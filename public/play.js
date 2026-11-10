@@ -172,6 +172,16 @@
 
   // ---------- your house ----------
   // Claiming (where you live) applies immediately; the design is a draft until Save.
+  // ---------- end-of-game reward scene ----------
+  // Plays once per game automatically (remembered on this phone); replay from the results card.
+  function showReward(force) {
+    if (!view || view.phase !== 'gameover' || !view.reward) return;
+    let seen = null; try { seen = localStorage.getItem(key('mt.rewardSeen')); } catch { /* private mode */ }
+    if (!force && seen === view.reward.gameId) return;
+    try { localStorage.setItem(key('mt.rewardSeen'), view.reward.gameId); } catch { /* private mode */ }
+    MT_REWARD.show(view.reward, { avatar: view.you.avatar, theme: view.theme, onClose: () => { if (view.progression) profile = view.progression; updatePouch(); } });
+  }
+
   // ---------- move-in requests (setup only) ----------
   const secsLeft = (at) => Math.max(0, Math.ceil((at - (Date.now() + clockOffset)) / 1000));
   // The owner's yes/no card, shown on top of any lobby screen with a 20s countdown.
@@ -309,10 +319,18 @@
   // Gold pouch in the game header: tap for balance, earned, spent and recent entries.
   // Customizing and shopping are lobby-only; during a game the phone is purely the game.
   const lobbyOpen = () => !view || view.phase === 'lobby';
+  // While this game's reward is waiting to be shown (or playing), the header pouch keeps
+  // the old balance so the coins can fly into it; it updates when the scene closes.
+  function rewardHeld() {
+    if (!view || view.phase !== 'gameover' || !view.reward || !view.reward.eligible) return false;
+    if (!$('#reward-scene').hidden) return true;
+    try { return localStorage.getItem(key('mt.rewardSeen')) !== view.reward.gameId; } catch { return false; }
+  }
   function updatePouch() {
     const wrap = $('#g-pouch-wrap'); if (!wrap) return;
-    wrap.innerHTML = MT_SHOP.pouchButton(profile, 'g-pouch');
-    const pouchHtml = () => MT_SHOP.pouchDetails(profile) + (lobbyOpen() ? '<button class="btn ghost" data-open-shop>🛒 Visit the shop</button>' : '<p class="small muted" data-shop-closed>The shop opens between games, back in the lobby.</p>');
+    const shown = rewardHeld() ? { ...(profile || {}), coins: view.reward.before } : profile;
+    wrap.innerHTML = MT_SHOP.pouchButton(shown, 'g-pouch');
+    const pouchHtml = () => MT_SHOP.pouchDetails(shown) +(lobbyOpen() ? '<button class="btn ghost" data-open-shop>🛒 Visit the shop</button>' : '<p class="small muted" data-shop-closed>The shop opens between games, back in the lobby.</p>');
     $('#g-pouch').onclick = () => { const pop = $('#g-pouch-pop'); pop.hidden = !pop.hidden; pop.innerHTML = pouchHtml(); };
     if (!$('#g-pouch-pop').hidden) $('#g-pouch-pop').innerHTML = pouchHtml();
     MT_SHOP.paintPouches();
@@ -404,6 +422,8 @@
     if (pendingClaim && v.phase === 'lobby' && !v.isJudge && !$('#screen-game').hidden) { pendingClaim = false; openHome('claim'); }
     if (!$('#screen-home').hidden) { if (v.phase !== 'lobby') show('#screen-game'); else buildHome(); }
     renderMoveAsk(); renderMoveStatus();
+    if (v.phase === 'gameover' && v.reward) setTimeout(() => showReward(false), 2500); // after the results settle
+    if (v.phase !== 'gameover' && !$('#reward-scene').hidden) $('#reward-scene').hidden = true;
     // The game started: close the shop and switch to the game, and refresh the pouch menu.
     if (v.phase !== 'lobby' && !$('#screen-shop').hidden) { lastKey = ''; show('#screen-game'); }
     if (phaseChanged) updatePouch();
@@ -454,7 +474,7 @@
     renderSettings();
     renderAbility();
     renderPrivateScene();
-    if (view.progression) profile = view.progression;
+    if (view.progression) { profile = view.progression; updatePouch(); }
     MT_STORY_UI(view, socket, $('#g-body'), { esc, paint, reply: abilityReply, votingHtml });
     if (focus) { const input = [...body.querySelectorAll('[data-draft]')].find((el) => el.dataset.draft === focus); if (input) { input.focus(); if (caret != null) input.setSelectionRange(caret,caret); } }
   }
@@ -743,7 +763,7 @@
     const order = { mafia: 0, neutral: 1, town: 2 };
     const teamOf = (p) => (ROLES[p.role] ? ROLES[p.role].team : 'town');
     const rows = v.players.slice().sort((a, b) => order[teamOf(a)] - order[teamOf(b)])
-      .map((p) => { const r = ROLES[p.role] || {}; return `<li><span>${p.won ? '🏆 ' : ''}${esc(p.name)}${p.alive ? '' : ' 👻'}</span><span class="tag" style="background:${r.color};color:${r.darkText ? '#2a2200' : '#fff'}">${r.emoji || ''} ${r.name || '?'}</span></li>`; })
+      .map((p) => { const r = ROLES[p.role] || {}; return `<li><span>${p.won ? '🏆 ' : ''}${esc(p.name)}${p.alive ? '' : ' 👻'}</span><span class="tag" style="background:${r.color};color:${r.darkText ? '#2a2200' : '#fff'}">${r.emoji || ''} ${esc(p.role ? roleLabel(p.role) : '?')}</span></li>`; })
       .join('');
     const W = RR.WINNERS[v.winner] || RR.WINNERS.draw;
     return `<div class="card center">
@@ -751,6 +771,7 @@
       <div class="result ${won ? 'win' : 'lose'}">${won ? 'You won!' : 'You lost'}</div>
       <p>${v.winner === 'draw' ? "It's a draw." : `${esc(v.winner === 'mafia' ? MT_THEMES.teamName(v.theme, 'mafia', W.name) : W.name)} wins.`}</p>
       <p class="muted small">Waiting for the host to start another round…</p>
+      ${v.reward ? `<button class="btn" data-reward-replay>🪙 ${v.reward.eligible ? `See my reward (+${v.reward.coins} gold)` : 'Why no gold this time?'}</button>` : ''}
     </div>
     <div class="card"><h3>Everyone's roles</h3><ul class="list">${rows}</ul></div>`;
   }
@@ -780,6 +801,8 @@
     });
     const ed = body.querySelector('[data-edit]');
     if (ed) ed.addEventListener('click', showEdit);
+    const rb = body.querySelector('[data-reward-replay]');
+    if (rb) rb.addEventListener('click', () => showReward(true));
     const hb = body.querySelector('[data-house]');
     if (hb) hb.addEventListener('click', () => openHome());
   }

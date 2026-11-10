@@ -44,8 +44,22 @@
     return { id, field, value, name: O.label(value), cost, achievement: gated, free: index < free, category,
       description: DESCRIPTIONS[id] || `A ${O.label(value).toLowerCase()} ${KIND[field] || 'item'}${index < free ? ' (free for everyone).' : ' for your ' + (slotOf(field).target === 'home' ? 'house.' : 'townsfolk.')}` };
   }));
-  // Gold rewards per completed game. Values are configurable; caps stop farming.
-  const REWARDS = { completed: 8, victory: 12, survived: 3, neutralVictory: 8, ability: 2, abilityCap: 3, objective: 5, objectiveCap: 2, investigation: 3, investigationCap: 3, save: 4, saveCap: 2, maxPerGame: 45, minimumGameMs: 60000 };
+  // Gold rewards per completed game, calculated and paid by the server once per game.
+  // Every value is configurable here. Per-category caps and maxPerGame stop players
+  // from farming repeated actions; games with bots, forced roles, sped-up clocks,
+  // skipped cinematics, fewer than 3 people, or shorter than minimumGameMs pay nothing.
+  const REWARDS = {
+    completed: 8,          // finished the game
+    victory: 12,           // your side won
+    neutralVictory: 8,     // extra for a neutral (Jester, Serial Killer, ...) win
+    survived: 3,           // alive at the end
+    ability: 2, abilityCap: 3,             // role-specific actions used (counted up to the cap)
+    objective: 5, objectiveCap: 2,         // objectives completed
+    investigation: 3, investigationCap: 3, // correct investigations
+    save: 4, saveCap: 2,                   // helping teammates: saves/protections that mattered
+    achievement: 10,                       // each achievement unlocked by this game
+    maxPerGame: 60, minimumGameMs: 60000,
+  };
   const API = { FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.MT_COSMETICS = API;
 })(typeof window !== 'undefined' ? window : globalThis);

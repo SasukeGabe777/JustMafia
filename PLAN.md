@@ -507,6 +507,37 @@ Implementation checklist (updated after verification below):
   flow across two real phones: the request card appears on Ana's phone with a
   countdown, No reaches Ben, then Yes moves him in.
 
+### Development update 7: end-of-game gold rewards
+
+- The server calculates and pays rewards (`ProfileStore.award`), once per game
+  id, and returns a breakdown: finished the game, your side won, neutral win
+  bonus, survived, role actions, objectives, correct investigations, helping
+  teammates (saves), and each achievement unlocked by the game. Every value,
+  per-category cap and the per-game maximum (now 60) live in `REWARDS` in
+  `public/shared/cosmetics.js`; repeated actions only count up to their caps.
+- `rules/progression.js` stores each player's result (`rewardResults`) and
+  sends it only to that player's phone (`view.reward`; the TV never gets
+  it). Practice games still pay nothing, and now say why: test bots, fewer
+  than 3 people, hand-picked roles, sped-up games, or shorter than the
+  minimum. `MT_REWARD_MIN_MS` shortens the minimum for tests only.
+- Phone reward scene (`public/reward-ui.js`), automatic after a completed
+  game: your character (grinning), your pixel gold pouch, coins arcing into
+  it for each breakdown line as it appears, the balance counting up from
+  before to after, and "Capped at …" when the per-game max applied. It plays
+  once per game per phone, with a replay button on the results card; the
+  header pouch keeps the old balance until you close the scene. Practice
+  games show the reason instead. The results list also uses themed role
+  names.
+- Validation: expansion test plays real games to the end (breakdown sums,
+  gold actually paid, victory/survival lines only for the right players,
+  winners earn more than losers, the TV never receives rewards, settling
+  twice / replaying a game id pays nothing, bots or a short game explain why,
+  farming hits caps and the max). New `tools/e2e-rewards.js` (real Chrome, 3
+  human players): the scene opens after the game; coins animate while the
+  header pouch waits; the breakdown and total are right; the balance
+  persists after refresh; no auto-replay; replay doesn't pay twice; no page
+  errors.
+
 The historical phases below describe earlier iterations; this completion audit
 supersedes their pending markers for features implemented above.
 

@@ -12,6 +12,8 @@
 <body>
   <!-- Move-in request (setup only): another player asks to live in your house; 20s to answer. -->
   <div id="move-ask" class="move-ask" role="alertdialog" aria-live="assertive" hidden></div>
+  <!-- End-of-game reward scene: coins flying into your gold pouch. -->
+  <div id="reward-scene" class="reward-scene" role="dialog" aria-label="Your gold reward" hidden></div>
 
   <section id="screen-join" hidden>
     <h1 class="brand">🔪 Mafia Town</h1>
@@ -145,6 +147,7 @@
   <script src="/creator-config.js"></script>
   <script src="/creator-ui.js"></script>
   <script src="/shop-ui.js"></script>
+  <script src="/reward-ui.js"></script>
   <script src="/play.js"></script>
 </body>
 </html>

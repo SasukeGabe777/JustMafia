@@ -95,7 +95,12 @@ own scene. The Human narrator and the Judge's manual reveal keep the classic
 murder scene.
 
 **Shop and gold:** every player has a gold pouch (balance, earned, spent).
-Gold comes from completed games and persists on the server. The 🛒 Shop
+Gold comes from completed games: after each game, the phone shows coins
+flying into your pouch with a breakdown (win, survival, role actions,
+objectives, helping teammates, achievements). Values are configurable in
+`REWARDS` (`public/shared/cosmetics.js`). Games with bots, hand-picked roles,
+fewer than 3 people, or under a minute pay nothing. Gold persists on the
+server. The 🛒 Shop
 sells clothing, hats, hairstyles, house designs and decorations, and flair;
 purchases go to your inventory, where you equip or unequip them.
 

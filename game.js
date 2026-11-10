@@ -445,7 +445,7 @@ class Room {
       storyHoldUntil: 0, storySeq:0, narrationHistory: {},
       turn: 0, eventLog: [], eventSeq: 0, scheduledEvents: [], mafiaChat: [], mafiaBluffs: [],
       pendingRevivals: [], emergency: null, nomination: null, storyTerminal: false, hustledDay: null, shortenedDiscussion: null,
-      gameId: crypto.randomUUID(), rewarded: false, progressionNotice: null,
+      gameId: crypto.randomUUID(), rewarded: false, progressionNotice: null, rewardResults: null,
     });
     this.stats = {
       nightKills: [], lynches: [], saves: 0, guards: 0, immune: 0, blocks: 0, shots: [], investigations: [],

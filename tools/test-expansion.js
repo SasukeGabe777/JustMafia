@@ -117,6 +117,50 @@ test('Expressions: every option saves, legacy "serious" migrates, invalid falls 
   assert.equal(room.playerView(p[1]).players.find((x) => x.id === p[0].id).avatar.expression, 'wink');
   room.destroy();
 });
+test('End-of-game gold: server-calculated breakdown, winners vs losers, paid once, practice games explain why not', () => {
+  const { ProfileStore } = require('../profiles'), C = require('../public/shared/cosmetics');
+  const play = ({ bots = 0, minutes = 2 } = {}) => {
+    const clock = new VirtualClock(), profiles = new ProfileStore(null);
+    const room = new Room('GOLD', null, { clock, headless: true, seed: 11, profiles });
+    room.updateSettings({ minPlayers: 3, botsAuto: false });
+    const ps = ['Ana', 'Ben', 'Cy', 'Di'].map((name) => { const pl = room.join({ name }).player; pl.profileId = profiles.create().id; return pl; });
+    if (bots) room.addBots(bots);
+    assert(room.startGame().ok); clock.t += minutes * 60000;
+    const mafia = room.inGame().filter((x) => room.team(x) === 'mafia');
+    for (const m of mafia) room.override({ op: 'kill', id: m.id });
+    assert.equal(room.phase, 'gameover'); assert.equal(room.winner, 'town');
+    return { room, ps, profiles, mafia };
+  };
+  const { room, ps, profiles, mafia } = play();
+  for (const p of ps) {
+    const r = room.playerView(p).reward; assert(r && r.eligible, 'eligible reward for ' + p.name);
+    const sum = r.lines.reduce((t, l) => t + l.amount, 0);
+    assert.equal(r.coins, Math.min(sum, C.REWARDS.maxPerGame)); assert.equal(r.after - r.before, r.coins);
+    assert.equal(profiles.view(p.profileId).coins, r.after, 'gold really paid');
+    assert(r.lines.some((l) => l.key === 'completed'));
+    const won = room.team(p) === 'town';
+    assert.equal(r.lines.some((l) => l.key === 'victory'), won, 'victory line only for winners');
+    assert.equal(r.lines.some((l) => l.key === 'survived'), !mafia.includes(p), 'survival line only for survivors');
+    assert.deepEqual(room.hostView().reward, undefined, 'TV never receives private rewards');
+  }
+  const loser = ps.find((p) => room.team(p) === 'mafia'), winner = ps.find((p) => room.team(p) === 'town');
+  if (loser && winner) assert(room.playerView(winner).reward.coins > room.playerView(loser).reward.coins);
+  // Paid once: settling again (or replaying the same game id) pays nothing more.
+  const before = ps.map((p) => profiles.view(p.profileId).coins);
+  room.rewarded = false; room.settleProgression();
+  assert.deepEqual(ps.map((p) => profiles.view(p.profileId).coins), before);
+  assert.equal(profiles.award(ps[0].profileId, room.gameId, { won: true, alive: true, metrics: {} }), false);
+  room.destroy();
+  // Practice games pay nothing and say why.
+  const withBots = play({ bots: 1 }); const rb = withBots.room.playerView(withBots.ps[0]).reward;
+  assert.equal(rb.eligible, false); assert.equal(rb.coins, 0); assert.match(rb.reason, /bots/); withBots.room.destroy();
+  const short = play({ minutes: 0 }); assert.match(short.room.playerView(short.ps[0]).reward.reason, /shorter than 60 seconds/); short.room.destroy();
+  // Farming is capped: lots of repeated actions only count up to each cap and the per-game max.
+  const big = new ProfileStore(null), id = big.create().id;
+  const res = big.award(id, 'farm', { won: true, alive: true, team: 'neutral', metrics: { abilities: 99, objectives: 99, correctInvestigations: 99, saves: 99 } });
+  assert.equal(res.coins, C.REWARDS.maxPerGame); assert.equal(res.capped, C.REWARDS.maxPerGame);
+  assert.equal(res.lines.find((l) => l.key === 'abilities').amount, C.REWARDS.abilityCap * C.REWARDS.ability);
+});
 test('Move-in requests: the owner gets 20 seconds to say yes or no; declines, timeouts, cancels, bots and game start', () => {
   const clock = new VirtualClock(), room = new Room('MOVE', null, { clock, headless: true, seed: 5 });
   room.updateSettings({ minPlayers: 3 });

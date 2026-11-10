@@ -103,17 +103,32 @@ class ProfileStore {
     if (item.cost > 0) this.record(p, -item.cost, 'Bought ' + item.name, { item: item.id });
     p.owned.push(item.id); this.save(); return { ok: true, profile: this.view(id) };
   }
+  // Pays one completed game's gold, once per game id, and returns the breakdown
+  // (each line: what it was for and how much). Values and caps live in REWARDS.
   award(id, gameId, result) {
     const p = this.data.profiles[id]; if (!p || p.rewardedGames.includes(gameId)) return false;
-    const m = result.metrics || {}, s = p.stats;
+    const m = result.metrics || {}, s = p.stats, lines = [];
     s.games++; if (result.won) { s.wins++; if (result.team === 'mafia') s.mafiaWins++; if (result.role === 'jester') s.jesterWins++; }
     if (result.alive) s.survived++;
     for (const key of ['saves', 'correctInvestigations', 'objectives']) s[key] += Math.max(0, m[key] || 0);
-    let coins = R.completed + (result.won ? R.victory : 0) + (result.alive ? R.survived : 0) + (result.won && result.team === 'neutral' ? R.neutralVictory : 0);
-    coins += Math.min(R.abilityCap, m.abilities || 0) * R.ability + Math.min(R.objectiveCap, m.objectives || 0) * R.objective + Math.min(R.investigationCap, m.correctInvestigations || 0) * R.investigation;
-    coins = Math.min(R.maxPerGame, coins); if (coins) this.record(p, coins, 'Game reward', { gameId });
-    for (const [key, a] of Object.entries(ACHIEVEMENTS)) if (s[a.stat] >= a.count && !p.achievements.includes(key)) p.achievements.push(key);
-    p.lastReward = { gameId, coins, reason: 'Completed game, participation and verified outcomes' }; p.rewardedGames.push(gameId); this.save(); return true;
+    const add = (key, label, amount) => { if (amount > 0) lines.push({ key, label, amount }); };
+    const capped = (n, cap) => Math.min(cap, Math.max(0, n || 0));
+    add('completed', 'Finished the game', R.completed);
+    if (result.won) add('victory', 'Your side won', R.victory);
+    if (result.won && result.team === 'neutral') add('neutral', 'Neutral victory bonus', R.neutralVictory);
+    if (result.alive) add('survived', 'Survived to the end', R.survived);
+    const ab = capped(m.abilities, R.abilityCap); add('abilities', `Role actions (${ab}${(m.abilities || 0) > ab ? ', capped' : ''})`, ab * R.ability);
+    const ob = capped(m.objectives, R.objectiveCap); add('objectives', `Objectives completed (${ob})`, ob * R.objective);
+    const inv = capped(m.correctInvestigations, R.investigationCap); add('investigations', `Correct investigations (${inv})`, inv * R.investigation);
+    const sv = capped(m.saves, R.saveCap); add('saves', `Helped teammates: saves (${sv})`, sv * R.save);
+    const unlocked = Object.entries(ACHIEVEMENTS).filter(([key, a]) => s[a.stat] >= a.count && !p.achievements.includes(key));
+    for (const [key, a] of unlocked) { p.achievements.push(key); add('achievement', `Achievement: ${a.label}`, R.achievement); }
+    const raw = lines.reduce((t, l) => t + l.amount, 0), coins = Math.min(R.maxPerGame, raw);
+    const before = p.coins;
+    if (coins) this.record(p, coins, 'Game reward', { gameId });
+    p.lastReward = { gameId, coins, before, after: p.coins, lines, capped: raw > coins ? R.maxPerGame : null, at: Date.now() };
+    p.rewardedGames.push(gameId); this.save();
+    return p.lastReward;
   }
 }
 module.exports = { ProfileStore };
