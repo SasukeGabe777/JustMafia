@@ -2,6 +2,13 @@
 
 A big-screen social deduction party game for 3–100 players. The TV shows an animated pixel-art town with cinematic murder scenes, everyone plays from their phone, and the **Judge** runs the game from a private console.
 
+## Contributing together
+
+Gabe/Codex and Justin/Claude use separate task branches and reviewed pull
+requests. Read [AGENTS.md](AGENTS.md) and the
+[collaboration workflow](docs/COLLABORATION.md) before making changes.
+Claude Code also has a root `CLAUDE.md` pointing to the same rules.
+
 ## Run it
 
 The November expansion adds stable neighborhoods through 100 players, a full
