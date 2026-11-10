@@ -16,24 +16,33 @@
       <label id="code-wrap">Room code
         <input id="j-code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
       </label>
-      <label>Your name
+      <p class="small muted">The 4-letter code is on the big screen. Next, you'll create your character.</p>
+    </div>
+    <button id="j-next" class="btn big">Next: create your character</button>
+    <p id="j-err" class="err"></p>
+  </section>
+
+  <!-- Character creator: big live preview, category tabs, visual choices. Edits
+       stay a draft (preview only) until Save. Layout lives in creator-config.js. -->
+  <section id="screen-creator" class="cas" hidden>
+    <header class="cas-head">
+      <button id="c-back" class="btn ghost small" aria-label="Back">◀</button>
+      <h2 id="c-title">Create your townsfolk</h2>
+      <span id="c-dirty" class="tag bad" hidden>Unsaved</span>
+    </header>
+    <div class="card cas-stage">
+      <canvas id="preview" class="preview" aria-label="Live character preview"></canvas>
+      <div class="cas-tools">
+        <button class="btn ghost small" id="random-character">🎲 Randomize</button>
+        <button class="btn ghost small" id="c-revert" disabled>↺ Revert</button>
+      </div>
+      <label class="cas-name">Your name
         <input id="j-name" maxlength="14" autocomplete="nickname" placeholder="e.g. Brodi">
       </label>
     </div>
+    <nav id="c-tabs" class="cas-tabs" role="tablist" aria-label="Customization categories"></nav>
+    <div id="c-panel" class="card cas-panel" role="tabpanel"></div>
     <div class="card">
-      <canvas id="preview" class="preview"></canvas>
-      <div class="creator-heading"><h2>Your townsfolk</h2><button class="btn ghost small" id="random-character">Randomize Character</button></div>
-      <div class="opt-label">Outfit</div>
-      <div id="opt-colors" class="swatches"></div>
-      <div class="opt-label">Skin</div>
-      <div id="opt-skins" class="swatches"></div>
-      <div class="opt-label">Hat</div>
-      <div id="opt-hats" class="hats"></div>
-      <div class="opt-label">Your home <span id="home-name" class="small muted"></span></div>
-      <div id="opt-homes" class="homes"></div>
-      <div class="opt-label">Home color</div>
-      <div id="opt-home-colors" class="swatches"></div>
-      <div id="opt-details" class="creator-details"></div>
       <details id="photo-panel"><summary>Optional photo assistant</summary>
         <p class="small muted">Photos stay on this device. Match colors, or use a pixelated face in your own phone preview. Face pixels are never uploaded, shared with the TV, or saved on the server.</p>
         <label class="check"><input type="checkbox" id="photo-consent"> Allow local photo processing on this device.</label>
@@ -48,8 +57,11 @@
       </details>
       <details id="shop"><summary>Wardrobe &amp; cosmetic shop</summary><div id="shop-body"></div></details>
     </div>
-    <button id="j-go" class="btn big">Join game</button>
-    <p id="j-err" class="err"></p>
+    <p id="c-err" class="err" role="alert"></p>
+    <div class="cas-bar">
+      <button id="c-save" class="btn ghost">Save look</button>
+      <button id="j-go" class="btn big">Save &amp; join</button>
+    </div>
   </section>
 
   <section id="screen-game" hidden>
@@ -84,6 +96,7 @@
   <script src="/shared/photo-match.js"></script>
   <script src="/photo-ui.js"></script>
   <script src="/story-ui.js"></script>
+  <script src="/creator-config.js"></script>
   <script src="/creator-ui.js"></script>
   <script src="/play.js"></script>
 </body>

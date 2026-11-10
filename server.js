@@ -204,6 +204,17 @@ io.on('connection', (socket) => {
   socket.on('profile:create', (_msg, cb) => { if (socket.profileId) return reply(cb, { ok: false, error: 'This connection already has a profile.' }); const p = profiles.create(); socket.profileId = p.id; socket.join('profile:' + p.id); reply(cb, { ok: true, ...p }); });
   socket.on('profile:resume', (msg = {}, cb) => { const p = profiles.authenticate(msg); if (!p) return reply(cb, { ok: false }); if (socket.profileId && socket.profileId !== p.id) socket.leave('profile:' + socket.profileId); socket.profileId = p.id; socket.join('profile:' + p.id); reply(cb, { ok: true, profile: profiles.view(p.id) }); });
   socket.on('profile:buy', (msg = {}, cb) => { const result = profiles.buy(socket.profileId, msg.itemId); reply(cb, result); if (result.ok) { io.to('profile:' + socket.profileId).emit('profile:state', profiles.view(socket.profileId)); const { room } = ctx(); if (room) room.sync(); } });
+  // Character creator: save a look to the profile without being in a room. The
+  // in-room avatar only changes through player:profile (lobby-only).
+  socket.on('profile:avatar', (msg = {}, cb) => {
+    if (!socket.profileId) return reply(cb, { ok: false, error: 'Profile not connected yet.' });
+    profiles.select(socket.profileId, msg.avatar && typeof msg.avatar === 'object' ? msg.avatar : {});
+    reply(cb, { ok: true, profile: profiles.view(socket.profileId) });
+  });
+  socket.on('room:check', (msg = {}, cb) => {
+    const room = findRoom(msg.code);
+    reply(cb, room ? { ok: true, code: room.code, lobby: room.phase === 'lobby' } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
+  });
   socket.on('player:join', (msg = {}, cb) => {
     const room = findRoom(msg.code);
     if (!room) return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.' });

@@ -200,18 +200,15 @@ class Room {
 
   sanitizeAvatar(a) {
     a = a || {};
-    const avatar = {
-      color: OPTIONS.colors.includes(a.color) ? a.color : this.pick(OPTIONS.colors),
-      skin: OPTIONS.skins.includes(a.skin) ? a.skin : this.pick(OPTIONS.skins),
-      hat: OPTIONS.hats.includes(a.hat) ? a.hat : 'none',
-      houseStyle: OPTIONS.houseStyle.includes(a.houseStyle) ? a.houseStyle : this.pick(OPTIONS.houseStyle),
-      houseColor: OPTIONS.houseColor.includes(a.houseColor) ? a.houseColor : this.pick(OPTIONS.houseColor),
-      // Older saves stored the mood in `features` ('serious'); carry it over.
-      expression: OPTIONS.expression.includes(a.expression) ? a.expression : a.features === 'serious' ? 'serious' : OPTIONS.expression[0],
-    };
-    for (const key of ['hair', 'hairColor', 'facialHair', 'eyes', 'face', 'features', 'outfit', 'pants', 'shoes', 'shoeStyle', 'accessory', 'nameColor', 'nameplate', 'houseDecor', 'effect']) {
-      const choices = OPTIONS[key === 'shoeStyle' ? 'shoeStyles' : key];
-      avatar[key] = choices.includes(a[key]) ? a[key] : choices[0];
+    // Missing values: these get a random pick so bots and old saves stay varied;
+    // the rest use the first option. Older saves stored the mood in `features`.
+    const RANDOM = ['color', 'skin', 'houseStyle', 'houseColor'];
+    const avatar = {};
+    for (const [key, list] of Object.entries(OPTIONS.AVATAR_FIELDS)) {
+      const choices = OPTIONS[list];
+      avatar[key] = choices.includes(a[key]) ? a[key]
+        : key === 'expression' && a.features === 'serious' ? 'serious'
+        : RANDOM.includes(key) ? this.pick(choices) : choices[0];
     }
     return avatar;
   }

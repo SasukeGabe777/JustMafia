@@ -27,6 +27,11 @@
   // Saved characters from before homes existed get a random starting home.
   if (!OPT.houseStyle.includes(avatar.houseStyle)) avatar.houseStyle = pick(OPT.houseStyle);
   if (!OPT.houseColor.includes(avatar.houseColor)) avatar.houseColor = pick(OPT.houseColor);
+  // Creator state: `avatar` is the live draft shown in previews; `savedAvatar` is
+  // what was last saved (device + server profile). Revert returns to it.
+  let savedAvatar = { ...avatar };
+  let creatorMode = null; // 'join' | 'edit'
+  let creatorTab = 'body';
 
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
   function load(k) { try { return JSON.parse(localStorage.getItem(key(k)) || 'null'); } catch { return null; } }
@@ -40,39 +45,55 @@
 
   // ---------- screens ----------
   function show(id) {
-    for (const s of ['#screen-join', '#screen-game', '#screen-msg']) $(s).hidden = s !== id;
+    for (const s of ['#screen-join', '#screen-creator', '#screen-game', '#screen-msg']) $(s).hidden = s !== id;
+    if (id === '#screen-creator') startStage();
   }
 
+  // Step 1: room code. A QR/link with ?room= skips straight to the creator.
   function showJoin(errorText) {
-    editing = false;
-    $('#code-wrap').hidden = false;
+    editing = false; creatorMode = null;
     $('#j-code').value = (params.get('room') || (session && session.code) || '').toUpperCase();
-    $('#j-name').value = load('mt.name') || '';
-    $('#j-name').disabled = false;
-    $('#j-go').textContent = 'Join game';
-    $('#j-go').disabled = !profileReady;
     $('#j-err').textContent = errorText || '';
     show('#screen-join');
-    buildPicker();
-    // ?autojoin=1&name=... joins straight away (used by the /test page).
-    if (profileReady && params.get('autojoin') && params.get('name') && !autoJoined && $('#j-code').value) {
-      autoJoined = true;
-      $('#j-name').value = params.get('name').slice(0, 14);
-      $('#j-go').click();
-    }
+    if (tryAutoJoin()) return;
+    if (params.get('room') && !params.get('autojoin') && !autoOpened && !errorText) { autoOpened = true; goNext(); }
   }
-  let autoJoined = false;
+  let autoJoined = false, autoOpened = false;
+  // ?autojoin=1&name=... joins straight away with the saved look (used by the /test page).
+  function tryAutoJoin() {
+    if (!profileReady || !params.get('autojoin') || !params.get('name') || autoJoined || !$('#j-code').value) return false;
+    autoJoined = true; doJoin($('#j-code').value, params.get('name').slice(0, 14)); return true;
+  }
+  function goNext() {
+    const code = $('#j-code').value.trim().toUpperCase();
+    if (code.length !== 4) return void ($('#j-err').textContent = 'Enter the 4-letter room code from the big screen.');
+    $('#j-next').disabled = true;
+    socket.emit('room:check', { code }, (r) => {
+      $('#j-next').disabled = false;
+      if (!r || !r.ok) return void ($('#j-err').textContent = (r && r.error) || 'Room not found.');
+      $('#j-err').textContent = ''; openCreator('join');
+    });
+  }
+  $('#j-next').addEventListener('click', goNext);
+
+  // Step 2: the character creator (also used to edit your look in the lobby).
+  function openCreator(mode) {
+    creatorMode = mode; editing = mode === 'edit';
+    $('#c-title').textContent = mode === 'edit' ? 'Edit your townsfolk' : 'Create your townsfolk';
+    $('#j-name').value = mode === 'edit' ? view.you.name : load('mt.name') || '';
+    $('#j-name').disabled = mode === 'edit' && view.phase !== 'lobby';
+    $('#j-go').textContent = mode === 'edit' ? 'Save' : 'Save & join';
+    $('#j-go').disabled = !profileReady;
+    $('#c-save').hidden = mode === 'edit';
+    $('#c-err').textContent = '';
+    avatar = { ...savedAvatar };
+    show('#screen-creator');
+    buildPicker();
+  }
 
   function showEdit() {
-    editing = true;
-    $('#code-wrap').hidden = true;
-    $('#j-name').value = view.you.name;
-    $('#j-name').disabled = view.phase !== 'lobby';
-    $('#j-go').textContent = 'Save';
-    $('#j-err').textContent = '';
-    avatar = { ...view.you.avatar };
-    show('#screen-join');
-    buildPicker();
+    savedAvatar = { ...view.you.avatar };
+    openCreator('edit');
   }
 
   function showMsg(title, text) {
@@ -83,68 +104,112 @@
   $('#m-btn').addEventListener('click', () => showJoin());
 
   // ---------- avatar drawing ----------
-  function paint(canvas, av, { scale = 1, ghost = false, feet = 0.93 } = {}) {
+  function paint(canvas, av, { scale = 1, ghost = false, feet = 0.93, t } = {}) {
     if (typeof photo !== 'undefined' && (canvas.id === 'preview' || canvas.id === 'me')) av = photo.decorate(av);
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     const w = canvas.clientWidth || 48, h = canvas.clientHeight || 48;
-    canvas.width = w * dpr; canvas.height = h * dpr;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = w * dpr; canvas.height = h * dpr; }
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
     const s = (h / 76) * scale;
     if (ghost) MTArt.drawGhost(ctx, w / 2, h * feet, av, { scale: s, t: performance.now() / 1000 });
-    else MTArt.drawCharacter(ctx, w / 2, h * feet, av, { scale: s, theme: view && view.theme });
+    else MTArt.drawCharacter(ctx, w / 2, h * feet, av, { scale: s, theme: view && view.theme, t: t || 0 });
+    return ctx;
+  }
+
+  // Creator stage: the draft idles (breathing, blinking) with its name tag while the creator is open.
+  let stageRunning = false;
+  function startStage() {
+    if (stageRunning) return; stageRunning = true;
+    const frame = (now) => {
+      const cv = $('#preview');
+      if ($('#screen-creator').hidden || !cv) { stageRunning = false; return; }
+      const ctx = paint(cv, avatar, { scale: 0.78, feet: 0.82, t: now / 1000 });
+      const look = JSON.stringify(Object.keys(OPT.AVATAR_FIELDS).map((k) => avatar[k])); if (cv.dataset.look !== look) cv.dataset.look = look; // what the stage is drawing (used by tests)
+      const w = cv.clientWidth, h = cv.clientHeight, name = ($('#j-name').value.trim() || 'Your name').slice(0, 14);
+      ctx.font = `600 ${Math.round(h / 13)}px 'Pixelify Sans', monospace`; ctx.textAlign = 'center';
+      const tw = ctx.measureText(name).width + 14;
+      ctx.fillStyle = 'rgba(42,26,18,.75)'; ctx.fillRect((w - tw) / 2, h * .87, tw, h / 10);
+      ctx.fillStyle = avatar.nameColor || '#ffffff'; ctx.fillText(name, w / 2, h * .87 + h / 13);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
   }
 
   let profile = null;
-  const photo = MT_PHOTO_UI((match) => { avatar = { ...avatar, ...match }; buildPicker(); }, () => paint($('#preview'), avatar));
+  const photo = MT_PHOTO_UI((match) => change(match), () => {});
+  const sameLook = (a, b) => Object.keys(OPT.AVATAR_FIELDS).every((k) => (a[k] == null ? null : a[k]) === (b[k] == null ? null : b[k]));
+  function change(next) { avatar = { ...avatar, ...next }; buildPicker(); }
   function buildPicker() {
-    MT_CREATOR.render({ avatar, profile, paint, theme: view && view.theme, change: (next) => { avatar = { ...avatar, ...next }; buildPicker(); }, buy: (itemId) => socket.emit('profile:buy', { itemId }, (r) => { if (r && r.ok) { profile = r.profile; buildPicker(); } else abilityReply(r); }) });
+    if (!creatorMode) return;
+    MT_CREATOR.render({ avatar, profile, paint, theme: view && view.theme, tab: creatorTab,
+      setTab: (id) => { creatorTab = id; buildPicker(); }, change,
+      buy: (itemId) => socket.emit('profile:buy', { itemId }, (r) => { if (r && r.ok) { profile = r.profile; buildPicker(); } else abilityReply(r); }) });
+    const dirty = !sameLook(avatar, savedAvatar);
+    $('#c-dirty').hidden = !dirty; $('#c-revert').disabled = !dirty;
   }
+  $('#random-character').addEventListener('click', () => change(MT_CREATOR.randomize(profile)));
+  $('#c-revert').addEventListener('click', () => { avatar = { ...savedAvatar }; buildPicker(); });
+  $('#c-back').addEventListener('click', () => {
+    if (creatorMode === 'edit') { editing = false; creatorMode = null; lastKey = ''; show('#screen-game'); render(); } else showJoin();
+  });
+  // Saving: this device keeps the look, and the server profile keeps it for rejoining.
+  function commitLook() { savedAvatar = { ...avatar }; save('mt.avatar', savedAvatar); buildPicker(); }
+  $('#c-save').addEventListener('click', () => {
+    if (!profileReady) return;
+    commitLook();
+    socket.emit('profile:avatar', { avatar: savedAvatar }, (r) => { if (r && r.ok) profile = r.profile; $('#c-err').textContent = r && r.ok ? '' : (r && r.error) || 'Could not save.'; });
+  });
 
   // ---------- join ----------
   $('#j-go').addEventListener('click', () => {
     if (!profileReady) return;
     const name = $('#j-name').value.trim();
-    save('mt.avatar', avatar);
     if (editing) {
-      socket.emit('player:profile', { name, avatar });
-      editing = false;
+      commitLook();
+      socket.emit('player:profile', { name, avatar: savedAvatar });
+      editing = false; creatorMode = null;
       lastKey = '';
       show('#screen-game');
       render();
       return;
     }
-    const code = $('#j-code').value.trim().toUpperCase();
-    if (code.length !== 4) return void ($('#j-err').textContent = 'Enter the 4-letter room code from the big screen.');
-    if (!name) return void ($('#j-err').textContent = 'Enter your name.');
+    if (!name) return void ($('#c-err').textContent = 'Enter your name.');
+    commitLook();
+    doJoin($('#j-code').value, name);
+  });
+  function doJoin(rawCode, name) {
+    const code = String(rawCode || '').trim().toUpperCase(), err = (t) => { $(creatorMode ? '#c-err' : '#j-err').textContent = t; };
+    if (code.length !== 4) return err('Enter the 4-letter room code from the big screen.');
     save('mt.name', name);
     $('#j-go').disabled = true;
-    socket.emit('player:join', { code, name, avatar }, (r) => {
+    socket.emit('player:join', { code, name, avatar: savedAvatar }, (r) => {
       $('#j-go').disabled = false;
-      if (!r || !r.ok) return void ($('#j-err').textContent = (r && r.error) || 'Could not join.');
+      if (!r || !r.ok) return err((r && r.error) || 'Could not join.');
       session = { code: r.code, token: r.token };
       save('mt.player', session);
+      creatorMode = null;
       keepAwake();
       show('#screen-game');
       lastKey = '';
       render();
     });
-  });
+  }
   $('#j-code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); });
 
   // ---------- connection ----------
-  socket.on('profile:state', (p) => { profile = p; if (!$('#screen-join').hidden) buildPicker(); });
+  socket.on('profile:state', (p) => { profile = p; if (!$('#screen-creator').hidden) buildPicker(); });
   socket.on('connect', () => {
     const creds = load('mt.profile');
     const ready = (r) => {
       if (!r || !r.ok) { $('#j-err').textContent = 'Profile connection failed. Reload to reconnect.'; return; }
       profile = r.profile; profileReady = true; $('#j-go').disabled = false;
       if (r.token) save('mt.profile',{ id:r.id,token:r.token });
-      if (!$('#screen-join').hidden) {
-        buildPicker();
-        if (!editing && params.get('autojoin') && params.get('name') && !autoJoined && $('#j-code').value) { autoJoined = true; $('#j-name').value = params.get('name').slice(0,14); $('#j-go').click(); }
-      }
+      // No look saved on this device yet, but the profile has one: restore it.
+      if (!load('mt.avatar') && profile && profile.lookSaved && profile.avatar) { savedAvatar = { ...savedAvatar, ...profile.avatar }; if (!creatorMode) avatar = { ...savedAvatar }; }
+      if (!$('#screen-creator').hidden) buildPicker();
+      if (!$('#screen-join').hidden) tryAutoJoin();
     };
     if (creds) socket.emit('profile:resume', creds, (r) => r && r.ok ? ready(r) : socket.emit('profile:create', {}, ready));
     else socket.emit('profile:create', {}, ready);
@@ -173,7 +238,7 @@
       prevPhase = v.phase;
     }
     view = v;
-    if (editing && v.phase !== 'lobby') { editing = false; show('#screen-game'); }
+    if (editing && v.phase !== 'lobby') { editing = false; creatorMode = null; show('#screen-game'); }
     if (!$('#screen-game').hidden) render();
   });
 

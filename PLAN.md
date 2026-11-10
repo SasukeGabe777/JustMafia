@@ -254,6 +254,46 @@ Implementation checklist (updated after verification below):
   them visually in headless Chrome. Not yet checked on a real phone or
   projector.
 
+### Development update 2: character creator screen (claude/creator-screen)
+
+- Joining is now two steps. First the room code (a `?room=` link skips this
+  step), then a dedicated creator screen. It has a large animated preview
+  (idle breathing and blinking, with a name tag in the chosen name color),
+  pixel-style category tabs (Body, Face, Hair, Clothes, Extras, Home) and
+  visual tiles drawn by the real renderer, framed on the part they change
+  (head, hat, body, feet, house), plus color swatches. The creator covers
+  skin, face shape, expression, eyes, markings, facial hair, hair and hair
+  color, outfit, clothing/pants/shoe colors, footwear, hats, accessories,
+  name color, nameplate, effect, and the home.
+- Draft vs saved: edits only change the preview and an "Unsaved" badge
+  until **Save look** (no room needed; new `profile:avatar` event),
+  **Save & join**, or **Save** (lobby edit). **Revert** returns to the
+  saved look; **Randomize** still exists and leaves the home alone. A saved
+  look lives on the device and in the server profile (`lookSaved`), so it
+  survives refreshes, leaving and rejoining, and cleared device storage. A
+  new `room:check` event validates the code before the creator opens.
+- Extensible: `MT_OPTIONS.AVATAR_FIELDS` is now the one list of saved fields.
+  `Room.sanitizeAvatar` and `ProfileStore.validateAvatar` iterate it (same
+  defaults and random-pick order as before, so seeded simulations are
+  unchanged). `public/creator-config.js` lays out the tabs. Adding an option
+  means an options list, one AVATAR_FIELDS line, the art, and one config line.
+- Kept: photo assistant, wardrobe shop (locked items hidden from tiles, with
+  a count pointing to the shop), lobby-only edits, and `/test` autojoin. Also
+  fixed the phone page's horizontal overflow, which came from canvases'
+  intrinsic 300px width inside grid tracks.
+- Validation: `npm test` (all suites), plus `npm run test:e2e`
+  (`tools/e2e-creator.js`). That test drives real headless Chrome at
+  390x844 over the DevTools protocol: a new player lands on the creator; all
+  143 visible options across 6 tabs update the live preview and selection;
+  Unsaved and Revert work; Randomize works; Save & join delivers the exact
+  look to the TV; it survives a refresh; lobby edits reach the TV; a second
+  player keeps their own look; rejoining another room starts from the saved
+  look; Save look persists; the server profile restores the look after
+  device storage is cleared; `/test` auto-join phones still join directly;
+  there is no horizontal overflow; and there are no page errors. That is 10
+  checks, and they passed 3 runs in a row. I reviewed the screenshots of
+  every tab. Not yet checked on a physical phone.
+
 The historical phases below describe earlier iterations; this completion audit
 supersedes their pending markers for features implemented above.
 

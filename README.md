@@ -49,6 +49,12 @@ Puppet Master, Paparazzi, Conductor and Glitch. Their complete abilities,
 restrictions and win conditions appear in the Judge's role reference. Configure
 Puppet/Glitch uses, Harmony objectives and Paparazzi photo goals in Setup.
 
+After entering the room code, players get a character creator with a large
+live preview and tabs for Body, Face, Hair, Clothes, Extras and Home. Changes
+are a preview until saved (Revert undoes them), and a saved look is
+remembered for future games. Run `npm run test:e2e` (needs Chrome) for a
+browser test of the creator.
+
 Players customize hair, facial features, one of ten expressions (Smile, Grin,
 Neutral, Serious, Surprised, Sad, Angry, Wink, Sleepy, Smirk), clothing and
 accessories before the game. They also choose their home: one of twelve buildings (Cottage, Tavern,

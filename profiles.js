@@ -29,7 +29,9 @@ class ProfileStore {
   view(id) { const p = this.data.profiles[id]; if (!p) return null; const { verifier, rewardedGames, ...view } = p; return { ...view, storage: this.filename ? 'Saved on this game server’s disk' : 'Session-only development storage' }; }
   validateAvatar(id, input = {}) {
     const p = this.data.profiles[id], result = {};
-    for (const [key, list] of Object.entries({ color:'colors', skin:'skins', hat:'hats', hair:'hair', hairColor:'hairColor', facialHair:'facialHair', eyes:'eyes', face:'face', features:'features', outfit:'outfit', pants:'pants', shoes:'shoes', shoeStyle:'shoeStyles', accessory:'accessory', nameColor:'nameColor', nameplate:'nameplate', houseDecor:'houseDecor', effect:'effect' })) {
+    // Expression and home have their own rules below.
+    for (const [key, list] of Object.entries(O.AVATAR_FIELDS)) {
+      if (['expression', 'houseStyle', 'houseColor'].includes(key)) continue;
       const value = input[key] == null ? p && p.avatar[key] : input[key];
       result[key] = O[list].includes(value) ? value : O[list][0];
       const item = CATALOG.find((i) => i.field === key && i.value === result[key]);
@@ -45,7 +47,7 @@ class ProfileStore {
     }
     return result;
   }
-  select(id, avatar) { const p = this.data.profiles[id]; if (!p) return; p.avatar = this.validateAvatar(id, avatar); this.save(); }
+  select(id, avatar) { const p = this.data.profiles[id]; if (!p) return; p.avatar = this.validateAvatar(id, avatar); p.lookSaved = true; this.save(); }
   buy(id, itemId) {
     const p = this.data.profiles[id], item = CATALOG.find((i) => i.id === itemId);
     if (!p || !item || p.owned.includes(item.id)) return { ok: false, error: 'Choose a locked catalog item.' };

@@ -33,6 +33,15 @@
   // presentation, chosen in the lobby and locked at start with the avatar.
   OPTIONS.houseStyle = ['cottage', 'tavern', 'bakery', 'smithy', 'apothecary', 'library', 'chapel', 'tailor', 'watchtower', 'windmill', 'farmhouse', 'manor'];
   OPTIONS.houseColor = ['#eadcb9', '#c4674f', '#d39a55', '#e3c15c', '#9fbe86', '#6ea89b', '#8db2d8', '#5f7aa6', '#a88bc6', '#d996ae', '#8b6a50', '#9c9b95'];
+  // Single source of truth for saved appearance fields: avatar field -> option list.
+  // The server (game.js, profiles.js) validates against this map and the phone
+  // creator (creator-config.js) lays it out. To add a customization: add its
+  // list above, one line here, and one entry in public/creator-config.js.
+  OPTIONS.AVATAR_FIELDS = {
+    color: 'colors', skin: 'skins', hat: 'hats', hair: 'hair', hairColor: 'hairColor', facialHair: 'facialHair', eyes: 'eyes', face: 'face',
+    features: 'features', expression: 'expression', outfit: 'outfit', pants: 'pants', shoes: 'shoes', shoeStyle: 'shoeStyles', accessory: 'accessory',
+    nameColor: 'nameColor', nameplate: 'nameplate', houseDecor: 'houseDecor', effect: 'effect', houseStyle: 'houseStyle', houseColor: 'houseColor',
+  };
   const colors = {
     '#e74c3c':'Red', '#e67e22':'Orange', '#f1c40f':'Gold', '#2ecc71':'Green', '#1abc9c':'Teal', '#3498db':'Sky Blue', '#2c5fd6':'Royal Blue', '#9b59b6':'Purple', '#e84393':'Pink', '#795548':'Brown', '#7f8c8d':'Gray', '#ecf0f1':'White',
     '#ffe0c4':'Porcelain', '#f3c9a0':'Fair', '#d9a273':'Warm Beige', '#b07a4f':'Tan', '#8a5634':'Brown', '#5c3a21':'Deep Brown',
