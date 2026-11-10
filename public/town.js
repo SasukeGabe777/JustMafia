@@ -11,9 +11,16 @@
 
   const L = window.MT_LAYOUT;
   const { W, H, CX, CY, ROAD, SQUARE_R, CEM, POND, TAU, seeded } = L;
-  // Pixel size: the world is drawn into a W/PIX x H/PIX buffer, then upscaled.
-  const PIX = Math.max(1, Number(new URLSearchParams(location.search).get('pix')) || 3);
-  const PIXEL_ON = new URLSearchParams(location.search).get('pixel') !== '0';
+  // Rendering quality. HD (default): the visible view is drawn at the screen's real
+  // resolution with the camera applied while drawing, so pixel art stays sharp at
+  // every zoom. Retro: the classic low-res buffer (1/PIX) plus the palette filter.
+  // Choose in the TV's ⚙ panel (saved per screen) or with ?pix=3 / ?pixel=1.
+  const Q = new URLSearchParams(location.search);
+  const storedGfx = (() => { try { return localStorage.getItem('mt.gfx'); } catch { return null; } })();
+  const RETRO = Q.get('pix') ? Number(Q.get('pix')) > 1 : storedGfx === 'retro';
+  const PIX = Math.max(1, Number(Q.get('pix')) || 3);
+  const PIXEL_ON = Q.get('pixel') != null ? Q.get('pixel') !== '0' : RETRO;
+  const HD_MAX = 1.5; // max buffer pixels per world unit (caps 4K screens at 2880x1620)
   const FONT = "'Pixelify Sans', 'Silkscreen', monospace";
   const lerp = (a, b, t) => a + (b - a) * t;
   const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
@@ -47,8 +54,10 @@
       this.ctx = this.screen;
       this.bg = document.createElement('canvas');
       this.px = document.createElement('canvas');
-      this.px.width = Math.round(W / PIX); this.px.height = Math.round(H / PIX);
-      this.pctx = this.px.getContext('2d', { willReadFrequently: true });
+      this.R = RETRO ? 1 / PIX : 1; // buffer pixels per world unit (set again on resize)
+      this.px.width = Math.round(W * this.R); this.px.height = Math.round(H * this.R);
+      // The palette filter reads pixels back; only then keep the buffer CPU-side.
+      this.pctx = this.px.getContext('2d', { willReadFrequently: PIXEL_ON });
       this.cam = { ...L.SPOTS.overview };
       this.camAnim = null;
       this.held = new Set();
@@ -94,6 +103,9 @@
       this.scale = s;
       this.offX = (cw - W * s) / 2;
       this.offY = (ch - H * s) / 2;
+      // HD: match the screen's real pixels (capped); retro: the fixed low-res buffer.
+      this.R = RETRO ? 1 / PIX : Math.max(0.5, Math.min(HD_MAX, s * dpr));
+      this.px.width = Math.round(W * this.R); this.px.height = Math.round(H * this.R);
       this.renderBackground();
     }
 
@@ -563,12 +575,22 @@
     }
 
     // ---------- drawing ----------
+    // The static map is cached: one copy at exactly the view resolution (copied 1:1
+    // each frame, cheap), and in HD a 2x copy built on demand for zoomed cinematics.
     renderBackground() {
-      const bg = this.bg;
-      bg.width = this.px.width;
-      bg.height = this.px.height;
-      const ctx = bg.getContext('2d', { willReadFrequently: true });
-      ctx.setTransform(1 / PIX, 0, 0, 1 / PIX, 0, 0);
+      this.paintBackground(this.bg, this.R);
+      this.bgZoom = null;
+    }
+    backgroundFor(z) {
+      if (RETRO || z < 1.15) return this.bg;
+      if (!this.bgZoom) { this.bgZoom = document.createElement('canvas'); this.paintBackground(this.bgZoom, Math.min(2.5, this.R * 2)); }
+      return this.bgZoom;
+    }
+    paintBackground(bg, bs) {
+      bg.width = Math.round(W * bs);
+      bg.height = Math.round(H * bs);
+      const ctx = bg.getContext('2d', { willReadFrequently: PIXEL_ON });
+      ctx.setTransform(bs, 0, 0, bs, 0, 0);
       const rng = seeded(42);
 
       const pal = this.th.palette;
@@ -733,21 +755,25 @@
       const k = this.scale * this.dpr;
       const cin = this.cinema;
       const interior = cin && cin.active && cin.stage === 'interior';
-      const pctx = this.pctx;
-      pctx.setTransform(1 / PIX, 0, 0, 1 / PIX, 0, 0);
-      pctx.imageSmoothingEnabled = false;
+      // Draw only what the camera sees, straight into the buffer at its resolution, so
+      // zooming re-renders the art crisply instead of enlarging a small image.
+      const cam = interior ? L.SPOTS.overview : this.clampCam(this.cam);
+      const sh = cin ? cin.shakeOffset() : { x: 0, y: 0 };
+      const pctx = this.pctx, S = this.R * cam.z;
+      pctx.setTransform(1, 0, 0, 1, 0, 0);
+      pctx.fillStyle = '#0b0a12'; pctx.fillRect(0, 0, this.px.width, this.px.height);
+      pctx.setTransform(S, 0, 0, S, -(cam.x - W / (2 * cam.z)) * S, -(cam.y - H / (2 * cam.z)) * S);
+      pctx.imageSmoothingEnabled = !RETRO; pctx.imageSmoothingQuality = 'medium';
+      this.drawZoom = cam.z;
       this.ctx = pctx;
       if (interior) cin.drawInteriorStage(pctx);
       else this.drawWorld();
       if (this.lut) window.MTPixel.snap(pctx, this.px.width, this.px.height, this.lut);
 
-      // blit the buffer through the camera, nearest-neighbor
-      const cam = interior ? L.SPOTS.overview : this.clampCam(this.cam);
-      const sh = cin ? cin.shakeOffset() : { x: 0, y: 0 };
+      // Copy the finished view to the screen: 1:1 in HD, chunky nearest-neighbor in retro.
       scr.setTransform(k, 0, 0, k, this.offX * this.dpr, this.offY * this.dpr);
-      scr.imageSmoothingEnabled = false;
-      const vw = W / cam.z, vh = H / cam.z;
-      scr.drawImage(this.px, (cam.x - vw / 2) / PIX, (cam.y - vh / 2) / PIX, vw / PIX, vh / PIX, sh.x, sh.y, W, H);
+      scr.imageSmoothingEnabled = !RETRO && this.px.width !== Math.round(W * k); scr.imageSmoothingQuality = 'medium';
+      scr.drawImage(this.px, 0, 0, this.px.width, this.px.height, sh.x, sh.y, W, H);
 
       // crisp text overlay in world space (follows the camera)
       this.ctx = scr;
@@ -784,7 +810,7 @@
 
     drawWorld() {
       const ctx = this.ctx;
-      ctx.drawImage(this.bg, 0, 0, W, H);
+      ctx.drawImage(this.backgroundFor(this.drawZoom || 1), 0, 0, W, H);
 
       // fountain shimmer
       ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;

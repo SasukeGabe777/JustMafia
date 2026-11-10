@@ -459,6 +459,28 @@ Implementation checklist (updated after verification below):
   pouch shows the shop as closed, and the server refuses buy/equip/look
   changes, leaving the avatar unchanged. Creator e2e still 15/15.
 
+### HD graphics (sharp pixel art)
+
+- Before: the TV drew the whole 1920x1080 map into a 640x360 buffer
+  (`PIX = 3`), snapped every pixel to a limited palette, and scaled the
+  buffer up with nearest-neighbor, again for every camera zoom. The result
+  was heavily pixelated and noisy.
+- Now (HD, the default): the town draws only what the camera sees, straight
+  into a buffer at the screen's real resolution (capped at 1.5 buffer pixels
+  per world unit for 4K), with the camera applied while drawing. Pixel-art
+  sprites, houses, signs and effects stay sharp in wide shots and in 2-3x
+  cinematic close-ups. The static map is cached at view resolution (copied
+  1:1) plus a 2x copy built on demand for zoomed scenes. The palette filter
+  is off in HD.
+- Retro mode keeps the original look (low-res buffer + palette filter): TV
+  ⚙ panel → "🎨 Graphics: HD/Retro" (saved per screen), or `?pix=3`.
+- Validation: the render sweep (1512 runs, 0 errors) runs in HD. Headless
+  Chrome with the GPU disabled measured 60 fps retro vs 50 fps HD at
+  1920x1080 with 30 players (33 fps before the cached-background
+  optimization). Real browsers with GPU acceleration should hold 60; not yet
+  measured on the actual TV. Side-by-side screenshots of a wide view and a
+  zoomed cinematic were reviewed.
+
 The historical phases below describe earlier iterations; this completion audit
 supersedes their pending markers for features implemented above.
 

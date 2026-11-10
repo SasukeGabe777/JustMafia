@@ -243,6 +243,16 @@
   $('#lobby-start').addEventListener('click', () => { SFX.unlock(); act('start'); });
   $('#lobby-bots').addEventListener('click', () => act('addBots', { count: 5 }));
 
+  // ---------- graphics: HD (sharp) or Retro (chunky low-res + palette filter) ----------
+  {
+    const get = () => { try { return localStorage.getItem('mt.gfx') === 'retro' ? 'retro' : 'hd'; } catch { return 'hd'; } };
+    const btn = $('#btn-gfx');
+    if (btn) {
+      btn.textContent = `🎨 Graphics: ${get() === 'retro' ? 'Retro' : 'HD'}`;
+      btn.addEventListener('click', () => { try { localStorage.setItem('mt.gfx', get() === 'retro' ? 'hd' : 'retro'); } catch { /* private mode */ } location.reload(); });
+    }
+  }
+
   // ---------- game over ----------
   function renderGameOver() {
     const show = state.phase === 'gameover' && state.winner;
