@@ -1,5 +1,16 @@
 # Mafia Town: expansion plan
 
+## November 10, 2026 - shared GitHub development
+
+Gabe/Codex and Justin/Claude collaborate in
+`https://github.com/SasukeGabe777/JustMafia` using separate local checkouts,
+task branches, and reviewed pull requests. Shared agent instructions are in
+`AGENTS.md`; `CLAUDE.md` directs Claude to them. `docs/COLLABORATION.md`
+documents task claiming, integration, conflict handling, tests, and handoffs.
+A pull request template records overlap and actual validation. Main-branch
+protection is recommended but has not been configured by this local change.
+Documentation changes passed `git diff --check`; no game code changed.
+
 ## November 9, 2026 — Storyteller / original-art update
 
 This section supersedes older pending markers below. The supplied Gather packs
