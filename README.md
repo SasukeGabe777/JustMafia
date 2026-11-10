@@ -4,8 +4,8 @@ A big-screen social deduction party game for 3–100 players. The TV shows an an
 
 ## Contributing together
 
-Gabe/Codex and Justin/Claude use separate task branches and reviewed pull
-requests. Read [AGENTS.md](AGENTS.md) and the
+Gabe/Codex and Justin/Claude use separate task branches, merged into `main`
+once tested (pull requests optional). Read [AGENTS.md](AGENTS.md) and the
 [collaboration workflow](docs/COLLABORATION.md) before making changes.
 Claude Code also has a root `CLAUDE.md` pointing to the same rules.
 

@@ -1,8 +1,9 @@
 # Gabe / Codex and Justin / Claude workflow
 
 Both contributors develop the same game in separate local checkouts. Merge
-small, reviewed pull requests into `main`; pull the merged work before starting
-another task. A running LAN server serves its local checkout, not GitHub, and
+small, tested task branches into `main`, directly or through a pull request.
+Gabe and Justin agreed that review is optional. Pull the merged work before
+starting another task. A running LAN server serves its local checkout, not GitHub, and
 does not automatically deploy merged updates.
 
 ## First checkout
@@ -37,8 +38,9 @@ git switch -c claude/short-task
 ```
 
 Codex uses `codex/short-task` instead. Check recent commits, open PRs, and
-`PLAN.md`. Open an issue or draft PR stating who is working, the intended
-behavior, and likely shared files. An issue is a notice, not an exclusive lock.
+`PLAN.md`. For larger or overlapping work, optionally open an issue or draft PR
+stating who is working, the intended behavior, and likely shared files. An
+issue is a notice, not an exclusive lock.
 Coordinate overlapping work through GitHub comments or the other contributor;
 do not assume an agent can see the other person's private chat.
 
@@ -71,24 +73,33 @@ results. Test UI in the browser when possible; document any unavailable checks.
 Push the integrated branch normally. If `main` advances again in a conflicting
 area, integrate and validate again before merge.
 
-Have the other contributor review and merge the PR. If the author merges after
-explicit agreement, use GitHub's normal PR merge; do not force-push main.
+Then merge into `main`, either directly or through a PR:
+
+```sh
+git switch main
+git pull --ff-only origin main
+git merge claude/short-task
+git push origin main
+```
+
+A PR review is optional. Request one when you want a second opinion. Never
+force-push `main`; if the push is rejected, fetch, integrate and retest.
 After merge, each contributor updates a clean local main using
 `git pull --ff-only origin main`. Run `npm ci` when dependencies changed.
 Coordinate server restarts: restarting ends in-memory party sessions.
 
 ## Handoff
 
-Each PR describes the problem, resulting behavior, affected systems, checks
-actually completed, and limitations. Update the relevant `PLAN.md` section.
-End an agent session with the branch, commit, PR URL, and any uncommitted work
+Each merge (commit message or PR) describes the problem, resulting behavior,
+affected systems, checks actually completed, and limitations. Update the
+relevant `PLAN.md` section. End an agent session with the branch, commit, PR
+URL or pushed `main` commit, and any uncommitted work
 or overlap warnings. Do not treat a chat promise as a shared GitHub update.
 
 ## Repository settings Gabe should enable on GitHub
 
-For `main`, use branch protection or a ruleset (where available) requiring a
-pull request and one approval, preventing force pushes and deletion, and
-dismissing stale approvals after new commits. Once CI exists, require its
-checks and an up-to-date branch before merging. These settings must be enabled
+For `main`, use branch protection or a ruleset (where available) that prevents
+force pushes and deletion. Because direct merges are allowed, do not require
+pull requests or approvals. Once CI exists, consider requiring its checks. These settings must be enabled
 on GitHub; these documents alone do not enforce them. Existing collaborator
 write access does not itself prevent a direct push.

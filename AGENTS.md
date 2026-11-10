@@ -13,22 +13,25 @@ changing code. Do not assume an old chat describes the current checkout.
   inspect recent commits and open pull requests when GitHub access is available.
   Preserve uncommitted work. Do not silently stash, discard, or overwrite it.
 - Start new work from current `origin/main` on a task branch named
-  `codex/<short-task>` or `claude/<short-task>`. Use a pull request to merge.
-  Do not push feature work directly to `main`.
-- Claim a task in a GitHub issue or draft PR before substantial edits. Describe
+  `codex/<short-task>` or `claude/<short-task>`. Pull requests are optional:
+  Gabe and Justin agreed that a tested task branch, already integrated with the
+  latest `origin/main`, may be merged into `main` and pushed directly. Never
+  commit work-in-progress straight onto `main`.
+- Optionally claim larger tasks in a GitHub issue or draft PR first. Describe
   the scope and files likely to overlap. If the other contributor is working
   in the same area, coordinate the boundary before making overlapping changes.
   Task claims are coordination notices, not automatic file locks.
 - Keep changes focused. Do not include unrelated refactors, mass formatting,
   or dependency upgrades in a feature branch.
-- Before requesting merge, fetch again, merge `origin/main` into the task
+- Before merging into `main`, fetch again, merge `origin/main` into the task
   branch, resolve conflicts preserving both contributors' intended behavior,
   and rerun the relevant checks on that integrated result. If the intended
   behavior is unclear, ask the contributor rather than choosing a whole side.
 - Never force-push, rewrite shared history, use destructive resets/cleans, or
   replace files wholesale to resolve a conflict. Prefer ordinary merge commits.
 - Report branch, commit, changed behavior, tests actually run, remaining limits,
-  and PR URL. If network/authentication prevents syncing, say so explicitly;
+  and PR URL or pushed `main` commit. If network/authentication prevents
+  syncing, say so explicitly;
   do not claim work is pushed or current with GitHub.
 - After a merge, update local `main` with `git pull --ff-only` before starting
   the next task. Never restart an active party server without coordinating.
