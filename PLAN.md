@@ -538,6 +538,45 @@ Implementation checklist (updated after verification below):
   persists after refresh; no auto-replay; replay doesn't pay twice; no page
   errors.
 
+### Hooded executioner, character rig, and the Executioner role
+
+- Animation upgrade: characters now have a small limb rig in
+  `character-art.js`: `lean` (the body tilts from the feet), `arms` (each arm
+  rotates from its shoulder joint), a real stride (feet lift in turn), and
+  `dragged` (heels planted). Cinema tethers (`grab` / `release`) lock a dragged
+  character's wrist to the dragger's hand, so they're physically pulled along,
+  leaning back, with dust at their heels. A follow camera keeps moving action
+  framed. A redesigned gallows has a raised deck, stairs, a lever and a
+  trapdoor that swings open; the trapdoor drop falls through and jerks to a
+  stop on the rope; a noose rope is drawn to the neck while standing.
+- The execution is now done by one anonymous hooded executioner NPC (black
+  full-face hood, no player's look). They grip the condemned by the wrist,
+  drag them across the square and up the stairs onto the trapdoor, place the
+  noose, then walk to the lever and pull it. Then X eyes, the rope gives way,
+  bleed out, decay, bones, reveal and last words. The townsfolk react where
+  they stand; there is no mob, so no scene figure can be read as a voter.
+  Interrupted and Bodyguard variants use the same drag.
+- New Town role: Executioner (🪓). Once per game, during the verdict, they
+  may reveal themselves and die in the condemned's place. The scene, "Saved by
+  the Executioner": at the noose the hooded executioner stops and unmasks (the
+  Executioner's own character, public by their choice), frees the condemned,
+  puts the noose on themselves and drops. Priority: interruption >
+  Executioner > Bodyguard. Their role is public from then on
+  (`revealedExecutioner`).
+- Hood of Mercy (`hat:executionerHood`): a crimson, gold-trimmed full-face hood,
+  an achievement reward ("Save someone as the Executioner") unlocked through
+  the normal end-of-game rewards.
+- Validation: Executioner expansion test (only that role gets the option,
+  priority over the Bodyguard, the condemned survives, role secret before and
+  public after, once per game, an interruption still wins and doesn't spend
+  the sacrifice, the hood is locked until earned, then buy and equip). The
+  render sweep (1627 runs) checks that no scene figure wears a player's look
+  (public or anonymous votes), the executioner is the hooded NPC dragging by
+  the wrist, and unmasking reveals the Executioner while the condemned lives.
+  The expression test confirms full-face hoods hide the face. Execution e2e
+  still 5/5. Limits: the preview tool's frozen screenshots don't animate
+  the follow camera; check the close framing on the live TV.
+
 ### Cinematic vote executions with interventions (mystery first)
 
 - When a vote eliminates someone (only then), the TV plays a new execution

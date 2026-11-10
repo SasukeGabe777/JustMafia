@@ -38,6 +38,8 @@
     ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.scale(o.scale || 1, o.scale || 1);
     ctx.globalAlpha *= o.alpha == null ? 1 : o.alpha;
     ctx.fillStyle = 'rgba(9,13,18,.25)'; ctx.beginPath(); ctx.ellipse(0, 0, 13, 4, 0, 0, TAU); ctx.fill();
+    // Rig: lean the whole body from the feet (pulling forward, resisting backward).
+    if (o.lean) ctx.rotate(o.lean);
     ctx.translate(0, -(o.walking ? Math.abs(step) : Math.sin(t * 2) * 0.5) - (o.jump || 0)); if (o.spin) ctx.rotate(o.spin);
     if (av.effect && av.effect !== 'none') for (let i = 0; i < 5; i++) { const a = t * .8 + i * 1.25; ctx.fillStyle = av.effect === 'embers' ? '#e7a969' : '#b9d88d'; ctx.fillRect(Math.cos(a) * 22, -22 + Math.sin(a * 1.3) * 28, 1, 2); }
     const rect = (c, a, b, w, h) => { ctx.fillStyle = c; ctx.fillRect(Math.round(a), Math.round(b), w, h); };
@@ -47,20 +49,31 @@
     const cloak = ['traveler', 'assassin', 'noble', 'royalGuard', 'storyteller', 'ghostHunter'].includes(outfit);
     if (av.accessory === 'backpack' || av.accessory === 'satchel') { rect('#392c26', -14, -29, 28, 22); rect('#8e7048', -13, -28, 6, 19); }
     if (cloak) { rect('#20242c', -14, -32, 28, 26); rect(dark, -13, -31, 26, 25); rect(light, -13, -31, 3, 20); }
-    rect('#19222e', -9 + step, -13, 7, 13); rect('#19222e', 2 - step, -13, 7, 13);
-    rect(av.pants || '#355879', -8 + step, -12, 5, 10); rect(av.pants || '#355879', 3 - step, -12, 5, 10);
+    // Stride: when walking, each foot lifts in turn (not just a sideways shuffle).
+    // Dragged characters plant their heels instead (feet forward, no steps).
+    const lL = o.walking ? Math.max(0, Math.sin(t * 11)) * 3 : 0, lR = o.walking ? Math.max(0, -Math.sin(t * 11)) * 3 : 0;
+    const heel = o.dragged ? (o.dragged > 0 ? 3 : -3) : 0;
+    rect('#19222e', -9 + step + heel, -13 - lL, 7, 13); rect('#19222e', 2 - step + heel, -13 - lR, 7, 13);
+    rect(av.pants || '#355879', -8 + step + heel, -12 - lL, 5, 10); rect(av.pants || '#355879', 3 - step + heel, -12 - lR, 5, 10);
     const boots = ['leatherBoots', 'tallBoots', 'armoredBoots'].includes(av.shoeStyle), shoeY = av.shoeStyle === 'tallBoots' ? -10 : boots ? -7 : -4;
-    rect('#1a1a20', -10 + step, shoeY, 9, -shoeY); rect('#1a1a20', 2 - step, shoeY, 9, -shoeY);
-    rect(av.shoes || '#33251d', -9 + step, shoeY, 7, -shoeY - 1); rect(av.shoes || '#33251d', 3 - step, shoeY, 7, -shoeY - 1);
+    rect('#1a1a20', -10 + step + heel, shoeY - lL, 9, -shoeY); rect('#1a1a20', 2 - step + heel, shoeY - lR, 9, -shoeY);
+    rect(av.shoes || '#33251d', -9 + step + heel, shoeY - lL, 7, -shoeY - 1); rect(av.shoes || '#33251d', 3 - step + heel, shoeY - lR, 7, -shoeY - 1);
     if (av.shoeStyle === 'sandals') { rect(skin, -8 + step, -5, 6, 3); rect(skin, 3 - step, -5, 6, 3); }
     if (av.shoeStyle === 'armoredBoots') { rect('#aab5ba', -9 + step, -6, 7, 3); rect('#aab5ba', 3 - step, -6, 7, 3); }
     if (av.shoeStyle === 'nobleShoes') { rect('#d2b474',-11+step,-3,8,2); rect('#d2b474',4-step,-3,8,2); }
     rect('#23232b', -11, -33, 22, 24); rect(cloth, -9, -32, 18, 22); rect(light, -9, -31, 4, 17); rect(dark, 6, -30, 3, 20);
     if (robe) for (let row = 0; row < 5; row++) { rect('#24232c', -10 - row, -17 + row * 2, 20 + row * 2, 2); rect(cloth, -9 - row, -17 + row * 2, 18 + row * 2, 2); }
     const arm = o.walking ? Math.round(step) : 0;
-    rect('#28242a', -14, -29 - arm, 5, 15); rect('#28242a', 9, -29 + arm, 5, 15);
-    rect(armored ? '#89959a' : dark, -13, -28 - arm, 4, 10); rect(armored ? '#b9c2bd' : cloth, 10, -28 + arm, 3, 10);
-    rect(skin, -13, -18 - arm, 4, 4); rect(skin, 10, -18 + arm, 4, 4);
+    if (o.arms) {
+      // Rig: each arm rotates from its shoulder joint (0 = hanging down; + swings it
+      // toward screen-left, - toward screen-right). Used for gripping, pulling, raising.
+      const limb = (sx, angle, sleeve) => { ctx.save(); ctx.translate(sx, -29); ctx.rotate(angle || 0); rect('#28242a', -2.5, 0, 5, 15); rect(sleeve, -1.5, 1, 3.5, 10); rect(skin, -2, 11, 4, 4); ctx.restore(); };
+      limb(-11.5, o.arms.l, armored ? '#89959a' : dark); limb(11.5, o.arms.r, armored ? '#b9c2bd' : cloth);
+    } else {
+      rect('#28242a', -14, -29 - arm, 5, 15); rect('#28242a', 9, -29 + arm, 5, 15);
+      rect(armored ? '#89959a' : dark, -13, -28 - arm, 4, 10); rect(armored ? '#b9c2bd' : cloth, 10, -28 + arm, 3, 10);
+      rect(skin, -13, -18 - arm, 4, 4); rect(skin, 10, -18 + arm, 4, 4);
+    }
     rect('#4c3529', -10, -15, 20, 3); rect('#d2b474', 0, -15, 3, 3);
     if (armored) { rect('#48505b', -9, -30, 18, 13); rect('#bec6bf', -8, -29, 15, 10); rect('#7c8990', 1, -29, 5, 10); rect('#d6bb7b', -2, -26, 4, 6); }
     if (['farmer', 'worker', 'overalls'].includes(outfit)) { rect('#455a61', -8, -27, 3, 16); rect('#455a61', 5, -27, 3, 16); rect('#455a61', -7, -22, 14, 10); rect('#d1b586', -5, -23, 2, 2); }
@@ -99,6 +112,16 @@
     // Brows sit over the fringe so raised/lowered brows stay visible on every hairstyle.
     for (const [x, y, w, h] of brows) rect(browColor, x, y, w, h);
     const hat = av.hat;
+    // Executioner hoods cover the whole head and face (only eye holes show).
+    // 'execHood' is the anonymous NPC executioner; 'executionerHood' is the Hood of Mercy cosmetic.
+    if (hat === 'execHood' || hat === 'executionerHood') {
+      const mercy = hat === 'executionerHood', c = mercy ? '#8e1f2c' : '#17161b', c2 = mercy ? '#6a1420' : '#0d0c10';
+      rect('#09080b', -13, -63, 26, 32); rect(c, -12, -62, 24, 30); rect(c2, 6, -60, 6, 27);
+      rect(c, -7, -67, 14, 6); rect(c, -3, -70, 6, 4); rect(c, -15, -36, 30, 5); // peak + shoulders
+      rect('#050406', -8 + eyeX, -47, 6, 4); rect('#050406', 2 + eyeX, -47, 6, 4); // eye holes
+      rect(mercy ? '#f3d27a' : '#c8b9a4', -6 + eyeX, -46, 2, 2); rect(mercy ? '#f3d27a' : '#c8b9a4', 4 + eyeX, -46, 2, 2);
+      if (mercy) { rect('#d6af53', -12, -33, 24, 2); rect('#d6af53', -1, -60, 2, 8); rect('#d6af53', -3, -57, 6, 2); }
+    }
     if (hat === 'bandana') { rect('#9c4d4d',-12,-55,24,5); rect('#c37b65',-10,-54,20,1); rect('#9c4d4d',10,-51,6,13); }
     if (['hood', 'plagueHat'].includes(hat)) { rect(dark, -14, -59, 28, 9); rect(dark, -14, -51, 4, 18); rect(dark, 10, -51, 4, 18); if (hat === 'plagueHat') { rect('#d7d0b8', -6, -43, 16, 7); rect('#a29b83', 9, -41, 8, 3); } }
     else if (['wizardHat', 'party'].includes(hat)) { for (let i = 0; i < 7; i++) rect(hat === 'party' ? '#af6c99' : '#3d526b', -i * 2, -73 + i * 3, i * 4 + 2, 3); rect('#c1aa75', -16, -54, 32, 3); }

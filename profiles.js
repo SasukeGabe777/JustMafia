@@ -110,7 +110,7 @@ class ProfileStore {
     const m = result.metrics || {}, s = p.stats, lines = [];
     s.games++; if (result.won) { s.wins++; if (result.team === 'mafia') s.mafiaWins++; if (result.role === 'jester') s.jesterWins++; }
     if (result.alive) s.survived++;
-    for (const key of ['saves', 'correctInvestigations', 'objectives']) s[key] += Math.max(0, m[key] || 0);
+    for (const key of ['saves', 'correctInvestigations', 'objectives', 'executionerSaves']) s[key] = (s[key] || 0) + Math.max(0, m[key] || 0);
     const add = (key, label, amount) => { if (amount > 0) lines.push({ key, label, amount }); };
     const capped = (n, cap) => Math.min(cap, Math.max(0, n || 0));
     add('completed', 'Finished the game', R.completed);

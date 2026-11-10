@@ -58,9 +58,15 @@ test('Every expression looks different for every hairstyle (brows survive the fr
   }
 });
 test('Every expression looks different under every hat and accessory', () => {
-  for (const hat of O.hats) for (const accessory of O.accessory) {
+  // Full-face hoods (the Hood of Mercy) hide the face by design; checked separately below.
+  for (const hat of O.hats.filter((h) => h !== 'executionerHood')) for (const accessory of O.accessory) {
     assertDistinct(O.expression.map((expression) => draw({ ...base, hat, accessory, expression })), O.expression, `hat ${hat} / ${accessory}`);
   }
+});
+test('Full-face hoods hide the face (and its expression) completely', () => {
+  const frames = O.expression.map((expression) => draw({ ...base, hat: 'executionerHood', expression }));
+  for (const f of frames) assert.equal(diff(f, frames[0]), 0);
+  assert(diff(frames[0], draw({ ...base, expression: 'smile' })) > 50, 'the hood visibly covers the head');
 });
 test('Face markings are independent of expression', () => {
   const plain = draw({ ...base, expression: 'grin' });

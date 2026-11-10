@@ -625,6 +625,7 @@
       <p class="muted">The crowd is gathering at the gallows…</p>
       ${o.canInterrupt ? `<button class="btn${sel('interrupt')}" data-intervene="interrupt">🛑 Interrupt the execution <small>(secretly, once per game)</small></button>` : ''}
       ${o.canProtect ? `<button class="btn${sel('protect')}" data-intervene="protect">🛡 Take their place <small>(you die instead, once per game)</small></button>` : ''}
+      ${o.canSacrifice ? `<button class="btn${sel('sacrifice')}" data-intervene="sacrifice">🪓 Reveal yourself as the Executioner <small>(die in their place; everyone will see, once per game)</small></button>` : ''}
       ${o.chose ? '<button class="btn ghost" data-intervene="cancel">Change my mind</button>' : ''}
       ${o.canDefend ? `<button class="btn ghost${o.defended ? ' sel' : ''}" data-intervene="${o.defended ? 'cancel' : 'defend'}">${o.defended ? '🙅 You are defending them (tap to stop)' : '🙅 Defend them <small>(everyone will see you try)</small>'}</button>` : ''}
     </div>`;

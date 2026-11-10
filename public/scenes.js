@@ -53,22 +53,44 @@
     [t + 3.4, 'letterbox', false],
   ];
 
-  // The hanging sequence (vote executions), reused for whoever goes to the noose:
-  // thrown up, hanged; eyes turn to X's; the rope gives way; bleeds out; decays to bones.
-  const HANGING = (id, t, finish) => [
-    [t, 'move', { id, to: 'hangFeet', dur: 0.45, gait: 'run' }], [t, 'sfx', 'whoosh'], [t, 'mobJump'],
-    [t + 0.45, 'hang', { id }], [t + 0.45, 'sfx', 'sting'], [t + 0.45, 'shake', 0.6], [t + 0.45, 'flash', { a: 0.5, color: '255,240,220' }],
-    [t + 0.6, 'camera', { to: { from: 'gallows', dx: 0, dy: -85 }, zoom: 2.7, dur: 1.2 }],
-    [t + 0.8, 'loop', { sfx: 'heartbeat', every: 0.55, until: t + 3 }],
-    [t + 1.0, 'mobBubble', { lines: ['…', 'It is done.', 'Was it them?'], count: 2, dur: 1.8 }],
-    [t + 1.2, 'crowd', { count: 4, lines: ['!', 'Gasp!', 'Oh no…'], dur: 1.6 }],
-    [t + 3.2, 'xeyes', { id }], [t + 3.2, 'music', 'eerie'], [t + 3.2, 'sfx', 'reveal'],
-    [t + 4.7, 'drop', { id, to: 'dropSpot' }],
-    [t + 4.8, 'prop', { type: 'pool', at: 'dropSpot', dur: 4.2 }],
-    [t + 5.0, 'camera', { to: { from: 'dropSpot', dy: -10 }, zoom: 2.9, dur: 1.2 }],
-    [t + 6.6, 'decay', { id, dur: 4 }],
-    [t + 6.8, 'mobFade', { dur: 1.2 }],
-    [t + 9.8, 'prop', { type: 'bones', at: 'dropSpot' }],
+  // ----- Vote-execution building blocks (character-driven, no teleporting) -----
+  // The hooded executioner grips `who` by the wrist and drags them (tethered, heels
+  // sliding) across the square, up the stairs and onto the trapdoor, then raises
+  // both arms to put the noose over their head. Ends with `who` noosed at ~t+6.6.
+  const DRAG = (who, t) => [
+    [t, 'grab', { id: who, by: 'exec', gap: 28 }], [t, 'bubble', { id: who, text: 'No! Please!', dur: 1.4 }],
+    [t + 0.3, 'move', { id: 'exec', to: 'stairsBottom', dur: 3.0, gait: 'walk', ease: 'linear' }],
+    [t + 0.3, 'loop', { sfx: 'step', every: 0.42, until: t + 5.2 }],
+    [t + 0.3, 'follow', { id: 'exec', zoom: 2.9, dx: -16, dy: 42 }], // the camera stays on the pair
+    [t + 1.6, 'bubble', { id: who, text: 'I’m innocent!', dur: 1.4 }],
+    [t + 3.3, 'move', { id: 'exec', to: 'stairsTop', dur: 1.3, gait: 'walk', ease: 'linear' }],
+    [t + 4.6, 'move', { id: 'exec', to: 'trapRight', dur: 0.9, gait: 'walk' }],
+    [t + 5.5, 'release', { id: who, by: 'exec' }], [t + 5.5, 'move', { id: who, to: 'trap', dur: 0.3 }],
+    [t + 5.8, 'follow', {}], [t + 5.8, 'arms', { id: 'exec', l: 2.7, r: -2.7 }], [t + 5.8, 'camera', { to: { from: 'gallows', dx: 0, dy: -70 }, zoom: 2.7, dur: 1.0 }],
+    [t + 6.3, 'noose', { id: who }], [t + 6.3, 'bubble', { id: who, text: '…', dur: 1.2 }],
+    [t + 6.6, 'arms', { id: 'exec' }],
+  ];
+  // The executioner walks to the lever and pulls it: the trapdoor opens and `who` drops.
+  const LEVER = (who, t) => [
+    [t, 'move', { id: 'exec', to: 'lever', dur: 0.7, gait: 'walk' }],
+    [t + 0.8, 'arms', { id: 'exec', l: 0.2, r: -1.4, lean: -0.08 }], [t + 0.8, 'loop', { sfx: 'heartbeat', every: 0.5, until: t + 1.1 }],
+    [t + 1.1, 'arms', { id: 'exec', l: 0.2, r: -0.4, lean: 0.06 }], [t + 1.1, 'lever'],
+    ...DROP(who, t + 1.1),
+  ];
+  const DROP = (who, t) => [
+    [t, 'hang', { id: who }], [t, 'sfx', 'sting'], [t, 'shake', 0.6], [t, 'flash', { a: 0.45, color: '255,240,220' }],
+    [t + 0.3, 'crowd', { count: 4, lines: ['!', 'Gasp!', 'Oh no…'], dur: 1.6 }],
+    [t + 1.4, 'crowd', { count: 3, lines: ['…', 'It is done.', 'Was it them?'], dur: 1.8 }],
+  ];
+  // After the drop: eyes turn to X's; the rope gives way; bleeds out; decays to bones.
+  const DEATH = (who, t, finish) => [
+    [t + 2.2, 'xeyes', { id: who }], [t + 2.2, 'music', 'eerie'], [t + 2.2, 'sfx', 'reveal'],
+    [t + 3.8, 'drop', { id: who, to: 'dropSpot' }],
+    [t + 3.9, 'prop', { type: 'pool', at: 'dropSpot', dur: 4.2 }],
+    [t + 4.1, 'camera', { to: { from: 'dropSpot', dy: -10 }, zoom: 2.9, dur: 1.2 }],
+    [t + 5.6, 'decay', { id: who, dur: 4 }],
+    [t + 5.8, 'alpha', { id: 'exec', to: 0, dur: 1.2 }],
+    [t + 8.8, 'prop', { type: 'bones', at: 'dropSpot' }],
     ...finish,
   ];
   const SCENES = {
@@ -210,61 +232,84 @@
         [0, 'camera', { to: { from: 'gallows', dx: -150, dy: -20 }, zoom: 1.8, dur: 1.4 }],
         [0, 'prop', { type: 'gallows', at: 'gallows' }],
         [0.2, 'spawn', { id: 'victim', kind: 'resident', at: 'accused' }],
-        [0.2, 'mob', { count: 7, at: 'accused', r: 300 }],
-        [0.4, 'mobMove', { to: 'accused', r: 62, dur: 1.7, gait: 'run' }],
-        [0.6, 'mobBubble', { lines: ['Guilty!', 'Get them!', 'Liar!', 'Traitor!', 'Seize them!'], count: 4, dur: 1.6 }],
+        // The townsfolk watch from where they stand; only the hooded executioner acts.
+        [0.8, 'crowd', { count: 4, lines: ['Guilty!', 'Justice!', 'Hmm…', '…'], dur: 1.6 }],
         [0.9, 'scared', { id: 'victim' }], [0.9, 'bubble', { id: 'victim', text: 'Wait—!', dur: 1.2 }],
-        [1.0, 'sfx', 'drum'], [1.6, 'loop', { sfx: 'drum', every: 0.75, until: 5.5 }],
+        [1.0, 'sfx', 'drum'], [1.6, 'loop', { sfx: 'drum', every: 0.75, until: 7.5 }],
         [1.2, 'crowd', { count: 4, lines: ['!', 'Oh no…', 'Hmm…', '…'], dur: 1.6 }],
-        // Friends who chose to defend them rush in, argue, and are pushed back.
+        // The hooded executioner walks up to the condemned.
+        [0.3, 'executioner', { at: 'offstage' }],
+        [0.4, 'move', { id: 'exec', to: { from: 'accused', dx: 30 }, dur: 1.6, gait: 'walk' }],
+        [0.4, 'follow', { id: 'exec', zoom: 2.6, dx: -20, dy: 40 }],
+        // Friends who chose to defend them rush in and argue.
         [1.2, 'defenders', { at: 'accused' }, { when: 'defenders' }],
-        [1.4, 'defendersMove', { to: 'accused', dx: -78, dur: 0.8 }, { when: 'defenders' }],
+        [1.4, 'defendersMove', { to: 'accused', dx: -70, dur: 0.8 }, { when: 'defenders' }],
         [2.0, 'defendersBubble', { lines: ['Stop!', 'They’re innocent!', 'Leave them!', 'No!'], dur: 1.6 }, { when: 'defenders' }],
-        // Seized and carried overhead to the gallows.
-        [2.3, 'carry', { id: 'victim', lift: 34 }], [2.3, 'mobJump'],
-        [2.5, 'mobMove', { to: 'gallowsStep', r: 46, dur: 3.0, gait: 'walk', turn: 0.3 }],
-        [2.5, 'move', { id: 'victim', to: 'gallowsStep', dur: 3.0, gait: 'walk' }],
-        [2.6, 'defendersMove', { to: 'gallowsStep', dx: -170, dur: 2.6, gait: 'walk' }, { when: 'defenders' }],
-        [2.7, 'camera', { to: { from: 'gallows', dx: -60, dy: -40 }, zoom: 2.1, dur: 2.8 }],
-        [3.4, 'mobBubble', { lines: ['To the gallows!', 'Justice!', 'Up they go!'], count: 3, dur: 1.6 }],
-        [3.6, 'bubble', { id: 'victim', text: 'No!!', dur: 1.2 }],
-        [3.8, 'defendersBubble', { lines: ['Please…', 'You’re wrong!'], dur: 1.4 }, { when: 'defenders' }],
       ],
       outcomes: {
-        executed: { name: 'Executed', duration: 23.6, steps: [
-          ...HANGING('victim', 5.6, [[16.0, 'execute']]),
-          [8.9, 'defendersBubble', { lines: ['NO…', '…', 'Why…'], dur: 2 }, { when: 'defenders' }],
+        executed: { name: 'Executed', duration: 26.4, steps: [
+          ...DRAG('victim', 2.1),
+          [3.0, 'defendersMove', { to: 'stairsBottom', dx: -60, dur: 2.4, gait: 'walk' }, { when: 'defenders' }],
+          [4.2, 'defendersBubble', { lines: ['Please…', 'You’re wrong!'], dur: 1.4 }, { when: 'defenders' }],
+          ...LEVER('victim', 8.8),
+          [11.2, 'defendersBubble', { lines: ['NO…', '…', 'Why…'], dur: 2 }, { when: 'defenders' }],
+          ...DEATH('victim', 9.9, [[18.8, 'execute']]),
           // The reveal (role shown only when the game reveals roles on death), then last words.
-          [16.2, 'title', { text: '{name} has been eliminated', sub: '{sub}', color: '#ffd36b', dur: 3.4, band: true }],
-          [19.7, 'title', { text: '“{lastWords}”', sub: '{name}’s last words', color: '#e8e4ff', dur: 3.2, band: true }, { when: 'lastWords' }],
-          [22.4, 'camera', { to: 'overview', dur: 1.0 }], [23.0, 'letterbox', false],
+          [19.0, 'title', { text: '{name} has been eliminated', sub: '{sub}', color: '#ffd36b', dur: 3.4, band: true }],
+          [22.5, 'title', { text: '“{lastWords}”', sub: '{name}’s last words', color: '#e8e4ff', dur: 3.2, band: true }, { when: 'lastWords' }],
+          [25.2, 'camera', { to: 'overview', dur: 1.0 }], [25.8, 'letterbox', false],
         ] },
-        // A Bodyguard throws themselves in and is hanged instead (they die publicly).
-        swapped: { name: 'Bodyguard takes their place', duration: 22.6, steps: [
-          [4.4, 'spawnGuard', { at: 'gallowsStep' }],
-          [4.5, 'move', { id: 'guard', to: { from: 'gallowsStep', dx: -26, dy: 6 }, dur: 0.9, gait: 'run' }],
-          [4.7, 'bubble', { id: 'guard', text: 'Take me instead!', dur: 1.8 }],
-          [5.6, 'pose2', { id: 'victim', pose: 'stand' }], [5.6, 'move', { id: 'victim', to: 'accused', dur: 1.6, gait: 'run' }],
-          [5.7, 'carry', { id: 'guard', lift: 34 }], [5.7, 'mobJump'], [5.8, 'bubble', { id: 'victim', text: '?!', dur: 1.2 }],
-          ...HANGING('guard', 6.6, [[17.0, 'executeId', { key: 'guardId' }]]),
-          [17.2, 'title', { text: '{guard} took {name}’s place', sub: '{sub}', color: '#ffd36b', dur: 3.8, band: true }],
-          [21.2, 'camera', { to: 'overview', dur: 1.0 }], [21.9, 'letterbox', false],
+        // A Bodyguard rushes in; the executioner lets the condemned go and drags the Bodyguard instead.
+        swapped: { name: 'Bodyguard takes their place', duration: 27.6, steps: [
+          [1.8, 'spawnGuard', { at: 'accused' }],
+          [1.9, 'move', { id: 'guard', to: { from: 'accused', dx: 6, dy: 12 }, dur: 0.9, gait: 'run' }],
+          [2.4, 'bubble', { id: 'guard', text: 'Take me instead!', dur: 1.8 }],
+          [3.0, 'move', { id: 'victim', to: { from: 'accused', dx: -260, dy: 20 }, dur: 1.6, gait: 'run' }], [3.0, 'bubble', { id: 'victim', text: '?!', dur: 1.2 }],
+          ...DRAG('guard', 3.3),
+          ...LEVER('guard', 10.0),
+          ...DEATH('guard', 11.1, [[20.0, 'executeId', { key: 'guardId' }]]),
+          [20.2, 'title', { text: '{guard} took {name}’s place', sub: '{sub}', color: '#ffd36b', dur: 3.8, band: true }],
+          [26.2, 'camera', { to: 'overview', dur: 1.0 }], [26.9, 'letterbox', false],
         ] },
-        // A masked figure (identity never shown) breaks it up; the condemned escapes.
-        interrupted: { name: 'Interrupted', duration: 12.6, steps: [
-          [4.8, 'spawnMasked', { id: 'masked', at: { from: 'gallowsStep', dx: -220, dy: 24 }, facing: 1, fadeIn: 0.3 }],
-          [4.9, 'move', { id: 'masked', to: { from: 'gallowsStep', dx: -34, dy: 6 }, dur: 0.6, gait: 'run' }],
-          [5.5, 'smoke', { at: 'gallowsStep' }], [5.5, 'flash', { a: 0.7 }], [5.5, 'shake', 0.6], [5.5, 'sfx', 'whoosh'],
-          [5.6, 'pose2', { id: 'victim', pose: 'stand' }],
-          [5.6, 'mobMove', { to: 'gallowsStep', r: 170, dur: 1.0, gait: 'run' }],
-          [5.7, 'mobBubble', { lines: ['Huh?!', 'Who was that?!', 'After them!', 'Smoke!'], count: 4, dur: 1.6 }],
-          [5.8, 'move', { id: 'victim', to: { from: 'accused', dx: -320, dy: 10 }, dur: 1.8, gait: 'run' }],
-          [5.8, 'move', { id: 'masked', to: { from: 'accused', dx: -350, dy: 40 }, dur: 1.6, gait: 'run' }],
-          [6.6, 'alpha', { id: 'masked', to: 0, dur: 0.8 }], [6.9, 'alpha', { id: 'victim', to: 0, dur: 0.8 }],
-          [6.9, 'defendersBubble', { lines: ['Yes!', 'Run!'], dur: 1.4 }, { when: 'defenders' }],
-          [7.2, 'music', 'tension'],
+        // Mid-drag, a masked figure (identity never shown) throws smoke; the condemned escapes.
+        interrupted: { name: 'Interrupted', duration: 13.4, steps: [
+          [2.1, 'grab', { id: 'victim', by: 'exec', gap: 28 }], [2.1, 'bubble', { id: 'victim', text: 'No! Please!', dur: 1.4 }],
+          [2.4, 'move', { id: 'exec', to: 'stairsBottom', dur: 3.0, gait: 'walk', ease: 'linear' }], [2.4, 'follow', { id: 'exec', zoom: 2.8, dx: -40, dy: 42 }], [4.6, 'follow', {}],
+          [3.6, 'spawnMasked', { id: 'masked', at: { from: 'accused', dx: -260, dy: 30 }, facing: 1, fadeIn: 0.3 }],
+          [3.7, 'move', { id: 'masked', to: { from: 'stairsBottom', dx: -150, dy: 14 }, dur: 0.9, gait: 'run' }],
+          [4.6, 'smoke', { at: { from: 'stairsBottom', dx: -100 } }], [4.6, 'flash', { a: 0.7 }], [4.6, 'shake', 0.6], [4.6, 'sfx', 'whoosh'],
+          [4.6, 'release', { id: 'victim', by: 'exec' }], [4.6, 'move', { id: 'exec', to: { from: 'stairsBottom', dx: -60 }, dur: 0.1 }],
+          [4.7, 'arms', { id: 'exec', l: 2.4, r: -2.4 }], [4.7, 'bubble', { id: 'exec', text: '?!', dur: 1.4 }],
+          [4.8, 'crowd', { lines: ['Huh?!', 'Who was that?!', 'After them!', 'Smoke!'], count: 4, dur: 1.6 }],
+          [4.9, 'move', { id: 'victim', to: { from: 'accused', dx: -340, dy: 10 }, dur: 1.8, gait: 'run' }],
+          [4.9, 'move', { id: 'masked', to: { from: 'accused', dx: -370, dy: 40 }, dur: 1.6, gait: 'run' }],
+          [5.8, 'alpha', { id: 'masked', to: 0, dur: 0.8 }], [6.1, 'alpha', { id: 'victim', to: 0, dur: 0.8 }],
+          [6.1, 'defendersBubble', { lines: ['Yes!', 'Run!'], dur: 1.4 }, { when: 'defenders' }],
+          [7.0, 'arms', { id: 'exec' }],
           [7.4, 'title', { text: 'The execution was interrupted!', sub: '{name} escaped… for now', color: '#9fe0ff', dur: 3.4, band: true }],
-          [11.0, 'camera', { to: 'overview', dur: 1.0 }], [11.8, 'letterbox', false],
+          [11.8, 'camera', { to: 'overview', dur: 1.0 }], [12.6, 'letterbox', false],
+        ] },
+        // Saved by the Executioner: at the noose, the hooded executioner stops, pulls off the
+        // hood (the Executioner, revealed by their own choice), frees the condemned and takes
+        // their place.
+        executioner: { name: 'Saved by the Executioner', duration: 27.4, steps: [
+          ...DRAG('victim', 2.1),
+          [8.9, 'bubble', { id: 'exec', text: '…', dur: 1.2 }], [9.0, 'music', 'tension'],
+          [9.8, 'unmask', { id: 'exec', key: 'executionerId' }],
+          [9.8, 'crowd', { lines: ['!!', 'It’s…!', 'No way!'], count: 4, dur: 1.6 }],
+          [10.3, 'bubble', { id: 'exec', text: 'Not today.', dur: 1.6 }],
+          [11.0, 'noose', { id: 'victim', on: false }], [11.0, 'arms', { id: 'exec', l: 2.6, r: -2.6 }],
+          [11.4, 'arms', { id: 'exec' }],
+          [11.5, 'move', { id: 'victim', to: 'stairsTop', dur: 0.6, gait: 'run' }],
+          [12.1, 'move', { id: 'victim', to: 'stairsBottom', dur: 0.7, gait: 'run' }],
+          [12.8, 'move', { id: 'victim', to: { from: 'accused', dx: -40 }, dur: 1.2, gait: 'run' }],
+          [11.6, 'move', { id: 'exec', to: 'trap', dur: 0.5, gait: 'walk' }],
+          [12.2, 'arms', { id: 'exec', l: 2.7, r: -2.7 }], [12.6, 'noose', { id: 'exec' }], [12.9, 'arms', { id: 'exec' }],
+          [13.2, 'bubble', { id: 'exec', text: 'Live well.', dur: 1.6 }],
+          [14.6, 'lever'], ...DROP('exec', 14.6),
+          ...DEATH('exec', 14.6, [[23.6, 'executeId', { key: 'executionerId' }]]),
+          [23.8, 'title', { text: 'Saved by the Executioner', sub: '{guard} gave their life so {name} could live', color: '#ffd36b', dur: 3.2, band: true }],
+          [26.4, 'camera', { to: 'overview', dur: 0.8 }], [27.0, 'letterbox', false],
         ] },
       },
     },

@@ -14,7 +14,9 @@
   const { drawCharacter, drawShadowFigure, roundRect, shade } = window.MTArt;
   const L = window.MT_LAYOUT;
   const { W, H, CX, CY, TAU } = L;
-  const GALLOWS = { x: CX + 140, y: CY + 70, beam: 126 }; // ground center of the vote-execution gallows
+  // Vote-execution gallows (world units at scale 1): ground center x,y; a raised
+  // platform with stairs on the left, a trapdoor in the middle and a lever on the right.
+  const GALLOWS = { x: CX + 140, y: CY + 70, beam: 150, deck: 40 };
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const lerp = (a, b, t) => a + (b - a) * t;
   const EASE = {
@@ -253,9 +255,12 @@
       ctx.globalAlpha *= 1 - clamp((d - 0.55) / 0.45, 0, 1);
     }
     if (a.pose === 'hang') {
-      // Swings from the gallows beam: rope from the anchor down to the neck.
-      const sway = Math.sin((t - (a.hangT || 0)) * 3.2) * 0.28 * Math.exp(-(t - (a.hangT || 0)) * 0.35);
-      const ropeLen = Math.max(8, a.y - 33 * s - a.anchorY);
+      // Trapdoor drop: falls from the deck, jerks to a stop on the rope, then sways from the beam.
+      const since = t - (a.hangT || 0), dp = clamp(since / 0.22, 0, 1);
+      const jerk = since > 0.22 ? Math.sin((since - 0.22) * 22) * 3 * s * Math.exp(-(since - 0.22) * 5) : 0;
+      const feetY = (a.dropFrom != null ? lerp(a.dropFrom, a.y, dp * dp) : a.y) + jerk;
+      const sway = Math.sin(since * 3.2) * 0.22 * Math.exp(-since * 0.35) * dp;
+      const ropeLen = Math.max(8, feetY - 33 * s - a.anchorY);
       ctx.translate(a.x, a.anchorY); ctx.rotate(sway);
       ctx.strokeStyle = '#c9a66b'; ctx.lineWidth = 2.2 * s; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, ropeLen + 4 * s); ctx.stroke();
       ctx.fillStyle = '#8a6a3a'; ctx.fillRect(-5 * s, ropeLen - 1 * s, 10 * s, 3 * s); // noose knot
@@ -280,7 +285,9 @@
     } else {
       const cower = a.pose === 'cower';
       if (cower) ctx.scale(1, 0.92);
-      drawCharacter(ctx, 0, 0, a.avatar, { theme: a.theme, t, scale: s, walking: a.walking, facing: a.facing || 0, scared: a.scared || cower, alpha: a.alpha, jump: a.jump || 0 });
+      // Standing with the noose on: the rope runs from the beam down to the neck.
+      if (a.noosed && a.anchorY != null) { ctx.strokeStyle = '#c9a66b'; ctx.lineWidth = 2.2 * s; ctx.beginPath(); ctx.moveTo(0, a.anchorY - a.y); ctx.lineTo(0, -31 * s); ctx.stroke(); ctx.fillStyle = '#8a6a3a'; ctx.fillRect(-5 * s, -34 * s, 10 * s, 3 * s); }
+      drawCharacter(ctx, 0, 0, a.avatar, { theme: a.theme, t, scale: s, walking: a.walking, facing: a.facing || 0, scared: a.scared || cower, alpha: a.alpha, jump: a.jump || 0, arms: a.arms, lean: a.lean, dragged: a.dragged, dead: a.dead });
     }
     ctx.restore();
   }
@@ -480,7 +487,7 @@
       if (oc) steps = steps.concat(oc.steps);
       steps = steps.filter((s) => this.cond(s[3])).sort((a, b) => a[0] - b[0]);
       this.scene = { ...item, steps, idx: 0, t: 0, duration: (oc && oc.duration) || def.duration, phaseBound: !!item.opts.phaseBound };
-      this.actors.clear(); this.fx = []; this.loops = []; this.title = null; this.spot = null; this.props = [];
+      this.actors.clear(); this.fx = []; this.loops = []; this.title = null; this.spot = null; this.props = []; this.camFollow = null;
       this.room = this.freshRoom();
       this.stage = 'town';
       this.environment = null; this.snapshot = false;
@@ -504,7 +511,7 @@
       this.stage = 'town';
       this.letterTarget = 0;
       this.fadeTo(0, interrupted ? 0.2 : 0.5);
-      this.actors.clear(); this.loops = []; this.spot = null; this.title = null; this.fogTarget = 0; this.props = [];
+      this.actors.clear(); this.loops = []; this.spot = null; this.title = null; this.fogTarget = 0; this.props = []; this.camFollow = null;
       town.focusSpot('overview', interrupted ? 0.5 : 1.4);
       town.cineDark = null;
       this.environment = null; this.snapshot = false;
@@ -560,6 +567,19 @@
       }
       this.loops = this.loops.filter((l) => l.next <= l.until);
       for (const a of this.actors.values()) this.updateActor(a, sc.t);
+      // Tethers: a dragged character is held by the wrist and pulled along behind its
+      // leader, leaning back with heels sliding (dust kicks up while moving).
+      for (const a of this.actors.values()) if (a.follow) {
+        const L = this.actors.get(a.follow.id); if (!L) { a.follow = null; continue; }
+        const side = L.facing >= 0 ? -1 : 1, s = a.scale || 1;
+        a.x = L.x + side * a.follow.gap * s; a.y = L.y + (a.follow.dy || 0);
+        a.lean = side * 0.32 + Math.sin(sc.t * 9) * 0.04; a.dragged = side < 0 ? 1 : -1; a.walking = false;
+        L.arms = side < 0 ? { l: 1.15, r: -0.15 } : { l: 0.15, r: -1.15 }; L.lean = -side * 0.14;
+        a.arms = side < 0 ? { l: 0.2, r: -1.25 } : { l: 1.25, r: -0.2 };
+        if (L.walking && Math.random() < 0.35) this.fx.push({ type: 'puff', x: a.x - side * 4 * s, y: a.y, vx: side * 20, vy: -10, g: 0, r: 4 * s, life: 0.6, max: 0.6, stage: this.stage });
+      }
+      // Follow camera: keeps a moving actor framed (e.g. the executioner dragging someone).
+      if (this.camFollow) { const A = this.actors.get(this.camFollow.id); if (A) this.town.focus(A.x + (this.camFollow.dx || 0), A.y - (this.camFollow.dy || 40), this.camFollow.zoom || 2.8, 0.35); }
       const r = this.room;
       if (r.doorAnim) {
         const p = clamp((sc.t - r.doorAnim.t0) / r.doorAnim.dur, 0, 1);
@@ -628,9 +648,17 @@
         // execution (vote) scene: the gallows stands on the square, right of the fountain
         case 'gallows': return { x: GALLOWS.x, y: GALLOWS.y };
         case 'gallowsStep': return { x: GALLOWS.x - 78, y: GALLOWS.y + 18 };
-        case 'hangFeet': return { x: GALLOWS.x, y: GALLOWS.y - 64 };
-        case 'dropSpot': return { x: GALLOWS.x + 2, y: GALLOWS.y + 16 };
+        case 'crowdFront': return { x: GALLOWS.x - 40, y: GALLOWS.y + 70 };
+        case 'stairsBottom': return { x: GALLOWS.x - 122, y: GALLOWS.y + 4 };
+        case 'stairsTop': return { x: GALLOWS.x - 66, y: GALLOWS.y - GALLOWS.deck + 1 };
+        case 'trap': return { x: GALLOWS.x, y: GALLOWS.y - GALLOWS.deck + 1 };
+        case 'trapLeft': return { x: GALLOWS.x - 30, y: GALLOWS.y - GALLOWS.deck + 1 };
+        case 'trapRight': return { x: GALLOWS.x + 30, y: GALLOWS.y - GALLOWS.deck + 1 };
+        case 'lever': return { x: GALLOWS.x + 44, y: GALLOWS.y - GALLOWS.deck + 1 };
+        case 'hangFeet': return { x: GALLOWS.x, y: GALLOWS.y - 8 };
+        case 'dropSpot': return { x: GALLOWS.x + 2, y: GALLOWS.y + 22 };
         case 'accused': return { x: CX - 190, y: CY + 115 };
+        case 'offstage': return { x: CX - 470, y: CY + 150 };
         // story locations: where the victim stands, and where the attacker comes from (the town side)
         case 'place': case 'placeBehind': case 'placeFrom': case 'placeAway': case 'placeWater': {
           const P = L.PLACES && L.PLACES[this.ctx.place];
@@ -867,11 +895,38 @@
     a_mobJump() { for (const id of this.mob || []) { const x = this.actors.get(id); if (x) x.jumpUntil = this.scene.t + 0.4 + Math.random() * 0.2; } }
     a_mobFade(a) { for (const id of this.mob || []) this.a_alpha({ id, to: 0, dur: a.dur || 0.8 }); }
     a_carry(a) { const x = this.actors.get(a.id); if (x) { x.pose = 'carried'; x.lift = a.lift || 34; } }
+    anchorY(x) { return GALLOWS.y - (GALLOWS.beam - 4) * ((x.scale || 0.756) / 0.756); } // the beam, at the gallows' scale
+    // The trapdoor opens under someone in the noose: they drop through and hang.
     a_hang(a) {
       const x = this.actors.get(a.id); if (!x) return;
-      x.pose = 'hang'; x.hangT = this.scene.t; x.move = null; x.walking = false;
-      const feet = this.pt('hangFeet'), ps = (x.scale || 0.756) / 0.756; // same scale the gallows prop uses
-      x.x = feet.x; x.y = feet.y; x.anchorY = GALLOWS.y - (GALLOWS.beam - 2) * ps;
+      const feet = this.pt('hangFeet');
+      x.dropFrom = x.noosed ? x.y : null; x.noosed = false;
+      x.pose = 'hang'; x.hangT = this.scene.t; x.move = null; x.walking = false; x.follow = null; x.arms = null; x.lean = 0; x.dragged = 0;
+      x.x = feet.x; x.y = feet.y; x.anchorY = this.anchorY(x);
+    }
+    // The executioner (anonymous NPC: black hood, face hidden, no player's look).
+    a_executioner(a) {
+      const p = this.pt(a.at || 'offstage');
+      this.actors.set(a.id || 'exec', { id: a.id || 'exec', kind: 'resident', stage: 'town', x: p.x, y: p.y, facing: 1, pose: 'stand', alpha: 1, eyes: 1, theme: this.town.themeId, scale: this.townScale() * 1.12, walking: false,
+        avatar: { color: '#1d1c22', skin: '#c49a7a', hat: 'execHood', hair: 'bald', outfit: 'worker', pants: '#202027', shoes: '#151821', shoeStyle: 'leatherBoots', accessory: 'none', facialHair: 'none', features: 'none', expression: 'serious' } });
+    }
+    // Grab by the wrist: `id` is now dragged behind `by` wherever they walk.
+    a_grab(a) { const x = this.actors.get(a.id); if (x) { x.follow = { id: a.by || 'exec', gap: a.gap || 30, dy: a.dy || 2 }; x.pose = 'stand'; x.lift = 0; x.scared = true; SFX.play('hit'); } }
+    a_release(a) { const x = this.actors.get(a.id); if (x) { x.follow = null; x.lean = 0; x.dragged = 0; x.arms = null; } const L = this.actors.get(a.by || 'exec'); if (L) { L.arms = null; L.lean = 0; } }
+    a_follow(a) { this.camFollow = a && a.id ? { id: a.id, zoom: a.zoom, dx: a.dx, dy: a.dy } : null; }
+    // Pose limbs directly (radians from the shoulder; see character-art rig).
+    a_arms(a) { const x = this.actors.get(a.id); if (x) { x.arms = a.l == null && a.r == null ? null : { l: a.l || 0, r: a.r || 0 }; if (a.lean != null) x.lean = a.lean; } }
+    // The noose goes over the head: a rope now runs from the beam to their neck.
+    a_noose(a) { const x = this.actors.get(a.id); if (x) { x.noosed = a.on !== false; x.anchorY = this.anchorY(x); SFX.play('click'); } }
+    // The lever: the trapdoor swings open.
+    a_lever() { const g = (this.props || []).find((p) => p.type === 'gallows'); if (g) { g.open = this.scene.t; } SFX.play('creak'); this.shake = 0.4; }
+    // Unmask: the hood comes off and the Executioner's real character is revealed (public by their choice).
+    a_unmask(a) {
+      const x = this.actors.get(a.id || 'exec'), c = this.town.chars.get(this.ctx.bind[a.key || 'executionerId']);
+      if (!x || !c) return;
+      this.town.hold(c.id); x.avatar = { ...c.avatar }; x.revealed = true;
+      this.flash = { a: 0.7, color: '255,240,200' }; SFX.play('reveal');
+      for (let i = 0; i < 14; i++) this.fx.push({ type: 'spark', x: x.x, y: x.y - 50 * (x.scale || 1), vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 90, g: 260, color: i % 2 ? '#17161b' : '#3a3a42', size: 3, life: 0.9, max: 0.9, stage: this.stage });
     }
     // The rope gives way: the body drops to the ground in front of the gallows.
     a_drop(a) {
@@ -890,14 +945,24 @@
     drawProp(ctx, p, t) {
       const s = p.scale / 0.756, r = (c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(p.x + x * s, p.y + y * s, w * s, h * s); };
       if (p.type === 'gallows') {
-        r('rgba(0,0,0,.25)', -66, -2, 132, 8);
-        r('#3b2616', -62, -22, 124, 22); r('#7a5232', -62, -24, 124, 5); for (let i = -56; i < 60; i += 14) r('#5a3b22', i, -19, 2, 19); // platform
-        r('#2a1a10', -14, -24, 28, 3); // trapdoor
-        for (let i = 0; i < 4; i++) r('#6b4628', -88 + i * 7, -6 - i * 5, 10, 5); // steps
-        r('#3b2616', -48, -GALLOWS.beam - 4, 9, GALLOWS.beam - 20); r('#5a3b22', -46, -GALLOWS.beam - 4, 3, GALLOWS.beam - 20); // post
-        r('#3b2616', -52, -GALLOWS.beam - 10, 64, 9); r('#5a3b22', -52, -GALLOWS.beam - 10, 64, 2); // beam
-        ctx.strokeStyle = '#3b2616'; ctx.lineWidth = 5 * s; ctx.beginPath(); ctx.moveTo(p.x - 44 * s, p.y - (GALLOWS.beam - 26) * s); ctx.lineTo(p.x - 18 * s, p.y - (GALLOWS.beam + 4) * s); ctx.stroke();
-        if (!this.hanging()) { ctx.strokeStyle = '#c9a66b'; ctx.lineWidth = 2.2 * s; ctx.beginPath(); ctx.moveTo(p.x, p.y - (GALLOWS.beam - 2) * s); ctx.lineTo(p.x, p.y - 96 * s); ctx.stroke(); ctx.beginPath(); ctx.ellipse(p.x, p.y - 90 * s, 5 * s, 7 * s, 0, 0, TAU); ctx.stroke(); }
+        const D = GALLOWS.deck, B = GALLOWS.beam, open = p.open != null ? clamp((t - p.open) / 0.25, 0, 1) : 0;
+        r('rgba(0,0,0,.28)', -76, -2, 160, 9); // shadow
+        // raised deck: front boards, posts, top planks; dark gap under the trapdoor once it opens
+        r('#2e1d10', -64, -D, 128, D); for (let i = -60; i < 64; i += 12) r('#5a3b22', i, -D + 4, 10, D - 6);
+        r('#3b2616', -64, -D - 4, 128, 6); r('#7a5232', -64, -D - 5, 128, 3);
+        if (open) { r('#0c0806', -16, -D - 4, 32, D + 2); r('#4a3018', -16, -D - 4 + open * 4, 4, 14 * open); r('#4a3018', 12, -D - 4 + open * 4, 4, 14 * open); }
+        else { r('#2a1a10', -16, -D - 5, 32, 3); r('#4a3018', -1, -D - 5, 2, 3); }
+        // stairs up the left side
+        for (let i = 0; i < 6; i++) { const sx = -122 + i * 9, sy = -i * (D / 6); r('#3b2616', sx, sy - D / 6 - 1, 12, D / 6 + 1 + i * (D / 6)); r('#7a5232', sx, sy - D / 6 - 1, 12, 2); }
+        // upright, crossbeam and brace
+        r('#2e1d10', -50, -B - 4, 10, B - D); r('#5a3b22', -48, -B - 4, 3, B - D);
+        r('#2e1d10', -54, -B - 10, 68, 10); r('#5a3b22', -54, -B - 10, 68, 2);
+        ctx.strokeStyle = '#2e1d10'; ctx.lineWidth = 5 * s; ctx.beginPath(); ctx.moveTo(p.x - 45 * s, p.y - (B - 30) * s); ctx.lineTo(p.x - 18 * s, p.y - (B + 4) * s); ctx.stroke();
+        // lever on the right of the deck (pulled = tilted toward the trapdoor)
+        const lv = open ? -0.9 : 0.5; ctx.save(); ctx.translate(p.x + 48 * s, p.y - (D + 4) * s); ctx.rotate(lv); ctx.fillStyle = '#4a4a52'; ctx.fillRect(-1.5 * s, -18 * s, 3 * s, 18 * s); ctx.fillStyle = '#a8323a'; ctx.fillRect(-3 * s, -21 * s, 6 * s, 5 * s); ctx.restore();
+        r('#3a3a42', 44, -D - 6, 9, 4);
+        // empty noose when no one is in it
+        if (!this.hanging() && ![...this.actors.values()].some((a) => a.noosed)) { ctx.strokeStyle = '#c9a66b'; ctx.lineWidth = 2.2 * s; ctx.beginPath(); ctx.moveTo(p.x, p.y - (B - 4) * s); ctx.lineTo(p.x, p.y - (D + 48) * s); ctx.stroke(); ctx.beginPath(); ctx.ellipse(p.x, p.y - (D + 42) * s, 5 * s, 7 * s, 0, 0, TAU); ctx.stroke(); }
       } else if (p.type === 'pool') {
         const g = clamp((t - p.t0) / p.dur, 0, 1), rad = (6 + 26 * EASE.out(g)) * s;
         ctx.fillStyle = '#5c0b10'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 2 * s, rad * 1.3, rad * 0.42, 0, 0, TAU); ctx.fill();

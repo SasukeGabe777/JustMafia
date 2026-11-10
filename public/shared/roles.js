@@ -92,9 +92,12 @@
     sorcerer: { name: 'Sorcerer', team: 'town', emoji: '🪄', color: '#789fd0', night: { kind: 'investigate', targets: 'others', reveal: 'role' }, blurb: 'Learn the exact role of one player, including the Godfather. Drunk, poison or malfunction can corrupt the information you receive.' },
     hustler: { name: 'Hustler', team: 'mafia', knowsTeam: true, emoji: '⏳', color: '#cc9f5f', night: { kind: 'hustle', targets: 'any', optional: true }, blurb: 'Once per game, rush the next daytime discussion to 40% of its normal length (minimum 15 seconds). Nomination speeches keep their own configured timers.' },
     alchemist: { name: 'Alchemist', team: 'mafia', knowsTeam: true, emoji: '⚗', color: '#6dbba4', night: { kind: 'midas', targets: 'others', optional: true }, blurb: 'Two distinct potions. Midas marks a living target: if eliminated the next day, a Mafia member inherits their supported active ability and its remaining uses. Volatile returns a dead Mafia teammate for one day, then they turn to ash permanently.' },
+    // Verdict-window role: once per game, reveal yourself during an execution and
+    // die in the condemned's place ("Saved by the Executioner"). The reveal is public.
+    executioner: { name: 'Executioner', team: 'town', emoji: '🪓', color: '#7a1f2b', blurb: 'Once per game, during any execution, you may reveal yourself as the Executioner and give your own life in place of the condemned. Everyone will see it. Wins with Town.' },
     storymaker: { name: 'Storymaker', team: 'town', emoji: '📜', color: '#e3bf80', night: { kind: 'interrupt', targets: 'any', optional: true }, blurb: 'Once per game, interrupt the night with a town crier and an emergency vote. After the verdict, resume the interrupted night with its still-valid actions and remaining time. Wins with Town.' },
   });
-  const ROLE_ORDER = ['mafia', 'godfather', 'roleblocker', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'detective', 'sheriff', 'sorcerer', 'investigator', 'doctor', 'bodyguard', 'vigilante', 'detonator', 'storymaker', 'mayor', 'telepath', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'jester', 'serialKiller', 'villager'];
+  const ROLE_ORDER = ['mafia', 'godfather', 'roleblocker', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'detective', 'sheriff', 'sorcerer', 'investigator', 'doctor', 'bodyguard', 'executioner', 'vigilante', 'detonator', 'storymaker', 'mayor', 'telepath', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'jester', 'serialKiller', 'villager'];
   const GHOST_WORDS = ['IS', 'NOT', 'LIAR', 'TRUST', 'WATCH', 'DANGER', 'SAFE', 'MAYBE', 'TOGETHER', 'ALONE'];
 
   const TEAMS = {

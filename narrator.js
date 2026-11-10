@@ -123,6 +123,7 @@ Object.assign(LINES.classic, {
 // Execution interventions (the interrupter is never named; a Bodyguard who dies is).
 Object.assign(LINES.classic, {
   interrupted: ['A masked figure storms the gallows! In the chaos, {name} slips away. The execution is called off.', 'Smoke fills the square. When it clears, the noose hangs empty. {name} lives, for now.'],
+  executionerSave: ['At the noose, the executioner stops… and pulls off the hood. It is {name}, the Executioner. They set {condemned} free and take their place.', 'Saved by the Executioner! {name} reveals themselves and gives their life so {condemned} may live.'],
   swapped: ['{name} throws themselves in front of {condemned} and takes their place at the gallows.{role}', 'At the last moment, {name} pushes {condemned} aside. The town’s justice falls on {name} instead.{role}'],
 });
 // Update 4: where a lone night victim was found (AI narrator only). {host} is

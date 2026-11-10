@@ -59,7 +59,7 @@ const DEFAULT_SETTINGS = {
 
 const ENV_SPEED = Number(process.env.MT_SPEED) || 1; // test knob: >1 makes every phase faster
 // Phase lengths that wait for the big screen's cinematics (see public/scenes.js).
-const CINE_MS = { roleReveal: 14000, dawn: 8000, dawnEvent: 15200, morning: 8000, verdict: 7500, execution: 24000, noExecution: 4500 }; // execution = the vote-elimination scene (up to 23.6s)
+const CINE_MS = { roleReveal: 14000, dawn: 8000, dawnEvent: 15200, morning: 8000, verdict: 7500, execution: 28500, noExecution: 4500 }; // execution = the vote-elimination scene (up to 27.6s)
 
 const HARD_MIN_PLAYERS = 3;
 const HARD_MAX_PLAYERS = 100;
@@ -312,11 +312,11 @@ class Room {
       alive: true, role: null, originalRole: null, spectator: false, investigations: [], notes: [],
       diedDay: null, deathCause: null, deathOrder: null, shotsLeft: 0, telepathSent: 0, telepathAt: -Infinity, won: null,
       abilityUses: 0, ghostDay: -1, ghostMessage: null, photos: 0, photoPending: null,
-      harmony: 0, objective: null, privateScene: null, interventionUsed: {},
+      harmony: 0, objective: null, privateScene: null, interventionUsed: {}, revealedExecutioner: false,
       statuses: [], actionUses: {}, actionDays: {}, copiedAbility: null, stolenAbilities: [],
       houseState: 'normal', ghostVoteUsed: false, whispersUsed: 0, whisperAt: -Infinity, whispers: [],
       ghostChat: [], nominations: 0, ashes: false, potions: { midas: 0, volatile: 0 },
-      mimicUsed: false, mimicActed: false, metrics: { abilities: 0, saves: 0, correctInvestigations: 0, objectives: 0 }, savedTargets: [],
+      mimicUsed: false, mimicActed: false, metrics: { abilities: 0, saves: 0, correctInvestigations: 0, objectives: 0, executionerSaves: 0 }, savedTargets: [],
     });
   }
 
@@ -736,7 +736,7 @@ class Room {
     this.voteHistory.push({ day: this.day, votes: entries.map(({ voterId, targetId }) => ({ voterId, targetId })), eliminatedId });
     this.pending = { eliminatedId, tie, votes: best };
     // Verdict window: interventions, defenders and last words for the condemned (resolved at execution).
-    this.verdictActs = eliminatedId ? { condemnedId: eliminatedId, voters: entries.filter((e) => e.targetId === eliminatedId).map((e) => e.voterId), interrupt: null, protect: null, defenders: [], lastWords: null } : null;
+    this.verdictActs = eliminatedId ? { condemnedId: eliminatedId, voters: entries.filter((e) => e.targetId === eliminatedId).map((e) => e.voterId), interrupt: null, protect: null, sacrifice: null, defenders: [], lastWords: null } : null;
     this.addLog(`Votes: ${entries.map((e) => `${this.nameOf(e.voterId)}→${this.nameOf(e.targetId)}${e.weight > 1 ? `(x${e.weight})` : ''}`).join(', ') || 'none'}.`, true);
     this.narrate('votesIn');
     const shown = this.settings.anonymousVotes ? entries.map((e) => ({ voterId: null, targetId: e.targetId })) : entries.map(({ voterId, targetId }) => ({ voterId, targetId }));
@@ -758,8 +758,9 @@ class Room {
       condemnedId: V.condemnedId, condemnedName: condemned.name, isCondemned: me,
       canInterrupt: on && !me && p.role === 'roleblocker' && !used.interrupt,
       canProtect: on && !me && p.role === 'bodyguard' && !used.protect,
+      canSacrifice: on && !me && p.role === 'executioner' && !used.sacrifice,
       canDefend: !me, defended: V.defenders.includes(p.id),
-      chose: V.interrupt === p.id ? 'interrupt' : V.protect === p.id ? 'protect' : null,
+      chose: V.interrupt === p.id ? 'interrupt' : V.sacrifice === p.id ? 'sacrifice' : V.protect === p.id ? 'protect' : null,
       lastWords: me && this.settings.lastWords ? { words: LAST_WORDS, names: this.alive().filter((x) => x.id !== p.id).map((x) => ({ id: x.id, name: x.name })), chosen: V.lastWords } : null,
     };
   }
@@ -768,8 +769,9 @@ class Room {
     if (!o) return { ok: false, error: 'Nothing to do right now.' };
     if (kind === 'interrupt' && o.canInterrupt) V.interrupt = p.id;
     else if (kind === 'protect' && o.canProtect) V.protect = p.id;
+    else if (kind === 'sacrifice' && o.canSacrifice) V.sacrifice = p.id;
     else if (kind === 'defend' && o.canDefend) { if (!V.defenders.includes(p.id)) V.defenders.push(p.id); }
-    else if (kind === 'cancel') { if (V.interrupt === p.id) V.interrupt = null; if (V.protect === p.id) V.protect = null; V.defenders = V.defenders.filter((id) => id !== p.id); }
+    else if (kind === 'cancel') { if (V.interrupt === p.id) V.interrupt = null; if (V.protect === p.id) V.protect = null; if (V.sacrifice === p.id) V.sacrifice = null; V.defenders = V.defenders.filter((id) => id !== p.id); }
     else return { ok: false, error: 'You can’t do that.' };
     this.sync(); return { ok: true };
   }
@@ -792,11 +794,20 @@ class Room {
     // execution; otherwise a Bodyguard takes the condemned's place. Once per game each.
     const live = (id) => { const x = id && this.players.get(id); return x && x.alive && !x.left ? x : null; };
     const interrupter = p && p.alive && V && this.settings.executionInterventions ? live(V.interrupt) : null;
-    const guard = p && p.alive && V && this.settings.executionInterventions && !interrupter ? live(V.protect) : null;
-    for (const x of [interrupter, guard]) if (x) x.interventionUsed = { ...(x.interventionUsed || {}), [x === interrupter ? 'interrupt' : 'protect']: true };
+    // Priority: interruption > Executioner's sacrifice > Bodyguard.
+    const executioner = p && p.alive && V && this.settings.executionInterventions && !interrupter ? live(V.sacrifice) : null;
+    const guard = p && p.alive && V && this.settings.executionInterventions && !interrupter && !executioner ? live(V.protect) : null;
+    for (const [x, key] of [[interrupter, 'interrupt'], [executioner, 'sacrifice'], [guard, 'protect']]) if (x) x.interventionUsed = { ...(x.interventionUsed || {}), [key]: true };
     const condemned = p;
     let outcome = p && p.alive ? 'executed' : null;
     if (interrupter) { outcome = 'interrupted'; this.addLog(`🛑 ${interrupter.name} interrupted the execution of ${p.name}.`, true); this.narrate('interrupted', { name: p.name }); p = null; }
+    else if (executioner) {
+      // The Executioner reveals themselves (public by choice) and dies in the condemned's place.
+      outcome = 'executioner'; executioner.revealedExecutioner = true;
+      executioner.metrics.executionerSaves = (executioner.metrics.executionerSaves || 0) + 1;
+      this.addLog(`🪓 ${executioner.name} revealed themselves as the Executioner and died in ${p.name}'s place.`);
+      p = executioner;
+    }
     else if (guard) { outcome = 'swapped'; this.addLog(`🛡 ${guard.name} took ${p.name}'s place at the gallows.`, true); p = guard; }
     if (outcome === 'interrupted') {
       if (this.winner !== 'jester') this.winner = this.checkWinner();
@@ -811,6 +822,8 @@ class Room {
         this.winner = 'jester';
         this.jesterId = p.id;
         this.narrate('jesterWin', { name: p.name });
+      } else if (outcome === 'executioner') {
+        this.narrate('executionerSave', { name: p.name, condemned: condemned.name });
       } else if (outcome === 'swapped') {
         this.narrate('swapped', { name: p.name, condemned: condemned.name, role: this.roleSuffix(p) });
       } else {
@@ -840,6 +853,8 @@ class Room {
       mobCount: V ? Math.max(3, Math.min(8, V.voters.length)) : 4,
       defenders: V ? V.defenders.filter((id) => this.players.get(id) && this.players.get(id).alive && (!dead || id !== dead.id)) : [],
       guardId: outcome === 'swapped' ? dead.id : null,
+      // The Executioner revealed themselves by choice, so their identity and role are public.
+      executionerId: outcome === 'executioner' ? dead.id : null,
       lastWords: lw ? { name: lw.name, word: lw.word } : null,
     };
   }
@@ -1231,6 +1246,7 @@ class Room {
   revealedRole(p) {
     if (this.phase === 'gameover') return p.role;
     if (!p.alive && this.settings.revealRoleOnDeath) return p.role;
+    if (p.revealedExecutioner) return 'executioner'; // they revealed it publicly themselves
     return null;
   }
 

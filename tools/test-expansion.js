@@ -176,6 +176,39 @@ test('Executions: interventions resolve on the server, mob identity follows vote
   room.hostAction({ type: 'skip' }); assert.equal(p[3].alive, false, 'skipping the scene never changes the outcome');
   room.destroy();
 });
+test('Executioner role: reveals themselves and dies in the condemned’s place; public by choice; once per game; earns the Hood of Mercy', () => {
+  const C = require('../public/shared/cosmetics');
+  const setup = () => {
+    const g = game(['mafia', 'executioner', 'bodyguard', 'villager', 'villager', 'villager', 'villager'], { revealRoleOnDeath: false });
+    day(g.room); g.room.advance();
+    for (const v of g.p) if (v !== g.p[3]) g.room.vote(v, g.p[3].id);
+    g.room.advance(); assert.equal(g.room.phase, 'verdict'); return g;
+  };
+  let { room, p } = setup();
+  assert(room.playerView(p[1]).verdict.canSacrifice); assert(!room.playerView(p[4]).verdict.canSacrifice, 'only the Executioner');
+  assert.equal(room.playerView(p[4]).players.find((x) => x.id === p[1].id).role, null, 'role secret before the reveal');
+  room.intervene(p[1], 'sacrifice'); room.intervene(p[2], 'protect');
+  room.advance(); const c = room.hostView().cinematic;
+  assert.equal(c.outcome, 'executioner', 'the Executioner goes before the Bodyguard'); assert.equal(c.executionerId, p[1].id); assert.equal(c.condemnedId, p[3].id);
+  assert.equal(p[1].alive, false); assert.equal(p[3].alive, true); assert.equal(p[2].alive, true);
+  assert.equal(room.playerView(p[4]).players.find((x) => x.id === p[1].id).role, 'executioner', 'their role is public: they revealed it themselves');
+  assert.equal(p[1].metrics.executionerSaves, 1); assert.equal(p[1].interventionUsed.sacrifice, true);
+  room.destroy();
+  // The Hood of Mercy is an achievement reward, unlocked by an eligible game where you saved someone.
+  const item = C.CATALOG.find((i) => i.id === 'hat:executionerHood');
+  assert(item && item.achievement === 'executionerSave' && item.cost === 0);
+  const { ProfileStore } = require('../profiles'), store = new ProfileStore(null), id = store.create().id;
+  assert.equal(store.buy(id, 'hat:executionerHood').ok, false, 'locked until earned');
+  const r = store.award(id, 'g-exec', { won: false, alive: false, team: 'town', metrics: { executionerSaves: 1 } });
+  assert(r.lines.some((l) => /Save someone as the Executioner/.test(l.label)));
+  assert(store.buy(id, 'hat:executionerHood').ok); assert(store.equip(id, 'hat:executionerHood').ok); assert.equal(store.view(id).avatar.hat, 'executionerHood');
+  // An interruption still beats everything.
+  ({ room, p } = game(['mafia', 'roleblocker', 'executioner', 'villager', 'villager', 'villager', 'villager'], {}));
+  day(room); room.advance(); for (const v of p) if (v !== p[3]) room.vote(v, p[3].id); room.advance();
+  room.intervene(p[1], 'interrupt'); room.intervene(p[2], 'sacrifice'); room.advance();
+  assert.equal(room.hostView().cinematic.outcome, 'interrupted'); assert.equal(p[2].alive, true); assert.notEqual(p[2].interventionUsed.sacrifice, true, 'an unused sacrifice is not spent');
+  room.destroy();
+});
 test('End-of-game gold: server-calculated breakdown, winners vs losers, paid once, practice games explain why not', () => {
   const { ProfileStore } = require('../profiles'), C = require('../public/shared/cosmetics');
   const play = ({ bots = 0, minutes = 2 } = {}) => {

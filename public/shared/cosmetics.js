@@ -28,6 +28,7 @@
     'houseStyle:darkMansion': 'A towering, gloomy mansion with iron gates and a single candle in the attic. Fits the darkest secrets.',
     'houseStyle:modernHouse': 'Clean lines, big windows and a flat roof. The most futuristic address in town.',
     'houseStyle:rspOffice': 'A tidy yellow-and-blue corporate branch office, courtesy of RSP Supply.',
+    'hat:executionerHood': 'A crimson executioner’s hood trimmed in gold, worn only by those who gave their life on the gallows to save another. Earned by saving someone as the Executioner.',
     'outfit:plagueDoctor': 'The beaked coat of a healer who has seen too much. Earned by saving ten players.',
     'outfit:detectiveCoat': 'A long coat with deep pockets for clues. Earned by identifying five Mafia.',
     'outfit:jester': 'Bells, stripes and zero regrets. Earned by winning as the Jester.',
@@ -35,8 +36,8 @@
     'outfit:ghostHunter': 'Gear for someone who has survived it all. Earned by surviving ten games.',
   };
   const KIND = { hair: 'hairstyle', outfit: 'outfit', hat: 'hat', shoeStyle: 'pair of shoes', accessory: 'accessory', nameplate: 'nameplate', houseDecor: 'house decoration', effect: 'cosmetic effect', houseStyle: 'house design', deathAnim: 'farewell animation' };
-  const ACHIEVEMENTS = { mafiaWins5: { label: 'Win five Mafia games', stat: 'mafiaWins', count: 5 }, saves10: { label: 'Save ten players', stat: 'saves', count: 10 }, jesterWin: { label: 'Win as Jester', stat: 'jesterWins', count: 1 }, investigations5: { label: 'Identify five Mafia', stat: 'correctInvestigations', count: 5 }, survive10: { label: 'Survive ten games', stat: 'survived', count: 10 } };
-  const GATES = { 'outfit:plagueDoctor': 'saves10', 'outfit:detectiveCoat': 'investigations5', 'outfit:jester': 'jesterWin', 'nameplate:mafiaBoss': 'mafiaWins5', 'outfit:ghostHunter': 'survive10' };
+  const ACHIEVEMENTS = { mafiaWins5: { label: 'Win five Mafia games', stat: 'mafiaWins', count: 5 }, saves10: { label: 'Save ten players', stat: 'saves', count: 10 }, jesterWin: { label: 'Win as Jester', stat: 'jesterWins', count: 1 }, investigations5: { label: 'Identify five Mafia', stat: 'correctInvestigations', count: 5 }, survive10: { label: 'Survive ten games', stat: 'survived', count: 10 }, executionerSave: { label: 'Save someone as the Executioner', stat: 'executionerSaves', count: 1 } };
+  const GATES = { 'hat:executionerHood': 'executionerSave', 'outfit:plagueDoctor': 'saves10', 'outfit:detectiveCoat': 'investigations5', 'outfit:jester': 'jesterWin', 'nameplate:mafiaBoss': 'mafiaWins5', 'outfit:ghostHunter': 'survive10' };
   const CATALOG = Object.entries(FIELDS).flatMap(([field, [list, free]]) => (O[list] || []).map((value, index) => {
     const id = field + ':' + value, gated = GATES[id] || null;
     const cost = index < free || gated ? 0 : PRICES[id] != null ? PRICES[id] : field === 'outfit' ? 70 + (index - free) * 8 : 25 + (index - free) * 10;

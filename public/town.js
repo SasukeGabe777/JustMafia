@@ -410,7 +410,7 @@
       const lw = cine.lastWords, lastWordsText = lw ? [lw.name, lw.word].filter(Boolean).join(' … ') : '';
       // Joining or reconnecting mid-execution: don't replay it from the start.
       const late = cine.at != null && this.state && this.state.serverNow != null && this.state.serverNow - cine.at > 4000;
-      const bind = { victimId: condemned.id, outcome: cine.outcome || 'executed', sub, mob: cine.mob, mobCount: cine.mobCount, defenders: cine.defenders || [], guardId: cine.guardId, guardName: dead && cine.guardId ? dead.name : '', lastWordsText };
+      const bind = { victimId: condemned.id, outcome: cine.outcome || 'executed', sub, mob: cine.mob, mobCount: cine.mobCount, defenders: cine.defenders || [], guardId: cine.guardId, executionerId: cine.executionerId, guardName: dead && (cine.guardId || cine.executionerId) ? dead.name : '', lastWordsText };
       if (late || !this.cinema || !this.cinema.play('execution', bind, { phaseBound: true })) { if (dead) this.finishDeath(dead.id); }
     }
 
