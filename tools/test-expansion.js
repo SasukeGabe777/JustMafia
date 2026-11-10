@@ -48,19 +48,56 @@ test('Every appearance option round-trips and locks at start; arbitrary fields r
   assert.deepEqual(p[0].avatar, expected); assert.equal(p[0].name, 'Custom'); assert.deepEqual(room.hostView().players[0].avatar, expected);
   assert.deepEqual(room.playerView(p[0]).you.avatar, expected);
 });
-test('Homes: twelve styles and colors, chosen in the lobby, random when unset, locked at start, public on the TV', () => {
+test('House design: every field saves per player, invalid input sanitized, random when unset, legacy avatar migrates, locked at start', () => {
   assert.equal(O.houseStyle.length, 12); assert.equal(O.houseColor.length, 12);
-  assert(O.houseStyle.includes('tavern') && O.houseStyle.includes('bakery'));
+  for (const list of Object.values(O.HOME_FIELDS)) assert(O[list].length >= 5, list);
   const { room, p } = game(['mafia', 'villager', 'villager', 'villager']);
   room.resetToLobby();
-  for (const x of p) { assert(O.houseStyle.includes(x.avatar.houseStyle)); assert(O.houseColor.includes(x.avatar.houseColor)); }
-  room.updateProfile(p[0], { avatar: { ...p[0].avatar, houseStyle: 'tavern', houseColor: '#c4674f' } });
-  room.updateProfile(p[1], { avatar: { ...p[1].avatar, houseStyle: '<script>', houseColor: 'red;background:url(x)' } });
-  assert.equal(p[0].avatar.houseStyle, 'tavern'); assert.equal(p[0].avatar.houseColor, '#c4674f');
-  assert(O.houseStyle.includes(p[1].avatar.houseStyle)); assert(O.houseColor.includes(p[1].avatar.houseColor));
-  room.startGame(); room.updateProfile(p[0], { avatar: { ...p[0].avatar, houseStyle: 'bakery' } });
-  assert.equal(p[0].avatar.houseStyle, 'tavern');
-  assert.equal(room.hostView().players.find((x) => x.id === p[0].id).avatar.houseStyle, 'tavern');
+  for (const x of p) for (const [k, list] of Object.entries(O.HOME_FIELDS)) assert(O[list].includes(x.homeLook[k]), k);
+  for (const [k, list] of Object.entries(O.HOME_FIELDS)) for (const v of O[list]) { room.updateProfile(p[0], { home: { [k]: v } }); assert.equal(p[0].homeLook[k], v); }
+  room.updateProfile(p[0], { home: { style: 'tavern', wall: '#c4674f', roof: '#2f4f80', door: 'arched', windows: 'stained', yard: 'pumpkins' } });
+  room.updateProfile(p[1], { home: { style: '<script>', wall: 'red;background:url(x)', door: 42 } });
+  assert(O.houseStyle.includes(p[1].homeLook.style) && O.houseColor.includes(p[1].homeLook.wall) && O.doorStyle.includes(p[1].homeLook.door));
+  assert.equal(p[2].homeLook.style === p[0].homeLook.style && p[2].homeLook.door === 'arched', false, 'houses are customized independently');
+  const legacy = room.join({ name: 'Old', avatar: { houseStyle: 'windmill', houseColor: '#a88bc6' } }).player;
+  assert.equal(legacy.homeLook.style, 'windmill'); assert.equal(legacy.homeLook.wall, '#a88bc6'); assert(!('houseStyle' in legacy.avatar));
+  room.kick(legacy.id);
+  const before = { ...p[0].homeLook }; room.startGame();
+  room.updateProfile(p[0], { home: { style: 'bakery' } }); assert.deepEqual(p[0].homeLook, before);
+  assert.deepEqual(room.hostView().players.find((x) => x.id === p[0].id).homeLook, before);
+  assert.deepEqual(room.playerView(p[1]).players.find((x) => x.id === p[0].id).homeLook, before);
+  room.destroy();
+});
+test('House ownership: claim empty plots, move in with an owner (max residents), guests return home when the owner leaves, lobby only', () => {
+  const room = new Room('TEST', null, { headless: true, seed: 3 }); room.updateSettings({ minPlayers: 3 });
+  const [a, b, c, d, e] = ['Ana', 'Ben', 'Cy', 'Di', 'Ed'].map((name) => room.join({ name }).player);
+  assert.deepEqual([a, b, c, d, e].map((x) => room.homeSlot(x)), [0, 1, 2, 3, 4], 'everyone starts in their own house');
+  // Claim an empty plot (gap after a removal), and reject taken plots.
+  room.kick(c.id); assert(room.freePlots().includes(2));
+  assert.equal(room.claimHome(e, { plot: 0 }).ok, false, 'plot taken');
+  assert.equal(room.claimHome(e, { plot: 2 }).ok, true); assert.equal(e.house, 2); assert.equal(room.homeSlot(e), 2);
+  // Move in with Ana; the sign data lists both; Ana stays the owner.
+  assert.equal(room.claimHome(b, { with: a.id }).ok, true);
+  assert.equal(room.homeSlot(b), a.house); assert.deepEqual(room.residentsOf(a).map((x) => x.name), ['Ben']);
+  assert.equal(room.hostView().players.find((x) => x.id === b.id).livesWith, a.id);
+  assert.equal(room.hostView().players.find((x) => x.id === b.id).home, a.house);
+  assert.equal(room.claimHome(d, { with: b.id }).ok, false, 'cannot move in with a guest');
+  assert.equal(room.claimHome(a, { with: a.id }).ok, false, 'cannot move in with yourself');
+  // Capacity: owner + 3 guests.
+  const f = room.join({ name: 'Fi' }).player, g = room.join({ name: 'Gus' }).player;
+  assert.equal(room.claimHome(f, { with: a.id }).ok, true); assert.equal(room.claimHome(g, { with: a.id }).ok, true);
+  assert.equal(room.claimHome(d, { with: a.id }).ok, false, 'house full');
+  // Seat numbers ("PLAYER N") stay unique even when sharing a house.
+  assert.equal(new Set(room.list().map((x) => x.house)).size, room.list().length);
+  // The owner moving in elsewhere sends their guests home; so does the owner leaving.
+  assert.equal(room.claimHome(a, { with: d.id }).ok, true);
+  assert.equal(room.homeSlot(b), b.house); assert.equal(f.livesWith, null);
+  assert.equal(room.claimHome(b, { with: d.id }).ok, true); room.kick(d.id);
+  assert.equal(room.homeSlot(a), a.house); assert.equal(room.homeSlot(b), b.house);
+  // Going back to your own house, then locked once the game starts.
+  assert.equal(room.claimHome(e, { with: a.id }).ok, true); assert.equal(room.claimHome(e, { own: true }).ok, true); assert.equal(room.homeSlot(e), e.house);
+  assert.equal(room.claimHome(b, { with: a.id }).ok, true); room.startGame();
+  assert.equal(room.claimHome(b, { own: true }).ok, false); assert.equal(room.homeSlot(b), a.house, 'residency survives game start');
   room.destroy();
 });
 test('Expressions: every option saves, legacy "serious" migrates, invalid falls back, locked at start, public', () => {

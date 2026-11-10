@@ -13,14 +13,19 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     assert(!store.award(auth.id, 'game-0', { won: true, alive: true }));
     assert(store.buy(auth.id, 'outfit:knight').ok); assert.equal(store.validateAvatar(auth.id, { outfit: 'knight' }).outfit, 'knight');
     assert(store.view(auth.id).achievements.includes('mafiaWins5'));
-    const home = store.validateAvatar(auth.id, { houseStyle: 'bakery', houseColor: '#a88bc6' });
-    assert.equal(home.houseStyle, 'bakery'); assert.equal(home.houseColor, '#a88bc6');
-    store.select(auth.id, home); assert.equal(store.validateAvatar(auth.id, {}).houseStyle, 'bakery');
+    // House design is separate from the avatar and persists in the profile.
+    const home = store.validateHome(auth.id, { style: 'bakery', wall: '#a88bc6', roof: '#3f6b4a', door: 'round', windows: 'shuttered', yard: 'well' });
+    assert.deepEqual(home, { style: 'bakery', wall: '#a88bc6', roof: '#3f6b4a', door: 'round', windows: 'shuttered', yard: 'well' });
+    store.selectHome(auth.id, home); assert.equal(new ProfileStore(filename).validateHome(auth.id, {}).door, 'round');
+    assert(!('houseStyle' in store.validateAvatar(auth.id, { houseStyle: 'bakery' })), 'home fields no longer live on the avatar');
+    const bad = store.validateHome(auth.id, { style: 'castle', wall: 'url(x)', door: '<b>', decor: 'heraldry' });
+    assert.equal(bad.style, 'bakery'); assert.equal(bad.wall, '#a88bc6'); assert.equal(bad.door, 'round'); // invalid input keeps the saved value
+    assert.equal(bad.decor, undefined, 'shop decor requires ownership');
+    const fresh = store.create(); store.data.profiles[fresh.id].avatar.houseStyle = 'windmill'; // legacy profile
+    assert.equal(store.validateHome(fresh.id, {}).style, 'windmill');
     store.select(auth.id, { ...store.validateAvatar(auth.id, {}), expression: 'sleepy' });
     assert.equal(new ProfileStore(filename).validateAvatar(auth.id, {}).expression, 'sleepy');
     assert.equal(store.validateAvatar(auth.id, { expression: 'nope', features: 'serious' }).expression, 'serious');
-    const bad = store.validateAvatar(auth.id, { houseStyle: 'castle', houseColor: 'url(x)' });
-    assert.equal(bad.houseStyle, undefined); assert.equal(bad.houseColor, undefined);
     const restored = new ProfileStore(filename); assert.deepEqual(restored.view(auth.id), store.view(auth.id)); assert(restored.authenticate(auth));
     assert(!('verifier' in restored.view(auth.id)));
   } finally { if (fs.existsSync(filename)) fs.unlinkSync(filename); }

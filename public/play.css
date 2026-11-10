@@ -211,4 +211,12 @@ summary { cursor:pointer; font-weight:600; padding:8px 0; }
 @media (max-width: 380px) { .cas-tiles { grid-template-columns:repeat(3, minmax(0,1fr)); } .cas-tab { font-size:10px; } }
 /* Older grids: a canvas's intrinsic 300px width must not widen the page. */
 .shop-grid { grid-template-columns:repeat(2, minmax(0,1fr)); }
+/* ===== House screen ===== */
+.house-preview { display:block; width:100%; max-width:340px; aspect-ratio:4 / 3; margin:0 auto 8px; border:4px solid var(--wood-d); box-shadow:inset 0 0 0 3px var(--wood-l); }
+.claims { display:grid; gap:6px; }
+.claim { text-align:left; padding:10px 12px; cursor:pointer; font:600 15px var(--font); color:var(--ink); background:var(--card2); border:3px solid var(--line); }
+.claim.sel { border-color:var(--wood-d); background:#fff0b0; box-shadow:inset 0 0 0 2px var(--accent); }
+.claim:disabled { opacity:.5; cursor:not-allowed; }
+.lobby-actions { position:static; margin:0; padding:0 6px; background:none; }
+.lobby-actions .btn { flex:1; }
 .shop-item canvas { max-width:100%; }

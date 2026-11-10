@@ -294,6 +294,49 @@ Implementation checklist (updated after verification below):
   checks, and they passed 3 runs in a row. I reviewed the screenshots of
   every tab. Not yet checked on a physical phone.
 
+### Development update 3: house customization and ownership
+
+- Houses are now a separate system from the character. `player.homeLook` /
+  `profile.home` hold the design, validated through `MT_OPTIONS.HOME_FIELDS`:
+  design (12 styles), wall color (12), roof color (theme default + 9), door
+  (6: plank, arched, double, painted, round, iron), windows (6: classic,
+  shuttered, round, stained, planters, tall), yard decoration (8, free) and
+  shop decoration (catalog unlocks). Older saves that kept
+  houseStyle/houseColor/houseDecor on the avatar are migrated by the room,
+  the profile store and the phone.
+- Ownership: `p.house` stays the unique plot and seat number ("PLAYER 3"
+  keeps working). A player can live on their own plot, claim an empty plot
+  (`Room.freePlots`), or move in with an owner (`p.livesWith`, up to
+  `MAX_RESIDENTS` = 4 per house). Only owners' plots show a house. Guests go
+  back to their own plot automatically when their host leaves, is removed,
+  or moves in elsewhere (`reindexHouses`). Claims are lobby-only; residency
+  holds through the game. Views expose `home`, `livesWith` and `homeLook`.
+- Signs: every house on the TV has a wooden sign with plot number + owner
+  and "+ residents". They're rebuilt from the live roster each frame, so
+  joins, departures and moves update them. Characters walk to the house
+  they live in. Window lights, cinematics (victim's home), damage (worst
+  state among residents) and the Judge scene map all follow the home.
+- Phone: after Save & join, a "Claim your house" screen opens. It shows a
+  live house preview with its sign, "Where you live" choices (own house /
+  empty plots / live with X with occupancy), and designer tabs (Design,
+  Paint, Door, Yard) using the creator's tile system. The design is a draft
+  until Move in / Save house. The lobby shows your house status and a
+  "Your house" button. The design persists on the device and in the server
+  profile (`player:home`, `profile:home`). `/test` auto-join skips the screen.
+- Validation: new expansion tests for every house field, sanitizing,
+  independent designs, legacy migration and the lock at start; an ownership
+  test covering empty plots, taken plots, moving in, capacity, guests and
+  self, unique seats, guests returning when the owner moves or leaves, own
+  house, and the lock at start; profile tests for house persistence,
+  fallback and decor ownership. The renderer sweep now gives every resident
+  a full design with all doors/windows/yards/roofs and shared houses (1152
+  runs). `npm run test:e2e` now has 14 checks, adding: claiming after join,
+  all 55 house options previewing live, Move in reaching the TV, a second
+  player designing separately then moving in, both phones showing the
+  residency, a TV screenshot with signs, and the house persisting across
+  rooms and from the server profile. Not yet checked on a physical phone or
+  projector; the signs are small at 100-player scale.
+
 The historical phases below describe earlier iterations; this completion audit
 supersedes their pending markers for features implemented above.
 

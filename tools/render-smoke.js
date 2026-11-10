@@ -53,7 +53,10 @@ function sceneSweep() {
   const W = sandbox.window;
   let n = 0, errs = 0;
   for (const population of [4, 10, 25, 50]) {
-  const players = Array.from({ length: population }, (_, i) => ({ id: 'p' + i, name: 'P' + i, house: i, alive: true, connected: true, avatar: { color: '#e74c3c', skin: '#f3c9a0', hat: 'none', hair: 'curly', hairColor: '#ba593c', facialHair: 'beard', eyes: '#416f91', face: 'square', outfit: 'overalls', pants: '#355879', shoes: '#f3eee0', accessory: 'glasses', houseStyle: W.MT_OPTIONS.houseStyle[i % W.MT_OPTIONS.houseStyle.length], houseColor: W.MT_OPTIONS.houseColor[i % W.MT_OPTIONS.houseColor.length] } }));
+  const players = Array.from({ length: population }, (_, i) => ({ id: 'p' + i, name: 'P' + i, house: i, alive: true, connected: true, avatar: { color: '#e74c3c', skin: '#f3c9a0', hat: 'none', hair: 'curly', hairColor: '#ba593c', facialHair: 'beard', eyes: '#416f91', face: 'square', outfit: 'overalls', pants: '#355879', shoes: '#f3eee0', accessory: 'glasses' },
+    // Every home option appears; every 5th player (not the cinematic victim p2) lives with the previous player.
+    homeLook: Object.fromEntries(Object.entries(W.MT_OPTIONS.HOME_FIELDS).map(([k, list], j) => [k, W.MT_OPTIONS[list][(i + j) % W.MT_OPTIONS[list].length]])),
+    livesWith: i % 5 === 4 ? 'p' + (i - 1) : null, home: i % 5 === 4 ? i - 1 : i }));
   for (const theme of W.MT_THEMES.THEME_ORDER) {
     const t = new W.Town(makeCanvas());
     t.applyState({ phase: 'night', theme, players, accusations: [] });

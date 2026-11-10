@@ -213,8 +213,51 @@ class Room {
     return avatar;
   }
 
+  // House design (separate from the character). Missing style/wall get a random
+  // pick so towns stay varied; legacy saves stored style/wall/decor on the avatar.
+  sanitizeHome(h, legacyAvatar) {
+    h = h && typeof h === 'object' ? h : {}; const legacy = legacyAvatar || {};
+    const home = {};
+    for (const [key, list] of Object.entries(OPTIONS.HOME_FIELDS)) {
+      const choices = OPTIONS[list], old = OPTIONS.LEGACY_HOME[key] && legacy[OPTIONS.LEGACY_HOME[key]];
+      home[key] = choices.includes(h[key]) ? h[key] : choices.includes(old) ? old : ['style', 'wall'].includes(key) ? this.pick(choices) : choices[0];
+    }
+    return home;
+  }
+
+  // ---------- homes: ownership and residents ----------
+  // p.house is the player's plot AND their seat number ("PLAYER 3"), so it stays
+  // unique. A player either lives on their own plot or with another owner
+  // (p.livesWith). Only owners have a house drawn; signs list the residents.
+  ownerOfHome(p) { const o = p.livesWith && this.players.get(p.livesWith); return o && !o.left && !o.livesWith ? o : null; }
+  homeSlot(p) { const o = this.ownerOfHome(p); return o ? o.house : p.house; }
+  residentsOf(owner) { return this.list().filter((x) => x !== owner && x.livesWith === owner.id && !x.left); }
+  claimHome(p, claim = {}) {
+    if (this.phase !== 'lobby' || p.left) return { ok: false, error: 'Homes can only change in the lobby.' };
+    if (claim.with != null) {
+      const owner = this.players.get(String(claim.with));
+      if (!owner || owner === p || owner.left || owner.livesWith || owner.spectator) return { ok: false, error: 'That house is not available.' };
+      if (this.residentsOf(owner).length + 1 >= OPTIONS.MAX_RESIDENTS) return { ok: false, error: 'That house is full.' };
+      for (const guest of this.residentsOf(p)) guest.livesWith = null; // your own guests go home
+      p.livesWith = owner.id;
+    } else if (claim.plot != null) {
+      const n = Number(claim.plot);
+      if (!Number.isInteger(n) || n < 0 || n >= HARD_MAX_PLAYERS || this.list().some((x) => x !== p && x.house === n)) return { ok: false, error: 'That plot is taken.' };
+      p.house = n; p.livesWith = null;
+    } else p.livesWith = null;
+    this.sync();
+    return { ok: true };
+  }
+  // Plots nobody holds, up to one past the current town edge (shown as "empty plots").
+  freePlots() {
+    const used = new Set(this.list().map((x) => x.house)), edge = Math.min(HARD_MAX_PLAYERS, Math.max(0, ...used) + 2);
+    return Array.from({ length: edge }, (_, i) => i).filter((i) => !used.has(i));
+  }
+
   reindexHouses() {
     // House slots are identity-bound; removals never move another owner.
+    // Anyone living with a removed or departed owner moves back to their own plot.
+    for (const p of this.list()) if (p.livesWith && !this.ownerOfHome(p)) p.livesWith = null;
   }
 
   resetPlayer(p) {
@@ -231,7 +274,7 @@ class Room {
   }
 
   // ---------- lobby ----------
-  join({ name, avatar } = {}) {
+  join({ name, avatar, home } = {}) {
     name = sanitizeName(name);
     if (!name) return { error: 'Please enter a name.' };
     if (this.players.size >= clamp(this.settings.maxPlayers, HARD_MIN_PLAYERS, HARD_MAX_PLAYERS)) return { error: 'This town is full.' };
@@ -240,6 +283,8 @@ class Room {
       token: crypto.randomBytes(16).toString('hex'),
       name: this.uniqueName(name),
       avatar: this.sanitizeAvatar(avatar),
+      homeLook: this.sanitizeHome(home, avatar),
+      livesWith: null,
       house: Array.from({ length: HARD_MAX_PLAYERS }, (_, i) => i).find((i) => !this.list().some((x) => x.house === i)),
       sockets: 0,
       isBot: false,
@@ -255,9 +300,10 @@ class Room {
     return { player: p };
   }
 
-  updateProfile(p, { name, avatar } = {}) {
+  updateProfile(p, { name, avatar, home } = {}) {
     if (this.phase !== 'lobby' || p.left) return false;
     if (avatar) p.avatar = this.sanitizeAvatar(avatar);
+    if (home && typeof home === 'object') p.homeLook = this.sanitizeHome({ ...p.homeLook, ...home });
     if (name != null && this.phase === 'lobby') {
       const n = sanitizeName(name);
       if (n) p.name = this.uniqueName(n, p.id);
@@ -1084,6 +1130,9 @@ class Room {
         name: p.name,
         avatar: p.avatar,
         house: p.house,
+        home: this.homeSlot(p),
+        livesWith: this.ownerOfHome(p) ? p.livesWith : null,
+        homeLook: p.homeLook,
         houseState: p.houseState,
         statuses: this.visibleStatuses(p),
         alive: p.alive,
@@ -1173,7 +1222,8 @@ class Room {
     const r = p.spectator ? null : ROLES[p.role];
     const v = {
       ...this.common(),
-      you: { id: p.id, name: p.name, avatar: p.avatar, alive: p.alive, spectator: p.spectator, left: p.left },
+      you: { id: p.id, name: p.name, avatar: p.avatar, alive: p.alive, spectator: p.spectator, left: p.left, house: p.house, home: this.homeSlot(p), livesWith: this.ownerOfHome(p) ? p.livesWith : null, homeLook: p.homeLook },
+      freePlots: this.phase === 'lobby' ? this.freePlots() : [],
       governance: this.governanceView(p),
       isJudge: !!p.isJudge,
       privateScene: p.spectator ? null : p.privateScene,
@@ -1184,7 +1234,7 @@ class Room {
       team: r ? r.team : null,
       won: this.phase === 'gameover' ? p.won : null,
       players: this.list().filter((x) => !x.spectator).map((x) => ({
-        id: x.id, name: x.name, house: x.house, avatar: x.avatar, alive: x.alive, role: this.revealedRole(x), won: this.phase === 'gameover' ? x.won : null,
+        id: x.id, name: x.name, house: x.house, home: this.homeSlot(x), livesWith: this.ownerOfHome(x) ? x.livesWith : null, homeLook: x.homeLook, avatar: x.avatar, alive: x.alive, role: this.revealedRole(x), won: this.phase === 'gameover' ? x.won : null,
       })),
       lobbyCount: this.inGame().length,
       minPlayers: this.settings.minPlayers,

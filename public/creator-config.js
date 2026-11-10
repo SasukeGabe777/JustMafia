@@ -43,11 +43,25 @@
       { field: 'nameplate', label: 'Nameplate', kind: 'tile', focus: 'body' },
       { field: 'effect', label: 'Cosmetic effect', kind: 'tile', focus: 'body' },
     ] },
-    { id: 'home', label: 'Home', icon: '🏠', sections: [
-      { field: 'houseStyle', label: 'Home style', kind: 'tile', focus: 'house' },
-      { field: 'houseColor', label: 'Home color', kind: 'swatch' },
-      { field: 'houseDecor', label: 'Home decoration', kind: 'tile', focus: 'house' },
+  ];
+  // House designer (separate screen). Fields are MT_OPTIONS.HOME_FIELDS keys;
+  // `list` names the option list. Tiles render the whole house with that choice.
+  const HOME_TABS = [
+    { id: 'style', label: 'Design', icon: '🏠', sections: [
+      { field: 'style', list: 'houseStyle', label: 'House design', kind: 'tile', focus: 'house' },
+    ] },
+    { id: 'paint', label: 'Paint', icon: '🎨', sections: [
+      { field: 'wall', list: 'houseColor', label: 'House color', kind: 'swatch' },
+      { field: 'roof', list: 'roofColor', label: 'Roof color', kind: 'swatch' },
+    ] },
+    { id: 'door', label: 'Door', icon: '🚪', sections: [
+      { field: 'door', list: 'doorStyle', label: 'Door', kind: 'tile', focus: 'house' },
+      { field: 'windows', list: 'windowStyle', label: 'Windows', kind: 'tile', focus: 'house' },
+    ] },
+    { id: 'yard', label: 'Yard', icon: '🌻', sections: [
+      { field: 'yard', list: 'yard', label: 'Yard decoration', kind: 'tile', focus: 'house' },
+      { field: 'decor', list: 'houseDecor', label: 'Shop decoration', kind: 'tile', focus: 'house', catalog: 'houseDecor' },
     ] },
   ];
-  root.MT_CREATOR_CONFIG = { TABS };
+  root.MT_CREATOR_CONFIG = { TABS, HOME_TABS };
 })(typeof window !== 'undefined' ? window : globalThis);

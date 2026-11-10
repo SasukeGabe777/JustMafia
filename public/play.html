@@ -64,6 +64,29 @@
     </div>
   </section>
 
+  <!-- House screen: claim where you live, then design your house (separate from your character). -->
+  <section id="screen-home" class="cas" hidden>
+    <header class="cas-head">
+      <button id="h-back" class="btn ghost small" aria-label="Back">◀</button>
+      <h2 id="h-title">Your house</h2>
+      <span id="h-dirty" class="tag bad" hidden>Unsaved</span>
+    </header>
+    <div class="card cas-stage">
+      <canvas id="h-preview" class="house-preview" aria-label="Your house preview with its sign"></canvas>
+      <p id="h-where" class="small"></p>
+      <div class="cas-tools"><button class="btn ghost small" id="h-revert" disabled>↺ Revert</button></div>
+    </div>
+    <div class="card">
+      <div class="cas-label">Where you live</div>
+      <div id="h-claims" class="claims"></div>
+      <p id="h-claim-err" class="err" role="alert"></p>
+    </div>
+    <nav id="h-tabs" class="cas-tabs" role="tablist" aria-label="House design categories"></nav>
+    <div id="h-panel" class="card cas-panel" role="tabpanel"></div>
+    <p id="h-err" class="err" role="alert"></p>
+    <div class="cas-bar"><button id="h-save" class="btn big">Save house</button></div>
+  </section>
+
   <section id="screen-game" hidden>
     <header class="top">
       <canvas id="me" class="me"></canvas>

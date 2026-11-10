@@ -199,7 +199,8 @@
   function mapHouses() {
     const active = (st ? st.players : []).filter((p) => !p.spectator);
     const n = Math.max(0, ...active.map((p) => p.house + 1));
-    return { houses: LAY.houses(n), owners: new Map(active.map((p) => [p.house, p])) };
+    // Only plots with a house (owners); guests living elsewhere have no house of their own.
+    return { houses: LAY.houses(n), owners: new Map(active.filter((p) => !p.livesWith).map((p) => [p.house, p])) };
   }
   $('#sc-map').addEventListener('click', (e) => {
     const c = e.currentTarget, rect = c.getBoundingClientRect();

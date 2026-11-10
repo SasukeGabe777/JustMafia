@@ -189,7 +189,7 @@
         const freshDisaster = (disaster || explosion) && st.cinematic.id !== this.lastCinematicId;
         const isNew = !c;
         if (isNew) {
-          const d = this.doorOf(p.house);
+          const d = this.doorOf(p.home != null ? p.home : p.house);
           c = { id: p.id, x: d.x, y: d.y, alpha: 0, facing: 0, seed: Math.random() * 10, jump: 0, jumpT: 0, voteCount: 0, alive: p.alive, mode: 'wander' };
           this.chars.set(p.id, c);
           if (st.phase === 'lobby') window.SFX && SFX.play('join');
@@ -204,7 +204,10 @@
         const wasAlive = c.alive;
         c.name = p.name;
         c.avatar = p.avatar;
-        c.house = p.house;
+        c.house = p.house; // plot + seat number
+        c.home = p.home != null ? p.home : p.house; // the house they live in (own plot or a host's)
+        c.livesWith = p.livesWith || null;
+        c.homeLook = p.homeLook || (p.avatar && p.avatar.houseStyle ? { style: p.avatar.houseStyle, wall: p.avatar.houseColor, decor: p.avatar.houseDecor } : null);
         if (!c.damagePending) c.houseState = p.houseState || 'normal';
         c.role = p.role;
         c.hasVoted = p.hasVoted;
@@ -255,7 +258,7 @@
 
     onDeath(c) {
       if (c.inside || c.alpha < 0.5) {
-        const d = this.doorOf(c.house);
+        const d = this.doorOf(c.home);
         c.x = d.x; c.y = d.y;
       }
       c.inside = false;
@@ -318,7 +321,7 @@
     }
 
     playVisit(e, t0, last) {
-      const h = this.houses[this.chars.get(e.targetId).house];
+      const h = this.houses[this.chars.get(e.targetId).home];
       if (!h) return;
       const start = { x: h.x < CX ? -60 : W + 60, y: h.y < CY ? 120 : H - 60 };
       const door = { x: h.x + 26 * h.s, y: h.y + 20 * h.s };
@@ -498,11 +501,11 @@
           return c.wt;
         }
         case 'gather': return this.slots.get(c.id) || { x: c.x, y: c.y };
-        case 'home': return this.doorOf(c.house);
+        case 'home': return this.doorOf(c.home);
         case 'haunt': {
           const t = this.chars.get(c.hauntTarget);
           if (!t) { c.mode = 'ghost'; return { x: c.x, y: c.y }; }
-          const tp = t.alpha < 0.5 ? this.doorOf(t.house) : t;
+          const tp = t.alpha < 0.5 ? this.doorOf(t.home) : t;
           return { x: tp.x + 34, y: tp.y + 4 };
         }
         case 'ghost':
@@ -864,8 +867,11 @@
         for (const [min,x,y,label] of window.MT_WORLD.CIVICS) if (this.chars.size >= min) { const key = { TAVERN:'tavern','GUILD HALL':'hall',SMITHY:'workshop',MARKET:'market' }[label]; ctx.fillText((this.th.civic || {})[key] || label,x,y+18); }
         if (this.chars.size) ctx.fillText((this.th.civic || {}).firepit || 'FIREPIT',1280,686);
       }
+      // Every house has a sign: plot number + owner, then anyone staying there.
+      // It follows the live roster, so joins, departures and moves update it.
+      if (window.MT_WORLD) this.houses.forEach((h, i) => { const owner = this.ownerOf(i); if (owner) window.MT_WORLD.homeSign(this, h, owner, this.residentsOf(i)); });
       ctx.font = `600 13px ${FONT}`;
-      for (const c of this.chars.values()) if (c.inside && !this.held.has(c.id)) {
+      if (!window.MT_WORLD) for (const c of this.chars.values()) if (c.inside && !this.held.has(c.id)) {
         const h = this.houses[c.house]; if (!h) continue;
         ctx.fillStyle = 'rgba(20,22,35,0.8)'; ctx.fillRect(h.x - 55, h.y + 16, 110, 20);
         ctx.fillStyle = c.avatar.nameColor || '#fff'; ctx.fillText(`${c.house + 1} ${c.name.slice(0, 10)}`, h.x, h.y + 26);
@@ -885,7 +891,7 @@
     }
 
     drawHouse(h, i) {
-      if (window.MT_WORLD) { window.MT_WORLD.house(this, h, i, this.ownerOf(i)); return; }
+      if (window.MT_WORLD) { window.MT_WORLD.house(this, h, i, this.ownerOf(i), this.residentsOf(i)); return; }
       const ctx = this.ctx;
       const owner = this.ownerOf(i);
       const pal = this.th.palette;
@@ -962,13 +968,26 @@
       ctx.restore();
     }
 
+    // A plot's owner is the player whose plot it is and who lives there (not a guest elsewhere).
     ownerOf(i) {
-      if (!this.ownerCache || this.ownerCacheT !== this.time) {
-        this.ownerCacheT = this.time;
-        this.ownerCache = new Map();
-        for (const c of this.chars.values()) this.ownerCache.set(c.house, c);
-      }
+      this.homeCache();
       return this.ownerCache.get(i);
+    }
+    // Everyone who lives in the house on plot i (owner first).
+    residentsOf(i) {
+      this.homeCache();
+      return this.residentCache.get(i) || [];
+    }
+    homeCache() {
+      if (this.ownerCache && this.ownerCacheT === this.time) return;
+      this.ownerCacheT = this.time;
+      this.ownerCache = new Map(); this.residentCache = new Map();
+      for (const c of this.chars.values()) if (!c.livesWith) this.ownerCache.set(c.house, c);
+      for (const c of this.chars.values()) {
+        const home = c.home != null ? c.home : c.house;
+        if (!this.residentCache.has(home)) this.residentCache.set(home, []);
+        const list = this.residentCache.get(home); if (c.livesWith) list.push(c); else list.unshift(c);
+      }
     }
 
     drawLights(dark) {
@@ -990,8 +1009,7 @@
         glow(x, y, 22, '255,230,160', 0.8 * this.dark);
       }
       this.houses.forEach((h, i) => {
-        const owner = this.ownerOf(i);
-        if (!owner || !owner.alive || !owner.inside) return;
+        if (!this.ownerOf(i) || !this.residentsOf(i).some((c) => c.alive && c.inside)) return;
         const flick = 0.85 + Math.sin(this.time * 3 + i) * 0.05;
         glow(h.x, h.y - 26 * h.s, 70 * h.s, '255,190,90', 0.28 * this.dark * flick);
       });
@@ -1006,8 +1024,7 @@
       ctx.restore();
       // re-draw lit windows crisply on top of the dark
       this.houses.forEach((h, i) => {
-        const owner = this.ownerOf(i);
-        if (!owner || !owner.alive || !owner.inside || this.th.building === 'tent') return;
+        if (!this.ownerOf(i) || !this.residentsOf(i).some((c) => c.alive && c.inside) || this.th.building === 'tent') return;
         ctx.fillStyle = `rgba(255,214,110,${this.dark})`;
         ctx.fillRect(h.x - 25 * h.s, h.y - 33 * h.s, 12 * h.s, 11 * h.s);
         ctx.fillRect(h.x + 13 * h.s, h.y - 33 * h.s, 12 * h.s, 11 * h.s);

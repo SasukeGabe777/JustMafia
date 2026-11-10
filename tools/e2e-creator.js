@@ -91,7 +91,7 @@ class Page {
 
   // --- Every option in every tab updates the live preview immediately.
   const tabs = await a.eval(`[...document.querySelectorAll('[data-tab]')].map((b) => b.dataset.tab)`);
-  assert.deepEqual(tabs, ['body', 'face', 'hair', 'clothes', 'accessories', 'home']);
+  assert.deepEqual(tabs, ['body', 'face', 'hair', 'clothes', 'accessories']);
   let tested = 0;
   for (const tab of tabs) {
     await a.click(`[data-tab="${tab}"]`);
@@ -120,21 +120,45 @@ class Page {
 
   // --- Randomize keeps working and only touches character fields.
   await a.click('#random-character'); await a.until(`!document.querySelector('#c-dirty').hidden`, 'randomize changes the draft');
-  const rnd = await a.look(); assert.notDeepEqual(rnd, first); assert.equal(rnd.houseStyle, first.houseStyle); assert.equal(rnd.houseColor, first.houseColor);
-  ok('Randomize changes the character (not the home) as a draft');
+  const rnd = await a.look(); assert.notDeepEqual(rnd, first);
+  ok('Randomize changes the character as a draft');
 
   // --- Build a specific look, name it, Save & join.
-  const want = { expression: 'wink', hair: 'afro', outfit: 'jacket', color: '#9b59b6', hat: 'cowboy', houseStyle: 'bakery' };
-  for (const [tab, field] of [['face', 'expression'], ['hair', 'hair'], ['clothes', 'outfit'], ['clothes', 'color'], ['accessories', 'hat'], ['home', 'houseStyle']]) {
+  const want = { expression: 'wink', hair: 'afro', outfit: 'jacket', color: '#9b59b6', hat: 'cowboy' };
+  for (const [tab, field] of [['face', 'expression'], ['hair', 'hair'], ['clothes', 'outfit'], ['clothes', 'color'], ['accessories', 'hat']]) {
     await a.click(`[data-tab="${tab}"]`); await a.click(`#c-panel [data-field="${field}"][data-value="${want[field]}"]`);
   }
   await a.eval(`(() => { const n = document.querySelector('#j-name'); n.value = 'Ana'; n.dispatchEvent(new Event('input')); })()`);
   await a.click('#j-go');
-  await a.until(`!document.querySelector('#screen-game').hidden`, 'joined the game');
   const ana = () => tv && tv.players.find((p) => p.name === 'Ana');
   for (let i = 0; i < 100 && !ana(); i++) await wait(30);
   for (const [k, v] of Object.entries(want)) assert.equal(ana().avatar[k], v, 'TV shows ' + k);
   ok('Save & join: the TV receives exactly the customized look');
+
+  // --- Joining continues to claiming a house; design it (every option previews), then move in.
+  await a.until(`!document.querySelector('#screen-home').hidden && document.querySelector('#h-preview').dataset.look`, 'claim-your-house screen after joining');
+  assert.equal(await a.eval(`document.querySelector('#h-title').textContent`), 'Claim your house');
+  assert(await a.eval(`document.querySelector('#h-claims .claim.sel').textContent.includes('My own house')`));
+  const homeLook = () => a.eval(`(() => { const keys = Object.keys(MT_OPTIONS.HOME_FIELDS), v = JSON.parse(document.querySelector('#h-preview').dataset.look || '[]'); return Object.fromEntries(keys.map((k, i) => [k, v[i]])); })()`);
+  let homeTested = 0;
+  for (const tab of await a.eval(`[...document.querySelectorAll('#h-tabs [data-tab]')].map((b) => b.dataset.tab)`)) {
+    await a.click(`#h-tabs [data-tab="${tab}"]`);
+    await a.until(`[...document.querySelectorAll('#h-panel .cas-tile canvas')].every((c) => c.width > 0)`, 'house tiles ' + tab);
+    assert(await a.noOverflow(), 'house screen overflow ' + tab); await a.shot('house-' + tab);
+    for (const [field, value] of await a.eval(`[...document.querySelectorAll('#h-panel [data-field]')].map((b) => [b.dataset.field, b.dataset.value])`)) {
+      await a.click(`#h-panel [data-field="${field}"][data-value="${value}"]`);
+      await a.until(`(() => { const keys = Object.keys(MT_OPTIONS.HOME_FIELDS), v = JSON.parse(document.querySelector('#h-preview').dataset.look); return v[keys.indexOf(${JSON.stringify(field)})] === ${JSON.stringify(value)}; })()`, `house preview ${field}=${value}`);
+      homeTested++;
+    }
+  }
+  const wantHome = { style: 'bakery', wall: '#d39a55', roof: '#2f4f80', door: 'round', windows: 'shuttered', yard: 'flowerbed' };
+  for (const [tab, field] of [['style', 'style'], ['paint', 'wall'], ['paint', 'roof'], ['door', 'door'], ['door', 'windows'], ['yard', 'yard']]) { await a.click(`#h-tabs [data-tab="${tab}"]`); await a.click(`#h-panel [data-field="${field}"][data-value="${wantHome[field]}"]`); }
+  assert(await a.eval(`!document.querySelector('#h-dirty').hidden`));
+  await a.click('#h-save');
+  await a.until(`!document.querySelector('#screen-game').hidden && document.querySelector('[data-home-status]')`, 'back in lobby after moving in');
+  for (let i = 0; i < 100 && ana().homeLook.door !== 'round'; i++) await wait(30);
+  for (const [k, v] of Object.entries(wantHome)) assert.equal(ana().homeLook[k], v, 'TV house ' + k);
+  ok(`House screen after joining: ${homeTested} house options preview live; Move in saves the design to the TV`);
 
   // --- Refresh: same seat, and editing opens the saved look (not a stale draft).
   await a.send('Page.reload'); await wait(300);
@@ -158,14 +182,49 @@ class Page {
   const ben = () => tv && tv.players.find((p) => p.name === 'Ben');
   for (let i = 0; i < 100 && !ben(); i++) await wait(30);
   assert.equal(ben().avatar.expression, 'sad'); assert.equal(ana().avatar.expression, 'grin');
-  await b.until(`!document.querySelector('#screen-game').hidden`, 'second player joined');
   ok('A second player joins with their own look; both appear correctly to others');
+
+  // --- Ben designs his own house independently, then moves in with Ana instead.
+  await b.until(`!document.querySelector('#screen-home').hidden && document.querySelector('#h-preview').dataset.look`, 'Ben claim screen');
+  await b.click('#h-tabs [data-tab="style"]'); await b.click('#h-panel [data-field="style"][data-value="windmill"]'); await b.click('#h-save');
+  for (let i = 0; i < 100 && ben().homeLook.style !== 'windmill'; i++) await wait(30);
+  assert.equal(ben().homeLook.style, 'windmill'); assert.equal(ana().homeLook.style, 'bakery', 'houses are customized separately');
+  await b.until(`!document.querySelector('#screen-game').hidden && document.querySelector('[data-house]')`, 'Ben lobby');
+  await b.click('[data-house]'); await b.until(`!document.querySelector('#screen-home').hidden && [...document.querySelectorAll('#h-claims .claim')].some((c) => c.textContent.includes('Live with Ana'))`, 'move-in option');
+  await b.eval(`[...document.querySelectorAll('#h-claims .claim')].find((c) => c.textContent.includes('Live with Ana')).click()`);
+  for (let i = 0; i < 100 && ben().livesWith !== ana().id; i++) await wait(30);
+  assert.equal(ben().livesWith, ana().id); assert.equal(ben().home, ana().house);
+  await b.until(`document.querySelector('#h-where').textContent.includes("staying at Ana's house")`, 'Ben sees he is staying with Ana');
+  await b.click('#h-back');
+  await a.until(`document.querySelector('[data-home-status]').textContent.includes('with Ben')`, "Ana's lobby shows Ben as a resident");
+  ok('Moving in with another player: residency reaches the TV and both phones; designs stay separate');
+
+  // --- The TV shows each house with a sign naming the owner and residents.
+  const tvPage = await browser.page();
+  await tvPage.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
+  await tvPage.go(`${URL}/`);
+  await tvPage.click('#create');
+  await tvPage.until(`/^[A-Z]{4}$/.test(document.querySelector('#room-code').textContent.trim())`, 'TV room code');
+  const tvCode = await tvPage.eval(`document.querySelector('#room-code').textContent.trim()`);
+  const signText = await tvPage.eval(`(() => { const W = MT_WORLD; const owner = { id: 'a', name: 'Ana', house: 0 }; return W.signLines(owner, [{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Ben' }, { id: 'c', name: 'Cy' }]); })()`);
+  assert.deepEqual(signText, ['1 · Ana', '+ Ben, Cy']);
+  const guests = [];
+  for (const [name, style] of [['Owner', 'manor'], ['Guest', 'cottage'], ['Solo', 'windmill']]) {
+    const s = io(URL, { transports: ['websocket'] }); guests.push(s);
+    const r = await new Promise((res) => s.emit('player:join', { code: tvCode, name, home: { style, door: 'arched', yard: 'mailbox' } }, res)); assert(r.ok);
+    s.playerId = r.playerId;
+  }
+  await new Promise((res) => guests[1].emit('player:home', { claim: { with: guests[0].playerId } }, res));
+  await wait(1500); await tvPage.shot('tv-signs');
+  guests.forEach((s) => s.close());
+  ok('TV town renders owned houses with resident signs (screenshot saved)');
 
   // --- Leave and rejoin a different room with the same phone: saved look is the starting point.
   const room2 = await hostEmit('host:create');
   await a.go(`${URL}/play?room=${room2.code}`);
   await a.until(`!document.querySelector('#screen-creator').hidden && document.querySelector('#preview').dataset.look`, 'rejoin creator');
   const rejoin = await a.look(); for (const [k, v] of Object.entries(want)) assert.equal(rejoin[k], v, 'rejoin ' + k);
+  assert.equal(await a.eval(`JSON.parse(localStorage.getItem('mt.home')).door`), 'round', 'house design saved on the device');
   // "Save look" persists without joining.
   await a.click('[data-tab="face"]'); await a.click('#c-panel [data-field="expression"][data-value="smirk"]'); await a.click('#c-save');
   await a.until(`document.querySelector('#c-dirty').hidden`, 'save look clears badge');
@@ -173,7 +232,7 @@ class Page {
   await a.eval(`localStorage.removeItem('mt.avatar')`);
   await a.go(`${URL}/play?room=${room2.code}`);
   await a.until(`!document.querySelector('#screen-creator').hidden && !document.querySelector('#j-go').disabled && JSON.parse(document.querySelector('#preview').dataset.look || '[]').includes('smirk')`, 'profile restores look');
-  const restored = await a.look(); assert.equal(restored.expression, 'smirk'); assert.equal(restored.hair, 'afro'); assert.equal(restored.houseStyle, 'bakery');
+  const restored = await a.look(); assert.equal(restored.expression, 'smirk'); assert.equal(restored.hair, 'afro');
   await a.shot('creator-rejoin');
   ok('Rejoining starts from the saved look; Save look persists; the server profile restores it');
 
@@ -185,7 +244,16 @@ class Page {
   assert(tv.players.some((p) => p.name === 'Tester 1'), 'autojoin player on TV');
   ok('/test auto-join phones still join directly');
 
-  const errors = [...a.errors, ...b.errors, ...t.errors];
+  // --- Rejoining with the same phone brings the saved house design (device copy cleared -> server profile).
+  await a.eval(`localStorage.removeItem('mt.home')`);
+  await a.go(`${URL}/play?room=${room2.code}`);
+  await a.until(`!document.querySelector('#screen-creator').hidden && !document.querySelector('#j-go').disabled`, 'creator for house rejoin');
+  await a.eval(`document.querySelector('#j-name').value = 'Ana'`); await a.click('#j-go');
+  await a.until(`!document.querySelector('#screen-home').hidden && document.querySelector('#h-preview').dataset.look`, 'claim screen in room 2');
+  const homeAgain = await homeLook(); for (const [k, v] of Object.entries(wantHome)) assert.equal(homeAgain[k], v, 'house restored ' + k);
+  ok('House design persists across rooms, including restore from the server profile');
+
+  const errors = [...a.errors, ...b.errors, ...t.errors, ...tvPage.errors];
   assert.deepEqual(errors, [], 'page errors: ' + errors.join('\n'));
   ok('No page errors');
   console.log(`All ${passed} creator end-to-end checks passed. Screenshots: ${SHOTS}`);

@@ -82,10 +82,41 @@
       for (const a of [-27, 23]) { r('#8f8a80', a, -12, 5, 12); r('#b4ad9e', a - 1, -14, 7, 3); }
     } },
   };
+  // Player-chosen doors (all fit the 18x28 doorway at the house's door anchor).
+  const DOORS = {
+    plank({ r }) { r('#40342c', -9, -27, 18, 28); r('#765238', -7, -25, 14, 25); r('#49382d', -3, -24, 1, 24); r('#c1a36a', 3, -13, 2, 3); },
+    arched({ r }) { r('#40342c', -9, -27, 18, 28); r('#40342c', -7, -31, 14, 4); r('#8a5a36', -7, -25, 14, 25); r('#8a5a36', -5, -29, 10, 4); r('#5f3e26', -1, -28, 2, 28); r('#e2c278', 3, -13, 2, 3); },
+    double({ r }) { r('#40342c', -11, -27, 22, 28); r('#6d4a33', -9, -25, 8, 25); r('#6d4a33', 1, -25, 8, 25); r('#2e241e', -1, -25, 2, 25); r('#c1a36a', -3, -13, 1, 3); r('#c1a36a', 2, -13, 1, 3); },
+    painted({ r }) { r('#40342c', -9, -27, 18, 28); r('#a83f37', -7, -25, 14, 25); r('#c45a4d', -5, -23, 4, 8); r('#c45a4d', 1, -23, 4, 8); r('#c45a4d', -5, -12, 10, 6); r('#f0d27a', 3, -15, 2, 3); },
+    round({ ctx, r }) { ctx.fillStyle = '#40342c'; ctx.beginPath(); ctx.arc(0, -11, 12, Math.PI, 0); ctx.fill(); r('#40342c', -12, -11, 24, 12); ctx.fillStyle = '#4f7a3c'; ctx.beginPath(); ctx.arc(0, -11, 10, Math.PI, 0); ctx.fill(); r('#4f7a3c', -10, -11, 20, 11); r('#e8c66d', -1, -9, 3, 3); },
+    iron({ r }) { r('#25282d', -9, -27, 18, 28); r('#4a5058', -7, -25, 14, 25); for (const yy of [-22, -14, -6]) { r('#2f3439', -7, yy, 14, 2); r('#9aa3ab', -6, yy, 1, 1); r('#9aa3ab', 5, yy, 1, 1); } r('#c8ced3', 3, -16, 2, 4); },
+  };
+  // Yard decorations drawn in front of the house; free (shop decor is separate).
+  const YARD = {
+    fence({ r, w }) { for (let a = -w / 2 - 10; a <= w / 2 + 8; a += 5) if (a < -14 || a > 12) r('#f1e9d6', a, -8, 2, 9); r('#f1e9d6', -w / 2 - 10, -6, w / 2 - 4, 1); r('#f1e9d6', 13, -6, w / 2 - 2, 1); },
+    flowerbed({ r, w }) { r('#5a3f2a', -w / 2 - 12, -5, 16, 5); r('#5a3f2a', w / 2 - 4, -5, 16, 5); for (let i = 0; i < 4; i++) { r('#4f7a3c', -w / 2 - 11 + i * 4, -9, 2, 5); r(['#e05a7a', '#f0d26a', '#9b6fe0', '#ffffff'][i], -w / 2 - 12 + i * 4, -11, 3, 3); r('#4f7a3c', w / 2 - 3 + i * 4, -9, 2, 5); r(['#ffffff', '#e05a7a', '#f0d26a', '#9b6fe0'][i], w / 2 - 4 + i * 4, -11, 3, 3); } },
+    mailbox({ r, w }) { r('#5b4630', w / 2 + 6, -14, 2, 14); r('#3e6fb0', w / 2 + 2, -20, 10, 7); r('#2c4f80', w / 2 + 2, -14, 10, 1); r('#d84b3c', w / 2 + 11, -22, 1, 5); r('#d84b3c', w / 2 + 11, -22, 3, 2); },
+    pumpkins({ r, w }) { for (const [a, s] of [[-w / 2 - 12, 8], [-w / 2 - 3, 6], [w / 2 + 3, 7]]) { r('#c9661f', a, -s, s + 2, s); r('#e98a30', a + 2, -s, 2, s); r('#4f7a3c', a + s / 2, -s - 3, 2, 3); } },
+    birdhouse({ r, polygon, w }) { r('#6b4a2e', -w / 2 - 8, -26, 2, 26); r('#c08a52', -w / 2 - 13, -36, 12, 10); polygon('#8a3b2f', [[-w / 2 - 15, -36], [-w / 2 - 7, -43], [-w / 2 + 1, -36]]); r('#2a2220', -w / 2 - 8, -32, 2, 3); },
+    well({ r, w }) { r('#6f6a64', w / 2 + 2, -12, 16, 12); r('#8d8780', w / 2 + 3, -11, 14, 3); r('#2b4a63', w / 2 + 4, -12, 12, 2); r('#5b4630', w / 2 + 3, -30, 2, 18); r('#5b4630', w / 2 + 15, -30, 2, 18); r('#7a3b2a', w / 2, -33, 20, 4); r('#c1a36a', w / 2 + 9, -26, 1, 10); },
+    laundry({ r, w }) { r('#5b4630', -w / 2 - 14, -30, 2, 30); r('#5b4630', -w / 2 + 2, -30, 2, 30); r('#d8d2c4', -w / 2 - 13, -29, 16, 1); r('#d86b5c', -w / 2 - 11, -28, 5, 7); r('#6b9be0', -w / 2 - 5, -28, 4, 9); r('#f0d26a', -w / 2, -28, 3, 5); },
+  };
+  // A wooden sign by the path naming the owner and anyone staying with them.
+  function sign(ctx, x, y, s, lines, colors) {
+    const font = Math.max(11, Math.round(14 * s));
+    ctx.save(); ctx.font = `600 ${font}px 'Pixelify Sans', monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const width = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 10, height = lines.length * (font + 2) + 6;
+    ctx.fillStyle = '#4a2e1e'; ctx.fillRect(x - 2 * s, y - 2, 4 * s, 14 * s);
+    ctx.fillStyle = '#4a2e1e'; ctx.fillRect(x - width / 2 - 2, y - height - 2, width + 4, height + 4);
+    ctx.fillStyle = '#c99a5b'; ctx.fillRect(x - width / 2, y - height, width, height);
+    ctx.fillStyle = '#b5844a'; ctx.fillRect(x - width / 2, y - height, width, 2);
+    lines.forEach((l, i) => { ctx.fillStyle = colors[i] || '#2a1a12'; ctx.fillText(l, x, y - height + 4 + (i + .5) * (font + 2)); });
+    ctx.restore();
+  }
   function building(ctx, x, y, index, palette, options = {}) {
     const spec = STYLES[options.style], art = spec ? STYLE_ART[options.style] : {};
     const family = spec ? spec[0] : index % 8, w = spec ? spec[1] : [68, 72, 70, 60, 78, 52, 78, 74][family], height = spec ? spec[2] : [42, 52, 46, 65, 43, 61, 51, 62][family];
-    const wall = options.wall || palette.walls[index % palette.walls.length], roof = palette.roofs[index % palette.roofs.length];
+    const wall = options.wall || palette.walls[index % palette.walls.length], roof = options.roof || palette.roofs[index % palette.roofs.length];
     const r = (color, a, b, c, d) => { ctx.fillStyle = color; ctx.fillRect(a, b, c, d); };
     const polygon = (color, points) => { ctx.fillStyle = color; ctx.beginPath(); points.forEach(([a, b], i) => i ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); ctx.closePath(); ctx.fill(); };
     const lit = options.lit || Math.sin((options.time || 0) * .7 + index) > -.75;
@@ -137,13 +168,23 @@
       }
       if (options.theme === 'fantasy') { polygon('#363448', [[-12,top+5],[0,top-20],[12,top+5]]); r('#b1e0de',-2,top-24,4,4); }
     }
-    r('#40342c', -9, -27, 18, 28); r('#765238', -7, -25, 14, 25);
-    r('#49382d', -3, -24, 1, 24); r('#c1a36a', 3, -13, 2, 3);
+    DOORS[options.door] ? DOORS[options.door](kit) : DOORS.plank(kit);
     r('#a49b83', -12, 0, 24, 3); r('#746c5a', -15, 3, 30, 3);
+    const ws = options.windows || 'classic', glass = lit ? '#dca45a' : '#4e6268', shine = lit ? '#ffe0a0' : '#758381';
     for (const a of [-w / 2 + 12, w / 2 - 21]) {
-      r('#453a32', a - 3, -34, 17, 20); r(lit ? '#dca45a' : '#4e6268', a, -32, 11, 15);
-      r(lit ? '#ffe0a0' : '#758381', a + 1, -31, 4, 7); if (art.windows) art.windows({ ...kit, a }); r('#5a4534', a + 5, -32, 1, 15); r('#5a4534', a, -24, 11, 1);
+      const wt = ws === 'tall' ? -42 : -34, wh = ws === 'tall' ? 28 : 20;
+      if (ws === 'round') {
+        ctx.fillStyle = '#453a32'; ctx.beginPath(); ctx.arc(a + 5.5, -24, 9, 0, TAU); ctx.fill();
+        ctx.fillStyle = glass; ctx.beginPath(); ctx.arc(a + 5.5, -24, 7, 0, TAU); ctx.fill(); r(shine, a + 2, -28, 3, 3); r('#5a4534', a + 5, -31, 1, 14); r('#5a4534', a - 1, -24, 13, 1);
+      } else {
+        r('#453a32', a - 3, wt, 17, wh); r(glass, a, wt + 2, 11, wh - 5); r(shine, a + 1, wt + 3, 4, 7);
+        if (ws === 'stained') { const c = lit ? ['#e0775f', '#6f9ee0', '#f0d26a', '#78c27f'] : ['#7a4038', '#38507a', '#7a6a38', '#3f6a44']; r(c[0], a, wt + 2, 5, 7); r(c[1], a + 6, wt + 2, 5, 7); r(c[2], a, wt + 10, 5, 5); r(c[3], a + 6, wt + 10, 5, 5); }
+        if (art.windows) art.windows({ ...kit, a });
+        r('#5a4534', a + 5, wt + 2, 1, wh - 5); r('#5a4534', a, wt + 10, 11, 1);
+        if (ws === 'shuttered') { for (const sx of [a - 9, a + 15]) { r('#3d5a34', sx, wt, 6, wh); r('#5d7a45', sx + 1, wt + 1, 4, wh - 2); r('#3d5a34', sx + 1, wt + 7, 4, 1); } }
+      }
       r('#51492e', a - 3, -14, 17, 4); r('#627248', a - 2, -16, 15, 3);
+      if (ws === 'planters') for (let i = 0; i < 4; i++) r(i % 2 ? '#e07a8f' : '#f0d26a', a - 1 + i * 4, -19, 3, 3);
     }
     if (height > 54) { r('#473e33', -19, -56, 12, 13); r('#e6ba76', -17, -54, 8, 9); r('#473e33', 10, -56, 12, 13); r('#e6ba76', 12, -54, 8, 9); }
     if ((spec ? options.style === 'farmhouse' : family === 4) || options.decor === 'flowers') { for (let i = 0; i < 6; i++) { r('#52673a', -40 + i * 6, -4, 3, 7); r(i % 2 ? '#c798a1' : '#dfbd67', -41 + i * 6, -6, 4, 3); } }
@@ -151,11 +192,31 @@
     if (options.decor === 'lanterns') { r('#353436', -w / 2 - 6, -18, 3, 20); r('#e6b66b', -w / 2 - 9, -22, 8, 9); }
     if (!spec) { r('#63533d', w / 2 + 3, -11, 10, 12); r('#958060', w / 2 + 2, -9, 12, 2); r('#2e3938', -w / 2 - 9, -10, 8, 11); r('#60714c', -w / 2 - 11, -16, 12, 8); }
     if (art.post) art.post(kit);
+    if (YARD[options.yard]) YARD[options.yard](kit);
     if (options.damage === 'damaged' || options.damage === 'burned') { r('#292726', 8, -height, 8, height); r('#3e3430', -w / 2, -8, w, 8); }
     ctx.restore();
   }
-  function house(town, h, index, owner) {
-    building(town.ctx, h.x + (h.shakeUntil > town.time ? Math.sin(town.time * 70) * 3 : 0), h.y, index, town.th.palette, { scale: h.s, theme: town.themeId, damage: owner && owner.houseState, decor: owner && owner.avatar.houseDecor, style: owner && owner.avatar.houseStyle, wall: owner && owner.avatar.houseColor, time: town.time, lit: town.dark > .4 });
+  // A home shows the owner's design. Damage shows the worst state among everyone
+  // living there (a destroyed resident home is destroyed for the whole house).
+  const WORST = ['normal', 'damaged', 'burned', 'destroyed'];
+  function lookOptions(look) {
+    look = look || {};
+    return { style: look.style, wall: look.wall, roof: look.roof === 'theme' ? undefined : look.roof, door: look.door, windows: look.windows, yard: look.yard, decor: look.decor };
+  }
+  function house(town, h, index, owner, residents = owner ? [owner] : []) {
+    const damage = residents.reduce((worst, c) => WORST.indexOf(c.houseState) > WORST.indexOf(worst) ? c.houseState : worst, 'normal');
+    building(town.ctx, h.x + (h.shakeUntil > town.time ? Math.sin(town.time * 70) * 3 : 0), h.y, index, town.th.palette, { ...lookOptions(owner && owner.homeLook), scale: h.s, theme: town.themeId, damage, time: town.time, lit: town.dark > .4 });
+  }
+  // Sign text: owner first, then residents ("+ Ben, Cy"), kept short for the TV.
+  function signLines(owner, residents) {
+    const others = residents.filter((c) => c !== owner && !(c.id && c.id === owner.id)).map((c) => c.name);
+    const lines = [`${owner.house + 1} · ${owner.name}`];
+    if (others.length) lines.push('+ ' + (others.length > 2 ? `${others.slice(0, 2).join(', ')} +${others.length - 2}` : others.join(', ')));
+    return lines;
+  }
+  function homeSign(town, h, owner, residents) {
+    const lines = signLines(owner, residents);
+    sign(town.ctx, h.x + 46 * h.s, h.y + 6 * h.s, h.s, lines, ['#2a1a12', '#5a3a22']);
   }
   const CIVICS = [[1, 660, 630, 'TAVERN', 1], [10, 1280, 410, 'GUILD HALL', 7], [10, 160, 450, 'SMITHY', 2], [10, 1415, 410, 'APOTHECARY', 5], [25, 1415, 665, 'MARKET', 4], [25, 1770, 450, 'INN', 3], [25, 1770, 665, 'SHOPS', 1], [25, 1590, 710, 'STABLES', 4], [50, 175, 670, 'WORKSHOPS', 2]];
   function settlement(town) {
@@ -184,5 +245,5 @@
       for (const x of [860, 1045]) { ctx.fillStyle = '#686761'; ctx.fillRect(x, 951, 18, 65); ctx.fillStyle = '#31343b'; ctx.fillRect(x - 4, 943, 26, 10); }
     }
   }
-  window.MT_WORLD = { FAMILIES, STYLES, CIVICS, building, house, settlement };
+  window.MT_WORLD = { FAMILIES, STYLES, DOORS: Object.keys(DOORS), YARD: Object.keys(YARD), CIVICS, building, house, sign, signLines, homeSign, lookOptions, settlement };
 })();

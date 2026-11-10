@@ -29,9 +29,9 @@ class ProfileStore {
   view(id) { const p = this.data.profiles[id]; if (!p) return null; const { verifier, rewardedGames, ...view } = p; return { ...view, storage: this.filename ? 'Saved on this game server’s disk' : 'Session-only development storage' }; }
   validateAvatar(id, input = {}) {
     const p = this.data.profiles[id], result = {};
-    // Expression and home have their own rules below.
+    // Expression has its own migration rule below.
     for (const [key, list] of Object.entries(O.AVATAR_FIELDS)) {
-      if (['expression', 'houseStyle', 'houseColor'].includes(key)) continue;
+      if (key === 'expression') continue;
       const value = input[key] == null ? p && p.avatar[key] : input[key];
       result[key] = O[list].includes(value) ? value : O[list][0];
       const item = CATALOG.find((i) => i.field === key && i.value === result[key]);
@@ -40,13 +40,22 @@ class ProfileStore {
     // Expressions are free; legacy features:'serious' becomes the Serious expression.
     const mood = input.expression == null ? p && p.avatar.expression : input.expression;
     result.expression = O.expression.includes(mood) ? mood : (input.features || p && p.avatar.features) === 'serious' ? 'serious' : O.expression[0];
-    // Homes are free; an unset home is left for the room to assign at random.
-    for (const key of ['houseStyle', 'houseColor']) {
-      const value = input[key] == null ? p && p.avatar[key] : input[key];
-      if (O[key].includes(value)) result[key] = value;
+    return result;
+  }
+  // House design. Unset/invalid fields are omitted so the room fills them (random
+  // style/wall). Shop decor needs ownership. Older profiles kept the home on the avatar.
+  validateHome(id, input = {}) {
+    const p = this.data.profiles[id], saved = p && p.home || {}, legacy = p && p.avatar || {}, result = {};
+    input = input && typeof input === 'object' ? input : {};
+    for (const [key, list] of Object.entries(O.HOME_FIELDS)) {
+      // First valid (and owned) of: this input, the saved design, a legacy avatar field.
+      const usable = (v) => O[list].includes(v) && (() => { const item = CATALOG.find((i) => i.field === list && i.value === v); return !item || item.free || (p && p.owned.includes(item.id)); })();
+      const value = [input[key], saved[key], O.LEGACY_HOME[key] && legacy[O.LEGACY_HOME[key]]].find(usable);
+      if (value !== undefined) result[key] = value;
     }
     return result;
   }
+  selectHome(id, home) { const p = this.data.profiles[id]; if (!p) return; p.home = this.validateHome(id, home); this.save(); }
   select(id, avatar) { const p = this.data.profiles[id]; if (!p) return; p.avatar = this.validateAvatar(id, avatar); p.lookSaved = true; this.save(); }
   buy(id, itemId) {
     const p = this.data.profiles[id], item = CATALOG.find((i) => i.id === itemId);

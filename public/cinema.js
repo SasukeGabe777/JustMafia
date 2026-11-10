@@ -419,8 +419,12 @@
       const { def, bind } = item;
       const town = this.town;
       const victimChar = bind.victimId ? town.chars.get(bind.victimId) : null;
-      let houseIdx = bind.house != null ? bind.house : victimChar ? victimChar.house : null;
-      if (houseIdx == null || !town.houses[houseIdx]) houseIdx = Math.floor(Math.random() * Math.max(1, town.houses.length));
+      // The victim's home (their own plot, or the house they're staying in).
+      let houseIdx = bind.house != null ? bind.house : victimChar ? (victimChar.home != null ? victimChar.home : victimChar.house) : null;
+      if (houseIdx == null || !town.houses[houseIdx]) {
+        const built = town.houses.map((_, i) => i).filter((i) => town.ownerOf(i));
+        houseIdx = built.length ? built[Math.floor(Math.random() * built.length)] : Math.floor(Math.random() * Math.max(1, town.houses.length));
+      }
       const house = town.houses[houseIdx];
       const owner = victimChar || town.ownerOf(houseIdx);
       const outcome = (def.outcomes && def.outcomes[bind.outcome]) ? bind.outcome : def.defaultOutcome;

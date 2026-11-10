@@ -50,17 +50,20 @@ restrictions and win conditions appear in the Judge's role reference. Configure
 Puppet/Glitch uses, Harmony objectives and Paparazzi photo goals in Setup.
 
 After entering the room code, players get a character creator with a large
-live preview and tabs for Body, Face, Hair, Clothes, Extras and Home. Changes
+live preview and tabs for Body, Face, Hair, Clothes and Extras. After joining,
+they claim a house: their own plot, an empty plot, or moving in with another
+player (up to 4 per house). They can also design it: 12 designs, wall and
+roof colors, doors, windows and yard decorations. Every house on the TV has
+a sign naming the owner and everyone staying there. Changes
 are a preview until saved (Revert undoes them), and a saved look is
 remembered for future games. Run `npm run test:e2e` (needs Chrome) for a
 browser test of the creator.
 
 Players customize hair, facial features, one of ten expressions (Smile, Grin,
 Neutral, Serious, Surprised, Sad, Angry, Wink, Sleepy, Smirk), clothing and
-accessories before the game. They also choose their home: one of twelve buildings (Cottage, Tavern,
-Bakery, Smithy, Apothecary, Library, Chapel, Tailor, Watchtower, Windmill,
-Farmhouse or Manor), in one of twelve colors, shown on the TV town. Their
-appearance and home lock on start. Optional selfie color matching requires
+accessories before the game. House designs include Cottage, Tavern, Bakery,
+Smithy, Apothecary, Library, Chapel, Tailor, Watchtower, Windmill, Farmhouse
+and Manor. Appearance, house and residency lock on start. Optional selfie color matching requires
 consent, runs locally, and discards the photograph; it only approximates hair
 and skin colors, with all manual controls available.
 

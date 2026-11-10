@@ -24,9 +24,13 @@
   let avatar = load('mt.avatar') || {
     color: pick(OPT.colors), skin: pick(OPT.skins), hat: 'none', hair:'short', outfit:'traveler', shoeStyle:'simple',
   };
-  // Saved characters from before homes existed get a random starting home.
-  if (!OPT.houseStyle.includes(avatar.houseStyle)) avatar.houseStyle = pick(OPT.houseStyle);
-  if (!OPT.houseColor.includes(avatar.houseColor)) avatar.houseColor = pick(OPT.houseColor);
+  // House design (separate from the character). Older saves kept it on the avatar.
+  let home = load('mt.home') || {};
+  for (const [k, old] of Object.entries(OPT.LEGACY_HOME)) if (home[k] == null && avatar[old] != null) home[k] = avatar[old];
+  if (!OPT.houseStyle.includes(home.style)) home.style = pick(OPT.houseStyle);
+  if (!OPT.houseColor.includes(home.wall)) home.wall = pick(OPT.houseColor);
+  for (const [k, list] of Object.entries(OPT.HOME_FIELDS)) if (!OPT[list].includes(home[k])) home[k] = OPT[list][0];
+  let savedHome = { ...home }, homeTab = 'style', homeMode = null, pendingClaim = false;
   // Creator state: `avatar` is the live draft shown in previews; `savedAvatar` is
   // what was last saved (device + server profile). Revert returns to it.
   let savedAvatar = { ...avatar };
@@ -45,8 +49,10 @@
 
   // ---------- screens ----------
   function show(id) {
-    for (const s of ['#screen-join', '#screen-creator', '#screen-game', '#screen-msg']) $(s).hidden = s !== id;
+    for (const s of ['#screen-join', '#screen-creator', '#screen-home', '#screen-game', '#screen-msg']) $(s).hidden = s !== id;
     if (id === '#screen-creator') startStage();
+    if (id === '#screen-home') startHouseStage();
+    if (id !== '#screen-home') homeMode = null;
   }
 
   // Step 1: room code. A QR/link with ?room= skips straight to the creator.
@@ -162,6 +168,73 @@
     socket.emit('profile:avatar', { avatar: savedAvatar }, (r) => { if (r && r.ok) profile = r.profile; $('#c-err').textContent = r && r.ok ? '' : (r && r.error) || 'Could not save.'; });
   });
 
+  // ---------- your house ----------
+  // Claiming (where you live) applies immediately; the design is a draft until Save.
+  function homeStatus() {
+    if (!view || !view.you) return '';
+    const host = view.you.livesWith && byId(view.you.livesWith);
+    if (host) return `Staying at ${host.name}'s house (plot ${host.house + 1})`;
+    const guests = view.players.filter((p) => p.livesWith === view.you.id).map((p) => p.name);
+    return `Your own house · plot ${view.you.house + 1}${guests.length ? ' · with ' + guests.join(', ') : ''}`;
+  }
+  function openHome(mode = 'edit') {
+    if (!view || view.phase !== 'lobby') return;
+    homeMode = mode;
+    savedHome = { ...savedHome, ...(view.you.homeLook || {}) }; home = { ...savedHome };
+    $('#h-title').textContent = mode === 'claim' ? 'Claim your house' : 'Your house';
+    $('#h-save').textContent = mode === 'claim' ? 'Move in!' : 'Save house';
+    $('#h-err').textContent = ''; $('#h-claim-err').textContent = '';
+    show('#screen-home'); buildHome();
+  }
+  function buildHome() {
+    if (!homeMode || !view) return;
+    MT_CREATOR.renderHome({ look: home, profile, theme: view.theme, tab: homeTab, setTab: (id) => { homeTab = id; buildHome(); }, change: (next) => { home = { ...home, ...next }; buildHome(); } });
+    const dirty = Object.keys(OPT.HOME_FIELDS).some((k) => home[k] !== savedHome[k]);
+    $('#h-dirty').hidden = !dirty; $('#h-revert').disabled = !dirty;
+    const guest = view.you.livesWith && byId(view.you.livesWith);
+    $('#h-where').textContent = guest ? `You're staying at ${guest.name}'s house. Your own design is saved for when you live in your own house.` : homeStatus();
+    // Where you live: your own plot, an empty plot, or moving in with an owner who has room.
+    const owners = view.players.filter((p) => !p.livesWith && p.id !== view.you.id);
+    const count = (id) => view.players.filter((p) => p.livesWith === id).length + 1;
+    const opts = [{ key: 'own', label: `🏠 My own house · plot ${view.you.house + 1}`, sel: !view.you.livesWith, claim: { own: true } }]
+      .concat((view.freePlots || []).slice(0, 4).map((n) => ({ key: 'plot' + n, label: `📍 Move to empty plot ${n + 1}`, sel: false, claim: { plot: n } })))
+      .concat(owners.map((o) => ({ key: 'with' + o.id, label: `🤝 Live with ${o.name} · plot ${o.house + 1} (${count(o.id)}/${OPT.MAX_RESIDENTS})`, sel: view.you.livesWith === o.id, full: count(o.id) >= OPT.MAX_RESIDENTS && view.you.livesWith !== o.id, claim: { with: o.id } })));
+    $('#h-claims').innerHTML = opts.map((o, i) => `<button class="claim${o.sel ? ' sel' : ''}" data-claim="${i}" aria-pressed="${o.sel}" ${o.full ? 'disabled' : ''}>${esc(o.label)}${o.full ? ' · full' : ''}</button>`).join('');
+    $('#h-claims').querySelectorAll('[data-claim]').forEach((b) => { b.onclick = () => {
+      socket.emit('player:home', { claim: opts[+b.dataset.claim].claim }, (r) => { $('#h-claim-err').textContent = r && r.ok ? '' : (r && r.error) || 'Could not move.'; });
+    }; });
+  }
+  // The house preview shows your design with its sign (you + anyone staying with you).
+  let houseStageRunning = false;
+  function startHouseStage() {
+    if (houseStageRunning) return; houseStageRunning = true;
+    const frame = (now) => {
+      const cv = $('#h-preview');
+      if ($('#screen-home').hidden || !cv || !window.MT_WORLD || !view) { houseStageRunning = false; return; }
+      const dpr = Math.min(window.devicePixelRatio || 1, 3), w = cv.clientWidth || 300, h = cv.clientHeight || 220;
+      if (cv.width !== Math.round(w * dpr)) { cv.width = w * dpr; cv.height = h * dpr; }
+      const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.imageSmoothingEnabled = false;
+      const T = window.MT_THEMES, pal = (T.THEMES[view.theme] || T.THEMES.smalltown).palette, s = h / 150;
+      ctx.fillStyle = pal.grass; ctx.fillRect(0, 0, w, h); ctx.fillStyle = pal.grassDark; ctx.fillRect(0, h * .8, w, h * .2);
+      ctx.fillStyle = pal.road; ctx.fillRect(w * .3, h * .86, w * .4, h * .14);
+      MT_WORLD.building(ctx, w * .42, h * .82, Math.max(0, OPT.houseStyle.indexOf(home.style)), pal, { ...MT_WORLD.lookOptions(home), scale: s, theme: view.theme, lit: true, time: now / 1000 });
+      const me = { name: view.you.name, house: view.you.house }, guests = view.players.filter((p) => p.livesWith === view.you.id);
+      MT_WORLD.sign(ctx, w * .42 + 62 * s, h * .82 + 4 * s, s, MT_WORLD.signLines(me, [me, ...guests]), ['#2a1a12', '#5a3a22']);
+      const look = JSON.stringify(Object.keys(OPT.HOME_FIELDS).map((k) => home[k])); if (cv.dataset.look !== look) cv.dataset.look = look; // for tests
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
+  $('#h-revert').addEventListener('click', () => { home = { ...savedHome }; buildHome(); });
+  $('#h-back').addEventListener('click', () => { lastKey = ''; show('#screen-game'); render(); });
+  $('#h-save').addEventListener('click', () => {
+    savedHome = { ...home }; save('mt.home', savedHome);
+    socket.emit('player:home', { look: savedHome }, (r) => {
+      if (!r || !r.ok) return void ($('#h-err').textContent = (r && r.error) || 'Could not save.');
+      lastKey = ''; show('#screen-game'); render();
+    });
+  });
+
   // ---------- join ----------
   $('#j-go').addEventListener('click', () => {
     if (!profileReady) return;
@@ -184,7 +257,8 @@
     if (code.length !== 4) return err('Enter the 4-letter room code from the big screen.');
     save('mt.name', name);
     $('#j-go').disabled = true;
-    socket.emit('player:join', { code, name, avatar: savedAvatar }, (r) => {
+    const fromCreator = !!creatorMode;
+    socket.emit('player:join', { code, name, avatar: savedAvatar, home: savedHome }, (r) => {
       $('#j-go').disabled = false;
       if (!r || !r.ok) return err((r && r.error) || 'Could not join.');
       session = { code: r.code, token: r.token };
@@ -193,6 +267,8 @@
       keepAwake();
       show('#screen-game');
       lastKey = '';
+      // Joining from the creator continues to claiming a house (skipped by /test auto-join).
+      if (fromCreator) pendingClaim = true;
       render();
     });
   }
@@ -208,6 +284,7 @@
       if (r.token) save('mt.profile',{ id:r.id,token:r.token });
       // No look saved on this device yet, but the profile has one: restore it.
       if (!load('mt.avatar') && profile && profile.lookSaved && profile.avatar) { savedAvatar = { ...savedAvatar, ...profile.avatar }; if (!creatorMode) avatar = { ...savedAvatar }; }
+      if (!load('mt.home') && profile && profile.home && Object.keys(profile.home).length) { savedHome = { ...savedHome, ...profile.home }; if (!homeMode) home = { ...savedHome }; }
       if (!$('#screen-creator').hidden) buildPicker();
       if (!$('#screen-join').hidden) tryAutoJoin();
     };
@@ -239,6 +316,8 @@
     }
     view = v;
     if (editing && v.phase !== 'lobby') { editing = false; creatorMode = null; show('#screen-game'); }
+    if (pendingClaim && v.phase === 'lobby' && !v.isJudge && !$('#screen-game').hidden) { pendingClaim = false; openHome('claim'); }
+    if (!$('#screen-home').hidden) { if (v.phase !== 'lobby') show('#screen-game'); else buildHome(); }
     if (!$('#screen-game').hidden) render();
   });
 
@@ -374,8 +453,9 @@
         <h2>You're in!</h2>
         <p>Find yourself on the big screen.</p>
         <p class="muted">${v.lobbyCount} in town${v.lobbyCount < v.minPlayers ? ` · need ${v.minPlayers - v.lobbyCount} more` : ''}. Waiting for the host to start…</p>
+        <p data-home-status>🏠 ${esc(homeStatus())}</p>
       </div>
-      <button class="btn ghost" data-edit>Change my look</button>`;
+      <div class="cas-bar lobby-actions"><button class="btn ghost" data-edit>Change my look</button><button class="btn ghost" data-house>Your house</button></div>`;
     }
     if (v.you.spectator) {
       return `<div class="card center"><div class="big-emoji">🍿</div><h2>Game in progress</h2>
@@ -609,6 +689,8 @@
     });
     const ed = body.querySelector('[data-edit]');
     if (ed) ed.addEventListener('click', showEdit);
+    const hb = body.querySelector('[data-house]');
+    if (hb) hb.addEventListener('click', () => openHome());
   }
 
   let hauntLocalUntil = 0;

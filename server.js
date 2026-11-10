@@ -8,6 +8,7 @@ const { Server } = require('socket.io');
 const { Worker } = require('worker_threads');
 const { Room } = require('./game');
 const { ProfileStore } = require('./profiles');
+const OPTIONS = require('./public/shared/options');
 const profiles = new ProfileStore(process.env.MT_PROFILE_STORE === 'memory' ? null : path.join(__dirname, '.data', 'profiles.json'));
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -65,6 +66,8 @@ function newCode() {
 }
 
 const findRoom = (code) => rooms.get(String(code || '').trim().toUpperCase());
+// Older phones sent the home inside the avatar (houseStyle/houseColor/houseDecor).
+const legacyHome = (av) => { const h = {}; if (av && typeof av === 'object') for (const [k, old] of Object.entries(OPTIONS.LEGACY_HOME)) if (av[old] != null) h[k] = av[old]; return h; };
 
 io.on('connection', (socket) => {
   // Normalize malformed packets before any handler dereferences their fields.
@@ -165,7 +168,8 @@ io.on('connection', (socket) => {
   const houseOf = (room, v) => {
     if (v == null || v === '') return null;
     const n = Number(v);
-    return Number.isInteger(n) && room.list().some((p) => p.house === n && !p.spectator) ? n : null;
+    // Only plots with a house on them (owners, not guests living elsewhere).
+    return Number.isInteger(n) && room.list().some((p) => p.house === n && !p.spectator && !room.ownerOfHome(p)) ? n : null;
   };
   judgeRelay('judge:scene', (m, room) => {
     if (!SCENES.includes(m.scene)) return null;
@@ -211,6 +215,12 @@ io.on('connection', (socket) => {
     profiles.select(socket.profileId, msg.avatar && typeof msg.avatar === 'object' ? msg.avatar : {});
     reply(cb, { ok: true, profile: profiles.view(socket.profileId) });
   });
+  // House designer: save a home design to the profile without being in a room.
+  socket.on('profile:home', (msg = {}, cb) => {
+    if (!socket.profileId) return reply(cb, { ok: false, error: 'Profile not connected yet.' });
+    profiles.selectHome(socket.profileId, msg.home);
+    reply(cb, { ok: true, profile: profiles.view(socket.profileId) });
+  });
   socket.on('room:check', (msg = {}, cb) => {
     const room = findRoom(msg.code);
     reply(cb, room ? { ok: true, code: room.code, lobby: room.phase === 'lobby' } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
@@ -219,9 +229,9 @@ io.on('connection', (socket) => {
     const room = findRoom(msg.code);
     if (!room) return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.' });
     const existing = socket.profileId && room.list().find((p) => p.profileId === socket.profileId && !p.left);
-    const r = existing ? { player: existing } : room.join({ name: msg.name, avatar: profiles.validateAvatar(socket.profileId, msg.avatar || {}) });
+    const r = existing ? { player: existing } : room.join({ name: msg.name, avatar: profiles.validateAvatar(socket.profileId, msg.avatar || {}), home: profiles.validateHome(socket.profileId, msg.home || legacyHome(msg.avatar)) });
     if (r.error) return reply(cb, { ok: false, error: r.error });
-    if (socket.profileId) { r.player.profileId = socket.profileId; profiles.select(socket.profileId, r.player.avatar); }
+    if (socket.profileId) { r.player.profileId = socket.profileId; profiles.select(socket.profileId, r.player.avatar); profiles.selectHome(socket.profileId, r.player.homeLook); }
     attachPlayer(room, r.player);
     reply(cb, { ok: true, code: room.code, token: r.player.token, playerId: r.player.id });
   });
@@ -235,6 +245,17 @@ io.on('connection', (socket) => {
   });
 
   socket.on('player:profile', (msg = {}) => { const { room, p } = ctx(); if (p && room.phase === 'lobby') { room.updateProfile(p, { name: msg.name, avatar: profiles.validateAvatar(p.profileId, msg.avatar || p.avatar) }); if (p.profileId) profiles.select(p.profileId, p.avatar); } });
+  // Your house: claim a plot / move in with someone, and/or change your house's design (lobby only).
+  socket.on('player:home', (msg = {}, cb) => {
+    const { room, p } = ctx();
+    if (!p || room.phase !== 'lobby' || p.left) return reply(cb, { ok: false, error: 'Homes can only change in the lobby.' });
+    if (msg.claim && typeof msg.claim === 'object') { const r = room.claimHome(p, msg.claim); if (!r.ok) return reply(cb, r); }
+    if (msg.look && typeof msg.look === 'object') {
+      room.updateProfile(p, { home: profiles.validateHome(p.profileId, msg.look) });
+      if (p.profileId) profiles.selectHome(p.profileId, p.homeLook);
+    }
+    reply(cb, { ok: true });
+  });
   socket.on('player:night', (msg = {}) => { const { room, p } = ctx(); if (p) room.nightAction(p, msg.targetId, { variant: msg.variant, delay: msg.delay }); });
   socket.on('player:vote', (msg = {}) => { const { room, p } = ctx(); if (p) room.vote(p, msg.targetId); });
   socket.on('player:haunt', (msg = {}) => { const { room, p } = ctx(); if (p) room.haunt(p, msg.kind, msg.targetId); });
