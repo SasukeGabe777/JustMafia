@@ -94,6 +94,24 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   await a.until(`document.querySelectorAll('.badge.eq').length === 2`, 'equipped after refresh');
   ok('Refresh keeps gold (balance, earned, spent), inventory and equipped items');
 
+  // Once the game starts the phone is purely the game: shop, look and house are closed (UI and server).
+  await new Promise((r) => host.emit('host:action', { type: 'addBots', count: 5 }, r));
+  await a.until(`!document.querySelector('#screen-shop').hidden`, 'shop still open before start');
+  await new Promise((r) => host.emit('host:action', { type: 'start' }, r));
+  await a.until(`!document.querySelector('#screen-game').hidden && document.querySelector('#screen-shop').hidden`, 'shop closes when the game starts');
+  await a.frames();
+  await a.until(`document.querySelector('#g-body [data-role]')`, 'the role card renders when the game starts');
+  assert.deepEqual(a.errors, [], 'no errors rendering the game: ' + a.errors.join('\n'));
+  assert.equal(await a.eval(`document.querySelectorAll('#g-body [data-open-shop], #g-body [data-edit], #g-body [data-house]').length`), 0, 'no look/house/shop buttons in the game');
+  await a.eval(`document.querySelector('#g-pouch-pop').hidden && document.querySelector('#g-pouch').click()`);
+  await a.until(`!document.querySelector('#g-pouch-pop').hidden && document.querySelector('#g-pouch-pop [data-shop-closed]')`, 'pouch popover shows the shop closed');
+  assert(await a.eval(`!!document.querySelector('#g-pouch-pop [data-shop-closed]') && !document.querySelector('#g-pouch-pop [data-open-shop]')`), 'pouch shows the shop as closed');
+  const refused = await a.eval(`new Promise((done) => { const s = io(); const c = JSON.parse(localStorage.getItem('mt.profile')); s.emit('profile:resume', c, () => s.emit('profile:buy', { itemId: 'hat:helmet' }, (r1) => s.emit('profile:equip', { itemId: 'hat:hood', on: false }, (r2) => s.emit('profile:avatar', { avatar: { hat: 'none' } }, (r3) => { s.close(); done([r1, r2, r3]); })))); })`);
+  for (const r of refused) { assert.equal(r.ok, false); assert.match(r.error, /reopen after this game/); }
+  assert.equal(me().avatar.hat, 'hood', 'nothing changed mid-game');
+  await a.shot('game-no-shop');
+  ok('After the game starts: shop/look/house closed on the phone, and the server refuses buy, equip and look changes');
+
   assert.deepEqual(a.errors, [], 'page errors: ' + a.errors.join('\n'));
   ok('No page errors');
   console.log(`All ${passed} shop end-to-end checks passed. Screenshots: ${SHOTS}`);

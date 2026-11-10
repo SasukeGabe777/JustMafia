@@ -439,6 +439,26 @@ Implementation checklist (updated after verification below):
   live in `tools/cdp.js`; `npm run test:e2e` runs both suites.
   `MT_DEV_GRANTS=1` enables a test-only gold grant.
 
+### Lobby-only customization and shop; in-game role card fix
+
+- Once a game starts, the phone is purely the game. "Change my look",
+  "Your house" and "Shop" exist only on the lobby card. A player still in
+  the shop, creator or house screen is returned to the game. The gold pouch
+  stays visible, but its menu says the shop reopens in the lobby.
+- Enforced on the server too: while a profile holds a seat in a game that
+  isn't in the lobby, `profile:buy`, `profile:equip`, `profile:avatar` and
+  `profile:home` are refused (look/house room edits were already
+  lobby-only).
+- Bug fixed (introduced in update 5): the phone role card referenced an
+  undefined variable when showing themed role names. That made every phone's
+  in-game render throw at game start, leaving the lobby card on screen. The
+  e2e shop test now starts a game and asserts the role card renders with no
+  page errors.
+- Validation: `tools/e2e-shop.js` (8 checks) now starts a real game:
+  the shop closes, the lobby buttons disappear, the role card renders, the
+  pouch shows the shop as closed, and the server refuses buy/equip/look
+  changes, leaving the avatar unchanged. Creator e2e still 15/15.
+
 The historical phases below describe earlier iterations; this completion audit
 supersedes their pending markers for features implemented above.
 

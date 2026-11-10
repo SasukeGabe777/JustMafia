@@ -258,18 +258,21 @@
       }) });
   }
   function openShop() {
-    if (!profileReady) return;
+    if (!profileReady || !lobbyOpen()) return;
     shopReturn = ['#screen-creator', '#screen-game'].find((s) => !$(s).hidden) || '#screen-game';
     MT_SHOP.open(); show('#screen-shop'); $('#s-pouch-pop').hidden = true; renderShop();
   }
   $('#s-back').addEventListener('click', () => { if (shopReturn === '#screen-creator') { avatar = { ...avatar }; show('#screen-creator'); buildPicker(); } else { lastKey = ''; show('#screen-game'); render(); } });
   document.addEventListener('click', (e) => { if (e.target.closest('[data-open-shop]')) openShop(); });
   // Gold pouch in the game header: tap for balance, earned, spent and recent entries.
+  // Customizing and shopping are lobby-only; during a game the phone is purely the game.
+  const lobbyOpen = () => !view || view.phase === 'lobby';
   function updatePouch() {
     const wrap = $('#g-pouch-wrap'); if (!wrap) return;
     wrap.innerHTML = MT_SHOP.pouchButton(profile, 'g-pouch');
-    $('#g-pouch').onclick = () => { const pop = $('#g-pouch-pop'); pop.hidden = !pop.hidden; pop.innerHTML = MT_SHOP.pouchDetails(profile) + '<button class="btn ghost" data-open-shop>🛒 Visit the shop</button>'; };
-    if (!$('#g-pouch-pop').hidden) $('#g-pouch-pop').innerHTML = MT_SHOP.pouchDetails(profile) + '<button class="btn ghost" data-open-shop>🛒 Visit the shop</button>';
+    const pouchHtml = () => MT_SHOP.pouchDetails(profile) + (lobbyOpen() ? '<button class="btn ghost" data-open-shop>🛒 Visit the shop</button>' : '<p class="small muted" data-shop-closed>The shop opens between games, back in the lobby.</p>');
+    $('#g-pouch').onclick = () => { const pop = $('#g-pouch-pop'); pop.hidden = !pop.hidden; pop.innerHTML = pouchHtml(); };
+    if (!$('#g-pouch-pop').hidden) $('#g-pouch-pop').innerHTML = pouchHtml();
     MT_SHOP.paintPouches();
   }
 
@@ -358,6 +361,9 @@
     if (editing && v.phase !== 'lobby') { editing = false; creatorMode = null; show('#screen-game'); }
     if (pendingClaim && v.phase === 'lobby' && !v.isJudge && !$('#screen-game').hidden) { pendingClaim = false; openHome('claim'); }
     if (!$('#screen-home').hidden) { if (v.phase !== 'lobby') show('#screen-game'); else buildHome(); }
+    // The game started: close the shop and switch to the game, and refresh the pouch menu.
+    if (v.phase !== 'lobby' && !$('#screen-shop').hidden) { lastKey = ''; show('#screen-game'); }
+    if (phaseChanged) updatePouch();
     if (!$('#screen-game').hidden) render();
   });
 
@@ -560,7 +566,7 @@
       <div class="rc-hidden">🔒 ${big ? 'Tap to reveal your role' : 'Tap to peek at your role'}</div>
       <div class="rc-shown">
         <div class="big-emoji">${r.emoji}</div>
-        <div class="rc-name">${esc(roleLabel(v.role))}</div>
+        <div class="rc-name">${esc(roleLabel(view.role))}</div>
         <div class="rc-blurb">${esc(view.roleBlurb || r.blurb)}</div>
         ${roleExtras()}
         <div class="small" style="margin-top:8px;opacity:.8">Tap to hide</div>

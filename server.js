@@ -66,6 +66,10 @@ function newCode() {
 }
 
 const findRoom = (code) => rooms.get(String(code || '').trim().toUpperCase());
+// Customizing and shopping are lobby-only: once a game starts, a profile seated in
+// it can't buy, equip, or save look/house changes until the room is back in the lobby.
+const CLOSED = 'The shop and customization reopen after this game, back in the lobby.';
+const profileInGame = (profileId) => !!profileId && [...rooms.values()].some((r) => r.phase !== 'lobby' && r.list().some((p) => p.profileId === profileId && !p.left));
 // Older phones sent the home inside the avatar (houseStyle/houseColor/houseDecor).
 const legacyHome = (av) => { const h = {}; if (av && typeof av === 'object') for (const [k, old] of Object.entries(OPTIONS.LEGACY_HOME)) if (av[old] != null) h[k] = av[old]; return h; };
 
@@ -207,11 +211,12 @@ io.on('connection', (socket) => {
   // ----- players -----
   socket.on('profile:create', (_msg, cb) => { if (socket.profileId) return reply(cb, { ok: false, error: 'This connection already has a profile.' }); const p = profiles.create(); socket.profileId = p.id; socket.join('profile:' + p.id); reply(cb, { ok: true, ...p }); });
   socket.on('profile:resume', (msg = {}, cb) => { const p = profiles.authenticate(msg); if (!p) return reply(cb, { ok: false }); if (socket.profileId && socket.profileId !== p.id) socket.leave('profile:' + socket.profileId); socket.profileId = p.id; socket.join('profile:' + p.id); reply(cb, { ok: true, profile: profiles.view(p.id) }); });
-  socket.on('profile:buy', (msg = {}, cb) => { const result = profiles.buy(socket.profileId, msg.itemId); reply(cb, result); if (result.ok) { io.to('profile:' + socket.profileId).emit('profile:state', profiles.view(socket.profileId)); const { room } = ctx(); if (room) room.sync(); } });
+  socket.on('profile:buy', (msg = {}, cb) => { if (profileInGame(socket.profileId)) return reply(cb, { ok: false, error: CLOSED }); const result = profiles.buy(socket.profileId, msg.itemId); reply(cb, result); if (result.ok) { io.to('profile:' + socket.profileId).emit('profile:state', profiles.view(socket.profileId)); const { room } = ctx(); if (room) room.sync(); } });
   // Character creator: save a look to the profile without being in a room. The
   // in-room avatar only changes through player:profile (lobby-only).
   socket.on('profile:avatar', (msg = {}, cb) => {
     if (!socket.profileId) return reply(cb, { ok: false, error: 'Profile not connected yet.' });
+    if (profileInGame(socket.profileId)) return reply(cb, { ok: false, error: CLOSED });
     profiles.select(socket.profileId, msg.avatar && typeof msg.avatar === 'object' ? msg.avatar : {});
     reply(cb, { ok: true, profile: profiles.view(socket.profileId) });
   });
@@ -219,6 +224,7 @@ io.on('connection', (socket) => {
   // In a lobby it also applies to your seat, so the TV updates right away.
   socket.on('profile:equip', (msg = {}, cb) => {
     if (!socket.profileId) return reply(cb, { ok: false, error: 'Profile not connected yet.' });
+    if (profileInGame(socket.profileId)) return reply(cb, { ok: false, error: CLOSED });
     const r = profiles.equip(socket.profileId, msg.itemId, msg.on !== false);
     if (!r.ok) return reply(cb, r);
     const { room, p } = ctx();
@@ -237,6 +243,7 @@ io.on('connection', (socket) => {
   // House designer: save a home design to the profile without being in a room.
   socket.on('profile:home', (msg = {}, cb) => {
     if (!socket.profileId) return reply(cb, { ok: false, error: 'Profile not connected yet.' });
+    if (profileInGame(socket.profileId)) return reply(cb, { ok: false, error: CLOSED });
     profiles.selectHome(socket.profileId, msg.home);
     reply(cb, { ok: true, profile: profiles.view(socket.profileId) });
   });
