@@ -50,6 +50,7 @@
 
   socket.on('host:state', (st) => {
     clockOffset = st.serverNow - Date.now();
+    if (document.documentElement.dataset.theme !== st.theme) document.documentElement.dataset.theme = st.theme || ''; // themed menus (CSS)
     const phaseChanged = !state || state.phase !== st.phase;
     state = st;
     if (st.narratorMode === 'human') { speakToken++; if (window.speechSynthesis) speechSynthesis.cancel(); }
@@ -189,7 +190,7 @@
     $('#composition').hidden = !showComp;
     if (showComp) {
       $('#composition').textContent = RR.ROLE_ORDER.filter((r) => comp[r])
-        .map((r) => `${ROLES[r].emoji} ${comp[r] > 1 || ['mafia', 'villager'].includes(r) ? comp[r] + ' ' : ''}${ROLES[r].name}${comp[r] > 1 && r !== 'mafia' ? 's' : ''}`)
+        .map((r) => `${ROLES[r].emoji} ${comp[r] > 1 || ['mafia', 'villager'].includes(r) ? comp[r] + ' ' : ''}${MT_THEMES.roleName(state.theme, r, ROLES[r].name)}${comp[r] > 1 && r !== 'mafia' && !(MT_THEMES.THEMES[state.theme] || {}).roleNames ? 's' : ''}`)
         .join('  ·  ');
     }
     $('#btn-pause').textContent = state.paused ? '▶ Resume' : '⏸ Pause';
@@ -249,10 +250,11 @@
     if (!show) return;
     const t = $('#go-title');
     const W = RR.WINNERS[state.winner] || RR.WINNERS.draw;
-    t.textContent = state.winner === 'draw' ? '🤝 A Draw!' : `${W.emoji} ${W.name} ${state.winner === 'mafia' ? 'Win' : 'Wins'}!`;
+    const themedTeam = state.winner === 'mafia' ? MT_THEMES.teamName(state.theme, 'mafia', W.name) : W.name;
+    t.textContent = state.winner === 'draw' ? '🤝 A Draw!' : `${W.emoji} ${themedTeam} ${state.winner === 'mafia' && themedTeam === W.name ? 'Win' : 'Wins'}!`;
     t.className = state.winner === 'town' ? 'town' : 'mafia';
     const evil = state.players.filter((p) => p.role && ROLES[p.role] && ROLES[p.role].team !== 'town')
-      .map((p) => `${ROLES[p.role].emoji} ${p.name}`);
+      .map((p) => `${ROLES[p.role].emoji} ${p.name}${MT_THEMES.THEMES[state.theme] && MT_THEMES.THEMES[state.theme].roleNames ? ` (${MT_THEMES.roleName(state.theme, p.role, ROLES[p.role].name)})` : ''}`);
     $('#go-sub').textContent = evil.length ? `Not on the town's side: ${evil.join(', ')}` : '';
   }
   $('#go-again').addEventListener('click', () => act('lobby'));

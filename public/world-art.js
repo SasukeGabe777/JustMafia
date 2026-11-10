@@ -193,6 +193,8 @@
     if (!spec) { r('#63533d', w / 2 + 3, -11, 10, 12); r('#958060', w / 2 + 2, -9, 12, 2); r('#2e3938', -w / 2 - 9, -10, 8, 11); r('#60714c', -w / 2 - 11, -16, 12, 8); }
     if (art.post) art.post(kit);
     if (YARD[options.yard]) YARD[options.yard](kit);
+    // RSP Supply theme: a company plaque over every door (blue with a yellow stripe).
+    if (options.theme === 'rsp') { r('#0f2a63', -11, -34, 22, 7); r('#1f4fa8', -10, -33, 20, 5); r('#ffd21f', -8, -31, 16, 1); r('#ffd21f', -10, -33, 2, 5); }
     if (options.damage === 'damaged' || options.damage === 'burned') { r('#292726', 8, -height, 8, height); r('#3e3430', -w / 2, -8, w, 8); }
     ctx.restore();
   }

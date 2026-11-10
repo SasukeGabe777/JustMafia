@@ -158,6 +158,33 @@ test('AI narrator: an inspector dies at the house they watched, only when roles 
   assert.equal(a.room.cinematic.events[0].place, b.room.cinematic.events[0].place, 'same seed, same story');
   a.room.destroy(); b.room.destroy();
 });
+test('RSP Supply theme: selectable, yellow/blue, Tom Smith leads the takeover; the original Mafia theme is untouched', () => {
+  const T = require('../public/shared/themes');
+  assert(T.THEME_ORDER.includes('rsp')); const rsp = T.THEMES.rsp;
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  for (const w of rsp.palette.walls) { const [r, g, b] = rgb(w); assert(r > 200 && g > 180 && b < 190, 'yellow walls ' + w); }
+  for (const w of rsp.palette.roofs) { const [r, g, b] = rgb(w); assert(b > r + 60 && b > g, 'blue roofs ' + w); }
+  assert.equal(rsp.villain.name, 'Tom Smith'); assert.equal(T.teamName('rsp', 'mafia', 'The Mafia'), 'RSP Supply');
+  assert.equal(T.roleName('rsp', 'godfather', 'Godfather'), 'Tom Smith, President');
+  assert.equal(T.roleName('medieval', 'godfather', 'Godfather'), 'Godfather'); assert.equal(T.teamName('smalltown', 'mafia', 'The Mafia'), 'The Mafia');
+  // Every role and team name RSP renames is a real id, and each theme only uses its own data.
+  for (const id of Object.keys(rsp.roleNames)) assert(R.ROLES[id], 'unknown role ' + id);
+  // Full games: an RSP game narrates the takeover; a classic game never mentions it.
+  for (const theme of ['rsp', 'medieval']) {
+    const { room, p } = game(['mafia', 'villager', 'villager'], { theme, revealRoleOnDeath: true });
+    const said = () => Object.values(room.narrationHistory).join(' | ');
+    room.nightAction(p[0], p[1].id); room.resolveNight(); room.startMorning();
+    for (let i = 0; i < 6 && room.phase !== 'gameover'; i++) room.advance();
+    if (theme === 'rsp') {
+      assert.equal(room.settings.townName, 'Supplyville');
+      assert.match(said(), /RSP Supply/); assert.match(said(), /member of RSP Supply|RSP Supply now owns|absorbed into the RSP Supply|acquired by RSP Supply/);
+    } else { assert.doesNotMatch(said(), /RSP|Tom Smith/); assert.match(said(), /Mafia/); }
+    room.destroy();
+  }
+  // The theme locks at start like every other theme.
+  const { room } = game(['mafia', 'villager', 'villager'], { theme: 'rsp' });
+  room.updateSettings({ theme: 'medieval' }); assert.equal(room.settings.theme, 'rsp'); room.destroy();
+});
 test('Investigator visits exclude dummy prompts and own surveillance; only one Mafia visitor', () => {
   const { room, p } = game(['mafia', 'mafia', 'investigator', 'doctor', 'villager', 'villager', 'villager', 'villager']);
   room.nightAction(p[0], p[4].id); room.nightAction(p[1], p[4].id); room.nightAction(p[2], p[4].id);

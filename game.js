@@ -179,10 +179,10 @@ class Room {
   }
 
   rolePhrase(p) {
-    const r = this.role(p);
-    if (p.role === 'mafia') return 'a member of the Mafia';
-    if (r.team === 'town' && p.role === 'villager') return 'a Villager';
-    return `the ${r.name}`;
+    const r = this.role(p), T = require('./public/shared/themes'), theme = this.settings.theme;
+    if (p.role === 'mafia') return `a member of ${T.teamName(theme, 'mafia', 'the Mafia')}`;
+    if (r.team === 'town' && p.role === 'villager') return `a ${T.roleName(theme, 'villager', 'Villager')}`;
+    return `the ${T.roleName(theme, p.role, r.name)}`;
   }
 
   roleSuffix(p) {

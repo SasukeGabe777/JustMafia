@@ -157,3 +157,9 @@ canvas#town { image-rendering: pixelated; }
 #toast { border-radius: 0; border: 3px solid var(--wood-d); }
 #judge-announcement { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); max-width:75vw; text-align:center; z-index:15; font-size:18px; }
 #hud-harmony { font-size:15px; color:#ffe6ab; }
+
+/* ===== Theme menus: RSP Supply (yellow + blue). ===== */
+:root[data-theme="rsp"] {
+  --wood: #1f4fa8; --wood-d: #0f2a63; --wood-l: #4d7fd9; --parch: #ffe9a3; --parch-l: #fff8dc; --pink: #0f1f45;
+  --panel: #ffe9a3; --panel-solid: #ffe9a3; --ink-dark: #0f1f45; --accent: #ffd21f;
+}

@@ -452,6 +452,13 @@
       [0, 'letterbox', true], [0, 'music', 'peace'], [0, 'camera', { to: 'overview', dur: 1 }],
       [1, 'title', { text: '{title}', sub: 'Every neighbor has a story. Every house holds a secret.', dur: 4, color: '#ffe6ab' }],
       [5, 'camera', { to: 'square', dur: 3 }], [9, 'camera', { to: 'overview', dur: 2 }], [11, 'letterbox', false],
+      // Themes with an antagonist (RSP Supply: Tom Smith) introduce them at the fountain.
+      [5.2, 'spawn', { id: 'villain', kind: 'resident', at: { from: 'fountain', dy: 135 }, avatar: 'villain', fadeIn: 0.8, scale: 1.6 }, { when: 'villain' }],
+      [5.8, 'spot', { id: 'villain' }, { when: 'villain' }],
+      [6.0, 'bubble', { id: 'villain', text: 'Synergy.', dur: 1.8 }, { when: 'villain' }],
+      [6.4, 'title', { text: '{villain}', sub: '{villainTitle} has big plans for {title}', color: '#ffd21f', dur: 2.6, band: true }, { when: 'villain' }],
+      [9.0, 'spot', {}, { when: 'villain' }],
+      [9.2, 'alpha', { id: 'villain', to: 0, dur: 0.8 }, { when: 'villain' }],
     ] },
     protection: { name: 'Player protection', needsHouse: true, duration: 8, steps: [
       [0, 'camera', { to: 'house', zoom: 2.6, dur: 1.5 }], [0, 'hold'],

@@ -38,6 +38,8 @@
   let creatorTab = 'body';
 
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  // Role names shown to players follow the theme (e.g. RSP Supply Associate); rules use role ids.
+  function roleLabel(id) { return window.MT_THEMES ? MT_THEMES.roleName(view && view.theme, id, (ROLES[id] || {}).name || id) : (ROLES[id] || {}).name || id; }
   function load(k) { try { return JSON.parse(localStorage.getItem(key(k)) || 'null'); } catch { return null; } }
   function save(k, v) { try { localStorage.setItem(key(k), JSON.stringify(v)); } catch { /* ignore */ } }
   function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -307,6 +309,7 @@
 
   socket.on('player:state', (v) => {
     clockOffset = v.serverNow - Date.now();
+    if (document.documentElement.dataset.theme !== v.theme) document.documentElement.dataset.theme = v.theme || ''; // themed menus (CSS)
     const phaseChanged = prevPhase !== v.phase;
     if (phaseChanged) {
       abilityDraft = {};
@@ -500,7 +503,7 @@
     const v = view;
     let html = '';
     if (v.teammates) {
-      html += `<div class="extra"><b>Your team:</b> ${v.teammates.length ? v.teammates.map((t) => `${esc(t.name)}${ROLES[t.role] && t.role !== 'mafia' ? ` (${ROLES[t.role].name})` : ''}${t.alive ? '' : ' 👻'}`).join(', ') : 'Just you. Good luck!'}</div>`;
+      html += `<div class="extra"><b>Your team:</b> ${v.teammates.length ? v.teammates.map((t) => `${esc(t.name)}${ROLES[t.role] && t.role !== 'mafia' ? ` (${esc(roleLabel(t.role))})` : ''}${t.alive ? '' : ' 👻'}`).join(', ') : 'Just you. Good luck!'}</div>`;
     }
     if (v.investigations && v.investigations.length) {
       html += `<div class="extra"><b>Your notebook</b><ul class="list">${v.investigations.map((i) => `<li><span>Night ${i.night}: ${esc(i.name)}</span>${verdictTag(i)}</li>`).join('')}</ul></div>`;
@@ -518,7 +521,7 @@
       <div class="rc-hidden">🔒 ${big ? 'Tap to reveal your role' : 'Tap to peek at your role'}</div>
       <div class="rc-shown">
         <div class="big-emoji">${r.emoji}</div>
-        <div class="rc-name">${r.name}</div>
+        <div class="rc-name">${esc(roleLabel(v.role))}</div>
         <div class="rc-blurb">${esc(view.roleBlurb || r.blurb)}</div>
         ${roleExtras()}
         <div class="small" style="margin-top:8px;opacity:.8">Tap to hide</div>
@@ -633,7 +636,7 @@
       <div class="big-emoji">👻</div>
       <h2>You're a ghost</h2>
       <p class="muted">Your living ability is finished. Use the ghost controls below when enabled, and keep secrets away from living players.</p>
-      ${r ? `<p class="small">You were ${r.emoji} <b>${r.name}</b></p>` : ''}
+      ${r ? `<p class="small">You were ${r.emoji} <b>${esc(roleLabel(v.role))}</b></p>` : ''}
       ${v.hauntReadyAt == null ? '<p class="muted small">Haunting is turned off for this game.</p>' : `<div class="haunts">
         <button class="btn" data-haunt="spin" ${cooling ? 'disabled' : ''}>🌀 Spin</button>
         <button class="btn" data-haunt="wail" ${cooling ? 'disabled' : ''}>😱 Wail</button>
@@ -658,7 +661,7 @@
     return `<div class="card center">
       <div class="big-emoji">${W.emoji}</div>
       <div class="result ${won ? 'win' : 'lose'}">${won ? 'You won!' : 'You lost'}</div>
-      <p>${v.winner === 'draw' ? "It's a draw." : `${W.name} wins.`}</p>
+      <p>${v.winner === 'draw' ? "It's a draw." : `${esc(v.winner === 'mafia' ? MT_THEMES.teamName(v.theme, 'mafia', W.name) : W.name)} wins.`}</p>
       <p class="muted small">Waiting for the host to start another round…</p>
     </div>
     <div class="card"><h3>Everyone's roles</h3><ul class="list">${rows}</ul></div>`;

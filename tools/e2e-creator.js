@@ -253,6 +253,18 @@ class Page {
   const homeAgain = await homeLook(); for (const [k, v] of Object.entries(wantHome)) assert.equal(homeAgain[k], v, 'house restored ' + k);
   ok('House design persists across rooms, including restore from the server profile');
 
+  // --- RSP Supply theme: switching the room re-themes the phone menus and house preview live.
+  await hostEmit('host:action', { type: 'settings', settings: { theme: 'rsp' } });
+  await a.until(`document.documentElement.dataset.theme === 'rsp'`, 'phone receives the RSP theme');
+  assert.equal(await a.eval(`getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()`), '#ffd21f');
+  assert.equal(await a.eval(`getComputedStyle(document.documentElement).getPropertyValue('--wood').trim()`), '#1f4fa8');
+  await wait(400); await a.shot('rsp-phone-house');
+  await hostEmit('host:action', { type: 'settings', settings: { theme: 'medieval' } });
+  await a.until(`document.documentElement.dataset.theme === 'medieval'`, 'phone returns to the original theme');
+  assert.notEqual(await a.eval(`getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()`), '#ffd21f');
+  await tvPage.eval(`document.documentElement.dataset.theme = 'rsp'`); await wait(300); await tvPage.shot('rsp-tv-menu');
+  ok('RSP Supply theme re-themes phone menus live and switches back cleanly');
+
   const errors = [...a.errors, ...b.errors, ...t.errors, ...tvPage.errors];
   assert.deepEqual(errors, [], 'page errors: ' + errors.join('\n'));
   ok('No page errors');

@@ -282,7 +282,7 @@
       else if (cine.type === 'gameover') this.playGameOver(cine);
       else if (cine.type === 'execution') this.playExecution(cine);
       else if (cine.type === 'scene' && this.cinema) this.cinema.play(cine.scene, { victimId: cine.targetId, outcome: cine.outcome }, { queue: true, phaseBound: true });
-      else if (cine.type === 'start') { SFX.play('start'); if (this.cinema) this.cinema.play('introduction', { title: this.state.townName || 'Mafia Town' }, { phaseBound: true }); this.burst(CX, CY, ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71'], 60, 380); }
+      else if (cine.type === 'start') { SFX.play('start'); if (this.cinema) this.cinema.play('introduction', { title: this.state.townName || 'Mafia Town' }, { phaseBound: true }); this.burst(CX, CY, (this.th.effects && this.th.effects.confetti) || ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71'], 60, 380); }
     }
 
     queueStories(stories) {
@@ -407,7 +407,8 @@
       const W8 = (window.MT_ROLES.WINNERS || {})[cine.winner];
       if (this.cinema && W8) {
         const good = cine.winner === 'town' || cine.winner === 'jester';
-        this.cinema.play('victory', { title: cine.winner === 'draw' ? 'Nobody wins…' : `${W8.name} wins!`, sub: this.state.townName || '', mood: good ? 'triumph' : 'ominous', cheer: cine.winner === 'town' }, {});
+        const team = cine.winner === 'mafia' && window.MT_THEMES ? MT_THEMES.teamName(this.themeId, 'mafia', W8.name) : W8.name;
+        this.cinema.play('victory', { title: cine.winner === 'draw' ? 'Nobody wins…' : `${team} wins!`, sub: this.state.townName || '', mood: good ? 'triumph' : 'ominous', cheer: cine.winner === 'town' }, {});
       }
       if (cine.winner === 'town') {
         for (let i = 0; i < 6; i++) this.at(i * 0.8, () => this.confetti(120));
@@ -441,7 +442,7 @@
     }
 
     confetti(count) {
-      const colors = ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#ff8fd1'];
+      const colors = (this.th.effects && this.th.effects.confetti) || ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#ff8fd1'];
       for (let i = 0; i < count; i++) {
         this.effects.push({ type: 'confetti', x: rnd(0, W), y: rnd(-80, -10), vx: rnd(-40, 40), vy: rnd(120, 260), rot: rnd(0, TAU), vr: rnd(-6, 6), color: pickOne(colors), life: 6, max: 6 });
       }
@@ -764,7 +765,11 @@
       }
       // screen-space cinematic overlay (letterbox, fades, titles)
       scr.setTransform(k, 0, 0, k, this.offX * this.dpr, this.offY * this.dpr);
-      if (cin) cin.drawOverlay(scr);
+      // Spotlight follows its actor (world -> screen through the camera).
+      const spotActor = cin && cin.spot && cin.actors.get(cin.spot);
+      const spotPos = spotActor && (interior ? { x: spotActor.x, y: spotActor.y - 30 * (spotActor.scale || 1) }
+        : { x: W / 2 + cam.z * (spotActor.x - cam.x) + sh.x, y: H / 2 + cam.z * (spotActor.y - 30 * (spotActor.scale || 1) - cam.y) + sh.y });
+      if (cin) cin.drawOverlay(scr, spotPos);
       if (this.isCorrupted()) {
         scr.fillStyle = 'rgba(110,255,220,0.12)';
         for (let i = 0; i < 18; i++) scr.fillRect((i * 397 + this.time * 340) % W, (i * 61 + this.time * 220) % H, 140, 5);

@@ -264,6 +264,7 @@
   // ---------- rendering ----------
   socket.on('judge:state', (s) => {
     clockOffset = s.serverNow - Date.now();
+    if (document.documentElement.dataset.theme !== s.theme) document.documentElement.dataset.theme = s.theme || ''; // themed menus (CSS)
     const first = !st;
     st = s;
     if (first) {

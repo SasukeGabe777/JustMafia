@@ -8,6 +8,17 @@
 //   building     shape the renderer draws: gable | thatch | dome | spire | tent | crypt | office | bunker
 //   night        RGB tint used for the night overlay
 //   music        (future) background music pack id; null = synthesized SFX only
+// Optional (all presentation; rules never read them):
+//   civic        names for the tavern / hall / firepit / market / workshop
+//   roleNames    { roleId: 'Display name' } shown on phones, TV text and narration
+//   teamNames    { mafia: 'Display name', town: ..., neutral: ... }
+//   villain      { name, title, avatar } the theme's face of the antagonist team
+//   ui           { accent, accent2, ink, paper, wood, woodDark } menu colors (CSS vars)
+//   narration    { key: [lines] } overrides narrator lines for every narrator style
+//   houseTrim    accent color for a small plaque on every house
+//   effects      { confetti: [colors] }
+// To add a theme: copy an entry (RSP Supply below shows every optional field),
+// add its id to THEME_ORDER, and optionally a cinema kit in public/cinema.js.
 (function (root) {
   const THEMES = {
     smalltown: {
@@ -63,8 +74,45 @@
   THEMES.fantasy.civic = { tavern: 'MOON INN', hall: 'MAGE HALL', firepit: 'ENCHANTED FIRE', market: 'BAZAAR', workshop: 'ALCHEMY' };
   THEMES.medieval.civic = { tavern: 'TAVERN', hall: 'GUILD HALL', firepit: 'HEARTH', market: 'MARKET', workshop: 'SMITHY' };
   THEMES.fbi.civic = { tavern: 'BREAK ROOM', hall: 'FIELD OFFICE', firepit: 'BRIEFING', market: 'SUPPLIES', workshop: 'FORENSICS' };
-  const THEME_ORDER = ['smalltown', 'medieval', 'space', 'fantasy', 'dragons', 'dungeon', 'spies', 'fbi'];
-  const API = { THEMES, THEME_ORDER };
+  // RSP Supply: a lighthearted corporate-takeover parody. The Mafia team becomes
+  // RSP Supply, led by its President, Tom Smith. Yellow and blue everywhere.
+  THEMES.rsp = {
+    name: 'RSP Supply', emoji: '📦', townName: 'Supplyville', building: 'gable',
+    labels: { cemetery: 'FORMER EMPLOYEES' },
+    palette: { grass: '#7fb069', grassDark: '#5f8f4e', road: '#c9ccd3', roadEdge: '#9da2ad', plaza: '#e6e8ed', plazaEdge: '#a9aeb9', water: '#3f7fd6',
+      tree: '#3f8a4f', walls: ['#ffe27a', '#f6d34a', '#fff1b3', '#e9c23a', '#ffd95e', '#f3e3a3'], roofs: ['#1f4fa8', '#2a63c4', '#173d82', '#3a74d6', '#204a96', '#2f5fb8'] },
+    night: '6,12,40', music: null,
+    civic: { tavern: 'BREAK ROOM', hall: 'RSP HQ', firepit: 'WATER COOLER', market: 'WAREHOUSE', workshop: 'LOADING DOCK' },
+    houseTrim: '#1f4fa8',
+    villain: { name: 'Tom Smith', title: 'President of RSP Supply',
+      avatar: { color: '#1f4fa8', skin: '#f3c9a0', hat: 'none', hair: 'slickedBack', hairColor: '#969b9d', facialHair: 'none', eyes: '#416f91', face: 'square', features: 'none', expression: 'smirk', outfit: 'mafiaSuit', pants: '#2d2f3a', shoes: '#151821', shoeStyle: 'nobleShoes', accessory: 'glasses', nameColor: '#ffe066' } },
+    teamNames: { mafia: 'RSP Supply', town: 'The Townsfolk', neutral: 'Freelancers' },
+    roleNames: { mafia: 'RSP Supply Associate', godfather: 'Tom Smith, President', roleblocker: 'Mandatory Meeting Scheduler', silencer: 'Corporate Lawyer',
+      puppetMaster: 'Marketing Department', hustler: 'Regional Sales Manager', alchemist: 'Product Development', villager: 'Townsperson', detective: 'Auditor',
+      sheriff: 'Inspector', doctor: 'Union Rep', bodyguard: 'Security Guard', serialKiller: 'Rogue Contractor' },
+    ui: { accent: '#ffd21f', accent2: '#1f4fa8', ink: '#0f1f45', paper: '#fff6cf', paper2: '#fffbe6', wood: '#1f4fa8', woodDark: '#0f2a63', woodLight: '#4d7fd9', bg: '#0c1d4a' },
+    effects: { confetti: ['#ffd21f', '#1f4fa8', '#ffffff', '#3a74d6'] },
+    narration: {
+      start: ['Welcome to {town}. {count} townsfolk live here... and RSP Supply has its eye on every single one of them. President Tom Smith calls it "an exciting growth opportunity."',
+        'Breaking news: RSP Supply plans to acquire {town}. Tom Smith promises "synergy." {count} townsfolk promise to resist. Some of them are lying.'],
+      roleReveal: ['Check your phones. Some of you secretly work for RSP Supply. Tom Smith thanks you for your loyalty.'],
+      night: ['The lights dim in {town}. At RSP Supply headquarters, Tom Smith is scheduling a very quiet meeting.', 'Night falls on {town}. Somewhere, an RSP Supply clipboard is being filled with names.'],
+      kill: ['{name} has been acquired by RSP Supply. Tom Smith calls it "a smooth transition."{role} {alive} townsfolk remain independent.', 'Overnight, {name} was absorbed into the RSP Supply org chart.{role} {alive} remain.'],
+      mafiaWin: ['The deal is closed. RSP Supply now owns {town}. Tom Smith unveils the new logo: yellow, blue, and everywhere.'],
+      townWin: ['The takeover has failed! The last RSP Supply associate is escorted out, and Tom Smith cancels the press conference. {town} stays independent!'],
+      eliminated: ['The town votes. {name} is walked out of {town} with a cardboard box.{role}'],
+      kill_lake: ['{name} stayed at the lake a little too long. RSP Supply has since installed a "Swim at Your Own Risk" sign.{role} {alive} remain.'],
+      kill_tavern: ['{name} was the last one in the break room. RSP Supply has reassigned their parking spot.{role} {alive} remain.'],
+      kill_hearth: ['{name} lingered by the water cooler too long. Tom Smith calls it "a learning moment."{role} {alive} remain.'],
+      kill_field: ['{name} wandered past the RSP Supply warehouse and into the field. They did not return.{role} {alive} remain.'],
+      kill_visit: ['{name} was auditing {host}’s house after hours. RSP Supply closed the audit permanently.{role} {alive} remain.'],
+    },
+  };
+  const THEME_ORDER = ['smalltown', 'medieval', 'space', 'fantasy', 'dragons', 'dungeon', 'spies', 'fbi', 'rsp'];
+  // Themed display names (fall back to the role/team's own name).
+  const roleName = (themeId, roleId, fallback) => { const t = THEMES[themeId]; return (t && t.roleNames && t.roleNames[roleId]) || fallback; };
+  const teamName = (themeId, team, fallback) => { const t = THEMES[themeId]; return (t && t.teamNames && t.teamNames[team]) || fallback; };
+  const API = { THEMES, THEME_ORDER, roleName, teamName };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.MT_THEMES = API;
 })(typeof window !== 'undefined' ? window : globalThis);

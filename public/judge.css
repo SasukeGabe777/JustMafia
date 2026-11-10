@@ -127,3 +127,9 @@ tr.dead td { opacity: .55; }
 #grimoire summary { cursor:pointer; padding:8px; }
 #s-roles .role { display:grid; grid-template-columns:24px minmax(70px,1fr) 48px; }
 #s-roles .role .btn { grid-column:2 / -1; padding:3px 6px; font-size:12px; }
+
+/* ===== Theme menus: RSP Supply (yellow + blue). ===== */
+:root[data-theme="rsp"] {
+  --bg: #0c1d4a; --bg2: #16306e; --wood: #1f4fa8; --wood-d: #0f2a63; --wood-l: #4d7fd9;
+  --card: #ffe9a3; --card2: #fff8dc; --ink: #0f1f45; --muted: #2c4a8a; --line: rgba(31,79,168,0.28); --accent: #ffd21f;
+}

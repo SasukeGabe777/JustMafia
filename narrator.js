@@ -144,8 +144,17 @@ Object.assign(LINES.corporate, {
   kill_visit: ['{name} was auditing {host}’s office after hours. The audit has been closed.{role} {alive} remain.'],
 });
 
+const { THEMES } = require('./public/shared/themes');
+
 function line(style, key, vars = {}, rng = Math.random) {
   let bank = (LINES[style] && LINES[style][key]) || LINES.classic[key] || [''];
+  // A theme's own narration (e.g. RSP Supply) replaces the style bank for that key.
+  const themed = THEMES[vars.theme] && THEMES[vars.theme].narration && THEMES[vars.theme].narration[key];
+  if (themed) {
+    const render = (tpl) => tpl.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ''));
+    const fresh = themed.filter((tpl) => render(tpl) !== vars.previous), list = fresh.length ? fresh : themed;
+    return render(list[Math.floor(rng() * list.length)]);
+  }
   const nightFlavor = {
     medieval: ['Lanterns dim along the lanes of {town}. Behind shuttered cottages, a footstep breaks the silence.', 'The tavern doors close in {town}. Not every traveler has gone to sleep.'],
     space: ['Habitat lights dim across {town}. A motion sensor blinks in an empty corridor.', 'Night cycle begins in {town}. Beyond the glass, the stars keep their secrets.'],

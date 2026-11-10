@@ -220,3 +220,10 @@ summary { cursor:pointer; font-weight:600; padding:8px 0; }
 .lobby-actions { position:static; margin:0; padding:0 6px; background:none; }
 .lobby-actions .btn { flex:1; }
 .shop-item canvas { max-width:100%; }
+
+/* ===== Theme menus: RSP Supply (yellow + blue). Set via <html data-theme> from the game state. ===== */
+:root[data-theme="rsp"] {
+  --bg: #0c1d4a; --card: #ffe9a3; --card2: #fff8dc; --ink: #0f1f45; --muted: #2c4a8a;
+  --line: rgba(31,79,168,0.28); --accent: #ffd21f; --wood: #1f4fa8; --wood-d: #0f2a63; --wood-l: #4d7fd9;
+}
+:root[data-theme="rsp"] .brand::after { content: ' · RSP SUPPLY'; color: #ffd21f; font-size: .5em; vertical-align: middle; }

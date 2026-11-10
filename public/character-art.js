@@ -117,6 +117,8 @@
     if (av.faceSprite) { ctx.imageSmoothingEnabled = false; ctx.drawImage(av.faceSprite, -8, -50, 16, 16); }
     if (o.theme === 'space') { rect('#7ed6cf', -10, -25, 3, 6); rect('#c4d8da', 6, -26, 3, 10); }
     if (o.theme === 'fantasy') { rect('#c8b6df', -1, -30, 2, 9); rect('#7ed6cf', -3, -24, 6, 4); }
+    // RSP Supply: everyone wears the company lanyard; a blue-and-yellow ID badge on the chest.
+    if (o.theme === 'rsp') { rect('#1f4fa8', -5, -33, 2, 12); rect('#1f4fa8', 3, -33, 2, 12); rect('#1f4fa8', -5, -22, 10, 1); rect('#ffd21f', -4, -21, 8, 7); rect('#1f4fa8', -3, -20, 6, 2); rect('#0f2a63', -2, -17, 4, 1); }
     if (['spies','fbi'].includes(o.theme)) { rect('#d0c8b7', -4, -32, 8, 7); rect('#32333e', -1, -28, 2, 9); rect('#c4ad73', 5, -27, 3, 3); }
     ctx.restore();
   }
