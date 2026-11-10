@@ -211,6 +211,28 @@ summary { cursor:pointer; font-weight:600; padding:8px 0; }
 @media (max-width: 380px) { .cas-tiles { grid-template-columns:repeat(3, minmax(0,1fr)); } .cas-tab { font-size:10px; } }
 /* Older grids: a canvas's intrinsic 300px width must not widen the page. */
 .shop-grid { grid-template-columns:repeat(2, minmax(0,1fr)); }
+/* ===== Gold pouch + shop ===== */
+.pouch { display:inline-flex; align-items:center; gap:3px; padding:3px 8px 3px 4px; cursor:pointer; font:700 16px var(--font); color:#3a2414;
+  background:#ffe9a0; border:3px solid var(--wood-d); box-shadow:inset 2px 2px 0 #fff6cf; }
+.pouch canvas { width:28px; height:28px; image-rendering:pixelated; }
+.pouch span { font-size:11px; font-weight:500; }
+.top .pouch { flex:none; }
+.pouch-pop { margin:0 6px 14px; }
+.pouch-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; text-align:center; }
+.pouch-stats div { background:var(--card2); border:2px solid var(--line); padding:6px; }
+.pouch-stats small { display:block; color:var(--muted); }
+.pouch-stats b { font-size:20px; }
+.ledger li span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ledger .plus { color:#3f7a3a; } .ledger .minus { color:#a8323a; }
+.shop-stage { padding:8px; }
+.shop-scene { display:block; width:100%; aspect-ratio:16 / 10; border:4px solid var(--wood-d); }
+.shop-say { margin:8px 2px 0; padding:8px 10px; background:#fff8dc; border:3px solid var(--wood-d); font-size:15px; min-height:2.6em; }
+.shop-tile { position:relative; }
+.shop-tile .badge { position:absolute; top:3px; right:3px; font-style:normal; font-size:11px; font-weight:700; padding:1px 4px; background:#ffd23f; color:#3a2414; border:2px solid #3a2414; }
+.shop-tile .badge.poor { background:#e8b3a8; }
+.shop-tile .badge.own { background:#b8e0a8; } .shop-tile .badge.eq { background:#8fd0f2; } .shop-tile .badge.lock { background:#ddd; }
+.shop-detail h3 { margin:0 0 6px; }
+.shop-detail .btn { margin-top:6px; }
 /* ===== House screen ===== */
 .house-preview { display:block; width:100%; max-width:340px; aspect-ratio:4 / 3; margin:0 auto 8px; border:4px solid var(--wood-d); box-shadow:inset 0 0 0 3px var(--wood-l); }
 .claims { display:grid; gap:6px; }

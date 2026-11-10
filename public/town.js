@@ -407,7 +407,7 @@
       const W8 = (window.MT_ROLES.WINNERS || {})[cine.winner];
       if (this.cinema && W8) {
         const good = cine.winner === 'town' || cine.winner === 'jester';
-        const team = cine.winner === 'mafia' && window.MT_THEMES ? MT_THEMES.teamName(this.themeId, 'mafia', W8.name) : W8.name;
+        const team = cine.winner === 'mafia' && window.MT_THEMES ? window.MT_THEMES.teamName(this.themeId, 'mafia', W8.name) : W8.name;
         this.cinema.play('victory', { title: cine.winner === 'draw' ? 'Nobody wins…' : `${team} wins!`, sub: this.state.townName || '', mood: good ? 'triumph' : 'ominous', cheer: cine.winner === 'town' }, {});
       }
       if (cine.winner === 'town') {

@@ -8,78 +8,24 @@
 // a second player, rejoining another room, "Save look" without joining, the
 // server-profile restore, and no horizontal overflow at phone width.
 const assert = require('node:assert/strict');
-const { spawn } = require('node:child_process');
-const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const WebSocket = require('ws');
 const { io } = require('socket.io-client');
+const { CHROME, Browser, startServer, cleanup, wait } = require('./cdp');
 
-const PORT = 3994, URL = `http://localhost:${PORT}`, DEBUG_PORT = 9333;
+const PORT = 3994, URL = `http://localhost:${PORT}`;
 const SHOTS = process.env.SHOTS || path.join(os.tmpdir(), 'mt-e2e');
-const CHROME = process.env.CHROME || [
-  'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  '/usr/bin/google-chrome', '/usr/bin/chromium', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-].find((p) => fs.existsSync(p));
 if (!CHROME) { console.log('SKIP e2e-creator: Chrome not found (set CHROME=path).'); process.exit(0); }
-fs.mkdirSync(SHOTS, { recursive: true });
-
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const procs = [];
 let passed = 0;
 const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
 
-class Browser {
-  async launch() {
-    const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-chrome-'));
-    procs.push(spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', `--remote-debugging-port=${DEBUG_PORT}`, `--user-data-dir=${profileDir}`, 'about:blank'], { stdio: 'ignore' }));
-    let info; for (let i = 0; i < 100 && !info; i++) { try { info = await (await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`)).json(); } catch { await wait(100); } }
-    if (!info) throw new Error('Chrome DevTools did not start');
-    this.ws = new WebSocket(info.webSocketDebuggerUrl); this.id = 0; this.pending = new Map(); this.listeners = [];
-    this.ws.on('message', (raw) => { const m = JSON.parse(raw); if (m.id && this.pending.has(m.id)) { const { resolve, reject } = this.pending.get(m.id); this.pending.delete(m.id); m.error ? reject(new Error(m.error.message)) : resolve(m.result); } else this.listeners.forEach((l) => l(m)); });
-    await new Promise((r) => this.ws.once('open', r));
-  }
-  send(method, params = {}, sessionId) { const id = ++this.id; this.ws.send(JSON.stringify({ id, method, params, sessionId })); return new Promise((resolve, reject) => this.pending.set(id, { resolve, reject })); }
-  // A separate browser context = a separate phone (own localStorage / profile).
-  async page() {
-    const { browserContextId } = await this.send('Target.createBrowserContext');
-    const { targetId } = await this.send('Target.createTarget', { url: 'about:blank', browserContextId });
-    const { sessionId } = await this.send('Target.attachToTarget', { targetId, flatten: true });
-    const p = new Page(this, sessionId); await p.init(); return p;
-  }
-}
-class Page {
-  constructor(b, sessionId) { this.b = b; this.s = sessionId; this.errors = []; }
-  send(m, p) { return this.b.send(m, p, this.s); }
-  async init() {
-    this.b.listeners.push((m) => { if (m.sessionId === this.s && m.method === 'Runtime.exceptionThrown') this.errors.push(m.params.exceptionDetails.exception ? m.params.exceptionDetails.exception.description : m.params.exceptionDetails.text); });
-    await this.send('Runtime.enable'); await this.send('Page.enable');
-    await this.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
-  }
-  async eval(expression) {
-    const r = await this.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-    if (r.exceptionDetails) throw new Error('Page error: ' + (r.exceptionDetails.exception ? r.exceptionDetails.exception.description : r.exceptionDetails.text));
-    return r.result.value;
-  }
-  async until(expression, what, ms = 6000) { const end = Date.now() + ms; while (!(await this.eval(expression))) { if (Date.now() > end) throw new Error('Timed out: ' + what); await wait(40); } }
-  async go(url) { await this.send('Page.navigate', { url }); await wait(300); await this.until('document.readyState === "complete"', 'load ' + url); }
-  click(sel) { return this.eval(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) throw new Error('missing ' + ${JSON.stringify(sel)}); el.click(); return true; })()`); }
-  async shot(name) { const { data } = await this.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }); fs.writeFileSync(path.join(SHOTS, name + '.png'), Buffer.from(data, 'base64')); }
-  // The stage publishes what it draws on its next animation frame; wait two frames first.
-  async look() { await this.eval('new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))'); return this.lookNow(); }
-  lookNow() { return this.eval(`(() => { const keys = Object.keys(MT_OPTIONS.AVATAR_FIELDS), v = JSON.parse(document.querySelector('#preview').dataset.look || '[]'); return Object.fromEntries(keys.map((k, i) => [k, v[i]])); })()`); }
-  noOverflow() { return this.eval('document.documentElement.scrollWidth <= window.innerWidth'); }
-}
-
 (async () => {
-  const server = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], { env: { ...process.env, PORT: String(PORT), MT_PROFILE_STORE: 'memory' }, stdio: 'pipe' });
-  procs.push(server);
-  await new Promise((resolve, reject) => { server.stdout.on('data', (b) => { if (String(b).includes('Mafia Town is running')) resolve(); }); setTimeout(() => reject(new Error('server did not start')), 6000).unref(); });
+  await startServer(PORT);
   const host = io(URL, { transports: ['websocket'] }); let tv = null; host.on('host:state', (s) => { tv = s; });
   const hostEmit = (ev, d = {}) => new Promise((r) => host.emit(ev, d, r));
   const room = await hostEmit('host:create');
 
-  const browser = new Browser(); await browser.launch();
+  const browser = new Browser({ shots: SHOTS }); await browser.launch();
   const a = await browser.page();
 
   // --- Join as a new player: the room link opens the creator directly.
@@ -270,4 +216,4 @@ class Page {
   ok('No page errors');
   console.log(`All ${passed} creator end-to-end checks passed. Screenshots: ${SHOTS}`);
   host.close();
-})().catch((e) => { console.error(e); process.exitCode = 1; }).finally(() => { for (const p of procs) try { p.kill(); } catch { /* gone */ } setTimeout(() => process.exit(), 300).unref(); });
+})().catch((e) => { console.error(e); process.exitCode = 1; }).finally(() => { cleanup(); setTimeout(() => process.exit(), 300).unref(); });

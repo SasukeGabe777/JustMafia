@@ -404,6 +404,41 @@ Implementation checklist (updated after verification below):
   of the town, the Tom Smith intro, and the phone and TV menus.
 - Note: the repository is public, so the theme's names are visible there.
 
+### Development update 6: shop, gold pouch and inventory
+
+- Gold: the existing server-side coins are now "gold". `ProfileStore` tracks
+  balance (`coins`), lifetime `goldEarned` / `goldSpent` and a 20-entry
+  `ledger`, all recorded through one `record()` path. Older profiles are
+  migrated on load (balance counted as earned). Purchases are validated on
+  the server, and an unaffordable or duplicate purchase changes nothing.
+- Catalog (`public/shared/cosmetics.js`): items now carry a category,
+  description and optional price override, and the file documents how to add
+  items. New premium house designs: Dark Mansion, Modern House and RSP
+  Supply Office, with new art and a flat-roof variant in `world-art.js`.
+  Random/default homes only use the 12 free designs.
+- Inventory: `profile.inventory` (owned shop items with their equipped
+  state) and `ProfileStore.equip()` / socket `profile:equip` equip or
+  unequip any owned item on the saved character or house. In the lobby this
+  applies to your seat right away, so the TV updates.
+- Phone: a Shop button (lobby, gold pouch popover, creator). The shop screen
+  (`public/shop-ui.js`) is a Zelda-style counter scene: a drawn shop interior
+  with a shopkeeper, the current section's wares on the shelves, and the
+  selected item on a cushion with a price tag, plus shopkeeper dialogue. It
+  has section tabs (Clothing, Hats & Gear, Hairstyles, House, Flair,
+  Inventory), item tiles with price/owned/equipped/locked badges, and a
+  detail panel with description, price, your gold, and Buy (disabled with a
+  reason when unaffordable or achievement-locked) or Equip/Unequip. The pixel
+  gold pouch shows in the game header; tapping it shows balance / earned /
+  spent and recent entries. The old in-creator shop panel was replaced.
+- Validation: profile tests (pouch fields, failed purchase unchanged, award
+  ledger, exact deduction, no double purchase, inventory, equip/unequip of
+  house and character items, unowned equip refused, persistence, migration).
+  New `tools/e2e-shop.js` (real Chrome, 7 checks: pouch, shop open/close,
+  preview + unaffordable, buying deducts exactly, inventory equip/unequip
+  reaching the TV, refresh persistence, no page errors). The e2e helpers now
+  live in `tools/cdp.js`; `npm run test:e2e` runs both suites.
+  `MT_DEV_GRANTS=1` enables a test-only gold grant.
+
 The historical phases below describe earlier iterations; this completion audit
 supersedes their pending markers for features implemented above.
 

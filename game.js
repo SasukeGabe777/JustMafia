@@ -220,7 +220,9 @@ class Room {
     const home = {};
     for (const [key, list] of Object.entries(OPTIONS.HOME_FIELDS)) {
       const choices = OPTIONS[list], old = OPTIONS.LEGACY_HOME[key] && legacy[OPTIONS.LEGACY_HOME[key]];
-      home[key] = choices.includes(h[key]) ? h[key] : choices.includes(old) ? old : ['style', 'wall'].includes(key) ? this.pick(choices) : choices[0];
+      // Random defaults only come from free designs (premium styles are shop items).
+      const free = key === 'style' ? choices.slice(0, OPTIONS.FREE_HOUSE_STYLES) : choices;
+      home[key] = choices.includes(h[key]) ? h[key] : choices.includes(old) ? old : ['style', 'wall'].includes(key) ? this.pick(free) : choices[0];
     }
     return home;
   }

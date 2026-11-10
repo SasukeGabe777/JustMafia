@@ -55,7 +55,7 @@
         <button class="btn ghost" id="photo-remove" hidden>Remove my face</button>
         <p id="photo-status" class="small" role="status"></p>
       </details>
-      <details id="shop"><summary>Wardrobe &amp; cosmetic shop</summary><div id="shop-body"></div></details>
+      <button class="btn ghost" id="c-shop" data-open-shop>🛒 Visit the shop</button>
     </div>
     <p id="c-err" class="err" role="alert"></p>
     <div class="cas-bar">
@@ -87,6 +87,23 @@
     <div class="cas-bar"><button id="h-save" class="btn big">Save house</button></div>
   </section>
 
+  <!-- Shop: a shop counter scene, category shelves, item details, and your inventory. -->
+  <section id="screen-shop" class="cas" hidden>
+    <header class="cas-head">
+      <button id="s-back" class="btn ghost small" aria-label="Back">◀</button>
+      <h2 id="s-title">Town Shop</h2>
+      <span id="s-pouch-wrap"></span>
+    </header>
+    <div id="s-pouch-pop" class="card pouch-pop" hidden></div>
+    <div class="card shop-stage">
+      <canvas id="s-scene" class="shop-scene" aria-label="The shop counter with the shopkeeper and the selected item"></canvas>
+      <p id="s-say" class="shop-say" role="status"></p>
+    </div>
+    <nav id="s-tabs" class="cas-tabs" role="tablist" aria-label="Shop sections"></nav>
+    <div id="s-grid" class="card cas-panel"></div>
+    <div id="s-detail" class="card shop-detail"></div>
+  </section>
+
   <section id="screen-game" hidden>
     <header class="top">
       <canvas id="me" class="me"></canvas>
@@ -95,7 +112,9 @@
         <div id="g-phase"></div>
       </div>
       <div id="g-timer"></div>
+      <span id="g-pouch-wrap"></span>
     </header>
+    <div id="g-pouch-pop" class="card pouch-pop" hidden></div>
     <main id="g-body"></main>
     <details class="card" id="player-settings"><summary>Settings</summary><div id="governance"></div></details>
   </section>
@@ -121,6 +140,7 @@
   <script src="/story-ui.js"></script>
   <script src="/creator-config.js"></script>
   <script src="/creator-ui.js"></script>
+  <script src="/shop-ui.js"></script>
   <script src="/play.js"></script>
 </body>
 </html>

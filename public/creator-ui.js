@@ -41,8 +41,7 @@
     render({ avatar, profile, theme = 'smalltown', tab, setTab, change, buy, paint }) {
       const $ = (s) => document.querySelector(s);
       renderTabs({ tabsEl: $('#c-tabs'), panelEl: $('#c-panel'), tabs: CFG.TABS, look: avatar, profile, theme, tab, setTab, change });
-      const avatarRef = avatar;
-      renderShop({ avatar: avatarRef, profile, buy, paint });
+      // The shop moved to its own screen (shop-ui.js); the creator links to it.
     },
   };
 
@@ -58,7 +57,7 @@
         const list = choices(profile, s.field, s), current = avatar[s.field] == null ? list[0] : avatar[s.field];
         const locked = listOf(s.field, s).length - list.length;
         const head = `<div class="cas-label">${esc(s.label)} <b>${esc(O.label(current))}</b></div>`;
-        const more = locked ? `<p class="small muted">${locked} more to unlock in the wardrobe shop.</p>` : '';
+        const more = locked ? `<p class="small muted">${locked} more to unlock in the 🛒 shop.</p>` : '';
         if (s.kind === 'swatch') return `<section class="cas-section">${head}<div class="swatches">${list.map((v) => `<button class="swatch${v === current ? ' sel' : ''}" style="background:${esc(v)}" title="${esc(O.label(v))}" aria-label="${esc(s.label)}: ${esc(O.label(v))}" aria-pressed="${v === current}" data-field="${s.field}" data-value="${esc(v)}"></button>`).join('')}</div>${more}</section>`;
         return `<section class="cas-section">${head}<div class="cas-tiles${s.focus === 'house' ? ' wide' : ''}">${list.map((v) => `<button class="cas-tile${v === current ? ' sel' : ''}" aria-pressed="${v === current}" data-field="${s.field}" data-value="${esc(v)}" data-focus="${s.focus || 'body'}"><canvas></canvas><span>${esc(O.label(v))}</span></button>`).join('')}</div>${more}</section>`;
       }).join('');
@@ -66,18 +65,4 @@
       requestAnimationFrame(() => panel.querySelectorAll('.cas-tile').forEach((b) => paintTile(b.querySelector('canvas'), { ...avatar, [b.dataset.field]: b.dataset.value }, b.dataset.focus, theme)));
   }
 
-  // Wardrobe shop (unchanged behavior): unlock catalog items with coins/achievements.
-  function renderShop({ avatar, profile, buy, paint }) {
-      const $ = (s) => document.querySelector(s);
-      const shop = $('#shop-body');
-      const openDetails = new Map([...shop.querySelectorAll('details')].map((d) => [d.querySelector('summary').textContent, d.open]));
-      shop.innerHTML = `<p><b>${profile ? profile.coins : 0} coins</b> · ${profile ? esc(profile.storage) : 'Connecting profile…'}</p><p class="small muted">Coins reward completed human games and verified outcomes. Test games do not award coins. Keep this browser's site data to retain your profile key.</p>${Object.entries(C.FIELDS).map(([field]) => `<details><summary>${esc(O.label(field))}</summary><div class="shop-grid">${C.CATALOG.filter((i) => i.field === field).map((i) => { const own = owned(profile, field, i.value), unlocked = !i.achievement || profile && profile.achievements.includes(i.achievement); return `<article class="shop-item"><canvas data-item="${i.id}"></canvas><b>${esc(i.name)}</b><small>${own ? 'Owned' : i.achievement ? esc(C.ACHIEVEMENTS[i.achievement].label) : i.cost + ' coins'}</small><button class="btn small ghost" data-buy="${i.id}" ${own || !profile || !unlocked || profile.coins < i.cost ? 'disabled' : ''}>${own ? 'Unlocked' : unlocked ? 'Unlock' : 'Achievement locked'}</button></article>`; }).join('')}</div></details>`).join('')}`;
-      shop.querySelectorAll('[data-buy]').forEach((b) => { b.onclick = () => buy(b.dataset.buy); });
-      shop.querySelectorAll('details').forEach((d) => { const label = d.querySelector('summary').textContent; if (openDetails.has(label)) d.open = openDetails.get(label); });
-      function previews() {
-        shop.querySelectorAll('canvas').forEach((cv) => { if (!cv.getClientRects().length) return; const item = C.CATALOG.find((i) => i.id === cv.dataset.item); paint(cv, { ...avatar, [item.field]: item.value }); const ctx = cv.getContext('2d'); if (item.field === 'nameplate') { ctx.fillStyle = '#b79867'; ctx.fillRect(2, cv.height - 12, cv.width - 4, 11); } if (item.field === 'houseDecor' || item.field === 'effect') { ctx.fillStyle = '#b79867'; ctx.font = '10px monospace'; ctx.fillText(item.name.slice(0, 12), 2, 12); } });
-      }
-      $('#shop').ontoggle = previews; shop.querySelectorAll('details').forEach((d) => { d.ontoggle = previews; });
-      requestAnimationFrame(previews);
-  }
 })();

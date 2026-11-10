@@ -48,7 +48,7 @@
   // `list` names the option list. Tiles render the whole house with that choice.
   const HOME_TABS = [
     { id: 'style', label: 'Design', icon: '🏠', sections: [
-      { field: 'style', list: 'houseStyle', label: 'House design', kind: 'tile', focus: 'house' },
+      { field: 'style', list: 'houseStyle', label: 'House design', kind: 'tile', focus: 'house', catalog: 'houseStyle' },
     ] },
     { id: 'paint', label: 'Paint', icon: '🎨', sections: [
       { field: 'wall', list: 'houseColor', label: 'House color', kind: 'swatch' },

@@ -98,6 +98,16 @@ function sceneSweep() {
   if (!queued.isCorrupted()) { errs++; console.error('Glitch did not start'); }
   const avatars = JSON.stringify([...queued.chars.values()].map((c) => c.avatar)); queued.draw(); queued.update(31); queued.draw();
   if (queued.isCorrupted() || JSON.stringify([...queued.chars.values()].map((c) => c.avatar)) !== avatars) { errs++; console.error('Glitch changed avatars permanently'); }
+  // Every theme's game-over path for each winner (themed team names, e.g. RSP Supply).
+  for (const theme of W.MT_THEMES.THEME_ORDER) for (const winner of ['mafia', 'town', 'jester', 'draw']) {
+    try {
+      const g = new W.Town(makeCanvas());
+      g.applyState({ phase: 'gameover', theme, winner, players: Array.from({ length: 6 }, (_, i) => ({ id: 'p' + i, name: 'P' + i, house: i, alive: i > 1, avatar: { color: '#e74c3c', skin: '#f3c9a0' } })), accusations: [] });
+      g.playCinematic({ id: 7, type: 'gameover', winner });
+      for (let i = 0; i < 12 * 30 && g.cinema.active; i++) { g.update(1 / 30); if (i % 3 === 0) g.draw(); }
+      n++;
+    } catch (e) { errs++; console.error('gameover', theme, winner, e); }
+  }
   console.log(`scene sweep: ${n} scene runs, errors: ${errs}`);
   return errs;
 }

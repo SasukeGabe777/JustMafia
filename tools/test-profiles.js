@@ -26,6 +26,30 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     store.select(auth.id, { ...store.validateAvatar(auth.id, {}), expression: 'sleepy' });
     assert.equal(new ProfileStore(filename).validateAvatar(auth.id, {}).expression, 'sleepy');
     assert.equal(store.validateAvatar(auth.id, { expression: 'nope', features: 'serious' }).expression, 'serious');
+    // Gold pouch: earned/spent/balance and a ledger; unaffordable buys change nothing.
+    const g = store.create(), P = () => store.view(g.id);
+    assert.equal(P().coins, 0); assert.equal(P().goldEarned, 0); assert.equal(P().goldSpent, 0);
+    const before = JSON.stringify(P());
+    const poor = store.buy(g.id, 'houseStyle:darkMansion'); assert.equal(poor.ok, false); assert.match(poor.error, /Not enough gold/);
+    assert.equal(JSON.stringify(P()), before, 'failed purchase leaves gold and inventory unchanged');
+    assert(store.award(g.id, 'g-1', { won: true, alive: true, team: 'town', metrics: { abilities: 1 } }));
+    const earned = P().coins; assert(earned > 0); assert.equal(P().goldEarned, earned); assert.equal(P().ledger[0].reason, 'Game reward');
+    assert(store.grant(g.id, 200)); assert.equal(P().coins, earned + 200);
+    const price = require('../public/shared/cosmetics').CATALOG.find((i) => i.id === 'houseStyle:darkMansion').cost;
+    assert(store.buy(g.id, 'houseStyle:darkMansion').ok);
+    assert.equal(P().coins, earned + 200 - price); assert.equal(P().goldSpent, price); assert.equal(P().goldEarned - P().goldSpent, P().coins);
+    assert.equal(P().ledger[0].delta, -price); assert.equal(P().ledger[0].item, 'houseStyle:darkMansion');
+    assert.equal(store.buy(g.id, 'houseStyle:darkMansion').ok, false, 'cannot buy twice');
+    // Inventory + equip/unequip (house item and character item); unowned items cannot be equipped.
+    assert.deepEqual(P().inventory.map((i) => i.id), ['houseStyle:darkMansion']); assert.equal(P().inventory[0].equipped, false);
+    assert.equal(store.equip(g.id, 'outfit:knight').ok, false);
+    const eq = store.equip(g.id, 'houseStyle:darkMansion'); assert(eq.ok); assert.equal(eq.target, 'home'); assert.equal(P().home.style, 'darkMansion'); assert.equal(P().inventory[0].equipped, true);
+    assert(store.equip(g.id, 'houseStyle:darkMansion', false).ok); assert.equal(P().home.style, 'cottage'); assert.equal(P().inventory[0].equipped, false);
+    assert(store.buy(g.id, 'hat:hood').ok); assert(store.equip(g.id, 'hat:hood').ok); assert.equal(P().avatar.hat, 'hood');
+    assert.equal(new ProfileStore(filename).view(g.id).avatar.hat, 'hood', 'equipped items persist');
+    // Older profiles get pouch fields on load (their balance counts as earned).
+    store.data.profiles[g.id].goldEarned = undefined; store.data.profiles[g.id].ledger = undefined; store.save();
+    const migrated = new ProfileStore(filename).view(g.id); assert.equal(migrated.goldEarned, migrated.coins); assert.deepEqual(migrated.ledger, []);
     const restored = new ProfileStore(filename); assert.deepEqual(restored.view(auth.id), store.view(auth.id)); assert(restored.authenticate(auth));
     assert(!('verifier' in restored.view(auth.id)));
   } finally { if (fs.existsSync(filename)) fs.unlinkSync(filename); }

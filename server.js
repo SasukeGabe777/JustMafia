@@ -215,6 +215,25 @@ io.on('connection', (socket) => {
     profiles.select(socket.profileId, msg.avatar && typeof msg.avatar === 'object' ? msg.avatar : {});
     reply(cb, { ok: true, profile: profiles.view(socket.profileId) });
   });
+  // Inventory: equip/unequip an owned shop item on the saved character or house.
+  // In a lobby it also applies to your seat, so the TV updates right away.
+  socket.on('profile:equip', (msg = {}, cb) => {
+    if (!socket.profileId) return reply(cb, { ok: false, error: 'Profile not connected yet.' });
+    const r = profiles.equip(socket.profileId, msg.itemId, msg.on !== false);
+    if (!r.ok) return reply(cb, r);
+    const { room, p } = ctx();
+    if (p && room.phase === 'lobby' && p.profileId === socket.profileId) {
+      if (r.target === 'home') room.updateProfile(p, { home: profiles.validateHome(p.profileId, r.profile.home) });
+      else room.updateProfile(p, { avatar: profiles.validateAvatar(p.profileId, r.profile.avatar) });
+    }
+    io.to('profile:' + socket.profileId).emit('profile:state', r.profile);
+    reply(cb, r);
+  });
+  // Tests only: grant gold when the server runs with MT_DEV_GRANTS=1.
+  if (process.env.MT_DEV_GRANTS === '1') socket.on('dev:grant', (msg = {}, cb) => {
+    if (!socket.profileId || !profiles.grant(socket.profileId, msg.amount)) return reply(cb, { ok: false });
+    const view = profiles.view(socket.profileId); io.to('profile:' + socket.profileId).emit('profile:state', view); reply(cb, { ok: true, profile: view });
+  });
   // House designer: save a home design to the profile without being in a room.
   socket.on('profile:home', (msg = {}, cb) => {
     if (!socket.profileId) return reply(cb, { ok: false, error: 'Profile not connected yet.' });

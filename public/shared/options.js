@@ -33,6 +33,8 @@
   // roof paint, doors, windows and free yard decorations. Shop decor (houseDecor)
   // stays a catalog unlock. Pure presentation; chosen in the lobby, locked at start.
   OPTIONS.houseStyle = ['cottage', 'tavern', 'bakery', 'smithy', 'apothecary', 'library', 'chapel', 'tailor', 'watchtower', 'windmill', 'farmhouse', 'manor'];
+  OPTIONS.FREE_HOUSE_STYLES = OPTIONS.houseStyle.length; // the first 12 are free; later ones are shop items
+  OPTIONS.houseStyle.push('darkMansion', 'modernHouse', 'rspOffice');
   OPTIONS.houseColor = ['#eadcb9', '#c4674f', '#d39a55', '#e3c15c', '#9fbe86', '#6ea89b', '#8db2d8', '#5f7aa6', '#a88bc6', '#d996ae', '#8b6a50', '#9c9b95'];
   OPTIONS.roofColor = ['theme', '#8a3b2f', '#4c5a6e', '#3f6b4a', '#6a4a7a', '#2f4f80', '#7a5a3a', '#b08a3e', '#5a7f8f', '#3a3a42'];
   OPTIONS.doorStyle = ['plank', 'arched', 'double', 'painted', 'round', 'iron'];
@@ -59,7 +61,7 @@
     '#342b25':'Brown', '#416f91':'Blue', '#477849':'Green', '#89817a':'Gray', '#2d2f3a':'Charcoal', '#355879':'Denim', '#765439':'Brown', '#e3d7bb':'Linen', '#33251d':'Leather', '#151821':'Black', '#f3eee0':'Ivory', '#9b4141':'Burgundy', '#ffffff':'White', '#ffe066':'Gold', '#a6e5ff':'Ice Blue', '#ffb9db':'Rose', '#b1f0ba':'Mint',
     '#eadcb9':'Cream', '#c4674f':'Brick', '#d39a55':'Ochre', '#e3c15c':'Mustard', '#9fbe86':'Sage', '#6ea89b':'Seafoam', '#8db2d8':'Cornflower', '#5f7aa6':'Slate Blue', '#a88bc6':'Lavender', '#d996ae':'Blush', '#8b6a50':'Walnut', '#9c9b95':'Fieldstone',
     theme:'Theme default', '#8a3b2f':'Terracotta', '#4c5a6e':'Slate', '#3f6b4a':'Moss', '#6a4a7a':'Plum', '#2f4f80':'Navy', '#7a5a3a':'Thatch', '#b08a3e':'Straw', '#5a7f8f':'Teal Slate', '#3a3a42':'Charcoal Tile' };
-  OPTIONS.labels = { ...colors, buzzCut:'Buzz Cut', sidePart:'Side Part', slickedBack:'Slicked Back', royalGuard:'Royal Guard', plagueDoctor:'Plague Doctor', mafiaSuit:'Mafia Suit', detectiveCoat:'Detective Coat', ghostHunter:'Ghost Hunter', shoeStyle:'Shoes', leatherBoots:'Leather Boots', tallBoots:'Tall Boots', armoredBoots:'Armored Boots', nobleShoes:'Noble Shoes', wizardHat:'Wizard Hat', wideBrim:'Wide-Brim Hat', plagueHat:'Plague Doctor Hat', jesterHat:'Jester Hat', flowerCrown:'Flower Crown', mafiaBoss:'Mafia Champion', houseStyle:'Home', houseColor:'Home color', rosyCheeks:'Rosy Cheeks', houseDecor:'Home decor' };
+  OPTIONS.labels = { ...colors, buzzCut:'Buzz Cut', sidePart:'Side Part', slickedBack:'Slicked Back', royalGuard:'Royal Guard', plagueDoctor:'Plague Doctor', mafiaSuit:'Mafia Suit', detectiveCoat:'Detective Coat', ghostHunter:'Ghost Hunter', shoeStyle:'Shoes', leatherBoots:'Leather Boots', tallBoots:'Tall Boots', armoredBoots:'Armored Boots', nobleShoes:'Noble Shoes', wizardHat:'Wizard Hat', wideBrim:'Wide-Brim Hat', plagueHat:'Plague Doctor Hat', jesterHat:'Jester Hat', flowerCrown:'Flower Crown', mafiaBoss:'Mafia Champion', houseStyle:'Home', houseColor:'Home color', rosyCheeks:'Rosy Cheeks', houseDecor:'Home decor', darkMansion:'Dark Mansion', modernHouse:'Modern House', rspOffice:'RSP Supply Office' };
   OPTIONS.label = (value) => OPTIONS.labels[value] || OPTIONS.hatLabels[value] || String(value).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   if (typeof module !== 'undefined' && module.exports) module.exports = OPTIONS;
   else root.MT_OPTIONS = OPTIONS;

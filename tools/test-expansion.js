@@ -49,7 +49,7 @@ test('Every appearance option round-trips and locks at start; arbitrary fields r
   assert.deepEqual(room.playerView(p[0]).you.avatar, expected);
 });
 test('House design: every field saves per player, invalid input sanitized, random when unset, legacy avatar migrates, locked at start', () => {
-  assert.equal(O.houseStyle.length, 12); assert.equal(O.houseColor.length, 12);
+  assert.equal(O.FREE_HOUSE_STYLES, 12); assert.equal(O.houseColor.length, 12);
   for (const list of Object.values(O.HOME_FIELDS)) assert(O[list].length >= 5, list);
   const { room, p } = game(['mafia', 'villager', 'villager', 'villager']);
   room.resetToLobby();

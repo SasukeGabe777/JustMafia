@@ -5,8 +5,30 @@
   const FAMILIES = ['Cottage', 'Timber house', 'Stone house', 'Townhouse', 'Farmhouse', 'Narrow home', 'Family home', 'Noble residence'];
   // Player-chosen home styles: [base family, width, wall height]. Each style adds
   // its own signage and props in STYLE_ART; door and footprint stay in the slot.
-  const STYLES = { cottage: [0, 64, 40], tavern: [6, 80, 52], bakery: [1, 70, 48], smithy: [4, 74, 42], apothecary: [3, 58, 64], library: [2, 76, 54], chapel: [5, 50, 60], tailor: [3, 62, 56], watchtower: [2, 56, 46], windmill: [0, 60, 42], farmhouse: [4, 78, 43], manor: [7, 82, 62] };
+  const STYLES = { darkMansion: [7, 86, 66], modernHouse: [2, 84, 46], rspOffice: [3, 74, 60], cottage: [0, 64, 40], tavern: [6, 80, 52], bakery: [1, 70, 48], smithy: [4, 74, 42], apothecary: [3, 58, 64], library: [2, 76, 54], chapel: [5, 50, 60], tailor: [3, 62, 56], watchtower: [2, 56, 46], windmill: [0, 60, 42], farmhouse: [4, 78, 43], manor: [7, 82, 62] };
   const STYLE_ART = {
+    // Premium shop designs.
+    darkMansion: { post({ r, polygon, w, height, top, lit, time, index }) {
+      const tx = -w / 2 - 4; // gothic corner tower with a candle in the attic
+      r('#1b1c22', tx - 1, top - 6, 20, -top + 7); r('#2d2f38', tx, top - 5, 18, -top + 5);
+      polygon('#17181d', [[tx - 4, top - 4], [tx + 9, top - 30], [tx + 22, top - 4]]);
+      r('#3a2c1e', tx + 6, top + 6, 6, 9); r(lit ? '#ffcf6a' : '#6a5a3a', tx + 7, top + 7 + Math.round(Math.sin(time * 6 + index)), 4, 6);
+      for (let a = -w / 2 - 12; a <= w / 2 + 10; a += 6) { r('#202228', a, -14, 2, 15); r('#202228', a - 1, -16, 4, 2); } // iron fence
+      r('#202228', -w / 2 - 12, -10, w + 24, 2); r('#202228', -w / 2 - 12, -4, w + 24, 2);
+      for (let i = 0; i < 2; i++) { const bx = 10 + i * 14 + Math.sin(time * 2 + i) * 6, by = top - 18 - i * 6 + Math.cos(time * 3 + i) * 3; r('#111', bx, by, 5, 1); r('#111', bx + 2, by - 1, 1, 2); }
+    } },
+    modernHouse: { flatRoof: true, post({ r, w, height, lit }) {
+      r(lit ? '#9fe0ff' : '#5b8aa6', -w / 2 + 4, -height + 6, w - 22, 14); r('#e8f6ff', -w / 2 + 6, -height + 8, 10, 3); // panoramic window
+      r('#2b2f36', -w / 2 + 4, -height + 13, w - 22, 1);
+      r('#1e2228', -w / 2 - 2, -height - 14, 26, 3); for (let i = 0; i < 4; i++) r('#2f6fb3', -w / 2 + i * 6, -height - 13, 5, 2); // solar panels
+      r('#cfd5db', w / 2 - 14, -height - 14, 3, 6); r('#7fd38a', w / 2 + 2, -8, 10, 8); r('#4f9a5b', w / 2 + 3, -12, 8, 5); // planter
+    } },
+    rspOffice: { flatRoof: true, post({ r, w, height, time }) {
+      r('#0f2a63', -w / 2 + 2, -height - 4, w - 4, 12); r('#1f4fa8', -w / 2 + 4, -height - 2, w - 8, 8); r('#ffd21f', -w / 2 + 4, -height + 3, w - 8, 2); // fascia sign
+      for (const [x, ch] of [[-12, 'R'], [-3, 'S'], [6, 'P']]) { r('#ffd21f', x, -height - 1, 6, 1); r('#ffd21f', x, -height - 1, 1, 4); r('#ffd21f', x + 5, -height - 1, 1, 2); if (ch !== 'P') r('#ffd21f', x, -height + 1, 6, 1); }
+      const blink = Math.sin(time * 4) > 0; r('#3a3a42', w / 2 - 12, -height - 14, 4, 10); r(blink ? '#ffd21f' : '#8a7a2a', w / 2 - 13, -height - 17, 6, 4); // beacon
+      r('#0f2a63', w / 2 + 2, -12, 12, 12); r('#ffd21f', w / 2 + 3, -11, 10, 2); // RSP crate
+    } },
     cottage: { post({ r, w }) {
       for (let a = -w / 2 - 10; a < w / 2 + 10; a += 5) if (a < -13 || a > 11) r('#eee6d2', a, -7, 2, 8);
       r('#eee6d2', -w / 2 - 10, -5, w / 2 - 3, 1); r('#eee6d2', 12, -5, w / 2, 1);
@@ -144,7 +166,9 @@
       ctx.strokeStyle = '#5c4735'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-w / 2 + 7, -height + 5); ctx.lineTo(-6, -height + 24); ctx.moveTo(5, -height + 24); ctx.lineTo(w / 2 - 8, -height + 5); ctx.stroke();
     }
     const top = -height - (family === 7 ? 35 : 25), eave = -height + 2;
-    if (options.theme === 'space') {
+    if (art.flatRoof) { // modern / office designs: a flat slab roof in every theme
+      r('#22252b', -w / 2 - 6, -height - 9, w + 12, 10); r(roof, -w / 2 - 4, -height - 7, w + 8, 6); r(shade(roof, .2), -w / 2 - 4, -height - 7, w + 8, 1);
+    } else if (options.theme === 'space') {
       ctx.fillStyle = roof; ctx.beginPath(); ctx.ellipse(0, -height, w / 2 + 5, 26, 0, Math.PI, 0); ctx.fill();
       r('#82dbe0', -w / 2, -height, w, 3); r('#25323f', w / 2 - 12, top - 9, 2, 20); r('#8cf8de', w / 2 - 14, top - 11, 5, 4);
     } else if (['spies','fbi','dungeon'].includes(options.theme)) {

@@ -94,6 +94,11 @@ investigating (only when roles are revealed on death). Each location has its
 own scene. The Human narrator and the Judge's manual reveal keep the classic
 murder scene.
 
+**Shop and gold:** every player has a gold pouch (balance, earned, spent).
+Gold comes from completed games and persists on the server. The 🛒 Shop
+sells clothing, hats, hairstyles, house designs and decorations, and flair;
+purchases go to your inventory, where you equip or unequip them.
+
 **RSP Supply theme:** pick "📦 RSP Supply" in Setup for a yellow-and-blue
 corporate-takeover version. The Mafia become RSP Supply, led by President Tom
 Smith. Themes are defined entirely in `public/shared/themes.js`; copy the RSP

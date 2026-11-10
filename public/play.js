@@ -27,7 +27,7 @@
   // House design (separate from the character). Older saves kept it on the avatar.
   let home = load('mt.home') || {};
   for (const [k, old] of Object.entries(OPT.LEGACY_HOME)) if (home[k] == null && avatar[old] != null) home[k] = avatar[old];
-  if (!OPT.houseStyle.includes(home.style)) home.style = pick(OPT.houseStyle);
+  if (!OPT.houseStyle.includes(home.style)) home.style = pick(OPT.houseStyle.slice(0, OPT.FREE_HOUSE_STYLES));
   if (!OPT.houseColor.includes(home.wall)) home.wall = pick(OPT.houseColor);
   for (const [k, list] of Object.entries(OPT.HOME_FIELDS)) if (!OPT[list].includes(home[k])) home[k] = OPT[list][0];
   let savedHome = { ...home }, homeTab = 'style', homeMode = null, pendingClaim = false;
@@ -51,7 +51,7 @@
 
   // ---------- screens ----------
   function show(id) {
-    for (const s of ['#screen-join', '#screen-creator', '#screen-home', '#screen-game', '#screen-msg']) $(s).hidden = s !== id;
+    for (const s of ['#screen-join', '#screen-creator', '#screen-home', '#screen-shop', '#screen-game', '#screen-msg']) $(s).hidden = s !== id;
     if (id === '#screen-creator') startStage();
     if (id === '#screen-home') startHouseStage();
     if (id !== '#screen-home') homeMode = null;
@@ -237,6 +237,42 @@
     });
   });
 
+  // ---------- shop, gold pouch, inventory ----------
+  // The server owns gold and ownership; the shop screen shows them and sends requests.
+  let shopReturn = '#screen-game';
+  function shopLook() { return view && view.you && view.phase === 'lobby' ? { avatar: view.you.avatar, home: view.you.homeLook || savedHome } : { avatar: savedAvatar, home: savedHome }; }
+  function renderShop() {
+    if ($('#screen-shop').hidden) return;
+    const look = shopLook();
+    MT_SHOP.render({ profile, avatar: look.avatar, home: look.home, theme: view && view.theme,
+      buy: (itemId, cb) => socket.emit('profile:buy', { itemId }, (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); }),
+      equip: (itemId, on, cb) => socket.emit('profile:equip', { itemId, on }, (r) => {
+        if (r && r.ok) {
+          profile = r.profile;
+          // Keep this device's saved look in step with what was equipped.
+          if (r.target === 'home') { savedHome = { ...savedHome, [r.key]: r.value }; save('mt.home', savedHome); }
+          else { savedAvatar = { ...savedAvatar, [r.key]: r.value }; save('mt.avatar', savedAvatar); }
+          renderShop(); updatePouch();
+        }
+        cb(r);
+      }) });
+  }
+  function openShop() {
+    if (!profileReady) return;
+    shopReturn = ['#screen-creator', '#screen-game'].find((s) => !$(s).hidden) || '#screen-game';
+    MT_SHOP.open(); show('#screen-shop'); $('#s-pouch-pop').hidden = true; renderShop();
+  }
+  $('#s-back').addEventListener('click', () => { if (shopReturn === '#screen-creator') { avatar = { ...avatar }; show('#screen-creator'); buildPicker(); } else { lastKey = ''; show('#screen-game'); render(); } });
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-open-shop]')) openShop(); });
+  // Gold pouch in the game header: tap for balance, earned, spent and recent entries.
+  function updatePouch() {
+    const wrap = $('#g-pouch-wrap'); if (!wrap) return;
+    wrap.innerHTML = MT_SHOP.pouchButton(profile, 'g-pouch');
+    $('#g-pouch').onclick = () => { const pop = $('#g-pouch-pop'); pop.hidden = !pop.hidden; pop.innerHTML = MT_SHOP.pouchDetails(profile) + '<button class="btn ghost" data-open-shop>🛒 Visit the shop</button>'; };
+    if (!$('#g-pouch-pop').hidden) $('#g-pouch-pop').innerHTML = MT_SHOP.pouchDetails(profile) + '<button class="btn ghost" data-open-shop>🛒 Visit the shop</button>';
+    MT_SHOP.paintPouches();
+  }
+
   // ---------- join ----------
   $('#j-go').addEventListener('click', () => {
     if (!profileReady) return;
@@ -277,7 +313,7 @@
   $('#j-code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); });
 
   // ---------- connection ----------
-  socket.on('profile:state', (p) => { profile = p; if (!$('#screen-creator').hidden) buildPicker(); });
+  socket.on('profile:state', (p) => { profile = p; if (!$('#screen-creator').hidden) buildPicker(); renderShop(); updatePouch(); });
   socket.on('connect', () => {
     const creds = load('mt.profile');
     const ready = (r) => {
@@ -288,6 +324,7 @@
       if (!load('mt.avatar') && profile && profile.lookSaved && profile.avatar) { savedAvatar = { ...savedAvatar, ...profile.avatar }; if (!creatorMode) avatar = { ...savedAvatar }; }
       if (!load('mt.home') && profile && profile.home && Object.keys(profile.home).length) { savedHome = { ...savedHome, ...profile.home }; if (!homeMode) home = { ...savedHome }; }
       if (!$('#screen-creator').hidden) buildPicker();
+      updatePouch();
       if (!$('#screen-join').hidden) tryAutoJoin();
     };
     if (creds) socket.emit('profile:resume', creds, (r) => r && r.ok ? ready(r) : socket.emit('profile:create', {}, ready));
@@ -354,6 +391,7 @@
     lastKey = key;
 
     $('#g-name').textContent = view.you.name;
+    if (!$('#g-pouch')) updatePouch();
     $('#g-name').style.color = view.you.avatar.nameColor || '#ffffff';
     $('#g-phase').textContent = (PHASE_LABEL[view.phase] || '').replace('{d}', view.day) + (view.you.alive || view.phase === 'lobby' ? '' : ' · 👻');
     paint($('#me'), view.you.avatar, { ghost: !view.you.alive && view.phase !== 'lobby' && !view.you.spectator });
@@ -458,7 +496,8 @@
         <p class="muted">${v.lobbyCount} in town${v.lobbyCount < v.minPlayers ? ` · need ${v.minPlayers - v.lobbyCount} more` : ''}. Waiting for the host to start…</p>
         <p data-home-status>🏠 ${esc(homeStatus())}</p>
       </div>
-      <div class="cas-bar lobby-actions"><button class="btn ghost" data-edit>Change my look</button><button class="btn ghost" data-house>Your house</button></div>`;
+      <div class="cas-bar lobby-actions"><button class="btn ghost" data-edit>Change my look</button><button class="btn ghost" data-house>Your house</button></div>
+      <button class="btn" data-open-shop>🛒 Shop</button>`;
     }
     if (v.you.spectator) {
       return `<div class="card center"><div class="big-emoji">🍿</div><h2>Game in progress</h2>
