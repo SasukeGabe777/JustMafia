@@ -53,7 +53,7 @@ function sceneSweep() {
   const W = sandbox.window;
   let n = 0, errs = 0;
   for (const population of [4, 10, 25, 50]) {
-  const players = Array.from({ length: population }, (_, i) => ({ id: 'p' + i, name: 'P' + i, house: i, alive: true, connected: true, avatar: { color: '#e74c3c', skin: '#f3c9a0', hat: 'none', hair: 'curly', hairColor: '#ba593c', facialHair: 'beard', eyes: '#416f91', face: 'square', outfit: 'overalls', pants: '#355879', shoes: '#f3eee0', accessory: 'glasses' } }));
+  const players = Array.from({ length: population }, (_, i) => ({ id: 'p' + i, name: 'P' + i, house: i, alive: true, connected: true, avatar: { color: '#e74c3c', skin: '#f3c9a0', hat: 'none', hair: 'curly', hairColor: '#ba593c', facialHair: 'beard', eyes: '#416f91', face: 'square', outfit: 'overalls', pants: '#355879', shoes: '#f3eee0', accessory: 'glasses', houseStyle: W.MT_OPTIONS.houseStyle[i % W.MT_OPTIONS.houseStyle.length], houseColor: W.MT_OPTIONS.houseColor[i % W.MT_OPTIONS.houseColor.length] } }));
   for (const theme of W.MT_THEMES.THEME_ORDER) {
     const t = new W.Town(makeCanvas());
     t.applyState({ phase: 'night', theme, players, accusations: [] });

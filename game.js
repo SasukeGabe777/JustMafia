@@ -204,6 +204,8 @@ class Room {
       color: OPTIONS.colors.includes(a.color) ? a.color : this.pick(OPTIONS.colors),
       skin: OPTIONS.skins.includes(a.skin) ? a.skin : this.pick(OPTIONS.skins),
       hat: OPTIONS.hats.includes(a.hat) ? a.hat : 'none',
+      houseStyle: OPTIONS.houseStyle.includes(a.houseStyle) ? a.houseStyle : this.pick(OPTIONS.houseStyle),
+      houseColor: OPTIONS.houseColor.includes(a.houseColor) ? a.houseColor : this.pick(OPTIONS.houseColor),
     };
     for (const key of ['hair', 'hairColor', 'facialHair', 'eyes', 'face', 'features', 'outfit', 'pants', 'shoes', 'shoeStyle', 'accessory', 'nameColor', 'nameplate', 'houseDecor', 'effect']) {
       const choices = OPTIONS[key === 'shoeStyle' ? 'shoeStyles' : key];

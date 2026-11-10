@@ -27,12 +27,17 @@
   OPTIONS.nameplate = ['plain', 'scroll', 'veteran', 'mafiaBoss'];
   OPTIONS.houseDecor = ['none', 'flowers', 'banner', 'lanterns', 'heraldry'];
   OPTIONS.effect = ['none', 'fireflies', 'embers'];
+  // Player homes: twelve free building styles and twelve wall paints. Pure
+  // presentation, chosen in the lobby and locked at start with the avatar.
+  OPTIONS.houseStyle = ['cottage', 'tavern', 'bakery', 'smithy', 'apothecary', 'library', 'chapel', 'tailor', 'watchtower', 'windmill', 'farmhouse', 'manor'];
+  OPTIONS.houseColor = ['#eadcb9', '#c4674f', '#d39a55', '#e3c15c', '#9fbe86', '#6ea89b', '#8db2d8', '#5f7aa6', '#a88bc6', '#d996ae', '#8b6a50', '#9c9b95'];
   const colors = {
     '#e74c3c':'Red', '#e67e22':'Orange', '#f1c40f':'Gold', '#2ecc71':'Green', '#1abc9c':'Teal', '#3498db':'Sky Blue', '#2c5fd6':'Royal Blue', '#9b59b6':'Purple', '#e84393':'Pink', '#795548':'Brown', '#7f8c8d':'Gray', '#ecf0f1':'White',
     '#ffe0c4':'Porcelain', '#f3c9a0':'Fair', '#d9a273':'Warm Beige', '#b07a4f':'Tan', '#8a5634':'Brown', '#5c3a21':'Deep Brown',
     '#241b18':'Black', '#543626':'Dark Brown', '#976332':'Light Brown', '#e5c16e':'Blonde', '#ba593c':'Auburn', '#d3d0c8':'Platinum', '#713f95':'Purple', '#b33b38':'Red', '#969b9d':'Gray', '#eeeeea':'White', '#35648f':'Blue', '#39a9ad':'Cyan', '#48905b':'Green', '#d079a6':'Pink',
-    '#342b25':'Brown', '#416f91':'Blue', '#477849':'Green', '#89817a':'Gray', '#2d2f3a':'Charcoal', '#355879':'Denim', '#765439':'Brown', '#e3d7bb':'Linen', '#33251d':'Leather', '#151821':'Black', '#f3eee0':'Ivory', '#9b4141':'Burgundy', '#ffffff':'White', '#ffe066':'Gold', '#a6e5ff':'Ice Blue', '#ffb9db':'Rose', '#b1f0ba':'Mint' };
-  OPTIONS.labels = { ...colors, buzzCut:'Buzz Cut', sidePart:'Side Part', slickedBack:'Slicked Back', royalGuard:'Royal Guard', plagueDoctor:'Plague Doctor', mafiaSuit:'Mafia Suit', detectiveCoat:'Detective Coat', ghostHunter:'Ghost Hunter', shoeStyle:'Shoes', leatherBoots:'Leather Boots', tallBoots:'Tall Boots', armoredBoots:'Armored Boots', nobleShoes:'Noble Shoes', wizardHat:'Wizard Hat', wideBrim:'Wide-Brim Hat', plagueHat:'Plague Doctor Hat', jesterHat:'Jester Hat', flowerCrown:'Flower Crown', mafiaBoss:'Mafia Champion' };
+    '#342b25':'Brown', '#416f91':'Blue', '#477849':'Green', '#89817a':'Gray', '#2d2f3a':'Charcoal', '#355879':'Denim', '#765439':'Brown', '#e3d7bb':'Linen', '#33251d':'Leather', '#151821':'Black', '#f3eee0':'Ivory', '#9b4141':'Burgundy', '#ffffff':'White', '#ffe066':'Gold', '#a6e5ff':'Ice Blue', '#ffb9db':'Rose', '#b1f0ba':'Mint',
+    '#eadcb9':'Cream', '#c4674f':'Brick', '#d39a55':'Ochre', '#e3c15c':'Mustard', '#9fbe86':'Sage', '#6ea89b':'Seafoam', '#8db2d8':'Cornflower', '#5f7aa6':'Slate Blue', '#a88bc6':'Lavender', '#d996ae':'Blush', '#8b6a50':'Walnut', '#9c9b95':'Fieldstone' };
+  OPTIONS.labels = { ...colors, buzzCut:'Buzz Cut', sidePart:'Side Part', slickedBack:'Slicked Back', royalGuard:'Royal Guard', plagueDoctor:'Plague Doctor', mafiaSuit:'Mafia Suit', detectiveCoat:'Detective Coat', ghostHunter:'Ghost Hunter', shoeStyle:'Shoes', leatherBoots:'Leather Boots', tallBoots:'Tall Boots', armoredBoots:'Armored Boots', nobleShoes:'Noble Shoes', wizardHat:'Wizard Hat', wideBrim:'Wide-Brim Hat', plagueHat:'Plague Doctor Hat', jesterHat:'Jester Hat', flowerCrown:'Flower Crown', mafiaBoss:'Mafia Champion', houseStyle:'Home', houseColor:'Home color' };
   OPTIONS.label = (value) => OPTIONS.labels[value] || OPTIONS.hatLabels[value] || String(value).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   if (typeof module !== 'undefined' && module.exports) module.exports = OPTIONS;
   else root.MT_OPTIONS = OPTIONS;

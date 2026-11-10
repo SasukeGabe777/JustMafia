@@ -35,6 +35,11 @@ class ProfileStore {
       const item = CATALOG.find((i) => i.field === key && i.value === result[key]);
       if (item && !item.free && !(p && p.owned.includes(item.id))) result[key] = O[list][0];
     }
+    // Homes are free; an unset home is left for the room to assign at random.
+    for (const key of ['houseStyle', 'houseColor']) {
+      const value = input[key] == null ? p && p.avatar[key] : input[key];
+      if (O[key].includes(value)) result[key] = value;
+    }
     return result;
   }
   select(id, avatar) { const p = this.data.profiles[id]; if (!p) return; p.avatar = this.validateAvatar(id, avatar); this.save(); }

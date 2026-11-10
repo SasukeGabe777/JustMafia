@@ -200,6 +200,32 @@ Implementation checklist (updated after verification below):
 - Advanced selfie feature recognition/face integration remains optional future
   work. No paid image, speech or narration API dependency was introduced.
 
+### Player homes (claude/custom-houses)
+
+- [x] Players pick one of twelve home styles in the lobby: Cottage, Tavern,
+  Bakery, Smithy, Apothecary, Library, Chapel, Tailor, Watchtower, Windmill,
+  Farmhouse and Manor. They also pick one of twelve wall colors. All are free.
+- Stored as `avatar.houseStyle` / `avatar.houseColor`. `options.js` holds the
+  shared lists. `Room.sanitizeAvatar` validates them and assigns a random
+  value when unset, so bots and older saved characters still produce a varied
+  town. `ProfileStore.validateAvatar` persists them. As with the rest of the
+  appearance, they lock at game start and are public, never role-linked.
+- Art extends the existing procedural `MT_WORLD.building` renderer with no
+  new image assets. Each style sets its own footprint and adds its own props
+  (tavern mug sign and barrels, bakery awning and oven, smithy forge, windmill
+  sails, manor wings, and so on). Theme roofs, decor, damage and ruins still
+  apply. Civic buildings and unstyled houses render exactly as before.
+- The phone creator shows live previews of all twelve homes in the current
+  theme, plus color swatches. "Randomize Character" leaves the home alone.
+  `/art` shows all twelve styles for each theme.
+- Validation: `npm test` passes, with 34 expansion tests including the new
+  Homes test. The profile test now covers home persistence and rejection of
+  invalid values. The renderer sweep now gives each resident a styled home
+  (all 12 styles and colors, 1152 scene/theme/population runs, 0 errors); the
+  sweep caught one windmill bug, which is now fixed. I checked `/art` and the
+  phone creator visually in headless Chrome screenshots. Not yet checked on a
+  real phone, on a projector, or with 50-100 styled homes in a live game.
+
 The historical phases below describe earlier iterations; this completion audit
 supersedes their pending markers for features implemented above.
 

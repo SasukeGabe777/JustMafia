@@ -56,6 +56,9 @@ input:focus { border-color: var(--accent); }
 .hat { background: var(--card2); border: 2px solid transparent; border-radius: 12px; padding: 2px; cursor: pointer; }
 .hat canvas { width: 100%; aspect-ratio: 1; display: block; }
 .hat.sel { border-color: var(--accent); }
+.homes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.homes .hat canvas { aspect-ratio: 5 / 4; }
+.homes .hat span { display: block; font-size: 11px; text-align: center; line-height: 1.2; padding-bottom: 2px; }
 
 .top { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 18px; padding: 8px 12px; margin-bottom: 14px; border: 1px solid var(--line); position: sticky; top: 8px; z-index: 2; }
 .me { width: 48px; height: 48px; flex: none; }

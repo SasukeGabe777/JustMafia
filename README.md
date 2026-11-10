@@ -50,7 +50,10 @@ restrictions and win conditions appear in the Judge's role reference. Configure
 Puppet/Glitch uses, Harmony objectives and Paparazzi photo goals in Setup.
 
 Players customize hair, facial features, clothing and accessories before the
-game. Their appearance locks on start. Optional selfie color matching requires
+game. They also choose their home: one of twelve buildings (Cottage, Tavern,
+Bakery, Smithy, Apothecary, Library, Chapel, Tailor, Watchtower, Windmill,
+Farmhouse or Manor), in one of twelve colors, shown on the TV town. Their
+appearance and home lock on start. Optional selfie color matching requires
 consent, runs locally, and discards the photograph; it only approximates hair
 and skin colors, with all manual controls available.
 

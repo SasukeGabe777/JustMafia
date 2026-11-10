@@ -24,6 +24,9 @@
   let avatar = load('mt.avatar') || {
     color: pick(OPT.colors), skin: pick(OPT.skins), hat: 'none', hair:'short', outfit:'traveler', shoeStyle:'simple',
   };
+  // Saved characters from before homes existed get a random starting home.
+  if (!OPT.houseStyle.includes(avatar.houseStyle)) avatar.houseStyle = pick(OPT.houseStyle);
+  if (!OPT.houseColor.includes(avatar.houseColor)) avatar.houseColor = pick(OPT.houseColor);
 
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
   function load(k) { try { return JSON.parse(localStorage.getItem(key(k)) || 'null'); } catch { return null; } }
@@ -96,7 +99,7 @@
   let profile = null;
   const photo = MT_PHOTO_UI((match) => { avatar = { ...avatar, ...match }; buildPicker(); }, () => paint($('#preview'), avatar));
   function buildPicker() {
-    MT_CREATOR.render({ avatar, profile, paint, change: (next) => { avatar = { ...avatar, ...next }; buildPicker(); }, buy: (itemId) => socket.emit('profile:buy', { itemId }, (r) => { if (r && r.ok) { profile = r.profile; buildPicker(); } else abilityReply(r); }) });
+    MT_CREATOR.render({ avatar, profile, paint, theme: view && view.theme, change: (next) => { avatar = { ...avatar, ...next }; buildPicker(); }, buy: (itemId) => socket.emit('profile:buy', { itemId }, (r) => { if (r && r.ok) { profile = r.profile; buildPicker(); } else abilityReply(r); }) });
   }
 
   // ---------- join ----------

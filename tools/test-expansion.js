@@ -48,6 +48,21 @@ test('Every appearance option round-trips and locks at start; arbitrary fields r
   assert.deepEqual(p[0].avatar, expected); assert.equal(p[0].name, 'Custom'); assert.deepEqual(room.hostView().players[0].avatar, expected);
   assert.deepEqual(room.playerView(p[0]).you.avatar, expected);
 });
+test('Homes: twelve styles and colors, chosen in the lobby, random when unset, locked at start, public on the TV', () => {
+  assert.equal(O.houseStyle.length, 12); assert.equal(O.houseColor.length, 12);
+  assert(O.houseStyle.includes('tavern') && O.houseStyle.includes('bakery'));
+  const { room, p } = game(['mafia', 'villager', 'villager', 'villager']);
+  room.resetToLobby();
+  for (const x of p) { assert(O.houseStyle.includes(x.avatar.houseStyle)); assert(O.houseColor.includes(x.avatar.houseColor)); }
+  room.updateProfile(p[0], { avatar: { ...p[0].avatar, houseStyle: 'tavern', houseColor: '#c4674f' } });
+  room.updateProfile(p[1], { avatar: { ...p[1].avatar, houseStyle: '<script>', houseColor: 'red;background:url(x)' } });
+  assert.equal(p[0].avatar.houseStyle, 'tavern'); assert.equal(p[0].avatar.houseColor, '#c4674f');
+  assert(O.houseStyle.includes(p[1].avatar.houseStyle)); assert(O.houseColor.includes(p[1].avatar.houseColor));
+  room.startGame(); room.updateProfile(p[0], { avatar: { ...p[0].avatar, houseStyle: 'bakery' } });
+  assert.equal(p[0].avatar.houseStyle, 'tavern');
+  assert.equal(room.hostView().players.find((x) => x.id === p[0].id).avatar.houseStyle, 'tavern');
+  room.destroy();
+});
 test('Investigator visits exclude dummy prompts and own surveillance; only one Mafia visitor', () => {
   const { room, p } = game(['mafia', 'mafia', 'investigator', 'doctor', 'villager', 'villager', 'villager', 'villager']);
   room.nightAction(p[0], p[4].id); room.nightAction(p[1], p[4].id); room.nightAction(p[2], p[4].id);
