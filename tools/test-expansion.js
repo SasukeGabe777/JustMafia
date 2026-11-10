@@ -1,0 +1,220 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { Room } = require('../game');
+const { VirtualClock } = require('../clock');
+const R = require('../public/shared/roles');
+const O = require('../public/shared/options');
+const L = require('../public/shared/layout');
+const PHOTO = require('../public/shared/photo-match');
+const { simulateGame } = require('../sim');
+let passed = 0;
+function test(name, fn) { fn(); passed++; console.log(`  ✓ ${name}`); }
+function game(roles, settings = {}) {
+  const clock = new VirtualClock(), room = new Room('TEST', null, { clock, headless: true, seed: 99 });
+  const counts = {}; roles.forEach((r) => { if (r !== 'villager') counts[r] = (counts[r] || 0) + 1; });
+  room.updateSettings({ minPlayers: 3, maxPlayers: 100, autoMafia: false, roleCounts: counts, botsAuto: false, ...settings });
+  room.addBots(roles.length); const p = room.list();
+  room.updateSettings({ forcedRoles: Object.fromEntries(p.map((x, i) => [x.id, roles[i]])) });
+  assert.equal(room.startGame().ok, true); room.advance(); return { room, p, clock };
+}
+function day(room) { room.advance(); room.advance(); room.advance(); assert.equal(room.phase, 'discussion'); }
+test('Local photo helper matches palette colors and ignores transparent pixels', () => {
+  assert.equal(PHOTO.nearest([36, 27, 24], O.hairColor), '#241b18');
+  const pixels = new Uint8ClampedArray(16 * 16 * 4);
+  for (let i = 0; i < pixels.length; i += 4) { pixels[i] = 36; pixels[i + 1] = 27; pixels[i + 2] = 24; pixels[i + 3] = 255; }
+  assert.deepEqual(PHOTO.sample(pixels, 16, 16, 0.5, 0.5), [36, 27, 24]);
+  pixels.fill(0); assert.deepEqual(PHOTO.sample(pixels, 16, 16, 0.5, 0.5), [128, 128, 128]);
+});
+
+for (const n of [4, 10, 25, 50, 100]) test(`Stable, bounded, nonoverlapping ${n}-house layout`, () => {
+  const hs = L.houses(n); assert.equal(hs.length, n); assert.deepEqual(hs, L.houses(100).slice(0, n));
+  for (const h of hs) { assert(h.x - 40 * h.s >= 0 && h.x + 40 * h.s <= L.W); assert(h.y - 100 * h.s >= 90 && h.y <= L.H - 80); }
+  hs.forEach((h, i) => hs.slice(i + 1).forEach((b) => assert(Math.abs(h.x - b.x) >= 80 * h.s + 5 || Math.abs(h.y - b.y) >= 100 * h.s + 5)));
+});
+test('House identity survives lobby removals, new arrivals and game start', () => {
+  const room = new Room('TEST', null, { headless: true, seed: 1 }); room.updateSettings({ minPlayers: 3 });
+  const ps = Array.from({ length: 6 }, (_, i) => room.join({ name: `P${i}` }).player);
+  room.kick(ps[0].id); const old = ps.slice(1).map((p) => p.house);
+  room.join({ name: 'newcomer' }); assert.deepEqual(ps.slice(1).map((p) => p.house), old);
+  room.startGame(); assert.deepEqual(ps.slice(1).map((p) => p.house), old); room.destroy();
+});
+test('Every appearance option round-trips and locks at start; arbitrary fields rejected', () => {
+  const { room, p } = game(['mafia', 'villager', 'villager', 'villager']);
+  room.resetToLobby(); const avatar = {};
+  for (const [k, v] of Object.entries(O)) if (Array.isArray(v)) avatar[k === 'colors' ? 'color' : k === 'skins' ? 'skin' : k === 'hats' ? 'hat' : k] = v[v.length - 1];
+  avatar.role = 'mafia'; room.updateProfile(p[0], { name: 'Custom', avatar });
+  assert.equal(p[0].avatar.hair, O.hair.at(-1)); assert.equal(p[0].avatar.facialHair, 'beard'); assert(!('role' in p[0].avatar));
+  const expected = { ...p[0].avatar }; room.startGame(); room.updateProfile(p[0], { avatar: { hair: 'short' }, name: 'Changed' });
+  assert.deepEqual(p[0].avatar, expected); assert.equal(p[0].name, 'Custom'); assert.deepEqual(room.hostView().players[0].avatar, expected);
+  assert.deepEqual(room.playerView(p[0]).you.avatar, expected);
+});
+test('Investigator visits exclude dummy prompts and own surveillance; only one Mafia visitor', () => {
+  const { room, p } = game(['mafia', 'mafia', 'investigator', 'doctor', 'villager', 'villager', 'villager', 'villager']);
+  room.nightAction(p[0], p[4].id); room.nightAction(p[1], p[4].id); room.nightAction(p[2], p[4].id);
+  room.nightAction(p[3], p[4].id); room.nightAction(p[5], p[4].id); room.resolveNight();
+  assert.match(p[2].investigations[0].clue, /Multiple/);
+  assert.equal(room.night.visits.filter((v) => v.kind === 'attack').length, 1);
+  assert(!room.night.visits.some((v) => v.actorId === p[5].id));
+  assert(!JSON.stringify(room.hostView()).includes('Multiple visitors'));
+  assert.equal(room.playerView(p[2]).privateScene.targetId, p[4].id); assert.equal(room.playerView(p[4]).privateScene, null);
+});
+test('Investigator nobody-visited clue, departure clue, and roleblock', () => {
+  for (const block of [false, true]) {
+    const { room, p } = game(['mafia', 'roleblocker', 'investigator', 'detective', 'villager', 'villager', 'villager']);
+    room.nightAction(p[2], p[3].id); room.nightAction(p[3], p[4].id);
+    if (block) room.nightAction(p[1], p[2].id);
+    room.resolveNight(); const clue = p[2].investigations[0];
+    if (block) { assert.equal(clue.blocked, true); assert.equal(clue.clue, null); }
+    else assert.match(clue.clue, /Nobody else visited\. Someone departed/);
+  }
+});
+test('Detective results and private cinematic never appear on other phones or TV', () => {
+  const { room, p } = game(['mafia', 'detective', 'villager', 'villager']);
+  room.nightAction(p[1], p[0].id); room.resolveNight();
+  assert.equal(room.playerView(p[1]).investigations[0].result, true);
+  assert.equal(room.playerView(p[0]).privateScene, null); assert(!room.hostView().privateScene);
+});
+test('Simultaneous attacks on one victim select the anonymous multiple-attacker cinematic', () => {
+  for (const revealMode of ['auto', 'judge']) {
+    const { room, p } = game(['mafia', 'vigilante', 'villager', 'villager', 'villager', 'villager'], { revealMode });
+    room.nightAction(p[0], p[2].id); room.nightAction(p[1], p[2].id); room.resolveNight();
+    if (revealMode === 'judge') room.judgeReveal({ all: true });
+    assert.deepEqual(room.cinematic.events, [{ type: 'multiKill', targetId: p[2].id }]);
+    assert.equal(room.pending.deaths.length, 1);
+    assert(!JSON.stringify(room.cinematic).includes(p[0].id)); assert(!JSON.stringify(room.cinematic).includes(p[1].id));
+  }
+});
+test('Ghostwriter only acts dead, fixed words, once per day, reveal at next boundary', () => {
+  const { room, p } = game(['mafia', 'ghostwriter', 'villager', 'villager', 'villager']); day(room);
+  assert.equal(room.dayAbility(p[1], { tokens: ['WATCH'] }).ok, false);
+  room.kill(p[1], 'test');
+  assert.equal(room.dayAbility(p[1], { tokens: ['MAFIA', 'free text'] }).ok, false);
+  assert.equal(room.dayAbility(p[1], { tokens: ['WATCH', 'PLAYER 1'] }).ok, true);
+  assert.equal(room.dayAbility(p[1], { tokens: ['SAFE'] }).ok, false);
+  assert(!JSON.stringify(room.hostView()).includes('WATCH PLAYER 1'));
+  room.startVoting(); assert.equal(room.cinematic.stories[0].sub, 'WATCH PLAYER 1');
+  assert.equal(p[1].ghostMessage, null);
+});
+test('Puppet Master redirects real ballot privately and respects limits and public-vote rule', () => {
+  const { room, p } = game(['mafia', 'puppetMaster', 'villager', 'villager', 'villager', 'villager'], { puppetUses: 1 }); day(room); room.startVoting();
+  assert.equal(room.dayAbility(p[1], { victimId: p[2].id, targetId: p[3].id }).ok, true);
+  assert.equal(room.playerView(p[2]).voting.choice, p[3].id); assert.equal(room.vote(p[2], p[4].id), false);
+  assert.equal(room.dayAbility(p[1], { victimId: p[4].id, targetId: p[3].id }).ok, false);
+  room.resolveVotes(); assert.equal(room.cinematic.votes.find((v) => v.voterId === p[2].id).targetId, p[3].id);
+  assert(R.buildRoleList({ autoMafia: false, anonymousVotes: true, roleCounts: { mafia: 1, puppetMaster: 1 } }, 6).errors.length);
+});
+test('Paparazzi publishes only an effective action, hides identities and can co-win', () => {
+  const { room, p } = game(['mafia', 'paparazzi', 'doctor', 'villager', 'villager'], { paparazziGoal: 1 });
+  room.nightAction(p[1], p[2].id); room.nightAction(p[2], p[3].id); room.resolveNight(); room.startMorning();
+  assert.equal(p[1].photos, 1); const story = room.cinematic.stories[0]; assert.equal(story.scene, 'photograph');
+  assert(!JSON.stringify(story).includes(p[1].id)); assert(!JSON.stringify(story).includes('doctor'));
+  room.winner = 'town'; assert.equal(room.didWin(p[1]), true); p[1].alive = false; assert.equal(room.didWin(p[1]), false);
+});
+test('Blocked and dummy actions produce no paparazzi photo', () => {
+  const { room, p } = game(['mafia', 'roleblocker', 'paparazzi', 'doctor', 'villager', 'villager', 'villager']);
+  room.nightAction(p[1], p[3].id); room.nightAction(p[2], p[3].id); room.nightAction(p[3], p[4].id); room.resolveNight(); room.startMorning();
+  assert.equal(p[2].photos, 0);
+});
+test('Conductor objective uses actual ballots and blesses only confirmed Town', () => {
+  const { room, p } = game(['mafia', 'conductor', 'villager', 'villager', 'villager'], { harmonyGoal: 1 }); day(room);
+  const objective = p[1].objective; assert(objective.voters.length === 2); assert(!room.hostView().objective);
+  room.startVoting(); const target = p.find((x) => !objective.voters.includes(x.id));
+  for (const id of objective.voters) room.vote(room.players.get(id), target.id);
+  room.resolveVotes(); assert.equal(room.harmonyTotal, 1); assert.equal(room.confirmedTown.length, 1);
+  assert.equal(room.team(room.players.get(room.confirmedTown[0])), 'town'); assert.equal(room.cinematic.followups[0].scene, 'blessing');
+});
+test('Glitch lasts 30 seconds, is limited, and never changes names, avatars or votes', () => {
+  const { room, p, clock } = game(['mafia', 'glitch', 'villager', 'villager', 'villager']); day(room); room.startVoting();
+  room.vote(p[2], p[0].id); const before = JSON.stringify({ votes: room.votes, players: room.hostView().players });
+  assert.equal(room.dayAbility(p[1]).ok, true); assert.equal(room.glitchUntil, clock.now() + 30000);
+  assert.equal(room.dayAbility(p[1]).ok, false); assert.equal(JSON.stringify({ votes: room.votes, players: room.hostView().players }), before);
+  room.pause(); while (clock.now() < room.glitchUntil) clock.step(); assert.equal(room.glitchUntil, 0);
+});
+test('Disaster requires matching, single-use, unexpired confirmation and preserves win checks', () => {
+  for (const disaster of ['hurricane', 'flood', 'meteor']) {
+    const { room, p } = game(['mafia', 'villager', 'villager', 'villager']);
+    assert.equal(room.disaster({ id: p[0].id, disaster }).ok, false);
+    const preview = room.disaster({ id: p[0].id, disaster, preview: true }); assert(p[0].alive);
+    assert.equal(room.disaster({ id: p[1].id, disaster, confirmation: preview.confirmation }).ok, false);
+    assert.equal(room.disaster({ id: p[0].id, disaster, confirmation: preview.confirmation }).ok, true);
+    assert.equal(p[0].alive, false); assert.equal(room.winner, 'town'); assert.equal(room.paused, true);
+    assert.equal(room.cinematic.scene, disaster); assert(room.log.some((l) => l.text.includes('Judge intervention')));
+    assert.equal(room.disaster({ id: p[0].id, disaster, confirmation: preview.confirmation }).ok, false);
+    room.advance(); assert.equal(room.phase, 'gameover');
+  }
+});
+test('Disaster previews expire at a phase change', () => {
+  const { room, p } = game(['mafia', 'villager', 'villager', 'villager']);
+  const d = room.disaster({ id: p[1].id, disaster: 'meteor', preview: true }); room.advance();
+  assert.equal(room.disaster({ id: p[1].id, disaster: 'meteor', confirmation: d.confirmation }).ok, false); assert(p[1].alive);
+});
+test('Intervention releases ballots locked toward a removed target', () => {
+  const { room, p } = game(['mafia', 'puppetMaster', 'villager', 'villager', 'villager', 'villager']); day(room); room.startVoting();
+  assert(room.dayAbility(p[1], { victimId: p[2].id, targetId: p[3].id }).ok);
+  const preview = room.disaster({ id: p[3].id, disaster: 'flood', preview: true });
+  assert(room.disaster({ id: p[3].id, disaster: 'flood', confirmation: preview.confirmation }).ok);
+  assert.equal(room.votes[p[2].id], undefined); assert.equal(room.voteLocks[p[2].id], undefined);
+  room.resume(); assert(room.vote(p[2], p[0].id));
+});
+test('Active-player Judge appointment withdraws their seat and pending night targets', () => {
+  const { room, p } = game(['mafia', 'villager', 'villager', 'villager', 'villager']);
+  room.nightAction(p[0], p[1].id); room.nightAction(p[1], p[2].id);
+  p[1].isBot = false; p[1].sockets = 1;
+  assert(room.appointJudge(p[1], 'Replacement.').ok);
+  assert.equal(p[1].alive, false); assert.equal(p[1].role, null); assert(p[1].spectator);
+  assert.equal(room.night.actions[p[0].id], undefined); assert.equal(room.night.actions[p[1].id], undefined);
+  assert.equal(room.inGame().length, 4);
+});
+test('Random Judge is a connected human and receives no role', () => {
+  const room = new Room('TEST', null, { headless: true, seed: 3 });
+  for (let i = 0; i < 7; i++) { const p = room.join({ name: `P${i}` }).player; p.sockets = 1; }
+  assert(room.randomJudge().ok); const judge = room.players.get(room.judgeParticipantId);
+  assert(judge.isJudge && judge.spectator); assert.equal(room.startGame().ok, true); assert.equal(judge.role, null);
+  assert.equal(room.inGame().length, 6); assert.equal(room.randomJudge().ok, false); room.destroy();
+});
+test('80% removal includes connected ghosts, counts once, pauses open-ended phase and rotates secrets', () => {
+  const { room, p } = game(['mafia', 'villager', 'villager', 'villager', 'villager', 'villager']);
+  for (const x of p) { x.isBot = false; x.sockets = 1; }
+  room.settings.autoAdvance = false; day(room); room.kill(p[5], 'test');
+  const oldKey = room.judgeKey;
+  assert.equal(room.governanceView().required, 5); room.voteRemoveJudge(p[0]); room.voteRemoveJudge(p[0]);
+  assert.equal(room.governanceView().approvals, 1);
+  for (const x of p.slice(1, 4)) room.voteRemoveJudge(x);
+  assert(!room.judgeVacant); room.voteRemoveJudge(p[5]);
+  assert(room.judgeVacant && room.paused); assert.notEqual(room.judgeKey, oldKey);
+  assert.equal(room.dayAbility(p[1]).ok, false); assert.equal(room.vote(p[1], p[2].id), false);
+  assert.equal(room.volunteerJudge(p[5], false).ok, false); assert.equal(room.volunteerJudge(p[5], true).ok, true);
+  assert.equal(room.judgeParticipantId, p[5].id); assert(room.paused); room.resume(); assert(!room.paused); assert.equal(room.endsAt, null);
+});
+test('Appointed and retired Judges lose role-specific phone feeds as well as admin access', () => {
+  const { room, p } = game(['mafia', 'telepath', 'telepath', 'villager', 'villager', 'villager']);
+  p[1].isBot = false; p[1].sockets = 1;
+  assert(room.appointJudge(p[1], 'Test transfer.').ok); assert.equal(p[1].role, null);
+  p[1].isJudge = false; p[1].judgeRetired = true; p[1].role = 'telepath';
+  room.telepathLog.push({ text: 'A future private message.' });
+  let view = room.playerView(p[1]); assert.equal(view.role, null); assert.equal(view.telepath, undefined); assert.deepEqual(view.notes, []);
+  p[1].role = 'mafia'; view = room.playerView(p[1]); assert.equal(view.teammates, undefined);
+});
+test('Current connected electorate updates without publishing individual votes', () => {
+  const { room, p } = game(['mafia', 'villager', 'villager', 'villager', 'villager']);
+  for (const x of p) { x.isBot = false; x.sockets = 1; }
+  p.slice(0, 3).forEach((x) => room.voteRemoveJudge(x)); assert(!room.judgeVacant);
+  p[4].sockets = 0; room.checkJudgeRemoval(); assert(!room.judgeVacant); // 3/4 requires four
+  p[3].sockets = 0; room.checkJudgeRemoval(); assert(room.judgeVacant);
+  assert(!('votes' in room.governanceView())); assert(!('judgeKey' in room.hostView()));
+});
+test('Human mode switching preserves phase and secrets, waits for manual advance', () => {
+  const { room, clock } = game(['mafia', 'villager', 'villager', 'villager']); const phaseId = room.phaseId;
+  room.updateSettings({ narratorMode: 'human' }); assert.equal(room.phaseId, phaseId); assert.equal(room.endsAt, null); assert.equal(room.hostView().narration, null);
+  room.advance(); assert.equal(room.phase, 'dawn'); assert.equal(room.endsAt, null);
+  room.updateSettings({ narratorMode: 'ai' }); assert.equal(room.phase, 'dawn'); assert.equal(room.phaseId, phaseId + 1); room.destroy();
+});
+for (const n of [4, 10, 25, 50, 100]) test(`${n}-player simulation completes with shared engine`, () => {
+  assert(!simulateGame({ players: n, seed: 2026 + n }).error);
+});
+test('Expanded roles complete deterministic bot simulations', () => {
+  const settings = { autoMafia: false, roleCounts: { mafia: 2, roleblocker: 1, puppetMaster: 1, detective: 1, investigator: 1, ghostwriter: 1, paparazzi: 1, conductor: 1, glitch: 1, doctor: 1 }, harmonyGoal: 1, paparazziGoal: 1 };
+  const a = simulateGame({ players: 20, settings, seed: 17 }), b = simulateGame({ players: 20, settings, seed: 17 });
+  assert(!a.error, a.error); assert.deepEqual(a, b);
+});
+console.log(`All ${passed} expansion tests passed.`);

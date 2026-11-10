@@ -1,0 +1,328 @@
+# Mafia Town: expansion plan
+
+## November 9, 2026 — Storyteller / original-art update
+
+This section supersedes older pending markers below. The supplied Gather packs
+were inspected as reference material. No Gather or Darkest Dungeon artwork is
+served by the game. Original art is drawn in `character-art.js` and `world-art.js`.
+
+### Architecture audit before this update
+
+| Area | Existing state | Extension |
+|---|---|---|
+| Roles | Shared registry, legacy role interactions and six expansion roles | Registry additions and normalized Standard/Custom options |
+| Night | Single authoritative resolver; one Mafia attack, killer-only selection and Godfather override | Staged resolver, all-Mafia plurality voting, optional Legacy mode |
+| Views | Public TV, private phone and rotating Judge channels | Preserve filters; Grimoire, team coordination and social channels stay private |
+| Voting | Open voting, Mayor weight, skip/tie settings, Puppet Master | Optional nomination/defense phases, one ghost ballot, silence restrictions |
+| Characters/photos | Shared vector avatar and local photo color sampler | Original modular pixel art, expanded wardrobe, local framed photo workflow |
+| Town/scenes | Stable 100 slots, palette themes, reusable scene timelines | Eight residential families, civic growth, persistent ruins, ten new scene previews |
+| Persistence | Rooms lived in memory; no durable player economy | Replaceable server profile store with atomic local disk writes |
+| Tests | Rules, virtual-clock bots, socket games, renderer sweep | New status/role/social/profile tests and real socket privacy/ownership tests |
+
+### Implemented phases
+
+- [x] **Action/status foundation:** `rules/night-pipeline.js` resolves collection,
+  simultaneous blocks, statuses, protection, special actions, collective kill,
+  other attacks, information, observations and outcomes. An immutable snapshot
+  of ability definitions prevents spent uses changing later stages. Deaths are
+  applied at morning; delayed events use logical server phase transitions.
+- [x] **Mafia coordination:** every living Mafia member votes and sees teammate
+  votes/totals. One collective kill by default; Godfather breaks tied leaders,
+  otherwise no kill. Explicit seeded-random tie and Legacy override modes remain
+  configurable. Six constrained tactical messages per night. A copied/stolen
+  ability target remains separate from the collective kill ballot.
+- [x] **New roles:** Town Detonator (default one charge, minimum three phase
+  transitions; explosions wait for daytime and destroy even empty homes), Mafia
+  Silencer, Town Sorcerer, Mafia Hustler, Mafia Alchemist, opt-in Mimic/Hybrid
+  Jester and Town Storymaker. Classic Jester is preserved. Midas copies only
+  supported active abilities with owner, restrictions and remaining uses;
+  Volatile returns a fallen Mafia for one day, then ash, with no potion loops.
+  Storymaker snapshots/restores the same night and remaining time around a
+  first-class emergency vote. Instant interruption happens before resolution;
+  it is not a retroactively blockable submitted night action.
+- [x] **Storyteller information:** source/expiration/visibility statuses; hidden
+  drunk, poisoned and malfunction effects alter delivered information, never
+  objective truth. Central resolver supports inversion, plausible alternatives,
+  a Judge-selected legal false result and bounded assisted selection. Assistance
+  selects among false results; it cannot change deaths, teams or winners.
+  Reusable true starting facts and 0–3 unused Town bluff roles are private.
+- [x] **Grimoire:** searchable living/ghost/alignment views, avatars, statuses,
+  uses, targets, team votes, copied/stolen abilities, ghost budgets, whisper
+  usage, delayed events, resolution order and chronological true/delivered logs.
+  Advanced settings are collapsible with per-role Configure, Standard/Custom,
+  reset-role/reset-all and saved setup support.
+- [x] **Ghosts/social/voting:** optional one dead ballot per game, ghost-only
+  chat plus Judge visibility, consent-based 30-second text huddles with server
+  limits, and optional nomination → accusation → defense → single-candidate
+  ballot. Seconding, cooldowns, repeat nominations and discussion resumption are
+  configurable. Private whisper content stays out of the Judge payload by
+  default. Silence blocks digital voting, nomination, whispers and Telepaths.
+- [x] **Character creator/progression:** 17 free core hairstyles plus three
+  decorative unlocks, basic/premium outfits, six footwear styles, expanded hats
+  and accessories, named colors, live preview and owned-item randomization.
+  Server validates profile identity, ownership, purchases and centralized
+  rewards. Profiles track coins, owned items, achievements, statistics and look.
+  Test/bot/forced-role/accelerated/short games do not award currency.
+- [x] **Optional photo flow:** explicit local consent, camera permission,
+  framing, capture/upload preview, retake, color matching or a pixel face.
+  Source pixels are discarded after use. Face pixels remain in memory on that
+  phone only and disappear on reload; they are neither uploaded nor shared in
+  town/cinematics. Manual customization is complete. LAN HTTP may require the
+  file input's Take Photo option because browsers restrict live camera APIs.
+- [x] **Original world art:** detailed masonry/timber/slate houses, theme-aware
+  architecture/equipment, population-based tavern/guild/smithy/apothecary/market/
+  inn/shops/stables/workshops/gates, vegetation, smoke, birds, clouds and fire.
+  Door anchors and house ownership are unchanged. Exploded houses retain ruins.
+  `/art` previews all building families, hairstyles and outfits; `/preview`
+  covers scenes and populations through 100.
+- [x] **New cinematics/narration:** fuse planting, full explosion/debris/smoke,
+  town crier/emergency vote, revival, ash, shortened clock, nomination, ghost
+  ballot and optional silence preview extend the existing timeline library.
+  Public attackers remain anonymous. Scene previews do not eliminate players.
+  House damage/death waits for the explosion climax on the TV. Human narration
+  disables phase timers across new nights, speeches and reveals; music and SFX
+  remain available. AI mode is local template narration and browser speech,
+  without an external generative or premium voice service.
+
+### Persistence and operational limits
+
+- `.data/profiles.json` persists across restarts on this machine. Browser site
+  data holds the opaque profile key. Back up both the server file and browser
+  credentials; clearing either loses access. This is a single-process local
+  development store, not a multi-server transactional database. `ProfileStore`
+  is replaceable; tests can use `MT_PROFILE_STORE=memory`.
+- Running game rooms, current statuses, Grimoire logs and delayed effects remain
+  in server memory. A server restart ends those sessions; profile coins survive.
+- The photo face is intentionally **local preview only**, not synchronized face
+  integration. Reliable hairstyle/face recognition and cross-device photo
+  storage remain unimplemented optional follow-ups.
+- Browser automation cannot currently navigate a local tab (provider error).
+  Interactive TV/Judge/phone QA, real iPhone/Android camera checks, projector
+  readability and GPU/mobile frame rates still need live playtesting.
+- A 20-game Cinematic Chaos sample at 25/50/100 completed without engine errors:
+  Town won 28.6%/85.7%/100%. This is exploratory bot evidence, not balanced
+  production tuning; large games need more human testing.
+
+### Validation
+
+- 34 legacy rules tests, 33 first-expansion tests, 30 Storyteller interaction
+  tests, a durable-profile test, two socket security suites, full socket games
+  across Classic/Chaos/Big Party/Storytellers/Cinematic Chaos, and renderer QA.
+- Renderer sweep expanded to **1,152** scene/outcome/theme/population runs, with
+  timeline action validation, customized residents, anonymous attackers and
+  clean queue/lighting/effect teardown. Canvas is stubbed: these are execution
+  checks, not screenshots or frame-rate measurements.
+- New deterministic bot coverage includes both new presets at 25/50/100.
+  Existing 4/10/25/50/100 layout, ownership and simulation checks are retained.
+- `npm test` is the aggregate regression command; `npm run balance -- 200
+  cinematicChaos 25 50 100` uses the existing simulation architecture.
+- Final renderer rerun passed all 1,152 sweeps and the live bot game through
+  gameover/reset (2,874 frames, zero renderer errors). Its driver now discards
+  sweep-only animation callbacks and does not multiply frames per socket packet;
+  the first aggregate run had timed out in that test harness. Other aggregate
+  groups passed, and affected mechanics/socket checks were rerun after fixes.
+
+The historical audit below describes the first feature-expansion pass.
+
+## November 2026 feedback audit and implementation
+
+Preserve the 100-player engine; optimize the detailed town for 50. Reuse the
+existing pixel art, theme registry, Room engine, bots, virtual clock, and timeline
+renderer. Appearance is shared across themes and never encodes a secret role.
+
+Audit before changes:
+- Already functional: naming, 100-player capacity, simultaneous night resolution,
+  murder outcome timelines, voting/execution/victory scenes, scene preview,
+  Judge scenes/camera/music, role reference, theme lock, Human Judge narration,
+  private views, reconnect tokens, bot simulations. Extend these systems.
+- Partial: population-dependent rings moved houses; creator had only skin,
+  shirt color and hat; narration lacked context; themed props were limited.
+- Missing: Judge election/removal, disaster confirmation, Investigator,
+  Ghostwriter, Puppet Master, Paparazzi, Conductor, Glitch, private phone scenes.
+
+Implementation checklist (updated after verification below):
+- [x] Stable neighborhood growth and ambient civic buildings, 4/10/25/50/100.
+- [x] Expanded manual creator and shared cinematic appearance; lobby-only edits.
+- [x] Disaster and role timelines; private investigation scenes; sequence QA.
+- [x] Secure Judge credential rotation, random selection, 80% connected-human
+  removal (including eliminated players), volunteer replacement with forfeiture.
+- [x] Confirmed disasters and win-condition compatibility.
+- [x] All new roles, phone controls, Judge configuration, bots and simulations.
+- [x] Contextual narration, Human Judge pacing, theme-aware presentation.
+- [x] Regression, socket authorization and renderer coverage.
+
+### Completed implementation
+
+| Feature | Implementation and verification |
+|---|---|
+| Dynamic town | `public/shared/layout.js` supplies 100 deterministic, bounded neighborhood slots. House assignments survive joins, removals, disconnects and game start. The Judge map and TV share geometry. Roads, civic buildings at population milestones, chimney smoke, clouds, birds and firepit movement extend the existing lighting and wandering players. Tests check 4/10/25/50/100 layouts and stable ownership. |
+| Character creator | `options.js`, `avatar.js`, `play.js` and engine sanitization cover hairstyle/color, facial hair, eyes, face, features, clothing, pants, shoes, hats, accessories, skin, shirt and name colors. Shared drawing supplies town, voting, phone and resident cinematic appearances. Edits lock on start, survive reconnects and adapt equipment to the existing themes. |
+| Cinematics | Existing timeline actions drive introductions, protection, three disasters, supernatural messages, pixelated photographs and blessings. Added failed-attack and multiple-masked-attacker storytelling variants. Existing automatic murder/save/guard scenes and secrecy are preserved: public immunity remains indistinguishable from protection, and public attackers never use identifying player avatars. Long title cards fit the stage. |
+| Private investigations | Detective/Sheriff and Investigator receive a phone-only approach/observation animation and their own result. Investigator clues use actual effective visits, not dummy prompts; a shared Mafia attack counts as one visitor. Blocked actions do not generate false successful clues. |
+| Judge scenes/reference | Existing scene dashboard is extended with tavern, hall and firepit spots and new previews. House references are validated. Manual scenes change presentation only. Registry-generated role reference includes all additions, timing, restrictions and win conditions. |
+| Narration/themes | Human mode suppresses automatic speech and timers, retains private suggestions, music and SFX, and can switch without resetting the phase. AI mode remains local template narration with theme flavor, first-death/final-survivor context, repetition avoidance and existing sentence pacing. Civic labels/architecture, outfit equipment and synthesized music timbres extend the same theme registry and kits. Theme lock and town name persistence remain intact, including introduction/victory cards. |
+| Random Judge | Lobby-only selection chooses a connected human, reserves their observer seat and excludes them from role assignment. Their phone prominently opens the private console using their existing identity token. Previous administrative sockets and bootstrap keys lose control. The TV retains public display/reconnect access. |
+| Judge removal/replacement | `governance.js` counts one ballot per identity, requires `ceil(connected eligible humans * 0.8)`, includes eliminated players and reevaluates connections. Individual votes remain private. Petitions prevent kicking human voters. Removal pauses timed or open-ended gameplay and rotates both admin authorization and the private channel. Explicit volunteers may replace the Judge; dead/observer volunteers are preferred, active volunteers forfeit their seat. A replacement resumes the same game. Retired Judges cannot reappoint themselves or retain future role-specific phone feeds. |
+| Disasters | Preview creates a one-use confirmation nonce, expiring after 60 seconds, phase change or credential rotation. Confirmation kills through the engine, logs a Judge intervention, pauses for the cinematic and evaluates victory. The Judge resumes/advances after the reveal. Preview alone does not eliminate anyone. |
+| New roles | Investigator, Ghostwriter, Puppet Master, Paparazzi, Conductor and Glitch are registered and available in setup, reference, phones, Judge inspection, Test Mode and bots. Ghostwriter: up to three fixed tokens once per day, published at the next discussion/vote. Puppet Master: configurable real ballot redirection limits, public voting only. Paparazzi: publish successful-action clues; independently co-win by surviving with the configured photo total. Conductor: achievable two-voter objectives and confirmed-Town blessings. Glitch: configurable uses, 30 seconds of presentation corruption without changing actual ballots, names or avatars. |
+| Test Mode/balance | The Storytellers preset includes every new role. Simulations still use Room, filtered bot views and the virtual clock; reports now count observations, clues, redirects, photos, Harmony, blessings and corruption. `/preview` selects population, theme, scene and outcome without a game. |
+| Optional photo helper | Consent-gated JPEG/PNG/WebP processing stays on the phone. Experimental centered-selfie sampling matches approximate hair/skin palette colors, clears decoded pixels and the selected file, and never uploads/displays the photograph. Full manual customization is always available. This is color matching, not face integration, hairstyle recognition or generative avatar creation. |
+
+### Verification and remaining playtest work
+
+- `npm test`: original 34 rules tests, 33 expansion tests, real-socket governance,
+  classic/Chaos/Big Party/Storytellers socket games, and renderer smoke tests.
+- Socket coverage includes forged/stale credentials, malformed requests,
+  presentation-only scenes, explicit disaster confirmation, ghost removal votes,
+  replacement, private-channel revocation, and display/phone reconnects.
+- Renderer sweep: **832** scene/outcome/theme/population runs, plus a 100-player
+  role-scene queue and temporary-corruption cleanup. Customized resident avatars
+  and anonymous attackers are asserted. Canvas is stubbed, so this proves
+  execution and cleanup, not visual quality or GPU frame rate.
+- A 200-game Storytellers sample at 14/25/50 players completed without engine
+  failures. Town won 55.2% / 49.3% / 90.9% respectively; Paparazzi independently
+  won 21% overall. These are exploratory bot results, not a balance guarantee.
+- **Still needs live browser/mobile/projector playtesting:** visual readability,
+  cinematic pacing, installed speech voice quality, photo framing accuracy and
+  real GPU/mobile performance. Browser automation could not open a local tab in
+  this environment. The 50-player preset especially needs balance tuning.
+- Advanced selfie feature recognition/face integration remains optional future
+  work. No paid image, speech or narration API dependency was introduced.
+
+The historical phases below describe earlier iterations; this completion audit
+supersedes their pending markers for features implemented above.
+
+This plan is based on the feature brief (Judge scenes, day/night flow, themes, pregame setup, voting, roles, Telepaths, Test Mode). It extends the existing game rather than rebuilding it.
+
+## What already existed (v1)
+
+- **Server-authoritative engine** (`game.js`): phases, roles, voting, filtered views, bots. Kept, and extended.
+- **Socket layer** (`server.js`): rooms, reconnects, QR codes. Kept, plus a Judge channel.
+- **Big screen** (`town.js`): canvas town and cinematic cues. Kept, plus themes, two-ring layout and multi-event nights.
+- **Phone** (`play.js`): join, role card, night actions, voting, ghosts. Kept, with prompts per role and Telepath messaging.
+- **Tests**: `tools/simulate.js` (socket end to end) and `tools/render-smoke.js` (renderer).
+
+## Architecture decisions
+
+1. **One rules engine for everything.** Real games, bots, headless simulations and tests all call the same `Room`. Timers go through an injectable clock (`clock.js`), so simulations jump straight to the next timer instead of waiting.
+2. **Data-driven roles** (`public/shared/roles.js`). Each role declares its team, night ability (`kill`, `shoot`, `heal`, `guard`, `block`, `investigate`), targeting rules, limits and flags (`appearsInnocent`, `nightImmune`, `voteWeight`, `pair`). `resolveNight` resolves abilities by kind, in a fixed priority order:
+   1. blocks
+   2. heals and guards
+   3. kills and shots
+   4. investigations
+
+   Ties are broken by the room's seeded random generator, so results are deterministic. Most new roles are one entry in the registry.
+3. **Three views, three trust levels.**
+   - `hostView`: the TV. Public information only.
+   - `playerView`: one phone. Public information plus that player's own secrets. Bots get exactly this too.
+   - `judgeView`: the Judge console. Everything. Sent on its own channel, and you need the host key to join it.
+4. **Mechanics and presentation are separate.** The engine emits `cinematic` cues and narration keys. The big screen decides how to show them. Themes are presentation-only (`public/shared/themes.js`).
+
+## Status
+
+### Phase 1: core systems ✅
+
+- **Role registry, done.** Roles: Villager, Mafia, Godfather, Roleblocker, Detective, Sheriff, Doctor, Bodyguard, Vigilante, Mayor, Telepath (×2), Jester, Serial Killer.
+- **Win conditions, done.** Town, Mafia (at parity or when everyone else is gone), Serial Killer, Jester, and a draw as a safety net.
+- **Night resolution, done.** Priority order, roleblocks, Bodyguard trades places, night immunity, and promotion when the Mafia's killers are gone.
+- **Voting rules, done.** Mayor's double vote, skip on or off, tie rule, plurality or majority, and anonymous votes.
+- **Judge flow controls, done.** Open and close voting (manual mode), pause and resume, extend, skip a phase.
+- **Overrides, done.** The Judge can set a night action, set a vote, eliminate, revive, change a role, or force a role before the game. Every override is logged.
+- **Expanded pregame setup, done.** Theme, min and max players (up to 100), automatic or exact Mafia count, a count per role, timers, rules toggles, presets, and saved setups (kept in the Judge's browser). Live validation flags setups that break the game and warns about balance.
+- **Telepaths, done.** A private coded-message link between the two Telepaths, from a fixed list of messages. Messages can name a player. The Judge sets when they can talk.
+- **Up to 100 players, done.** Bigger rooms batch their state updates, and the town switches to two rings of houses.
+
+### Phase 2: Test Mode and analytics ✅
+
+- **Bots, done.** Five personalities (Analyst, Aggressive, Cautious, Follower, Chaotic).
+  - Each bot keeps a suspicion score for every player, built from votes, accusations, revealed roles, its own investigations and Telepath messages.
+  - Role-specific logic: investigators announce what they find, the Mafia coordinate and bluff, the Jester baits votes, and so on.
+  - Bots only see their own phone view.
+- **Test controls, done.**
+  - Add up to 99 bots, with a personality per bot.
+  - Speed from 1× to 50×, skip animations, auto-acting bots on or off, and "make bots act now".
+  - Inspect every role and action, and override any decision.
+  - Force roles to set up a scenario.
+- **Simulations, done.** Thousands of headless games in a worker thread, launched from the Judge console or `npm run balance`.
+- **Analytics, done.** Win rates overall and by player count, average days and minutes, role survival and win rates, causes of death, how often day eliminations hit a non-Town player, tie and skip rates, Doctor and Bodyguard saves, investigator hit rates, Vigilante friendly fire. Results download as JSON.
+- **Tests, done.** `npm test` runs:
+  - 28 rules tests
+  - the socket end-to-end games, including the Chaos preset and a 60-player Big Party
+  - the renderer smoke test
+
+### Phase 3: cinematic gameplay & Judge controls (revised after playtest feedback)
+
+Playtest feedback: the audience wants **animated stories**, not a camera zooming into a house. A murder should play as a 10–15 second scene: an assassin approaches, sneaks in, the victim notices, an attack, the lights flicker, fade to black.
+
+**Art direction (added mid-phase):** the whole game is cozy farm-sim **pixel art**. The style is original; no assets are borrowed.
+- **The big screen** draws its world into a 640×360 buffer (`?pix=N` changes this). Every frame is snapped to a warm hand-picked palette in `public/pixel.js`, including pre-blended night tints, and then upscaled with nearest-neighbor. Text (names, bubbles, titles) is drawn on a crisp overlay in the *Pixelify Sans* font. `?pixel=0` turns the palette snap off.
+- **The TV HUD, phones, Judge console and preview** use the same skin: wood frames, parchment panels, bevelled pixel buttons.
+
+**Engine vs presentation.** Nearly all of Phase 3 is presentation. The small engine changes are marked below. Cinematics never change game state.
+
+1. ✅ **Cinematic engine** (`public/cinema.js`).
+   - **Actions**, reusable across scenes:
+     - movement: spawn, move (walk, sneak, run), pose (stand, sleep, cower, guard, peek), face, flee through a window
+     - combat: attack (theme weapon swing or ranged bolt), hit, die, shield ward, smoke, glint
+     - effects: knock, house light, lamp, flicker, thunder, door, shake, flash, fog
+     - presentation: camera, stage cut, fade, letterbox, title, music mood, sfx loops, crowd reactions, walk the condemned, execute
+   - **Stages**:
+     - the town, with a real camera over the real map (`town.focus` / `focusSpot` / `focusHouse`)
+     - a full-screen **interior** drawn per theme: a suburban bedroom, a stone cottage, or a space habitat
+   - **Scenes are data** (`public/scenes.js`): `[time, action, args]` timelines with outcome branches.
+2. ✅ **Murder cinematic** (about 14s) with every outcome: `kill | protected | guard | guardDies | blocked`.
+   - ✅ Quiet night, execution (the condemned walks to the fountain, the crowd reacts, and their visual death is held back until the climax), victory.
+   - ✅ Manual scenes: investigation, watcher, peek, flee, visitor, empty house, graveyard, square.
+3. ✅ **Secrecy.** Engine change: `cinematic.events` is sanitized to `{type, targetId, guardDied?}`.
+   - Saves and immunity look identical, protectors are anonymous, and attackers are hooded.
+   - *Also fixed:* the TV used to receive `settings.forcedRoles`, which mapped players to their roles. Tests cover both.
+4. ✅ **Judge scene controls** (console → 🎥 Scenes): a clickable mini-map of the real layout, camera spots, zooming to a house, every manual scene on the selected house, a murder outcome picker, music moods, and stop.
+   - Server relays: `judge:scene/camera/music/stop/narration`. They are Judge-only and validated, they go to the TV only, and they never touch game state.
+5. ✅ **Cinematic event queue.** Engine change: `revealMode: auto | judge`.
+   - In Judge mode, dawn has no timer. The console lists the night's public events with ▶ Play, Replay and Play all, plus blocked attempts marked ⚠ as optional extra information.
+   - **Next phase** moves on to the morning.
+6. ✅ **Role reference** (📖 Roles in the console header). It's generated from the role registry (`MT_ROLES.reference`), so it can't drift from the rules.
+7. **Narrator modes.** Engine change: `narratorMode: ai | human`.
+   - ✅ *Human Judge*: the TV and phones get no narration. Lines appear in the console as private 💡 suggestions. The mode defaults to manual phases and Judge reveals.
+   - ✅ Custom "📣 Say" lines and "⏭ Skip narration".
+   - ✅ The TV speaks sentence by sentence, with dramatic pauses.
+   - ⏳ Still to do: context-aware AI lines (first death, few left, quiet streaks) and per-theme flavor.
+8. **Themes.**
+   - ✅ The theme locks once the game starts.
+   - ✅ Each theme kit has its own assassin look and weapon (knife, dagger, blaster, wand, axe, pistol), its own interior and its own music root.
+   - ⏳ Still to do: per-theme town props (e.g. medieval stalls, space domes) beyond palettes and building shapes, and per-theme music beds.
+9. ✅ **Preview** at `/preview`: any scene × outcome × theme, day or night, with no game. `?autoplay=1&t=8&freeze=1` jumps to a moment, which is useful for screenshots.
+
+Tests:
+- `npm test` covers sanitization, forced-role secrecy, the execution cue, Human Judge mode, the theme lock and Judge reveals (34 rules tests).
+- The socket tests check that scene controls are Judge-only and validated.
+- The renderer smoke test now plays **every scene × outcome × theme** to the end (128 runs) and checks that the town is left clean.
+
+### Phase 4: new roles (after Phase 3)
+
+All of these hook into the role registry, bots, simulations, the Judge console and cinematics.
+
+| Role | Team | Engine work | Presentation |
+|---|---|---|---|
+| Detective+ | Town | none | private phone animation (spy, then the result) |
+| Investigator | Town | track night *visits* per house; clue text generated from real visits | phone spying animation |
+| Ghostwriter | Town (dead) | day action after death: up to 3 tokens from a word bank plus names; frequency setting | "Message from beyond" scene at the next discussion |
+| Puppet Master | Mafia | voting-phase action: redirect one living player's vote; uses setting; only with public votes | ballot visibly swerves; the victim's phone shows the changed vote |
+| Paparazzi | Neutral (wins by surviving to the end with N photos published) | night: photograph a target; captures the *kind* of their action | flash + silhouette reveal at day start (the Judge can trigger it) |
+| Conductor | Town | nightly objective generated from living players; checked at verdict; charge setting | Harmony Gauge on the TV; Town Blessing reveals a confirmed Town player |
+| Glitch | Town | limited CORRUPT uses in day phases | 30s visual corruption on the TV only; the real state is untouched |
+
+### Phase 5: polish, testing & balance
+
+- Rules tests for every new role and interaction.
+- Disconnects during actions, rapid phase skipping, 100 players.
+- A render smoke test over every scene × outcome × theme.
+- Simulations for the new roles: vote manipulation, Investigator clue value, Conductor objective difficulty, Ghostwriter and Paparazzi information strength.
+
+## Balance notes from the first simulation runs
+
+These come from 300 games per preset with the built-in bots, so they're only a guide.
+
+- **Classic at 7 players:** about 85% Mafia wins. Two Mafia out of seven is harsh. Consider 1 Mafia below 8 players, or adding a Doctor.
+- **Chaos:** the Serial Killer wins about 30–40% of games. Night immunity plus a kill every night is strong. Options: let the Vigilante bypass immunity, or require 12+ players.
+- **Big Party at 60–100 players:** the town wins about 90% of games. Two Detectives plus a Sheriff find the Mafia too fast. Options: drop to one investigator, or raise the automatic Mafia ratio for big games.

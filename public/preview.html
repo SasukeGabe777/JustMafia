@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scene Preview · Mafia Town</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --wood: #6b4428; --wood-d: #3a2418; --parch: #f0d29a; --ink: #2a1a10; --font: 'Pixelify Sans', monospace; }
+    html, body { margin: 0; height: 100%; background: #0b0a12; overflow: hidden; font-family: var(--font); }
+    canvas { position: fixed; inset: 0; display: block; image-rendering: pixelated; }
+    #bar { position: fixed; left: 12px; right: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      background: var(--parch); color: var(--ink); border: 4px solid var(--wood); box-shadow: 0 0 0 4px var(--wood-d), 0 6px 0 4px rgba(0,0,0,.35); padding: 8px 12px; z-index: 2; }
+    #bar.hide { display: none; }
+    select, button { font: 600 16px var(--font); color: var(--ink); background: #fbecc6; border: 3px solid var(--wood); padding: 4px 10px; cursor: pointer; }
+    button.go { background: #7cbf5a; color: #14261c; }
+    label { font-size: 15px; }
+    .hint { margin-left: auto; font-size: 13px; opacity: .7; }
+  </style>
+</head>
+<body>
+  <canvas id="town"></canvas>
+  <div id="bar">
+    <b>🎬 Scene preview</b>
+    <label>Scene <select id="scene"></select></label>
+    <label>Outcome <select id="outcome"></select></label>
+    <label>Theme <select id="theme"></select></label>
+    <label>Population <select id="population"><option>4</option><option>10</option><option>25</option><option>50</option><option>100</option></select></label>
+    <label>Time <select id="phase"><option value="night">Night</option><option value="discussion">Day</option></select></label>
+    <button class="go" id="play">▶ Play</button>
+    <button id="stop">■ Stop</button>
+    <button id="sound">🔊 Sound on</button>
+    <span class="hint">No game is touched. H hides this bar.</span>
+  </div>
+
+  <script src="/shared/options.js"></script>
+  <script src="/shared/roles.js"></script>
+  <script src="/shared/themes.js"></script>
+  <script src="/shared/layout.js"></script>
+  <script src="/avatar.js"></script>
+  <script src="/character-art.js"></script>
+  <script src="/world-art.js"></script>
+  <script src="/sfx.js"></script>
+  <script src="/pixel.js"></script>
+  <script src="/cinema.js"></script>
+  <script src="/scenes.js"></script>
+  <script src="/town.js"></script>
+  <script>
+    (function () {
+      const $ = (s) => document.querySelector(s);
+      const q = new URLSearchParams(location.search);
+      const O = window.MT_OPTIONS;
+      const NAMES = ['Justin', 'Maya', 'Leo', 'Priya', 'Sam', 'Ava', 'Kai', 'Noor', 'Ben', 'Zoe', 'Omar', 'Lily'];
+      const town = new Town($('#town'));
+      const S = window.MT_SCENES;
+      const T = window.MT_THEMES;
+      for (const [id, sc] of Object.entries(S)) $('#scene').add(new Option(sc.name, id));
+      for (const id of T.THEME_ORDER) $('#theme').add(new Option(`${T.THEMES[id].emoji} ${T.THEMES[id].name}`, id));
+      const fillOutcomes = () => {
+        const sc = S[$('#scene').value];
+        $('#outcome').innerHTML = '';
+        const oc = sc.outcomes ? Object.entries(sc.outcomes) : [];
+        $('#outcome').disabled = !oc.length;
+        if (!oc.length) $('#outcome').add(new Option('—', ''));
+        for (const [id, o] of oc) $('#outcome').add(new Option(o.name, id));
+      };
+      $('#scene').value = q.get('scene') || 'murder';
+      fillOutcomes();
+      if (q.get('outcome')) $('#outcome').value = q.get('outcome');
+      $('#theme').value = q.get('theme') || 'medieval';
+      $('#phase').value = q.get('phase') || 'night';
+      const initialCount = Math.max(4, Math.min(100, Number(q.get('players')) || 10));
+      if (![4, 10, 25, 50, 100].includes(initialCount)) $('#population').add(new Option(initialCount, initialCount));
+      $('#population').value = String(initialCount);
+
+      function state() {
+        const n = Number($('#population').value) || 10;
+        const players = Array.from({ length: n }, (_, i) => ({
+          id: 'p' + i, name: NAMES[i % NAMES.length] + (i >= NAMES.length ? ' ' + (i + 1) : ''), house: i, alive: true, connected: true,
+          avatar: { color: O.colors[i % O.colors.length], skin: O.skins[i % O.skins.length], hat: O.hats[i % O.hats.length], hair: O.hair[i % O.hair.length], hairColor: O.hairColor[i % O.hairColor.length], face: O.face[i % O.face.length], facialHair: O.facialHair[i % O.facialHair.length], outfit: O.outfit[i % O.outfit.length], eyes: O.eyes[i % O.eyes.length], pants: O.pants[i % O.pants.length], shoes: O.shoes[i % O.shoes.length], accessory: O.accessory[i % O.accessory.length] },
+        }));
+        return { phase: $('#phase').value, theme: $('#theme').value, townName: T.THEMES[$('#theme').value].townName, players, accusations: [] };
+      }
+      function apply() {
+        town.applyState(state());
+        town.dark = town.targetDark = $('#phase').value === 'night' ? 1 : 0;
+        for (const c of town.chars.values()) { // snap everyone into place
+          const t = town.targetFor(c); c.x = t.x; c.y = t.y; c.alpha = c.mode === 'home' ? 0 : 1; c.inside = c.mode === 'home';
+        }
+      }
+      function play() {
+        apply();
+        const sc = $('#scene').value;
+        const victimId = Number(q.get('house')) >= 0 && q.get('house') != null ? 'p' + q.get('house') : 'p2';
+        if (sc === 'execution') {
+          const c = town.chars.get(victimId); c.deathPending = true;
+        }
+        const text = { introduction: { title: T.THEMES[$('#theme').value].townName, sub: 'Every neighbor has a story.' }, beyond: { title: 'MESSAGE FROM BEYOND', sub: 'PLAYER 3 IS LIAR' }, photograph: { title: 'NIGHT SNAPSHOT', sub: 'Someone was active outside their home.' }, blessing: { title: 'TOWN BLESSING', sub: 'Maya is confirmed Town.' } };
+        town.cinema.play(sc, { victimId, outcome: $('#outcome').value, title: 'The Town wins!', sub: 'Every member of the Mafia is gone', mood: 'triumph', ...text[sc] });
+      }
+      $('#play').addEventListener('click', play);
+      $('#stop').addEventListener('click', () => town.cinema.stop());
+      $('#scene').addEventListener('change', fillOutcomes);
+      $('#theme').addEventListener('change', apply);
+      $('#phase').addEventListener('change', apply);
+      $('#population').addEventListener('change', () => { town.cinema.stop(); apply(); });
+      let sound = q.get('mute') !== '1';
+      SFX.enabled = sound;
+      $('#sound').textContent = sound ? '🔊 Sound on' : '🔇 Sound off';
+      $('#sound').addEventListener('click', (e) => { sound = !sound; SFX.enabled = sound; e.target.textContent = sound ? '🔊 Sound on' : '🔇 Sound off'; });
+      document.addEventListener('keydown', (e) => { if (e.key === 'h' || e.key === 'H') $('#bar').classList.toggle('hide'); });
+      if (q.get('bar') === '0') $('#bar').classList.add('hide');
+      apply();
+      // ?autoplay=1&t=8.2 jumps straight to a moment (used for screenshots)
+      if (q.get('autoplay') === '1') {
+        play();
+        const t = Number(q.get('t')) || 0;
+        for (let x = 0; x < t; x += 1 / 30) town.update(1 / 30);
+        if (q.get('freeze') === '1') town.update = () => {};
+      }
+      window.previewTown = town;
+    })();
+  </script>
+</body>
+</html>

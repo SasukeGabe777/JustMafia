@@ -1,0 +1,22 @@
+{
+  "name": "mafia-town",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mafia Town — a big-screen, phone-controlled social deduction party game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tools/test-rules.js && node tools/test-expansion.js && node tools/test-storyteller.js && node tools/test-profiles.js && node tools/test-governance-sockets.js && node tools/test-story-sockets.js && node tools/simulate.js && node tools/render-smoke.js",
+    "simulate": "node tools/simulate.js",
+    "test:rules": "node tools/test-rules.js",
+    "balance": "node tools/balance.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}

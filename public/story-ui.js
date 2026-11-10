@@ -1,0 +1,58 @@
+(function () {
+  const drafts = {};
+  window.MT_STORY_UI = function (v, socket, body, { esc, paint, reply, votingHtml }) {
+    if (v.isJudge || v.you.spectator) return;
+    const name = (id) => (v.players.find((p) => p.id === id) || {}).name || '?';
+    const emit = (event, data) => socket.emit('player:' + event, data, reply);
+    const options = (ids) => ids.map((id) => `<option value="${esc(id)}">${esc(name(id))}</option>`).join('');
+    function card(html, first = false) { const el = document.createElement('section'); el.className = 'card story-controls'; el.innerHTML = html; first ? body.prepend(el) : body.appendChild(el); return el; }
+    const statuses = v.statuses || [];
+    if (statuses.length) card(statuses.map((s) => `<strong class="status-banner">${esc(s.label || s.type)}</strong>`).join(''), true);
+    if (v.startingInfo) card(`<details><summary>Private starting clue</summary><p>${esc(v.startingInfo.text)}</p><p>${v.startingInfo.players.map((p) => esc(p.name)).join(' · ')}</p></details>`);
+    if (v.nomination) {
+      const n = v.nomination, title = v.phase === 'defense' ? name(n.targetId) + ', defend yourself' : name(n.accuserId) + ' is accusing ' + name(n.targetId);
+      const el = card(`<h2>${esc(title)}</h2><p>${n.state === 'pending' ? n.seconds + '/' + n.required + ' seconds of this nomination received.' : v.phase === 'voting' ? 'Vote for the accused, or choose no elimination.' : 'Give the speaker the floor.'}</p>${n.state === 'pending' && v.you.alive ? '<button class="btn" data-second>Second nomination</button>' : ''}`, true);
+      const b = el.querySelector('[data-second]'); if (b) b.onclick = () => emit('nominate', { second: true });
+    }
+    if (v.emergency) card('<h3>Emergency town vote</h3><p>The interrupted night resumes after this vote. Your pending night choices are preserved.</p>', true);
+    if (v.shortenedDiscussion && v.phase === 'discussion') card(`<h3>The clock has shortened</h3><p>This discussion lasts ${v.shortenedDiscussion} seconds.</p>`, true);
+    const mafia = v.mafia;
+    if (mafia) {
+      const el = card(`<h3>Mafia coordination</h3>${mafia.bluffs.length ? `<details><summary>Safe cover identities</summary><p>${mafia.bluffs.map((r) => esc(MT_ROLES.ROLES[r].name)).join(' · ')}</p><p class="small">These Town roles were unassigned at setup. A claim is still a risk.</p></details>` : ''}${mafia.canVote ? `<p class="small">One collective kill. ${mafia.decision === 'legacy' ? 'Legacy: Godfather overrides; seeded ties.' : 'Most votes wins. Godfather breaks tied leaders; otherwise ' + (mafia.ties === 'random' ? 'a seeded random tie-break.' : 'a tie means no kill.')}</p><div class="grid">${mafia.targets.map((id) => `<button class="target ${id === mafia.choice ? 'sel' : ''}" data-mafia="${id}"><canvas data-mafia-av="${id}"></canvas><b>${esc(name(id))}</b><small>${mafia.totals[id] || 0} votes</small></button>`).join('')}</div><ul>${mafia.picks.map((p) => `<li>${esc(name(p.id))} → ${esc(name(p.targetId))}</li>`).join('')}</ul><label>Coordination target<select data-tactical-target>${options(mafia.targets)}</select></label><div class="btns">${Object.entries(mafia.tactics).map(([id, text]) => `<button class="btn ghost small" data-tactic="${id}" ${mafia.messagesLeft ? '' : 'disabled'}>${esc(text.replace('{player}', 'selected player'))}</button>`).join('')}</div><small>${mafia.messagesLeft} tactical messages left this night.</small>` : ''}<ul>${mafia.messages.slice(-6).map((m) => `<li>${esc(name(m.fromId))}: ${esc(m.text)}</li>`).join('')}</ul>`, true);
+      el.querySelectorAll('[data-mafia]').forEach((b) => b.onclick = () => emit('mafiaVote', { targetId: b.dataset.mafia }));
+      el.querySelectorAll('[data-mafia-av]').forEach((cv) => { const p = v.players.find((p) => p.id === cv.dataset.mafiaAv); paint(cv, p.avatar); });
+      el.querySelectorAll('[data-tactic]').forEach((b) => b.onclick = () => emit('mafiaMessage', { tactic: b.dataset.tactic, targetId: el.querySelector('[data-tactical-target]').value }));
+    }
+    const special = v.special;
+    if (special && special.canAct && (special.variants.length > 1 || special.bomb || special.mimic || special.interrupt)) {
+      const roles = MT_ROLES.ROLES;
+      const el = card(`<h3>Ability controls</h3>${special.variants.length > 1 ? `<label>Choose ability<select data-variant>${special.variants.map((a) => `<option value="${a.id}" ${a.id === special.variant || special.variant === 'primary' && a.id === 'midas' ? 'selected' : ''}>${esc(a.label)}</option>`).join('')}</select></label>` : '<p class="small">Choose a target above if your role has an available action.</p>'}${special.bomb ? `<label>Fuse delay (phase transitions)<input id="bomb-delay" type="number" min="${special.bomb.min}" max="${special.bomb.max}" value="${drafts.bombDelay || special.bomb.min}"></label><small>Detonation waits for a daytime phase.</small>` : ''}${special.mimic ? `<label>Copy one active ability<select data-copy>${special.eligibleCopies.map((r) => `<option value="${r}">${esc(roles[r].name)}</option>`).join('')}</select></label><button class="btn" data-mimic>Assume this ability (once)</button>` : ''}${special.interrupt ? '<button class="btn danger" data-interrupt>Town Square Interruption</button>' : ''}`);
+      const variant = el.querySelector('[data-variant]'); if (variant) variant.onchange = () => emit('variant', { variant: variant.value });
+      const delay = el.querySelector('#bomb-delay'); if (delay) delay.oninput = () => { drafts.bombDelay = delay.value; };
+      const mimic = el.querySelector('[data-mimic]'); if (mimic) mimic.onclick = () => emit('special', { op: 'mimic', role: el.querySelector('[data-copy]').value });
+      const interrupt = el.querySelector('[data-interrupt]'); if (interrupt) interrupt.onclick = () => emit('special', { op: 'interrupt' });
+    }
+    if (v.ghost) {
+      const g = v.ghost, el = card(`<h3>Ghost controls</h3><b>${g.voteEnabled ? 'GHOST VOTE: ' + (g.voteUsed ? 'USED' : 'AVAILABLE') : 'Ghost voting is off'}</b><p class="small">One ballot per game. Casting or skipping spends it; you may change that ballot while voting remains open.</p>${g.chatEnabled ? `<h4>Ghost chat</h4><p class="small">Only ghosts and the Judge see this channel.</p><ul>${g.messages.slice(-12).map((m) => `<li>${esc(m.name)}: ${esc(m.text)}</li>`).join('')}</ul><input data-draft="ghost" maxlength="160" aria-label="Ghost message"><button class="btn" data-ghost-send>Send to ghosts</button>` : ''}`);
+      const send = el.querySelector('[data-ghost-send]'); if (send) send.onclick = () => { emit('ghostChat', { text: el.querySelector('input').value }); drafts.ghost = ''; };
+      if (v.phase === 'voting' && v.voting) { const vote = card(votingHtml()); vote.querySelectorAll('[data-vote]').forEach((b) => b.onclick = () => emit('vote', { targetId: b.dataset.vote })); vote.querySelectorAll('[data-av]').forEach((cv) => { const p = v.players.find((p) => p.id === cv.dataset.av); if (p) paint(cv, p.avatar); }); }
+    }
+    const social = v.social;
+    if (social) {
+      const living = v.players.filter((p) => p.alive && p.id !== v.you.id && !p.spectator).map((p) => p.id);
+      if (social.canWhisper || social.canNominate) {
+        const el = card(`<h3>Discussion actions</h3><select data-social-target aria-label="Choose player">${options(living)}</select>${social.canWhisper ? `<button class="btn ghost" data-whisper-request ${social.whispersLeft ? '' : 'disabled'}>Request private whisper (${social.whispersLeft} left)</button><p class="small">Recipient must accept. Three short messages each over 30 seconds. ${social.judgeReadsWhispers ? 'The Judge can read content in this setup.' : 'The Judge sees usage metadata only.'}</p>` : ''}${social.canNominate ? '<button class="btn" data-nominate>Nominate</button>' : ''}`);
+        const request = el.querySelector('[data-whisper-request]'); if (request) request.onclick = () => emit('whisper', { op: 'request', targetId: el.querySelector('select').value });
+        const nominate = el.querySelector('[data-nominate]'); if (nominate) nominate.onclick = () => emit('nominate', { targetId: el.querySelector('select').value });
+      }
+      for (const h of social.sessions.filter((h) => ['pending', 'active'].includes(h.state))) {
+        const other = h.fromId === v.you.id ? h.toId : h.fromId;
+        const el = card(`<h3>Whisper with ${esc(name(other))}</h3>${h.state === 'pending' ? h.toId === v.you.id ? '<button class="btn" data-accept>Accept</button><button class="btn ghost" data-decline>Decline</button>' : '<p>Waiting for consent…</p>' : `<p class="small">Private session closes automatically after 30 seconds.</p><ul>${h.messages.map((m) => `<li>${esc(name(m.fromId))}: ${esc(m.text)}</li>`).join('')}</ul><input data-draft="whisper-${h.id}" maxlength="320" aria-label="Private whisper"><button class="btn" data-whisper-send>Send privately</button>`}`);
+        for (const [selector, accept] of [['[data-accept]', true], ['[data-decline]', false]]) { const b = el.querySelector(selector); if (b) b.onclick = () => emit('whisper', { op: 'reply', id: h.id, accept }); }
+        const send = el.querySelector('[data-whisper-send]'); if (send) send.onclick = () => { emit('whisper', { op: 'send', id: h.id, text: el.querySelector('input').value }); drafts['whisper-' + h.id] = ''; };
+      }
+    }
+    body.querySelectorAll('[data-draft]').forEach((el) => { el.value = drafts[el.dataset.draft] || ''; el.oninput = () => { drafts[el.dataset.draft] = el.value; }; });
+    if (v.progression && v.phase === 'gameover') card(`<h3>Your profile</h3><p>${v.progression.coins} coins · ${v.progression.stats.games} completed games</p><p>${esc(v.progressionNotice || '')}</p><p class="small">${esc(v.progression.storage)}</p>`);
+  };
+})();

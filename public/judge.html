@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#121225">
+  <title>Judge Console · Mafia Town</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/judge.css">
+</head>
+<body>
+  <section id="auth" hidden>
+    <div class="card narrow">
+      <h1>⚖️ Judge console</h1>
+      <p class="muted">Open this from the big screen (⚙ → Judge console) or scan its phone QR. Or enter the room code and host key:</p>
+      <label>Room code <input id="a-code" maxlength="4" autocomplete="off"></label>
+      <label>Host key <input id="a-key" autocomplete="off"></label>
+      <button class="btn" id="a-go">Connect</button>
+      <p id="a-err" class="err"></p>
+    </div>
+  </section>
+
+  <section id="app" hidden>
+    <header class="top">
+      <div>
+        <div class="code" id="h-code">----</div>
+        <div class="muted small" id="h-town"></div>
+      </div>
+      <div class="phase">
+        <div id="h-phase">Lobby</div>
+        <div id="h-timer" class="timer"></div>
+      </div>
+      <button class="btn ghost" id="h-ref">📖 Roles</button>
+      <div class="secret">🔒 Secret screen. Don't show the players.</div>
+    </header>
+
+    <nav class="tabs">
+      <button data-tab="grimoire">Grimoire</button>
+      <button data-tab="game" class="on">🎬 Game</button>
+      <button data-tab="scenes">🎥 Scenes</button>
+      <button data-tab="setup">🛠 Setup</button>
+      <button data-tab="players">👥 Players</button>
+      <button data-tab="test">🧪 Test mode</button>
+      <button data-tab="log">📜 Log</button>
+    </nav>
+
+    <main data-panel="grimoire" id="grimoire" hidden></main>
+    <!-- GAME -->
+    <main data-panel="game">
+      <div class="card">
+        <h3>Flow</h3>
+        <p id="judge-governance" class="muted"></p>
+        <button class="btn ghost" data-act="randomJudge">Randomize Judge (before game)</button>
+        <div class="btns">
+          <button class="btn" data-act="start">▶ Start game</button>
+          <button class="btn" id="g-pause">⏸ Pause</button>
+          <button class="btn" data-act="skip">⏭ Next phase</button>
+          <button class="btn" data-act="extend">+30s</button>
+          <button class="btn" data-act="openVoting">🗳 Open voting</button>
+          <button class="btn" data-act="closeVoting">🔒 Close voting</button>
+          <button class="btn danger" id="g-lobby">⟲ Back to lobby</button>
+        </div>
+        <p class="muted small" id="g-hint"></p>
+      </div>
+      <div class="card">
+        <h3>Judge intervention</h3>
+        <label>Player <select id="disaster-player"></select></label>
+        <label>Disaster <select id="disaster-kind"><option value="hurricane">Hurricane</option><option value="flood">Flood / drowning</option><option value="meteor">Meteor</option></select></label>
+        <p class="small muted">Preview opens a separate scene. Confirmation eliminates the player, logs an intervention, and pauses gameplay.</p>
+        <button class="btn ghost" id="disaster-preview">Preview event</button>
+        <button class="btn danger" id="disaster-confirm" hidden>Confirm elimination</button>
+        <p id="disaster-status" role="status"></p>
+      </div>
+      <div class="card reveal" id="g-reveal" hidden>
+        <h3>🌅 Dawn is waiting for you</h3>
+        <p class="muted small">Play each event on the big screen when you're ready, then press <b>Next phase</b> for the morning announcement.</p>
+        <div id="g-reveal-list"></div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h3>Progress</h3>
+          <div id="g-progress" class="muted">Nothing to wait for.</div>
+          <div id="g-tally"></div>
+        </div>
+        <div class="card">
+          <h3>Coming up at dawn</h3>
+          <div id="g-pending" class="muted">Resolved when night ends.</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Narrator <span class="muted small" id="g-narr-mode"></span></h3>
+        <p id="g-narr" class="narr muted">…</p>
+        <div class="row">
+          <input id="g-say" placeholder="Say a custom line on the big screen…" maxlength="240">
+          <button class="btn" id="g-say-go">📣 Say</button>
+          <button class="btn ghost" id="g-skip-narr">⏭ Skip narration</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🔮 Telepath messages</h3>
+        <ul id="g-tele" class="list"></ul>
+      </div>
+    </main>
+
+    <!-- SCENES -->
+    <main data-panel="scenes" hidden>
+      <div class="card">
+        <h3>Town map <span class="muted small">Tap a house to select it. Nothing here changes the game.</span></h3>
+        <canvas id="sc-map" width="960" height="540"></canvas>
+        <div class="btns">
+          <button class="btn ghost" data-spot="overview">🗺 Overview</button>
+          <button class="btn ghost" data-spot="square">⛲ Square</button>
+          <button class="btn ghost" data-spot="cemetery">🪦 Graveyard</button>
+          <button class="btn ghost" data-spot="pond">🦆 Pond</button>
+          <button class="btn ghost" id="sc-zoom">🔍 Zoom to selected house</button>
+          <button class="btn danger" id="sc-stop">■ Stop scene</button>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h3>Scenes <span class="muted small" id="sc-sel">No house selected</span></h3>
+          <div class="row">
+            <label>Murder outcome
+              <select id="sc-outcome">
+                <option value="kill">Killed</option>
+                <option value="protected">Protected (save or immunity)</option>
+                <option value="guard">Protector blocks</option>
+                <option value="guardDies">Protector dies</option>
+                <option value="blocked">Attack never came</option>
+                <option value="failed">Failed attack</option>
+                <option value="multiple">Multiple masked attackers</option>
+              </select>
+            </label>
+          </div>
+          <div id="sc-scenes" class="btns"></div>
+          <div class="btns"><button class="btn ghost" data-spot="tavern">Tavern</button><button class="btn ghost" data-spot="hall">Town hall</button><button class="btn ghost" data-spot="firepit">Firepit</button></div>
+          <p class="muted small">Manual scenes are for storytelling only. They don't kill, save or reveal anyone. Avoid scenes that hint at secrets you haven't announced.</p>
+        </div>
+        <div class="card">
+          <h3>Music</h3>
+          <div class="btns">
+            <button class="btn ghost" data-mood="peace">🌙 Peaceful</button>
+            <button class="btn ghost" data-mood="tension">💓 Tension</button>
+            <button class="btn ghost" data-mood="ominous">🌑 Ominous</button>
+            <button class="btn ghost" data-mood="eerie">👻 Eerie</button>
+            <button class="btn ghost" data-mood="triumph">🎺 Triumph</button>
+            <button class="btn ghost" data-mood="">🔇 Silence</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- SETUP -->
+    <main data-panel="setup" hidden>
+      <div class="card">
+        <h3>Presets</h3>
+        <div id="s-presets" class="btns"></div>
+        <div class="row">
+          <input id="s-save-name" placeholder="Name this setup…" maxlength="30">
+          <button class="btn" id="s-save">💾 Save current</button>
+        </div>
+        <div id="s-saved" class="btns"></div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h3>Town</h3>
+          <label>Theme <select data-set="theme" id="s-theme"></select></label>
+          <label>Town name <input data-set="townName" maxlength="24"></label>
+          <label>Narrator
+            <select data-set="narratorStyle">
+              <option value="classic">Classic (dark &amp; dramatic)</option>
+              <option value="comedy">Comedy</option>
+              <option value="corporate">Corporate chaos</option>
+            </select>
+          </label>
+          <label>Narrator mode
+            <select data-set="narratorMode">
+              <option value="ai">🤖 AI narrator (the TV narrates and speaks)</option>
+              <option value="human">🎙 Human Judge (you narrate; lines are suggested here only)</option>
+            </select>
+          </label>
+          <label>Dawn reveals
+            <select data-set="revealMode">
+              <option value="auto">Automatic (cinematics play by themselves)</option>
+              <option value="judge">Judge-controlled (you play each event)</option>
+            </select>
+          </label>
+          <div class="row2">
+            <label>Min players <input type="number" data-set="minPlayers" min="3" max="100"></label>
+            <label>Max players <input type="number" data-set="maxPlayers" min="3" max="100"></label>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Timers</h3>
+          <div class="row2">
+            <label>Night (s) <input type="number" data-set="nightSeconds" min="5" max="600"></label>
+            <label>Discussion (s) <input type="number" data-set="discussionSeconds" min="5" max="3600"></label>
+            <label>Voting (s) <input type="number" data-set="votingSeconds" min="5" max="600"></label>
+          </div>
+          <label class="check"><input type="checkbox" data-set="autoAdvance"> Automatic phases (off = you open and close discussion and voting)</label>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Roles <span class="muted small" id="s-count"></span></h3>
+        <label class="check"><input type="checkbox" data-set="autoMafia"> Automatic Mafia team size (about 1 in 4.5 players; Godfather and Roleblocker count toward it)</label>
+        <p class="muted small">Everyone without a special role is a Villager. Roles are shuffled randomly unless you force one in the Players tab.</p>
+        <div id="s-roles" class="roles"></div>
+        <div id="s-comp" class="comp"></div>
+        <div id="s-errors"></div>
+      </div>
+      <div class="card">
+        <h3>Rules</h3>
+        <div class="grid2 tight">
+          <label class="check"><input type="checkbox" data-set="revealRoleOnDeath"> Reveal roles on death</label>
+          <label class="check"><input type="checkbox" data-set="allowSkip"> Allow "skip" votes</label>
+          <label class="check"><input type="checkbox" data-set="anonymousVotes"> Anonymous votes (TV doesn't show who voted for whom)</label>
+          <label class="check"><input type="checkbox" data-set="doctorSelfProtect"> Doctor may protect themselves</label>
+          <label class="check"><input type="checkbox" data-set="ghostHaunts"> Ghosts can haunt the big screen</label>
+          <label class="check"><input type="checkbox" data-set="botChatter"> Bots talk in discussion</label>
+          <label>Ties <select data-set="tieRule"><option value="none">Nobody is eliminated</option><option value="random">Random pick among the tied</option></select></label>
+          <label>Elimination needs <select data-set="majority"><option value="plurality">Most votes (plurality)</option><option value="majority">Over half of all voters</option></select></label>
+          <label>Mafia win when <select data-set="mafiaWinAt"><option value="parity">They equal the rest (classic)</option><option value="all">Everyone else is gone</option></select></label>
+          <label>Telepaths can talk <select data-set="telepathWhen"><option value="always">Day and night</option><option value="night">Only at night</option><option value="day">Only during the day</option></select></label>
+          <label>Vigilante bullets <input type="number" data-set="vigilanteShots" min="1" max="10"></label>
+          <label>Puppet Master uses <input type="number" data-set="puppetUses" min="1" max="10"></label>
+          <label>Glitch uses <input type="number" data-set="glitchUses" min="1" max="10"></label>
+          <label>Harmony objectives per blessing <input type="number" data-set="harmonyGoal" min="1" max="10"></label>
+          <label>Paparazzi photos to win <input type="number" data-set="paparazziGoal" min="1" max="10"></label>
+        </div>
+      </div>
+    </main>
+
+    <!-- PLAYERS -->
+    <main data-panel="players" hidden>
+      <div class="card">
+        <h3>Everyone <span class="muted small" id="p-count"></span></h3>
+        <p class="muted small">Override anything here: force roles before the game, change night actions or votes, eliminate or revive. Every override is written to the Log.</p>
+        <div class="tablewrap"><table id="p-table"></table></div>
+      </div>
+    </main>
+
+    <!-- TEST MODE -->
+    <main data-panel="test" hidden>
+      <div class="grid2">
+        <div class="card">
+          <h3>Bots</h3>
+          <div class="row">
+            <input type="number" id="t-n" value="9" min="1" max="99">
+            <select id="t-pers"><option value="">Mixed personalities</option></select>
+            <button class="btn" id="t-add">+ Add bots</button>
+          </div>
+          <button class="btn ghost" id="t-remove">Remove all bots</button>
+          <p class="muted small">Bots use the same rules and only see what their phone would show. To play alongside them, open <b>/play</b> in another tab.</p>
+        </div>
+        <div class="card">
+          <h3>Live test controls</h3>
+          <label>Speed
+            <select data-set="speed"><option value="1">1× (real time)</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="25">25×</option><option value="50">50×</option></select>
+          </label>
+          <label class="check"><input type="checkbox" data-set="skipCinematics"> Skip animations (cinematic phases last a moment)</label>
+          <label class="check"><input type="checkbox" data-set="botsAuto"> Bots act automatically</label>
+          <button class="btn ghost" data-act="botsActNow">🤖 Make bots act now</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Balance simulations</h3>
+        <p class="muted small">Plays many games instantly with the current setup and bots only (no animations), then reports the results. Runs in the background, so live games aren't affected.</p>
+        <div class="row">
+          <label>Games <input type="number" id="sim-games" value="500" min="1" max="5000"></label>
+          <label>Player counts <input id="sim-sizes" value="8, 12, 20"></label>
+          <label>Bot style <select id="sim-pers"><option value="">Mixed</option></select></label>
+          <button class="btn" id="sim-run">▶ Run</button>
+        </div>
+        <div id="sim-out"></div>
+      </div>
+    </main>
+
+    <!-- LOG -->
+    <main data-panel="log" hidden>
+      <div class="card">
+        <h3>Game log <span class="muted small">🔒 = hidden from players</span></h3>
+        <ul id="l-list" class="list log"></ul>
+      </div>
+    </main>
+  </section>
+
+  <div id="ref" class="overlay" hidden>
+    <div class="card ref">
+      <div class="row"><h2>📖 Role reference</h2><button class="btn ghost" id="ref-close">✕ Close</button></div>
+      <div id="ref-list"></div>
+    </div>
+  </div>
+
+  <div id="toast" hidden></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/shared/roles.js"></script>
+  <script src="/shared/options.js"></script>
+  <script src="/shared/config.js"></script>
+  <script src="/avatar.js"></script>
+  <script src="/character-art.js"></script>
+  <script src="/grimoire.js"></script>
+  <script src="/shared/themes.js"></script>
+  <script src="/shared/layout.js"></script>
+  <script src="/scenes.js"></script>
+  <script src="/judge.js"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#151428">
+  <title>Mafia Town</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/play.css">
+</head>
+<body>
+  <section id="screen-join" hidden>
+    <h1 class="brand">🔪 Mafia Town</h1>
+    <div class="card">
+      <label id="code-wrap">Room code
+        <input id="j-code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
+      </label>
+      <label>Your name
+        <input id="j-name" maxlength="14" autocomplete="nickname" placeholder="e.g. Brodi">
+      </label>
+    </div>
+    <div class="card">
+      <canvas id="preview" class="preview"></canvas>
+      <div class="creator-heading"><h2>Your townsfolk</h2><button class="btn ghost small" id="random-character">Randomize Character</button></div>
+      <div class="opt-label">Outfit</div>
+      <div id="opt-colors" class="swatches"></div>
+      <div class="opt-label">Skin</div>
+      <div id="opt-skins" class="swatches"></div>
+      <div class="opt-label">Hat</div>
+      <div id="opt-hats" class="hats"></div>
+      <div id="opt-details" class="creator-details"></div>
+      <details id="photo-panel"><summary>Optional photo assistant</summary>
+        <p class="small muted">Photos stay on this device. Match colors, or use a pixelated face in your own phone preview. Face pixels are never uploaded, shared with the TV, or saved on the server.</p>
+        <label class="check"><input type="checkbox" id="photo-consent"> Allow local photo processing on this device.</label>
+        <button class="btn ghost" id="photo-camera" disabled>Open camera</button>
+        <input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp" capture="user" disabled aria-label="Choose or take a selfie">
+        <div class="photo-frame" hidden><video id="photo-video" autoplay playsinline muted hidden></video><canvas id="photo-preview" hidden></canvas><div class="face-guide"></div></div>
+        <p class="small">Center your face inside the guide, with hair near the top.</p>
+        <button class="btn" id="photo-capture" hidden>Take photo</button>
+        <div id="photo-choices" hidden><button class="btn" id="photo-match">Match My Character</button><button class="btn ghost" id="photo-face">Use My Face (local preview)</button><button class="btn ghost" id="photo-retake">Retake / discard</button></div>
+        <button class="btn ghost" id="photo-remove" hidden>Remove my face</button>
+        <p id="photo-status" class="small" role="status"></p>
+      </details>
+      <details id="shop"><summary>Wardrobe &amp; cosmetic shop</summary><div id="shop-body"></div></details>
+    </div>
+    <button id="j-go" class="btn big">Join game</button>
+    <p id="j-err" class="err"></p>
+  </section>
+
+  <section id="screen-game" hidden>
+    <header class="top">
+      <canvas id="me" class="me"></canvas>
+      <div class="who">
+        <div id="g-name"></div>
+        <div id="g-phase"></div>
+      </div>
+      <div id="g-timer"></div>
+    </header>
+    <main id="g-body"></main>
+    <details class="card" id="player-settings"><summary>Settings</summary><div id="governance"></div></details>
+  </section>
+
+  <section id="screen-msg" hidden>
+    <div class="card center">
+      <h2 id="m-title"></h2>
+      <p id="m-text"></p>
+      <button id="m-btn" class="btn">Join again</button>
+    </div>
+  </section>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/shared/options.js"></script>
+  <script src="/shared/roles.js"></script>
+  <script src="/shared/cosmetics.js"></script>
+  <script src="/avatar.js"></script>
+  <script src="/character-art.js"></script>
+  <script src="/shared/photo-match.js"></script>
+  <script src="/photo-ui.js"></script>
+  <script src="/story-ui.js"></script>
+  <script src="/creator-ui.js"></script>
+  <script src="/play.js"></script>
+</body>
+</html>

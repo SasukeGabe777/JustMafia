@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mafia Town</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/host.css">
+</head>
+<body>
+  <canvas id="town"></canvas>
+
+  <!-- Title screen -->
+  <section id="title" class="overlay">
+    <div class="title-card">
+      <div class="logo">🔪 Mafia Town</div>
+      <p class="tagline">A big-screen murder mystery. Everyone plays from their phone.</p>
+      <button id="create" class="btn btn-big">Create a town</button>
+      <p class="fine">Open this page on the TV or projector. Players join by scanning a QR code.</p>
+    </div>
+  </section>
+
+  <!-- Heads-up display -->
+  <header id="hud" hidden>
+    <div class="pill" id="hud-left">
+      <div id="hud-town">Mafia Town</div>
+      <div id="hud-phase">Waiting for players</div>
+      <div id="hud-harmony" hidden></div>
+    </div>
+    <div class="pill" id="hud-timer" hidden></div>
+    <div class="hud-right">
+      <div class="pill" id="hud-counts"></div>
+      <button class="pill icon-btn" id="gear" title="Host controls (H)">⚙</button>
+    </div>
+  </header>
+  <aside id="judge-announcement" class="pill" hidden aria-live="polite"></aside>
+
+  <div id="composition" class="pill" hidden></div>
+
+  <!-- Lobby join panel -->
+  <aside id="lobby" hidden>
+    <h2>Join the game!</h2>
+    <img id="qr" alt="QR code to join">
+    <div class="code-label">Room code</div>
+    <div id="room-code">----</div>
+    <div id="join-url"></div>
+    <div id="lobby-count"></div>
+    <div id="lobby-error"></div>
+    <button id="lobby-start" class="btn btn-big">Start game</button>
+    <button id="lobby-bots" class="link">+ add 5 test bots</button>
+  </aside>
+
+  <!-- Game over -->
+  <div id="gameover" hidden>
+    <div id="go-town"></div>
+    <div id="go-title"></div>
+    <div id="go-sub"></div>
+    <div class="go-actions">
+      <button id="go-again" class="btn">Play again</button>
+    </div>
+  </div>
+
+  <div id="narration" hidden><div id="narration-text"></div></div>
+
+  <!-- Host drawer -->
+  <aside id="drawer" class="closed">
+    <div class="drawer-head">
+      <h3>Host controls</h3>
+      <button class="icon-btn" id="drawer-close">✕</button>
+    </div>
+    <section>
+      <h4>Game</h4>
+      <div class="btn-grid">
+        <button class="btn" data-act="start">▶ Start</button>
+        <button class="btn" id="btn-pause">⏸ Pause</button>
+        <button class="btn" data-act="skip">⏭ Next phase</button>
+        <button class="btn" data-act="extend">+30s</button>
+        <button class="btn" data-act="openVoting">🗳 Open voting</button>
+        <button class="btn" data-act="closeVoting">🔒 Close voting</button>
+        <button class="btn btn-danger" data-act="lobby">⟲ Back to lobby</button>
+        <button class="btn" id="btn-full">⛶ Fullscreen</button>
+      </div>
+      <p class="fine">Keys: <b>Space</b> pause · <b>N</b> next · <b>H</b> this panel · <b>F</b> fullscreen</p>
+    </section>
+    <section>
+      <h4>Judge console</h4>
+      <p class="fine">Setup, roles, themes, voting, overrides, test bots and simulations. It shows everyone's secret role, so open it on a laptop or phone the audience can't see.</p>
+      <div class="btn-grid">
+        <button class="btn" id="judge-open">Open in new tab</button>
+        <button class="btn" id="judge-qr-btn">Phone QR</button>
+      </div>
+      <img id="judge-qr" alt="Judge console QR" hidden>
+    </section>
+    <section>
+      <h4>This screen</h4>
+      <label class="check"><input type="checkbox" id="pref-voice"> Read narration aloud</label>
+      <label class="check"><input type="checkbox" id="pref-sfx"> Sound effects</label>
+      <label>Join link base <input id="join-base" placeholder="http://192.168.x.x:3000"></label>
+    </section>
+    <section>
+      <h4>Players <span id="drawer-count"></span></h4>
+      <ul id="player-list"></ul>
+    </section>
+  </aside>
+
+  <div id="toast" hidden></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/shared/options.js"></script>
+  <script src="/shared/roles.js"></script>
+  <script src="/shared/themes.js"></script>
+  <script src="/avatar.js"></script>
+  <script src="/character-art.js"></script>
+  <script src="/world-art.js"></script>
+  <script src="/sfx.js"></script>
+  <script src="/shared/layout.js"></script>
+  <script src="/pixel.js"></script>
+  <script src="/cinema.js"></script>
+  <script src="/scenes.js"></script>
+  <script src="/town.js"></script>
+  <script src="/host.js"></script>
+</body>
+</html>

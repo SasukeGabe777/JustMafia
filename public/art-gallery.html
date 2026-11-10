@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Original art gallery · Mafia Town</title>
+<style>body{margin:0;padding:24px;background:#222b2a;color:#eee0be;font:16px system-ui}header{max-width:1100px;margin:auto}a{color:#d8bc81}select{padding:8px;background:#3b4640;color:#f1e2bf;border:1px solid #8b876b}canvas{display:block;max-width:100%;margin:24px auto;image-rendering:pixelated;background:#7a8170;border:1px solid #8f937c}p{line-height:1.6;color:#c7c8b1}</style></head>
+<body><header><h1>Faces &amp; places</h1><p>Original modular character and building art. All core hairstyles are free. Premium outfits and embellishments appear here for preview.</p><label>Theme <select id="theme"></select></label> · <a href="/preview?theme=medieval&population=25&phase=discussion">Town &amp; cinematic preview</a> · <a href="/test">Full test bench</a></header><canvas id="gallery" width="1200" height="1240" aria-label="Eight residential buildings, hairstyles and outfit previews"></canvas>
+<script src="/shared/options.js"></script><script src="/shared/themes.js"></script><script src="/avatar.js"></script><script src="/character-art.js"></script><script src="/world-art.js"></script>
+<script>
+(function(){const O=MT_OPTIONS,select=document.querySelector('select'),cv=document.querySelector('canvas'),ctx=cv.getContext('2d');
+select.innerHTML=MT_THEMES.THEME_ORDER.map((t)=>'<option value="'+t+'">'+MT_THEMES.THEMES[t].name+'</option>').join('');select.value='medieval';
+function render(){const theme=select.value,pal=MT_THEMES.THEMES[theme].palette;ctx.fillStyle=pal.grass;ctx.fillRect(0,0,1200,1240);ctx.imageSmoothingEnabled=false;ctx.textAlign='center';
+function title(text,y){ctx.font='bold 22px monospace';ctx.fillStyle='#f6e7bf';ctx.fillText(text,600,y)}
+title('EIGHT RESIDENTIAL FAMILIES',40);for(let i=0;i<8;i++){const x=150+i%4*300,y=190+Math.floor(i/4)*180;MT_WORLD.building(ctx,x,y,i,pal,{scale:1.5,theme,lit:true});ctx.font='16px monospace';ctx.fillStyle='#f6e7bf';ctx.fillText(MT_WORLD.FAMILIES[i],x,y+32)}
+title('TWENTY MODULAR HAIRSTYLES',435);O.hair.forEach((hair,i)=>{const x=75+i%10*117,y=560+Math.floor(i/10)*145;MTArt.drawCharacter(ctx,x,y,{hair,hairColor:O.hairColor[i%O.hairColor.length],skin:O.skins[i%O.skins.length],outfit:'traveler',color:'#54746b'},{scale:1.45,theme});ctx.font='12px monospace';ctx.fillStyle='#f6e7bf';ctx.fillText(O.label(hair),x,y+22)});
+title('OUTFITS · ONE IDENTITY ACROSS EVERY THEME',770);O.outfit.forEach((outfit,i)=>{const x=75+i%10*117,y=890+Math.floor(i/10)*145;MTArt.drawCharacter(ctx,x,y,{outfit,hair:'sidePart',skin:O.skins[i%O.skins.length],color:O.colors[i%O.colors.length],shoeStyle:O.shoeStyles[i%O.shoeStyles.length]},{scale:1.45,theme});ctx.font='12px monospace';ctx.fillStyle='#f6e7bf';ctx.fillText(O.label(outfit),x,y+22)})}
+select.onchange=render;render()})();
+</script></body></html>

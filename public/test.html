@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test Bench · Mafia Town</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg: #0e0e1c; --card: #1b1b33; --ink: #f4f1ff; --muted: #a9a6c8; --line: rgba(255,255,255,0.12); --accent: #ffcc33; --font: 'Fredoka', system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font); }
+    body { display: flex; flex-direction: column; }
+    header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--card); }
+    header h1 { font-size: 18px; margin: 0 8px 0 0; }
+    .code { font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--accent); }
+    .muted { color: var(--muted); font-size: 13px; }
+    button, select { font: 600 14px var(--font); border-radius: 10px; border: 1px solid var(--line); padding: 6px 10px; cursor: pointer; background: #2a2950; color: var(--ink); }
+    button.primary { background: var(--accent); color: #1b1630; border: 0; }
+    .spacer { flex: 1; }
+    main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 8px; padding: 8px; }
+    main.judge-big { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+    .panel { display: flex; flex-direction: column; min-height: 0; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .panel > .bar { display: flex; align-items: center; gap: 8px; padding: 4px 10px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); }
+    .panel > .bar b { color: var(--ink); }
+    .panel > .bar a { color: var(--muted); margin-left: auto; }
+    .panel iframe { flex: 1; width: 100%; border: 0; background: #000; }
+    #phones { grid-column: 1 / -1; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+    #phones .panel { flex: none; width: 300px; height: 560px; }
+    #phones:empty::after { content: 'No test phones. Pick a number above (bots can fill the rest from the Judge console).'; color: var(--muted); padding: 12px; }
+    .max { position: fixed !important; inset: 52px 8px 8px 8px; z-index: 10; width: auto !important; height: auto !important; }
+    #err { color: #ff8a8a; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧪 Test bench</h1>
+    <span class="muted">Room</span> <span class="code" id="code">····</span>
+    <label class="muted">Phones
+      <select id="count"><option>0</option><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>8</option></select>
+    </label>
+    <button id="layout">Bigger Judge</button>
+    <button id="reload-phones">Reload phones</button>
+    <button class="primary" id="new">New room</button>
+    <a href="/art" target="_blank" style="color:#e4ca94">Art gallery</a>
+    <a href="/preview" target="_blank" style="color:#e4ca94">Scene preview</a>
+    <span id="err"></span>
+    <span class="spacer"></span>
+    <span class="muted">Tip: Judge → Test mode → add bots to fill the town.</span>
+  </header>
+  <main id="main">
+    <section class="panel" id="p-tv"><div class="bar"><b>📺 Big screen</b><button data-max="p-tv">⤢</button><a id="l-tv" target="_blank">open in new tab ↗</a></div><iframe id="tv" allow="fullscreen; autoplay"></iframe></section>
+    <section class="panel" id="p-judge"><div class="bar"><b>⚖️ Judge</b><button data-max="p-judge">⤢</button><a id="l-judge" target="_blank">open in new tab ↗</a></div><iframe id="judge"></iframe></section>
+    <div id="phones"></div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    (function () {
+      const $ = (s) => document.querySelector(s);
+      const socket = io();
+      let room = null; // { code, hostKey }
+      const load = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
+      const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } };
+      let phones = Number(load('mt.testPhones') ?? 3);
+      $('#count').value = String(phones);
+
+      function createRoom() {
+        socket.emit('host:create', {}, (r) => {
+          if (!r || !r.ok) { $('#err').textContent = 'Could not create a room.'; return; }
+          // Fresh room: forget old test-phone sessions.
+          for (let i = 1; i <= 8; i++) localStorage.removeItem(`mt.player.t${i}`);
+          use({ code: r.code, hostKey: r.hostKey });
+        });
+      }
+
+      function use(r) {
+        room = r;
+        save('mt.host', r); // the big screen and Judge pick this up
+        $('#code').textContent = r.code;
+        $('#tv').src = '/';
+        $('#l-tv').href = '/';
+        $('#judge').src = `/judge#${r.code}.${r.hostKey}`;
+        $('#l-judge').href = `/judge#${r.code}.${r.hostKey}`;
+        renderPhones();
+      }
+
+      function renderPhones() {
+        const box = $('#phones');
+        box.innerHTML = '';
+        if (!room) return;
+        for (let i = 1; i <= phones; i++) {
+          const url = `/play?room=${room.code}&slot=t${i}&autojoin=1&name=${encodeURIComponent('Tester ' + i)}`;
+          const p = document.createElement('section');
+          p.className = 'panel';
+          p.id = `p-ph${i}`;
+          p.innerHTML = `<div class="bar"><b>📱 Tester ${i}</b><button data-max="p-ph${i}">⤢</button><a href="${url}" target="_blank">open ↗</a></div><iframe src="${url}"></iframe>`;
+          box.appendChild(p);
+        }
+      }
+
+      socket.on('connect', () => {
+        if (room) return;
+        const prev = load('mt.host');
+        if (!prev) return createRoom();
+        socket.emit('host:resume', prev, (r) => (r && r.ok ? use(prev) : createRoom()));
+      });
+
+      $('#new').addEventListener('click', createRoom);
+      $('#count').addEventListener('change', (e) => { phones = Number(e.target.value); save('mt.testPhones', phones); renderPhones(); });
+      $('#reload-phones').addEventListener('click', renderPhones);
+      $('#layout').addEventListener('click', (e) => {
+        const big = $('#main').classList.toggle('judge-big');
+        e.target.textContent = big ? 'Bigger TV' : 'Bigger Judge';
+      });
+      document.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-max]');
+        if (!b) return;
+        const el = document.getElementById(b.dataset.max);
+        const on = el.classList.toggle('max');
+        b.textContent = on ? '✕' : '⤢';
+      });
+    })();
+  </script>
+</body>
+</html>
