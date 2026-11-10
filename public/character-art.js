@@ -25,6 +25,9 @@
       rect(MOUTH, -3 + e, -36, 6, 1); rect(MOUTH, 3 + e, -37, 2, 1); },
     sleepy(k) { const { rect, e, iris, skin } = k; for (const x of [-7 + e, 3 + e]) { rect(LINE, x, -43, 4, 2); rect(iris, x + 1, -42, 2, 1); rect(A.shade(skin, -.12), x, -44, 4, 1); }
       rect(MOUTH, -1 + e, -36, 3, 2); rect('#9fb4d8', 9, -51, 3, 1); rect('#9fb4d8', 11, -50, 1, 1); rect('#9fb4d8', 9, -49, 3, 1); },
+    // Internal (animation-only): X eyes and a slack mouth for the dead.
+    xeyes(k) { const { rect, e } = k; for (const x of [-7 + e, 3 + e]) for (let i = 0; i < 4; i++) { rect(LINE, x + i, -45 + i, 1, 1); rect(LINE, x + 3 - i, -45 + i, 1, 1); }
+      rect(DARK, -3 + e, -36, 6, 1); rect('#c4555a', e, -35, 2, 2); },
     smirk(k) { const { rect, e, b } = k; eyes(k); b(2 + e, -48, 6, 1); b(-8 + e, -47, 5, 1); rect(MOUTH, -2 + e, -36, 5, 1); rect(MOUTH, 3 + e, -37, 2, 1); },
   };
   function character(ctx, x, y, av, o = {}) {
@@ -73,7 +76,7 @@
     if (av.face !== 'square') { rect('#30252a', -faceW / 2, -34, 3, 2); rect('#30252a', faceW / 2 - 3, -34, 3, 2); }
     const blink = Math.sin(t * 1.3 + (o.seed || 0)) > .985, eyeX = Math.round(f * 2);
     // Expressions: eyes, brows and mouth. A live animation state (scared) overrides the chosen mood.
-    const mood = o.scared ? 'scared' : EXPRESSIONS[av.expression] ? av.expression : av.features === 'serious' ? 'serious' : 'smile';
+    const mood = o.dead ? 'xeyes' : o.scared ? 'scared' : EXPRESSIONS[av.expression] ? av.expression : av.features === 'serious' ? 'serious' : 'smile';
     const brows = [], browColor = A.shade(hair, -.25);
     EXPRESSIONS[mood]({ rect, e: eyeX, blink, iris: av.eyes || '#342b25', b: (...r) => brows.push(r), skin });
     rect(A.shade(skin, -.25), eyeX, -41, 2, 3);
@@ -122,6 +125,6 @@
     if (['spies','fbi'].includes(o.theme)) { rect('#d0c8b7', -4, -32, 8, 7); rect('#32333e', -1, -28, 2, 9); rect('#c4ad73', 5, -27, 3, 3); }
     ctx.restore();
   }
-  A.drawCharacter = character; A.EXPRESSIONS = Object.keys(EXPRESSIONS).filter((k) => k !== 'scared');
+  A.drawCharacter = character; A.EXPRESSIONS = Object.keys(EXPRESSIONS).filter((k) => !['scared', 'xeyes'].includes(k));
   A.drawGhost = function (ctx, x, y, av, o = {}) { ctx.save(); ctx.globalAlpha *= .52; ctx.shadowColor = '#a8d6df'; ctx.shadowBlur = o.glow ? 15 : 4; character(ctx, x, y - 7 + Math.sin((o.t || 0) * 2.5 + (o.seed || 0)) * 4, av, { ...o, alpha: o.alpha == null ? .85 : o.alpha }); ctx.restore(); };
 })();

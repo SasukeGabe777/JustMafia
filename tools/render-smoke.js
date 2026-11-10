@@ -72,7 +72,7 @@ function sceneSweep() {
             if (outcome !== 'blocked' && (!resident || resident.avatar.hair !== 'curly' || resident.avatar.outfit !== 'overalls')) throw new Error('cinematic lost the player customization');
             if (t.cinema.actors.get('assassin').avatar) throw new Error('attacker exposed a player avatar');
           }
-          for (let i = 0; i < 20 * 30 && t.cinema.active; i++) { t.update(1 / 30); if (i % 3 === 0) t.draw(); }
+          for (let i = 0; i < 30 * 30 && t.cinema.active; i++) { t.update(1 / 30); if (i % 3 === 0) t.draw(); } // scenes run up to ~21s
           if (t.cinema.active) throw new Error(`scene ${id}/${outcome} never ended`);
           if (t.cineDark != null || t.held.size || t.cinema.environment || t.cinema.snapshot) throw new Error(`scene ${id}/${outcome} left the town in a cinematic state`);
           n++;
@@ -98,6 +98,26 @@ function sceneSweep() {
   if (!queued.isCorrupted()) { errs++; console.error('Glitch did not start'); }
   const avatars = JSON.stringify([...queued.chars.values()].map((c) => c.avatar)); queued.draw(); queued.update(31); queued.draw();
   if (queued.isCorrupted() || JSON.stringify([...queued.chars.values()].map((c) => c.avatar)) !== avatars) { errs++; console.error('Glitch changed avatars permanently'); }
+  // Execution secrecy in the renderer: with anonymous votes no figure wears a player's
+  // look; with public votes the mob is exactly the voters; the interrupter is always masked.
+  {
+    const mk = () => { const g = new W.Town(makeCanvas()); g.applyState({ phase: 'execution', theme: 'medieval', players: Array.from({ length: 8 }, (_, i) => ({ id: 'p' + i, name: 'P' + i, house: i, alive: true, avatar: { color: W.MT_OPTIONS.colors[i], skin: W.MT_OPTIONS.skins[i % 6], hair: W.MT_OPTIONS.hair[i], hat: 'none' } })), accusations: [] }); return g; };
+    const looks = (g) => [...g.cinema.actors.values()].filter((a) => a.kind === 'resident' && a.id !== 'victim' && a.id !== 'guard' && !a.id.startsWith('def')).map((a) => a.avatar);
+    const playerColors = new Set(Array.from({ length: 8 }, (_, i) => W.MT_OPTIONS.colors[i]));
+    const run = (bind, check) => { try { const g = mk(); g.cinema.play('execution', { victimId: 'p2', ...bind }); for (let i = 0; i < 6.5 * 30; i++) g.update(1 / 30); check(g); for (let i = 0; i < 30 * 30 && g.cinema.active; i++) g.update(1 / 30); if (g.held.size) throw new Error('held after scene'); n++; } catch (e) { errs++; console.error('execution secrecy', bind.outcome, e); } };
+    run({ outcome: 'executed', mob: null, mobCount: 5 }, (g) => { const l = looks(g); if (l.length < 3 || l.some((a) => playerColors.has(a.color) || a.skin !== '#2b2a30')) throw new Error('anonymous mob shows a player look'); });
+    run({ outcome: 'executed', mob: ['p1', 'p4', 'p5'], defenders: ['p6'] }, (g) => { const l = looks(g).map((a) => a.color).sort(); const want = ['p1', 'p4', 'p5'].map((id) => W.MT_OPTIONS.colors[+id.slice(1)]).sort(); if (JSON.stringify(l) !== JSON.stringify(want)) throw new Error('public mob is not exactly the voters: ' + l); if (!g.cinema.actors.get('def0')) throw new Error('defender missing'); });
+    run({ outcome: 'interrupted', mob: null, mobCount: 4 }, (g) => { const m = g.cinema.actors.get('masked'); if (!m || playerColors.has(m.avatar.color) || m.avatar.skin !== '#2b2a30') throw new Error('interrupter is not anonymous'); });
+    run({ outcome: 'swapped', mob: null, mobCount: 4, guardId: 'p7', guardName: 'P7' }, (g) => { const gd = g.cinema.actors.get('guard'); if (!gd || gd.avatar.color !== W.MT_OPTIONS.colors[7]) throw new Error('bodyguard who dies should be shown'); });
+    // A TV joining or reconnecting mid-execution doesn't replay it from the start.
+    try {
+      const fresh = mk(); fresh.state.serverNow = 1000; fresh.playCinematic({ id: 50, type: 'execution', outcome: 'executed', targetId: 'p2', condemnedId: 'p2', at: 0, mob: null, mobCount: 4 });
+      if (!fresh.cinema.active) throw new Error('on-time execution should play');
+      const late = mk(); late.chars.get('p2').deathPending = true; late.state.serverNow = 12000; late.playCinematic({ id: 51, type: 'execution', outcome: 'executed', targetId: 'p2', condemnedId: 'p2', at: 0, mob: null, mobCount: 4 });
+      if (late.cinema.active || late.chars.get('p2').deathPending) throw new Error('late join replayed the execution');
+      n++;
+    } catch (e) { errs++; console.error('execution reconnect', e); }
+  }
   // Every theme's game-over path for each winner (themed team names, e.g. RSP Supply).
   for (const theme of W.MT_THEMES.THEME_ORDER) for (const winner of ['mafia', 'town', 'jester', 'draw']) {
     try {

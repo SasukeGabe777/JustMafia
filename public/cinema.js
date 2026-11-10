@@ -14,6 +14,7 @@
   const { drawCharacter, drawShadowFigure, roundRect, shade } = window.MTArt;
   const L = window.MT_LAYOUT;
   const { W, H, CX, CY, TAU } = L;
+  const GALLOWS = { x: CX + 140, y: CY + 70, beam: 126 }; // ground center of the vote-execution gallows
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const lerp = (a, b, t) => a + (b - a) * t;
   const EASE = {
@@ -237,18 +238,45 @@
   }
 
   // A resident: their real avatar, posed.
+  // Anonymous townsperson for scenes that must not identify anyone: a hooded cloak
+  // in a muted color and a face lost in shadow (skin tone hidden).
+  const MASK_CLOAKS = ['#4a4a55', '#5a4a3e', '#3e4a52', '#4e4440', '#46503f', '#3d3d48', '#55483a', '#404652', '#2e2e36', '#4a3f4f'];
+  function masked(i) { return { color: MASK_CLOAKS[i % MASK_CLOAKS.length], skin: '#2b2a30', hat: 'hood', hair: 'bald', outfit: 'traveler', pants: '#2d2f3a', shoes: '#151821', eyes: '#151418', expression: 'neutral', accessory: 'none', facialHair: 'none', features: 'none' }; }
+
   function drawResident(ctx, a, t) {
     const s = a.scale || 1;
     ctx.save();
+    // Decomposing (execution scene): colors drain and the body fades to bones.
+    if (a.decayAnim) {
+      const d = clamp((t - a.decayAnim.t0) / a.decayAnim.dur, 0, 1);
+      ctx.filter = `grayscale(${d}) sepia(${d * 0.55}) brightness(${1 - d * 0.4})`;
+      ctx.globalAlpha *= 1 - clamp((d - 0.55) / 0.45, 0, 1);
+    }
+    if (a.pose === 'hang') {
+      // Swings from the gallows beam: rope from the anchor down to the neck.
+      const sway = Math.sin((t - (a.hangT || 0)) * 3.2) * 0.28 * Math.exp(-(t - (a.hangT || 0)) * 0.35);
+      const ropeLen = Math.max(8, a.y - 33 * s - a.anchorY);
+      ctx.translate(a.x, a.anchorY); ctx.rotate(sway);
+      ctx.strokeStyle = '#c9a66b'; ctx.lineWidth = 2.2 * s; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, ropeLen + 4 * s); ctx.stroke();
+      ctx.fillStyle = '#8a6a3a'; ctx.fillRect(-5 * s, ropeLen - 1 * s, 10 * s, 3 * s); // noose knot
+      drawCharacter(ctx, 0, ropeLen + 33 * s, a.avatar, { theme: a.theme, t: 0, scale: s, scared: !a.dead, dead: a.dead, alpha: a.alpha });
+      ctx.restore();
+      return;
+    }
     ctx.translate(a.x, a.y);
-    if (a.pose === 'sleep' || a.pose === 'sit') {
+    if (a.pose === 'carried') {
+      // Held overhead by the crowd, lying flat and struggling.
+      ctx.translate(0, -(a.lift || 34) * s);
+      ctx.rotate(-Math.PI / 2 + Math.sin(t * 9) * 0.08);
+      drawCharacter(ctx, 0, 0, a.avatar, { theme: a.theme, t, scale: s, scared: true, alpha: a.alpha });
+    } else if (a.pose === 'sleep' || a.pose === 'sit') {
       ctx.rotate(a.pose === 'sleep' ? Math.PI / 2 : Math.PI / 2 - 0.9);
       drawCharacter(ctx, 0, 0, a.avatar, { theme: a.theme, t: a.pose === 'sleep' ? 0 : t, scale: s, scared: a.scared, alpha: a.alpha });
     } else if (a.pose === 'dead') {
       const p = clamp((t - (a.fallT || 0)) / 0.45, 0, 1);
       ctx.rotate(EASE.out(p) * (Math.PI / 2) * (a.facing < 0 ? 1 : -1));
       ctx.globalAlpha *= 1 - p * 0.25;
-      drawCharacter(ctx, 0, 0, a.avatar, { theme: a.theme, t: 0, scale: s, scared: true, alpha: a.alpha });
+      drawCharacter(ctx, 0, 0, a.avatar, { theme: a.theme, t: 0, scale: s, scared: !a.dead, dead: a.dead, alpha: a.alpha });
     } else {
       const cower = a.pose === 'cower';
       if (cower) ctx.scale(1, 0.92);
@@ -452,7 +480,7 @@
       if (oc) steps = steps.concat(oc.steps);
       steps = steps.filter((s) => this.cond(s[3])).sort((a, b) => a[0] - b[0]);
       this.scene = { ...item, steps, idx: 0, t: 0, duration: (oc && oc.duration) || def.duration, phaseBound: !!item.opts.phaseBound };
-      this.actors.clear(); this.fx = []; this.loops = []; this.title = null; this.spot = null;
+      this.actors.clear(); this.fx = []; this.loops = []; this.title = null; this.spot = null; this.props = [];
       this.room = this.freshRoom();
       this.stage = 'town';
       this.environment = null; this.snapshot = false;
@@ -466,6 +494,8 @@
       if (c.when === 'hasOwner') return !!this.ctx.owner;
       if (c.when === 'cheer') return this.ctx.bind.cheer !== false;
       if (c.when === 'villain') return !!this.villain();
+      if (c.when === 'lastWords') return !!this.ctx.bind.lastWordsText;
+      if (c.when === 'defenders') return !!(this.ctx.bind.defenders || []).length;
       return true;
     }
 
@@ -474,7 +504,7 @@
       this.stage = 'town';
       this.letterTarget = 0;
       this.fadeTo(0, interrupted ? 0.2 : 0.5);
-      this.actors.clear(); this.loops = []; this.spot = null; this.title = null; this.fogTarget = 0;
+      this.actors.clear(); this.loops = []; this.spot = null; this.title = null; this.fogTarget = 0; this.props = [];
       town.focusSpot('overview', interrupted ? 0.5 : 1.4);
       town.cineDark = null;
       this.environment = null; this.snapshot = false;
@@ -595,6 +625,12 @@
         case 'watch': return { x: h.x + 70 * d, y: h.y + 34 * s };
         case 'fountain': return { x: CX, y: CY + 78 };
         case 'cemetery': return { x: L.CEM.x + L.CEM.w / 2, y: L.CEM.y + L.CEM.h / 2 };
+        // execution (vote) scene: the gallows stands on the square, right of the fountain
+        case 'gallows': return { x: GALLOWS.x, y: GALLOWS.y };
+        case 'gallowsStep': return { x: GALLOWS.x - 78, y: GALLOWS.y + 18 };
+        case 'hangFeet': return { x: GALLOWS.x, y: GALLOWS.y - 64 };
+        case 'dropSpot': return { x: GALLOWS.x + 2, y: GALLOWS.y + 16 };
+        case 'accused': return { x: CX - 190, y: CY + 115 };
         // story locations: where the victim stands, and where the attacker comes from (the town side)
         case 'place': case 'placeBehind': case 'placeFrom': case 'placeAway': case 'placeWater': {
           const P = L.PLACES && L.PLACES[this.ctx.place];
@@ -637,7 +673,7 @@
 
     // A theme's antagonist (e.g. RSP Supply's Tom Smith); null for themes without one.
     villain() { const T = window.MT_THEMES, t = T && T.THEMES[this.town.themeId]; return t && t.villain || null; }
-    text(s) { const b = this.ctx.bind, v = this.villain() || {}; return String(s || '').replace(/\{name\}/g, this.ctx.name).replace(/\{host\}/g, this.ctx.host).replace(/\{villain\}/g, v.name || '').replace(/\{villainTitle\}/g, v.title || '').replace(/\{title\}/g, b.title || '').replace(/\{sub\}/g, b.sub || '').replace(/\{mood\}/g, b.mood || ''); }
+    text(s) { const b = this.ctx.bind, v = this.villain() || {}; return String(s || '').replace(/\{name\}/g, this.ctx.name).replace(/\{host\}/g, this.ctx.host).replace(/\{villain\}/g, v.name || '').replace(/\{villainTitle\}/g, v.title || '').replace(/\{guard\}/g, b.guardName || 'Someone').replace(/\{lastWords\}/g, b.lastWordsText || '').replace(/\{title\}/g, b.title || '').replace(/\{sub\}/g, b.sub || '').replace(/\{mood\}/g, b.mood || ''); }
 
     a_letterbox(on) { this.letterTarget = on ? 1 : 0; }
     a_music(mood) { SFX.music(this.text(mood) || null, this.ctx.kit.root, this.town.themeId); }
@@ -771,6 +807,110 @@
       SFX.play('shatter');
     }
     a_despawn(a) { this.actors.delete(a.id); }
+
+    // ----- execution (vote) scene: the mob, the gallows, the hanging, decay -----
+    // The mob is the real living townsfolk: their town figures are held while
+    // stand-ins with the same looks act out the scene (released when it ends).
+    // The mob: the actual voters when votes are public (bind.mob), otherwise masked
+    // townsfolk (hooded, faces in shadow) so nobody can be identified.
+    a_mob(a) {
+      const b = this.ctx.bind, ids = Array.isArray(b.mob) ? b.mob : null;
+      const sources = ids ? ids.map((id) => this.town.chars.get(id)).filter((c) => c && c.alive && !c.deathPending) : [];
+      const count = ids ? Math.max(1, sources.length) : Math.max(3, Math.min(8, b.mobCount || a.count || 6)), c0 = this.pt(a.at), r = a.r || 260;
+      this.mob = [];
+      for (let i = 0; i < count; i++) {
+        const src = sources[i];
+        if (src) this.town.hold(src.id);
+        const ang = (i / count) * TAU + 0.4, id = 'mob' + i;
+        this.actors.set(id, { id, kind: 'resident', stage: 'town', x: c0.x + Math.cos(ang) * r, y: c0.y + Math.sin(ang) * r * 0.55, facing: Math.cos(ang) > 0 ? -1 : 1, pose: 'stand', alpha: 1, eyes: 1,
+          avatar: src ? { ...src.avatar, expression: 'angry' } : masked(i), masked: !src,
+          theme: this.town.themeId, scale: this.townScale(), walking: false });
+        this.mob.push(id);
+      }
+    }
+    townScale() { return (this.ctx.house ? this.ctx.house.s : 0.72) * 1.05; }
+    // Players who chose to defend the condemned (their choice is public): they rush in and argue.
+    a_defenders(a) {
+      const c0 = this.pt(a.at || 'accused');
+      this.defenders = [];
+      (this.ctx.bind.defenders || []).map((id) => this.town.chars.get(id)).filter((c) => c && c.alive).slice(0, 4).forEach((c, i) => {
+        this.town.hold(c.id);
+        const id = 'def' + i;
+        this.actors.set(id, { id, kind: 'resident', stage: 'town', x: c0.x - 220 - i * 30, y: c0.y + 40 + i * 14, facing: 1, pose: 'stand', alpha: 1, eyes: 1, avatar: { ...c.avatar, expression: 'sad' }, theme: this.town.themeId, scale: this.townScale(), walking: false });
+        this.defenders.push(id);
+      });
+    }
+    a_defendersMove(a) { const p = this.pt(a.to); (this.defenders || []).forEach((id, i) => this.a_move({ id, to: { x: p.x + (a.dx || 0) - i * 26, y: p.y + 10 + i * 12 }, dur: a.dur || 1, gait: a.gait || 'run' })); }
+    a_defendersBubble(a) { (this.defenders || []).forEach((id, i) => { const x = this.actors.get(id); if (x) x.bubble = { text: (a.lines || ['Stop!'])[i % (a.lines || ['Stop!']).length], until: this.scene.t + (a.dur || 1.5) }; }); }
+    // A second resident (the Bodyguard who takes the condemned's place): public because they die.
+    a_spawnGuard(a) {
+      const c = this.town.chars.get(this.ctx.bind.guardId); if (!c) return;
+      this.town.hold(c.id);
+      const p = this.pt(a.at || 'gallowsStep');
+      this.actors.set('guard', { id: 'guard', kind: 'resident', stage: 'town', x: p.x - 240, y: p.y + 30, facing: 1, pose: 'stand', alpha: 1, eyes: 1, avatar: c.avatar, theme: this.town.themeId, scale: this.townScale(), walking: false });
+    }
+    // An anonymous masked figure (never a player's look, never a team's attacker/protector look).
+    a_spawnMasked(a) { const p = this.pt(a.at); this.actors.set(a.id || 'masked', { id: a.id || 'masked', kind: 'resident', stage: 'town', x: p.x, y: p.y, facing: a.facing || -1, pose: 'stand', alpha: a.fadeIn ? 0 : 1, alphaAnim: a.fadeIn ? { from: 0, to: 1, t0: this.scene.t, dur: a.fadeIn } : null, eyes: 1, avatar: masked(9), theme: this.town.themeId, scale: this.townScale() * 1.08, walking: false }); }
+    a_executeId(a) { const id = this.ctx.bind[a.key]; if (id) this.town.finishDeath(id); }
+    a_pose2(a) { const x = this.actors.get(a.id); if (x) { x.pose = a.pose; if (a.pose !== 'carried') x.lift = 0; } }
+    a_mobMove(a) {
+      const c0 = this.pt(a.to), r = a.r || 60, n = (this.mob || []).length;
+      (this.mob || []).forEach((id, i) => {
+        const ang = (i / n) * TAU + 0.4 + (a.turn || 0);
+        this.a_move({ id, to: { x: c0.x + Math.cos(ang) * r, y: c0.y + Math.sin(ang) * r * 0.5 }, dur: (a.dur || 1.5) + i * 0.04, gait: a.gait || 'walk' });
+      });
+    }
+    a_mobBubble(a) {
+      const lines = a.lines || ['!'], ids = (this.mob || []).slice().sort(() => Math.random() - 0.5).slice(0, a.count || 3);
+      ids.forEach((id, i) => { const x = this.actors.get(id); if (x) x.bubble = { text: lines[(i + Math.floor(Math.random() * lines.length)) % lines.length], until: this.scene.t + (a.dur || 1.4) }; });
+    }
+    a_mobJump() { for (const id of this.mob || []) { const x = this.actors.get(id); if (x) x.jumpUntil = this.scene.t + 0.4 + Math.random() * 0.2; } }
+    a_mobFade(a) { for (const id of this.mob || []) this.a_alpha({ id, to: 0, dur: a.dur || 0.8 }); }
+    a_carry(a) { const x = this.actors.get(a.id); if (x) { x.pose = 'carried'; x.lift = a.lift || 34; } }
+    a_hang(a) {
+      const x = this.actors.get(a.id); if (!x) return;
+      x.pose = 'hang'; x.hangT = this.scene.t; x.move = null; x.walking = false;
+      const feet = this.pt('hangFeet'), ps = (x.scale || 0.756) / 0.756; // same scale the gallows prop uses
+      x.x = feet.x; x.y = feet.y; x.anchorY = GALLOWS.y - (GALLOWS.beam - 2) * ps;
+    }
+    // The rope gives way: the body drops to the ground in front of the gallows.
+    a_drop(a) {
+      const x = this.actors.get(a.id); if (!x) return;
+      const p = this.pt(a.to || 'dropSpot'); x.x = p.x; x.y = p.y; x.pose = 'dead'; x.fallT = this.scene.t; x.move = null;
+      SFX.play('fall'); this.shake = 0.5;
+    }
+    a_xeyes(a) { const x = this.actors.get(a.id); if (x) x.dead = true; }
+    a_decay(a) {
+      const x = this.actors.get(a.id); if (!x) return;
+      x.decayAnim = { t0: this.scene.t, dur: a.dur || 4 };
+      for (let i = 0; i < 10; i++) this.fx.push({ type: 'spark', x: x.x + (Math.random() - 0.5) * 30, y: x.y - 10 - Math.random() * 20, vx: (Math.random() - 0.5) * 30, vy: -8 - Math.random() * 14, g: 0, color: '#1b1b1f', size: 2, life: (a.dur || 4) * (0.6 + Math.random() * 0.4), max: a.dur || 4, stage: this.stage });
+    }
+    // Props live for the scene: gallows, a growing blood pool, a bone pile.
+    a_prop(a) { const p = this.pt(a.at || 'gallows'); this.props.push({ type: a.type, x: p.x, y: p.y, t0: this.scene.t, dur: a.dur || 1, scale: (this.ctx.house ? this.ctx.house.s : 0.72) * 1.05 }); }
+    drawProp(ctx, p, t) {
+      const s = p.scale / 0.756, r = (c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(p.x + x * s, p.y + y * s, w * s, h * s); };
+      if (p.type === 'gallows') {
+        r('rgba(0,0,0,.25)', -66, -2, 132, 8);
+        r('#3b2616', -62, -22, 124, 22); r('#7a5232', -62, -24, 124, 5); for (let i = -56; i < 60; i += 14) r('#5a3b22', i, -19, 2, 19); // platform
+        r('#2a1a10', -14, -24, 28, 3); // trapdoor
+        for (let i = 0; i < 4; i++) r('#6b4628', -88 + i * 7, -6 - i * 5, 10, 5); // steps
+        r('#3b2616', -48, -GALLOWS.beam - 4, 9, GALLOWS.beam - 20); r('#5a3b22', -46, -GALLOWS.beam - 4, 3, GALLOWS.beam - 20); // post
+        r('#3b2616', -52, -GALLOWS.beam - 10, 64, 9); r('#5a3b22', -52, -GALLOWS.beam - 10, 64, 2); // beam
+        ctx.strokeStyle = '#3b2616'; ctx.lineWidth = 5 * s; ctx.beginPath(); ctx.moveTo(p.x - 44 * s, p.y - (GALLOWS.beam - 26) * s); ctx.lineTo(p.x - 18 * s, p.y - (GALLOWS.beam + 4) * s); ctx.stroke();
+        if (!this.hanging()) { ctx.strokeStyle = '#c9a66b'; ctx.lineWidth = 2.2 * s; ctx.beginPath(); ctx.moveTo(p.x, p.y - (GALLOWS.beam - 2) * s); ctx.lineTo(p.x, p.y - 96 * s); ctx.stroke(); ctx.beginPath(); ctx.ellipse(p.x, p.y - 90 * s, 5 * s, 7 * s, 0, 0, TAU); ctx.stroke(); }
+      } else if (p.type === 'pool') {
+        const g = clamp((t - p.t0) / p.dur, 0, 1), rad = (6 + 26 * EASE.out(g)) * s;
+        ctx.fillStyle = '#5c0b10'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 2 * s, rad * 1.3, rad * 0.42, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#8f1820'; ctx.beginPath(); ctx.ellipse(p.x - rad * 0.2, p.y + 1 * s, rad * 0.8, rad * 0.24, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(255,170,170,.35)'; ctx.fillRect(p.x - rad * 0.5, p.y - 0.5 * s, rad * 0.3, 1.2 * s);
+      } else if (p.type === 'bones') {
+        const a = clamp((t - p.t0) / 0.8, 0, 1); ctx.save(); ctx.globalAlpha *= a;
+        r('#e9e2cf', -6, -12, 12, 9); r('#2a2420', -4, -9, 3, 3); r('#2a2420', 1, -9, 3, 3); r('#e9e2cf', -4, -4, 8, 2); // skull
+        ctx.strokeStyle = '#e9e2cf'; ctx.lineWidth = 3 * s; ctx.beginPath(); ctx.moveTo(p.x - 18 * s, p.y); ctx.lineTo(p.x + 18 * s, p.y - 6 * s); ctx.moveTo(p.x - 16 * s, p.y - 7 * s); ctx.lineTo(p.x + 16 * s, p.y + 1 * s); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    hanging() { for (const a of this.actors.values()) if (a.pose === 'hang' && a.alpha > 0.01) return true; return false; }
     // Water splash + rings (lake scene); embers (hearth scene). Particles only, no rules.
     a_splash(a) {
       const p = this.pt(a.at || 'placeWater');
@@ -818,7 +958,8 @@
     townEntities() {
       if (this.stage !== 'town') return [];
       const t = this.now();
-      return [...this.actors.values()].filter((a) => a.stage === 'town' && a.alpha > 0.01).map((a) => ({ y: a.y, draw: (ctx) => this.drawActor(ctx, a, t) }));
+      const props = (this.props || []).map((p) => ({ y: p.type === 'gallows' ? p.y - 200 : p.type === 'pool' ? p.y - 4 : p.y + 1, draw: (ctx) => this.drawProp(ctx, p, t) }));
+      return props.concat([...this.actors.values()].filter((a) => a.stage === 'town' && a.alpha > 0.01).map((a) => ({ y: a.y, draw: (ctx) => this.drawActor(ctx, a, t) })));
     }
 
     drawActor(ctx, a, t) {

@@ -538,6 +538,58 @@ Implementation checklist (updated after verification below):
   persists after refresh; no auto-replay; replay doesn't pay twice; no page
   errors.
 
+### Cinematic vote executions with interventions (mystery first)
+
+- When a vote eliminates someone (only then), the TV plays a new execution
+  scene. The townsfolk rally and seize the condemned, who is terrified and
+  pleads; friends who chose to defend them rush in and argue. The mob carries
+  the condemned overhead to a gallows on the square and throws them up to the
+  noose. They hang and sway; their eyes turn to X's; the rope gives way; they
+  bleed out on the ground and decompose to bones. Then the reveal: the role
+  appears only when roles are revealed on death, and last words follow if left.
+- Server-authoritative, decided before anything is shown (`startExecution`).
+  During an extended verdict window (`VERDICT_WINDOW_MS`):
+  - Role Blocker: "Interrupt the execution" (once per game). Nobody dies, and
+    the scene shows an anonymous masked figure with a smoke bomb.
+  - Bodyguard: "Take their place" (once per game). The Bodyguard is hanged
+    instead and shown, because their death is public; the condemned survives.
+    An interruption takes priority over a protection.
+  - Anyone: "Defend them" is visual only and public by the player's choice.
+  - The condemned: last words made only from a living player's name and/or a
+    fixed word (LIAR, INNOCENT, TRUST, WATCH, SUSPECT, AVENGE ME, GOODBYE).
+    Free text is refused. Shown only if they actually die.
+  - Settings `executionInterventions` and `lastWords` (both on by default).
+- What each audience sees (`executionCinematic`, `verdictOptions`): the TV
+  cue carries no roles or teams. The mob is the real voters only when votes
+  are public; with anonymous votes it's masked townsfolk (hooded, faces in
+  shadow), so no figure wears a player's look. The interrupter is never
+  identified in the cue or narration. Each phone gets only its own verdict
+  options; the TV gets none.
+- Robustness: skipping (host "Next phase") never changes the outcome, because
+  the server resolved it first. A TV that joins or reconnects more than 4s
+  into an execution doesn't replay it (it shows the end state). Duplicate
+  executions are impossible (`pending` is consumed; kills require alive).
+  Interventions reset each game.
+- Reusable engine pieces: props (gallows, blood pool, bones), a mob that
+  follows the visibility rules, defenders, masked figures, carried/hanging
+  poses, X-eye and decay states, a reusable `HANGING` timeline, outcome
+  branches, and conditions (`lastWords`, `defenders`). The execution phase
+  now lasts 24s.
+- Validation: rules test (public cue, no role/team); expansion test (per-player
+  options, TV gets none, free-text last words refused, public mob = voters,
+  anonymous mob leaks no ids, interruption beats protection, the interrupter
+  is never identified, once per game, Bodyguard swap, no last words from a
+  survivor, settings off, skipping keeps the outcome). Render sweep (1589 runs)
+  with secrecy checks: an anonymous mob never wears a player look, the public
+  mob is exactly the voters, the interrupter is masked, and a late TV join
+  doesn't replay. New `tools/e2e-execution.js` (real phone + 4 players): the
+  same verdict gives different information per player, Ana interrupts from her
+  phone, her choice survives a reconnect, the outcome is decided on the server,
+  the TV cue and narration never identify her, and skipping keeps the outcome.
+- Next (from the cinematic brief): extend the same visibility-aware scene
+  system to night attacks and rescues, betrayals and confrontations, role
+  abilities, game changers and victories.
+
 The historical phases below describe earlier iterations; this completion audit
 supersedes their pending markers for features implemented above.
 

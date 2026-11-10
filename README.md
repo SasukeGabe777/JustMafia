@@ -104,6 +104,13 @@ server. The 🛒 Shop
 sells clothing, hats, hairstyles, house designs and decorations, and flair;
 purchases go to your inventory, where you equip or unequip them.
 
+**Executions:** when a vote eliminates someone, the TV shows the townsfolk
+seizing them and hanging them at the gallows. During the verdict, a Role
+Blocker can secretly interrupt it, and a Bodyguard can take their place (once
+per game each). Anyone can visibly defend the accused, and the condemned can
+leave last words made from a name and a fixed word. With anonymous votes, the
+mob is masked, and the interrupter is never identified.
+
 **RSP Supply theme:** pick "📦 RSP Supply" in Setup for a yellow-and-blue
 corporate-takeover version. The Mafia become RSP Supply, led by President Tom
 Smith. Themes are defined entirely in `public/shared/themes.js`; copy the RSP

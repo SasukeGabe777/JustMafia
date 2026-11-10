@@ -120,6 +120,11 @@ Object.assign(LINES.classic, {
   emergencyVote: ['Leave your nighttime plans where they are. The town must vote now.'],
 });
 
+// Execution interventions (the interrupter is never named; a Bodyguard who dies is).
+Object.assign(LINES.classic, {
+  interrupted: ['A masked figure storms the gallows! In the chaos, {name} slips away. The execution is called off.', 'Smoke fills the square. When it clears, the noose hangs empty. {name} lives, for now.'],
+  swapped: ['{name} throws themselves in front of {condemned} and takes their place at the gallows.{role}', 'At the last moment, {name} pushes {condemned} aside. The town’s justice falls on {name} instead.{role}'],
+});
 // Update 4: where a lone night victim was found (AI narrator only). {host} is
 // whose house an inspector was watching. Home deaths keep the classic 'kill' lines.
 Object.assign(LINES.classic, {

@@ -400,12 +400,18 @@
       });
     }
 
+    // Plays the server's public execution cue. The outcome (executed / swapped /
+    // interrupted) and who may be shown were decided on the server before this.
     playExecution(cine) {
-      const c = this.chars.get(cine.targetId);
-      if (!c) return;
-      const r = c.role && ROLES[c.role];
-      const sub = r ? `They were the ${r.name}` : '';
-      if (!this.cinema || !this.cinema.play('execution', { victimId: c.id, sub }, { phaseBound: true })) this.finishDeath(c.id);
+      const condemned = this.chars.get(cine.condemnedId || cine.targetId), dead = cine.outcome === 'interrupted' ? null : this.chars.get(cine.targetId);
+      if (!condemned) return;
+      const r = dead && dead.role && ROLES[dead.role]; // dead.role is only present when roles are revealed
+      const sub = r ? `They were the ${window.MT_THEMES ? window.MT_THEMES.roleName(this.themeId, dead.role, r.name) : r.name}` : '';
+      const lw = cine.lastWords, lastWordsText = lw ? [lw.name, lw.word].filter(Boolean).join(' … ') : '';
+      // Joining or reconnecting mid-execution: don't replay it from the start.
+      const late = cine.at != null && this.state && this.state.serverNow != null && this.state.serverNow - cine.at > 4000;
+      const bind = { victimId: condemned.id, outcome: cine.outcome || 'executed', sub, mob: cine.mob, mobCount: cine.mobCount, defenders: cine.defenders || [], guardId: cine.guardId, guardName: dead && cine.guardId ? dead.name : '', lastWordsText };
+      if (late || !this.cinema || !this.cinema.play('execution', bind, { phaseBound: true })) { if (dead) this.finishDeath(dead.id); }
     }
 
     // The visible moment of death for a character whose death was held back.

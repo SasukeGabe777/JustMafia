@@ -40,6 +40,8 @@ const DEFAULT_SETTINGS = {
   tieRule: 'none',            // none | random
   majority: 'plurality',      // plurality | majority (more than half of all votes)
   anonymousVotes: false,
+  executionInterventions: true, // verdict window: Role Blocker may interrupt, Bodyguard may take the place (once per game each)
+  lastWords: true,              // the condemned may leave a message from fixed, safe tokens
   mafiaWinAt: 'parity',       // parity | all
   telepathWhen: 'always',     // always | night | day
   ghostHaunts: true,
@@ -57,11 +59,13 @@ const DEFAULT_SETTINGS = {
 
 const ENV_SPEED = Number(process.env.MT_SPEED) || 1; // test knob: >1 makes every phase faster
 // Phase lengths that wait for the big screen's cinematics (see public/scenes.js).
-const CINE_MS = { roleReveal: 14000, dawn: 8000, dawnEvent: 15200, morning: 8000, verdict: 7500, execution: 10800, noExecution: 4500 };
+const CINE_MS = { roleReveal: 14000, dawn: 8000, dawnEvent: 15200, morning: 8000, verdict: 7500, execution: 24000, noExecution: 4500 }; // execution = the vote-elimination scene (up to 23.6s)
 
 const HARD_MIN_PLAYERS = 3;
 const HARD_MAX_PLAYERS = 100;
 const MOVE_ASK_MS = 20000; // how long a host has to answer a move-in request
+const VERDICT_WINDOW_MS = 8000; // extra verdict time for interventions / last words when someone is condemned
+const LAST_WORDS = ['LIAR', 'INNOCENT', 'TRUST', 'WATCH', 'SUSPECT', 'AVENGE ME', 'GOODBYE']; // safe, opinion-only tokens
 const HAUNT_COOLDOWN_MS = 4000;
 const HAUNT_KINDS = ['boo', 'spin', 'wail'];
 const TELEPATH_COOLDOWN_MS = 2500;
@@ -308,7 +312,7 @@ class Room {
       alive: true, role: null, originalRole: null, spectator: false, investigations: [], notes: [],
       diedDay: null, deathCause: null, deathOrder: null, shotsLeft: 0, telepathSent: 0, telepathAt: -Infinity, won: null,
       abilityUses: 0, ghostDay: -1, ghostMessage: null, photos: 0, photoPending: null,
-      harmony: 0, objective: null, privateScene: null,
+      harmony: 0, objective: null, privateScene: null, interventionUsed: {},
       statuses: [], actionUses: {}, actionDays: {}, copiedAbility: null, stolenAbilities: [],
       houseState: 'normal', ghostVoteUsed: false, whispersUsed: 0, whisperAt: -Infinity, whispers: [],
       ghostChat: [], nominations: 0, ashes: false, potions: { midas: 0, volatile: 0 },
@@ -539,6 +543,7 @@ class Room {
     this.night = { actions: {}, order: [], mafiaVotes: {}, metadata: {}, variants: {} };
     for (const p of this.list()) p.mafiaSent = 0;
     this.votes = null;
+    this.verdictActs = null;
     this.voteLocks = {};
     this.accusations = [];
     this.promoteIfNeeded();
@@ -730,18 +735,75 @@ class Room {
 
     this.voteHistory.push({ day: this.day, votes: entries.map(({ voterId, targetId }) => ({ voterId, targetId })), eliminatedId });
     this.pending = { eliminatedId, tie, votes: best };
+    // Verdict window: interventions, defenders and last words for the condemned (resolved at execution).
+    this.verdictActs = eliminatedId ? { condemnedId: eliminatedId, voters: entries.filter((e) => e.targetId === eliminatedId).map((e) => e.voterId), interrupt: null, protect: null, defenders: [], lastWords: null } : null;
     this.addLog(`Votes: ${entries.map((e) => `${this.nameOf(e.voterId)}→${this.nameOf(e.targetId)}${e.weight > 1 ? `(x${e.weight})` : ''}`).join(', ') || 'none'}.`, true);
     this.narrate('votesIn');
     const shown = this.settings.anonymousVotes ? entries.map((e) => ({ voterId: null, targetId: e.targetId })) : entries.map(({ voterId, targetId }) => ({ voterId, targetId }));
     const followups = this.updateHarmony(entries);
     this.setCinematic({ type: 'votes', votes: shown, eliminatedId, tie, anonymous: this.settings.anonymousVotes, followups });
-    this.setPhase('verdict', this.cine('verdict', followups.length * 6500));
+    // A condemned player gets a longer verdict so interventions and last words can happen.
+    const extra = eliminatedId && (this.settings.executionInterventions || this.settings.lastWords) ? VERDICT_WINDOW_MS : 0;
+    this.setPhase('verdict', this.cine('verdict', followups.length * 6500 + extra));
+  }
+
+  // ---------- verdict window: interventions, defenders, last words ----------
+  // Everything here is decided on the server; the execution scene only shows the result.
+  verdictOptions(p) {
+    const V = this.verdictActs;
+    if (this.phase !== 'verdict' || !V || !p.alive || p.left || p.spectator || p.isJudge) return null;
+    const condemned = this.players.get(V.condemnedId); if (!condemned || !condemned.alive) return null;
+    const used = p.interventionUsed || {}, on = this.settings.executionInterventions, me = p.id === V.condemnedId;
+    return {
+      condemnedId: V.condemnedId, condemnedName: condemned.name, isCondemned: me,
+      canInterrupt: on && !me && p.role === 'roleblocker' && !used.interrupt,
+      canProtect: on && !me && p.role === 'bodyguard' && !used.protect,
+      canDefend: !me, defended: V.defenders.includes(p.id),
+      chose: V.interrupt === p.id ? 'interrupt' : V.protect === p.id ? 'protect' : null,
+      lastWords: me && this.settings.lastWords ? { words: LAST_WORDS, names: this.alive().filter((x) => x.id !== p.id).map((x) => ({ id: x.id, name: x.name })), chosen: V.lastWords } : null,
+    };
+  }
+  intervene(p, kind) {
+    const o = this.verdictOptions(p), V = this.verdictActs;
+    if (!o) return { ok: false, error: 'Nothing to do right now.' };
+    if (kind === 'interrupt' && o.canInterrupt) V.interrupt = p.id;
+    else if (kind === 'protect' && o.canProtect) V.protect = p.id;
+    else if (kind === 'defend' && o.canDefend) { if (!V.defenders.includes(p.id)) V.defenders.push(p.id); }
+    else if (kind === 'cancel') { if (V.interrupt === p.id) V.interrupt = null; if (V.protect === p.id) V.protect = null; V.defenders = V.defenders.filter((id) => id !== p.id); }
+    else return { ok: false, error: 'You can’t do that.' };
+    this.sync(); return { ok: true };
+  }
+  // Last words: only a living player's name and/or a fixed word. Free text is never accepted.
+  setLastWords(p, { nameId, word } = {}) {
+    const o = this.verdictOptions(p);
+    if (!o || !o.lastWords) return { ok: false, error: 'You can’t leave last words right now.' };
+    const named = nameId ? o.lastWords.names.find((x) => x.id === nameId) : null;
+    if ((nameId && !named) || (word && !LAST_WORDS.includes(word)) || (!named && !word)) return { ok: false, error: 'Pick from the list.' };
+    this.verdictActs.lastWords = { nameId: named ? named.id : null, name: named ? named.name : null, word: word || null };
+    this.sync(); return { ok: true };
   }
 
   startExecution() {
     const { eliminatedId, tie, votes } = this.pending || {};
     this.pending = null;
-    const p = eliminatedId && this.players.get(eliminatedId);
+    const V = this.verdictActs; this.verdictActs = null;
+    let p = eliminatedId && this.players.get(eliminatedId);
+    // Interventions resolve before anything is shown: an interruption cancels the
+    // execution; otherwise a Bodyguard takes the condemned's place. Once per game each.
+    const live = (id) => { const x = id && this.players.get(id); return x && x.alive && !x.left ? x : null; };
+    const interrupter = p && p.alive && V && this.settings.executionInterventions ? live(V.interrupt) : null;
+    const guard = p && p.alive && V && this.settings.executionInterventions && !interrupter ? live(V.protect) : null;
+    for (const x of [interrupter, guard]) if (x) x.interventionUsed = { ...(x.interventionUsed || {}), [x === interrupter ? 'interrupt' : 'protect']: true };
+    const condemned = p;
+    let outcome = p && p.alive ? 'executed' : null;
+    if (interrupter) { outcome = 'interrupted'; this.addLog(`🛑 ${interrupter.name} interrupted the execution of ${p.name}.`, true); this.narrate('interrupted', { name: p.name }); p = null; }
+    else if (guard) { outcome = 'swapped'; this.addLog(`🛡 ${guard.name} took ${p.name}'s place at the gallows.`, true); p = guard; }
+    if (outcome === 'interrupted') {
+      if (this.winner !== 'jester') this.winner = this.checkWinner();
+      this.setCinematic(this.executionCinematic({ outcome, condemned, dead: null, V }));
+      this.setPhase('execution', this.cine('execution'));
+      return;
+    }
     if (p && p.alive) {
       this.kill(p, 'vote');
       this.stats.lynches.push({ role: p.role, team: this.team(p) });
@@ -749,6 +811,8 @@ class Room {
         this.winner = 'jester';
         this.jesterId = p.id;
         this.narrate('jesterWin', { name: p.name });
+      } else if (outcome === 'swapped') {
+        this.narrate('swapped', { name: p.name, condemned: condemned.name, role: this.roleSuffix(p) });
       } else {
         this.narrate('eliminated', { name: p.name, role: this.roleSuffix(p), votes });
       }
@@ -756,8 +820,28 @@ class Room {
       this.narrate(tie ? 'tie' : 'noElim');
     }
     if (this.winner !== 'jester') this.winner = this.checkWinner();
-    if (p) this.setCinematic({ type: 'execution', targetId: p.id });
+    if (p) this.setCinematic(this.executionCinematic({ outcome, condemned, dead: p, V }));
     this.setPhase('execution', p ? this.cine('execution') : this.cine('noExecution'));
+  }
+
+  // The public (TV) version of an execution. Hidden information stays hidden:
+  // - the mob shows the real voters only when votes are public; otherwise masked townsfolk;
+  // - an interruption is always by an anonymous masked figure (the Role Blocker stays secret);
+  // - a Bodyguard who takes the place dies in public, so their own figure is shown;
+  // - defenders chose to be seen; last words are fixed tokens only.
+  executionCinematic({ outcome, condemned, dead, V }) {
+    const votesPublic = !this.settings.anonymousVotes;
+    const lw = V && V.lastWords && dead === condemned && this.settings.lastWords ? V.lastWords : null;
+    if (lw) this.addLog(`🪦 ${condemned.name}'s last words: ${[lw.name, lw.word].filter(Boolean).join(' … ')}`);
+    return {
+      type: 'execution', outcome, at: this.now(),
+      targetId: dead ? dead.id : condemned.id, condemnedId: condemned.id,
+      mob: votesPublic && V ? V.voters.filter((id) => id !== condemned.id) : null,
+      mobCount: V ? Math.max(3, Math.min(8, V.voters.length)) : 4,
+      defenders: V ? V.defenders.filter((id) => this.players.get(id) && this.players.get(id).alive && (!dead || id !== dead.id)) : [],
+      guardId: outcome === 'swapped' ? dead.id : null,
+      lastWords: lw ? { name: lw.name, word: lw.word } : null,
+    };
   }
 
   kill(p, cause) {
@@ -818,7 +902,7 @@ class Room {
     for (const p of this.list()) this.resetPlayer(p);
     for (const p of this.list()) { if (p.isJudge) p.spectator = true; p.judgeRetired = false; }
     this.publicStories = []; this.confirmedTown = []; this.harmonyTotal = 0; this.glitchUntil = 0;
-    this.storyHoldUntil = 0; this.narrationHistory = {};
+    this.storyHoldUntil = 0; this.narrationHistory = {}; this.verdictActs = null;
     this.reindexHouses();
     Object.assign(this, { day: 0, winner: null, jesterId: null, pending: null, reveal: null, votes: null, night: null, composition: null, narration: null, cinematic: null, accusations: [], voteHistory: [], telepathLog: [] });
     this.setPhase('lobby', null);
@@ -973,7 +1057,7 @@ class Room {
         for (const [id, role] of Object.entries(s.forcedRoles)) if (this.players.has(id) && ROLES[role]) S.forcedRoles[id] = role;
       }
     }
-    for (const k of ['autoMafia', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'anonymousVotes', 'doctorSelfProtect', 'ghostHaunts', 'botChatter', 'skipCinematics', 'botsAuto']) if (s[k] != null) S[k] = !!s[k];
+    for (const k of ['executionInterventions', 'lastWords', 'autoMafia', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'anonymousVotes', 'doctorSelfProtect', 'ghostHaunts', 'botChatter', 'skipCinematics', 'botsAuto']) if (s[k] != null) S[k] = !!s[k];
     if (s.nightSeconds != null) S.nightSeconds = clamp(int(s.nightSeconds, 45), 5, 600);
     if (s.discussionSeconds != null) S.discussionSeconds = clamp(int(s.discussionSeconds, 120), 5, 3600);
     if (s.votingSeconds != null) S.votingSeconds = clamp(int(s.votingSeconds, 45), 5, 600);
@@ -1286,6 +1370,8 @@ class Room {
     const v = {
       ...this.common(),
       you: { id: p.id, name: p.name, avatar: p.avatar, alive: p.alive, spectator: p.spectator, left: p.left, house: p.house, home: this.homeSlot(p), livesWith: this.ownerOfHome(p) ? p.livesWith : null, homeLook: p.homeLook, moveStatus: p.moveStatus || null },
+      // This player's own verdict-window options (never anyone else's role or choices).
+      verdict: this.verdictOptions(p),
       // Move-in requests waiting for this player's yes/no (lobby only).
       moveAsks: this.phase === 'lobby' ? [...(this.moveRequests || new Map()).values()].filter((r) => r.toId === p.id).map((r) => ({ fromId: r.fromId, fromName: r.fromName, expiresAt: r.expiresAt })) : [],
       freePlots: this.phase === 'lobby' ? this.freePlots() : [],

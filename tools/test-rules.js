@@ -301,7 +301,11 @@ test('Execution sends a public cue for the condemned only', () => {
   for (const v of p) if (v.alive && v !== p[1]) room.vote(v, p[1].id);
   room.advance(); eq(room.phase, 'verdict');
   room.advance(); eq(room.phase, 'execution');
-  eq(room.hostView().cinematic, { id: room.cinematic.id, type: 'execution', targetId: p[1].id });
+  const c = room.hostView().cinematic;
+  eq([c.type, c.outcome, c.targetId, c.condemnedId], ['execution', 'executed', p[1].id, p[1].id]);
+  // Public votes: the mob is the real voters. Nothing in the public cue carries roles or teams.
+  eq(c.mob.slice().sort(), p.filter((v) => v !== p[1]).map((v) => v.id).sort());
+  if (/"role"|"team"|mafia|villager/.test(JSON.stringify(c))) throw new Error('execution cue leaks role/team: ' + JSON.stringify(c));
 });
 test('Human Judge mode: narration is a private suggestion', () => {
   const { room, p } = game(['mafia', 'villager', 'villager', 'villager'], { narratorMode: 'human' });

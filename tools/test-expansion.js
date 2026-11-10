@@ -117,6 +117,65 @@ test('Expressions: every option saves, legacy "serious" migrates, invalid falls 
   assert.equal(room.playerView(p[1]).players.find((x) => x.id === p[0].id).avatar.expression, 'wink');
   room.destroy();
 });
+test('Executions: interventions resolve on the server, mob identity follows vote visibility, per-player info, safe last words', () => {
+  // roles: 0 mafia, 1 roleblocker (mafia), 2 bodyguard, 3..6 villagers; everyone votes out p[3]
+  const setup = (settings = {}) => {
+    const g = game(['mafia', 'roleblocker', 'bodyguard', 'villager', 'villager', 'villager', 'villager'], { revealRoleOnDeath: false, ...settings });
+    day(g.room); g.room.advance(); assert.equal(g.room.phase, 'voting');
+    for (const v of g.p) if (v !== g.p[3]) g.room.vote(v, g.p[3].id);
+    g.room.advance(); assert.equal(g.room.phase, 'verdict'); return g;
+  };
+  const cue = (room) => room.hostView().cinematic;
+  const leaks = (c, ids) => ids.some((id) => JSON.stringify(c).includes(id));
+
+  // Different players see different options; the TV sees none of them.
+  let { room, p } = setup();
+  const o = (x) => room.playerView(x).verdict;
+  assert(o(p[1]).canInterrupt && !o(p[1]).canProtect); assert(o(p[2]).canProtect && !o(p[2]).canInterrupt);
+  assert(!o(p[4]).canInterrupt && !o(p[4]).canProtect && o(p[4]).canDefend);
+  assert(o(p[3]).isCondemned && o(p[3]).lastWords && !o(p[3]).canDefend); assert.equal(o(p[4]).lastWords, null);
+  assert(!('verdict' in room.hostView()));
+  // Normal execution with public votes: real voters form the mob; defenders who chose to be seen; safe last words.
+  room.intervene(p[4], 'defend'); room.intervene(p[5], 'defend');
+  assert.equal(room.setLastWords(p[3], { word: 'I was framed by Ana' }).ok, false, 'free text refused');
+  assert(room.setLastWords(p[3], { nameId: p[0].id, word: 'LIAR' }).ok);
+  room.advance(); let c = cue(room);
+  assert.equal(c.outcome, 'executed'); assert.equal(p[3].alive, false);
+  assert.deepEqual(c.defenders.sort(), [p[4].id, p[5].id].sort()); assert.deepEqual(c.lastWords, { name: p[0].name, word: 'LIAR' });
+  assert.deepEqual(c.mob.slice().sort(), p.filter((x) => x !== p[3]).map((x) => x.id).sort());
+  room.destroy();
+
+  // Anonymous votes: masked mob, no voter ids anywhere in the public cue.
+  ({ room, p } = setup({ anonymousVotes: true })); room.advance(); c = cue(room);
+  assert.equal(c.mob, null); assert(c.mobCount >= 3); assert(!leaks(c, p.filter((x) => x !== p[3]).map((x) => x.id)));
+  room.destroy();
+
+  // Role Blocker interrupts: nobody dies, the interrupter is never identified; once per game.
+  ({ room, p } = setup());
+  room.intervene(p[1], 'interrupt'); room.intervene(p[2], 'protect');
+  room.advance(); c = cue(room);
+  assert.equal(c.outcome, 'interrupted'); assert.equal(p[3].alive, true); assert.equal(p[2].alive, true, 'interruption wins over protection');
+  assert(!leaks({ ...c, mob: null }, [p[1].id]), 'the interrupter is never identified (they may only appear as a public voter)');
+  assert(!/roleblocker|Role Blocker/i.test(room.narration.text));
+  assert.equal(p[1].interventionUsed.interrupt, true);
+  room.advance(); assert.equal(room.phase, 'night');
+  room.destroy();
+
+  // Bodyguard takes the place: the Bodyguard dies, the condemned lives, no last words from the survivor.
+  ({ room, p } = setup());
+  room.intervene(p[2], 'protect'); room.setLastWords(p[3], { word: 'GOODBYE' });
+  room.advance(); c = cue(room);
+  assert.equal(c.outcome, 'swapped'); assert.equal(c.guardId, p[2].id); assert.equal(c.targetId, p[2].id); assert.equal(c.condemnedId, p[3].id);
+  assert.equal(p[2].alive, false); assert.equal(p[3].alive, true); assert.equal(c.lastWords, null);
+  room.destroy();
+
+  // Interventions are opt-in per game (settings) and only for the right roles; skipping keeps the outcome.
+  ({ room, p } = setup({ executionInterventions: false }));
+  assert.equal(room.intervene(p[1], 'interrupt').ok, false);
+  room.hostAction({ type: 'skip' }); assert.equal(room.phase, 'execution'); assert.equal(p[3].alive, false);
+  room.hostAction({ type: 'skip' }); assert.equal(p[3].alive, false, 'skipping the scene never changes the outcome');
+  room.destroy();
+});
 test('End-of-game gold: server-calculated breakdown, winners vs losers, paid once, practice games explain why not', () => {
   const { ProfileStore } = require('../profiles'), C = require('../public/shared/cosmetics');
   const play = ({ bots = 0, minutes = 2 } = {}) => {

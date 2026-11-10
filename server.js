@@ -284,6 +284,9 @@ io.on('connection', (socket) => {
     reply(cb, { ok: true, pending: !!(claimed && claimed.pending), moved: !!(claimed && claimed.moved) });
   });
   // A host answers a move-in request (yes/no) during setup.
+  // Verdict window: intervene (interrupt / protect / defend / cancel) and last words.
+  socket.on('player:intervene', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.intervene(p, String(msg.kind || '')) : { ok: false }); });
+  socket.on('player:lastWords', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.setLastWords(p, { nameId: msg.nameId ? String(msg.nameId) : null, word: msg.word ? String(msg.word) : null }) : { ok: false }); });
   socket.on('player:moveReply', (msg = {}, cb) => {
     const { room, p } = ctx();
     if (!p || room.phase !== 'lobby') return reply(cb, { ok: false, error: 'Move-in requests are only answered during setup.' });

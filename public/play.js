@@ -600,11 +600,34 @@
       case 'voting':
         return votingHtml();
       case 'verdict':
+        return `${narr}${verdictHtml()}${roleCard()}`;
       case 'execution':
         return `${narr}<div class="card center"><div class="big-emoji">⚖️</div><h2>The verdict</h2><p class="muted">Eyes on the big screen…</p></div>${roleCard()}`;
       default:
         return narr + roleCard();
     }
+  }
+
+  // Verdict window: only this phone's own options (the server decides what each player may do).
+  function verdictHtml() {
+    const o = view.verdict;
+    if (!o) return `<div class="card center"><div class="big-emoji">⚖️</div><h2>The verdict</h2><p class="muted">Eyes on the big screen…</p></div>`;
+    if (o.isCondemned) {
+      const lw = o.lastWords, ch = lw && lw.chosen;
+      return `<div class="card center verdict-card"><div class="big-emoji">🪢</div><h2>The town has chosen you.</h2><p class="muted">You're being taken to the gallows.</p>
+        ${lw ? `<div class="last-words"><p><b>Last words</b> (shown after the scene, if you die). Pick a name and/or a word:</p>
+          <div class="lw-row">${lw.names.map((n) => `<button class="chip${ch && ch.nameId === n.id ? ' sel' : ''}" data-lw-name="${esc(n.id)}">${esc(n.name)}</button>`).join('')}</div>
+          <div class="lw-row">${lw.words.map((w) => `<button class="chip${ch && ch.word === w ? ' sel' : ''}" data-lw-word="${esc(w)}">${esc(w)}</button>`).join('')}</div>
+          ${ch ? `<p class="lw-chosen">“${esc([ch.name, ch.word].filter(Boolean).join(' … '))}”</p>` : ''}</div>` : ''}</div>`;
+    }
+    const sel = (k) => o.chose === k ? ' sel' : '';
+    return `<div class="card center verdict-card"><div class="big-emoji">⚖️</div><h2>${esc(o.condemnedName)} is condemned</h2>
+      <p class="muted">The crowd is gathering at the gallows…</p>
+      ${o.canInterrupt ? `<button class="btn${sel('interrupt')}" data-intervene="interrupt">🛑 Interrupt the execution <small>(secretly, once per game)</small></button>` : ''}
+      ${o.canProtect ? `<button class="btn${sel('protect')}" data-intervene="protect">🛡 Take their place <small>(you die instead, once per game)</small></button>` : ''}
+      ${o.chose ? '<button class="btn ghost" data-intervene="cancel">Change my mind</button>' : ''}
+      ${o.canDefend ? `<button class="btn ghost${o.defended ? ' sel' : ''}" data-intervene="${o.defended ? 'cancel' : 'defend'}">${o.defended ? '🙅 You are defending them (tap to stop)' : '🙅 Defend them <small>(everyone will see you try)</small>'}</button>` : ''}
+    </div>`;
   }
 
   function roleExtras() {
@@ -801,6 +824,12 @@
     });
     const ed = body.querySelector('[data-edit]');
     if (ed) ed.addEventListener('click', showEdit);
+    body.querySelectorAll('[data-intervene]').forEach((b) => b.addEventListener('click', () => socket.emit('player:intervene', { kind: b.dataset.intervene }, abilityReply)));
+    body.querySelectorAll('[data-lw-name],[data-lw-word]').forEach((b) => b.addEventListener('click', () => {
+      const cur = (view.verdict && view.verdict.lastWords && view.verdict.lastWords.chosen) || {};
+      const next = b.dataset.lwName ? { nameId: cur.nameId === b.dataset.lwName ? null : b.dataset.lwName, word: cur.word } : { nameId: cur.nameId, word: cur.word === b.dataset.lwWord ? null : b.dataset.lwWord };
+      socket.emit('player:lastWords', next, abilityReply);
+    }));
     const rb = body.querySelector('[data-reward-replay]');
     if (rb) rb.addEventListener('click', () => showReward(true));
     const hb = body.querySelector('[data-house]');
