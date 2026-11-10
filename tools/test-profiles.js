@@ -16,6 +16,9 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     const home = store.validateAvatar(auth.id, { houseStyle: 'bakery', houseColor: '#a88bc6' });
     assert.equal(home.houseStyle, 'bakery'); assert.equal(home.houseColor, '#a88bc6');
     store.select(auth.id, home); assert.equal(store.validateAvatar(auth.id, {}).houseStyle, 'bakery');
+    store.select(auth.id, { ...store.validateAvatar(auth.id, {}), expression: 'sleepy' });
+    assert.equal(new ProfileStore(filename).validateAvatar(auth.id, {}).expression, 'sleepy');
+    assert.equal(store.validateAvatar(auth.id, { expression: 'nope', features: 'serious' }).expression, 'serious');
     const bad = store.validateAvatar(auth.id, { houseStyle: 'castle', houseColor: 'url(x)' });
     assert.equal(bad.houseStyle, undefined); assert.equal(bad.houseColor, undefined);
     const restored = new ProfileStore(filename); assert.deepEqual(restored.view(auth.id), store.view(auth.id)); assert(restored.authenticate(auth));

@@ -35,6 +35,9 @@ class ProfileStore {
       const item = CATALOG.find((i) => i.field === key && i.value === result[key]);
       if (item && !item.free && !(p && p.owned.includes(item.id))) result[key] = O[list][0];
     }
+    // Expressions are free; legacy features:'serious' becomes the Serious expression.
+    const mood = input.expression == null ? p && p.avatar.expression : input.expression;
+    result.expression = O.expression.includes(mood) ? mood : (input.features || p && p.avatar.features) === 'serious' ? 'serious' : O.expression[0];
     // Homes are free; an unset home is left for the room to assign at random.
     for (const key of ['houseStyle', 'houseColor']) {
       const value = input[key] == null ? p && p.avatar[key] : input[key];

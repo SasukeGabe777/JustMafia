@@ -44,12 +44,12 @@
         b.title = O.label(value); b.setAttribute('aria-label', O.label(value) + ' home color'); b.onclick = () => change({ houseColor: value }); homeColors.appendChild(b);
       }
     }
-    const groups = { Appearance: { hair:'Hairstyle', hairColor:'Hair color', facialHair:'Facial hair', eyes:'Eye color', face:'Face shape', features:'Features' }, Wardrobe: { outfit:'Outfit', pants:'Pants color', shoeStyle:'Footwear', shoes:'Shoe color', accessory:'Accessory' }, Identity: { nameColor:'Name color', nameplate:'Nameplate', houseDecor:'Home decoration', effect:'Cosmetic effect' } };
+    const groups = { Appearance: { hair:'Hairstyle', hairColor:'Hair color', facialHair:'Facial hair', eyes:'Eye color', face:'Face shape', expression:'Expression', features:'Face markings' }, Wardrobe: { outfit:'Outfit', pants:'Pants color', shoeStyle:'Footwear', shoes:'Shoe color', accessory:'Accessory' }, Identity: { nameColor:'Name color', nameplate:'Nameplate', houseDecor:'Home decoration', effect:'Cosmetic effect' } };
     const lists = { shoeStyle:'shoeStyles' };
     $('#opt-details').innerHTML = Object.entries(groups).map(([group, fields]) => `<details ${group === 'Appearance' ? 'open' : ''}><summary>${group}</summary><div class="creator-fields">${Object.entries(fields).map(([field, label]) => `<label>${label}<select data-look="${field}">${O[lists[field] || field].filter((v) => owned(profile, field, v)).map((v) => `<option value="${v}" ${v === (avatar[field] || O[lists[field] || field][0]) ? 'selected' : ''}>${esc(O.label(v))}</option>`).join('')}</select></label>`).join('')}</div></details>`).join('');
     $('#opt-details').querySelectorAll('[data-look]').forEach((el) => el.onchange = () => change({ [el.dataset.look]: el.value }));
     $('#random-character').onclick = () => {
-      const next = {}; for (const [field, list] of Object.entries({ color:'colors', skin:'skins', hat:'hats', hair:'hair', hairColor:'hairColor', facialHair:'facialHair', eyes:'eyes', face:'face', features:'features', outfit:'outfit', pants:'pants', shoeStyle:'shoeStyles', shoes:'shoes', accessory:'accessory', nameColor:'nameColor' })) { const valid = O[list].filter((v) => owned(profile, field, v)); next[field] = valid[Math.floor(Math.random() * valid.length)]; }
+      const next = {}; for (const [field, list] of Object.entries({ color:'colors', skin:'skins', hat:'hats', hair:'hair', hairColor:'hairColor', facialHair:'facialHair', eyes:'eyes', face:'face', features:'features', expression:'expression', outfit:'outfit', pants:'pants', shoeStyle:'shoeStyles', shoes:'shoes', accessory:'accessory', nameColor:'nameColor' })) { const valid = O[list].filter((v) => owned(profile, field, v)); next[field] = valid[Math.floor(Math.random() * valid.length)]; }
       change(next);
     };
     const shop = $('#shop-body');

@@ -226,6 +226,34 @@ Implementation checklist (updated after verification below):
   phone creator visually in headless Chrome screenshots. Not yet checked on a
   real phone, on a projector, or with 50-100 styled homes in a live game.
 
+### Development update 1: character expressions (claude/expressions)
+
+- Bug: the "Features" picker (`smile` / `freckles` / `serious`) did not visibly
+  change faces. `smile` had no art (every character had the same flat mouth).
+  `serious` redrew that same mouth and added 1px brows at y=-48, which the hair
+  fringe (rows -50..-48) then covered. Smile vs Serious differed by only 3-5
+  pixels on most hairstyles. Mood and freckles also shared one field.
+- Fix: a separate `avatar.expression` field with ten options (Smile, Grin,
+  Neutral, Serious, Surprised, Sad, Angry, Wink, Sleepy, Smirk), drawn by an
+  `EXPRESSIONS` table in `character-art.js`. Each one has its own eyes, brows
+  and mouth. Brows are drawn after the hair so the fringe can't hide them.
+  `features` is now face markings only: None, Freckles or Rosy cheeks. Saved
+  `features: 'serious'` migrates to the Serious expression (server and profiles).
+  Animation states still override the chosen expression (the cinematic scared
+  reaction). Every surface uses the one shared renderer: phone preview, TV
+  town, voting, cinematics, ghosts and the Judge grimoire.
+- Validation: `tools/test-expressions.js` rasterizes the real renderer and
+  requires every pair of expressions to differ by 6 or more pixels for every
+  hairstyle (dark and light hair), every hat and accessory combination, and at
+  2x scale. The old renderer fails this check. It also covers markings,
+  migration and the scared override. A new expansion test covers
+  save/migrate/fallback/lock/public views; the profile test covers persistence.
+  `tools/test-expression-sockets.js` checks over real sockets that the TV and
+  other phones update live, that the expression survives a refresh and a
+  profile rejoin, and that it locks at start. `/art` shows all ten; I checked
+  them visually in headless Chrome. Not yet checked on a real phone or
+  projector.
+
 The historical phases below describe earlier iterations; this completion audit
 supersedes their pending markers for features implemented above.
 

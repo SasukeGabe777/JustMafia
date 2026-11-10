@@ -206,6 +206,8 @@ class Room {
       hat: OPTIONS.hats.includes(a.hat) ? a.hat : 'none',
       houseStyle: OPTIONS.houseStyle.includes(a.houseStyle) ? a.houseStyle : this.pick(OPTIONS.houseStyle),
       houseColor: OPTIONS.houseColor.includes(a.houseColor) ? a.houseColor : this.pick(OPTIONS.houseColor),
+      // Older saves stored the mood in `features` ('serious'); carry it over.
+      expression: OPTIONS.expression.includes(a.expression) ? a.expression : a.features === 'serious' ? 'serious' : OPTIONS.expression[0],
     };
     for (const key of ['hair', 'hairColor', 'facialHair', 'eyes', 'face', 'features', 'outfit', 'pants', 'shoes', 'shoeStyle', 'accessory', 'nameColor', 'nameplate', 'houseDecor', 'effect']) {
       const choices = OPTIONS[key === 'shoeStyle' ? 'shoeStyles' : key];

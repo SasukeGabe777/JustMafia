@@ -1,6 +1,32 @@
 // Original modular pixel characters. No external sprite sheet or role-derived costumes.
 (function () {
   const A = window.MTArt, TAU = Math.PI * 2;
+  // Face parts in head-local pixels: eyes y -45..-42, brows y -47 (below the hair
+  // fringe), mouth around y -36. Features are 2px+ so they read at town scale.
+  const LINE = '#2e2730', MOUTH = '#825147', DARK = '#4a2626', TEETH = '#f4ecdc', SHINE = '#eee8d8';
+  function eyes({ rect, e, blink, iris }, h = 4) {
+    if (blink) { rect(LINE, -7 + e, -43, 4, 1); rect(LINE, 3 + e, -43, 4, 1); return; }
+    rect(LINE, -7 + e, -45 - (h - 4), 4, h); rect(LINE, 3 + e, -45 - (h - 4), 4, h);
+    rect(iris, -6 + e, -44, 2, 2); rect(iris, 4 + e, -44, 2, 2); rect(SHINE, -6 + e, -45, 1, 1); rect(SHINE, 4 + e, -45, 1, 1);
+  }
+  const closed = (rect, x, curve) => { rect(LINE, x, -43, 4, 1); if (curve) { rect(LINE, x, -44, 1, 1); rect(LINE, x + 3, -44, 1, 1); } };
+  const EXPRESSIONS = {
+    smile(k) { const { rect, e, b } = k; eyes(k); b(-7 + e, -47, 4, 1); b(3 + e, -47, 4, 1); rect(MOUTH, -3 + e, -36, 6, 1); rect(MOUTH, -5 + e, -37, 2, 1); rect(MOUTH, 3 + e, -37, 2, 1); },
+    grin(k) { const { rect, e } = k; for (const x of [-7 + e, 3 + e]) { rect(LINE, x + 1, -45, 2, 1); rect(LINE, x, -44, 1, 2); rect(LINE, x + 3, -44, 1, 2); } rect(DARK, -4 + e, -37, 8, 3); rect(TEETH, -3 + e, -37, 6, 1); rect(DARK, -5 + e, -38, 1, 1); rect(DARK, 4 + e, -38, 1, 1); rect('#df8f86', -9, -40, 2, 1); rect('#df8f86', 7, -40, 2, 1); },
+    neutral(k) { const { rect, e } = k; eyes(k); rect(MOUTH, -2 + e, -36, 4, 1); },
+    serious(k) { const { rect, e, b } = k; eyes(k); b(-8 + e, -47, 6, 2); b(2 + e, -47, 6, 2); rect(DARK, -3 + e, -36, 6, 1); },
+    surprised(k) { const { rect, e, b } = k; eyes(k, 5); b(-7 + e, -48, 4, 1); b(3 + e, -48, 4, 1); rect(DARK, -2 + e, -38, 4, 4); rect('#b5545a', -1 + e, -36, 2, 1); },
+    scared(k) { const { rect, e, b } = k; eyes(k, 5); b(-7 + e, -48, 4, 1); b(3 + e, -48, 4, 1); rect(DARK, -3 + e, -37, 6, 3); },
+    sad(k) { const { rect, e, b } = k; eyes(k); b(-8 + e, -46, 3, 1); b(-5 + e, -47, 2, 1); b(3 + e, -47, 2, 1); b(5 + e, -46, 3, 1);
+      rect(MOUTH, -3 + e, -37, 6, 1); rect(MOUTH, -5 + e, -36, 2, 1); rect(MOUTH, 3 + e, -36, 2, 1); rect('#7fc4e8', -7 + e, -41, 1, 2); },
+    angry(k) { const { rect, e, b } = k; eyes(k); b(-8 + e, -47, 3, 1); b(-5 + e, -46, 3, 1); b(2 + e, -46, 3, 1); b(5 + e, -47, 3, 1);
+      rect(DARK, -3 + e, -37, 6, 2); rect(TEETH, -2 + e, -37, 4, 1); },
+    wink(k) { const { rect, e, iris } = k; rect(LINE, -7 + e, -45, 4, 4); rect(iris, -6 + e, -44, 2, 2); rect(SHINE, -6 + e, -45, 1, 1); closed(rect, 3 + e, true);
+      rect(MOUTH, -3 + e, -36, 6, 1); rect(MOUTH, 3 + e, -37, 2, 1); },
+    sleepy(k) { const { rect, e, iris, skin } = k; for (const x of [-7 + e, 3 + e]) { rect(LINE, x, -43, 4, 2); rect(iris, x + 1, -42, 2, 1); rect(A.shade(skin, -.12), x, -44, 4, 1); }
+      rect(MOUTH, -1 + e, -36, 3, 2); rect('#9fb4d8', 9, -51, 3, 1); rect('#9fb4d8', 11, -50, 1, 1); rect('#9fb4d8', 9, -49, 3, 1); },
+    smirk(k) { const { rect, e, b } = k; eyes(k); b(2 + e, -48, 6, 1); b(-8 + e, -47, 5, 1); rect(MOUTH, -2 + e, -36, 5, 1); rect(MOUTH, 3 + e, -37, 2, 1); },
+  };
   function character(ctx, x, y, av, o = {}) {
     av = av || {}; const t = o.t || 0, step = o.walking ? Math.sin(t * 11) * 2 : 0;
     const cloth = av.color || '#9d7160', hair = av.hairColor || '#543626', skin = av.skin || '#d9a273';
@@ -46,11 +72,13 @@
     rect(A.shade(skin, -.18), faceW / 2 - 3, -50, 3, 17); rect(skin, -12, -45, 3, 7); rect(skin, 9, -45, 3, 7);
     if (av.face !== 'square') { rect('#30252a', -faceW / 2, -34, 3, 2); rect('#30252a', faceW / 2 - 3, -34, 3, 2); }
     const blink = Math.sin(t * 1.3 + (o.seed || 0)) > .985, eyeX = Math.round(f * 2);
-    rect('#2e2730', -7 + eyeX, -45, 4, blink ? 1 : 4); rect('#2e2730', 3 + eyeX, -45, 4, blink ? 1 : 4);
-    if (!blink) { rect(av.eyes || '#342b25', -6 + eyeX, -44, 2, 2); rect(av.eyes || '#342b25', 4 + eyeX, -44, 2, 2); rect('#eee8d8', -6 + eyeX, -45, 1, 1); rect('#eee8d8', 4 + eyeX, -45, 1, 1); }
-    rect(A.shade(skin, -.25), eyeX, -41, 2, 3); rect('#825147', -3 + eyeX, -36, 6, o.scared ? 3 : 1);
+    // Expressions: eyes, brows and mouth. A live animation state (scared) overrides the chosen mood.
+    const mood = o.scared ? 'scared' : EXPRESSIONS[av.expression] ? av.expression : av.features === 'serious' ? 'serious' : 'smile';
+    const brows = [], browColor = A.shade(hair, -.25);
+    EXPRESSIONS[mood]({ rect, e: eyeX, blink, iris: av.eyes || '#342b25', b: (...r) => brows.push(r), skin });
+    rect(A.shade(skin, -.25), eyeX, -41, 2, 3);
     if (av.features === 'freckles') for (const dx of [-8, -5, 5, 8]) rect('#a76c50', dx, -39, 1, 1);
-    if (av.features === 'serious') { rect('#493534',-8+eyeX,-48,5,1); rect('#493534',4+eyeX,-48,5,1); rect('#825147',-3+eyeX,-36,6,1); }
+    if (av.features === 'rosyCheeks') { rect('#df8f86', -9, -39, 3, 2); rect('#df8f86', 6, -39, 3, 2); }
     if (av.facialHair === 'moustache') rect(hair, -5, -38, 10, 2);
     if (av.facialHair === 'beard') { rect(hair, -8, -38, 16, 5); rect(hair, -5, -33, 10, 3); }
     const style = hairstyle || 'short';
@@ -65,6 +93,8 @@
       if (style === 'braids') for (let i = 0; i < 6; i++) { rect(hair, -13 + i % 2, -49 + i * 4, 5, 4); rect(hair, 9 - i % 2, -49 + i * 4, 5, 4); }
       rect(A.shade(hair, .22), -8, -54, style === 'slickedBack' ? 16 : 7, 2);
     }
+    // Brows sit over the fringe so raised/lowered brows stay visible on every hairstyle.
+    for (const [x, y, w, h] of brows) rect(browColor, x, y, w, h);
     const hat = av.hat;
     if (hat === 'bandana') { rect('#9c4d4d',-12,-55,24,5); rect('#c37b65',-10,-54,20,1); rect('#9c4d4d',10,-51,6,13); }
     if (['hood', 'plagueHat'].includes(hat)) { rect(dark, -14, -59, 28, 9); rect(dark, -14, -51, 4, 18); rect(dark, 10, -51, 4, 18); if (hat === 'plagueHat') { rect('#d7d0b8', -6, -43, 16, 7); rect('#a29b83', 9, -41, 8, 3); } }
@@ -90,6 +120,6 @@
     if (['spies','fbi'].includes(o.theme)) { rect('#d0c8b7', -4, -32, 8, 7); rect('#32333e', -1, -28, 2, 9); rect('#c4ad73', 5, -27, 3, 3); }
     ctx.restore();
   }
-  A.drawCharacter = character;
+  A.drawCharacter = character; A.EXPRESSIONS = Object.keys(EXPRESSIONS).filter((k) => k !== 'scared');
   A.drawGhost = function (ctx, x, y, av, o = {}) { ctx.save(); ctx.globalAlpha *= .52; ctx.shadowColor = '#a8d6df'; ctx.shadowBlur = o.glow ? 15 : 4; character(ctx, x, y - 7 + Math.sin((o.t || 0) * 2.5 + (o.seed || 0)) * 4, av, { ...o, alpha: o.alpha == null ? .85 : o.alpha }); ctx.restore(); };
 })();

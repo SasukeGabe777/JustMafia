@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node tools/test-rules.js && node tools/test-expansion.js && node tools/test-storyteller.js && node tools/test-profiles.js && node tools/test-governance-sockets.js && node tools/test-story-sockets.js && node tools/simulate.js && node tools/render-smoke.js",
+    "test": "node tools/test-rules.js && node tools/test-expansion.js && node tools/test-expressions.js && node tools/test-storyteller.js && node tools/test-profiles.js && node tools/test-governance-sockets.js && node tools/test-story-sockets.js && node tools/test-expression-sockets.js && node tools/simulate.js && node tools/render-smoke.js",
     "simulate": "node tools/simulate.js",
     "test:rules": "node tools/test-rules.js",
     "balance": "node tools/balance.js"

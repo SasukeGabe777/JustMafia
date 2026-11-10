@@ -63,6 +63,21 @@ test('Homes: twelve styles and colors, chosen in the lobby, random when unset, l
   assert.equal(room.hostView().players.find((x) => x.id === p[0].id).avatar.houseStyle, 'tavern');
   room.destroy();
 });
+test('Expressions: every option saves, legacy "serious" migrates, invalid falls back, locked at start, public', () => {
+  const { room, p } = game(['mafia', 'villager', 'villager', 'villager']);
+  room.resetToLobby();
+  for (const expression of O.expression) { room.updateProfile(p[0], { avatar: { ...p[0].avatar, expression } }); assert.equal(p[0].avatar.expression, expression); }
+  room.updateProfile(p[1], { avatar: { ...p[1].avatar, expression: undefined, features: 'serious' } });
+  assert.equal(p[1].avatar.expression, 'serious'); assert.equal(p[1].avatar.features, 'none');
+  room.updateProfile(p[2], { avatar: { ...p[2].avatar, expression: 'evil<script>', features: 'freckles' } });
+  assert.equal(p[2].avatar.expression, 'smile'); assert.equal(p[2].avatar.features, 'freckles');
+  room.updateProfile(p[0], { avatar: { ...p[0].avatar, expression: 'wink' } }); room.startGame();
+  room.updateProfile(p[0], { avatar: { ...p[0].avatar, expression: 'angry' } });
+  assert.equal(p[0].avatar.expression, 'wink');
+  assert.equal(room.hostView().players.find((x) => x.id === p[0].id).avatar.expression, 'wink');
+  assert.equal(room.playerView(p[1]).players.find((x) => x.id === p[0].id).avatar.expression, 'wink');
+  room.destroy();
+});
 test('Investigator visits exclude dummy prompts and own surveillance; only one Mafia visitor', () => {
   const { room, p } = game(['mafia', 'mafia', 'investigator', 'doctor', 'villager', 'villager', 'villager', 'villager']);
   room.nightAction(p[0], p[4].id); room.nightAction(p[1], p[4].id); room.nightAction(p[2], p[4].id);
