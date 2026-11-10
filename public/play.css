@@ -233,6 +233,18 @@ summary { cursor:pointer; font-weight:600; padding:8px 0; }
 .shop-tile .badge.own { background:#b8e0a8; } .shop-tile .badge.eq { background:#8fd0f2; } .shop-tile .badge.lock { background:#ddd; }
 .shop-detail h3 { margin:0 0 6px; }
 .shop-detail .btn { margin-top:6px; }
+/* ===== Move-in request card (owner) and status (asker) ===== */
+.move-ask { position:fixed; left:50%; top:12px; transform:translateX(-50%); width:min(520px, calc(100% - 24px)); z-index:50; padding:14px 16px;
+  background:var(--card); color:var(--ink); animation:moveAskIn .25s ease-out;
+  box-shadow:var(--frame), 0 12px 30px rgba(0,0,0,.45), 0 0 0 100vmax rgba(10,8,20,.55); /* dims the page behind the question */ }
+@keyframes moveAskIn { from { transform:translate(-50%, -24px); } to { transform:translateX(-50%); } }
+.move-ask-title { font-size:18px; margin:0 0 4px; }
+.move-timer { height:8px; background:var(--card2); border:2px solid var(--wood-d); margin:8px 0 2px; }
+.move-timer i { display:block; height:100%; background:var(--accent); transition:width .25s linear; }
+.move-buttons { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+.move-buttons .btn { margin:0; }
+.move-status { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; padding:8px 10px; background:#fff8dc; border:2px solid var(--wood-d); }
+.move-status .btn { width:auto; margin:0; }
 /* ===== House screen ===== */
 .house-preview { display:block; width:100%; max-width:340px; aspect-ratio:4 / 3; margin:0 auto 8px; border:4px solid var(--wood-d); box-shadow:inset 0 0 0 3px var(--wood-l); }
 .claims { display:grid; gap:6px; }

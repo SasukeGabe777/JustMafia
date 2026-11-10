@@ -275,12 +275,19 @@ io.on('connection', (socket) => {
   socket.on('player:home', (msg = {}, cb) => {
     const { room, p } = ctx();
     if (!p || room.phase !== 'lobby' || p.left) return reply(cb, { ok: false, error: 'Homes can only change in the lobby.' });
-    if (msg.claim && typeof msg.claim === 'object') { const r = room.claimHome(p, msg.claim); if (!r.ok) return reply(cb, r); }
+    let claimed = null;
+    if (msg.claim && typeof msg.claim === 'object') { claimed = room.claimHome(p, msg.claim); if (!claimed.ok) return reply(cb, claimed); }
     if (msg.look && typeof msg.look === 'object') {
       room.updateProfile(p, { home: profiles.validateHome(p.profileId, msg.look) });
       if (p.profileId) profiles.selectHome(p.profileId, p.homeLook);
     }
-    reply(cb, { ok: true });
+    reply(cb, { ok: true, pending: !!(claimed && claimed.pending), moved: !!(claimed && claimed.moved) });
+  });
+  // A host answers a move-in request (yes/no) during setup.
+  socket.on('player:moveReply', (msg = {}, cb) => {
+    const { room, p } = ctx();
+    if (!p || room.phase !== 'lobby') return reply(cb, { ok: false, error: 'Move-in requests are only answered during setup.' });
+    reply(cb, room.respondMoveIn(p, msg.fromId, !!msg.accept));
   });
   socket.on('player:night', (msg = {}) => { const { room, p } = ctx(); if (p) room.nightAction(p, msg.targetId, { variant: msg.variant, delay: msg.delay }); });
   socket.on('player:vote', (msg = {}) => { const { room, p } = ctx(); if (p) room.vote(p, msg.targetId); });

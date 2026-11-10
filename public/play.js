@@ -172,10 +172,51 @@
 
   // ---------- your house ----------
   // Claiming (where you live) applies immediately; the design is a draft until Save.
+  // ---------- move-in requests (setup only) ----------
+  const secsLeft = (at) => Math.max(0, Math.ceil((at - (Date.now() + clockOffset)) / 1000));
+  // The owner's yes/no card, shown on top of any lobby screen with a 20s countdown.
+  function renderMoveAsk() {
+    const box = $('#move-ask'), ask = view && view.phase === 'lobby' && (view.moveAsks || []).find((a) => secsLeft(a.expiresAt) > 0);
+    if (!ask) { box.hidden = true; box.dataset.from = ''; return; }
+    const s = secsLeft(ask.expiresAt);
+    if (box.dataset.from !== ask.fromId) {
+      box.dataset.from = ask.fromId;
+      box.innerHTML = `<p class="move-ask-title">🏠 <b>${esc(ask.fromName)}</b> wants to move in with you!</p>
+        <p class="small">You'll share your house and sign on the big screen. It doesn't change the game.</p>
+        <div class="move-timer"><i></i></div><p class="small" data-secs></p>
+        <div class="move-buttons"><button class="btn" data-move-yes>Yes, move in</button><button class="btn ghost" data-move-no>No thanks</button></div>`;
+      const answer = (accept) => socket.emit('player:moveReply', { fromId: ask.fromId, accept }, () => {});
+      box.querySelector('[data-move-yes]').onclick = () => answer(true);
+      box.querySelector('[data-move-no]').onclick = () => answer(false);
+      if (navigator.vibrate) navigator.vibrate(60);
+    }
+    box.hidden = false;
+    box.querySelector('[data-secs]').textContent = `${s}s to answer`;
+    box.querySelector('.move-timer i').style.width = `${Math.min(100, (s / 20) * 100)}%`;
+  }
+  // The asker's status: waiting (with countdown + cancel), or the answer for a few seconds.
+  function moveStatusText() {
+    const st = view && view.you && view.you.moveStatus; if (!st) return null;
+    const recent = Date.now() + clockOffset - st.at < 8000;
+    if (st.state === 'pending' && secsLeft(st.expiresAt) > 0) return { text: `⏳ Asked ${st.toName} to move in… ${secsLeft(st.expiresAt)}s`, pending: true };
+    if (!recent) return null;
+    const text = { accepted: `🎉 ${st.toName} said yes! You live together now.`, declined: st.reason ? `${st.toName} said yes, but: ${st.reason}` : `${st.toName} said no thanks.`, expired: `${st.toName} didn't answer in time.`, cancelled: 'Request cancelled.' }[st.state];
+    return text ? { text } : null;
+  }
+  function renderMoveStatus() {
+    const el = $('#h-move-status'); if (!el) return;
+    const st = moveStatusText();
+    el.hidden = !st; if (!st) return;
+    if (el.dataset.text !== st.text) { el.dataset.text = st.text; el.innerHTML = `<span>${esc(st.text)}</span>${st.pending ? '<button class="btn ghost small" data-move-cancel>Cancel</button>' : ''}`; const c = el.querySelector('[data-move-cancel]'); if (c) c.onclick = () => socket.emit('player:home', { claim: { cancel: true } }, () => {}); }
+  }
+  setInterval(() => { if (view) { renderMoveAsk(); renderMoveStatus(); } }, 250);
+
   function homeStatus() {
     if (!view || !view.you) return '';
     const host = view.you.livesWith && byId(view.you.livesWith);
     if (host) return `Staying at ${host.name}'s house (plot ${host.house + 1})`;
+    const st = view.you.moveStatus;
+    if (st && st.state === 'pending' && secsLeft(st.expiresAt) > 0) return `Asked ${st.toName} to move in… waiting for an answer`;
     const guests = view.players.filter((p) => p.livesWith === view.you.id).map((p) => p.name);
     return `Your own house · plot ${view.you.house + 1}${guests.length ? ' · with ' + guests.join(', ') : ''}`;
   }
@@ -198,9 +239,10 @@
     // Where you live: your own plot, an empty plot, or moving in with an owner who has room.
     const owners = view.players.filter((p) => !p.livesWith && p.id !== view.you.id);
     const count = (id) => view.players.filter((p) => p.livesWith === id).length + 1;
+    const asking = (id) => { const st = view.you.moveStatus; return !!st && st.state === 'pending' && st.toId === id && secsLeft(st.expiresAt) > 0; };
     const opts = [{ key: 'own', label: `🏠 My own house · plot ${view.you.house + 1}`, sel: !view.you.livesWith, claim: { own: true } }]
       .concat((view.freePlots || []).slice(0, 4).map((n) => ({ key: 'plot' + n, label: `📍 Move to empty plot ${n + 1}`, sel: false, claim: { plot: n } })))
-      .concat(owners.map((o) => ({ key: 'with' + o.id, label: `🤝 Live with ${o.name} · plot ${o.house + 1} (${count(o.id)}/${OPT.MAX_RESIDENTS})`, sel: view.you.livesWith === o.id, full: count(o.id) >= OPT.MAX_RESIDENTS && view.you.livesWith !== o.id, claim: { with: o.id } })));
+      .concat(owners.map((o) => ({ key: 'with' + o.id, label: `🤝 ${view.you.livesWith === o.id ? 'Living with' : asking(o.id) ? 'Asked' : 'Ask to live with'} ${o.name} · plot ${o.house + 1} (${count(o.id)}/${OPT.MAX_RESIDENTS})`, sel: view.you.livesWith === o.id || asking(o.id), full: count(o.id) >= OPT.MAX_RESIDENTS && view.you.livesWith !== o.id, claim: { with: o.id } })));
     $('#h-claims').innerHTML = opts.map((o, i) => `<button class="claim${o.sel ? ' sel' : ''}" data-claim="${i}" aria-pressed="${o.sel}" ${o.full ? 'disabled' : ''}>${esc(o.label)}${o.full ? ' · full' : ''}</button>`).join('');
     $('#h-claims').querySelectorAll('[data-claim]').forEach((b) => { b.onclick = () => {
       socket.emit('player:home', { claim: opts[+b.dataset.claim].claim }, (r) => { $('#h-claim-err').textContent = r && r.ok ? '' : (r && r.error) || 'Could not move.'; });
@@ -361,6 +403,7 @@
     if (editing && v.phase !== 'lobby') { editing = false; creatorMode = null; show('#screen-game'); }
     if (pendingClaim && v.phase === 'lobby' && !v.isJudge && !$('#screen-game').hidden) { pendingClaim = false; openHome('claim'); }
     if (!$('#screen-home').hidden) { if (v.phase !== 'lobby') show('#screen-game'); else buildHome(); }
+    renderMoveAsk(); renderMoveStatus();
     // The game started: close the shop and switch to the game, and refresh the pouch menu.
     if (v.phase !== 'lobby' && !$('#screen-shop').hidden) { lastKey = ''; show('#screen-game'); }
     if (phaseChanged) updatePouch();

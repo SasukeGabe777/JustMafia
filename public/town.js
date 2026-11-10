@@ -218,6 +218,13 @@
         c.avatar = p.avatar;
         c.house = p.house; // plot + seat number
         c.home = p.home != null ? p.home : p.house; // the house they live in (own plot or a host's)
+        // Housewarming (presentation only): someone just moved in during setup.
+        if (!isNew && st.phase === 'lobby' && p.livesWith && c.livesWith !== p.livesWith) {
+          const h = this.houses[c.home];
+          if (h) { this.burst(h.x, h.y - 40 * h.s, ['#ffd23f', '#ff8fb1', '#ffffff', '#8fd0f2'], 36, 240); this.floatText(h.x, h.y - 90 * h.s, 'Moved in!', '#ffe066'); }
+          c.bubble = { text: '🏠', until: this.time + 2.5 };
+          window.SFX && SFX.play('join');
+        }
         c.livesWith = p.livesWith || null;
         c.homeLook = p.homeLook || (p.avatar && p.avatar.houseStyle ? { style: p.avatar.houseStyle, wall: p.avatar.houseColor, decor: p.avatar.houseDecor } : null);
         if (!c.damagePending) c.houseState = p.houseState || 'normal';

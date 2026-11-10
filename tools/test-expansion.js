@@ -71,32 +71,34 @@ test('House design: every field saves per player, invalid input sanitized, rando
 test('House ownership: claim empty plots, move in with an owner (max residents), guests return home when the owner leaves, lobby only', () => {
   const room = new Room('TEST', null, { headless: true, seed: 3 }); room.updateSettings({ minPlayers: 3 });
   const [a, b, c, d, e] = ['Ana', 'Ben', 'Cy', 'Di', 'Ed'].map((name) => room.join({ name }).player);
+  // Moving in asks the owner first; here the owner says yes straight away.
+  const ask = (p, o) => { const r = room.claimHome(p, { with: o.id }); return r.ok && r.pending ? room.respondMoveIn(o, p.id, true) : r; };
   assert.deepEqual([a, b, c, d, e].map((x) => room.homeSlot(x)), [0, 1, 2, 3, 4], 'everyone starts in their own house');
   // Claim an empty plot (gap after a removal), and reject taken plots.
   room.kick(c.id); assert(room.freePlots().includes(2));
   assert.equal(room.claimHome(e, { plot: 0 }).ok, false, 'plot taken');
   assert.equal(room.claimHome(e, { plot: 2 }).ok, true); assert.equal(e.house, 2); assert.equal(room.homeSlot(e), 2);
   // Move in with Ana; the sign data lists both; Ana stays the owner.
-  assert.equal(room.claimHome(b, { with: a.id }).ok, true);
+  assert.equal(ask(b, a).ok, true);
   assert.equal(room.homeSlot(b), a.house); assert.deepEqual(room.residentsOf(a).map((x) => x.name), ['Ben']);
   assert.equal(room.hostView().players.find((x) => x.id === b.id).livesWith, a.id);
   assert.equal(room.hostView().players.find((x) => x.id === b.id).home, a.house);
-  assert.equal(room.claimHome(d, { with: b.id }).ok, false, 'cannot move in with a guest');
-  assert.equal(room.claimHome(a, { with: a.id }).ok, false, 'cannot move in with yourself');
+  assert.equal(ask(d, b).ok, false, 'cannot move in with a guest');
+  assert.equal(ask(a, a).ok, false, 'cannot move in with yourself');
   // Capacity: owner + 3 guests.
   const f = room.join({ name: 'Fi' }).player, g = room.join({ name: 'Gus' }).player;
-  assert.equal(room.claimHome(f, { with: a.id }).ok, true); assert.equal(room.claimHome(g, { with: a.id }).ok, true);
-  assert.equal(room.claimHome(d, { with: a.id }).ok, false, 'house full');
+  assert.equal(ask(f, a).ok, true); assert.equal(ask(g, a).ok, true);
+  assert.equal(ask(d, a).ok, false, 'house full');
   // Seat numbers ("PLAYER N") stay unique even when sharing a house.
   assert.equal(new Set(room.list().map((x) => x.house)).size, room.list().length);
   // The owner moving in elsewhere sends their guests home; so does the owner leaving.
-  assert.equal(room.claimHome(a, { with: d.id }).ok, true);
+  assert.equal(ask(a, d).ok, true);
   assert.equal(room.homeSlot(b), b.house); assert.equal(f.livesWith, null);
-  assert.equal(room.claimHome(b, { with: d.id }).ok, true); room.kick(d.id);
+  assert.equal(ask(b, d).ok, true); room.kick(d.id);
   assert.equal(room.homeSlot(a), a.house); assert.equal(room.homeSlot(b), b.house);
   // Going back to your own house, then locked once the game starts.
-  assert.equal(room.claimHome(e, { with: a.id }).ok, true); assert.equal(room.claimHome(e, { own: true }).ok, true); assert.equal(room.homeSlot(e), e.house);
-  assert.equal(room.claimHome(b, { with: a.id }).ok, true); room.startGame();
+  assert.equal(ask(e, a).ok, true); assert.equal(room.claimHome(e, { own: true }).ok, true); assert.equal(room.homeSlot(e), e.house);
+  assert.equal(ask(b, a).ok, true); room.startGame();
   assert.equal(room.claimHome(b, { own: true }).ok, false); assert.equal(room.homeSlot(b), a.house, 'residency survives game start');
   room.destroy();
 });
@@ -113,6 +115,36 @@ test('Expressions: every option saves, legacy "serious" migrates, invalid falls 
   assert.equal(p[0].avatar.expression, 'wink');
   assert.equal(room.hostView().players.find((x) => x.id === p[0].id).avatar.expression, 'wink');
   assert.equal(room.playerView(p[1]).players.find((x) => x.id === p[0].id).avatar.expression, 'wink');
+  room.destroy();
+});
+test('Move-in requests: the owner gets 20 seconds to say yes or no; declines, timeouts, cancels, bots and game start', () => {
+  const clock = new VirtualClock(), room = new Room('MOVE', null, { clock, headless: true, seed: 5 });
+  room.updateSettings({ minPlayers: 3 });
+  const [ana, ben, cy] = ['Ana', 'Ben', 'Cy'].map((name) => room.join({ name }).player);
+  // Asking does not move you in yet; the owner sees the request with a 20s deadline.
+  const r = room.claimHome(ben, { with: ana.id }); assert(r.ok && r.pending);
+  assert.equal(ben.livesWith, null);
+  const asks = room.playerView(ana).moveAsks; assert.equal(asks.length, 1); assert.equal(asks[0].fromName, 'Ben'); assert.equal(asks[0].expiresAt - clock.now(), 20000);
+  assert.equal(room.playerView(ben).you.moveStatus.state, 'pending'); assert.deepEqual(room.playerView(cy).moveAsks, [], 'only the owner is asked');
+  // Yes -> moved in.
+  assert(room.respondMoveIn(ana, ben.id, true).moved); assert.equal(ben.livesWith, ana.id); assert.equal(room.playerView(ben).you.moveStatus.state, 'accepted');
+  // No -> stays home.
+  room.claimHome(ben, { own: true }); room.claimHome(cy, { with: ana.id });
+  room.respondMoveIn(ana, cy.id, false); assert.equal(cy.livesWith, null); assert.equal(room.playerView(cy).you.moveStatus.state, 'declined');
+  // No answer within 20 seconds -> expires; a late answer does nothing.
+  room.claimHome(cy, { with: ana.id }); clock.t += 19999; assert.equal(room.playerView(ana).moveAsks.length, 1);
+  assert(clock.step()); assert.equal(room.playerView(cy).you.moveStatus.state, 'expired'); assert.deepEqual(room.playerView(ana).moveAsks, []);
+  assert.equal(room.respondMoveIn(ana, cy.id, true).ok, false); assert.equal(cy.livesWith, null);
+  // Only the asked owner can answer; asking someone else or cancelling replaces the request.
+  room.claimHome(cy, { with: ana.id }); assert.equal(room.respondMoveIn(ben, cy.id, true).ok, false);
+  room.claimHome(cy, { cancel: true }); assert.equal(room.playerView(cy).you.moveStatus.state, 'cancelled'); assert.deepEqual(room.playerView(ana).moveAsks, []);
+  // Bots can't answer, so they accept.
+  room.addBots(1); const bot = room.list().find((x) => x.isBot);
+  assert(room.claimHome(cy, { with: bot.id }).moved); assert.equal(cy.livesWith, bot.id);
+  // Unanswered requests end when the game starts; nothing about it changes the game rules.
+  room.claimHome(ben, { with: ana.id }); assert.equal(room.playerView(ana).moveAsks.length, 1);
+  assert(room.startGame().ok); assert.deepEqual(room.playerView(ana).moveAsks, []); assert.equal(ben.livesWith, null);
+  assert.equal(room.respondMoveIn(ana, ben.id, true).ok, false);
   room.destroy();
 });
 test('AI narrator: night deaths get story locations with lore lines; manual narrator keeps the classic scene and text', () => {

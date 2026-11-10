@@ -481,6 +481,32 @@ Implementation checklist (updated after verification below):
   measured on the actual TV. Side-by-side screenshots of a wide view and a
   zoomed cinematic were reviewed.
 
+### Move-in requests (setup only)
+
+- Moving in with another player now asks them first. `Room.claimHome({ with })`
+  creates a request; the owner gets 20 seconds (`MOVE_ASK_MS`, room clock, so
+  virtual-clock tests work) to answer via `player:moveReply`. Yes moves the
+  asker in, after re-checking capacity and availability. No, a timeout, a
+  cancel, or picking another option leaves them home, and the asker sees what
+  happened. Bots, who can't answer, accept. Requests exist only in the lobby;
+  `startGame` cancels any still pending, and removals drop requests involving
+  the removed player.
+- Phone: the owner gets a solid Yes/No card on top of any lobby screen, with a
+  countdown bar and the page dimmed. The asker's house screen shows "Asked
+  Ana… 17s" with Cancel, then the answer ("said yes", "no thanks", "didn't
+  answer in time"). The option reads "Ask to live with X", then "Asked X",
+  then "Living with X". The lobby status line shows a pending request.
+- Gameplay is unchanged: residency still only affects the TV (shared house
+  and sign, characters walking home to the same door). New on the TV: a
+  housewarming burst, "Moved in!" and a 🏠 bubble when someone moves in
+  during setup.
+- Validation: new expansion test (pending until answered, 20s deadline, yes,
+  no, timeout via virtual clock, late answer ignored, only the asked owner can
+  answer, cancel, bots accept, game start cancels and late answers fail); the
+  ownership test adapted to the request flow. Creator e2e (15/15) now does the
+  flow across two real phones: the request card appears on Ana's phone with a
+  countdown, No reaches Ben, then Yes moves him in.
+
 The historical phases below describe earlier iterations; this completion audit
 supersedes their pending markers for features implemented above.
 

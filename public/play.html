@@ -10,6 +10,9 @@
   <link rel="stylesheet" href="/play.css">
 </head>
 <body>
+  <!-- Move-in request (setup only): another player asks to live in your house; 20s to answer. -->
+  <div id="move-ask" class="move-ask" role="alertdialog" aria-live="assertive" hidden></div>
+
   <section id="screen-join" hidden>
     <h1 class="brand">🔪 Mafia Town</h1>
     <div class="card">
@@ -79,6 +82,7 @@
     <div class="card">
       <div class="cas-label">Where you live</div>
       <div id="h-claims" class="claims"></div>
+      <div id="h-move-status" class="move-status" role="status" hidden></div>
       <p id="h-claim-err" class="err" role="alert"></p>
     </div>
     <nav id="h-tabs" class="cas-tabs" role="tablist" aria-label="House design categories"></nav>

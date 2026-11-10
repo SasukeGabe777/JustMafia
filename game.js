@@ -61,6 +61,7 @@ const CINE_MS = { roleReveal: 14000, dawn: 8000, dawnEvent: 15200, morning: 8000
 
 const HARD_MIN_PLAYERS = 3;
 const HARD_MAX_PLAYERS = 100;
+const MOVE_ASK_MS = 20000; // how long a host has to answer a move-in request
 const HAUNT_COOLDOWN_MS = 4000;
 const HAUNT_KINDS = ['boo', 'spin', 'wail'];
 const TELEPATH_COOLDOWN_MS = 2500;
@@ -234,14 +235,51 @@ class Room {
   ownerOfHome(p) { const o = p.livesWith && this.players.get(p.livesWith); return o && !o.left && !o.livesWith ? o : null; }
   homeSlot(p) { const o = this.ownerOfHome(p); return o ? o.house : p.house; }
   residentsOf(owner) { return this.list().filter((x) => x !== owner && x.livesWith === owner.id && !x.left); }
+  // Moving in with someone asks them first: they get MOVE_ASK_MS to say yes or no
+  // (bots, who can't answer, accept). Lobby only; presentation only, never rules.
+  moveInCheck(p, owner) {
+    if (this.phase !== 'lobby' || p.left) return 'Homes can only change in the lobby.';
+    if (!owner || owner === p || owner.left || owner.livesWith || owner.spectator) return 'That house is not available.';
+    if (this.residentsOf(owner).length + 1 >= OPTIONS.MAX_RESIDENTS) return 'That house is full.';
+    return null;
+  }
+  moveIn(p, owner) {
+    for (const guest of this.residentsOf(p)) guest.livesWith = null; // your own guests go home
+    p.livesWith = owner.id;
+  }
+  cancelMoveRequest(fromId, state) {
+    const req = this.moveRequests && this.moveRequests.get(fromId); if (!req) return;
+    this.clock.clear(req.timer); this.moveRequests.delete(fromId);
+    const p = this.players.get(fromId);
+    if (p && state) p.moveStatus = { state, toId: req.toId, toName: req.toName, at: this.now() };
+  }
+  respondMoveIn(owner, fromId, accept) {
+    const req = this.moveRequests && this.moveRequests.get(String(fromId));
+    if (!req || req.toId !== owner.id) return { ok: false, error: 'That request has expired.' };
+    const p = this.players.get(req.fromId);
+    this.cancelMoveRequest(req.fromId);
+    if (!p) return { ok: false, error: 'They left.' };
+    const problem = accept ? this.moveInCheck(p, owner) : null;
+    if (accept && !problem) this.moveIn(p, owner);
+    p.moveStatus = { state: accept && !problem ? 'accepted' : 'declined', toId: owner.id, toName: owner.name, reason: problem || undefined, at: this.now() };
+    this.sync();
+    return { ok: true, moved: accept && !problem, error: problem || undefined };
+  }
   claimHome(p, claim = {}) {
     if (this.phase !== 'lobby' || p.left) return { ok: false, error: 'Homes can only change in the lobby.' };
+    if (claim.cancel) { this.cancelMoveRequest(p.id, 'cancelled'); this.sync(); return { ok: true }; }
+    this.cancelMoveRequest(p.id); // any new choice replaces a pending request
     if (claim.with != null) {
       const owner = this.players.get(String(claim.with));
-      if (!owner || owner === p || owner.left || owner.livesWith || owner.spectator) return { ok: false, error: 'That house is not available.' };
-      if (this.residentsOf(owner).length + 1 >= OPTIONS.MAX_RESIDENTS) return { ok: false, error: 'That house is full.' };
-      for (const guest of this.residentsOf(p)) guest.livesWith = null; // your own guests go home
-      p.livesWith = owner.id;
+      const problem = this.moveInCheck(p, owner); if (problem) return { ok: false, error: problem };
+      if (owner.isBot) { this.moveIn(p, owner); p.moveStatus = { state: 'accepted', toId: owner.id, toName: owner.name, at: this.now() }; this.sync(); return { ok: true, moved: true }; }
+      this.moveRequests = this.moveRequests || new Map();
+      const req = { fromId: p.id, toId: owner.id, toName: owner.name, fromName: p.name, expiresAt: this.now() + MOVE_ASK_MS };
+      req.timer = this.later(MOVE_ASK_MS, () => { if (this.moveRequests.get(p.id) === req) { this.cancelMoveRequest(p.id, 'expired'); this.sync(); } });
+      this.moveRequests.set(p.id, req);
+      p.moveStatus = { state: 'pending', toId: owner.id, toName: owner.name, expiresAt: req.expiresAt, at: this.now() };
+      this.sync();
+      return { ok: true, pending: true };
     } else if (claim.plot != null) {
       const n = Number(claim.plot);
       if (!Number.isInteger(n) || n < 0 || n >= HARD_MAX_PLAYERS || this.list().some((x) => x !== p && x.house === n)) return { ok: false, error: 'That plot is taken.' };
@@ -260,7 +298,10 @@ class Room {
     // House slots are identity-bound; removals never move another owner.
     // Anyone living with a removed or departed owner moves back to their own plot.
     for (const p of this.list()) if (p.livesWith && !this.ownerOfHome(p)) p.livesWith = null;
+    // Requests to or from someone who left are dropped.
+    for (const [fromId, req] of this.moveRequests || []) if (!this.players.get(fromId) || !this.players.get(req.toId)) this.cancelMoveRequest(fromId, this.players.get(fromId) ? 'cancelled' : null);
   }
+  clearMoveRequests() { for (const fromId of [...(this.moveRequests || new Map()).keys()]) this.cancelMoveRequest(fromId, 'cancelled'); }
 
   resetPlayer(p) {
     Object.assign(p, {
@@ -375,6 +416,7 @@ class Room {
 
     players.forEach((p) => this.resetPlayer(p));
     this.reindexHouses();
+    this.clearMoveRequests(); // unanswered move-in requests end when the game starts
 
     // Forced roles first (test mode), then shuffle the rest.
     const pool = setup.roles.slice();
@@ -1243,7 +1285,9 @@ class Room {
     const r = p.spectator ? null : ROLES[p.role];
     const v = {
       ...this.common(),
-      you: { id: p.id, name: p.name, avatar: p.avatar, alive: p.alive, spectator: p.spectator, left: p.left, house: p.house, home: this.homeSlot(p), livesWith: this.ownerOfHome(p) ? p.livesWith : null, homeLook: p.homeLook },
+      you: { id: p.id, name: p.name, avatar: p.avatar, alive: p.alive, spectator: p.spectator, left: p.left, house: p.house, home: this.homeSlot(p), livesWith: this.ownerOfHome(p) ? p.livesWith : null, homeLook: p.homeLook, moveStatus: p.moveStatus || null },
+      // Move-in requests waiting for this player's yes/no (lobby only).
+      moveAsks: this.phase === 'lobby' ? [...(this.moveRequests || new Map()).values()].filter((r) => r.toId === p.id).map((r) => ({ fromId: r.fromId, fromName: r.fromName, expiresAt: r.expiresAt })) : [],
       freePlots: this.phase === 'lobby' ? this.freePlots() : [],
       governance: this.governanceView(p),
       isJudge: !!p.isJudge,
