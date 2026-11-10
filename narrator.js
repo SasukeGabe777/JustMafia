@@ -120,6 +120,30 @@ Object.assign(LINES.classic, {
   emergencyVote: ['Leave your nighttime plans where they are. The town must vote now.'],
 });
 
+// Update 4: where a lone night victim was found (AI narrator only). {host} is
+// whose house an inspector was watching. Home deaths keep the classic 'kill' lines.
+Object.assign(LINES.classic, {
+  kill_lake: ['{name} stayed at the lake a little too long. The water is still now.{role} {alive} remain.', 'Ripples spread across the lake at dawn, and {name} never came home.{role} {alive} remain.'],
+  kill_hearth: ['The hearth burned low last night. {name} was found beside the cold embers.{role} {alive} remain.', '{name} lingered by the hearth for one more warm moment. It was their last.{role} {alive} remain.'],
+  kill_tavern: ['{name} was the last to leave the tavern. They never made it home.{role} {alive} remain.', 'One more round, {name} said. The tavern keeper found them by the door at dawn.{role} {alive} remain.'],
+  kill_field: ['{name} wandered into the field outside town to watch the stars. Only the crows saw what happened.{role} {alive} remain.', 'Beyond the last fence of {town}, in the tall grass, lies {name}.{role} {alive} remain.'],
+  kill_visit: ['{name} was watching {host}’s house a little too closely. Someone was watching {name}, too.{role} {alive} remain.', 'They found {name} beneath {host}’s window, notebook still in hand.{role} {alive} remain.'],
+});
+Object.assign(LINES.comedy, {
+  kill_lake: ['{name} went for a midnight swim. Lifeguard on duty: nobody.{role} {alive} remain.'],
+  kill_hearth: ['{name} got a little too cozy by the hearth. Permanently cozy.{role} {alive} remain.'],
+  kill_tavern: ['{name} said "just one more drink." Famous last words, literally.{role} {alive} remain.'],
+  kill_field: ['{name} went to the field to "find themselves." Someone else found them first.{role} {alive} remain.'],
+  kill_visit: ['{name} was snooping on {host}. Snooping is a high-risk hobby.{role} {alive} remain.'],
+});
+Object.assign(LINES.corporate, {
+  kill_lake: ['{name} took a "wellness walk" by the lake and has been permanently offboarded.{role} {alive} remain.'],
+  kill_hearth: ['{name} stayed late in the break room by the fireplace. HR has been notified.{role} {alive} remain.'],
+  kill_tavern: ['{name} left the team happy hour last. Their badge was deactivated at dawn.{role} {alive} remain.'],
+  kill_field: ['{name} went off-site to "think outside the box." The box won.{role} {alive} remain.'],
+  kill_visit: ['{name} was auditing {host}’s office after hours. The audit has been closed.{role} {alive} remain.'],
+});
+
 function line(style, key, vars = {}, rng = Math.random) {
   let bank = (LINES[style] && LINES[style][key]) || LINES.classic[key] || [''];
   const nightFlavor = {

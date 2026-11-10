@@ -126,6 +126,10 @@ const stages = {
     r.night.resolution.protected = [...c.healed];
     r.audit('resolution.summary', { actions: c.actions, blocked: [...c.blocked], protected: [...c.healed], attacks: c.attacks, outcomes: c.events });
     const events = c.events.map((e) => e.type === 'guarded' ? { type: e.type, targetId: e.targetId, guardDied: e.guardDied } : { type: e.type === 'kill' && c.attacks.filter((a) => a.targetId === e.targetId).length > 1 ? 'multiKill' : e.type, targetId: e.targetId });
+    // AI narrator: each single kill gets a story location (scene + lore line at dawn).
+    // Manual modes (human narrator, or the Judge revealing events by hand) stay classic.
+    r.pending.places = {};
+    if (r.settings.revealMode !== 'judge') for (const e of events) if (e.type === 'kill') { const where = r.deathPlace(r.players.get(e.targetId)); if (where) { Object.assign(e, where); r.pending.places[e.targetId] = where; } }
     if (r.settings.revealMode === 'judge') {
       r.reveal = { events: events.map((e) => ({ ...e, played: false })), blocked: c.blockedAttempts.map((e) => ({ ...e, played: false })), quietPlayed: false };
       r.setPhase('dawn', null);

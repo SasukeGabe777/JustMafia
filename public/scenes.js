@@ -386,6 +386,47 @@
     [9, 'move', { id: 'second', to: 'doorway', dur: 1, gait: 'run', fadeOut: true }],
   ] };
 
+  // Update 4 (AI narrator only): night deaths away from the bedroom. Same secrecy
+  // as the murder scene: a hooded attacker, never a player avatar. The victim is
+  // held in town and replaced by a stand-in resident at the story location.
+  const OUTDOOR = ({ name, place, title, color, music = 'tension', intro = [], death = [[5.9, 'die', { id: 'victim' }]], extra = [] }) => ({
+    name, kind: 'night', place, needsHouse: true, duration: 13.8,
+    steps: [
+      [0, 'letterbox', true], [0, 'dark', 1], [0, 'hold'], [0, 'music', music],
+      [0, 'camera', { to: place === 'visit' ? 'house' : 'place', zoom: place === 'visit' ? 2.6 : undefined, dur: 1.6 }],
+      [0.4, 'spawn', { id: 'victim', kind: 'resident', at: 'place' }],
+      ...intro,
+      [1.2, 'spawn', { id: 'assassin', kind: 'assassin', at: 'placeFrom', crouch: true, fadeIn: 0.8 }],
+      [1.6, 'move', { id: 'assassin', to: 'placeBehind', dur: 3.2, gait: 'sneak', crouch: true }],
+      [1.8, 'loop', { sfx: 'heartbeat', every: 0.85, until: 5.3 }],
+      [5.0, 'pose', { id: 'assassin', pose: 'stand', crouch: false }],
+      [5.15, 'bubble', { id: 'victim', text: '!', dur: 0.8 }], [5.15, 'scared', { id: 'victim' }], [5.15, 'sfx', 'gasp'],
+      [5.4, 'attack', { id: 'assassin', target: 'victim' }],
+      [5.8, 'hit', { id: 'victim', dir: -1 }],
+      ...death,
+      [6.0, 'sfx', 'sting'], [6.5, 'music', 'eerie'],
+      [7.0, 'move', { id: 'assassin', to: 'placeAway', dur: 2.2, gait: 'walk', fadeOut: true }],
+      ...extra,
+      ...ENDING(title, '', color, 9.4),
+    ],
+  });
+  Object.assign(SCENES, {
+    death_lake: OUTDOOR({ name: 'Death at the lake', place: 'lake', title: '{name} stayed at the lake too long', color: '#8fd0f2',
+      intro: [[0.9, 'bubble', { id: 'victim', text: '~ ~ ~', dur: 1.6 }], [2.8, 'bubble', { id: 'victim', text: 'So peaceful…', dur: 1.6 }]],
+      death: [[5.85, 'move', { id: 'victim', to: 'placeWater', dur: 0.8, gait: 'run' }], [6.5, 'splash'], [6.6, 'alpha', { id: 'victim', to: 0, dur: 1.8 }], [7.6, 'splash']] }),
+    death_hearth: OUTDOOR({ name: 'Death at the hearth', place: 'hearth', title: '{name} never left the hearth', color: '#ffb36b',
+      intro: [[0.6, 'embers'], [0.9, 'bubble', { id: 'victim', text: 'So warm…', dur: 1.6 }], [2.6, 'embers'], [4.2, 'embers']],
+      extra: [[6.2, 'embers'], [7.8, 'embers']] }),
+    death_tavern: OUTDOOR({ name: 'Death outside the tavern', place: 'tavern', title: '{name} was the last to leave the tavern', color: '#e8c37a',
+      intro: [[0.5, 'sfx', 'creak'], [0.9, 'bubble', { id: 'victim', text: '*hic*', dur: 1.2 }], [2.2, 'move', { id: 'victim', to: { from: 'place', dx: 14 }, dur: 0.9, gait: 'walk' }], [3.3, 'bubble', { id: 'victim', text: 'One more round…', dur: 1.6 }]] }),
+    death_field: OUTDOOR({ name: 'Death in the field', place: 'field', title: '{name} wandered too far from town', color: '#c3dc9a', music: 'eerie',
+      intro: [[0, 'fog', true], [0.9, 'bubble', { id: 'victim', text: 'What a sky…', dur: 1.8 }], [2.4, 'sfx', 'owl']],
+      extra: [[9.3, 'fog', false]] }),
+    death_visit: OUTDOOR({ name: "Death at another's house", place: 'visit', title: "{name} was watching {host}'s house", color: '#ff8a7a',
+      intro: [[0.6, 'houseLight', true], [0.9, 'bubble', { id: 'victim', text: '…', dur: 1.4 }], [2.6, 'bubble', { id: 'victim', text: '(taking notes)', dur: 1.8 }]],
+      extra: [[6.4, 'houseLight', false]] }),
+  });
+
   // Reuse the timeline action library for interventions and role reveals.
   for (const kind of ['hurricane', 'flood', 'meteor']) SCENES[kind] = {
     name: kind === 'flood' ? 'Flood / drowning' : kind[0].toUpperCase() + kind.slice(1),

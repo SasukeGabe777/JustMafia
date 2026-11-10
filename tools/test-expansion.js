@@ -115,6 +115,49 @@ test('Expressions: every option saves, legacy "serious" migrates, invalid falls 
   assert.equal(room.playerView(p[1]).players.find((x) => x.id === p[0].id).avatar.expression, 'wink');
   room.destroy();
 });
+test('AI narrator: night deaths get story locations with lore lines; manual narrator keeps the classic scene and text', () => {
+  const seen = new Set();
+  const LORE = { lake: /lake/i, hearth: /hearth/i, tavern: /tavern/i, field: /field|grass/i };
+  for (let seed = 1; seed <= 80; seed++) {
+    const clock = new VirtualClock(), room = new Room('S' + seed, null, { clock, headless: true, seed });
+    room.updateSettings({ minPlayers: 3, autoMafia: false, roleCounts: { mafia: 1 }, botsAuto: false, revealRoleOnDeath: true });
+    room.addBots(5); const p = room.list();
+    room.updateSettings({ forcedRoles: Object.fromEntries(p.map((x, i) => [x.id, i === 0 ? 'mafia' : 'villager'])) });
+    room.startGame(); room.advance();
+    room.nightAction(p[0], p[1].id); room.resolveNight();
+    const e = room.cinematic.events.find((x) => x.targetId === p[1].id);
+    assert(L.DEATH_PLACES.includes(e.place), 'kill has a place'); assert.notEqual(e.place, 'visit', 'only inspectors die at another house');
+    seen.add(e.place);
+    room.startMorning();
+    if (LORE[e.place]) assert.match(room.narration.text, LORE[e.place]); else assert.match(room.narration.text, new RegExp(p[1].name));
+    room.destroy();
+  }
+  for (const place of ['home', 'lake', 'hearth', 'tavern', 'field']) assert(seen.has(place), 'location appears: ' + place);
+  // Manual (human) narrator: no locations, classic murder, unchanged text.
+  const { room, p } = game(['mafia', 'villager', 'villager', 'villager'], { narratorMode: 'human' });
+  room.nightAction(p[0], p[1].id); room.resolveNight();
+  const manualEvents = room.reveal ? room.reveal.events : room.cinematic.events; // human mode may queue for the Judge
+  assert.equal(manualEvents.length, 1); assert(!('place' in manualEvents[0]));
+  room.startMorning(); assert(!/lake|hearth|tavern|field/i.test(room.narration.text));
+  room.destroy();
+});
+test('AI narrator: an inspector dies at the house they watched, only when roles are revealed; deterministic', () => {
+  for (const reveal of [true, false]) {
+    const { room, p } = game(['mafia', 'detective', 'villager', 'villager', 'villager'], { revealRoleOnDeath: reveal });
+    room.updateProfile(p[3], {}); // p[3] is the watched house
+    room.nightAction(p[1], p[3].id); room.nightAction(p[0], p[1].id); room.resolveNight();
+    const e = room.cinematic.events.find((x) => x.targetId === p[1].id);
+    if (reveal) {
+      assert.equal(e.place, 'visit'); assert.equal(e.placeHouse, room.homeSlot(p[3])); assert.equal(e.placeName, p[3].name);
+      room.startMorning(); assert(room.narration.text.includes(p[3].name), 'lore names whose house');
+    } else assert.notEqual(e.place, 'visit', 'hidden roles never produce the revealing location');
+    room.destroy();
+  }
+  const a = game(['mafia', 'villager', 'villager', 'villager']), b = game(['mafia', 'villager', 'villager', 'villager']);
+  for (const g of [a, b]) { g.room.nightAction(g.p[0], g.p[2].id); g.room.resolveNight(); }
+  assert.equal(a.room.cinematic.events[0].place, b.room.cinematic.events[0].place, 'same seed, same story');
+  a.room.destroy(); b.room.destroy();
+});
 test('Investigator visits exclude dummy prompts and own surveillance; only one Mafia visitor', () => {
   const { room, p } = game(['mafia', 'mafia', 'investigator', 'doctor', 'villager', 'villager', 'villager', 'villager']);
   room.nightAction(p[0], p[4].id); room.nightAction(p[1], p[4].id); room.nightAction(p[2], p[4].id);

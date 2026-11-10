@@ -302,7 +302,11 @@
         const multi = events.length > 1;
         events.forEach((e) => {
           const outcome = e.type === 'multiKill' ? 'multiple' : e.type === 'kill' ? 'kill' : e.type === 'guarded' ? (e.guardDied ? 'guardDies' : 'guard') : 'protected';
-          this.cinema.play('murder', { victimId: e.targetId, outcome, multi }, { queue: true, phaseBound: true });
+          // AI narrator: a kill away from home plays its location scene (lake, hearth, tavern,
+          // field, or another house). Home deaths and manual mode use the classic murder scene.
+          const story = e.type === 'kill' && e.place && e.place !== 'home' && window.MT_SCENES && window.MT_SCENES['death_' + e.place];
+          if (story) this.cinema.play('death_' + e.place, { victimId: e.targetId, place: e.place, placeName: e.placeName, house: e.place === 'visit' ? e.placeHouse : undefined, multi }, { queue: true, phaseBound: true });
+          else this.cinema.play('murder', { victimId: e.targetId, outcome, multi }, { queue: true, phaseBound: true });
         });
         return;
       }

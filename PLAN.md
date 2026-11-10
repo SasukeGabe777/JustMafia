@@ -337,6 +337,39 @@ Implementation checklist (updated after verification below):
   rooms and from the server profile. Not yet checked on a physical phone or
   projector; the signs are small at 100-player scale.
 
+### Development update 4: narrator and story (AI narrator)
+
+- With the AI narrator running dawn automatically, each single night kill
+  gets a story location: the victim's house, the lake, the hearth, the tavern,
+  the field outside town, or another player's house. The last one is used
+  only when the victim was really investigating that house that night
+  (Detective/Sheriff `investigate`, Investigator `spy`) and roles are revealed
+  on death, so the TV never leaks a hidden role. `Room.deathPlace` picks from a
+  hash of room, day and victim: deterministic, and it never consumes the
+  rules RNG, so seeded games and simulations are unchanged. Presentation only;
+  no rule reads it.
+- Lore narration: new `kill_lake/hearth/tavern/field/visit` lines in all three
+  narrator styles, e.g. "{name} stayed at the lake a little too long…". Home
+  deaths and multi-kills keep the classic lines.
+- Scenes: `death_lake` (drowning: run into the water, splash, ripples, sink),
+  `death_hearth` (embers), `death_tavern` (tipsy last customer),
+  `death_field` (fog outside town) and `death_visit` (watching a lit window).
+  All use the existing timeline engine with a hooded attacker and never a
+  player avatar, plus new `place*` points, a `camera: 'place'` target, and
+  `splash`/`embers`/`ripple` effects. Locations live in `MT_LAYOUT.PLACES`.
+- Unchanged: the Human narrator, and the Judge's manual reveal mode
+  (`revealMode: 'judge'`), keep the classic murder scene and text. Saves,
+  guards and multi-kills keep their scenes.
+- Validation: expansion tests cover all five public locations appearing over
+  80 seeded games with matching lore, never "visit" for non-inspectors,
+  inspectors dying at the watched house (with the host's name in the lore)
+  only when roles are revealed, determinism, and manual mode staying
+  classic. The existing Judge-reveal rules test still passes unchanged. The
+  render sweep grew to 1312 scene runs across all themes and populations
+  with 0 errors. I checked all five scenes in headless Chrome via
+  `/preview?scene=death_lake` and tuned the lake ripples, the watcher
+  position and the field framing. Not yet checked on a projector.
+
 The historical phases below describe earlier iterations; this completion audit
 supersedes their pending markers for features implemented above.
 

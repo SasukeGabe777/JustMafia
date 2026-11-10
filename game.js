@@ -569,6 +569,22 @@ class Room {
     return picks.some((m) => m.leader) || new Set(picks.map((m) => m.targetId)).size <= 1;
   }
 
+  // Story location for a night death (AI narrator only; presentation, never rules).
+  // An inspector (investigate/spy) dies at the house they were really watching,
+  // but only when roles are revealed on death, so the TV never leaks a hidden role.
+  // Otherwise: their own house, or the lake / hearth / tavern / field outside town.
+  deathPlace(p) {
+    if (!p || this.settings.narratorMode === 'human') return null;
+    const visit = this.settings.revealRoleOnDeath && ((this.night && this.night.visits) || []).find((v) => v.actorId === p.id && v.targetId !== p.id && ['investigate', 'spy'].includes(v.kind));
+    const host = visit && this.players.get(visit.targetId);
+    if (host) return { place: 'visit', placeHouse: this.homeSlot(host), placeName: host.name };
+    // Hash of room/day/victim: deterministic, and it never consumes the rules RNG.
+    let h = 2166136261; for (const ch of `${this.code}:${this.day}:${p.id}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    const roll = (h >>> 0) / 4294967296;
+    const place = roll < 0.3 ? 'home' : ['lake', 'hearth', 'tavern', 'field'][Math.min(3, Math.floor((roll - 0.3) / 0.175))];
+    return { place, placeHouse: this.homeSlot(p) };
+  }
+
   // Resolves all night actions at once, in priority order:
   //   1. blocks  2. heals + guards  3. kills + shots  4. investigations
   // Ties are broken by the room's seeded random generator, so a simulation
@@ -576,7 +592,7 @@ class Room {
   resolveNight() { return require('./rules/night-pipeline').resolve(this); }
 
   startMorning() {
-    const { deaths = [], events = [] } = this.pending || {};
+    const { deaths = [], events = [], places = {} } = this.pending || {};
     this.pending = null;
     const victims = [];
     for (const d of deaths) {
@@ -590,7 +606,10 @@ class Room {
       if (this.settings.revealRoleOnDeath) {
         role = victims.length === 1 ? this.roleSuffix(victims[0]) : ' ' + victims.map((v) => `${v.name} was ${this.rolePhrase(v)}.`).join(' ');
       }
-      this.narrate(victims.length > 1 ? 'multiKill' : 'kill', { name, role, alive: this.alive().length, count: victims.length });
+      // AI narrator: a lone victim's story location picks a lore line ("stayed at the lake too long").
+      const where = victims.length === 1 && this.settings.narratorMode !== 'human' && places[victims[0].id];
+      const key = victims.length > 1 ? 'multiKill' : where && where.place !== 'home' ? 'kill_' + where.place : 'kill';
+      this.narrate(key, { name, role, alive: this.alive().length, count: victims.length, host: where && where.placeName || '' });
     } else {
       const saved = events.find((e) => e.type === 'saved' || e.type === 'guarded');
       if (saved && this.players.get(saved.targetId)) this.narrate('saved', { name: this.players.get(saved.targetId).name });
@@ -862,7 +881,7 @@ class Room {
       if (!e) return { ok: false, error: 'No such event.' };
       e.played = true;
       if (which === 'blocked') this.setCinematic({ type: 'scene', scene: 'murder', outcome: 'blocked', targetId: e.targetId });
-      else this.setCinematic({ type: 'night', events: [{ type: e.type, targetId: e.targetId, ...(e.type === 'guarded' ? { guardDied: e.guardDied } : {}) }] });
+      else this.setCinematic({ type: 'night', events: [{ type: e.type, targetId: e.targetId, ...(e.type === 'guarded' ? { guardDied: e.guardDied } : {}), ...(e.place ? { place: e.place, placeHouse: e.placeHouse, placeName: e.placeName } : {}) }] });
     }
     this.addLog(`🎬 Judge revealed ${all ? 'all dawn events' : which === 'quiet' ? 'a quiet night' : `a ${which === 'blocked' ? 'blocked attempt' : 'dawn event'}`}.`, true);
     this.sync();

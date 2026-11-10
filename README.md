@@ -87,6 +87,13 @@ Night actions resolve together, in this order: blocks → protection → kills �
 
 **Win conditions:** the Town wins when no Mafia or Serial Killer is left alive. The Mafia win at parity, or (optionally) when everyone else is gone. The Serial Killer wins as the last one standing. The Jester wins if voted out.
 
+With the AI narrator, night deaths become stories. A victim may be found at
+home, by the lake ("stayed at the lake a little too long"), at the hearth,
+outside the tavern, in the field outside town, or beside the house they were
+investigating (only when roles are revealed on death). Each location has its
+own scene. The Human narrator and the Judge's manual reveal keep the classic
+murder scene.
+
 ## Judge console (`/judge`)
 
 - **Game:** start, pause or resume, next phase, +30s, open and close voting, back to lobby. It also shows:

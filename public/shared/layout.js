@@ -42,7 +42,17 @@
     firepit: { x: 1280, y: 655, z: 2.4 },
   };
 
-  const API = { W, H, CX, CY, RING, ROAD, SQUARE_R, CEM, POND, TAU, seeded, houses, SPOTS };
+  // Story locations for AI-narrated deaths (Update 4). `at` is where the victim
+  // stands; `water` is the lake's deep end. 'home' and 'visit' use houses instead.
+  const PLACES = {
+    lake: { at: { x: POND.x - POND.rx - 18, y: POND.y + 30 }, water: { x: POND.x - 30, y: POND.y + 6 }, camera: { x: POND.x - 60, y: POND.y, z: 2.4 } },
+    hearth: { at: { x: 1238, y: 688 }, camera: { x: 1270, y: 650, z: 2.6 } },
+    tavern: { at: { x: 712, y: 668 }, camera: { x: 680, y: 620, z: 2.5 } },
+    field: { at: { x: 1780, y: 990 }, camera: { x: 1690, y: 905, z: 2.2 } },
+  };
+  const DEATH_PLACES = ['home', 'lake', 'hearth', 'tavern', 'field', 'visit'];
+
+  const API = { W, H, CX, CY, RING, ROAD, SQUARE_R, CEM, POND, TAU, seeded, houses, SPOTS, PLACES, DEATH_PLACES };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.MT_LAYOUT = API;
 })(typeof window !== 'undefined' ? window : globalThis);

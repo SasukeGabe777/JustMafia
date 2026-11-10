@@ -434,6 +434,8 @@
         avatar: (owner && owner.avatar) || { color: '#8a8a9a', skin: '#f3c9a0', hat: 'none' },
         outcome, multi: !!bind.multi, kit: this.kit(), bind,
         dir: house && house.x < CX ? 1 : -1, // which way is "toward town"
+        // Story location (AI-narrated deaths): lake / hearth / tavern / field, or 'visit' (a house window).
+        place: bind.place || def.place || null, host: bind.placeName || 'a neighbor',
       };
       let steps = def.steps.slice();
       const oc = def.outcomes && def.outcomes[outcome];
@@ -582,6 +584,17 @@
         case 'watch': return { x: h.x + 70 * d, y: h.y + 34 * s };
         case 'fountain': return { x: CX, y: CY + 78 };
         case 'cemetery': return { x: L.CEM.x + L.CEM.w / 2, y: L.CEM.y + L.CEM.h / 2 };
+        // story locations: where the victim stands, and where the attacker comes from (the town side)
+        case 'place': case 'placeBehind': case 'placeFrom': case 'placeAway': case 'placeWater': {
+          const P = L.PLACES && L.PLACES[this.ctx.place];
+          const spot = P ? P.at : { x: h.x - 52 * s, y: h.y + 22 * s }; // 'visit': beside the house, peeking at the lit window
+          const side = spot.x < CX ? 1 : -1;
+          if (at === 'placeWater') return P && P.water ? P.water : spot;
+          if (at === 'placeBehind') return { x: spot.x + 30 * side, y: spot.y + 4 };
+          if (at === 'placeFrom') return { x: spot.x + 250 * side, y: spot.y + 50 };
+          if (at === 'placeAway') return { x: spot.x + 650 * side, y: spot.y + 140 };
+          return spot;
+        }
         // interior stage
         case 'offLeft': return { x: 330, y: WALL_BASE + 4 };
         case 'doorway': return { x: 330, y: WALL_BASE + 14 };
@@ -611,7 +624,7 @@
       if (f) f.call(this, a == null ? {} : a);
     }
 
-    text(s) { const b = this.ctx.bind; return String(s || '').replace(/\{name\}/g, this.ctx.name).replace(/\{title\}/g, b.title || '').replace(/\{sub\}/g, b.sub || '').replace(/\{mood\}/g, b.mood || ''); }
+    text(s) { const b = this.ctx.bind; return String(s || '').replace(/\{name\}/g, this.ctx.name).replace(/\{host\}/g, this.ctx.host).replace(/\{title\}/g, b.title || '').replace(/\{sub\}/g, b.sub || '').replace(/\{mood\}/g, b.mood || ''); }
 
     a_letterbox(on) { this.letterTarget = on ? 1 : 0; }
     a_music(mood) { SFX.music(this.text(mood) || null, this.ctx.kit.root, this.town.themeId); }
@@ -621,6 +634,11 @@
     a_destroyHouse() { if (this.ctx.owner) { this.ctx.owner.houseState = 'destroyed'; this.ctx.owner.damagePending = false; } }
     a_loop(a) { this.loops.push({ sfx: a.sfx, every: a.every || 1, next: this.scene.t, until: a.until || this.scene.t + 5 }); }
     a_camera(a) {
+      if (a.to === 'place') {
+        const P = L.PLACES && L.PLACES[this.ctx.place];
+        if (!P) return this.a_camera({ ...a, to: 'house' });
+        return this.town.focus(P.camera.x, P.camera.y, a.zoom || P.camera.z, a.dur || 1.5);
+      }
       if (L.SPOTS[a.to]) return this.town.focusSpot(a.to, a.dur || 1.5, a.zoom);
       const p = a.to === 'house' ? { x: this.ctx.house.x, y: this.ctx.house.y - 20 * this.ctx.house.s } : this.pt(a.to);
       this.town.focus(p.x + (a.dx || 0), p.y + (a.dy || 0), a.zoom || 2, a.dur || 1.5);
@@ -740,6 +758,17 @@
       SFX.play('shatter');
     }
     a_despawn(a) { this.actors.delete(a.id); }
+    // Water splash + rings (lake scene); embers (hearth scene). Particles only, no rules.
+    a_splash(a) {
+      const p = this.pt(a.at || 'placeWater');
+      for (let i = 0; i < 26; i++) { const ang = -Math.PI * (0.15 + Math.random() * 0.7), v = 90 + Math.random() * 200; this.fx.push({ type: 'spark', x: p.x, y: p.y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, g: 520, color: Math.random() < 0.5 ? '#bfe6ff' : '#5fa8d8', size: 3 + Math.random() * 4, life: 0.9, max: 0.9, stage: this.stage }); }
+      for (let i = 0; i < 3; i++) this.fx.push({ type: 'ripple', x: p.x, y: p.y + 4, r: 26 + i * 16, life: 1.6 + i * 0.5, max: 1.6 + i * 0.5, stage: this.stage });
+      SFX.play('fall');
+    }
+    a_embers(a) {
+      const p = this.pt(a.at || 'place');
+      for (let i = 0; i < 18; i++) this.fx.push({ type: 'spark', x: p.x + 40 + (Math.random() - 0.5) * 30, y: p.y - 20, vx: (Math.random() - 0.5) * 60, vy: -60 - Math.random() * 90, g: -10, color: Math.random() < 0.5 ? '#ffb347' : '#ff6a2a', size: 2 + Math.random() * 3, life: 1.6, max: 1.6, stage: this.stage });
+    }
     a_lamp(on) { this.room.lamp = on ? 1 : 0; }
     a_flicker(a) { this.room.flickerUntil = this.scene.t + (a.dur || 0.8); }
     a_thunder() { this.room.lightning = 1; this.flash = { a: 0.45, color: '220,230,255' }; SFX.play('thunder'); }
@@ -936,6 +965,10 @@
             ctx.strokeStyle = '#6dffb0'; ctx.lineWidth = 6; ctx.shadowColor = '#4dff9a'; ctx.shadowBlur = 24;
             ctx.beginPath(); ctx.arc(e.x, e.y, e.r * (0.9 + Math.sin(p * 20) * 0.03), 0, TAU); ctx.stroke();
             ctx.fillStyle = 'rgba(80,255,160,0.15)'; ctx.fill();
+            break;
+          case 'ripple': // flat water rings spreading out (lake scene)
+            ctx.globalAlpha = 0.85 * (1 - p); ctx.strokeStyle = '#cdeeff'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.ellipse(e.x, e.y, e.r * (0.4 + p * 1.6), e.r * (0.4 + p * 1.6) * 0.38, 0, 0, TAU); ctx.stroke();
             break;
           case 'spark': case 'shard':
             ctx.globalAlpha = Math.max(0, e.life / e.max);
