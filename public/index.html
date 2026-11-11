@@ -57,7 +57,15 @@
     <div id="go-title"></div>
     <div id="go-sub"></div>
     <div class="go-actions">
+      <button id="go-rundown" class="btn">📜 Rundown of the game</button>
       <button id="go-again" class="btn">Play again</button>
+    </div>
+  </div>
+  <!-- Optional after-game story: who did what, night by night (revealed only at game over). -->
+  <div id="rundown" class="rundown" hidden>
+    <div class="rundown-card">
+      <div class="rundown-head"><h2 id="rd-headline">Rundown</h2><button id="rd-close" class="btn">✕ Close</button></div>
+      <div id="rd-body" class="rundown-body"></div>
     </div>
   </div>
 
@@ -120,6 +128,7 @@
   <script src="/cinema.js"></script>
   <script src="/scenes.js"></script>
   <script src="/town.js"></script>
+  <script src="/rundown-ui.js"></script>
   <script src="/host.js"></script>
 </body>
 </html>

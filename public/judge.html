@@ -63,6 +63,16 @@
         </div>
         <p class="muted small" id="g-hint"></p>
       </div>
+      <div class="card" id="rundown-card">
+        <h3>📜 Rundown of the game</h3>
+        <p class="muted small">Optional, after the game: the full story of who did what, night by night.</p>
+        <div class="btns">
+          <button class="btn" id="rd-view">📜 View rundown</button>
+          <button class="btn" id="rd-tv">📺 Show on TV</button>
+          <button class="btn ghost" id="rd-tv-off">Hide from TV</button>
+        </div>
+        <div id="rd-out" class="rundown-body" hidden></div>
+      </div>
       <div class="card">
         <h3>Judge intervention</h3>
         <label>Player <select id="disaster-player"></select></label>
@@ -304,6 +314,7 @@
   <script src="/shared/themes.js"></script>
   <script src="/shared/layout.js"></script>
   <script src="/scenes.js"></script>
-  <script src="/judge.js"></script>
+  <script src="/rundown-ui.js"></script>
+<script src="/judge.js"></script>
 </body>
 </html>

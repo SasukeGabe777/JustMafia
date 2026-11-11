@@ -294,6 +294,9 @@
     $('#g-pause').textContent = st.paused ? '▶ Resume' : '⏸ Pause';
     const lobby = st.phase === 'lobby';
     $('[data-act="start"]').disabled = !lobby;
+    const over = st.phase === 'gameover';
+    for (const id of ['#rd-view', '#rd-tv', '#rd-tv-off']) $(id).disabled = !over;
+    if (!over) $('#rd-out').hidden = true;
     $('[data-act="openVoting"]').disabled = st.phase !== 'discussion';
     $('[data-act="closeVoting"]').disabled = st.phase !== 'voting';
     $('#g-hint').textContent = st.settings.autoAdvance ? 'Phases advance automatically. Turn off "Automatic phases" in Setup to open and close voting yourself.'
@@ -471,6 +474,17 @@
   function renderLog() {
     $('#l-list').innerHTML = (st.log || []).slice().reverse().map((e) => `<li class="${e.hidden ? 'hidden' : ''}"><span class="d">${e.day ? `Day ${e.day}` : ''}</span><span>${e.hidden ? '🔒 ' : ''}${esc(e.text)}</span></li>`).join('') || '<li class="muted">Nothing yet.</li>';
   }
+
+  // Optional after-game rundown: view it here, and/or put it up on the TV.
+  const rundown = (toTv) => socket.emit('room:rundown', toTv == null ? {} : { toTv }, (r) => {
+    if (!r || !r.ok) return toast((r && r.error) || 'The rundown is not available.');
+    if (toTv === false) return toast('Rundown hidden from the TV.', true);
+    $('#rd-out').innerHTML = `<h3>${esc(r.rundown.headline)}</h3>` + MT_RUNDOWN.html(r.rundown); $('#rd-out').hidden = false;
+    if (toTv) toast('Rundown is up on the TV.', true);
+  });
+  $('#rd-view').addEventListener('click', () => rundown());
+  $('#rd-tv').addEventListener('click', () => rundown(true));
+  $('#rd-tv-off').addEventListener('click', () => rundown(false));
 
   let toastTimer = null;
   function toast(msg, ok) {

@@ -133,3 +133,10 @@ tr.dead td { opacity: .55; }
   --bg: #0c1d4a; --bg2: #16306e; --wood: #1f4fa8; --wood-d: #0f2a63; --wood-l: #4d7fd9;
   --card: #ffe9a3; --card2: #fff8dc; --ink: #0f1f45; --muted: #2c4a8a; --line: rgba(31,79,168,0.28); --accent: #ffd21f;
 }
+
+/* After-game rundown inside the Judge console */
+#rd-out { margin-top:12px; max-height:60vh; overflow:auto; font-size:15px; }
+#rd-out h3 { margin:12px 0 4px; }
+#rd-out ul { margin:0; padding-left:0; list-style:none; }
+#rd-out li { padding:2px 0; }
+#rd-out .team-mafia b { color:#e0575f; } #rd-out .team-neutral b { color:#b48ae0; } #rd-out .dead { opacity:.7; }

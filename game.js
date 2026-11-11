@@ -800,6 +800,7 @@ class Room {
     for (const [x, key] of [[interrupter, 'interrupt'], [executioner, 'sacrifice'], [guard, 'protect']]) if (x) x.interventionUsed = { ...(x.interventionUsed || {}), [key]: true };
     const condemned = p;
     let outcome = p && p.alive ? 'executed' : null;
+    if (condemned) this.audit('execution.resolved', { condemnedId: condemned.id, interrupterId: interrupter ? interrupter.id : null, executionerId: executioner ? executioner.id : null, guardId: guard ? guard.id : null, defenders: V ? V.defenders.slice() : [], lastWords: V && V.lastWords ? { ...V.lastWords } : null });
     if (interrupter) { outcome = 'interrupted'; this.addLog(`🛑 ${interrupter.name} interrupted the execution of ${p.name}.`, true); this.narrate('interrupted', { name: p.name }); p = null; }
     else if (executioner) {
       // The Executioner reveals themselves (public by choice) and dies in the condemned's place.
@@ -1111,6 +1112,7 @@ class Room {
       case 'addBots': return this.addBots(clamp(int(msg.count, 1), 1, HARD_MAX_PLAYERS), msg.personality);
       case 'removeBots': return this.removeBots();
       case 'override': return this.override(msg);
+      case 'rundown': return this.rundown(); // the full story, only after the game is over
       case 'personality': {
         const p = this.players.get(msg.id);
         if (!p || !p.isBot || !PERSONALITIES[msg.personality]) return { ok: false, error: 'Not a bot.' };
@@ -1477,5 +1479,6 @@ require('./rules/special-roles')(Room);
 require('./rules/storyteller')(Room);
 require('./rules/social')(Room);
 require('./rules/progression')(Room);
+require('./rules/rundown')(Room);
 require('./rules/story-bots')(Room);
 module.exports = { Room, DEFAULT_SETTINGS, HARD_MAX_PLAYERS };

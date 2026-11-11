@@ -36,7 +36,9 @@ const BASE_URL = (process.env.PUBLIC_URL || `http://${lanAddress()}:${PORT}`).re
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { pingInterval: 10000, pingTimeout: 20000 });
+// Compress game-state messages (~15 KB of JSON per phone update shrinks several-fold),
+// which matters with 20+ phones sharing one Wi-Fi network.
+const io = new Server(server, { pingInterval: 10000, pingTimeout: 20000, perMessageDeflate: { threshold: 1024 }, httpCompression: { threshold: 1024 } });
 const rooms = new Map();
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -73,7 +75,20 @@ const profileInGame = (profileId) => !!profileId && [...rooms.values()].some((r)
 // Older phones sent the home inside the avatar (houseStyle/houseColor/houseDecor).
 const legacyHome = (av) => { const h = {}; if (av && typeof av === 'object') for (const [k, old] of Object.entries(OPTIONS.LEGACY_HOME)) if (av[old] != null) h[k] = av[old]; return h; };
 
+// Crash guards (live games must survive a bug): log instead of exiting the process.
+process.on('uncaughtException', (e) => console.error('[guard] uncaught exception (game kept running):', e));
+process.on('unhandledRejection', (e) => console.error('[guard] unhandled rejection (game kept running):', e));
+
 io.on('connection', (socket) => {
+  // Every handler is wrapped: an error in one action is logged and answered,
+  // instead of crashing the server and ending everyone's game.
+  const rawOn = socket.on.bind(socket);
+  socket.on = (event, handler) => rawOn(event, (...args) => {
+    try { return handler(...args); } catch (e) {
+      console.error(`[guard] ${event} failed:`, e);
+      const cb = args[args.length - 1]; if (typeof cb === 'function') try { cb({ ok: false, error: 'Something went wrong. Please try again.' }); } catch { /* client gone */ }
+    }
+  });
   // Normalize malformed packets before any handler dereferences their fields.
   socket.use((packet, next) => {
     if (packet[1] == null || (typeof packet[1] !== 'object' && typeof packet[1] !== 'function') || Array.isArray(packet[1])) packet[1] = {};
@@ -140,6 +155,16 @@ io.on('connection', (socket) => {
     const { room } = ctx();
     if (!room || !['host', 'judge'].includes(socket.data.kind) || socket.data.adminEpoch !== room.adminEpoch || room.judgeVacant) return reply(cb, { ok: false, error: 'Judge access has expired.' });
     reply(cb, room.hostAction(msg || {}) || { ok: true });
+  });
+
+  // The game's rundown (who did what): TV or Judge, and only once the game is over.
+  socket.on('room:rundown', (msg, cb) => {
+    const { room } = ctx();
+    if (!room || !['host', 'judge'].includes(socket.data.kind)) return reply(cb, { ok: false, error: 'Only the big screen or the Judge can show the rundown.' });
+    const out = room.rundown();
+    // The Judge can also put it up on the big screen (or close it there).
+    if (out.ok && socket.data.kind === 'judge' && msg && msg.toTv != null) io.to(room.hostChannel()).emit('host:rundown', { show: !!msg.toTv, rundown: out.rundown });
+    reply(cb, out);
   });
 
   // ----- Judge console (full information; authenticated with the host key) -----

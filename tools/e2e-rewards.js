@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 // End-to-end check of the end-of-game gold reward scene in headless Chrome:
 // three human players finish a game, the phone shows coins flying into the pouch
 // with a breakdown, the balance updates and persists, and it plays only once.
@@ -13,7 +13,7 @@ const PORT = 3991, URL = `http://localhost:${PORT}`;
 const SHOTS = process.env.SHOTS || path.join(os.tmpdir(), 'mt-e2e');
 if (!CHROME) { console.log('SKIP e2e-rewards: Chrome not found (set CHROME=path).'); process.exit(0); }
 let passed = 0;
-const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
+const ok = (name) => { passed++; console.log(`  âœ“ ${name}`); };
 const emit = (s, ev, d = {}) => new Promise((r) => s.emit(ev, d, r));
 
 (async () => {
@@ -67,6 +67,27 @@ const emit = (s, ev, d = {}) => new Promise((r) => s.emit(ev, d, r));
   await a.until(`document.querySelector('#reward-scene').dataset.done === '1'`, 'replay finishes', 15000);
   assert.equal(await a.eval(`Number(document.querySelector('[data-reward-shown]').textContent)`), startGold + r.total, 'replay does not pay twice');
   ok('Balance persists after refresh; the scene plays once and can be replayed without paying again');
+
+  // The optional Rundown on the big screen: hidden until someone clicks it.
+  const t = await browser.page();
+  await t.go(`${URL}/`); await t.eval(`localStorage.setItem('mt.host', JSON.stringify(${JSON.stringify({ code: room.code, hostKey: room.hostKey })}))`);
+  await t.send('Page.reload'); await wait(500);
+  await t.until(`!document.querySelector('#gameover').hidden`, 'TV game-over screen');
+  assert(await t.eval(`document.querySelector('#rundown').hidden`), 'rundown stays hidden unless asked for');
+  await t.click('#go-rundown');
+  await t.until(`!document.querySelector('#rundown').hidden && document.querySelectorAll('#rd-body .rd-chapter').length > 0`, 'rundown opens');
+  const rd = await t.eval(`({ head: document.querySelector('#rd-headline').textContent, cast: document.querySelectorAll('#rd-body .rd-cast li').length, text: document.querySelector('#rd-body').textContent })`);
+  assert.match(rd.head, /won|Nobody/); assert.equal(rd.cast, 3); assert(/Ben|Cy/.test(rd.text) && !/undefined/.test(rd.text));
+  assert(/removed by the Judge/.test(rd.text), 'host/Judge removals are part of the story: ' + rd.text);
+  await wait(3500); await t.shot('tv-rundown');
+  await t.click('#rd-close'); assert(await t.eval(`document.querySelector('#rundown').hidden`));
+  // The Judge can put it up on the TV remotely, and take it down.
+  const judge = io(URL, { transports: ['websocket'] }); assert((await emit(judge, 'judge:attach', { code: room.code, hostKey: room.hostKey })).ok);
+  assert((await emit(judge, 'room:rundown', { toTv: true })).ok); await t.until(`!document.querySelector('#rundown').hidden`, 'judge shows it on TV');
+  assert((await emit(judge, 'room:rundown', { toTv: false })).ok); await t.until(`document.querySelector('#rundown').hidden`, 'judge hides it');
+  judge.close();
+  assert.deepEqual(t.errors, [], 'TV page errors: ' + t.errors.join('\n'));
+  ok(`TV "Rundown of the game" tells the story (${rd.head}); the Judge can show/hide it on the TV`);
 
   assert.deepEqual(a.errors, [], 'page errors: ' + a.errors.join('\n'));
   ok('No page errors');

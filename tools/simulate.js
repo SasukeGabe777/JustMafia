@@ -118,9 +118,32 @@ async function playGame(n, opts = {}) {
     if (p.view.teammates.length !== mafia - 1) fail('mafia teammate list wrong');
   }
 
+  // The rundown tells everyone's secrets, so it must refuse until the game is over.
+  if ((await emit(host, 'room:rundown', {})).ok !== false) fail('rundown was available mid-game');
+  if ((await emit(players[0].s, 'room:rundown', {})).ok !== false) fail('a phone could request the rundown');
+
   const t0 = Date.now();
   while (hostState.phase !== 'gameover' && Date.now() - t0 < 240000) await wait(200);
   if (hostState.phase !== 'gameover') fail(`game ${n} did not finish (stuck in ${hostState.phase})`);
+  if (hostState.phase === 'gameover') {
+    const rd = await emit(host, 'room:rundown', {});
+    if (!rd.ok) fail('rundown failed at game over: ' + rd.error);
+    else {
+      const r = rd.rundown;
+      if (process.env.SHOW_RUNDOWN) console.log(JSON.stringify(r, null, 1));
+      if (r.cast.length !== n) fail(`rundown cast has ${r.cast.length}, expected ${n}`);
+      if (!r.chapters.some((c) => c.title.startsWith('Night'))) fail('rundown has no night chapters');
+      if (r.chapters.some((c) => c.lines.some((l) => /undefined|\[object/.test(l)))) fail('rundown has a broken line: ' + JSON.stringify(r.chapters).slice(0, 300));
+      // The Judge can put it up on the TV.
+      const judge = io(URL, { transports: ['websocket'] });
+      await emit(judge, 'judge:attach', { code, hostKey: created.hostKey });
+      const onTv = new Promise((res) => host.once('host:rundown', res));
+      const sent = await emit(judge, 'room:rundown', { toTv: true });
+      const got = await Promise.race([onTv, wait(2000).then(() => null)]);
+      if (!sent.ok || !got || !got.show || !got.rundown.cast.length) fail('judge could not show the rundown on the TV');
+      judge.close();
+    }
+  }
 
   const alive = hostState.players.filter((p) => p.alive);
   const aliveMafia = alive.filter((p) => p.role === 'mafia').length;

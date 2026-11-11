@@ -5,7 +5,8 @@
 
 class RealClock {
   now() { return Date.now(); }
-  set(fn, ms) { return setTimeout(fn, ms); }
+  // A failing timer (phase advance, bot turn, move-in timeout) is logged, never fatal.
+  set(fn, ms) { return setTimeout(() => { try { fn(); } catch (e) { console.error('[guard] timer failed (game kept running):', e); } }, ms); }
   clear(h) { clearTimeout(h); }
 }
 

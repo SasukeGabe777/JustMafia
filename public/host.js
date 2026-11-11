@@ -257,6 +257,7 @@
   function renderGameOver() {
     const show = state.phase === 'gameover' && state.winner;
     $('#gameover').hidden = !show;
+    if (state.phase !== 'gameover') $('#rundown').hidden = true;
     if (!show) return;
     const t = $('#go-title');
     const W = RR.WINNERS[state.winner] || RR.WINNERS.draw;
@@ -268,6 +269,14 @@
     $('#go-sub').textContent = evil.length ? `Not on the town's side: ${evil.join(', ')}` : '';
   }
   $('#go-again').addEventListener('click', () => act('lobby'));
+  // Optional after-game story (only shown when someone clicks it).
+  const showRundown = (rd) => { $('#rd-headline').textContent = `Rundown · ${rd.headline}`; $('#rd-body').innerHTML = MT_RUNDOWN.html(rd); $('#rd-body').scrollTop = 0; $('#rundown').hidden = false; };
+  $('#go-rundown').addEventListener('click', () => socket.emit('room:rundown', {}, (r) => {
+    if (!r || !r.ok) return toast((r && r.error) || 'The rundown is not available.');
+    showRundown(r.rundown);
+  }));
+  socket.on('host:rundown', (m) => { if (m && m.show && m.rundown) showRundown(m.rundown); else $('#rundown').hidden = true; });
+  $('#rd-close').addEventListener('click', () => { $('#rundown').hidden = true; });
 
   // ---------- drawer ----------
   const drawer = $('#drawer');
