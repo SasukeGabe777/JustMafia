@@ -19,7 +19,8 @@ const emit = (s, ev, d = {}) => new Promise((r) => s.emit(ev, d, r));
   await startServer(PORT);
   const host = io(URL, { transports: ['websocket'] }); let tv = null; host.on('host:state', (s) => { tv = s; });
   const room = await emit(host, 'host:create');
-  await emit(host, 'host:action', { type: 'settings', settings: { minPlayers: 3, draftSeconds: 40 } });
+  // "Every role" deck, so this checks a real vote (a fresh room's first game is the vote-free tutorial round).
+  await emit(host, 'host:action', { type: 'settings', settings: { minPlayers: 3, draftSeconds: 40, draftPool: 'all' } });
   await emit(host, 'host:action', { type: 'addBots', count: 4 });
 
   const browser = new Browser({ shots: SHOTS, debugPort: 9338 }); await browser.launch();

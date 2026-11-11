@@ -21,6 +21,7 @@
   // offered (complex roles a bit rarer); power = rough strength used for balancing;
   // kind = what the town needs (info / protect).
   const META = {
+    mafia:        { min: 3,  weight: 0,   power: 2, tutorialOnly: true }, // only shown as a card in the tutorial round
     godfather:    { min: 4,  weight: 1.0, power: 3 },
     roleblocker:  { min: 7,  weight: 1.0, power: 2 },
     silencer:     { min: 7,  weight: 0.9, power: 2 },
@@ -62,8 +63,11 @@
   // Ten unlock tiers for "learn as you play": a room starts with the 9 simplest roles and
   // unlocks the next tier (3 roles) after every game it finishes, from simple to complex.
   // Every role in META is in exactly one tier.
+  // Tier 0 is the tutorial round (a room's very first game): just Mafia, Detective and Doctor.
+  const TUTORIAL = ['mafia', 'detective', 'doctor'];
   const TIER = {
-    1: ['godfather', 'detective', 'sheriff', 'doctor', 'bodyguard', 'vigilante', 'mayor', 'jester', 'executioner'],
+    0: ['detective', 'doctor'],
+    1: ['godfather', 'sheriff', 'bodyguard', 'vigilante', 'mayor', 'jester', 'executioner'],
     2: ['medium', 'lookout', 'crier'],
     3: ['roleblocker', 'trapper', 'veteran'],
     4: ['framer', 'serialKiller', 'cupid'],
@@ -76,15 +80,15 @@
   };
   const MAX_TIER = 10;
   for (const [t, keys] of Object.entries(TIER)) for (const k of keys) if (META[k]) META[k].tier = Number(t);
-  // Game 1: tier 1 · each finished game unlocks one more tier · game 10+: every role.
-  const tierForGame = (gamesPlayed) => Math.min(MAX_TIER, 1 + (gamesPlayed || 0));
+  // Game 1: tier 0 (tutorial) · each finished game unlocks one more tier · game 11+: every role.
+  const tierForGame = (gamesPlayed) => Math.min(MAX_TIER, gamesPlayed || 0);
   const slotsOf = (k) => (META[k] && META[k].slots) || 1;
   const teamOf = (k) => (ROLES[k] || {}).team;
   const killerMafia = (k) => teamOf(k) === 'mafia' && ROLES[k].night && ROLES[k].night.kind === 'kill';
 
   function eligible(k, n, settings) {
     const m = META[k];
-    if (!m || !ROLES[k] || n < m.min) return false;
+    if (!m || !ROLES[k] || n < m.min || m.tutorialOnly) return false;
     if (m.publicVotes && settings.anonymousVotes) return false;
     // In games with a single Mafia member, only a Mafia role that can kill may replace it.
     if (teamOf(k) === 'mafia' && autoMafiaCount(n) < 2 && !killerMafia(k)) return false;
@@ -111,14 +115,15 @@
   function candidates(n, settings = {}, rng = Math.random, seen = {}, opts = {}) {
     const total = SCALE.cards(n);
     if (opts.everyRole) {
-      const all = Object.keys(META).filter((k) => ROLES[k] && !(META[k].publicVotes && settings.anonymousVotes));
+      const all = Object.keys(META).filter((k) => ROLES[k] && !META[k].tutorialOnly && !(META[k].publicVotes && settings.anonymousVotes));
       const out = [];
       while (out.length < total && out.length < all.length) { const k = all[Math.floor(rng() * all.length)]; if (!out.includes(k)) out.push(k); }
       return out;
     }
-    const maxTier = opts.maxTier || MAX_TIER;
-    const ok = Object.keys(META).filter((k) => eligible(k, n, settings) && (META[k].tier || 1) <= maxTier);
-    const harder = Object.keys(META).filter((k) => eligible(k, n, settings) && (META[k].tier || 1) > maxTier);
+    if (opts.maxTier === 0) return TUTORIAL.slice(); // the tutorial round: always the same three cards
+    const maxTier = opts.maxTier == null ? MAX_TIER : opts.maxTier;
+    const ok = Object.keys(META).filter((k) => eligible(k, n, settings) && (META[k].tier ?? 1) <= maxTier);
+    const harder = Object.keys(META).filter((k) => eligible(k, n, settings) && (META[k].tier ?? 1) > maxTier);
     const by = (team) => ok.filter((k) => teamOf(k) === team);
     const mafiaCards = Math.min(by('mafia').length, Math.max(1, Math.round(total * 0.25)), autoMafiaCount(n));
     const neutralCards = Math.min(by('neutral').length, SCALE.neutrals(n));
@@ -142,13 +147,13 @@
   // Votes → final roleCounts. ballots: { playerId: [roleKey, ...] }.
   // Ranking: most votes first; ties broken by a fair random shuffle (rng).
   // Then fixes anything invalid while keeping as many of the players' choices as possible.
-  function finalize({ cards, ballots, n, settings = {}, rng = Math.random }) {
+  function finalize({ cards, ballots, n, settings = {}, rng = Math.random, want: wantAll }) {
     const tally = Object.fromEntries(cards.map((k) => [k, 0]));
     for (const picks of Object.values(ballots || {})) for (const k of new Set(picks || [])) if (k in tally) tally[k]++;
     const order = cards.slice();
     for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
     order.sort((a, b) => tally[b] - tally[a]); // stable: equal votes keep the random order
-    const want = SCALE.winners(cards.length);
+    const want = wantAll || SCALE.winners(cards.length);
     const cutoff = order[want - 1] != null ? tally[order[want - 1]] : -1;
     const tie = order.filter((k) => tally[k] === cutoff).length > order.slice(0, want).filter((k) => tally[k] === cutoff).length;
 
@@ -188,7 +193,7 @@
     };
   }
 
-  const API = { SCALE, META, TIER, MAX_TIER, tierForGame, eligible, candidates, finalize, slotsOf };
+  const API = { SCALE, META, TIER, TUTORIAL, MAX_TIER, tierForGame, eligible, candidates, finalize, slotsOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.MT_DRAFT_RULES = API;
 })(typeof window !== 'undefined' ? window : globalThis);

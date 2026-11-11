@@ -97,12 +97,14 @@
       if (!state || state.phase !== 'gameover') return;
       $('#unlock-sub').textContent = `Tier ${u.tier} of ${u.maxTier} · these roles join the deck next game`;
       const cards = $('#unlock-cards'); cards.innerHTML = '';
+      cards.style.setProperty('--cw', `min(250px, ${Math.floor(86 / Math.max(3, u.roles.length))}vw)`); // 3 to 7 cards fit on one row
       u.roles.forEach((k, i) => {
         const c = MT_DRAFT.cardEl(k, st.theme, { full: false });
-        c.style.animationDelay = `${0.4 + i * 0.5}s`;
+        const step = u.roles.length > 4 ? 0.3 : 0.5;
+        c.style.animationDelay = `${0.4 + i * step}s`;
         c.classList.add('unlock-card');
         cards.appendChild(c);
-        setTimeout(() => { c.classList.add('up'); SFX.play('flip'); }, 1300 + i * 500);
+        setTimeout(() => { c.classList.add('up'); SFX.play('flip'); }, 1300 + i * step * 1000);
       });
       box.hidden = false; SFX.play('saved');
     }, 4500);

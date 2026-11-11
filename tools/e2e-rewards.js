@@ -74,10 +74,11 @@ const emit = (s, ev, d = {}) => new Promise((r) => s.emit(ev, d, r));
   await t.send('Page.reload'); await wait(500);
   await t.until(`!document.querySelector('#gameover').hidden`, 'TV game-over screen');
   // "You just unlocked!": the next tier's cards float in and flip; then Play again / See results.
-  await t.until(`!document.querySelector('#unlock').hidden && document.querySelectorAll('#unlock-cards .dcard').length === 3`, 'unlock reveal', 9000);
-  await t.until(`document.querySelectorAll('#unlock-cards .dcard.up').length === 3`, 'cards flip over', 6000);
+  const T1 = require('../public/shared/draft').TIER[1];
+  await t.until(`!document.querySelector('#unlock').hidden && document.querySelectorAll('#unlock-cards .dcard').length === ${T1.length}`, 'unlock reveal', 9000);
+  await t.until(`document.querySelectorAll('#unlock-cards .dcard.up').length === ${T1.length}`, 'cards flip over', 8000);
   const unlocked = await t.eval(`[...document.querySelectorAll('#unlock-cards .dcard')].map((c) => c.dataset.card)`);
-  assert.deepEqual(unlocked, ['medium', 'lookout', 'crier'], 'tier 2 unlocks after the first game');
+  assert.deepEqual(unlocked, T1, 'the first game (the tutorial round) unlocks tier 1');
   await wait(1200); await t.shot('tv-unlock');
   await t.click('#unlock-close'); assert(await t.eval(`document.querySelector('#unlock').hidden`));
   ok('Game over: “You just unlocked!” floats in the next tier’s cards and flips them');

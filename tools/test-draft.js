@@ -9,10 +9,13 @@ const D = require('../public/shared/draft');
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log(`  ✓ ${name}`); };
-function makeRoom({ humans = 0, bots = 0, seed = 1, settings = {} } = {}) {
+// fresh: a brand-new room whose first game is the tutorial round; otherwise the room has
+// already finished one game, so drafts show the normal vote.
+function makeRoom({ humans = 0, bots = 0, seed = 1, settings = {}, fresh = false } = {}) {
   const clock = new VirtualClock();
   clock.advance = (ms) => { const end = clock.t + ms; while ([...clock.queue.values()].some((e) => e.at <= end)) clock.step(); clock.t = Math.max(clock.t, end); };
   const room = new Room('TEST', null, { clock, seed });
+  if (!fresh) room.gamesPlayed = 1;
   room.updateSettings({ minPlayers: 3, ...settings });
   const people = [];
   for (let i = 0; i < humans; i++) { const p = room.join({ name: `H${i}` }).player; p.sockets = 1; people.push(p); }
@@ -63,7 +66,7 @@ test('Roles rotate: a room keeps offering cards it has not shown much yet', () =
   const seen = new Set();
   // No game finished, so the deck is still the 9 starter roles: all of them get their turn.
   for (let i = 0; i < 12; i++) { assert(room.hostAction({ type: 'start' }).ok); room.draft.cards.forEach((k) => seen.add(k)); room.hostAction({ type: 'lobby' }); }
-  assert.deepEqual([...seen].sort(), D.TIER[1].slice().sort(), 'every unlocked starter role was offered');
+  assert.deepEqual([...seen].sort(), D.TIER[0].concat(D.TIER[1]).sort(), 'every unlocked role (tiers 0 and 1) was offered');
   // With every role in the deck, rotation spreads across the whole bank.
   room.updateSettings({ draftPool: 'all' }); const wide = new Set();
   for (let i = 0; i < 12; i++) { room.hostAction({ type: 'start' }); room.draft.cards.forEach((k) => wide.add(k)); room.hostAction({ type: 'lobby' }); }
@@ -252,28 +255,41 @@ test('Every role is in the deck: each draftable role sits in exactly one complex
   const tiered = [].concat(...Object.values(D.TIER));
   assert.deepEqual(tiered.slice().sort(), draftable.slice().sort(), 'all roles, no duplicates');
   assert.equal(new Set(tiered).size, tiered.length);
-  for (const k of draftable) assert(D.META[k] && D.META[k].tier, k);
+  for (const k of draftable) assert(D.META[k] && D.META[k].tier != null, k);
 });
 
-test('Learn as you play (default): 10 tiers; each finished game unlocks the next, shown at game over', () => {
-  const { room, clock } = makeRoom({ bots: 12 });
+test('Tutorial round (tier 0): a fresh room’s first game is Mafia, Detective and Doctor, with no vote', () => {
+  const { room } = makeRoom({ bots: 8, fresh: true });
+  room.hostAction({ type: 'start' });
+  assert(room.draft.tutorial); assert.deepEqual(room.draft.cards, D.TUTORIAL);
+  room.hostAction({ type: 'skip' }); // the deck shuffle goes straight to the result (no vote)
+  assert.equal(room.draft.stage, 'result');
+  assert.deepEqual(room.draft.result.roles.slice().sort(), D.TUTORIAL.slice().sort(), 'all three cards are in');
+  room.hostAction({ type: 'skip' }); room.hostAction({ type: 'skip' });
+  assert.equal(room.phase, 'roleReveal');
+  assert.deepEqual(Object.keys(room.composition).sort(), ['detective', 'doctor', 'mafia', 'villager']);
+});
+
+test('Learn as you play (default): tier 0 tutorial, then each finished game unlocks the next tier, shown at game over', () => {
+  const { room, clock } = makeRoom({ bots: 12, fresh: true });
   assert.equal(room.settings.draftPool, 'learn');
   const tiersSeen = [];
-  for (let g = 0; g < 11; g++) {
+  for (let g = 0; g < 12; g++) {
     room.hostAction({ type: 'start' });
     const d = room.draft;
     tiersSeen.push(d.tier);
-    for (const k of d.cards) assert(D.META[k].tier <= d.tier, `game ${g + 1}: ${k} (tier ${D.META[k].tier}) is still locked at tier ${d.tier}`);
-    if (g > 0 && g < 10) assert.deepEqual(room.draftView().unlocked, D.TIER[g + 1], 'the deck announces the roles that just joined');
-    for (let i = 0; i < 4; i++) room.hostAction({ type: 'skip' }); // through the draft to the deal
+    if (g > 0) for (const k of d.cards) assert(D.META[k].tier <= d.tier, `game ${g + 1}: ${k} (tier ${D.META[k].tier}) is still locked at tier ${d.tier}`);
+    if (g > 0 && g <= 10) assert.deepEqual(room.draftView().unlocked, D.TIER[g], 'the deck announces the roles that just joined');
+    for (let i = 0; i < (d.tutorial ? 3 : 4); i++) room.hostAction({ type: 'skip' }); // through the draft to the deal
+    assert.equal(room.phase, 'roleReveal');
     room.winner = 'town'; room.endGame(); // game over
     const u = room.hostView().unlock;
-    if (g < 9) { assert(u, `game ${g + 1} unlocks a tier`); assert.equal(u.tier, g + 2); assert.deepEqual(u.roles, D.TIER[g + 2]); assert(room.playerView(room.inGame()[0]).unlock, 'phones see it too'); }
+    if (g < 10) { assert(u, `game ${g + 1} unlocks a tier`); assert.equal(u.tier, g + 1); assert.deepEqual(u.roles, D.TIER[g + 1]); assert(room.playerView(room.inGame()[0]).unlock, 'phones see it too'); }
     else assert.equal(u, null, 'nothing left to unlock after tier 10');
     room.hostAction({ type: 'lobby' }); clock.advance(10);
     assert.equal(room.hostView().unlock, null, 'only shown at game over');
   }
-  assert.deepEqual(tiersSeen, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10]);
+  assert.deepEqual(tiersSeen, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10]);
 });
 
 test('Every role, fully random (Judge toggle): any role can appear from game 1, and setups stay valid', () => {

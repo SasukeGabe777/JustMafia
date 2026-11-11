@@ -65,9 +65,10 @@ Set in the Judge console → Setup → Roles.
   - It then repairs anything invalid while keeping as many votes as possible: there is **always at least one Mafia**, the Mafia is never bigger or stronger than normal, and there are never more roles than players.
   - Mafia and Villagers fill the other seats. Roles are dealt at random by the server, and each phone only ever receives its own.
 - **The deck holds every role, in 10 unlock tiers (Judge → Card deck → "Learn as you play", the default):**
-  - A room starts with the 9 simplest roles (Godfather, Detective, Sheriff, Doctor, Bodyguard, Vigilante, Mayor, Jester, Executioner).
-  - Every finished game unlocks the next tier of 3, from simple to complex. At game over the TV shows **"✨ You just unlocked!"**: the new role cards float in and flip over, then **▶ Play again**. Phones list them too.
-  - Unlocked roles join the next draft, and by game 10 every role is in.
+  - **Tier 0, the tutorial round:** a room's very first game is just Mafia, Detective and Doctor. The deck shuffles and shows those three cards, with no vote.
+  - Finishing it unlocks **tier 1** (Godfather, Sheriff, Bodyguard, Vigilante, Mayor, Jester, Executioner).
+  - Every finished game after that unlocks the next tier of 3, from simple to complex. At game over the TV shows **"✨ You just unlocked!"**: the new role cards float in and flip over, then **▶ Play again**. Phones list them too.
+  - Unlocked roles join the next draft, and by game 11 every role is in.
   - The draft stays balanced the whole time.
   - Unlocks are per room for now (later: logins that pool each player's unlocks).
 - **"Every role, fully random"** (Judge toggle): every role is in the deck from game 1, drawn at random. The final setup is still repaired to be valid (always at least one Mafia).

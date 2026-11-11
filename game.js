@@ -1312,7 +1312,7 @@ class Room {
       help: this.settings.newPlayerHelp !== false, // new-player help on the TV and phones
       draft: this.draftView(),
       unlock: this.unlockView(), // roles this game just unlocked for the deck (game over only)
-      deckTier: this.settings.draftPool === 'all' ? 10 : Math.min(10, 1 + (this.gamesPlayed || 0)),
+      deckTier: this.settings.draftPool === 'all' ? 10 : Math.min(10, this.gamesPlayed || 0), // 0 = tutorial round
       accusations: this.accusations.slice(-30),
       votingOpen: this.phase === 'voting',
       manualVoting: !this.settings.autoAdvance,

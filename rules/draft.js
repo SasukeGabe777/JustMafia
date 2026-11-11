@@ -35,7 +35,9 @@ module.exports = function install(Room) {
     const unlocked = !everyRole && tier > prevTier ? D.TIER[tier].filter((k) => R.ROLES[k]) : [];
     const cards = D.candidates(n, this.settings, this.rng, this.draftSeen, { maxTier: tier, everyRole });
     for (const k of cards) this.draftSeen[k] = (this.draftSeen[k] || 0) + 1;
-    this.draft = { id: (this.draft ? this.draft.id : 0) + 1, stage: 'deck', stageAt: this.now(), cards, picks: D.SCALE.winners(cards.length), ballots: {}, ready: {}, result: null, n, tier, everyRole, unlocked };
+    // Tier 0 = the tutorial round (the room's first game): Mafia, Detective, Doctor, no vote.
+    const tutorial = !everyRole && tier === 0;
+    this.draft = { id: (this.draft ? this.draft.id : 0) + 1, stage: 'deck', stageAt: this.now(), cards, picks: tutorial ? cards.length : D.SCALE.winners(cards.length), ballots: {}, ready: {}, result: null, n, tier, everyRole, unlocked, tutorial };
     this.draftCounts = null;
     for (const p of this.list()) p.flipped = false;
     this.clearMoveRequests();
@@ -63,13 +65,13 @@ module.exports = function install(Room) {
   Room.prototype.draftNext = function () {
     const d = this.draft;
     if (!d) return this.resetToLobby();
-    if (d.stage === 'deck') {
+    if (d.stage === 'deck' && !d.tutorial) {
       this.draftStage('vote', this.ms(this.settings.draftSeconds || 45));
       this.draftBots();
-    } else if (d.stage === 'vote') {
+    } else if (d.stage === 'vote' || d.stage === 'deck') { // the tutorial round goes straight to the result
       const ids = new Set(this.draftPlayers().map((p) => p.id)); // ballots of people who left don't count
       const ballots = Object.fromEntries(Object.entries(d.ballots).filter(([id]) => ids.has(id)));
-      d.result = D.finalize({ cards: d.cards, ballots, n: ids.size, settings: this.settings, rng: this.rng });
+      d.result = D.finalize({ cards: d.cards, ballots, n: ids.size, settings: this.settings, rng: this.rng, want: d.tutorial ? d.cards.length : undefined });
       this.draftCounts = d.result.roleCounts;
       this.addLog(`Drafted roles: ${d.result.roles.map((k) => R.ROLES[k].name).join(', ') || 'none (classic setup)'}${d.result.tie ? ' (a tie was settled by a random draw)' : ''}.`);
       this.draftStage('result', STAGE_MS.result);
@@ -146,7 +148,7 @@ module.exports = function install(Room) {
       ready: voters.filter((x) => d.ready[x.id]).length, total: voters.length,
       readyIds: voters.filter((x) => d.ready[x.id]).map((x) => x.id),
       result: d.result ? { roles: d.result.roles, tie: d.result.tie, fallback: d.result.fallback } : null,
-      tier: d.tier || 3, everyRole: !!d.everyRole, unlocked: d.unlocked || [],
+      tier: d.tier ?? 10, everyRole: !!d.everyRole, unlocked: d.unlocked || [], tutorial: !!d.tutorial,
     };
     if (this.phase === 'roleReveal') v.flippedIds = this.inGame().filter((x) => x.flipped).map((x) => x.id); // who has looked, never what
     if (p) { v.mine = d.ballots[p.id] || []; v.locked = !!d.ready[p.id]; }
