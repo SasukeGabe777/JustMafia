@@ -443,6 +443,7 @@ class Room {
       const idx = want ? pool.indexOf(want) : -1;
       if (idx >= 0) { p.role = pool[idx]; pool.splice(idx, 1); } else free.push(p);
     }
+    if (this.applyWishes) this.applyWishes(free, pool); // Fate Cards: Role/Team Wishes before the shuffle
     this.shuffle(pool);
     free.forEach((p, i) => { p.role = pool[i]; });
     this.brains = new Map();
@@ -1563,6 +1564,7 @@ require('./rules/headhunter')(Room); // wraps kill/night/views from the modules 
 require('./rules/story-bots')(Room);
 require('./rules/dlc1')(Room);
 require('./rules/crafter')(Room);
-require('./rules/credits')(Room); // end-of-game movie credits: cast, awards, stats, highlights // the Crafter: materials, recipes, tools
+require('./rules/credits')(Room);
+require('./rules/fate')(Room); // Fate Cards: Role Wish, Team Wish, Reroll // end-of-game movie credits: cast, awards, stats, highlights // the Crafter: materials, recipes, tools
 require('./rules/events')(Room); // seasonal events (Blood Moon) // DLC 1 roles; wraps kill/views/shownRole, so it installs last
 module.exports = { Room, DEFAULT_SETTINGS, HARD_MAX_PLAYERS };

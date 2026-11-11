@@ -56,3 +56,18 @@
 .shop-tile.mystery canvas { filter: brightness(0) opacity(.55); }
 .shop-tile.mystery::after { content: '?'; position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); font: 700 26px 'Pixelify Sans', monospace; color: #ffe066; text-shadow: 0 2px 0 #3a2414; animation: mysteryPulse 1.6s ease-in-out infinite alternate; }
 @keyframes mysteryPulse { from { opacity: .55; transform: translate(-50%, -50%) scale(.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } }
+
+/* Fate tab: tokens and Fate Cards */
+.fate-head h3 { margin: 0 0 4px; }
+.fate-head b { color: #7a3ab0; }
+.fate-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+.fate-card { border: 3px solid #3a2414; border-radius: 12px; overflow: hidden; background: linear-gradient(160deg, #2a1640, #4a2a70); color: #f6ecd4; display: flex; flex-direction: column; }
+.fc-face { padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.fc-icon { font-size: 34px; filter: drop-shadow(0 0 10px rgba(220, 180, 255, .6)); }
+.fc-face b { color: #ffe39a; }
+.fc-face small { font-size: 12px; opacity: .85; }
+.fc-foot { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 8px; background: rgba(0, 0, 0, .25); font-size: 13px; }
+.fc-foot .btn { width: auto; }
+.fate-lobby summary { cursor: pointer; font-weight: 700; }
+.fate-reroll { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; }
+.fate-reroll .btn { width: auto; }

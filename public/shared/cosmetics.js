@@ -147,6 +147,18 @@
     return out;
   }
 
+  // ----- Fate Tokens ✦: a second currency for one-time Fate Cards (not cosmetics) -----
+  // Earned by winning, finishing weekly challenges and visiting new worlds (or traded for
+  // gold). Cards bend which role you get; each is spent only if it actually takes effect.
+  const FATE = {
+    starter: 2, exchangeGold: 120, perWin: 1, perChallenge: 1, perNewWorld: 1,
+    cards: {
+      wish: { name: 'Role Wish', icon: '🎯', cost: 2, text: 'Before the game, wish for a role. If that role is in the game, it is dealt to you. Spent only if it comes true.' },
+      team: { name: 'Team Wish', icon: '⚖️', cost: 1, text: 'Before the game, lean toward the Town or the Mafia. You are dealt a role from that side if the game has a free one. Spent only if it comes true.' },
+      reroll: { name: 'Reroll', icon: '🔄', cost: 1, text: 'While you look at your dealt role, swap it once for a different role on the same team.' },
+    },
+  };
+
   // Gold rewards per completed game, calculated and paid by the server once per game.
   // Every value is configurable here. Per-category caps and maxPerGame stop players
   // from farming repeated actions; games with bots, forced roles, sped-up clocks,
@@ -163,6 +175,6 @@
     achievement: 10,                       // each achievement unlocked by this game
     maxPerGame: 60, minimumGameMs: 60000,
   };
-  const API = { FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS, SEASON, PASS, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_ITEM, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock };
+  const API = { FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS, SEASON, PASS, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_ITEM, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock, FATE };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.MT_COSMETICS = API;
 })(typeof window !== 'undefined' ? window : globalThis);

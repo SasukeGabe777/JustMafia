@@ -16,6 +16,24 @@
     }
     if (v.emergency) card('<h3>Emergency town vote</h3><p>The interrupted night resumes after this vote. Your pending night choices are preserved.</p>', true);
     if (v.shortenedDiscussion && v.phase === 'discussion') card(`<h3>The clock has shortened</h3><p>This discussion lasts ${v.shortenedDiscussion} seconds.</p>`, true);
+    // Fate Cards: a wish in the lobby (only if you own one), a Reroll during the role reveal.
+    const fate = v.fate;
+    if (fate && v.phase === 'lobby' && (fate.cards.wish || fate.cards.team)) {
+      const R = MT_ROLES.ROLES, roleNameF = (k) => (window.MT_THEMES ? MT_THEMES.roleName(v.theme, k, R[k].name) : R[k].name);
+      const w = fate.wish, now = w ? (w.type === 'role' ? `🎯 Wishing for the ${esc(roleNameF(w.value))}` : `⚖️ Leaning ${w.value === 'mafia' ? 'Mafia' : 'Town'}`) : 'No wish yet';
+      const el = card(`<details class="fate-lobby"${drafts.fateOpen ? ' open' : ''}><summary>✦ Fate Cards · ${now}</summary>
+        ${fate.cards.wish ? `<label>Role Wish (${fate.cards.wish})<select data-wish-role><option value="">Choose a role…</option>${MT_ROLES.ROLE_ORDER.filter((k) => k !== 'villager' && R[k]).map((k) => `<option value="${k}"${w && w.type === 'role' && w.value === k ? ' selected' : ''}>${R[k].emoji} ${esc(roleNameF(k))}</option>`).join('')}</select></label>` : ''}
+        ${fate.cards.team ? `<div class="btns"><button class="btn small ghost" data-wish-team="town">⚖️ Lean Town (${fate.cards.team})</button><button class="btn small ghost" data-wish-team="mafia">⚖️ Lean Mafia</button></div>` : ''}
+        ${w ? '<button class="btn small ghost" data-wish-clear>Clear my wish</button>' : ''}<p class="small muted">Spent only if it comes true when cards are dealt.</p></details>`);
+      const d = el.querySelector('details'); d.addEventListener('toggle', () => { drafts.fateOpen = d.open; });
+      const sel = el.querySelector('[data-wish-role]'); if (sel) sel.onchange = () => sel.value && emit('fate', { type: 'role', value: sel.value });
+      el.querySelectorAll('[data-wish-team]').forEach((b) => b.onclick = () => emit('fate', { type: 'team', value: b.dataset.wishTeam }));
+      const clr = el.querySelector('[data-wish-clear]'); if (clr) clr.onclick = () => emit('fate', { type: null });
+    }
+    if (fate && fate.canReroll) {
+      const el = card(`<p class="fate-reroll">🔄 Not feeling this role? <button class="btn small" data-reroll>Reroll (${fate.cards.reroll})</button></p><p class="small muted">Swaps your role once for another on the same team.</p>`);
+      el.querySelector('[data-reroll]').onclick = () => { if (confirm('Use a Reroll card to swap your role?')) emit('fate', { op: 'reroll' }); };
+    }
     // Town talk: what the bots (and claims) are saying today, one tidy collapsed line.
     const talk = ['morning', 'discussion', 'voting'].includes(v.phase) ? (v.accusations || []).filter((a) => a.day == null || a.day === v.day).slice(-8) : [];
     if (talk.length) {

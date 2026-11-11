@@ -283,13 +283,14 @@
     $('#s-title').textContent = theme === 'rsp' ? 'RSP Supply Store' : 'Town Shop';
     $('#s-pouch-wrap').innerHTML = pouchButton(profile, 's-pouch');
     $('#s-pouch').onclick = () => { const pop = $('#s-pouch-pop'); pop.hidden = !pop.hidden; pop.innerHTML = pouchDetails(profile); };
-    const tabs = [{ id: 'season', label: 'Season', icon: '🎟' }, { id: 'worlds', label: 'Worlds', icon: '🗺' }, ...C.CATEGORIES.filter((c) => forSale(c.id).length), ...(hidden.length ? [{ id: 'locked', label: `Locked (${hidden.length})`, icon: '🔒' }] : []), { id: 'inventory', label: 'Inventory', icon: '🎒' }];
+    const tabs = [{ id: 'season', label: 'Season', icon: '🎟' }, { id: 'worlds', label: 'Worlds', icon: '🗺' }, { id: 'fate', label: 'Fate', icon: '✦' }, ...C.CATEGORIES.filter((c) => forSale(c.id).length), ...(hidden.length ? [{ id: 'locked', label: `Locked (${hidden.length})`, icon: '🔒' }] : []), { id: 'inventory', label: 'Inventory', icon: '🎒' }];
     if (!tabs.some((t) => t.id === state.tab)) state.tab = tabs[0].id;
     $('#s-tabs').style.gridTemplateColumns = `repeat(${tabs.length > 6 ? Math.ceil(tabs.length / 2) : tabs.length}, minmax(0,1fr))`; // two rows when there are many tabs, so labels stay readable
     $('#s-tabs').innerHTML = tabs.map((t) => `<button role="tab" class="cas-tab${t.id === state.tab ? ' sel' : ''}" data-shop-tab="${t.id}" aria-selected="${t.id === state.tab}"><span aria-hidden="true">${t.icon}</span>${esc(t.label)}</button>`).join('');
     $('#s-tabs').querySelectorAll('[data-shop-tab]').forEach((b) => { b.onclick = () => { state.tab = b.dataset.shopTab; state.selectedId = null; render(opts); }; });
     if (state.tab === 'season') { renderSeason(opts); paintPouches(); return; }
     if (state.tab === 'worlds') { renderWorlds(opts); paintPouches(); return; }
+    if (state.tab === 'fate') { renderFate(opts); paintPouches(); return; }
     if (state.tab === 'locked') { renderLocked(opts, hidden); paintPouches(); return; }
     const inv = state.tab === 'inventory';
     const items = inv ? (profile ? profile.inventory : []).map((x) => C.CATALOG.find((i) => i.id === x.id)).filter(Boolean) : forSale(state.tab);
@@ -333,6 +334,23 @@
     const shelf = (inv ? items : forSale(state.tab)).slice(0, 12);
     startScene(() => ({ theme, avatar, home, shelf, selected, owned }));
     paintPouches();
+  }
+  // ---------- Fate: tokens and one-time Fate Cards ----------
+  function renderFate(opts) {
+    const { profile, theme, avatar } = opts, F = C.FATE;
+    if (!profile || typeof profile.fate !== 'number') { $('#s-grid').innerHTML = '<p class="muted">Connecting…</p>'; $('#s-detail').innerHTML = ''; return; }
+    const owned = profile.fateCards || {};
+    $('#s-grid').innerHTML = `<div class="fate-head"><h3>✦ Fate Tokens: <b>${profile.fate}</b></h3>
+        <p class="small">A second currency, just for Fate Cards: one-time tricks that bend which role you get. Earn tokens by winning (+${F.perWin}), finishing a weekly challenge (+${F.perChallenge}) and visiting a new world (+${F.perNewWorld}).</p>
+        <button class="btn ghost small" data-fate-exchange ${profile.coins < F.exchangeGold ? 'disabled' : ''}>Trade ${F.exchangeGold} gold for 1 token</button><p class="err small" data-fate-err></p></div>
+      <div class="fate-cards">${Object.entries(F.cards).map(([id, c]) => `<div class="fate-card"><div class="fc-face"><span class="fc-icon">${c.icon}</span><b>${esc(c.name)}</b><small>${esc(c.text)}</small></div>
+        <div class="fc-foot"><span>You have <b>${owned[id] || 0}</b></span><button class="btn small" data-fate-buy="${id}" ${profile.fate < c.cost ? 'disabled' : ''}>Buy · ✦${c.cost}</button></div></div>`).join('')}</div>`;
+    $('#s-detail').innerHTML = '<p class="small">How to use them: wishes are made on your phone in the lobby before the game starts. Reroll appears while you look at your dealt role. A wish is only spent if it comes true.</p>';
+    const err = (r) => { const el = $('#s-grid').querySelector('[data-fate-err]'); if (el) el.textContent = (r && r.error) || ''; };
+    $('#s-grid').querySelectorAll('[data-fate-buy]').forEach((b) => { b.onclick = () => opts.fateBuy && opts.fateBuy(b.dataset.fateBuy, (r) => { if (r && r.ok) { state.say = `A ${F.cards[b.dataset.fateBuy].name}! Fate smiles on you, friend.`; setKeeper('buy'); render({ ...opts, profile: r.profile }); } else err(r); }); });
+    const ex = $('#s-grid').querySelector('[data-fate-exchange]'); if (ex) ex.onclick = () => opts.fateExchange && opts.fateExchange((r) => { if (r && r.ok) render({ ...opts, profile: r.profile }); else err(r); });
+    $('#s-say').textContent = state.say || 'Fate Cards… rare stuff. Not for wearing. For changing your destiny.';
+    startScene(() => ({ theme, avatar, home: opts.home, shelf: [], selected: null, owned: () => false }));
   }
   // ---------- Locked: how to put more on the shelves ----------
   function renderLocked(opts, hidden) {

@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const O = require('./public/shared/options');
-const { CATALOG, ACHIEVEMENTS, REWARDS: R, slotOf, SEASON, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock } = require('./public/shared/cosmetics');
+const { CATALOG, ACHIEVEMENTS, REWARDS: R, slotOf, SEASON, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock, FATE } = require('./public/shared/cosmetics');
 const STOCKABLE_IDS = new Set(STOCKABLE.map((i) => i.id));
 const freshPass = () => ({ season: SEASON.id, owned: false, xp: 0, granted: [] });
 const LEDGER_MAX = 20;
@@ -19,6 +19,7 @@ class ProfileStore {
       if (p.goldSpent == null) p.goldSpent = 0;
       if (!Array.isArray(p.ledger)) p.ledger = [];
       if (!p.pass || p.pass.season !== SEASON.id) p.pass = freshPass(); // a new season starts everyone at tier 0
+      if (typeof p.fate !== 'number') { p.fate = FATE.starter; p.fateCards = { wish: 0, team: 0, reroll: 0 }; } // Fate Tokens arrive with a starter gift
       // Shop stock (older profiles): the starter shelf plus what their games so far would have revealed.
       if (!Array.isArray(p.stock)) { p.stock = STARTER_STOCK.slice(); const s = p.stats || {}; p.stock.push(...nextStock(p.stock, (s.games || 0) * STOCK.finished + (s.wins || 0) * STOCK.won)); }
     }
@@ -100,7 +101,7 @@ class ProfileStore {
   }
   create() {
     const id = crypto.randomUUID(), token = crypto.randomBytes(32).toString('hex');
-    this.data.profiles[id] = { id, verifier: digest(token), coins: 0, goldEarned: 0, goldSpent: 0, ledger: [], owned: CATALOG.filter((i) => i.free).map((i) => i.id), achievements: [], stats: { games: 0, wins: 0, mafiaWins: 0, jesterWins: 0, survived: 0, saves: 0, correctInvestigations: 0, objectives: 0 }, avatar: {}, rewardedGames: [], lastReward: null, pass: freshPass(), stock: STARTER_STOCK.slice() };
+    this.data.profiles[id] = { id, verifier: digest(token), coins: 0, goldEarned: 0, goldSpent: 0, ledger: [], owned: CATALOG.filter((i) => i.free).map((i) => i.id), achievements: [], stats: { games: 0, wins: 0, mafiaWins: 0, jesterWins: 0, survived: 0, saves: 0, correctInvestigations: 0, objectives: 0 }, avatar: {}, rewardedGames: [], lastReward: null, pass: freshPass(), stock: STARTER_STOCK.slice(), fate: FATE.starter, fateCards: { wish: 0, team: 0, reroll: 0 } };
     this.data.profiles[id].avatar = this.validateAvatar(id, { outfit: 'traveler', hair: 'short' });
     this.save(); return { id, token, profile: this.view(id) };
   }
@@ -141,6 +142,22 @@ class ProfileStore {
   }
   selectHome(id, home) { const p = this.data.profiles[id]; if (!p) return; p.home = this.validateHome(id, home); this.save(); }
   select(id, avatar) { const p = this.data.profiles[id]; if (!p) return; p.avatar = this.validateAvatar(id, avatar); p.lookSaved = true; this.save(); }
+  // ----- Fate Tokens and Fate Cards -----
+  buyFate(id, card) {
+    const p = this.data.profiles[id], c = FATE.cards[card];
+    if (!p || !c) return { ok: false, error: 'Unknown Fate Card.' };
+    if (p.fate < c.cost) return { ok: false, error: `The ${c.name} costs ${c.cost} Fate Token${c.cost > 1 ? 's' : ''}; you have ${p.fate}.` };
+    p.fate -= c.cost; p.fateCards[card] = (p.fateCards[card] || 0) + 1; this.save();
+    return { ok: true, profile: this.view(id) };
+  }
+  exchangeFate(id) {
+    const p = this.data.profiles[id]; if (!p) return { ok: false, error: 'No profile.' };
+    if (p.coins < FATE.exchangeGold) return { ok: false, error: `A Fate Token costs ${FATE.exchangeGold} gold; you have ${p.coins}.` };
+    this.record(p, -FATE.exchangeGold, 'Traded for a Fate Token'); p.fate++; this.save();
+    return { ok: true, profile: this.view(id) };
+  }
+  hasFate(id, card) { const p = this.data.profiles[id]; return !!p && (p.fateCards[card] || 0) > 0; }
+  useFate(id, card) { const p = this.data.profiles[id]; if (!p || !(p.fateCards[card] > 0)) return false; p.fateCards[card]--; this.save(); return true; }
   // Puts items on a player's shelves directly (tests and developer tools).
   stockItems(id, itemIds) { const p = this.data.profiles[id]; if (!p) return false; for (const i of itemIds) if (!p.stock.includes(i)) p.stock.push(i); this.save(); return true; }
   buy(id, itemId) {
@@ -196,6 +213,8 @@ class ProfileStore {
     }
     // New in the shop: every finished game, every win and every new world restock the shelves.
     const newStock = nextStock(p.stock, STOCK.finished + (result.won ? STOCK.won : 0) + (firstVisit ? STOCK.newWorld : 0));
+    const fateGained = (result.won ? FATE.perWin : 0) + challengesDone * FATE.perChallenge + (firstVisit ? FATE.perNewWorld : 0);
+    p.fate += fateGained;
     p.stock.push(...newStock);
     const tierBefore = this.seasonTier(p); p.pass.xp += xp;
     const passRewards = this.grantPass(p);
@@ -203,7 +222,7 @@ class ProfileStore {
     const coins = p.coins - before;
     p.lastReward = { gameId, coins, before, after: p.coins, lines, capped: raw > capped0 ? R.maxPerGame : null, at: Date.now(),
       season: { xp, multiplier: mult, tierBefore, tierAfter: this.seasonTier(p), owned: p.pass.owned, items: passRewards.filter((r) => r.item).map((r) => r.item) },
-      stock: newStock,
+      stock: newStock, fate: fateGained,
       world: result.theme && WORLD_REWARDS[result.theme] ? { id: result.theme, name: WORLD_NAMES[result.theme], games: p.worlds[result.theme], items: worldItems } : null };
     p.rewardedGames.push(gameId); this.save();
     return p.lastReward;

@@ -306,6 +306,8 @@
     MT_SHOP.render({ profile, avatar: look.avatar, home: look.home, theme: view && view.theme,
       buy: (itemId, cb) => socket.emit('profile:buy', { itemId }, (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); }),
       buyPass: (cb) => socket.emit('profile:buyPass', {}, (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); }),
+      fateBuy: (card, cb) => socket.emit('profile:fateBuy', { card }, (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); }),
+      fateExchange: (cb) => socket.emit('profile:fateExchange', {}, (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); }),
       equip: (itemId, on, cb) => socket.emit('profile:equip', { itemId, on }, (r) => {
         if (r && r.ok) {
           profile = r.profile;
