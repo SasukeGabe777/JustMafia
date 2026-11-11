@@ -47,6 +47,17 @@
     serialKiller: { min: 9,  weight: 0.8, power: 3 },
     paparazzi:    { min: 10, weight: 0.6, power: 0 },
     headhunter:   { min: 8,  weight: 0.8, power: 3 },
+    // DLC 1
+    framer:       { min: 7,  weight: 0.8, power: 2 },
+    janitor:      { min: 8,  weight: 0.7, power: 1 },
+    impostor:     { min: 7,  weight: 0.8, power: 2 },
+    medium:       { min: 6,  weight: 0.8, power: 1, kind: 'info' },
+    lookout:      { min: 6,  weight: 0.9, power: 2, kind: 'info' },
+    veteran:      { min: 6,  weight: 0.8, power: 2, kind: 'protect' },
+    trapper:      { min: 6,  weight: 0.8, power: 2, kind: 'protect' },
+    cupid:        { min: 7,  weight: 0.7, power: 0 },
+    eavesdropper: { min: 7,  weight: 0.7, power: 1, kind: 'info' },
+    crier:        { min: 6,  weight: 0.8, power: 1 },
   };
   const slotsOf = (k) => (META[k] && META[k].slots) || 1;
   const teamOf = (k) => (ROLES[k] || {}).team;

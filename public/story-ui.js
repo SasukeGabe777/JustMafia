@@ -35,6 +35,13 @@
       const mimic = el.querySelector('[data-mimic]'); if (mimic) mimic.onclick = () => emit('special', { op: 'mimic', role: el.querySelector('[data-copy]').value });
       const interrupt = el.querySelector('[data-interrupt]'); if (interrupt) interrupt.onclick = () => emit('special', { op: 'interrupt' });
     }
+    // DLC 1: the Eavesdropper's overheard Mafia talk, the Town Crier's proclamation, Cupid's bond.
+    if (v.eavesdrop) card(`<h3>👂 Overheard tonight</h3>${v.eavesdrop.length ? `<ul>${v.eavesdrop.map((t) => `<li>“${esc(t)}”</li>`).join('')}</ul>` : '<p class="small muted">Nothing yet. The Mafia talk at night.</p>'}<p class="small muted">You hear what they say, never who says it.</p>`);
+    if (v.crier) {
+      const el = card(`<h3>📯 Town Crier</h3>${v.crier.canUse ? `<p class="small">Once a day, an anonymous proclamation on the big screen.</p><label>About<select data-crier-target>${options(v.crier.targets)}</select></label><div class="btns">${v.crier.words.map((w) => `<button class="btn small" data-crier-word="${esc(w)}">${esc(w)}</button>`).join('')}</div>` : `<p class="small muted">${v.crier.used ? 'You already proclaimed today.' : 'You can proclaim during the discussion.'}</p>`}`);
+      el.querySelectorAll('[data-crier-word]').forEach((b) => b.onclick = () => emit('ability', { op: 'crier', targetId: el.querySelector('[data-crier-target]').value, word: b.dataset.crierWord }));
+    }
+    if (v.lover) card(`<h3>💘 Bound to ${esc(v.lover.name)}</h3><p class="small">${v.lover.alive ? 'If either of you dies, the other dies of a broken heart.' : 'Your bond is broken.'}</p>`);
     // The Headhunter: level, mark, and the powers they've unlocked (the server checks everything).
     const hh = v.headhunter;
     if (hh) {

@@ -43,6 +43,16 @@ npm start
 | Voting | Check marks show who has voted | Vote (or skip), and change your vote until voting closes |
 | Verdict | Ballots fly to each suspect and vote counts appear | |
 
+### New player help (Judge console → Rules → 🧭 New player help; on by default)
+
+- **Quick join:** the QR link opens the character creator with a "⚡ Quick join" card on top. Type a name, tap once, and you're in with a random look and an assigned house (no house step). Customize later in the lobby.
+- **"What to do now" bar:** shown on every phone for every phase. It is role-aware but uses only that phone's own view (for example "Tap someone to investigate. Only you will see the result.").
+- **"?" How to Play:** the goal, the round, your phone, tips, and the roles in this game with their real descriptions.
+- **"What does my role do?"** on the role card: when it acts, its rules, and how it wins.
+- **One-time tips** (once per device): the first night, discussion, vote, being a ghost, being Mafia.
+- **TV:** a 4-step how-to in the lobby, and a one-line explainer for each phase under the phase name.
+- Turning the setting off hides all of it at once.
+
 ### Role selection: Default (card draft) or Manual
 
 Set in the Judge console → Setup → Roles.
@@ -104,6 +114,21 @@ and skin colors, with all manual controls available.
 | 🎯 Headhunter | Neutral | Marks who they want dead (night, or any time). The mark shows on the Mafia's night screen as a vote from one of their own (never counted). Each time the mark dies (night or gallows) they level up. **1** disguise (investigations see a role of their choice; a Villager before that) · **2** once a night, force a Mafia member's kill vote · **3** one strike per game, any time, with its own scene · **4** learn one role a night · **5** sees every role · **6** one execution per day. Wins as the last one standing |
 
 Night actions resolve together, in this order: blocks → protection → kills → investigations. Ties are broken by a seeded random generator, so results are deterministic.
+
+**DLC 1** (Judge console → Setup → Roles → *DLC 1* pack; also offered in the card draft):
+
+| Role | Team | What it does |
+|---|---|---|
+| 🕯 Medium | Town | Each night, learn the exact role of one fallen player |
+| 👀 Lookout | Town | Watch someone; learn the names of everyone who visited them with an ability |
+| 🎖 Veteran | Town | 2 alerts per game: attacks on you fail and every visitor dies (friend or foe) |
+| 🪤 Trapper | Town | Trap a house: it's protected, and you learn who attacked it |
+| 💘 Cupid | Town | Once: bind yourself to someone. If either dies, the other dies of a broken heart |
+| 👂 Eavesdropper | Town | Hears the Mafia's coordination messages, never who said them |
+| 📯 Town Crier | Town | Once a day, an anonymous proclamation on the TV ("Ana IS SAFE!") |
+| 🖼 Framer | Mafia | Frame someone: tonight every investigation sees them as Mafia |
+| 🧹 Janitor | Mafia | Once: if the target dies tonight, their role stays hidden (only the Janitor learns it) |
+| 🎭 Impostor | Mafia | Every investigation (even the Sorcerer's) sees a Town role instead |
 
 **Win conditions:** the Town wins when no Mafia, Serial Killer or Headhunter is left alive. The Mafia win at parity, or (optionally) when everyone else is gone. The Serial Killer and the Headhunter each win as the last one standing. The Jester wins if voted out.
 

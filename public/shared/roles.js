@@ -99,6 +99,17 @@
     hunter: { name: 'Hunter', team: 'mafia', knowsTeam: true, emoji: '🏹', color: '#8c3b2e', night: { kind: 'investigate', reveal: 'role', targets: 'nonTeam' }, blurb: "The Mafia's detective. Each night, learn the exact role of one player outside the family; your whole team sees what you find. You also vote on the Mafia's kill." },
     // Neutral: marks who they want dead. Every time a mark dies (night or gallows) they level up.
     headhunter: { name: 'Headhunter', team: 'neutral', emoji: '🎯', color: '#c47a1c', max: 1, night: { kind: 'mark', targets: 'others', optional: true }, blurb: 'Each night (or day), secretly mark who you want dead. Your mark appears as a fake vote on the Mafia’s night screen. Every time your mark dies, at night or at the gallows, you level up and unlock new powers. Win by being the last one standing.' },
+    // ----- DLC 1 -----
+    medium: { name: 'Medium', team: 'town', emoji: '🕯', color: '#9a86d8', night: { kind: 'seance', targets: 'dead' }, blurb: 'Each night, hold a séance with one fallen player and learn their exact role, even if roles stay hidden on death.' },
+    lookout: { name: 'Lookout', team: 'town', emoji: '👀', color: '#4fa3a0', night: { kind: 'watch', targets: 'others' }, blurb: 'Each night, watch one player. At dawn you learn the names of everyone who visited them with an ability.' },
+    veteran: { name: 'Veteran', team: 'town', emoji: '🎖', color: '#6f7d3a', night: { kind: 'alert', targets: 'self', optional: true }, blurb: 'Twice per game, go on alert for the night: attacks on you fail, and anyone who visits you that night dies. Careful: friends visit too.' },
+    trapper: { name: 'Trapper', team: 'town', emoji: '🪤', color: '#8a6a3c', night: { kind: 'trap', targets: 'any' }, blurb: 'Each night, set a trap at one house. It protects whoever lives there, and if someone attacks them, you learn the attacker’s name.' },
+    cupid: { name: 'Cupid', team: 'town', emoji: '💘', color: '#e86a9a', night: { kind: 'link', targets: 'others', optional: true }, blurb: 'Once per game, bind yourself to another player. You both learn of the bond. If either of you dies, the other dies of a broken heart.' },
+    eavesdropper: { name: 'Eavesdropper', team: 'town', emoji: '👂', color: '#5d8fb8', when: 'All game (passive)', blurb: 'You overhear the Mafia’s coordination messages every night, but never who said them.' },
+    crier: { name: 'Town Crier', team: 'town', emoji: '📯', color: '#c98f2e', when: 'Once a day, during discussion', blurb: 'Once a day, make an anonymous proclamation on the big screen about one player: SAFE, SUSPICIOUS, LYING, HONEST or IN DANGER.' },
+    framer: { name: 'Framer', team: 'mafia', knowsTeam: true, emoji: '🖼', color: '#a3443a', night: { kind: 'frame', targets: 'nonTeam' }, blurb: 'Each night, frame one player: tonight, every investigation sees them as Mafia. You also vote on the Mafia’s kill.' },
+    janitor: { name: 'Janitor', team: 'mafia', knowsTeam: true, emoji: '🧹', color: '#6e5a4a', night: { kind: 'clean', targets: 'nonTeam', optional: true }, blurb: 'Once per game, clean up after a kill: if your target dies tonight, their role stays hidden from the town, and only you learn it.' },
+    impostor: { name: 'Impostor', team: 'mafia', knowsTeam: true, emoji: '🎭', color: '#8d3d6e', when: 'All game (passive)', blurb: 'You hide behind a Town role: every investigation, even the Sorcerer’s, sees you as a Town role chosen at the start. You also vote on the Mafia’s kill.' },
     storymaker: { name: 'Storymaker', team: 'town', emoji: '📜', color: '#e3bf80', night: { kind: 'interrupt', targets: 'any', optional: true }, blurb: 'Once per game, interrupt the night with a town crier and an emergency vote. After the verdict, resume the interrupted night with its still-valid actions and remaining time. Wins with Town.' },
   });
   // Headhunter levels: the Nth correct mark (the marked player died) unlocks level N.
@@ -111,7 +122,13 @@
     { level: 5, power: 'allSight', title: 'All-seeing', text: 'You know everyone’s role.' },
     { level: 6, power: 'execute', title: 'Executioner', text: 'Once a day, execute anyone during discussion or voting.' },
   ];
-  const ROLE_ORDER = ['mafia', 'godfather', 'roleblocker', 'hunter', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'detective', 'sheriff', 'sorcerer', 'investigator', 'doctor', 'bodyguard', 'executioner', 'vigilante', 'detonator', 'storymaker', 'mayor', 'telepath', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'jester', 'serialKiller', 'headhunter', 'villager'];
+  const ROLE_ORDER = ['mafia', 'godfather', 'roleblocker', 'hunter', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'detective', 'sheriff', 'sorcerer', 'investigator', 'doctor', 'bodyguard', 'executioner', 'vigilante', 'detonator', 'storymaker', 'mayor', 'telepath', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'jester', 'serialKiller', 'headhunter', 'framer', 'janitor', 'impostor', 'medium', 'lookout', 'veteran', 'trapper', 'cupid', 'eavesdropper', 'crier', 'villager'];
+  // Role packs: how the Judge console groups roles (Core, Expansion, DLC 1).
+  const ROLE_PACKS = {
+    core: { label: 'Core', roles: ['mafia', 'godfather', 'roleblocker', 'detective', 'sheriff', 'doctor', 'bodyguard', 'vigilante', 'mayor', 'telepath', 'jester', 'serialKiller', 'executioner'] },
+    expansion: { label: 'Expansion', roles: ['hunter', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'sorcerer', 'investigator', 'detonator', 'storymaker', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'headhunter'] },
+    dlc1: { label: 'DLC 1', roles: ['framer', 'janitor', 'impostor', 'medium', 'lookout', 'veteran', 'trapper', 'cupid', 'eavesdropper', 'crier'] },
+  };
   const GHOST_WORDS = ['IS', 'NOT', 'LIAR', 'TRUST', 'WATCH', 'DANGER', 'SAFE', 'MAYBE', 'TOGETHER', 'ALONE'];
 
   const TEAMS = {
@@ -251,7 +268,7 @@
     };
   }
 
-  const API = { HEADHUNTER_LEVELS, ROLES, ROLE_ORDER, TEAMS, WINNERS, TELEPATH_MESSAGES, GHOST_WORDS, PRESETS, isMafiaTeam, isKillerRole, investigate, autoMafiaCount, buildRoleList, reference };
+  const API = { ROLE_PACKS, HEADHUNTER_LEVELS, ROLES, ROLE_ORDER, TEAMS, WINNERS, TELEPATH_MESSAGES, GHOST_WORDS, PRESETS, isMafiaTeam, isKillerRole, investigate, autoMafiaCount, buildRoleList, reference };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.MT_ROLES = API;
 })(typeof window !== 'undefined' ? window : globalThis);

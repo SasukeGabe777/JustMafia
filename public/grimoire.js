@@ -33,7 +33,7 @@
       const select = root.querySelector('#config-role'); select.innerHTML = R.ROLE_ORDER.map((r) => `<option value="${r}">${esc(R.ROLES[r].name)}</option>`).join(''); select.value = selectedRole;
       select.onchange = () => { selectedRole = select.value; configRole(); };
       root.querySelector('#reset-all-rules').onclick = () => act('resetAllSettings');
-      document.querySelectorAll('#s-roles .role').forEach((row) => { const role = row.querySelector('[data-role]').dataset.role, b = document.createElement('button'); b.className = 'btn small ghost'; b.textContent = 'Configure'; b.onclick = () => { selectedRole = role; select.value = role; root.querySelector('#role-config-details').open = true; configRole(); root.scrollIntoView({ behavior:'smooth', block:'start' }); }; row.appendChild(b); });
+      document.querySelectorAll('#s-roles .role').forEach((row) => { const role = row.querySelector('[data-role]').dataset.role, b = document.createElement('button'); b.className = 'btn small ghost cfg'; b.textContent = '⚙'; b.title = 'Configure this role'; b.setAttribute('aria-label', 'Configure this role'); b.onclick = () => { selectedRole = role; select.value = role; root.querySelector('#role-config-details').open = true; configRole(); root.scrollIntoView({ behavior:'smooth', block:'start' }); }; row.appendChild(b); });
     }
     if (root.contains(document.activeElement) && ['INPUT','SELECT'].includes(document.activeElement.tagName)) return;
     const globals = root.querySelector('#global-rule-options');

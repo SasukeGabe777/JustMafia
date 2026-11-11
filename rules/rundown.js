@@ -13,11 +13,11 @@ module.exports = function install(Room) {
     const roleName = (p) => { const r = roleOf(p); return r ? ((THEMES[theme] && THEMES[theme].roleNames && THEMES[theme].roleNames[r]) || (R.ROLES[r] || {}).name || r) : '?'; };
     const who = (id) => { const p = byId(id); return p ? `${p.name} (${roleName(p)})` : 'someone who left'; };
     const name = (id) => (byId(id) || {}).name || 'someone';
-    const VERB = { heal: 'protected', guard: 'stood guard over', investigate: 'investigated', spy: 'spied on', block: 'distracted', shoot: 'shot at', silence: 'silenced', bomb: 'planted a bomb at', photo: 'photographed', hustle: 'hustled', midas: 'used gold on', interrupt: 'interrupted the night for', mark: 'marked for death' };
+    const VERB = { heal: 'protected', guard: 'stood guard over', investigate: 'investigated', spy: 'spied on', block: 'distracted', shoot: 'shot at', silence: 'silenced', bomb: 'planted a bomb at', photo: 'photographed', hustle: 'hustled', midas: 'used gold on', interrupt: 'interrupted the night for', mark: 'marked for death', seance: 'held a séance for', watch: 'watched', alert: 'went on alert to protect', trap: 'set a trap at', link: 'bound their fate to', frame: 'framed', clean: 'cleaned up after' };
     const chapters = [], log = this.eventLog || [];
     const days = Math.max(this.day, ...this.voteHistory.map((v) => v.day), 0);
     // Deaths the night/vote logs don't tell (Judge removals, players leaving, explosions...).
-    const OTHER = { judge: 'was removed by the Judge', left: 'left the game', explosion: 'was caught in an explosion', ash: 'turned to ash', headhunter: 'was taken by the Headhunter' };
+    const OTHER = { judge: 'was removed by the Judge', left: 'left the game', explosion: 'was caught in an explosion', ash: 'turned to ash', headhunter: 'was taken by the Headhunter', heartbreak: 'died of a broken heart' };
     const otherDeaths = (d, nightKilled) => this.inGame().filter((p) => !p.alive && p.diedDay === d && p.deathCause !== 'vote' && !nightKilled.has(p.id))
       .sort((a, b) => a.deathOrder - b.deathOrder).map((p) => `☠️ ${who(p.id)} ${OTHER[p.deathCause] || 'died'}.`);
     for (let d = 0; d <= days; d++) {

@@ -185,6 +185,12 @@
     if (!state) return;
     $('#hud-town').textContent = state.townName;
     $('#hud-phase').textContent = (PHASES[state.phase] || state.phase).replace('{d}', state.day);
+    // New player help: one plain line about what everyone should be doing now.
+    const helpLine = window.MT_HELP && MT_HELP.tvLine(state);
+    $('#hud-help').hidden = !helpLine; $('#hud-help').textContent = helpLine || '';
+    const how = $('#lobby-how');
+    how.hidden = !state.help;
+    if (state.help && !how.children.length) how.innerHTML = MT_HELP.LOBBY_STEPS.map((s) => `<li>${s}</li>`).join('');
     const active = state.players.filter((p) => !p.spectator);
     const alive = active.filter((p) => p.alive && !p.left).length;
     const dead = active.length - alive;

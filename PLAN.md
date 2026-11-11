@@ -439,6 +439,29 @@ Implementation checklist (updated after verification below):
   live in `tools/cdp.js`; `npm run test:e2e` runs both suites.
   `MT_DEV_GRANTS=1` enables a test-only gold grant.
 
+### New player help, Judge console v2, DLC 1 roles
+
+- **New player help** (`newPlayerHelp`, default on; `public/help.js`, `help.css`):
+  - Quick join card on the creator (random look, auto house, no claim step).
+  - A per-phase "what to do now" bar from the phone's own view, and a "?" How to Play overlay with the roles in play.
+  - "What does my role do?" on the role card, and one-time tips (`mt.tips`).
+  - TV: a lobby how-to and a per-phase `#hud-help` line.
+  - `room:check` returns `help`. Test: `tools/e2e-help.js` (7).
+- **Judge console v2** (`judge-v2.css`, restructured `judge.html`; all IDs and handlers kept):
+  - A sticky control bar (Start / Next / Pause / +30s / roles).
+  - Five tabs: Play, Setup, Players, Scenes, More. Grimoire, test mode and the log moved to More; old saved tabs map there.
+  - Play shows a live headline (`#g-status`) and only the relevant cards.
+  - Setup uses collapsible sections, with role-pack filters (`ROLE_PACKS`: core / expansion / dlc1 / all) and a compact ⚙ per role.
+  - Test: `tools/e2e-judge.js` (5).
+- **DLC 1** (`rules/dlc1.js`, installed last):
+  - The night pipeline has a new `information` handler stage (it runs after attacks).
+  - Handlers: frame / trap (statuses stage), alert / clean / link (specials stage), seance / watch (information stage).
+  - Trap results come from a `resolveNight` wrapper.
+  - `shownRole` covers the Framer and the Impostor's cover role.
+  - The `kill` wrapper handles the Janitor (`p.cleaned` hides the role until game over) and Cupid's heartbreak (announced in the narration).
+  - The Crier's proclamation goes through `dayAbility {op:'crier'}`; Eavesdropper and Cupid info appear in `playerView`.
+  - Test: `tools/test-dlc1.js` (9, including 12 bot games).
+
 ### Update 8: farewell animations + house-specific visuals; story-aware deaths
 
 - **Farewells:**

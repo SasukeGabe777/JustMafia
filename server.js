@@ -277,7 +277,7 @@ io.on('connection', (socket) => {
   });
   socket.on('room:check', (msg = {}, cb) => {
     const room = findRoom(msg.code);
-    reply(cb, room ? { ok: true, code: room.code, lobby: room.phase === 'lobby' } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
+    reply(cb, room ? { ok: true, code: room.code, lobby: room.phase === 'lobby', help: room.settings.newPlayerHelp !== false } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
   });
   socket.on('player:join', (msg = {}, cb) => {
     const room = findRoom(msg.code);
@@ -331,7 +331,7 @@ io.on('connection', (socket) => {
   socket.on('player:telepath', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.sendTelepath(p, msg) : { ok: false }); });
   socket.on('player:removeJudge', (_msg, cb) => { const { room, p } = ctx(); reply(cb, p ? room.voteRemoveJudge(p) : { ok: false }); });
   socket.on('player:volunteerJudge', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.volunteerJudge(p, msg.confirmed === true) : { ok: false }); });
-  socket.on('player:ability', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.dayAbility(p, msg) : { ok: false }); });
+  socket.on('player:ability', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.dayAbility(p, { ...msg, op: msg.op == null ? undefined : String(msg.op), word: msg.word == null ? undefined : String(msg.word) }) : { ok: false }); });
   socket.on('player:mafiaVote', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.voteMafia(p, msg.targetId) : { ok: false }); });
   socket.on('player:mafiaMessage', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.sendMafia(p, msg) : { ok: false }); });
   socket.on('player:variant', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.chooseVariant(p, msg.variant) : { ok: false }); });

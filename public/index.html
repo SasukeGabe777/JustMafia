@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/host.css">
   <link rel="stylesheet" href="/draft.css">
+  <link rel="stylesheet" href="/help.css">
 </head>
 <body>
   <canvas id="town"></canvas>
@@ -28,6 +29,7 @@
       <div id="hud-town">Mafia Town</div>
       <div id="hud-phase">Waiting for players</div>
       <div id="hud-harmony" hidden></div>
+      <div id="hud-help" hidden></div>
     </div>
     <div class="pill" id="hud-timer" hidden></div>
     <div class="hud-right">
@@ -48,6 +50,7 @@
     <div id="join-url"></div>
     <div id="lobby-count"></div>
     <div id="lobby-error"></div>
+    <ul id="lobby-how" class="lobby-how" hidden></ul>
     <button id="lobby-start" class="btn btn-big">Start game</button>
     <button id="lobby-bots" class="link">+ add 5 test bots</button>
   </aside>
@@ -133,6 +136,7 @@
   <script src="/cinema.js"></script>
   <script src="/scenes.js"></script>
   <script src="/town.js"></script>
+  <script src="/help.js"></script>
   <script src="/draft-ui.js"></script>
   <script src="/rundown-ui.js"></script>
   <script src="/host.js"></script>

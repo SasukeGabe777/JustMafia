@@ -49,7 +49,7 @@ const stages = {
     const r = c.room;
     for (const action of c.actions) {
       const handler = (r.nightHandlers || {})[action.ability];
-      if (handler && handler.stage !== 'statuses' && !c.blocked.has(action.actorId)) handler.run.call(r, action, c);
+      if (handler && handler.stage !== 'statuses' && handler.stage !== 'information' && !c.blocked.has(action.actorId)) handler.run.call(r, action, c);
     }
   },
   teamKill(c) {
@@ -103,6 +103,11 @@ const stages = {
   },
   information(c) {
     const r = c.room;
+    // Handlers that need to know how the night went (who visited whom, who was attacked).
+    for (const action of c.actions) {
+      const handler = (r.nightHandlers || {})[action.ability];
+      if (handler && handler.stage === 'information' && !c.blocked.has(action.actorId)) handler.run.call(r, action, c);
+    }
     for (const p of c.alive) {
       const def = c.definition(p), target = r.players.get(c.acts[p.id]);
       if (!def || def.kind !== 'investigate' || !c.did(p) || !target) continue;

@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/play.css">
 <link rel="stylesheet" href="/draft.css">
+<link rel="stylesheet" href="/help.css">
 </head>
 <body>
   <!-- Move-in request (setup only): another player asks to live in your house; 20s to answer. -->
@@ -36,6 +37,13 @@
       <h2 id="c-title">Create your townsfolk</h2>
       <span id="c-dirty" class="tag bad" hidden>Unsaved</span>
     </header>
+    <!-- New player help: skip the creator entirely (random look, a house is assigned). -->
+    <div id="quick-join" class="card quick-join" hidden>
+      <h3>⚡ New here? Jump right in</h3>
+      <label>Your name <input id="q-name" maxlength="14" autocomplete="nickname" placeholder="e.g. Brodi"></label>
+      <button id="q-go" class="btn big">⚡ Quick join</button>
+      <p class="small muted">You’ll get a random look and a house. Change them anytime in the lobby, or design your character below.</p>
+    </div>
     <div class="card cas-stage">
       <canvas id="preview" class="preview" aria-label="Live character preview"></canvas>
       <div class="cas-tools">
@@ -119,9 +127,14 @@
         <div id="g-phase"></div>
       </div>
       <div id="g-timer"></div>
+      <button id="g-help" class="help-btn" aria-label="How to play" hidden>?</button>
       <span id="g-pouch-wrap"></span>
     </header>
     <div id="g-pouch-pop" class="card pouch-pop" hidden></div>
+    <!-- New player help: what to do right now, and a one-time tip -->
+    <div id="g-hint" class="hint-bar" role="status" hidden></div>
+    <div id="g-tip" class="tip-card" hidden></div>
+    <div id="howto" class="howto" role="dialog" aria-label="How to play" hidden></div>
     <main id="g-body"></main>
     <details class="card" id="player-settings"><summary>Settings</summary><div id="governance"></div></details>
   </section>
@@ -150,7 +163,8 @@
   <script src="/creator-ui.js"></script>
   <script src="/shop-ui.js"></script>
   <script src="/reward-ui.js"></script>
-    <script src="/draft-ui.js"></script>
+    <script src="/help.js"></script>
+  <script src="/draft-ui.js"></script>
   <script src="/play.js"></script>
 </body>
 </html>

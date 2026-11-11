@@ -10,7 +10,9 @@
   const socket = io();
   let st = null;
   let clockOffset = 0;
-  let tab = load('mt.judgeTab') || 'game';
+  // Tabs: Play, Setup, Players, Scenes, More (the grimoire, test mode and log live under More).
+  let tab = ({ grimoire: 'more', test: 'more', log: 'more' })[load('mt.judgeTab')] || load('mt.judgeTab') || 'game';
+  if (!['game', 'setup', 'players', 'scenes', 'more'].includes(tab)) tab = 'game';
 
   function load(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } }
@@ -62,11 +64,22 @@
 
   // ---------- static setup UI ----------
   $('#s-theme').innerHTML = THEMES.THEME_ORDER.map((k) => `<option value="${k}">${THEMES.THEMES[k].emoji} ${esc(THEMES.THEMES[k].name)}</option>`).join('');
+  // Roles grouped into packs (Core, Expansion, DLC 1...); a pack filter keeps the list short.
+  const packOf = (k) => (Object.entries(RR.ROLE_PACKS || {}).find(([, p]) => p.roles.includes(k)) || ['core'])[0];
   $('#s-roles').innerHTML = RR.ROLE_ORDER.filter((k) => k !== 'villager').map((k) => {
     const r = ROLES[k];
     const sub = k === 'mafia' ? 'Mafia team' : r.team === 'mafia' ? 'Mafia team' : r.team === 'neutral' ? 'Neutral' : 'Town';
-    return `<div class="role" style="--rc:${r.color}" title="${esc(r.blurb)}"><span>${r.emoji}</span><span class="nm">${r.name}<small>${sub}</small></span><input type="number" min="0" max="${k === 'telepath' ? 2 : r.max || 50}" step="${k === 'telepath' ? 2 : 1}" data-role="${k}"></div>`;
+    return `<div class="role" data-pack="${packOf(k)}" style="--rc:${r.color}" title="${esc(r.blurb)}"><span>${r.emoji}</span><span class="nm">${r.name}<small>${sub}</small></span><input type="number" min="0" max="${k === 'telepath' ? 2 : r.max || 50}" step="${k === 'telepath' ? 2 : 1}" data-role="${k}"></div>`;
   }).join('');
+  let pack = load('mt.judgePack') || 'core';
+  const showPack = (p) => {
+    pack = p; save('mt.judgePack', p);
+    $$('#s-packs button').forEach((b) => b.classList.toggle('on', b.dataset.pack === p));
+    $$('#s-roles .role').forEach((el) => { el.hidden = p !== 'all' && el.dataset.pack !== p; });
+  };
+  $('#s-packs').innerHTML = Object.entries(RR.ROLE_PACKS || { core: { label: 'Core' } }).map(([k, p]) => `<button class="pack" data-pack="${k}">${esc(p.label)}</button>`).join('') + '<button class="pack" data-pack="all">All</button>';
+  $$('#s-packs button').forEach((b) => b.addEventListener('click', () => showPack(b.dataset.pack)));
+  showPack(pack);
   $$('[data-role]').forEach((inp) => inp.addEventListener('change', () => {
     const counts = {};
     $$('[data-role]').forEach((i) => { counts[i.dataset.role] = Number(i.value) || 0; });
@@ -92,7 +105,7 @@
 
   // Saved setups live in this browser.
   const SAVE_KEYS = ['theme', 'townName', 'narratorStyle', 'narratorMode', 'revealMode', 'minPlayers', 'maxPlayers', 'autoMafia', 'roleCounts', 'vigilanteShots', 'doctorSelfProtect', 'nightSeconds', 'discussionSeconds', 'votingSeconds', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'tieRule', 'majority', 'anonymousVotes', 'mafiaWinAt', 'telepathWhen', 'ghostHaunts', 'botChatter'];
-  SAVE_KEYS.push('puppetUses', 'glitchUses', 'harmonyGoal', 'paparazziGoal', 'roleSelection', 'draftSeconds');
+  SAVE_KEYS.push('puppetUses', 'glitchUses', 'harmonyGoal', 'paparazziGoal', 'roleSelection', 'draftSeconds', 'newPlayerHelp');
   SAVE_KEYS.push(...Object.keys(window.MT_CONFIG.DEFAULTS));
   $('#s-save').addEventListener('click', () => {
     const name = $('#s-save-name').value.trim();
@@ -309,9 +322,32 @@
     if (tab === 'setup') renderSetup();
     if (tab === 'scenes') renderScenes();
     if (tab === 'players') renderPlayers();
-    if (tab === 'test') renderTest();
-    if (tab === 'log') renderLog();
-      if (tab === 'grimoire') MT_GRIMOIRE.render(st, act);
+    if (tab === 'more') { renderTest(); renderLog(); MT_GRIMOIRE.render(st, act); }
+    renderStatus();
+  }
+
+  // The headline at the top of Play: what's happening and what (if anything) you should do.
+  function renderStatus() {
+    const P = st.phase, inGame = st.players.filter((p) => !p.spectator && !p.left), alive = inGame.filter((p) => p.alive).length;
+    const pr = st.progress, d = st.draft;
+    const line = {
+      lobby: () => `👥 ${inGame.length} in the lobby${st.setupError ? ` · ⚠ ${st.setupError}` : ''}. ${inGame.length >= st.minPlayers ? 'Press ▶ Start when everyone’s in.' : `Waiting for ${st.minPlayers - inGame.length} more.`}`,
+      draft: () => (d && d.stage === 'vote' ? `🗳 Players are voting on role cards: ${d.ready}/${d.total} locked in.` : '🂠 The role draft is running on the TV.'),
+      roleReveal: () => '🤫 Everyone is looking at their secret role.',
+      night: () => (pr ? `🌙 Night ${st.day}: ${pr.done}/${pr.total} night actions in.` : `🌙 Night ${st.day}.`),
+      dawn: () => (st.reveal ? '🌅 Dawn is waiting for you: play each event below, then press ⏭ Next.' : '🌅 Dawn is playing on the TV.'),
+      morning: () => `☀️ Morning: ${alive} still alive.`,
+      discussion: () => (st.settings.autoAdvance ? `🗣 Discussion: ${alive} alive.` : '🗣 Discussion: press “Open voting” (More game controls) when ready.'),
+      voting: () => (pr ? `🗳 Voting: ${pr.done}/${pr.total} votes in.` : '🗳 Voting.'),
+      verdict: () => '⚖️ The verdict is on the TV.',
+      execution: () => '⚖️ The verdict is on the TV.',
+      gameover: () => `🏁 Game over: ${st.winner ? (RR.WINNERS[st.winner] || {}).name || st.winner : 'nobody'} won. Show the Rundown or press ⟲ for a new game.`,
+    }[P];
+    $('#g-status').textContent = line ? line() : '';
+    // Only show cards that matter right now.
+    $('#rundown-card').hidden = P !== 'gameover';
+    $('#g-progress-card').hidden = !(pr || st.tally);
+    $('#g-pending-card').hidden = !st.pending;
   }
 
   function tick() {

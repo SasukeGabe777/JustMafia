@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
   minPlayers: 4,
   maxPlayers: 100,
   autoMafia: true,            // Mafia count scales with the player count
+  newPlayerHelp: true,        // Quick join, "what to do now" hints, How to Play, role explainers, TV explainers
   roleSelection: 'draft',     // draft (Default) = players vote on role cards | manual = roleCounts below, as before
   draftSeconds: 45,           // how long the role-card vote lasts
   roleCounts: { mafia: 1, detective: 1, doctor: 1 },
@@ -1105,7 +1106,7 @@ class Room {
         for (const [id, role] of Object.entries(s.forcedRoles)) if (this.players.has(id) && ROLES[role]) S.forcedRoles[id] = role;
       }
     }
-    for (const k of ['executionInterventions', 'lastWords', 'autoMafia', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'anonymousVotes', 'doctorSelfProtect', 'ghostHaunts', 'botChatter', 'skipCinematics', 'botsAuto']) if (s[k] != null) S[k] = !!s[k];
+    for (const k of ['newPlayerHelp', 'executionInterventions', 'lastWords', 'autoMafia', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'anonymousVotes', 'doctorSelfProtect', 'ghostHaunts', 'botChatter', 'skipCinematics', 'botsAuto']) if (s[k] != null) S[k] = !!s[k];
     if (s.nightSeconds != null) S.nightSeconds = clamp(int(s.nightSeconds, 45), 5, 600);
     if (s.discussionSeconds != null) S.discussionSeconds = clamp(int(s.discussionSeconds, 120), 5, 3600);
     if (s.votingSeconds != null) S.votingSeconds = clamp(int(s.votingSeconds, 45), 5, 600);
@@ -1306,6 +1307,7 @@ class Room {
       winner: this.phase === 'gameover' ? this.winner : null,
       composition: this.composition,
       roleSelection: this.settings.roleSelection,
+      help: this.settings.newPlayerHelp !== false, // new-player help on the TV and phones
       draft: this.draftView(),
       accusations: this.accusations.slice(-30),
       votingOpen: this.phase === 'voting',
@@ -1520,4 +1522,5 @@ require('./rules/draft')(Room);
 require('./rules/story')(Room);
 require('./rules/headhunter')(Room); // wraps kill/night/views from the modules above, so it installs last
 require('./rules/story-bots')(Room);
+require('./rules/dlc1')(Room); // DLC 1 roles; wraps kill/views/shownRole, so it installs last
 module.exports = { Room, DEFAULT_SETTINGS, HARD_MAX_PLAYERS };

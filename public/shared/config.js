@@ -8,6 +8,7 @@
     alchemist: { midasUses: 1, volatileUses: 1, temporaryVoting: true },
     jester: { behavior: 'classic', uses: 1, copyDuration: 'night' },
     storymaker: { uses: 1 }, puppetMaster: { uses: 2 }, glitch: { uses: 1 },
+    veteran: { uses: 2 }, janitor: { uses: 1 }, cupid: { uses: 1 }, // DLC 1
   };
   const FIELDS = {
     uses: { label: 'Uses per game (0 = unlimited)', type: 'number', min: 0, max: 10 },

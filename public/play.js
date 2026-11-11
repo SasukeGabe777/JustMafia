@@ -67,7 +67,7 @@
     if (tryAutoJoin()) return;
     if (params.get('room') && !params.get('autojoin') && !autoOpened && !errorText) { autoOpened = true; goNext(); }
   }
-  let autoJoined = false, autoOpened = false;
+  let autoJoined = false, autoOpened = false, roomHelp = true;
   // ?autojoin=1&name=... joins straight away with the saved look (used by the /test page).
   function tryAutoJoin() {
     if (!profileReady || !params.get('autojoin') || !params.get('name') || autoJoined || !$('#j-code').value) return false;
@@ -80,6 +80,7 @@
     socket.emit('room:check', { code }, (r) => {
       $('#j-next').disabled = false;
       if (!r || !r.ok) return void ($('#j-err').textContent = (r && r.error) || 'Room not found.');
+      roomHelp = r.help !== false; // the room's "New player help" setting (Quick join on the creator)
       $('#j-err').textContent = ''; openCreator('join');
     });
   }
@@ -94,6 +95,8 @@
     $('#j-go').textContent = mode === 'edit' ? 'Save' : 'Join the game ▶';
     $('#j-go').disabled = !profileReady;
     $('#c-save').hidden = mode === 'edit';
+    $('#quick-join').hidden = mode === 'edit' || !roomHelp;
+    $('#q-name').value = load('mt.name') || '';
     $('#c-shop').hidden = mode !== 'edit'; // first join: one clear path; the shop is in the lobby
     $('#c-err').textContent = '';
     avatar = { ...savedAvatar };
@@ -355,7 +358,17 @@
     commitLook();
     doJoin($('#j-code').value, name);
   });
-  function doJoin(rawCode, name) {
+  // Quick join: just a name. A first-time phone gets a random look; the house is assigned
+  // automatically (no claim step). Everything can be changed later in the lobby.
+  $('#q-go').addEventListener('click', () => {
+    if (!profileReady) return;
+    const name = $('#q-name').value.trim();
+    if (!name) return void ($('#c-err').textContent = 'Type your name first.');
+    if (!load('mt.avatar') && !(profile && profile.lookSaved)) avatar = { ...avatar, ...MT_CREATOR.randomize(profile) };
+    commitLook();
+    doJoin($('#j-code').value, name, { quick: true });
+  });
+  function doJoin(rawCode, name, opts = {}) {
     const code = String(rawCode || '').trim().toUpperCase(), err = (t) => { $(creatorMode ? '#c-err' : '#j-err').textContent = t; };
     if (code.length !== 4) return err('Enter the 4-letter room code from the big screen.');
     save('mt.name', name);
@@ -371,7 +384,7 @@
       show('#screen-game');
       lastKey = '';
       // Joining from the creator continues to claiming a house (skipped by /test auto-join).
-      if (fromCreator) pendingClaim = true;
+      if (fromCreator && !opts.quick) pendingClaim = true;
       render();
     });
   }
@@ -469,6 +482,7 @@
     updateTimer();
 
     const body = $('#g-body');
+    renderHelp();
     // Role draft (vote on the cards, then flip your dealt card) owns the screen while it runs.
     draftPhone = draftPhone || (window.MT_DRAFT && MT_DRAFT.Phone());
     if (draftPhone && draftPhone.render(body, view, {
@@ -486,6 +500,35 @@
     MT_STORY_UI(view, socket, $('#g-body'), { esc, paint, reply: abilityReply, votingHtml });
     if (focus) { const input = [...body.querySelectorAll('[data-draft]')].find((el) => el.dataset.draft === focus); if (input) { input.focus(); if (caret != null) input.setSelectionRange(caret,caret); } }
   }
+
+  // ---------- new player help (Judge setting; on by default) ----------
+  let tipsSeen = load('mt.tips') || [], tipTimer = null, roleHelpOpen = false;
+  function renderHelp() {
+    const on = !!(view && view.help);
+    $('#g-help').hidden = !on;
+    // What to do right now (from this phone's own view only).
+    const h = on && window.MT_HELP && MT_HELP.phoneHint(view);
+    $('#g-hint').hidden = !h;
+    if (h) $('#g-hint').innerHTML = `<span class="hint-icon">${h.icon}</span><span>${esc(h.text)}</span>`;
+    // A one-time tip the first time something new happens on this device.
+    const tip = on && $('#g-tip').hidden && MT_HELP.nextTip(view, tipsSeen);
+    if (tip) {
+      tipsSeen = tipsSeen.concat(tip.id); save('mt.tips', tipsSeen);
+      $('#g-tip').innerHTML = `<p>💡 ${esc(tip.text)}</p><button class="btn small" data-tip-ok>Got it</button>`;
+      $('#g-tip').hidden = false;
+      const close = () => { $('#g-tip').hidden = true; clearTimeout(tipTimer); };
+      $('#g-tip').querySelector('[data-tip-ok]').onclick = close;
+      clearTimeout(tipTimer); tipTimer = setTimeout(close, 14000);
+    }
+    if (!on) { $('#g-tip').hidden = true; $('#howto').hidden = true; }
+  }
+  $('#g-help').addEventListener('click', () => {
+    if (!view) return;
+    $('#howto').innerHTML = MT_HELP.howToHtml(view, roleLabel);
+    $('#howto').hidden = false;
+    $('#howto').querySelectorAll('[data-howto-close]').forEach((b) => b.addEventListener('click', () => { $('#howto').hidden = true; }));
+  });
+  $('#howto').addEventListener('click', (e) => { if (e.target.id === 'howto') $('#howto').hidden = true; });
 
   function renderSettings() {
     const g = view.governance, box = $('#governance');
@@ -650,6 +693,8 @@
     }
     if (v.role === 'vigilante') html += `<div class="extra">🎯 Bullets left: <b>${v.shotsLeft}</b></div>`;
     if (v.telepath && v.telepath.partner) html += `<div class="extra">🔮 Your fellow Telepath: <b>${esc(v.telepath.partner.name)}</b>${v.telepath.partner.alive ? '' : ' 👻'}</div>`;
+    // New player help: what this role does, when, and how it wins (from the role bank).
+    if (v.help && v.role && window.MT_HELP) html += MT_HELP.roleHelpHtml(v.role).replace('<details class="role-help">', `<details class="role-help"${roleHelpOpen ? ' open' : ''}>`);
     return html;
   }
 
@@ -709,6 +754,13 @@
       kill: v.role === 'serialKiller' ? ['🗡️ Who dies tonight?', 'Only a Doctor or Bodyguard can stop you.']
         : ['🔪 Choose your target', v.role === 'godfather' ? 'You have the final say for the family.' : "The Mafia must agree (the Godfather's pick wins). You can see your team's picks."],
       block: ['🚫 Who will you distract?', 'Their night ability will fail.'],
+      seance: ['🕯 Whose spirit will you call?', 'You’ll learn the exact role of one fallen player.'],
+      watch: ['👀 Who will you watch?', 'At dawn you’ll learn everyone who visited them with an ability.'],
+      alert: ['🎖 Go on alert tonight?', 'Attacks on you fail, and anyone who visits you dies. Tap yourself to stand guard, or hold fire.'],
+      trap: ['🪤 Where will you set your trap?', 'It protects that house tonight, and you’ll learn who attacks it.'],
+      link: ['💘 Who will you bind yourself to?', 'Once per game. If either of you dies, the other dies of a broken heart.'],
+      frame: ['🖼 Who will you frame?', 'Tonight, every investigation sees them as Mafia.'],
+      clean: ['🧹 Clean up after tonight’s kill?', 'Once per game: if this player dies tonight, their role stays hidden and only you learn it.'],
       mark: ['🎯 Who do you want dead?', 'Mark them. If they die tonight or at the gallows, you level up. The Mafia will see your mark as a vote from one of their own.'],
       investigate: [v.role === 'hunter' ? '🏹 Who will you hunt?' : '🔍 Who will you investigate?', v.role === 'hunter' ? "You'll learn their exact role, and so will your whole family." : v.action && v.action.reveal === 'role' ? "You'll learn their exact role." : v.role === 'sheriff' ? "You'll learn if they are dangerous." : "You'll learn if they're Mafia."],
       heal: ['💉 Who will you protect?', last || 'You can protect yourself.'],
@@ -816,6 +868,8 @@
     });
     const rc = body.querySelector('[data-role]');
     if (rc) rc.addEventListener('click', () => { roleShown = !roleShown; rc.classList.toggle('show', roleShown); lastKey = ''; });
+    // Tapping the role explainer opens it without hiding the card; it stays open across updates.
+    body.querySelectorAll('.role-help').forEach((d) => { d.addEventListener('click', (e) => e.stopPropagation()); d.addEventListener('toggle', () => { roleHelpOpen = d.open; }); });
     body.querySelectorAll('[data-night]').forEach((b) => b.addEventListener('click', () => socket.emit('player:night', { targetId: b.dataset.night, delay: Number((document.querySelector('#bomb-delay') || {}).value) || 3 })));
     body.querySelectorAll('[data-vote]').forEach((b) => b.addEventListener('click', () => socket.emit('player:vote', { targetId: b.dataset.vote })));
     body.querySelectorAll('[data-boo]').forEach((b) => b.addEventListener('click', () => haunt('boo', b.dataset.boo)));
