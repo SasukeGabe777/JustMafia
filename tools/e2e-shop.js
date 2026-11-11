@@ -99,8 +99,12 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   await a.until(`!document.querySelector('#screen-shop').hidden`, 'shop still open before start');
   await new Promise((r) => host.emit('host:action', { type: 'start' }, r));
   await a.until(`!document.querySelector('#screen-game').hidden && document.querySelector('#screen-shop').hidden`, 'shop closes when the game starts');
+  await a.until(`document.querySelector('#g-body .draft-phone')`, 'the role draft opens (Default role selection)');
+  assert.equal(await a.eval(`document.querySelectorAll('#g-body [data-open-shop], #g-body [data-edit], #g-body [data-house]').length`), 0, 'no shop during the draft');
+  // Fast-forward the draft (deck → vote → result → collect → deal) and the reveal, like the host's Next phase.
+  for (let i = 0; i < 5; i++) { await new Promise((r) => host.emit('host:action', { type: 'skip' }, r)); await wait(150); }
   await a.frames();
-  await a.until(`document.querySelector('#g-body [data-role]')`, 'the role card renders when the game starts');
+  await a.until(`document.querySelector('#g-body [data-role]')`, 'the role card renders once the game starts');
   assert.deepEqual(a.errors, [], 'no errors rendering the game: ' + a.errors.join('\n'));
   assert.equal(await a.eval(`document.querySelectorAll('#g-body [data-open-shop], #g-body [data-edit], #g-body [data-house]').length`), 0, 'no look/house/shop buttons in the game');
   await a.eval(`document.querySelector('#g-pouch-pop').hidden && document.querySelector('#g-pouch').click()`);

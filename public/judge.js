@@ -92,7 +92,7 @@
 
   // Saved setups live in this browser.
   const SAVE_KEYS = ['theme', 'townName', 'narratorStyle', 'narratorMode', 'revealMode', 'minPlayers', 'maxPlayers', 'autoMafia', 'roleCounts', 'vigilanteShots', 'doctorSelfProtect', 'nightSeconds', 'discussionSeconds', 'votingSeconds', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'tieRule', 'majority', 'anonymousVotes', 'mafiaWinAt', 'telepathWhen', 'ghostHaunts', 'botChatter'];
-  SAVE_KEYS.push('puppetUses', 'glitchUses', 'harmonyGoal', 'paparazziGoal');
+  SAVE_KEYS.push('puppetUses', 'glitchUses', 'harmonyGoal', 'paparazziGoal', 'roleSelection', 'draftSeconds');
   SAVE_KEYS.push(...Object.keys(window.MT_CONFIG.DEFAULTS));
   $('#s-save').addEventListener('click', () => {
     const name = $('#s-save-name').value.trim();
@@ -278,7 +278,7 @@
     render();
   });
 
-  const PHASES = { lobby: 'Lobby', roleReveal: 'Role reveal', night: 'Night {d}', dawn: 'Dawn {d}', morning: 'Morning {d}', discussion: 'Day {d} · Discussion', voting: 'Day {d} · Voting', verdict: 'Day {d} · Verdict', execution: 'Day {d} · Verdict', gameover: 'Game over' };
+  const PHASES = { lobby: 'Lobby', draft: 'Role draft', roleReveal: 'Role reveal', night: 'Night {d}', dawn: 'Dawn {d}', morning: 'Morning {d}', discussion: 'Day {d} · Discussion', voting: 'Day {d} · Voting', verdict: 'Day {d} · Verdict', execution: 'Day {d} · Verdict', gameover: 'Game over' };
 
   function render() {
     if (!st) return;
@@ -354,7 +354,8 @@
       const v = st.settings[el.dataset.set];
       if (el.type === 'checkbox') el.checked = !!v; else el.value = v;
     });
-    $$('main[data-panel="setup"] [data-set="minPlayers"], main[data-panel="setup"] [data-set="maxPlayers"], main[data-panel="setup"] [data-set="vigilanteShots"]').forEach((el) => { el.disabled = !lobby; });
+    $$('main[data-panel="setup"] [data-set="minPlayers"], main[data-panel="setup"] [data-set="maxPlayers"], main[data-panel="setup"] [data-set="vigilanteShots"], [data-set="roleSelection"], [data-set="draftSeconds"]').forEach((el) => { el.disabled = !lobby; });
+    $('#s-roles').classList.toggle('muted-off', st.settings.roleSelection !== 'manual');
     $$('[data-role]').forEach((el) => {
       el.disabled = !lobby || (el.dataset.role === 'mafia' && st.settings.autoMafia);
       if (el.dataset.role === 'mafia' && st.settings.autoMafia) { el.value = (st.setup.roles.filter((r) => r === 'mafia').length); return; }

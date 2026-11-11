@@ -1,0 +1,94 @@
+/* ===== Role Draft: cards, deck, vote, deal (TV + phones) ===== */
+.dcard { position:relative; width:var(--cw, 200px); height:var(--ch, 290px); perspective:900px; font-size:calc(var(--cw, 200px) / 11.5); }
+.dc-inner { position:absolute; inset:0; transform-style:preserve-3d; transition:transform .6s cubic-bezier(.3,1.4,.5,1); transform:rotateY(180deg); }
+.dcard.up .dc-inner { transform:rotateY(0deg); }
+.dc-front, .dc-backside { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:.7em; overflow:hidden; }
+.dc-backside { transform:rotateY(180deg); }
+
+/* Card back: a dark velvet deck with a gold sigil */
+.dc-back { width:100%; height:100%; box-sizing:border-box; border:.35em solid #c9a24a; border-radius:.7em;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,215,120,.18) 0 22%, transparent 23%),
+    repeating-linear-gradient(45deg, rgba(255,215,120,.09) 0 .35em, transparent .35em .9em),
+    repeating-linear-gradient(-45deg, rgba(255,215,120,.09) 0 .35em, transparent .35em .9em),
+    linear-gradient(160deg, #2a1640, #120a22 60%, #1d0f2e);
+  box-shadow:inset 0 0 0 .2em #120a22, inset 0 0 0 .32em rgba(201,162,74,.6), 0 .4em 1em rgba(0,0,0,.45);
+  display:flex; align-items:center; justify-content:center; }
+.dc-sigil { border-radius:50%; border:.18em solid #e8c66b; color:#f5d98a; font:700 1.9em/2.8em 'Pixelify Sans', monospace; text-align:center; text-shadow:0 0 .4em rgba(255,210,110,.8); width:1.5em; height:1.5em; line-height:1.4em; }
+
+/* Card face: generated from the real role bank */
+.dc-face { width:100%; height:100%; box-sizing:border-box; display:flex; flex-direction:column; gap:.25em; padding:.55em .6em .5em;
+  background:linear-gradient(180deg, #fff8e6, #f1e2bf); color:#2b1d12; border:.35em solid var(--rc); border-radius:.7em; font-family:'Fredoka', sans-serif; }
+.dc-team { align-self:flex-start; font-size:.78em; font-weight:700; padding:.12em .5em; border-radius:1em; background:#3aa0ff; color:#fff; letter-spacing:.02em; }
+.dc-face.team-mafia .dc-team { background:#c0392b; } .dc-face.team-neutral .dc-team { background:#7d5ba6; }
+.dc-art { flex:0 0 auto; height:3.6em; border-radius:.5em; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--rc) 55%, #fff), var(--rc)); box-shadow:inset 0 -.25em 0 rgba(0,0,0,.18); }
+.dc-art span { font-size:2.4em; filter:drop-shadow(0 .08em 0 rgba(0,0,0,.3)); }
+.dc-name { font:700 1.25em/1.1 'Pixelify Sans', monospace; text-align:center; }
+.dc-when { font-size:.72em; text-align:center; opacity:.75; }
+.dc-text { font-size:.8em; line-height:1.25; overflow:hidden; flex:1 1 auto; }
+.dc-rules { margin:0; padding-left:1.1em; font-size:.68em; line-height:1.2; opacity:.85; }
+
+/* ---------- TV ---------- */
+#draft { position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; align-items:center; overflow:hidden;
+  background:radial-gradient(ellipse at 50% 55%, rgba(60,30,90,.80), rgba(8,5,16,.94) 70%); color:#f6ecd4; font-family:'Fredoka', sans-serif; }
+#draft[hidden] { display:none !important; }
+.draft-head { text-align:center; padding:2.2vh 2vw 0; z-index:2; }
+.draft-head h1 { margin:0; font:700 clamp(28px, 4.2vh, 54px) 'Pixelify Sans', monospace; color:#f5d98a; text-shadow:0 0 18px rgba(255,200,90,.45), 0 3px 0 #000; }
+.draft-sub { margin:.5vh 0 0; font-size:clamp(16px, 2.3vh, 28px); opacity:.92; }
+.draft-table { position:relative; flex:1 1 auto; width:100%; }
+.draft-table > .dcard { position:absolute; left:50%; top:50%; margin-left:calc(var(--cw) / -2); margin-top:calc(var(--ch) / -2); transform-origin:50% 50%; will-change:transform; }
+.draft-table > .dcard.deck-card { transform-origin:50% 110%; }
+.draft-foot { padding:0 2vw 2.6vh; font-size:clamp(16px, 2.4vh, 28px); min-height:3vh; text-align:center; }
+.draft-timer { position:absolute; top:2vh; right:2vw; font:700 clamp(24px, 4vh, 48px) 'Pixelify Sans', monospace; background:rgba(0,0,0,.45); padding:.1em .5em; border-radius:.4em; border:2px solid #c9a24a; }
+.draft-timer.urgent { color:#ff6b6b; animation:draftPulse .8s infinite; }
+@keyframes draftPulse { 50% { transform:scale(1.08); } }
+.draft-table .dc-votes { position:absolute; left:0; right:0; bottom:-2.1em; text-align:center; font-size:1em; color:#f6ecd4; }
+.draft-table .dc-votes b { font:700 1.5em 'Pixelify Sans', monospace; color:#f5d98a; }
+.dc-bar { height:.35em; margin:.25em auto 0; width:80%; background:rgba(255,255,255,.15); border-radius:.2em; overflow:hidden; }
+.dc-bar i { display:block; height:100%; width:0; background:#f5d98a; transition:width .4s; }
+.dcard.lead .dc-front { box-shadow:0 0 0 .25em #f5d98a, 0 0 2em .4em rgba(255,210,100,.55); }
+.dcard.lead::after { content:'⭐'; position:absolute; top:-.9em; right:-.6em; font-size:1.9em; filter:drop-shadow(0 0 .3em #ffd36b); }
+.draft-table .dc-text { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:7; overflow:hidden; flex:0 1 auto; }
+.dc-ribbon { display:none; position:absolute; left:-4%; right:-4%; top:-0.9em; text-align:center; padding:.25em 0; font:700 1.05em 'Pixelify Sans', monospace; color:#1b1006; background:linear-gradient(90deg, #c9a24a, #ffe39a, #c9a24a); box-shadow:0 .2em .6em rgba(0,0,0,.5); transform:rotate(-6deg); }
+.dcard.win { z-index:3; animation:draftWin 1s ease-out both; }
+.dcard.win .dc-ribbon { display:block; animation:draftRibbon .5s .5s both; }
+.dcard.win .dc-front { box-shadow:0 0 0 .25em #ffe39a, 0 0 2.6em .6em rgba(255,220,120,.7); }
+.dcard.out { opacity:.45; filter:grayscale(.7); transition:opacity .8s, filter .8s; }
+@keyframes draftWin { 0% { scale:1; } 50% { scale:1.12; } 100% { scale:1.06; } }
+@keyframes draftRibbon { from { opacity:0; transform:rotate(-6deg) scaleX(.2); } to { opacity:1; transform:rotate(-6deg) scaleX(1); } }
+.dcard.dealt { z-index:2; }
+.dc-plate { position:absolute; left:50%; top:100%; transform:translate(-50%, .3em); white-space:nowrap; font:600 calc(var(--cw) / 5.5) 'Fredoka', sans-serif; background:rgba(0,0,0,.55); padding:.05em .45em; border-radius:.4em; }
+.dc-seen { display:none; margin-left:.3em; color:#6be08b; }
+.dcard.seen .dc-seen { display:inline; }
+.dcard.seen .dc-back { box-shadow:inset 0 0 0 .2em #120a22, inset 0 0 0 .32em rgba(201,162,74,.6), 0 0 1.2em .3em rgba(107,224,139,.55); }
+
+/* ---------- Phone ---------- */
+.draft-phone .draft-wait { padding-top:18px; }
+.mini-deck { position:relative; width:84px; height:122px; margin:10px auto 18px; --cw:84px; --ch:122px; }
+.mini-deck > .dcard { position:absolute; left:0; top:0; }
+.draft-intro h2 { margin:0 0 6px; }
+.draft-left { font-weight:700; margin:6px 0 0; }
+.draft-list { display:flex; flex-direction:column; gap:14px; margin:12px 0 96px; }
+.draft-item { border-radius:14px; animation:draftIn .5s ease-out both; }
+.draft-item .dc-face { height:auto; min-height:0; font-size:16px; border-radius:14px 14px 0 0; }
+.draft-item .dc-art { height:64px; }
+.draft-item .dc-text { overflow:visible; }
+.draft-vote-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; background:rgba(0,0,0,.35); border-radius:0 0 14px 14px; }
+.draft-vote-row .btn { width:auto; min-width:120px; margin:0; }
+.dv-count { color:#f6ecd4; font-weight:600; }
+.dv-count b { font-size:20px; color:#f5d98a; }
+.dv-count [data-lead] { color:#ffd36b; margin-left:4px; }
+.dv-tag { color:#f6ecd4; font-weight:700; }
+.draft-item.picked { box-shadow:0 0 0 3px #f5d98a, 0 0 18px rgba(255,210,100,.5); }
+.draft-item.win { box-shadow:0 0 0 3px #6be08b; }
+.draft-item.out { opacity:.5; }
+.draft-lock { position:fixed; left:0; right:0; bottom:0; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, transparent, rgba(10,6,20,.95) 30%); z-index:20; }
+.draft-lock .btn { margin:0; }
+@keyframes draftIn { from { opacity:0; transform:translateY(16px) rotateX(30deg); } to { opacity:1; transform:none; } }
+.deal-zone { display:flex; justify-content:center; padding:10px 0 16px; }
+.deal-zone .my-card { --cw:min(78vw, 300px); --ch:calc(var(--cw) * 1.45); cursor:pointer; font-size:calc(min(78vw, 300px) / 15); }
+.deal-zone .my-card .dc-text { font-size:1em; }
+.deal-hint { margin-top:8px; }
+.deal-extras { margin-bottom:20px; }
+@media (prefers-reduced-motion: reduce) { .dc-inner { transition:none; } .draft-item { animation:none; } }

@@ -34,6 +34,7 @@ npm start
 
 | Phase | Big screen | Phones |
 |---|---|---|
+| Role draft (Default) | A deck of role cards drops in, fans out and shuffles. The candidate cards flip up with live vote counts (⭐ = leading), the winners get an "IN THE GAME" ribbon, then the cards go back into the deck and one card is dealt to each player | Read each card (team, timing, what it does), vote for up to N cards, lock in. Then your own card is dealt face down: tap to flip it |
 | Roles | Everyone gathers in the square | Tap to see your secret role (team members see each other) |
 | Night | Town goes dark, everyone goes home | Power roles act. Everyone else gets a dummy "who do you suspect?" prompt, so nobody can tell who has a power |
 | Dawn | A cinematic for each attack: a hooded figure sneaks in, the victim wakes, and then the attack lands, a protector steps in, or a ward blocks it | Investigators get their results. Blocked players are told |
@@ -41,6 +42,23 @@ npm start
 | Discussion | Timer (or open-ended in manual mode). Bots "speak" in bubbles | Peek at your role. Telepaths message each other |
 | Voting | Check marks show who has voted | Vote (or skip), and change your vote until voting closes |
 | Verdict | Ballots fly to each suspect and vote counts appear | |
+
+### Role selection: Default (card draft) or Manual
+
+Set in the Judge console → Setup → Roles.
+
+- **Default (new games):** after Start, the players vote on which special roles are in this game.
+  - The number of cards scales with the players: 4 → 3 cards, 8 → 5, 12 → 7, 16+ → 9. About 60% of the cards make it in.
+  - Cards come from the real role bank (`public/shared/draft.js`): a mix of Mafia, Town (always an investigator and a protector when possible) and, in bigger games, Neutral roles.
+  - Roles a room hasn't seen much are offered more often, and complex roles only appear in bigger games.
+  - The server counts the votes and breaks ties with a random draw.
+  - It then repairs anything invalid while keeping as many votes as possible: there is **always at least one Mafia**, the Mafia is never bigger or stronger than normal, and there are never more roles than players.
+  - Mafia and Villagers fill the other seats. Roles are dealt at random by the server, and each phone only ever receives its own.
+- **Custom roles (manual):** exactly the previous behavior, using the role list in Setup.
+  - Changing that list or loading a preset switches to Custom roles automatically. Pick Default again to go back to the draft.
+  - Test-mode forced roles also use the list.
+- After the vote, the **Mafia coordination** panel lists which roles are in this game (never who holds them), so the Mafia know which Town threats to hunt and which claims are risky.
+- **Next phase** steps through the draft stages. Back to lobby cancels it. People can join during the draft and are dealt in.
 
 ## Roles
 

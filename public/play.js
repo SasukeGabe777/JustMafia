@@ -15,6 +15,7 @@
   let profileReady = false;
   let lastKey = '';
   let clockOffset = 0;
+  let draftPhone = null;
   let roleShown = false;
   let editing = false;
   let prevPhase = null;
@@ -45,7 +46,7 @@
   function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
   const PHASE_LABEL = {
-    accusation: 'Accusation', defense: 'Defense', emergencyIntro: 'Emergency vote', lobby: 'Lobby', roleReveal: 'Roles assigned', night: 'Night {d}', dawn: 'Night {d}', morning: 'Day {d}',
+    accusation: 'Accusation', defense: 'Defense', emergencyIntro: 'Emergency vote', lobby: 'Lobby', draft: 'Choosing the roles', roleReveal: 'Roles assigned', night: 'Night {d}', dawn: 'Night {d}', morning: 'Day {d}',
     discussion: 'Day {d} · Discuss', voting: 'Day {d} · Vote', verdict: 'Day {d} · Verdict', execution: 'Day {d} · Verdict', gameover: 'Game over',
   };
 
@@ -467,6 +468,12 @@
     updateTimer();
 
     const body = $('#g-body');
+    // Role draft (vote on the cards, then flip your dealt card) owns the screen while it runs.
+    draftPhone = draftPhone || (window.MT_DRAFT && MT_DRAFT.Phone());
+    if (draftPhone && draftPhone.render(body, view, {
+      socket, clockOffset: () => clockOffset, mine: () => (view.draft && view.draft.mine) || [],
+      toast: (m) => alert(m), extrasHtml: () => roleExtras(),
+    })) { renderSettings(); return; }
     const focus = document.activeElement && document.activeElement.dataset.draft;
     const caret = focus ? document.activeElement.selectionStart : null;
     body.innerHTML = bodyHtml();

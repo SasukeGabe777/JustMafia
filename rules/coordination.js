@@ -8,6 +8,8 @@ module.exports = function install(Room) {
     return { canVote: this.phase === 'night' && !this.paused, choice: (this.night && this.night.mafiaVotes || {})[p.id] || null,
       targets: this.alive().filter((x) => this.team(x) !== 'mafia').map((x) => x.id), picks, totals,
       ties: this.settings.mafiaTie, decision: this.settings.mafiaDecision, bluffs: this.mafiaBluffs || [],
+      // Which roles are in this game (e.g. after the card draft), never who holds them.
+      rolesInGame: Object.entries(this.composition || {}).map(([role, count]) => ({ role, count, team: (require('../public/shared/roles').ROLES[role] || {}).team })),
       messages: (this.mafiaChat || []).filter((m) => m.day === this.day), tactics: TACTICS, messagesLeft: Math.max(0, 6 - (p.mafiaSent || 0)) };
   };
   Room.prototype.voteMafia = function (p, targetId) {

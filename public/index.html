@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/host.css">
+  <link rel="stylesheet" href="/draft.css">
 </head>
 <body>
   <canvas id="town"></canvas>
@@ -69,6 +70,9 @@
     </div>
   </div>
 
+  <!-- Role draft: deck, vote on the role cards, deal (public; never shows anyone's role) -->
+  <div id="draft" hidden></div>
+
   <div id="narration" hidden><div id="narration-text"></div></div>
 
   <!-- Host drawer -->
@@ -128,6 +132,7 @@
   <script src="/cinema.js"></script>
   <script src="/scenes.js"></script>
   <script src="/town.js"></script>
+  <script src="/draft-ui.js"></script>
   <script src="/rundown-ui.js"></script>
   <script src="/host.js"></script>
 </body>

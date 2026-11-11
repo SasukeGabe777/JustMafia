@@ -140,3 +140,6 @@ tr.dead td { opacity: .55; }
 #rd-out ul { margin:0; padding-left:0; list-style:none; }
 #rd-out li { padding:2px 0; }
 #rd-out .team-mafia b { color:#e0575f; } #rd-out .team-neutral b { color:#b48ae0; } #rd-out .dead { opacity:.7; }
+
+/* Role list is only used in Manual role selection */
+#s-roles.muted-off { opacity:.5; }

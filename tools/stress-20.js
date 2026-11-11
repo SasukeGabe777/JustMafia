@@ -57,13 +57,29 @@ const NAMES = ['Ana', 'Ben', 'Cy', 'Di', 'Eve', 'Finn', 'Gus', 'Hana', 'Ivy', 'J
   for (let game = 1; game <= GAMES; game++) {
     const t0 = Date.now(); let ticks = 0;
     const st = await emit(host, 'host:action', { type: 'start' }); if (st && st.ok === false) throw new Error('start failed: ' + st.error);
-    let lastPhase = null, phaseSince = Date.now();
+    let lastPhase = null, phaseSince = Date.now(), drafted = null;
     while (tv.phase !== 'gameover') {
       if (++ticks > 4000) { problems.push(`game ${game} stuck in ${tv.phase}`); break; }
-      if (tv.phase !== lastPhase) { lastPhase = tv.phase; phaseSince = Date.now(); stats.phases++; }
+      const stage = tv.phase + (tv.draft ? ':' + tv.draft.stage : '');
+      if (stage !== lastPhase) { lastPhase = stage; phaseSince = Date.now(); stats.phases++; }
+      if (tv.draft && tv.draft.result) drafted = tv.draft.result.roles;
       // Phones act like people.
       for (const s of phones) {
         const v = s.view; if (!v || !v.you.alive) continue;
+        // Role draft: vote on a few cards (sometimes change your mind), lock in; then flip the dealt card.
+        if (v.phase === 'draft' && v.draft) {
+          const d = v.draft;
+          if (JSON.stringify(d.cards) !== JSON.stringify(tv.draft.cards)) problems.push(`${s.name} saw different draft cards than the TV`);
+          if (d.stage === 'vote' && !d.locked && !s.drafted) {
+            s.drafted = true;
+            for (const role of d.cards.filter(() => Math.random() < 0.5).slice(0, d.picks)) await emit(s, 'player:draftVote', { role, on: true });
+            const extra = await emit(s, 'player:draftVote', { role: d.cards[0], on: true });
+            if (extra.ok && (s.view.draft.mine || []).length > d.picks) problems.push('a phone voted for more cards than allowed');
+            if (Math.random() < 0.85) await emit(s, 'player:draftVote', { ready: true });
+          }
+        } else s.drafted = false;
+        if (v.phase === 'roleReveal' && v.draft && !s.flipped) { s.flipped = true; if (!v.role) problems.push(`${s.name} was dealt no card`); s.emit('player:flip', {}); }
+        if (v.phase !== 'roleReveal') s.flipped = false;
         if (v.phase === 'night' && v.action && !v.action.choice && v.action.targets && v.action.targets.length && !s.acted) { const tg = pick(v.action.targets); s.emit('player:night', { targetId: typeof tg === 'string' ? tg : tg.id }); s.acted = true; }
         if (v.phase === 'voting' && v.voting && !v.voting.choice && v.voting.targets.length && !s.voted) { const tg = pick(v.voting.targets); s.emit('player:vote', { targetId: typeof tg === 'string' ? tg : tg.id }); s.voted = true; }
         if (v.phase === 'verdict' && v.verdict && !s.verdicted) {
@@ -78,9 +94,22 @@ const NAMES = ['Ana', 'Ben', 'Cy', 'Di', 'Eve', 'Finn', 'Gus', 'Hana', 'Ivy', 'J
       }
       // The host moves things along (like pressing Next phase when everyone is done).
       const age = Date.now() - phaseSince;
-      if ((tv.phase === 'night' || tv.phase === 'voting') && age > 900) await emit(host, 'host:action', { type: 'skip' });
+      if (tv.phase === 'draft' && tv.draft && tv.draft.stage === 'vote') { if (age > 4000) await emit(host, 'host:action', { type: 'skip' }); } // closes by itself once all lock in
+      else if (tv.phase === 'roleReveal' && tv.draft) { if (age > 3000) await emit(host, 'host:action', { type: 'skip' }); } // ends by itself once all flipped
+      else if ((tv.phase === 'night' || tv.phase === 'voting') && age > 900) await emit(host, 'host:action', { type: 'skip' });
       else if (!['night', 'voting', 'gameover'].includes(tv.phase) && age > 350) await emit(host, 'host:action', { type: 'skip' });
       await wait(60);
+    }
+    // The drafted cards are really in the game, with at least one Mafia, and exactly one role per player.
+    if (!drafted) problems.push(`game ${game}: no draft result seen`);
+    else {
+      const roles = tv.players.filter((p) => !p.spectator).map((p) => p.role);
+      if (roles.length !== N || roles.some((r) => !r)) problems.push(`game ${game}: ${roles.filter(Boolean).length}/${N} players had a role`);
+      const comp = tv.composition || {}, dealt = Object.values(comp).reduce((a, b) => a + b, 0);
+      for (const k of drafted) if (!comp[k]) problems.push(`game ${game}: drafted ${k} was not dealt`);
+      if (dealt !== N) problems.push(`game ${game}: ${dealt} cards dealt for ${N} players`);
+      if (!Object.keys(comp).some((r) => ['mafia', 'godfather'].includes(r))) problems.push(`game ${game}: no Mafia killer`);
+      console.log(`    drafted: ${drafted.join(', ') || '(classic)'}`);
     }
     stats.games.push({ game, winner: tv.winner, ms: Date.now() - t0, alive: tv.players.filter((p) => p.alive).length });
     console.log(`  ✓ game ${game}: ${tv.winner} won in ${((Date.now() - t0) / 1000).toFixed(1)}s, ${tv.players.filter((p) => p.alive).length}/${N} alive`);

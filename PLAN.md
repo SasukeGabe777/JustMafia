@@ -439,6 +439,31 @@ Implementation checklist (updated after verification below):
   live in `tools/cdp.js`; `npm run test:e2e` runs both suites.
   `MT_DEV_GRANTS=1` enables a test-only gold grant.
 
+### Role Draft (new Default role selection) and the optional Rundown
+
+**Role Draft**
+- New setting `roleSelection`: `draft` (Default, new games) or `manual` ("Custom roles": the unchanged previous behavior). `draftSeconds` sets the vote length.
+  - Editing `roleCounts`, the old role switches, or a preset switches to Custom roles, unless the same update sets `roleSelection` (saved setups).
+- `mafiaView.rolesInGame`: the dealt composition, shown in the Mafia coordination panel.
+- Phase `draft` with stages deck (7 s) → vote → result (5.5 s) → collect (5 s), then the existing `startGame()` / roleReveal.
+- Server: `rules/draft.js`. Logic: `public/shared/draft.js` (pure; card scaling, balanced candidates with per-room rotation, finalize with ties and repair).
+- The vote closes early once everyone connected has locked in.
+- A drafted roleReveal waits up to 30 s for players to flip their own card (`player:flip`). It ends 3.5 s after everyone has looked; the TV only learns *who* looked.
+- Late joiners during the draft are dealt in.
+- Kicking someone during the draft removes them like in the lobby (this fixed a bug where a kick ended the game). No winner checks run before roles exist.
+- UI: `public/draft-ui.js` + `public/draft.css`, shared by the TV overlay and the phones.
+  - Web Animations are offset by the server stage time, so all screens stay in sync and a reloaded phone resumes mid-animation.
+  - New sfx: shuffle, deal, flip.
+  - Judge console: Manual/Default select and vote seconds.
+- Tests:
+  - `tools/test-draft.js` (12 tests): defaults, manual unchanged, scaling 4→3 / 8→5, balance, rotation, vote validation, early close, fair ties, invalid-vote repair for 4–30 players, dealing and secrecy, flips, leave/join/reconnect mid-draft, cancel/pause, old saved settings.
+  - `tools/e2e-draft.js` (6 checks): real Chrome with a TV and 2 phones.
+  - `tools/stress-20.js` now drafts with 20 phones.
+
+**Rundown of the game** (optional, after game over)
+- TV button or Judge console (view / show on TV / hide).
+- Tells the story night by night from the event log and vote history: actions, outcomes, votes, gallows interventions, last words, Judge removals, who was who, and awards. Built only at game over.
+
 ### Lobby-only customization and shop; in-game role card fix
 
 - Once a game starts, the phone is purely the game. "Change my look",

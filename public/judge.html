@@ -213,6 +213,16 @@
       </div>
       <div class="card">
         <h3>Roles <span class="muted small" id="s-count"></span></h3>
+        <div class="row2">
+          <label>Role selection
+            <select data-set="roleSelection" id="s-role-selection">
+              <option value="draft">Default: players vote on role cards (card draft)</option>
+              <option value="manual">Custom roles: use the role list below</option>
+            </select>
+          </label>
+          <label>Card vote (s) <input type="number" data-set="draftSeconds" min="10" max="300"></label>
+        </div>
+        <p class="muted small" id="s-draft-note">Default: after Start, everyone watches the deck shuffle, votes on which role cards are in this game, then flips their own secret card. There is always at least one Mafia. Changing the role list below or loading a preset switches to Custom roles; pick Default again to go back to the card draft. (Test-mode forced roles also use the list.)</p>
         <label class="check"><input type="checkbox" data-set="autoMafia"> Automatic Mafia team size (about 1 in 4.5 players; Godfather and Roleblocker count toward it)</label>
         <p class="muted small">Everyone without a special role is a Villager. Roles are shuffled randomly unless you force one in the Players tab.</p>
         <div id="s-roles" class="roles"></div>

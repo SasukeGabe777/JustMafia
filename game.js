@@ -28,6 +28,8 @@ const DEFAULT_SETTINGS = {
   minPlayers: 4,
   maxPlayers: 100,
   autoMafia: true,            // Mafia count scales with the player count
+  roleSelection: 'draft',     // draft (Default) = players vote on role cards | manual = roleCounts below, as before
+  draftSeconds: 45,           // how long the role-card vote lasts
   roleCounts: { mafia: 1, detective: 1, doctor: 1 },
   vigilanteShots: 1,
   doctorSelfProtect: true,
@@ -340,7 +342,7 @@ class Room {
       hauntAt: 0,
     };
     this.resetPlayer(p);
-    p.spectator = this.phase !== 'lobby';
+    p.spectator = !['lobby', 'draft'].includes(this.phase); // joining during the role draft still gets you dealt in
     this.players.set(p.id, p);
     this.touch();
     this.sync();
@@ -392,7 +394,7 @@ class Room {
     if (!p) return;
     if (!p.isBot && (this.removalVotes.size || p.isJudge)) return;
     this.io.to(this.playerChannel(p)).emit('player:kicked');
-    if (this.phase === 'lobby' || p.spectator) {
+    if (this.phase === 'lobby' || this.phase === 'draft' || p.spectator) { // no roles yet during the draft
       this.players.delete(id);
       delete this.settings.forcedRoles[id];
       this.reindexHouses();
@@ -407,6 +409,11 @@ class Room {
 
   // ---------- setup ----------
   setupFor(n) {
+    // A drafted game uses the cards the players voted in (Mafia and Villagers fill the rest).
+    if (this.draftCounts) {
+      const s = R.buildRoleList({ ...this.settings, roleCounts: this.draftCounts, autoMafia: true, forcedRoles: {} }, n);
+      return s.errors.length ? R.buildRoleList({ ...this.settings, roleCounts: {}, autoMafia: true, forcedRoles: {} }, n) : s;
+    }
     return R.buildRoleList(this.settings, n);
   }
 
@@ -460,7 +467,9 @@ class Room {
     for (const p of players) this.addLog(`${p.name} is ${ROLES[p.role].name}.`, true);
     this.narrate('start', { count: players.length });
     this.setCinematic({ type: 'start' });
-    this.setPhase('roleReveal', this.cine('roleReveal'));
+    for (const p of players) p.flipped = false;
+    // Drafted games deal cards that players flip themselves, so the reveal waits a little longer.
+    this.setPhase('roleReveal', this.cine('roleReveal', this.draftCounts ? this.draftDealMs() : 0));
     return { ok: true };
   }
 
@@ -518,6 +527,7 @@ class Room {
     this.timer = null;
     this.endsAt = null;
     switch (this.phase) {
+      case 'draft': return this.draftNext();
       case 'roleReveal': return this.startNight();
       case 'night': return this.resolveNight();
       case 'dawn': return this.startMorning();
@@ -920,7 +930,7 @@ class Room {
     this.publicStories = []; this.confirmedTown = []; this.harmonyTotal = 0; this.glitchUntil = 0;
     this.storyHoldUntil = 0; this.narrationHistory = {}; this.verdictActs = null;
     this.reindexHouses();
-    Object.assign(this, { day: 0, winner: null, jesterId: null, pending: null, reveal: null, votes: null, night: null, composition: null, narration: null, cinematic: null, accusations: [], voteHistory: [], telepathLog: [] });
+    Object.assign(this, { day: 0, winner: null, jesterId: null, pending: null, reveal: null, votes: null, night: null, composition: null, narration: null, cinematic: null, accusations: [], voteHistory: [], telepathLog: [], draft: null, draftCounts: null });
     this.setPhase('lobby', null);
   }
 
@@ -958,6 +968,7 @@ class Room {
 
   // After a Judge kill/revive/kick mid-game, the game may now be decided.
   afterJudgeChange() {
+    if (['lobby', 'draft'].includes(this.phase)) return; // nobody has a role yet, so nobody can have won
     this.winner = this.checkWinner();
     if (this.winner && !['dawn', 'morning', 'verdict', 'execution', 'gameover', 'lobby'].includes(this.phase)) this.endGame();
   }
@@ -1068,6 +1079,11 @@ class Room {
       if (s.mafiaCount != null) { const m = clamp(int(s.mafiaCount, 0), 0, 50); S.autoMafia = m === 0; if (m) S.roleCounts.mafia = m; }
       for (const k of ['detective', 'doctor']) if (s[k] != null) S.roleCounts[k] = s[k] ? Math.max(1, S.roleCounts[k] || 0) : 0;
       if (s.vigilanteShots != null) S.vigilanteShots = clamp(int(s.vigilanteShots, 1), 1, 10);
+      // The card draft is the default; picking roles yourself (role list, old role switches or a
+      // preset) means Custom roles, unless this same update says which mode to use.
+      if (s.roleSelection == null && (s.roleCounts || s.mafiaCount != null || s.detective != null || s.doctor != null)) S.roleSelection = 'manual';
+      if (s.roleSelection != null && ['draft', 'manual'].includes(s.roleSelection)) S.roleSelection = s.roleSelection;
+      if (s.draftSeconds != null) S.draftSeconds = clamp(int(s.draftSeconds, 45), 10, 300);
       if (s.forcedRoles && typeof s.forcedRoles === 'object') {
         S.forcedRoles = {};
         for (const [id, role] of Object.entries(s.forcedRoles)) if (this.players.has(id) && ROLES[role]) S.forcedRoles[id] = role;
@@ -1098,7 +1114,7 @@ class Room {
     switch (msg.type) {
       case 'randomJudge': return this.randomJudge();
       case 'disaster': return this.disaster(msg);
-      case 'start': return this.phase === 'lobby' ? this.startGame() : { ok: false, error: 'Game already running.' };
+      case 'start': return this.phase !== 'lobby' ? { ok: false, error: 'Game already running.' } : this.draftMode() ? this.startDraft() : this.startGame();
       case 'pause': this.pause(); break;
       case 'resume': this.resume(); break;
       case 'skip': if (!['lobby', 'gameover'].includes(this.phase)) this.advance(); break;
@@ -1273,6 +1289,8 @@ class Room {
       narratorMode: this.settings.narratorMode,
       winner: this.phase === 'gameover' ? this.winner : null,
       composition: this.composition,
+      roleSelection: this.settings.roleSelection,
+      draft: this.draftView(),
       accusations: this.accusations.slice(-30),
       votingOpen: this.phase === 'voting',
       manualVoting: !this.settings.autoAdvance,
@@ -1288,7 +1306,8 @@ class Room {
       joinBase: this.joinBase,
       minPlayers: this.settings.minPlayers,
       maxPlayers: this.settings.maxPlayers,
-      setupError: this.phase === 'lobby' ? (this.setupFor(Math.max(this.inGame().length, 1)).errors[0] || null) : null,
+      // A draft builds its own setup, so only the manual role list can block Start.
+      setupError: this.phase === 'lobby' && !this.draftMode() ? (this.setupFor(Math.max(this.inGame().length, 1)).errors[0] || null) : null,
       cinematic: this.cinematic,
       players: this.list().map((p) => ({
         id: p.id,
@@ -1409,6 +1428,7 @@ class Room {
       minPlayers: this.settings.minPlayers,
       notes: p.spectator ? [] : p.notes.filter((n) => n.day >= this.day - 1),
     };
+    if (v.draft) { v.draft = this.draftView(p); v.flipped = !!p.flipped; } // this player's own ballot; never anyone's role
     // Bots reason over the public vote record (players saw it on the big screen).
     if (p.isBot && !this.settings.anonymousVotes) v.voteHistory = this.voteHistory;
     if (r && r.knowsTeam && p.alive) v.teammates = this.inGame().filter((x) => x.id !== p.id && this.team(x) === r.team && this.role(x).knowsTeam).map((x) => ({ id: x.id, name: x.name, alive: x.alive, role: x.role }));
@@ -1480,5 +1500,6 @@ require('./rules/storyteller')(Room);
 require('./rules/social')(Room);
 require('./rules/progression')(Room);
 require('./rules/rundown')(Room);
+require('./rules/draft')(Room);
 require('./rules/story-bots')(Room);
 module.exports = { Room, DEFAULT_SETTINGS, HARD_MAX_PLAYERS };

@@ -67,6 +67,10 @@ window.SFX = (function () {
     wail: () => { tone(520, 1.3, { vol: 0.1, slide: 260 }); tone(530, 1.3, { vol: 0.08, slide: 250, at: 0.06 }); },
     win: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, 0.4, { type: 'triangle', vol: 0.18, at: i * 0.15 })),
     lose: () => [392, 370, 349, 262].forEach((f, i) => tone(f, 0.7, { type: 'sawtooth', vol: 0.08, at: i * 0.3 })),
+    // ---- role draft: a deck of cards ----
+    shuffle: () => { for (let i = 0; i < 22; i++) noise(0.025, { vol: 0.18 + Math.random() * 0.12, at: i * 0.045, filter: 2600 + Math.random() * 1500, type: 'highpass' }); },
+    deal: () => noise(0.12, { vol: 0.3, filter: 3200, type: 'bandpass' }),
+    flip: () => { noise(0.06, { vol: 0.35, filter: 2800, type: 'highpass' }); tone(880, 0.25, { type: 'triangle', vol: 0.1, at: 0.05 }); tone(1320, 0.35, { type: 'triangle', vol: 0.08, at: 0.12 }); },
     // ---- cinematic sounds ----
     creak: () => { tone(180, 1.1, { type: 'sawtooth', vol: 0.05, slide: 120 }); tone(260, 0.9, { type: 'square', vol: 0.025, at: 0.15, slide: 210 }); noise(1.0, { vol: 0.06, filter: 600, type: 'bandpass' }); },
     click: () => { noise(0.03, { vol: 0.6, filter: 3500, type: 'highpass' }); noise(0.03, { vol: 0.5, at: 0.12, filter: 3000, type: 'highpass' }); },

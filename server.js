@@ -311,6 +311,9 @@ io.on('connection', (socket) => {
   // A host answers a move-in request (yes/no) during setup.
   // Verdict window: intervene (interrupt / protect / defend / cancel) and last words.
   socket.on('player:intervene', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.intervene(p, String(msg.kind || '')) : { ok: false }); });
+  // Role draft: vote for a card (toggle) or lock in; then flip your own dealt card.
+  socket.on('player:draftVote', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.draftVote(p, { role: typeof msg.role === 'string' ? msg.role : null, on: typeof msg.on === 'boolean' ? msg.on : null, ready: msg.ready === true }) : { ok: false }); });
+  socket.on('player:flip', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.flipCard(p) : { ok: false }); });
   socket.on('player:lastWords', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.setLastWords(p, { nameId: msg.nameId ? String(msg.nameId) : null, word: msg.word ? String(msg.word) : null }) : { ok: false }); });
   socket.on('player:moveReply', (msg = {}, cb) => {
     const { room, p } = ctx();

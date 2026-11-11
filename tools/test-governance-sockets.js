@@ -42,7 +42,7 @@ async function until(fn) { const end = Date.now() + 5000; while (!fn()) { if (Da
   const judge = socket(); let privateState, judgeUpdates = 0;
   judge.on('judge:state', (v) => { privateState = v; judgeUpdates++; });
   assert((await emit(judge, 'judge:attach', { code: bootstrap.code, token: chosen.token })).ok);
-  assert((await emit(judge, 'host:action', { type: 'settings', settings: { minPlayers: 3, narratorMode: 'human', autoAdvance: false } })).ok);
+  assert((await emit(judge, 'host:action', { type: 'settings', settings: { roleSelection: 'manual', minPlayers: 3, narratorMode: 'human', autoAdvance: false } })).ok);
   assert((await emit(judge, 'host:action', { type: 'start' })).ok);
   await until(() => privateState && privateState.phase === 'roleReveal');
   assert.equal(privateState.allPlayers.find((p) => p.id === chosen.playerId).role, null);

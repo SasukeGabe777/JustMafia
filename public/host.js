@@ -19,6 +19,7 @@
   const PHASES = {
     accusation:'The accusation', defense:'The defense', emergencyIntro:'Emergency town vote',
     lobby: 'Waiting for players',
+    draft: 'Choosing the roles',
     roleReveal: 'Check your phones!',
     night: 'Night {d}',
     dawn: 'Night {d}',
@@ -78,7 +79,9 @@
     renderLobby();
     renderGameOver();
     renderDrawer();
+    draftTv.render(st); // the role draft overlay (deck, card vote, deal)
   });
+  const draftTv = MT_DRAFT.TV($('#draft'));
 
   socket.on('host:haunt', (evt) => town.haunt(evt));
 

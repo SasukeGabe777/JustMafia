@@ -32,7 +32,7 @@ async function playGame(n, opts = {}) {
       for (const p of st.players) if (p.alive && p.role) fail(`host saw role of living player ${p.name} during ${st.phase}`);
     }
   });
-  await emit(host, 'host:action', { type: 'settings', settings: { nightSeconds: 20, discussionSeconds: 10, votingSeconds: 20, maxPlayers: 100 } });
+  await emit(host, 'host:action', { type: 'settings', settings: { roleSelection: 'manual', nightSeconds: 20, discussionSeconds: 10, votingSeconds: 20, maxPlayers: 100 } });
   if (opts.preset) {
     await emit(host, 'host:action', { type: 'preset', id: opts.preset });
     await emit(host, 'host:action', { type: 'settings', settings: { discussionSeconds: 10, votingSeconds: 20 } });

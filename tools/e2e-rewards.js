@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 // End-to-end check of the end-of-game gold reward scene in headless Chrome:
 // three human players finish a game, the phone shows coins flying into the pouch
 // with a breakdown, the balance updates and persists, and it plays only once.
@@ -13,14 +13,14 @@ const PORT = 3991, URL = `http://localhost:${PORT}`;
 const SHOTS = process.env.SHOTS || path.join(os.tmpdir(), 'mt-e2e');
 if (!CHROME) { console.log('SKIP e2e-rewards: Chrome not found (set CHROME=path).'); process.exit(0); }
 let passed = 0;
-const ok = (name) => { passed++; console.log(`  âœ“ ${name}`); };
+const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
 const emit = (s, ev, d = {}) => new Promise((r) => s.emit(ev, d, r));
 
 (async () => {
   await startServer(PORT, { MT_REWARD_MIN_MS: '0' });
   const host = io(URL, { transports: ['websocket'] }); let tv = null; host.on('host:state', (s) => { tv = s; });
   const room = await emit(host, 'host:create');
-  await emit(host, 'host:action', { type: 'settings', settings: { minPlayers: 3 } });
+  await emit(host, 'host:action', { type: 'settings', settings: { minPlayers: 3, roleSelection: 'manual' } });
   // Two other humans on their own "phones" (sockets with their own profiles).
   for (const name of ['Ben', 'Cy']) { const s = io(URL, { transports: ['websocket'] }); await emit(s, 'profile:create'); assert((await emit(s, 'player:join', { code: room.code, name })).ok); }
 
