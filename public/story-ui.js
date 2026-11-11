@@ -66,6 +66,40 @@
       });
       const role = el.querySelector('[data-hh-role]'); if (role) role.onchange = () => emit('headhunter', { op: 'disguise', role: role.value || null });
     }
+    // The Crafter's workshop: search, an inventory of materials, the recipe book, and tools.
+    const cr = v.crafter, K = window.MT_CRAFTING;
+    if (cr && K) {
+      const mats = Object.entries(K.MATERIALS), last = cr.finds[cr.finds.length - 1];
+      const fresh = last && drafts.crSeen !== `${last.day}-${last.night}-${cr.finds.length}`;
+      const slot = ([id, m]) => `<div class="craft-slot${(cr.materials[id] || 0) ? '' : ' empty'}${fresh && last.material === id ? ' new' : ''}" title="${esc(m.name)}"><span class="cs-icon">${m.icon}</span><b>${cr.materials[id] || 0}</b><small>${esc(m.name)}</small></div>`;
+      const need = (r) => Object.entries(r.needs).map(([id, n]) => `<span class="need${(cr.materials[id] || 0) >= n ? ' ok' : ''}">${K.MATERIALS[id].icon}×${n}</span>`).join('');
+      const recipe = ({ id, canCraft }) => { const r = K.RECIPES[id]; return `<div class="recipe${canCraft ? ' can' : ''}"><span class="r-icon">${r.icon}</span><div class="r-body"><b>${esc(r.name)}</b> <span class="small muted">${r.when === 'night' ? '🌙 night' : '☀️ day'}</span><p class="small">${esc(r.text)}</p><div class="needs">${need(r)}</div></div><button class="btn small" data-craft="${id}" ${canCraft ? '' : 'disabled'}>Craft</button></div>`; };
+      const owned = Object.entries(cr.tools).filter(([, n]) => n > 0);
+      const toolRow = ([id, n]) => {
+        const r = K.RECIPES[id], ready = cr.ready.includes(id), armed = cr.armed === id;
+        const pick = r.target === 'others' && ready && !armed ? `<select data-tool-target="${id}">${options(cr.targets)}</select>` : '';
+        const action = armed ? `<span class="armed">✓ Using tonight${cr.armedTarget && cr.armedTarget !== v.you.id ? ' on ' + esc(name(cr.armedTarget)) : ''}</span><button class="btn small ghost" data-disarm>Cancel</button>`
+          : ready ? `<button class="btn small" data-use="${id}">${r.when === 'day' ? 'Strike' : 'Use tonight'}</button>` : `<span class="small muted">${r.when === 'night' ? 'Usable at night' : 'Usable in the day'}</span>`;
+        return `<div class="tool${armed ? ' on' : ''}"><span class="t-icon">${r.icon}</span><b>${esc(r.name)} ×${n}</b>${pick}${action}</div>`;
+      };
+      const el = card(`<div class="workshop"><h3>🔨 Crafter’s Workshop</h3>
+        <button class="btn search-btn" data-search ${cr.canSearch ? '' : 'disabled'}>🔎 ${cr.canSearch ? `Search for materials (${cr.searchWhen})` : `Searched ${cr.searchWhen}`}</button>
+        ${fresh ? `<p class="found-pop">You found <b>${K.MATERIALS[last.material].icon} ${esc(K.MATERIALS[last.material].name)}</b>!</p>` : ''}
+        <h4>🎒 Materials</h4><div class="craft-inv">${mats.map(slot).join('')}</div>
+        ${owned.length ? `<h4>🧰 Your tools</h4><div class="tools">${owned.map(toolRow).join('')}</div>` : ''}
+        <details class="recipe-book"${drafts.crBook === false ? '' : ' open'}><summary>📖 Recipe book</summary>${cr.recipes.map(recipe).join('')}</details></div>`);
+      if (fresh) setTimeout(() => { drafts.crSeen = `${last.day}-${last.night}-${cr.finds.length}`; }, 2500);
+      const book = el.querySelector('.recipe-book'); if (book) book.addEventListener('toggle', () => { drafts.crBook = book.open; });
+      const s = el.querySelector('[data-search]'); if (s) s.onclick = () => emit('crafter', { op: 'search' });
+      el.querySelectorAll('[data-craft]').forEach((b) => b.onclick = () => emit('crafter', { op: 'craft', recipe: b.dataset.craft }));
+      el.querySelectorAll('[data-tool-target]').forEach((sel) => { const keep = drafts['crT' + sel.dataset.toolTarget]; if (keep && cr.targets.includes(keep)) sel.value = keep; sel.onchange = () => { drafts['crT' + sel.dataset.toolTarget] = sel.value; }; });
+      el.querySelectorAll('[data-use]').forEach((b) => b.onclick = () => {
+        const tool = b.dataset.use, r = K.RECIPES[tool], sel = el.querySelector(`[data-tool-target="${tool}"]`), t = sel && sel.value;
+        if (r.when === 'day' && !confirm(`Strike ${name(t)} down with your sword? Nobody will know it was you.`)) return;
+        emit('crafter', { op: 'use', tool, targetId: t || null });
+      });
+      const d = el.querySelector('[data-disarm]'); if (d) d.onclick = () => emit('crafter', { op: 'disarm' });
+    }
     if (v.ghost && (v.ghost.voteEnabled || v.ghost.chatEnabled)) { // nothing to show when both are off
       const g = v.ghost, el = card(`<h3>Ghost powers</h3>${g.voteEnabled ? `<p><b>Ghost vote: ${g.voteUsed ? 'used' : 'ready'}</b></p><p class="small">You get one vote from beyond, once per game.</p>` : ''}${g.chatEnabled ? `<h4>Ghost chat</h4><p class="small">Only ghosts and the Judge see this channel.</p><ul>${g.messages.slice(-12).map((m) => `<li>${esc(m.name)}: ${esc(m.text)}</li>`).join('')}</ul><input data-draft="ghost" maxlength="160" aria-label="Ghost message"><button class="btn" data-ghost-send>Send to ghosts</button>` : ''}`);
       const send = el.querySelector('[data-ghost-send]'); if (send) send.onclick = () => { emit('ghostChat', { text: el.querySelector('input').value }); drafts.ghost = ''; };

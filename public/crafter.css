@@ -1,0 +1,33 @@
+/* The Crafter's workshop (phone): a wooden workbench, an inventory grid and a recipe book */
+.workshop { background: repeating-linear-gradient(90deg, #8a5a32 0 22px, #7e5230 22px 44px); margin: -12px; padding: 12px; border-radius: 10px; color: #fff6e0; }
+.workshop h3 { margin: 0 0 8px; text-shadow: 0 2px 0 #3a2414; }
+.workshop h4 { margin: 12px 0 6px; font-size: 14px; text-shadow: 0 1px 0 #3a2414; }
+.workshop .search-btn { width: 100%; }
+.found-pop { margin: 8px 0 0; padding: 6px 10px; background: #fff1b8; color: #3a2414; border: 2px solid #3a2414; border-radius: 8px; text-align: center; animation: foundPop .5s cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes foundPop { from { transform: scale(.5); opacity: 0; } to { transform: none; opacity: 1; } }
+.craft-inv { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.craft-slot { position: relative; aspect-ratio: 1; background: #4a2e18; border: 3px solid #2a1a10; box-shadow: inset 0 0 0 2px #6b4426; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.craft-slot.empty { opacity: .5; }
+.craft-slot.new { animation: slotNew 1s ease-out 2; }
+@keyframes slotNew { 0% { box-shadow: inset 0 0 0 2px #6b4426, 0 0 0 0 #ffe066; } 50% { box-shadow: inset 0 0 0 2px #ffe066, 0 0 14px 4px #ffe066; } 100% { box-shadow: inset 0 0 0 2px #6b4426, 0 0 0 0 #ffe066; } }
+.cs-icon { font-size: 22px; line-height: 1; }
+.craft-slot b { position: absolute; right: 4px; bottom: 2px; font: 700 14px 'Pixelify Sans', monospace; text-shadow: 0 1px 0 #000; }
+.craft-slot small { font-size: 9px; opacity: .8; }
+.tools { display: flex; flex-direction: column; gap: 6px; }
+.tool { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: rgba(42, 26, 16, .55); border: 2px solid #2a1a10; border-radius: 8px; padding: 6px 8px; }
+.tool.on { border-color: #ffe066; box-shadow: 0 0 10px rgba(255, 224, 102, .5); }
+.t-icon { font-size: 22px; }
+.tool select { flex: 1; min-width: 90px; }
+.tool .armed { color: #ffe066; font-weight: 700; font-size: 13px; }
+.recipe-book { margin-top: 12px; background: #f3e4c4; color: #3a2414; border: 3px solid #3a2414; border-radius: 8px; padding: 6px 8px; }
+.recipe-book summary { font-weight: 700; cursor: pointer; }
+.recipe { display: flex; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px dashed rgba(58, 36, 20, .35); }
+.recipe:not(.can) .r-icon { filter: grayscale(.8); opacity: .7; }
+.r-icon { font-size: 28px; }
+.r-body { flex: 1; }
+.r-body p { margin: 2px 0 4px; }
+.needs { display: flex; gap: 4px; flex-wrap: wrap; }
+.need { padding: 1px 6px; border-radius: 6px; background: rgba(192, 57, 43, .18); font-size: 13px; }
+.need.ok { background: rgba(46, 125, 50, .22); }
+.recipe .btn, .tool .btn { width: auto; flex: none; padding-left: 14px; padding-right: 14px; }
+.recipe .r-body { min-width: 0; }

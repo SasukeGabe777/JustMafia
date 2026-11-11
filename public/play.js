@@ -771,6 +771,7 @@
       guard: ['🛡️ Who will you guard?', last || 'If they are attacked, you die in their place.'],
       shoot: ['🎯 Shoot someone?', `${v.shotsLeft} bullet${v.shotsLeft === 1 ? '' : 's'} left. Only shoot if you're sure.`],
       dummy: ['🤔 Who do you suspect?', 'Pick whoever seems most suspicious.'],
+      craft: ['🔨 Whose house will you visit?', 'Using a Pickaxe? Pick it in your workshop below. Otherwise tap anyone to blend in.'],
     };
     const [title, sub] = prompts[a.dummy ? 'dummy' : a.kind] || prompts.dummy;
     const picksFor = {};

@@ -125,6 +125,8 @@ and skin colors, with all manual controls available.
 
 Night actions resolve together, in this order: blocks → protection → kills → investigations. Ties are broken by a seeded random generator, so results are deterministic.
 
+**Crafter** (Town, Expansion pack): searches for one material each night and once each day (Wood, Stone, Iron, Glass, String), then crafts tools from a recipe book in their phone workshop: **Pickaxe** (wood + stone + iron, night: break a window and learn the target's TRUE role at dawn, the only check no disguise, frame or cover role fools), **Lantern** (glass + string, night: learn everyone who visited your house), **Magnifying Glass** (glass + iron, night: learn every visit that night), **Sword** (wood + 2 iron, day: strike one player down on the spot, anonymously). Tools stack; each use spends one. Rules: `rules/crafter.js`, data: `public/shared/crafting.js`.
+
 **DLC 1** (Judge console → Setup → Roles → *DLC 1* pack; also offered in the card draft):
 
 | Role | Team | What it does |

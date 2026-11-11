@@ -60,6 +60,7 @@
     trapper:      { min: 6,  weight: 0.8, power: 2, kind: 'protect' },
     cupid:        { min: 7,  weight: 0.7, power: 0 },
     eavesdropper: { min: 7,  weight: 0.7, power: 1, kind: 'info' },
+    crafter:      { min: 6,  weight: 0.8, power: 2, kind: 'info' },
     crier:        { min: 6,  weight: 0.8, power: 1 },
   };
   // Ten unlock tiers for "learn as you play": a room starts with the 9 simplest roles and
@@ -73,7 +74,7 @@
     2: ['medium', 'lookout', 'crier'],
     3: ['roleblocker', 'trapper', 'veteran'],
     4: ['framer', 'serialKiller', 'cupid'],
-    5: ['sorcerer', 'investigator', 'eavesdropper'],
+    5: ['sorcerer', 'investigator', 'eavesdropper', 'crafter'],
     6: ['silencer', 'impostor', 'telepath'],
     7: ['hunter', 'janitor', 'ghostwriter'],
     8: ['hustler', 'detonator', 'storymaker'],

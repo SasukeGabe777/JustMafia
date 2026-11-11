@@ -110,6 +110,7 @@
     framer: { name: 'Framer', team: 'mafia', knowsTeam: true, emoji: '🖼', color: '#a3443a', night: { kind: 'frame', targets: 'nonTeam' }, blurb: 'Each night, frame one player: tonight, every investigation sees them as Mafia. You also vote on the Mafia’s kill.' },
     janitor: { name: 'Janitor', team: 'mafia', knowsTeam: true, emoji: '🧹', color: '#6e5a4a', night: { kind: 'clean', targets: 'nonTeam', optional: true }, blurb: 'Once per game, clean up after a kill: if your target dies tonight, their role stays hidden from the town, and only you learn it.' },
     impostor: { name: 'Impostor', team: 'mafia', knowsTeam: true, emoji: '🎭', color: '#8d3d6e', when: 'All game (passive)', blurb: 'You hide behind a Town role: every investigation, even the Sorcerer’s, sees you as a Town role chosen at the start. You also vote on the Mafia’s kill.' },
+    crafter: { name: 'Crafter', team: 'town', emoji: '🔨', color: '#b07a3a', night: { kind: 'craft', targets: 'others', optional: true }, when: 'Search each night and once a day; craft any time', blurb: 'Search for one material each night and once each day, then craft tools from your recipe book: a Pickaxe (break a window: learn a role), a Lantern (see your visitors), a Magnifying Glass (see every visit tonight) or a Sword (strike someone down during the day).' },
     storymaker: { name: 'Storymaker', team: 'town', emoji: '📜', color: '#e3bf80', night: { kind: 'interrupt', targets: 'any', optional: true }, blurb: 'Once per game, interrupt the night with a town crier and an emergency vote. After the verdict, resume the interrupted night with its still-valid actions and remaining time. Wins with Town.' },
   });
   // Headhunter levels: the Nth correct mark (the marked player died) unlocks level N.
@@ -122,11 +123,11 @@
     { level: 5, power: 'allSight', title: 'All-seeing', text: 'You know everyone’s role.' },
     { level: 6, power: 'execute', title: 'Executioner', text: 'Once a day, execute anyone during discussion or voting.' },
   ];
-  const ROLE_ORDER = ['mafia', 'godfather', 'roleblocker', 'hunter', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'detective', 'sheriff', 'sorcerer', 'investigator', 'doctor', 'bodyguard', 'executioner', 'vigilante', 'detonator', 'storymaker', 'mayor', 'telepath', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'jester', 'serialKiller', 'headhunter', 'framer', 'janitor', 'impostor', 'medium', 'lookout', 'veteran', 'trapper', 'cupid', 'eavesdropper', 'crier', 'villager'];
+  const ROLE_ORDER = ['mafia', 'godfather', 'roleblocker', 'hunter', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'detective', 'sheriff', 'sorcerer', 'investigator', 'doctor', 'bodyguard', 'executioner', 'vigilante', 'detonator', 'storymaker', 'crafter', 'mayor', 'telepath', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'jester', 'serialKiller', 'headhunter', 'framer', 'janitor', 'impostor', 'medium', 'lookout', 'veteran', 'trapper', 'cupid', 'eavesdropper', 'crier', 'villager'];
   // Role packs: how the Judge console groups roles (Core, Expansion, DLC 1).
   const ROLE_PACKS = {
     core: { label: 'Core', roles: ['mafia', 'godfather', 'roleblocker', 'detective', 'sheriff', 'doctor', 'bodyguard', 'vigilante', 'mayor', 'telepath', 'jester', 'serialKiller', 'executioner'] },
-    expansion: { label: 'Expansion', roles: ['hunter', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'sorcerer', 'investigator', 'detonator', 'storymaker', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'headhunter'] },
+    expansion: { label: 'Expansion', roles: ['crafter', 'hunter', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'sorcerer', 'investigator', 'detonator', 'storymaker', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'headhunter'] },
     dlc1: { label: 'DLC 1', roles: ['framer', 'janitor', 'impostor', 'medium', 'lookout', 'veteran', 'trapper', 'cupid', 'eavesdropper', 'crier'] },
   };
   const GHOST_WORDS = ['IS', 'NOT', 'LIAR', 'TRUST', 'WATCH', 'DANGER', 'SAFE', 'MAYBE', 'TOGETHER', 'ALONE'];

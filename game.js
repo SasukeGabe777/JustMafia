@@ -1533,5 +1533,6 @@ require('./rules/story')(Room);
 require('./rules/headhunter')(Room); // wraps kill/night/views from the modules above, so it installs last
 require('./rules/story-bots')(Room);
 require('./rules/dlc1')(Room);
+require('./rules/crafter')(Room); // the Crafter: materials, recipes, tools
 require('./rules/events')(Room); // seasonal events (Blood Moon) // DLC 1 roles; wraps kill/views/shownRole, so it installs last
 module.exports = { Room, DEFAULT_SETTINGS, HARD_MAX_PLAYERS };

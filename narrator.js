@@ -124,6 +124,7 @@ Object.assign(LINES.classic, {
 Object.assign(LINES.classic, {
   hhStrike: ['A whistle in the dark, then silence. The Headhunter has claimed {name}.{role}', 'Nobody saw the Headhunter coming. {name} never had a chance.{role}'],
   hhExecute: ['The Headhunter steps into the square and passes their own sentence. {name} is executed.{role}', 'No vote. No trial. The Headhunter decides, and {name} falls.{role}'],
+  crafterStrike: ['A blade flashes in the square. Someone crafted it in secret, and {name} falls.{role}', 'Nobody saw who forged the sword. Everyone saw it strike {name} down.{role}'],
   hhWin: ['Every head in {town} has been collected. The Headhunter stands alone and wins.', 'The last name on the Headhunter’s list has been crossed off. The Headhunter wins.'],
 });
 

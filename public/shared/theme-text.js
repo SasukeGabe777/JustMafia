@@ -8,7 +8,7 @@
       cemetery: 'AIRLOCK',
       civic: { tavern: 'CANTINA', hall: 'COMMAND', firepit: 'REACTOR', market: 'TRADING POST', workshop: 'LAB' },
       teamNames: { mafia: 'The Syndicate', town: 'The Crew', neutral: 'Drifters' },
-      roleNames: {
+      roleNames: { crafter: 'Fabricator',
         villager: 'Colonist', mafia: 'Saboteur', godfather: 'Syndicate Boss', roleblocker: 'Signal Jammer',
         detective: 'Scan Officer', sheriff: 'Security Chief', doctor: 'Med-Bay Surgeon', bodyguard: 'Shield Trooper',
         vigilante: 'Rogue Marine', mayor: 'Station Commander', telepath: 'Psi-Link Twin', jester: 'Space Clown',
@@ -92,7 +92,7 @@
       cemetery: 'BARROWS',
       civic: { tavern: 'MOON INN', hall: 'MAGE HALL', firepit: 'ENCHANTED FIRE', market: 'BAZAAR', workshop: 'ALCHEMY' },
       teamNames: { mafia: 'The Dark Coven', town: 'The Realm', neutral: 'Wanderers' },
-      roleNames: {
+      roleNames: { crafter: 'Rune Smith',
         villager: 'Elfkin', mafia: 'Dark Acolyte', godfather: 'Coven Archmage', roleblocker: 'Binding Witch',
         detective: 'Truthseer', sheriff: 'Moon Warden', doctor: 'Healing Priestess', bodyguard: 'Oath Knight',
         vigilante: 'Rogue Ranger', mayor: 'High Elder', telepath: 'Moonbound Twin', jester: 'Trickster Fae',
@@ -176,7 +176,7 @@
       cemetery: 'ASHFIELD',
       civic: { tavern: 'FLAGON HALL', hall: 'RIDER KEEP', firepit: 'GREAT BRAZIER', market: 'SCALE MARKET', workshop: 'FORGE' },
       teamNames: { mafia: 'The Dragon Cult', town: 'The Riders', neutral: 'Outlanders' },
-      roleNames: {
+      roleNames: { crafter: 'Forge Hand',
         villager: 'Mountain Folk', mafia: 'Cultist', godfather: 'Wyrm Prophet', roleblocker: 'Chain Binder',
         detective: 'Scale Reader', sheriff: 'Peak Warden', doctor: 'Burn Healer', bodyguard: 'Shieldbearer',
         vigilante: 'Lone Rider', mayor: 'Dragon Lord', telepath: 'Bonded Rider', jester: 'Ash Fool',
@@ -260,7 +260,7 @@
       cemetery: 'OSSUARY',
       civic: { tavern: 'ALEHOUSE', hall: 'THRONE CRYPT', firepit: 'TORCH CIRCLE', market: 'BLACK MARKET', workshop: 'ARMORY' },
       teamNames: { mafia: 'The Thieves’ Guild', town: 'The Delvers', neutral: 'Lurkers' },
-      roleNames: {
+      roleNames: { crafter: 'Tinkerer',
         villager: 'Delver', mafia: 'Cutthroat', godfather: 'Guildmaster', roleblocker: 'Door Jammer',
         detective: 'Torch Inquirer', sheriff: 'Hall Warden', doctor: 'Antidote Healer', bodyguard: 'Shield Guard',
         vigilante: 'Crypt Stalker', mayor: 'Hall Steward', telepath: 'Echo Twin', jester: 'Crypt Fool',
@@ -344,7 +344,7 @@
       cemetery: 'COMPROMISED',
       civic: { tavern: 'HOTEL BAR', hall: 'HQ', firepit: 'SAFE HOUSE', market: 'EMBASSY', workshop: 'GADGET LAB' },
       teamNames: { mafia: 'The Network', town: 'The Agency', neutral: 'Freelancers' },
-      roleNames: {
+      roleNames: { crafter: 'Gadgeteer',
         villager: 'Field Agent', mafia: 'Double Agent', godfather: 'Spymaster', roleblocker: 'Handler',
         detective: 'Analyst', sheriff: 'Counterintel', doctor: 'Field Medic', bodyguard: 'Close Protection',
         vigilante: 'Rogue Operative', mayor: 'Station Chief', telepath: 'Cipher Partner', jester: 'Loose Cannon',
@@ -428,7 +428,7 @@
       cemetery: 'EVIDENCE',
       civic: { tavern: 'BREAK ROOM', hall: 'FIELD OFFICE', firepit: 'BRIEFING', market: 'SUPPLIES', workshop: 'FORENSICS' },
       teamNames: { mafia: 'The Crime Family', town: 'The Bureau', neutral: 'Persons of Interest' },
-      roleNames: {
+      roleNames: { crafter: 'Lab Tech',
         villager: 'Civilian', mafia: 'Made Man', godfather: 'Crime Boss', roleblocker: 'Fixer',
         detective: 'Special Agent', sheriff: 'Profiler', doctor: 'Paramedic', bodyguard: 'Protection Detail',
         vigilante: 'Rogue Cop', mayor: 'Bureau Chief', telepath: 'Partner Agent', jester: 'False Confessor',
@@ -512,7 +512,7 @@
       cemetery: 'ICE FIELD',
       civic: { tavern: 'COCOA HOUSE', hall: 'LODGE', firepit: 'BONFIRE', market: 'FUR MARKET', workshop: 'SLED SHOP' },
       teamNames: { mafia: 'The Frost Wolves', town: 'The Village', neutral: 'Wanderers' },
-      roleNames: {
+      roleNames: { crafter: 'Ice Carver',
         villager: 'Snowfolk', mafia: 'Frost Wolf', godfather: 'Alpha Wolf', roleblocker: 'Blizzard Caller',
         detective: 'Aurora Seer', sheriff: 'Snow Ranger', doctor: 'Hearth Healer', bodyguard: 'Sled Guard',
         vigilante: 'Lone Skier', mayor: 'Village Elder', telepath: 'Aurora Twin', jester: 'Snow Clown',
@@ -596,7 +596,7 @@
       cemetery: 'RESPAWN VOID',
       civic: { tavern: 'SNACK CUBE', hall: 'BUILD HALL', firepit: 'CAMPFIRE', market: 'TRADE BLOCK', workshop: 'CRAFT TABLE' },
       teamNames: { mafia: 'The Griefers', town: 'The Builders', neutral: 'Wildcards' },
-      roleNames: {
+      roleNames: { crafter: 'Workbench Wiz',
         villager: 'Blockling', mafia: 'Griefer', godfather: 'Grief Lord', roleblocker: 'Block Wall',
         detective: 'Pixel Inspector', sheriff: 'Cube Marshal', doctor: 'Respawn Medic', bodyguard: 'Shield Block',
         vigilante: 'Lone Builder', mayor: 'Server Admin', telepath: 'Paired Cube', jester: 'Pixel Prankster',
@@ -680,7 +680,7 @@
       cemetery: 'DISCARD PILE',
       civic: { tavern: 'THE INN', hall: 'GUILDHALL', firepit: 'CAMPFIRE', market: 'MERCHANT ROW', workshop: 'BLACKSMITH' },
       teamNames: { mafia: 'The Villain’s Cult', town: 'The Party', neutral: 'Wandering NPCs' },
-      roleNames: {
+      roleNames: { crafter: 'Artificer',
         villager: 'Commoner', mafia: 'Rogue', godfather: 'Cult Leader', roleblocker: 'Hold Caster',
         detective: 'Truth Cleric', sheriff: 'Paladin', doctor: 'Healer', bodyguard: 'Fighter',
         vigilante: 'Ranger', mayor: 'Party Leader', telepath: 'Twin Familiars', jester: 'Chaotic Bard',
@@ -764,7 +764,7 @@
       cemetery: 'CEMETERY',
       civic: { tavern: 'THE DINER', hall: 'TOWN HALL', firepit: 'FIRE PIT', market: 'GROCERY', workshop: 'GARAGE' },
       teamNames: { mafia: 'The Syndicate', town: 'The Town', neutral: 'Outsiders' },
-      roleNames: {
+      roleNames: { crafter: 'Handyman',
         villager: 'Resident', mafia: 'Syndicate Member', godfather: 'The Boss', roleblocker: 'Enforcer',
         detective: 'Homicide Lead', sheriff: 'Deputy', doctor: 'ER Nurse', bodyguard: 'Security Guard',
         vigilante: 'Avenger', mayor: 'Council Chair', telepath: 'Childhood Friend', jester: 'Troublemaker',
@@ -848,7 +848,7 @@
       cemetery: 'POTTER’S FIELD',
       civic: { tavern: 'JAZZ CLUB', hall: 'CITY HALL', firepit: 'BARREL FIRE', market: 'PAWN SHOP', workshop: 'DOCKS' },
       teamNames: { mafia: 'The Outfit', town: 'The City', neutral: 'Drifters' },
-      roleNames: {
+      roleNames: { crafter: 'The Fixer',
         villager: 'Citizen', mafia: 'Outfit Goon', godfather: 'Kingpin', roleblocker: 'Muscle',
         detective: 'Private Eye', sheriff: 'Beat Cop', doctor: 'Night Nurse', bodyguard: 'Bruiser',
         vigilante: 'Trigger Man', mayor: 'Councilman', telepath: 'Old Partner', jester: 'Two-Bit Clown',
