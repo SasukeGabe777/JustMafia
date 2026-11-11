@@ -2,16 +2,24 @@
 const { GHOST_WORDS } = require('./public/shared/roles');
 
 module.exports = function install(Room) {
-  Room.prototype.resolveObservations = function (alive, acts, blocked, attacks, definitions) {
+  // The one visit list every visit-reading role uses (Lookout, Investigator, Paparazzi,
+  // Crafter tools): who actually went to whose house tonight. A team kill counts as the one
+  // Mafia member who carried it out; blocked players stayed home; acting on yourself
+  // (a Doctor healing themselves, a Veteran on alert, a Crafter's lantern) is not a visit.
+  Room.prototype.computeVisits = function (alive, acts, blocked, attacks, definitions) {
     const nightDef = (p) => definitions ? definitions.get(p.id) : this.nightDef(p);
-    // Team kill contributes one visitor. Dummy suspicion prompts never create visits.
     const visits = [];
     for (const p of alive) {
       const def = nightDef(p), targetId = acts[p.id];
-      if (!def || !targetId || targetId === 'pass' || (blocked.has(p.id) && def.kind !== 'block') || def.kind === 'kill' || def.kind === 'shoot') continue;
+      if (!def || !targetId || targetId === 'pass' || targetId === p.id || (blocked.has(p.id) && def.kind !== 'block') || def.kind === 'kill' || def.kind === 'shoot' || def.teamKill) continue;
       visits.push({ actorId: p.id, targetId, kind: def.kind });
     }
-    for (const a of attacks) visits.push({ actorId: a.actorId, targetId: a.targetId, kind: 'attack' });
+    for (const a of attacks) if (a.actorId && a.actorId !== a.targetId && !visits.some((v) => v.actorId === a.actorId && v.targetId === a.targetId)) visits.push({ actorId: a.actorId, targetId: a.targetId, kind: 'attack' });
+    return visits;
+  };
+  Room.prototype.resolveObservations = function (alive, acts, blocked, attacks, definitions) {
+    const nightDef = (p) => definitions ? definitions.get(p.id) : this.nightDef(p);
+    const visits = this.computeVisits(alive, acts, blocked, attacks, definitions);
     this.night.visits = visits; // Judge-only; public views receive only redacted clues.
     for (const p of alive) {
       const def = nightDef(p), target = this.players.get(acts[p.id]);
@@ -29,9 +37,10 @@ module.exports = function install(Room) {
       if (['investigate', 'spy'].includes(def.kind)) {
         p.privateScene = { id: `${this.day}:${p.id}`, scene: def.kind === 'spy' ? 'watcher' : 'investigation', targetId: target.id, night: this.day };
       }
-      if (def.kind === 'photo' && !blocked.has(p.id) && visits.some((v) => v.actorId === target.id)) {
+      const went = visits.find((v) => v.actorId === target.id);
+      if (def.kind === 'photo' && !blocked.has(p.id) && went) {
         this.consumeAbility(p,'photo');
-        p.photoPending = { targetId: target.id, text: `${target.name} was active outside their home last night.` };
+        p.photoPending = { targetId: target.id, text: `${target.name} was photographed at ${this.nameOf(went.targetId)}'s house last night.` };
       }
     }
   };

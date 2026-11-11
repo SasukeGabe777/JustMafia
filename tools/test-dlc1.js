@@ -60,12 +60,17 @@ test('Veteran on alert: the attack fails and every visitor dies (twice per game)
   assert(!P.M1.alive && !P.M2.alive && !P.Det.alive, 'every visitor died, friend or foe');
 });
 
-test('Trapper protects the house and learns who attacked it', () => {
-  const { room, P } = game({ Ma: 'mafia', Tr: 'trapper', V1: 'villager', V2: 'villager', V3: 'villager', V4: 'villager' });
-  room.nightAction(P.Tr, P.V1.id); room.voteMafia(P.Ma, P.V1.id);
+test('Trapper: the trap takes a night to set, then stays until it catches the attacker', () => {
+  const { room, P } = game({ Ma: 'mafia', Tr: 'trapper', V1: 'villager', V2: 'villager', V3: 'villager', V4: 'villager', V5: 'villager' });
+  room.nightAction(P.Tr, P.V1.id); room.voteMafia(P.Ma, P.V2.id);
   toMorning(room);
+  assert(noteOf(P.Tr, /started setting a trap at V1/)); assert(!P.V2.alive);
+  toNight(room); room.nightAction(P.Tr, 'pass'); room.voteMafia(P.Ma, P.V3.id); toMorning(room); // armed, waiting (elsewhere)
+  assert(!P.V3.alive); assert.equal(P.Tr.trap.targetId, P.V1.id, 'still set');
+  toNight(room); room.voteMafia(P.Ma, P.V1.id); toMorning(room);
   assert(P.V1.alive, 'the trap saved them');
-  assert(noteOf(P.Tr, /caught Ma/), 'the Trapper learns the attacker');
+  assert(noteOf(P.Tr, /SNAP! .*caught Ma/), 'the Trapper learns the attacker');
+  assert.equal(P.Tr.trap, null, 'sprung: set a new one');
 });
 
 test('Cupid binds two players; when one dies the other dies of a broken heart (announced)', () => {

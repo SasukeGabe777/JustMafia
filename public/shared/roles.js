@@ -30,17 +30,17 @@
     roleblocker: {
       name: 'Roleblocker', team: 'mafia', emoji: '🚫', color: '#c0392b', knowsTeam: true,
       night: { kind: 'block', targets: 'nonTeam' },
-      blurb: "Each night, distract a non-Mafia player so their ability fails. Also participate in the Mafia's collective kill vote. In Legacy mode you take over killing if the killers fall.",
+      blurb: "Each night, distract a non-Mafia player so their ability fails. Once per game at the gallows, cause a commotion that stops an execution. You also vote on the Mafia's kill; in Legacy mode you take over killing if the killers fall.",
     },
     detective: {
       name: 'Detective', team: 'town', emoji: '🔍', color: '#3aa0ff',
       night: { kind: 'investigate', reveal: 'mafia', targets: 'others' },
-      blurb: 'Each night, investigate one person to learn whether they are Mafia. (The Godfather fools you.) Share what you learn... carefully.',
+      blurb: 'Each night, investigate one person to learn whether they are on the Mafia’s side. The Godfather passes as innocent, but an Impostor’s cover story doesn’t fool you. Share what you learn... carefully.',
     },
     sheriff: {
       name: 'Sheriff', team: 'town', emoji: '⭐', color: '#d4a017',
-      night: { kind: 'investigate', reveal: 'killer', targets: 'others' },
-      blurb: 'Each night, check one person to learn if they are dangerous: Mafia or Serial Killer. (The Godfather fools you.)',
+      night: { kind: 'investigate', reveal: 'killedTonight', targets: 'others' },
+      blurb: 'Each night, stake out one person: at dawn you learn whether they were out killing that night (the Mafia member who carried out the kill, every Mafia who voted for it, the Serial Killer, a Vigilante). A framed player looks guilty too.',
     },
     doctor: {
       name: 'Doctor', team: 'town', emoji: '💉', color: '#2ecc71',
@@ -50,12 +50,12 @@
     bodyguard: {
       name: 'Bodyguard', team: 'town', emoji: '🛡️', color: '#16a085',
       night: { kind: 'guard', targets: 'others' },
-      blurb: 'Each night, guard one person. If they are attacked, you take the hit and die in their place.',
+      blurb: 'Each night, guard one person. If they are attacked, you take the hit and die in their place. Unlike the Doctor, you can guard the same person every night.',
     },
     vigilante: {
       name: 'Vigilante', team: 'town', emoji: '🎯', color: '#8e44ad',
       night: { kind: 'shoot', targets: 'others', optional: true, limited: 'vigilanteShots' },
-      blurb: "You're on the town's side, with a limited number of bullets. At night you may shoot someone you're sure is evil. Choose wisely.",
+      blurb: "You're on the town's side, with two bullets (the Judge can change this). At night you may shoot someone you're sure is evil. If you kill a Town member, the guilt makes you put the gun away for good.",
     },
     mayor: {
       name: 'Mayor', team: 'town', emoji: '🏛️', color: '#2980b9', voteWeight: 2,
@@ -80,7 +80,7 @@
     investigator: { name: 'Investigator', team: 'town', emoji: '👁', color: '#59b8b1', night: { kind: 'spy', targets: 'others' }, blurb: 'Spy on one house each night. Learn how many other visitors arrived and whether someone departed. Clues describe real activity, without identities or roles.' },
     ghostwriter: { name: 'Ghostwriter', team: 'town', emoji: '✒', color: '#b9a0ef', when: 'After death, during the day', restrictions: ['One message per day; at most three approved tokens.', 'Messages publish at the next discussion or voting opening.'], blurb: 'After death, write a clue using up to three words from the fixed word bank. Your message appears at the next discussion or vote.' },
     puppetMaster: { name: 'Puppet Master', team: 'mafia', emoji: '🧵', color: '#ad4c72', knowsTeam: true, when: 'During public voting', restrictions: ['Unavailable with anonymous votes.', 'Configurable uses per game; one forced ballot per victim per phase.'], blurb: 'Secretly redirect and lock one living player’s ballot for this voting phase. Limited uses per game; public voting only.' },
-    paparazzi: { name: 'Paparazzi', team: 'neutral', emoji: '📸', color: '#cfac68', night: { kind: 'photo', targets: 'others' }, blurb: 'Photograph one player each night. If they act successfully, publish a vague activity clue at dawn. Win independently by surviving until game end with the configured number of photos published (default two).' },
+    paparazzi: { name: 'Paparazzi', team: 'neutral', emoji: '📸', color: '#cfac68', night: { kind: 'photo', targets: 'others' }, blurb: 'Photograph one player each night. If they leave their house, the photo is published at dawn showing whose house they went to. Win independently by surviving until game end with the configured number of photos published (default two).' },
     conductor: { name: 'Conductor', team: 'town', emoji: '🎼', color: '#d69cdb', when: 'Discussion and voting', restrictions: ['A private objective names two living voters.', 'Default two completed objectives per blessing.'], blurb: 'Convince the two voters named in your secret objective to choose the same living target. Each completed objective adds Harmony. Enough Harmony reveals one confirmed Town player.' },
     glitch: { name: 'The Glitch', team: 'town', emoji: '⚡', color: '#6be1d2', when: 'Discussion or voting', restrictions: ['Configurable uses per game (default one).', 'Corruption lasts 30 seconds and changes presentation only.'], blurb: 'Activate CORRUPT for 30 seconds of scrambled TV names, avatars and displayed vote counts. Real ballots and results stay accurate. Wins with the Town.' },
   });
@@ -89,27 +89,27 @@
   Object.assign(ROLES, {
     detonator: { name: 'Detonator', team: 'town', emoji: '💣', color: '#be865e', night: { kind: 'bomb', targets: 'others' }, restrictions: ['Standard: one bomb per game, at least three phase transitions before detonation.', 'An empty house still explodes; damage lasts until the next game.'], blurb: 'Plant a delayed explosive on a living player’s house. It detonates during a later daytime phase, killing a living owner and destroying the building. Wins with Town.' },
     silencer: { name: 'Silencer', team: 'mafia', knowsTeam: true, emoji: '🤫', color: '#805b91', night: { kind: 'silence', targets: 'others' }, blurb: 'Silence one player for the following day. They cannot vote, nominate, post or whisper digitally. Their phone clearly shows SILENCED; outside voice chat relies on the group’s rules.' },
-    sorcerer: { name: 'Sorcerer', team: 'town', emoji: '🪄', color: '#789fd0', night: { kind: 'investigate', targets: 'others', reveal: 'role' }, blurb: 'Learn the exact role of one player, including the Godfather. Drunk, poison or malfunction can corrupt the information you receive.' },
+    sorcerer: { name: 'Sorcerer', team: 'town', emoji: '🪄', color: '#789fd0', night: { kind: 'investigate', targets: 'others', reveal: 'role' }, blurb: 'Each night, read one player’s fate: you learn two roles, and one of them is theirs. It sees through the Godfather. Drunk, poison or malfunction can corrupt the information you receive.' },
     hustler: { name: 'Hustler', team: 'mafia', knowsTeam: true, emoji: '⏳', color: '#cc9f5f', night: { kind: 'hustle', targets: 'any', optional: true }, blurb: 'Once per game, rush the next daytime discussion to 40% of its normal length (minimum 15 seconds). Nomination speeches keep their own configured timers.' },
     alchemist: { name: 'Alchemist', team: 'mafia', knowsTeam: true, emoji: '⚗', color: '#6dbba4', night: { kind: 'midas', targets: 'others', optional: true }, blurb: 'Two distinct potions. Midas marks a living target: if eliminated the next day, a Mafia member inherits their supported active ability and its remaining uses. Volatile returns a dead Mafia teammate for one day, then they turn to ash permanently.' },
     // Verdict-window role: once per game, reveal yourself during an execution and
     // die in the condemned's place ("Saved by the Executioner"). The reveal is public.
     executioner: { name: 'Executioner', team: 'town', emoji: '🪓', color: '#7a1f2b', blurb: 'Once per game, during any execution, you may reveal yourself as the Executioner and give your own life in place of the condemned. Everyone will see it. Wins with Town.' },
     // The Mafia's detective: learns exact roles for the family (also votes on the Mafia kill).
-    hunter: { name: 'Hunter', team: 'mafia', knowsTeam: true, emoji: '🏹', color: '#8c3b2e', night: { kind: 'investigate', reveal: 'role', targets: 'nonTeam' }, blurb: "The Mafia's detective. Each night, learn the exact role of one player outside the family; your whole team sees what you find. You also vote on the Mafia's kill." },
+    hunter: { name: 'Hunter', team: 'mafia', knowsTeam: true, emoji: '🏹', color: '#8c3b2e', night: { kind: 'investigate', reveal: 'role', targets: 'nonTeam' }, blurb: "The Mafia's detective. Each night, learn the exact role of one player outside the family; your whole team sees what you find. Your prey senses it: they wake knowing someone hunted them. You also vote on the Mafia's kill." },
     // Neutral: marks who they want dead. Every time a mark dies (night or gallows) they level up.
     headhunter: { name: 'Headhunter', team: 'neutral', emoji: '🎯', color: '#c47a1c', max: 1, night: { kind: 'mark', targets: 'others', optional: true }, blurb: 'Each night (or day), secretly mark who you want dead. Your mark appears as a fake vote on the Mafia’s night screen. Every time your mark dies, at night or at the gallows, you level up and unlock new powers. Win by being the last one standing.' },
     // ----- DLC 1 -----
-    medium: { name: 'Medium', team: 'town', emoji: '🕯', color: '#9a86d8', night: { kind: 'seance', targets: 'dead' }, blurb: 'Each night, hold a séance with one fallen player and learn their exact role, even if roles stay hidden on death.' },
-    lookout: { name: 'Lookout', team: 'town', emoji: '👀', color: '#4fa3a0', night: { kind: 'watch', targets: 'others' }, blurb: 'Each night, watch one player. At dawn you learn the names of everyone who visited them with an ability.' },
+    medium: { name: 'Medium', team: 'town', emoji: '🕯', color: '#9a86d8', night: { kind: 'seance', targets: 'dead' }, blurb: 'Each night, hold a séance with one fallen player: learn how they died (the Mafia, the Serial Killer, a Vigilante, the gallows...) and their exact role, even if roles stay hidden on death.' },
+    lookout: { name: 'Lookout', team: 'town', emoji: '👀', color: '#4fa3a0', night: { kind: 'watch', targets: 'others' }, blurb: 'Each night, watch one player’s house. At dawn you learn the names of everyone who visited it (a Mafia kill counts as the one member who carried it out).' },
     veteran: { name: 'Veteran', team: 'town', emoji: '🎖', color: '#6f7d3a', night: { kind: 'alert', targets: 'self', optional: true }, blurb: 'Twice per game, go on alert for the night: attacks on you fail, and anyone who visits you that night dies. Careful: friends visit too.' },
-    trapper: { name: 'Trapper', team: 'town', emoji: '🪤', color: '#8a6a3c', night: { kind: 'trap', targets: 'any' }, blurb: 'Each night, set a trap at one house. It protects whoever lives there, and if someone attacks them, you learn the attacker’s name.' },
+    trapper: { name: 'Trapper', team: 'town', emoji: '🪤', color: '#8a6a3c', night: { kind: 'trap', targets: 'others', optional: true }, blurb: 'Set a trap at another player’s house. It takes one night to set, then stays there until it catches someone: the first attack on that house fails and you learn the attacker’s name. Moving the trap starts over.' },
     cupid: { name: 'Cupid', team: 'town', emoji: '💘', color: '#e86a9a', night: { kind: 'link', targets: 'others', optional: true }, blurb: 'Once per game, bind yourself to another player. You both learn of the bond. If either of you dies, the other dies of a broken heart.' },
     eavesdropper: { name: 'Eavesdropper', team: 'town', emoji: '👂', color: '#5d8fb8', when: 'All game (passive)', blurb: 'You overhear the Mafia’s coordination messages every night, but never who said them.' },
     crier: { name: 'Town Crier', team: 'town', emoji: '📯', color: '#c98f2e', when: 'Once a day, during discussion', blurb: 'Once a day, make an anonymous proclamation on the big screen about one player: SAFE, SUSPICIOUS, LYING, HONEST or IN DANGER.' },
     framer: { name: 'Framer', team: 'mafia', knowsTeam: true, emoji: '🖼', color: '#a3443a', night: { kind: 'frame', targets: 'nonTeam' }, blurb: 'Each night, frame one player: tonight, every investigation sees them as Mafia. You also vote on the Mafia’s kill.' },
     janitor: { name: 'Janitor', team: 'mafia', knowsTeam: true, emoji: '🧹', color: '#6e5a4a', night: { kind: 'clean', targets: 'nonTeam', optional: true }, blurb: 'Once per game, clean up after a kill: if your target dies tonight, their role stays hidden from the town, and only you learn it.' },
-    impostor: { name: 'Impostor', team: 'mafia', knowsTeam: true, emoji: '🎭', color: '#8d3d6e', when: 'All game (passive)', blurb: 'You hide behind a Town role: every investigation, even the Sorcerer’s, sees you as a Town role chosen at the start. You also vote on the Mafia’s kill.' },
+    impostor: { name: 'Impostor', team: 'mafia', knowsTeam: true, emoji: '🎭', color: '#8d3d6e', when: 'All game (passive)', blurb: 'You hide behind a Town role chosen at the start: role readings (Sorcerer, Hunter, Medium) show your cover story. A Detective still sees you as Mafia, and a Crafter’s pickaxe sees the truth. You also vote on the Mafia’s kill.' },
     crafter: { name: 'Crafter', team: 'town', emoji: '🔨', color: '#b07a3a', night: { kind: 'craft', targets: 'others', optional: true }, when: 'Search each night and once a day; craft any time', blurb: 'Search for one material each night and once each day, then craft tools from your recipe book: a Pickaxe (break a window: learn a role), a Lantern (see your visitors), a Magnifying Glass (see every visit tonight) or a Sword (strike someone down during the day).' },
     storymaker: { name: 'Storymaker', team: 'town', emoji: '📜', color: '#e3bf80', night: { kind: 'interrupt', targets: 'any', optional: true }, blurb: 'Once per game, interrupt the night with a town crier and an emergency vote. After the verdict, resume the interrupted night with its still-valid actions and remaining time. Wins with Town.' },
   });
@@ -247,9 +247,9 @@
     if (n && n.teamKill) restrictions.push('The Mafia team shares one kill per night.');
     if (n && n.leader) restrictions.push('Breaks tied leading Mafia targets by default. Legacy mode allows a full override.');
     if (n && n.noRepeat) restrictions.push("Can't pick the same person two nights in a row.");
-    if (n && n.optional) restrictions.push('May hold fire.');
+    if (n && n.optional) restrictions.push(key === 'trapper' ? 'May leave the trap where it is.' : 'May hold fire.');
     if (n && n.limited) restrictions.push(`Limited uses (setting: ${n.limited}).`);
-    if (r.appearsInnocent) restrictions.push('Looks innocent to alignment investigations. Sorcerer still learns the exact role.');
+    if (r.appearsInnocent) restrictions.push('Looks innocent to the Detective. The Sorcerer’s reading still includes the true role, and the Sheriff catches them if they kill.');
     if (r.nightImmune) restrictions.push("Can't be killed at night.");
     if (r.voteWeight > 1) restrictions.push(`Their vote counts ${r.voteWeight}× (secretly).`);
     if (r.pair) restrictions.push('Always comes as a pair.');

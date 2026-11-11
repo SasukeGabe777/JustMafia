@@ -107,10 +107,11 @@ test('Mafia majority wins when they disagree, tie broken deterministically', () 
 test('Detective, Sheriff and the Godfather', () => {
   const { room, p } = game(['godfather', 'mafia', 'detective', 'sheriff', 'serialKiller', 'villager', 'villager', 'villager', 'villager', 'villager']);
   room.nightAction(p[2], p[0].id); // detective -> godfather
-  room.nightAction(p[3], p[4].id); // sheriff -> serial killer
+  room.nightAction(p[3], p[4].id); // sheriff -> serial killer, who kills tonight
+  room.nightAction(p[4], p[6].id);
   toDawn(room);
   eq(p[2].investigations[0].result, false, 'Godfather looks innocent');
-  eq(p[3].investigations[0].result, true, 'Sheriff sees the Serial Killer');
+  eq(p[3].investigations[0].result, true, 'Sheriff catches the Serial Killer out killing');
   ok(R.investigate('mafia', 'mafia') && !R.investigate('serialKiller', 'mafia'), 'Detective only finds Mafia');
 });
 test('Serial Killer is immune at night and kills', () => {

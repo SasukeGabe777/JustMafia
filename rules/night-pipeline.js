@@ -31,6 +31,7 @@ const stages = {
       const handler = (r.nightHandlers || {})[action.ability];
       if (handler && handler.stage === 'statuses' && !c.blocked.has(action.actorId)) handler.run.call(r, action, c);
     }
+    if (r.lastingEffects) r.lastingEffects(c);
   },
   protection(c) {
     const r = c.room, last = {};
@@ -98,7 +99,11 @@ const stages = {
       else { c.deaths.set(p.id, attack.by); c.events.push({ type: 'kill', targetId: p.id }); outcome = 'killed'; }
       r.audit('attack.resolved', { ...attack, outcome });
       r.addLog(`${p.name}: ${outcome} (${attack.by}).`, true);
-      if (attack.by === 'vigilante') r.stats.shots.push({ targetTeam: r.team(p), killed: c.deaths.get(p.id) === 'vigilante' });
+      if (attack.by === 'vigilante') {
+        r.stats.shots.push({ targetTeam: r.team(p), killed: c.deaths.get(p.id) === 'vigilante' });
+        const shooter = r.players.get(attack.actorId);
+        if (shooter && c.deaths.get(p.id) === 'vigilante' && r.team(p) === 'town' && shooter.shotsLeft > 0) { shooter.shotsLeft = 0; shooter.notes.push({ day: r.day, text: '🎯 You killed one of your own. The guilt is too much: you put your gun away for good.' }); }
+      }
     }
   },
   information(c) {
@@ -115,9 +120,13 @@ const stages = {
       if (c.blocked.has(p.id)) p.investigations.push({ ...entry, blocked: true });
       else {
         const shown = r.shownRole ? r.shownRole(target) : target.role; // a disguised Headhunter shows their fake role
-        const truth = def.reveal === 'role' ? shown : R.investigate(shown, def.reveal);
+        // The Impostor's cover story only fools role readings; yes/no checks see the Mafia member.
+        const truth = def.reveal === 'role' ? shown : def.reveal === 'killedTonight' ? r.killedTonight(target, c) : R.investigate(target.role === 'impostor' ? 'impostor' : shown, def.reveal);
         const result = r.information(p, target, truth, def.reveal === 'role' ? 'role' : 'boolean');
-        p.investigations.push({ ...entry, result }); r.consumeAbility(p, 'investigate');
+        // The Sorcerer reads two fates: the true one and a decoy from this game (order shuffled).
+        const options = p.role === 'sorcerer' && def.reveal === 'role' ? r.sorcererOptions(result) : null;
+        p.investigations.push({ ...entry, result, ...(options ? { options } : {}) }); r.consumeAbility(p, 'investigate');
+        if (p.role === 'hunter' && r.team(target) !== 'mafia') target.notes.push({ day: r.day, text: '🏹 You woke with a chill: someone from the Mafia hunted you last night. They know who you are.' });
         if (r.team(target) === 'mafia' && (result === true || typeof result === 'string' && R.ROLES[result] && R.ROLES[result].team === 'mafia')) p.metrics.correctInvestigations++;
         r.stats.investigations.push({ role: p.role, found: typeof result === 'boolean' ? result : R.ROLES[result].team !== 'town', truth: r.team(target) !== 'town' });
       }

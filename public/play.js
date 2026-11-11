@@ -601,7 +601,7 @@
       MTArt.drawCharacter(ctx, 35 + Math.min(1, t / 3) * 177, 154, view.you.avatar, { t, walking: t < 3, facing: 1, scale: 1.1, theme: view.theme });
       if (t > 3 && t < 5.6) { ctx.strokeStyle = '#b8ddff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(235, 103, 12 + Math.sin(t * 8) * 4, 0, Math.PI * 2); ctx.stroke(); }
       ctx.fillStyle = '#fff'; ctx.font = '16px monospace'; ctx.fillText((byId(sc.targetId) || {}).name || 'House', 235, 175);
-      card.querySelector('[data-private-result]').textContent = t < 5.6 ? sc.scene === 'planting' ? 'Preparing the fuse…' : 'Observing…' : sc.scene === 'planting' ? 'Fuse planted. The server tracks the delay.' : !result ? 'Observation complete.' : result.reveal === 'role' && ROLES[result.result] ? ROLES[result.result].name : result.blocked ? 'Your investigation was blocked.' : result.clue || (result.result ? (result.reveal === 'killer' ? 'Dangerous' : 'Mafia') : (result.reveal === 'killer' ? 'Not dangerous' : 'Not Mafia'));
+      card.querySelector('[data-private-result]').textContent = t < 5.6 ? sc.scene === 'planting' ? 'Preparing the fuse…' : 'Observing…' : sc.scene === 'planting' ? 'Fuse planted. The server tracks the delay.' : !result ? 'Observation complete.' : result.reveal === 'role' && result.options ? result.options.map((k) => (ROLES[k] || {}).name || k).join(' or ') : result.reveal === 'role' && ROLES[result.result] ? ROLES[result.result].name : result.blocked ? 'Your investigation was blocked.' : result.clue || (result.result ? (result.reveal === 'killedTonight' ? 'They killed last night' : 'Mafia') : (result.reveal === 'killedTonight' ? 'They stayed clean' : 'Not Mafia'));
       document.querySelectorAll('[data-investigation-result]').forEach((el) => { el.hidden = t < 5.6; });
       if (t < 6) requestAnimationFrame(draw);
     };
@@ -721,9 +721,11 @@
   function verdictTag(i, big) {
     const st = big ? ' style="font-size:20px"' : '';
     if (i.blocked) return `<span class="tag"${st}>Blocked</span>`;
+    if (i.reveal === 'role' && i.options && i.options.every((k) => ROLES[k])) return `<span class="tag"${st}>${i.options.map((k) => esc(ROLES[k].name)).join(' or ')}</span>`;
     if (i.reveal === 'role' && ROLES[i.result]) return `<span class="tag">${esc(ROLES[i.result].name)}</span>`;
+    if (i.reveal === 'killedTonight') return `<span class="tag ${i.result ? 'bad' : 'good'}"${st}>${i.result ? 'KILLED last night' : 'Stayed clean'}</span>`;
     if (i.clue) return `<span class="tag"${st}>${esc(i.clue)}</span>`;
-    const word = i.reveal === 'killer' ? (i.result ? 'DANGEROUS' : 'Not dangerous') : (i.result ? 'MAFIA' : 'NOT Mafia');
+    const word = i.result ? 'MAFIA' : 'NOT Mafia';
     return `<span class="tag ${i.result ? 'bad' : 'good'}"${st}>${word}</span>`;
   }
 
@@ -766,7 +768,7 @@
       frame: ['🖼 Who will you frame?', 'Tonight, every investigation sees them as Mafia.'],
       clean: ['🧹 Clean up after tonight’s kill?', 'Once per game: if this player dies tonight, their role stays hidden and only you learn it.'],
       mark: ['🎯 Who do you want dead?', 'Mark them. If they die tonight or at the gallows, you level up. The Mafia will see your mark as a vote from one of their own.'],
-      investigate: [v.role === 'hunter' ? '🏹 Who will you hunt?' : '🔍 Who will you investigate?', v.role === 'hunter' ? "You'll learn their exact role, and so will your whole family." : v.action && v.action.reveal === 'role' ? "You'll learn their exact role." : v.role === 'sheriff' ? "You'll learn if they are dangerous." : "You'll learn if they're Mafia."],
+      investigate: [v.role === 'hunter' ? '🏹 Who will you hunt?' : '🔍 Who will you investigate?', v.role === 'hunter' ? "You'll learn their exact role, and so will your whole family." : v.role === 'sorcerer' ? "You'll see two roles: one of them is theirs." : v.action && v.action.reveal === 'role' ? "You'll learn their exact role." : v.role === 'sheriff' ? "You'll learn whether they went out killing tonight." : "You'll learn if they're Mafia."],
       heal: ['💉 Who will you protect?', last || 'You can protect yourself.'],
       guard: ['🛡️ Who will you guard?', last || 'If they are attacked, you die in their place.'],
       shoot: ['🎯 Shoot someone?', `${v.shotsLeft} bullet${v.shotsLeft === 1 ? '' : 's'} left. Only shoot if you're sure.`],

@@ -19,8 +19,13 @@ module.exports = function install(Room) {
   Object.assign(Room.prototype.nightHandlers, {
     // Framer: tonight, investigations see the target as Mafia.
     frame: { stage: 'statuses', run(a) { (this.night.framed = this.night.framed || new Set()).add(a.targetId); } },
-    // Trapper: the trap protects the house tonight; the attacker is caught later (information stage).
-    trap: { stage: 'statuses', run(a, c) { c.healed.add(a.targetId); (c.traps = c.traps || new Map()).set(a.targetId, a.actorId); } },
+    // Trapper: setting (or moving) the trap takes a night; see lastingEffects for an armed trap.
+    trap: { stage: 'statuses', run(a) {
+      const tp = this.players.get(a.actorId), t = this.players.get(a.targetId);
+      if (!tp || !t || (tp.trap && tp.trap.targetId === t.id)) return;
+      tp.trap = { targetId: t.id, armDay: this.day + 1 };
+      tp.notes.push({ day: this.day, text: `🪤 You started setting a trap at ${t.name}'s house. It will be ready tomorrow night and stays until it catches someone.` });
+    } },
     // Veteran on alert: attacks on them fail, and everyone who visits them dies.
     alert: { run(a, c) {
       const vet = this.players.get(a.actorId); this.consumeAbility(vet, 'alert'); c.healed.add(vet.id);
@@ -46,28 +51,43 @@ module.exports = function install(Room) {
     seance: { stage: 'information', run(a) {
       const p = this.players.get(a.actorId), t = this.players.get(a.targetId);
       if (!t || t.alive) return;
-      const result = this.information(p, t, t.originalRole || t.role, 'role');
+      const result = this.information(p, t, this.shownRole ? this.shownRole(t) : t.originalRole || t.role, 'role');
       p.investigations.push({ night: this.day, targetId: t.id, name: t.name, reveal: 'role', result });
+      const CAUSE = { mafia: 'the Mafia', serialKiller: 'the Serial Killer', vigilante: 'a Vigilante’s bullet', veteran: 'a Veteran on alert', headhunter: 'the Headhunter', crafter: 'a crafted sword', vote: 'the town’s vote at the gallows', execution: 'the town’s vote at the gallows', heartbreak: 'a broken heart', bomb: 'an explosion', detonator: 'an explosion', explosion: 'an explosion', guarding: 'an attack they took while guarding someone', ash: 'borrowed time running out' };
+      const how = CAUSE[t.deathCause] || (String(t.deathCause || '').startsWith('judge') ? 'the Judge' : 'something no one saw');
+      p.notes.push({ day: this.day, text: `🕯 ${t.name}'s spirit answered: they were the ${roleName(result)}, taken by ${how}.` });
       this.consumeAbility(p, 'seance');
     } },
     // Lookout: who used an ability on the watched player tonight.
     watch: { stage: 'information', run(a, c) {
       const p = this.players.get(a.actorId), t = this.players.get(a.targetId); if (!t) return;
-      const names = [...new Set(c.actions.filter((x) => x.targetId === t.id && x.actorId !== p.id).map((x) => this.nameOf(x.actorId)))];
+      const visits = this.computeVisits(c.alive, c.acts, c.blocked, c.attacks, c.defs);
+      const names = [...new Set(visits.filter((x) => x.targetId === t.id && x.actorId !== p.id).map((x) => this.nameOf(x.actorId)))];
       p.notes.push({ day: this.day, text: `👀 ${t.name}'s visitors last night: ${names.length ? names.join(', ') : 'nobody'}.` });
       this.consumeAbility(p, 'watch');
     } },
   });
 
-  // The trap's catch runs after attacks resolve: an attack on the trapped house reveals the attacker to the Trapper.
+  // A set trap (armed from the night after it was placed) protects its house every night
+  // until an attack springs it.
+  Room.prototype.lastingEffects = function (c) {
+    for (const tp of c.alive.filter((x) => x.role === 'trapper' && x.trap && x.trap.armDay <= this.day)) {
+      const t = this.players.get(tp.trap.targetId);
+      if (!t || !t.alive) { tp.trap = null; continue; }
+      c.healed.add(t.id); (c.traps = c.traps || new Map()).set(t.id, tp.id);
+    }
+  };
+  // The catch runs after attacks resolve: the first attack on the trapped house springs it
+  // and names the attacker; an untouched trap stays set (silently).
   const resolveNight = Room.prototype.resolveNight;
   Room.prototype.resolveNight = function () {
     const c = resolveNight.call(this);
     if (c && c.traps) for (const [targetId, trapperId] of c.traps) {
       const trapper = this.players.get(trapperId), target = this.players.get(targetId);
       const attacks = (c.attacks || []).filter((x) => x.targetId === targetId && x.actorId);
-      if (!trapper) continue;
-      trapper.notes.push({ day: this.day, text: attacks.length ? `🪤 Your trap at ${target.name}'s house caught ${[...new Set(attacks.map((x) => this.nameOf(x.actorId)))].join(' and ')} trying to attack!` : `🪤 Your trap at ${target.name}'s house stayed empty.` });
+      if (!trapper || !attacks.length) continue;
+      trapper.trap = null; trapper.metrics.saves++;
+      trapper.notes.push({ day: this.day, text: `🪤 SNAP! Your trap at ${target.name}'s house caught ${[...new Set(attacks.map((x) => this.nameOf(x.actorId)))].join(' and ')} trying to attack. ${target.name} is safe. Set a new trap when you're ready.` });
     }
     return c;
   };

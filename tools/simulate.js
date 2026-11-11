@@ -152,7 +152,8 @@ async function playGame(n, opts = {}) {
   if (!hostState.players.every((p) => p.role)) fail('roles not revealed at game over');
   for (const inv of players.filter((p) => p.view.investigations)) {
     for (const i of inv.view.investigations) {
-      if (!i.blocked && i.reveal !== 'activity' && i.result !== (i.reveal === 'role' ? hostState.players.find((p) => p.id === i.targetId).role : R.investigate(hostState.players.find((p) => p.id === i.targetId).role, i.reveal))) fail(`${inv.view.role} got a wrong result`);
+      if (!i.blocked && i.reveal === 'killedTonight' && typeof i.result !== 'boolean') fail('sheriff got a non yes/no result'); // tonight-only facts: checked in test-balance.js
+      if (!i.blocked && i.reveal !== 'activity' && i.reveal !== 'killedTonight' && i.result !== (i.reveal === 'role' ? hostState.players.find((p) => p.id === i.targetId).role : R.investigate(hostState.players.find((p) => p.id === i.targetId).role, i.reveal))) fail(`${inv.view.role} got a wrong result`);
     }
   }
 

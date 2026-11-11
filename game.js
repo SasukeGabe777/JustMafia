@@ -35,7 +35,7 @@ const DEFAULT_SETTINGS = {
   draftSeconds: 45,           // how long the role-card vote lasts
   draftPool: 'learn',         // learn = simple roles first, harder ones as the room plays more games | all = every role, fully random
   roleCounts: { mafia: 1, detective: 1, doctor: 1 },
-  vigilanteShots: 1,
+  vigilanteShots: 2,
   doctorSelfProtect: true,
   nightSeconds: 45,
   discussionSeconds: 120,
@@ -775,7 +775,7 @@ class Room {
     return {
       condemnedId: V.condemnedId, condemnedName: condemned.name, isCondemned: me,
       canInterrupt: on && !me && p.role === 'roleblocker' && !used.interrupt,
-      canProtect: on && !me && p.role === 'bodyguard' && !used.protect,
+      canProtect: false, // the Bodyguard is a night role now; the Executioner owns the gallows swap
       canSacrifice: on && !me && p.role === 'executioner' && !used.sacrifice,
       canDefend: !me, defended: V.defenders.includes(p.id),
       chose: V.interrupt === p.id ? 'interrupt' : V.sacrifice === p.id ? 'sacrifice' : V.protect === p.id ? 'protect' : null,
@@ -877,6 +877,20 @@ class Room {
       lastWords: lw ? { name: lw.name, word: lw.word } : null,
       story: dead ? this.storyContext(dead, { execution: true }) : null, // public facts for the scene's story beats
     };
+  }
+
+  // Sheriff: was this player out killing tonight? (the member who carried out the Mafia kill
+  // or voted for it, the Serial Killer, a Vigilante...). A framed player looks guilty.
+  killedTonight(target, c) {
+    if (this.night && this.night.framed && this.night.framed.has(target.id)) return true;
+    return (c.attacks || []).some((a) => a.actorId === target.id || (a.by === 'mafia' && this.team(target) === 'mafia' && ((this.night && this.night.mafiaVotes) || {})[target.id] === a.targetId));
+  }
+  // Sorcerer: the true reading plus a decoy role from this game (else any role), shuffled.
+  sorcererOptions(result) {
+    const inGame = [...new Set(this.inGame().map((x) => x.role))].filter((r) => r !== result && ROLES[r]);
+    const pool = inGame.length ? inGame : Object.keys(ROLES).filter((r) => r !== result);
+    const decoy = this.pick(pool);
+    return this.rng() < 0.5 ? [result, decoy] : [decoy, result];
   }
 
   kill(p, cause) {

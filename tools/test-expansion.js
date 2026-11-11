@@ -131,7 +131,7 @@ test('Executions: interventions resolve on the server, mob identity follows vote
   // Different players see different options; the TV sees none of them.
   let { room, p } = setup();
   const o = (x) => room.playerView(x).verdict;
-  assert(o(p[1]).canInterrupt && !o(p[1]).canProtect); assert(o(p[2]).canProtect && !o(p[2]).canInterrupt);
+  assert(o(p[1]).canInterrupt && !o(p[1]).canProtect); assert(!o(p[2]).canProtect && !o(p[2]).canInterrupt, 'the Bodyguard is a night role only (no gallows swap)');
   assert(!o(p[4]).canInterrupt && !o(p[4]).canProtect && o(p[4]).canDefend);
   assert(o(p[3]).isCondemned && o(p[3]).lastWords && !o(p[3]).canDefend); assert.equal(o(p[4]).lastWords, null);
   assert(!('verdict' in room.hostView()));
@@ -161,12 +161,11 @@ test('Executions: interventions resolve on the server, mob identity follows vote
   room.advance(); assert.equal(room.phase, 'night');
   room.destroy();
 
-  // Bodyguard takes the place: the Bodyguard dies, the condemned lives, no last words from the survivor.
+  // The Bodyguard no longer swaps places at the gallows (that's the Executioner's role): the request is refused.
   ({ room, p } = setup());
-  room.intervene(p[2], 'protect'); room.setLastWords(p[3], { word: 'GOODBYE' });
+  assert.equal(room.intervene(p[2], 'protect').ok, false);
   room.advance(); c = cue(room);
-  assert.equal(c.outcome, 'swapped'); assert.equal(c.guardId, p[2].id); assert.equal(c.targetId, p[2].id); assert.equal(c.condemnedId, p[3].id);
-  assert.equal(p[2].alive, false); assert.equal(p[3].alive, true); assert.equal(c.lastWords, null);
+  assert.equal(c.outcome, 'executed'); assert.equal(p[3].alive, false); assert.equal(p[2].alive, true);
   room.destroy();
 
   // Interventions are opt-in per game (settings) and only for the right roles; skipping keeps the outcome.

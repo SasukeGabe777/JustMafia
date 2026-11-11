@@ -29,10 +29,10 @@ module.exports = function install(Room) {
         p.investigations.push({ night: this.day, targetId: t.id, name: t.name, reveal: 'role', result, by: 'pickaxe' });
         p.notes.push({ day: this.day, text: `⛏️ You broke ${t.name}'s window. Inside: the ${(ROLES[result] || {}).name || result}.` });
       } else if (tool === 'lantern') {
-        const names = [...new Set(c.actions.filter((x) => x.targetId === p.id && x.actorId !== p.id).map((x) => this.nameOf(x.actorId)))];
+        const names = [...new Set(this.computeVisits(c.alive, c.acts, c.blocked, c.attacks, c.defs).filter((x) => x.targetId === p.id && x.actorId !== p.id).map((x) => this.nameOf(x.actorId)))];
         p.notes.push({ day: this.day, text: `🏮 Your lantern burned all night. Visitors at your door: ${names.length ? names.join(', ') : 'nobody'}.` });
       } else if (tool === 'magnifier') {
-        const visits = c.actions.filter((x) => x.actorId !== p.id && x.targetId && x.targetId !== x.actorId).map((x) => `${this.nameOf(x.actorId)} → ${this.nameOf(x.targetId)}`);
+        const visits = this.computeVisits(c.alive, c.acts, c.blocked, c.attacks, c.defs).filter((x) => x.actorId !== p.id).map((x) => `${this.nameOf(x.actorId)} → ${this.nameOf(x.targetId)}`);
         p.notes.push({ day: this.day, text: `🔍 Through your magnifying glass you watched the whole night: ${visits.length ? [...new Set(visits)].join(', ') : 'nobody left their house'}.` });
       }
       this.audit('crafter.use', { actorId: p.id, tool, targetId: a.targetId });

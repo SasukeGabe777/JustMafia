@@ -112,10 +112,10 @@ and skin colors, with all manual controls available.
 | 🎩 Godfather | Mafia | Has the final say on the kill. Looks innocent to investigators |
 | 🚫 Roleblocker | Mafia | Makes one person's night ability fail. Takes over the killing if the killers die |
 | 🔍 Detective | Town | Learns if someone is Mafia |
-| ⭐ Sheriff | Town | Learns if someone is dangerous (Mafia or Serial Killer) |
+| ⭐ Sheriff | Town | Stakes someone out: learns whether they were out killing that night (any killer, including Mafia who voted for the kill; a framed player looks guilty) |
 | 💉 Doctor | Town | Protects one person from attacks (not the same person two nights in a row) |
 | 🛡️ Bodyguard | Town | Guards someone and dies in their place if they're attacked |
-| 🎯 Vigilante | Town | Limited bullets. May shoot at night, or hold fire |
+| 🎯 Vigilante | Town | Two bullets (setting). May shoot at night, or hold fire. Killing a Town member puts the gun away for good |
 | 🏛️ Mayor | Town | Their vote secretly counts twice |
 | 🔮 Telepath ×2 | Town | Private coded messages to the other Telepath ("I suspect X", "Protect X", "Do not trust my last message"…) |
 | 🃏 Jester | Neutral | Wins if the town votes them out |
@@ -131,16 +131,16 @@ Night actions resolve together, in this order: blocks → protection → kills �
 
 | Role | Team | What it does |
 |---|---|---|
-| 🕯 Medium | Town | Each night, learn the exact role of one fallen player |
-| 👀 Lookout | Town | Watch someone; learn the names of everyone who visited them with an ability |
+| 🕯 Medium | Town | Each night, a séance with one fallen player: how they died (Mafia, Serial Killer, Vigilante, the gallows...) and their role |
+| 👀 Lookout | Town | Watch someone's house; learn the names of everyone who visited it |
 | 🎖 Veteran | Town | 2 alerts per game: attacks on you fail and every visitor dies (friend or foe) |
-| 🪤 Trapper | Town | Trap a house: it's protected, and you learn who attacked it |
+| 🪤 Trapper | Town | Set a trap at another house: it's ready the next night and stays until the first attack, which fails and names the attacker |
 | 💘 Cupid | Town | Once: bind yourself to someone. If either dies, the other dies of a broken heart |
 | 👂 Eavesdropper | Town | Hears the Mafia's coordination messages, never who said them |
 | 📯 Town Crier | Town | Once a day, an anonymous proclamation on the TV ("Ana IS SAFE!") |
 | 🖼 Framer | Mafia | Frame someone: tonight every investigation sees them as Mafia |
 | 🧹 Janitor | Mafia | Once: if the target dies tonight, their role stays hidden (only the Janitor learns it) |
-| 🎭 Impostor | Mafia | Every investigation (even the Sorcerer's) sees a Town role instead |
+| 🎭 Impostor | Mafia | Role readings (Sorcerer, Hunter, Medium) see a Town cover role; the Detective and the Crafter's pickaxe see the truth |
 
 **Win conditions:** the Town wins when no Mafia, Serial Killer or Headhunter is left alive. The Mafia win at parity, or (optionally) when everyone else is gone. The Serial Killer and the Headhunter each win as the last one standing. The Jester wins if voted out.
 
@@ -180,7 +180,7 @@ purchases go to your inventory, where you equip or unequip them.
 
 **Executions:** when a vote eliminates someone, the TV shows the townsfolk
 seizing them and hanging them at the gallows. During the verdict, a Role
-Blocker can secretly interrupt it, and a Bodyguard can take their place (once
+Blocker can secretly interrupt it (the Bodyguard no longer swaps at the gallows; that is the Executioner's job) (once
 per game each). Anyone can visibly defend the accused, and the condemned can
 leave last words made from a name and a fixed word. With anonymous votes, the
 mob is masked, and the interrupter is never identified.
@@ -348,3 +348,13 @@ artwork or paid photo/narration API is used.
 - `public/play.js` + `play.html`: phone controller.
 
 See **PLAN.md** for the roadmap (cinematic Judge scenes, theme art, music, more roles).
+
+
+## Role uniqueness (balance pass)
+
+Every role reads the night its own way, so each one is worth having when it shows up:
+
+- **Detective** = which side (yes/no; the Godfather passes, the Impostor doesn't) · **Sheriff** = did they kill tonight · **Sorcerer** = two possible roles, one true · **Hunter** (Mafia) = the exact role, but the prey is warned · **Crafter's pickaxe** = the true role, nothing fools it · **Medium** = how a dead player died, and their role.
+- **Lookout** = names of visitors to a house · **Investigator** = how many visitors, and whether the owner went out · **Paparazzi** = publishes where someone went · **Crafter's lantern / magnifying glass** = your own visitors / every visit. All use one shared visit list (a Mafia kill is the one member who carried it out; acting on yourself is not a visit).
+- **Doctor** = flexible healer, every night (no repeats) · **Bodyguard** = dies in someone's place, can guard the same person every night · **Trapper** = a trap that takes a night to set and waits until it catches an attacker · **Veteran** = alert: immune, visitors die.
+- **Executioner** owns the gallows swap; the **Roleblocker** can interrupt one execution.
