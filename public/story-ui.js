@@ -16,6 +16,13 @@
     }
     if (v.emergency) card('<h3>Emergency town vote</h3><p>The interrupted night resumes after this vote. Your pending night choices are preserved.</p>', true);
     if (v.shortenedDiscussion && v.phase === 'discussion') card(`<h3>The clock has shortened</h3><p>This discussion lasts ${v.shortenedDiscussion} seconds.</p>`, true);
+    // Town talk: what the bots (and claims) are saying today, one tidy collapsed line.
+    const talk = ['morning', 'discussion', 'voting'].includes(v.phase) ? (v.accusations || []).filter((a) => a.day == null || a.day === v.day).slice(-8) : [];
+    if (talk.length) {
+      const line = (a) => `<li class="talk-${a.kind}"><b>${esc(name(a.fromId))}:</b> ${esc(a.text)}</li>`, lastA = talk[talk.length - 1];
+      const el = card(`<details class="town-talk"${drafts.talkOpen ? ' open' : ''}><summary>💬 <b>${esc(name(lastA.fromId))}:</b> ${esc(lastA.text)}</summary><ul>${talk.slice(0, -1).reverse().map(line).join('')}</ul></details>`);
+      const d = el.querySelector('details'); d.addEventListener('toggle', () => { drafts.talkOpen = d.open; });
+    }
     const mafia = v.mafia;
     if (mafia) {
       // At night this is the main event; by day it folds into a small "Mafia notes" at the bottom.

@@ -72,6 +72,7 @@ class BotBrain {
     for (const a of v.accusations || []) {
       if (this.seenAcc.has(a.id) || a.fromId === me) continue;
       this.seenAcc.add(a.id);
+      if (!a.targetId) continue; // a plain remark, nobody named
       const cred = Math.max(0.15, Math.min(1, 1 - (this.sus[a.fromId] || 0) / 120));
       if (a.kind === 'claim') this.add(this.sus, a.targetId, (a.verdict === 'evil' ? 55 : -35) * cred);
       else this.add(this.sus, a.targetId, 7 * cred);
@@ -143,6 +144,18 @@ class BotBrain {
         const b = this.best(T, (id) => this.score(id, v));
         return b.score >= 60 ? b.id : 'pass';
       }
+      // Mafia support: silence or frame whoever is most dangerous to the family.
+      case 'silence':
+      case 'frame':
+        return this.best(T, (id) => (this.threat[id] || 0) + (def.kind === 'frame' ? this.score(id, v) * 0.5 : 0) + this.r(0, 25)).id;
+      case 'clean': { const lead = (a.teamPicks || [])[0]; return lead && T.includes(lead.targetId) ? lead.targetId : 'pass'; }
+      // Town specials: protect the people who claimed, watch the suspects, talk to the newest ghost.
+      case 'trap': { const c = this.claimers(v).filter((id) => T.includes(id)); return c.length ? this.pick(c) : this.rng() < 0.5 ? 'pass' : this.best(T, (id) => -(this.sus[id] || 0) + this.r(0, 40)).id; }
+      case 'alert': return (v.accusations || []).some((x) => x.targetId === v.you.id) || this.rng() < 0.2 ? T[0] : 'pass';
+      case 'link': return this.best(T, (id) => -(this.sus[id] || 0) + this.r(0, 30)).id;
+      case 'watch': return this.best(T, (id) => this.score(id, v)).id;
+      case 'seance': return T[T.length - 1];
+      case 'mark': return this.best(T, (id) => this.score(id, v) + this.r(0, 20)).id;
       default:
         return this.pick(T);
     }
@@ -172,37 +185,106 @@ class BotBrain {
     return b.id;
   }
 
-  // Something to say in discussion (shown as a speech bubble on the TV).
-  chatter(v) {
+  // ---------- talking (speech bubbles on the TV, the "Town talk" feed on phones) ----------
+  // Bots can't really discuss, so they think out loud: they react to deaths, defend
+  // themselves, share (or fake) findings, point at voting patterns and explain their votes.
+  // Each call returns the most relevant thing not said yet: { targetId?, kind, verdict?, text }.
+  nameOf(v, id) { return (v.players.find((p) => p.id === id) || {}).name || 'someone'; }
+  voice(lines) { // personality flavor on top of the content
+    const tag = { analyst: ['Logically: ', 'Data says: ', ''], aggressive: ['Listen! ', 'Wake up, people. ', ''], cautious: ['Maybe... ', 'I could be wrong... ', ''], follower: ['Agreed with the others: ', 'Like they said: ', ''], chaotic: ['Plot twist: ', 'Hear me out. ', ''] }[this.personality] || [''];
+    const t = this.pick(lines);
+    return this.rng() < 0.35 ? this.pick(tag) + t : t; // keep capitals: lines often start with a name
+  }
+  roleWord(v) { return (ROLES[v.role] || {}).name || 'Villager'; }
+  chatter(v, mode = 'discussion') {
     this.observe(v);
-    if (this.rng() > this.p.talk) return null;
-    const alive = v.players.filter((p) => p.alive && p.id !== v.you.id);
+    if (mode === 'discussion' && this.rng() > Math.max(0.35, this.p.talk)) return null;
+    const me = v.you.id, alive = v.players.filter((p) => p.alive && p.id !== me);
     if (!alive.length) return null;
-    const role = ROLES[v.role] || {};
-    // Investigators reveal their findings.
-    const found = (v.investigations || []).filter((i) => !i.blocked && (i.reveal === 'role' ? ROLES[i.result] && ROLES[i.result].team !== 'town' : i.result) && !this.claimed.has(i.targetId) && alive.some((p) => p.id === i.targetId));
-    if (found.length) {
-      const i = found[0];
+    const evil = this.evil(v), mates = new Set((v.teammates || []).map((t) => t.id));
+    this.said = this.said || new Set();
+    const once = (key) => { if (this.said.has(key)) return false; this.said.add(key); return true; };
+
+    // 1. Someone just died: react (once per death).
+    const dead = v.players.filter((p) => !p.alive && p.id !== me); // each death is mourned once, when first noticed
+    for (const d of dead) if (once('death:' + d.id) && this.rng() < 0.45 + this.p.talk * 0.3) {
+      const accusers = [...new Set((v.accusations || []).filter((a) => a.targetId === d.id && a.fromId !== me).map((a) => a.fromId))].filter((id) => alive.some((p) => p.id === id) && !mates.has(id));
+      const r = d.role && ROLES[d.role];
+      if (accusers.length && !evil) { const t = accusers[0]; return { targetId: t, kind: 'accuse', text: this.voice([`${d.name} is gone, and ${this.nameOf(v, t)} was the one pushing on them. Odd.`, `RIP ${d.name}. ${this.nameOf(v, t)}, you went after them hard yesterday. Why?`]) }; }
+      const lines = r ? (r.team === 'town'
+        ? [`We lost ${d.name}, our ${r.name}. The Mafia knew exactly who to hit.`, `${d.name} was the ${r.name}... that hurts. Somebody leaked it.`, `Not ${d.name}! We needed that ${r.name}.`, `${d.name} gone. Who knew they were the ${r.name}?`, `That's a real loss. ${d.name} was helping us.`]
+        : evil ? [`${d.name}... well. Let's not lose our heads.`, `So ${d.name} was the ${r.name}. Didn't see that one coming.`, `One down. Let's make sure it's not a fluke.`]
+          : [`${d.name} was the ${r.name}? Good riddance.`, `Got one! ${d.name} was the ${r.name}.`, `Told you ${d.name} was off.`, `That's one less ${r.name} to worry about.`, `Nice work, town. Who's next on the list?`])
+        : [`${d.name}... I didn't see that coming.`, `Another empty chair. ${d.name}, rest easy.`, `Who would want ${d.name} gone? Think about it.`];
+      return { kind: 'say', text: this.voice(lines) };
+    }
+
+    // 2. I've been accused: defend myself.
+    const onMe = (v.accusations || []).filter((a) => a.targetId === me && a.fromId !== me && !this.said.has('def:' + a.id));
+    if (onMe.length) {
+      const a = onMe[onMe.length - 1]; this.said.add('def:' + a.id);
+      const who = this.nameOf(v, a.fromId), role = this.roleWord(v);
+      if (evil) return { targetId: a.fromId, kind: 'accuse', text: this.voice([`Me? I'm a plain Villager. ${who} is deflecting.`, `Funny, ${who}. I was about to say the same about you.`, `If you vote me you're wasting a day. Look at ${who}.`]) };
+      const soft = v.role === 'villager' ? 'just a Villager' : this.rng() < 0.5 ? `the ${role}, and I can prove it` : 'on your side';
+      return { targetId: a.fromId, kind: 'claim', verdict: 'good', text: this.voice([`I'm ${soft}. ${who}, why me?`, `Wrong person, ${who}. I'm ${soft}.`, `Vote me and you lose a friend. I'm ${soft}.`]) };
+    }
+
+    // 3. Fresh findings (information roles): share them. Mafia sometimes fake one.
+    const role = this.roleWord(v);
+    const inv = (v.investigations || []).filter((i) => !i.blocked && !this.claimed.has(i.targetId) && alive.some((p) => p.id === i.targetId));
+    for (const i of inv) {
+      const guilty = i.options ? i.options.every((k) => ROLES[k] && ROLES[k].team !== 'town') : i.reveal === 'role' ? ROLES[i.result] && ROLES[i.result].team !== 'town' : i.result;
+      const unsure = i.options && !guilty && i.options.some((k) => ROLES[k] && ROLES[k].team !== 'town');
       this.claimed.add(i.targetId);
-      return { targetId: i.targetId, kind: 'claim', verdict: 'evil', text: `I'm the ${role.name}. ${i.name} is guilty!` };
+      if (guilty) return { targetId: i.targetId, kind: 'claim', verdict: 'evil', text: this.voice([`I'm the ${role}. ${i.name} is guilty. Vote them!`, `${role} here. Checked ${i.name} last night: not one of us.`]) };
+      if (unsure) return { targetId: i.targetId, kind: 'accuse', text: this.voice([`My reading on ${i.name} came back mixed. Keep an eye on them.`]) };
+      if (this.rng() < 0.6) return { targetId: i.targetId, kind: 'claim', verdict: 'good', text: this.voice([`I checked ${i.name}. They're clean.`, `${i.name} is fine, I looked into it.`]) };
     }
-    if (v.role === 'jester') {
+    if (evil && this.rng() < this.p.bluff * 0.6 && once('fakeclaim:' + v.day)) {
+      const town = alive.filter((p) => !mates.has(p.id)); if (town.length) {
+        const t = this.best(town.map((p) => p.id), (id) => (this.threat[id] || 0) + this.score(id, v)).id;
+        return { targetId: t, kind: 'claim', verdict: 'evil', text: this.voice([`I'm the Detective. ${this.nameOf(v, t)} is Mafia.`, `Investigated ${this.nameOf(v, t)}. Guilty. Sorry.`]) };
+      }
+    }
+
+    // 4. Voting patterns: who voted out a Town member?
+    if (v.voteHistory && !evil) for (const d of v.players.filter((p) => !p.alive && p.role && ROLES[p.role] && ROLES[p.role].team === 'town')) {
+      for (const day of v.voteHistory) for (const e of day.votes || []) {
+        if (e.targetId !== d.id || e.voterId === me || !alive.some((p) => p.id === e.voterId) || !once(`vote:${e.voterId}:${d.id}`)) continue;
+        return { targetId: e.voterId, kind: 'accuse', text: this.voice([`${this.nameOf(v, e.voterId)} voted out ${d.name}, and ${d.name} was Town. Explain that.`, `Remember who voted ${d.name}? ${this.nameOf(v, e.voterId)} did.`]) };
+      }
+    }
+
+    // 5. Mafia: steer the town toward whoever hunts us, or join the crowd.
+    if (evil) {
+      const town = alive.filter((p) => !mates.has(p.id)); if (!town.length) return null;
+      const t = this.best(town.map((p) => p.id), (id) => (this.threat[id] || 0) + this.score(id, v)).id;
+      if (!once(`push:${t}:${v.day}`)) return mode === 'opener' ? { kind: 'say', text: this.voice(['Quiet night for me. Anyone see anything?', 'Let us not rush this vote.']) } : null;
+      return { targetId: t, kind: 'accuse', text: this.voice([`${this.nameOf(v, t)} is way too comfortable.`, `Something about ${this.nameOf(v, t)}'s story doesn't add up.`, `I'm watching ${this.nameOf(v, t)}. Too many questions, no answers.`]) };
+    }
+
+    // 6. Jester: wants to be voted out.
+    if (v.role === 'jester' && once('jest:' + v.day)) {
       const t = this.pick(alive);
-      return { targetId: t.id, kind: 'accuse', text: this.pick([`${t.name} is DEFINITELY Mafia.`, `I'd vote me, honestly. Or ${t.name}.`, `Trust me, it's ${t.name}.`]) };
+      return { targetId: t.id, kind: 'accuse', text: this.pick([`Honestly? Vote me. I dare you.`, `${t.name} is DEFINITELY Mafia. Or me. Could be me.`, `I have a confession... nah. Or do I?`]) };
     }
-    if (this.evil(v)) {
-      const mates = new Set((v.teammates || []).map((t) => t.id));
-      const town = alive.filter((p) => !mates.has(p.id));
-      if (!town.length) return null;
-      const t = this.best(town.map((p) => p.id), (id) => (this.threat[id] || 0) + this.score(id, v));
-      const name = (alive.find((p) => p.id === t.id) || {}).name;
-      if (this.rng() < this.p.bluff) return { targetId: t.id, kind: 'claim', verdict: 'evil', text: `I'm the Detective. ${name} is guilty!` };
-      return { targetId: t.id, kind: 'accuse', text: `I don't trust ${name}.` };
-    }
+
+    // 7. Town suspicion with a reason.
     const b = this.best(alive.map((p) => p.id), (id) => this.score(id, v));
-    if (b.score < 10) return null;
-    const name = (alive.find((p) => p.id === b.id) || {}).name;
-    return { targetId: b.id, kind: 'accuse', text: this.pick([`I suspect ${name}.`, `${name} is acting shady.`, `Let's look at ${name}.`]) };
+    if (b.score >= 10 && once(`sus:${b.id}:${v.day}`)) {
+      const n = this.nameOf(v, b.id), why = (v.accusations || []).filter((a) => a.targetId === b.id).length > 1 ? 'everyone is talking about them' : 'their story keeps changing';
+      return { targetId: b.id, kind: 'accuse', text: this.voice([`I suspect ${n}: ${why}.`, `${n} is acting shady. ${why.charAt(0).toUpperCase() + why.slice(1)}.`, `Let's look hard at ${n}.`]) };
+    }
+    if (mode === 'opener' && once('open:' + v.day)) return { kind: 'say', text: this.voice(v.day <= 1 ? ['No info yet. Watch who rushes the vote.', 'First day. Let\'s hear everyone before we vote.', 'Quiet players worry me. Speak up!'] : ['Another day, fewer of us. Think about who benefits.', 'Let\'s use what we learned last night.', 'Who has been the loudest without saying anything?']) };
+    return null;
+  }
+
+  // Why I voted the way I did (said right after voting).
+  explain(v, targetId) {
+    if (!targetId || this.rng() > Math.max(0.3, this.p.talk)) return null;
+    if (targetId === 'skip') return { kind: 'say', text: this.voice(['Skipping. Not enough to go on.', 'I won\'t vote blind. Skip.']) };
+    const n = this.nameOf(v, targetId), claimEvil = (v.accusations || []).some((a) => a.targetId === targetId && a.kind === 'claim' && a.verdict === 'evil');
+    return { targetId, kind: 'accuse', text: this.voice(claimEvil ? [`Voting ${n}. A claim said guilty and I believe it.`, `${n}. The evidence is right there.`] : [`Voting ${n}. Gut feeling.`, `${n}, you never answered the question.`, `My vote is on ${n}.`]) };
   }
 
   telepath(v) {

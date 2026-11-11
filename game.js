@@ -1266,13 +1266,15 @@ class Room {
         later(r(3000, Math.min(14000, this.settings.votingSeconds * 800)), () => {
           if (this.votes[p.id]) return;
           const t = brain.vote(this.playerView(p));
-          if (t) this.vote(p, t);
+          if (t) { this.vote(p, t); if (this.settings.botChatter) { const why = brain.explain(this.playerView(p), t); if (why) this.accuse(p, why); } }
         });
+      } else if (this.phase === 'morning' && this.settings.botChatter) {
+        later(r(1200, 4000), () => { const said = brain.chatter(this.playerView(p), 'morning'); if (said) this.accuse(p, said); });
       } else if (this.phase === 'discussion' && this.settings.botChatter) {
-        later(r(1500, Math.min(30000, this.settings.discussionSeconds * 700)), () => {
-          const said = brain.chatter(this.playerView(p));
-          if (said) this.accuse(p, said);
-        });
+        // Think out loud a few times: an opener, then whatever is most relevant.
+        const span = Math.min(40000, this.settings.discussionSeconds * 800);
+        const beats = 1 + Math.round(this.rng() * 2 * Math.max(0.4, brain.p.talk));
+        for (let i = 0; i < beats; i++) later(r(1200, 4000) + (span * i) / beats, () => { const said = brain.chatter(this.playerView(p), i === 0 ? 'opener' : 'discussion'); if (said) this.accuse(p, said); });
       }
       if (p.role === 'telepath' && this.telepathOpen()) {
         later(r(2000, 8000), () => {
@@ -1285,9 +1287,10 @@ class Room {
   }
 
   // Public accusations (bots "talking" in discussion; shown on the big screen).
+  // Bots think out loud in the morning, discussion and voting: an accusation, a claim, or just a line ('say').
   accuse(p, { targetId, kind, verdict, text }) {
-    if (!this.canSpeak(p) || this.phase !== 'discussion' || !this.players.get(targetId)) return;
-    this.accusations.push({ id: ++this.accSeq, fromId: p.id, targetId, kind: kind === 'claim' ? 'claim' : 'accuse', verdict: verdict || null, text: String(text).slice(0, 80) });
+    if (!this.canSpeak(p) || !['morning', 'discussion', 'voting'].includes(this.phase) || (kind !== 'say' && !this.players.get(targetId))) return;
+    this.accusations.push({ id: ++this.accSeq, fromId: p.id, targetId: targetId || null, kind: kind === 'claim' ? 'claim' : kind === 'say' ? 'say' : 'accuse', verdict: verdict || null, text: String(text).slice(0, 90), day: this.day, phase: this.phase, at: this.now() });
     if (this.accusations.length > 60) this.accusations.shift();
     this.sync();
   }
