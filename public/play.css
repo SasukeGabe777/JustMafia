@@ -279,3 +279,10 @@ summary { cursor:pointer; font-weight:600; padding:8px 0; }
   --line: rgba(31,79,168,0.28); --accent: #ffd21f; --wood: #1f4fa8; --wood-d: #0f2a63; --wood-l: #4d7fd9;
 }
 :root[data-theme="rsp"] .brand::after { content: ' · RSP SUPPLY'; color: #ffd21f; font-size: .5em; vertical-align: middle; }
+
+/* Simpler night panels: grid items may shrink; Mafia signals tucked away */
+.grid > * { min-width: 0; }
+.target b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mafia-signals { margin-top: 10px; }
+.mafia-signals summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+.mafia-roles .tag { display: inline-block; margin: 2px 2px; }

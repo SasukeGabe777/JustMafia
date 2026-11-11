@@ -91,9 +91,10 @@
     $('#c-title').textContent = mode === 'edit' ? 'Edit your townsfolk' : 'Create your townsfolk';
     $('#j-name').value = mode === 'edit' ? view.you.name : load('mt.name') || '';
     $('#j-name').disabled = mode === 'edit' && view.phase !== 'lobby';
-    $('#j-go').textContent = mode === 'edit' ? 'Save' : 'Save & join';
+    $('#j-go').textContent = mode === 'edit' ? 'Save' : 'Join the game ▶';
     $('#j-go').disabled = !profileReady;
     $('#c-save').hidden = mode === 'edit';
+    $('#c-shop').hidden = mode !== 'edit'; // first join: one clear path; the shop is in the lobby
     $('#c-err').textContent = '';
     avatar = { ...savedAvatar };
     show('#screen-creator');
@@ -774,7 +775,7 @@
     return `<div class="card ghostcard center">
       <div class="big-emoji">👻</div>
       <h2>You're a ghost</h2>
-      <p class="muted">Your living ability is finished. Use the ghost controls below when enabled, and keep secrets away from living players.</p>
+      <p class="muted">No more hints to the living! But you can still haunt them for fun.</p>
       ${r ? `<p class="small">You were ${r.emoji} <b>${esc(roleLabel(v.role))}</b></p>` : ''}
       ${v.hauntReadyAt == null ? '<p class="muted small">Haunting is turned off for this game.</p>' : `<div class="haunts">
         <button class="btn" data-haunt="spin" ${cooling ? 'disabled' : ''}>🌀 Spin</button>

@@ -235,7 +235,7 @@
       if (d.stage === 'vote' || d.stage === 'result') {
         const voting = d.stage === 'vote', won = new Set((d.result && d.result.roles) || []);
         root.innerHTML = `<div class="card draft-intro">${voting
-          ? `<h2>🗳 Choose the roles</h2><p>Vote for up to <b>${d.picks}</b> roles you want in this game. The most-voted roles go in; Mafia and Villagers fill the other seats. <span class="muted">(There is always at least one Mafia.)</span></p><p class="draft-left" data-left></p>`
+          ? `<h2>🗳 Choose the roles</h2><p>Tap <b>Vote</b> on up to <b>${d.picks}</b> roles you want in this game, then <b>Lock in</b>. Most votes win.</p><p class="draft-left" data-left></p>`
           : `<h2>✨ The town has chosen</h2><p>${won.size ? 'These roles are in the game:' : 'No valid mix was voted in, so this game uses the classic setup.'}${d.result && d.result.tie ? ' A tie was settled by a random draw.' : ''}</p>`}</div>
           <div class="draft-list">${(voting ? d.cards : d.cards.slice().sort((a, b) => won.has(b) - won.has(a))).map((k, i) => `<div class="draft-item${voting ? '' : won.has(k) ? ' win' : ' out'}" data-item="${k}" style="animation-delay:${Math.max(0, i * 0.12 - elapsed / 1000)}s">
             ${face(k, theme)}
