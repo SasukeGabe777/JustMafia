@@ -46,12 +46,19 @@ test('Default is the card draft; Manual and forced roles keep the old instant st
   assert.equal(f.room.inGame()[0].role, 'detective');
 });
 
-test('Card count scales with players (4 → 3, 8 → 5) and the bank gives a balanced mix', () => {
-  assert.equal(D.SCALE.cards(4), 3); assert.equal(D.SCALE.cards(8), 5);
+test('Special roles scale with players (≤5 → 2, 6 → 3, 8 → 4, 10 → 5 …) and the bank gives a balanced mix', () => {
+  assert.deepEqual([3, 4, 5, 6, 7, 8, 10, 12, 20].map(D.SCALE.specials), [2, 2, 2, 3, 3, 4, 5, 6, 10]);
   for (let n = 4; n <= 40; n++) {
     const cards = D.candidates(n, {}, Math.random, {});
     assert.equal(new Set(cards).size, cards.length, 'no duplicate cards');
-    assert(cards.length >= 3 && cards.length <= D.SCALE.cards(n));
+    const nonMafia = cards.filter((k) => R.ROLES[k].team !== 'mafia').length;
+    assert(nonMafia >= D.SCALE.specials(n), `${n} players: ${nonMafia} town/neutral cards for ${D.SCALE.specials(n)} specials`);
+    assert(nonMafia <= D.SCALE.cards(n));
+    // Everyone votes for the top cards: the game gets exactly the right number of specials.
+    const ballots = { a: cards.slice(0, D.SCALE.specials(n) + 1) };
+    const f = D.finalize({ cards, ballots, n, rng: Math.random });
+    assert.equal(f.roles.filter((k) => R.ROLES[k].team !== 'mafia').length, D.SCALE.specials(n), `${n} players get ${D.SCALE.specials(n)} specials`);
+    assert(f.list.length === n && !f.errors.length, `${n}: a valid ${f.list.length}-role setup`);
     assert(cards.every((k) => R.ROLES[k] && k !== 'villager' && k !== 'mafia'), 'only real special roles');
     assert(cards.some((k) => R.ROLES[k].team === 'town'), 'town cards offered');
     if (n >= 7) assert(cards.some((k) => R.ROLES[k].team === 'mafia'), `mafia card offered at ${n}`);
@@ -109,10 +116,10 @@ test('Everyone locking in closes the vote early; the result is server-decided', 
 test('Ties are settled by a fair random draw (different seeds, different winners)', () => {
   const winners = new Set();
   for (let seed = 1; seed <= 30; seed++) {
-    const cards = ['detective', 'doctor', 'sheriff', 'bodyguard', 'mayor'];
+    const cards = ['detective', 'doctor', 'sheriff', 'bodyguard', 'mayor', 'lookout'];
     let s = seed; const rng = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-    const f = D.finalize({ cards, ballots: { a: ['detective', 'doctor', 'sheriff', 'bodyguard', 'mayor'] }, n: 8, rng });
-    assert(f.tie); assert.equal(f.roles.length, 3);
+    const f = D.finalize({ cards, ballots: { a: cards.slice() }, n: 8, rng });
+    assert(f.tie); assert.equal(f.roles.length, 4, '8 players: 4 special roles');
     winners.add(f.roles.slice().sort().join());
   }
   assert(winners.size > 3, 'ties do not always go the same way');
@@ -132,9 +139,12 @@ test('Invalid votes are repaired: always ≥ 1 Mafia, never a stacked Mafia, nev
       }
     }
   }
-  // Cards that can never fit (two non-killing Mafia roles in a 4-player game) fall back to the classic setup.
+  // Cards that can never fit (non-killing Mafia roles in a 4-player game) are dropped: classic setup.
   const f = D.finalize({ cards: ['silencer', 'roleblocker'], ballots: { a: ['silencer', 'roleblocker'] }, n: 4 });
-  assert(f.fallback); assert.deepEqual(f.roles, []); assert.equal(mafiaCount(f.list), 1); assert.equal(f.list.length, 4);
+  assert.deepEqual(f.dropped.sort(), ['roleblocker', 'silencer']); assert.deepEqual(f.roles, []); assert.equal(mafiaCount(f.list), 1); assert.equal(f.list.length, 4);
+  // A town card next to an impossible Mafia card is kept.
+  const g = D.finalize({ cards: ['silencer', 'doctor'], ballots: { a: ['silencer', 'doctor'] }, n: 4 });
+  assert.deepEqual(g.roles, ['doctor']); assert.equal(mafiaCount(g.list), 1); assert.equal(g.list.length, 4);
 });
 
 test('The full draft deals exactly one role per player, using the drafted cards, and keeps roles secret', () => {

@@ -109,17 +109,21 @@ const win = { won: true, alive: true, team: 'town', metrics: { abilities: 1 } };
       const look = { hair: 'afro', hat: 'bloodCrown', outfit: 'vampire' };
       const tv = socket(), room = await emit(tv, 'host:create');
       const judge = socket(); assert((await emit(judge, 'judge:attach', { code: room.code, hostKey: room.hostKey })).ok);
-      const join = async (name) => { const s = socket(); assert((await emit(s, 'profile:create')).ok); const r = await emit(s, 'player:join', { code: room.code, name, avatar: look }); assert(r.ok, r.error); return r; };
-      const ownState = () => new Promise((res) => tv.once('host:state', res));
+      const join = async (name) => { const s = socket(); assert((await emit(s, 'profile:create')).ok); const r = await emit(s, 'player:join', { code: room.code, name, avatar: look }); assert(r.ok, r.error); r.s = s; return r; };
+      let latest = null; tv.on('host:state', (s) => { latest = s; });
+      const playerOnTv = async (name) => { for (let i = 0; i < 200; i++) { const p = latest && latest.players.find((x) => x.name === name); if (p) return p; await new Promise((r) => setTimeout(r, 25)); } throw new Error(`${name} never appeared on the TV`); };
       // Without party mode, locked items fall back to defaults.
-      await join('Plain');
-      let st = await ownState(); let me = st.players.find((p) => p.name === 'Plain');
+      const plain = await join('Plain');
+      let me = await playerOnTv('Plain');
       assert.notEqual(me.avatar.hair, 'afro'); assert.notEqual(me.avatar.outfit, 'vampire');
+      // A refused vote answers with a reason (the phone shows it instead of failing silently).
+      const refused = await emit(plain.s, 'player:vote', { targetId: 'nobody' });
+      assert.equal(refused.ok, false); assert.match(refused.error, /Voting is closed/);
       assert.equal((await emit(socket(), 'room:check', { code: room.code })).party, false);
       assert((await emit(judge, 'host:action', { type: 'settings', settings: { partyMode: true } })).ok);
       assert.equal((await emit(socket(), 'room:check', { code: room.code })).party, true);
-      const wait = ownState(); await join('Party'); st = await wait;
-      me = st.players.find((p) => p.name === 'Party');
+      await join('Party');
+      me = await playerOnTv('Party');
       assert.equal(me.avatar.hair, 'afro'); assert.equal(me.avatar.hat, 'bloodCrown'); assert.equal(me.avatar.outfit, 'vampire');
     } finally { for (const s of sockets) s.close(); server.kill(); }
   });

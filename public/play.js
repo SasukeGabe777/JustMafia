@@ -17,6 +17,7 @@
   let clockOffset = 0;
   let draftPhone = null;
   let roleShown = false;
+  let voteErr = '', voteErrPhase = null; // why the last vote tap was refused (cleared each new vote)
   let editing = false;
   let prevPhase = null;
   let tpMsg = 'suspect';
@@ -795,10 +796,14 @@
     const v = view;
     const vt = v.voting;
     if (!vt) return roleCard();
+    const voteKey = `${v.day}:${(v.nomination || {}).targetId || ''}`;
+    if (voteErrPhase !== voteKey) { voteErrPhase = voteKey; voteErr = ''; }
     const buttons = vt.targets.map((id) => byId(id)).filter(Boolean).map((p) => targetButton(p, vt.choice === p.id, 'data-vote')).join('');
-    return `<div class="card">
+    return `<div class="card${v.paused ? ' is-paused' : ''}">
       <div class="prompt">🗳️ Vote to eliminate</div>
       <p class="muted small">${vt.voted}/${vt.total} have voted. You can change your vote until ${v.manualVoting ? 'the Judge closes voting' : 'time runs out'}.</p>
+      ${v.paused ? '<p class="err small">⏸ The game is paused. Voting opens again when it resumes.</p>' : ''}
+      <p class="err small" data-vote-err>${esc(voteErr)}</p>
       <div class="grid">${buttons}</div>
       ${vt.canSkip ? `<button class="btn ghost skip ${vt.choice === 'skip' ? 'sel' : ''}" data-vote="skip">${vt.choice === 'skip' ? '✓ ' : ''}Skip (no elimination)</button>` : ''}
       ${vt.choice && vt.choice !== 'skip' ? `<div class="locked">✓ You voted for ${esc((byId(vt.choice) || {}).name || '')}</div>` : ''}
@@ -875,7 +880,10 @@
     // Tapping the role explainer opens it without hiding the card; it stays open across updates.
     body.querySelectorAll('.role-help').forEach((d) => { d.addEventListener('click', (e) => e.stopPropagation()); d.addEventListener('toggle', () => { roleHelpOpen = d.open; }); });
     body.querySelectorAll('[data-night]').forEach((b) => b.addEventListener('click', () => socket.emit('player:night', { targetId: b.dataset.night, delay: Number((document.querySelector('#bomb-delay') || {}).value) || 3 })));
-    body.querySelectorAll('[data-vote]').forEach((b) => b.addEventListener('click', () => socket.emit('player:vote', { targetId: b.dataset.vote })));
+    body.querySelectorAll('[data-vote]').forEach((b) => b.addEventListener('click', () => socket.timeout(5000).emit('player:vote', { targetId: b.dataset.vote }, (err, r) => {
+      voteErr = err ? 'No answer from the game. Check your connection and tap again.' : r && !r.ok ? r.error || 'Vote not counted.' : '';
+      const el = document.querySelector('[data-vote-err]'); if (el) el.textContent = voteErr;
+    })));
     body.querySelectorAll('[data-boo]').forEach((b) => b.addEventListener('click', () => haunt('boo', b.dataset.boo)));
     body.querySelectorAll('[data-haunt]').forEach((b) => b.addEventListener('click', () => haunt(b.dataset.haunt)));
     const tm = body.querySelector('#tp-msg');

@@ -37,7 +37,7 @@ module.exports = function install(Room) {
     for (const k of cards) this.draftSeen[k] = (this.draftSeen[k] || 0) + 1;
     // Tier 0 = the tutorial round (the room's first game): Mafia, Detective, Doctor, no vote.
     const tutorial = !everyRole && tier === 0;
-    this.draft = { id: (this.draft ? this.draft.id : 0) + 1, stage: 'deck', stageAt: this.now(), cards, picks: tutorial ? cards.length : D.SCALE.winners(cards.length), ballots: {}, ready: {}, result: null, n, tier, everyRole, unlocked, tutorial };
+    this.draft = { id: (this.draft ? this.draft.id : 0) + 1, stage: 'deck', stageAt: this.now(), cards, picks: tutorial ? cards.length : Math.min(cards.length, D.SCALE.specials(n) + 1) /* the specials, plus one Mafia upgrade */, ballots: {}, ready: {}, result: null, n, tier, everyRole, unlocked, tutorial };
     this.draftCounts = null;
     for (const p of this.list()) p.flipped = false;
     this.clearMoveRequests();

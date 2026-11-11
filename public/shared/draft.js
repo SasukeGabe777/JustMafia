@@ -9,10 +9,12 @@
 
   // ---- Tunable scaling (configurable, not hard-coded to 4 and 8 players) ----
   const SCALE = {
-    // Cards shown: 4 players → 3 cards, 8 → 5, 12 → 7, 16+ → 9 (cap).
-    cards: (n) => Math.max(3, Math.min(9, Math.round(n / 2) + 1)),
-    // How many of the shown cards make it into the game: 3 → 2, 5 → 3, 7 → 5, 9 → 6.
-    winners: (cards) => Math.max(1, Math.ceil(cards * 0.6)),
+    // Special (non-Mafia) roles in the game: up to 5 players → 2, then one more every 2
+    // players: 6 → 3, 8 → 4, 10 → 5 … (cap 12). Plain Mafia and Villagers fill the rest.
+    // A drafted Mafia card (e.g. Godfather) upgrades a Mafia seat and is extra.
+    specials: (n) => Math.min(12, n <= 5 ? 2 : Math.floor(n / 2)),
+    // Town/Neutral cards shown: the specials plus two to choose between (Mafia cards are extra).
+    cards: (n) => SCALE.specials(n) + 2,
     // Neutral cards offered (and allowed in the final game).
     neutrals: (n) => (n >= 14 ? 2 : n >= 7 ? 1 : 0),
   };
@@ -113,19 +115,23 @@
   // tiers if a tier is too small). opts.everyRole: every role, fully random (no tiers,
   // no minimum sizes, no team structure); the final setup is still repaired to be valid.
   function candidates(n, settings = {}, rng = Math.random, seen = {}, opts = {}) {
-    const total = SCALE.cards(n);
     if (opts.everyRole) {
       const all = Object.keys(META).filter((k) => ROLES[k] && !META[k].tutorialOnly && !(META[k].publicVotes && settings.anonymousVotes));
-      const out = [];
-      while (out.length < total && out.length < all.length) { const k = all[Math.floor(rng() * all.length)]; if (!out.includes(k)) out.push(k); }
-      return out;
+      // Fully random, but always enough Town/Neutral cards for the specials, plus Mafia upgrades.
+      const pool = all.slice();
+      for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+      const others = pool.filter((k) => teamOf(k) !== 'mafia').slice(0, SCALE.cards(n));
+      const mafia = pool.filter((k) => teamOf(k) === 'mafia').slice(0, Math.min(2, autoMafiaCount(n)));
+      return pool.filter((k) => others.includes(k) || mafia.includes(k));
     }
     if (opts.maxTier === 0) return TUTORIAL.slice(); // the tutorial round: always the same three cards
     const maxTier = opts.maxTier == null ? MAX_TIER : opts.maxTier;
     const ok = Object.keys(META).filter((k) => eligible(k, n, settings) && (META[k].tier ?? 1) <= maxTier);
     const harder = Object.keys(META).filter((k) => eligible(k, n, settings) && (META[k].tier ?? 1) > maxTier);
     const by = (team) => ok.filter((k) => teamOf(k) === team);
-    const mafiaCards = Math.min(by('mafia').length, Math.max(1, Math.round(total * 0.25)), autoMafiaCount(n));
+    // Mafia cards come on top of the Town/Neutral cards (they upgrade a Mafia seat).
+    const mafiaCards = Math.min(by('mafia').length, n >= 7 ? Math.max(1, Math.round(SCALE.specials(n) * 0.3)) : 1, autoMafiaCount(n));
+    const total = SCALE.cards(n) + mafiaCards;
     const neutralCards = Math.min(by('neutral').length, SCALE.neutrals(n));
     const picked = [];
     picked.push(...weightedPick(by('mafia'), mafiaCards, rng, seen));
@@ -139,8 +145,12 @@
     picked.push(...weightedPick(town.filter((t) => !picked.includes(t)), total - picked.length, rng, seen));
     // If the bank is short, top up from anything still eligible (never duplicates).
     if (picked.length < total) picked.push(...weightedPick(ok.filter((k) => !picked.includes(k)), total - picked.length, rng, seen));
-    // Fewer than 3 unlocked roles fit this group (very rare): borrow the simplest locked ones.
-    if (picked.length < Math.min(total, 3)) picked.push(...weightedPick(harder.filter((k) => !picked.includes(k)).sort((a, b) => META[a].tier - META[b].tier).slice(0, total * 2), Math.min(total, 3) - picked.length, rng, seen));
+    // Not enough unlocked roles for a big group: borrow the simplest locked Town/Neutral ones,
+    // so a game always gets its full number of special roles.
+    if (picked.length < total) {
+      const next = harder.filter((k) => !picked.includes(k) && teamOf(k) !== 'mafia').sort((a, b) => META[a].tier - META[b].tier);
+      picked.push(...next.slice(0, total - picked.length));
+    }
     return picked;
   }
 
@@ -153,7 +163,10 @@
     const order = cards.slice();
     for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
     order.sort((a, b) => tally[b] - tally[a]); // stable: equal votes keep the random order
-    const want = wantAll || SCALE.winners(cards.length);
+    // want = how many special (non-Mafia) roles the game gets; Mafia cards that win the vote
+    // upgrade Mafia seats on top of that (never more than the normal Mafia family).
+    const want = wantAll || SCALE.specials(n);
+    const specialsIn = (keys) => keys.filter((k) => teamOf(k) !== 'mafia').length;
     const cutoff = order[want - 1] != null ? tally[order[want - 1]] : -1;
     const tie = order.filter((k) => tally[k] === cutoff).length > order.slice(0, want).filter((k) => tally[k] === cutoff).length;
 
@@ -174,7 +187,8 @@
     // Greedy: walk the ranking, keep each card if the setup stays valid, until we have enough.
     let chosen = [];
     const dropped = [];
-    const fill = (skip) => { for (const k of order) { if (chosen.length >= want) break; if (chosen.includes(k) || dropped.includes(k) || skip(k)) continue; if (valid([...chosen, k])) chosen.push(k); else dropped.push(k); } };
+    // A Mafia card only gets in if it was voted for (or this is a fixed deal like the tutorial).
+    const fill = (skip) => { for (const k of order) { if (specialsIn(chosen) >= want) break; if (chosen.includes(k) || dropped.includes(k) || skip(k)) continue; if (teamOf(k) === 'mafia' && !tally[k] && !wantAll) continue; if (valid([...chosen, k])) chosen.push(k); else dropped.push(k); } };
     fill(() => false);
     // Balance pass: swap the least-voted Mafia cards for the next best non-Mafia cards.
     while (!balanced(chosen) && chosen.some((k) => teamOf(k) === 'mafia')) {
@@ -189,7 +203,7 @@
       roles: final, // the drafted special roles (Mafia members and Villagers are filled automatically)
       roleCounts: Object.fromEntries(final.map((k) => [k, k === 'telepath' ? 2 : 1])),
       list: setup.roles, errors: setup.errors, tally, order, tie, dropped,
-      fallback: final.length < Math.min(want, order.length),
+      fallback: specialsIn(final) < Math.min(want, specialsIn(order)),
     };
   }
 

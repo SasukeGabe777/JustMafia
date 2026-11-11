@@ -332,7 +332,18 @@ io.on('connection', (socket) => {
     reply(cb, room.respondMoveIn(p, msg.fromId, !!msg.accept));
   });
   socket.on('player:night', (msg = {}) => { const { room, p } = ctx(); if (p) room.nightAction(p, msg.targetId, { variant: msg.variant, delay: msg.delay }); });
-  socket.on('player:vote', (msg = {}) => { const { room, p } = ctx(); if (p) room.vote(p, msg.targetId); });
+  socket.on('player:vote', (msg = {}, cb) => {
+    const { room, p } = ctx();
+    if (!room || !p) return reply(cb, { ok: false, error: 'You are not in this game any more. Rejoin with the room code.' });
+    if (room.vote(p, msg.targetId)) return reply(cb, { ok: true });
+    // Say why, so a refused vote never fails silently on the phone.
+    const why = room.paused || room.judgeVacant ? 'The game is paused. Voting opens again when it resumes.'
+      : room.phase !== 'voting' ? 'Voting is closed right now.'
+      : room.hasStatus(p, 'silenced') ? 'You were silenced tonight: no vote today.'
+      : !room.canCast(p) ? (p.alive ? 'You cannot vote this round.' : 'Ghosts cannot vote in this game.')
+      : 'That vote is not allowed. Pick someone on the list.';
+    reply(cb, { ok: false, error: why });
+  });
   socket.on('player:haunt', (msg = {}) => { const { room, p } = ctx(); if (p) room.haunt(p, msg.kind, msg.targetId); });
   socket.on('player:telepath', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.sendTelepath(p, msg) : { ok: false }); });
   socket.on('player:removeJudge', (_msg, cb) => { const { room, p } = ctx(); reply(cb, p ? room.voteRemoveJudge(p) : { ok: false }); });
