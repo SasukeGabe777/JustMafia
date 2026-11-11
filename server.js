@@ -240,6 +240,8 @@ io.on('connection', (socket) => {
   socket.on('profile:create', (_msg, cb) => { if (socket.profileId) return reply(cb, { ok: false, error: 'This connection already has a profile.' }); const p = profiles.create(); socket.profileId = p.id; socket.join('profile:' + p.id); reply(cb, { ok: true, ...p }); });
   socket.on('profile:resume', (msg = {}, cb) => { const p = profiles.authenticate(msg); if (!p) return reply(cb, { ok: false }); if (socket.profileId && socket.profileId !== p.id) socket.leave('profile:' + socket.profileId); socket.profileId = p.id; socket.join('profile:' + p.id); reply(cb, { ok: true, profile: profiles.view(p.id) }); });
   socket.on('profile:buy', (msg = {}, cb) => { if (profileInGame(socket.profileId)) return reply(cb, { ok: false, error: CLOSED }); const result = profiles.buy(socket.profileId, msg.itemId); reply(cb, result); if (result.ok) { io.to('profile:' + socket.profileId).emit('profile:state', profiles.view(socket.profileId)); const { room } = ctx(); if (room) room.sync(); } });
+  // Season pass: buy it with gold (between games, like the shop).
+  socket.on('profile:buyPass', (msg = {}, cb) => { if (profileInGame(socket.profileId)) return reply(cb, { ok: false, error: CLOSED }); const result = profiles.buyPass(socket.profileId); reply(cb, result); if (result.ok) io.to('profile:' + socket.profileId).emit('profile:state', profiles.view(socket.profileId)); });
   // Character creator: save a look to the profile without being in a room. The
   // in-room avatar only changes through player:profile (lobby-only).
   socket.on('profile:avatar', (msg = {}, cb) => {
@@ -277,13 +279,17 @@ io.on('connection', (socket) => {
   });
   socket.on('room:check', (msg = {}, cb) => {
     const room = findRoom(msg.code);
-    reply(cb, room ? { ok: true, code: room.code, lobby: room.phase === 'lobby', help: room.settings.newPlayerHelp !== false } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
+    reply(cb, room ? { ok: true, code: room.code, lobby: room.phase === 'lobby', help: room.settings.newPlayerHelp !== false, party: !!room.settings.partyMode } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
   });
+  // Party mode (Judge setting): everyone in this room may wear every cosmetic. Otherwise
+  // only what their profile owns. Either way the room still checks each value is real.
+  const lookFor = (room, profileId, avatar) => (room.settings.partyMode ? room.sanitizeAvatar(avatar || {}) : profiles.validateAvatar(profileId, avatar || {}));
+  const homeFor = (room, profileId, home) => (room.settings.partyMode ? room.sanitizeHome(home || {}) : profiles.validateHome(profileId, home || {}));
   socket.on('player:join', (msg = {}, cb) => {
     const room = findRoom(msg.code);
     if (!room) return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.' });
     const existing = socket.profileId && room.list().find((p) => p.profileId === socket.profileId && !p.left);
-    const r = existing ? { player: existing } : room.join({ name: msg.name, avatar: profiles.validateAvatar(socket.profileId, msg.avatar || {}), home: profiles.validateHome(socket.profileId, msg.home || legacyHome(msg.avatar)) });
+    const r = existing ? { player: existing } : room.join({ name: msg.name, avatar: lookFor(room, socket.profileId, msg.avatar), home: homeFor(room, socket.profileId, msg.home || legacyHome(msg.avatar)) });
     if (r.error) return reply(cb, { ok: false, error: r.error });
     if (socket.profileId) { r.player.profileId = socket.profileId; profiles.select(socket.profileId, r.player.avatar); profiles.selectHome(socket.profileId, r.player.homeLook); }
     attachPlayer(room, r.player);
@@ -298,7 +304,7 @@ io.on('connection', (socket) => {
     reply(cb, { ok: true, code: room.code, playerId: p.id });
   });
 
-  socket.on('player:profile', (msg = {}) => { const { room, p } = ctx(); if (p && room.phase === 'lobby') { room.updateProfile(p, { name: msg.name, avatar: profiles.validateAvatar(p.profileId, msg.avatar || p.avatar) }); if (p.profileId) profiles.select(p.profileId, p.avatar); } });
+  socket.on('player:profile', (msg = {}) => { const { room, p } = ctx(); if (p && room.phase === 'lobby') { room.updateProfile(p, { name: msg.name, avatar: lookFor(room, p.profileId, msg.avatar || p.avatar) }); if (p.profileId) profiles.select(p.profileId, p.avatar); } });
   // Your house: claim a plot / move in with someone, and/or change your house's design (lobby only).
   socket.on('player:home', (msg = {}, cb) => {
     const { room, p } = ctx();
@@ -306,7 +312,7 @@ io.on('connection', (socket) => {
     let claimed = null;
     if (msg.claim && typeof msg.claim === 'object') { claimed = room.claimHome(p, msg.claim); if (!claimed.ok) return reply(cb, claimed); }
     if (msg.look && typeof msg.look === 'object') {
-      room.updateProfile(p, { home: profiles.validateHome(p.profileId, msg.look) });
+      room.updateProfile(p, { home: homeFor(room, p.profileId, msg.look) });
       if (p.profileId) profiles.selectHome(p.profileId, p.homeLook);
     }
     reply(cb, { ok: true, pending: !!(claimed && claimed.pending), moved: !!(claimed && claimed.moved) });

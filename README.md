@@ -214,6 +214,22 @@ Supply entry to make another.
 
 On the TV, ⚙ keeps quick controls. Keys: **Space** pause, **N** next phase, **H** panel, **F** fullscreen.
 
+## Season pass, challenges, events and party mode
+
+- **Season 1: Blood Moon** (Shop → 🎟 Season). Every finished game earns season XP
+  (finish 40, win +25, survive +10, each weekly challenge +60). The pass costs
+  **150 gold** and pays every tier you reach, including tiers you passed before
+  you bought it: gold, plus 8 pass-only cosmetics (Blood Moon Crown, Bat Wings,
+  Vampire Count, Blood Knight and more). Pass items cannot be bought.
+- **Weekly challenges**: three per ISO week (the same for everyone), each paid once,
+  on top of the per-game gold cap.
+- **Locked cosmetics**: only a few hairstyles, outfits, hats and houses are free;
+  the rest are bought with gold, earned through achievements or found in the pass.
+- **Events** (Judge → Basics → Event): *Blood Moon* turns every third night red,
+  the Mafia kill twice, and season XP is doubled.
+- **Party mode** (Judge → Basics): everyone can wear every cosmetic in that room
+  without unlocking it. Nothing is added to their profile.
+
 ## Look & themes
 
 Judge selection/removal:

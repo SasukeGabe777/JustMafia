@@ -1,0 +1,19 @@
+/* Season pass tab in the shop */
+.pass-head h3 { margin: 0 0 4px; }
+.pass-xp { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.pass-xp .bar { height: 14px; background: rgba(0, 0, 0, .25); border: 2px solid #3a2414; border-radius: 6px; overflow: hidden; }
+.pass-xp .bar i { display: block; height: 100%; background: linear-gradient(90deg, #8f1a2a, #ff4a4a); }
+.pass-owned { font-weight: 700; color: #2e7d32; }
+.pass-track { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+.pass-tier { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 2px solid #5a3a20; border-radius: 8px; background: rgba(255, 255, 255, .35); font-size: 11px; text-align: center; min-height: 86px; }
+.pass-tier b { position: absolute; top: 2px; left: 5px; font-size: 11px; }
+.pass-tier canvas { width: 48px; height: 48px; image-rendering: pixelated; }
+.pass-tier .pass-gold { margin-top: 18px; font-weight: 700; font-size: 13px; }
+.pass-tier.got { background: #d6f2c4; border-color: #2e7d32; }
+.pass-tier.got::after { content: '✓'; position: absolute; top: 1px; right: 5px; color: #2e7d32; font-weight: 700; }
+.pass-tier.ready { background: #fff1b8; border-color: #c9a24a; }
+.pass-tier.next { border-color: #ff4a4a; box-shadow: 0 0 0 2px rgba(255, 74, 74, .35); }
+.pass-tier.locked { opacity: .65; }
+.challenges { list-style: none; padding: 0; margin: 6px 0; }
+.challenges li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px dashed rgba(0, 0, 0, .2); }
+.challenges li.done { opacity: .7; text-decoration: line-through; }

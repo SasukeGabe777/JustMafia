@@ -22,7 +22,7 @@ module.exports = function install(Room) {
     this.progressionNotice = blocker ? 'Practice game: no gold this time. ' + blocker : 'Gold paid to everyone’s pouch.';
     for (const p of players) {
       if (!p.profileId || p.isBot) continue;
-      const paid = blocker ? null : this.profiles.award(p.profileId, this.gameId, { won: p.won, alive: p.alive, role: p.originalRole, team: this.team(p), metrics: p.metrics });
+      const paid = blocker ? null : this.profiles.award(p.profileId, this.gameId, { won: p.won, alive: p.alive, role: p.originalRole, team: this.team(p), metrics: p.metrics, event: this.settings.event });
       const balance = (this.profiles.view(p.profileId) || {}).coins || 0;
       this.rewardResults[p.id] = paid
         ? { gameId: this.gameId, eligible: true, coins: paid.coins, before: paid.before, after: paid.after, lines: paid.lines, capped: paid.capped }

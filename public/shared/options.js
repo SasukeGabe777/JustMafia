@@ -30,6 +30,12 @@
   OPTIONS.nameplate = ['plain', 'scroll', 'veteran', 'mafiaBoss'];
   OPTIONS.houseDecor = ['none', 'flowers', 'banner', 'lanterns', 'heraldry'];
   OPTIONS.effect = ['none', 'fireflies', 'embers'];
+  // Cosmetics wave 2 (shop) and Season 1: Blood Moon (battle-pass exclusives, marked in cosmetics.js PASS).
+  OPTIONS.hats.push('halo', 'pirate', 'samurai', 'antlers', 'catEars', 'vikingHelm', 'beret', 'pumpkin', 'bloodCrown');
+  OPTIONS.accessory.push('cape', 'wings', 'mask', 'goldChain', 'pipe', 'rose', 'batWings');
+  OPTIONS.effect.push('sparkles', 'snow', 'hearts', 'shadow', 'bloodMist', 'lightning');
+  OPTIONS.nameplate.push('neon', 'royal', 'bloodMoon', 'gilded');
+  OPTIONS.outfit.push('pirateCoat', 'samuraiArmor', 'royalRobe', 'cyber', 'vampire', 'bloodKnight');
   // Player homes (separate from the character): twelve building styles, wall and
   // roof paint, doors, windows and free yard decorations. Shop decor (houseDecor)
   // stays a catalog unlock. Pure presentation; chosen in the lobby, locked at start.
@@ -65,6 +71,11 @@
     '#eadcb9':'Cream', '#c4674f':'Brick', '#d39a55':'Ochre', '#e3c15c':'Mustard', '#9fbe86':'Sage', '#6ea89b':'Seafoam', '#8db2d8':'Cornflower', '#5f7aa6':'Slate Blue', '#a88bc6':'Lavender', '#d996ae':'Blush', '#8b6a50':'Walnut', '#9c9b95':'Fieldstone',
     theme:'Theme default', '#8a3b2f':'Terracotta', '#4c5a6e':'Slate', '#3f6b4a':'Moss', '#6a4a7a':'Plum', '#2f4f80':'Navy', '#7a5a3a':'Thatch', '#b08a3e':'Straw', '#5a7f8f':'Teal Slate', '#3a3a42':'Charcoal Tile' };
   OPTIONS.labels = { ...colors, buzzCut:'Buzz Cut', sidePart:'Side Part', slickedBack:'Slicked Back', royalGuard:'Royal Guard', plagueDoctor:'Plague Doctor', mafiaSuit:'Mafia Suit', detectiveCoat:'Detective Coat', ghostHunter:'Ghost Hunter', shoeStyle:'Shoes', leatherBoots:'Leather Boots', tallBoots:'Tall Boots', armoredBoots:'Armored Boots', nobleShoes:'Noble Shoes', wizardHat:'Wizard Hat', wideBrim:'Wide-Brim Hat', plagueHat:'Plague Doctor Hat', jesterHat:'Jester Hat', flowerCrown:'Flower Crown', mafiaBoss:'Mafia Champion', houseStyle:'Home', houseColor:'Home color', rosyCheeks:'Rosy Cheeks', houseDecor:'Home decor', executionerHood:'Hood of Mercy', darkMansion:'Dark Mansion', modernHouse:'Modern House', rspOffice:'RSP Supply Office',
+    halo:'Halo', pirate:'Pirate Hat', samurai:'Samurai Kabuto', antlers:'Antlers', catEars:'Cat Ears', vikingHelm:'Viking Helm', beret:'Beret', pumpkin:'Pumpkin Head', bloodCrown:'Blood Moon Crown',
+    cape:'Royal Cape', wings:'Angel Wings', mask:'Masquerade Mask', goldChain:'Gold Chain', pipe:'Pipe', rose:'Rose', batWings:'Bat Wings',
+    sparkles:'Sparkles', snow:'Snowfall', hearts:'Hearts', shadow:'Shadow Aura', bloodMist:'Blood Mist', lightning:'Storm',
+    neon:'Neon', royal:'Royal', bloodMoon:'Blood Moon', gilded:'Gilded',
+    pirateCoat:'Pirate Coat', samuraiArmor:'Samurai Armor', royalRobe:'Royal Robe', cyber:'Cyber Suit', vampire:'Vampire Count', bloodKnight:'Blood Knight',
     deathAnim:'Farewell', petals:'Rose Petals', fireflies:'Fireflies', letter:'A Last Letter', candle:'Candlelight', lantern:'Sky Lantern', starfall:'Falling Stars', ascend:'Spirit Rises' };
   OPTIONS.label = (value) => OPTIONS.labels[value] || OPTIONS.hatLabels[value] || String(value).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   if (typeof module !== 'undefined' && module.exports) module.exports = OPTIONS;

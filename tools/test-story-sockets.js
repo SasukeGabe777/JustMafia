@@ -20,7 +20,7 @@ async function until(fn) { const end = Date.now()+5000; while (!fn()) { if (Date
   const people = [];
   for (let i=0;i<roles.length;i++) {
     const s = socket(), profile = await emit(s,'profile:create'); assert(profile.ok);
-    const joined = await emit(s,'player:join',{ code:created.code,name:'Human '+i,avatar:{ hair:'sidePart',outfit:'plagueDoctor',shoeStyle:'tallBoots',faceSprite:'NEVER UPLOAD THIS' },coins:999999 });
+    const joined = await emit(s,'player:join',{ code:created.code,name:'Human '+i,avatar:{ hair:'sidePart',outfit:'plagueDoctor',shoeStyle:'leatherBoots',faceSprite:'NEVER UPLOAD THIS' },coins:999999 });
     assert(joined.ok); const p = { s,...joined,profile,view:null }; s.on('player:state',(v) => { p.view = v; }); people.push(p);
   }
   await until(() => publicState && publicState.players.length === roles.length);
@@ -30,7 +30,7 @@ async function until(fn) { const end = Date.now()+5000; while (!fn()) { if (Date
   const settings = { autoMafia:false,roleCounts:Object.fromEntries(roles.filter((r) => r!=='villager').map((r) => [r,1])),forcedRoles:Object.fromEntries(people.map((p,i) => [p.playerId,roles[i]])),botsAuto:false,autoAdvance:false,revealMode:'judge',nightSeconds:600,ghostVotes:true,ghostChat:true,whispers:true,votingMode:'nomination',nominationSecondsRequired:1,misinformation:'judge' };
   const act = (type,extra = {}) => emit(judge,'host:action',{ type,...extra });
   assert((await act('settings',{ settings })).ok); assert((await act('start')).ok); await act('skip'); await until(() => people.every((p) => p.view && p.view.phase==='night'));
-  assert.equal(first.view.progression.coins,0); assert.equal(first.view.you.avatar.shoeStyle,'tallBoots'); assert.notEqual(first.view.you.avatar.outfit,'plagueDoctor'); assert(!('faceSprite' in first.view.you.avatar));
+  assert.equal(first.view.progression.coins,0); assert.equal(first.view.you.avatar.shoeStyle,'leatherBoots'); assert.notEqual(first.view.you.avatar.outfit,'plagueDoctor'); assert(!('faceSprite' in first.view.you.avatar));
   const victim = people[9].playerId;
   for (const p of people.slice(0,3)) assert((await emit(p.s,'player:mafiaVote',{ targetId:victim })).ok);
   assert((await emit(first.s,'player:mafiaMessage',{ tactic:'cover' })).ok);

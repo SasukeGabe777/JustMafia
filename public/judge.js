@@ -105,7 +105,7 @@
 
   // Saved setups live in this browser.
   const SAVE_KEYS = ['theme', 'townName', 'narratorStyle', 'narratorMode', 'revealMode', 'minPlayers', 'maxPlayers', 'autoMafia', 'roleCounts', 'vigilanteShots', 'doctorSelfProtect', 'nightSeconds', 'discussionSeconds', 'votingSeconds', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'tieRule', 'majority', 'anonymousVotes', 'mafiaWinAt', 'telepathWhen', 'ghostHaunts', 'botChatter'];
-  SAVE_KEYS.push('puppetUses', 'glitchUses', 'harmonyGoal', 'paparazziGoal', 'roleSelection', 'draftSeconds', 'newPlayerHelp', 'draftPool');
+  SAVE_KEYS.push('puppetUses', 'glitchUses', 'harmonyGoal', 'paparazziGoal', 'roleSelection', 'draftSeconds', 'newPlayerHelp', 'draftPool', 'partyMode', 'event');
   SAVE_KEYS.push(...Object.keys(window.MT_CONFIG.DEFAULTS));
   $('#s-save').addEventListener('click', () => {
     const name = $('#s-save-name').value.trim();

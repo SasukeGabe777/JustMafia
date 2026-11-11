@@ -9,7 +9,9 @@
 (function (root) {
   const O = typeof module !== 'undefined' && module.exports ? require('./options') : root.MT_OPTIONS;
   // field -> [option list, how many are free from the start]
-  const FIELDS = { hair: ['hair', 17], outfit: ['outfit', 12], hat: ['hats', 9], shoeStyle: ['shoeStyles', 4], accessory: ['accessory', 6], nameplate: ['nameplate', 1], houseDecor: ['houseDecor', 1], effect: ['effect', 1], houseStyle: ['houseStyle', 12] };
+  // field -> [option list, how many are free]. Most items are earned now: new players start with
+  // a small free set (profiles created earlier keep everything they already had).
+  const FIELDS = { hair: ['hair', 6], outfit: ['outfit', 4], hat: ['hats', 3], shoeStyle: ['shoeStyles', 2], accessory: ['accessory', 2], nameplate: ['nameplate', 1], houseDecor: ['houseDecor', 1], effect: ['effect', 1], houseStyle: ['houseStyle', 4] };
   if (O.deathAnim) FIELDS.deathAnim = ['deathAnim', 1];
   // Shop sections. `target` says what equipping changes: the character or the house.
   const CATEGORIES = [
@@ -36,6 +38,14 @@
     'nameplate:mafiaBoss': 'A gold-trimmed nameplate for proven bosses. Earned by winning five Mafia games.',
     'outfit:ghostHunter': 'Gear for someone who has survived it all. Earned by surviving ten games.',
     // Farewells: how you go out. Plays over your body on the big screen when you die (it never reveals who did it).
+    'hat:bloodCrown': 'A crown of dark iron and a single blood-red gem. Season 1 pass, tier 6.',
+    'effect:bloodMist': 'A red mist curls around your feet. Season 1 pass, tier 3.',
+    'nameplate:bloodMoon': 'A nameplate the color of the Blood Moon. Season 1 pass, tier 9.',
+    'accessory:batWings': 'Leathery wings that twitch when you walk. Season 1 pass, tier 12.',
+    'outfit:vampire': 'High collar, crimson lining, never seen in daylight. Season 1 pass, tier 15.',
+    'effect:lightning': 'A storm follows you, and sometimes it strikes. Season 1 pass, tier 17.',
+    'nameplate:gilded': 'Solid gold. For those who finished what they started. Season 1 pass, tier 18.',
+    'outfit:bloodKnight': 'Armor forged under the Blood Moon. The Season 1 grand prize, tier 20.',
     'deathAnim:none': 'No farewell. You go quietly.',
     'deathAnim:petals': 'Rose petals drift down and settle around you.',
     'deathAnim:fireflies': 'Fireflies rise from where you fell and drift into the night.',
@@ -48,11 +58,48 @@
   const KIND = { hair: 'hairstyle', outfit: 'outfit', hat: 'hat', shoeStyle: 'pair of shoes', accessory: 'accessory', nameplate: 'nameplate', houseDecor: 'house decoration', effect: 'cosmetic effect', houseStyle: 'house design', deathAnim: 'farewell animation' };
   const ACHIEVEMENTS = { mafiaWins5: { label: 'Win five Mafia games', stat: 'mafiaWins', count: 5 }, saves10: { label: 'Save ten players', stat: 'saves', count: 10 }, jesterWin: { label: 'Win as Jester', stat: 'jesterWins', count: 1 }, investigations5: { label: 'Identify five Mafia', stat: 'correctInvestigations', count: 5 }, survive10: { label: 'Survive ten games', stat: 'survived', count: 10 }, executionerSave: { label: 'Save someone as the Executioner', stat: 'executionerSaves', count: 1 } };
   const GATES = { 'hat:executionerHood': 'executionerSave', 'outfit:plagueDoctor': 'saves10', 'outfit:detectiveCoat': 'investigations5', 'outfit:jester': 'jesterWin', 'nameplate:mafiaBoss': 'mafiaWins5', 'outfit:ghostHunter': 'survive10' };
+  // ----- Season 1: Blood Moon (battle pass) -----
+  // Buy the pass with gold; every game earns pass XP (pass or not); each tier pays gold or
+  // unlocks a pass-exclusive cosmetic. Buying later grants every tier already reached.
+  const SEASON = {
+    id: 's1', name: 'Season 1: Blood Moon', cost: 150, tiers: 20, xpPerTier: 100,
+    xp: { completed: 40, won: 25, survived: 10, challenge: 60 },
+    rewards: { 1: { gold: 20 }, 2: { gold: 20 }, 3: { item: 'effect:bloodMist' }, 4: { gold: 30 }, 5: { gold: 30 }, 6: { item: 'hat:bloodCrown' }, 7: { gold: 30 }, 8: { gold: 40 },
+      9: { item: 'nameplate:bloodMoon' }, 10: { gold: 40 }, 11: { gold: 40 }, 12: { item: 'accessory:batWings' }, 13: { gold: 50 }, 14: { gold: 50 }, 15: { item: 'outfit:vampire' },
+      16: { gold: 50 }, 17: { item: 'effect:lightning' }, 18: { item: 'nameplate:gilded' }, 19: { gold: 60 }, 20: { item: 'outfit:bloodKnight' } },
+  };
+  const PASS = Object.fromEntries(Object.entries(SEASON.rewards).filter(([, r]) => r.item).map(([tier, r]) => [r.item, Number(tier)]));
+  // Weekly challenges: three per week (chosen from this pool by the week number), paid once each.
+  const CHALLENGES = {
+    play3: { label: 'Play 3 games', stat: 'games', count: 3, gold: 40 },
+    play5: { label: 'Play 5 games', stat: 'games', count: 5, gold: 60 },
+    win2: { label: 'Win 2 games', stat: 'wins', count: 2, gold: 60 },
+    survive2: { label: 'Survive to the end of 2 games', stat: 'survived', count: 2, gold: 40 },
+    save1: { label: 'Save someone from an attack', stat: 'saves', count: 1, gold: 50 },
+    catch1: { label: 'Catch a Mafia member with an investigation', stat: 'correctInvestigations', count: 1, gold: 50 },
+    mafiaWin1: { label: 'Win as the Mafia', stat: 'mafiaWins', count: 1, gold: 70 },
+    abilities5: { label: 'Use your role’s ability 5 times', stat: 'abilities', count: 5, gold: 40 },
+  };
+  const weekKey = (date = new Date()) => { const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())); const day = d.getUTCDay() || 7; d.setUTCDate(d.getUTCDate() + 4 - day); const y = d.getUTCFullYear(); return `${y}-W${String(Math.ceil(((d - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7)).padStart(2, '0')}`; };
+  function weeklyChallenges(week) {
+    const keys = Object.keys(CHALLENGES), out = [];
+    let h = 0; for (const ch of week) h = (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0;
+    // 32-bit integer math (a plain multiply loses the low bits) and a hard stop, so this can never spin.
+    for (let guard = 0; out.length < 3 && guard < 200; guard++) { h = (Math.imul(h ^ (h >>> 15), 2246822507) + 12345) >>> 0; const k = keys[(h >>> 8) % keys.length]; if (!out.includes(k)) out.push(k); }
+    for (const k of keys) if (out.length < 3 && !out.includes(k)) out.push(k);
+    return out;
+  }
+  // Seasonal events the Judge can switch on (see rules/events.js).
+  const EVENTS = {
+    none: { name: 'No event' },
+    bloodMoon: { name: '🌕 Blood Moon', xpMultiplier: 2, desc: 'Every third night the moon turns red and the Mafia strike twice. Double season XP.' },
+  };
+
   const CATALOG = Object.entries(FIELDS).flatMap(([field, [list, free]]) => (O[list] || []).map((value, index) => {
-    const id = field + ':' + value, gated = GATES[id] || null;
-    const cost = index < free || gated ? 0 : PRICES[id] != null ? PRICES[id] : field === 'outfit' ? 70 + (index - free) * 8 : 25 + (index - free) * 10;
+    const id = field + ':' + value, gated = GATES[id] || null, passTier = PASS[id] || null;
+    const cost = index < free || gated || passTier ? 0 : PRICES[id] != null ? PRICES[id] : field === 'outfit' ? 70 + (index - free) * 8 : 25 + (index - free) * 10;
     const category = (CATEGORIES.find((c) => c.fields.includes(field)) || {}).id || 'flair';
-    return { id, field, value, name: O.label(value), cost, achievement: gated, free: index < free, category,
+    return { id, field, value, name: O.label(value), cost, achievement: gated, pass: passTier ? SEASON.id : null, passTier, free: index < free, category,
       description: DESCRIPTIONS[id] || `A ${O.label(value).toLowerCase()} ${KIND[field] || 'item'}${index < free ? ' (free for everyone).' : ' for your ' + (slotOf(field).target === 'home' ? 'house.' : 'townsfolk.')}` };
   }));
   // Gold rewards per completed game, calculated and paid by the server once per game.
@@ -71,6 +118,6 @@
     achievement: 10,                       // each achievement unlocked by this game
     maxPerGame: 60, minimumGameMs: 60000,
   };
-  const API = { FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS };
+  const API = { FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS, SEASON, PASS, CHALLENGES, weekKey, weeklyChallenges, EVENTS };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.MT_COSMETICS = API;
 })(typeof window !== 'undefined' ? window : globalThis);

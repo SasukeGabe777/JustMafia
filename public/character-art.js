@@ -41,13 +41,27 @@
     // Rig: lean the whole body from the feet (pulling forward, resisting backward).
     if (o.lean) ctx.rotate(o.lean);
     ctx.translate(0, -(o.walking ? Math.abs(step) : Math.sin(t * 2) * 0.5) - (o.jump || 0)); if (o.spin) ctx.rotate(o.spin);
-    if (av.effect && av.effect !== 'none') for (let i = 0; i < 5; i++) { const a = t * .8 + i * 1.25; ctx.fillStyle = av.effect === 'embers' ? '#e7a969' : '#b9d88d'; ctx.fillRect(Math.cos(a) * 22, -22 + Math.sin(a * 1.3) * 28, 1, 2); }
+    const fx = av.effect;
+    if (fx === 'fireflies' || fx === 'embers') for (let i = 0; i < 5; i++) { const a = t * .8 + i * 1.25; ctx.fillStyle = fx === 'embers' ? '#e7a969' : '#b9d88d'; ctx.fillRect(Math.cos(a) * 22, -22 + Math.sin(a * 1.3) * 28, 1, 2); }
+    else if (fx === 'sparkles') for (let i = 0; i < 6; i++) { if (Math.sin(t * 6 + i * 2.1) < .2) continue; const a = t * 1.4 + i * 1.05, x = Math.cos(a) * 20, y = -30 + Math.sin(a * 1.7) * 26; ctx.fillStyle = '#fff6c0'; ctx.fillRect(x - 2, y, 5, 1); ctx.fillRect(x, y - 2, 1, 5); }
+    else if (fx === 'snow') for (let i = 0; i < 8; i++) { ctx.fillStyle = '#f4f8ff'; ctx.fillRect(((i * 13 + t * 6) % 44) - 22, -72 + ((t * 14 + i * 17) % 72), 2, 2); }
+    else if (fx === 'hearts') for (let i = 0; i < 4; i++) { const p = (t * .5 + i / 4) % 1, x = Math.sin(i * 3 + t) * 16, y = -22 - p * 50; ctx.globalAlpha *= 1; ctx.fillStyle = `rgba(255,110,160,${1 - p})`; ctx.fillRect(x - 3, y, 3, 3); ctx.fillRect(x + 1, y, 3, 3); ctx.fillRect(x - 2, y + 3, 5, 2); ctx.fillRect(x - 1, y + 5, 3, 1); }
+    else if (fx === 'shadow') for (let i = 0; i < 7; i++) { const p = (t * .4 + i / 7) % 1; ctx.fillStyle = `rgba(30,12,44,${.55 * (1 - p)})`; ctx.fillRect(-14 + i * 4 + Math.sin(t * 2 + i) * 2, -4 - p * 34, 3, 6); }
+    else if (fx === 'bloodMist') for (let i = 0; i < 8; i++) { const p = (t * .35 + i / 8) % 1, a = i * .8 + t * .6; ctx.fillStyle = `rgba(170,20,36,${.45 * (1 - p)})`; ctx.fillRect(Math.cos(a) * (10 + p * 14), -6 - p * 40, 3, 3); }
+    else if (fx === 'lightning' && Math.sin(t * 2.6) > .93) { ctx.strokeStyle = '#bfe4ff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-6, -82); ctx.lineTo(2, -74); ctx.lineTo(-3, -70); ctx.lineTo(5, -62); ctx.stroke(); }
     const rect = (c, a, b, w, h) => { ctx.fillStyle = c; ctx.fillRect(Math.round(a), Math.round(b), w, h); };
     const dark = A.shade(cloth, -.36), light = A.shade(cloth, .24);
-    const armored = ['knight', 'royalGuard', 'sheriff', 'ghostHunter'].includes(outfit);
-    const robe = ['wizard', 'scholar', 'alchemist', 'storyteller', 'plagueDoctor', 'dress'].includes(outfit);
-    const cloak = ['traveler', 'assassin', 'noble', 'royalGuard', 'storyteller', 'ghostHunter'].includes(outfit);
+    const armored = ['knight', 'royalGuard', 'sheriff', 'ghostHunter', 'samuraiArmor', 'bloodKnight'].includes(outfit);
+    const robe = ['wizard', 'scholar', 'alchemist', 'storyteller', 'plagueDoctor', 'dress', 'royalRobe', 'vampire'].includes(outfit);
+    const cloak = ['traveler', 'assassin', 'noble', 'royalGuard', 'storyteller', 'ghostHunter', 'pirateCoat', 'vampire', 'royalRobe'].includes(outfit);
     if (av.accessory === 'backpack' || av.accessory === 'satchel') { rect('#392c26', -14, -29, 28, 22); rect('#8e7048', -13, -28, 6, 19); }
+    // Behind the body: capes and wings.
+    if (av.accessory === 'cape') { rect('#3a0f1a', -16, -33, 32, 32); rect('#7a2236', -15, -32, 30, 30); rect('#d6af53', -15, -33, 30, 2); }
+    if (av.accessory === 'wings' || av.accessory === 'batWings') {
+      const bat = av.accessory === 'batWings', flap = Math.sin(t * 3) * 2, c1 = bat ? '#2a1a2e' : '#f4f1e6', c2 = bat ? '#5a2a4e' : '#d9e6f2';
+      for (let i = 0; i < 5; i++) { const h = 20 - i * 3, dy = -42 + i * 2 - flap * (i / 4); rect(c1, 9 + i * 3, dy, 3, h); rect(c1, -12 - i * 3, dy, 3, h); }
+      rect(c2, 10, -38, 2, 12); rect(c2, -12, -38, 2, 12);
+    }
     if (cloak) { rect('#20242c', -14, -32, 28, 26); rect(dark, -13, -31, 26, 25); rect(light, -13, -31, 3, 20); }
     // Stride: when walking, each foot lifts in turn (not just a sideways shuffle).
     // Dragged characters plant their heels instead (feet forward, no steps).
@@ -79,6 +93,13 @@
     if (['farmer', 'worker', 'overalls'].includes(outfit)) { rect('#455a61', -8, -27, 3, 16); rect('#455a61', 5, -27, 3, 16); rect('#455a61', -7, -22, 14, 10); rect('#d1b586', -5, -23, 2, 2); }
     if (['merchant', 'noble', 'mafiaSuit', 'detectiveCoat', 'jacket'].includes(outfit)) { rect('#e4d7b5', -3, -32, 6, 12); rect('#b8a078', -1, -30, 2, 10); for (let i = 0; i < 3; i++) rect('#d4bf83', 2, -20 + i * 3, 2, 1); }
     if (outfit === 'jester') { rect('#83517f', -9, -30, 9, 17); rect('#d2ad61', 1, -30, 7, 17); }
+    // Wave 2 outfits.
+    if (outfit === 'pirateCoat') { rect('#2b2018', -10, -32, 20, 24); rect('#c9a24a', -1, -30, 2, 18); rect('#9a2a2a', -10, -17, 20, 3); for (let i = 0; i < 3; i++) rect('#e6c778', -5, -28 + i * 5, 2, 2); }
+    if (outfit === 'samuraiArmor') { rect('#7a1f1f', -10, -31, 20, 16); for (let i = 0; i < 3; i++) rect('#2a1a1a', -10, -27 + i * 5, 20, 1); rect('#d6af53', -2, -31, 4, 3); }
+    if (outfit === 'bloodKnight') { rect('#3a0d14', -9, -30, 18, 15); rect('#8f1a2a', -8, -29, 16, 12); rect('#ff3a4a', -1, -26, 3, 3); }
+    if (outfit === 'royalRobe') { rect('#5a2a8a', -10, -32, 20, 22); rect('#f2ead6', -11, -33, 22, 4); for (let i = 0; i < 5; i++) rect('#2b2018', -9 + i * 4, -32, 1, 2); rect('#d6af53', -1, -29, 2, 16); }
+    if (outfit === 'cyber') { rect('#1a2030', -9, -32, 18, 22); rect('#3af0ff', -9, -24, 18, 1); rect('#3af0ff', -1, -32, 1, 22); rect('#ff3af0', 5, -30, 2, 2); }
+    if (outfit === 'vampire') { rect('#16121a', -10, -32, 20, 22); rect('#8f1a2a', -4, -32, 8, 10); rect('#16121a', -14, -37, 6, 9); rect('#16121a', 8, -37, 6, 9); rect('#e6e0d6', -2, -31, 4, 6); }
     if (av.accessory === 'scarf') { rect('#e1b15f', -11, -33, 22, 4); rect('#ad7149', 5, -29, 4, 12); }
     if (av.accessory === 'amulet' || ['wizard', 'alchemist'].includes(outfit)) { rect('#d7b375', 0, -29, 2, 8); rect('#70c4bf', -2, -23, 6, 4); }
     // Long styles behind the head, then face, then fringes/headgear.
@@ -133,6 +154,24 @@
       if (hat === 'helmet') rect('#d3dbd5', -2, -59, 4, 14);
       if (hat === 'crown' || hat === 'flowerCrown' || hat === 'jesterHat') for (let i = 0; i < 4; i++) rect(hat === 'flowerCrown' ? '#c97991' : '#e6c778', -12 + i * 7, -65 - i % 2 * 2, 4, 6);
     }
+    // Wave 2 + Season 1 hats.
+    if (hat === 'halo') { ctx.strokeStyle = '#ffe48a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, -65, 11, 3, 0, 0, TAU); ctx.stroke(); }
+    if (hat === 'pirate') { rect('#1a1418', -16, -60, 32, 7); rect('#1a1418', -10, -66, 20, 7); rect('#e6e0d6', -2, -63, 4, 3); }
+    if (hat === 'samurai' || hat === 'vikingHelm') {
+      rect('#27242d', -13, -61, 26, 10); rect(hat === 'samurai' ? '#2a2a32' : '#a6b2b6', -12, -60, 24, 9);
+      if (hat === 'samurai') { rect('#d6af53', -8, -68, 3, 8); rect('#d6af53', 5, -68, 3, 8); rect('#7a1f1f', -14, -52, 28, 3); }
+      else { rect('#e6dcc0', -18, -66, 5, 9); rect('#e6dcc0', 13, -66, 5, 9); rect('#e6dcc0', -20, -70, 3, 5); rect('#e6dcc0', 17, -70, 3, 5); }
+    }
+    if (hat === 'antlers') for (const s of [-1, 1]) { rect('#6a4a2a', s * 6 - 1, -66, 2, 12); rect('#6a4a2a', s * 8 - 1, -71, 2, 6); rect('#6a4a2a', s * 11 - 1, -66, 2, 5); }
+    if (hat === 'catEars') for (const s of [-1, 1]) { rect(hair, s * 7 - 3, -61, 6, 6); rect(hair, s * 7 - 2, -64, 4, 3); rect('#e8a0b0', s * 7 - 1, -61, 2, 3); }
+    if (hat === 'beret') { rect('#2a2a3a', -13, -60, 24, 6); rect('#3a3a4e', -12, -61, 20, 4); rect('#2a2a3a', -1, -64, 2, 3); }
+    if (hat === 'pumpkin') { rect('#c4561a', -14, -66, 28, 24); rect('#e0702a', -12, -64, 24, 20); rect('#3a6a2a', -2, -70, 4, 5); rect('#1a0a04', -8 + eyeX, -58, 5, 4); rect('#1a0a04', 3 + eyeX, -58, 5, 4); rect('#1a0a04', -6 + eyeX, -50, 12, 3); }
+    if (hat === 'bloodCrown') { rect('#3a0d14', -12, -60, 24, 6); for (let i = 0; i < 5; i++) rect('#8f1a2a', -12 + i * 6, -66 - (i % 2) * 2, 4, 7); rect('#ff3a4a', -2, -59, 4, 3); }
+    // Wave 2 face/neck accessories.
+    if (av.accessory === 'mask') { rect('#2a1a3a', -10 + eyeX, -48, 20, 6); rect('#d6af53', -10 + eyeX, -48, 20, 1); rect('#0a0610', -8 + eyeX, -47, 6, 4); rect('#0a0610', 2 + eyeX, -47, 6, 4); }
+    if (av.accessory === 'goldChain') { for (let i = 0; i < 6; i++) rect('#e6c778', -6 + i * 2, -31 + Math.abs(i - 2.5), 2, 2); rect('#ffd96b', -2, -27, 4, 4); }
+    if (av.accessory === 'pipe') { rect('#5a3a20', 4 + eyeX, -37, 7, 2); rect('#3a2414', 10 + eyeX, -40, 4, 4); }
+    if (av.accessory === 'rose') { rect('#3a7a3a', 7, -26, 1, 8); rect('#c0283c', 6, -29, 4, 4); }
     if (av.accessory === 'glasses') { ctx.strokeStyle = '#293039'; ctx.lineWidth = 1; ctx.strokeRect(-9 + eyeX, -47, 8, 7); ctx.strokeRect(1 + eyeX, -47, 8, 7); }
     if (av.accessory === 'eyepatch') { rect('#191f29', -8 + eyeX, -46, 7, 6); rect('#191f29', -11, -49, 22, 1); }
     if (av.accessory === 'earring') rect('#ead18a', 11, -40, 2, 5);

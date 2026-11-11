@@ -70,7 +70,7 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   ok('Randomize changes the character as a draft');
 
   // --- Build a specific look, name it, Save & join.
-  const want = { expression: 'wink', hair: 'afro', outfit: 'jacket', color: '#9b59b6', hat: 'cowboy' };
+  const want = { expression: 'wink', hair: 'mohawk', outfit: 'jacket', color: '#9b59b6', hat: 'cap' }; // free items (most are earned now)
   for (const [tab, field] of [['face', 'expression'], ['hair', 'hair'], ['clothes', 'outfit'], ['clothes', 'color'], ['accessories', 'hat']]) {
     await a.click(`[data-tab="${tab}"]`); await a.click(`#c-panel [data-field="${field}"][data-value="${want[field]}"]`);
   }
@@ -132,9 +132,9 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
 
   // --- Ben designs his own house independently, then moves in with Ana instead.
   await b.until(`!document.querySelector('#screen-home').hidden && document.querySelector('#h-preview').dataset.look`, 'Ben claim screen');
-  await b.click('#h-tabs [data-tab="style"]'); await b.click('#h-panel [data-field="style"][data-value="windmill"]'); await b.click('#h-save');
-  for (let i = 0; i < 100 && ben().homeLook.style !== 'windmill'; i++) await wait(30);
-  assert.equal(ben().homeLook.style, 'windmill'); assert.equal(ana().homeLook.style, 'bakery', 'houses are customized separately');
+  await b.click('#h-tabs [data-tab="style"]'); await b.click('#h-panel [data-field="style"][data-value="tavern"]'); await b.click('#h-save');
+  for (let i = 0; i < 100 && ben().homeLook.style !== 'tavern'; i++) await wait(30);
+  assert.equal(ben().homeLook.style, 'tavern'); assert.equal(ana().homeLook.style, 'bakery', 'houses are customized separately');
   await b.until(`!document.querySelector('#screen-game').hidden && document.querySelector('[data-house]')`, 'Ben lobby');
   await b.click('[data-house]'); await b.until(`!document.querySelector('#screen-home').hidden && [...document.querySelectorAll('#h-claims .claim')].some((c) => c.textContent.includes('live with Ana'))`, 'move-in option');
   // Asking sends Ana a 20-second yes/no; Ben waits, nothing moves yet.
@@ -166,7 +166,7 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   const signText = await tvPage.eval(`(() => { const W = MT_WORLD; const owner = { id: 'a', name: 'Ana', house: 0 }; return W.signLines(owner, [{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Ben' }, { id: 'c', name: 'Cy' }]); })()`);
   assert.deepEqual(signText, ['1 · Ana', '+ Ben, Cy']);
   const guests = [];
-  for (const [name, style] of [['Owner', 'manor'], ['Guest', 'cottage'], ['Solo', 'windmill']]) {
+  for (const [name, style] of [['Owner', 'manor'], ['Guest', 'cottage'], ['Solo', 'tavern']]) {
     const s = io(URL, { transports: ['websocket'] }); guests.push(s);
     const r = await new Promise((res) => s.emit('player:join', { code: tvCode, name, home: { style, door: 'arched', yard: 'mailbox' } }, res)); assert(r.ok);
     s.playerId = r.playerId;
@@ -189,7 +189,7 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   await a.eval(`localStorage.removeItem('mt.avatar')`);
   await a.go(`${URL}/play?room=${room2.code}`);
   await a.until(`!document.querySelector('#screen-creator').hidden && !document.querySelector('#j-go').disabled && JSON.parse(document.querySelector('#preview').dataset.look || '[]').includes('smirk')`, 'profile restores look');
-  const restored = await a.look(); assert.equal(restored.expression, 'smirk'); assert.equal(restored.hair, 'afro');
+  const restored = await a.look(); assert.equal(restored.expression, 'smirk'); assert.equal(restored.hair, 'mohawk');
   await a.shot('creator-rejoin');
   ok('Rejoining starts from the saved look; Save look persists; the server profile restores it');
 

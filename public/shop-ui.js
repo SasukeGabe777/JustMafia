@@ -126,23 +126,24 @@
     $('#s-title').textContent = theme === 'rsp' ? 'RSP Supply Store' : 'Town Shop';
     $('#s-pouch-wrap').innerHTML = pouchButton(profile, 's-pouch');
     $('#s-pouch').onclick = () => { const pop = $('#s-pouch-pop'); pop.hidden = !pop.hidden; pop.innerHTML = pouchDetails(profile); };
-    const tabs = [...C.CATEGORIES.filter((c) => forSale(c.id).length), { id: 'inventory', label: 'Inventory', icon: '🎒' }];
+    const tabs = [{ id: 'season', label: 'Season', icon: '🎟' }, ...C.CATEGORIES.filter((c) => forSale(c.id).length), { id: 'inventory', label: 'Inventory', icon: '🎒' }];
     if (!tabs.some((t) => t.id === state.tab)) state.tab = tabs[0].id;
-    $('#s-tabs').style.gridTemplateColumns = `repeat(${tabs.length}, minmax(0,1fr))`;
+    $('#s-tabs').style.gridTemplateColumns = `repeat(${tabs.length > 6 ? Math.ceil(tabs.length / 2) : tabs.length}, minmax(0,1fr))`; // two rows when there are many tabs, so labels stay readable
     $('#s-tabs').innerHTML = tabs.map((t) => `<button role="tab" class="cas-tab${t.id === state.tab ? ' sel' : ''}" data-shop-tab="${t.id}" aria-selected="${t.id === state.tab}"><span aria-hidden="true">${t.icon}</span>${esc(t.label)}</button>`).join('');
     $('#s-tabs').querySelectorAll('[data-shop-tab]').forEach((b) => { b.onclick = () => { state.tab = b.dataset.shopTab; state.selectedId = null; render(opts); }; });
+    if (state.tab === 'season') { renderSeason(opts); paintPouches(); return; }
     const inv = state.tab === 'inventory';
     const items = inv ? (profile ? profile.inventory : []).map((x) => C.CATALOG.find((i) => i.id === x.id)).filter(Boolean) : forSale(state.tab);
     const selected = items.find((i) => i.id === state.selectedId) || null;
     const gold = profile ? profile.coins : 0;
     $('#s-grid').innerHTML = items.length ? `<div class="cas-tiles shop-tiles">${items.map((i) => {
       const own = owned(i), equipped = inv && (profile.inventory.find((x) => x.id === i.id) || {}).equipped;
-      const badge = equipped ? '<em class="badge eq">Equipped</em>' : own ? '<em class="badge own">Owned</em>' : i.achievement ? '<em class="badge lock">🔒</em>' : `<em class="badge price${gold < i.cost ? ' poor' : ''}">${i.cost}g</em>`;
+      const badge = equipped ? '<em class="badge eq">Equipped</em>' : own ? '<em class="badge own">Owned</em>' : i.pass ? `<em class="badge lock">🎟 T${i.passTier}</em>` : i.achievement ? '<em class="badge lock">🔒</em>' : `<em class="badge price${gold < i.cost ? ' poor' : ''}">${i.cost}g</em>`;
       return `<button class="cas-tile shop-tile${i.id === state.selectedId ? ' sel' : ''}" data-item="${esc(i.id)}" aria-pressed="${i.id === state.selectedId}"><canvas></canvas><span>${esc(i.name)}</span>${badge}</button>`;
     }).join('')}</div>` : `<p class="muted">${inv ? 'Your inventory is empty. Buy something from the shop tabs!' : 'Nothing for sale here yet.'}</p>`;
     $('#s-grid').querySelectorAll('[data-item]').forEach((b) => { b.onclick = () => {
       state.selectedId = b.dataset.item; const i = C.CATALOG.find((x) => x.id === state.selectedId);
-      state.say = owned(i) ? SAY.owned(i) : i.achievement && !(profile && profile.achievements.includes(i.achievement)) ? SAY.locked(i) : gold < i.cost ? SAY.poor(i, gold) : SAY.pick(i);
+      state.say = owned(i) ? SAY.owned(i) : i.pass ? `The ${i.name}? Not for sale. It's a Season pass reward at tier ${i.passTier}.` : i.achievement && !(profile && profile.achievements.includes(i.achievement)) ? SAY.locked(i) : gold < i.cost ? SAY.poor(i, gold) : SAY.pick(i);
       render(opts);
     }; });
     const ctx = { avatar, home, theme };
@@ -152,7 +153,7 @@
     if (!selected) d.innerHTML = `<p class="muted">${inv ? 'Tap an item to equip or unequip it.' : 'Tap an item to see it up close.'}</p>`;
     else {
       const own = owned(selected), invEntry = profile && profile.inventory.find((x) => x.id === selected.id);
-      const lockedBy = selected.achievement && !(profile && profile.achievements.includes(selected.achievement)) ? C.ACHIEVEMENTS[selected.achievement].label : null;
+      const lockedBy = selected.pass ? `Season pass tier ${selected.passTier}` : selected.achievement && !(profile && profile.achievements.includes(selected.achievement)) ? C.ACHIEVEMENTS[selected.achievement].label : null;
       const cant = !own && (lockedBy ? 'Unlock: ' + lockedBy : gold < selected.cost ? `Need ${selected.cost - gold} more gold` : '');
       const action = own
         ? `<button class="btn" data-equip="${invEntry && invEntry.equipped ? 'off' : 'on'}">${invEntry && invEntry.equipped ? 'Unequip' : 'Equip'}</button>`
@@ -169,6 +170,30 @@
     const shelf = (inv ? items : forSale(state.tab)).slice(0, 12);
     startScene(() => ({ theme, avatar, home, shelf, selected, owned }));
     paintPouches();
+  }
+  // ---------- Season pass + weekly challenges ----------
+  function renderSeason(opts) {
+    const { profile, avatar, theme } = opts, s = profile && profile.season;
+    if (!s) { $('#s-grid').innerHTML = '<p class="muted">Connecting…</p>'; $('#s-detail').innerHTML = ''; return; }
+    const pct = Math.min(100, Math.round(((s.xp % s.xpPerTier) / s.xpPerTier) * 100)), gold = profile.coins;
+    const tierCell = (n) => {
+      const r = s.rewards[n] || {}, item = r.item && C.CATALOG.find((i) => i.id === r.item);
+      const state = s.granted.includes(n) ? 'got' : n <= s.tier ? (s.owned ? 'got' : 'ready') : n === s.tier + 1 ? 'next' : 'locked';
+      return `<div class="pass-tier ${state}" data-tier="${n}"><b>${n}</b>${item ? `<canvas data-pass-item="${esc(item.id)}"></canvas><span>${esc(item.name)}</span>` : `<span class="pass-gold">🪙 ${r.gold}</span>`}</div>`;
+    };
+    $('#s-grid').innerHTML = `<div class="pass-head">
+        <h3>🌕 ${esc(s.name)}</h3>
+        <p class="small">Every game earns season XP. ${s.owned ? 'Your pass is active: each tier pays out automatically.' : `Get the pass for <b>${s.cost} gold</b> to collect every tier you reach (even ones you already passed).`}</p>
+        <div class="pass-xp"><span>Tier <b>${s.tier}</b> / ${s.tiers}</span><div class="bar"><i style="width:${s.tier >= s.tiers ? 100 : pct}%"></i></div><span class="small muted">${s.tier >= s.tiers ? 'Complete!' : `${s.xp % s.xpPerTier}/${s.xpPerTier} XP to tier ${s.tier + 1}`}</span></div>
+        ${s.owned ? '<p class="pass-owned">✓ Pass active</p>' : `<button class="btn" data-buy-pass ${gold < s.cost ? 'disabled' : ''}>🎟 Get the pass for ${s.cost} gold</button>${gold < s.cost ? `<p class="err small">Need ${s.cost - gold} more gold.</p>` : ''}<p class="err" data-pass-err></p>`}
+      </div>
+      <div class="pass-track">${Array.from({ length: s.tiers }, (_, i) => tierCell(i + 1)).join('')}</div>`;
+    $('#s-detail').innerHTML = `<h3>📅 Weekly challenges</h3><ul class="challenges">${s.challenges.map((c) => `<li class="${c.done ? 'done' : ''}"><span>${c.done ? '✅' : '⬜'} ${esc(c.label)}</span><span class="small">${c.progress}/${c.count} · 🪙 ${c.gold}</span></li>`).join('')}</ul><p class="small muted">New challenges every week. Each one also gives bonus season XP.</p>`;
+    const b = $('#s-grid').querySelector('[data-buy-pass]');
+    if (b) b.onclick = () => opts.buyPass((r) => { if (r && r.ok) { state.say = 'A fine choice! The Blood Moon rewards are yours as you climb.'; render({ ...opts, profile: r.profile }); } else $('#s-grid').querySelector('[data-pass-err]').textContent = (r && r.error) || 'Could not buy the pass.'; });
+    requestAnimationFrame(() => $('#s-grid').querySelectorAll('[data-pass-item]').forEach((cv) => paintItem(cv, C.CATALOG.find((x) => x.id === cv.dataset.passItem), { avatar, home: opts.home, theme })));
+    $('#s-say').textContent = state.say || 'The Blood Moon season is here! Play games to climb the tiers.';
+    startScene(() => ({ theme, avatar, home: opts.home, shelf: C.CATALOG.filter((i) => i.pass), selected: null, owned: () => false }));
   }
   window.MT_SHOP = { render, open() { state.say = ''; state.selectedId = null; }, drawPouch, drawCoin, pouchButton, pouchDetails, paintPouches };
 })();

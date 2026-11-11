@@ -1043,6 +1043,13 @@
       const ctx = this.ctx;
       const savedDark = this.dark;
       this.dark = dark;
+      // Blood Moon event night: the whole town turns red under a red moon.
+      if (this.state && this.state.bloodMoon && dark > 0.05) {
+        ctx.save(); ctx.fillStyle = `rgba(150,12,24,${0.22 * dark})`; ctx.fillRect(-4000, -4000, 12000, 12000);
+        ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createRadialGradient(1700, 120, 0, 1700, 120, 180); g.addColorStop(0, `rgba(255,70,60,${0.9 * dark})`); g.addColorStop(0.35, `rgba(200,30,30,${0.5 * dark})`); g.addColorStop(1, 'rgba(120,0,0,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(1700, 120, 180, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      }
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       const glow = (x, y, r, rgb, a) => {
@@ -1135,7 +1142,7 @@
         const w = ctx.measureText(name).width + 12;
         const ly = c.y + 13;
         ctx.globalAlpha = a;
-        ctx.fillStyle = ghost ? 'rgba(60,70,110,0.55)' : c.avatar.nameplate === 'scroll' ? '#695741' : c.avatar.nameplate === 'veteran' ? '#505d62' : c.avatar.nameplate === 'mafiaBoss' ? '#673143' : 'rgba(20,22,35,0.72)';
+        ctx.fillStyle = ghost ? 'rgba(60,70,110,0.55)' : c.avatar.nameplate === 'scroll' ? '#695741' : c.avatar.nameplate === 'veteran' ? '#505d62' : c.avatar.nameplate === 'mafiaBoss' ? '#673143' : ({ neon: '#0f3a4e', royal: '#4a2a6a', bloodMoon: '#5a0a14', gilded: '#7a5a1a' })[c.avatar.nameplate] || 'rgba(20,22,35,0.72)';
         roundRect(ctx, c.x - w / 2, ly - 9, w, 18, 9); ctx.fill();
         ctx.fillStyle = c.connected === false ? '#ff9b9b' : (c.avatar.nameColor || '#ffffff');
         ctx.fillText(name, c.x, ly + 0.5);

@@ -22,6 +22,7 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     assert.equal(bad.style, 'bakery'); assert.equal(bad.wall, '#a88bc6'); assert.equal(bad.door, 'round'); // invalid input keeps the saved value
     assert.equal(bad.decor, undefined, 'shop decor requires ownership');
     const fresh = store.create(); store.data.profiles[fresh.id].avatar.houseStyle = 'windmill'; // legacy profile
+    store.data.profiles[fresh.id].owned.push('houseStyle:windmill'); // a legacy profile owns what was free when it was created
     assert.equal(store.validateHome(fresh.id, {}).style, 'windmill');
     store.select(auth.id, { ...store.validateAvatar(auth.id, {}), expression: 'sleepy' });
     assert.equal(new ProfileStore(filename).validateAvatar(auth.id, {}).expression, 'sleepy');

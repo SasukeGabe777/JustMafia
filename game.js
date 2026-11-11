@@ -28,6 +28,8 @@ const DEFAULT_SETTINGS = {
   minPlayers: 4,
   maxPlayers: 100,
   autoMafia: true,            // Mafia count scales with the player count
+  partyMode: false,           // everyone in this room can wear every cosmetic (owned or not)
+  event: 'none',              // seasonal event: none | bloodMoon (see cosmetics.js EVENTS, rules/events.js)
   newPlayerHelp: true,        // Quick join, "what to do now" hints, How to Play, role explainers, TV explainers
   roleSelection: 'draft',     // draft (Default) = players vote on role cards | manual = roleCounts below, as before
   draftSeconds: 45,           // how long the role-card vote lasts
@@ -1108,7 +1110,8 @@ class Room {
         for (const [id, role] of Object.entries(s.forcedRoles)) if (this.players.has(id) && ROLES[role]) S.forcedRoles[id] = role;
       }
     }
-    for (const k of ['newPlayerHelp', 'executionInterventions', 'lastWords', 'autoMafia', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'anonymousVotes', 'doctorSelfProtect', 'ghostHaunts', 'botChatter', 'skipCinematics', 'botsAuto']) if (s[k] != null) S[k] = !!s[k];
+    if (lobby && s.event != null && ['none', 'bloodMoon'].includes(s.event)) S.event = s.event;
+    for (const k of ['partyMode', 'newPlayerHelp', 'executionInterventions', 'lastWords', 'autoMafia', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'anonymousVotes', 'doctorSelfProtect', 'ghostHaunts', 'botChatter', 'skipCinematics', 'botsAuto']) if (s[k] != null) S[k] = !!s[k];
     if (s.nightSeconds != null) S.nightSeconds = clamp(int(s.nightSeconds, 45), 5, 600);
     if (s.discussionSeconds != null) S.discussionSeconds = clamp(int(s.discussionSeconds, 120), 5, 3600);
     if (s.votingSeconds != null) S.votingSeconds = clamp(int(s.votingSeconds, 45), 5, 600);
@@ -1310,6 +1313,9 @@ class Room {
       composition: this.composition,
       roleSelection: this.settings.roleSelection,
       help: this.settings.newPlayerHelp !== false, // new-player help on the TV and phones
+      party: !!this.settings.partyMode,             // party mode: every cosmetic usable in this room
+      event: this.settings.event || 'none',
+      bloodMoon: !!(this.night && this.night.bloodMoon && ['night', 'dawn'].includes(this.phase)),
       draft: this.draftView(),
       unlock: this.unlockView(), // roles this game just unlocked for the deck (game over only)
       deckTier: this.settings.draftPool === 'all' ? 10 : Math.min(10, this.gamesPlayed || 0), // 0 = tutorial round
@@ -1526,5 +1532,6 @@ require('./rules/draft')(Room);
 require('./rules/story')(Room);
 require('./rules/headhunter')(Room); // wraps kill/night/views from the modules above, so it installs last
 require('./rules/story-bots')(Room);
-require('./rules/dlc1')(Room); // DLC 1 roles; wraps kill/views/shownRole, so it installs last
+require('./rules/dlc1')(Room);
+require('./rules/events')(Room); // seasonal events (Blood Moon) // DLC 1 roles; wraps kill/views/shownRole, so it installs last
 module.exports = { Room, DEFAULT_SETTINGS, HARD_MAX_PLAYERS };

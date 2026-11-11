@@ -81,6 +81,7 @@
       $('#j-next').disabled = false;
       if (!r || !r.ok) return void ($('#j-err').textContent = (r && r.error) || 'Room not found.');
       roomHelp = r.help !== false; // the room's "New player help" setting (Quick join on the creator)
+      MT_CREATOR.setParty(!!r.party); // party mode: every cosmetic is unlocked in this room
       $('#j-err').textContent = ''; openCreator('join');
     });
   }
@@ -303,6 +304,7 @@
     const look = shopLook();
     MT_SHOP.render({ profile, avatar: look.avatar, home: look.home, theme: view && view.theme,
       buy: (itemId, cb) => socket.emit('profile:buy', { itemId }, (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); }),
+      buyPass: (cb) => socket.emit('profile:buyPass', {}, (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); }),
       equip: (itemId, on, cb) => socket.emit('profile:equip', { itemId, on }, (r) => {
         if (r && r.ok) {
           profile = r.profile;
@@ -433,6 +435,7 @@
       prevPhase = v.phase;
     }
     view = v;
+    if (window.MT_CREATOR) MT_CREATOR.setParty(!!v.party);
     if (editing && v.phase !== 'lobby') { editing = false; creatorMode = null; show('#screen-game'); }
     if (pendingClaim && v.phase === 'lobby' && !v.isJudge && !$('#screen-game').hidden) { pendingClaim = false; openHome('claim'); }
     if (!$('#screen-home').hidden) { if (v.phase !== 'lobby') show('#screen-game'); else buildHome(); }

@@ -5,7 +5,9 @@
   const O = window.MT_OPTIONS, C = window.MT_COSMETICS, CFG = window.MT_CREATOR_CONFIG;
   const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const listOf = (field, s) => O[s && s.list || O.AVATAR_FIELDS[field]] || [];
-  function owned(profile, field, value) { const item = C.CATALOG.find((i) => i.field === field && i.value === value); return !item || item.free || profile && profile.owned.includes(item.id); }
+  // Party mode (a room setting): every cosmetic is available while you're in that room.
+  let party = false;
+  function owned(profile, field, value) { if (party) return true; const item = C.CATALOG.find((i) => i.field === field && i.value === value); return !item || item.free || profile && profile.owned.includes(item.id); }
   const choices = (profile, field, s) => listOf(field, s).filter((v) => owned(profile, s && s.catalog || field, v));
 
   // Tile camera: draw the character (or home) with one option changed, framed on the part it affects.
@@ -26,6 +28,7 @@
   }
 
   window.MT_CREATOR = {
+    setParty(on) { party = !!on; },
     tabs: () => CFG.TABS,
     // Random look from every section marked random:true, limited to owned items.
     randomize(profile) {
