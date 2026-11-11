@@ -439,6 +439,26 @@ Implementation checklist (updated after verification below):
   live in `tools/cdp.js`; `npm run test:e2e` runs both suites.
   `MT_DEV_GRANTS=1` enables a test-only gold grant.
 
+### Update 8: farewell animations + house-specific visuals; story-aware deaths
+
+- **Farewells:**
+  - `OPTIONS.deathAnim` is an avatar field, sold in the shop's Animations section (80–200 gold) and equipped from the inventory.
+  - `public/farewell-art.js` draws each effect as a pure function of time. The shop loops it as a preview; the TV plays it once over the body (cinema `farewell()` on `die`/`drop`).
+  - It is the victim's own item, so it never reveals the killer.
+- **House visuals:** `drawHouseDecor` tints the bedroom with the house paint and adds signature furniture for all 15 designs. The house is the owner's (a roommate dies in the owner's house).
+- **Story context:** `rules/story.js` → `storyContext(p)` returns only public facts:
+  - first, late and alive count
+  - roommate (house signs)
+  - defended (gallows defenders)
+  - accused and nearly (public votes only)
+  - survived (a public save scene)
+  - It is attached to night kill events and execution cinematics.
+  - Scenes use `storyCaption` / `storyBubble` (first matching fact wins).
+  - The dawn narration gets one personal sentence (`storySentence`).
+  - Lines never name a possible killer.
+- `dawnEvent` is 16.2 s so a farewell can play before the fade.
+- Tests: `tools/test-story.js` (6).
+
 ### Story-driven death scenes, the Headhunter, and the Hunter
 
 **Scenes**

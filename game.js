@@ -61,7 +61,7 @@ const DEFAULT_SETTINGS = {
 
 const ENV_SPEED = Number(process.env.MT_SPEED) || 1; // test knob: >1 makes every phase faster
 // Phase lengths that wait for the big screen's cinematics (see public/scenes.js).
-const CINE_MS = { roleReveal: 14000, dawn: 8000, dawnEvent: 15200, morning: 8000, verdict: 7500, execution: 28500, noExecution: 4500 }; // execution = the vote-elimination scene (up to 27.6s)
+const CINE_MS = { roleReveal: 14000, dawn: 8000, dawnEvent: 16200, morning: 8000, verdict: 7500, execution: 28500, noExecution: 4500 }; // execution = the vote-elimination scene (up to 27.6s)
 
 const HARD_MIN_PLAYERS = 3;
 const HARD_MAX_PLAYERS = 100;
@@ -652,7 +652,7 @@ class Room {
   resolveNight() { return require('./rules/night-pipeline').resolve(this); }
 
   startMorning() {
-    const { deaths = [], events = [], places = {} } = this.pending || {};
+    const { deaths = [], events = [], places = {}, stories: storyCtx = {} } = this.pending || {};
     this.pending = null;
     const victims = [];
     for (const d of deaths) {
@@ -670,6 +670,9 @@ class Room {
       const where = victims.length === 1 && this.settings.narratorMode !== 'human' && places[victims[0].id];
       const key = victims.length > 1 ? 'multiKill' : where && where.place !== 'home' ? 'kill_' + where.place : 'kill';
       this.narrate(key, { name, role, alive: this.alive().length, count: victims.length, host: where && where.placeName || '' });
+      // The most personal public fact, told by the narrator ("Maya found them at dawn.").
+      const extra = victims.length === 1 && this.storySentence(storyCtx[victims[0].id]);
+      if (extra) this.narration.text += ' ' + extra;
     } else {
       const saved = events.find((e) => e.type === 'saved' || e.type === 'guarded');
       if (saved && this.players.get(saved.targetId)) this.narrate('saved', { name: this.players.get(saved.targetId).name });
@@ -868,6 +871,7 @@ class Room {
       // The Executioner revealed themselves by choice, so their identity and role are public.
       executionerId: outcome === 'executioner' ? dead.id : null,
       lastWords: lw ? { name: lw.name, word: lw.word } : null,
+      story: dead ? this.storyContext(dead, { execution: true }) : null, // public facts for the scene's story beats
     };
   }
 
@@ -1048,7 +1052,7 @@ class Room {
       if (!e) return { ok: false, error: 'No such event.' };
       e.played = true;
       if (which === 'blocked') this.setCinematic({ type: 'scene', scene: 'murder', outcome: 'blocked', targetId: e.targetId });
-      else this.setCinematic({ type: 'night', events: [{ type: e.type, targetId: e.targetId, ...(e.type === 'guarded' ? { guardDied: e.guardDied } : {}), ...(e.place ? { place: e.place, placeHouse: e.placeHouse, placeName: e.placeName } : {}) }] });
+      else this.setCinematic({ type: 'night', events: [{ type: e.type, targetId: e.targetId, ...(e.type === 'guarded' ? { guardDied: e.guardDied } : {}), ...(e.place ? { place: e.place, placeHouse: e.placeHouse, placeName: e.placeName } : {}), ...(e.story ? { story: e.story } : {}) }] });
     }
     this.addLog(`🎬 Judge revealed ${all ? 'all dawn events' : which === 'quiet' ? 'a quiet night' : `a ${which === 'blocked' ? 'blocked attempt' : 'dawn event'}`}.`, true);
     this.sync();
@@ -1513,6 +1517,7 @@ require('./rules/social')(Room);
 require('./rules/progression')(Room);
 require('./rules/rundown')(Room);
 require('./rules/draft')(Room);
+require('./rules/story')(Room);
 require('./rules/headhunter')(Room); // wraps kill/night/views from the modules above, so it installs last
 require('./rules/story-bots')(Room);
 module.exports = { Room, DEFAULT_SETTINGS, HARD_MAX_PLAYERS };

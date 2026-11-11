@@ -340,7 +340,8 @@ test('Judge reveal mode: dawn waits, reveals play one event at a time', () => {
   eq(room.hostView().reveal, undefined, 'the TV never sees the queue');
   ok(room.hostAction({ type: 'reveal', index: 0 }).ok);
   ok(room.cinematic.id !== before, 'a cinematic was cued');
-  eq(room.cinematic.events, [{ type: 'kill', targetId: p[3].id }]);
+  eq(room.cinematic.events.map(({ story, ...e }) => e), [{ type: 'kill', targetId: p[3].id }]); // story = public facts for the scene
+  if (!room.cinematic.events[0].story || /role|team|mafia/i.test(JSON.stringify(room.cinematic.events[0].story))) throw new Error('story context must exist and carry no secrets');
   ok(room.judgeView().reveal.events[0].played);
   ok(room.hostAction({ type: 'reveal', which: 'blocked', index: 0 }).ok);
   eq(room.cinematic.outcome, 'blocked');

@@ -401,6 +401,87 @@
     }
   }
 
+  // Update 8, house-specific visuals: the bedroom reflects the victim's own house. The wall
+  // takes the house's paint, and each design adds its signature furniture (a tavern's
+  // barrels, a bakery's oven, a library's shelves...). Spots: a floor piece left of the
+  // rug (x≈470-650) and a wall piece between the picture and the window (x≈950-1190).
+  function drawHouseDecor(ctx, look, t, lamp) {
+    if (!look) return;
+    const r = (c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+    if (look.wall && /^#/.test(look.wall)) { ctx.save(); ctx.globalAlpha = 0.2; r(look.wall, 0, 0, W, WALL_BASE); ctx.restore(); }
+    const F = WALL_BASE + 50; // floor line for standing pieces
+    const books = (x, y, w, rows) => { for (let row = 0; row < rows; row++) for (let i = 0, bx = x + 8; bx < x + w - 12; i++) { const bw = 10 + (i * 7) % 8; r(['#8a2f2f', '#2f5a8a', '#3f7a3f', '#b08a3e', '#5a3a7a'][(i + row) % 5], bx, y + row * 70 + 14, bw, 50 - (i % 3) * 6); bx += bw + 3; } };
+    switch (look.style) {
+      case 'tavern':
+        for (const [x, y] of [[480, F - 90], [570, F - 90], [525, F - 170]]) { r('#6b4423', x, y, 80, 90); r('#3a2614', x, y + 14, 80, 8); r('#3a2614', x, y + 66, 80, 8); r('#2a1a0e', x + 34, y + 36, 12, 12); }
+        r('#4a2e18', 960, 300, 220, 14); for (let i = 0; i < 5; i++) { r('#c9a66b', 975 + i * 42, 314, 26, 34); r('#f2ead6', 975 + i * 42, 314, 26, 8); }
+        break;
+      case 'bakery':
+        r('#9a4a32', 470, F - 200, 190, 200); r('#7a3424', 470, F - 200, 190, 16);
+        ctx.fillStyle = '#1a0d08'; ctx.beginPath(); ctx.arc(565, F - 60, 55, Math.PI, 0); ctx.fill(); r('#1a0d08', 510, F - 60, 110, 50);
+        ctx.fillStyle = `rgba(255,150,60,${0.55 + 0.25 * Math.sin(t * 5)})`; ctx.beginPath(); ctx.arc(565, F - 40, 30, Math.PI, 0); ctx.fill();
+        r('#4a2e18', 960, 300, 220, 14); for (let i = 0; i < 4; i++) { ctx.fillStyle = '#d99a4e'; ctx.beginPath(); ctx.ellipse(990 + i * 52, 292, 22, 12, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#b8742e'; ctx.fillRect(980 + i * 52, 288, 20, 3); }
+        break;
+      case 'smithy':
+        r('#3a3a42', 490, F - 70, 150, 34); r('#2a2a30', 530, F - 36, 70, 36); r('#55555f', 470, F - 66, 40, 18);
+        r('#7a5232', 600, F - 110, 8, 44); r('#4a4a52', 586, F - 118, 36, 16);
+        ctx.save(); ctx.translate(1070, 260); for (const a of [-0.6, 0.6]) { ctx.save(); ctx.rotate(a); r('#7a5232', -5, -90, 10, 180); r('#6a6a74', -22, -100, 44, 26); ctx.restore(); } ctx.restore();
+        break;
+      case 'apothecary':
+        r('#4a2e18', 950, 180, 240, 200); r('#2e1d10', 960, 190, 220, 180);
+        for (let row = 0; row < 3; row++) { r('#4a2e18', 960, 248 + row * 60, 220, 8); for (let i = 0; i < 6; i++) { r(['#7ad0a8', '#d07ab8', '#7aa8d0', '#e0c060'][(i + row) % 4], 972 + i * 34, 214 + row * 60, 18, 32); r('#e8e0d0', 975 + i * 34, 208 + row * 60, 12, 8); } }
+        r('#8a6a3a', 490, F - 50, 120, 50); r('#5a8a3a', 500, F - 80, 30, 34); r('#6a9a4a', 540, F - 90, 30, 44); r('#4a7a2a', 575, F - 76, 26, 30);
+        break;
+      case 'library':
+        r('#4a2e18', 460, 160, 210, F - 160); r('#2e1d10', 470, 170, 190, F - 180); books(470, 170, 190, Math.floor((F - 180) / 70));
+        r('#4a2e18', 950, 200, 240, 160); r('#2e1d10', 958, 208, 224, 144); books(958, 208, 224, 2);
+        break;
+      case 'chapel':
+        ctx.fillStyle = '#2a2030'; ctx.beginPath(); ctx.arc(1070, 270, 96, 0, Math.PI * 2); ctx.fill();
+        for (let i = 0; i < 8; i++) { ctx.fillStyle = ['#c0392b', '#2980b9', '#f1c40f', '#27ae60'][i % 4]; ctx.beginPath(); ctx.moveTo(1070, 270); ctx.arc(1070, 270, 84, (i / 8) * Math.PI * 2, ((i + 1) / 8) * Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = 'rgba(255,240,200,0.25)'; ctx.beginPath(); ctx.arc(1070, 270, 84, 0, Math.PI * 2); ctx.fill();
+        r('#c9a24a', 550, F - 160, 10, 160); r('#c9a24a', 510, F - 160, 90, 8); for (const x of [512, 552, 592]) { r('#efe6c8', x, F - 190, 10, 30); if (lamp > 0) { ctx.fillStyle = '#ffcf4a'; ctx.beginPath(); ctx.ellipse(x + 5, F - 197, 4, 8, 0, 0, Math.PI * 2); ctx.fill(); } }
+        break;
+      case 'tailor':
+        r('#3a3a42', 556, F - 30, 8, 30); r('#3a3a42', 520, F - 4, 80, 6);
+        ctx.fillStyle = '#c96a8a'; ctx.beginPath(); ctx.moveTo(520, F - 150); ctx.lineTo(600, F - 150); ctx.lineTo(615, F - 30); ctx.lineTo(505, F - 30); ctx.closePath(); ctx.fill(); r('#e8d8c8', 530, F - 190, 60, 44);
+        r('#4a2e18', 960, 300, 220, 12); for (let i = 0; i < 6; i++) { r(['#c0392b', '#2980b9', '#f1c40f', '#8e44ad', '#27ae60', '#ecf0f1'][i], 972 + i * 34, 270, 22, 30); r('#c9a66b', 970 + i * 34, 266, 26, 6); r('#c9a66b', 970 + i * 34, 298, 26, 6); }
+        break;
+      case 'watchtower':
+        ctx.strokeStyle = '#4a3626'; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(560, F - 110); ctx.lineTo(510, F); ctx.moveTo(560, F - 110); ctx.lineTo(610, F); ctx.moveTo(560, F - 110); ctx.lineTo(560, F); ctx.stroke();
+        ctx.save(); ctx.translate(560, F - 120); ctx.rotate(-0.5); r('#b08a3e', -10, -60, 22, 120); r('#7a5a2a', -14, -64, 30, 12); ctx.restore();
+        r('#e8d9a8', 955, 190, 230, 170); ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(975, 300); ctx.bezierCurveTo(1020, 220, 1080, 330, 1160, 230); ctx.stroke(); r('#c0392b', 1100, 268, 10, 10);
+        break;
+      case 'windmill':
+        for (const [x, y] of [[480, F - 70], [560, F - 70], [520, F - 130]]) { ctx.fillStyle = '#c9b48a'; ctx.beginPath(); ctx.ellipse(x + 40, y + 35, 42, 38, 0, 0, Math.PI * 2); ctx.fill(); r('#a8946a', x + 30, y - 2, 20, 10); }
+        ctx.save(); ctx.translate(1070, 270); ctx.rotate(t * 0.3); for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); r('#e8dcc0', -8, -90, 16, 80); } ctx.restore(); r('#7a5a3a', 1060, 260, 20, 20);
+        break;
+      case 'farmhouse':
+        r('#d9b45a', 470, F - 90, 180, 90); for (let i = 0; i < 6; i++) r('#b8902e', 470, F - 82 + i * 15, 180, 3); r('#8a6a2a', 500, F - 90, 6, 90); r('#8a6a2a', 610, F - 90, 6, 90);
+        ctx.strokeStyle = '#8a8a92'; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(1070, 260, 40, Math.PI * 0.15, Math.PI * 0.85, true); ctx.stroke();
+        break;
+      case 'manor': case 'darkMansion': {
+        const dark = look.style === 'darkMansion';
+        r('#5a3a20', 490, F - 260, 110, 260); r('#3a2414', 500, F - 250, 90, 90); ctx.fillStyle = '#efe6c8'; ctx.beginPath(); ctx.arc(545, F - 205, 34, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#2a1a0e'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(545, F - 205); ctx.lineTo(545 + Math.sin(t) * 24, F - 205 - Math.cos(t) * 24); ctx.stroke(); r('#c9a24a', 541, F - 150 + Math.sin(t * 2) * 30, 8, 60);
+        r('#c9a24a', 960, 170, 220, 230); r(dark ? '#1a1420' : '#3a5a7a', 975, 185, 190, 200); ctx.fillStyle = dark ? '#2a2430' : '#e0c0a0'; ctx.beginPath(); ctx.arc(1070, 260, 46, 0, Math.PI * 2); ctx.fill(); r(dark ? '#2a2430' : '#5a2a2a', 1015, 305, 110, 80);
+        if (dark) { r('#ff2a2a', 1052, 252, 8, 6); r('#ff2a2a', 1080, 252, 8, 6); ctx.strokeStyle = 'rgba(220,220,230,.35)'; ctx.lineWidth = 2; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(60 + i * 30, 150 - i * 20); ctx.stroke(); } }
+        break;
+      }
+      case 'modernHouse':
+        r('#2a2a30', 556, F - 220, 8, 220); r('#3a3a42', 526, F - 6, 68, 8); ctx.fillStyle = lamp > 0 ? '#fff4c8' : '#c8c0a8'; ctx.beginPath(); ctx.moveTo(520, F - 220); ctx.lineTo(600, F - 220); ctx.lineTo(585, F - 270); ctx.lineTo(535, F - 270); ctx.closePath(); ctx.fill();
+        r('#111216', 950, 210, 240, 140); r(`rgba(80,140,220,${0.35 + 0.1 * Math.sin(t * 3)})`, 958, 218, 224, 124); r('#2a2a30', 1060, 350, 20, 30);
+        break;
+      case 'rspOffice':
+        r('#1f3f86', 470, F - 90, 200, 20); r('#16306a', 480, F - 70, 14, 70); r('#16306a', 646, F - 70, 14, 70); r('#2a2a30', 530, F - 160, 90, 64); r(`rgba(255,210,31,${0.4 + 0.1 * Math.sin(t * 2)})`, 536, F - 154, 78, 52); r('#2a2a30', 568, F - 96, 14, 8);
+        r('#ffd21f', 960, 190, 220, 160); r('#1f3f86', 970, 200, 200, 140); ctx.fillStyle = '#ffd21f'; ctx.font = '700 64px monospace'; ctx.textAlign = 'center'; ctx.fillText('RSP', 1070, 292); ctx.textAlign = 'start';
+        break;
+      default: // cottage
+        r('#8a5a3a', 520, F - 60, 80, 60); r('#6a4a2a', 512, F - 66, 96, 12); ctx.fillStyle = '#4a8a3a'; for (const [dx, dy, rr] of [[560, F - 100, 40], [530, F - 120, 30], [590, F - 125, 28]]) { ctx.beginPath(); ctx.arc(dx, dy, rr, 0, Math.PI * 2); ctx.fill(); }
+        r('#c9a24a', 990, 210, 160, 130); r('#f2ead6', 1002, 222, 136, 106); ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.arc(1050, 270, 14, 0, Math.PI * 2); ctx.arc(1080, 270, 14, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.moveTo(1037, 276); ctx.lineTo(1065, 306); ctx.lineTo(1093, 276); ctx.fill();
+    }
+  }
+
   function drawBed(ctx, k, part, blanketColor) {
     const R = k.room;
     if (part === 'back') {
@@ -481,6 +562,8 @@
         dir: house && house.x < CX ? 1 : -1, // which way is "toward town"
         // Story location (AI-narrated deaths): lake / hearth / tavern / field, or 'visit' (a house window).
         place: bind.place || def.place || null, host: bind.placeName || 'a neighbor',
+        // The house's design (the owner's, even for a roommate): the bedroom takes its look.
+        homeLook: ((town.ownerOf(houseIdx) || owner || {}).homeLook) || null,
       };
       let steps = def.steps.slice();
       const oc = def.outcomes && def.outcomes[outcome];
@@ -726,7 +809,7 @@
 
     // A theme's antagonist (e.g. RSP Supply's Tom Smith); null for themes without one.
     villain() { const T = window.MT_THEMES, t = T && T.THEMES[this.town.themeId]; return t && t.villain || null; }
-    text(s) { const b = this.ctx.bind, v = this.villain() || {}; return String(s || '').replace(/\{town\}/g, (this.town.state && this.town.state.townName) || 'town').replace(/\{name\}/g, this.ctx.name).replace(/\{host\}/g, this.ctx.host).replace(/\{villain\}/g, v.name || '').replace(/\{villainTitle\}/g, v.title || '').replace(/\{guard\}/g, b.guardName || 'Someone').replace(/\{lastWords\}/g, b.lastWordsText || '').replace(/\{title\}/g, b.title || '').replace(/\{sub\}/g, b.sub || '').replace(/\{mood\}/g, b.mood || ''); }
+    text(s) { const b = this.ctx.bind, v = this.villain() || {}, S = b.story || {}; return String(s || '').replace(/\{roommate\}/g, S.roommate || 'someone').replace(/\{defended\}/g, S.defended || 'someone').replace(/\{accused\}/g, S.accused || 'someone').replace(/\{alive\}/g, S.alive != null ? S.alive : 'a few').replace(/\{town\}/g, (this.town.state && this.town.state.townName) || 'town').replace(/\{name\}/g, this.ctx.name).replace(/\{host\}/g, this.ctx.host).replace(/\{villain\}/g, v.name || '').replace(/\{villainTitle\}/g, v.title || '').replace(/\{guard\}/g, b.guardName || 'Someone').replace(/\{lastWords\}/g, b.lastWordsText || '').replace(/\{title\}/g, b.title || '').replace(/\{sub\}/g, b.sub || '').replace(/\{mood\}/g, b.mood || ''); }
 
     a_letterbox(on) { this.letterTarget = on ? 1 : 0; }
     a_music(mood) { SFX.music(this.text(mood) || null, this.ctx.kit.root, this.town.themeId); }
@@ -832,6 +915,7 @@
       if (!x) return;
       x.pose = 'dead'; x.fallT = this.scene.t; x.walking = false; x.move = null;
       SFX.play('fall');
+      if (x.kind === 'resident') this.farewell(x);
     }
     a_shield(a) {
       const x = this.actors.get(a.id);
@@ -942,6 +1026,22 @@
     a_struggle(a) { const x = this.actors.get(a.id); if (x) { x.struggle = { t0: this.scene.t, until: this.scene.t + (a.dur || 1.5) }; SFX.play('gasp'); } }
     // Drag a body (already fallen) along behind someone, leaving a trail.
     a_dragBody(a) { const x = this.actors.get(a.id); if (x) { x.follow = { id: a.by || 'assassin', gap: a.gap || 24, dy: a.dy || 0, body: true }; } }
+    // Story-aware beats: { beats: [[fact, lines], ..., ['default', lines]] }. The first fact that is
+    // true for this death (first death, a roommate, yesterday's vote...) picks the line.
+    storyPick(beats) {
+      const S = this.ctx.bind.story || {};
+      const hit = (beats || []).find(([k]) => k === 'default' || S[k]);
+      return hit ? [].concat(hit[1]) : null;
+    }
+    a_storyCaption(a) { const lines = this.storyPick(a.beats); if (lines) this.a_caption({ lines, dur: a.dur }); }
+    a_storyBubble(a) { const lines = this.storyPick(a.beats); if (lines) this.a_bubble({ id: a.id, text: lines[Math.floor(Math.random() * lines.length)], dur: a.dur }); }
+    // Update 8: the dying character's equipped farewell (shop item) plays over their body.
+    farewell(x) {
+      const kind = x && x.avatar && x.avatar.deathAnim;
+      if (!kind || kind === 'none' || x.farewellDone || !window.MT_FAREWELL) return;
+      x.farewellDone = true;
+      this.props.push({ type: 'farewell', kind, x: x.x, y: x.y, t0: this.scene.t, dur: 6, scale: (x.scale || 1) / 0.756 * 0.756, stage: this.stage, avatar: x.avatar, interior: this.stage === 'interior' });
+    }
     // Narrator caption (AI narrator only; a human narrator tells the story themselves).
     a_caption(a) {
       if (this.town.state && this.town.state.narratorMode === 'human') return;
@@ -970,6 +1070,7 @@
       const x = this.actors.get(a.id); if (!x) return;
       const p = this.pt(a.to || 'dropSpot'); x.x = p.x; x.y = p.y; x.pose = 'dead'; x.fallT = this.scene.t; x.move = null;
       SFX.play('fall'); this.shake = 0.5;
+      this.farewell(x); // gallows: their farewell plays where they fall
     }
     a_xeyes(a) { const x = this.actors.get(a.id); if (x) x.dead = true; }
     a_decay(a) {
@@ -1010,6 +1111,8 @@
         ctx.fillStyle = '#5c0b10'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 2 * s, rad * 1.3, rad * 0.42, 0, 0, TAU); ctx.fill();
         ctx.fillStyle = '#8f1820'; ctx.beginPath(); ctx.ellipse(p.x - rad * 0.2, p.y + 1 * s, rad * 0.8, rad * 0.24, 0, 0, TAU); ctx.fill();
         ctx.fillStyle = 'rgba(255,170,170,.35)'; ctx.fillRect(p.x - rad * 0.5, p.y - 0.5 * s, rad * 0.3, 1.2 * s);
+      } else if (p.type === 'farewell') {
+        if (window.MT_FAREWELL) window.MT_FAREWELL.draw(ctx, p.kind, p.x, p.y, s, t - p.t0, { avatar: p.avatar, once: true }); // s: 1 = a town-sized character
       } else if (p.type === 'bones') {
         const a = clamp((t - p.t0) / 0.8, 0, 1); ctx.save(); ctx.globalAlpha *= a;
         r('#e9e2cf', -6, -12, 12, 9); r('#2a2420', -4, -9, 3, 3); r('#2a2420', 1, -9, 3, 3); r('#e9e2cf', -4, -4, 8, 2); // skull
@@ -1067,7 +1170,7 @@
     townEntities() {
       if (this.stage !== 'town') return [];
       const t = this.now();
-      const props = (this.props || []).filter((p) => p.stage !== 'interior').map((p) => ({ y: p.type === 'gallows' ? p.y - 200 : p.type === 'pool' ? p.y - 4 : p.y + 1, draw: (ctx) => this.drawProp(ctx, p, t) }));
+      const props = (this.props || []).filter((p) => p.stage !== 'interior').map((p) => ({ y: p.type === 'gallows' ? p.y - 200 : p.type === 'pool' ? p.y - 4 : p.type === 'farewell' ? p.y + 6 : p.y + 1, draw: (ctx) => this.drawProp(ctx, p, t) }));
       return props.concat([...this.actors.values()].filter((a) => a.stage === 'town' && a.alpha > 0.01).map((a) => ({ y: a.y, draw: (ctx) => this.drawActor(ctx, a, t) })));
     }
 
@@ -1150,13 +1253,15 @@
       const t = this.now();
       const r = this.room;
       drawInterior(ctx, kit, r, t);
+      drawHouseDecor(ctx, this.ctx.homeLook, t, r.lampLevel == null ? r.lamp : r.lampLevel); // the victim's own house
       const res = [...this.actors.values()].filter((a) => a.stage === 'interior');
       const lying = res.filter((a) => a.kind === 'resident' && (a.pose === 'sleep' || a.pose === 'sit'));
       drawBed(ctx, kit, 'back');
       for (const a of lying) this.drawActor(ctx, a, t);
       drawBed(ctx, kit, 'front', shade(this.ctx.avatar.color, -0.15));
-      for (const p of (this.props || []).filter((q) => q.stage === 'interior')) this.drawProp(ctx, p, t); // e.g. a pool under the body
+      for (const p of (this.props || []).filter((q) => q.stage === 'interior' && q.type !== 'farewell')) this.drawProp(ctx, p, t); // e.g. a pool under the body
       res.filter((a) => !lying.includes(a)).sort((p, q) => p.y - q.y).forEach((a) => this.drawActor(ctx, a, t));
+      for (const p of (this.props || []).filter((q) => q.stage === 'interior' && q.type === 'farewell')) this.drawProp(ctx, p, t); // over the body
       this.drawFx(ctx, 'interior', 'under');
 
       // lighting

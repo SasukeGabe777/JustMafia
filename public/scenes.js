@@ -42,9 +42,32 @@
     [7.0, 'flicker', { dur: 0.8 }],
     [7.0, 'pose', { id: 'assassin', pose: 'stand', crouch: false }],
   ];
+  // ----- Story beats that change with how the game has gone (public facts only; see rules/story.js) -----
+  // The first fact that applies wins; each scene supplies its own setting line as the fallback.
+  // Lines never point at anyone as a possible killer.
+  const INTRO = (fallback) => ({ beats: [
+    ['first', ['Nobody in {town} had died yet. That was about to change.', 'It was the night {town} would never forget.']],
+    ['defended', ['Just yesterday, {name} had stood up for {defended} at the gallows.']],
+    ['nearly', ['Yesterday, the town nearly hanged {name}. Tonight, someone decided not to wait.']],
+    ['roommate', ['{name} and {roommate} shared a home. Tonight, {roommate} slept soundly.']],
+    ['accused', ['Yesterday, {name} had pointed the finger at {accused}. Had someone been watching?']],
+    ['survived', ['{name} had survived an attack once before. They had started to feel safe.']],
+    ['late', ['So few were left in {town} now. Every door was locked.']],
+    ['default', fallback],
+  ] });
+  const AFTER = (fallback) => ({ beats: [
+    ['roommate', ['{roommate} would be the one to find them.', 'In the morning, {roommate} would knock on an empty room.']],
+    ['first', ['The first empty chair in {town}.']],
+    ['late', ['Only {alive} remain.']],
+    ['default', fallback],
+  ] });
+  // What they shout during the struggle, and what they whisper as they fall.
+  const CRY = { beats: [['roommate', ['{roommate}! HELP!']], ['default', ['Help!', 'Somebody!', 'No!']]] };
+  const LAST = { beats: [['roommate', ['Tell {roommate}…']], ['default', ['Why…?', 'Not like this…', '…', 'I trusted you…']]] };
+
   // The narrator's story beats for a night at home (AI narrator only; see a_caption).
   const HOME_STORY = [
-    [0.3, 'caption', { lines: ['Night settled over {town}. {name} went to bed early.', '{name} blew out the candle. The house went quiet.'], dur: 2.6 }],
+    [0.3, 'storyCaption', { ...INTRO(['Night settled over {town}. {name} went to bed early.', '{name} blew out the candle. The house went quiet.']), dur: 2.6 }],
     [3.0, 'caption', { lines: ['A shadow reached {name}’s door.', 'Someone was already at the gate.'], dur: 2.0 }],
     [5.1, 'caption', { lines: ['A floorboard creaked. Then another.', 'The floorboards gave them away.'], dur: 1.5 }],
     [6.7, 'caption', { lines: ['{name} woke. Someone was in the room.'], dur: 1.4 }],
@@ -111,24 +134,24 @@
         // A real fight: grabbed face to face, a struggle, then the fall (X eyes, a pool on the floor).
         kill: {
           name: 'Killed',
-          duration: 15.0,
+          duration: 15.8,
           steps: [
             ...ENTER,
             ...HOME_STORY,
             [7.3, 'move', { id: 'assassin', to: 'strike', dur: 0.4, gait: 'run' }],
             [7.7, 'grab', { id: 'victim', by: 'assassin', front: true, gap: 22 }], [7.7, 'struggle', { id: 'victim', dur: 1.6 }],
-            [7.75, 'bubble', { id: 'victim', text: 'Help!', dur: 1 }], [8.2, 'shake', 0.4], [8.2, 'sfx', 'hit'],
+            [7.75, 'storyBubble', { id: 'victim', ...CRY, dur: 1 }], [8.2, 'shake', 0.4], [8.2, 'sfx', 'hit'],
             [8.3, 'caption', { lines: ['{name} fought for their life.', 'They fought back with everything they had.'], dur: 2 }],
             [8.6, 'bubble', { id: 'victim', text: 'Let go!', dur: 0.9 }],
             [9.3, 'release', { id: 'victim', by: 'assassin' }],
             [9.35, 'attack', { id: 'assassin', target: 'victim' }],
-            [9.7, 'hit', { id: 'victim', dir: 1 }], [9.8, 'die', { id: 'victim' }], [9.8, 'sfx', 'sting'],
+            [9.7, 'hit', { id: 'victim', dir: 1 }], [9.75, 'storyBubble', { id: 'victim', ...LAST, dur: 1.4 }], [9.8, 'die', { id: 'victim' }], [9.8, 'sfx', 'sting'],
             [9.85, 'flicker', { dur: 0.6 }], // the lamp gutters but stays lit, so the room can see what happened
             [10.1, 'xeyes', { id: 'victim' }], [10.2, 'prop', { type: 'pool', at: { actor: 'victim' }, dur: 2.5 }],
-            [10.3, 'music', 'eerie'], [10.3, 'caption', { lines: ['It was not enough.', 'Then the house was silent.'], dur: 1.6 }],
+            [10.3, 'music', 'eerie'], [10.3, 'storyCaption', { ...AFTER(['It was not enough.', 'Then the house was silent.']), dur: 1.6 }],
             [10.6, 'move', { id: 'assassin', to: 'doorway', dur: 1.2, gait: 'walk' }],
             [11.2, 'alpha', { id: 'assassin', to: 0, dur: 0.5 }],
-            ...ENDING('{name} did not survive the night', '', '#ff6b6b', 11.6),
+            ...ENDING('{name} did not survive the night', '', '#ff6b6b', 12.4), // lingers so their farewell can play
           ],
         },
         protected: {
@@ -266,6 +289,15 @@
         [1.2, 'defenders', { at: 'accused' }, { when: 'defenders' }],
         [1.4, 'defendersMove', { to: 'accused', dx: -70, dur: 0.8 }, { when: 'defenders' }],
         [2.0, 'defendersBubble', { lines: ['Stop!', 'They’re innocent!', 'Leave them!', 'No!'], dur: 1.6 }, { when: 'defenders' }],
+        // The story so far, at the gallows (AI narrator only).
+        [1.0, 'storyCaption', { beats: [
+          ['first', ['{town} had never sent anyone to the gallows before.']],
+          ['defended', ['Only yesterday, {name} begged the town to spare {defended}. Today, it was their turn.']],
+          ['survived', ['{name} had survived the night once. The town would finish what the night began.']],
+          ['roommate', ['Somewhere in the crowd, {roommate} could not bear to look.']],
+          ['late', ['There were so few of them left now. Every vote mattered.']],
+          ['default', ['The town has made its choice.', 'The votes are counted. There is no going back.']],
+        ], dur: 3 }],
       ],
       outcomes: {
         executed: { name: 'Executed', duration: 26.4, steps: [
@@ -275,6 +307,12 @@
           ...LEVER('victim', 8.8),
           [11.2, 'defendersBubble', { lines: ['NO…', '…', 'Why…'], dur: 2 }, { when: 'defenders' }],
           ...DEATH('victim', 9.9, [[18.8, 'execute']]),
+          [15.6, 'storyCaption', { beats: [
+            ['roommate', ['Tonight, {roommate} will sleep alone.']],
+            ['first', ['The first verdict of {town}. Was it the right one?']],
+            ['late', ['Only {alive} remain. Was it the right choice?']],
+            ['default', ['May the town be right.', 'Time will tell if the town chose well.']],
+          ], dur: 3 }],
           // The reveal (role shown only when the game reveals roles on death), then last words.
           [19.0, 'title', { text: '{name} has been eliminated', sub: '{sub}', color: '#ffd36b', dur: 3.4, band: true }],
           [22.5, 'title', { text: '“{lastWords}”', sub: '{name}’s last words', color: '#e8e4ff', dur: 3.2, band: true }, { when: 'lastWords' }],
@@ -506,7 +544,7 @@
     [8.8, 'move', { id: 'assassin', to: 'doorway', dur: 0.6, gait: 'run', fadeOut: true }],
     ...ENDING('The attack failed', '{name} survived the night', '#b1f0ba', 9.8, 'peace'),
   ] };
-  SCENES.murder.outcomes.multiple = { name: 'Multiple masked attackers', duration: 15.0, steps: [
+  SCENES.murder.outcomes.multiple = { name: 'Multiple masked attackers', duration: 15.8, steps: [
     ...SCENES.murder.outcomes.kill.steps,
     [1, 'spawn', { id: 'second', kind: 'assassin', at: 'street', fadeIn: 0.5 }],
     [1.3, 'move', { id: 'second', to: 'door', dur: 2, gait: 'sneak' }],
@@ -524,13 +562,15 @@
   const FALL = (t) => [[t, 'die', { id: 'victim' }], [t + 0.25, 'xeyes', { id: 'victim' }], [t + 0.3, 'prop', { type: 'pool', at: { actor: 'victim' }, dur: 2.6 }]];
   // `story`: four narrator beats [setting, mood, the moment, aftermath] (AI narrator only).
   const OUTDOOR = ({ name, place, title, color, music = 'tension', intro = [], story = [], death = FALL(7.3), leave = [[8.6, 'move', { id: 'assassin', to: 'placeAway', dur: 2.2, gait: 'walk', fadeOut: true }]], extra = [] }) => ({
-    name, kind: 'night', place, needsHouse: true, duration: 14.6,
+    name, kind: 'night', place, needsHouse: true, duration: 15.4,
     steps: [
       [0, 'letterbox', true], [0, 'dark', 1], [0, 'hold'], [0, 'music', music],
       [0, 'camera', { to: place === 'visit' ? 'house' : 'place', zoom: place === 'visit' ? 2.6 : undefined, dur: 1.6 }],
       [0.4, 'spawn', { id: 'victim', kind: 'resident', at: 'place' }],
       ...intro,
-      ...story.map((lines, i) => [[0.5, 2.6, 5.3, 8.0][i], 'caption', { lines: [].concat(lines), dur: [2.0, 2.4, 1.8, 2.4][i] }]),
+      // Beat 1 and 4 bend to the story so far (first death, a roommate, yesterday...); 2 and 3 set the place.
+      ...story.map((lines, i) => [[0.5, 2.6, 5.3, 8.0][i], i === 0 || i === 3 ? 'storyCaption' : 'caption',
+        i === 0 ? { ...INTRO([].concat(lines)), dur: 2.4 } : i === 3 ? { ...AFTER([].concat(lines)), dur: 2.4 } : { lines: [].concat(lines), dur: [2.0, 2.4, 1.8, 2.4][i] }]),
       [1.2, 'spawn', { id: 'assassin', kind: 'assassin', at: 'placeFrom', crouch: true, fadeIn: 0.8 }],
       [1.6, 'move', { id: 'assassin', to: 'placeBehind', dur: 3.2, gait: 'sneak', crouch: true }],
       [1.8, 'loop', { sfx: 'heartbeat', every: 0.85, until: 5.3 }],
@@ -539,15 +579,15 @@
       // Grabbed face to face; they thrash and shout; then the blow. The camera pushes in.
       [5.0, 'camera', { to: { actor: 'victim', dy: -30 }, zoom: 3.1, dur: 0.7 }],
       [5.3, 'grab', { id: 'victim', by: 'assassin', front: true, gap: 22 }], [5.3, 'struggle', { id: 'victim', dur: 1.5 }],
-      [5.5, 'bubble', { id: 'victim', text: 'Help!', dur: 1 }], [5.8, 'shake', 0.35], [6.2, 'sfx', 'hit'],
+      [5.5, 'storyBubble', { id: 'victim', ...CRY, dur: 1 }], [5.8, 'shake', 0.35], [6.2, 'sfx', 'hit'],
       [6.8, 'release', { id: 'victim', by: 'assassin' }],
       [6.85, 'attack', { id: 'assassin', target: 'victim' }],
-      [7.2, 'hit', { id: 'victim', dir: -1 }],
+      [7.2, 'hit', { id: 'victim', dir: -1 }], [7.22, 'storyBubble', { id: 'victim', ...LAST, dur: 1.3 }],
       ...death,
       [7.35, 'sfx', 'sting'], [7.8, 'music', 'eerie'],
       ...leave,
       ...extra,
-      ...ENDING(title, '', color, 10.8),
+      ...ENDING(title, '', color, 11.6),
     ],
   });
   Object.assign(SCENES, {
@@ -578,12 +618,12 @@
       story: [['{name} was watching {host}’s house.'], ['They had a theory. They wanted proof.'], ['Someone else was watching too.'], ['Their notes were never finished.']],
       extra: [[6.4, 'houseLight', false]] }),
     // Chased home through the street and caught three steps from the door.
-    death_chase: { name: 'Chased through town', kind: 'night', needsHouse: true, duration: 14.6, steps: [
+    death_chase: { name: 'Chased through town', kind: 'night', needsHouse: true, duration: 15.4, steps: [
       [0, 'letterbox', true], [0, 'dark', 1], [0, 'hold'], [0, 'music', 'tension'], [0, 'camera', { to: 'house', zoom: 2.4, dur: 1.0 }],
       [0.3, 'spawn', { id: 'victim', kind: 'resident', at: 'away' }], [0.4, 'move', { id: 'victim', to: 'nearStreet', dur: 3.6, gait: 'walk' }],
       [0.5, 'follow', { id: 'victim', zoom: 2.7, dy: 40 }], [8.6, 'follow', {}], // the camera runs with them
       [8.6, 'camera', { to: { actor: 'victim', dy: -20 }, zoom: 3.0, dur: 0.6 }],
-      [0.5, 'caption', { lines: ['{name} was walking home late.', '{name} took the long way home.'], dur: 2.4 }],
+      [0.5, 'storyCaption', { ...INTRO(['{name} was walking home late.', '{name} took the long way home.']), dur: 2.4 }],
       [1.6, 'spawn', { id: 'assassin', kind: 'assassin', at: 'awayFar', fadeIn: 0.6 }], [1.8, 'move', { id: 'assassin', to: 'street', dur: 2.6, gait: 'sneak' }],
       [3.0, 'caption', { lines: ['Footsteps behind them, matching theirs.'], dur: 1.8 }],
       [3.6, 'bubble', { id: 'victim', text: 'Hello…?', dur: 1 }],
@@ -593,12 +633,12 @@
       [4.7, 'move', { id: 'assassin', to: { from: 'doorSide', dx: 26, dy: 40, mirror: true }, dur: 1.9, gait: 'run' }],
       [5.0, 'caption', { lines: ['{name} ran.'], dur: 1.4 }],
       [6.6, 'grab', { id: 'victim', by: 'assassin', front: true, gap: 20 }], [6.6, 'struggle', { id: 'victim', dur: 1.4 }],
-      [6.7, 'bubble', { id: 'victim', text: 'NO!', dur: 1 }], [6.7, 'caption', { lines: ['They were three steps from their door.'], dur: 2 }],
-      [8.0, 'release', { id: 'victim', by: 'assassin' }], [8.05, 'attack', { id: 'assassin', target: 'victim' }], [8.4, 'hit', { id: 'victim', dir: 1 }],
+      [6.7, 'storyBubble', { id: 'victim', ...CRY, dur: 1 }], [6.7, 'storyCaption', { beats: [['roommate', ['{roommate} was asleep on the other side of that door.']], ['default', ['They were three steps from their door.']]], dur: 2 }],
+      [8.0, 'release', { id: 'victim', by: 'assassin' }], [8.05, 'attack', { id: 'assassin', target: 'victim' }], [8.4, 'hit', { id: 'victim', dir: 1 }], [8.42, 'storyBubble', { id: 'victim', ...LAST, dur: 1.3 }],
       ...FALL(8.5), [8.5, 'sfx', 'sting'], [9.0, 'music', 'eerie'],
       [9.4, 'move', { id: 'assassin', to: 'away', dur: 2, gait: 'walk', fadeOut: true }],
-      [9.6, 'caption', { lines: ['The door stayed shut.'], dur: 1.6 }],
-      ...ENDING('{name} never made it home', '', '#ff8a7a', 11.0),
+      [9.6, 'storyCaption', { ...AFTER(['The door stayed shut.']), dur: 1.6 }],
+      ...ENDING('{name} never made it home', '', '#ff8a7a', 11.8),
     ] },
     // The Headhunter's strike (any time of day): a stranger walks up, and it's over in a heartbeat.
     headhunt: { name: 'Headhunter: a head is taken', needsHouse: true, duration: 11.2, steps: [

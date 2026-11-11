@@ -107,6 +107,17 @@ Night actions resolve together, in this order: blocks → protection → kills �
 
 **Win conditions:** the Town wins when no Mafia, Serial Killer or Headhunter is left alive. The Mafia win at parity, or (optionally) when everyone else is gone. The Serial Killer and the Headhunter each win as the last one standing. The Jester wins if voted out.
 
+**Farewells (Update 8):**
+- Buy one in the shop's Animations section and equip it from your inventory: Rose Petals, Fireflies, A Last Letter, Candlelight, Sky Lantern, Falling Stars or Spirit Rises.
+- When you die, it plays over your body on the TV, at night or at the gallows.
+- It belongs to the victim, so it never hints at who the killer was.
+- The bedroom murder also takes on the victim's own house: its paint color, plus signature furniture for each design (a tavern's barrels, a bakery's oven, a library's shelves, a chapel's stained glass, a dark mansion's watching portrait…).
+
+**Every death tells its own story:**
+- The scenes and the dawn narration change with how the game has gone: the first death, a roommate who will find them ("Maya found them at dawn"), who they voted against yesterday, the town nearly hanging them, an earlier narrow escape, or how few remain.
+- What they cry out and whisper as they fall changes too.
+- Only public facts are used. Vote-based lines only appear when votes are public, and no line ever points at anyone as the killer.
+
 **Death scenes:**
 - Every death is acted out with the character rig: the victim is grabbed and struggles, falls with X eyes, and a blood pool spreads under them.
 - Death locations: their bed, the lake (where the body is dragged to the shore and slips under), the hearth, outside the tavern, the field, chased home, or watching another house.

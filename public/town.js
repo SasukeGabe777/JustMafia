@@ -324,8 +324,9 @@
           // AI narrator: a kill away from home plays its location scene (lake, hearth, tavern,
           // field, or another house). Home deaths and manual mode use the classic murder scene.
           const story = e.type === 'kill' && e.place && e.place !== 'home' && window.MT_SCENES && window.MT_SCENES['death_' + e.place];
-          if (story) this.cinema.play('death_' + e.place, { victimId: e.targetId, place: e.place, placeName: e.placeName, house: e.place === 'visit' ? e.placeHouse : undefined, multi }, { queue: true, phaseBound: true });
-          else this.cinema.play('murder', { victimId: e.targetId, outcome, multi }, { queue: true, phaseBound: true });
+          // e.story: public facts (first death, a roommate, yesterday's vote...) that pick the story beats.
+          if (story) this.cinema.play('death_' + e.place, { victimId: e.targetId, place: e.place, placeName: e.placeName, house: e.place === 'visit' ? e.placeHouse : undefined, multi, story: e.story }, { queue: true, phaseBound: true });
+          else this.cinema.play('murder', { victimId: e.targetId, outcome, multi, story: e.story }, { queue: true, phaseBound: true });
         });
         return;
       }
@@ -410,7 +411,7 @@
       const lw = cine.lastWords, lastWordsText = lw ? [lw.name, lw.word].filter(Boolean).join(' … ') : '';
       // Joining or reconnecting mid-execution: don't replay it from the start.
       const late = cine.at != null && this.state && this.state.serverNow != null && this.state.serverNow - cine.at > 4000;
-      const bind = { victimId: condemned.id, outcome: cine.outcome || 'executed', sub, mob: cine.mob, mobCount: cine.mobCount, defenders: cine.defenders || [], guardId: cine.guardId, executionerId: cine.executionerId, guardName: dead && (cine.guardId || cine.executionerId) ? dead.name : '', lastWordsText };
+      const bind = { victimId: condemned.id, outcome: cine.outcome || 'executed', sub, mob: cine.mob, mobCount: cine.mobCount, defenders: cine.defenders || [], guardId: cine.guardId, executionerId: cine.executionerId, guardName: dead && (cine.guardId || cine.executionerId) ? dead.name : '', lastWordsText, story: cine.story };
       if (late || !this.cinema || !this.cinema.play('execution', bind, { phaseBound: true })) { if (dead) this.finishDeath(dead.id); }
     }
 

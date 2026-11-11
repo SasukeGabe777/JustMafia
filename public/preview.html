@@ -40,6 +40,7 @@
   <script src="/shared/layout.js"></script>
   <script src="/avatar.js"></script>
   <script src="/character-art.js"></script>
+  <script src="/farewell-art.js"></script>
   <script src="/world-art.js"></script>
   <script src="/sfx.js"></script>
   <script src="/pixel.js"></script>
@@ -78,7 +79,9 @@
         const n = Number($('#population').value) || 10;
         const players = Array.from({ length: n }, (_, i) => ({
           id: 'p' + i, name: NAMES[i % NAMES.length] + (i >= NAMES.length ? ' ' + (i + 1) : ''), house: i, alive: true, connected: true,
-          avatar: { color: O.colors[i % O.colors.length], skin: O.skins[i % O.skins.length], hat: O.hats[i % O.hats.length], hair: O.hair[i % O.hair.length], hairColor: O.hairColor[i % O.hairColor.length], face: O.face[i % O.face.length], facialHair: O.facialHair[i % O.facialHair.length], outfit: O.outfit[i % O.outfit.length], eyes: O.eyes[i % O.eyes.length], pants: O.pants[i % O.pants.length], shoes: O.shoes[i % O.shoes.length], accessory: O.accessory[i % O.accessory.length] },
+          // ?farewell=petals and ?style=bakery preview Update 8 on the victim (house index 2 by default).
+          homeLook: { style: (i === 2 && q.get('style')) || O.houseStyle[i % O.houseStyle.length], wall: O.houseColor[i % O.houseColor.length] },
+          avatar: { deathAnim: q.get('farewell') || 'none', color: O.colors[i % O.colors.length], skin: O.skins[i % O.skins.length], hat: O.hats[i % O.hats.length], hair: O.hair[i % O.hair.length], hairColor: O.hairColor[i % O.hairColor.length], face: O.face[i % O.face.length], facialHair: O.facialHair[i % O.facialHair.length], outfit: O.outfit[i % O.outfit.length], eyes: O.eyes[i % O.eyes.length], pants: O.pants[i % O.pants.length], shoes: O.shoes[i % O.shoes.length], accessory: O.accessory[i % O.accessory.length] },
         }));
         return { phase: $('#phase').value, theme: $('#theme').value, townName: T.THEMES[$('#theme').value].townName, players, accusations: [] };
       }
@@ -97,7 +100,9 @@
           const c = town.chars.get(victimId); c.deathPending = true;
         }
         const text = { introduction: { title: T.THEMES[$('#theme').value].townName, sub: 'Every neighbor has a story.' }, beyond: { title: 'MESSAGE FROM BEYOND', sub: 'PLAYER 3 IS LIAR' }, photograph: { title: 'NIGHT SNAPSHOT', sub: 'Someone was active outside their home.' }, blessing: { title: 'TOWN BLESSING', sub: 'Maya is confirmed Town.' } };
-        town.cinema.play(sc, { victimId, outcome: $('#outcome').value, title: 'The Town wins!', sub: 'Every member of the Mafia is gone', mood: 'triumph', ...text[sc] });
+        // ?story=roommate|first|defended|... previews the story-aware beats.
+        const storyKey = q.get('story'), story = storyKey ? { [storyKey]: storyKey === 'roommate' ? 'Maya' : storyKey === 'defended' || storyKey === 'accused' ? 'Leo' : true, alive: 4 } : null;
+        town.cinema.play(sc, { victimId, story, outcome: $('#outcome').value, title: 'The Town wins!', sub: 'Every member of the Mafia is gone', mood: 'triumph', ...text[sc] });
       }
       $('#play').addEventListener('click', play);
       $('#stop').addEventListener('click', () => town.cinema.stop());

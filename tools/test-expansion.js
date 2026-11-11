@@ -384,7 +384,7 @@ test('Simultaneous attacks on one victim select the anonymous multiple-attacker 
     const { room, p } = game(['mafia', 'vigilante', 'villager', 'villager', 'villager', 'villager'], { revealMode });
     room.nightAction(p[0], p[2].id); room.nightAction(p[1], p[2].id); room.resolveNight();
     if (revealMode === 'judge') room.judgeReveal({ all: true });
-    assert.deepEqual(room.cinematic.events, [{ type: 'multiKill', targetId: p[2].id }]);
+    assert.deepEqual(room.cinematic.events.map(({ story, ...e }) => e), [{ type: 'multiKill', targetId: p[2].id }]);
     assert.equal(room.pending.deaths.length, 1);
     assert(!JSON.stringify(room.cinematic).includes(p[0].id)); assert(!JSON.stringify(room.cinematic).includes(p[1].id));
   }

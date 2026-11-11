@@ -129,6 +129,9 @@ const stages = {
     const events = c.events.map((e) => e.type === 'guarded' ? { type: e.type, targetId: e.targetId, guardDied: e.guardDied } : { type: e.type === 'kill' && c.attacks.filter((a) => a.targetId === e.targetId).length > 1 ? 'multiKill' : e.type, targetId: e.targetId });
     // AI narrator: each single kill gets a story location (scene + lore line at dawn).
     // Manual modes (human narrator, or the Judge revealing events by hand) stay classic.
+    // Story context (public facts only) for each death: the TV scene and the narrator use it.
+    r.pending.stories = {};
+    for (const e of events) if (e.type === 'kill' || e.type === 'multiKill') { const S = r.storyContext ? r.storyContext(r.players.get(e.targetId), { deaths: c.deaths.size }) : null; if (S) { e.story = S; r.pending.stories[e.targetId] = S; } }
     r.pending.places = {};
     if (r.settings.revealMode !== 'judge') for (const e of events) if (e.type === 'kill') { const where = r.deathPlace(r.players.get(e.targetId)); if (where) { Object.assign(e, where); r.pending.places[e.targetId] = where; } }
     if (r.settings.revealMode === 'judge') {
@@ -136,7 +139,7 @@ const stages = {
       r.setPhase('dawn', null);
     } else {
       r.reveal = null; r.setCinematic({ type: 'night', events });
-      r.setPhase('dawn', c.events.length ? r.cine('dawnEvent', (c.events.length - 1) * 15200) : r.cine('dawn'));
+      r.setPhase('dawn', c.events.length ? r.cine('dawnEvent', (c.events.length - 1) * 16200) : r.cine('dawn'));
     }
     for (const p of c.alive) if (p.copiedAbility && p.copiedAbility.expiresDay === r.day) p.copiedAbility = null;
   },

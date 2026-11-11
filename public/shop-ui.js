@@ -44,6 +44,7 @@
     const dpr = Math.min(window.devicePixelRatio || 1, 3), w = cv.clientWidth || 72, h = cv.clientHeight || 72;
     cv.width = w * dpr; cv.height = h * dpr; const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, w, h);
     const look = lookWith(item, ctx);
+    if (item.field === 'deathAnim' && window.MT_FAREWELL) { window.MT_FAREWELL.preview(g, item.value, w, h, 1.4, ctx.avatar); return; } // a farewell: show it playing
     if (look.home) {
       const T = window.MT_THEMES, pal = (T.THEMES[ctx.theme] || T.THEMES.smalltown).palette;
       g.fillStyle = pal.grass; g.fillRect(0, 0, w, h);
@@ -81,6 +82,7 @@
         const look = lookWith(item, st);
         if (look.home) window.MT_WORLD.building(g, x, y, Math.max(0, O.houseStyle.indexOf(look.home.style)), (window.MT_THEMES.THEMES[st.theme] || window.MT_THEMES.THEMES.smalltown).palette, { ...window.MT_WORLD.lookOptions(look.home), scale: .22 * u, theme: st.theme, lit: true });
         else MTArt.drawCharacter(g, x, y, look.avatar, { scale: .5 * u, theme: st.theme });
+        if (item.field === 'deathAnim' && window.MT_FAREWELL) window.MT_FAREWELL.draw(g, item.value, x, y, .5 * u, t + i, { avatar: st.avatar });
         if (st.selected && st.selected.id === item.id) { g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.strokeRect(x - 16 * u, y - 44 * u, 32 * u, 46 * u); }
       });
       // shopkeeper behind the counter (bobs, blinks), counter, selected item on a cushion
@@ -94,6 +96,7 @@
         const bob = Math.sin(t * 3) * 2 * u;
         if (look.home) window.MT_WORLD.building(g, cx, cy - 4 * u + bob, Math.max(0, O.houseStyle.indexOf(look.home.style)), (window.MT_THEMES.THEMES[st.theme] || window.MT_THEMES.THEMES.smalltown).palette, { ...window.MT_WORLD.lookOptions(look.home), scale: .55 * u, theme: st.theme, lit: true, time: t });
         else MTArt.drawCharacter(g, cx, cy - 4 * u + bob, look.avatar, { scale: 1.1 * u, theme: st.theme, t });
+        if (sel.field === 'deathAnim' && window.MT_FAREWELL) window.MT_FAREWELL.draw(g, sel.value, cx, cy - 4 * u, 1.1 * u, t, { avatar: st.avatar }); // the farewell, looping
         // price tag
         const owned = st.owned(sel), tag = sel.achievement && !owned ? 'LOCKED' : owned ? 'OWNED' : String(sel.cost);
         g.fillStyle = '#f6ecd0'; g.fillRect(cx + 26 * u, cy - 60 * u, 44 * u, 18 * u); g.fillStyle = '#3a2414'; g.fillRect(cx + 26 * u, cy - 60 * u, 44 * u, 2 * u);

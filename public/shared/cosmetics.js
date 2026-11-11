@@ -18,12 +18,13 @@
     { id: 'hair', label: 'Hairstyles', icon: '💇', fields: ['hair'], target: 'avatar' },
     { id: 'house', label: 'House', icon: '🏠', fields: ['houseStyle', 'houseDecor'], target: 'home' },
     { id: 'flair', label: 'Flair', icon: '✨', fields: ['nameplate', 'effect'], target: 'avatar' },
-    { id: 'animations', label: 'Animations', icon: '🎬', fields: ['deathAnim'], target: 'avatar' },
+    { id: 'animations', label: 'Farewells', icon: '🕯', fields: ['deathAnim'], target: 'avatar' },
   ];
   // Where an equipped item lives: avatar field, or house design field (HOME_FIELDS key).
   const SLOT = { houseStyle: { target: 'home', key: 'style' }, houseDecor: { target: 'home', key: 'decor' } };
   const slotOf = (field) => SLOT[field] || { target: 'avatar', key: field };
-  const PRICES = { 'houseStyle:darkMansion': 140, 'houseStyle:modernHouse': 120, 'houseStyle:rspOffice': 160 };
+  const PRICES = { 'houseStyle:darkMansion': 140, 'houseStyle:modernHouse': 120, 'houseStyle:rspOffice': 160,
+    'deathAnim:petals': 90, 'deathAnim:fireflies': 110, 'deathAnim:letter': 80, 'deathAnim:candle': 100, 'deathAnim:lantern': 120, 'deathAnim:starfall': 150, 'deathAnim:ascend': 200 };
   const DESCRIPTIONS = {
     'houseStyle:darkMansion': 'A towering, gloomy mansion with iron gates and a single candle in the attic. Fits the darkest secrets.',
     'houseStyle:modernHouse': 'Clean lines, big windows and a flat roof. The most futuristic address in town.',
@@ -34,6 +35,15 @@
     'outfit:jester': 'Bells, stripes and zero regrets. Earned by winning as the Jester.',
     'nameplate:mafiaBoss': 'A gold-trimmed nameplate for proven bosses. Earned by winning five Mafia games.',
     'outfit:ghostHunter': 'Gear for someone who has survived it all. Earned by surviving ten games.',
+    // Farewells: how you go out. Plays over your body on the big screen when you die (it never reveals who did it).
+    'deathAnim:none': 'No farewell. You go quietly.',
+    'deathAnim:petals': 'Rose petals drift down and settle around you.',
+    'deathAnim:fireflies': 'Fireflies rise from where you fell and drift into the night.',
+    'deathAnim:letter': 'A sealed letter flutters down beside you. What did it say? Nobody will ever know.',
+    'deathAnim:candle': 'A candle burns beside you, gutters, and goes out.',
+    'deathAnim:lantern': 'A paper sky lantern lifts from your side and floats away.',
+    'deathAnim:starfall': 'The sky answers: falling stars streak overhead.',
+    'deathAnim:ascend': 'Your spirit rises from your body, glowing, and fades into the light.',
   };
   const KIND = { hair: 'hairstyle', outfit: 'outfit', hat: 'hat', shoeStyle: 'pair of shoes', accessory: 'accessory', nameplate: 'nameplate', houseDecor: 'house decoration', effect: 'cosmetic effect', houseStyle: 'house design', deathAnim: 'farewell animation' };
   const ACHIEVEMENTS = { mafiaWins5: { label: 'Win five Mafia games', stat: 'mafiaWins', count: 5 }, saves10: { label: 'Save ten players', stat: 'saves', count: 10 }, jesterWin: { label: 'Win as Jester', stat: 'jesterWins', count: 1 }, investigations5: { label: 'Identify five Mafia', stat: 'correctInvestigations', count: 5 }, survive10: { label: 'Survive ten games', stat: 'survived', count: 10 }, executionerSave: { label: 'Save someone as the Executioner', stat: 'executionerSaves', count: 1 } };
