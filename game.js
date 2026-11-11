@@ -31,6 +31,7 @@ const DEFAULT_SETTINGS = {
   newPlayerHelp: true,        // Quick join, "what to do now" hints, How to Play, role explainers, TV explainers
   roleSelection: 'draft',     // draft (Default) = players vote on role cards | manual = roleCounts below, as before
   draftSeconds: 45,           // how long the role-card vote lasts
+  draftPool: 'learn',         // learn = simple roles first, harder ones as the room plays more games | all = every role, fully random
   roleCounts: { mafia: 1, detective: 1, doctor: 1 },
   vigilanteShots: 1,
   doctorSelfProtect: true,
@@ -1101,6 +1102,7 @@ class Room {
       if (s.roleSelection == null && (s.roleCounts || s.mafiaCount != null || s.detective != null || s.doctor != null)) S.roleSelection = 'manual';
       if (s.roleSelection != null && ['draft', 'manual'].includes(s.roleSelection)) S.roleSelection = s.roleSelection;
       if (s.draftSeconds != null) S.draftSeconds = clamp(int(s.draftSeconds, 45), 10, 300);
+      if (s.draftPool != null && ['learn', 'all'].includes(s.draftPool)) S.draftPool = s.draftPool;
       if (s.forcedRoles && typeof s.forcedRoles === 'object') {
         S.forcedRoles = {};
         for (const [id, role] of Object.entries(s.forcedRoles)) if (this.players.has(id) && ROLES[role]) S.forcedRoles[id] = role;
@@ -1309,6 +1311,8 @@ class Room {
       roleSelection: this.settings.roleSelection,
       help: this.settings.newPlayerHelp !== false, // new-player help on the TV and phones
       draft: this.draftView(),
+      unlock: this.unlockView(), // roles this game just unlocked for the deck (game over only)
+      deckTier: this.settings.draftPool === 'all' ? 10 : Math.min(10, 1 + (this.gamesPlayed || 0)),
       accusations: this.accusations.slice(-30),
       votingOpen: this.phase === 'voting',
       manualVoting: !this.settings.autoAdvance,

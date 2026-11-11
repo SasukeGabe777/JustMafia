@@ -165,6 +165,12 @@
             </label>
             <label>Card vote (seconds) <input type="number" data-set="draftSeconds" min="10" max="300"></label>
           </div>
+          <label>Card deck
+            <select data-set="draftPool">
+              <option value="learn">Learn as you play: simple roles first, harder ones each few games (recommended)</option>
+              <option value="all">Every role, fully random</option>
+            </select>
+          </label>
           <p class="muted small" id="s-draft-note">With the card vote, players pick the roles; there's always at least one Mafia. Editing the list below or loading a preset switches to Custom.</p>
           <div class="packs" id="s-packs"></div>
           <div id="s-roles" class="roles"></div>

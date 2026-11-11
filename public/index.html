@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/host.css">
   <link rel="stylesheet" href="/draft.css">
   <link rel="stylesheet" href="/help.css">
+  <link rel="stylesheet" href="/unlock.css">
 </head>
 <body>
   <canvas id="town"></canvas>
@@ -70,6 +71,17 @@
     <div class="rundown-card">
       <div class="rundown-head"><h2 id="rd-headline">Rundown</h2><button id="rd-close" class="btn">✕ Close</button></div>
       <div id="rd-body" class="rundown-body"></div>
+    </div>
+  </div>
+
+  <!-- Game over: roles this game unlocked for the deck (learn as you play). -->
+  <div id="unlock" class="unlock" hidden>
+    <h1 class="unlock-title">✨ You just unlocked!</h1>
+    <p class="unlock-sub" id="unlock-sub"></p>
+    <div class="unlock-cards" id="unlock-cards"></div>
+    <div class="unlock-actions">
+      <button class="btn btn-big" id="unlock-again">▶ Play again</button>
+      <button class="btn" id="unlock-close">See results</button>
     </div>
   </div>
 

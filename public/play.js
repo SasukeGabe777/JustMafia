@@ -858,6 +858,7 @@
       <p class="muted small">Waiting for the host to start another round…</p>
       ${v.reward ? `<button class="btn" data-reward-replay>🪙 ${v.reward.eligible ? `See my reward (+${v.reward.coins} gold)` : 'Why no gold this time?'}</button>` : ''}
     </div>
+    ${v.unlock ? `<div class="card center unlock-phone"><h3>✨ Just unlocked</h3><p>${v.unlock.roles.map((k) => `${(ROLES[k] || {}).emoji || ''} <b>${esc(roleLabel(k))}</b>`).join(' · ')}</p><p class="small muted">New roles join the deck next game (tier ${v.unlock.tier} of ${v.unlock.maxTier}).</p></div>` : ''}
     <div class="card"><h3>Everyone's roles</h3><ul class="list">${rows}</ul></div>`;
   }
 

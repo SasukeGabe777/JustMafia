@@ -92,3 +92,5 @@
 .deal-hint { margin-top:8px; }
 .deal-extras { margin-bottom:20px; }
 @media (prefers-reduced-motion: reduce) { .dc-inner { transition:none; } .draft-item { animation:none; } }
+
+.deck-news { font-weight: 700; color: #f5d98a; margin-top: 8px; }

@@ -105,7 +105,7 @@
 
   // Saved setups live in this browser.
   const SAVE_KEYS = ['theme', 'townName', 'narratorStyle', 'narratorMode', 'revealMode', 'minPlayers', 'maxPlayers', 'autoMafia', 'roleCounts', 'vigilanteShots', 'doctorSelfProtect', 'nightSeconds', 'discussionSeconds', 'votingSeconds', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'tieRule', 'majority', 'anonymousVotes', 'mafiaWinAt', 'telepathWhen', 'ghostHaunts', 'botChatter'];
-  SAVE_KEYS.push('puppetUses', 'glitchUses', 'harmonyGoal', 'paparazziGoal', 'roleSelection', 'draftSeconds', 'newPlayerHelp');
+  SAVE_KEYS.push('puppetUses', 'glitchUses', 'harmonyGoal', 'paparazziGoal', 'roleSelection', 'draftSeconds', 'newPlayerHelp', 'draftPool');
   SAVE_KEYS.push(...Object.keys(window.MT_CONFIG.DEFAULTS));
   $('#s-save').addEventListener('click', () => {
     const name = $('#s-save-name').value.trim();
@@ -394,7 +394,7 @@
       const v = st.settings[el.dataset.set];
       if (el.type === 'checkbox') el.checked = !!v; else el.value = v;
     });
-    $$('main[data-panel="setup"] [data-set="minPlayers"], main[data-panel="setup"] [data-set="maxPlayers"], main[data-panel="setup"] [data-set="vigilanteShots"], [data-set="roleSelection"], [data-set="draftSeconds"]').forEach((el) => { el.disabled = !lobby; });
+    $$('main[data-panel="setup"] [data-set="minPlayers"], main[data-panel="setup"] [data-set="maxPlayers"], main[data-panel="setup"] [data-set="vigilanteShots"], [data-set="roleSelection"], [data-set="draftSeconds"], [data-set="draftPool"]').forEach((el) => { el.disabled = !lobby; });
     $('#s-roles').classList.toggle('muted-off', st.settings.roleSelection !== 'manual');
     $$('[data-role]').forEach((el) => {
       el.disabled = !lobby || (el.dataset.role === 'mafia' && st.settings.autoMafia);

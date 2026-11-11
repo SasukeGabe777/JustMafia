@@ -28,9 +28,14 @@ module.exports = function install(Room) {
     if (players.length < min) return { ok: false, error: `Need at least ${min} players.` };
     const n = players.length;
     this.draftSeen = this.draftSeen || {}; // per-room memory so other roles get their turn
-    const cards = D.candidates(n, this.settings, this.rng, this.draftSeen);
+    // Card pool: "learn" (default) starts with simple roles and adds harder ones as this room
+    // plays more games; "all" puts every role in, fully random.
+    const games = this.gamesPlayed || 0, everyRole = this.settings.draftPool === 'all';
+    const tier = everyRole ? 3 : D.tierForGame(games), prevTier = games ? D.tierForGame(games - 1) : tier;
+    const unlocked = !everyRole && tier > prevTier ? D.TIER[tier].filter((k) => R.ROLES[k]) : [];
+    const cards = D.candidates(n, this.settings, this.rng, this.draftSeen, { maxTier: tier, everyRole });
     for (const k of cards) this.draftSeen[k] = (this.draftSeen[k] || 0) + 1;
-    this.draft = { id: (this.draft ? this.draft.id : 0) + 1, stage: 'deck', stageAt: this.now(), cards, picks: D.SCALE.winners(cards.length), ballots: {}, ready: {}, result: null, n };
+    this.draft = { id: (this.draft ? this.draft.id : 0) + 1, stage: 'deck', stageAt: this.now(), cards, picks: D.SCALE.winners(cards.length), ballots: {}, ready: {}, result: null, n, tier, everyRole, unlocked };
     this.draftCounts = null;
     for (const p of this.list()) p.flipped = false;
     this.clearMoveRequests();
@@ -141,6 +146,7 @@ module.exports = function install(Room) {
       ready: voters.filter((x) => d.ready[x.id]).length, total: voters.length,
       readyIds: voters.filter((x) => d.ready[x.id]).map((x) => x.id),
       result: d.result ? { roles: d.result.roles, tie: d.result.tie, fallback: d.result.fallback } : null,
+      tier: d.tier || 3, everyRole: !!d.everyRole, unlocked: d.unlocked || [],
     };
     if (this.phase === 'roleReveal') v.flippedIds = this.inGame().filter((x) => x.flipped).map((x) => x.id); // who has looked, never what
     if (p) { v.mine = d.ballots[p.id] || []; v.locked = !!d.ready[p.id]; }
@@ -160,4 +166,22 @@ module.exports = function install(Room) {
   };
 
   Room.prototype.draftDealMs = function () { return DEAL_EXTRA_MS; };
+
+  // Every finished game unlocks the next tier of roles for this room's deck (learn as you
+  // play). The TV shows the newly unlocked cards at game over; they join the next draft.
+  // (Later: pool each player's own unlocks once logins exist.)
+  const endGame = Room.prototype.endGame;
+  Room.prototype.endGame = function () {
+    const before = this.gamesPlayed || 0;
+    this.gamesPlayed = before + 1;
+    const oldTier = D.tierForGame(before), newTier = D.tierForGame(this.gamesPlayed);
+    this.unlockNews = this.settings.draftPool !== 'all' && newTier > oldTier
+      ? { id: this.gamesPlayed, tier: newTier, maxTier: D.MAX_TIER, roles: D.TIER[newTier].filter((k) => R.ROLES[k]) } : null;
+    if (this.unlockNews) this.addLog(`✨ Unlocked for the next draft: ${this.unlockNews.roles.map((k) => R.ROLES[k].name).join(', ')} (tier ${newTier}/${D.MAX_TIER}).`);
+    return endGame.call(this);
+  };
+  const resetToLobby = Room.prototype.resetToLobby;
+  Room.prototype.resetToLobby = function () { this.unlockNews = null; return resetToLobby.call(this); };
+  // Public: shown on the TV and phones at game over.
+  Room.prototype.unlockView = function () { return this.phase === 'gameover' && this.unlockNews ? this.unlockNews : null; };
 };

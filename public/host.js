@@ -80,7 +80,35 @@
     renderGameOver();
     renderDrawer();
     draftTv.render(st); // the role draft overlay (deck, card vote, deal)
+    renderUnlock(st);
   });
+
+  // Game over → "You just unlocked!": the next tier's role cards float in and flip over,
+  // then Play again. They join the deck from the next game. Shown once per unlock.
+  let unlockShown = 0, unlockTimer = null;
+  function renderUnlock(st) {
+    const u = st.unlock, box = $('#unlock');
+    if (!u || st.phase !== 'gameover') { box.hidden = true; return; }
+    if (unlockShown === u.id) return;
+    unlockShown = u.id;
+    clearTimeout(unlockTimer);
+    // Let the victory moment play first.
+    unlockTimer = setTimeout(() => {
+      if (!state || state.phase !== 'gameover') return;
+      $('#unlock-sub').textContent = `Tier ${u.tier} of ${u.maxTier} · these roles join the deck next game`;
+      const cards = $('#unlock-cards'); cards.innerHTML = '';
+      u.roles.forEach((k, i) => {
+        const c = MT_DRAFT.cardEl(k, st.theme, { full: false });
+        c.style.animationDelay = `${0.4 + i * 0.5}s`;
+        c.classList.add('unlock-card');
+        cards.appendChild(c);
+        setTimeout(() => { c.classList.add('up'); SFX.play('flip'); }, 1300 + i * 500);
+      });
+      box.hidden = false; SFX.play('saved');
+    }, 4500);
+  }
+  $('#unlock-again').addEventListener('click', () => { $('#unlock').hidden = true; act('lobby'); });
+  $('#unlock-close').addEventListener('click', () => { $('#unlock').hidden = true; });
   const draftTv = MT_DRAFT.TV($('#draft'));
 
   socket.on('host:haunt', (evt) => town.haunt(evt));

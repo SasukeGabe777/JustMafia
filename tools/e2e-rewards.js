@@ -73,6 +73,14 @@ const emit = (s, ev, d = {}) => new Promise((r) => s.emit(ev, d, r));
   await t.go(`${URL}/`); await t.eval(`localStorage.setItem('mt.host', JSON.stringify(${JSON.stringify({ code: room.code, hostKey: room.hostKey })}))`);
   await t.send('Page.reload'); await wait(500);
   await t.until(`!document.querySelector('#gameover').hidden`, 'TV game-over screen');
+  // "You just unlocked!": the next tier's cards float in and flip; then Play again / See results.
+  await t.until(`!document.querySelector('#unlock').hidden && document.querySelectorAll('#unlock-cards .dcard').length === 3`, 'unlock reveal', 9000);
+  await t.until(`document.querySelectorAll('#unlock-cards .dcard.up').length === 3`, 'cards flip over', 6000);
+  const unlocked = await t.eval(`[...document.querySelectorAll('#unlock-cards .dcard')].map((c) => c.dataset.card)`);
+  assert.deepEqual(unlocked, ['medium', 'lookout', 'crier'], 'tier 2 unlocks after the first game');
+  await wait(1200); await t.shot('tv-unlock');
+  await t.click('#unlock-close'); assert(await t.eval(`document.querySelector('#unlock').hidden`));
+  ok('Game over: “You just unlocked!” floats in the next tier’s cards and flips them');
   assert(await t.eval(`document.querySelector('#rundown').hidden`), 'rundown stays hidden unless asked for');
   await t.click('#go-rundown');
   await t.until(`!document.querySelector('#rundown').hidden && document.querySelectorAll('#rd-body .rd-chapter').length > 0`, 'rundown opens');

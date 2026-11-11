@@ -61,8 +61,13 @@ test('Card count scales with players (4 → 3, 8 → 5) and the bank gives a bal
 test('Roles rotate: a room keeps offering cards it has not shown much yet', () => {
   const { room } = makeRoom({ bots: 8, seed: 3 });
   const seen = new Set();
+  // No game finished, so the deck is still the 9 starter roles: all of them get their turn.
   for (let i = 0; i < 12; i++) { assert(room.hostAction({ type: 'start' }).ok); room.draft.cards.forEach((k) => seen.add(k)); room.hostAction({ type: 'lobby' }); }
-  assert(seen.size >= 12, `only ${seen.size} different roles offered over 12 games`);
+  assert.deepEqual([...seen].sort(), D.TIER[1].slice().sort(), 'every unlocked starter role was offered');
+  // With every role in the deck, rotation spreads across the whole bank.
+  room.updateSettings({ draftPool: 'all' }); const wide = new Set();
+  for (let i = 0; i < 12; i++) { room.hostAction({ type: 'start' }); room.draft.cards.forEach((k) => wide.add(k)); room.hostAction({ type: 'lobby' }); }
+  assert(wide.size >= 20, `only ${wide.size} different roles offered over 12 random games`);
 });
 
 test('Voting is validated: real cards only, up to the pick limit, toggle to change, lock-in is final', () => {
@@ -239,6 +244,51 @@ test('Mafia coordination lists the roles in this game after the vote (never who 
   assert(!JSON.stringify(mv.rolesInGame).match(/"id"|holder|player/i), 'roles only, no holders');
   assert.equal(room.mafiaView(town), null);
   assert.equal(room.playerView(people.find((p) => room.team(p) !== 'mafia') || town).mafia, null);
+});
+
+test('Every role is in the deck: each draftable role sits in exactly one complexity tier', () => {
+  const draftable = R.ROLE_ORDER.filter((k) => !['mafia', 'villager'].includes(k));
+  assert.equal(D.MAX_TIER, 10);
+  const tiered = [].concat(...Object.values(D.TIER));
+  assert.deepEqual(tiered.slice().sort(), draftable.slice().sort(), 'all roles, no duplicates');
+  assert.equal(new Set(tiered).size, tiered.length);
+  for (const k of draftable) assert(D.META[k] && D.META[k].tier, k);
+});
+
+test('Learn as you play (default): 10 tiers; each finished game unlocks the next, shown at game over', () => {
+  const { room, clock } = makeRoom({ bots: 12 });
+  assert.equal(room.settings.draftPool, 'learn');
+  const tiersSeen = [];
+  for (let g = 0; g < 11; g++) {
+    room.hostAction({ type: 'start' });
+    const d = room.draft;
+    tiersSeen.push(d.tier);
+    for (const k of d.cards) assert(D.META[k].tier <= d.tier, `game ${g + 1}: ${k} (tier ${D.META[k].tier}) is still locked at tier ${d.tier}`);
+    if (g > 0 && g < 10) assert.deepEqual(room.draftView().unlocked, D.TIER[g + 1], 'the deck announces the roles that just joined');
+    for (let i = 0; i < 4; i++) room.hostAction({ type: 'skip' }); // through the draft to the deal
+    room.winner = 'town'; room.endGame(); // game over
+    const u = room.hostView().unlock;
+    if (g < 9) { assert(u, `game ${g + 1} unlocks a tier`); assert.equal(u.tier, g + 2); assert.deepEqual(u.roles, D.TIER[g + 2]); assert(room.playerView(room.inGame()[0]).unlock, 'phones see it too'); }
+    else assert.equal(u, null, 'nothing left to unlock after tier 10');
+    room.hostAction({ type: 'lobby' }); clock.advance(10);
+    assert.equal(room.hostView().unlock, null, 'only shown at game over');
+  }
+  assert.deepEqual(tiersSeen, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10]);
+});
+
+test('Every role, fully random (Judge toggle): any role can appear from game 1, and setups stay valid', () => {
+  const { room } = makeRoom({ bots: 8 });
+  room.updateSettings({ draftPool: 'all' });
+  const seen = new Set();
+  for (let g = 0; g < 40; g++) { room.hostAction({ type: 'start' }); room.draft.cards.forEach((k) => seen.add(k)); assert(room.draftView().everyRole); room.hostAction({ type: 'lobby' }); }
+  assert(seen.has('headhunter') || seen.has('alchemist') || seen.has('conductor'), 'tier 3 roles appear immediately');
+  assert(seen.size >= 25, `only ${seen.size} different roles over 40 games`);
+  for (let n = 4; n <= 30; n++) for (let t = 0; t < 30; t++) {
+    const cards = D.candidates(n, {}, Math.random, {}, { everyRole: true });
+    const f = D.finalize({ cards, ballots: { a: cards.slice(0, 3), b: cards.slice(2) }, n });
+    assert.deepEqual(f.errors, []); assert.equal(f.list.length, n);
+    assert(f.list.filter((r) => R.ROLES[r].team === 'mafia').length >= 1);
+  }
 });
 
 console.log(`All ${passed} role draft tests passed.`);

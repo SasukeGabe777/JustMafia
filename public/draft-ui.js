@@ -29,6 +29,13 @@
       ${rules ? `<ul class="dc-rules">${rules}</ul>` : ''}
     </div>`;
   }
+  // "Learn as you play": announce roles that just joined the deck (or the fully random deck).
+  function deckNews(d, theme) {
+    if (d.everyRole) return '🎲 Every role is in the deck. Anything can happen!';
+    if (!d.unlocked || !d.unlocked.length) return '';
+    const names = d.unlocked.map((k) => `${ROLES[k].emoji} ${esc(roleName(k, theme))}`);
+    return `✨ New roles join the deck: ${names.slice(0, 6).join(', ')}${names.length > 6 ? ` and ${names.length - 6} more` : ''}`;
+  }
   const BACK = '<div class="dc-back"><div class="dc-sigil">?</div></div>';
   function cardEl(k, theme, opts = {}) {
     const el = document.createElement('div');
@@ -96,7 +103,7 @@
       const theme = st.theme, k = d.cards.length;
       cards = [];
       if (d.stage === 'deck') {
-        chrome('🂠 The Deck of Roles', 'Every game is different. Watch the deck…');
+        chrome('🂠 The Deck of Roles', deckNews(d, theme) || 'Every game is different. Watch the deck…');
         measure(k);
         const N = 22, dur = 7000, els = deck(N);
         els.forEach((c, i) => {
@@ -224,7 +231,7 @@
     function build(view, d, elapsed, ctx) {
       const theme = view.theme;
       if (d.stage === 'deck' || d.stage === 'collect') {
-        root.innerHTML = `<div class="card center draft-wait"><div class="mini-deck"></div><h2>${d.stage === 'deck' ? 'Shuffling the deck of roles…' : 'Back into the deck…'}</h2><p class="muted">${d.stage === 'deck' ? 'Get ready to vote on which roles are in this game.' : 'Your secret card is about to be dealt.'}</p></div>`;
+        root.innerHTML = `<div class="card center draft-wait"><div class="mini-deck"></div><h2>${d.stage === 'deck' ? 'Shuffling the deck of roles…' : 'Back into the deck…'}</h2><p class="muted">${d.stage === 'deck' ? 'Get ready to vote on which roles are in this game.' : 'Your secret card is about to be dealt.'}</p>${d.stage === 'deck' && deckNews(d, theme) ? `<p class="deck-news">${deckNews(d, theme)}</p>` : ''}</div>`;
         const md = root.querySelector('.mini-deck');
         for (let i = 0; i < 10; i++) {
           const c = cardEl(null); md.appendChild(c);

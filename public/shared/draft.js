@@ -59,6 +59,25 @@
     eavesdropper: { min: 7,  weight: 0.7, power: 1, kind: 'info' },
     crier:        { min: 6,  weight: 0.8, power: 1 },
   };
+  // Ten unlock tiers for "learn as you play": a room starts with the 9 simplest roles and
+  // unlocks the next tier (3 roles) after every game it finishes, from simple to complex.
+  // Every role in META is in exactly one tier.
+  const TIER = {
+    1: ['godfather', 'detective', 'sheriff', 'doctor', 'bodyguard', 'vigilante', 'mayor', 'jester', 'executioner'],
+    2: ['medium', 'lookout', 'crier'],
+    3: ['roleblocker', 'trapper', 'veteran'],
+    4: ['framer', 'serialKiller', 'cupid'],
+    5: ['sorcerer', 'investigator', 'eavesdropper'],
+    6: ['silencer', 'impostor', 'telepath'],
+    7: ['hunter', 'janitor', 'ghostwriter'],
+    8: ['hustler', 'detonator', 'storymaker'],
+    9: ['puppetMaster', 'alchemist', 'paparazzi'],
+    10: ['headhunter', 'conductor', 'glitch'],
+  };
+  const MAX_TIER = 10;
+  for (const [t, keys] of Object.entries(TIER)) for (const k of keys) if (META[k]) META[k].tier = Number(t);
+  // Game 1: tier 1 · each finished game unlocks one more tier · game 10+: every role.
+  const tierForGame = (gamesPlayed) => Math.min(MAX_TIER, 1 + (gamesPlayed || 0));
   const slotsOf = (k) => (META[k] && META[k].slots) || 1;
   const teamOf = (k) => (ROLES[k] || {}).team;
   const killerMafia = (k) => teamOf(k) === 'mafia' && ROLES[k].night && ROLES[k].night.kind === 'kill';
@@ -86,9 +105,20 @@
 
   // The candidate cards for a game of n players: a mix of Mafia, Town and (bigger games)
   // Neutral roles, always with an information role and a protector for the town when possible.
-  function candidates(n, settings = {}, rng = Math.random, seen = {}) {
+  // opts.maxTier: only roles up to this complexity (learn as you play; tops up from harder
+  // tiers if a tier is too small). opts.everyRole: every role, fully random (no tiers,
+  // no minimum sizes, no team structure); the final setup is still repaired to be valid.
+  function candidates(n, settings = {}, rng = Math.random, seen = {}, opts = {}) {
     const total = SCALE.cards(n);
-    const ok = Object.keys(META).filter((k) => eligible(k, n, settings));
+    if (opts.everyRole) {
+      const all = Object.keys(META).filter((k) => ROLES[k] && !(META[k].publicVotes && settings.anonymousVotes));
+      const out = [];
+      while (out.length < total && out.length < all.length) { const k = all[Math.floor(rng() * all.length)]; if (!out.includes(k)) out.push(k); }
+      return out;
+    }
+    const maxTier = opts.maxTier || MAX_TIER;
+    const ok = Object.keys(META).filter((k) => eligible(k, n, settings) && (META[k].tier || 1) <= maxTier);
+    const harder = Object.keys(META).filter((k) => eligible(k, n, settings) && (META[k].tier || 1) > maxTier);
     const by = (team) => ok.filter((k) => teamOf(k) === team);
     const mafiaCards = Math.min(by('mafia').length, Math.max(1, Math.round(total * 0.25)), autoMafiaCount(n));
     const neutralCards = Math.min(by('neutral').length, SCALE.neutrals(n));
@@ -104,6 +134,8 @@
     picked.push(...weightedPick(town.filter((t) => !picked.includes(t)), total - picked.length, rng, seen));
     // If the bank is short, top up from anything still eligible (never duplicates).
     if (picked.length < total) picked.push(...weightedPick(ok.filter((k) => !picked.includes(k)), total - picked.length, rng, seen));
+    // Fewer than 3 unlocked roles fit this group (very rare): borrow the simplest locked ones.
+    if (picked.length < Math.min(total, 3)) picked.push(...weightedPick(harder.filter((k) => !picked.includes(k)).sort((a, b) => META[a].tier - META[b].tier).slice(0, total * 2), Math.min(total, 3) - picked.length, rng, seen));
     return picked;
   }
 
@@ -156,7 +188,7 @@
     };
   }
 
-  const API = { SCALE, META, eligible, candidates, finalize, slotsOf };
+  const API = { SCALE, META, TIER, MAX_TIER, tierForGame, eligible, candidates, finalize, slotsOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.MT_DRAFT_RULES = API;
 })(typeof window !== 'undefined' ? window : globalThis);
