@@ -11,6 +11,7 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     assert(!store.buy(auth.id, 'outfit:knight').ok); assert.equal(store.validateAvatar(auth.id, { outfit: 'knight' }).outfit, 'shirt');
     for (let i = 0; i < 5; i++) assert(store.award(auth.id, 'game-' + i, { won: true, alive: true, role: 'mafia', team: 'mafia', metrics: { abilities: 3, saves: 2 } }));
     assert(!store.award(auth.id, 'game-0', { won: true, alive: true }));
+    store.stockItems(auth.id, ['outfit:knight']); // put it on this player's shelves (the shop reveals items as they play)
     assert(store.buy(auth.id, 'outfit:knight').ok); assert.equal(store.validateAvatar(auth.id, { outfit: 'knight' }).outfit, 'knight');
     assert(store.view(auth.id).achievements.includes('mafiaWins5'));
     // House design is separate from the avatar and persists in the profile.
@@ -29,6 +30,7 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     assert.equal(store.validateAvatar(auth.id, { expression: 'nope', features: 'serious' }).expression, 'serious');
     // Gold pouch: earned/spent/balance and a ledger; unaffordable buys change nothing.
     const g = store.create(), P = () => store.view(g.id);
+    store.stockItems(g.id, ['houseStyle:darkMansion', 'hat:hood']); // on the shelves for this player
     assert.equal(P().coins, 0); assert.equal(P().goldEarned, 0); assert.equal(P().goldSpent, 0);
     const before = JSON.stringify(P());
     const poor = store.buy(g.id, 'houseStyle:darkMansion'); assert.equal(poor.ok, false); assert.match(poor.error, /Not enough gold/);

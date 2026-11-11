@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const O = require('./public/shared/options');
-const { CATALOG, ACHIEVEMENTS, REWARDS: R, slotOf, SEASON, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_NAMES } = require('./public/shared/cosmetics');
+const { CATALOG, ACHIEVEMENTS, REWARDS: R, slotOf, SEASON, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock } = require('./public/shared/cosmetics');
+const STOCKABLE_IDS = new Set(STOCKABLE.map((i) => i.id));
 const freshPass = () => ({ season: SEASON.id, owned: false, xp: 0, granted: [] });
 const LEDGER_MAX = 20;
 const digest = (token) => crypto.createHash('sha256').update(token).digest('hex');
@@ -18,6 +19,8 @@ class ProfileStore {
       if (p.goldSpent == null) p.goldSpent = 0;
       if (!Array.isArray(p.ledger)) p.ledger = [];
       if (!p.pass || p.pass.season !== SEASON.id) p.pass = freshPass(); // a new season starts everyone at tier 0
+      // Shop stock (older profiles): the starter shelf plus what their games so far would have revealed.
+      if (!Array.isArray(p.stock)) { p.stock = STARTER_STOCK.slice(); const s = p.stats || {}; p.stock.push(...nextStock(p.stock, (s.games || 0) * STOCK.finished + (s.wins || 0) * STOCK.won)); }
     }
   }
   // ----- Season pass -----
@@ -97,7 +100,7 @@ class ProfileStore {
   }
   create() {
     const id = crypto.randomUUID(), token = crypto.randomBytes(32).toString('hex');
-    this.data.profiles[id] = { id, verifier: digest(token), coins: 0, goldEarned: 0, goldSpent: 0, ledger: [], owned: CATALOG.filter((i) => i.free).map((i) => i.id), achievements: [], stats: { games: 0, wins: 0, mafiaWins: 0, jesterWins: 0, survived: 0, saves: 0, correctInvestigations: 0, objectives: 0 }, avatar: {}, rewardedGames: [], lastReward: null, pass: freshPass() };
+    this.data.profiles[id] = { id, verifier: digest(token), coins: 0, goldEarned: 0, goldSpent: 0, ledger: [], owned: CATALOG.filter((i) => i.free).map((i) => i.id), achievements: [], stats: { games: 0, wins: 0, mafiaWins: 0, jesterWins: 0, survived: 0, saves: 0, correctInvestigations: 0, objectives: 0 }, avatar: {}, rewardedGames: [], lastReward: null, pass: freshPass(), stock: STARTER_STOCK.slice() };
     this.data.profiles[id].avatar = this.validateAvatar(id, { outfit: 'traveler', hair: 'short' });
     this.save(); return { id, token, profile: this.view(id) };
   }
@@ -138,12 +141,15 @@ class ProfileStore {
   }
   selectHome(id, home) { const p = this.data.profiles[id]; if (!p) return; p.home = this.validateHome(id, home); this.save(); }
   select(id, avatar) { const p = this.data.profiles[id]; if (!p) return; p.avatar = this.validateAvatar(id, avatar); p.lookSaved = true; this.save(); }
+  // Puts items on a player's shelves directly (tests and developer tools).
+  stockItems(id, itemIds) { const p = this.data.profiles[id]; if (!p) return false; for (const i of itemIds) if (!p.stock.includes(i)) p.stock.push(i); this.save(); return true; }
   buy(id, itemId) {
     const p = this.data.profiles[id], item = CATALOG.find((i) => i.id === itemId);
     if (!p || !item || p.owned.includes(item.id)) return { ok: false, error: 'Choose a locked catalog item.' };
     if (item.pass) return { ok: false, error: `Season pass reward: reach tier ${item.passTier} of the ${SEASON.name} pass.` };
     if (item.world) return { ok: false, error: `World reward: finish ${item.worldGames === 1 ? 'a game' : item.worldGames + ' games'} in the ${WORLD_NAMES[item.world]} world.` };
     if (item.achievement && !p.achievements.includes(item.achievement)) return { ok: false, error: ACHIEVEMENTS[item.achievement].label };
+    if (STOCKABLE_IDS.has(item.id) && !(p.stock || []).includes(item.id)) return { ok: false, error: `The ${item.name} isn't in the shop yet. Keep playing: every game puts something new on the shelves.` };
     if (p.coins < item.cost) return { ok: false, error: `Not enough gold: ${item.name} costs ${item.cost}, you have ${p.coins}.` };
     if (item.cost > 0) this.record(p, -item.cost, 'Bought ' + item.name, { item: item.id });
     p.owned.push(item.id); this.save(); return { ok: true, profile: this.view(id) };
@@ -183,17 +189,21 @@ class ProfileStore {
     const X = SEASON.xp, mult = (EVENTS[result.event] || {}).xpMultiplier || 1;
     const xp = (X.completed + (result.won ? X.won : 0) + (result.alive ? X.survived : 0) + challengesDone * X.challenge) * mult;
     // Worlds: each finished game in a world counts toward that world's cosmetics.
-    const worldItems = [];
+    const worldItems = [], firstVisit = !!(result.theme && WORLD_REWARDS[result.theme] && !(p.worlds || {})[result.theme]);
     if (result.theme && WORLD_REWARDS[result.theme]) {
       p.worlds = p.worlds || {}; p.worlds[result.theme] = (p.worlds[result.theme] || 0) + 1;
       for (const r of WORLD_REWARDS[result.theme]) if (p.worlds[result.theme] >= r.games && !p.owned.includes(r.item)) { p.owned.push(r.item); worldItems.push(r.item); }
     }
+    // New in the shop: every finished game, every win and every new world restock the shelves.
+    const newStock = nextStock(p.stock, STOCK.finished + (result.won ? STOCK.won : 0) + (firstVisit ? STOCK.newWorld : 0));
+    p.stock.push(...newStock);
     const tierBefore = this.seasonTier(p); p.pass.xp += xp;
     const passRewards = this.grantPass(p);
     for (const r of passRewards) if (r.gold) lines.push({ key: 'pass', label: `Season pass tier ${r.tier}`, amount: r.gold });
     const coins = p.coins - before;
     p.lastReward = { gameId, coins, before, after: p.coins, lines, capped: raw > capped0 ? R.maxPerGame : null, at: Date.now(),
       season: { xp, multiplier: mult, tierBefore, tierAfter: this.seasonTier(p), owned: p.pass.owned, items: passRewards.filter((r) => r.item).map((r) => r.item) },
+      stock: newStock,
       world: result.theme && WORLD_REWARDS[result.theme] ? { id: result.theme, name: WORLD_NAMES[result.theme], games: p.worlds[result.theme], items: worldItems } : null };
     p.rewardedGames.push(gameId); this.save();
     return p.lastReward;

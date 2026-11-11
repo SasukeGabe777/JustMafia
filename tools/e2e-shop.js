@@ -45,6 +45,9 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   await a.click('[data-open-shop]'); await a.until(`!document.querySelector('#screen-shop').hidden`, 'shop reopens');
   ok(`Shop opens and closes; sections: ${tabs.join(', ')}`);
 
+  // The shop reveals items as you play; put the two this test buys on Ana's shelves (test-only).
+  assert(await a.eval(`new Promise((done) => { const s = io(); const c = JSON.parse(localStorage.getItem('mt.profile')); s.emit('profile:resume', c, () => s.emit('dev:stock', { items: ['houseStyle:darkMansion', 'hat:hood'] }, (r) => { s.close(); done(r && r.ok); })); })`));
+  await wait(300);
   // Preview an item; it is unaffordable, so Buy is disabled and the shopkeeper says so.
   await a.click('[data-shop-tab="house"]'); await a.click('[data-item="houseStyle:darkMansion"]');
   await a.until(`document.querySelector('#s-scene').dataset.selected === 'houseStyle:darkMansion'`, 'item on the counter');

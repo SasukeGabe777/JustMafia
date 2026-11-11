@@ -227,6 +227,15 @@ On the TV, ⚙ keeps quick controls. Keys: **Space** pause, **N** next phase, **
   on top of the per-game gold cap.
 - **Locked cosmetics**: only a few hairstyles, outfits, hats and houses are free;
   the rest are bought with gold, earned through achievements or found in the pass.
+- **The shop fills up as you play** (per profile): a new player sees a small starter shelf
+  (two cheap items of each kind). Every finished game puts 1 new item on the shelves, a win
+  1 more, and your first game in a new world 2 more (cheapest first, a mix of kinds; rules in
+  `STOCK` in `public/shared/cosmetics.js`). Hidden items can't be bought. The game-over card
+  lists what just arrived, and Shop → 🔒 **Locked** shows how many items are still in the
+  back room, the next three as mystery silhouettes, and how to unlock more.
+- **The shopkeeper is alive**: a jointed body that breathes, blinks, polishes the counter and
+  waves; holds the item you pick up high to show it off; throws his arms up in a shower of
+  coins when you buy; shrugs when you're short of gold; wags a finger at locked items.
 - **Events** (Judge → Basics → Event): *Blood Moon* turns every third night red,
   the Mafia kill twice, and season XP is doubled.
 - **Party mode** (Judge → Basics): everyone can wear every cosmetic in that room

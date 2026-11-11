@@ -121,6 +121,26 @@
       world: earned ? earned.world : null, worldGames: earned ? earned.games : null,
       description: earned ? `Earned by finishing ${earned.games === 1 ? 'a game' : earned.games + ' games'} in the ${WORLD_NAMES[earned.world]} world.` : DESCRIPTIONS[id] || `A ${O.label(value).toLowerCase()} ${KIND[field] || 'item'}${index < free ? ' (free for everyone).' : ' for your ' + (slotOf(field).target === 'home' ? 'house.' : 'townsfolk.')}` };
   }));
+  // ----- Shop stock: what each player can buy grows as they play -----
+  // Gold items (not free, not pass/world/achievement rewards) start hidden. A new player sees
+  // a small starter stock; finishing games, winning and visiting new worlds put more on the
+  // shelves (cheapest first, a mix of kinds). Hidden items cannot be bought.
+  const STOCK = { starterPerField: 2, finished: 1, won: 1, newWorld: 2 };
+  const STOCKABLE = CATALOG.filter((i) => !i.free && !i.pass && !i.world && !i.achievement && i.cost > 0);
+  const stockOrder = (a, b) => a.cost - b.cost || CATALOG.indexOf(a) - CATALOG.indexOf(b);
+  const STARTER_STOCK = Object.keys(FIELDS).flatMap((f) => STOCKABLE.filter((i) => i.field === f).sort(stockOrder).slice(0, STOCK.starterPerField).map((i) => i.id));
+  // The next n hidden items to reveal: the cheapest of each kind in turn, so a reveal mixes
+  // clothes, hats, house designs, flair... (deterministic, so tests and players can predict it).
+  function nextStock(stock, n) {
+    const have = new Set(stock), out = [];
+    const byField = Object.keys(FIELDS).map((f) => STOCKABLE.filter((i) => i.field === f && !have.has(i.id)).sort(stockOrder)).filter((l) => l.length);
+    const start = have.size % Math.max(1, byField.length);
+    for (let round = 0; out.length < n && byField.some((l) => l.length); round++) {
+      for (let k = 0; k < byField.length && out.length < n; k++) { const l = byField[(start + k) % byField.length]; if (l.length) out.push(l.shift().id); }
+    }
+    return out;
+  }
+
   // Gold rewards per completed game, calculated and paid by the server once per game.
   // Every value is configurable here. Per-category caps and maxPerGame stop players
   // from farming repeated actions; games with bots, forced roles, sped-up clocks,
@@ -137,6 +157,6 @@
     achievement: 10,                       // each achievement unlocked by this game
     maxPerGame: 60, minimumGameMs: 60000,
   };
-  const API = { FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS, SEASON, PASS, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_ITEM, WORLD_NAMES };
+  const API = { FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS, SEASON, PASS, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_ITEM, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.MT_COSMETICS = API;
 })(typeof window !== 'undefined' ? window : globalThis);

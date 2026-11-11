@@ -45,3 +45,14 @@
 .world-reward canvas { width: 100%; height: 44px; display: block; image-rendering: pixelated; }
 .world-reward:not(.got) canvas { filter: grayscale(1) brightness(.6); }
 .world-reward.got { background: rgba(126, 217, 87, .35); }
+
+/* Locked tab: how to unlock more stock, with mystery silhouettes */
+.locked-head h3 { margin: 0 0 4px; }
+.unlock-rules { list-style: none; padding: 0; margin: 8px 0; }
+.unlock-rules li { display: flex; justify-content: space-between; gap: 8px; padding: 7px 4px; border-bottom: 1px dashed rgba(0, 0, 0, .2); }
+.unlock-rules b { white-space: nowrap; color: #2e7d32; }
+.locked-sub { margin: 12px 0 4px; }
+.shop-tile.mystery { cursor: default; position: relative; }
+.shop-tile.mystery canvas { filter: brightness(0) opacity(.55); }
+.shop-tile.mystery::after { content: '?'; position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); font: 700 26px 'Pixelify Sans', monospace; color: #ffe066; text-shadow: 0 2px 0 #3a2414; animation: mysteryPulse 1.6s ease-in-out infinite alternate; }
+@keyframes mysteryPulse { from { opacity: .55; transform: translate(-50%, -50%) scale(.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } }

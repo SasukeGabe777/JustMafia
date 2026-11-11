@@ -270,6 +270,11 @@ io.on('connection', (socket) => {
     if (!socket.profileId || !profiles.grant(socket.profileId, msg.amount)) return reply(cb, { ok: false });
     const view = profiles.view(socket.profileId); io.to('profile:' + socket.profileId).emit('profile:state', view); reply(cb, { ok: true, profile: view });
   });
+  // Test-only (MT_DEV_GRANTS=1): put items on this profile's shelves.
+  if (process.env.MT_DEV_GRANTS === '1') socket.on('dev:stock', (msg = {}, cb) => {
+    if (!socket.profileId || !Array.isArray(msg.items) || !profiles.stockItems(socket.profileId, msg.items.map(String).slice(0, 50))) return reply(cb, { ok: false });
+    const view = profiles.view(socket.profileId); io.to('profile:' + socket.profileId).emit('profile:state', view); reply(cb, { ok: true, profile: view });
+  });
   // House designer: save a home design to the profile without being in a room.
   socket.on('profile:home', (msg = {}, cb) => {
     if (!socket.profileId) return reply(cb, { ok: false, error: 'Profile not connected yet.' });
