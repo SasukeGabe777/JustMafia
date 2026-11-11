@@ -369,7 +369,9 @@
     if (!state) return;
     const show = state.phase === 'lobby';
     $('#lobby').hidden = !show;
-    if (!show) return;
+    if (!show) { $('#attract').hidden = true; return; }
+    $('#attract').hidden = state.players.length > 0; // empty lobby: the title over a slow flyover
+    $('#attract-title').textContent = state.townName || 'Mafia Town';
     const hof = state.hallOfFame || [];
     $('#hof').hidden = !hof.length;
     if (hof.length) $('#hof').innerHTML = `<h3>🏛 Hall of Fame</h3><ol>${hof.map((h, i) => `<li><span>${['🥇', '🥈', '🥉'][i] || '·'} <b>${h.name.replace(/[<>&]/g, '')}</b>${h.title ? ` <small>${h.title}</small>` : ''}</span><span>${h.wins}W · ${h.games}G${h.mvps ? ` · 🏆${h.mvps}` : ''}</span></li>`).join('')}</ol>`;
@@ -415,7 +417,7 @@
     t.className = state.winner === 'town' ? 'town' : 'mafia';
     const evil = state.players.filter((p) => p.role && ROLES[p.role] && ROLES[p.role].team !== 'town')
       .map((p) => `${ROLES[p.role].emoji} ${p.name}${MT_THEMES.THEMES[state.theme] && MT_THEMES.THEMES[state.theme].roleNames ? ` (${MT_THEMES.roleName(state.theme, p.role, ROLES[p.role].name)})` : ''}`);
-    $('#go-sub').textContent = evil.length ? `Not on the town's side: ${evil.join(', ')}` : '';
+    $('#go-sub').textContent = (evil.length ? `Not on the town's side: ${evil.join(', ')}` : '') + (state.campaign ? `  ·  📖 Chapter ${state.campaign.chapter}/${state.campaign.total}: Town ${state.campaign.town} – Mafia ${state.campaign.mafia}${state.campaign.done ? ' (final)' : ''}` : '');
   }
   $('#go-again').addEventListener('click', () => act('lobby'));
   // Optional after-game story (only shown when someone clicks it).

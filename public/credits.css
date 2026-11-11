@@ -41,3 +41,10 @@
 .hof ol { list-style: none; padding: 0; margin: 0; font-size: 14px; }
 .hof li { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; }
 .hof small { opacity: .7; font-size: 11px; }
+
+/* Attract mode: an empty lobby shows the title over a slow flyover */
+.attract { position: fixed; left: 0; right: 0; top: 18vh; z-index: 5; text-align: center; pointer-events: none; color: #fff6e0; text-shadow: 0 4px 0 #000, 0 0 30px rgba(0, 0, 0, .6); }
+.attract[hidden] { display: none; }
+.attract h1 { margin: 0; font: 700 clamp(56px, 12vh, 140px) 'Pixelify Sans', monospace; color: #f5d98a; animation: attractPulse 3s ease-in-out infinite alternate; }
+.attract p { margin: 1vh 0 0; font: 600 clamp(18px, 3vh, 34px) 'Fredoka', sans-serif; }
+@keyframes attractPulse { from { transform: scale(1); } to { transform: scale(1.04); } }

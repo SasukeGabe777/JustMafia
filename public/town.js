@@ -274,7 +274,7 @@
       if (phase !== 'gameover') { this.winner = null; this.targetRed = 0; }
       for (const c of this.chars.values()) this.assign(c);
       if (phase === 'night' && prev !== 'dawn') SFX.play('night');
-      if (phase === 'morning') SFX.play('day');
+      if (phase === 'morning') { SFX.play('day'); setTimeout(() => SFX.play('rooster'), 300); this.sunrise = this.time; }
     }
 
     onDeath(c) {
@@ -449,6 +449,19 @@
       }
     }
 
+    // Atmosphere that tells the story: a golden sunrise sweep each morning, and a gloom that
+    // grows as the town empties (fewer living players = greyer, darker days).
+    drawAtmosphere(ctx) {
+      if (this.sunrise != null && this.time - this.sunrise < 4) {
+        const k = (this.time - this.sunrise) / 4, x = -400 + k * (W + 800);
+        const g = ctx.createLinearGradient(x - 500, 0, x + 500, 0); g.addColorStop(0, 'rgba(255,200,120,0)'); g.addColorStop(0.5, `rgba(255,210,140,${0.28 * (1 - k)})`); g.addColorStop(1, 'rgba(255,200,120,0)');
+        ctx.fillStyle = g; ctx.fillRect(-20, -20, W + 40, H + 40);
+      }
+      if (!this.state || !['morning', 'discussion', 'voting', 'verdict', 'execution', 'accusation', 'defense'].includes(this.phase)) return;
+      const all = this.state.players.filter((p) => !p.spectator).length, alive = this.state.players.filter((p) => !p.spectator && p.alive).length;
+      const gloom = all > 3 ? Math.max(0, 1 - alive / all - 0.15) : 0;
+      if (gloom > 0.02) { ctx.fillStyle = `rgba(40,44,58,${Math.min(0.3, gloom * 0.4)})`; ctx.fillRect(-20, -20, W + 40, H + 40); }
+    }
     // Daily Surprises on the TV: drifting fog banks, or festival lantern strings and fireworks.
     drawSurprise(ctx) {
       const s = this.state && this.state.surprise, t = this.time; if (!s) return;
@@ -527,6 +540,7 @@
     }
 
     update(dt) {
+      this.directCamera();
       this.time += dt;
       const due = this.timeline.filter((e) => e.t <= this.time);
       if (due.length) {
@@ -589,6 +603,32 @@
       }
     }
 
+    // Who the town is looking at, and a gentle camera on the vote leader (no cinematic running).
+    // In an empty lobby the camera drifts around town (attract mode).
+    directCamera() {
+      const busy = this.cinema && this.cinema.active;
+      let look = null;
+      if (this.phase === 'voting' || this.phase === 'verdict') {
+        const lead = [...this.chars.values()].filter((c) => c.alive && c.voteCount > 0).sort((a, b) => b.voteCount - a.voteCount)[0];
+        if (lead) look = lead.id;
+        if (!busy && lead && lead.voteCount >= 2 && this.time - (this.camDirAt || 0) > 4 && this.camLead !== lead.id) {
+          this.camLead = lead.id; this.camDirAt = this.time; this.focus(lead.x, lead.y - 40, 1.3, 2.4);
+        }
+      } else if (this.camLead) { this.camLead = null; if (!busy) this.focusSpot('overview', 1.6); }
+      if (!look && ['discussion', 'morning'].includes(this.phase)) {
+        const talker = [...this.chars.values()].filter((c) => c.alive && c.bubble && c.bubble.until > this.time).sort((a, b) => b.bubble.until - a.bubble.until)[0];
+        if (talker) look = talker.id;
+      }
+      this.lookTarget = look;
+      if (this.phase === 'lobby' && this.chars.size === 0 && !busy) {
+        if (this.time - (this.attractAt || -99) > 9) {
+          this.attractAt = this.time; this.attractStep = ((this.attractStep || 0) + 1) % 5;
+          const spots = [['square', 1.5], ['pond', 1.6], ['cemetery', 1.5], ['tavern', 1.7], ['overview', 1]];
+          const [name, z] = spots[this.attractStep]; this.focusSpot(name, 8.5, z);
+        }
+      } else if (this.attractAt != null && this.phase === 'lobby' && !busy) { this.attractAt = null; this.focusSpot('overview', 1.2); }
+    }
+
     updateChar(c, dt) {
       const tgt = c.cineTarget || this.targetFor(c);
       const dx = tgt.x - c.x, dy = tgt.y - c.y, d = Math.hypot(dx, dy);
@@ -603,7 +643,11 @@
         if (Math.abs(dx) > 2) c.facing += ((dx > 0 ? 1 : -1) - c.facing) * Math.min(1, dt * 8);
       } else {
         c.walking = false;
-        c.facing += (0 - c.facing) * Math.min(1, dt * 3);
+        // Standing still, people turn toward whoever the town is watching (the vote leader,
+        // or the person talking); otherwise they face front.
+        const look = this.lookTarget && this.lookTarget !== c.id ? this.chars.get(this.lookTarget) : null;
+        const want = look && Math.abs(look.x - c.x) > 12 ? (look.x > c.x ? 0.7 : -0.7) : 0;
+        c.facing += (want - c.facing) * Math.min(1, dt * 3);
       }
 
       if (c.mode === 'haunt' && d < 6 && !c.hauntDone) {
@@ -911,6 +955,7 @@
       }
       if (tw) tw.drawAmbient(this, ctx, 'weather'); // snow, rain, embers, aurora
       this.drawSurprise(ctx);
+      this.drawAtmosphere(ctx);
 
       // ghosts glow above the darkness
       for (const c of this.chars.values()) {
@@ -1114,15 +1159,16 @@
         ctx.fillStyle = g;
         ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
       };
-      for (const a of [Math.PI * 0.25, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75]) {
-        const x = CX + Math.cos(a) * (SQUARE_R + 22), y = CY + Math.sin(a) * (SQUARE_R + 22) - 51;
-        glow(x, y + 40, 110, '255,200,110', 0.22 * this.dark);
-        glow(x, y, 22, '255,230,160', 0.8 * this.dark);
-      }
+      const lit = (k) => Math.max(0, Math.min(1, (this.dark - k) / 0.12)); // each light switches on at its own darkness level
+      [Math.PI * 0.25, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75].forEach((a, li) => {
+        const x = CX + Math.cos(a) * (SQUARE_R + 22), y = CY + Math.sin(a) * (SQUARE_R + 22) - 51, on = lit(0.15 + li * 0.12);
+        glow(x, y + 40, 110, '255,200,110', 0.22 * on);
+        glow(x, y, 22, '255,230,160', 0.8 * on);
+      });
       this.houses.forEach((h, i) => {
         if (!this.ownerOf(i) || !this.residentsOf(i).some((c) => c.alive && c.inside)) return;
-        const flick = 0.85 + Math.sin(this.time * 3 + i) * 0.05;
-        glow(h.x, h.y - 26 * h.s, 70 * h.s, '255,190,90', 0.28 * this.dark * flick);
+        const flick = 0.85 + Math.sin(this.time * 3 + i) * 0.05, on = lit(0.25 + ((i * 37) % 10) * 0.05);
+        glow(h.x, h.y - 26 * h.s, 70 * h.s, '255,190,90', 0.28 * on * flick);
       });
       const cw = this.cineWindow && this.houses[this.cineWindow.house];
       if (cw) glow(cw.x, cw.y - 26 * cw.s, 90 * cw.s, '255,200,100', 0.5 * this.dark);

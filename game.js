@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS = {
   maxPlayers: 100,
   autoMafia: true,            // Mafia count scales with the player count
   partyMode: false,           // everyone in this room can wear every cosmetic (owned or not)
+  campaign: false,            // the next five games are chapters of one story (rules/campaign.js)
   event: 'none',              // seasonal event: none | bloodMoon (see cosmetics.js EVENTS, rules/events.js)
   newPlayerHelp: true,        // Quick join, "what to do now" hints, How to Play, role explainers, TV explainers
   roleSelection: 'draft',     // draft (Default) = players vote on role cards | manual = roleCounts below, as before
@@ -1126,7 +1127,7 @@ class Room {
       }
     }
     if (lobby && s.event != null && ['none', 'bloodMoon', 'surprises'].includes(s.event)) S.event = s.event;
-    for (const k of ['partyMode', 'newPlayerHelp', 'executionInterventions', 'lastWords', 'autoMafia', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'anonymousVotes', 'doctorSelfProtect', 'ghostHaunts', 'botChatter', 'skipCinematics', 'botsAuto']) if (s[k] != null) S[k] = !!s[k];
+    for (const k of ['campaign', 'partyMode', 'newPlayerHelp', 'executionInterventions', 'lastWords', 'autoMafia', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'anonymousVotes', 'doctorSelfProtect', 'ghostHaunts', 'botChatter', 'skipCinematics', 'botsAuto']) if (s[k] != null) S[k] = !!s[k];
     if (s.nightSeconds != null) S.nightSeconds = clamp(int(s.nightSeconds, 45), 5, 600);
     if (s.discussionSeconds != null) S.discussionSeconds = clamp(int(s.discussionSeconds, 120), 5, 3600);
     if (s.votingSeconds != null) S.votingSeconds = clamp(int(s.votingSeconds, 45), 5, 600);
@@ -1567,6 +1568,7 @@ require('./rules/dlc1')(Room);
 require('./rules/crafter')(Room);
 require('./rules/credits')(Room);
 require('./rules/fate')(Room); // Fate Cards: Role Wish, Team Wish, Reroll
-require('./rules/career')(Room); // career stats, rivalries, mastery, Hall of Fame // end-of-game movie credits: cast, awards, stats, highlights // the Crafter: materials, recipes, tools
+require('./rules/career')(Room); // career stats, rivalries, mastery, Hall of Fame
+require('./rules/campaign')(Room); // five-chapter campaigns with recaps and scars // end-of-game movie credits: cast, awards, stats, highlights // the Crafter: materials, recipes, tools
 require('./rules/events')(Room); // seasonal events (Blood Moon) // DLC 1 roles; wraps kill/views/shownRole, so it installs last
 module.exports = { Room, DEFAULT_SETTINGS, HARD_MAX_PLAYERS };

@@ -109,6 +109,7 @@ window.SFX = (function () {
     arrow: () => { noise(0.25, { vol: 0.25, filter: 3000, type: 'bandpass' }); tone(140, 0.12, { vol: 0.4, at: 0.22, slide: 70 }); },
     diceRoll: () => { for (let i = 0; i < 9; i++) noise(0.03, { vol: 0.35 - i * 0.03, at: i * 0.07 + Math.random() * 0.02, filter: 3200, type: 'bandpass' }); [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.1, at: 0.7 + i * 0.08 })); },
     // Big moments: a cinematic low hit, and a rising swell.
+    rooster: () => { tone(620, 0.12, { type: 'sawtooth', vol: 0.05, slide: 900 }); tone(900, 0.5, { type: 'sawtooth', vol: 0.05, at: 0.14, slide: 700 }); tone(700, 0.35, { type: 'sawtooth', vol: 0.04, at: 0.62, slide: 420 }); },
     boom: () => { tone(55, 1.6, { vol: 0.55, slide: 32 }); noise(1.2, { vol: 0.4, filter: 160 }); tone(110, 0.9, { type: 'triangle', vol: 0.12, slide: 70 }); },
     swell: () => { [262, 330, 392, 523, 659].forEach((f, i) => tone(f, 2.2 - i * 0.2, { type: 'triangle', vol: 0.07, at: i * 0.12 })); noise(1.5, { vol: 0.08, filter: 3000, type: 'bandpass' }); },
     stab: () => { noise(0.12, { vol: 0.35, filter: 900 }); tone(110, 0.3, { vol: 0.35, at: 0.04, slide: 50 }); },
