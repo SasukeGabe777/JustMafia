@@ -52,21 +52,24 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   await a.click('[data-shop-tab="house"]'); await a.click('[data-item="houseStyle:darkMansion"]');
   await a.until(`document.querySelector('#s-scene').dataset.selected === 'houseStyle:darkMansion'`, 'item on the counter');
   assert(await a.eval(`document.querySelector('[data-buy]').disabled && /Need 140 more gold/.test(document.querySelector('[data-cant]').textContent)`));
-  assert.match(await a.eval(`document.querySelector('#s-say').textContent`), /140 gold.*You have 0/);
+  assert.match(await a.eval(`document.querySelector('#s-say').textContent`), /let me get it down/, 'he goes to fetch it first');
+  await a.until(`document.querySelector('#s-scene').dataset.placed === 'houseStyle:darkMansion'`, 'he carries it to the pedestal', 6000);
+  await a.until(`/140 gold.*You have 0/.test(document.querySelector('#s-say').textContent)`, 'then the sales pitch', 4000);
+  assert.match(await a.eval(`document.querySelector('#s-say').textContent`), /neighbors|walls|plot|Dark Mansion/, 'he talks about the item');
   assert.match(await a.eval(`document.querySelector('#s-detail').textContent`), /gloomy mansion/);
   await a.shot('shop-preview');
-  ok('Selecting an item previews it on the counter with description and price; unaffordable items cannot be bought');
+  ok('Picking an item: the shopkeeper fetches it to the pedestal, then pitches it (description, price); unaffordable items cannot be bought');
 
   // Earn gold, buy it: gold is deducted, the item is owned and in the inventory.
   assert(await grant(300)); await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 300`, 'gold arrives');
   await a.until(`!document.querySelector('[data-buy]').disabled`, 'buy enabled');
   await a.click('[data-buy]');
-  await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 160 && document.querySelector('[data-item="houseStyle:darkMansion"] .badge.own')`, 'purchase completes');
+  await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 160 && !document.querySelector('[data-item="houseStyle:darkMansion"]') && document.querySelector('[data-equip]')`, 'purchase completes: it leaves the shelf, Equip appears');
   assert.match(await a.eval(`document.querySelector('#s-say').textContent`), /Thank you/);
   await a.click('[data-shop-tab="accessories"]'); await a.click('[data-item="hat:hood"]');
   const hoodPrice = await a.eval(`MT_COSMETICS.CATALOG.find((i) => i.id === 'hat:hood').cost`);
   await a.click('[data-buy]'); await a.until(`Number(document.querySelector('#s-pouch b').textContent) === ${160 - hoodPrice}`, 'second purchase');
-  ok(`Buying deducts exactly the price (140 + ${hoodPrice} gold) and marks items owned`);
+  ok(`Buying deducts exactly the price (140 + ${hoodPrice} gold) ; bought items move to the inventory`);
 
   // Inventory: equip the house and the hat; the TV shows them. Unequip works too.
   await a.click('[data-shop-tab="inventory"]');

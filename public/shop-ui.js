@@ -92,8 +92,8 @@
   }
   // Draws the keeper with the waist at (x, y) (hidden behind the counter); returns where the
   // raised hand is so the shop can put the item in it.
-  function drawKeeper(g, x, y, u, t, mood, since, rsp) {
-    const P = keeperPose(mood, t, since), s = u * 2.3;
+  function drawKeeper(g, x, y, u, t, mood, since, rsp, over) {
+    const P = Object.assign(keeperPose(mood, t, since), over || {}), s = u * 2.3;
     const r = (c, a, b, w, h) => { g.fillStyle = c; g.fillRect(Math.round(a * s), Math.round(b * s), Math.ceil(w * s), Math.ceil(h * s)); };
     const coat = rsp ? '#1f4fa8' : '#7a4a2a', coatD = rsp ? '#163a7a' : '#5e3820', skin = '#d9a273', skinD = '#b8845a', apron = rsp ? '#ffd21f' : '#efe6d6';
     let hand = null;
@@ -132,6 +132,26 @@
     hand = P.holds ? right : null;
     return { hand, left };
   }
+  // When you pick an item he fetches it: walks to its shelf, reaches up, takes it down,
+  // carries it to the pedestal, sets it down so you can see it, steps back and presents it.
+  const FETCH = { walk: 0.5, reach: 0.4, carry: 0.65, place: 0.35, back: 0.4 };
+  const FETCH_DONE = FETCH.walk + FETCH.reach + FETCH.carry + FETCH.place + FETCH.back;
+  const ease = (k) => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+  function fetchPlan(since, t, home, shelfX, pedX, high, u) {
+    const F = FETCH, walkBob = (k) => ({ body: Math.abs(Math.sin(t * 14)) * 2.2 * (k < 1 ? 1 : 0) });
+    const stand = pedX - 48 * u, present = { rS: -1.35 + Math.sin(t * 2.2) * 0.07, rE: -0.25, lS: 0.35, lE: -0.7, mouth: 'grin', brow: 1, holds: false };
+    let s0 = since;
+    if (s0 < F.walk) { const k = s0 / F.walk; return { x: home + (shelfX - home) * ease(k), pose: { ...walkBob(k), rS: -0.25, lS: 0.25, mouth: 'smile' }, hide: false, placed: false }; }
+    s0 -= F.walk;
+    if (s0 < F.reach) { const k = s0 / F.reach; return { x: shelfX, pose: { rS: -0.25 - 2.8 * ease(k), rE: 0, hop: (high ? 16 : 6) * Math.sin(k * Math.PI / 2), mouth: 'flat', holds: k > 0.75 }, hide: k > 0.75, placed: false }; }
+    s0 -= F.reach;
+    if (s0 < F.carry) { const k = s0 / F.carry; return { x: shelfX + (stand - shelfX) * ease(k), pose: { ...walkBob(k), rS: -1.9, rE: -0.15, lS: 0.3, mouth: 'grin', holds: true }, hide: true, placed: false }; }
+    s0 -= F.carry;
+    if (s0 < F.place) { const k = s0 / F.place; return { x: stand, pose: { rS: -1.9 + 0.65 * k, rE: -0.15 - 0.4 * k, mouth: 'grin', holds: k < 0.85 }, hide: true, placed: k >= 0.85, placedAt: since - s0 + F.place * 0.85 }; }
+    s0 -= F.place;
+    if (s0 < F.back) { const k = s0 / F.back; return { x: stand - 26 * u * ease(k), pose: { ...present, rS: -1.15 - 0.2 * k }, hide: true, placed: true }; }
+    return { x: stand - 26 * u, pose: present, hide: true, placed: true };
+  }
   let scene = { raf: 0, coins: [] };
   function startScene(getState) {
     cancelAnimationFrame(scene.raf);
@@ -150,60 +170,94 @@
       g.fillStyle = rsp ? '#0f2a63' : '#3a2414'; g.fillRect(w / 2 - 70 * u, 6 * u, 140 * u, 24 * u);
       g.fillStyle = rsp ? '#ffd21f' : '#f0d29a'; g.font = `700 ${Math.round(14 * u)}px 'Pixelify Sans', monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillText(rsp ? 'RSP SUPPLY STORE' : 'TOWN SHOP', w / 2, 18 * u);
+      // Where everything is: the shopkeeper's spot, the pedestal, and the picked item's shelf slot.
+      const home = w * .27, ped = w * .66, pedY = h * .74, sel = st.selected;
+      const slot = sel ? (st.shelf || []).findIndex((i) => i.id === sel.id) : -1;
+      const shelfX = slot >= 0 && slot < 12 ? w * ((slot % 6) + .5) / 6 : w * .12, high = slot >= 0 && slot < 6;
+      let mood = keeper.mood, since = t - keeper.t0;
+      if (mood === 'buy' && since > 2.2) { mood = 'fetch'; since = FETCH_DONE + 1; }
+      if ((mood === 'poor' || mood === 'locked') && since > 2.6) mood = sel ? 'fetch' : 'idle';
+      if ((mood === 'fetch' && (!sel || keeper.item !== sel.id)) || (mood !== 'fetch' && mood !== 'buy' && mood !== 'locked' && mood !== 'poor' && sel)) { mood = sel ? 'fetch' : 'idle'; if (sel && keeper.item !== sel.id) { keeper.item = sel.id; keeper.t0 = t; since = 0; } }
+      const plan = sel && mood === 'fetch' ? fetchPlan(since, t, home, Math.max(w * .1, Math.min(w * .9, shelfX)), ped, high, u)
+        : sel && mood === 'buy' ? { x: ped - 74 * u, pose: null, hide: true, placed: true } : { x: home, pose: null, hide: false, placed: false };
       (st.shelf || []).forEach((item, i) => {
         const col = i % 6, row = Math.floor(i / 6); if (row > 1) return;
+        if (sel && item.id === sel.id && plan.hide) { g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(w * (col + .5) / 6 - 12 * u, (row ? 104 : 52) * u - 3 * u, 24 * u, 3 * u); return; } // an empty spot
         const x = w * (col + .5) / 6, y = (row ? 104 : 52) * u;
         const look = lookWith(item, st);
         if (look.home) window.MT_WORLD.building(g, x, y, Math.max(0, O.houseStyle.indexOf(look.home.style)), (window.MT_THEMES.THEMES[st.theme] || window.MT_THEMES.THEMES.smalltown).palette, { ...window.MT_WORLD.lookOptions(look.home), scale: .22 * u, theme: st.theme, lit: true });
         else MTArt.drawCharacter(g, x, y, look.avatar, { scale: .5 * u, theme: st.theme });
         if (item.field === 'deathAnim' && window.MT_FAREWELL) window.MT_FAREWELL.draw(g, item.value, x, y, .5 * u, t + i, { avatar: st.avatar });
-        if (st.selected && st.selected.id === item.id) { g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.strokeRect(x - 16 * u, y - 44 * u, 32 * u, 46 * u); }
+        if (sel && sel.id === item.id) { g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.strokeRect(x - 16 * u, y - 44 * u, 32 * u, 46 * u); }
       });
-      // the shopkeeper behind the counter: a rigged body that reacts to what you do
-      let mood = keeper.mood, since = t - keeper.t0;
-      if (mood === 'buy' && since > 2.2) { mood = st.selected ? 'show' : 'idle'; }
-      if ((mood === 'poor' || mood === 'locked') && since > 2.6) mood = st.selected ? 'show' : 'idle';
-      if (mood === 'show' && !st.selected) mood = 'idle';
-      const k = drawKeeper(g, w * .27, h * 1.02, u, t, mood, since, rsp);
-      if (mood === 'buy' && since < 1.6 && Math.random() < 0.5) scene.coins.push({ x: w * .3 + (Math.random() - .5) * 60 * u, y: h * .3, vx: (Math.random() - .5) * 120 * u, vy: -140 * u - Math.random() * 80 * u, t: 0 });
+      // the shopkeeper behind the counter: a rigged body that fetches, presents and reacts
+      const k = drawKeeper(g, plan.x, h * 1.02, u, t, mood, since, rsp, plan.pose);
+      if (mood === 'buy' && since < 1.6 && Math.random() < 0.5) scene.coins.push({ x: plan.x + (Math.random() - .5) * 60 * u, y: h * .3, vx: (Math.random() - .5) * 120 * u, vy: -140 * u - Math.random() * 80 * u, t: 0 });
       g.fillStyle = rsp ? '#0f2a63' : '#4a2e18'; g.fillRect(0, h * .74, w, h * .26);
       g.fillStyle = rsp ? '#ffd21f' : '#8f5e34'; g.fillRect(0, h * .74, w, 6 * u);
       g.fillStyle = 'rgba(0,0,0,.2)'; for (let x = 0; x < w; x += 30 * u) g.fillRect(x, h * .78, 2 * u, h * .22);
-      // He holds the item up to show it off (drawn over the counter, in his raised hand).
-      if (st.selected && k.hand) {
-        const sel = st.selected, look = lookWith(sel, st), hx = k.hand.x / (window.devicePixelRatio > 1 ? Math.min(window.devicePixelRatio, 3) : 1), hy = k.hand.y / (window.devicePixelRatio > 1 ? Math.min(window.devicePixelRatio, 3) : 1);
-        const glow = g.createRadialGradient(hx, hy - 20 * u, 2, hx, hy - 20 * u, 40 * u); glow.addColorStop(0, 'rgba(255,230,140,.55)'); glow.addColorStop(1, 'rgba(255,230,140,0)');
-        g.fillStyle = glow; g.fillRect(hx - 40 * u, hy - 60 * u, 80 * u, 80 * u);
+      // the pedestal on the counter (velvet top, gold trim)
+      g.fillStyle = '#3a2414'; g.fillRect(ped - 30 * u, pedY - 10 * u, 60 * u, 10 * u); g.fillStyle = '#a8323a'; g.fillRect(ped - 34 * u, pedY - 14 * u, 68 * u, 6 * u); g.fillStyle = '#d2a64a'; g.fillRect(ped - 34 * u, pedY - 14 * u, 68 * u, 1.5 * u); g.fillRect(ped - 30 * u, pedY - 4 * u, 60 * u, 1.5 * u);
+      const dpr0 = Math.min(window.devicePixelRatio || 1, 3);
+      // in his hand while he carries it
+      if (sel && k.hand) {
+        const look = lookWith(sel, st), hx = k.hand.x / dpr0, hy = k.hand.y / dpr0;
         if (look.home) window.MT_WORLD.building(g, hx, hy + 4 * u, Math.max(0, O.houseStyle.indexOf(look.home.style)), (window.MT_THEMES.THEMES[st.theme] || window.MT_THEMES.THEMES.smalltown).palette, { ...window.MT_WORLD.lookOptions(look.home), scale: .28 * u, theme: st.theme, lit: true });
-        else MTArt.drawCharacter(g, hx, hy + 2 * u, look.avatar, { scale: .85 * u, theme: st.theme, t });
-        for (let i = 0; i < 3; i++) { const a = t * 2 + i * 2.1; g.fillStyle = '#fff6c0'; g.fillRect(hx + Math.cos(a) * 26 * u, hy - 24 * u + Math.sin(a) * 14 * u, 2 * u, 2 * u); } // sparkles
+        else MTArt.drawCharacter(g, hx, hy + 2 * u, look.avatar, { scale: .8 * u, theme: st.theme, t });
       }
       scene.coins = scene.coins.filter((c) => c.t < 1.4);
       for (const c of scene.coins) { c.t += 1 / 60; c.vy += 420 * u / 60; c.x += c.vx / 60; c.y += c.vy / 60; drawCoin(g, c.x, c.y, u * .8, t + c.t * 3); }
-      if (st.selected) {
-        const sel = st.selected, look = lookWith(sel, st), cx = w * .62, cy = h * .74;
-        g.fillStyle = '#a8323a'; g.fillRect(cx - 34 * u, cy - 4 * u, 68 * u, 6 * u); g.fillStyle = '#d2a64a'; g.fillRect(cx - 34 * u, cy - 4 * u, 68 * u, 1 * u);
-        const bob = Math.sin(t * 3) * 2 * u;
-        if (k.hand) { /* in the keeper's hand */ } else if (look.home) window.MT_WORLD.building(g, cx, cy - 4 * u + bob, Math.max(0, O.houseStyle.indexOf(look.home.style)), (window.MT_THEMES.THEMES[st.theme] || window.MT_THEMES.THEMES.smalltown).palette, { ...window.MT_WORLD.lookOptions(look.home), scale: .55 * u, theme: st.theme, lit: true, time: t });
-        else MTArt.drawCharacter(g, cx, cy - 4 * u + bob, look.avatar, { scale: 1.1 * u, theme: st.theme, t }); // on the cushion until he picks it up
-        if (sel.field === 'deathAnim' && window.MT_FAREWELL) window.MT_FAREWELL.draw(g, sel.value, cx, cy - 4 * u, 1.1 * u, t, { avatar: st.avatar }); // the farewell, looping
-        // price tag
-        const owned = st.owned(sel), tag = sel.achievement && !owned ? 'LOCKED' : owned ? 'OWNED' : String(sel.cost);
-        g.fillStyle = '#f6ecd0'; g.fillRect(cx + 26 * u, cy - 60 * u, 44 * u, 18 * u); g.fillStyle = '#3a2414'; g.fillRect(cx + 26 * u, cy - 60 * u, 44 * u, 2 * u);
-        if (!owned && !sel.achievement) drawCoin(g, cx + 34 * u, cy - 51 * u, u * .9, t);
-        g.fillStyle = '#3a2414'; g.font = `700 ${Math.round(11 * u)}px 'Pixelify Sans', monospace`; g.fillText(tag, cx + (owned || sel.achievement ? 48 : 54) * u, cy - 50 * u);
+      // on the pedestal, big and turning a little, so you can really see it
+      if (sel && plan.placed) {
+        const look = lookWith(sel, st), cy = pedY - 14 * u, land = plan.placedAt != null ? Math.max(0, 1 - (since - plan.placedAt) / 0.3) : 0;
+        const drop = -Math.abs(Math.sin(land * Math.PI)) * 8 * u, bob = Math.sin(t * 2.4) * 1.5 * u;
+        const glow = g.createRadialGradient(ped, cy - 40 * u, 4, ped, cy - 40 * u, 70 * u); glow.addColorStop(0, 'rgba(255,230,140,.45)'); glow.addColorStop(1, 'rgba(255,230,140,0)');
+        g.fillStyle = glow; g.fillRect(ped - 70 * u, cy - 110 * u, 140 * u, 120 * u);
+        if (look.home) window.MT_WORLD.building(g, ped, cy + drop + bob, Math.max(0, O.houseStyle.indexOf(look.home.style)), (window.MT_THEMES.THEMES[st.theme] || window.MT_THEMES.THEMES.smalltown).palette, { ...window.MT_WORLD.lookOptions(look.home), scale: .5 * u, theme: st.theme, lit: true });
+        else MTArt.drawCharacter(g, ped, cy + drop + bob, look.avatar, { scale: 1.45 * u, theme: st.theme, t, facing: Math.sin(t * 0.9) > 0.6 ? 1 : Math.sin(t * 0.9) < -0.6 ? -1 : 0 });
+        if (sel.field === 'deathAnim' && window.MT_FAREWELL) window.MT_FAREWELL.draw(g, sel.value, ped, cy, 1.45 * u, t, { avatar: st.avatar }); // the farewell, looping
+        for (let i = 0; i < 4; i++) { const a = t * 1.6 + i * 1.57; g.fillStyle = '#fff6c0'; g.fillRect(ped + Math.cos(a) * 44 * u, cy - 50 * u + Math.sin(a) * 26 * u, 2 * u, 2 * u); } // sparkles
+        // price tag hanging off the pedestal
+        const owned = st.owned(sel), tag = owned ? 'OWNED' : String(sel.cost);
+        g.fillStyle = '#f6ecd0'; g.fillRect(ped + 36 * u, pedY - 30 * u, 44 * u, 18 * u); g.fillStyle = '#3a2414'; g.fillRect(ped + 36 * u, pedY - 30 * u, 44 * u, 2 * u);
+        if (!owned) drawCoin(g, ped + 44 * u, pedY - 21 * u, u * .9, t);
+        g.fillStyle = '#3a2414'; g.font = `700 ${Math.round(11 * u)}px 'Pixelify Sans', monospace`; g.fillText(tag, ped + (owned ? 58 : 64) * u, pedY - 20 * u);
       }
-      cv.dataset.selected = st.selected ? st.selected.id : '';
+      cv.dataset.selected = st.selected ? st.selected.id : ''; cv.dataset.placed = sel && plan.placed ? sel.id : ''; // on the pedestal
       scene.raf = requestAnimationFrame(frame);
     };
     scene.raf = requestAnimationFrame(frame);
+  }
+
+  // ---------- the sales pitch ----------
+  // He talks about how it looks and why it's a good buy (stable per item, so it reads like his opinion).
+  const PITCH = {
+    outfit: ['Feel that fabric! The {name} sits just right on the shoulders.', 'Look at the cut on the {name}. Walk into the square in this and every head turns.', 'The {name}: sturdy stitching, sharp colors. It says "trust me" without saying a word.'],
+    hat: ['The {name} frames the face beautifully. Very mysterious. Very hard to accuse.', 'Try the {name}. The silhouette alone wins arguments.', 'A {name}! Tip it at your neighbors at dawn; they will never suspect a thing.'],
+    hair: ['The {name}. Fresh, bold, unforgettable. The town will know you by it.', 'With the {name} you look like you have nothing to hide. Very useful.'],
+    shoeStyle: ['The {name}: quiet on the cobbles, quick on the run home at night.', 'Good shoes save lives in this town. The {name} are the best I have.'],
+    accessory: ['The {name} is the finishing touch. Small thing, big difference.', 'Nobody forgets a {name}. Wear it and you are the talk of the tavern.'],
+    nameplate: ['Your name in {name} style on the big screen. Everyone will read it twice.', 'The {name} nameplate: when the votes come in, they will spell your name right.'],
+    houseStyle: ['The {name}! Look at those walls. The neighbors will be so jealous.', 'A {name} on your plot. Solid, handsome, and the windows lock. Mostly.'],
+    houseDecor: ['A little {name} makes any house a home. And a home is harder to break into.', 'Add {name} to your house: the whole street will stop and look.'],
+    effect: ['{name}! Watch it shimmer around you. Pure magic, guaranteed by me.', 'With {name} you glow in every crowd. Nobody can ignore you now.'],
+    deathAnim: ['If the worst happens, go out in style: {name}. People will talk about it for days.', 'A farewell to remember: {name}. Even the Mafia will feel bad. Maybe.'],
+  };
+  const DEAL = ['A bargain at {cost} gold!', 'Only {cost} gold, and worth twice that.', 'For you, friend? {cost} gold. Practically a gift.', '{cost} gold. You will not find a better price in town.'];
+  const pickStable = (list, id) => { let h = 0; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return list[h % list.length]; };
+  function pitch(i, gold) {
+    const fill = (tpl) => tpl.replace('{name}', i.name).replace('{cost}', i.cost);
+    const desc = C.DESCRIPTIONS[i.id] ? ' ' + C.DESCRIPTIONS[i.id] : '';
+    const deal = gold != null && gold < i.cost ? `It's ${i.cost} gold. You have ${gold}: a couple more games and it's yours!` : fill(pickStable(DEAL, i.id + 'deal'));
+    return `${fill(pickStable(PITCH[i.field] || PITCH.accessory, i.id))}${desc} ${deal}`;
   }
 
   // ---------- screen ----------
   let state = { tab: C.CATEGORIES[0].id, selectedId: null, say: '' };
   const SAY = {
     hello: 'Welcome, welcome! Have a look around.',
-    pick: (i) => `Ah, the ${i.name}! That'll be ${i.cost} gold.`,
+    pick: (i, gold) => pitch(i, gold),
+    fetching: (i) => `The ${i.name}? Excellent eye! One moment, let me get it down for you…`,
     owned: (i) => `The ${i.name}? You already own it. Wear it in good health!`,
     poor: (i, gold) => `The ${i.name} is ${i.cost} gold, friend. You have ${gold}. Come back after a few more games!`,
     locked: (i) => `The ${i.name} isn't for sale. You earn it: ${C.ACHIEVEMENTS[i.achievement].label}.`,
@@ -215,7 +269,7 @@
     // On the shelves: what this player has unlocked for purchase (plus what they own and
     // achievement rewards). Season and world rewards live in their own tabs.
     const stocked = (i) => !!profile && (profile.stock || []).includes(i.id);
-    const forSale = (cat) => C.CATALOG.filter((i) => i.category === cat && !i.free && (owned(i) || i.achievement || (!i.pass && !i.world && stocked(i))));
+    const forSale = (cat) => C.CATALOG.filter((i) => i.category === cat && !i.free && !owned(i) && !i.pass && !i.world && !i.achievement && stocked(i));
     const hidden = C.STOCKABLE.filter((i) => !stocked(i) && !owned(i));
     $('#s-title').textContent = theme === 'rsp' ? 'RSP Supply Store' : 'Town Shop';
     $('#s-pouch-wrap').innerHTML = pouchButton(profile, 's-pouch');
@@ -230,7 +284,8 @@
     if (state.tab === 'locked') { renderLocked(opts, hidden); paintPouches(); return; }
     const inv = state.tab === 'inventory';
     const items = inv ? (profile ? profile.inventory : []).map((x) => C.CATALOG.find((i) => i.id === x.id)).filter(Boolean) : forSale(state.tab);
-    const selected = items.find((i) => i.id === state.selectedId) || null;
+    // A just-bought item leaves the shelf but stays on the pedestal (with Equip) until you pick another.
+    const selected = items.find((i) => i.id === state.selectedId) || (state.selectedId && C.CATALOG.find((i) => i.id === state.selectedId && owned(i))) || null;
     const gold = profile ? profile.coins : 0;
     $('#s-grid').innerHTML = items.length ? `<div class="cas-tiles shop-tiles">${items.map((i) => {
       const own = owned(i), equipped = inv && (profile.inventory.find((x) => x.id === i.id) || {}).equipped;
@@ -239,8 +294,10 @@
     }).join('')}</div>` : `<p class="muted">${inv ? 'Your inventory is empty. Buy something from the shop tabs!' : 'Nothing for sale here yet.'}</p>`;
     $('#s-grid').querySelectorAll('[data-item]').forEach((b) => { b.onclick = () => {
       state.selectedId = b.dataset.item; const i = C.CATALOG.find((x) => x.id === state.selectedId);
-      setKeeper(owned(i) ? 'show' : i.achievement && !(profile && profile.achievements.includes(i.achievement)) ? 'locked' : gold < i.cost ? 'poor' : 'show');
-      state.say = owned(i) ? SAY.owned(i) : i.pass ? `The ${i.name}? Not for sale. It's a Season pass reward at tier ${i.passTier}.` : i.world ? `Can't sell you that one. Explore ${C.WORLD_NAMES[i.world]} and it's yours.` : i.achievement && !(profile && profile.achievements.includes(i.achievement)) ? SAY.locked(i) : gold < i.cost ? SAY.poor(i, gold) : SAY.pick(i);
+      keeper.item = null; setKeeper('fetch'); keeper.item = i.id;
+      clearTimeout(state.pitchTimer);
+      state.pitchTimer = setTimeout(() => { if (state.selectedId === i.id) { state.say = owned(i) ? SAY.owned(i) : SAY.pick(i, (profile || {}).coins || 0); const el = $('#s-say'); if (el) el.textContent = state.say; } }, (FETCH_DONE - 0.3) * 1000);
+      state.say = owned(i) ? 'Ah, one of yours! Let me bring it out so you can admire it.' : SAY.fetching(i);
       render(opts);
     }; });
     const ctx = { avatar, home, theme };
