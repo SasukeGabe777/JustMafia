@@ -370,6 +370,9 @@
     const show = state.phase === 'lobby';
     $('#lobby').hidden = !show;
     if (!show) return;
+    const hof = state.hallOfFame || [];
+    $('#hof').hidden = !hof.length;
+    if (hof.length) $('#hof').innerHTML = `<h3>🏛 Hall of Fame</h3><ol>${hof.map((h, i) => `<li><span>${['🥇', '🥈', '🥉'][i] || '·'} <b>${h.name.replace(/[<>&]/g, '')}</b>${h.title ? ` <small>${h.title}</small>` : ''}</span><span>${h.wins}W · ${h.games}G${h.mvps ? ` · 🏆${h.mvps}` : ''}</span></li>`).join('')}</ol>`;
     const url = joinUrl();
     if (qrFor !== url) { qrFor = url; $('#qr').src = `/api/qr?text=${encodeURIComponent(url)}`; }
     $('#room-code').textContent = state.code;

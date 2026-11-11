@@ -325,7 +325,28 @@
     MT_SHOP.open(); show('#screen-shop'); $('#s-pouch-pop').hidden = true; renderShop();
   }
   $('#s-back').addEventListener('click', () => { if (shopReturn === '#screen-creator') { avatar = { ...avatar }; show('#screen-creator'); buildPicker(); } else { lastKey = ''; show('#screen-game'); render(); } });
-  document.addEventListener('click', (e) => { if (e.target.closest('[data-open-shop]')) openShop(); });
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-open-shop]')) openShop(); if (e.target.closest('[data-open-stats]')) openStats(); });
+  // ---------- My stats: career, mastery, rivalries, recent games ----------
+  function openStats() {
+    const c = profile && profile.career;
+    let m = $('#stats-modal');
+    if (!m) { m = document.createElement('div'); m.id = 'stats-modal'; m.className = 'stats-modal'; document.body.appendChild(m); m.addEventListener('click', (e) => { if (e.target === m || e.target.closest('[data-close-stats]')) m.hidden = true; }); }
+    const T = window.MT_THEMES, rn = (k) => (ROLES[k] || {}).name || k;
+    const pct = (w, g) => (g ? Math.round((w / g) * 100) + '%' : '—');
+    const rival = (x, f, label, emoji) => x ? `<li>${emoji} <b>${esc(x.name)}</b> ${label.replace('{n}', x[f])}</li>` : '';
+    m.innerHTML = `<div class="stats-card"><button class="stats-x" data-close-stats aria-label="Close">✕</button><h2>📊 My stats</h2>
+      ${!c || !c.games ? '<p class="muted">Finish a game to start your career. Every game counts, even practice games with bots.</p>' : `
+      <div class="stats-big"><div><b>${c.games}</b><small>games</small></div><div><b>${c.wins}</b><small>wins</small></div><div><b>${pct(c.wins, c.games)}</b><small>win rate</small></div><div><b>${c.survived}</b><small>survived</small></div></div>
+      <p class="small">As Town: ${pct((c.teams.town || {}).wins || 0, (c.teams.town || {}).games || 0)} · As Mafia: ${pct((c.teams.mafia || {}).wins || 0, (c.teams.mafia || {}).games || 0)}${(c.teams.neutral || {}).games ? ` · As Neutral: ${pct(c.teams.neutral.wins, c.teams.neutral.games)}` : ''}</p>
+      ${c.titles.length ? `<p class="stats-titles">${c.titles.map((t) => `<span>⭐ ${esc(t)}</span>`).join('')}</p>` : ''}
+      <h3>🎭 Role mastery</h3><ul class="stats-roles">${c.roles.slice(0, 8).map((r) => `<li><span>${(ROLES[r.role] || {}).emoji || ''} ${esc(rn(r.role))}${r.title ? ` <em>${r.title}</em>` : ''}</span><span>${r.games}G · ${pct(r.wins, r.games)}</span><i style="width:${Math.min(100, r.games / 30 * 100)}%"></i></li>`).join('')}</ul>
+      <p class="small muted">5 games as a role: Apprentice · 15: Expert · 30: Master.</p>
+      <h3>⚔️ Rivalries</h3><ul class="stats-rivals">${rival(c.rivals.nemesis, 'killedMe', 'took you out {n}×', '😈')}${rival(c.rivals.prey, 'iKilled', 'fell to you {n}×', '🎯')}${rival(c.rivals.critic, 'votedMe', 'voted against you {n}×', '🗳')}</ul>
+      ${Object.keys(c.awards).length ? `<h3>🏆 Awards</h3><p class="stats-awards">${Object.entries(c.awards).map(([a, n]) => `<span>${esc(a)} ×${n}</span>`).join('')}</p>` : ''}
+      <h3>🕰 Recent games</h3><ul class="stats-history">${c.history.slice(0, 8).map((h) => `<li><span>${h.won ? '🏆' : '·'} ${esc(rn(h.role))}${T && T.THEMES[h.theme] ? ` <small>${T.THEMES[h.theme].emoji}</small>` : ''}</span><span>${h.won ? 'Won' : 'Lost'}${h.alive ? '' : ' · died'}</span></li>`).join('')}</ul>`}
+      </div>`;
+    m.hidden = false;
+  }
   // Gold pouch in the game header: tap for balance, earned, spent and recent entries.
   // Customizing and shopping are lobby-only; during a game the phone is purely the game.
   const lobbyOpen = () => !view || view.phase === 'lobby';
@@ -653,7 +674,7 @@
         <p data-home-status>🏠 ${esc(homeStatus())}</p>
       </div>
       <div class="cas-bar lobby-actions"><button class="btn ghost" data-edit>Change my look</button><button class="btn ghost" data-house>Your house</button></div>
-      <button class="btn" data-open-shop>🛒 Shop</button>`;
+      <div class="cas-bar lobby-actions"><button class="btn" data-open-shop>🛒 Shop</button><button class="btn ghost" data-open-stats>📊 My stats</button></div>`;
     }
     if (v.you.spectator) {
       return `<div class="card center"><div class="big-emoji">🍿</div><h2>Game in progress</h2>

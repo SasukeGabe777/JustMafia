@@ -33,3 +33,11 @@
 .cr-end { font: 700 clamp(30px, 5vh, 60px) 'Pixelify Sans', monospace; color: #f5d98a; margin-top: 14vh; }
 .cr-actions { position: absolute; left: 0; right: 0; bottom: 3vh; display: flex; justify-content: center; gap: 16px; }
 .cr-actions .btn { width: auto; }
+
+/* TV lobby: Hall of Fame */
+.hof { margin-top: 12px; padding-top: 8px; border-top: 2px dashed rgba(58, 36, 20, .3); text-align: left; }
+.hof[hidden] { display: none; }
+.hof h3 { margin: 0 0 6px; text-align: center; font-size: 18px; }
+.hof ol { list-style: none; padding: 0; margin: 0; font-size: 14px; }
+.hof li { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; }
+.hof small { opacity: .7; font-size: 11px; }

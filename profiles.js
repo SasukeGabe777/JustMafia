@@ -111,7 +111,7 @@ class ProfileStore {
   }
   // Worlds explored: games finished in each world and its rewards (owned or how far to go).
   worldsView(p) { return Object.entries(WORLD_REWARDS).map(([id, list]) => ({ id, name: WORLD_NAMES[id], games: (p.worlds || {})[id] || 0, rewards: list.map((r) => ({ ...r, owned: p.owned.includes(r.item) })) })); }
-  view(id) { const p = this.data.profiles[id]; if (!p) return null; const { verifier, rewardedGames, ...view } = p; return { ...view, season: this.seasonView(p), worlds: this.worldsView(p), inventory: this.inventory(id), storage: this.filename ? 'Saved on this game server’s disk' : 'Session-only development storage' }; }
+  view(id) { const p = this.data.profiles[id]; if (!p) return null; const { verifier, rewardedGames, ...view } = p; return { ...view, career: this.careerView(p), season: this.seasonView(p), worlds: this.worldsView(p), inventory: this.inventory(id), storage: this.filename ? 'Saved on this game server’s disk' : 'Session-only development storage' }; }
   validateAvatar(id, input = {}) {
     const p = this.data.profiles[id], result = {};
     // Expression has its own migration rule below.
@@ -142,6 +142,35 @@ class ProfileStore {
   }
   selectHome(id, home) { const p = this.data.profiles[id]; if (!p) return; p.home = this.validateHome(id, home); this.save(); }
   select(id, avatar) { const p = this.data.profiles[id]; if (!p) return; p.avatar = this.validateAvatar(id, avatar); p.lookSaved = true; this.save(); }
+  // ----- Career: every finished game (practice included), mastery, rivalries, awards -----
+  recordGame(id, gameId, g) {
+    const p = this.data.profiles[id]; if (!p) return false;
+    const c = p.career = p.career || { games: 0, wins: 0, survived: 0, teams: {}, roles: {}, rivals: {}, awards: {}, history: [], seen: [] };
+    if (c.seen.includes(gameId)) return false;
+    c.seen.push(gameId); if (c.seen.length > 200) c.seen.shift();
+    c.games++; if (g.won) c.wins++; if (g.alive) c.survived++;
+    const t = c.teams[g.team] = c.teams[g.team] || { games: 0, wins: 0 }; t.games++; if (g.won) t.wins++;
+    const r = c.roles[g.role] = c.roles[g.role] || { games: 0, wins: 0 }; r.games++; if (g.won) r.wins++;
+    const rival = (who, field) => { const x = c.rivals[who.key] = c.rivals[who.key] || { name: who.name, killedMe: 0, iKilled: 0, votedMe: 0 }; x.name = who.name; x[field]++; };
+    for (const k of g.killedBy || []) rival(k, 'killedMe');
+    for (const k of g.kills || []) rival(k, 'iKilled');
+    for (const v of g.votedBy || []) rival(v, 'votedMe');
+    for (const a of g.awards || []) c.awards[a] = (c.awards[a] || 0) + 1;
+    c.history.unshift({ at: g.at, theme: g.theme, town: g.town, role: g.role, team: g.team, won: g.won, alive: g.alive, players: g.players, awards: g.awards || [] });
+    c.history = c.history.slice(0, 20);
+    this.save(); return true;
+  }
+  // Role mastery: games played as a role earn a title for it.
+  static masteryTitle(games) { return games >= 30 ? 'Master' : games >= 15 ? 'Expert' : games >= 5 ? 'Apprentice' : null; }
+  careerView(p) {
+    const c = p.career; if (!c) return { games: 0, wins: 0, survived: 0, teams: {}, roles: [], rivals: {}, awards: {}, history: [], titles: [] };
+    const roles = Object.entries(c.roles).map(([role, s]) => ({ role, ...s, title: ProfileStore.masteryTitle(s.games) })).sort((a, b) => b.games - a.games);
+    const rivalList = Object.values(c.rivals);
+    const topBy = (f) => rivalList.filter((x) => x[f] > 0).sort((a, b) => b[f] - a[f])[0] || null;
+    const titles = roles.filter((r) => r.title).map((r) => `${r.title} ${(require('./public/shared/roles').ROLES[r.role] || {}).name || r.role}`);
+    return { games: c.games, wins: c.wins, survived: c.survived, teams: c.teams, roles, awards: c.awards, history: c.history, titles, title: titles[0] || null,
+      rivals: { nemesis: topBy('killedMe'), prey: topBy('iKilled'), critic: topBy('votedMe') } };
+  }
   // ----- Fate Tokens and Fate Cards -----
   buyFate(id, card) {
     const p = this.data.profiles[id], c = FATE.cards[card];
