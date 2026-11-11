@@ -1287,6 +1287,18 @@ class Room {
   }
 
   // Public accusations (bots "talking" in discussion; shown on the big screen).
+  // Live reactions: a tap on the phone floats an emoji over your character on the TV.
+  // Only emojis from your equipped pack (or the free classic one); rate-limited.
+  react(p, emoji) {
+    const packs = OPTIONS.REACTION_PACKS, pack = packs[(p.avatar || {}).reactions] || packs.rxClassic;
+    if (!p || p.spectator || p.left || ['lobby', 'draft'].includes(this.phase)) return { ok: false, error: 'Reactions open once the game starts.' };
+    if (!pack.includes(emoji) && !packs.rxClassic.includes(emoji)) return { ok: false, error: 'Not in your reaction pack.' };
+    if (this.now() - (p.reactedAt ?? -Infinity) < 1500) return { ok: false, error: 'Easy there!' };
+    p.reactedAt = this.now();
+    if (this.io) this.io.to(this.hostChannel()).emit('host:react', { playerId: p.id, emoji });
+    return { ok: true };
+  }
+
   // Bots think out loud in the morning, discussion and voting: an accusation, a claim, or just a line ('say').
   accuse(p, { targetId, kind, verdict, text }) {
     if (!this.canSpeak(p) || !['morning', 'discussion', 'voting'].includes(this.phase) || (kind !== 'say' && !this.players.get(targetId))) return;

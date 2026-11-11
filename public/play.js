@@ -435,6 +435,11 @@
       if ((v.phase === 'night' && v.action) || (v.phase === 'voting' && v.voting)) buzz();
       prevPhase = v.phase;
     }
+    // Haptics: you died (a long double pulse); something happened to you overnight (a tap).
+    if (navigator.vibrate && view && view.you && v.you) {
+      if (view.you.alive && v.you.alive === false) navigator.vibrate([300, 120, 300]);
+      else if ((v.notes || []).length > (view.notes || []).length) navigator.vibrate(120);
+    }
     view = v;
     if (window.MT_CREATOR) MT_CREATOR.setParty(!!v.party);
     if (editing && v.phase !== 'lobby') { editing = false; creatorMode = null; show('#screen-game'); }
@@ -472,6 +477,30 @@
   // ---------- rendering ----------
   const byId = (id) => view.players.find((p) => p.id === id);
 
+  // Live reactions: one small round button in the corner; tap it for a row of six emojis.
+  // Hidden in the lobby and at night so it never gets in the way of the game.
+  function renderReactFab() {
+    let fab = $('#react-fab');
+    if (!fab) {
+      fab = document.createElement('div'); fab.id = 'react-fab'; fab.className = 'react-fab';
+      fab.innerHTML = '<div class="react-row" hidden></div><button class="react-btn" aria-label="React">😀</button>';
+      document.body.appendChild(fab);
+      fab.querySelector('.react-btn').onclick = () => { const row = fab.querySelector('.react-row'); row.hidden = !row.hidden; };
+    }
+    const on = view && !view.you.spectator && ['dawn', 'morning', 'discussion', 'voting', 'verdict', 'execution', 'accusation', 'defense', 'gameover'].includes(view.phase) && !$('#screen-game').hidden;
+    fab.hidden = !on; if (!on) { fab.querySelector('.react-row').hidden = true; return; }
+    const O = window.MT_OPTIONS, packs = O.REACTION_PACKS, pack = packs[(view.you.avatar || {}).reactions] || packs.rxClassic;
+    const row = fab.querySelector('.react-row'), key = pack.join('');
+    if (row.dataset.key !== key) {
+      row.dataset.key = key;
+      row.innerHTML = pack.map((e) => `<button data-react="${e}">${e}</button>`).join('');
+      row.querySelectorAll('[data-react]').forEach((b) => b.onclick = () => {
+        socket.emit('player:react', { emoji: b.dataset.react }, (r) => { if (r && r.ok) { b.classList.remove('sent'); void b.offsetWidth; b.classList.add('sent'); if (navigator.vibrate) navigator.vibrate(15); } });
+        setTimeout(() => { row.hidden = true; }, 350);
+      });
+    }
+  }
+
   function render() {
     if (!view) return;
     const key = JSON.stringify({ ...view, serverNow: 0, endsAt: 0, remainingMs: 0, roleShown });
@@ -502,6 +531,7 @@
     renderPrivateScene();
     if (view.progression) { profile = view.progression; updatePouch(); }
     MT_STORY_UI(view, socket, $('#g-body'), { esc, paint, reply: abilityReply, votingHtml });
+    renderReactFab();
     if (focus) { const input = [...body.querySelectorAll('[data-draft]')].find((el) => el.dataset.draft === focus); if (input) { input.focus(); if (caret != null) input.setSelectionRange(caret,caret); } }
   }
 
@@ -706,8 +736,8 @@
     const r = ROLES[view.role];
     if (!r) return '';
     const shown = roleShown;
-    return `<div class="rolecard ${view.role} ${shown ? 'show' : ''}" data-role style="--rc:${r.color}">
-      <div class="rc-hidden">🔒 ${big ? 'Tap to reveal your role' : 'Tap to peek at your role'}</div>
+    return `<div class="rolecard ${view.role} ${shown ? 'show' : ''}${big ? ' rc-big' : ''}" data-role style="--rc:${r.color}">
+      <div class="rc-hidden">🔒 ${big ? 'Tap to reveal your role' : 'Hold to peek at your role'}</div>
       <div class="rc-shown">
         <div class="big-emoji">${r.emoji}</div>
         <div class="rc-name">${esc(roleLabel(view.role))}</div>
@@ -882,9 +912,18 @@
       if (p) paint(cv, p.avatar);
     });
     const rc = body.querySelector('[data-role]');
-    if (rc) rc.addEventListener('click', () => { roleShown = !roleShown; rc.classList.toggle('show', roleShown); lastKey = ''; });
+    // In-game the role card only shows while you hold it (no shoulder-surfing); the big
+    // reveal card at the start is still a tap.
+    if (rc && rc.classList.contains('rc-big')) rc.addEventListener('click', () => { roleShown = !roleShown; rc.classList.toggle('show', roleShown); lastKey = ''; });
+    else if (rc) {
+      const peek = (on) => { roleShown = on; rc.classList.toggle('show', on); if (on && navigator.vibrate) navigator.vibrate(10); };
+      rc.addEventListener('pointerdown', (e) => { if (e.target.closest('.role-help')) return; peek(true); });
+      for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) rc.addEventListener(ev, () => { if (roleShown) { peek(false); lastKey = ''; } });
+      rc.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
     // Tapping the role explainer opens it without hiding the card; it stays open across updates.
     body.querySelectorAll('.role-help').forEach((d) => { d.addEventListener('click', (e) => e.stopPropagation()); d.addEventListener('toggle', () => { roleHelpOpen = d.open; }); });
+    body.querySelectorAll('[data-night]').forEach((b) => b.addEventListener('click', () => navigator.vibrate && navigator.vibrate(20)));
     body.querySelectorAll('[data-night]').forEach((b) => b.addEventListener('click', () => socket.emit('player:night', { targetId: b.dataset.night, delay: Number((document.querySelector('#bomb-delay') || {}).value) || 3 })));
     body.querySelectorAll('[data-vote]').forEach((b) => b.addEventListener('click', () => socket.timeout(5000).emit('player:vote', { targetId: b.dataset.vote }, (err, r) => {
       voteErr = err ? 'No answer from the game. Check your connection and tap again.' : r && !r.ok ? r.error || 'Vote not counted.' : '';

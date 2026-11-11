@@ -328,6 +328,7 @@ io.on('connection', (socket) => {
   // Role draft: vote for a card (toggle) or lock in; then flip your own dealt card.
   socket.on('player:draftVote', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.draftVote(p, { role: typeof msg.role === 'string' ? msg.role : null, on: typeof msg.on === 'boolean' ? msg.on : null, ready: msg.ready === true }) : { ok: false }); });
   // Headhunter powers (mark, disguise, puppet, strike, reveal, execute); the server checks level and timing.
+  socket.on('player:react', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.react(p, String(msg.emoji || '')) : { ok: false }); });
   socket.on('player:crafter', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.crafterAction(p, { op: String(msg.op || ''), recipe: msg.recipe == null ? undefined : String(msg.recipe), tool: msg.tool == null ? undefined : String(msg.tool), targetId: msg.targetId ? String(msg.targetId) : null }) : { ok: false }); });
   socket.on('player:headhunter', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.headhunterAction(p, { op: String(msg.op || ''), targetId: msg.targetId ? String(msg.targetId) : null, role: msg.role == null ? null : String(msg.role) }) : { ok: false }); });
   socket.on('player:flip', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.flipCard(p) : { ok: false }); });

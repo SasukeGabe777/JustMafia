@@ -108,6 +108,9 @@ window.SFX = (function () {
     crunch: () => { for (let i = 0; i < 5; i++) tone(180 - i * 20, 0.06, { type: 'square', vol: 0.12, at: i * 0.05 }); noise(0.25, { vol: 0.25, filter: 1200 }); [784, 523].forEach((f, i) => tone(f, 0.12, { type: 'square', vol: 0.05, at: 0.3 + i * 0.1 })); },
     arrow: () => { noise(0.25, { vol: 0.25, filter: 3000, type: 'bandpass' }); tone(140, 0.12, { vol: 0.4, at: 0.22, slide: 70 }); },
     diceRoll: () => { for (let i = 0; i < 9; i++) noise(0.03, { vol: 0.35 - i * 0.03, at: i * 0.07 + Math.random() * 0.02, filter: 3200, type: 'bandpass' }); [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.1, at: 0.7 + i * 0.08 })); },
+    // Big moments: a cinematic low hit, and a rising swell.
+    boom: () => { tone(55, 1.6, { vol: 0.55, slide: 32 }); noise(1.2, { vol: 0.4, filter: 160 }); tone(110, 0.9, { type: 'triangle', vol: 0.12, slide: 70 }); },
+    swell: () => { [262, 330, 392, 523, 659].forEach((f, i) => tone(f, 2.2 - i * 0.2, { type: 'triangle', vol: 0.07, at: i * 0.12 })); noise(1.5, { vol: 0.08, filter: 3000, type: 'bandpass' }); },
     stab: () => { noise(0.12, { vol: 0.35, filter: 900 }); tone(110, 0.3, { vol: 0.35, at: 0.04, slide: 50 }); },
   };
 
@@ -162,13 +165,15 @@ window.SFX = (function () {
       l.frequency.value = m.pulse; lg.gain.value = m.vol * 0.6;
       l.connect(lg); lg.connect(gain.gain); l.start(); nodes.push(l);
     }
-    bed = { mood, root, theme, gain, nodes };
+    bed = { mood, root, theme, gain, nodes, vol: m.vol };
   }
 
   return {
     play(name) { try { if (sounds[name]) sounds[name](); } catch (e) { /* ignore */ } },
     unlock: ensure,
     music(mood, root, theme) { try { if (mood) music(mood, root, theme); else stopBed(); } catch (e) { /* ignore */ } },
+    // Duck the music under the narrator's voice (and bring it back after).
+    duck(on) { try { if (!bed || !ctx) return; const g = bed.gain.gain, t = ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(on ? bed.vol * 0.3 : bed.vol, t + (on ? 0.25 : 0.8)); } catch (e) { /* ignore */ } },
     get mood() { return bed ? bed.mood : null; },
     get enabled() { return enabled; },
     set enabled(v) { enabled = !!v; if (!enabled) stopBed(0.2); },

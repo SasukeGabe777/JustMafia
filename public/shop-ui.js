@@ -40,11 +40,19 @@
     const slot = C.slotOf(item.field);
     return slot.target === 'home' ? { home: { ...ctx.home, [slot.key]: item.value } } : { avatar: { ...ctx.avatar, [slot.key]: item.value } };
   }
+  // A reaction pack shows its six emojis (two rows of three).
+  function drawReactionPack(g, value, x, y, size) {
+    const pack = (O.REACTION_PACKS || {})[value] || [];
+    g.save(); g.font = `${Math.round(size)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    pack.forEach((e, i) => g.fillText(e, x + ((i % 3) - 1) * size * 1.15, y + (Math.floor(i / 3) - 0.5) * size * 1.15));
+    g.restore();
+  }
   function paintItem(cv, item, ctx) {
     const dpr = Math.min(window.devicePixelRatio || 1, 3), w = cv.clientWidth || 72, h = cv.clientHeight || 72;
     cv.width = w * dpr; cv.height = h * dpr; const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, w, h);
     const look = lookWith(item, ctx);
     if (item.field === 'deathAnim' && window.MT_FAREWELL) { window.MT_FAREWELL.preview(g, item.value, w, h, 1.4, ctx.avatar); return; } // a farewell: show it playing
+    if (item.field === 'reactions') { drawReactionPack(g, item.value, w / 2, h / 2, Math.min(w, h) / 4.2); return; }
     if (look.home) {
       const T = window.MT_THEMES, pal = (T.THEMES[ctx.theme] || T.THEMES.smalltown).palette;
       g.fillStyle = pal.grass; g.fillRect(0, 0, w, h);
@@ -213,7 +221,8 @@
         const drop = -Math.abs(Math.sin(land * Math.PI)) * 8 * u, bob = Math.sin(t * 2.4) * 1.5 * u;
         const glow = g.createRadialGradient(ped, cy - 40 * u, 4, ped, cy - 40 * u, 70 * u); glow.addColorStop(0, 'rgba(255,230,140,.45)'); glow.addColorStop(1, 'rgba(255,230,140,0)');
         g.fillStyle = glow; g.fillRect(ped - 70 * u, cy - 110 * u, 140 * u, 120 * u);
-        if (look.home) window.MT_WORLD.building(g, ped, cy + drop + bob, Math.max(0, O.houseStyle.indexOf(look.home.style)), (window.MT_THEMES.THEMES[st.theme] || window.MT_THEMES.THEMES.smalltown).palette, { ...window.MT_WORLD.lookOptions(look.home), scale: .5 * u, theme: st.theme, lit: true });
+        if (sel.field === 'reactions') drawReactionPack(g, sel.value, ped, cy - 40 * u + drop + bob, 24 * u);
+        else if (look.home) window.MT_WORLD.building(g, ped, cy + drop + bob, Math.max(0, O.houseStyle.indexOf(look.home.style)), (window.MT_THEMES.THEMES[st.theme] || window.MT_THEMES.THEMES.smalltown).palette, { ...window.MT_WORLD.lookOptions(look.home), scale: .5 * u, theme: st.theme, lit: true });
         else MTArt.drawCharacter(g, ped, cy + drop + bob, look.avatar, { scale: 1.45 * u, theme: st.theme, t, facing: Math.sin(t * 0.9) > 0.6 ? 1 : Math.sin(t * 0.9) < -0.6 ? -1 : 0 });
         if (sel.field === 'deathAnim' && window.MT_FAREWELL) window.MT_FAREWELL.draw(g, sel.value, ped, cy, 1.45 * u, t, { avatar: st.avatar }); // the farewell, looping
         for (let i = 0; i < 4; i++) { const a = t * 1.6 + i * 1.57; g.fillStyle = '#fff6c0'; g.fillRect(ped + Math.cos(a) * 44 * u, cy - 50 * u + Math.sin(a) * 26 * u, 2 * u, 2 * u); } // sparkles

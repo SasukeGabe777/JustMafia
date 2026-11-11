@@ -13,13 +13,14 @@
   // a small free set (profiles created earlier keep everything they already had).
   const FIELDS = { hair: ['hair', 6], outfit: ['outfit', 4], hat: ['hats', 3], shoeStyle: ['shoeStyles', 2], accessory: ['accessory', 2], nameplate: ['nameplate', 1], houseDecor: ['houseDecor', 1], effect: ['effect', 1], houseStyle: ['houseStyle', 4] };
   if (O.deathAnim) FIELDS.deathAnim = ['deathAnim', 1];
+  if (O.reactions) FIELDS.reactions = ['reactions', 1];
   // Shop sections. `target` says what equipping changes: the character or the house.
   const CATEGORIES = [
     { id: 'clothing', label: 'Clothing', icon: '👕', fields: ['outfit', 'shoeStyle'], target: 'avatar' },
     { id: 'accessories', label: 'Hats & Gear', icon: '🎩', fields: ['hat', 'accessory'], target: 'avatar' },
     { id: 'hair', label: 'Hairstyles', icon: '💇', fields: ['hair'], target: 'avatar' },
     { id: 'house', label: 'House', icon: '🏠', fields: ['houseStyle', 'houseDecor'], target: 'home' },
-    { id: 'flair', label: 'Flair', icon: '✨', fields: ['nameplate', 'effect'], target: 'avatar' },
+    { id: 'flair', label: 'Flair', icon: '✨', fields: ['nameplate', 'effect', 'reactions'], target: 'avatar' },
     { id: 'animations', label: 'Farewells', icon: '🕯', fields: ['deathAnim'], target: 'avatar' },
   ];
   // Where an equipped item lives: avatar field, or house design field (HOME_FIELDS key).
@@ -52,6 +53,11 @@
     'deathAnim:letter': 'A sealed letter flutters down beside you. What did it say? Nobody will ever know.',
     'deathAnim:candle': 'A candle burns beside you, gutters, and goes out.',
     'deathAnim:lantern': 'A paper sky lantern lifts from your side and floats away.',
+    'reactions:rxSpooky': 'Reactions for the brave: 👻 💀 🕯️ 🦇 🎃 ⚰️ float over your head on the big screen.',
+    'reactions:rxRoyal': 'React like royalty: 👑 💎 🍷 🎩 🗡️ 🛡️.',
+    'reactions:rxParty': 'Turn every vote into a party: 🎉 🥳 🍕 🎈 🕺 🤪.',
+    'reactions:rxDetective': 'For the sleuths: 🔍 🕵️ 🧐 📝 🔦 🚨.',
+    'reactions:rxLove': 'Wear your heart on your sleeve: ❤️ 😍 💔 😘 🌹 🥺.',
     'deathAnim:starfall': 'The sky answers: falling stars streak overhead.',
     'deathAnim:ascend': 'Your spirit rises from your body, glowing, and fades into the light.',
   };

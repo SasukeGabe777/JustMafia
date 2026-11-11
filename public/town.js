@@ -449,6 +449,26 @@
       }
     }
 
+    // A live reaction from a phone: the emoji pops up over the character and floats away.
+    react(id, emoji) {
+      const c = this.chars.get(id); if (!c || !emoji) return;
+      (this.reactions = this.reactions || []).push({ id, emoji, t0: this.time, dx: (Math.random() - 0.5) * 24 });
+      if (this.reactions.length > 40) this.reactions.shift();
+    }
+    drawReactions(ctx) {
+      if (!this.reactions || !this.reactions.length) return;
+      this.reactions = this.reactions.filter((r) => this.time - r.t0 < 2.4);
+      ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (const r of this.reactions) {
+        const c = this.chars.get(r.id); if (!c) continue;
+        const k = (this.time - r.t0) / 2.4, pop = Math.min(1, k * 6), scale = pop < 1 ? 0.4 + pop * 0.9 : 1.3 - Math.min(0.3, (k - 0.17) * 0.6);
+        ctx.globalAlpha = k > 0.7 ? (1 - k) / 0.3 : 1;
+        ctx.font = `${Math.round(30 * scale)}px sans-serif`;
+        ctx.fillText(r.emoji, c.x + r.dx + Math.sin(k * 8) * 4, c.y - 92 - k * 70);
+      }
+      ctx.restore();
+    }
+
     haunt({ ghostId, kind, targetId }) {
       const g = this.chars.get(ghostId);
       if (!g || g.alive) return;
@@ -817,6 +837,7 @@
         this.drawSigns();
         this.drawLabels();
         this.drawEffects(true);
+        this.drawReactions(scr);
         if (this.showSkip && this.skipCount > 0) this.drawSkip();
         if (cin) cin.drawTownTexts(scr);
       }

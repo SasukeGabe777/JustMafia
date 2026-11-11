@@ -189,6 +189,7 @@
   $('#cr-again').addEventListener('click', () => { $('#credits').hidden = true; act('lobby'); });
 
   socket.on('host:haunt', (evt) => town.haunt(evt));
+  socket.on('host:react', (r) => town.react(r.playerId, r.emoji));
 
   // Judge scene controls (presentation only).
   const houseOfPlayer = (house) => (house == null ? undefined : house);
@@ -243,17 +244,39 @@
     el.classList.remove('enter');
     void el.offsetWidth;
     el.classList.add('enter');
+    // Big moments land with the music: a deep hit on deaths and verdicts, a swell for a win.
+    if (/^(kill|multiKill|eliminated|hhStrike|hhExecute|crafterStrike)/.test(n.key || '')) SFX.play('boom');
+    else if (/Win$/.test(n.key || '')) SFX.play('swell');
     speak(n.text);
   }
 
-  let voice = null;
-  function pickVoice() {
-    const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
-    voice = vs.find((v) => /en-GB/i.test(v.lang) && /male|daniel|george|ryan/i.test(v.name))
-      || vs.find((v) => /en-(US|GB)/i.test(v.lang) && /natural|google/i.test(v.name))
-      || vs.find((v) => /^en/i.test(v.lang)) || null;
+  // Each world has its own narrator: a preferred voice (by name/accent, falling back to any
+  // English voice), a pitch and a pace. The classic look keeps the original narrator.
+  const VOICES = {
+    classic: { prefer: [/en-GB/i, /male|daniel|george|ryan/i], rate: 0.92, pitch: 0.85 },
+    noir: { prefer: [/en-US/i, /male|guy|david|mark|christopher/i], rate: 0.84, pitch: 0.7 },
+    tabletop: { prefer: [/en-GB/i, /male|george|ryan|thomas/i], rate: 0.95, pitch: 0.95 },
+    space: { prefer: [/en-US/i, /zira|aria|female|jenny/i], rate: 1.02, pitch: 1.15 },
+    fantasy: { prefer: [/en-GB/i, /female|libby|sonia|hazel/i], rate: 0.9, pitch: 1.1 },
+    dragons: { prefer: [/en-GB/i, /male|ryan|george/i], rate: 0.86, pitch: 0.65 },
+    dungeon: { prefer: [/en/i, /male/i], rate: 0.82, pitch: 0.6 },
+    spies: { prefer: [/en-GB/i, /male|daniel|ryan/i], rate: 0.98, pitch: 0.9 },
+    fbi: { prefer: [/en-US/i, /male|guy|david/i], rate: 1.0, pitch: 0.9 },
+    snow: { prefer: [/en/i, /female|aria|libby|sonia/i], rate: 0.88, pitch: 1.05 },
+    blocky: { prefer: [/en-US/i, /.*/], rate: 1.05, pitch: 1.3 },
+    realistic: { prefer: [/en-US/i, /natural|neural|online/i], rate: 0.94, pitch: 1.0 },
+  };
+  const voiceCache = {};
+  function voiceFor(theme) {
+    const key = VOICES[theme] ? theme : 'classic';
+    if (voiceCache[key] !== undefined) return { v: voiceCache[key], p: VOICES[key] };
+    const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [], [lang, name] = VOICES[key].prefer;
+    const v = vs.find((x) => lang.test(x.lang) && name.test(x.name) && /natural|neural|online|google/i.test(x.name))
+      || vs.find((x) => lang.test(x.lang) && name.test(x.name)) || vs.find((x) => /^en/i.test(x.lang)) || null;
+    if (vs.length) voiceCache[key] = v;
+    return { v, p: VOICES[key] };
   }
-  if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+  if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => { for (const k of Object.keys(voiceCache)) delete voiceCache[k]; };
 
   // Spoken sentence by sentence, with a dramatic pause between them.
   let speakToken = 0;
@@ -264,15 +287,18 @@
     if (!prefs.voice || !window.speechSynthesis) return;
     speechSynthesis.cancel();
     const token = ++speakToken;
-    const style = state && state.settings.narratorStyle;
+    const style = state && state.settings.narratorStyle, { v: voice, p: vp } = voiceFor(state && state.theme);
     const parts = String(text).match(/[^.!?…]+[.!?…]*\s*/g) || [text];
+    SFX.duck(true); // the music steps back while the narrator speaks
     const next = (i) => {
-      if (token !== speakToken || i >= parts.length) return;
+      if (token !== speakToken) return;
+      if (i >= parts.length) { SFX.duck(false); return; }
       const u = new SpeechSynthesisUtterance(parts[i].trim());
       if (voice) u.voice = voice;
-      u.rate = style === 'comedy' ? 1.05 : 0.92;
-      u.pitch = style === 'classic' ? 0.85 : 1;
+      u.rate = vp.rate * (style === 'comedy' ? 1.1 : 1);
+      u.pitch = vp.pitch;
       u.onend = () => setTimeout(() => next(i + 1), /[.…]$/.test(parts[i].trim()) ? 650 : 350);
+      u.onerror = () => SFX.duck(false);
       speechSynthesis.speak(u);
     };
     next(0);

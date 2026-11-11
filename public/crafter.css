@@ -31,3 +31,14 @@
 .need.ok { background: rgba(46, 125, 50, .22); }
 .recipe .btn, .tool .btn { width: auto; flex: none; padding-left: 14px; padding-right: 14px; }
 .recipe .r-body { min-width: 0; }
+
+/* Live reactions: a small corner button and a compact emoji row (stays out of the way) */
+.react-fab { position: fixed; right: 12px; bottom: 14px; z-index: 40; display: flex; align-items: center; gap: 8px; flex-direction: row-reverse; }
+.react-fab[hidden] { display: none; }
+.react-btn { width: 44px; height: 44px; border-radius: 50%; border: 2px solid #3a2414; background: rgba(255, 246, 224, .92); font-size: 22px; box-shadow: 0 3px 0 #3a2414; cursor: pointer; opacity: .85; }
+.react-row { display: flex; gap: 4px; padding: 4px 6px; border-radius: 24px; background: rgba(255, 246, 224, .96); border: 2px solid #3a2414; box-shadow: 0 3px 0 #3a2414; animation: rowIn .18s ease-out; }
+.react-row[hidden] { display: none; }
+.react-row button { border: 0; background: none; font-size: 24px; width: 36px; height: 36px; cursor: pointer; }
+.react-row button.sent { animation: sentPop .35s ease-out; }
+@keyframes rowIn { from { transform: scaleX(.3); opacity: 0; transform-origin: right; } to { transform: none; opacity: 1; } }
+@keyframes sentPop { 50% { transform: scale(1.5); } }

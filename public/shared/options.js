@@ -57,10 +57,21 @@
   // list above, one line here, and one entry in public/creator-config.js.
   // Update 8: farewell animations (shop items) that play over your body when you die.
   OPTIONS.deathAnim = ['none', 'petals', 'fireflies', 'letter', 'candle', 'lantern', 'starfall', 'ascend'];
+  // Live reactions (tap on the phone, they float over your character on the TV). The first
+  // pack is free; the others are shop cosmetics. A player equips one pack.
+  OPTIONS.reactions = ['rxClassic', 'rxSpooky', 'rxRoyal', 'rxParty', 'rxDetective', 'rxLove'];
+  OPTIONS.REACTION_PACKS = {
+    rxClassic: ['😱', '🤨', '🙏', '😂', '👍', '😡'],
+    rxSpooky: ['👻', '💀', '🕯️', '🦇', '🎃', '⚰️'],
+    rxRoyal: ['👑', '💎', '🍷', '🎩', '🗡️', '🛡️'],
+    rxParty: ['🎉', '🥳', '🍕', '🎈', '🕺', '🤪'],
+    rxDetective: ['🔍', '🕵️', '🧐', '📝', '🔦', '🚨'],
+    rxLove: ['❤️', '😍', '💔', '😘', '🌹', '🥺'],
+  };
   OPTIONS.AVATAR_FIELDS = {
     color: 'colors', skin: 'skins', hat: 'hats', hair: 'hair', hairColor: 'hairColor', facialHair: 'facialHair', eyes: 'eyes', face: 'face',
     features: 'features', expression: 'expression', outfit: 'outfit', pants: 'pants', shoes: 'shoes', shoeStyle: 'shoeStyles', accessory: 'accessory',
-    nameColor: 'nameColor', nameplate: 'nameplate', effect: 'effect', deathAnim: 'deathAnim',
+    nameColor: 'nameColor', nameplate: 'nameplate', effect: 'effect', deathAnim: 'deathAnim', reactions: 'reactions',
   };
   // Same idea for a player's house design (player.homeLook / profile.home).
   // Legacy saves kept houseStyle/houseColor/houseDecor on the avatar; see LEGACY_HOME.
@@ -83,6 +94,7 @@
     spaceSuit:'Space Suit', dragonScale:'Dragon-Scale Mail', rogueLeathers:'Rogue Leathers', tuxedo:'Tuxedo', fedJacket:'Bureau Jacket', parka:'Parka', blockArmor:'Block Armor', denimJacket:'Denim Jacket', trenchCoat:'Trench Coat',
     fairyWings:'Fairy Wings', torch:'Torch', shades:'Agent Shades', badge:'Federal Badge', diceBag:'Dice Bag', wristwatch:'Wristwatch',
     pirateCoat:'Pirate Coat', samuraiArmor:'Samurai Armor', royalRobe:'Royal Robe', cyber:'Cyber Suit', vampire:'Vampire Count', bloodKnight:'Blood Knight',
+    rxClassic:'Classic Reactions', rxSpooky:'Spooky Reactions', rxRoyal:'Royal Reactions', rxParty:'Party Reactions', rxDetective:'Detective Reactions', rxLove:'Sweetheart Reactions',
     deathAnim:'Farewell', petals:'Rose Petals', fireflies:'Fireflies', letter:'A Last Letter', candle:'Candlelight', lantern:'Sky Lantern', starfall:'Falling Stars', ascend:'Spirit Rises' };
   OPTIONS.label = (value) => OPTIONS.labels[value] || OPTIONS.hatLabels[value] || String(value).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   if (typeof module !== 'undefined' && module.exports) module.exports = OPTIONS;
