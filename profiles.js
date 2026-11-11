@@ -151,6 +151,7 @@ class ProfileStore {
     c.games++; if (g.won) c.wins++; if (g.alive) c.survived++;
     const t = c.teams[g.team] = c.teams[g.team] || { games: 0, wins: 0 }; t.games++; if (g.won) t.wins++;
     const r = c.roles[g.role] = c.roles[g.role] || { games: 0, wins: 0 }; r.games++; if (g.won) r.wins++;
+    if ([5, 15, 30].includes(r.games)) { p.fate = (p.fate || 0) + 1; c.masteryGifts = (c.masteryGifts || 0) + 1; } // a new mastery title earns a Fate Token
     const rival = (who, field) => { const x = c.rivals[who.key] = c.rivals[who.key] || { name: who.name, killedMe: 0, iKilled: 0, votedMe: 0 }; x.name = who.name; x[field]++; };
     for (const k of g.killedBy || []) rival(k, 'killedMe');
     for (const k of g.kills || []) rival(k, 'iKilled');

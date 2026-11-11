@@ -274,7 +274,7 @@
       if (phase !== 'gameover') { this.winner = null; this.targetRed = 0; }
       for (const c of this.chars.values()) this.assign(c);
       if (phase === 'night' && prev !== 'dawn') SFX.play('night');
-      if (phase === 'morning') { SFX.play('day'); setTimeout(() => SFX.play('rooster'), 300); this.sunrise = this.time; }
+      if (phase === 'morning') { SFX.play('day'); this.at(0.3, () => SFX.play('rooster')); this.sunrise = this.time; }
     }
 
     onDeath(c) {

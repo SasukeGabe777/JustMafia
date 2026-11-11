@@ -59,7 +59,7 @@
   OPTIONS.deathAnim = ['none', 'petals', 'fireflies', 'letter', 'candle', 'lantern', 'starfall', 'ascend'];
   // Live reactions (tap on the phone, they float over your character on the TV). The first
   // pack is free; the others are shop cosmetics. A player equips one pack.
-  OPTIONS.reactions = ['rxClassic', 'rxSpooky', 'rxRoyal', 'rxParty', 'rxDetective', 'rxLove'];
+  OPTIONS.reactions = ['rxClassic', 'rxSpooky', 'rxRoyal', 'rxParty', 'rxDetective', 'rxLove', 'rxBloodMoon'];
   OPTIONS.REACTION_PACKS = {
     rxClassic: ['😱', '🤨', '🙏', '😂', '👍', '😡'],
     rxSpooky: ['👻', '💀', '🕯️', '🦇', '🎃', '⚰️'],
@@ -67,6 +67,7 @@
     rxParty: ['🎉', '🥳', '🍕', '🎈', '🕺', '🤪'],
     rxDetective: ['🔍', '🕵️', '🧐', '📝', '🔦', '🚨'],
     rxLove: ['❤️', '😍', '💔', '😘', '🌹', '🥺'],
+    rxBloodMoon: ['🩸', '🌕', '🦇', '🗡️', '⚰️', '🌹'], // Season 1 pass reward
   };
   OPTIONS.AVATAR_FIELDS = {
     color: 'colors', skin: 'skins', hat: 'hats', hair: 'hair', hairColor: 'hairColor', facialHair: 'facialHair', eyes: 'eyes', face: 'face',
@@ -94,7 +95,7 @@
     spaceSuit:'Space Suit', dragonScale:'Dragon-Scale Mail', rogueLeathers:'Rogue Leathers', tuxedo:'Tuxedo', fedJacket:'Bureau Jacket', parka:'Parka', blockArmor:'Block Armor', denimJacket:'Denim Jacket', trenchCoat:'Trench Coat',
     fairyWings:'Fairy Wings', torch:'Torch', shades:'Agent Shades', badge:'Federal Badge', diceBag:'Dice Bag', wristwatch:'Wristwatch',
     pirateCoat:'Pirate Coat', samuraiArmor:'Samurai Armor', royalRobe:'Royal Robe', cyber:'Cyber Suit', vampire:'Vampire Count', bloodKnight:'Blood Knight',
-    rxClassic:'Classic Reactions', rxSpooky:'Spooky Reactions', rxRoyal:'Royal Reactions', rxParty:'Party Reactions', rxDetective:'Detective Reactions', rxLove:'Sweetheart Reactions',
+    rxClassic:'Classic Reactions', rxSpooky:'Spooky Reactions', rxRoyal:'Royal Reactions', rxParty:'Party Reactions', rxDetective:'Detective Reactions', rxLove:'Sweetheart Reactions', rxBloodMoon:'Blood Moon Reactions',
     deathAnim:'Farewell', petals:'Rose Petals', fireflies:'Fireflies', letter:'A Last Letter', candle:'Candlelight', lantern:'Sky Lantern', starfall:'Falling Stars', ascend:'Spirit Rises' };
   OPTIONS.label = (value) => OPTIONS.labels[value] || OPTIONS.hatLabels[value] || String(value).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   if (typeof module !== 'undefined' && module.exports) module.exports = OPTIONS;

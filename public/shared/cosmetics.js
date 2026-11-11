@@ -57,6 +57,7 @@
     'reactions:rxRoyal': 'React like royalty: 👑 💎 🍷 🎩 🗡️ 🛡️.',
     'reactions:rxParty': 'Turn every vote into a party: 🎉 🥳 🍕 🎈 🕺 🤪.',
     'reactions:rxDetective': 'For the sleuths: 🔍 🕵️ 🧐 📝 🔦 🚨.',
+    'reactions:rxBloodMoon': 'Season 1 pass exclusive: 🩸 🌕 🦇 🗡️ ⚰️ 🌹 under a red moon.',
     'reactions:rxLove': 'Wear your heart on your sleeve: ❤️ 😍 💔 😘 🌹 🥺.',
     'deathAnim:starfall': 'The sky answers: falling stars streak overhead.',
     'deathAnim:ascend': 'Your spirit rises from your body, glowing, and fades into the light.',
@@ -71,7 +72,7 @@
     id: 's1', name: 'Season 1: Blood Moon', cost: 150, tiers: 20, xpPerTier: 100,
     xp: { completed: 40, won: 25, survived: 10, challenge: 60 },
     rewards: { 1: { gold: 20 }, 2: { gold: 20 }, 3: { item: 'effect:bloodMist' }, 4: { gold: 30 }, 5: { gold: 30 }, 6: { item: 'hat:bloodCrown' }, 7: { gold: 30 }, 8: { gold: 40 },
-      9: { item: 'nameplate:bloodMoon' }, 10: { gold: 40 }, 11: { gold: 40 }, 12: { item: 'accessory:batWings' }, 13: { gold: 50 }, 14: { gold: 50 }, 15: { item: 'outfit:vampire' },
+      9: { item: 'nameplate:bloodMoon' }, 10: { gold: 40 }, 11: { gold: 40 }, 12: { item: 'accessory:batWings' }, 13: { item: 'reactions:rxBloodMoon' }, 14: { gold: 50 }, 15: { item: 'outfit:vampire' },
       16: { gold: 50 }, 17: { item: 'effect:lightning' }, 18: { item: 'nameplate:gilded' }, 19: { gold: 60 }, 20: { item: 'outfit:bloodKnight' } },
   };
   const PASS = Object.fromEntries(Object.entries(SEASON.rewards).filter(([, r]) => r.item).map(([tier, r]) => [r.item, Number(tier)]));
