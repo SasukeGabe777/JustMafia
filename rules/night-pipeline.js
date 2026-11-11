@@ -55,6 +55,7 @@ const stages = {
   },
   teamKill(c) {
     const r = c.room, all = r.teamPicks('mafia'), picks = all.filter((p) => !c.blocked.has(p.id));
+    if (r.night && r.night.festival) return; // Daily Surprises: festival night, no Mafia kill
     if (all.length && !picks.length) c.blockedAttempts.push({ type: 'blocked', targetId: all[0].targetId, by: 'mafia' });
     if (picks.length) {
       let chosen;

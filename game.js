@@ -1125,7 +1125,7 @@ class Room {
         for (const [id, role] of Object.entries(s.forcedRoles)) if (this.players.has(id) && ROLES[role]) S.forcedRoles[id] = role;
       }
     }
-    if (lobby && s.event != null && ['none', 'bloodMoon'].includes(s.event)) S.event = s.event;
+    if (lobby && s.event != null && ['none', 'bloodMoon', 'surprises'].includes(s.event)) S.event = s.event;
     for (const k of ['partyMode', 'newPlayerHelp', 'executionInterventions', 'lastWords', 'autoMafia', 'autoAdvance', 'revealRoleOnDeath', 'allowSkip', 'anonymousVotes', 'doctorSelfProtect', 'ghostHaunts', 'botChatter', 'skipCinematics', 'botsAuto']) if (s[k] != null) S[k] = !!s[k];
     if (s.nightSeconds != null) S.nightSeconds = clamp(int(s.nightSeconds, 45), 5, 600);
     if (s.discussionSeconds != null) S.discussionSeconds = clamp(int(s.discussionSeconds, 120), 5, 3600);
@@ -1346,6 +1346,7 @@ class Room {
       party: !!this.settings.partyMode,             // party mode: every cosmetic usable in this room
       event: this.settings.event || 'none',
       bloodMoon: !!(this.night && this.night.bloodMoon && ['night', 'dawn'].includes(this.phase)),
+      surprise: this.night && this.night.surprise && ['night', 'dawn'].includes(this.phase) ? this.night.surprise : null,
       draft: this.draftView(),
       unlock: this.unlockView(), // roles this game just unlocked for the deck (game over only)
       deckTier: this.settings.draftPool === 'all' ? 10 : Math.min(10, this.gamesPlayed || 0), // 0 = tutorial round

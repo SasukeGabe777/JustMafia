@@ -449,6 +449,17 @@
       }
     }
 
+    // Daily Surprises on the TV: drifting fog banks, or festival lantern strings and fireworks.
+    drawSurprise(ctx) {
+      const s = this.state && this.state.surprise, t = this.time; if (!s) return;
+      if (s === 'fog') {
+        for (let i = 0; i < 9; i++) { const x = ((t * (18 + i * 3) + i * 260) % (W + 600)) - 300, y = 140 + i * 105; const g = ctx.createRadialGradient(x, y, 10, x, y, 260); g.addColorStop(0, 'rgba(225,228,235,0.42)'); g.addColorStop(1, 'rgba(225,228,235,0)'); ctx.fillStyle = g; ctx.fillRect(x - 260, y - 260, 520, 520); }
+      } else if (s === 'festival') {
+        const colors = ['#ff5a7a', '#ffd23f', '#5ad1ff', '#9b7bff', '#5aff9b'];
+        for (let row = 0; row < 3; row++) { const y0 = CY - 170 + row * 170; for (let i = 0; i < 18; i++) { const x = CX - 420 + i * 50, y = y0 + Math.sin(i / 17 * Math.PI) * 30; const on = Math.sin(t * 3 + i + row) > -0.3; ctx.fillStyle = on ? colors[(i + row) % colors.length] : '#553'; ctx.beginPath(); ctx.arc(x, y, 5, 0, TAU); ctx.fill(); if (on) { ctx.fillStyle = 'rgba(255,240,180,0.18)'; ctx.beginPath(); ctx.arc(x, y, 14, 0, TAU); ctx.fill(); } } }
+        const k = (t % 4) / 4; if (k < 0.6) { const fx = CX + Math.sin(Math.floor(t / 4) * 2.3) * 500, fy = 260 - k * 120; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, r = k * 140; ctx.fillStyle = colors[i % colors.length]; ctx.globalAlpha = 1 - k / 0.6; ctx.fillRect(fx + Math.cos(a) * r, fy + Math.sin(a) * r, 4, 4); } ctx.globalAlpha = 1; }
+      }
+    }
     // A live reaction from a phone: the emoji pops up over the character and floats away.
     react(id, emoji) {
       const c = this.chars.get(id); if (!c || !emoji) return;
@@ -899,6 +910,7 @@
         this.drawLights(dark);
       }
       if (tw) tw.drawAmbient(this, ctx, 'weather'); // snow, rain, embers, aurora
+      this.drawSurprise(ctx);
 
       // ghosts glow above the darkness
       for (const c of this.chars.values()) {

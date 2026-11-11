@@ -99,6 +99,7 @@
   const EVENTS = {
     none: { name: 'No event' },
     bloodMoon: { name: '🌕 Blood Moon', xpMultiplier: 2, desc: 'Every third night the moon turns red and the Mafia strike twice. Double season XP.' },
+    surprises: { name: '🎲 Daily Surprises', xpMultiplier: 1.5, desc: 'Some nights bring a twist: Fog (watchers see nothing), a Festival (no Mafia kill) or a Blood Moon (two kills). 1.5× season XP.' },
   };
 
   // ----- Worlds (Themes v2): cosmetics earned by finishing games in each world -----
