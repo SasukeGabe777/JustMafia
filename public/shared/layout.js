@@ -52,7 +52,23 @@
   };
   const DEATH_PLACES = ['home', 'lake', 'hearth', 'tavern', 'field', 'chase', 'visit'];
 
-  const API = { W, H, CX, CY, RING, ROAD, SQUARE_R, CEM, POND, TAU, seeded, houses, SPOTS, PLACES, DEATH_PLACES };
+  // Each world can shift and reshape the pond and graveyard a little (small, safe offsets:
+  // houses, roads and civic buildings never move). The objects are updated in place, so
+  // the TV, cinematics and the Judge's mini-map all follow. null = the classic map.
+  const BASE = { CEM: { ...CEM }, POND: { ...POND } };
+  function applyVariant(v) {
+    v = v || {};
+    const p = v.pond || {}, c = v.cem || {};
+    Object.assign(POND, { x: BASE.POND.x + (p.dx || 0), y: BASE.POND.y + (p.dy || 0), rx: p.rx || BASE.POND.rx, ry: p.ry || BASE.POND.ry });
+    Object.assign(CEM, { x: BASE.CEM.x + (c.dx || 0), y: BASE.CEM.y + (c.dy || 0), w: BASE.CEM.w, h: BASE.CEM.h });
+    Object.assign(SPOTS.cemetery, { x: CEM.x + CEM.w / 2, y: CEM.y + CEM.h / 2 - 10 });
+    Object.assign(SPOTS.pond, { x: POND.x, y: POND.y });
+    PLACES.lake.at = { x: POND.x - POND.rx - 18, y: POND.y + 30 };
+    PLACES.lake.water = { x: POND.x - 30, y: POND.y + 6 };
+    PLACES.lake.camera = { x: POND.x - 60, y: POND.y, z: 2.4 };
+  }
+
+  const API = { W, H, CX, CY, RING, ROAD, SQUARE_R, CEM, POND, TAU, seeded, houses, SPOTS, PLACES, DEATH_PLACES, applyVariant };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.MT_LAYOUT = API;
 })(typeof window !== 'undefined' ? window : globalThis);

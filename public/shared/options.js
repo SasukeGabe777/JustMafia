@@ -36,6 +36,10 @@
   OPTIONS.effect.push('sparkles', 'snow', 'hearts', 'shadow', 'bloodMist', 'lightning');
   OPTIONS.nameplate.push('neon', 'royal', 'bloodMoon', 'gilded');
   OPTIONS.outfit.push('pirateCoat', 'samuraiArmor', 'royalRobe', 'cyber', 'vampire', 'bloodKnight');
+  // Themes v2: world cosmetics, earned by playing games in each world (cosmetics.js WORLD_REWARDS).
+  OPTIONS.hats.push('spaceHelmet', 'elfCirclet', 'dragonHorns', 'furHat', 'cubeHelm', 'featherCap', 'fedora');
+  OPTIONS.outfit.push('spaceSuit', 'dragonScale', 'rogueLeathers', 'tuxedo', 'fedJacket', 'parka', 'blockArmor', 'denimJacket', 'trenchCoat');
+  OPTIONS.accessory.push('fairyWings', 'torch', 'shades', 'badge', 'diceBag', 'wristwatch');
   // Player homes (separate from the character): twelve building styles, wall and
   // roof paint, doors, windows and free yard decorations. Shop decor (houseDecor)
   // stays a catalog unlock. Pure presentation; chosen in the lobby, locked at start.
@@ -75,6 +79,9 @@
     cape:'Royal Cape', wings:'Angel Wings', mask:'Masquerade Mask', goldChain:'Gold Chain', pipe:'Pipe', rose:'Rose', batWings:'Bat Wings',
     sparkles:'Sparkles', snow:'Snowfall', hearts:'Hearts', shadow:'Shadow Aura', bloodMist:'Blood Mist', lightning:'Storm',
     neon:'Neon', royal:'Royal', bloodMoon:'Blood Moon', gilded:'Gilded',
+    spaceHelmet:'Space Helmet', elfCirclet:'Elven Circlet', dragonHorns:'Dragon Horns', furHat:'Fur Trapper Hat', cubeHelm:'Cube Helm', featherCap:'Feathered Cap', fedora:'Fedora',
+    spaceSuit:'Space Suit', dragonScale:'Dragon-Scale Mail', rogueLeathers:'Rogue Leathers', tuxedo:'Tuxedo', fedJacket:'Bureau Jacket', parka:'Parka', blockArmor:'Block Armor', denimJacket:'Denim Jacket', trenchCoat:'Trench Coat',
+    fairyWings:'Fairy Wings', torch:'Torch', shades:'Agent Shades', badge:'Federal Badge', diceBag:'Dice Bag', wristwatch:'Wristwatch',
     pirateCoat:'Pirate Coat', samuraiArmor:'Samurai Armor', royalRobe:'Royal Robe', cyber:'Cyber Suit', vampire:'Vampire Count', bloodKnight:'Blood Knight',
     deathAnim:'Farewell', petals:'Rose Petals', fireflies:'Fireflies', letter:'A Last Letter', candle:'Candlelight', lantern:'Sky Lantern', starfall:'Falling Stars', ascend:'Spirit Rises' };
   OPTIONS.label = (value) => OPTIONS.labels[value] || OPTIONS.hatLabels[value] || String(value).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());

@@ -108,11 +108,62 @@
       kill_visit: ['{name} was auditing {host}’s house after hours. RSP Supply closed the audit permanently.{role} {alive} remain.'],
     },
   };
-  const THEME_ORDER = ['smalltown', 'medieval', 'space', 'fantasy', 'dragons', 'dungeon', 'spies', 'fbi', 'rsp'];
-  // Themed display names (fall back to the role/team's own name).
-  const roleName = (themeId, roleId, fallback) => { const t = THEMES[themeId]; return (t && t.roleNames && t.roleNames[roleId]) || fallback; };
+  // ----- Worlds added in Themes v2 (their look, life and deaths live in public/theme-world.js) -----
+  THEMES.snow = {
+    name: 'Snowy Village', emoji: '❄️', townName: 'Frostvale', building: 'gable',
+    labels: { cemetery: 'FROZEN GRAVES' },
+    palette: { grass: '#e9f1f8', grassDark: '#c6d5e4', road: '#b7c2cf', roadEdge: '#8d99a8', plaza: '#dfe8f0', plazaEdge: '#a5b3c2', water: '#b9e2f5', tree: '#2f5d4a',
+      walls: ['#8a5a3a', '#a06a44', '#7a4e32', '#c8a27a', '#b5835a', '#9a6a4a'], roofs: ['#3a4a5a', '#5a3a2a', '#2e4058', '#6a2a2a', '#40505e'] },
+    night: '6,14,40', music: null,
+  };
+  THEMES.blocky = {
+    name: 'Block World', emoji: '🧱', townName: 'Cubeshire', building: 'block',
+    labels: { cemetery: 'BEDROCK' },
+    palette: { grass: '#62ad3f', grassDark: '#447f2b', road: '#9b7a52', roadEdge: '#6f5436', plaza: '#8f8f8f', plazaEdge: '#5f5f5f', water: '#3a6fd8', tree: '#2f7d23',
+      walls: ['#b08a5a', '#9a7448', '#c8c8c8', '#a0a0a0', '#c49a62'], roofs: ['#6b4a2b', '#5a5a5a', '#8a3a2a', '#3a5a2a'] },
+    night: '4,6,30', music: null,
+  };
+  THEMES.tabletop = {
+    name: 'Tabletop Quest', emoji: '🎲', townName: 'Tavern Tales', building: 'thatch',
+    labels: { cemetery: 'FALLEN HEROES' },
+    palette: { grass: '#e8d6ab', grassDark: '#d2ba88', road: '#c8a46a', roadEdge: '#8a6a3a', plaza: '#efe2c0', plazaEdge: '#9a7a4a', water: '#86aebd', tree: '#5a7a3a',
+      walls: ['#f2e6c8', '#e8d8b0', '#f6ecd2', '#eadcb8'], roofs: ['#8a3a2a', '#3a5a7a', '#5a4a2a', '#2a5a3a'] },
+    night: '24,14,6', music: null,
+  };
+  THEMES.realistic = {
+    name: 'Realistic', emoji: '📷', townName: 'Maple Hollow', building: 'gable',
+    labels: { cemetery: 'CEMETERY' },
+    palette: { grass: '#5d7f3b', grassDark: '#42612a', road: '#5f5d5a', roadEdge: '#454341', plaza: '#a39d92', plazaEdge: '#7a746a', water: '#3d6e85', tree: '#2f4f22',
+      walls: ['#d9d2c5', '#c9b9a3', '#e6e1d8', '#b8a48a', '#9fa6a8', '#cfc2ad'], roofs: ['#4a3f38', '#5a5f66', '#6b4a3a', '#3f4a52', '#5c4c44'] },
+    night: '8,12,26', music: null,
+  };
+  THEMES.noir = {
+    name: 'Noir', emoji: '🎬', townName: 'Rain City', building: 'office',
+    labels: { cemetery: 'POTTER’S FIELD' },
+    palette: { grass: '#4c4c4c', grassDark: '#353535', road: '#262626', roadEdge: '#161616', plaza: '#5a5a5a', plazaEdge: '#3a3a3a', water: '#707070', tree: '#2a2a2a',
+      walls: ['#9a9a9a', '#7a7a7a', '#b0b0b0', '#8a8a8a'], roofs: ['#222222', '#333333', '#2a2a2a'] },
+    night: '0,0,0', music: null,
+  };
+  // Themed text for the worlds above and the older non-classic themes (written in
+  // theme-text.js): role/team names, place labels and the narrator's voice. The
+  // classic look (Medieval Village "Mafia Town", Small Town) and RSP Supply stay as they are.
+  const TEXT = (typeof module !== 'undefined' && module.exports ? (() => { try { return require('./theme-text').THEME_TEXT; } catch (e) { return null; } })() : root.MT_THEME_TEXT && root.MT_THEME_TEXT.THEME_TEXT) || {};
+  for (const [id, t] of Object.entries(TEXT)) {
+    const th = THEMES[id]; if (!th || ['medieval', 'smalltown', 'rsp'].includes(id)) continue;
+    if (t.townName) th.townName = t.townName;
+    if (t.cemetery) th.labels = { ...th.labels, cemetery: t.cemetery };
+    if (t.civic) th.civic = { ...(th.civic || {}), ...t.civic };
+    if (t.teamNames) th.teamNames = t.teamNames;
+    if (t.roleNames) th.roleNames = t.roleNames;
+    if (t.narration) th.narration = t.narration;
+  }
+  const THEME_ORDER = ['medieval', 'smalltown', 'space', 'fantasy', 'dragons', 'dungeon', 'spies', 'fbi', 'snow', 'blocky', 'tabletop', 'realistic', 'noir', 'rsp'];
+  // Themed display names (fall back to the role/team's own name). A themed role keeps
+  // its real name beside it, so everyone knows what it does: "Med-Bay Surgeon (Doctor)".
+  const roleTitle = (themeId, roleId, fallback) => { const t = THEMES[themeId]; return (t && t.roleNames && t.roleNames[roleId]) || fallback; };
+  const roleName = (themeId, roleId, fallback) => { const themed = roleTitle(themeId, roleId, fallback); return themed && fallback && themed !== fallback ? `${themed} (${fallback})` : themed; };
   const teamName = (themeId, team, fallback) => { const t = THEMES[themeId]; return (t && t.teamNames && t.teamNames[team]) || fallback; };
-  const API = { THEMES, THEME_ORDER, roleName, teamName };
+  const API = { THEMES, THEME_ORDER, roleName, roleTitle, teamName };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.MT_THEMES = API;
 })(typeof window !== 'undefined' ? window : globalThis);

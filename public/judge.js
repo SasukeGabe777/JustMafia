@@ -229,6 +229,7 @@
     const c = $('#sc-map'), g = c.getContext('2d');
     const k = c.width / LAY.W;
     g.setTransform(k, 0, 0, k, 0, 0);
+    if (LAY.applyVariant) LAY.applyVariant(window.MT_THEME_WORLD ? window.MT_THEME_WORLD.variant(st.theme) : null); // the world's pond/graveyard spots
     const th = (THEMES.THEMES[st.theme] || THEMES.THEMES.smalltown).palette;
     g.fillStyle = th.grass; g.fillRect(0, 0, LAY.W, LAY.H);
     g.strokeStyle = th.road; g.lineWidth = 36;

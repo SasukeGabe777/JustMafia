@@ -94,6 +94,21 @@ window.SFX = (function () {
     reveal: () => [262, 330, 392, 523].forEach((f, i) => tone(f, 0.9, { type: 'triangle', vol: 0.12, at: i * 0.06 })),
     shutter: () => { noise(0.04, { vol: 0.7, filter: 4000, type: 'highpass' }); noise(0.06, { vol: 0.5, at: 0.07, filter: 2500, type: 'highpass' }); },
     glitch: () => { for (let i = 0; i < 8; i++) tone(200 + Math.random() * 1800, 0.05, { type: 'square', vol: 0.06, at: i * 0.04 }); },
+    // ---- Themes v2: each world's weapons and deaths ----
+    vaporize: () => { tone(300, 0.5, { type: 'sawtooth', vol: 0.08, slide: 2400 }); tone(1800, 0.35, { type: 'square', vol: 0.05, at: 0.05, slide: 200 }); noise(0.5, { vol: 0.2, at: 0.1, filter: 6000, type: 'highpass' }); },
+    petrify: () => { [1568, 1319, 1047, 784].forEach((f, i) => tone(f, 0.3, { type: 'sine', vol: 0.08, at: i * 0.05 })); noise(0.7, { vol: 0.3, at: 0.25, filter: 300 }); tone(70, 0.6, { vol: 0.3, at: 0.25 }); },
+    fireBreath: () => { noise(0.9, { vol: 0.5, filter: 900 }); noise(0.6, { vol: 0.3, at: 0.1, filter: 2400, type: 'bandpass' }); tone(90, 0.8, { type: 'sawtooth', vol: 0.08, slide: 60 }); },
+    roar: () => { tone(120, 1.1, { type: 'sawtooth', vol: 0.16, slide: 60 }); tone(127, 1.1, { type: 'sawtooth', vol: 0.12, slide: 64 }); noise(1.0, { vol: 0.3, filter: 500 }); },
+    venom: () => { noise(0.7, { vol: 0.3, filter: 5000, type: 'highpass' }); for (let i = 0; i < 4; i++) tone(500 + i * 90, 0.08, { vol: 0.06, at: 0.2 + i * 0.12, slide: 900 }); },
+    suppressed: () => { noise(0.08, { vol: 0.6, filter: 1400, type: 'bandpass' }); tone(220, 0.08, { vol: 0.15, slide: 90 }); },
+    laserBeep: () => tone(2200, 0.18, { type: 'square', vol: 0.04 }),
+    revolver: () => { noise(0.3, { vol: 1.0, filter: 2200 }); tone(80, 0.4, { vol: 0.6, slide: 35 }); noise(0.9, { vol: 0.18, at: 0.25, filter: 700 }); }, // with an echo down the street
+    siren: () => { for (let i = 0; i < 4; i++) tone(i % 2 ? 660 : 880, 0.4, { type: 'triangle', vol: 0.05, at: 0.6 + i * 0.4 }); },
+    freeze: () => { for (let i = 0; i < 7; i++) tone(2600 + Math.random() * 2600, 0.2, { type: 'triangle', vol: 0.05, at: i * 0.03 }); noise(0.4, { vol: 0.35, filter: 4000, type: 'highpass' }); tone(1200, 0.5, { vol: 0.04, at: 0.1, slide: 3000 }); },
+    crunch: () => { for (let i = 0; i < 5; i++) tone(180 - i * 20, 0.06, { type: 'square', vol: 0.12, at: i * 0.05 }); noise(0.25, { vol: 0.25, filter: 1200 }); [784, 523].forEach((f, i) => tone(f, 0.12, { type: 'square', vol: 0.05, at: 0.3 + i * 0.1 })); },
+    arrow: () => { noise(0.25, { vol: 0.25, filter: 3000, type: 'bandpass' }); tone(140, 0.12, { vol: 0.4, at: 0.22, slide: 70 }); },
+    diceRoll: () => { for (let i = 0; i < 9; i++) noise(0.03, { vol: 0.35 - i * 0.03, at: i * 0.07 + Math.random() * 0.02, filter: 3200, type: 'bandpass' }); [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.1, at: 0.7 + i * 0.08 })); },
+    stab: () => { noise(0.12, { vol: 0.35, filter: 900 }); tone(110, 0.3, { vol: 0.35, at: 0.04, slide: 50 }); },
   };
 
   // ---- looping music beds (synthesized pads) ----
@@ -119,7 +134,7 @@ window.SFX = (function () {
     if (bed && bed.mood === mood && bed.root === root && bed.theme === theme) return;
     stopBed();
     if (!c || !MOODS[mood] || !enabled) return;
-    const kits = { medieval: { type: 'triangle', cutoff: 1100 }, space: { type: 'sine', wobble: 4, cutoff: 2200 }, fantasy: { type: 'sine', wobble: 2, cutoff: 2600 }, dragons: { type: 'sawtooth', cutoff: 450 }, dungeon: { type: 'triangle', cutoff: 400 }, spies: { type: 'triangle', pulse: 1.2 }, fbi: { type: 'sine', pulse: 0.8 } };
+    const kits = { snow: { type: 'sine', cutoff: 3000, wobble: 1 }, blocky: { type: 'square', cutoff: 1300 }, tabletop: { type: 'triangle', cutoff: 1600 }, realistic: { type: 'sine', cutoff: 1500 }, noir: { type: 'triangle', cutoff: 900, wobble: 3, pulse: 0.5 }, medieval: { type: 'triangle', cutoff: 1100 }, space: { type: 'sine', wobble: 4, cutoff: 2200 }, fantasy: { type: 'sine', wobble: 2, cutoff: 2600 }, dragons: { type: 'sawtooth', cutoff: 450 }, dungeon: { type: 'triangle', cutoff: 400 }, spies: { type: 'triangle', pulse: 1.2 }, fbi: { type: 'sine', pulse: 0.8 } };
     const m = { ...MOODS[mood], ...(kits[theme] || {}) };
     const gain = c.createGain();
     const filt = c.createBiquadFilter();

@@ -71,8 +71,61 @@
     weapon: 'stapler', root: 100, assassin: { cloak: '#0f2a63', trim: '#ffd21f', eyes: '#ffd21f', suit: true },
     room: { style: 'bedroom', wall: '#2a4f9e', wall2: '#244586', floor: '#5a6272', floor2: '#4e5564', trim: '#ffd21f', sky: '#071433' },
   };
-  const THEME_KIT = { smalltown: 'modern', medieval: 'medieval', space: 'space', fantasy: 'fantasy', dragons: 'dragons', dungeon: 'dungeon', spies: 'spies', fbi: 'fbi', rsp: 'rsp' };
-  const RANGED = { blaster: { color: '#30fff0', sfx: 'zap' }, pistol: { color: '#ffd76a', sfx: 'shot' }, wand: { color: '#d080ff', sfx: 'zap' } };
+  // Themes v2: how each world kills. weapon = what the attacker carries; burst = the impact
+  // effect; mark = what is left on the ground (replaces the blood pool); body = how the
+  // fallen body looks (a CSS filter: petrified, charred, frozen...); strike/die = sounds.
+  // The classic kits (modern, medieval, rsp) keep the original knife, pool and sounds.
+  Object.assign(KITS.space, { weapon: 'blaster', burst: 'dust', mark: 'dust', body: 'saturate(0) brightness(1.9) opacity(0.55)', die: 'vaporize' });
+  Object.assign(KITS.fantasy, { weapon: 'wand', burst: 'sparkle', mark: 'stone', body: 'grayscale(1) brightness(0.9) contrast(1.3)', die: 'petrify' });
+  Object.assign(KITS.dragons, { weapon: 'firebrand', burst: 'fire', mark: 'ash', body: 'brightness(0.28) sepia(0.5)', die: 'roar' });
+  Object.assign(KITS.dungeon, { weapon: 'poisonDagger', burst: 'venom', mark: 'venom', body: 'hue-rotate(75deg) saturate(1.5) brightness(0.85)', die: 'venom', strike: 'slash' });
+  Object.assign(KITS.spies, { weapon: 'silenced', burst: 'blood', mark: 'blood', die: 'fall' });
+  Object.assign(KITS.fbi, { weapon: 'revolver', burst: 'blood', mark: 'chalk', die: 'siren' });
+  KITS.snow = { weapon: 'icicle', root: 116, burst: 'ice', mark: 'ice', body: 'saturate(0.25) brightness(1.3) hue-rotate(170deg)', die: 'freeze', strike: 'freeze',
+    assassin: { cloak: '#e8eef4', trim: '#9fb4c8', eyes: '#7fe0ff', hood: true },
+    room: { style: 'cottage', wall: '#7a5a44', wall2: '#684b38', floor: '#8a6a4a', floor2: '#7a5a3e', trim: '#e8f0f7', sky: '#0a1430' } };
+  KITS.blocky = { weapon: 'pixelSword', root: 98, burst: 'cubes', mark: 'cubes', body: 'opacity(0)', die: 'crunch', strike: 'crunch',
+    assassin: { cloak: '#2f5a24', trim: '#1f3a18', eyes: '#ff3030', suit: true },
+    room: { style: 'cottage', wall: '#9a7448', wall2: '#8a6438', floor: '#7a7a7a', floor2: '#6a6a6a', trim: '#5a3a1e', sky: '#0a1030' } };
+  KITS.tabletop = { weapon: 'bow', root: 104, burst: 'crit', mark: 'crit', die: 'diceRoll',
+    assassin: { cloak: '#5a3a1e', trim: '#3a2414', eyes: '#ffd36b', hood: true },
+    room: { style: 'cottage', wall: '#8a6a44', wall2: '#7a5a38', floor: '#6a4a2a', floor2: '#5a3e22', trim: '#e8d6ab', sky: '#1a1008' } };
+  KITS.realistic = { weapon: 'knife', root: 92, burst: 'blood', mark: 'bloodReal', die: 'fall', strike: 'stab',
+    assassin: { cloak: '#1c1d20', trim: '#2c2d31', eyes: '#2a2a2a', hood: true },
+    room: { style: 'bedroom', wall: '#a39684', wall2: '#93876f', floor: '#6a5038', floor2: '#5a432e', trim: '#e6e1d8', sky: '#0a0e1a' } };
+  KITS.noir = { weapon: 'revolver', root: 87, burst: 'blood', mark: 'blood', die: 'fall',
+    assassin: { cloak: '#151515', trim: '#2a2a2a', eyes: '#e8e8e8', suit: true },
+    room: { style: 'bedroom', wall: '#5a5a5a', wall2: '#4a4a4a', floor: '#3a3a3a', floor2: '#303030', trim: '#bbbbbb', sky: '#050505' } };
+  const THEME_KIT = { smalltown: 'modern', medieval: 'medieval', space: 'space', fantasy: 'fantasy', dragons: 'dragons', dungeon: 'dungeon', spies: 'spies', fbi: 'fbi', rsp: 'rsp', snow: 'snow', blocky: 'blocky', tabletop: 'tabletop', realistic: 'realistic', noir: 'noir' };
+  const RANGED = { blaster: { color: '#30fff0', sfx: 'vaporize' }, pistol: { color: '#ffd76a', sfx: 'shot' }, wand: { color: '#d080ff', sfx: 'petrify' },
+    firebrand: { color: '#ff8a20', sfx: 'fireBreath', fire: true }, silenced: { color: '#ff2a2a', sfx: 'suppressed', laser: true }, revolver: { color: '#fff2b0', sfx: 'revolver', muzzle: true },
+    bow: { color: '#c9a66b', sfx: 'arrow', arrow: true } };
+
+  // What a death leaves on the ground in each world (replaces the blood pool).
+  function drawMark(ctx, p, t, s) {
+    const g = clamp((t - p.t0) / p.dur, 0, 1), e = EASE.out(g), rad = (6 + 26 * e) * s;
+    const oval = (c, x, y, rx, ry) => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); ctx.fill(); };
+    ctx.save();
+    switch (p.mark) {
+      case 'ash': oval('#2a2624', p.x, p.y + 2 * s, rad * 1.3, rad * 0.42); oval('#4a4440', p.x - rad * 0.3, p.y, rad * 0.6, rad * 0.2);
+        for (let i = 0; i < 6; i++) { const f = 0.5 + 0.5 * Math.sin(t * 6 + i * 2); ctx.fillStyle = `rgba(255,${120 + i * 15},40,${0.5 + 0.5 * f})`; ctx.fillRect(p.x - rad + i * rad * 0.35, p.y - 1 * s + (i % 2) * 2 * s, 2 * s, 2 * s); } break;
+      case 'dust': oval(`rgba(48,255,240,${0.18 * (1 - g * 0.5)})`, p.x, p.y + 2 * s, rad * 1.5, rad * 0.5); ctx.strokeStyle = 'rgba(160,255,250,0.7)'; ctx.lineWidth = 1.5 * s; ctx.beginPath(); ctx.ellipse(p.x, p.y + 2 * s, rad * 1.2, rad * 0.38, 0, 0, TAU); ctx.stroke();
+        for (let i = 0; i < 8; i++) { const k = (t * 0.5 + i / 8) % 1; ctx.fillStyle = `rgba(160,255,250,${0.7 * (1 - k)})`; ctx.fillRect(p.x - rad + i * rad * 0.28, p.y - k * 40 * s, 2 * s, 2 * s); } break;
+      case 'stone': for (let i = 0; i < 7; i++) { ctx.fillStyle = i % 2 ? '#8a8a90' : '#6a6a72'; ctx.beginPath(); const x = p.x - rad + i * rad * 0.32, y = p.y + (i % 3) * 2 * s; ctx.moveTo(x, y); ctx.lineTo(x + 5 * s, y - 6 * s * e); ctx.lineTo(x + 10 * s, y); ctx.fill(); }
+        ctx.fillStyle = `rgba(208,128,255,${0.4 + 0.3 * Math.sin(t * 4)})`; ctx.fillRect(p.x - 2 * s, p.y - 12 * s, 2 * s, 2 * s); ctx.fillRect(p.x + 8 * s, p.y - 6 * s, 2 * s, 2 * s); break;
+      case 'venom': oval('#2f6a24', p.x, p.y + 2 * s, rad * 1.3, rad * 0.42); oval('#7dff6a', p.x - rad * 0.2, p.y + 1 * s, rad * 0.8, rad * 0.24);
+        for (let i = 0; i < 4; i++) { const k = (t * 0.8 + i / 4) % 1; ctx.strokeStyle = `rgba(160,255,140,${0.8 * (1 - k)})`; ctx.lineWidth = 1.2 * s; ctx.beginPath(); ctx.arc(p.x - rad * 0.5 + i * rad * 0.35, p.y - k * 8 * s, (1 + k * 3) * s, 0, TAU); ctx.stroke(); } break;
+      case 'chalk': ctx.strokeStyle = `rgba(245,245,245,${e})`; ctx.lineWidth = 2 * s; ctx.setLineDash([]); const cx = p.x + 34 * s; ctx.beginPath(); ctx.ellipse(cx, p.y + 1 * s, 46 * s, 11 * s, 0, 0, TAU); ctx.stroke(); // the outline lies around the fallen body
+        ctx.beginPath(); ctx.moveTo(cx - 46 * s, p.y); ctx.lineTo(cx - 56 * s, p.y - 5 * s); ctx.moveTo(cx + 42 * s, p.y + 4 * s); ctx.lineTo(cx + 54 * s, p.y + 8 * s); ctx.stroke();
+        ctx.fillStyle = '#ffd21f'; ctx.beginPath(); ctx.moveTo(p.x - 30 * s, p.y - 10 * s); ctx.lineTo(p.x - 24 * s, p.y - 20 * s); ctx.lineTo(p.x - 18 * s, p.y - 10 * s); ctx.fill(); ctx.fillStyle = '#111'; ctx.font = `700 ${Math.round(7 * s)}px monospace`; ctx.textAlign = 'center'; ctx.fillText('1', p.x - 24 * s, p.y - 11 * s); break;
+      case 'ice': oval('rgba(200,240,255,0.55)', p.x, p.y + 2 * s, rad * 1.3, rad * 0.42); ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.2 * s;
+        for (let i = 0; i < 5; i++) { const a = i / 5 * TAU; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + Math.cos(a) * rad * 1.1, p.y + Math.sin(a) * rad * 0.35); ctx.stroke(); } break;
+      case 'cubes': for (let i = 0; i < 12; i++) { const x = p.x - rad + (i * 37 % 100) / 100 * rad * 2, y = p.y - ((i * 53) % 7) * s, c = ['#c0392b', '#d9a273', '#3a3a3a', '#ffffff', '#6b4a2b'][i % 5]; ctx.fillStyle = c; ctx.fillRect(x, y - 4 * s * e, 4 * s, 4 * s); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x, y - 1 * s * e, 4 * s, 1 * s); } break;
+      case 'crit': oval('#5c0b10', p.x, p.y + 2 * s, rad * 1.1, rad * 0.36); ctx.fillStyle = '#6a4424'; ctx.save(); ctx.translate(p.x + 6 * s, p.y - 6 * s); ctx.rotate(-0.6); ctx.fillRect(-14 * s, -1 * s, 18 * s, 2 * s); ctx.fillStyle = '#e8e2cf'; ctx.fillRect(-16 * s, -3 * s, 4 * s, 6 * s); ctx.restore(); break;
+      case 'bloodReal': oval('#3a0508', p.x, p.y + 2 * s, rad * 1.35, rad * 0.4); oval('#5a0a0e', p.x - rad * 0.25, p.y + 1 * s, rad * 0.9, rad * 0.26); oval('rgba(255,255,255,0.12)', p.x - rad * 0.5, p.y, rad * 0.25, rad * 0.06); break;
+    }
+    ctx.restore();
+  }
 
   // ---------- figures ----------
   function drawWeapon(ctx, kind) {
@@ -100,6 +153,35 @@
         ctx.fillStyle = '#1f4fa8'; roundRect(ctx, -2, -5, 22, 6, 2); ctx.fill();
         ctx.fillStyle = '#ffd21f'; ctx.fillRect(0, 1, 22, 3);
         ctx.fillStyle = '#c8ced6'; ctx.fillRect(18, -3, 4, 2);
+        break;
+      case 'icicle':
+        ctx.fillStyle = '#d8f2ff'; ctx.beginPath(); ctx.moveTo(-2, -3); ctx.lineTo(30, 0); ctx.lineTo(-2, 3); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(2, -1, 16, 1);
+        break;
+      case 'pixelSword':
+        ctx.fillStyle = '#6b4a2b'; ctx.fillRect(-4, -2, 8, 4); ctx.fillStyle = '#3a3a3a'; ctx.fillRect(3, -6, 3, 12);
+        ctx.fillStyle = '#9fe8ff'; ctx.fillRect(6, -3, 22, 6); ctx.fillStyle = '#5ad0f0'; ctx.fillRect(6, 1, 22, 2); ctx.fillStyle = '#9fe8ff'; ctx.fillRect(28, -2, 3, 4);
+        break;
+      case 'bow':
+        ctx.strokeStyle = '#6a4424'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(4, 0, 14, -1.2, 1.2); ctx.stroke();
+        ctx.strokeStyle = '#e8e2cf'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(4 + Math.cos(-1.2) * 14, Math.sin(-1.2) * 14); ctx.lineTo(4 + Math.cos(1.2) * 14, Math.sin(1.2) * 14); ctx.stroke();
+        break;
+      case 'revolver':
+        ctx.fillStyle = '#2a2a2a'; ctx.fillRect(0, 1, 6, 9); ctx.fillStyle = '#4a4a4a'; roundRect(ctx, -2, -4, 14, 7, 2); ctx.fill(); ctx.fillStyle = '#6a6a6a'; ctx.fillRect(10, -3, 14, 3);
+        break;
+      case 'silenced':
+        ctx.fillStyle = '#1a1a1e'; roundRect(ctx, -2, -3, 16, 6, 2); ctx.fill(); ctx.fillRect(0, 1, 5, 8); ctx.fillStyle = '#3a3a42'; ctx.fillRect(14, -2.5, 16, 5);
+        ctx.fillStyle = '#ff2a2a'; ctx.fillRect(30, -1, 2, 2);
+        break;
+      case 'poisonDagger':
+        ctx.fillStyle = '#3a2a1e'; ctx.fillRect(-2, -3, 8, 6); ctx.fillStyle = '#5a5a62'; ctx.fillRect(5, -6, 3, 12);
+        ctx.fillStyle = '#c8d0c0'; ctx.beginPath(); ctx.moveTo(8, -3); ctx.lineTo(28, 0); ctx.lineTo(8, 3); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#7dff6a'; ctx.shadowColor = '#7dff6a'; ctx.shadowBlur = 8; ctx.fillRect(12, -1, 14, 2); ctx.beginPath(); ctx.arc(28, 3, 1.6, 0, TAU); ctx.fill();
+        break;
+      case 'firebrand': // a dragon-claw gauntlet that breathes fire
+        ctx.fillStyle = '#5a2a18'; roundRect(ctx, -2, -5, 16, 10, 3); ctx.fill();
+        ctx.fillStyle = '#e9e2cf'; for (const y of [-5, 0, 4]) { ctx.beginPath(); ctx.moveTo(14, y - 1); ctx.lineTo(22, y + 1); ctx.lineTo(14, y + 2); ctx.fill(); }
+        ctx.fillStyle = '#ff8a20'; ctx.shadowColor = '#ff8a20'; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(6, 0, 3, 0, TAU); ctx.fill();
         break;
       case 'wand':
         ctx.fillStyle = '#5a3a1e'; ctx.fillRect(-2, -2, 24, 4);
@@ -253,7 +335,7 @@
       const d = clamp((t - a.decayAnim.t0) / a.decayAnim.dur, 0, 1);
       ctx.filter = `grayscale(${d}) sepia(${d * 0.55}) brightness(${1 - d * 0.4})`;
       ctx.globalAlpha *= 1 - clamp((d - 0.55) / 0.45, 0, 1);
-    }
+    } else if (a.deathFilter && t - a.deathFilter.t0 > 0.35) ctx.filter = a.deathFilter.filter; // petrified, charred, frozen, vaporized...
     if (a.pose === 'hang') {
       // Trapdoor drop: falls from the deck, jerks to a stop on the rope, then sways from the beam.
       const since = t - (a.hangT || 0), dp = clamp(since / 0.22, 0, 1);
@@ -880,7 +962,8 @@
       const strikeAt = this.scene.t + (ranged ? 0.3 : 0.32);
       this.scene.steps.splice(this.scene.idx, 0, [strikeAt, 'strike', { id: a.id, target: a.target, blocked: !!a.blocked }]);
       this.scene.steps.sort((p, q) => p[0] - q[0]);
-      SFX.play('whoosh');
+      if (ranged && ranged.laser && target) { const s = target.scale || 1; this.fx.push({ type: 'laserdot', x: target.x, y: target.y - 34 * s, life: 0.32, max: 0.32, stage: this.stage }); }
+      SFX.play(ranged && ranged.laser ? 'laserBeep' : 'whoosh');
     }
     a_strike(a) { // the moment an attack lands
       const x = this.actors.get(a.id);
@@ -891,32 +974,41 @@
       const hit = { x: target.x, y: target.y - 32 * s };
       if (ranged) {
         const from = { x: x.x + x.facing * 34 * (x.scale || 1), y: x.y - 32 * (x.scale || 1) };
-        this.fx.push({ type: 'bolt', x0: from.x, y0: from.y, x1: hit.x, y1: hit.y, color: ranged.color, life: 0.25, max: 0.25, stage: this.stage });
-        this.fx.push({ type: 'glow', x: from.x, y: from.y, r: 40 * (x.scale || 1) / 3, color: ranged.color, life: 0.18, max: 0.18, stage: this.stage });
+        if (ranged.arrow) this.fx.push({ type: 'arrow', x0: from.x, y0: from.y, x1: hit.x, y1: hit.y, life: 0.3, max: 0.3, stage: this.stage });
+        else if (ranged.fire) for (let i = 0; i < 16; i++) { const k = i / 16; this.fx.push({ type: 'flame', x: lerp(from.x, hit.x, k), y: lerp(from.y, hit.y, k) + (Math.random() - 0.5) * 10, vx: (hit.x - from.x) * 0.4, vy: -30, g: -40, r: (5 + k * 10) * (x.scale || 1) / 3 * 2, life: 0.4 + k * 0.3, max: 0.4 + k * 0.3, stage: this.stage }); }
+        else this.fx.push({ type: 'bolt', x0: from.x, y0: from.y, x1: hit.x, y1: hit.y, color: ranged.color, life: 0.25, max: 0.25, stage: this.stage });
+        this.fx.push({ type: 'glow', x: from.x, y: from.y, r: (ranged.muzzle ? 70 : 40) * (x.scale || 1) / 3, color: ranged.color, life: ranged.muzzle ? 0.12 : 0.18, max: ranged.muzzle ? 0.12 : 0.18, stage: this.stage });
+        if (ranged.muzzle) this.flash = { a: 0.45, color: '255,250,220' };
         SFX.play(ranged.sfx);
       } else {
         x.knock = { t0: this.scene.t, x0: x.x, dx: x.facing * 40 * (x.scale || 1) / 3 };
         this.fx.push({ type: 'slash', x: hit.x, y: hit.y, r: 34 * s, dir: x.facing, life: 0.35, max: 0.35, stage: this.stage });
-        SFX.play('slash');
+        SFX.play(this.ctx.kit.strike || 'slash');
       }
     }
     a_hit(a) {
       const x = this.actors.get(a.id);
       if (!x) return;
-      this.flash = { a: 0.55, color: '255,40,40' };
+      const burst = this.ctx.kit.burst || 'blood', s = x.scale || 1, hx = x.x, hy = x.y - 34 * s;
+      const FLASH = { fire: '255,140,30', ice: '170,230,255', dust: '120,255,240', sparkle: '200,120,255', venom: '120,255,100', cubes: '255,255,255', crit: '255,220,90' };
+      this.flash = { a: 0.55, color: FLASH[burst] || '255,40,40' };
       this.shake = 0.8;
       SFX.play('hit');
-      x.knock = { t0: this.scene.t, x0: x.x, dx: (a.dir || 1) * 26 * (x.scale || 1) / 3 };
-      for (let i = 0; i < 18; i++) {
-        const ang = Math.random() * TAU, v = 80 + Math.random() * 240;
-        this.fx.push({ type: 'spark', x: x.x, y: x.y - 34 * (x.scale || 1), vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 80, g: 500, color: Math.random() < 0.5 ? '#ff3a3a' : '#ffd0d0', size: 3 + Math.random() * 4, life: 0.7, max: 0.7, stage: this.stage });
+      x.knock = { t0: this.scene.t, x0: x.x, dx: (a.dir || 1) * 26 * s / 3 };
+      const COLORS = { blood: ['#ff3a3a', '#ffd0d0'], fire: ['#ff8a20', '#ffd36b', '#ff4a10'], ice: ['#dff4ff', '#9fe0ff', '#ffffff'], dust: ['#9ffff0', '#30fff0', '#ffffff'], sparkle: ['#d080ff', '#ffffff', '#ff9ad8'], venom: ['#7dff6a', '#3a9a2a'], cubes: [x.avatar && x.avatar.color || '#c0392b', x.avatar && x.avatar.skin || '#d9a273', '#ffffff', '#3a3a3a'], crit: ['#ffd36b', '#ffffff'] }[burst] || ['#ff3a3a', '#ffd0d0'];
+      const type = burst === 'ice' ? 'shard' : burst === 'cubes' ? 'cube' : burst === 'fire' ? 'flame' : 'spark';
+      for (let i = 0; i < (burst === 'cubes' ? 26 : 18); i++) {
+        const ang = Math.random() * TAU, v = 80 + Math.random() * 240, up = burst === 'dust' || burst === 'fire';
+        this.fx.push({ type, x: hx, y: hy, vx: Math.cos(ang) * v * (up ? 0.4 : 1), vy: up ? -60 - Math.random() * 120 : Math.sin(ang) * v - 80, g: up ? -20 : 500, color: COLORS[i % COLORS.length], size: (burst === 'cubes' ? 4 : 3) + Math.random() * 4, r: (6 + Math.random() * 8) * s / 2, life: 0.7 + (up ? 0.5 : 0), max: 0.7 + (up ? 0.5 : 0), stage: this.stage });
       }
+      if (burst === 'crit') this.fx.push({ type: 'die', x: hx, y: hy - 40 * s, r: 22 * s / 2, life: 1.6, max: 1.6, stage: this.stage });
     }
     a_die(a) {
       const x = this.actors.get(a.id);
       if (!x) return;
       x.pose = 'dead'; x.fallT = this.scene.t; x.walking = false; x.move = null;
-      SFX.play('fall');
+      SFX.play(this.ctx.kit.die || 'fall');
+      if (this.ctx.kit.body && x.kind === 'resident') x.deathFilter = { filter: this.ctx.kit.body, t0: this.scene.t };
       if (x.kind === 'resident') this.farewell(x);
     }
     a_shield(a) {
@@ -1122,7 +1214,7 @@
       const p = this.pt(a.at || 'gallows'), A = a.at && a.at.actor ? this.actors.get(a.at.actor) : null;
       // Indoors the camera is close, so props take the actor's (much larger) scale.
       const scale = A && this.stage === 'interior' ? A.scale * 0.85 : (this.ctx.house ? this.ctx.house.s : 0.72) * 1.05;
-      this.props.push({ type: a.type, x: p.x, y: p.y, t0: this.scene.t, dur: a.dur || 1, scale, stage: this.stage });
+      this.props.push({ type: a.type, x: p.x, y: p.y, t0: this.scene.t, dur: a.dur || 1, scale, stage: this.stage, mark: a.type === 'pool' ? this.ctx.kit.mark : undefined });
     }
     drawProp(ctx, p, t) {
       const s = p.scale / 0.756, r = (c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(p.x + x * s, p.y + y * s, w * s, h * s); };
@@ -1145,6 +1237,8 @@
         r('#3a3a42', 44, -D - 6, 9, 4);
         // empty noose when no one is in it
         if (!this.hanging() && ![...this.actors.values()].some((a) => a.noosed)) { ctx.strokeStyle = '#c9a66b'; ctx.lineWidth = 2.2 * s; ctx.beginPath(); ctx.moveTo(p.x, p.y - (B - 4) * s); ctx.lineTo(p.x, p.y - (D + 48) * s); ctx.stroke(); ctx.beginPath(); ctx.ellipse(p.x, p.y - (D + 42) * s, 5 * s, 7 * s, 0, 0, TAU); ctx.stroke(); }
+      } else if (p.type === 'pool' && p.mark && p.mark !== 'blood') {
+        drawMark(ctx, p, t, s);
       } else if (p.type === 'pool') {
         const g = clamp((t - p.t0) / p.dur, 0, 1), rad = (6 + 26 * EASE.out(g)) * s;
         ctx.fillStyle = '#5c0b10'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 2 * s, rad * 1.3, rad * 0.42, 0, 0, TAU); ctx.fill();
@@ -1387,6 +1481,33 @@
             ctx.globalAlpha = 0.5 * (1 - p);
             ctx.fillStyle = e.color || '#4a4458'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r * (e.color ? 1 : 1 + p), 0, TAU); ctx.fill();
             break;
+          case 'flame': {
+            const k = 1 - p; ctx.globalAlpha = Math.max(0, k);
+            ctx.fillStyle = p < 0.3 ? '#fff0a0' : p < 0.6 ? '#ff9a2a' : '#c0401a'; ctx.beginPath(); ctx.arc(e.x, e.y, (e.r || 6) * (0.6 + p), 0, TAU); ctx.fill();
+            break;
+          }
+          case 'cube':
+            ctx.globalAlpha = Math.max(0, e.life / e.max); ctx.fillStyle = e.color; ctx.translate(e.x, e.y); ctx.rotate(e.life * 4); ctx.fillRect(-e.size / 2, -e.size / 2, e.size, e.size);
+            ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(-e.size / 2, e.size / 4, e.size, e.size / 4);
+            break;
+          case 'arrow': {
+            const k = Math.min(1, p * 3), x = lerp(e.x0, e.x1, k), y = lerp(e.y0, e.y1, k), ang = Math.atan2(e.y1 - e.y0, e.x1 - e.x0);
+            ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = '#6a4424'; ctx.fillRect(-26, -1.2, 26, 2.4); ctx.fillStyle = '#c8ced6'; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(8, 0); ctx.lineTo(0, 4); ctx.fill();
+            ctx.fillStyle = '#e8e2cf'; ctx.fillRect(-28, -4, 6, 3); ctx.fillRect(-28, 1, 6, 3);
+            break;
+          }
+          case 'laserdot':
+            ctx.fillStyle = '#ff2a2a'; ctx.shadowColor = '#ff2a2a'; ctx.shadowBlur = 10; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(p * 40); ctx.beginPath(); ctx.arc(e.x, e.y, 3, 0, TAU); ctx.fill();
+            break;
+          case 'die': { // a critical hit: the d20 pops up showing 20
+            const pop = Math.min(1, p * 4), y = e.y - 30 * EASE.out(Math.min(1, p * 2));
+            ctx.globalAlpha = p > 0.8 ? (1 - p) / 0.2 : 1; ctx.translate(e.x, y); ctx.rotate((1 - pop) * 4); ctx.scale(pop, pop);
+            ctx.fillStyle = '#8a1f2a'; ctx.beginPath(); for (let k = 0; k < 6; k++) { const a2 = k * Math.PI / 3 + Math.PI / 6; ctx.lineTo(Math.cos(a2) * e.r, Math.sin(a2) * e.r); } ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, -e.r); ctx.lineTo(-e.r * 0.86, e.r * 0.5); ctx.lineTo(e.r * 0.86, e.r * 0.5); ctx.closePath(); ctx.stroke();
+            ctx.fillStyle = '#ffd36b'; ctx.font = `700 ${Math.round(e.r * 0.8)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('20', 0, e.r * 0.1);
+            ctx.font = `700 ${Math.round(e.r * 0.6)}px 'Pixelify Sans', monospace`; ctx.fillStyle = '#fff'; ctx.fillText('CRIT!', 0, -e.r * 1.6);
+            break;
+          }
           case 'glint':
             ctx.globalAlpha = 1 - p; ctx.strokeStyle = '#fff6c0'; ctx.lineWidth = 3; ctx.shadowColor = '#fff'; ctx.shadowBlur = 12;
             ctx.beginPath(); ctx.moveTo(e.x - e.r * (1 + p), e.y); ctx.lineTo(e.x + e.r * (1 + p), e.y); ctx.moveTo(e.x, e.y - e.r * (1 + p)); ctx.lineTo(e.x, e.y + e.r * (1 + p)); ctx.stroke();

@@ -32,7 +32,7 @@ const sandbox = {
 };
 sandbox.window.SFX = sandbox.SFX;
 vm.createContext(sandbox);
-for (const f of ['shared/options.js', 'shared/roles.js', 'shared/themes.js', 'shared/layout.js', 'avatar.js', 'character-art.js', 'world-art.js', 'pixel.js', 'cinema.js', 'scenes.js', 'town.js']) {
+for (const f of ['shared/options.js', 'shared/roles.js', 'shared/theme-text.js', 'shared/themes.js', 'shared/layout.js', 'avatar.js', 'character-art.js', 'world-art.js', 'theme-world.js', 'pixel.js', 'cinema.js', 'scenes.js', 'town.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf8').replace('typeof window !== \'undefined\' ? window : globalThis', 'window'), sandbox, { filename: f });
 }
 // options.js assigns to window.MT_OPTIONS; town.js reads window.*

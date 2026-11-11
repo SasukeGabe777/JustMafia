@@ -57,6 +57,7 @@
     if (av.accessory === 'backpack' || av.accessory === 'satchel') { rect('#392c26', -14, -29, 28, 22); rect('#8e7048', -13, -28, 6, 19); }
     // Behind the body: capes and wings.
     if (av.accessory === 'cape') { rect('#3a0f1a', -16, -33, 32, 32); rect('#7a2236', -15, -32, 30, 30); rect('#d6af53', -15, -33, 30, 2); }
+    if (av.accessory === 'fairyWings') { const flap = Math.sin(t * 6) * 2; for (const s of [-1, 1]) { rect('rgba(190,240,255,0.75)', s > 0 ? 9 : -21 + 0, -46 - flap, 12, 14); rect('rgba(255,190,240,0.7)', s > 0 ? 9 : -19, -32 + flap, 10, 9); rect('rgba(255,255,255,0.8)', s > 0 ? 12 : -18, -44 - flap, 2, 10); } }
     if (av.accessory === 'wings' || av.accessory === 'batWings') {
       const bat = av.accessory === 'batWings', flap = Math.sin(t * 3) * 2, c1 = bat ? '#2a1a2e' : '#f4f1e6', c2 = bat ? '#5a2a4e' : '#d9e6f2';
       for (let i = 0; i < 5; i++) { const h = 20 - i * 3, dy = -42 + i * 2 - flap * (i / 4); rect(c1, 9 + i * 3, dy, 3, h); rect(c1, -12 - i * 3, dy, 3, h); }
@@ -100,6 +101,20 @@
     if (outfit === 'royalRobe') { rect('#5a2a8a', -10, -32, 20, 22); rect('#f2ead6', -11, -33, 22, 4); for (let i = 0; i < 5; i++) rect('#2b2018', -9 + i * 4, -32, 1, 2); rect('#d6af53', -1, -29, 2, 16); }
     if (outfit === 'cyber') { rect('#1a2030', -9, -32, 18, 22); rect('#3af0ff', -9, -24, 18, 1); rect('#3af0ff', -1, -32, 1, 22); rect('#ff3af0', 5, -30, 2, 2); }
     if (outfit === 'vampire') { rect('#16121a', -10, -32, 20, 22); rect('#8f1a2a', -4, -32, 8, 10); rect('#16121a', -14, -37, 6, 9); rect('#16121a', 8, -37, 6, 9); rect('#e6e0d6', -2, -31, 4, 6); }
+    // Themes v2 world outfits.
+    if (outfit === 'spaceSuit') { rect('#e4e8f3', -10, -32, 20, 24); rect('#b9c1da', -10, -20, 20, 3); rect('#4fb3ff', -6, -29, 5, 4); rect('#ff5a5a', 2, -29, 3, 2); rect('#8f7bff', 2, -26, 3, 2); }
+    if (outfit === 'dragonScale') { rect('#5a1a10', -10, -32, 20, 22); for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) rect(r % 2 ? '#a8321e' : '#c2501f', -9 + c * 5 + (r % 2) * 2, -31 + r * 5, 3, 3); rect('#e9c46a', -1, -32, 2, 22); }
+    if (outfit === 'rogueLeathers') { rect('#3a2a1e', -10, -32, 20, 22); rect('#5a3e28', -10, -32, 6, 22); rect('#2a1a10', -10, -18, 20, 3); rect('#c9a24a', -2, -18, 4, 3); rect('#2a1a10', 4, -30, 2, 14); }
+    if (outfit === 'tuxedo') { rect('#16161c', -10, -32, 20, 22); rect('#f4f4f4', -3, -32, 6, 14); rect('#16161c', -1, -32, 2, 3); rect('#c0283c', -2, -31, 4, 2); rect('#16161c', -1, -26, 2, 1); rect('#16161c', -1, -22, 2, 1); }
+    if (outfit === 'fedJacket') { rect('#1d3557', -10, -32, 20, 22); rect('#ffd21f', -7, -26, 14, 4); rect('#1d3557', -6, -25, 2, 2); rect('#1d3557', -2, -25, 2, 2); rect('#1d3557', 2, -25, 2, 2); rect('#e4dfcf', -2, -32, 4, 3); }
+    if (outfit === 'parka') { rect('#c0392b', -11, -32, 22, 24); rect('#f2ead6', -12, -34, 24, 4); rect('#a02a1e', -1, -30, 2, 22); rect('#f2ead6', -11, -11, 22, 2); }
+    if (outfit === 'blockArmor') { rect('#8fd0e8', -10, -32, 20, 22); rect('#5ab0d0', -10, -32, 20, 4); rect('#5ab0d0', -10, -20, 20, 2); rect('#d6f2ff', -8, -30, 4, 4); rect('#5ab0d0', -2, -28, 4, 6); }
+    if (outfit === 'denimJacket') { rect('#3d5f8a', -10, -32, 20, 22); rect('#2e4a6e', -1, -32, 2, 22); rect('#e6e1d8', -3, -32, 6, 6); rect('#c9a24a', -6, -24, 2, 2); rect('#c9a24a', 4, -24, 2, 2); rect('#2e4a6e', -10, -14, 20, 2); }
+    if (outfit === 'trenchCoat') { rect('#8a7a5a', -11, -32, 22, 26); rect('#6a5a40', -11, -20, 22, 3); rect('#6a5a40', -1, -32, 2, 26); rect('#d8d0b8', -4, -32, 3, 5); rect('#d8d0b8', 1, -32, 3, 5); rect('#3a3020', -7, -27, 2, 2); }
+    if (av.accessory === 'badge') { rect('#d6af53', 3, -28, 6, 6); rect('#ffe48a', 4, -27, 4, 4); rect('#1d3557', 5, -26, 2, 2); }
+    if (av.accessory === 'diceBag') { rect('#6a3a5a', 8, -20, 7, 8); rect('#8a5a7a', 9, -19, 5, 2); rect('#d6af53', 10, -22, 3, 2); rect('#c0283c', 14, -16, 3, 3); }
+    if (av.accessory === 'wristwatch') { rect('#3a3a3a', -14, -16, 4, 3); rect('#e6e1d8', -13, -16, 2, 2); }
+    if (av.accessory === 'torch') { const f = Math.sin(t * 12) > 0; rect('#5a3a20', 12, -26, 3, 14); rect(f ? '#ff9a2a' : '#ffb34a', 11, -32, 5, 6); rect('#ffe08a', 12, -30, 3, 3); }
     if (av.accessory === 'scarf') { rect('#e1b15f', -11, -33, 22, 4); rect('#ad7149', 5, -29, 4, 12); }
     if (av.accessory === 'amulet' || ['wizard', 'alchemist'].includes(outfit)) { rect('#d7b375', 0, -29, 2, 8); rect('#70c4bf', -2, -23, 6, 4); }
     // Long styles behind the head, then face, then fringes/headgear.
@@ -167,6 +182,15 @@
     if (hat === 'beret') { rect('#2a2a3a', -13, -60, 24, 6); rect('#3a3a4e', -12, -61, 20, 4); rect('#2a2a3a', -1, -64, 2, 3); }
     if (hat === 'pumpkin') { rect('#c4561a', -14, -66, 28, 24); rect('#e0702a', -12, -64, 24, 20); rect('#3a6a2a', -2, -70, 4, 5); rect('#1a0a04', -8 + eyeX, -58, 5, 4); rect('#1a0a04', 3 + eyeX, -58, 5, 4); rect('#1a0a04', -6 + eyeX, -50, 12, 3); }
     if (hat === 'bloodCrown') { rect('#3a0d14', -12, -60, 24, 6); for (let i = 0; i < 5; i++) rect('#8f1a2a', -12 + i * 6, -66 - (i % 2) * 2, 4, 7); rect('#ff3a4a', -2, -59, 4, 3); }
+    // Themes v2 world hats.
+    if (hat === 'spaceHelmet') { ctx.strokeStyle = 'rgba(200,240,255,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -44, 15, 0, TAU); ctx.stroke(); rect('rgba(220,245,255,0.9)', -12, -55, 2, 5); rect('rgba(220,245,255,0.9)', -10, -57, 3, 2); rect('#e4e8f3', -14, -33, 28, 3); rect('#ff5a5a', 10, -60, 2, 4); }
+    if (hat === 'elfCirclet') { rect('#d6af53', -12, -56, 24, 2); rect('#9fe8ff', -2, -59, 4, 4); rect('#d6af53', -14, -55, 3, 2); rect('#d6af53', 11, -55, 3, 2); rect(skin, -14, -47, 3, 3); rect(skin, 11, -47, 3, 3); }
+    if (hat === 'dragonHorns') for (const s of [-1, 1]) { rect('#3a1a10', s * 7 - 2, -60, 4, 6); rect('#5a2a18', s * 9 - 2, -64, 4, 5); rect('#e9e2cf', s * 11 - 2, -68, 3, 5); }
+    if (hat === 'furHat') { rect('#7a5434', -14, -60, 28, 10); rect('#a8845a', -13, -61, 26, 4); rect('#7a5434', -15, -52, 5, 12); rect('#7a5434', 10, -52, 5, 12); rect('#e6dcc0', -13, -53, 3, 6); rect('#e6dcc0', 10, -53, 3, 6); }
+    if (hat === 'cubeHelm') { rect('#5a5a5a', -14, -62, 28, 12); rect('#7a7a7a', -13, -61, 26, 4); rect('#5a5a5a', -14, -52, 4, 8); rect('#5a5a5a', 10, -52, 4, 8); rect('#9fe8ff', -2, -60, 4, 3); }
+    if (hat === 'featherCap') { rect('#2a5a3a', -13, -59, 26, 8); rect('#3a7a4a', -12, -60, 20, 3); rect('#2a5a3a', 6, -57, 10, 3); rect('#c0283c', -12, -66, 2, 10); rect('#e04a5a', -14, -68, 3, 4); }
+    if (hat === 'fedora') { rect('#2a2a2e', -17, -52, 34, 3); rect('#2a2a2e', -11, -61, 22, 9); rect('#3a3a40', -11, -61, 22, 2); rect('#8a1f1f', -11, -55, 22, 2); }
+    if (av.accessory === 'shades') { rect('#101014', -9 + eyeX, -46, 8, 4); rect('#101014', 1 + eyeX, -46, 8, 4); rect('#101014', -1 + eyeX, -45, 2, 1); rect('rgba(255,255,255,0.35)', -8 + eyeX, -46, 2, 1); }
     // Wave 2 face/neck accessories.
     if (av.accessory === 'mask') { rect('#2a1a3a', -10 + eyeX, -48, 20, 6); rect('#d6af53', -10 + eyeX, -48, 20, 1); rect('#0a0610', -8 + eyeX, -47, 6, 4); rect('#0a0610', 2 + eyeX, -47, 6, 4); }
     if (av.accessory === 'goldChain') { for (let i = 0; i < 6; i++) rect('#e6c778', -6 + i * 2, -31 + Math.abs(i - 2.5), 2, 2); rect('#ffd96b', -2, -27, 4, 4); }

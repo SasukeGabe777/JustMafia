@@ -10,6 +10,7 @@
   };
 
   const L = window.MT_LAYOUT;
+  const TW = () => window.MT_THEME_WORLD || null; // Themes v2 worlds (theme-world.js)
   const { W, H, CX, CY, ROAD, SQUARE_R, CEM, POND, TAU, seeded } = L;
   // Rendering quality. HD (default): the visible view is drawn at the screen's real
   // resolution with the camera applied while drawing, so pixel art stays sharp at
@@ -185,6 +186,7 @@
       if (st.theme && st.theme !== this.themeId) {
         this.themeId = st.theme;
         this.th = THEMES[st.theme] || FALLBACK_THEME;
+        if (L.applyVariant) L.applyVariant(TW() && TW().variant(st.theme));
         this.buildPalette();
         this.renderBackground();
       }
@@ -611,19 +613,21 @@
       bg.height = Math.round(H * bs);
       const ctx = bg.getContext('2d', { willReadFrequently: PIXEL_ON });
       ctx.setTransform(bs, 0, 0, bs, 0, 0);
-      const rng = seeded(42);
+      const tw = TW(), world = tw && tw.world(this.themeId);
+      const rng = seeded(world ? 42 + this.themeId.length * 977 + this.themeId.charCodeAt(0) : 42); // each world grows its own trees
 
       const pal = this.th.palette;
       // grass
       ctx.fillStyle = pal.grass;
       ctx.fillRect(0, 0, W, H);
-      for (let i = 0; i < 260; i++) {
+      const textured = world ? tw.paintGround(ctx, this.themeId, pal, rng) : false;
+      for (let i = 0; i < (textured ? 0 : 260); i++) {
         ctx.fillStyle = rng() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,60,0,0.06)';
         ctx.beginPath();
         ctx.ellipse(rng() * W, rng() * H, 20 + rng() * 70, 10 + rng() * 35, rng() * 3, 0, TAU);
         ctx.fill();
       }
-      for (let i = 0; i < 500; i++) {
+      for (let i = 0; i < (textured ? 0 : 500); i++) {
         ctx.strokeStyle = 'rgba(40,110,30,0.55)'; ctx.lineWidth = 3;
         const x = rng() * W, y = rng() * H;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y - 6); ctx.moveTo(x, y); ctx.lineTo(x + 2, y - 5); ctx.stroke();
@@ -683,7 +687,8 @@
         ctx.strokeStyle = '#3b3f4a'; ctx.lineWidth = 2; ctx.stroke();
       }
 
-      // pond
+      // pond (or the world's own: lava, ice, coolant...)
+      if (world && tw.paintPond(ctx, this.themeId, pal, POND)) { /* drawn by the world */ } else {
       ctx.fillStyle = pal.grassDark;
       ctx.beginPath(); ctx.ellipse(POND.x, POND.y, POND.rx + 8, POND.ry + 7, 0, 0, TAU); ctx.fill();
       ctx.fillStyle = pal.water;
@@ -694,7 +699,8 @@
         ctx.fillStyle = '#3f8f3a'; ctx.beginPath(); ctx.arc(lx, ly, 9, 0.3, TAU - 0.3); ctx.lineTo(lx, ly); ctx.fill();
       }
       ctx.fillStyle = '#9b7653';
-      ctx.fillRect(POND.x - POND.rx - 30, CY - 9, 45, 18);
+      ctx.fillRect(POND.x - POND.rx - 30, POND.y - 9, 45, 18);
+      }
 
       // cemetery
       ctx.fillStyle = pal.grassDark;
@@ -738,7 +744,8 @@
         const x = rng() * W, y = rng() * H;
         if (ok(x, y, 10) && trees.every((t) => Math.hypot(t.x - x, t.y - y) > 60)) trees.push({ x, y, s: 0.8 + rng() * 0.5, c: rng() });
       }
-      for (let i = 0; i < 300; i++) {
+      if (world) tw.paintSetPieces(ctx, this.themeId, pal, ok); // landmarks: volcano, launch pad, ski hill...
+      for (let i = 0; i < (world ? 0 : 300); i++) {
         const x = rng() * W, y = rng() * H;
         if (!ok(x, y, 0)) continue;
         ctx.fillStyle = pickOne(['#ff8fb1', '#fff3a0', '#ffffff', '#c7a4ff', '#ffb36b']);
@@ -747,6 +754,7 @@
       trees.sort((a, b) => a.y - b.y);
       for (const t of trees) {
         ctx.save(); ctx.translate(t.x, t.y); ctx.scale(t.s, t.s);
+        if (world && tw.drawTree(ctx, this.themeId, t, pal)) { ctx.restore(); continue; }
         ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(4, 2, 26, 8, 0, 0, TAU); ctx.fill();
         if (t.c < 0.25) {
           ctx.fillStyle = pal.tree; ctx.beginPath(); ctx.ellipse(0, -14, 22, 16, 0, 0, TAU); ctx.fill();
@@ -793,7 +801,10 @@
       // Copy the finished view to the screen: 1:1 in HD, chunky nearest-neighbor in retro.
       scr.setTransform(k, 0, 0, k, this.offX * this.dpr, this.offY * this.dpr);
       scr.imageSmoothingEnabled = !RETRO && this.px.width !== Math.round(W * k); scr.imageSmoothingQuality = 'medium';
+      const look = TW() && TW().screenFilter(this.themeId);
+      if (look) scr.filter = look; // Noir: the whole world in black and white
       scr.drawImage(this.px, 0, 0, this.px.width, this.px.height, sh.x, sh.y, W, H);
+      if (look) scr.filter = 'none';
 
       // crisp text overlay in world space (follows the camera)
       this.ctx = scr;
@@ -815,6 +826,7 @@
       const spotActor = cin && cin.spot && cin.actors.get(cin.spot);
       const spotPos = spotActor && (interior ? { x: spotActor.x, y: spotActor.y - 30 * (spotActor.scale || 1) }
         : { x: W / 2 + cam.z * (spotActor.x - cam.x) + sh.x, y: H / 2 + cam.z * (spotActor.y - 30 * (spotActor.scale || 1) - cam.y) + sh.y });
+      if (TW()) TW().drawScreenOverlay(scr, this.themeId, this.time, W, H); // vignette, film grain
       if (cin) cin.drawOverlay(scr, spotPos);
       if (this.isCorrupted()) {
         scr.fillStyle = 'rgba(110,255,220,0.12)';
@@ -840,6 +852,8 @@
         ctx.beginPath(); ctx.arc(CX, CY, r, 0, TAU); ctx.stroke();
       }
       ctx.globalAlpha = 1;
+      const tw = TW();
+      if (tw) tw.drawAmbient(this, ctx, 'ground'); // cars, shadows, critters
 
       this.drawGraves();
       this.drawSettlement();
@@ -853,6 +867,7 @@
       if (this.cinema) ents.push(...this.cinema.townEntities().map((e) => ({ y: e.y, draw: () => e.draw(ctx) })));
       if (this.shadow) ents.push({ y: this.shadow.y, draw: () => drawShadowFigure(ctx, this.shadow.x, this.shadow.y, this.time, this.shadow.walking) });
       ents.sort((a, b) => a.y - b.y).forEach((e) => e.draw());
+      if (tw) tw.drawAmbient(this, ctx, 'sky'); // dragons, drones, birds, bats
 
       // night
       const dark = this.cineDark != null ? this.cineDark : this.dark;
@@ -862,6 +877,7 @@
         if (this.red > 0.01) { ctx.fillStyle = `rgba(90,0,0,${0.38 * this.red})`; ctx.fillRect(-20, -20, W + 40, H + 40); }
         this.drawLights(dark);
       }
+      if (tw) tw.drawAmbient(this, ctx, 'weather'); // snow, rain, embers, aurora
 
       // ghosts glow above the darkness
       for (const c of this.chars.values()) {

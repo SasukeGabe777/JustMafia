@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const O = require('./public/shared/options');
-const { CATALOG, ACHIEVEMENTS, REWARDS: R, slotOf, SEASON, CHALLENGES, weekKey, weeklyChallenges, EVENTS } = require('./public/shared/cosmetics');
+const { CATALOG, ACHIEVEMENTS, REWARDS: R, slotOf, SEASON, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_NAMES } = require('./public/shared/cosmetics');
 const freshPass = () => ({ season: SEASON.id, owned: false, xp: 0, granted: [] });
 const LEDGER_MAX = 20;
 const digest = (token) => crypto.createHash('sha256').update(token).digest('hex');
@@ -105,7 +105,9 @@ class ProfileStore {
     const p = auth && typeof auth.id === 'string' && Object.hasOwn(this.data.profiles, auth.id) && this.data.profiles[auth.id];
     return p && typeof auth.token === 'string' && /^[a-f0-9]{64}$/.test(auth.token) && crypto.timingSafeEqual(Buffer.from(p.verifier, 'hex'), Buffer.from(digest(auth.token), 'hex')) ? p : null;
   }
-  view(id) { const p = this.data.profiles[id]; if (!p) return null; const { verifier, rewardedGames, ...view } = p; return { ...view, season: this.seasonView(p), inventory: this.inventory(id), storage: this.filename ? 'Saved on this game server’s disk' : 'Session-only development storage' }; }
+  // Worlds explored: games finished in each world and its rewards (owned or how far to go).
+  worldsView(p) { return Object.entries(WORLD_REWARDS).map(([id, list]) => ({ id, name: WORLD_NAMES[id], games: (p.worlds || {})[id] || 0, rewards: list.map((r) => ({ ...r, owned: p.owned.includes(r.item) })) })); }
+  view(id) { const p = this.data.profiles[id]; if (!p) return null; const { verifier, rewardedGames, ...view } = p; return { ...view, season: this.seasonView(p), worlds: this.worldsView(p), inventory: this.inventory(id), storage: this.filename ? 'Saved on this game server’s disk' : 'Session-only development storage' }; }
   validateAvatar(id, input = {}) {
     const p = this.data.profiles[id], result = {};
     // Expression has its own migration rule below.
@@ -140,6 +142,7 @@ class ProfileStore {
     const p = this.data.profiles[id], item = CATALOG.find((i) => i.id === itemId);
     if (!p || !item || p.owned.includes(item.id)) return { ok: false, error: 'Choose a locked catalog item.' };
     if (item.pass) return { ok: false, error: `Season pass reward: reach tier ${item.passTier} of the ${SEASON.name} pass.` };
+    if (item.world) return { ok: false, error: `World reward: finish ${item.worldGames === 1 ? 'a game' : item.worldGames + ' games'} in the ${WORLD_NAMES[item.world]} world.` };
     if (item.achievement && !p.achievements.includes(item.achievement)) return { ok: false, error: ACHIEVEMENTS[item.achievement].label };
     if (p.coins < item.cost) return { ok: false, error: `Not enough gold: ${item.name} costs ${item.cost}, you have ${p.coins}.` };
     if (item.cost > 0) this.record(p, -item.cost, 'Bought ' + item.name, { item: item.id });
@@ -179,12 +182,19 @@ class ProfileStore {
     // Season pass XP (everyone earns it; rewards need the pass). Events can multiply it.
     const X = SEASON.xp, mult = (EVENTS[result.event] || {}).xpMultiplier || 1;
     const xp = (X.completed + (result.won ? X.won : 0) + (result.alive ? X.survived : 0) + challengesDone * X.challenge) * mult;
+    // Worlds: each finished game in a world counts toward that world's cosmetics.
+    const worldItems = [];
+    if (result.theme && WORLD_REWARDS[result.theme]) {
+      p.worlds = p.worlds || {}; p.worlds[result.theme] = (p.worlds[result.theme] || 0) + 1;
+      for (const r of WORLD_REWARDS[result.theme]) if (p.worlds[result.theme] >= r.games && !p.owned.includes(r.item)) { p.owned.push(r.item); worldItems.push(r.item); }
+    }
     const tierBefore = this.seasonTier(p); p.pass.xp += xp;
     const passRewards = this.grantPass(p);
     for (const r of passRewards) if (r.gold) lines.push({ key: 'pass', label: `Season pass tier ${r.tier}`, amount: r.gold });
     const coins = p.coins - before;
     p.lastReward = { gameId, coins, before, after: p.coins, lines, capped: raw > capped0 ? R.maxPerGame : null, at: Date.now(),
-      season: { xp, multiplier: mult, tierBefore, tierAfter: this.seasonTier(p), owned: p.pass.owned, items: passRewards.filter((r) => r.item).map((r) => r.item) } };
+      season: { xp, multiplier: mult, tierBefore, tierAfter: this.seasonTier(p), owned: p.pass.owned, items: passRewards.filter((r) => r.item).map((r) => r.item) },
+      world: result.theme && WORLD_REWARDS[result.theme] ? { id: result.theme, name: WORLD_NAMES[result.theme], games: p.worlds[result.theme], items: worldItems } : null };
     p.rewardedGames.push(gameId); this.save();
     return p.lastReward;
   }

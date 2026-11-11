@@ -256,6 +256,19 @@ Everything is cozy pixel art. The town is rendered at low resolution, snapped to
 
 Small Town, Medieval Village, Space Station, Fantasy Realm, Dragon Peaks, Dungeon Crawl, Secret Agents and Federal Investigation. Each one changes the town's colors, building shapes, place names and night tint. Themes are presentation-only: add one in `public/shared/themes.js` without touching game rules.
 
+### Worlds (Themes v2)
+
+The classic look (Medieval Village "Mafia Town", Small Town) and RSP Supply are unchanged. The other eleven themes are full **worlds**: Space Station, Fantasy Realm, Dragon Peaks, Dungeon Crawl, Secret Agents, Federal Investigation, and five new ones: **Snowy Village**, **Block World** (blocky voxel look, all original), **Tabletop Quest** (a parchment battle map with dice), **Realistic** (natural colors, soft lighting and textures; the characters keep their current look) and **Noir** (black and white, rain, film grain).
+
+- **Roles change with the world** and keep their real name beside them, e.g. *Med-Bay Surgeon (Doctor)*, *Alpha Wolf (Godfather)*. Teams are renamed too (*The Dragon Cult*, *The Outfit*…). Text lives in `public/shared/theme-text.js`.
+- **The narrator adapts**: every world has its own lines for the start, nights, deaths (one per death location), votes and wins (Noir is a first-person private eye; Tabletop is the Game Master).
+- **A different map**: the pond and graveyard shift and change (lava pool, frozen lake, coolant pool…), each world has its own ground, trees and landmarks (volcano, launch pad, ski hill, block cliff, compass rose…). Houses and roads stay put so the Judge's map and cinematics still line up (`MT_LAYOUT.applyVariant`).
+- **A living world**: dragons flying overhead, drones and shuttles, fairy wisps, bats and torches, helicopters with searchlights, police cars, reindeer and northern lights, block sheep and square clouds, a giant rolling d20, cars with headlights in the rain.
+- **Every world kills differently**: its own weapon, impact, sounds and aftermath. Blaster → vaporized into glowing dust; wand → turned to stone; dragon-claw gauntlet → dragonfire and ash; poisoned dagger → green venom; silenced pistol with a laser sight; revolver → chalk outline; icicle → frozen; pixel sword → bursts into cubes; bow → critical hit (a d20 shows 20); knife (Realistic); revolver flash in the rain (Noir).
+- **World gear**: each world has two cosmetics, earned by finishing games there (1st and 3rd game). They are never sold. Shop → 🗺 **Worlds** shows every world as a map card with your progress and its rewards.
+
+Art and life: `public/theme-world.js`. Kills: kits in `public/cinema.js`. Tests: `tools/test-themes.js`.
+
 ## Scene preview (`/preview`)
 
 Population controls cover 4, 10, 25, 50 and 100. Previews include all three

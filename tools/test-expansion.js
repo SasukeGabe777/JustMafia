@@ -334,7 +334,7 @@ test('RSP Supply theme: selectable, yellow/blue, Tom Smith leads the takeover; t
   for (const w of rsp.palette.walls) { const [r, g, b] = rgb(w); assert(r > 200 && g > 180 && b < 190, 'yellow walls ' + w); }
   for (const w of rsp.palette.roofs) { const [r, g, b] = rgb(w); assert(b > r + 60 && b > g, 'blue roofs ' + w); }
   assert.equal(rsp.villain.name, 'Tom Smith'); assert.equal(T.teamName('rsp', 'mafia', 'The Mafia'), 'RSP Supply');
-  assert.equal(T.roleName('rsp', 'godfather', 'Godfather'), 'Tom Smith, President');
+  assert.equal(T.roleName('rsp', 'godfather', 'Godfather'), 'Tom Smith, President (Godfather)'); assert.equal(T.roleTitle('rsp', 'godfather', 'Godfather'), 'Tom Smith, President'); // themed name + what it is
   assert.equal(T.roleName('medieval', 'godfather', 'Godfather'), 'Godfather'); assert.equal(T.teamName('smalltown', 'mafia', 'The Mafia'), 'The Mafia');
   // Every role and team name RSP renames is a real id, and each theme only uses its own data.
   for (const id of Object.keys(rsp.roleNames)) assert(R.ROLES[id], 'unknown role ' + id);

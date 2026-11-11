@@ -166,15 +166,16 @@
       ctx.strokeStyle = '#5c4735'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-w / 2 + 7, -height + 5); ctx.lineTo(-6, -height + 24); ctx.moveTo(5, -height + 24); ctx.lineTo(w / 2 - 8, -height + 5); ctx.stroke();
     }
     const top = -height - (family === 7 ? 35 : 25), eave = -height + 2;
-    if (art.flatRoof) { // modern / office designs: a flat slab roof in every theme
+    if (!art.flatRoof && window.MT_THEME_WORLD && window.MT_THEME_WORLD.roof(kit, options.theme)) { /* the world's own roof (Block World) */ }
+    else if (art.flatRoof) { // modern / office designs: a flat slab roof in every theme
       r('#22252b', -w / 2 - 6, -height - 9, w + 12, 10); r(roof, -w / 2 - 4, -height - 7, w + 8, 6); r(shade(roof, .2), -w / 2 - 4, -height - 7, w + 8, 1);
     } else if (options.theme === 'space') {
       ctx.fillStyle = roof; ctx.beginPath(); ctx.ellipse(0, -height, w / 2 + 5, 26, 0, Math.PI, 0); ctx.fill();
       r('#82dbe0', -w / 2, -height, w, 3); r('#25323f', w / 2 - 12, top - 9, 2, 20); r('#8cf8de', w / 2 - 14, top - 11, 5, 4);
-    } else if (['spies','fbi','dungeon'].includes(options.theme)) {
+    } else if (['spies','fbi','dungeon','noir'].includes(options.theme)) {
       r('#292f38', -w / 2 - 4, -height - 8, w + 8, 11); r(roof, -w / 2 - 2, -height - 7, w + 4, 5);
       r('#555c63', 12, -height - 22, 13, 14); r('#b1bbba', 14, -height - 20, 9, 2);
-      if (options.theme !== 'dungeon') { r('#748b92', -w / 2 + 5, -height + 5, w - 10, 11); for (let a = -w / 2 + 14; a < w / 2 - 5; a += 12) r('#34434b', a, -height + 5, 2, 11); }
+      if (options.theme !== 'dungeon' && options.theme !== 'noir') { r('#748b92', -w / 2 + 5, -height + 5, w - 10, 11); for (let a = -w / 2 + 14; a < w / 2 - 5; a += 12) r('#34434b', a, -height + 5, 2, 11); }
     } else {
       r('#444049', 14, top - 7, 10, 22); r('#94836c', 13, top - 9, 12, 4);
       polygon('#272b34', [[-w / 2 - 7, eave + 2], [-w / 2 + 7, top - 3], [w / 2 - 6, top - 3], [w / 2 + 7, eave + 2]]);
@@ -216,6 +217,7 @@
     if (options.decor === 'lanterns') { r('#353436', -w / 2 - 6, -18, 3, 20); r('#e6b66b', -w / 2 - 9, -22, 8, 9); }
     if (!spec) { r('#63533d', w / 2 + 3, -11, 10, 12); r('#958060', w / 2 + 2, -9, 12, 2); r('#2e3938', -w / 2 - 9, -10, 8, 11); r('#60714c', -w / 2 - 11, -16, 12, 8); }
     if (art.post) art.post(kit);
+    if (window.MT_THEME_WORLD) window.MT_THEME_WORLD.buildingExtra(kit, options.theme); // snow caps, ink lines, shading
     if (YARD[options.yard]) YARD[options.yard](kit);
     // RSP Supply theme: a company plaque over every door (blue with a yellow stripe).
     if (options.theme === 'rsp') { r('#0f2a63', -11, -34, 22, 7); r('#1f4fa8', -10, -33, 20, 5); r('#ffd21f', -8, -31, 16, 1); r('#ffd21f', -10, -33, 2, 5); }

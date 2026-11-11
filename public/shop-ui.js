@@ -126,24 +126,25 @@
     $('#s-title').textContent = theme === 'rsp' ? 'RSP Supply Store' : 'Town Shop';
     $('#s-pouch-wrap').innerHTML = pouchButton(profile, 's-pouch');
     $('#s-pouch').onclick = () => { const pop = $('#s-pouch-pop'); pop.hidden = !pop.hidden; pop.innerHTML = pouchDetails(profile); };
-    const tabs = [{ id: 'season', label: 'Season', icon: '🎟' }, ...C.CATEGORIES.filter((c) => forSale(c.id).length), { id: 'inventory', label: 'Inventory', icon: '🎒' }];
+    const tabs = [{ id: 'season', label: 'Season', icon: '🎟' }, { id: 'worlds', label: 'Worlds', icon: '🗺' }, ...C.CATEGORIES.filter((c) => forSale(c.id).length), { id: 'inventory', label: 'Inventory', icon: '🎒' }];
     if (!tabs.some((t) => t.id === state.tab)) state.tab = tabs[0].id;
     $('#s-tabs').style.gridTemplateColumns = `repeat(${tabs.length > 6 ? Math.ceil(tabs.length / 2) : tabs.length}, minmax(0,1fr))`; // two rows when there are many tabs, so labels stay readable
     $('#s-tabs').innerHTML = tabs.map((t) => `<button role="tab" class="cas-tab${t.id === state.tab ? ' sel' : ''}" data-shop-tab="${t.id}" aria-selected="${t.id === state.tab}"><span aria-hidden="true">${t.icon}</span>${esc(t.label)}</button>`).join('');
     $('#s-tabs').querySelectorAll('[data-shop-tab]').forEach((b) => { b.onclick = () => { state.tab = b.dataset.shopTab; state.selectedId = null; render(opts); }; });
     if (state.tab === 'season') { renderSeason(opts); paintPouches(); return; }
+    if (state.tab === 'worlds') { renderWorlds(opts); paintPouches(); return; }
     const inv = state.tab === 'inventory';
     const items = inv ? (profile ? profile.inventory : []).map((x) => C.CATALOG.find((i) => i.id === x.id)).filter(Boolean) : forSale(state.tab);
     const selected = items.find((i) => i.id === state.selectedId) || null;
     const gold = profile ? profile.coins : 0;
     $('#s-grid').innerHTML = items.length ? `<div class="cas-tiles shop-tiles">${items.map((i) => {
       const own = owned(i), equipped = inv && (profile.inventory.find((x) => x.id === i.id) || {}).equipped;
-      const badge = equipped ? '<em class="badge eq">Equipped</em>' : own ? '<em class="badge own">Owned</em>' : i.pass ? `<em class="badge lock">🎟 T${i.passTier}</em>` : i.achievement ? '<em class="badge lock">🔒</em>' : `<em class="badge price${gold < i.cost ? ' poor' : ''}">${i.cost}g</em>`;
+      const badge = equipped ? '<em class="badge eq">Equipped</em>' : own ? '<em class="badge own">Owned</em>' : i.pass ? `<em class="badge lock">🎟 T${i.passTier}</em>` : i.world ? `<em class="badge lock">${worldEmoji(i.world)} ${i.worldGames}</em>` : i.achievement ? '<em class="badge lock">🔒</em>' : `<em class="badge price${gold < i.cost ? ' poor' : ''}">${i.cost}g</em>`;
       return `<button class="cas-tile shop-tile${i.id === state.selectedId ? ' sel' : ''}" data-item="${esc(i.id)}" aria-pressed="${i.id === state.selectedId}"><canvas></canvas><span>${esc(i.name)}</span>${badge}</button>`;
     }).join('')}</div>` : `<p class="muted">${inv ? 'Your inventory is empty. Buy something from the shop tabs!' : 'Nothing for sale here yet.'}</p>`;
     $('#s-grid').querySelectorAll('[data-item]').forEach((b) => { b.onclick = () => {
       state.selectedId = b.dataset.item; const i = C.CATALOG.find((x) => x.id === state.selectedId);
-      state.say = owned(i) ? SAY.owned(i) : i.pass ? `The ${i.name}? Not for sale. It's a Season pass reward at tier ${i.passTier}.` : i.achievement && !(profile && profile.achievements.includes(i.achievement)) ? SAY.locked(i) : gold < i.cost ? SAY.poor(i, gold) : SAY.pick(i);
+      state.say = owned(i) ? SAY.owned(i) : i.pass ? `The ${i.name}? Not for sale. It's a Season pass reward at tier ${i.passTier}.` : i.world ? `Can't sell you that one. Explore ${C.WORLD_NAMES[i.world]} and it's yours.` : i.achievement && !(profile && profile.achievements.includes(i.achievement)) ? SAY.locked(i) : gold < i.cost ? SAY.poor(i, gold) : SAY.pick(i);
       render(opts);
     }; });
     const ctx = { avatar, home, theme };
@@ -153,7 +154,7 @@
     if (!selected) d.innerHTML = `<p class="muted">${inv ? 'Tap an item to equip or unequip it.' : 'Tap an item to see it up close.'}</p>`;
     else {
       const own = owned(selected), invEntry = profile && profile.inventory.find((x) => x.id === selected.id);
-      const lockedBy = selected.pass ? `Season pass tier ${selected.passTier}` : selected.achievement && !(profile && profile.achievements.includes(selected.achievement)) ? C.ACHIEVEMENTS[selected.achievement].label : null;
+      const lockedBy = selected.pass ? `Season pass tier ${selected.passTier}` : selected.world ? `finish ${selected.worldGames === 1 ? 'a game' : selected.worldGames + ' games'} in ${C.WORLD_NAMES[selected.world]}` : selected.achievement && !(profile && profile.achievements.includes(selected.achievement)) ? C.ACHIEVEMENTS[selected.achievement].label : null;
       const cant = !own && (lockedBy ? 'Unlock: ' + lockedBy : gold < selected.cost ? `Need ${selected.cost - gold} more gold` : '');
       const action = own
         ? `<button class="btn" data-equip="${invEntry && invEntry.equipped ? 'off' : 'on'}">${invEntry && invEntry.equipped ? 'Unequip' : 'Equip'}</button>`
@@ -170,6 +171,34 @@
     const shelf = (inv ? items : forSale(state.tab)).slice(0, 12);
     startScene(() => ({ theme, avatar, home, shelf, selected, owned }));
     paintPouches();
+  }
+  // ---------- Worlds: explore every theme to earn its cosmetics ----------
+  const worldEmoji = (id) => (window.MT_THEMES && MT_THEMES.THEMES[id] || {}).emoji || '🗺';
+  function renderWorlds(opts) {
+    const { profile, avatar, theme } = opts;
+    const worlds = profile && profile.worlds;
+    if (!worlds) { $('#s-grid').innerHTML = '<p class="muted">Connecting…</p>'; $('#s-detail').innerHTML = ''; return; }
+    const T = window.MT_THEMES ? MT_THEMES.THEMES : {};
+    const explored = worlds.filter((w) => w.games > 0).length, items = worlds.reduce((n, w) => n + w.rewards.filter((r) => r.owned).length, 0), total = worlds.reduce((n, w) => n + w.rewards.length, 0);
+    $('#s-grid').innerHTML = `<div class="worlds-head"><h3>🗺 Worlds</h3><p class="small">Every world has its own map, roles, weapons and narrator. Finish games there to earn its gear. The Judge picks the world in Setup → Theme.</p>
+      <p class="small"><b>${explored}</b> of ${worlds.length} worlds explored · <b>${items}</b> of ${total} rewards found</p></div>
+      <div class="worlds-grid">${worlds.map((w) => {
+        const th = T[w.id] || {}, pal = th.palette || {}, here = w.id === theme, next = w.rewards.find((r) => !r.owned);
+        const pct = next ? Math.min(100, Math.round((w.games / next.games) * 100)) : 100;
+        return `<div class="world-card${here ? ' here' : ''}${w.games ? '' : ' unexplored'}" style="--wa:${pal.grass || '#7cbf5a'};--wb:${pal.grassDark || '#5c9443'};--wr:${(pal.roofs || ['#c0392b'])[0]};--ww:${pal.water || '#4aa3d9'}">
+          <div class="world-map" aria-hidden="true"><i class="wm-pond"></i><i class="wm-house a"></i><i class="wm-house b"></i><i class="wm-house c"></i><span class="wm-emoji">${th.emoji || '🗺'}</span></div>
+          <div class="world-body"><b>${esc(w.name)}</b><span class="small muted">${esc(th.townName || '')}</span>
+            ${here ? '<span class="world-here">📍 You are here</span>' : ''}
+            <div class="world-bar"><i style="width:${pct}%"></i></div>
+            <span class="small">${w.games} game${w.games === 1 ? '' : 's'} played${next ? ` · next reward at ${next.games}` : ' · all found ✓'}</span>
+            <div class="world-rewards">${w.rewards.map((r) => { const it = C.CATALOG.find((x) => x.id === r.item); return `<div class="world-reward${r.owned ? ' got' : ''}" title="${esc(it ? it.name : r.item)}"><canvas data-world-item="${esc(r.item)}"></canvas><span>${r.owned ? '✓' : '🔒 ' + r.games}</span></div>`; }).join('')}</div>
+          </div></div>`;
+      }).join('')}</div>`;
+    const cur = worlds.find((w) => w.id === theme);
+    $('#s-detail').innerHTML = cur ? `<h3>${worldEmoji(cur.id)} ${esc(cur.name)}</h3><p class="small">You are playing in this world. Finish this game to count it toward ${esc(cur.name)}’s rewards.</p>` : '<p class="small muted">This town uses a classic look. Ask the Judge to pick one of these worlds to start exploring.</p>';
+    requestAnimationFrame(() => $('#s-grid').querySelectorAll('[data-world-item]').forEach((cv) => paintItem(cv, C.CATALOG.find((x) => x.id === cv.dataset.worldItem), { avatar, home: opts.home, theme })));
+    $('#s-say').textContent = state.say || 'Every world hides its own treasures. Go see them all!';
+    startScene(() => ({ theme, avatar, home: opts.home, shelf: C.CATALOG.filter((i) => i.world), selected: null, owned: () => false }));
   }
   // ---------- Season pass + weekly challenges ----------
   function renderSeason(opts) {

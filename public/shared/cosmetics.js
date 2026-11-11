@@ -95,12 +95,31 @@
     bloodMoon: { name: '🌕 Blood Moon', xpMultiplier: 2, desc: 'Every third night the moon turns red and the Mafia strike twice. Double season XP.' },
   };
 
+  // ----- Worlds (Themes v2): cosmetics earned by finishing games in each world -----
+  // First game there unlocks the first item, the third game the second. Never sold.
+  const WORLD_NAMES = { space: 'Space Station', fantasy: 'Fantasy Realm', dragons: 'Dragon Peaks', dungeon: 'Dungeon Crawl', spies: 'Secret Agents', fbi: 'Federal Investigation', snow: 'Snowy Village', blocky: 'Block World', tabletop: 'Tabletop Quest', realistic: 'Realistic', noir: 'Noir' };
+  const WORLD_REWARDS = {
+    space: [{ item: 'hat:spaceHelmet', games: 1 }, { item: 'outfit:spaceSuit', games: 3 }],
+    fantasy: [{ item: 'hat:elfCirclet', games: 1 }, { item: 'accessory:fairyWings', games: 3 }],
+    dragons: [{ item: 'hat:dragonHorns', games: 1 }, { item: 'outfit:dragonScale', games: 3 }],
+    dungeon: [{ item: 'accessory:torch', games: 1 }, { item: 'outfit:rogueLeathers', games: 3 }],
+    spies: [{ item: 'accessory:shades', games: 1 }, { item: 'outfit:tuxedo', games: 3 }],
+    fbi: [{ item: 'accessory:badge', games: 1 }, { item: 'outfit:fedJacket', games: 3 }],
+    snow: [{ item: 'hat:furHat', games: 1 }, { item: 'outfit:parka', games: 3 }],
+    blocky: [{ item: 'hat:cubeHelm', games: 1 }, { item: 'outfit:blockArmor', games: 3 }],
+    tabletop: [{ item: 'accessory:diceBag', games: 1 }, { item: 'hat:featherCap', games: 3 }],
+    realistic: [{ item: 'accessory:wristwatch', games: 1 }, { item: 'outfit:denimJacket', games: 3 }],
+    noir: [{ item: 'hat:fedora', games: 1 }, { item: 'outfit:trenchCoat', games: 3 }],
+  };
+  const WORLD_ITEM = Object.fromEntries(Object.entries(WORLD_REWARDS).flatMap(([world, list]) => list.map((r) => [r.item, { world, games: r.games }])));
+
   const CATALOG = Object.entries(FIELDS).flatMap(([field, [list, free]]) => (O[list] || []).map((value, index) => {
-    const id = field + ':' + value, gated = GATES[id] || null, passTier = PASS[id] || null;
-    const cost = index < free || gated || passTier ? 0 : PRICES[id] != null ? PRICES[id] : field === 'outfit' ? 70 + (index - free) * 8 : 25 + (index - free) * 10;
+    const id = field + ':' + value, gated = GATES[id] || null, passTier = PASS[id] || null, earned = WORLD_ITEM[id] || null;
+    const cost = index < free || gated || passTier || earned ? 0 : PRICES[id] != null ? PRICES[id] : field === 'outfit' ? 70 + (index - free) * 8 : 25 + (index - free) * 10;
     const category = (CATEGORIES.find((c) => c.fields.includes(field)) || {}).id || 'flair';
     return { id, field, value, name: O.label(value), cost, achievement: gated, pass: passTier ? SEASON.id : null, passTier, free: index < free, category,
-      description: DESCRIPTIONS[id] || `A ${O.label(value).toLowerCase()} ${KIND[field] || 'item'}${index < free ? ' (free for everyone).' : ' for your ' + (slotOf(field).target === 'home' ? 'house.' : 'townsfolk.')}` };
+      world: earned ? earned.world : null, worldGames: earned ? earned.games : null,
+      description: earned ? `Earned by finishing ${earned.games === 1 ? 'a game' : earned.games + ' games'} in the ${WORLD_NAMES[earned.world]} world.` : DESCRIPTIONS[id] || `A ${O.label(value).toLowerCase()} ${KIND[field] || 'item'}${index < free ? ' (free for everyone).' : ' for your ' + (slotOf(field).target === 'home' ? 'house.' : 'townsfolk.')}` };
   }));
   // Gold rewards per completed game, calculated and paid by the server once per game.
   // Every value is configurable here. Per-category caps and maxPerGame stop players
@@ -118,6 +137,6 @@
     achievement: 10,                       // each achievement unlocked by this game
     maxPerGame: 60, minimumGameMs: 60000,
   };
-  const API = { FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS, SEASON, PASS, CHALLENGES, weekKey, weeklyChallenges, EVENTS };
+  const API = { FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS, SEASON, PASS, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_ITEM, WORLD_NAMES };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.MT_COSMETICS = API;
 })(typeof window !== 'undefined' ? window : globalThis);
