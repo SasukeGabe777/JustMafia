@@ -109,7 +109,8 @@ const stages = {
       const entry = { night: r.day, targetId: target.id, name: target.name, reveal: def.reveal };
       if (c.blocked.has(p.id)) p.investigations.push({ ...entry, blocked: true });
       else {
-        const truth = def.reveal === 'role' ? target.role : R.investigate(target.role, def.reveal);
+        const shown = r.shownRole ? r.shownRole(target) : target.role; // a disguised Headhunter shows their fake role
+        const truth = def.reveal === 'role' ? shown : R.investigate(shown, def.reveal);
         const result = r.information(p, target, truth, def.reveal === 'role' ? 'role' : 'boolean');
         p.investigations.push({ ...entry, result }); r.consumeAbility(p, 'investigate');
         if (r.team(target) === 'mafia' && (result === true || typeof result === 'string' && R.ROLES[result] && R.ROLES[result].team === 'mafia')) p.metrics.correctInvestigations++;

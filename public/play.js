@@ -709,7 +709,8 @@
       kill: v.role === 'serialKiller' ? ['🗡️ Who dies tonight?', 'Only a Doctor or Bodyguard can stop you.']
         : ['🔪 Choose your target', v.role === 'godfather' ? 'You have the final say for the family.' : "The Mafia must agree (the Godfather's pick wins). You can see your team's picks."],
       block: ['🚫 Who will you distract?', 'Their night ability will fail.'],
-      investigate: ['🔍 Who will you investigate?', v.action && v.action.reveal === 'role' ? "You'll learn their exact role." : v.role === 'sheriff' ? "You'll learn if they are dangerous." : "You'll learn if they're Mafia."],
+      mark: ['🎯 Who do you want dead?', 'Mark them. If they die tonight or at the gallows, you level up. The Mafia will see your mark as a vote from one of their own.'],
+      investigate: [v.role === 'hunter' ? '🏹 Who will you hunt?' : '🔍 Who will you investigate?', v.role === 'hunter' ? "You'll learn their exact role, and so will your whole family." : v.action && v.action.reveal === 'role' ? "You'll learn their exact role." : v.role === 'sheriff' ? "You'll learn if they are dangerous." : "You'll learn if they're Mafia."],
       heal: ['💉 Who will you protect?', last || 'You can protect yourself.'],
       guard: ['🛡️ Who will you guard?', last || 'If they are attacked, you die in their place.'],
       shoot: ['🎯 Shoot someone?', `${v.shotsLeft} bullet${v.shotsLeft === 1 ? '' : 's'} left. Only shoot if you're sure.`],

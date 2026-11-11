@@ -42,6 +42,13 @@
     [7.0, 'flicker', { dur: 0.8 }],
     [7.0, 'pose', { id: 'assassin', pose: 'stand', crouch: false }],
   ];
+  // The narrator's story beats for a night at home (AI narrator only; see a_caption).
+  const HOME_STORY = [
+    [0.3, 'caption', { lines: ['Night settled over {town}. {name} went to bed early.', '{name} blew out the candle. The house went quiet.'], dur: 2.6 }],
+    [3.0, 'caption', { lines: ['A shadow reached {name}’s door.', 'Someone was already at the gate.'], dur: 2.0 }],
+    [5.1, 'caption', { lines: ['A floorboard creaked. Then another.', 'The floorboards gave them away.'], dur: 1.5 }],
+    [6.7, 'caption', { lines: ['{name} woke. Someone was in the room.'], dur: 1.4 }],
+  ];
   // Fade out, show a title card, and come back to the town.
   const ENDING = (title, sub, color, t = 10.4, mood) => [
     [t, 'fade', { to: 0.88, dur: 0.9 }],
@@ -101,42 +108,56 @@
       steps: APPROACH,
       defaultOutcome: 'kill',
       outcomes: {
+        // A real fight: grabbed face to face, a struggle, then the fall (X eyes, a pool on the floor).
         kill: {
           name: 'Killed',
-          duration: 14.2,
+          duration: 15.0,
           steps: [
             ...ENTER,
+            ...HOME_STORY,
             [7.3, 'move', { id: 'assassin', to: 'strike', dur: 0.4, gait: 'run' }],
-            [7.75, 'attack', { id: 'assassin', target: 'victim' }],
-            [8.1, 'hit', { id: 'victim', dir: 1 }],
-            [8.2, 'die', { id: 'victim' }],
-            [8.3, 'sfx', 'sting'],
-            [8.35, 'lamp', false],
-            [8.35, 'flicker', { dur: 0.5 }],
-            [8.6, 'music', 'eerie'],
-            [9.2, 'move', { id: 'assassin', to: 'doorway', dur: 1.4, gait: 'walk' }],
-            [9.9, 'alpha', { id: 'assassin', to: 0, dur: 0.5 }],
-            ...ENDING('{name} did not survive the night', '', '#ff6b6b', 10.4),
+            [7.7, 'grab', { id: 'victim', by: 'assassin', front: true, gap: 22 }], [7.7, 'struggle', { id: 'victim', dur: 1.6 }],
+            [7.75, 'bubble', { id: 'victim', text: 'Help!', dur: 1 }], [8.2, 'shake', 0.4], [8.2, 'sfx', 'hit'],
+            [8.3, 'caption', { lines: ['{name} fought for their life.', 'They fought back with everything they had.'], dur: 2 }],
+            [8.6, 'bubble', { id: 'victim', text: 'Let go!', dur: 0.9 }],
+            [9.3, 'release', { id: 'victim', by: 'assassin' }],
+            [9.35, 'attack', { id: 'assassin', target: 'victim' }],
+            [9.7, 'hit', { id: 'victim', dir: 1 }], [9.8, 'die', { id: 'victim' }], [9.8, 'sfx', 'sting'],
+            [9.85, 'flicker', { dur: 0.6 }], // the lamp gutters but stays lit, so the room can see what happened
+            [10.1, 'xeyes', { id: 'victim' }], [10.2, 'prop', { type: 'pool', at: { actor: 'victim' }, dur: 2.5 }],
+            [10.3, 'music', 'eerie'], [10.3, 'caption', { lines: ['It was not enough.', 'Then the house was silent.'], dur: 1.6 }],
+            [10.6, 'move', { id: 'assassin', to: 'doorway', dur: 1.2, gait: 'walk' }],
+            [11.2, 'alpha', { id: 'assassin', to: 0, dur: 0.5 }],
+            ...ENDING('{name} did not survive the night', '', '#ff6b6b', 11.6),
           ],
         },
         protected: {
           name: 'Protected (save or immune)',
-          duration: 14.6,
+          // Clearly a rescue: a hooded protector (anonymous: never a player's look) bursts in,
+          // a healing ward flares around the victim and the attacker flees. (Night immunity
+          // plays the same scene, so a survivor's role is never exposed.)
+          duration: 14.8,
           steps: [
             ...ENTER,
+            ...HOME_STORY,
             [7.3, 'move', { id: 'assassin', to: 'strike', dur: 0.4, gait: 'run' }],
-            [7.75, 'attack', { id: 'assassin', target: 'victim', blocked: true }],
-            [8.05, 'shield', { id: 'victim', dur: 2.2 }],
-            [8.15, 'shake', 0.5],
-            [8.2, 'move', { id: 'assassin', to: { from: 'strike', dx: -110 }, dur: 0.3, gait: 'run' }],
-            [8.6, 'bubble', { id: 'assassin', text: '?!', dur: 1 }],
-            [9.2, 'move', { id: 'assassin', to: 'underWindow', dur: 0.6, gait: 'run' }],
-            [9.8, 'shards'],
-            [9.8, 'move', { id: 'assassin', to: 'outWindow', dur: 0.35, gait: 'run', fadeOut: true }],
-            [10.1, 'thunder'],
-            [10.3, 'bubble', { id: 'victim', text: 'Phew…', dur: 1.2 }],
-            [10.3, 'music', 'peace'],
-            ...ENDING('An attack was stopped', '{name} survived the night', '#7dffb0', 10.8),
+            [7.6, 'grab', { id: 'victim', by: 'assassin', front: true, gap: 22 }], [7.6, 'struggle', { id: 'victim', dur: 0.9 }],
+            [7.65, 'bubble', { id: 'victim', text: 'Help!', dur: 0.9 }],
+            [7.7, 'spawn', { id: 'healer', kind: 'protector', at: 'doorway', facing: 1 }], [7.7, 'sfx', 'creak'],
+            [7.75, 'move', { id: 'healer', to: 'guardSpot', dur: 0.55, gait: 'run' }],
+            [7.8, 'caption', { lines: ['But {name} was not alone tonight.', 'Someone had been watching over {name}.'], dur: 2.2 }],
+            [8.4, 'release', { id: 'victim', by: 'assassin' }],
+            [8.45, 'attack', { id: 'assassin', target: 'victim', blocked: true }],
+            [8.7, 'shield', { id: 'victim', dur: 2.6 }], [8.7, 'sfx', 'saved'], [8.75, 'shake', 0.5],
+            [8.8, 'move', { id: 'assassin', to: { from: 'strike', dx: -130 }, dur: 0.3, gait: 'run' }],
+            [9.0, 'bubble', { id: 'healer', text: 'Not tonight.', dur: 1.3 }], [9.1, 'bubble', { id: 'assassin', text: '?!', dur: 0.9 }],
+            [9.7, 'move', { id: 'assassin', to: 'underWindow', dur: 0.6, gait: 'run' }],
+            [10.3, 'shards'], [10.3, 'move', { id: 'assassin', to: 'outWindow', dur: 0.35, gait: 'run', fadeOut: true }],
+            [10.5, 'thunder'], [10.6, 'music', 'peace'],
+            [10.6, 'bubble', { id: 'victim', text: 'Thank you…', dur: 1.2 }],
+            [10.7, 'move', { id: 'healer', to: 'doorway', dur: 0.8, gait: 'walk', fadeOut: true }],
+            [10.4, 'caption', { lines: ['{name} was protected, and lives to see another day.'], dur: 1.6 }],
+            ...ENDING('PROTECTED', '{name} was saved and survived the night', '#7dffb0', 11.2),
           ],
         },
         guard: {
@@ -485,56 +506,130 @@
     [8.8, 'move', { id: 'assassin', to: 'doorway', dur: 0.6, gait: 'run', fadeOut: true }],
     ...ENDING('The attack failed', '{name} survived the night', '#b1f0ba', 9.8, 'peace'),
   ] };
-  SCENES.murder.outcomes.multiple = { name: 'Multiple masked attackers', duration: 14.2, steps: [
+  SCENES.murder.outcomes.multiple = { name: 'Multiple masked attackers', duration: 15.0, steps: [
     ...SCENES.murder.outcomes.kill.steps,
     [1, 'spawn', { id: 'second', kind: 'assassin', at: 'street', fadeIn: 0.5 }],
     [1.3, 'move', { id: 'second', to: 'door', dur: 2, gait: 'sneak' }],
     [4.6, 'spawn', { id: 'second', kind: 'assassin', at: 'doorway', fadeIn: 0.4 }],
     [4.9, 'move', { id: 'second', to: 'mid', dur: 1.4, gait: 'sneak' }],
     [7.4, 'move', { id: 'second', to: 'bedside', dur: 0.4, gait: 'run' }],
-    [8, 'attack', { id: 'second', target: 'victim' }],
-    [9, 'move', { id: 'second', to: 'doorway', dur: 1, gait: 'run', fadeOut: true }],
+    [9.4, 'attack', { id: 'second', target: 'victim' }],
+    [10.4, 'move', { id: 'second', to: 'doorway', dur: 1, gait: 'run', fadeOut: true }],
   ] };
 
   // Update 4 (AI narrator only): night deaths away from the bedroom. Same secrecy
   // as the murder scene: a hooded attacker, never a player avatar. The victim is
   // held in town and replaced by a stand-in resident at the story location.
-  const OUTDOOR = ({ name, place, title, color, music = 'tension', intro = [], death = [[5.9, 'die', { id: 'victim' }]], extra = [] }) => ({
-    name, kind: 'night', place, needsHouse: true, duration: 13.8,
+  // The fall: X eyes and a pool spreading under the body.
+  const FALL = (t) => [[t, 'die', { id: 'victim' }], [t + 0.25, 'xeyes', { id: 'victim' }], [t + 0.3, 'prop', { type: 'pool', at: { actor: 'victim' }, dur: 2.6 }]];
+  // `story`: four narrator beats [setting, mood, the moment, aftermath] (AI narrator only).
+  const OUTDOOR = ({ name, place, title, color, music = 'tension', intro = [], story = [], death = FALL(7.3), leave = [[8.6, 'move', { id: 'assassin', to: 'placeAway', dur: 2.2, gait: 'walk', fadeOut: true }]], extra = [] }) => ({
+    name, kind: 'night', place, needsHouse: true, duration: 14.6,
     steps: [
       [0, 'letterbox', true], [0, 'dark', 1], [0, 'hold'], [0, 'music', music],
       [0, 'camera', { to: place === 'visit' ? 'house' : 'place', zoom: place === 'visit' ? 2.6 : undefined, dur: 1.6 }],
       [0.4, 'spawn', { id: 'victim', kind: 'resident', at: 'place' }],
       ...intro,
+      ...story.map((lines, i) => [[0.5, 2.6, 5.3, 8.0][i], 'caption', { lines: [].concat(lines), dur: [2.0, 2.4, 1.8, 2.4][i] }]),
       [1.2, 'spawn', { id: 'assassin', kind: 'assassin', at: 'placeFrom', crouch: true, fadeIn: 0.8 }],
       [1.6, 'move', { id: 'assassin', to: 'placeBehind', dur: 3.2, gait: 'sneak', crouch: true }],
       [1.8, 'loop', { sfx: 'heartbeat', every: 0.85, until: 5.3 }],
       [5.0, 'pose', { id: 'assassin', pose: 'stand', crouch: false }],
       [5.15, 'bubble', { id: 'victim', text: '!', dur: 0.8 }], [5.15, 'scared', { id: 'victim' }], [5.15, 'sfx', 'gasp'],
-      [5.4, 'attack', { id: 'assassin', target: 'victim' }],
-      [5.8, 'hit', { id: 'victim', dir: -1 }],
+      // Grabbed face to face; they thrash and shout; then the blow. The camera pushes in.
+      [5.0, 'camera', { to: { actor: 'victim', dy: -30 }, zoom: 3.1, dur: 0.7 }],
+      [5.3, 'grab', { id: 'victim', by: 'assassin', front: true, gap: 22 }], [5.3, 'struggle', { id: 'victim', dur: 1.5 }],
+      [5.5, 'bubble', { id: 'victim', text: 'Help!', dur: 1 }], [5.8, 'shake', 0.35], [6.2, 'sfx', 'hit'],
+      [6.8, 'release', { id: 'victim', by: 'assassin' }],
+      [6.85, 'attack', { id: 'assassin', target: 'victim' }],
+      [7.2, 'hit', { id: 'victim', dir: -1 }],
       ...death,
-      [6.0, 'sfx', 'sting'], [6.5, 'music', 'eerie'],
-      [7.0, 'move', { id: 'assassin', to: 'placeAway', dur: 2.2, gait: 'walk', fadeOut: true }],
+      [7.35, 'sfx', 'sting'], [7.8, 'music', 'eerie'],
+      ...leave,
       ...extra,
-      ...ENDING(title, '', color, 9.4),
+      ...ENDING(title, '', color, 10.8),
     ],
   });
   Object.assign(SCENES, {
+    // The lake: the body is dragged to the water and slips under.
     death_lake: OUTDOOR({ name: 'Death at the lake', place: 'lake', title: '{name} stayed at the lake too long', color: '#8fd0f2',
       intro: [[0.9, 'bubble', { id: 'victim', text: '~ ~ ~', dur: 1.6 }], [2.8, 'bubble', { id: 'victim', text: 'So peaceful…', dur: 1.6 }]],
-      death: [[5.85, 'move', { id: 'victim', to: 'placeWater', dur: 0.8, gait: 'run' }], [6.5, 'splash'], [6.6, 'alpha', { id: 'victim', to: 0, dur: 1.8 }], [7.6, 'splash']] }),
+      story: [['{name} couldn’t sleep, so they walked down to the lake.'], ['The water was black and perfectly still.'], ['Footsteps on the pebbles. Too close.'], ['The lake keeps its secrets.', 'By morning, only ripples remained.']],
+      // Dragged to the shore, then the body slides into the black water.
+      death: [[7.3, 'die', { id: 'victim' }], [7.55, 'xeyes', { id: 'victim' }], [7.9, 'dragBody', { id: 'victim', by: 'assassin', gap: 22 }],
+        [7.9, 'follow', { id: 'assassin', zoom: 2.9, dy: 30 }],
+        [8.0, 'move', { id: 'assassin', to: 'placeShore', dur: 1.3, gait: 'walk' }], [8.0, 'loop', { sfx: 'step', every: 0.45, until: 9.2 }],
+        [9.3, 'release', { id: 'victim', by: 'assassin' }], [9.3, 'follow', {}], [9.35, 'move', { id: 'victim', to: 'placeWater', dur: 0.7 }],
+        [10.0, 'splash'], [10.05, 'alpha', { id: 'victim', to: 0, dur: 1.0 }], [10.5, 'splash']],
+      leave: [[9.7, 'move', { id: 'assassin', to: 'placeAway', dur: 1.6, gait: 'walk', fadeOut: true }]] }),
     death_hearth: OUTDOOR({ name: 'Death at the hearth', place: 'hearth', title: '{name} never left the hearth', color: '#ffb36b',
       intro: [[0.6, 'embers'], [0.9, 'bubble', { id: 'victim', text: 'So warm…', dur: 1.6 }], [2.6, 'embers'], [4.2, 'embers']],
-      extra: [[6.2, 'embers'], [7.8, 'embers']] }),
+      story: [['{name} stayed by the hearth to keep warm.'], ['The fire crackled. Nobody else was awake. Almost nobody.'], ['A hand fell on their shoulder.'], ['By dawn, the embers were cold.']],
+      extra: [[6.2, 'embers'], [7.8, 'embers'], [9.0, 'embers']] }),
     death_tavern: OUTDOOR({ name: 'Death outside the tavern', place: 'tavern', title: '{name} was the last to leave the tavern', color: '#e8c37a',
-      intro: [[0.5, 'sfx', 'creak'], [0.9, 'bubble', { id: 'victim', text: '*hic*', dur: 1.2 }], [2.2, 'move', { id: 'victim', to: { from: 'place', dx: 14 }, dur: 0.9, gait: 'walk' }], [3.3, 'bubble', { id: 'victim', text: 'One more round…', dur: 1.6 }]] }),
+      intro: [[0.5, 'sfx', 'creak'], [0.9, 'bubble', { id: 'victim', text: '*hic*', dur: 1.2 }], [2.2, 'move', { id: 'victim', to: { from: 'place', dx: 14 }, dur: 0.9, gait: 'walk' }], [3.3, 'bubble', { id: 'victim', text: 'One more round…', dur: 1.6 }]],
+      story: [['{name} was the last one out of the tavern.'], ['One more round had turned into three.'], ['Somebody had been waiting outside.'], ['The tavern keeper found them by the door.']] }),
     death_field: OUTDOOR({ name: 'Death in the field', place: 'field', title: '{name} wandered too far from town', color: '#c3dc9a', music: 'eerie',
       intro: [[0, 'fog', true], [0.9, 'bubble', { id: 'victim', text: 'What a sky…', dur: 1.8 }], [2.4, 'sfx', 'owl']],
-      extra: [[9.3, 'fog', false]] }),
+      story: [['{name} wandered into the field to watch the stars.'], ['Out here, nobody could hear a thing.'], ['The grass moved. There was no wind.'], ['Only the crows saw what happened.']],
+      extra: [[10.4, 'fog', false]] }),
     death_visit: OUTDOOR({ name: "Death at another's house", place: 'visit', title: "{name} was watching {host}'s house", color: '#ff8a7a',
       intro: [[0.6, 'houseLight', true], [0.9, 'bubble', { id: 'victim', text: '…', dur: 1.4 }], [2.6, 'bubble', { id: 'victim', text: '(taking notes)', dur: 1.8 }]],
+      story: [['{name} was watching {host}’s house.'], ['They had a theory. They wanted proof.'], ['Someone else was watching too.'], ['Their notes were never finished.']],
       extra: [[6.4, 'houseLight', false]] }),
+    // Chased home through the street and caught three steps from the door.
+    death_chase: { name: 'Chased through town', kind: 'night', needsHouse: true, duration: 14.6, steps: [
+      [0, 'letterbox', true], [0, 'dark', 1], [0, 'hold'], [0, 'music', 'tension'], [0, 'camera', { to: 'house', zoom: 2.4, dur: 1.0 }],
+      [0.3, 'spawn', { id: 'victim', kind: 'resident', at: 'away' }], [0.4, 'move', { id: 'victim', to: 'nearStreet', dur: 3.6, gait: 'walk' }],
+      [0.5, 'follow', { id: 'victim', zoom: 2.7, dy: 40 }], [8.6, 'follow', {}], // the camera runs with them
+      [8.6, 'camera', { to: { actor: 'victim', dy: -20 }, zoom: 3.0, dur: 0.6 }],
+      [0.5, 'caption', { lines: ['{name} was walking home late.', '{name} took the long way home.'], dur: 2.4 }],
+      [1.6, 'spawn', { id: 'assassin', kind: 'assassin', at: 'awayFar', fadeIn: 0.6 }], [1.8, 'move', { id: 'assassin', to: 'street', dur: 2.6, gait: 'sneak' }],
+      [3.0, 'caption', { lines: ['Footsteps behind them, matching theirs.'], dur: 1.8 }],
+      [3.6, 'bubble', { id: 'victim', text: 'Hello…?', dur: 1 }],
+      [4.5, 'bubble', { id: 'victim', text: '!', dur: 0.6 }], [4.5, 'scared', { id: 'victim' }], [4.5, 'sfx', 'gasp'],
+      // Caught on the path just below the house (clear of its nameplate).
+      [4.6, 'move', { id: 'victim', to: { from: 'doorSide', dy: 40 }, dur: 1.8, gait: 'run' }], [4.6, 'loop', { sfx: 'step', every: 0.22, until: 6.7 }],
+      [4.7, 'move', { id: 'assassin', to: { from: 'doorSide', dx: 26, dy: 40, mirror: true }, dur: 1.9, gait: 'run' }],
+      [5.0, 'caption', { lines: ['{name} ran.'], dur: 1.4 }],
+      [6.6, 'grab', { id: 'victim', by: 'assassin', front: true, gap: 20 }], [6.6, 'struggle', { id: 'victim', dur: 1.4 }],
+      [6.7, 'bubble', { id: 'victim', text: 'NO!', dur: 1 }], [6.7, 'caption', { lines: ['They were three steps from their door.'], dur: 2 }],
+      [8.0, 'release', { id: 'victim', by: 'assassin' }], [8.05, 'attack', { id: 'assassin', target: 'victim' }], [8.4, 'hit', { id: 'victim', dir: 1 }],
+      ...FALL(8.5), [8.5, 'sfx', 'sting'], [9.0, 'music', 'eerie'],
+      [9.4, 'move', { id: 'assassin', to: 'away', dur: 2, gait: 'walk', fadeOut: true }],
+      [9.6, 'caption', { lines: ['The door stayed shut.'], dur: 1.6 }],
+      ...ENDING('{name} never made it home', '', '#ff8a7a', 11.0),
+    ] },
+    // The Headhunter's strike (any time of day): a stranger walks up, and it's over in a heartbeat.
+    headhunt: { name: 'Headhunter: a head is taken', needsHouse: true, duration: 11.2, steps: [
+      [0, 'hold'], [0, 'letterbox', true], [0, 'music', 'tension'], [0, 'camera', { to: 'house', zoom: 3.0, dur: 1.4 }],
+      [0.4, 'spawn', { id: 'victim', kind: 'resident', at: 'door' }],
+      [0.6, 'caption', { lines: ['Somewhere in {town}, a name was crossed off a list.'], dur: 2.6 }],
+      [1.2, 'bubble', { id: 'victim', text: '…?', dur: 1 }],
+      [1.5, 'spawnMasked', { id: 'hh', at: 'street', fadeIn: 0.6 }], [2.0, 'move', { id: 'hh', to: 'nearStreet', dur: 1.4, gait: 'walk' }],
+      [3.3, 'caption', { lines: ['The Headhunter does not miss.'], dur: 2 }], [3.4, 'glint', { id: 'hh' }],
+      [4.0, 'scared', { id: 'victim' }], [4.0, 'bubble', { id: 'victim', text: '!', dur: 0.7 }],
+      [4.2, 'move', { id: 'hh', to: { from: 'doorSide', dx: 22, mirror: true }, dur: 0.5, gait: 'run' }],
+      [4.75, 'attack', { id: 'hh', target: 'victim' }], [5.1, 'hit', { id: 'victim', dir: -1 }],
+      ...FALL(5.2), [5.2, 'sfx', 'sting'], [5.3, 'execute'],
+      [6.0, 'bubble', { id: 'hh', text: '🎯', dur: 1.2 }], [6.4, 'move', { id: 'hh', to: 'street', dur: 1.4, gait: 'walk', fadeOut: true }],
+      [7.0, 'title', { text: 'A HEAD IS TAKEN', sub: '{sub}', color: '#f0a64a', dur: 3.4 }], [10.6, 'letterbox', false],
+    ] },
+    // The Headhunter's level-6 execution: no vote, no trial.
+    headhuntExecution: { name: 'Headhunter: execution', needsHouse: true, duration: 11.4, steps: [
+      [0, 'hold'], [0, 'letterbox', true], [0, 'music', 'ominous'], [0, 'camera', { to: 'house', zoom: 3.0, dur: 1.4 }],
+      [0.4, 'spawn', { id: 'victim', kind: 'resident', at: 'door' }],
+      [0.6, 'caption', { lines: ['The Headhunter has passed a sentence of their own.'], dur: 2.4 }],
+      [1.0, 'spawnMasked', { id: 'hh', at: 'street', fadeIn: 0.6 }], [1.2, 'move', { id: 'hh', to: { from: 'doorSide', dx: 22, mirror: true }, dur: 1.6, gait: 'walk' }],
+      [2.9, 'grab', { id: 'victim', by: 'hh', front: true, gap: 20 }], [2.9, 'struggle', { id: 'victim', dur: 1.2 }],
+      [3.0, 'bubble', { id: 'victim', text: 'Wait—!', dur: 1 }], [3.0, 'caption', { lines: ['No vote. No trial.'], dur: 1.8 }],
+      [4.2, 'release', { id: 'victim', by: 'hh' }], [4.4, 'arms', { id: 'hh', l: 2.6, r: -2.6 }], [4.4, 'sfx', 'drum'],
+      [5.2, 'attack', { id: 'hh', target: 'victim' }], [5.55, 'hit', { id: 'victim', dir: -1 }], [5.6, 'flash', { a: 0.5, color: '255,200,140' }],
+      ...FALL(5.6), [5.6, 'sfx', 'sting'], [5.7, 'execute'],
+      [6.0, 'crowd', { count: 4, lines: ['!', 'No!', 'Who was that?'], dur: 1.6 }], [6.2, 'arms', { id: 'hh' }],
+      [6.6, 'move', { id: 'hh', to: 'street', dur: 1.4, gait: 'walk', fadeOut: true }],
+      [7.0, 'title', { text: 'THE HEADHUNTER’S VERDICT', sub: '{sub}', color: '#f0a64a', dur: 3.4 }], [10.8, 'letterbox', false],
+    ] },
   });
 
   // Reuse the timeline action library for interventions and role reveals.
@@ -629,6 +724,8 @@
 
   MANUAL.push('introduction', 'protection', 'hurricane', 'flood', 'meteor');
   MANUAL.push('planting', 'explosion', 'crier', 'revival', 'ash', 'hustle', 'nomination', 'ghostVote', 'silence', 'emergencyVote');
+  // Every death scene is available to the Judge to tell their own story.
+  MANUAL.push('death_lake', 'death_hearth', 'death_tavern', 'death_field', 'death_chase', 'headhunt', 'headhuntExecution');
   window.MT_SCENES = SCENES;
   window.MT_SCENE_MANUAL = MANUAL;
 })();

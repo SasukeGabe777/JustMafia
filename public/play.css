@@ -286,3 +286,9 @@ summary { cursor:pointer; font-weight:600; padding:8px 0; }
 .mafia-signals { margin-top: 10px; }
 .mafia-signals summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
 .mafia-roles .tag { display: inline-block; margin: 2px 2px; }
+
+/* Headhunter level pips */
+.hh-levels { display: flex; gap: 6px; margin: 6px 0; }
+.hh-pip { width: 30px; height: 30px; display: grid; place-items: center; border: 3px solid var(--line); font-weight: 700; opacity: .5; }
+.hh-pip.on { background: #f0a64a; color: #2b1d12; opacity: 1; }
+.mafia-intel ul { margin: 4px 0 8px; }

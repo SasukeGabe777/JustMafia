@@ -179,7 +179,10 @@ io.on('connection', (socket) => {
 
   // Judge scene controls: presentation only, relayed to the big screen.
   // They never change game state, and every field is validated.
-  const SCENES = ['murder', 'investigation', 'watcher', 'peek', 'flee', 'visitor', 'emptyHouse', 'graveyard', 'square', 'quietNight', 'victory', 'hurricane', 'flood', 'meteor', 'introduction', 'protection', 'beyond', 'photograph', 'blessing'];
+  const SCENES = ['murder', 'investigation', 'watcher', 'peek', 'flee', 'visitor', 'emptyHouse', 'graveyard', 'square', 'quietNight', 'victory', 'hurricane', 'flood', 'meteor', 'introduction', 'protection', 'beyond', 'photograph', 'blessing',
+    'death_lake', 'death_hearth', 'death_tavern', 'death_field', 'death_chase', 'headhunt', 'headhuntExecution'];
+  const HOUSE_SCENES = ['murder', 'investigation', 'watcher', 'peek', 'flee', 'visitor', 'emptyHouse', 'hurricane', 'flood', 'meteor', 'protection',
+    'death_lake', 'death_hearth', 'death_tavern', 'death_field', 'death_chase', 'headhunt', 'headhuntExecution'];
   SCENES.push('planting','explosion','crier','revival','ash','hustle','nomination','ghostVote','silence','emergencyVote');
   const OUTCOMES = ['kill', 'protected', 'guard', 'guardDies', 'blocked', 'failed', 'multiple'];
   const SPOTS = ['overview', 'square', 'cemetery', 'pond', 'tavern', 'hall', 'firepit'];
@@ -204,7 +207,7 @@ io.on('connection', (socket) => {
     if (!SCENES.includes(m.scene)) return null;
     const house = houseOf(room, m.house);
     if (m.house != null && house == null) return null;
-    if (['murder', 'investigation', 'watcher', 'peek', 'flee', 'visitor', 'emptyHouse', 'hurricane', 'flood', 'meteor', 'protection'].includes(m.scene) && house == null) return null;
+    if (HOUSE_SCENES.includes(m.scene) && house == null) return null;
     const outcome = OUTCOMES.includes(m.outcome) ? m.outcome : undefined;
     return { event: 'host:scene', data: { scene: m.scene, outcome, house, title: m.scene === 'victory' ? String(m.title || '').slice(0, 60) : undefined } };
   });
@@ -313,6 +316,8 @@ io.on('connection', (socket) => {
   socket.on('player:intervene', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.intervene(p, String(msg.kind || '')) : { ok: false }); });
   // Role draft: vote for a card (toggle) or lock in; then flip your own dealt card.
   socket.on('player:draftVote', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.draftVote(p, { role: typeof msg.role === 'string' ? msg.role : null, on: typeof msg.on === 'boolean' ? msg.on : null, ready: msg.ready === true }) : { ok: false }); });
+  // Headhunter powers (mark, disguise, puppet, strike, reveal, execute); the server checks level and timing.
+  socket.on('player:headhunter', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.headhunterAction(p, { op: String(msg.op || ''), targetId: msg.targetId ? String(msg.targetId) : null, role: msg.role == null ? null : String(msg.role) }) : { ok: false }); });
   socket.on('player:flip', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.flipCard(p) : { ok: false }); });
   socket.on('player:lastWords', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.setLastWords(p, { nameId: msg.nameId ? String(msg.nameId) : null, word: msg.word ? String(msg.word) : null }) : { ok: false }); });
   socket.on('player:moveReply', (msg = {}, cb) => {

@@ -152,6 +152,8 @@
 
   // Spoken sentence by sentence, with a dramatic pause between them.
   let speakToken = 0;
+  // Scene captions (the narrator's story beats) are read aloud too, when the voice is on.
+  window.addEventListener('mt-caption', (e) => speak(e.detail));
   function speak(text) {
     if (state && state.narratorMode === 'human') return;
     if (!prefs.voice || !window.speechSynthesis) return;

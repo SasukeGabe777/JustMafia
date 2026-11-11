@@ -100,10 +100,18 @@ and skin colors, with all manual controls available.
 | 🔮 Telepath ×2 | Town | Private coded messages to the other Telepath ("I suspect X", "Protect X", "Do not trust my last message"…) |
 | 🃏 Jester | Neutral | Wins if the town votes them out |
 | 🗡️ Serial Killer | Neutral | Kills each night and can't be killed at night. Wins by being the last one standing |
+| 🏹 Hunter | Mafia | The Mafia's detective: learns one non-Mafia player's exact role each night, shared with the whole family. Also votes on the kill |
+| 🎯 Headhunter | Neutral | Marks who they want dead (night, or any time). The mark shows on the Mafia's night screen as a vote from one of their own (never counted). Each time the mark dies (night or gallows) they level up. **1** disguise (investigations see a role of their choice; a Villager before that) · **2** once a night, force a Mafia member's kill vote · **3** one strike per game, any time, with its own scene · **4** learn one role a night · **5** sees every role · **6** one execution per day. Wins as the last one standing |
 
 Night actions resolve together, in this order: blocks → protection → kills → investigations. Ties are broken by a seeded random generator, so results are deterministic.
 
-**Win conditions:** the Town wins when no Mafia or Serial Killer is left alive. The Mafia win at parity, or (optionally) when everyone else is gone. The Serial Killer wins as the last one standing. The Jester wins if voted out.
+**Win conditions:** the Town wins when no Mafia, Serial Killer or Headhunter is left alive. The Mafia win at parity, or (optionally) when everyone else is gone. The Serial Killer and the Headhunter each win as the last one standing. The Jester wins if voted out.
+
+**Death scenes:**
+- Every death is acted out with the character rig: the victim is grabbed and struggles, falls with X eyes, and a blood pool spreads under them.
+- Death locations: their bed, the lake (where the body is dragged to the shore and slips under), the hearth, outside the tavern, the field, chased home, or watching another house.
+- With the AI narrator, each scene carries the narrator's story beats as captions, read aloud when the TV voice is on.
+- With a human narrator there are no captions. Instead, the Judge picks how each kill plays at dawn (Judge console → dawn reveal list), and can play any death scene by hand from the Scenes tab.
 
 With the AI narrator, night deaths become stories. A victim may be found at
 home, by the lake ("stayed at the lake a little too long"), at the hearth,

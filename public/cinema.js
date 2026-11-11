@@ -487,7 +487,7 @@
       if (oc) steps = steps.concat(oc.steps);
       steps = steps.filter((s) => this.cond(s[3])).sort((a, b) => a[0] - b[0]);
       this.scene = { ...item, steps, idx: 0, t: 0, duration: (oc && oc.duration) || def.duration, phaseBound: !!item.opts.phaseBound };
-      this.actors.clear(); this.fx = []; this.loops = []; this.title = null; this.spot = null; this.props = []; this.camFollow = null;
+      this.actors.clear(); this.fx = []; this.loops = []; this.title = null; this.spot = null; this.props = []; this.camFollow = null; this.caption = null;
       this.room = this.freshRoom();
       this.stage = 'town';
       this.environment = null; this.snapshot = false;
@@ -511,7 +511,7 @@
       this.stage = 'town';
       this.letterTarget = 0;
       this.fadeTo(0, interrupted ? 0.2 : 0.5);
-      this.actors.clear(); this.loops = []; this.spot = null; this.title = null; this.fogTarget = 0; this.props = []; this.camFollow = null;
+      this.actors.clear(); this.loops = []; this.spot = null; this.title = null; this.fogTarget = 0; this.props = []; this.camFollow = null; this.caption = null;
       town.focusSpot('overview', interrupted ? 0.5 : 1.4);
       town.cineDark = null;
       this.environment = null; this.snapshot = false;
@@ -571,12 +571,34 @@
       // leader, leaning back with heels sliding (dust kicks up while moving).
       for (const a of this.actors.values()) if (a.follow) {
         const L = this.actors.get(a.follow.id); if (!L) { a.follow = null; continue; }
-        const side = L.facing >= 0 ? -1 : 1, s = a.scale || 1;
+        const s = a.scale || 1;
+        if (a.follow.body) { // a fallen body slides along behind, leaving a dark trail
+          const side = L.facing >= 0 ? -1 : 1;
+          a.x = L.x + side * a.follow.gap * s; a.y = L.y + (a.follow.dy || 0);
+          if (L.walking && Math.random() < 0.3) this.fx.push({ type: 'puff', x: a.x, y: a.y, vx: 0, vy: 0, g: 0, r: 3 * s, life: 2.5, max: 2.5, stage: this.stage, color: 'rgba(90,10,16,.8)' });
+          continue;
+        }
+        if (a.follow.front) { // face to face: the victim is held at arm's length, twisting to break free
+          const side = L.facing >= 0 ? 1 : -1;
+          a.x = L.x + side * a.follow.gap * s + Math.sin(sc.t * 13) * 2 * s; a.y = L.y + (a.follow.dy || 0);
+          a.facing = -side; a.walking = false;
+          L.arms = side > 0 ? { l: -1.35, r: -1.55 } : { l: 1.55, r: 1.35 }; L.lean = side * 0.12;
+          a.lean = side * 0.22; a.arms = { l: 1.4, r: -1.4 };
+          continue;
+        }
+        const side = L.facing >= 0 ? -1 : 1;
         a.x = L.x + side * a.follow.gap * s; a.y = L.y + (a.follow.dy || 0);
         a.lean = side * 0.32 + Math.sin(sc.t * 9) * 0.04; a.dragged = side < 0 ? 1 : -1; a.walking = false;
         L.arms = side < 0 ? { l: 1.15, r: -0.15 } : { l: 0.15, r: -1.15 }; L.lean = -side * 0.14;
         a.arms = side < 0 ? { l: 0.2, r: -1.25 } : { l: 1.25, r: -0.2 };
         if (L.walking && Math.random() < 0.35) this.fx.push({ type: 'puff', x: a.x - side * 4 * s, y: a.y, vx: side * 20, vy: -10, g: 0, r: 4 * s, life: 0.6, max: 0.6, stage: this.stage });
+      }
+      // Struggle: arms thrash and the body twists (overrides any held pose while it lasts).
+      for (const a of this.actors.values()) if (a.struggle) {
+        if (sc.t > a.struggle.until) { a.struggle = null; continue; }
+        const k = sc.t * 11;
+        a.arms = { l: 1.1 + Math.sin(k) * 1.2, r: -1.1 + Math.cos(k * 1.3) * 1.2 }; a.lean = (a.lean || 0) * 0.5 + Math.sin(k * 0.7) * 0.18;
+        a.scared = true;
       }
       // Follow camera: keeps a moving actor framed (e.g. the executioner dragging someone).
       if (this.camFollow) { const A = this.actors.get(this.camFollow.id); if (A) this.town.focus(A.x + (this.camFollow.dx || 0), A.y - (this.camFollow.dy || 40), this.camFollow.zoom || 2.8, 0.35); }
@@ -627,6 +649,8 @@
     pt(at) {
       if (!at) return { x: CX, y: CY };
       if (typeof at === 'object') {
+        // { actor: 'victim', dx, dy }: relative to where an actor is right now (e.g. a pool under a body).
+        if (at.actor) { const A = this.actors.get(at.actor); if (A) return { x: A.x + (at.dx || 0) * (A.scale || 1), y: A.y + (at.dy || 0) * (A.scale || 1) }; }
         const base = at.from ? this.pt(at.from) : { x: 0, y: 0 };
         return { x: base.x + (at.dx || 0) * (at.mirror ? this.ctx.dir : 1), y: base.y + (at.dy || 0) };
       }
@@ -660,11 +684,12 @@
         case 'accused': return { x: CX - 190, y: CY + 115 };
         case 'offstage': return { x: CX - 470, y: CY + 150 };
         // story locations: where the victim stands, and where the attacker comes from (the town side)
-        case 'place': case 'placeBehind': case 'placeFrom': case 'placeAway': case 'placeWater': {
+        case 'place': case 'placeBehind': case 'placeFrom': case 'placeAway': case 'placeWater': case 'placeShore': {
           const P = L.PLACES && L.PLACES[this.ctx.place];
           const spot = P ? P.at : { x: h.x - 52 * s, y: h.y + 22 * s }; // 'visit': beside the house, peeking at the lit window
           const side = spot.x < CX ? 1 : -1;
           if (at === 'placeWater') return P && P.water ? P.water : spot;
+          if (at === 'placeShore') { const w = P && P.water ? P.water : spot; return { x: spot.x + (w.x - spot.x) * 0.55, y: spot.y + (w.y - spot.y) * 0.55 }; }
           if (at === 'placeBehind') return { x: spot.x + 30 * side, y: spot.y + 4 };
           if (at === 'placeFrom') return { x: spot.x + 250 * side, y: spot.y + 50 };
           if (at === 'placeAway') return { x: spot.x + 650 * side, y: spot.y + 140 };
@@ -701,7 +726,7 @@
 
     // A theme's antagonist (e.g. RSP Supply's Tom Smith); null for themes without one.
     villain() { const T = window.MT_THEMES, t = T && T.THEMES[this.town.themeId]; return t && t.villain || null; }
-    text(s) { const b = this.ctx.bind, v = this.villain() || {}; return String(s || '').replace(/\{name\}/g, this.ctx.name).replace(/\{host\}/g, this.ctx.host).replace(/\{villain\}/g, v.name || '').replace(/\{villainTitle\}/g, v.title || '').replace(/\{guard\}/g, b.guardName || 'Someone').replace(/\{lastWords\}/g, b.lastWordsText || '').replace(/\{title\}/g, b.title || '').replace(/\{sub\}/g, b.sub || '').replace(/\{mood\}/g, b.mood || ''); }
+    text(s) { const b = this.ctx.bind, v = this.villain() || {}; return String(s || '').replace(/\{town\}/g, (this.town.state && this.town.state.townName) || 'town').replace(/\{name\}/g, this.ctx.name).replace(/\{host\}/g, this.ctx.host).replace(/\{villain\}/g, v.name || '').replace(/\{villainTitle\}/g, v.title || '').replace(/\{guard\}/g, b.guardName || 'Someone').replace(/\{lastWords\}/g, b.lastWordsText || '').replace(/\{title\}/g, b.title || '').replace(/\{sub\}/g, b.sub || '').replace(/\{mood\}/g, b.mood || ''); }
 
     a_letterbox(on) { this.letterTarget = on ? 1 : 0; }
     a_music(mood) { SFX.music(this.text(mood) || null, this.ctx.kit.root, this.town.themeId); }
@@ -911,8 +936,20 @@
         avatar: { color: '#1d1c22', skin: '#c49a7a', hat: 'execHood', hair: 'bald', outfit: 'worker', pants: '#202027', shoes: '#151821', shoeStyle: 'leatherBoots', accessory: 'none', facialHair: 'none', features: 'none', expression: 'serious' } });
     }
     // Grab by the wrist: `id` is now dragged behind `by` wherever they walk.
-    a_grab(a) { const x = this.actors.get(a.id); if (x) { x.follow = { id: a.by || 'exec', gap: a.gap || 30, dy: a.dy || 2 }; x.pose = 'stand'; x.lift = 0; x.scared = true; SFX.play('hit'); } }
-    a_release(a) { const x = this.actors.get(a.id); if (x) { x.follow = null; x.lean = 0; x.dragged = 0; x.arms = null; } const L = this.actors.get(a.by || 'exec'); if (L) { L.arms = null; L.lean = 0; } }
+    // front: held face to face (a struggle) instead of dragged behind.
+    a_grab(a) { const x = this.actors.get(a.id); if (x) { x.follow = { id: a.by || 'exec', gap: a.gap || 30, dy: a.dy || 2, front: !!a.front }; x.pose = 'stand'; x.lift = 0; x.scared = true; SFX.play('hit'); } }
+    // Flailing arms and a twisting body for a few seconds (a fight for their life).
+    a_struggle(a) { const x = this.actors.get(a.id); if (x) { x.struggle = { t0: this.scene.t, until: this.scene.t + (a.dur || 1.5) }; SFX.play('gasp'); } }
+    // Drag a body (already fallen) along behind someone, leaving a trail.
+    a_dragBody(a) { const x = this.actors.get(a.id); if (x) { x.follow = { id: a.by || 'assassin', gap: a.gap || 24, dy: a.dy || 0, body: true }; } }
+    // Narrator caption (AI narrator only; a human narrator tells the story themselves).
+    a_caption(a) {
+      if (this.town.state && this.town.state.narratorMode === 'human') return;
+      const lines = a.lines || [a.text], text = this.text(lines[Math.floor(Math.random() * lines.length)]);
+      this.caption = { text, t0: this.scene.t, dur: a.dur || 3 };
+      try { window.dispatchEvent(new CustomEvent('mt-caption', { detail: text })); } catch { /* voice is optional */ }
+    }
+    a_release(a) { const x = this.actors.get(a.id); if (x) { x.follow = null; x.lean = 0; x.dragged = 0; x.arms = null; x.struggle = null; } const L = this.actors.get(a.by || 'exec'); if (L) { L.arms = null; L.lean = 0; } }
     a_follow(a) { this.camFollow = a && a.id ? { id: a.id, zoom: a.zoom, dx: a.dx, dy: a.dy } : null; }
     // Pose limbs directly (radians from the shoulder; see character-art rig).
     a_arms(a) { const x = this.actors.get(a.id); if (x) { x.arms = a.l == null && a.r == null ? null : { l: a.l || 0, r: a.r || 0 }; if (a.lean != null) x.lean = a.lean; } }
@@ -941,7 +978,12 @@
       for (let i = 0; i < 10; i++) this.fx.push({ type: 'spark', x: x.x + (Math.random() - 0.5) * 30, y: x.y - 10 - Math.random() * 20, vx: (Math.random() - 0.5) * 30, vy: -8 - Math.random() * 14, g: 0, color: '#1b1b1f', size: 2, life: (a.dur || 4) * (0.6 + Math.random() * 0.4), max: a.dur || 4, stage: this.stage });
     }
     // Props live for the scene: gallows, a growing blood pool, a bone pile.
-    a_prop(a) { const p = this.pt(a.at || 'gallows'); this.props.push({ type: a.type, x: p.x, y: p.y, t0: this.scene.t, dur: a.dur || 1, scale: (this.ctx.house ? this.ctx.house.s : 0.72) * 1.05 }); }
+    a_prop(a) {
+      const p = this.pt(a.at || 'gallows'), A = a.at && a.at.actor ? this.actors.get(a.at.actor) : null;
+      // Indoors the camera is close, so props take the actor's (much larger) scale.
+      const scale = A && this.stage === 'interior' ? A.scale * 0.85 : (this.ctx.house ? this.ctx.house.s : 0.72) * 1.05;
+      this.props.push({ type: a.type, x: p.x, y: p.y, t0: this.scene.t, dur: a.dur || 1, scale, stage: this.stage });
+    }
     drawProp(ctx, p, t) {
       const s = p.scale / 0.756, r = (c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(p.x + x * s, p.y + y * s, w * s, h * s); };
       if (p.type === 'gallows') {
@@ -1003,7 +1045,9 @@
     // Town residents (used by the execution scene).
     a_execute() { if (this.ctx.owner) this.town.finishDeath(this.ctx.owner.id); }
     a_hold() { if (this.ctx.owner) this.town.hold(this.ctx.owner.id); }
-    a_release() { if (this.ctx.owner) this.town.release(this.ctx.owner.id); }
+    // (Tether release is a_release(a) above; a second method with the same name used to
+    // override it, so grabs never let go. Releasing the held resident is now a_unhold.)
+    a_unhold() { if (this.ctx.owner) this.town.release(this.ctx.owner.id); }
     a_walkResident(a) {
       const c = this.ctx.owner && this.town.chars.get(this.ctx.owner.id);
       if (c) c.cineTarget = this.pt(a.to);
@@ -1023,7 +1067,7 @@
     townEntities() {
       if (this.stage !== 'town') return [];
       const t = this.now();
-      const props = (this.props || []).map((p) => ({ y: p.type === 'gallows' ? p.y - 200 : p.type === 'pool' ? p.y - 4 : p.y + 1, draw: (ctx) => this.drawProp(ctx, p, t) }));
+      const props = (this.props || []).filter((p) => p.stage !== 'interior').map((p) => ({ y: p.type === 'gallows' ? p.y - 200 : p.type === 'pool' ? p.y - 4 : p.y + 1, draw: (ctx) => this.drawProp(ctx, p, t) }));
       return props.concat([...this.actors.values()].filter((a) => a.stage === 'town' && a.alpha > 0.01).map((a) => ({ y: a.y, draw: (ctx) => this.drawActor(ctx, a, t) })));
     }
 
@@ -1111,6 +1155,7 @@
       drawBed(ctx, kit, 'back');
       for (const a of lying) this.drawActor(ctx, a, t);
       drawBed(ctx, kit, 'front', shade(this.ctx.avatar.color, -0.15));
+      for (const p of (this.props || []).filter((q) => q.stage === 'interior')) this.drawProp(ctx, p, t); // e.g. a pool under the body
       res.filter((a) => !lying.includes(a)).sort((p, q) => p.y - q.y).forEach((a) => this.drawActor(ctx, a, t));
       this.drawFx(ctx, 'interior', 'under');
 
@@ -1196,7 +1241,7 @@
             break;
           case 'puff':
             ctx.globalAlpha = 0.5 * (1 - p);
-            ctx.fillStyle = '#4a4458'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r * (1 + p), 0, TAU); ctx.fill();
+            ctx.fillStyle = e.color || '#4a4458'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r * (e.color ? 1 : 1 + p), 0, TAU); ctx.fill();
             break;
           case 'glint':
             ctx.globalAlpha = 1 - p; ctx.strokeStyle = '#fff6c0'; ctx.lineWidth = 3; ctx.shadowColor = '#fff'; ctx.shadowBlur = 12;
@@ -1239,6 +1284,17 @@
       if (this.fade > 0.001) { ctx.fillStyle = `rgba(0,0,0,${this.fade})`; ctx.fillRect(-10, -10, W + 20, H + 20); }
       const bar = 120 * this.letter;
       if (bar > 0.5) { ctx.fillStyle = '#000'; ctx.fillRect(-10, -10, W + 20, bar + 10); ctx.fillRect(-10, H - bar, W + 20, bar + 10); }
+      // Narrator caption: the story, told line by line in the bottom band.
+      if (this.caption && this.scene) {
+        const ct = this.scene.t - this.caption.t0, ca = ct < 0.4 ? ct / 0.4 : ct > this.caption.dur - 0.4 ? Math.max(0, (this.caption.dur - ct) / 0.4) : 1;
+        if (ca > 0) {
+          ctx.save(); ctx.globalAlpha = ca; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          if (bar < 60) { ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(0, H - 120, W, 120); }
+          ctx.font = `italic 500 46px ${FONT}`; ctx.fillStyle = '#f5e6c8'; ctx.shadowColor = '#000'; ctx.shadowBlur = 8;
+          ctx.fillText(this.caption.text, W / 2, H - 60, W - 200);
+          ctx.restore();
+        }
+      }
       if (this.title && this.scene) {
         const tt = this.scene.t - this.title.t0;
         const a = tt < 0.5 ? tt / 0.5 : tt > this.title.dur - 0.5 ? Math.max(0, (this.title.dur - tt) / 0.5) : 1;

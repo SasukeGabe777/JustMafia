@@ -249,13 +249,17 @@
     const label = (e) => (['kill', 'multiKill'].includes(e.type) ? `🔪 ${esc(nameOf(e.targetId))} is killed`
       : e.type === 'guarded' ? `🛡️ A protector saves ${esc(nameOf(e.targetId))}${e.guardDied ? ' and dies' : ''}`
         : `💉 ${esc(nameOf(e.targetId))} is attacked but survives`);
-    const rows = R2.events.map((e, i) => `<li><span>${label(e)}</span><button class="btn small ${e.played ? 'ghost' : ''}" data-rev="${i}">${e.played ? '↻ Replay' : '▶ Play'}</button></li>`);
+    // Each kill: pick how it plays on the TV (tell your own story), then Play.
+    const PLACES = [['home', '🛏 In their bed'], ['lake', '🌊 At the lake'], ['hearth', '🔥 By the hearth'], ['tavern', '🍺 Outside the tavern'], ['field', '🌾 In the field'], ['chase', '🏃 Chased home']];
+    const pick = (e, i) => (['kill', 'multiKill'].includes(e.type) ? `<select class="small" data-rev-place="${i}" title="How this death plays out on the TV">${PLACES.map(([k, l]) => `<option value="${k}"${(e.place || 'home') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>` : '');
+    const rows = R2.events.map((e, i) => `<li><span>${label(e)}</span>${pick(e, i)}<button class="btn small ${e.played ? 'ghost' : ''}" data-rev="${i}">${e.played ? '↻ Replay' : '▶ Play'}</button></li>`);
     if (!R2.events.length) rows.push(`<li><span>🌙 A quiet night: nobody was attacked</span><button class="btn small ${R2.quietPlayed ? 'ghost' : ''}" data-rev-quiet>${R2.quietPlayed ? '↻ Replay' : '▶ Play'}</button></li>`);
     const blocked = R2.blocked.map((e, i) => `<li><span>⚠ Attack on ${esc(nameOf(e.targetId))} was blocked <span class="muted small">(reveals extra info)</span></span><button class="btn small ghost" data-rev-blocked="${i}">${e.played ? '↻ Replay' : '▶ Play'}</button></li>`);
     $('#g-reveal-list').innerHTML = `<ul class="list">${rows.join('')}</ul>`
       + (R2.events.length > 1 ? '<button class="btn" id="rev-all">▶ Play all in order</button>' : '')
       + (blocked.length ? `<h4>Optional</h4><ul class="list">${blocked.join('')}</ul>` : '');
     $$('[data-rev]').forEach((b) => b.addEventListener('click', () => act('reveal', { index: Number(b.dataset.rev) })));
+    $$('[data-rev-place]').forEach((s) => s.addEventListener('change', () => act('reveal', { index: Number(s.dataset.revPlace), place: s.value, setPlace: true })));
     $$('[data-rev-blocked]').forEach((b) => b.addEventListener('click', () => act('reveal', { which: 'blocked', index: Number(b.dataset.revBlocked) })));
     const q = $('[data-rev-quiet]'); if (q) q.addEventListener('click', () => act('reveal', { which: 'quiet' }));
     const all = $('#rev-all'); if (all) all.addEventListener('click', () => act('reveal', { all: true }));

@@ -24,6 +24,7 @@
     godfather:    { min: 4,  weight: 1.0, power: 3 },
     roleblocker:  { min: 7,  weight: 1.0, power: 2 },
     silencer:     { min: 7,  weight: 0.9, power: 2 },
+    hunter:       { min: 7,  weight: 0.9, power: 2 },
     puppetMaster: { min: 9,  weight: 0.6, power: 2, publicVotes: true },
     hustler:      { min: 9,  weight: 0.6, power: 1 },
     alchemist:    { min: 11, weight: 0.5, power: 2 },
@@ -45,6 +46,7 @@
     jester:       { min: 6,  weight: 1.0, power: 0 },
     serialKiller: { min: 9,  weight: 0.8, power: 3 },
     paparazzi:    { min: 10, weight: 0.6, power: 0 },
+    headhunter:   { min: 8,  weight: 0.8, power: 3 },
   };
   const slotsOf = (k) => (META[k] && META[k].slots) || 1;
   const teamOf = (k) => (ROLES[k] || {}).team;

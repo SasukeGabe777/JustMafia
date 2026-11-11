@@ -68,6 +68,7 @@ const HARD_MAX_PLAYERS = 100;
 const MOVE_ASK_MS = 20000; // how long a host has to answer a move-in request
 const VERDICT_WINDOW_MS = 8000; // extra verdict time for interventions / last words when someone is condemned
 const LAST_WORDS = ['LIAR', 'INNOCENT', 'TRUST', 'WATCH', 'SUSPECT', 'AVENGE ME', 'GOODBYE']; // safe, opinion-only tokens
+const JUDGE_PLACES = ['home', 'lake', 'hearth', 'tavern', 'field', 'chase']; // kill scenes the Judge can pick at dawn
 const HAUNT_COOLDOWN_MS = 4000;
 const HAUNT_KINDS = ['boo', 'spin', 'wail'];
 const TELEPATH_COOLDOWN_MS = 2500;
@@ -318,7 +319,7 @@ class Room {
       statuses: [], actionUses: {}, actionDays: {}, copiedAbility: null, stolenAbilities: [],
       houseState: 'normal', ghostVoteUsed: false, whispersUsed: 0, whisperAt: -Infinity, whispers: [],
       ghostChat: [], nominations: 0, ashes: false, potions: { midas: 0, volatile: 0 },
-      mimicUsed: false, mimicActed: false, metrics: { abilities: 0, saves: 0, correctInvestigations: 0, objectives: 0, executionerSaves: 0 }, savedTargets: [],
+      mimicUsed: false, mimicActed: false, hh: null, metrics: { abilities: 0, saves: 0, correctInvestigations: 0, objectives: 0, executionerSaves: 0 }, savedTargets: [],
     });
   }
 
@@ -640,7 +641,7 @@ class Room {
     // Hash of room/day/victim: deterministic, and it never consumes the rules RNG.
     let h = 2166136261; for (const ch of `${this.code}:${this.day}:${p.id}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
     const roll = (h >>> 0) / 4294967296;
-    const place = roll < 0.3 ? 'home' : ['lake', 'hearth', 'tavern', 'field'][Math.min(3, Math.floor((roll - 0.3) / 0.175))];
+    const place = roll < 0.25 ? 'home' : ['lake', 'hearth', 'tavern', 'field', 'chase'][Math.min(4, Math.floor((roll - 0.25) / 0.15))];
     return { place, placeHouse: this.homeSlot(p) };
   }
 
@@ -890,14 +891,18 @@ class Room {
   checkWinner() {
     const alive = this.alive();
     const mafia = alive.filter((p) => this.team(p) === 'mafia').length;
-    const sk = alive.filter((p) => p.role === 'serialKiller').length;
+    // Neutral killers (Serial Killer, Headhunter) win by being the last one standing.
+    const killers = alive.filter((p) => ['serialKiller', 'headhunter'].includes(p.role));
+    const sk = killers.length;
+    const lone = new Set(killers.map((p) => p.role)).size === 1 ? killers[0].role : null; // two different killers keep fighting
     const others = alive.length - mafia - sk;
     if (!alive.length) return 'draw';
     if (mafia === 0 && sk === 0) return 'town';
     const mafiaWins = this.settings.mafiaWinAt === 'all' ? others === 0 : mafia >= others;
     if (sk === 0 && mafiaWins) return 'mafia';
-    if (mafia === 0 && others <= 1) return 'serialKiller';
-    if (others === 0) return mafia > sk ? 'mafia' : 'serialKiller';
+    if (mafia === 0 && others <= 1 && lone) return lone;
+    if (others === 0 && (mafia > sk || !lone)) return mafia > sk ? 'mafia' : alive.length <= 2 ? 'draw' : null;
+    if (others === 0) return lone;
     if (this.day > this.inGame().length + 5) return 'draw'; // safety net
     return null;
   }
@@ -908,14 +913,14 @@ class Room {
     if (p.role === 'paparazzi') return !!w && p.alive && p.photos >= this.settings.paparazziGoal;
     if (!w || w === 'draw') return false;
     if (w === 'jester') return p.id === this.jesterId;
-    if (w === 'serialKiller') return p.role === 'serialKiller';
+    if (w === 'serialKiller' || w === 'headhunter') return p.role === w;
     return this.team(p) === w;
   }
 
   endGame() {
     this.clock.clear(this.timer);
     for (const p of this.inGame()) p.won = this.didWin(p);
-    const key = { mafia: 'mafiaWin', town: 'townWin', serialKiller: 'skWin', draw: 'draw' }[this.winner];
+    const key = { mafia: 'mafiaWin', town: 'townWin', serialKiller: 'skWin', headhunter: 'hhWin', draw: 'draw' }[this.winner];
     if (key) this.narrate(key);
     this.addLog(`Game over: ${R.WINNERS[this.winner] ? R.WINNERS[this.winner].name : this.winner} won on day ${this.day}.`);
     this.setCinematic({ type: 'gameover', winner: this.winner });
@@ -1021,9 +1026,16 @@ class Room {
   }
 
   // Judge reveal mode: play one dawn event (or all of them, or the quiet night).
-  judgeReveal({ index, which = 'events', all } = {}) {
+  judgeReveal({ index, which = 'events', all, place, setPlace } = {}) {
     if (this.phase !== 'dawn' || !this.reveal) return { ok: false, error: 'Nothing waiting to be revealed.' };
     const R2 = this.reveal;
+    // The Judge chooses how each kill plays out on the TV (their own story): home, lake, chase...
+    if (place != null) {
+      const e = R2.events[int(index, -1)];
+      if (!e || !['kill', 'multiKill'].includes(e.type) || !JUDGE_PLACES.includes(place)) return { ok: false, error: 'Choose a scene for a kill.' };
+      e.place = place === 'home' ? null : place; e.placeHouse = place === 'home' ? undefined : e.placeHouse;
+      if (setPlace) { this.sync(); return { ok: true }; }
+    }
     if (all) {
       R2.events.forEach((e) => { e.played = true; });
       this.setCinematic({ type: 'night', events: R2.events.map(({ played, ...e }) => e) });
@@ -1501,5 +1513,6 @@ require('./rules/social')(Room);
 require('./rules/progression')(Room);
 require('./rules/rundown')(Room);
 require('./rules/draft')(Room);
+require('./rules/headhunter')(Room); // wraps kill/night/views from the modules above, so it installs last
 require('./rules/story-bots')(Room);
 module.exports = { Room, DEFAULT_SETTINGS, HARD_MAX_PLAYERS };

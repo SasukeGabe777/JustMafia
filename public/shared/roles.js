@@ -95,9 +95,23 @@
     // Verdict-window role: once per game, reveal yourself during an execution and
     // die in the condemned's place ("Saved by the Executioner"). The reveal is public.
     executioner: { name: 'Executioner', team: 'town', emoji: '🪓', color: '#7a1f2b', blurb: 'Once per game, during any execution, you may reveal yourself as the Executioner and give your own life in place of the condemned. Everyone will see it. Wins with Town.' },
+    // The Mafia's detective: learns exact roles for the family (also votes on the Mafia kill).
+    hunter: { name: 'Hunter', team: 'mafia', knowsTeam: true, emoji: '🏹', color: '#8c3b2e', night: { kind: 'investigate', reveal: 'role', targets: 'nonTeam' }, blurb: "The Mafia's detective. Each night, learn the exact role of one player outside the family; your whole team sees what you find. You also vote on the Mafia's kill." },
+    // Neutral: marks who they want dead. Every time a mark dies (night or gallows) they level up.
+    headhunter: { name: 'Headhunter', team: 'neutral', emoji: '🎯', color: '#c47a1c', max: 1, night: { kind: 'mark', targets: 'others', optional: true }, blurb: 'Each night (or day), secretly mark who you want dead. Your mark appears as a fake vote on the Mafia’s night screen. Every time your mark dies, at night or at the gallows, you level up and unlock new powers. Win by being the last one standing.' },
     storymaker: { name: 'Storymaker', team: 'town', emoji: '📜', color: '#e3bf80', night: { kind: 'interrupt', targets: 'any', optional: true }, blurb: 'Once per game, interrupt the night with a town crier and an emergency vote. After the verdict, resume the interrupted night with its still-valid actions and remaining time. Wins with Town.' },
   });
-  const ROLE_ORDER = ['mafia', 'godfather', 'roleblocker', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'detective', 'sheriff', 'sorcerer', 'investigator', 'doctor', 'bodyguard', 'executioner', 'vigilante', 'detonator', 'storymaker', 'mayor', 'telepath', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'jester', 'serialKiller', 'villager'];
+  // Headhunter levels: the Nth correct mark (the marked player died) unlocks level N.
+  const HEADHUNTER_LEVELS = [
+    { level: 0, power: null, title: 'Hidden', text: 'Investigations see you as a plain Villager. Mark someone you want dead.' },
+    { level: 1, power: 'disguise', title: 'Disguise', text: 'Choose a fake role: investigations see that role instead of yours.' },
+    { level: 2, power: 'puppet', title: 'Puppet', text: 'Once a night, force one Mafia member’s kill vote onto a target of your choice.' },
+    { level: 3, power: 'strike', title: 'Strike', text: 'Once per game, kill someone on the spot, at night or during the day.' },
+    { level: 4, power: 'reveal', title: 'Insight', text: 'Once a night, learn one player’s exact role.' },
+    { level: 5, power: 'allSight', title: 'All-seeing', text: 'You know everyone’s role.' },
+    { level: 6, power: 'execute', title: 'Executioner', text: 'Once a day, execute anyone during discussion or voting.' },
+  ];
+  const ROLE_ORDER = ['mafia', 'godfather', 'roleblocker', 'hunter', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'detective', 'sheriff', 'sorcerer', 'investigator', 'doctor', 'bodyguard', 'executioner', 'vigilante', 'detonator', 'storymaker', 'mayor', 'telepath', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'jester', 'serialKiller', 'headhunter', 'villager'];
   const GHOST_WORDS = ['IS', 'NOT', 'LIAR', 'TRUST', 'WATCH', 'DANGER', 'SAFE', 'MAYBE', 'TOGETHER', 'ALONE'];
 
   const TEAMS = {
@@ -112,6 +126,7 @@
     mafia: { name: 'The Mafia', emoji: '🔪' },
     serialKiller: { name: 'The Serial Killer', emoji: '🗡️' },
     jester: { name: 'The Jester', emoji: '🃏' },
+    headhunter: { name: 'The Headhunter', emoji: '🎯' },
     draw: { name: 'Nobody', emoji: '🤝' },
   };
 
@@ -134,7 +149,7 @@
   function investigate(role, reveal) {
     const r = ROLES[role];
     if (!r || r.appearsInnocent) return false;
-    if (reveal === 'killer') return r.team === 'mafia' || role === 'serialKiller';
+    if (reveal === 'killer') return r.team === 'mafia' || role === 'serialKiller' || role === 'headhunter';
     return r.team === 'mafia';
   }
 
@@ -221,9 +236,11 @@
     if (r.voteWeight > 1) restrictions.push(`Their vote counts ${r.voteWeight}× (secretly).`);
     if (r.pair) restrictions.push('Always comes as a pair.');
     if (key === 'roleblocker') restrictions.push('Takes over the killing if all Mafia killers die.');
+    if (key === 'headhunter') restrictions.push('Levels up each time a marked player dies. Powers: 1 disguise · 2 puppet a Mafia vote · 3 one strike · 4 nightly role reveal · 5 sees all roles · 6 daily execution.');
+    if (key === 'hunter') restrictions.push('Results are shared with the whole Mafia team.');
     if (key === 'bodyguard') restrictions.push('Dies in place of the person they guard (unless the Doctor saved the Bodyguard).');
     const win = key === 'paparazzi' ? 'Survive to game end and publish the configured number of photos (default two). May win alongside any faction.' : key === 'jester' ? 'Wins if the town votes them out.'
-      : key === 'serialKiller' ? 'Wins by being the last one standing.'
+      : key === 'serialKiller' || key === 'headhunter' ? 'Wins by being the last one standing.'
         : r.team === 'mafia' ? 'Wins with the Mafia: when they equal the rest (or everyone else is gone, by setting).'
           : 'Wins with the Town: when no Mafia or Serial Killer is left.';
     return {
@@ -234,7 +251,7 @@
     };
   }
 
-  const API = { ROLES, ROLE_ORDER, TEAMS, WINNERS, TELEPATH_MESSAGES, GHOST_WORDS, PRESETS, isMafiaTeam, isKillerRole, investigate, autoMafiaCount, buildRoleList, reference };
+  const API = { HEADHUNTER_LEVELS, ROLES, ROLE_ORDER, TEAMS, WINNERS, TELEPATH_MESSAGES, GHOST_WORDS, PRESETS, isMafiaTeam, isKillerRole, investigate, autoMafiaCount, buildRoleList, reference };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.MT_ROLES = API;
 })(typeof window !== 'undefined' ? window : globalThis);

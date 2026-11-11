@@ -439,6 +439,32 @@ Implementation checklist (updated after verification below):
   live in `tools/cdp.js`; `npm run test:e2e` runs both suites.
   `MT_DEV_GRANTS=1` enables a test-only gold grant.
 
+### Story-driven death scenes, the Headhunter, and the Hunter
+
+**Scenes**
+- New cinema actions:
+  - `grab {front}` (a face-to-face hold) and `struggle` (thrashing arms)
+  - `dragBody` (a fallen body slides behind its killer, leaving a trail)
+  - `caption` (narrator story beats; AI narrator only; spoken through the TV voice via the `mt-caption` event)
+  - actor-relative points `{ actor }`, interior props, and `placeShore`.
+- Bug fixed: `a_release` was defined twice, so the second definition overrode the tether release (grabs never let go). The resident release is now `a_unhold`.
+- The bedroom murder, every outdoor death (lake, hearth, tavern, field, visit) and the new `death_chase` now use grab → struggle → blow → fall → X eyes → blood pool, with four narrator beats each.
+  - The lake drags the body to the shore.
+  - The camera pushes in for the struggle, and the chase is followed by the camera.
+- New `headhunt` and `headhuntExecution` scenes.
+- Manual mode: the Judge picks a scene for each kill in the dawn reveal list (`reveal {index, place, setPlace}`). All death scenes are in the Judge's manual Scenes list.
+- The AI narrator's location roll now includes `chase`.
+
+**Roles** (`rules/headhunter.js`, installed last because it wraps kill/night/views)
+- Hunter (Mafia): exact-role investigation of non-Mafia players. Results appear as `mafiaView.intel` for the whole team.
+- Headhunter (neutral, max 1):
+  - The mark is set live and becomes a fake teammate vote in `mafiaView`/`teamPicks` display only (never `teamPicks` resolution, never shown to the borrowed face).
+  - Levels come from mark deaths (any cause except leaving).
+  - `shownRole`: a Villager, or the chosen disguise from level 1.
+  - Powers: puppet (locks one Mafia vote), strike, reveal, all roles, and a daily execution.
+  - Neutral-killer win logic is shared with the Serial Killer.
+- `player:headhunter` socket event. Tests: `tools/test-headhunter.js` (11).
+
 ### Role Draft (new Default role selection) and the optional Rundown
 
 **Role Draft**

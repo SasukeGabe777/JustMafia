@@ -50,7 +50,7 @@
     tavern: { at: { x: 712, y: 668 }, camera: { x: 680, y: 620, z: 2.5 } },
     field: { at: { x: 1780, y: 990 }, camera: { x: 1690, y: 905, z: 2.2 } },
   };
-  const DEATH_PLACES = ['home', 'lake', 'hearth', 'tavern', 'field', 'visit'];
+  const DEATH_PLACES = ['home', 'lake', 'hearth', 'tavern', 'field', 'chase', 'visit'];
 
   const API = { W, H, CX, CY, RING, ROAD, SQUARE_R, CEM, POND, TAU, seeded, houses, SPOTS, PLACES, DEATH_PLACES };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

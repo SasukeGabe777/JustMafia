@@ -285,7 +285,7 @@ test('Move-in requests: the owner gets 20 seconds to say yes or no; declines, ti
 });
 test('AI narrator: night deaths get story locations with lore lines; manual narrator keeps the classic scene and text', () => {
   const seen = new Set();
-  const LORE = { lake: /lake/i, hearth: /hearth/i, tavern: /tavern/i, field: /field|grass/i };
+  const LORE = { lake: /lake/i, hearth: /hearth/i, tavern: /tavern/i, field: /field|grass/i, chase: /home|door|followed/i };
   for (let seed = 1; seed <= 80; seed++) {
     const clock = new VirtualClock(), room = new Room('S' + seed, null, { clock, headless: true, seed });
     room.updateSettings({ minPlayers: 3, autoMafia: false, roleCounts: { mafia: 1 }, botsAuto: false, revealRoleOnDeath: true });
@@ -300,7 +300,7 @@ test('AI narrator: night deaths get story locations with lore lines; manual narr
     if (LORE[e.place]) assert.match(room.narration.text, LORE[e.place]); else assert.match(room.narration.text, new RegExp(p[1].name));
     room.destroy();
   }
-  for (const place of ['home', 'lake', 'hearth', 'tavern', 'field']) assert(seen.has(place), 'location appears: ' + place);
+  for (const place of ['home', 'lake', 'hearth', 'tavern', 'field', 'chase']) assert(seen.has(place), 'location appears: ' + place);
   // Manual (human) narrator: no locations, classic murder, unchanged text.
   const { room, p } = game(['mafia', 'villager', 'villager', 'villager'], { narratorMode: 'human' });
   room.nightAction(p[0], p[1].id); room.resolveNight();

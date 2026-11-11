@@ -20,8 +20,8 @@ const LINES = {
       'A scream at dawn. {name} will not be joining us today.{role} {alive} remain.',
     ],
     saved: [
-      "A shadow crept to {name}'s door last night. What happened behind it remains a mystery, but {name} lives to see another day.",
-      'Someone came for {name}. When the shadows cleared, {name} was still standing.',
+      "A shadow came for {name} last night, but someone was watching over them. {name} was protected and lives to see another day.",
+      'Someone tried to kill {name} last night. A protector stepped in, and {name} survived.',
     ],
     quiet: ['An unusually quiet night. Everyone wakes up safe... for now.'],
     discussion: [
@@ -120,6 +120,13 @@ Object.assign(LINES.classic, {
   emergencyVote: ['Leave your nighttime plans where they are. The town must vote now.'],
 });
 
+// The Headhunter: a strike or an execution on the spot, and their win.
+Object.assign(LINES.classic, {
+  hhStrike: ['A whistle in the dark, then silence. The Headhunter has claimed {name}.{role}', 'Nobody saw the Headhunter coming. {name} never had a chance.{role}'],
+  hhExecute: ['The Headhunter steps into the square and passes their own sentence. {name} is executed.{role}', 'No vote. No trial. The Headhunter decides, and {name} falls.{role}'],
+  hhWin: ['Every head in {town} has been collected. The Headhunter stands alone and wins.', 'The last name on the Headhunter’s list has been crossed off. The Headhunter wins.'],
+});
+
 // Execution interventions (the interrupter is never named; a Bodyguard who dies is).
 Object.assign(LINES.classic, {
   interrupted: ['A masked figure storms the gallows! In the chaos, {name} slips away. The execution is called off.', 'Smoke fills the square. When it clears, the noose hangs empty. {name} lives, for now.'],
@@ -133,6 +140,7 @@ Object.assign(LINES.classic, {
   kill_hearth: ['The hearth burned low last night. {name} was found beside the cold embers.{role} {alive} remain.', '{name} lingered by the hearth for one more warm moment. It was their last.{role} {alive} remain.'],
   kill_tavern: ['{name} was the last to leave the tavern. They never made it home.{role} {alive} remain.', 'One more round, {name} said. The tavern keeper found them by the door at dawn.{role} {alive} remain.'],
   kill_field: ['{name} wandered into the field outside town to watch the stars. Only the crows saw what happened.{role} {alive} remain.', 'Beyond the last fence of {town}, in the tall grass, lies {name}.{role} {alive} remain.'],
+  kill_chase: ['{name} ran for home through the dark. They were three steps from their door.{role} {alive} remain.', 'Someone followed {name} home last night. {name} never made it inside.{role} {alive} remain.'],
   kill_visit: ['{name} was watching {host}’s house a little too closely. Someone was watching {name}, too.{role} {alive} remain.', 'They found {name} beneath {host}’s window, notebook still in hand.{role} {alive} remain.'],
 });
 Object.assign(LINES.comedy, {
@@ -141,6 +149,7 @@ Object.assign(LINES.comedy, {
   kill_tavern: ['{name} said "just one more drink." Famous last words, literally.{role} {alive} remain.'],
   kill_field: ['{name} went to the field to "find themselves." Someone else found them first.{role} {alive} remain.'],
   kill_visit: ['{name} was snooping on {host}. Snooping is a high-risk hobby.{role} {alive} remain.'],
+  kill_chase: ['{name} tried to outrun their problems. Their problems did cardio.{role} {alive} remain.'],
 });
 Object.assign(LINES.corporate, {
   kill_lake: ['{name} took a "wellness walk" by the lake and has been permanently offboarded.{role} {alive} remain.'],
@@ -148,6 +157,7 @@ Object.assign(LINES.corporate, {
   kill_tavern: ['{name} left the team happy hour last. Their badge was deactivated at dawn.{role} {alive} remain.'],
   kill_field: ['{name} went off-site to "think outside the box." The box won.{role} {alive} remain.'],
   kill_visit: ['{name} was auditing {host}’s office after hours. The audit has been closed.{role} {alive} remain.'],
+  kill_chase: ['{name} tried to leave the office early. Someone followed them to the parking lot.{role} {alive} remain.'],
 });
 
 const { THEMES } = require('./public/shared/themes');
