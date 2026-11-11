@@ -87,6 +87,32 @@
   const slotsOf = (k) => (META[k] && META[k].slots) || 1;
   const teamOf = (k) => (ROLES[k] || {}).team;
   const killerMafia = (k) => teamOf(k) === 'mafia' && ROLES[k].night && ROLES[k].night.kind === 'kill';
+  // Bigger groups start further along: the lowest tier whose unlocked Town/Neutral roles
+  // are enough cards for this many players (so a 20-player room is never short of roles).
+  function startTier(n, settings = {}) {
+    const poolAt = (t) => Object.keys(META).filter((k) => eligible(k, n, settings) && META[k].tier <= t && teamOf(k) !== 'mafia').length;
+    // Tiny groups can't fit many roles at any tier: aim for what is actually possible.
+    const target = Math.min(SCALE.cards(n), poolAt(MAX_TIER));
+    for (let t = 1; t <= MAX_TIER; t++) if (poolAt(t) >= target) return t;
+    return MAX_TIER;
+  }
+  // The deck tier for a room's next game: games played, but never below the player-count start.
+  // The very first game (gamesPlayed 0) is always the tutorial (tier 0).
+  const tierFor = (gamesPlayed, n, settings) => (gamesPlayed ? Math.max(tierForGame(gamesPlayed), startTier(n, settings)) : 0);
+  // The tutorial round, scaled: Mafia, Detective and Doctor, plus easy Town roles (tiers 1–2,
+  // then the next simplest) until the game has its full number of special roles. No vote.
+  function tutorialCards(n, settings = {}, rng = Math.random, seen = {}) {
+    const need = SCALE.specials(n) - 2; // Detective and Doctor are two of the specials
+    const out = TUTORIAL.slice();
+    if (need <= 0) return out;
+    const easy = Object.keys(META).filter((k) => eligible(k, n, settings) && teamOf(k) === 'town' && META[k].tier >= 1 && META[k].tier <= 2 && !out.includes(k));
+    out.push(...weightedPick(easy, need, rng, seen));
+    if (out.length - 1 < SCALE.specials(n)) { // still short (very big group): the next simplest Town roles
+      const next = Object.keys(META).filter((k) => eligible(k, n, settings) && teamOf(k) === 'town' && !out.includes(k)).sort((a, b) => META[a].tier - META[b].tier);
+      out.push(...next.slice(0, SCALE.specials(n) - (out.length - 1)));
+    }
+    return out;
+  }
 
   function eligible(k, n, settings) {
     const m = META[k];
@@ -124,7 +150,7 @@
       const mafia = pool.filter((k) => teamOf(k) === 'mafia').slice(0, Math.min(2, autoMafiaCount(n)));
       return pool.filter((k) => others.includes(k) || mafia.includes(k));
     }
-    if (opts.maxTier === 0) return TUTORIAL.slice(); // the tutorial round: always the same three cards
+    if (opts.maxTier === 0) return tutorialCards(n, settings, rng, seen); // the tutorial round: the basics, scaled to the group
     const maxTier = opts.maxTier == null ? MAX_TIER : opts.maxTier;
     const ok = Object.keys(META).filter((k) => eligible(k, n, settings) && (META[k].tier ?? 1) <= maxTier);
     const harder = Object.keys(META).filter((k) => eligible(k, n, settings) && (META[k].tier ?? 1) > maxTier);
@@ -207,7 +233,7 @@
     };
   }
 
-  const API = { SCALE, META, TIER, TUTORIAL, MAX_TIER, tierForGame, eligible, candidates, finalize, slotsOf };
+  const API = { SCALE, META, TIER, TUTORIAL, MAX_TIER, tierForGame, startTier, tierFor, tutorialCards, eligible, candidates, finalize, slotsOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.MT_DRAFT_RULES = API;
 })(typeof window !== 'undefined' ? window : globalThis);

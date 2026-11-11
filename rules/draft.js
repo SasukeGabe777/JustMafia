@@ -13,6 +13,9 @@ const STAGE_MS = { deck: 7000, result: 5500, collect: 5000 };
 const ALL_READY_MS = 1500;   // once everyone locked in, the vote closes shortly after
 const DEAL_EXTRA_MS = 16000; // a drafted game's role reveal waits longer for card flips
 
+// Roles in tiers (from, to] — what a jump in tier adds to the deck.
+const tiersBetween = (from, to) => { const out = []; for (let t = from + 1; t <= to; t++) out.push(...(D.TIER[t] || []).filter((k) => R.ROLES[k])); return out; };
+
 module.exports = function install(Room) {
   Room.prototype.draftMode = function () {
     // Test mode's forced roles need the manual setup, so they always skip the draft.
@@ -31,11 +34,13 @@ module.exports = function install(Room) {
     // Card pool: "learn" (default) starts with simple roles and adds harder ones as this room
     // plays more games; "all" puts every role in, fully random.
     const games = this.gamesPlayed || 0, everyRole = this.settings.draftPool === 'all';
-    const tier = everyRole ? 3 : D.tierForGame(games), prevTier = games ? D.tierForGame(games - 1) : tier;
-    const unlocked = !everyRole && tier > prevTier ? D.TIER[tier].filter((k) => R.ROLES[k]) : [];
+    // Bigger groups start at a higher tier (enough roles for everyone); the first game is the tutorial.
+    const tier = everyRole ? 3 : D.tierFor(games, n, this.settings), prevTier = games ? D.tierFor(games - 1, n, this.settings) : tier;
+    const unlocked = !everyRole && tier > prevTier ? tiersBetween(prevTier, tier) : [];
     const cards = D.candidates(n, this.settings, this.rng, this.draftSeen, { maxTier: tier, everyRole });
     for (const k of cards) this.draftSeen[k] = (this.draftSeen[k] || 0) + 1;
-    // Tier 0 = the tutorial round (the room's first game): Mafia, Detective, Doctor, no vote.
+    // Tier 0 = the tutorial round (the room's first game): Mafia, Detective, Doctor and, in
+    // bigger groups, more easy Town roles so everyone gets the right number of specials. No vote.
     const tutorial = !everyRole && tier === 0;
     this.draft = { id: (this.draft ? this.draft.id : 0) + 1, stage: 'deck', stageAt: this.now(), cards, picks: tutorial ? cards.length : Math.min(cards.length, D.SCALE.specials(n) + 1) /* the specials, plus one Mafia upgrade */, ballots: {}, ready: {}, result: null, n, tier, everyRole, unlocked, tutorial };
     this.draftCounts = null;
@@ -176,9 +181,12 @@ module.exports = function install(Room) {
   Room.prototype.endGame = function () {
     const before = this.gamesPlayed || 0;
     this.gamesPlayed = before + 1;
-    const oldTier = D.tierForGame(before), newTier = D.tierForGame(this.gamesPlayed);
+    // Same group size next game: what does the deck gain? (A big group may jump several tiers
+    // after the tutorial, because it starts further along.)
+    const n = this.draftPlayers().length;
+    const oldTier = D.tierFor(before, n, this.settings), newTier = D.tierFor(this.gamesPlayed, n, this.settings);
     this.unlockNews = this.settings.draftPool !== 'all' && newTier > oldTier
-      ? { id: this.gamesPlayed, tier: newTier, maxTier: D.MAX_TIER, roles: D.TIER[newTier].filter((k) => R.ROLES[k]) } : null;
+      ? { id: this.gamesPlayed, tier: newTier, maxTier: D.MAX_TIER, roles: tiersBetween(oldTier, newTier), deckBefore: 1 + tiersBetween(-1, oldTier).length } : null; // +1: Mafia is always in
     if (this.unlockNews) this.addLog(`✨ Unlocked for the next draft: ${this.unlockNews.roles.map((k) => R.ROLES[k].name).join(', ')} (tier ${newTier}/${D.MAX_TIER}).`);
     return endGame.call(this);
   };

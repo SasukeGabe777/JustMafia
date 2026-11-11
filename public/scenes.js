@@ -389,6 +389,54 @@
       ],
     },
 
+    // The Town wins: everyone on the town's side runs into the square and celebrates.
+    victoryTown: {
+      name: 'Victory: the Town',
+      kind: 'day',
+      duration: 9.4,
+      steps: [
+        [0, 'letterbox', true],
+        [0, 'music', 'triumph'],
+        [0, 'camera', { to: 'square', zoom: 1.5, dur: 1.6 }],
+        [0.2, 'winners', {}],
+        [0.5, 'confetti', 140],
+        [1.3, 'title', { text: '{title}', sub: '{sub}', color: '#ffe066', dur: 5.6 }],
+        [1.5, 'winnersCheer', { lines: ['We did it!', 'Hooray!', 'The town is safe!', 'Justice!', 'Yes!!'], arms: 2.5, dur: 1.8, all: true }],
+        [2.4, 'confetti', 160],
+        [2.6, 'winnersCheer', { arms: 2.7 }],
+        [3.5, 'winnersCheer', { lines: ['Woo-hoo!', 'Safe at last!', 'Party at the tavern!', 'Group hug!'], arms: 2.4, dur: 1.8 }],
+        [4.4, 'winnersCheer', { arms: 2.7 }],
+        [4.6, 'confetti', 160],
+        [5.3, 'winnersCheer', { arms: 2.4 }],
+        [6.3, 'winnersCheer', { lines: ['🎉', '❤️', '😄'], arms: 0, dur: 1.4, all: true }],
+        [7.8, 'camera', { to: 'overview', dur: 1.2 }],
+        [8.8, 'letterbox', false],
+      ],
+    },
+
+    // The Mafia win: the family slinks into the square, huddles, and turns with a sly grin.
+    victoryMafia: {
+      name: 'Victory: the Mafia',
+      kind: 'day',
+      duration: 10.6,
+      steps: [
+        [0, 'letterbox', true],
+        [0, 'music', 'ominous'],
+        [0, 'fog', true],
+        [0, 'camera', { to: 'square', zoom: 1.65, dur: 1.8 }],
+        [0.2, 'winners', { gap: 70 }],
+        [1.7, 'winnersHuddle', { gap: 40 }],
+        [2.6, 'winnersCheer', { face: 'in', jump: false, lean: 0.25, lines: ['Psst…', 'Heh heh…', 'It worked…', 'Shh…'], dur: 1.6, all: true }],
+        [4.3, 'winnersCheer', { jump: false, lean: 0, lines: ['We did it.'], dur: 2.6, leader: true }],
+        [4.5, 'title', { text: '{title}', sub: '“We did it.”', color: '#ff6b6b', dur: 4.4 }],
+        [6.9, 'winnersCheer', { jump: false, lines: ['Heh heh heh…', 'This town is ours.', 'Nobody suspected a thing.', 'Too easy.'], dur: 2, all: true }],
+        [7.4, 'crowd', { lines: ['No…', 'It was them?!', 'We trusted you…'], count: 2, dur: 1.8 }],
+        [9.1, 'camera', { to: 'overview', dur: 1.2 }],
+        [9.8, 'fog', false],
+        [10.1, 'letterbox', false],
+      ],
+    },
+
     // ---------- manual (Judge) scenes: never touch the game ----------
     investigation: {
       name: 'Investigation',

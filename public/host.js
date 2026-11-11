@@ -6,6 +6,7 @@
   const ROLES = RR.ROLES;
   const socket = io();
   const town = new window.Town($('#town'));
+  if (/[?&]debug\b/.test(location.search)) window.__town = town; // tests/inspection only
 
   let state = null;
   let clockOffset = 0;
@@ -83,31 +84,54 @@
     renderUnlock(st);
   });
 
-  // Game over → "You just unlocked!": the next tier's role cards float in and flip over,
-  // then Play again. They join the deck from the next game. Shown once per unlock.
-  let unlockShown = 0, unlockTimer = null;
+  // Game over → "You just unlocked!" (after the victory celebration). One card at a time:
+  // it floats up face down, flips to show the new role, then flies into the deck, which
+  // counts up. Every new card then lines up below, and Play again lights up.
+  // The new roles join the deck from the next game. Shown once per unlock.
+  const VICTORY_MS = 11000; // the victory scenes run ~9.5–10.6 s
+  let unlockShown = 0, unlockTimers = [];
+  const later = (ms, fn) => unlockTimers.push(setTimeout(fn, ms));
   function renderUnlock(st) {
     const u = st.unlock, box = $('#unlock');
     if (!u || st.phase !== 'gameover') { box.hidden = true; return; }
     if (unlockShown === u.id) return;
     unlockShown = u.id;
-    clearTimeout(unlockTimer);
-    // Let the victory moment play first.
-    unlockTimer = setTimeout(() => {
+    unlockTimers.forEach(clearTimeout); unlockTimers = [];
+    later(VICTORY_MS, () => {
       if (!state || state.phase !== 'gameover') return;
-      $('#unlock-sub').textContent = `Tier ${u.tier} of ${u.maxTier} · these roles join the deck next game`;
-      const cards = $('#unlock-cards'); cards.innerHTML = '';
-      cards.style.setProperty('--cw', `min(250px, ${Math.floor(86 / Math.max(3, u.roles.length))}vw)`); // 3 to 7 cards fit on one row
-      u.roles.forEach((k, i) => {
-        const c = MT_DRAFT.cardEl(k, st.theme, { full: false });
-        const step = u.roles.length > 4 ? 0.3 : 0.5;
-        c.style.animationDelay = `${0.4 + i * step}s`;
-        c.classList.add('unlock-card');
-        cards.appendChild(c);
-        setTimeout(() => { c.classList.add('up'); SFX.play('flip'); }, 1300 + i * step * 1000);
+      const roles = u.roles, beat = roles.length > 8 ? 1700 : roles.length > 4 ? 2100 : 2600; // big jumps go a bit quicker; each card is readable for ≥1 s
+      $('#unlock-sub').textContent = `Tier ${u.tier} of ${u.maxTier} · ${roles.length} new role${roles.length === 1 ? '' : 's'} for your deck`;
+      $('#unlock-name').textContent = '';
+      const spot = $('#unlock-spot'), deck = $('#unlock-deck'), list = $('#unlock-cards'), count = $('#unlock-count');
+      spot.innerHTML = ''; list.innerHTML = '';
+      list.style.setProperty('--cw', `min(130px, ${Math.floor(88 / Math.max(5, roles.length))}vw)`);
+      let n = u.deckBefore || 0; count.textContent = n;
+      $('#unlock-actions').classList.remove('ready');
+      box.classList.remove('done'); box.hidden = false; SFX.play('saved');
+      roles.forEach((k, i) => {
+        const t0 = 900 + i * beat;
+        later(t0, () => { // float up, face down
+          spot.innerHTML = '';
+          const c = MT_DRAFT.cardEl(k, st.theme, { full: false }); c.classList.add('unlock-card'); spot.appendChild(c);
+        });
+        later(t0 + 450, () => { // flip
+          const c = spot.querySelector('.dcard'); if (!c) return;
+          c.classList.add('up'); SFX.play('flip');
+          $('#unlock-name').textContent = `${(ROLES[k] || {}).emoji || ''} ${MT_THEMES.roleName(st.theme, k, (ROLES[k] || {}).name || k)}`;
+        });
+        later(t0 + beat - 500, () => { // into the deck
+          const c = spot.querySelector('.dcard'); if (!c) return;
+          c.classList.add('to-deck');
+          deck.classList.remove('bump'); void deck.offsetWidth; deck.classList.add('bump');
+          count.textContent = ++n;
+          const mini = MT_DRAFT.cardEl(k, st.theme, { full: false, up: true }); mini.classList.add('unlock-mini'); list.appendChild(mini);
+        });
       });
-      box.hidden = false; SFX.play('saved');
-    }, 4500);
+      later(900 + roles.length * beat, () => { // all in: Play again
+        spot.innerHTML = ''; $('#unlock-name').textContent = 'They’re in the deck. Ready for the next game?';
+        box.classList.add('done'); $('#unlock-actions').classList.add('ready'); SFX.play('saved');
+      });
+    });
   }
   $('#unlock-again').addEventListener('click', () => { $('#unlock').hidden = true; act('lobby'); });
   $('#unlock-close').addEventListener('click', () => { $('#unlock').hidden = true; });
@@ -295,8 +319,12 @@
   }
 
   // ---------- game over ----------
+  // The panel waits for the victory celebration to finish, so it doesn't cover the square.
+  let goRetry = null;
   function renderGameOver() {
-    const show = state.phase === 'gameover' && state.winner;
+    const celebrating = town.cinema && town.cinema.scene && /^victory/.test(town.cinema.scene.id);
+    if (celebrating && state.phase === 'gameover') { clearTimeout(goRetry); goRetry = setTimeout(renderGameOver, 400); }
+    const show = state.phase === 'gameover' && state.winner && !celebrating;
     $('#gameover').hidden = !show;
     if (state.phase !== 'gameover') $('#rundown').hidden = true;
     if (!show) return;

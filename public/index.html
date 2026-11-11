@@ -78,8 +78,18 @@
   <div id="unlock" class="unlock" hidden>
     <h1 class="unlock-title">✨ You just unlocked!</h1>
     <p class="unlock-sub" id="unlock-sub"></p>
+    <!-- One card at a time: floats up face down, flips, then flies into the deck. -->
+    <div class="unlock-table">
+      <div class="unlock-spot" id="unlock-spot"></div>
+      <div class="unlock-deck" id="unlock-deck">
+        <div class="ud-stack"><i></i><i></i><i></i><i></i></div>
+        <div class="ud-count"><b id="unlock-count">0</b> roles</div>
+        <div class="ud-label">Your deck</div>
+      </div>
+    </div>
+    <p class="unlock-name" id="unlock-name"></p>
     <div class="unlock-cards" id="unlock-cards"></div>
-    <div class="unlock-actions">
+    <div class="unlock-actions" id="unlock-actions">
       <button class="btn btn-big" id="unlock-again">▶ Play again</button>
       <button class="btn" id="unlock-close">See results</button>
     </div>

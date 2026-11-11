@@ -32,7 +32,9 @@
   // "Learn as you play": announce roles that just joined the deck (or the fully random deck).
   function deckNews(d, theme) {
     if (d.everyRole) return '🎲 Every role is in the deck. Anything can happen!';
-    if (d.tutorial) return '📘 Your first game: just the basics. Mafia, a Detective and a Doctor.';
+    if (d.tutorial) return d.cards.length > 3
+      ? `📘 Your first game: the basics (Mafia, a Detective, a Doctor) plus ${d.cards.length - 3} easy role${d.cards.length === 4 ? '' : 's'} for a group this size.`
+      : '📘 Your first game: just the basics. Mafia, a Detective and a Doctor.';
     if (!d.unlocked || !d.unlocked.length) return '';
     const names = d.unlocked.map((k) => `${ROLES[k].emoji} ${esc(roleName(k, theme))}`);
     return `✨ New roles join the deck: ${names.slice(0, 6).join(', ')}${names.length > 6 ? ` and ${names.length - 6} more` : ''}`;

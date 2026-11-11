@@ -58,15 +58,17 @@ npm start
 Set in the Judge console → Setup → Roles.
 
 - **Default (new games):** after Start, the players vote on which special roles are in this game.
-  - The number of cards scales with the players: 4 → 3 cards, 8 → 5, 12 → 7, 16+ → 9. About 60% of the cards make it in.
+  - The number of **special roles** scales with the players: up to 5 players → 2, then one more every 2 players (6 → 3, 8 → 4, 10 → 5 … 20 → 10, cap 12). Plain Mafia and Villagers are not counted.
+  - The vote shows two more Town/Neutral cards than that, plus Mafia cards (e.g. Godfather). A Mafia card upgrades a Mafia seat and only gets in if someone votes for it.
   - Cards come from the real role bank (`public/shared/draft.js`): a mix of Mafia, Town (always an investigator and a protector when possible) and, in bigger games, Neutral roles.
   - Roles a room hasn't seen much are offered more often, and complex roles only appear in bigger games.
   - The server counts the votes and breaks ties with a random draw.
   - It then repairs anything invalid while keeping as many votes as possible: there is **always at least one Mafia**, the Mafia is never bigger or stronger than normal, and there are never more roles than players.
   - Mafia and Villagers fill the other seats. Roles are dealt at random by the server, and each phone only ever receives its own.
 - **The deck holds every role, in 10 unlock tiers (Judge → Card deck → "Learn as you play", the default):**
-  - **Tier 0, the tutorial round:** a room's very first game is just Mafia, Detective and Doctor. The deck shuffles and shows those three cards, with no vote.
+  - **Tier 0, the tutorial round:** a room's very first game is Mafia, Detective and Doctor, with no vote. Bigger groups get the scaled number of special roles: easy Town roles from tiers 1–2 are added (e.g. 8 players: + 2 of Sheriff, Bodyguard, Vigilante, Mayor, Medium, Lookout, Crier).
   - Finishing it unlocks **tier 1** (Godfather, Sheriff, Bodyguard, Vigilante, Mayor, Jester, Executioner).
+  - **Bigger groups start further along** so there are always enough cards: up to 12 players start at tier 1, 14–16 at tier 2, 20 at tier 3, 25+ at tier 4. After the tutorial their reveal shows every role that joined.
   - Every finished game after that unlocks the next tier of 3, from simple to complex. At game over the TV shows **"✨ You just unlocked!"**: the new role cards float in and flip over, then **▶ Play again**. Phones list them too.
   - Unlocked roles join the next draft, and by game 11 every role is in.
   - The draft stays balanced the whole time.

@@ -268,8 +268,8 @@ test('Every role is in the deck: each draftable role sits in exactly one complex
   for (const k of draftable) assert(D.META[k] && D.META[k].tier != null, k);
 });
 
-test('Tutorial round (tier 0): a fresh room’s first game is Mafia, Detective and Doctor, with no vote', () => {
-  const { room } = makeRoom({ bots: 8, fresh: true });
+test('Tutorial round (tier 0): Mafia, Detective and Doctor, no vote; bigger groups add easy Town roles (tiers 1–2)', () => {
+  const { room } = makeRoom({ bots: 4, fresh: true });
   room.hostAction({ type: 'start' });
   assert(room.draft.tutorial); assert.deepEqual(room.draft.cards, D.TUTORIAL);
   room.hostAction({ type: 'skip' }); // the deck shuffle goes straight to the result (no vote)
@@ -278,6 +278,38 @@ test('Tutorial round (tier 0): a fresh room’s first game is Mafia, Detective a
   room.hostAction({ type: 'skip' }); room.hostAction({ type: 'skip' });
   assert.equal(room.phase, 'roleReveal');
   assert.deepEqual(Object.keys(room.composition).sort(), ['detective', 'doctor', 'mafia', 'villager']);
+  // The tutorial follows the player scaling too, with easy Town roles only.
+  for (const n of [6, 8, 10, 12, 16, 20]) {
+    const big = makeRoom({ bots: n, fresh: true }).room;
+    big.hostAction({ type: 'start' });
+    const cards = big.draft.cards;
+    assert(big.draft.tutorial); assert.deepEqual(cards.slice(0, 3), D.TUTORIAL);
+    assert.equal(cards.length - 1, D.SCALE.specials(n), `${n} players: ${D.SCALE.specials(n)} specials in the tutorial`);
+    const extras = cards.slice(3);
+    assert(extras.every((k) => R.ROLES[k].team === 'town'), 'only Town roles are added');
+    if (n <= 16) assert(extras.every((k) => D.META[k].tier >= 1 && D.META[k].tier <= 2), `${n}: easy roles only (tiers 1–2): ${extras}`);
+    for (let i = 0; i < 3; i++) big.hostAction({ type: 'skip' });
+    assert.equal(big.phase, 'roleReveal');
+    for (const k of cards) assert(big.composition[k], `${k} dealt in the ${n}-player tutorial`);
+    assert(D.candidates(n, {}, Math.random, {}, { maxTier: 0 }).length === cards.length);
+  }
+});
+
+test('Bigger groups start at a higher tier so they always have enough roles', () => {
+  assert.deepEqual([4, 8, 12, 14, 20, 25].map((n) => D.startTier(n)), [1, 1, 1, 2, 3, 4]);
+  // After the tutorial, a 20-player room's deck jumps straight to its starting tier,
+  // and the game-over reveal shows every role that joined.
+  const { room } = makeRoom({ bots: 20, fresh: true });
+  room.hostAction({ type: 'start' }); for (let i = 0; i < 3; i++) room.hostAction({ type: 'skip' });
+  room.winner = 'town'; room.endGame();
+  const u = room.hostView().unlock;
+  assert.equal(u.tier, 3); assert.deepEqual(u.roles, [...D.TIER[1], ...D.TIER[2], ...D.TIER[3]]);
+  room.hostAction({ type: 'lobby' });
+  room.hostAction({ type: 'start' });
+  assert.equal(room.draft.tier, 3);
+  const nonMafia = room.draft.cards.filter((k) => R.ROLES[k].team !== 'mafia');
+  assert.equal(nonMafia.length, D.SCALE.cards(20));
+  assert(room.draft.cards.every((k) => D.META[k].tier <= 3), 'nothing above the starting tier is borrowed');
 });
 
 test('Learn as you play (default): tier 0 tutorial, then each finished game unlocks the next tier, shown at game over', () => {

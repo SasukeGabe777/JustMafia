@@ -734,6 +734,8 @@
       if (typeof at === 'object') {
         // { actor: 'victim', dx, dy }: relative to where an actor is right now (e.g. a pool under a body).
         if (at.actor) { const A = this.actors.get(at.actor); if (A) return { x: A.x + (at.dx || 0) * (A.scale || 1), y: A.y + (at.dy || 0) * (A.scale || 1) }; }
+        // A plain point { x, y } (used by the defenders and the victory line-up).
+        if (!at.from && typeof at.x === 'number' && typeof at.y === 'number') return { x: at.x, y: at.y };
         const base = at.from ? this.pt(at.from) : { x: 0, y: 0 };
         return { x: base.x + (at.dx || 0) * (at.mirror ? this.ctx.dir : 1), y: base.y + (at.dy || 0) };
       }
@@ -979,6 +981,43 @@
     }
     a_defendersMove(a) { const p = this.pt(a.to); (this.defenders || []).forEach((id, i) => this.a_move({ id, to: { x: p.x + (a.dx || 0) - i * 26, y: p.y + 10 + i * 12 }, dur: a.dur || 1, gait: a.gait || 'run' })); }
     a_defendersBubble(a) { (this.defenders || []).forEach((id, i) => { const x = this.actors.get(id); if (x) x.bubble = { text: (a.lines || ['Stop!'])[i % (a.lines || ['Stop!']).length], until: this.scene.t + (a.dur || 1.5) }; }); }
+    // Game over: the winning side steps into the square (stand-ins with their real looks; at
+    // game over every role is public). bind.winners = ids, bind.side = 'town' | 'mafia' | other.
+    // Town: big smiles. Mafia: a sly smirk. Up to 8, in a row in front of the fountain.
+    a_winners(a) {
+      const b = this.ctx.bind, side = b.side;
+      const chars = (b.winners || []).map((id) => this.town.chars.get(id)).filter(Boolean).slice(0, 8);
+      const face = side === 'mafia' ? 'smirk' : 'grin', c0 = this.pt(a.at || 'fountain'), gap = a.gap || 62;
+      this.winnerIds = [];
+      chars.forEach((c, i) => {
+        this.town.hold(c.id);
+        const id = 'win' + i, off = (i - (chars.length - 1) / 2) * gap;
+        const from = { x: c0.x + off + (i % 2 ? 260 : -260), y: c0.y + 170 };
+        this.actors.set(id, { id, kind: 'resident', stage: 'town', x: from.x, y: from.y, facing: off > 0 ? -1 : 1, pose: 'stand', alpha: 0, alphaAnim: { from: 0, to: c.alive ? 1 : 0.5, t0: this.scene.t, dur: 0.5 }, eyes: 1, // fallen winners return as faded spirits
+          avatar: { ...c.avatar, expression: face }, theme: this.town.themeId, scale: this.townScale() * 1.1, walking: false });
+        this.a_move({ id, to: { x: c0.x + off, y: c0.y + 70 + Math.abs(off) * 0.08 }, dur: 1.1 + i * 0.08, gait: side === 'mafia' ? 'sneak' : 'run' });
+        this.winnerIds.push(id);
+      });
+    }
+    // Everyone celebrating together: jumps, arms up, a line each.
+    a_winnersCheer(a) {
+      const lines = a.lines || ['Hooray!'];
+      (this.winnerIds || []).forEach((id, i) => {
+        const x = this.actors.get(id); if (!x) return;
+        x.facing = a.face === 'in' ? (x.x > CX ? -1 : 1) : 1;
+        if (a.jump !== false) x.jumpUntil = this.scene.t + 0.4 + (i % 3) * 0.1;
+        if (a.arms) x.arms = { l: a.arms, r: -a.arms }; else if (a.arms === 0) x.arms = null;
+        if (a.lean != null) x.lean = a.lean;
+        // Who speaks: the leader only, or (so bubbles don't pile up) everyone in a small group / every other one in a big one.
+        const n = this.winnerIds.length, speaks = a.leader ? i === 0 : n <= 3 || (a.all ? i % 2 === 0 : i % 3 === 0);
+        if (a.lines && speaks) x.bubble = { text: this.text(lines[i % lines.length]), until: this.scene.t + (a.dur || 1.6) + i * 0.1 };
+      });
+    }
+    // The Mafia lean in close (a huddle), then turn to the crowd.
+    a_winnersHuddle(a) {
+      const ids = this.winnerIds || [], c0 = this.pt(a.at || 'fountain');
+      ids.forEach((id, i) => { const off = (i - (ids.length - 1) / 2) * (a.gap || 34); this.a_move({ id, to: { x: c0.x + off, y: c0.y + 74 }, dur: a.dur || 0.9, gait: 'sneak' }); });
+    }
     // A second resident (the Bodyguard who takes the condemned's place): public because they die.
     a_spawnGuard(a) {
       const c = this.town.chars.get(this.ctx.bind.guardId); if (!c) return;

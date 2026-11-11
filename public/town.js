@@ -434,9 +434,15 @@
       if (this.cinema && W8) {
         const good = cine.winner === 'town' || cine.winner === 'jester';
         const team = cine.winner === 'mafia' && window.MT_THEMES ? window.MT_THEMES.teamName(this.themeId, 'mafia', W8.name) : W8.name;
-        this.cinema.play('victory', { title: cine.winner === 'draw' ? 'Nobody wins…' : `${team} wins!`, sub: this.state.townName || '', mood: good ? 'triumph' : 'ominous', cheer: cine.winner === 'town' }, {});
-      }
-      if (cine.winner === 'town') {
+        const title = cine.winner === 'draw' ? 'Nobody wins…' : `${team} wins!`;
+        // Town or Mafia: the winning side celebrates in the square (roles are public at game over).
+        // Living winners first, then the fallen (shown faded).
+        const side = cine.winner === 'town' || cine.winner === 'mafia' ? cine.winner : null;
+        const winners = side ? (this.state.players || []).filter((p) => p.role && ROLES[p.role] && ROLES[p.role].team === side && !p.spectator && this.chars.get(p.id))
+          .sort((a, b) => (b.alive ? 1 : 0) - (a.alive ? 1 : 0)).map((p) => p.id) : [];
+        if (side && winners.length) this.cinema.play(side === 'town' ? 'victoryTown' : 'victoryMafia', { title, sub: this.state.townName || '', side, winners }, {});
+        else this.cinema.play('victory', { title, sub: this.state.townName || '', mood: good ? 'triumph' : 'ominous', cheer: cine.winner === 'town' }, {});
+      } else if (cine.winner === 'town') {
         for (let i = 0; i < 6; i++) this.at(i * 0.8, () => this.confetti(120));
       }
     }

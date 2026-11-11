@@ -1,3 +1,8 @@
+/* Game over on the phone: newly unlocked roles pop in one at a time */
+.unlock-phone .ul-roles { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.unlock-phone .ul-role { display: inline-block; padding: 4px 8px; border-radius: 8px; background: rgba(255, 227, 154, .25); animation: ulPop .45s cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes ulPop { from { opacity: 0; transform: scale(.4) translateY(10px); } to { opacity: 1; transform: none; } }
+
 /* Season pass tab in the shop */
 .pass-head h3 { margin: 0 0 4px; }
 .pass-xp { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
