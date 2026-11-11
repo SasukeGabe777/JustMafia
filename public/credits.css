@@ -1,0 +1,35 @@
+/* Game over: highlight replay banner and the rolling movie credits (TV) */
+.replay-banner { position: fixed; top: 4vh; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; gap: 14px; align-items: center; padding: 10px 22px;
+  background: rgba(8, 6, 14, .82); border: 2px solid #ff4a4a; border-radius: 8px; color: #fff; font: 700 clamp(18px, 2.4vh, 28px) 'Pixelify Sans', monospace; animation: rbIn .5s ease-out both; }
+.replay-banner[hidden] { display: none; }
+.replay-banner span { color: #ff4a4a; animation: rbBlink 1s steps(2) infinite; }
+@keyframes rbIn { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translateX(-50%); } }
+@keyframes rbBlink { 50% { opacity: .2; } }
+
+.credits { position: fixed; inset: 0; z-index: 75; background: radial-gradient(ellipse at 50% 40%, #1a1428, #050308 75%); color: #f6ecd4; font-family: 'Fredoka', sans-serif; overflow: hidden; }
+.credits[hidden] { display: none; }
+.cr-window { position: absolute; inset: 0 0 12vh; overflow: hidden; -webkit-mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); }
+.cr-roll { position: absolute; left: 50%; width: min(1100px, 90vw); transform: translate(-50%, 100vh); text-align: center; padding-bottom: 40vh; }
+@keyframes crRoll { from { transform: translate(-50%, 90vh); } to { transform: translate(-50%, calc(-100% + 40vh)); } }
+.cr-pre { font-size: clamp(18px, 2.4vh, 28px); letter-spacing: .3em; text-transform: uppercase; opacity: .7; margin: 0; }
+.cr-title { font: 700 clamp(48px, 9vh, 110px) 'Pixelify Sans', monospace; color: #f5d98a; text-shadow: 0 0 30px rgba(255, 200, 90, .5), 0 5px 0 #000; margin: 2vh 0 8vh; }
+.credits h2 { font: 700 clamp(26px, 4vh, 48px) 'Pixelify Sans', monospace; color: #ffe39a; letter-spacing: .15em; text-transform: uppercase; margin: 8vh 0 4vh; }
+.cr-cast { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3vh 4vw; text-align: left; }
+.cr-actor { display: flex; align-items: center; gap: 18px; }
+.cr-actor canvas { width: 96px; height: 120px; image-rendering: pixelated; background: rgba(255, 255, 255, .04); border-radius: 10px; }
+.cr-actor.fallen canvas { filter: grayscale(.85) brightness(.75); }
+.cr-actor b { display: block; font-size: clamp(22px, 3vh, 36px); }
+.cr-role { display: block; font-size: clamp(16px, 2.2vh, 26px); color: #8fd0ff; }
+.cr-actor.team-mafia .cr-role { color: #ff7a7a; }
+.cr-actor.team-neutral .cr-role { color: #e6b0ff; }
+.cr-fate { display: block; font-size: clamp(14px, 1.8vh, 20px); opacity: .75; }
+.cr-awards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 3vh 2vw; }
+.cr-award { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px; border: 2px solid rgba(245, 217, 138, .4); border-radius: 12px; background: rgba(255, 220, 120, .06); }
+.cr-trophy { font-size: clamp(40px, 6vh, 72px); filter: drop-shadow(0 0 12px rgba(255, 220, 120, .6)); }
+.cr-award b { font-size: clamp(18px, 2.4vh, 28px); color: #ffe39a; }
+.cr-award span { font-size: clamp(20px, 2.8vh, 32px); }
+.cr-award small { opacity: .7; font-size: clamp(14px, 1.8vh, 20px); }
+.cr-stats { list-style: none; padding: 0; font-size: clamp(20px, 3vh, 34px); line-height: 1.8; }
+.cr-end { font: 700 clamp(30px, 5vh, 60px) 'Pixelify Sans', monospace; color: #f5d98a; margin-top: 14vh; }
+.cr-actions { position: absolute; left: 0; right: 0; bottom: 3vh; display: flex; justify-content: center; gap: 16px; }
+.cr-actions .btn { width: auto; }

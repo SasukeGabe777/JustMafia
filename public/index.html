@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/draft.css">
   <link rel="stylesheet" href="/help.css">
   <link rel="stylesheet" href="/unlock.css">
+  <link rel="stylesheet" href="/credits.css">
 </head>
 <body>
   <canvas id="town"></canvas>
@@ -74,6 +75,12 @@
     </div>
   </div>
 
+  <!-- Game over: highlight replays, then the movie credits (cast, awards, numbers). -->
+  <div id="replay-banner" class="replay-banner" hidden><span>▶ REPLAY</span><b id="replay-title"></b></div>
+  <div id="credits" class="credits" hidden>
+    <div class="cr-window"><div class="cr-roll" id="cr-roll"></div></div>
+    <div class="cr-actions"><button class="btn" id="cr-skip">Skip</button><button class="btn btn-big" id="cr-again">▶ Play again</button></div>
+  </div>
   <!-- Game over: roles this game unlocked for the deck (learn as you play). -->
   <div id="unlock" class="unlock" hidden>
     <h1 class="unlock-title">✨ You just unlocked!</h1>

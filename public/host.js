@@ -82,6 +82,7 @@
     renderDrawer();
     draftTv.render(st); // the role draft overlay (deck, card vote, deal)
     renderUnlock(st);
+    renderCredits(st);
   });
 
   // Game over → "You just unlocked!" (after the victory celebration). One card at a time:
@@ -136,6 +137,56 @@
   $('#unlock-again').addEventListener('click', () => { $('#unlock').hidden = true; act('lobby'); });
   $('#unlock-close').addEventListener('click', () => { $('#unlock').hidden = true; });
   const draftTv = MT_DRAFT.TV($('#draft'));
+
+  // ---------- game over: highlight replays, then the movie credits ----------
+  // Starts once per game, after the victory scene (and the unlock reveal, if any).
+  let creditsFor = null, creditsTimer = null, replaying = false;
+  function renderCredits(st) {
+    if (st.phase !== 'gameover' || !st.credits) { if (st.phase !== 'gameover') { $('#credits').hidden = true; $('#replay-banner').hidden = true; creditsFor = null; clearTimeout(creditsTimer); } return; }
+    const key = st.credits.title + st.credits.cast.map((c) => c.id).join();
+    if (creditsFor === key) return;
+    creditsFor = key; clearTimeout(creditsTimer);
+    const roles = st.unlock ? st.unlock.roles.length : 0, beat = roles > 8 ? 1700 : roles > 4 ? 2100 : 2600;
+    const delay = VICTORY_MS + (roles ? 900 + roles * beat + 5000 : 1500);
+    creditsTimer = setTimeout(() => playHighlights(st.credits), delay);
+  }
+  function playHighlights(cr) {
+    if (!state || state.phase !== 'gameover') return;
+    $('#unlock').hidden = true;
+    const list = (cr.highlights || []).filter((h) => town.chars.get(h.targetId));
+    const next = (i) => {
+      if (!state || state.phase !== 'gameover') return;
+      if (i >= list.length || !town.cinema) { $('#replay-banner').hidden = true; replaying = false; rollCredits(cr); return; }
+      const h = list[i]; replaying = true; renderGameOver();
+      $('#replay-title').textContent = h.title; $('#replay-banner').hidden = false;
+      town.cinema.play('murder', { victimId: h.targetId, outcome: h.type === 'saved' ? 'protected' : 'kill' }, {});
+      const wait = () => { if (town.cinema && town.cinema.active) setTimeout(wait, 400); else next(i + 1); };
+      setTimeout(wait, 1500);
+    };
+    next(0);
+  }
+  function rollCredits(cr) {
+    if (!state || state.phase !== 'gameover') return;
+    const esc2 = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const roll = $('#cr-roll');
+    roll.innerHTML = `<p class="cr-pre">${esc2(cr.town)} presents</p><h1 class="cr-title">${esc2(cr.title)}</h1>
+      <h2>The Cast</h2><div class="cr-cast">${cr.cast.map((c) => `<div class="cr-actor team-${c.team}${c.alive ? '' : ' fallen'}"><canvas data-cr-av="${esc2(c.id)}" width="120" height="150"></canvas><div><b>${esc2(c.name)}</b><span class="cr-role">as the ${esc2(c.roleName)}</span><span class="cr-fate">${c.alive ? '✓ ' : '✝ '}${esc2(c.fate)}</span></div></div>`).join('')}</div>
+      ${cr.awards.length ? `<h2>Awards</h2><div class="cr-awards">${cr.awards.map((a) => `<div class="cr-award"><span class="cr-trophy">${a.emoji}</span><b>${esc2(a.label)}</b><span>${esc2(a.name)}</span><small>${esc2(a.detail)}</small></div>`).join('')}</div>` : ''}
+      <h2>By the numbers</h2><ul class="cr-stats">${cr.stats.map((s) => `<li>${esc2(s)}</li>`).join('')}</ul>
+      <p class="cr-end">Thanks for playing</p>`;
+    roll.querySelectorAll('[data-cr-av]').forEach((cv) => {
+      const c = cr.cast.find((x) => x.id === cv.dataset.crAv); if (!c) return;
+      const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+      MTArt.drawCharacter(g, 60, 140, c.avatar, { scale: 1.6, t: 0, theme: state.theme, expression: c.alive ? undefined : 'sad' });
+    });
+    $('#credits').hidden = false; renderGameOver();
+    roll.style.animation = 'none'; void roll.offsetHeight;
+    const secs = Math.max(30, Math.round(roll.scrollHeight / 55));
+    roll.style.animation = `crRoll ${secs}s linear forwards`;
+    SFX.music('triumph', 110, state.theme);
+  }
+  $('#cr-skip').addEventListener('click', () => { $('#credits').hidden = true; renderGameOver(); });
+  $('#cr-again').addEventListener('click', () => { $('#credits').hidden = true; act('lobby'); });
 
   socket.on('host:haunt', (evt) => town.haunt(evt));
 
@@ -322,7 +373,7 @@
   // The panel waits for the victory celebration to finish, so it doesn't cover the square.
   let goRetry = null;
   function renderGameOver() {
-    const celebrating = town.cinema && town.cinema.scene && /^victory/.test(town.cinema.scene.id);
+    const celebrating = (town.cinema && town.cinema.scene && /^victory/.test(town.cinema.scene.id)) || replaying || !$('#credits').hidden; // victory, replays and credits own the screen
     if (celebrating && state.phase === 'gameover') { clearTimeout(goRetry); goRetry = setTimeout(renderGameOver, 400); }
     const show = state.phase === 'gameover' && state.winner && !celebrating;
     $('#gameover').hidden = !show;
