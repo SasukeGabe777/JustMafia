@@ -1,0 +1,16 @@
+# Render Blueprint (render.com → New → Blueprint, pick this repo).
+# Free plan: the server sleeps after 15 minutes without visitors (the next visit takes about
+# a minute to wake it), and saved characters, gold and unlocks (.data/profiles.json) are wiped
+# whenever it restarts or redeploys. Rooms are in memory and always end on a restart.
+services:
+  - type: web
+    name: justmafia
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0

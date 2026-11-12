@@ -30,6 +30,12 @@ npm start
 - If the QR code shows the wrong address, open ⚙ → *Join link base* and enter the right one (e.g. `http://192.168.1.20:3000`). You can also start the server with `PUBLIC_URL=...`.
 - For players on different networks, use a tunnel (e.g. `cloudflared tunnel --url http://localhost:3000`) and set the join link base to the tunnel URL.
 
+### Play online (Render)
+
+`render.yaml` deploys the game to [Render](https://render.com) on the free plan: render.com → **New → Blueprint** → pick this repository → **Apply**. Every push to `main` redeploys it. Join links and QR codes use the site's address automatically (`RENDER_EXTERNAL_URL`; `PUBLIC_URL` overrides it). Open the site on the TV computer, create a town, and players join from any network.
+
+Free-plan limits: the server sleeps after 15 minutes without visitors, and the next visit takes about a minute to wake it. Saved characters, gold and unlocks are wiped whenever it restarts or redeploys (its disk isn't kept), and running rooms end. A paid instance with a disk mounted at `.data` keeps profiles.
+
 ## How a round plays
 
 | Phase | Big screen | Phones |

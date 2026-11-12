@@ -4,6 +4,7 @@
   "private": true,
   "description": "Mafia Town — a big-screen, phone-controlled social deduction party game",
   "main": "server.js",
+  "engines": { "node": ">=20" },
   "scripts": {
     "start": "node server.js",
     "test": "node tools/test-rules.js && node tools/test-expansion.js && node tools/test-draft.js && node tools/test-headhunter.js && node tools/test-story.js && node tools/test-dlc1.js &&node tools/test-expressions.js && node tools/test-storyteller.js && node tools/test-profiles.js && node tools/test-season.js && node tools/test-themes.js && node tools/test-shop-stock.js && node tools/test-crafter.js && node tools/test-balance.js && node tools/test-bots.js && node tools/test-credits.js && node tools/test-reactions.js && node tools/test-fate.js && node tools/test-career.js && node tools/test-surprises.js && node tools/test-campaign.js && node tools/test-afterlife.js && node tools/test-governance-sockets.js && node tools/test-story-sockets.js && node tools/test-expression-sockets.js && node tools/simulate.js && node tools/render-smoke.js",

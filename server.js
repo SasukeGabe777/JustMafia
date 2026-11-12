@@ -32,7 +32,9 @@ function lanAddress() {
   return candidates.length ? candidates[0].address : 'localhost';
 }
 
-const BASE_URL = (process.env.PUBLIC_URL || `http://${lanAddress()}:${PORT}`).replace(/\/+$/, '');
+// Join links and QR codes: PUBLIC_URL if set, else the host's public address (Render sets
+// RENDER_EXTERNAL_URL), else this machine's LAN address.
+const BASE_URL = (process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || `http://${lanAddress()}:${PORT}`).replace(/\/+$/, '');
 
 const app = express();
 const server = http.createServer(app);
@@ -48,6 +50,7 @@ app.get('/test', (req, res) => res.sendFile(path.join(__dirname, 'public', 'test
 app.get('/preview', (req, res) => res.sendFile(path.join(__dirname, 'public', 'preview.html')));
 app.get('/art', (req, res) => res.sendFile(path.join(__dirname, 'public', 'art-gallery.html')));
 app.get('/api/info', (req, res) => res.json({ baseUrl: BASE_URL }));
+app.get('/healthz', (req, res) => res.type('text').send('ok')); // the host's health check
 app.get('/api/qr', async (req, res) => {
   const text = String(req.query.text || '').slice(0, 300);
   if (!text) return res.status(400).end();
