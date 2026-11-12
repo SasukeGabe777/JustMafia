@@ -22,6 +22,7 @@ class ProfileStore {
       if (typeof p.fate !== 'number') { p.fate = FATE.starter; p.fateCards = { wish: 0, team: 0, reroll: 0 }; } // Fate Tokens arrive with a starter gift
       // Shop stock (older profiles): the starter shelf plus what their games so far would have revealed.
       if (!Array.isArray(p.stock)) { p.stock = STARTER_STOCK.slice(); const s = p.stats || {}; p.stock.push(...nextStock(p.stock, (s.games || 0) * STOCK.finished + (s.wins || 0) * STOCK.won)); }
+      for (const id of STARTER_STOCK) if (!p.stock.includes(id)) p.stock.push(id); // new kinds of items (ghost looks) start on everyone's shelf
     }
   }
   // ----- Season pass -----
@@ -188,6 +189,23 @@ class ProfileStore {
   }
   hasFate(id, card) { const p = this.data.profiles[id]; return !!p && (p.fateCards[card] || 0) > 0; }
   useFate(id, card) { const p = this.data.profiles[id]; if (!p || !(p.fateCards[card] > 0)) return false; p.fateCards[card]--; this.save(); return true; }
+  // Counts something that happened in a game right away (ghost and betting stats) and unlocks
+  // any achievement it completes (the achievement's cosmetic, no gold). Returns the new ones.
+  bumpStat(id, stat, n = 1) {
+    const p = this.data.profiles[id]; if (!p || !n) return [];
+    p.stats[stat] = (p.stats[stat] || 0) + n;
+    const unlocked = Object.entries(ACHIEVEMENTS).filter(([key, a]) => a.stat === stat && p.stats[stat] >= a.count && !p.achievements.includes(key)).map(([key]) => key);
+    p.achievements.push(...unlocked);
+    for (const i of CATALOG) if (unlocked.includes(i.achievement) && !p.owned.includes(i.id)) p.owned.push(i.id); // its cosmetic goes straight to the inventory
+    this.save(); return unlocked;
+  }
+  // Moves gold in or out for a bet (negative = put on the table). False if they can't cover it.
+  escrow(id, delta, reason) {
+    const p = this.data.profiles[id]; if (!p || !delta) return false;
+    if (delta < 0 && p.coins < -delta) return false;
+    this.record(p, delta, reason); this.save(); return true;
+  }
+  coins(id) { const p = this.data.profiles[id]; return p ? p.coins : 0; }
   // Puts items on a player's shelves directly (tests and developer tools).
   stockItems(id, itemIds) { const p = this.data.profiles[id]; if (!p) return false; for (const i of itemIds) if (!p.stock.includes(i)) p.stock.push(i); this.save(); return true; }
   buy(id, itemId) {
@@ -196,6 +214,7 @@ class ProfileStore {
     if (item.pass) return { ok: false, error: `Season pass reward: reach tier ${item.passTier} of the ${SEASON.name} pass.` };
     if (item.world) return { ok: false, error: `World reward: finish ${item.worldGames === 1 ? 'a game' : item.worldGames + ' games'} in the ${WORLD_NAMES[item.world]} world.` };
     if (item.achievement && !p.achievements.includes(item.achievement)) return { ok: false, error: ACHIEVEMENTS[item.achievement].label };
+    if (item.requires && !p.owned.includes(item.requires)) { const need = CATALOG.find((i) => i.id === item.requires); return { ok: false, error: `High Roller tier ${item.ladderTier}: own the ${need ? need.name : 'tier below'} first.` }; }
     if (STOCKABLE_IDS.has(item.id) && !(p.stock || []).includes(item.id)) return { ok: false, error: `The ${item.name} isn't in the shop yet. Keep playing: every game puts something new on the shelves.` };
     if (p.coins < item.cost) return { ok: false, error: `Not enough gold: ${item.name} costs ${item.cost}, you have ${p.coins}.` };
     if (item.cost > 0) this.record(p, -item.cost, 'Bought ' + item.name, { item: item.id });
@@ -219,6 +238,8 @@ class ProfileStore {
     const ob = capped(m.objectives, R.objectiveCap); add('objectives', `Objectives completed (${ob})`, ob * R.objective);
     const inv = capped(m.correctInvestigations, R.investigationCap); add('investigations', `Correct investigations (${inv})`, inv * R.investigation);
     const sv = capped(m.saves, R.saveCap); add('saves', `Helped teammates: saves (${sv})`, sv * R.save);
+    const orc = capped(m.oracle, R.oracleCap); add('oracle', `Right ghost predictions (${orc})`, orc * R.oracle);
+    if (result.won && !result.alive) add('spirit', 'Your side won after you died', R.spiritBonus);
     const unlocked = Object.entries(ACHIEVEMENTS).filter(([key, a]) => s[a.stat] >= a.count && !p.achievements.includes(key));
     for (const [key, a] of unlocked) { p.achievements.push(key); add('achievement', `Achievement: ${a.label}`, R.achievement); }
     const raw = lines.reduce((t, l) => t + l.amount, 0), capped0 = Math.min(R.maxPerGame, raw);

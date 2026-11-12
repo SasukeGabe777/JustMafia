@@ -8,12 +8,19 @@
 //   - optional: PRICES['field:value'] for a custom price, DESCRIPTIONS for text.
 (function (root) {
   const O = typeof module !== 'undefined' && module.exports ? require('./options') : root.MT_OPTIONS;
+  // Economy dials. Every gold reward (games, challenges, season tiers, achievements) is paid
+  // at goldRate, and every gold price (items, the season pass, Fate Token trades) is charged
+  // at priceRate. The numbers written below are the base values before these dials.
+  const ECONOMY = { goldRate: 0.5, priceRate: 1.3 };
+  const price = (n) => Math.round(n * ECONOMY.priceRate / 5) * 5;
+  const pay = (n) => Math.max(1, Math.round(n * ECONOMY.goldRate));
   // field -> [option list, how many are free from the start]
   // field -> [option list, how many are free]. Most items are earned now: new players start with
   // a small free set (profiles created earlier keep everything they already had).
   const FIELDS = { hair: ['hair', 6], outfit: ['outfit', 4], hat: ['hats', 3], shoeStyle: ['shoeStyles', 2], accessory: ['accessory', 2], nameplate: ['nameplate', 1], houseDecor: ['houseDecor', 1], effect: ['effect', 1], houseStyle: ['houseStyle', 4] };
   if (O.deathAnim) FIELDS.deathAnim = ['deathAnim', 1];
   if (O.reactions) FIELDS.reactions = ['reactions', 1];
+  if (O.ghostSkin) FIELDS.ghostSkin = ['ghostSkin', 1];
   // Shop sections. `target` says what equipping changes: the character or the house.
   const CATEGORIES = [
     { id: 'clothing', label: 'Clothing', icon: '👕', fields: ['outfit', 'shoeStyle'], target: 'avatar' },
@@ -22,12 +29,18 @@
     { id: 'house', label: 'House', icon: '🏠', fields: ['houseStyle', 'houseDecor'], target: 'home' },
     { id: 'flair', label: 'Flair', icon: '✨', fields: ['nameplate', 'effect', 'reactions'], target: 'avatar' },
     { id: 'animations', label: 'Farewells', icon: '🕯', fields: ['deathAnim'], target: 'avatar' },
+    { id: 'afterlife', label: 'Ghosts', icon: '👻', fields: ['ghostSkin'], target: 'avatar', goals: true },
   ];
+  // The High Roller line: tier 1 is earned by making (or taking) your first bet; each higher
+  // tier is a better version you can buy with gold once you own the tier below it.
+  const LADDER = { 'reactions:rxCasino': { tier: 1 }, 'hat:dealerVisor': { tier: 2, requires: 'reactions:rxCasino' }, 'hat:highRoller': { tier: 3, requires: 'hat:dealerVisor' }, 'effect:goldRain': { tier: 4, requires: 'hat:highRoller' } };
   // Where an equipped item lives: avatar field, or house design field (HOME_FIELDS key).
   const SLOT = { houseStyle: { target: 'home', key: 'style' }, houseDecor: { target: 'home', key: 'decor' } };
   const slotOf = (field) => SLOT[field] || { target: 'avatar', key: field };
   const PRICES = { 'houseStyle:darkMansion': 140, 'houseStyle:modernHouse': 120, 'houseStyle:rspOffice': 160,
-    'deathAnim:petals': 90, 'deathAnim:fireflies': 110, 'deathAnim:letter': 80, 'deathAnim:candle': 100, 'deathAnim:lantern': 120, 'deathAnim:starfall': 150, 'deathAnim:ascend': 200 };
+    'deathAnim:petals': 90, 'deathAnim:fireflies': 110, 'deathAnim:letter': 80, 'deathAnim:candle': 100, 'deathAnim:lantern': 120, 'deathAnim:starfall': 150, 'deathAnim:ascend': 200,
+    'deathAnim:ectoplasm': 110, 'deathAnim:soulChains': 130, 'ghostSkin:sheet': 45, 'ghostSkin:chains': 75, 'ghostSkin:royalGhost': 160,
+    'hat:dealerVisor': 120, 'hat:highRoller': 250, 'effect:goldRain': 400 };
   const DESCRIPTIONS = {
     'houseStyle:darkMansion': 'A towering, gloomy mansion with iron gates and a single candle in the attic. Fits the darkest secrets.',
     'houseStyle:modernHouse': 'Clean lines, big windows and a flat roof. The most futuristic address in town.',
@@ -60,11 +73,29 @@
     'reactions:rxBloodMoon': 'Season 1 pass exclusive: 🩸 🌕 🦇 🗡️ ⚰️ 🌹 under a red moon.',
     'reactions:rxLove': 'Wear your heart on your sleeve: ❤️ 😍 💔 😘 🌹 🥺.',
     'deathAnim:starfall': 'The sky answers: falling stars streak overhead.',
+    'deathAnim:ectoplasm': 'Green ectoplasm bursts from where you fell, and your ghost pulls itself out of the goo.',
+    'deathAnim:soulChains': 'Spectral chains wrap around you, then shatter: your soul breaks free and rises as a ghost.',
+    'ghostSkin:classic': 'The classic white ghost. Free for everyone.',
+    'ghostSkin:sheet': 'A bedsheet with two eye holes and a striped hem. Timeless. Slightly cheap. Very spooky.',
+    'ghostSkin:chains': 'Rattling chains and a heavy padlock. Everyone hears you coming.',
+    'ghostSkin:royalGhost': 'A golden phantom with a crown and a flowing cape. Haunt like royalty.',
+    'ghostSkin:wisp': 'A flickering blue flame with eyes. Earned the first time you become a ghost.',
+    'ghostSkin:shadowEyes': 'A dark wraith with burning red eyes. Earned by sending 3 Chills.',
+    'ghostSkin:oracle': 'A violet seer with a third eye and a crystal ball. Earned by making 5 right ghost predictions.',
+    'reactions:rxCasino': 'High Roller tier 1: 🎲 🃏 💰 🎰 🍀 💸. Earned by making or taking your first bet.',
+    'hat:dealerVisor': 'High Roller tier 2: a green dealer’s visor with a card tucked in the band. Own the Casino Reactions first.',
+    'hat:highRoller': 'High Roller tier 3: a gold-banded top hat with an ace and diamond studs. Own the Dealer’s Visor first.',
+    'effect:goldRain': 'High Roller tier 4: gold coins rain around you wherever you go. Own the High Roller Top Hat first.',
     'deathAnim:ascend': 'Your spirit rises from your body, glowing, and fades into the light.',
   };
-  const KIND = { hair: 'hairstyle', outfit: 'outfit', hat: 'hat', shoeStyle: 'pair of shoes', accessory: 'accessory', nameplate: 'nameplate', houseDecor: 'house decoration', effect: 'cosmetic effect', houseStyle: 'house design', deathAnim: 'farewell animation' };
-  const ACHIEVEMENTS = { mafiaWins5: { label: 'Win five Mafia games', stat: 'mafiaWins', count: 5 }, saves10: { label: 'Save ten players', stat: 'saves', count: 10 }, jesterWin: { label: 'Win as Jester', stat: 'jesterWins', count: 1 }, investigations5: { label: 'Identify five Mafia', stat: 'correctInvestigations', count: 5 }, survive10: { label: 'Survive ten games', stat: 'survived', count: 10 }, executionerSave: { label: 'Save someone as the Executioner', stat: 'executionerSaves', count: 1 } };
-  const GATES = { 'hat:executionerHood': 'executionerSave', 'outfit:plagueDoctor': 'saves10', 'outfit:detectiveCoat': 'investigations5', 'outfit:jester': 'jesterWin', 'nameplate:mafiaBoss': 'mafiaWins5', 'outfit:ghostHunter': 'survive10' };
+  const KIND = { ghostSkin: 'ghost look', hair: 'hairstyle', outfit: 'outfit', hat: 'hat', shoeStyle: 'pair of shoes', accessory: 'accessory', nameplate: 'nameplate', houseDecor: 'house decoration', effect: 'cosmetic effect', houseStyle: 'house design', deathAnim: 'farewell animation' };
+  const ACHIEVEMENTS = { mafiaWins5: { label: 'Win five Mafia games', stat: 'mafiaWins', count: 5 }, saves10: { label: 'Save ten players', stat: 'saves', count: 10 }, jesterWin: { label: 'Win as Jester', stat: 'jesterWins', count: 1 }, investigations5: { label: 'Identify five Mafia', stat: 'correctInvestigations', count: 5 }, survive10: { label: 'Survive ten games', stat: 'survived', count: 10 }, executionerSave: { label: 'Save someone as the Executioner', stat: 'executionerSaves', count: 1 },
+    // The afterlife and betting (counted as they happen, in any game).
+    firstGhost: { label: 'Become a ghost', stat: 'ghosts', count: 1 },
+    restlessSpirit: { label: 'Send 3 Chills as a ghost', stat: 'chills', count: 3 },
+    ghostOracle: { label: 'Make 5 right ghost predictions', stat: 'oracleCorrect', count: 5 },
+    firstBet: { label: 'Make or take your first bet', stat: 'bets', count: 1 } };
+  const GATES = { 'hat:executionerHood': 'executionerSave', 'outfit:plagueDoctor': 'saves10', 'outfit:detectiveCoat': 'investigations5', 'outfit:jester': 'jesterWin', 'nameplate:mafiaBoss': 'mafiaWins5', 'outfit:ghostHunter': 'survive10', 'ghostSkin:wisp': 'firstGhost', 'ghostSkin:shadowEyes': 'restlessSpirit', 'ghostSkin:oracle': 'ghostOracle', 'reactions:rxCasino': 'firstBet' };
   // ----- Season 1: Blood Moon (battle pass) -----
   // Buy the pass with gold; every game earns pass XP (pass or not); each tier pays gold or
   // unlocks a pass-exclusive cosmetic. Buying later grants every tier already reached.
@@ -124,17 +155,18 @@
   const CATALOG = Object.entries(FIELDS).flatMap(([field, [list, free]]) => (O[list] || []).map((value, index) => {
     const id = field + ':' + value, gated = GATES[id] || null, passTier = PASS[id] || null, earned = WORLD_ITEM[id] || null;
     const cost = index < free || gated || passTier || earned ? 0 : PRICES[id] != null ? PRICES[id] : field === 'outfit' ? 70 + (index - free) * 8 : 25 + (index - free) * 10;
-    const category = (CATEGORIES.find((c) => c.fields.includes(field)) || {}).id || 'flair';
-    return { id, field, value, name: O.label(value), cost, achievement: gated, pass: passTier ? SEASON.id : null, passTier, free: index < free, category,
+    const ladder = LADDER[id] || null, category = (CATEGORIES.find((c) => c.fields.includes(field)) || {}).id || 'flair';
+    return { id, field, value, name: O.label(value), cost, achievement: gated, pass: passTier ? SEASON.id : null, passTier, free: index < free, category, requires: ladder && ladder.requires || null, ladderTier: ladder ? ladder.tier : null,
       world: earned ? earned.world : null, worldGames: earned ? earned.games : null,
       description: earned ? `Earned by finishing ${earned.games === 1 ? 'a game' : earned.games + ' games'} in the ${WORLD_NAMES[earned.world]} world.` : DESCRIPTIONS[id] || `A ${O.label(value).toLowerCase()} ${KIND[field] || 'item'}${index < free ? ' (free for everyone).' : ' for your ' + (slotOf(field).target === 'home' ? 'house.' : 'townsfolk.')}` };
   }));
+  for (const i of CATALOG) if (i.cost > 0) i.cost = price(i.cost);
   // ----- Shop stock: what each player can buy grows as they play -----
   // Gold items (not free, not pass/world/achievement rewards) start hidden. A new player sees
   // a small starter stock; finishing games, winning and visiting new worlds put more on the
   // shelves (cheapest first, a mix of kinds). Hidden items cannot be bought.
   const STOCK = { starterPerField: 2, finished: 1, won: 1, newWorld: 2 };
-  const STOCKABLE = CATALOG.filter((i) => !i.free && !i.pass && !i.world && !i.achievement && i.cost > 0);
+  const STOCKABLE = CATALOG.filter((i) => !i.free && !i.pass && !i.world && !i.achievement && !i.requires && i.cost > 0);
   const stockOrder = (a, b) => a.cost - b.cost || CATALOG.indexOf(a) - CATALOG.indexOf(b);
   const STARTER_STOCK = Object.keys(FIELDS).flatMap((f) => STOCKABLE.filter((i) => i.field === f).sort(stockOrder).slice(0, STOCK.starterPerField).map((i) => i.id));
   // The next n hidden items to reveal: the cheapest of each kind in turn, so a reveal mixes
@@ -175,8 +207,20 @@
     investigation: 3, investigationCap: 3, // correct investigations
     save: 4, saveCap: 2,                   // helping teammates: saves/protections that mattered
     achievement: 10,                       // each achievement unlocked by this game
+    oracle: 5, oracleCap: 4,               // right ghost predictions
+    spiritBonus: 5,                        // your side won after you died
     maxPerGame: 60, minimumGameMs: 60000,
   };
-  const API = { FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS, SEASON, PASS, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_ITEM, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock, FATE };
+  // The afterlife: what ghosts can do (see rules/afterlife.js).
+  const AFTERLIFE = {
+    words: ['Trust', 'Liar', 'Danger', 'Watch', 'Protect', 'Wrong', 'Right', 'Quiet', 'Loud', 'Soon', 'Mafia', 'Innocent'],
+    stakes: [10, 25, 50, 100], maxSpirits: 2,
+  };
+  SEASON.cost = price(SEASON.cost);
+  for (const r of Object.values(SEASON.rewards)) if (r.gold) r.gold = pay(r.gold);
+  for (const c of Object.values(CHALLENGES)) c.gold = pay(c.gold);
+  FATE.exchangeGold = price(FATE.exchangeGold);
+  for (const k of ['completed', 'victory', 'neutralVictory', 'survived', 'ability', 'objective', 'investigation', 'save', 'achievement', 'oracle', 'spiritBonus', 'maxPerGame']) REWARDS[k] = pay(REWARDS[k]);
+  const API = { ECONOMY, AFTERLIFE, LADDER, FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS, SEASON, PASS, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_ITEM, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock, FATE };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.MT_COSMETICS = API;
 })(typeof window !== 'undefined' ? window : globalThis);

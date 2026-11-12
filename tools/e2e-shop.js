@@ -51,10 +51,10 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   // Preview an item; it is unaffordable, so Buy is disabled and the shopkeeper says so.
   await a.click('[data-shop-tab="house"]'); await a.click('[data-item="houseStyle:darkMansion"]');
   await a.until(`document.querySelector('#s-scene').dataset.selected === 'houseStyle:darkMansion'`, 'item on the counter');
-  assert(await a.eval(`document.querySelector('[data-buy]').disabled && /Need 140 more gold/.test(document.querySelector('[data-cant]').textContent)`));
+  assert(await a.eval(`document.querySelector('[data-buy]').disabled && /Need 180 more gold/.test(document.querySelector('[data-cant]').textContent)`));
   assert.match(await a.eval(`document.querySelector('#s-say').textContent`), /let me get it down/, 'he goes to fetch it first');
   await a.until(`document.querySelector('#s-scene').dataset.placed === 'houseStyle:darkMansion'`, 'he carries it to the pedestal', 6000);
-  await a.until(`/140 gold.*You have 0/.test(document.querySelector('#s-say').textContent)`, 'then the sales pitch', 4000);
+  await a.until(`/180 gold.*You have 0/.test(document.querySelector('#s-say').textContent)`, 'then the sales pitch', 4000);
   assert.match(await a.eval(`document.querySelector('#s-say').textContent`), /neighbors|walls|plot|Dark Mansion/, 'he talks about the item');
   assert.match(await a.eval(`document.querySelector('#s-detail').textContent`), /gloomy mansion/);
   await a.shot('shop-preview');
@@ -64,12 +64,12 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   assert(await grant(300)); await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 300`, 'gold arrives');
   await a.until(`!document.querySelector('[data-buy]').disabled`, 'buy enabled');
   await a.click('[data-buy]');
-  await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 160 && !document.querySelector('[data-item="houseStyle:darkMansion"]') && document.querySelector('[data-equip]')`, 'purchase completes: it leaves the shelf, Equip appears');
+  await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 120 && !document.querySelector('[data-item="houseStyle:darkMansion"]') && document.querySelector('[data-equip]')`, 'purchase completes: it leaves the shelf, Equip appears');
   assert.match(await a.eval(`document.querySelector('#s-say').textContent`), /Thank you/);
   await a.click('[data-shop-tab="accessories"]'); await a.click('[data-item="hat:hood"]');
   const hoodPrice = await a.eval(`MT_COSMETICS.CATALOG.find((i) => i.id === 'hat:hood').cost`);
-  await a.click('[data-buy]'); await a.until(`Number(document.querySelector('#s-pouch b').textContent) === ${160 - hoodPrice}`, 'second purchase');
-  ok(`Buying deducts exactly the price (140 + ${hoodPrice} gold) ; bought items move to the inventory`);
+  await a.click('[data-buy]'); await a.until(`Number(document.querySelector('#s-pouch b').textContent) === ${120 - hoodPrice}`, 'second purchase');
+  ok(`Buying deducts exactly the price (180 + ${hoodPrice} gold) ; bought items move to the inventory`);
 
   // Inventory: equip the house and the hat; the TV shows them. Unequip works too.
   await a.click('[data-shop-tab="inventory"]');
@@ -90,12 +90,12 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   ok('Inventory equips/unequips purchases on the character and the house; the TV updates');
 
   // Refresh: gold, purchases and equipped items persist.
-  const balance = 160 - hoodPrice;
+  const balance = 120 - hoodPrice;
   await a.send('Page.reload'); await wait(400);
   await a.until(`!document.querySelector('#screen-game').hidden && document.querySelector('#g-pouch') && Number(document.querySelector('#g-pouch b').textContent) === ${balance}`, 'gold after refresh');
   await a.click('#g-pouch'); await a.until(`document.querySelector('#g-pouch-pop .pouch-stats')`, 'pouch details');
   const stats = await a.eval(`[...document.querySelectorAll('#g-pouch-pop .pouch-stats b')].map((b) => Number(b.textContent))`);
-  assert.deepEqual(stats, [balance, 300, 140 + hoodPrice], 'balance / earned / spent');
+  assert.deepEqual(stats, [balance, 300, 180 + hoodPrice], 'balance / earned / spent');
   await a.click('[data-open-shop]'); await a.until(`!document.querySelector('#screen-shop').hidden`, 'shop'); await a.click('[data-shop-tab="inventory"]');
   await a.until(`document.querySelectorAll('.badge.eq').length === 2`, 'equipped after refresh');
   ok('Refresh keeps gold (balance, earned, spent), inventory and equipped items');

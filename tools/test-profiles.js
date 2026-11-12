@@ -12,6 +12,7 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     for (let i = 0; i < 5; i++) assert(store.award(auth.id, 'game-' + i, { won: true, alive: true, role: 'mafia', team: 'mafia', metrics: { abilities: 3, saves: 2 } }));
     assert(!store.award(auth.id, 'game-0', { won: true, alive: true }));
     store.stockItems(auth.id, ['outfit:knight']); // put it on this player's shelves (the shop reveals items as they play)
+    store.grant(auth.id, 100); // five games no longer pay for an outfit on their own (gold is paid at half rate)
     assert(store.buy(auth.id, 'outfit:knight').ok); assert.equal(store.validateAvatar(auth.id, { outfit: 'knight' }).outfit, 'knight');
     assert(store.view(auth.id).achievements.includes('mafiaWins5'));
     // House design is separate from the avatar and persists in the profile.
@@ -48,7 +49,7 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     assert.equal(store.equip(g.id, 'outfit:knight').ok, false);
     const eq = store.equip(g.id, 'houseStyle:darkMansion'); assert(eq.ok); assert.equal(eq.target, 'home'); assert.equal(P().home.style, 'darkMansion'); assert.equal(P().inventory[0].equipped, true);
     assert(store.equip(g.id, 'houseStyle:darkMansion', false).ok); assert.equal(P().home.style, 'cottage'); assert.equal(P().inventory[0].equipped, false);
-    assert(store.buy(g.id, 'hat:hood').ok); assert(store.equip(g.id, 'hat:hood').ok); assert.equal(P().avatar.hat, 'hood');
+    store.grant(g.id, 100); assert(store.buy(g.id, 'hat:hood').ok); assert(store.equip(g.id, 'hat:hood').ok); assert.equal(P().avatar.hat, 'hood');
     assert.equal(new ProfileStore(filename).view(g.id).avatar.hat, 'hood', 'equipped items persist');
     // Older profiles get pouch fields on load (their balance counts as earned).
     store.data.profiles[g.id].goldEarned = undefined; store.data.profiles[g.id].ledger = undefined; store.save();

@@ -48,6 +48,7 @@
     else if (fx === 'hearts') for (let i = 0; i < 4; i++) { const p = (t * .5 + i / 4) % 1, x = Math.sin(i * 3 + t) * 16, y = -22 - p * 50; ctx.globalAlpha *= 1; ctx.fillStyle = `rgba(255,110,160,${1 - p})`; ctx.fillRect(x - 3, y, 3, 3); ctx.fillRect(x + 1, y, 3, 3); ctx.fillRect(x - 2, y + 3, 5, 2); ctx.fillRect(x - 1, y + 5, 3, 1); }
     else if (fx === 'shadow') for (let i = 0; i < 7; i++) { const p = (t * .4 + i / 7) % 1; ctx.fillStyle = `rgba(30,12,44,${.55 * (1 - p)})`; ctx.fillRect(-14 + i * 4 + Math.sin(t * 2 + i) * 2, -4 - p * 34, 3, 6); }
     else if (fx === 'bloodMist') for (let i = 0; i < 8; i++) { const p = (t * .35 + i / 8) % 1, a = i * .8 + t * .6; ctx.fillStyle = `rgba(170,20,36,${.45 * (1 - p)})`; ctx.fillRect(Math.cos(a) * (10 + p * 14), -6 - p * 40, 3, 3); }
+    else if (fx === 'goldRain') for (let i = 0; i < 9; i++) { const p = (t * .55 + i / 9) % 1, x = Math.sin(i * 2.3) * 20 + Math.sin(t + i) * 2, y = -86 + p * 86, w = Math.max(1, Math.round(3 * Math.abs(Math.cos(t * 5 + i)))); ctx.fillStyle = `rgba(255,210,63,${p < .85 ? 1 : (1 - p) / .15})`; ctx.fillRect(x - w / 2, y, w, 3); if (i % 3 === 0) { ctx.fillStyle = '#fff1a0'; ctx.fillRect(x - .5, y, 1, 1); } }
     else if (fx === 'lightning' && Math.sin(t * 2.6) > .93) { ctx.strokeStyle = '#bfe4ff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-6, -82); ctx.lineTo(2, -74); ctx.lineTo(-3, -70); ctx.lineTo(5, -62); ctx.stroke(); }
     const rect = (c, a, b, w, h) => { ctx.fillStyle = c; ctx.fillRect(Math.round(a), Math.round(b), w, h); };
     const dark = A.shade(cloth, -.36), light = A.shade(cloth, .24);
@@ -189,6 +190,9 @@
     if (hat === 'furHat') { rect('#7a5434', -14, -60, 28, 10); rect('#a8845a', -13, -61, 26, 4); rect('#7a5434', -15, -52, 5, 12); rect('#7a5434', 10, -52, 5, 12); rect('#e6dcc0', -13, -53, 3, 6); rect('#e6dcc0', 10, -53, 3, 6); }
     if (hat === 'cubeHelm') { rect('#5a5a5a', -14, -62, 28, 12); rect('#7a7a7a', -13, -61, 26, 4); rect('#5a5a5a', -14, -52, 4, 8); rect('#5a5a5a', 10, -52, 4, 8); rect('#9fe8ff', -2, -60, 4, 3); }
     if (hat === 'featherCap') { rect('#2a5a3a', -13, -59, 26, 8); rect('#3a7a4a', -12, -60, 20, 3); rect('#2a5a3a', 6, -57, 10, 3); rect('#c0283c', -12, -66, 2, 10); rect('#e04a5a', -14, -68, 3, 4); }
+    // High Roller line (tiers 2 and 3).
+    if (hat === 'dealerVisor') { rect('#1f7a4a', -14, -55, 28, 3); rect('#2fa060', -16, -53, 22, 3); rect('rgba(140,230,170,.55)', -16, -52, 22, 2); rect('#f6f2e6', 9, -61, 6, 8); rect('#c0283c', 11, -59, 2, 2); }
+    if (hat === 'highRoller') { rect('#141018', -17, -52, 34, 3); rect('#1c1622', -11, -70, 22, 18); rect('#2a2230', -11, -70, 22, 2); rect('#e2b23c', -11, -57, 22, 3); for (let i = 0; i < 4; i++) rect(Math.sin(t * 3 + i) > .4 ? '#ffffff' : '#9fe8ff', -9 + i * 5, -56, 2, 1); rect('#f6f2e6', 6, -68, 6, 9); rect('#141018', 8, -66, 2, 2); }
     if (hat === 'fedora') { rect('#2a2a2e', -17, -52, 34, 3); rect('#2a2a2e', -11, -61, 22, 9); rect('#3a3a40', -11, -61, 22, 2); rect('#8a1f1f', -11, -55, 22, 2); }
     if (av.accessory === 'shades') { rect('#101014', -9 + eyeX, -46, 8, 4); rect('#101014', 1 + eyeX, -46, 8, 4); rect('#101014', -1 + eyeX, -45, 2, 1); rect('rgba(255,255,255,0.35)', -8 + eyeX, -46, 2, 1); }
     // Wave 2 face/neck accessories.
@@ -212,5 +216,7 @@
     ctx.restore();
   }
   A.drawCharacter = character; A.EXPRESSIONS = Object.keys(EXPRESSIONS).filter((k) => !['scared', 'xeyes'].includes(k));
-  A.drawGhost = function (ctx, x, y, av, o = {}) { ctx.save(); ctx.globalAlpha *= .52; ctx.shadowColor = '#a8d6df'; ctx.shadowBlur = o.glow ? 15 : 4; character(ctx, x, y - 7 + Math.sin((o.t || 0) * 2.5 + (o.seed || 0)) * 4, av, { ...o, alpha: o.alpha == null ? .85 : o.alpha }); ctx.restore(); };
+  // Ghost looks: Classic is the see-through townsperson; the others are costume ghosts (avatar.js).
+  const costumeGhost = A.drawGhost;
+  A.drawGhost = function (ctx, x, y, av, o = {}) { if (av && av.ghostSkin && av.ghostSkin !== 'classic' && costumeGhost) { costumeGhost(ctx, x, y, av, { ...o, scale: (o.scale || 1) * 1.4 }); return; } ctx.save(); ctx.globalAlpha *= .52; ctx.shadowColor = '#a8d6df'; ctx.shadowBlur = o.glow ? 15 : 4; character(ctx, x, y - 7 + Math.sin((o.t || 0) * 2.5 + (o.seed || 0)) * 4, av, { ...o, alpha: o.alpha == null ? .85 : o.alpha }); ctx.restore(); };
 })();

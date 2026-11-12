@@ -759,9 +759,11 @@ class Room {
     this.verdictActs = eliminatedId ? { condemnedId: eliminatedId, voters: entries.filter((e) => e.targetId === eliminatedId).map((e) => e.voterId), interrupt: null, protect: null, sacrifice: null, defenders: [], lastWords: null } : null;
     this.addLog(`Votes: ${entries.map((e) => `${this.nameOf(e.voterId)}→${this.nameOf(e.targetId)}${e.weight > 1 ? `(x${e.weight})` : ''}`).join(', ') || 'none'}.`, true);
     this.narrate('votesIn');
-    const shown = this.settings.anonymousVotes ? entries.map((e) => ({ voterId: null, targetId: e.targetId })) : entries.map(({ voterId, targetId }) => ({ voterId, targetId }));
+    const anon = this.votesAnonymous ? this.votesAnonymous() : this.settings.anonymousVotes;
+    if (anon) this.voteHistory[this.voteHistory.length - 1].secret = true;
+    const shown = anon ? entries.map((e) => ({ voterId: null, targetId: e.targetId })) : entries.map(({ voterId, targetId }) => ({ voterId, targetId }));
     const followups = this.updateHarmony(entries);
-    this.setCinematic({ type: 'votes', votes: shown, eliminatedId, tie, anonymous: this.settings.anonymousVotes, followups });
+    this.setCinematic({ type: 'votes', votes: shown, eliminatedId, tie, anonymous: anon, followups });
     // A condemned player gets a longer verdict so interventions and last words can happen.
     const extra = eliminatedId && (this.settings.executionInterventions || this.settings.lastWords) ? VERDICT_WINDOW_MS : 0;
     this.setPhase('verdict', this.cine('verdict', followups.length * 6500 + extra));
@@ -864,7 +866,7 @@ class Room {
   // - a Bodyguard who takes the place dies in public, so their own figure is shown;
   // - defenders chose to be seen; last words are fixed tokens only.
   executionCinematic({ outcome, condemned, dead, V }) {
-    const votesPublic = !this.settings.anonymousVotes;
+    const votesPublic = !(this.votesAnonymous ? this.votesAnonymous() : this.settings.anonymousVotes);
     const lw = V && V.lastWords && dead === condemned && this.settings.lastWords ? V.lastWords : null;
     if (lw) this.addLog(`🪦 ${condemned.name}'s last words: ${[lw.name, lw.word].filter(Boolean).join(' … ')}`);
     return {
@@ -1490,7 +1492,7 @@ class Room {
     };
     if (v.draft) { v.draft = this.draftView(p); v.flipped = !!p.flipped; } // this player's own ballot; never anyone's role
     // Bots reason over the public vote record (players saw it on the big screen).
-    if (p.isBot && !this.settings.anonymousVotes) v.voteHistory = this.voteHistory;
+    if (p.isBot && !this.settings.anonymousVotes) v.voteHistory = this.voteHistory.filter((x) => !x.secret);
     if (r && r.knowsTeam && p.alive) v.teammates = this.inGame().filter((x) => x.id !== p.id && this.team(x) === r.team && this.role(x).knowsTeam).map((x) => ({ id: x.id, name: x.name, alive: x.alive, role: x.role }));
     if (!p.spectator && p.investigations.length) v.investigations = p.investigations;
     if (!p.spectator && p.role === 'vigilante') v.shotsLeft = p.shotsLeft;
@@ -1570,5 +1572,6 @@ require('./rules/credits')(Room);
 require('./rules/fate')(Room); // Fate Cards: Role Wish, Team Wish, Reroll
 require('./rules/career')(Room); // career stats, rivalries, mastery, Hall of Fame
 require('./rules/campaign')(Room); // five-chapter campaigns with recaps and scars // end-of-game movie credits: cast, awards, stats, highlights // the Crafter: materials, recipes, tools
+require('./rules/afterlife')(Room); // ghosts: predictions, Chills, the Medium's spirit line, shrouds, bets
 require('./rules/events')(Room); // seasonal events (Blood Moon) // DLC 1 roles; wraps kill/views/shownRole, so it installs last
 module.exports = { Room, DEFAULT_SETTINGS, HARD_MAX_PLAYERS };

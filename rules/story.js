@@ -29,7 +29,7 @@ module.exports = function install(Room) {
     // Votes (only when the town sees who voted for whom).
     if (!this.settings.anonymousVotes) {
       const vote = (this.voteHistory || []).filter((v) => v.day === day).pop();
-      if (vote && !execution) {
+      if (vote && !vote.secret && !execution) {
         const mine = vote.votes.find((v) => v.voterId === p.id);
         const t = mine && mine.targetId !== 'skip' && this.players.get(mine.targetId);
         if (t && t.id !== p.id) S.accused = t.name;

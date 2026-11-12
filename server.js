@@ -358,6 +358,20 @@ io.on('connection', (socket) => {
       : 'That vote is not allowed. Pick someone on the list.';
     reply(cb, { ok: false, error: why });
   });
+  // The afterlife: predictions, a Chill, whispers to a Medium, a Mafia ghost's shroud, bets.
+  socket.on('player:ghost', (msg = {}, cb) => {
+    const { room, p } = ctx(); if (!p) return reply(cb, { ok: false });
+    const id = msg.targetId == null ? null : String(msg.targetId), op = String(msg.op || '');
+    reply(cb, op === 'predict' ? room.ghostPredict(p, String(msg.kind || ''), id)
+      : op === 'chill' ? room.ghostChill(p, id)
+      : op === 'whisper' ? room.ghostWhisper(p, String(msg.word || ''))
+      : op === 'shroud' ? room.ghostShroud(p)
+      : op === 'bet' ? room.offerWager(p, { kind: String(msg.kind || ''), pick: msg.pick == null ? null : String(msg.pick), stake: Number(msg.stake) })
+      : op === 'take' ? room.takeWager(p, Number(msg.id))
+      : op === 'cancel' ? room.cancelWager(p, Number(msg.id))
+      : op === 'spirit' ? room.spiritLine(p, id, !!msg.on)
+      : { ok: false, error: 'Unknown action.' });
+  });
   socket.on('player:haunt', (msg = {}) => { const { room, p } = ctx(); if (p) room.haunt(p, msg.kind, msg.targetId); });
   socket.on('player:telepath', (msg = {}, cb) => { const { room, p } = ctx(); reply(cb, p ? room.sendTelepath(p, msg) : { ok: false }); });
   socket.on('player:removeJudge', (_msg, cb) => { const { room, p } = ctx(); reply(cb, p ? room.voteRemoveJudge(p) : { ok: false }); });

@@ -189,6 +189,7 @@
   $('#cr-again').addEventListener('click', () => { $('#credits').hidden = true; act('lobby'); });
 
   socket.on('host:haunt', (evt) => town.haunt(evt));
+  socket.on('host:chill', (evt) => town.chill(evt));
   socket.on('host:react', (r) => town.react(r.playerId, r.emoji));
 
   // Judge scene controls (presentation only).

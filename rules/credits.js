@@ -47,6 +47,7 @@ module.exports = function install(Room) {
       award('🙈', 'Worst Vote', top(wrongVotes), (x) => `helped vote out ${x.n} Town member${x.n > 1 ? 's' : ''}`),
       sneaky ? { emoji: '🕶', label: 'Never Caught', id: sneaky.id, name: sneaky.name, detail: `${roleName(sneaky)}, never once voted for` } : null,
       firstDead ? { emoji: '🩸', label: 'First Blood', id: firstDead.id, name: firstDead.name, detail: fate(firstDead) } : null,
+      award('🔮', 'Ghost Oracle', top(Object.fromEntries(everyone.map((p) => [p.id, (p.oracle || {}).correct || 0]))), (x) => `${x.n} right prediction${x.n > 1 ? 's' : ''} from beyond`),
       lastStanding.length === 1 ? { emoji: '🧍', label: 'Last One Standing', id: lastStanding[0].id, name: lastStanding[0].name, detail: roleName(lastStanding[0]) } : null,
     ].filter(Boolean);
 

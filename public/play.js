@@ -554,6 +554,7 @@
     renderPrivateScene();
     if (view.progression) { profile = view.progression; updatePouch(); }
     MT_STORY_UI(view, socket, $('#g-body'), { esc, paint, reply: abilityReply, votingHtml });
+    if (window.MT_AFTERLIFE_UI) MT_AFTERLIFE_UI(view, socket, $('#g-body'), { esc, reply: abilityReply });
     renderReactFab();
     if (focus) { const input = [...body.querySelectorAll('[data-draft]')].find((el) => el.dataset.draft === focus); if (input) { input.focus(); if (caret != null) input.setSelectionRange(caret,caret); } }
   }
@@ -884,6 +885,7 @@
     </div>`;
   }
 
+  let booOpen = false;
   function ghostHtml() {
     const v = view;
     const alive = v.players.filter((p) => p.alive);
@@ -892,18 +894,18 @@
     return `<div class="card ghostcard center">
       <div class="big-emoji">👻</div>
       <h2>You're a ghost</h2>
-      <p class="muted">No more hints to the living! But you can still haunt them for fun.</p>
+      <p class="muted">No more hints to the living! But the afterlife has plenty to do: predict, haunt, whisper to a Medium and bet.</p>
       ${r ? `<p class="small">You were ${r.emoji} <b>${esc(roleLabel(v.role))}</b></p>` : ''}
       ${v.hauntReadyAt == null ? '<p class="muted small">Haunting is turned off for this game.</p>' : `<div class="haunts">
         <button class="btn" data-haunt="spin" ${cooling ? 'disabled' : ''}>🌀 Spin</button>
         <button class="btn" data-haunt="wail" ${cooling ? 'disabled' : ''}>😱 Wail</button>
       </div>`}
     </div>
-    ${v.hauntReadyAt == null ? '' : `<div class="card">
-      <div class="prompt">👻 Boo someone</div>
+    ${v.hauntReadyAt == null ? '' : `<details class="card boo-card"${booOpen ? ' open' : ''}>
+      <summary class="prompt">👻 Boo someone</summary>
       <p class="muted small">Float over and spook a living player.</p>
       <div class="grid">${alive.map((p) => targetButton(p, false, 'data-boo')).join('')}</div>
-    </div>`}`;
+    </details>`}`;
   }
 
   function gameOverHtml() {
@@ -949,6 +951,7 @@
       voteErr = err ? 'No answer from the game. Check your connection and tap again.' : r && !r.ok ? r.error || 'Vote not counted.' : '';
       const el = document.querySelector('[data-vote-err]'); if (el) el.textContent = voteErr;
     })));
+    body.querySelectorAll('.boo-card').forEach((d) => d.addEventListener('toggle', () => { booOpen = d.open; }));
     body.querySelectorAll('[data-boo]').forEach((b) => b.addEventListener('click', () => haunt('boo', b.dataset.boo)));
     body.querySelectorAll('[data-haunt]').forEach((b) => b.addEventListener('click', () => haunt(b.dataset.haunt)));
     const tm = body.querySelector('#tp-msg');

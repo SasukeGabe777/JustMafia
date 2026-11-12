@@ -96,6 +96,51 @@
       ctx.strokeStyle = 'rgba(255,240,170,.9)'; ctx.lineWidth = 1.6 * s; ctx.beginPath(); ctx.ellipse(x, py - 52 * s, 8 * s, 2.6 * s, 0, 0, TAU); ctx.stroke();
       ctx.restore();
     },
+    // Green ectoplasm bursts from the body, then the ghost pulls itself out of the goo.
+    ectoplasm(ctx, x, y, s, t, o) {
+      const tt = o.once ? t : t % 4.6, burst = clamp(tt / 0.6, 0, 1), rise = clamp((tt - 0.9) / 2.6, 0, 1);
+      ctx.fillStyle = 'rgba(80,220,110,0.85)';
+      ctx.beginPath(); ctx.ellipse(x, y - 1 * s, (14 + burst * 22) * s, (3 + burst * 4) * s, 0, 0, TAU); ctx.fill();
+      for (let i = 0; i < 12; i++) {
+        const a = hash(i) * Math.PI, k = clamp(tt / 1.1, 0, 1), d = (20 + hash(i + 4) * 40) * s * k;
+        const px = x + Math.cos(a) * d * (i % 2 ? 1 : -1), py = y - Math.sin(a) * d * 1.3 + k * k * 30 * s;
+        if (py > y) continue;
+        ctx.fillStyle = `rgba(120,255,140,${0.9 * (1 - k * 0.6)})`; ctx.beginPath(); ctx.arc(px, py, (2.6 - k) * s, 0, TAU); ctx.fill();
+      }
+      for (let i = 0; i < 3; i++) { const dx = (i - 1) * 9 * s, len = (6 + 10 * Math.abs(Math.sin(tt * 2 + i))) * s * burst; ctx.fillStyle = 'rgba(80,220,110,0.75)'; ctx.fillRect(dx + x - 1.5 * s, y - 2 * s, 3 * s, len); }
+      if (rise > 0 && window.MTArt && o.avatar) {
+        ctx.save(); ctx.globalAlpha *= Math.min(1, rise * 2) * (o.once ? 1 - clamp((tt - 4) / 1, 0, 1) : 1);
+        glow(ctx, x, y - 30 * s - rise * 30 * s, 30 * s, '120,255,150', 0.45);
+        window.MTArt.drawGhost(ctx, x, y - rise * 34 * s, o.avatar, { scale: s, t, alpha: 0.85, glow: true });
+        ctx.restore();
+      }
+    },
+    // Spectral chains wrap the body, glow, and shatter: the soul breaks free and rises.
+    soulChains(ctx, x, y, s, t, o) {
+      const tt = o.once ? t : t % 5, wrap = clamp(tt / 1.2, 0, 1), snap = tt > 1.8, k = clamp((tt - 1.8) / 1.4, 0, 1);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 1.6 * s;
+      if (!snap) {
+        for (let i = 0; i < 7; i++) {
+          if (i / 7 > wrap) continue;
+          const lx = x - 20 * s + i * 6.5 * s, ly = y - 6 * s + Math.sin(i * 1.7 + tt * 3) * 2 * s;
+          ctx.strokeStyle = `rgba(150,200,255,${0.6 + 0.4 * Math.sin(tt * 9 + i)})`; ctx.beginPath(); ctx.ellipse(lx, ly, 3.2 * s, 2 * s, i % 2 ? 0.6 : -0.6, 0, TAU); ctx.stroke();
+        }
+        if (tt > 1.3) glow(ctx, x, y - 6 * s, 30 * s, '170,210,255', 0.5 * Math.sin((tt - 1.3) / 0.5 * Math.PI / 2));
+      } else {
+        for (let i = 0; i < 7; i++) {
+          const a = -Math.PI / 2 + (i - 3) * 0.45, d = k * 60 * s;
+          ctx.strokeStyle = `rgba(150,200,255,${1 - k})`; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * d, y - 6 * s + Math.sin(a) * d * 0.6 + k * k * 40 * s, 3 * s, 2 * s, k * 6 + i, 0, TAU); ctx.stroke();
+        }
+        if (k < 0.3) glow(ctx, x, y - 8 * s, 50 * s, '220,240,255', 0.9 * (1 - k / 0.3));
+      }
+      ctx.restore();
+      if (snap && window.MTArt && o.avatar) {
+        const up = clamp((tt - 1.9) / 2.4, 0, 1);
+        ctx.save(); ctx.globalAlpha *= Math.min(1, up * 3) * (o.once ? 1 - clamp((tt - 4.6) / 1, 0, 1) : 1);
+        window.MTArt.drawGhost(ctx, x, y - 6 * s - up * 50 * s, o.avatar, { scale: s, t, alpha: 0.85, glow: true });
+        ctx.restore();
+      }
+    },
   };
   function draw(ctx, kind, x, y, s, t, o = {}) {
     const f = KINDS[kind]; if (!f) return;

@@ -53,6 +53,7 @@
     const look = lookWith(item, ctx);
     if (item.field === 'deathAnim' && window.MT_FAREWELL) { window.MT_FAREWELL.preview(g, item.value, w, h, 1.4, ctx.avatar); return; } // a farewell: show it playing
     if (item.field === 'reactions') { drawReactionPack(g, item.value, w / 2, h / 2, Math.min(w, h) / 4.2); return; }
+    if (item.field === 'ghostSkin') { g.fillStyle = '#1d2236'; g.fillRect(0, 0, w, h); MTArt.drawGhost(g, w / 2, h * 0.9, look.avatar, { scale: h / 92, t: 1.2, glow: true }); return; } // a ghost look
     if (look.home) {
       const T = window.MT_THEMES, pal = (T.THEMES[ctx.theme] || T.THEMES.smalltown).palette;
       g.fillStyle = pal.grass; g.fillRect(0, 0, w, h);
@@ -194,6 +195,7 @@
         const x = w * (col + .5) / 6, y = (row ? 104 : 52) * u;
         const look = lookWith(item, st);
         if (look.home) window.MT_WORLD.building(g, x, y, Math.max(0, O.houseStyle.indexOf(look.home.style)), (window.MT_THEMES.THEMES[st.theme] || window.MT_THEMES.THEMES.smalltown).palette, { ...window.MT_WORLD.lookOptions(look.home), scale: .22 * u, theme: st.theme, lit: true });
+        else if (item.field === 'ghostSkin') MTArt.drawGhost(g, x, y, look.avatar, { scale: .5 * u, t: t + i, glow: true });
         else MTArt.drawCharacter(g, x, y, look.avatar, { scale: .5 * u, theme: st.theme });
         if (item.field === 'deathAnim' && window.MT_FAREWELL) window.MT_FAREWELL.draw(g, item.value, x, y, .5 * u, t + i, { avatar: st.avatar });
         if (sel && sel.id === item.id) { g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.strokeRect(x - 16 * u, y - 44 * u, 32 * u, 46 * u); }
@@ -211,6 +213,7 @@
       if (sel && k.hand) {
         const look = lookWith(sel, st), hx = k.hand.x / dpr0, hy = k.hand.y / dpr0;
         if (look.home) window.MT_WORLD.building(g, hx, hy + 4 * u, Math.max(0, O.houseStyle.indexOf(look.home.style)), (window.MT_THEMES.THEMES[st.theme] || window.MT_THEMES.THEMES.smalltown).palette, { ...window.MT_WORLD.lookOptions(look.home), scale: .28 * u, theme: st.theme, lit: true });
+        else if (sel.field === 'ghostSkin') MTArt.drawGhost(g, hx, hy + 2 * u, look.avatar, { scale: .8 * u, t, glow: true });
         else MTArt.drawCharacter(g, hx, hy + 2 * u, look.avatar, { scale: .8 * u, theme: st.theme, t });
       }
       scene.coins = scene.coins.filter((c) => c.t < 1.4);
@@ -223,6 +226,7 @@
         g.fillStyle = glow; g.fillRect(ped - 70 * u, cy - 110 * u, 140 * u, 120 * u);
         if (sel.field === 'reactions') drawReactionPack(g, sel.value, ped, cy - 40 * u + drop + bob, 24 * u);
         else if (look.home) window.MT_WORLD.building(g, ped, cy + drop + bob, Math.max(0, O.houseStyle.indexOf(look.home.style)), (window.MT_THEMES.THEMES[st.theme] || window.MT_THEMES.THEMES.smalltown).palette, { ...window.MT_WORLD.lookOptions(look.home), scale: .5 * u, theme: st.theme, lit: true });
+        else if (sel.field === 'ghostSkin') MTArt.drawGhost(g, ped, cy + drop + bob, look.avatar, { scale: 1.45 * u, t, glow: true });
         else MTArt.drawCharacter(g, ped, cy + drop + bob, look.avatar, { scale: 1.45 * u, theme: st.theme, t, facing: Math.sin(t * 0.9) > 0.6 ? 1 : Math.sin(t * 0.9) < -0.6 ? -1 : 0 });
         if (sel.field === 'deathAnim' && window.MT_FAREWELL) window.MT_FAREWELL.draw(g, sel.value, ped, cy, 1.45 * u, t, { avatar: st.avatar }); // the farewell, looping
         for (let i = 0; i < 4; i++) { const a = t * 1.6 + i * 1.57; g.fillStyle = '#fff6c0'; g.fillRect(ped + Math.cos(a) * 44 * u, cy - 50 * u + Math.sin(a) * 26 * u, 2 * u, 2 * u); } // sparkles
@@ -250,6 +254,7 @@
     houseStyle: ['The {name}! Look at those walls. The neighbors will be so jealous.', 'A {name} on your plot. Solid, handsome, and the windows lock. Mostly.'],
     houseDecor: ['A little {name} makes any house a home. And a home is harder to break into.', 'Add {name} to your house: the whole street will stop and look.'],
     effect: ['{name}! Watch it shimmer around you. Pure magic, guaranteed by me.', 'With {name} you glow in every crowd. Nobody can ignore you now.'],
+    ghostSkin: ['When your time comes, haunt in style: the {name}. The living will never sleep again.', 'The {name}! Float over the graveyard in this and every ghost will be jealous.'],
     deathAnim: ['If the worst happens, go out in style: {name}. People will talk about it for days.', 'A farewell to remember: {name}. Even the Mafia will feel bad. Maybe.'],
   };
   const DEAL = ['A bargain at {cost} gold!', 'Only {cost} gold, and worth twice that.', 'For you, friend? {cost} gold. Practically a gift.', '{cost} gold. You will not find a better price in town.'];
@@ -269,7 +274,7 @@
     fetching: (i) => `The ${i.name}? Excellent eye! One moment, let me get it down for you…`,
     owned: (i) => `The ${i.name}? You already own it. Wear it in good health!`,
     poor: (i, gold) => `The ${i.name} is ${i.cost} gold, friend. You have ${gold}. Come back after a few more games!`,
-    locked: (i) => `The ${i.name} isn't for sale. You earn it: ${C.ACHIEVEMENTS[i.achievement].label}.`,
+    locked: (i) => i.requires ? `The ${i.name} is High Roller tier ${i.ladderTier}. Own the ${(C.CATALOG.find((x) => x.id === i.requires) || {}).name} first.` : `The ${i.name} isn't for sale. You earn it: ${C.ACHIEVEMENTS[i.achievement].label}.`,
     bought: (i) => `Thank you! The ${i.name} is yours. Equip it from your inventory.`,
   };
   function render(opts) {
@@ -278,7 +283,10 @@
     // On the shelves: what this player has unlocked for purchase (plus what they own and
     // achievement rewards). Season and world rewards live in their own tabs.
     const stocked = (i) => !!profile && (profile.stock || []).includes(i.id);
-    const forSale = (cat) => C.CATALOG.filter((i) => i.category === cat && !i.free && !owned(i) && !i.pass && !i.world && !i.achievement && stocked(i));
+    // The Ghosts tab also shows what you earn (achievements); High Roller tiers show in their own tabs (hats, flair), locked until the tier below is owned.
+    const goals = (cat) => !!(C.CATEGORIES.find((c) => c.id === cat) || {}).goals;
+    const forSale = (cat) => C.CATALOG.filter((i) => i.category === cat && !i.free && !owned(i) && !i.pass && !i.world && (goals(cat) ? (i.achievement || i.requires || stocked(i)) : i.ladderTier || !i.achievement && stocked(i))).sort((a, b) => (a.ladderTier || 0) - (b.ladderTier || 0));
+    const needs = (i) => i.requires && !(profile && profile.owned.includes(i.requires)) ? C.CATALOG.find((x) => x.id === i.requires) : null;
     const hidden = C.STOCKABLE.filter((i) => !stocked(i) && !owned(i));
     $('#s-title').textContent = theme === 'rsp' ? 'RSP Supply Store' : 'Town Shop';
     $('#s-pouch-wrap').innerHTML = pouchButton(profile, 's-pouch');
@@ -299,7 +307,7 @@
     const gold = profile ? profile.coins : 0;
     $('#s-grid').innerHTML = items.length ? `<div class="cas-tiles shop-tiles">${items.map((i) => {
       const own = owned(i), equipped = inv && (profile.inventory.find((x) => x.id === i.id) || {}).equipped;
-      const badge = equipped ? '<em class="badge eq">Equipped</em>' : own ? '<em class="badge own">Owned</em>' : i.pass ? `<em class="badge lock">🎟 T${i.passTier}</em>` : i.world ? `<em class="badge lock">${worldEmoji(i.world)} ${i.worldGames}</em>` : i.achievement ? '<em class="badge lock">🔒</em>' : `<em class="badge price${gold < i.cost ? ' poor' : ''}">${i.cost}g</em>`;
+      const badge = equipped ? '<em class="badge eq">Equipped</em>' : own ? '<em class="badge own">Owned</em>' : i.pass ? `<em class="badge lock">🎟 T${i.passTier}</em>` : i.world ? `<em class="badge lock">${worldEmoji(i.world)} ${i.worldGames}</em>` : i.achievement ? '<em class="badge lock">🔒</em>' : needs(i) ? `<em class="badge lock">🔒 T${i.ladderTier}</em>` : `<em class="badge price${gold < i.cost ? ' poor' : ''}">${i.cost}g</em>`;
       return `<button class="cas-tile shop-tile${i.id === state.selectedId ? ' sel' : ''}" data-item="${esc(i.id)}" aria-pressed="${i.id === state.selectedId}"><canvas></canvas><span>${esc(i.name)}</span>${badge}</button>`;
     }).join('')}</div>` : `<p class="muted">${inv ? 'Your inventory is empty. Buy something from the shop tabs!' : 'Nothing for sale here yet.'}</p>`;
     $('#s-grid').querySelectorAll('[data-item]').forEach((b) => { b.onclick = () => {
@@ -317,7 +325,7 @@
     if (!selected) d.innerHTML = `<p class="muted">${inv ? 'Tap an item to equip or unequip it.' : 'Tap an item to see it up close.'}</p>`;
     else {
       const own = owned(selected), invEntry = profile && profile.inventory.find((x) => x.id === selected.id);
-      const lockedBy = selected.pass ? `Season pass tier ${selected.passTier}` : selected.world ? `finish ${selected.worldGames === 1 ? 'a game' : selected.worldGames + ' games'} in ${C.WORLD_NAMES[selected.world]}` : selected.achievement && !(profile && profile.achievements.includes(selected.achievement)) ? C.ACHIEVEMENTS[selected.achievement].label : null;
+      const lockedBy = selected.pass ? `Season pass tier ${selected.passTier}` : selected.world ? `finish ${selected.worldGames === 1 ? 'a game' : selected.worldGames + ' games'} in ${C.WORLD_NAMES[selected.world]}` : selected.achievement && !(profile && profile.achievements.includes(selected.achievement)) ? C.ACHIEVEMENTS[selected.achievement].label : needs(selected) ? `own the ${needs(selected).name} (High Roller tier ${selected.ladderTier - 1}) first` : null;
       const cant = !own && (lockedBy ? 'Unlock: ' + lockedBy : gold < selected.cost ? `Need ${selected.cost - gold} more gold` : '');
       const action = own
         ? `<button class="btn" data-equip="${invEntry && invEntry.equipped ? 'off' : 'on'}">${invEntry && invEntry.equipped ? 'Unequip' : 'Equip'}</button>`

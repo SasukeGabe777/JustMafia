@@ -371,3 +371,20 @@ Every role reads the night its own way, so each one is worth having when it show
 - **Daily Surprises** (Judge event): from night 2 some nights bring Fog (no visit information), a Festival (no Mafia kill) or a Blood Moon (two kills), announced by the narrator and shown on the TV.
 - **TV polish.** Lamps light one by one at nightfall, a rooster and a sunrise sweep at dawn, the town grows gloomier as it empties, people look at the vote leader or whoever is talking, the camera drifts to the leading suspect, and an empty lobby plays attract mode.
 - **Campaigns** (Judge toggle): five games become chapters of one story, with recaps, scarred houses for last chapter's victims, a running Town vs Mafia score and a finale. (`rules/campaign.js`)
+
+## The afterlife and betting
+
+Dying no longer means sitting out. A ghost's phone offers (none of it can leak secrets to the living):
+
+- **Ghost predictions.** Before each vote, guess who gets voted out; before each night, guess who dies. Right guesses pay a little gold in games that pay, and the best guesser gets the 🔮 **Ghost Oracle** award in the credits.
+- **A Chill** (once per game). Pick a living player: their house flickers with frost on the TV and their phone shivers. Harmless, very spooky.
+- **The Medium's spirit line.** Only a living Medium can hear the dead, and the Medium chooses who: up to two ghosts at a time. Each chosen ghost may whisper one word from a fixed list (Trust, Liar, Danger…) every day and every night. No names, ever.
+- **Mafia ghosts** may shroud one day's ballot per game: that vote's reveal hides who voted for whom.
+- **Ghost bets.** Ghosts with a saved character bet their own gold against each other: who wins the game, or who is voted out today. The gold is held until the bet settles; the winner takes both stakes; untaken or undecided bets are refunded. Bets only move gold between players.
+- **A win from beyond the grave** pays a small bonus when your side wins after you died.
+
+**Cosmetics.** A 👻 **Ghosts** shop tab holds ghost looks (Bedsheet, Chained Spirit and Royal Phantom for gold; Will-o'-Wisp, Shadow Wraith and The Oracle from the ghost achievements: become a ghost, send 3 Chills, make 5 right predictions). Two new farewells show you becoming a ghost: **Ectoplasm** and **Breaking Chains**. The 🎰 **High Roller** line (shown in the Hats & Gear and Flair tabs) is unlocked by your first bet (Casino Reactions) and climbs in tiers you buy in order: Dealer's Visor → High Roller Top Hat → Jackpot Rain.
+
+## Economy
+
+`public/shared/cosmetics.js` has two dials in `ECONOMY`: every gold reward (games, challenges, season tiers, achievements) is paid at `goldRate` (now 0.5, half the base values written in the file) and every gold price (items, the season pass, Fate Token trades) is charged at `priceRate` (now 1.3, 30% above base, rounded to 5).

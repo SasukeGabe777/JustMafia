@@ -493,6 +493,16 @@
       ctx.restore();
     }
 
+    // A ghost's Chill: the ghost swoops over and the living player's house flickers with frost.
+    chill({ ghostId, targetId }) {
+      const c = this.chars.get(targetId); if (!c) return;
+      const h = this.houses[c.home], x = h ? h.x : c.x, y = h ? h.y : c.y;
+      this.effects.push({ type: 'chill', x, y, life: 6, max: 6, seed: Math.random() * 10 });
+      c.bubble = { text: 'Brrr…!', until: this.time + 2.2 };
+      const g = this.chars.get(ghostId);
+      if (g && !g.alive && c.alive) { g.mode = 'haunt'; g.hauntTarget = targetId; g.hauntDone = false; }
+      if (window.SFX) SFX.play('freeze');
+    }
     haunt({ ghostId, kind, targetId }) {
       const g = this.chars.get(ghostId);
       if (!g || g.alive) return;
@@ -1318,6 +1328,17 @@
             ctx.fillStyle = e.color; ctx.fillRect(-5, -3, 10, 6);
             ctx.restore();
             break;
+          case 'chill': {
+            const on = Math.sin(this.time * 23 + e.seed) > -0.2 && Math.sin(this.time * 5.3 + e.seed) > -0.6 ? 1 : 0.25, a = Math.min(1, e.life / 1.5, (e.max - e.life) / 0.3) * on;
+            ctx.save(); ctx.globalCompositeOperation = 'lighter';
+            const g = ctx.createRadialGradient(e.x, e.y - 45, 4, e.x, e.y - 45, 95);
+            g.addColorStop(0, `rgba(150,215,255,${0.6 * a})`); g.addColorStop(1, 'rgba(150,215,255,0)');
+            ctx.fillStyle = g; ctx.fillRect(e.x - 95, e.y - 140, 190, 190);
+            ctx.fillStyle = `rgba(235,248,255,${0.9 * a})`;
+            for (let i = 0; i < 12; i++) { const k = ((this.time * 0.4 + i / 12) % 1), px = e.x + Math.sin(i * 2.7 + e.seed) * 60, py = e.y - 100 + k * 100; ctx.fillRect(px - 1, py, 3, 1); ctx.fillRect(px, py - 1, 1, 3); }
+            ctx.restore();
+            break;
+          }
           case 'flash': {
             const g = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r * (0.5 + p));
             g.addColorStop(0, `rgba(${e.color},${0.85 * (1 - p)})`);

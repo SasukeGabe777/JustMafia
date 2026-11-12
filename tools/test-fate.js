@@ -17,7 +17,7 @@ test('Tokens: a starter gift, earned by wins/challenges/new worlds, traded for g
   assert.match(s.buyFate(a.id, 'reroll').error, /costs 1 Fate Token; you have 0/);
   const r = s.award(a.id, 'g1', { won: true, alive: true, team: 'town', metrics: {}, theme: 'noir' });
   assert.equal(r.fate, FATE.perWin + FATE.perNewWorld); assert.equal(P().fate, 2);
-  assert.match(s.exchangeFate(a.id).error, /costs 120 gold/);
+  assert.match(s.exchangeFate(a.id).error, new RegExp(`costs ${FATE.exchangeGold} gold`));
   s.grant(a.id, 200); assert(s.exchangeFate(a.id).ok); assert.equal(P().fate, 3);
   assert.equal(s.buyFate(a.id, 'bogus').ok, false);
 });

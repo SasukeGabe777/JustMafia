@@ -56,10 +56,15 @@
   // creator (creator-config.js) lays it out. To add a customization: add its
   // list above, one line here, and one entry in public/creator-config.js.
   // Update 8: farewell animations (shop items) that play over your body when you die.
-  OPTIONS.deathAnim = ['none', 'petals', 'fireflies', 'letter', 'candle', 'lantern', 'starfall', 'ascend'];
+  OPTIONS.deathAnim = ['none', 'petals', 'fireflies', 'letter', 'candle', 'lantern', 'starfall', 'ascend', 'ectoplasm', 'soulChains'];
+  // The afterlife: how your ghost looks on the big screen (classic is free; the rest are shop
+  // items or ghost achievements), and the High Roller line (unlocked by betting).
+  OPTIONS.ghostSkin = ['classic', 'sheet', 'chains', 'royalGhost', 'wisp', 'shadowEyes', 'oracle'];
+  OPTIONS.hats.push('dealerVisor', 'highRoller');
+  OPTIONS.effect.push('goldRain');
   // Live reactions (tap on the phone, they float over your character on the TV). The first
   // pack is free; the others are shop cosmetics. A player equips one pack.
-  OPTIONS.reactions = ['rxClassic', 'rxSpooky', 'rxRoyal', 'rxParty', 'rxDetective', 'rxLove', 'rxBloodMoon'];
+  OPTIONS.reactions = ['rxClassic', 'rxSpooky', 'rxRoyal', 'rxParty', 'rxDetective', 'rxLove', 'rxBloodMoon', 'rxCasino'];
   OPTIONS.REACTION_PACKS = {
     rxClassic: ['😱', '🤨', '🙏', '😂', '👍', '😡'],
     rxSpooky: ['👻', '💀', '🕯️', '🦇', '🎃', '⚰️'],
@@ -68,11 +73,12 @@
     rxDetective: ['🔍', '🕵️', '🧐', '📝', '🔦', '🚨'],
     rxLove: ['❤️', '😍', '💔', '😘', '🌹', '🥺'],
     rxBloodMoon: ['🩸', '🌕', '🦇', '🗡️', '⚰️', '🌹'], // Season 1 pass reward
+    rxCasino: ['🎲', '🃏', '💰', '🎰', '🍀', '💸'], // High Roller tier 1: make your first bet
   };
   OPTIONS.AVATAR_FIELDS = {
     color: 'colors', skin: 'skins', hat: 'hats', hair: 'hair', hairColor: 'hairColor', facialHair: 'facialHair', eyes: 'eyes', face: 'face',
     features: 'features', expression: 'expression', outfit: 'outfit', pants: 'pants', shoes: 'shoes', shoeStyle: 'shoeStyles', accessory: 'accessory',
-    nameColor: 'nameColor', nameplate: 'nameplate', effect: 'effect', deathAnim: 'deathAnim', reactions: 'reactions',
+    nameColor: 'nameColor', nameplate: 'nameplate', effect: 'effect', deathAnim: 'deathAnim', reactions: 'reactions', ghostSkin: 'ghostSkin',
   };
   // Same idea for a player's house design (player.homeLook / profile.home).
   // Legacy saves kept houseStyle/houseColor/houseDecor on the avatar; see LEGACY_HOME.
@@ -95,7 +101,9 @@
     spaceSuit:'Space Suit', dragonScale:'Dragon-Scale Mail', rogueLeathers:'Rogue Leathers', tuxedo:'Tuxedo', fedJacket:'Bureau Jacket', parka:'Parka', blockArmor:'Block Armor', denimJacket:'Denim Jacket', trenchCoat:'Trench Coat',
     fairyWings:'Fairy Wings', torch:'Torch', shades:'Agent Shades', badge:'Federal Badge', diceBag:'Dice Bag', wristwatch:'Wristwatch',
     pirateCoat:'Pirate Coat', samuraiArmor:'Samurai Armor', royalRobe:'Royal Robe', cyber:'Cyber Suit', vampire:'Vampire Count', bloodKnight:'Blood Knight',
-    rxClassic:'Classic Reactions', rxSpooky:'Spooky Reactions', rxRoyal:'Royal Reactions', rxParty:'Party Reactions', rxDetective:'Detective Reactions', rxLove:'Sweetheart Reactions', rxBloodMoon:'Blood Moon Reactions',
+    rxClassic:'Classic Reactions', rxSpooky:'Spooky Reactions', rxRoyal:'Royal Reactions', rxParty:'Party Reactions', rxDetective:'Detective Reactions', rxLove:'Sweetheart Reactions', rxBloodMoon:'Blood Moon Reactions', rxCasino:'Casino Reactions',
+    classic:'Classic Ghost', sheet:'Bedsheet Ghost', chains:'Chained Spirit', royalGhost:'Royal Phantom', wisp:'Will-o’-Wisp', shadowEyes:'Shadow Wraith', oracle:'The Oracle', ghostSkin:'Ghost',
+    dealerVisor:'Dealer’s Visor', highRoller:'High Roller Top Hat', goldRain:'Jackpot Rain', ectoplasm:'Ectoplasm', soulChains:'Breaking Chains',
     deathAnim:'Farewell', petals:'Rose Petals', fireflies:'Fireflies', letter:'A Last Letter', candle:'Candlelight', lantern:'Sky Lantern', starfall:'Falling Stars', ascend:'Spirit Rises' };
   OPTIONS.label = (value) => OPTIONS.labels[value] || OPTIONS.hatLabels[value] || String(value).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   if (typeof module !== 'undefined' && module.exports) module.exports = OPTIONS;
