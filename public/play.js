@@ -760,7 +760,7 @@
     if (!r) return '';
     const shown = roleShown;
     return `<div class="rolecard ${view.role} ${shown ? 'show' : ''}${big ? ' rc-big' : ''}" data-role style="--rc:${r.color}">
-      <div class="rc-hidden">🔒 ${big ? 'Tap to reveal your role' : 'Hold to peek at your role'}</div>
+      <div class="rc-hidden">🔒 Tap to reveal your role</div>
       <div class="rc-shown">
         <div class="big-emoji">${r.emoji}</div>
         <div class="rc-name">${esc(roleLabel(view.role))}</div>
@@ -935,15 +935,12 @@
       if (p) paint(cv, p.avatar);
     });
     const rc = body.querySelector('[data-role]');
-    // In-game the role card only shows while you hold it (no shoulder-surfing); the big
-    // reveal card at the start is still a tap.
-    if (rc && rc.classList.contains('rc-big')) rc.addEventListener('click', () => { roleShown = !roleShown; rc.classList.toggle('show', roleShown); lastKey = ''; });
-    else if (rc) {
-      const peek = (on) => { roleShown = on; rc.classList.toggle('show', on); if (on && navigator.vibrate) navigator.vibrate(10); };
-      rc.addEventListener('pointerdown', (e) => { if (e.target.closest('.role-help')) return; peek(true); });
-      for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) rc.addEventListener(ev, () => { if (roleShown) { peek(false); lastKey = ''; } });
-      rc.addEventListener('contextmenu', (e) => e.preventDefault());
-    }
+    // Tap the role card to reveal it, tap again to hide it.
+    if (rc) rc.addEventListener('click', (e) => {
+      if (e.target.closest('.role-help')) return;
+      roleShown = !roleShown; rc.classList.toggle('show', roleShown); lastKey = '';
+      if (roleShown && navigator.vibrate) navigator.vibrate(10);
+    });
     // Tapping the role explainer opens it without hiding the card; it stays open across updates.
     body.querySelectorAll('.role-help').forEach((d) => { d.addEventListener('click', (e) => e.stopPropagation()); d.addEventListener('toggle', () => { roleHelpOpen = d.open; }); });
     body.querySelectorAll('[data-night]').forEach((b) => b.addEventListener('click', () => navigator.vibrate && navigator.vibrate(20)));
