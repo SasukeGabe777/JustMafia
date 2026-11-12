@@ -942,6 +942,7 @@
       if (e.target.closest('.role-help')) return;
       roleShown = !roleShown; rc.classList.toggle('show', roleShown); lastKey = '';
       if (roleShown && navigator.vibrate) navigator.vibrate(10);
+      if (roleShown && view && view.phase === 'roleReveal' && !view.flipped) socket.emit('player:flip', {}); // tells the game you've looked (never what)
     });
     // Tapping the role explainer opens it without hiding the card; it stays open across updates.
     body.querySelectorAll('.role-help').forEach((d) => { d.addEventListener('click', (e) => e.stopPropagation()); d.addEventListener('toggle', () => { roleHelpOpen = d.open; }); });

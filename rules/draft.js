@@ -166,7 +166,10 @@ module.exports = function install(Room) {
     if (!p.flipped) {
       p.flipped = true;
       const waiting = this.inGame().filter((x) => !x.isBot && x.sockets > 0 && !x.flipped);
-      if (this.draft && !waiting.length) this.finishSoon(3500); // everyone has seen their card
+      if (!waiting.length && !this.paused) { // everyone has seen their card: carry on shortly
+        const ms = Math.max(3500 / this.speed(), (this.revealMinEnd || 0) - this.now());
+        if (!this.endsAt || this.endsAt - this.now() > ms) { this.clock.clear(this.timer); this.endsAt = this.now() + ms; this.timer = this.later(ms, () => this.advance()); }
+      }
       this.sync();
     }
     return { ok: true };

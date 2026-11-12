@@ -66,6 +66,7 @@ const DEFAULT_SETTINGS = {
 
 const ENV_SPEED = Number(process.env.MT_SPEED) || 1; // test knob: >1 makes every phase faster
 // Phase lengths that wait for the big screen's cinematics (see public/scenes.js).
+const REVEAL_WAIT_MS = 60000; // the longest the role reveal waits for players to look at their cards
 const CINE_MS = { roleReveal: 14000, dawn: 8000, dawnEvent: 16200, morning: 8000, verdict: 7500, execution: 28500, noExecution: 4500 }; // execution = the vote-elimination scene (up to 27.6s)
 
 const HARD_MIN_PLAYERS = 3;
@@ -475,15 +476,19 @@ class Room {
     this.narrate('start', { count: players.length });
     this.setCinematic({ type: 'start' });
     for (const p of players) p.flipped = false;
-    // Drafted games deal cards that players flip themselves, so the reveal waits a little longer.
-    this.setPhase('roleReveal', this.cine('roleReveal', this.draftCounts ? this.draftDealMs() : 0));
+    // The role reveal: it moves on as soon as every player on a phone has looked at their card
+    // (see flipCard), and never waits longer than REVEAL_WAIT_MS for anyone who doesn't.
+    const base = this.cine('roleReveal', this.draftCounts ? this.draftDealMs() : 0);
+    const humans = players.some((p) => !p.isBot && p.sockets > 0);
+    this.revealMinEnd = this.draftCounts ? 0 : this.now() + this.cine('roleReveal'); // a plain reveal still plays its TV scene
+    this.setPhase('roleReveal', humans && !this.settings.skipCinematics ? Math.max(base, REVEAL_WAIT_MS / this.speed()) : base);
     return { ok: true };
   }
 
   // ---------- phase machine ----------
   setPhase(phase, ms) {
-    if (this.settings.narratorMode === 'human') ms = null;
-    if (this.settings.narratorMode === 'human') ms = null;
+    // A human Judge paces the game, except the role reveal: it always ends within its time limit.
+    if (this.settings.narratorMode === 'human' && phase !== 'roleReveal') ms = null;
     this.clock.clear(this.timer);
     this.timer = null;
     this.phase = phase;
