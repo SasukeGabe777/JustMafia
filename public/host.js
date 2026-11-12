@@ -219,9 +219,16 @@
     $('#hud').hidden = false;
   }
 
+  // Create a town. If the server doesn't answer (it's down, or an online server is still
+  // waking up), say so instead of doing nothing.
   $('#create').addEventListener('click', () => {
     SFX.unlock();
-    socket.emit('host:create', {}, (r) => {
+    const btn = $('#create'), label = btn.textContent;
+    if (btn.disabled) return;
+    btn.disabled = true; btn.textContent = socket.connected ? 'Creating…' : 'Connecting…';
+    socket.timeout(30000).emit('host:create', {}, (err, r) => {
+      btn.disabled = false; btn.textContent = label;
+      if (err) return toast('Can’t reach the game server. If this is the online version, it may still be waking up: wait a minute and try again.');
       if (!r || !r.ok) return toast('Could not create a room.');
       setSession({ code: r.code, hostKey: r.hostKey });
       enterGame();
