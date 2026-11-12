@@ -462,6 +462,16 @@
     e.target.textContent = 'Hide QR';
   });
   $('#btn-pause').addEventListener('click', () => act(state && state.paused ? 'resume' : 'pause'));
+  // Always available on the big screen, even with a Judge (or a stuck game): two clicks each.
+  const twoClick = (btn, armedText, fn) => btn.addEventListener('click', () => {
+    if (!btn.dataset.armed) { btn.dataset.armed = btn.textContent; btn.textContent = armedText; setTimeout(() => { if (btn.dataset.armed) { btn.textContent = btn.dataset.armed; delete btn.dataset.armed; } }, 3000); return; }
+    btn.textContent = btn.dataset.armed; delete btn.dataset.armed; fn();
+  });
+  twoClick($('#btn-reclaim'), 'Click again: end game, remove Judge', () => socket.emit('host:reclaim', {}, (r) => { if (!r || !r.ok) toast((r && r.error) || 'Could not take back control.'); else toast('This screen runs the room again. Back in the lobby.'); }));
+  twoClick($('#btn-newtown'), 'Click again: new town, new code', () => socket.timeout(30000).emit('host:create', {}, (err, r) => {
+    if (err || !r || !r.ok) return toast('Can’t reach the game server. Wait a moment and try again.');
+    setSession({ code: r.code, hostKey: r.hostKey }); enterGame(); toggleDrawer(false); toast(`New town! Players join with code ${r.code}.`);
+  }));
   $('#btn-full').addEventListener('click', toggleFullscreen);
 
   // Two-click confirm without using blocking browser dialogs.
@@ -487,6 +497,7 @@
     const lobby = state.phase === 'lobby';
     const managed = displayOnly();
     drawer.querySelectorAll('[data-act]').forEach((b) => { b.disabled = managed; });
+    $('#btn-reclaim').hidden = !managed && !state.governance.vacant;
     $('#btn-pause').disabled = managed; $('#judge-open').disabled = managed; $('#judge-qr-btn').disabled = managed; jb.disabled = managed;
     if (managed) $('#judge-qr').hidden = true;
     drawer.querySelector('[data-act="start"]').disabled = managed || !lobby;

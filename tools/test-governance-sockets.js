@@ -95,5 +95,12 @@ async function until(fn) { const end = Date.now() + 5000; while (!fn()) { if (Da
   assert((await emit(reconnected, 'player:resume', { code: bootstrap.code, token: human.token })).ok);
   await until(() => restored); assert.equal(restored.you.id, human.playerId); assert.equal(restored.you.avatar.hair, 'curly');
   assert(!JSON.stringify(state).includes(victim.token)); assert(!JSON.stringify(restored).includes('judgeKey'));
+  // The big screen can always take back control: the game ends, the Judge is revoked, the TV runs the room.
+  assert.equal((await emit(human.s.connected ? human.s : reconnected, 'host:reclaim')).ok, false, 'phones cannot');
+  assert((await emit(display, 'host:reclaim')).ok);
+  await until(() => state.phase === 'lobby' && !state.governance.judgeId);
+  assert.equal((await emit(successor, 'host:action', { type: 'say', text: 'still here?' })).ok, false, 'the old Judge console is revoked');
+  assert((await emit(display, 'host:action', { type: 'settings', settings: { minPlayers: 3 } })).ok, 'the TV controls the room again');
+  assert((await emit(socket(), 'judge:attach', { code: bootstrap.code, hostKey: bootstrap.hostKey })).ok, 'the TV’s Judge console link works again');
   assert.equal(errors, ''); console.log('  ✓ Real sockets: election, role exclusion, disaster confirmation, ghost votes, 80% removal, credential and channel revocation, replacement, display and phone reconnects');
 })().catch((e) => { console.error(e); process.exitCode = 1; }).finally(() => { sockets.forEach((s) => s.close()); server.kill(); });

@@ -156,8 +156,16 @@ io.on('connection', (socket) => {
 
   socket.on('host:action', (msg, cb) => {
     const { room } = ctx();
-    if (!room || !['host', 'judge'].includes(socket.data.kind) || socket.data.adminEpoch !== room.adminEpoch || room.judgeVacant) return reply(cb, { ok: false, error: 'Judge access has expired.' });
+    // The Judge console needs the current credentials; the TV controls the room while nobody is Judge.
+    const allowed = room && (socket.data.kind === 'judge' ? socket.data.adminEpoch === room.adminEpoch && !room.judgeVacant : socket.data.kind === 'host' && !room.judgeParticipantId && !room.judgeVacant);
+    if (!allowed) return reply(cb, { ok: false, error: 'Judge access has expired.' });
     reply(cb, room.hostAction(msg || {}) || { ok: true });
+  });
+  // The big screen can always take back control: end any game, back to the lobby, Judge removed.
+  socket.on('host:reclaim', (_msg, cb) => {
+    const { room } = ctx();
+    if (!room || socket.data.kind !== 'host') return reply(cb, { ok: false, error: 'Only the big screen can do that.' });
+    reply(cb, room.reclaimForScreen());
   });
 
   // The game's rundown (who did what): TV or Judge, and only once the game is over.

@@ -91,6 +91,23 @@ module.exports = function install(Room) {
     const observers = candidates.filter((p) => p.spectator || !p.alive);
     if (candidates.length) this.appointJudge(this.pick(observers.length ? observers : candidates), 'Replacement appointed; use Resume when ready.');
   };
+  // The big screen takes back control (a Judge never joined, or the game is stuck): any game
+  // ends and the room returns to the lobby, the Judge's console is revoked, and the TV runs
+  // the room again (its own Judge console link works again). The old Judge rejoins as a player.
+  Room.prototype.reclaimForScreen = function () {
+    if (this.phase !== 'lobby') this.resetToLobby();
+    const old = this.players.get(this.judgeParticipantId);
+    if (old) { old.isJudge = false; old.spectator = false; old.judgeRetired = false; }
+    if (this.io) this.io.to(this.judgeChannel()).emit('judge:revoked');
+    this.judgeParticipantId = null; this.judgeVacant = false;
+    this.judgeKey = this.hostKey; this.adminEpoch++;
+    this.paused = false;
+    this.removalVotes.clear(); this.judgeVolunteers.clear(); this.disasterPreview = null;
+    this.judgeAnnouncement = `The big screen took back control of ${this.settings.townName}. Back in the lobby.`;
+    this.addLog(this.judgeAnnouncement);
+    this.sync();
+    return { ok: true };
+  };
   Room.prototype.disaster = function ({ id, disaster, preview, confirmation }) {
     const p = this.players.get(id);
     if (['lobby', 'gameover'].includes(this.phase) || !p || !p.alive || p.spectator || p.left || !DISASTERS.includes(disaster)) return { ok: false, error: 'Choose a living player and a valid disaster during a game.' };
