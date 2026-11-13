@@ -1203,7 +1203,7 @@
       SFX.play('fall'); this.shake = 0.5;
       this.farewell(x); // gallows: their farewell plays where they fall
     }
-    a_xeyes(a) { const x = this.actors.get(a.id); if (x) x.dead = true; }
+    a_xeyes(a) { const x = this.actors.get(a.id); if (x) x.dead = true; if (window.MT_NARRATION_RELEASE) window.MT_NARRATION_RELEASE(); } // the moment of death: the narrator reveals the role
     a_decay(a) {
       const x = this.actors.get(a.id); if (!x) return;
       x.decayAnim = { t0: this.scene.t, dur: a.dur || 4 };

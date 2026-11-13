@@ -50,6 +50,32 @@ app.get('/test', (req, res) => res.sendFile(path.join(__dirname, 'public', 'test
 app.get('/preview', (req, res) => res.sendFile(path.join(__dirname, 'public', 'preview.html')));
 app.get('/art', (req, res) => res.sendFile(path.join(__dirname, 'public', 'art-gallery.html')));
 app.get('/api/info', (req, res) => res.json({ baseUrl: BASE_URL }));
+// Your own music (my-music/README.md): audio files sorted into folders by moment
+// (my-music/day, my-music/night, ...) or by world and moment (my-music/noir/night).
+// The TV mixes them in with the composed soundtrack.
+const MY_MUSIC = path.join(__dirname, 'my-music');
+const MUSIC_FOLDERS = { lobby: 'lobby', day: 'day', night: 'night', dawn: 'dawn', reveal: 'reveal', vote: 'vote', voting: 'vote', gallows: 'trial', execution: 'trial', murder: 'suspense', suspense: 'suspense', ghosts: 'eerie', ghost: 'eerie', victory: 'triumph', win: 'triumph' };
+const AUDIO_FILE = /\.(mp3|m4a|aac|ogg|oga|wav|webm|flac)$/i;
+app.use('/my-music', express.static(MY_MUSIC, { maxAge: '1h' }));
+app.get('/api/music', (req, res) => {
+  const fs = require('fs'), tracks = [];
+  const list = (dir) => { try { return fs.readdirSync(dir, { withFileTypes: true }); } catch { return []; } };
+  const add = (rel, mood, world) => { for (const f of list(path.join(MY_MUSIC, rel))) if (f.isFile() && AUDIO_FILE.test(f.name)) tracks.push({ url: '/my-music/' + rel.split(path.sep).map(encodeURIComponent).join('/') + '/' + encodeURIComponent(f.name), mood, world, name: f.name.replace(AUDIO_FILE, '') }); };
+  // my-music/<World name>/<moment>/ plays in that world; my-music/All/<moment>/ (or a moment
+  // folder directly under my-music/) plays in every world.
+  const THEMES = require('./public/shared/themes'), TH = THEMES.THEMES || THEMES;
+  const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const worldOf = {}; for (const [k, v] of Object.entries(TH)) { worldOf[norm(k)] = k; if (v.name) worldOf[norm(v.name)] = k; }
+  for (const d of list(MY_MUSIC)) {
+    if (!d.isDirectory()) continue;
+    const key = norm(d.name);
+    if (MUSIC_FOLDERS[key]) { add(d.name, MUSIC_FOLDERS[key], null); continue; }
+    const world = key === 'all' || key === 'anytheme' ? null : worldOf[key];
+    if (world === undefined) continue;
+    for (const sub of list(path.join(MY_MUSIC, d.name))) if (sub.isDirectory() && MUSIC_FOLDERS[norm(sub.name)]) add(path.join(d.name, sub.name), MUSIC_FOLDERS[norm(sub.name)], world);
+  }
+  res.json({ tracks });
+});
 app.get('/healthz', (req, res) => res.type('text').send('ok')); // the host's health check
 app.get('/api/qr', async (req, res) => {
   const text = String(req.query.text || '').slice(0, 300);

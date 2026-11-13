@@ -34,7 +34,7 @@
 
   // ---------- prefs & session ----------
   const prefs = (() => {
-    try { return Object.assign({ voice: true, sfx: true, music: true, voiceName: '', volVoice: 100, volMusic: 80, volSfx: 100 }, JSON.parse(localStorage.getItem('mt.hostPrefs') || '{}')); } catch { return { voice: true, sfx: true, music: true, voiceName: '', volVoice: 100, volMusic: 80, volSfx: 100 }; }
+    try { return Object.assign({ voice: true, sfx: true, music: true, voiceName: '', volVoice: 100, volMusic: 80, volSfx: 100, musicMix: 'mix' }, JSON.parse(localStorage.getItem('mt.hostPrefs') || '{}')); } catch { return { voice: true, sfx: true, music: true, voiceName: '', volVoice: 100, volMusic: 80, volSfx: 100 }; }
   })();
   const savePrefs = () => { try { localStorage.setItem('mt.hostPrefs', JSON.stringify(prefs)); } catch { /* ignore */ } };
   const getSession = () => { try { return JSON.parse(localStorage.getItem('mt.host') || 'null'); } catch { return null; } };
@@ -257,7 +257,24 @@
   }
 
   // ---------- narration ----------
-  function showNarration(n) {
+  // At the gallows the narrator (voice and subtitle) waits for the moment of death, so the
+  // role is revealed when the body drops, not while the gallows is still being set up.
+  const DEATH_REVEAL_KEYS = ['eliminated', 'swapped', 'executionerSave', 'jesterLaughs', 'jesterWin'];
+  let heldNarration = null, heldTimer = null;
+  window.MT_NARRATION_RELEASE = () => {
+    if (!heldNarration) return;
+    const n = heldNarration; heldNarration = null; clearTimeout(heldTimer);
+    showNarration(n, true);
+  };
+  function showNarration(n, released) {
+    const execScene = state && state.phase === 'execution' && state.cinematic && state.cinematic.type === 'execution' && !state.settings.skipCinematics;
+    if (!released && execScene && DEATH_REVEAL_KEYS.includes(n.key)) {
+      if (heldNarration) window.MT_NARRATION_RELEASE();
+      heldNarration = n; clearTimeout(heldTimer);
+      heldTimer = setTimeout(window.MT_NARRATION_RELEASE, 26000); // never lose a line if the scene is skipped
+      return;
+    }
+    if (!released && heldNarration && n.key !== heldNarration.key) window.MT_NARRATION_RELEASE(); // a new line: say the held one first
     const box = $('#narration');
     const el = $('#narration-text');
     box.hidden = false;
@@ -528,6 +545,19 @@
   $('#pref-sfx').checked = prefs.sfx;
   $('#pref-voice').addEventListener('change', (e) => { prefs.voice = e.target.checked; savePrefs(); if (!prefs.voice) stopSpeaking(); });
   $('#pref-music').checked = prefs.music;
+  // Your own music (my-music/ folder on the server), mixed with the composed soundtrack.
+  const MOOD_NAMES = { lobby: 'lobby', day: 'day', night: 'night', dawn: 'dawn', reveal: 'reveal', vote: 'vote', trial: 'gallows', suspense: 'murder', eerie: 'ghosts', triumph: 'victory' };
+  function myMusicInfo() {
+    const M = window.MT_MUSIC; if (!M) return;
+    const s = M.customSummary(), now = M.nowPlaying();
+    $('#my-music-info').textContent = s.total
+      ? `Your music: ${s.total} song${s.total === 1 ? '' : 's'} (${Object.entries(s.by).map(([k, n]) => `${MOOD_NAMES[k] || k} ${n}`).join(', ')}).${s.failed.length ? ` Can't play: ${s.failed.join(', ')}.` : ''}${now && now.mine ? ` Now playing: ${now.name}.` : ''}`
+      : 'Your music: none yet. Add songs to the my-music folder (see my-music/README.md).';
+  }
+  $('#pref-music-mix').value = prefs.musicMix || 'mix';
+  $('#pref-music-mix').addEventListener('change', (e) => { prefs.musicMix = e.target.value; savePrefs(); if (window.MT_MUSIC) window.MT_MUSIC.setCustom(window.MT_MUSIC_LIST || [], prefs.musicMix); myMusicInfo(); });
+  fetch('/api/music').then((r) => r.json()).then((d) => { window.MT_MUSIC_LIST = d.tracks || []; if (window.MT_MUSIC) window.MT_MUSIC.setCustom(window.MT_MUSIC_LIST, prefs.musicMix || 'mix'); myMusicInfo(); }).catch(() => {});
+  setInterval(myMusicInfo, 5000);
   // Volume sliders (saved on this screen).
   for (const [id, key, apply] of [['vol-voice', 'volVoice', () => {}], ['vol-music', 'volMusic', (v) => SFX.setMusicVolume(v / 100)], ['vol-sfx', 'volSfx', (v) => SFX.setVolume(v / 100)]]) {
     const el = $('#' + id), outEl = $('#' + id + '-out');
