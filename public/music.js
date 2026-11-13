@@ -3,10 +3,10 @@
 //
 // Every world has its own theme, key, instruments and character (playful, dreamy, cool, epic,
 // dark or grim). Every moment of the game (lobby, day, night, voting, a murder, the gallows,
-// victory...) has its own piece in that world's sound. Each piece is COMPOSED as a full 3–4
-// minute track: intro, theme, variations, a second and third melody, a breakdown, a build-up,
-// a key change and an ending tag. When a track ends, a newly composed track (same theme, new
-// melodies and arrangement) follows on the beat, so the music never loops the same way twice.
+// victory...) has its own piece in that world's sound. Each piece is COMPOSED as a
+// stream of 36-bar tracks (theme, answer phrases, new melodies, breakdowns, build-ups, key
+// changes); when a track ends, a newly composed one with new melodies and a different form
+// follows on the beat, so the music never loops the same way twice.
 window.MT_MUSIC = (function () {
   // Scales (semitones). Melodies are written in scale steps so they follow the chords.
   const S = {
@@ -167,69 +167,156 @@ window.MT_MUSIC = (function () {
   const halfKit = (p) => ({ kick: 'x...............', snare: '........x.......', hat: p.hat ? 'x...x...x...x...' : '' });
   const FILL = { snare: '....x...x.x.xxxx', tom: '............x.xx' };
 
-  // Compose one full track (3–4 minutes) for the current piece. Track N of a piece always
+  // Compose one 36-bar track for the current piece. Track N of a piece always
   // sounds the same, and every new track brings new melodies and a new arrangement.
+  // Every 8-bar section is a little story, never a loop: a statement, its answer, a new idea
+  // and a closing phrase, over 8 bars of changing chords, with the bass and the arpeggio
+  // changing figure as it goes. The world's theme only opens a few sections per track.
   function compose(sg, trackNo) {
     const fl = sg.flavor, rng = rngOf(hash(`${sg.world}:${sg.mood}:${trackNo}`));
-    const barSec = 240 / sg.bpm, target = Math.max(24, Math.round((180 + rng() * 60) / barSec / 4) * 4);
+    const barSec = 240 / sg.bpm;
     const theme = trackNo % 2 ? vary(sg.lead.motif, rng) : sg.lead.motif.slice();
     const brightKey = ['major', 'mixo', 'lydian'].includes(sg.scale);
-    const progs = PROGS[brightKey ? 'bright' : 'dark'].filter((p) => p.join() !== sg.prog.join());
-    const progB = pickOf(rng, progs), progC = pickOf(rng, progs.filter((p) => p !== progB));
-    const melB = phrase(rng, fl), melC = phrase(rng, fl), melD = phrase(rng, fl, fl.slow >= 0.9);
-    const bassAlt = pickOf(rng, fl.bass), arpAlt = pickOf(rng, fl.arp) || sg.arp, arpMain = sg.arp || arpAlt;
+    const pool = PROGS[brightKey ? 'bright' : 'dark'];
+    // 8-bar progressions: four chords, then a different four that turn back home.
+    const prog8 = (first) => { const second = pickOf(rng, pool.filter((p) => p.join() !== first.join())).slice(); second[3] = rng() < 0.6 ? 4 : second[3]; return first.concat(second); };
+    const progA = prog8(sg.prog);
+    const others = pool.filter((p) => p.join() !== sg.prog.join());
+    const fresh = () => prog8(pickOf(rng, others));
+    // 8 bars of melody: statement (2 bars), answer (2), a new idea (2), a closing phrase (2).
+    const period = (x, busy) => {
+      const answer = vary(x, rng), idea = phrase(rng, fl, busy), close = cadence(rng() < 0.5 ? phrase(rng, fl, busy) : vary(idea, rng), rng);
+      return x.concat(answer, idea, close);
+    };
+    const neu = (busy) => period(phrase(rng, fl, busy), busy);
+    const bassPool = [sg.bass].concat(fl.bass).filter(Boolean), arpPool = [sg.arp].concat(fl.arp).filter(Boolean);
+    const twoOf = (a) => { const x = pickOf(rng, a), y = pickOf(rng, a.filter((z) => z !== x).concat(a.length < 2 ? [x] : [])); return [x, y]; };
     const kit = sg.pat || {}, hasDrums = Object.values(kit).some(Boolean);
     const alt = sg.lead.alt || sg.lead.wave, grim = fl === FLAVORS.grim;
+    const busyOK = fl.slow >= 0.9;
+    const melB = neu(), melC = neu(), melD = neu(busyOK), melE = neu(), melG = neu(), melH = neu(busyOK);
     // The form. Sections are 8 bars (intro, build-up and tag are 4).
     const SEC = {
-      intro: { bars: 4, prog: sg.prog, mel: null, lv: { lead: 0, bass: 0.7, arp: 0.8, pad: 0.6, drums: 0.5 }, kit: { kick: kit.kick || '', hat: kit.hat || '' } },
-      A: { prog: sg.prog, mel: theme, crash: true },
-      A2: { prog: sg.prog, mel: ornament(theme, rng, fl.ornament), arp: arpAlt },
-      A3: { prog: sg.prog, mel: theme, counter: true, bass: bassAlt },
-      A4: { prog: sg.prog, mel: ornament(theme, rng, fl.ornament * 0.6), shift: fl.lift, kit: hasDrums ? busyKit(kit) : kit, crash: true, counter: grim, oct: grim ? -1 : 0, wave: grim ? alt : null, lv: grim ? { pad: 1.2 } : null },
-      A5: { prog: sg.prog, mel: theme, shift: fl.lift, counter: true, crash: true },
-      B: { prog: progB, mel: melB, bass: bassAlt },
-      B2: { prog: progB, mel: ornament(melB, rng, fl.ornament), counter: true, crash: true },
-      B3: { prog: progB, mel: vary(melB, rng), wave: alt },
-      C: { prog: progC, mel: melC, wave: alt, kit: hasDrums ? halfKit(kit) : kit, arp: arpAlt },
-      C2: { prog: progC, mel: vary(melC, rng), wave: alt, counter: true },
-      D: { prog: rng() < 0.5 ? sg.prog : progB, mel: melD, kit: hasDrums ? busyKit(kit) : kit, lv: { arp: 0.3 } },
-      brk: { prog: progC, mel: grim ? melC : sparse(melC), wave: alt, kit: grim || !kit.hat ? {} : { hat: kit.hat }, bass: '0...............', lv: { lead: 0.7, bass: 0.7, arp: 1, pad: 1.4, drums: 0.6 } },
-      build: { bars: 4, prog: sg.prog.slice(-4), mel: null, build: true, lv: { lead: 0, arp: 1, pad: 0.6 } },
-      tag: { bars: 4, prog: sg.prog, mel: theme.slice(0, 16).concat(new Array(16).fill(null)), lv: { drums: 0.8 } },
+      intro: { bars: 4, prog: progA, mel: null, lv: { lead: 0, bass: 0.7, arp: 0.8, pad: 0.6, drums: 0.5 }, kit: { kick: kit.kick || '', hat: kit.hat || '' } },
+      A: { prog: progA, mel: period(theme), crash: true },
+      B: { prog: fresh(), mel: melB },
+      C: { prog: fresh(), mel: melC, wave: alt, kit: hasDrums ? halfKit(kit) : kit },
+      A2: { prog: progA, mel: period(ornament(theme, rng, fl.ornament)), counter: true, wave: grim ? alt : null, crash: true },
+      brk: { prog: fresh(), mel: grim ? melC.map((x) => (typeof x === 'number' ? x : x === '-' ? '-' : null)) : sparse(melE), wave: alt, kit: grim || !kit.hat ? {} : { hat: kit.hat }, bassFixed: '0...............', lv: { lead: 0.7, bass: 0.7, arp: 1, pad: 1.4, drums: 0.6 } },
+      build: { bars: 4, prog: progA.slice(4), mel: null, build: true, lv: { lead: 0, arp: 1, pad: 0.6 } },
+      D: { prog: fresh(), mel: melD, kit: hasDrums && busyOK ? busyKit(kit) : kit, lv: { arp: 0.4 }, crash: true },
+      E: { prog: fresh(), mel: melE, counter: true, wave: alt },
+      A3: { prog: progA, mel: period(theme), shift: fl.lift, counter: true, crash: true, kit: hasDrums && busyOK ? busyKit(kit) : kit, oct: grim ? -1 : 0 },
+      F: { prog: fresh(), mel: period(vary(melB.slice(0, 32), rng)) },
+      G: { prog: fresh(), mel: melG, wave: alt },
+      H: { prog: fresh(), mel: melH, kit: hasDrums ? halfKit(kit) : kit, counter: true },
+      B2: { prog: fresh(), mel: period(ornament(melB.slice(64, 96), rng, fl.ornament)), counter: true },
+      tag: { bars: 4, prog: progA, mel: theme.concat(new Array(32).fill(null)).slice(0, 64), lv: { drums: 0.8 } },
     };
-    const plan = ['intro', 'A', 'A2', 'B', 'A3', 'C', 'brk', 'build', 'A4', 'B2', 'D', 'A5', 'tag'];
-    const full = barSec > 4.2 ? 4 : 8; // very slow pieces use shorter sections
-    const len = () => plan.reduce((t, k) => t + (SEC[k].bars || full), 0);
-    for (const extra of ['B3', 'C2', 'A3', 'C', 'B2', 'A2']) if (len() < target - 4) plan.splice(plan.length - 2, 0, extra);
-    for (const cut of ['A3', 'D', 'B2', 'A2', 'C']) if (len() > target + 4 && plan.includes(cut)) plan.splice(plan.indexOf(cut), 1);
+    // Every track is 36 bars, then a newly composed track takes over on the beat. The first
+    // track of a piece opens with an intro; later ones rotate between different forms.
+    const FORMS = [
+      [['A', 8], ['D', 8], ['brk', 4], ['build', 4], ['A3', 8], ['tag', 4]],
+      [['B', 8], ['E', 8], ['A2', 8], ['H', 8], ['tag', 4]],
+      [['A', 8], ['G', 8], ['C', 8], ['F', 8], ['tag', 4]],
+    ];
+    const plan = trackNo === sg.firstTrack ? [['intro', 4], ['A', 8], ['B', 8], ['C', 8], ['A2', 8]] : FORMS[trackNo % FORMS.length];
     // Lay the sections out bar by bar.
     const bars = [], mel = [], counter = [], grace = [];
-    for (const k of plan) {
-      const sec = SEC[k], n = sec.bars || full, cm = sec.counter && sec.mel ? counterOf(sec.mel) : null;
+    for (const [k, n] of plan) {
+      const sec = SEC[k];
+      const m = sec.mel, cm = sec.counter && m ? counterOf(m) : null;
+      const [bass1, bass2] = twoOf(bassPool), [arp1, arp2] = twoOf(arpPool);
       for (let b = 0; b < n; b++) {
-        const lastBar = b === n - 1 && n >= 4, k2 = b % 2;
+        const lastBar = b === n - 1 && n >= 4;
         let pat = sec.kit || kit;
         if (sec.build) { const snare = ['....x.......x...', 'x...x...x...x...', 'x.x.x.x.x.x.x.x.', 'xxxxxxxxxxxxxxxx'][b]; pat = { kick: 'x...x...x...x...', snare, hat: kit.hat ? 'x.x.x.x.x.x.x.x.' : '' }; }
-        else if (lastBar && hasDrums && Object.keys(pat).length && !grim) pat = { ...pat, ...FILL };
-        else if (lastBar && hasDrums && grim && Object.keys(pat).length) pat = { ...pat, snare: '....x.......x.xx' };
+        else if (b === 3 && n === 8 && hasDrums && Object.keys(pat).length && !grim) pat = { ...pat, snare: '....x.......x.x.' }; // a small pickup mid-section
+        if (lastBar && !sec.build && hasDrums && Object.keys(pat).length) pat = { ...pat, ...(grim ? { snare: '....x.......x.xx' } : FILL) };
         const lv = { lead: 1, bass: 1, arp: 1, pad: 1, drums: 1, ...(sec.lv || {}) };
         if (sec.build) lv.drums = 0.55 + b * 0.18;
-        bars.push({ sec: k, root: sec.prog[b % sec.prog.length], shift: sec.shift || 0, bass: sec.bass || sg.bass, arp: sec.arp || arpMain, pat, lv, crash: !!sec.crash && b === 0 && hasDrums, wave: sec.wave || null, oct: sec.oct || 0 });
+        // The bass changes figure every two bars and walks into the next chord at phrase ends.
+        const walk = (b === 3 || b === 7) && !grim && rng() < 0.6;
+        const bass = sec.bassFixed || (walk ? pickOf(rng, ['0...2...4...6...', '0.0.2.2.4.4.6.6.', '4...2...1...0...']) : (Math.floor(b / 2) % 2 ? bass2 : bass1));
+        const arp = Math.floor(b / 4) % 2 ? arp2 : arp1;
+        bars.push({ sec: k, root: sec.prog[b % sec.prog.length], shift: sec.shift || 0, bass, arp, arpUp: !grim && b >= 4 && rng() < 0.35 ? 1 : 0, pat, lv, crash: !!sec.crash && b === 0 && hasDrums, wave: sec.wave || null, oct: sec.oct || 0 });
         for (let s = 0; s < 16; s++) {
-          let x = sec.mel ? sec.mel[k2 * 16 + s] : null;
-          // Every other time through the 2-bar melody, the last pair of bars climbs (playful worlds hop up).
-          if (typeof x === 'number' && b >= 4 && k2 === 1 && rng() < fl.hop) x += 2;
-          mel.push(x); counter.push(cm ? cm[k2 * 16 + s] : null);
+          const idx = (b % (m ? m.length / 16 : 1)) * 16 + s;
+          let x = m ? m[idx] : null;
+          if (typeof x === 'number' && b >= 6 && rng() < fl.hop * 0.5) x += 2; // the last bars sometimes reach higher
+          mel.push(x); counter.push(cm ? cm[idx] : null);
           grace.push(typeof x === 'number' && s % 4 === 0 && rng() < fl.grace);
         }
       }
     }
-    return { plan, bars, mel, counter, grace, steps: bars.length * 16, seconds: bars.length * barSec };
+    return { plan: plan.map((p) => p[0]), bars, mel, counter, grace, steps: bars.length * 16, seconds: bars.length * barSec };
   }
 
   let ac = null, out = null, bus = null, pulseWave = null, timer = null, song = null, mood = null, theme = null, step = 0, nextAt = 0, level = 0.8, ducked = false;
   const plays = {}; // how many times each piece has started (so a returning day doesn't restart the same track)
+  // ----- Your own music (my-music/ on the server) -----
+  // Songs are matched to the piece (moment, and optionally world), decoded ahead of time,
+  // measured and fitted: silence trimmed, loudness matched to the composed music, faded in
+  // and out. In "mix" mode they alternate with composed tracks; "mine" plays them whenever
+  // one is ready; "game" ignores them.
+  let custom = [], mixMode = 'mix', offline = false;
+  const loaded = new Map(); // url -> 'loading' | 'failed' | { buf, gain, start, dur }
+  const turns = {};
+  const TARGET_RMS = 0.05, XFADE = 2.5;
+  function setCustom(list, mode) { custom = Array.isArray(list) ? list.filter((c) => c && c.url && c.mood) : []; if (mode) mixMode = mode; }
+  const customFor = (sg) => custom.filter((c) => c.mood === sg.mood && (!c.world || c.world === sg.world));
+  function fit(buf) {
+    const ch = [];
+    for (let c = 0; c < buf.numberOfChannels; c++) ch.push(buf.getChannelData(c));
+    const n = buf.length, amp = (i) => { let v = 0; for (const d of ch) v = Math.max(v, Math.abs(d[i])); return v; };
+    let s = 0, e = n - 1;
+    while (s < n && amp(s) < 0.01) s += 64;
+    while (e > s && amp(e) < 0.01) e -= 64;
+    let sum = 0, peak = 0, k = 0;
+    for (let i = s; i < e; i += 16) { const v = ch[0][i]; sum += v * v; k++; const a = amp(i); if (a > peak) peak = a; }
+    const rms = Math.sqrt(sum / Math.max(1, k)) || 0.1;
+    return { buf, gain: Math.min(TARGET_RMS / rms, 0.9 / Math.max(peak, 0.01), 2), start: s / buf.sampleRate, dur: Math.max(1, (e - s) / buf.sampleRate) };
+  }
+  function prefetch(c) {
+    if (!c || loaded.has(c.url) || !ac || offline) return;
+    loaded.set(c.url, 'loading');
+    // Keep at most three decoded songs in memory.
+    const ready = [...loaded.entries()].filter(([, v]) => v && v.buf);
+    while (ready.length > 3) { const [url] = ready.shift(); if (!song || !song.custom || song.custom.url !== url) loaded.delete(url); }
+    fetch(c.url).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status))))
+      .then((b) => new Promise((ok, no) => ac.decodeAudioData(b, ok, no)))
+      .then((buf) => loaded.set(c.url, fit(buf)))
+      .catch(() => loaded.set(c.url, 'failed'));
+  }
+  // The next of your songs for this piece, in rotation.
+  function nextCustom(sg) {
+    if (sg.next) return sg.next;
+    const list = customFor(sg).filter((c) => loaded.get(c.url) !== 'failed');
+    if (!list.length) return null;
+    const id = sg.world + ':' + sg.mood; turns[id] = (turns[id] || 0) + 1;
+    sg.next = list[(hash(id) + turns[id]) % list.length];
+    return sg.next;
+  }
+  function startCustom(sg, t) {
+    const c = nextCustom(sg), L = c && loaded.get(c.url);
+    if (!L || !L.buf || !bus) { if (c) prefetch(c); return false; }
+    const src = ac.createBufferSource(), g = ac.createGain(), end = t + L.dur;
+    src.buffer = L.buf;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(L.gain, t + XFADE);
+    g.gain.setValueAtTime(L.gain, Math.max(t + XFADE, end - XFADE)); g.gain.linearRampToValueAtTime(0.0001, end);
+    src.connect(g); g.connect(bus); src.start(t, L.start, L.dur);
+    sg.custom = { src, url: c.url, name: c.name, resumeAt: end - XFADE };
+    sg.next = null; prefetch(nextCustom(sg)); // get the one after ready
+    return true;
+  }
+  // Should one of your songs start here? (Called at section starts.)
+  function wantCustom(sg, local) {
+    if (offline || mixMode === 'game' || !customFor(sg).length) return false;
+    if (mixMode === 'mine') return local % 128 === 0;
+    if (local !== 0) return false;
+    if (sg.justResumed) { sg.justResumed = false; return false; } // a composed track after each of yours
+    return sg.trackNo !== sg.firstTrack; // the piece opens with its composed track
+  }
   const mtof = (n) => 440 * Math.pow(2, (n - 69) / 12);
   function pitch(sg, chordRoot, deg, octave = 0) {
     const sc = S[sg.scale], i = chordRoot + deg, o = Math.floor(i / 7), d = ((i % 7) + 7) % 7;
@@ -279,6 +366,8 @@ window.MT_MUSIC = (function () {
     const sg = song;
     let local = i - sg.trackStart;
     if (local >= sg.track.steps) { sg.trackNo++; sg.track = compose(sg, sg.trackNo); sg.trackStart = i; local = 0; } // next track, on the beat
+    if (wantCustom(sg, local) && startCustom(sg, t)) { sg.trackStart = i; return false; } // one of your songs takes over
+    if (local === 0 && !offline && mixMode !== 'game') prefetch(nextCustom(sg));
     const tr = sg.track, b = tr.bars[Math.floor(local / 16)], s = local % 16, fl = sg.flavor;
     const m = {}; for (const k of ['lead', 'bass', 'arp', 'pad', 'drums']) m[k] = (sg.layers[k] || 0) * (b.lv[k] == null ? 1 : b.lv[k]);
     const root = b.root, low = sg.low ? -1 : 0, shifted = b.shift ? { ...sg, key: sg.key + b.shift } : sg;
@@ -301,7 +390,7 @@ window.MT_MUSIC = (function () {
     // Arpeggio: short plucks an octave up (patterns may hold two-digit steps like 11/12).
     if (m.arp && b.arp) {
       const tokens = b.arp.match(/\d+|\./g) || [], a = tokens[s % tokens.length];
-      if (a && a !== '.') note(pitch(shifted, root, Number(a), sg.low ? 0 : 1), t, sixteenth * (fl === FLAVORS.grim ? 2.4 : 0.7), { wave: fl === FLAVORS.grim ? 'bell' : sg.lead && sg.lead.wave === 'triangle' ? 'triangle' : 'pulse', vol: (fl === FLAVORS.grim ? 0.03 : 0.022) * m.arp, cutoff: 3000, release: 0.05 });
+      if (a && a !== '.') note(pitch(shifted, root, Number(a), (sg.low ? 0 : 1) + (b.arpUp || 0)), t, sixteenth * (fl === FLAVORS.grim ? 2.4 : 0.7), { wave: fl === FLAVORS.grim ? 'bell' : sg.lead && sg.lead.wave === 'triangle' ? 'triangle' : 'pulse', vol: (fl === FLAVORS.grim ? 0.03 : 0.022) * m.arp, cutoff: 3000, release: 0.05 });
     }
     // Pad: the chord, held for the bar.
     const pad = m.pad || (sg.pad ? 0.6 * (b.lv.pad == null ? 1 : b.lv.pad) : 0);
@@ -314,16 +403,23 @@ window.MT_MUSIC = (function () {
   }
   function tick() {
     if (!song || !ac) return;
+    if (song.custom) { // one of your songs is playing: the composed music waits, then comes back in on its fade
+      if (ac.currentTime + 0.25 < song.custom.resumeAt) return;
+      const at = song.custom.resumeAt; song.custom = null; song.justResumed = true;
+      if (mixMode === 'mine' && startCustom(song, at)) return;
+      nextAt = Math.max(at, ac.currentTime + 0.05);
+    }
     const sixteenth = 60 / song.bpm / 4;
     while (nextAt < ac.currentTime + 0.2) {
       const swing = song.swing && step % 2 === 1 ? song.swing * sixteenth : 0;
-      if (nextAt + swing >= ac.currentTime - 0.05) playStep(step, nextAt + swing, sixteenth);
+      if (nextAt + swing >= ac.currentTime - 0.05 && playStep(step, nextAt + swing, sixteenth) === false) break;
       nextAt += sixteenth; step++;
     }
   }
   function stop(fade = 1) {
     if (!bus || !ac) { song = null; mood = null; return; }
     const old = bus, t = ac.currentTime;
+    if (song && song.custom) { try { song.custom.src.stop(t + fade + 0.1); } catch { /* done */ } }
     old.gain.cancelScheduledValues(t); old.gain.setValueAtTime(old.gain.value, t); old.gain.linearRampToValueAtTime(0.0001, t + fade);
     setTimeout(() => { try { old.disconnect(); } catch { /* gone */ } }, fade * 1000 + 600);
     bus = null; song = null; mood = null; theme = null;
@@ -332,7 +428,7 @@ window.MT_MUSIC = (function () {
   // A piece ready to play: its arrangement and first composed track.
   function prepare(key, moodName, trackNo) {
     const sg = build(key, moodName);
-    sg.trackNo = trackNo; sg.track = compose(sg, trackNo); sg.trackStart = 0;
+    sg.trackNo = trackNo; sg.firstTrack = trackNo; sg.track = compose(sg, trackNo); sg.trackStart = 0;
     return sg;
   }
   // Start (or switch) the soundtrack: a new mood or world crossfades into its own piece.
@@ -348,6 +444,7 @@ window.MT_MUSIC = (function () {
     const id = key + ':' + newMood; plays[id] = (plays[id] || 0) + 1;
     song = prepare(key, newMood, plays[id] - 1); theme = key; mood = newMood; step = 0; nextAt = ac.currentTime + 0.15;
     timer = setInterval(tick, 25);
+    if (mixMode !== 'game') prefetch(nextCustom(song));
   }
   function duck(on) {
     ducked = on; if (!bus || !ac) return;
@@ -358,15 +455,18 @@ window.MT_MUSIC = (function () {
   // previews). from: seconds into the piece (the composer is deterministic, so it's the same music).
   function renderTo(ctx2, dest, key, moodName, seconds, from = 0, trackNo = 0) {
     const saved = { ac, bus, song, mood, step };
-    ac = ctx2; bus = ctx2.createGain(); bus.gain.value = level; bus.connect(dest);
+    ac = ctx2; bus = ctx2.createGain(); bus.gain.value = level; bus.connect(dest); offline = true;
     song = prepare(key, ALIAS[moodName] || moodName, trackNo); pulseWave = null;
     const six = 60 / song.bpm / 4, first = Math.floor(from / six);
     // Walk through the skipped part without sound so track changes happen as they would live.
     for (let i = 0; i < first; i++) { const l = i - song.trackStart; if (l >= song.track.steps) { song.trackNo++; song.track = compose(song, song.trackNo); song.trackStart = i; } }
     for (let i = first, t = 0.05; t < seconds; i++, t += six) playStep(i, t + (song.swing && i % 2 ? song.swing * six : 0), six);
-    ({ ac, bus, song, mood, step } = saved); pulseWave = null;
+    ({ ac, bus, song, mood, step } = saved); pulseWave = null; offline = false;
   }
   // The form of a piece's tracks (for tests and the curious).
   function describe(key, moodName, trackNo = 0) { const sg = prepare(key, ALIAS[moodName] || moodName, trackNo); return { bpm: Math.round(sg.bpm), flavor: (SONGS[key] || SONGS.medieval).flavor, plan: sg.track.plan, bars: sg.track.bars.length, seconds: Math.round(sg.track.seconds) }; }
-  return { play, stop, duck, volume, renderTo, describe, SONGS, MOODS, FLAVORS, get mood() { return mood; }, get theme() { return theme; }, get level() { return level; } };
+  // What is playing right now (for the TV's music panel).
+  const nowPlaying = () => (song && song.custom ? { mine: true, name: song.custom.name } : song ? { mine: false, name: 'Composed: ' + song.world + ' ' + song.mood } : null);
+  const customSummary = () => { const by = {}; for (const c of custom) by[c.mood] = (by[c.mood] || 0) + 1; return { total: custom.length, by, failed: [...loaded.entries()].filter(([, v]) => v === 'failed').map(([u]) => decodeURIComponent(u.split('/').pop())) }; };
+  return { setCustom, nowPlaying, customSummary, get mix() { return mixMode; }, play, stop, duck, volume, renderTo, describe, SONGS, MOODS, FLAVORS, get mood() { return mood; }, get theme() { return theme; }, get level() { return level; } };
 })();

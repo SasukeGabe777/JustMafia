@@ -1,0 +1,10 @@
+# Songs stay on this computer: the repository and website are public, so audio files here are
+# never committed. (To put licensed music online, remove the line for that file type.)
+*.mp3
+*.m4a
+*.aac
+*.ogg
+*.oga
+*.wav
+*.webm
+*.flac

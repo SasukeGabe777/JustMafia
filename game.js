@@ -72,7 +72,7 @@ const CINE_MS = { roleReveal: 14000, dawn: 8000, dawnEvent: 16200, morning: 8000
 const HARD_MIN_PLAYERS = 3;
 const HARD_MAX_PLAYERS = 100;
 const MOVE_ASK_MS = 20000; // how long a host has to answer a move-in request
-const VERDICT_WINDOW_MS = 8000; // extra verdict time for interventions / last words when someone is condemned
+const VERDICT_HOLD_MS = 3000; // after the votes are in and the target turns red, 3 seconds until the gallows
 const LAST_WORDS = ['LIAR', 'INNOCENT', 'TRUST', 'WATCH', 'SUSPECT', 'AVENGE ME', 'GOODBYE']; // safe, opinion-only tokens
 const JUDGE_PLACES = ['home', 'lake', 'hearth', 'tavern', 'field', 'chase']; // kill scenes the Judge can pick at dawn
 const HAUNT_COOLDOWN_MS = 4000;
@@ -769,9 +769,12 @@ class Room {
     const shown = anon ? entries.map((e) => ({ voterId: null, targetId: e.targetId })) : entries.map(({ voterId, targetId }) => ({ voterId, targetId }));
     const followups = this.updateHarmony(entries);
     this.setCinematic({ type: 'votes', votes: shown, eliminatedId, tie, anonymous: anon, followups });
-    // A condemned player gets a longer verdict so interventions and last words can happen.
-    const extra = eliminatedId && (this.settings.executionInterventions || this.settings.lastWords) ? VERDICT_WINDOW_MS : 0;
-    this.setPhase('verdict', this.cine('verdict', followups.length * 6500 + extra));
+    // The verdict lasts until the TV has shown every ballot and the target turns red (see
+    // town.js playVotes), then 3 seconds more before the gallows. Interventions and last
+    // words can be chosen on the phones during this time.
+    const n = shown.length, interval = n ? Math.min(0.5, Math.max(0.02, 3.6 / n)) : 0;
+    const verdictMs = followups.length ? CINE_MS.verdict + followups.length * 6500 : (1.4 + n * interval) * 1000 + VERDICT_HOLD_MS;
+    this.setPhase('verdict', this.settings.skipCinematics ? this.cine('verdict') : verdictMs / this.speed());
   }
 
   // ---------- verdict window: interventions, defenders, last words ----------
