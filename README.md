@@ -71,12 +71,28 @@ Set in the Judge console → Setup → Roles.
   - The server counts the votes and breaks ties with a random draw.
   - It then repairs anything invalid while keeping as many votes as possible: there is **always at least one Mafia**, the Mafia is never bigger or stronger than normal, and there are never more roles than players.
   - Mafia and Villagers fill the other seats. Roles are dealt at random by the server, and each phone only ever receives its own.
-- **The deck holds every role, in 10 unlock tiers (Judge → Card deck → "Learn as you play", the default):**
-  - **Tier 0, the tutorial round:** a room's very first game is Mafia, Detective and Doctor, with no vote. Bigger groups get the scaled number of special roles: easy Town roles from tiers 1–2 are added (e.g. 8 players: + 2 of Sheriff, Bodyguard, Vigilante, Mayor, Medium, Lookout, Crier).
-  - Finishing it unlocks **tier 1** (Godfather, Sheriff, Bodyguard, Vigilante, Mayor, Jester, Executioner).
-  - **Bigger groups start further along** so there are always enough cards: up to 12 players start at tier 1, 14–16 at tier 2, 20 at tier 3, 25+ at tier 4. After the tutorial their reveal shows every role that joined.
-  - Every finished game after that unlocks the next tier of 3, from simple to complex. At game over the TV shows **"✨ You just unlocked!"**: the new role cards float in and flip over, then **▶ Play again**. Phones list them too.
-  - Unlocked roles join the next draft, and by game 11 every role is in.
+- **The deck holds every role, in 12 unlock tiers of 3–4 roles (Judge → Card deck → "Learn as you play", the default).** The base game unlocks first, then DLC 1. Each tier mixes Town roles with a Mafia or Neutral one, so no unlock tips the balance:
+
+  | Tier | Unlocks | |
+  |---|---|---|
+  | 0 | Mafia, Detective, Doctor | tutorial round |
+  | 1 | Godfather, Sheriff, Mayor | base game |
+  | 2 | Jester, Bodyguard, Vigilante | |
+  | 3 | Roleblocker, Executioner, Telepaths | |
+  | 4 | Serial Killer, Sorcerer, Investigator | |
+  | 5 | Silencer, Crafter, Detonator | |
+  | 6 | Hunter, Ghostwriter, Storymaker | |
+  | 7 | Hustler, Paparazzi, Conductor | |
+  | 8 | Alchemist, Puppet Master, Headhunter, Glitch | |
+  | 9 | Framer, Lookout, Medium, Veteran | DLC 1 |
+  | 10 | Janitor, Trapper, Town Crier | |
+  | 11 | Impostor, Mathematician, Gamer, Eavesdropper | |
+  | 12 | Zombie (+ Priest), Cupid | |
+
+  - **Tier 0, the tutorial round:** a room's very first game is Mafia, Detective and Doctor, with no vote. Bigger groups get the scaled number of special roles: easy Town roles from tiers 1–2 are added first (Sheriff, Mayor, Bodyguard, Vigilante), then the next simplest.
+  - **Bigger groups start further along** so there are always enough cards: 4 players start at tier 1, 5–8 at tier 2, 12–14 at tier 3, 20 at tier 4, 25 at tier 5. After the tutorial their reveal shows every role that joined.
+  - Every finished game after that unlocks the next tier. At game over the TV shows **"✨ You just unlocked!"**: the new role cards float in and flip over, then **▶ Play again**. Phones list them too.
+  - Unlocked roles join the next draft, and by game 13 every role is in.
   - The draft stays balanced the whole time.
   - Unlocks are per room for now (later: logins that pool each player's unlocks).
 - **"Every role, fully random"** (Judge toggle): every role is in the deck from game 1, drawn at random. The final setup is still repaired to be valid (always at least one Mafia).
@@ -147,6 +163,10 @@ Night actions resolve together, in this order: blocks → protection → kills �
 | 🖼 Framer | Mafia | Frame someone: tonight every investigation sees them as Mafia |
 | 🧹 Janitor | Mafia | Once: if the target dies tonight, their role stays hidden (only the Janitor learns it) |
 | 🎭 Impostor | Mafia | Role readings (Sorcerer, Hunter, Medium) see a Town cover role; the Detective and the Crafter's pickaxe see the truth |
+| 🧮 Mathematician | Town | Each night: pick two players and solve a math problem on the phone (two tries; harder every night). Solved: at dawn, how many of the two are a threat (0, 1 or 2: Mafia, a killer or a Zombie; the Godfather counts as harmless) |
+| 🎮 Gamer | Town | Each night: one run of **Night Flight**, an original tap-to-fly game (a lantern-bat dodging chimneys). The score unlocks a power on one player: 5+ Shield (protect from one attack), 12+ Scan (Mafia or not), 25+ High Score (exact role). Scores are capped by how long the run lasted |
+| 🧟 Zombie | Neutral | Patient Zero (for 11+ players). Every night the horde breaks into houses and bites (one bite per Zombie, up to 4). The TV shows a zombie limping through town, a blackout as glass breaks, then a flash to a random house: nobody learns who was bitten. The bitten are told and turn when the next night ends unless the Priest blesses them. Zombies can't be killed at night (only the vote or the Priest's cure stops them). The horde wins at half the living, with more Zombies than Mafia; Town can't win while a Zombie walks. Tuned to win about half its games |
+| ⛪ Priest | Town | Comes with every Zombie (never alone). Each night blesses one player (not twice in a row): full protection from every attack and bite, and it cures the bitten. The Priest can't tell a real bite from a fake one, so Mafia may claim a bite to get protected. Once per game a blessing turns a full Zombie human again; after that, blessing a Zombie makes the holy water hiss |
 
 **Win conditions:** the Town wins when no Mafia, Serial Killer or Headhunter is left alive. The Mafia win at parity, or (optionally) when everyone else is gone. The Serial Killer and the Headhunter each win as the last one standing. The Jester wins if voted out.
 

@@ -107,6 +107,11 @@
     cupid: { name: 'Cupid', team: 'town', emoji: '💘', color: '#e86a9a', night: { kind: 'link', targets: 'others', optional: true }, blurb: 'Once per game, bind yourself to another player. You both learn of the bond. If either of you dies, the other dies of a broken heart.' },
     eavesdropper: { name: 'Eavesdropper', team: 'town', emoji: '👂', color: '#5d8fb8', when: 'All game (passive)', blurb: 'You overhear the Mafia’s coordination messages every night, but never who said them.' },
     crier: { name: 'Town Crier', team: 'town', emoji: '📯', color: '#c98f2e', when: 'Once a day, during discussion', blurb: 'Once a day, make an anonymous proclamation on the big screen about one player: SAFE, SUSPICIOUS, LYING, HONEST or IN DANGER.' },
+    // ----- DLC 1, part 2 -----
+    mathematician: { name: 'Mathematician', team: 'town', emoji: '🧮', color: '#4f9fd8', night: { kind: 'calc', targets: 'others', optional: true }, when: 'Each night: pick two players and solve a problem', blurb: 'Each night, choose two players and solve a math problem on your phone (two tries). Solve it and at dawn you learn HOW MANY of the two are a threat to the Town: 0, 1 or 2 (Mafia, a killer or a Zombie; the Godfather counts as harmless). Problems get harder every night. Get it wrong and the numbers tell you nothing.' },
+    gamer: { name: 'Gamer', team: 'town', emoji: '🎮', color: '#8e5bd6', night: { kind: 'game', targets: 'others', optional: true }, when: 'Each night: play one run of Night Flight', blurb: 'Each night, play one run of Night Flight on your phone: tap to keep your lantern-bat in the air and fly through the chimney gaps. Your score unlocks tonight’s power on the player you pick: 5+ Shield (protect them from one attack), 12+ Scan (learn if they are Mafia), 25+ High Score (learn their exact role).' },
+    zombie: { name: 'Zombie', team: 'neutral', emoji: '🧟', color: '#6f9a3e', knowsTeam: true, nightImmune: true, max: 1, night: { kind: 'bite', targets: 'nonZombie' }, when: 'Each night from night 2, with the horde (for 11+ players)', blurb: 'You are Patient Zero. From night 2 the horde breaks into houses and bites people, Town or Mafia: 1 bite a night, 2 once there are 3 Zombies, 3 from 5. The town only sees a window break somewhere. The bitten feel feverish and TURN into a Zombie when the next night ends, unless the Priest blesses them first. Zombies bite and win together: the horde wins when it is more than half of the living and no Mafia or killer is left. A Doctor, a Bodyguard or a blessing stops a bite. Recommended for more than 10 players.' },
+    priest: { name: 'Priest', team: 'town', emoji: '⛪', color: '#e8d48a', darkText: true, night: { kind: 'bless', targets: 'others', noRepeat: true }, when: 'Each night (comes with the Zombie)', blurb: 'You arrive whenever a Zombie is in town. Each night, bless one player (not the same one twice in a row): they are safe from every attack and bite tonight, and if they were bitten, the fever breaks. You can’t tell whether someone was really bitten, so beware of Mafia faking a bite to get your protection. Once per game, a blessing cures a full Zombie and makes them human again; after that, blessing a Zombie makes the holy water hiss (you learn they are one).' },
     framer: { name: 'Framer', team: 'mafia', knowsTeam: true, emoji: '🖼', color: '#a3443a', night: { kind: 'frame', targets: 'nonTeam' }, blurb: 'Each night, frame one player: tonight, every investigation sees them as Mafia. You also vote on the Mafia’s kill.' },
     janitor: { name: 'Janitor', team: 'mafia', knowsTeam: true, emoji: '🧹', color: '#6e5a4a', night: { kind: 'clean', targets: 'nonTeam', optional: true }, blurb: 'Once per game, clean up after a kill: if your target dies tonight, their role stays hidden from the town, and only you learn it.' },
     impostor: { name: 'Impostor', team: 'mafia', knowsTeam: true, emoji: '🎭', color: '#8d3d6e', when: 'All game (passive)', blurb: 'You hide behind a Town role chosen at the start: role readings (Sorcerer, Hunter, Medium) show your cover story. A Detective still sees you as Mafia, and a Crafter’s pickaxe sees the truth. You also vote on the Mafia’s kill.' },
@@ -123,12 +128,12 @@
     { level: 5, power: 'allSight', title: 'All-seeing', text: 'You know everyone’s role.' },
     { level: 6, power: 'execute', title: 'Executioner', text: 'Once a day, execute anyone during discussion or voting.' },
   ];
-  const ROLE_ORDER = ['mafia', 'godfather', 'roleblocker', 'hunter', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'detective', 'sheriff', 'sorcerer', 'investigator', 'doctor', 'bodyguard', 'executioner', 'vigilante', 'detonator', 'storymaker', 'crafter', 'mayor', 'telepath', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'jester', 'serialKiller', 'headhunter', 'framer', 'janitor', 'impostor', 'medium', 'lookout', 'veteran', 'trapper', 'cupid', 'eavesdropper', 'crier', 'villager'];
+  const ROLE_ORDER = ['mafia', 'godfather', 'roleblocker', 'hunter', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'detective', 'sheriff', 'sorcerer', 'investigator', 'doctor', 'bodyguard', 'executioner', 'vigilante', 'detonator', 'storymaker', 'crafter', 'mayor', 'telepath', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'jester', 'serialKiller', 'headhunter', 'framer', 'janitor', 'impostor', 'medium', 'lookout', 'veteran', 'trapper', 'cupid', 'eavesdropper', 'crier', 'mathematician', 'gamer', 'zombie', 'priest', 'villager'];
   // Role packs: how the Judge console groups roles (Core, Expansion, DLC 1).
   const ROLE_PACKS = {
     core: { label: 'Core', roles: ['mafia', 'godfather', 'roleblocker', 'detective', 'sheriff', 'doctor', 'bodyguard', 'vigilante', 'mayor', 'telepath', 'jester', 'serialKiller', 'executioner'] },
     expansion: { label: 'Expansion', roles: ['crafter', 'hunter', 'puppetMaster', 'silencer', 'hustler', 'alchemist', 'sorcerer', 'investigator', 'detonator', 'storymaker', 'ghostwriter', 'conductor', 'glitch', 'paparazzi', 'headhunter'] },
-    dlc1: { label: 'DLC 1', roles: ['framer', 'janitor', 'impostor', 'medium', 'lookout', 'veteran', 'trapper', 'cupid', 'eavesdropper', 'crier'] },
+    dlc1: { label: 'DLC 1', roles: ['framer', 'janitor', 'impostor', 'medium', 'lookout', 'veteran', 'trapper', 'cupid', 'eavesdropper', 'crier', 'mathematician', 'gamer', 'zombie', 'priest'] },
   };
   const GHOST_WORDS = ['IS', 'NOT', 'LIAR', 'TRUST', 'WATCH', 'DANGER', 'SAFE', 'MAYBE', 'TOGETHER', 'ALONE'];
 
@@ -145,6 +150,7 @@
     serialKiller: { name: 'The Serial Killer', emoji: '🗡️' },
     jester: { name: 'The Jester', emoji: '🃏' },
     headhunter: { name: 'The Headhunter', emoji: '🎯' },
+    zombie: { name: 'The Horde', emoji: '🧟' },
     draw: { name: 'Nobody', emoji: '🤝' },
   };
 
@@ -194,6 +200,9 @@
       if (ROLES[k].max && counts[k] > ROLES[k].max) { counts[k] = ROLES[k].max; warnings.push(`Only one ${ROLES[k].name} allowed.`); }
     }
     if (counts.telepath && counts.telepath !== 2) { counts.telepath = 2; warnings.push('Telepaths come in pairs (always 2).'); }
+    if (counts.zombie > 0 && !(counts.priest > 0)) counts.priest = 1; // a Priest always comes with the Zombie (the cure)
+    if (counts.priest > 0 && !(counts.zombie > 0)) { delete counts.priest; warnings.push('The Priest only comes with a Zombie.'); }
+    if (counts.zombie > 0 && n <= 10) warnings.push('The Zombie is recommended for more than 10 players.');
     const autoMafia = settings.autoMafia !== false;
     if (autoMafia) {
       const otherMafia = ROLE_ORDER.filter((k) => k !== 'mafia' && isMafiaTeam(k)).reduce((s, k) => s + (counts[k] || 0), 0);

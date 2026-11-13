@@ -17,7 +17,7 @@
         silencer: 'Comms Cutter', sorcerer: 'Deep Scanner', hustler: 'Clock Hacker', alchemist: 'Bio-Chemist',
         executioner: 'Airlock Warden', hunter: 'Syndicate Scout', headhunter: 'Bounty Droid', medium: 'Echo Receiver',
         lookout: 'Camera Watch', veteran: 'Old Spacer', trapper: 'Laser Tripwire', cupid: 'Bond Engineer',
-        eavesdropper: 'Comms Tapper', crier: 'Station PA', framer: 'Data Forger', janitor: 'Cleanup Bot',
+        eavesdropper: 'Comms Tapper', crier: 'Station PA', mathematician: 'Navigator', gamer: 'Sim Pilot', zombie: 'Infected Crewmate', priest: 'Station Chaplain', framer: 'Data Forger', janitor: 'Cleanup Bot',
         impostor: 'Shapeshifter', storymaker: 'Red Alert Officer',
       },
       narration: {
@@ -101,7 +101,7 @@
         silencer: 'Hush Hexer', sorcerer: 'Oracle', hustler: 'Time Witch', alchemist: 'Potion Brewer',
         executioner: 'Martyr Knight', hunter: 'Shadow Seeker', headhunter: 'Bounty Hexer', medium: 'Ghost Whisperer',
         lookout: 'Owl Sentinel', veteran: 'Elder Battlemage', trapper: 'Ward Weaver', cupid: 'Love Sprite',
-        eavesdropper: 'Whisper Wisp', crier: 'Royal Herald', framer: 'Illusionist', janitor: 'Oblivion Witch',
+        eavesdropper: 'Whisper Wisp', crier: 'Royal Herald', mathematician: 'Arithmancer', gamer: 'Game Sprite', zombie: 'Ghoul', priest: 'High Cleric', framer: 'Illusionist', janitor: 'Oblivion Witch',
         impostor: 'Glamour Witch', storymaker: 'Lorekeeper',
       },
       narration: {
@@ -185,7 +185,7 @@
         silencer: 'Smoke Muzzler', sorcerer: 'Flame Oracle', hustler: 'Hourglass Smith', alchemist: 'Ember Brewer',
         executioner: 'Pyre Keeper', hunter: 'Cult Scout', headhunter: 'Dragon Slayer', medium: 'Ash Speaker',
         lookout: 'Watchtower Guard', veteran: 'Scarred Rider', trapper: 'Snare Setter', cupid: 'Heartflame',
-        eavesdropper: 'Cave Listener', crier: 'Horn Blower', framer: 'Soot Smearer', janitor: 'Ash Sweeper',
+        eavesdropper: 'Cave Listener', crier: 'Horn Blower', mathematician: 'Rune Counter', gamer: 'Wyvern Racer', zombie: 'Ashen Husk', priest: 'Flame Priest', framer: 'Soot Smearer', janitor: 'Ash Sweeper',
         impostor: 'Turncloak', storymaker: 'Saga Teller',
       },
       narration: {
@@ -269,7 +269,7 @@
         silencer: 'Gag Thief', sorcerer: 'Rune Reader', hustler: 'Sand Thief', alchemist: 'Venom Brewer',
         executioner: 'Gallows Keeper', hunter: 'Guild Spotter', headhunter: 'Bounty Stalker', medium: 'Bone Speaker',
         lookout: 'Torch Sentry', veteran: 'Grizzled Warrior', trapper: 'Pit Digger', cupid: 'Heartbinder',
-        eavesdropper: 'Vent Listener', crier: 'Bell Ringer', framer: 'Evidence Planter', janitor: 'Crypt Sweeper',
+        eavesdropper: 'Vent Listener', crier: 'Bell Ringer', mathematician: 'Rune Scholar', gamer: 'Dice Goblin', zombie: 'Rotting Delver', priest: 'Torch Priest', framer: 'Evidence Planter', janitor: 'Crypt Sweeper',
         impostor: 'Masked Thief', storymaker: 'Bard of Echoes',
       },
       narration: {
@@ -353,7 +353,7 @@
         silencer: 'Gag Order', sorcerer: 'Codebreaker', hustler: 'Countdown', alchemist: 'Chemist',
         executioner: 'Fall Guy', hunter: 'Enemy Scout', headhunter: 'Contract Killer', medium: 'Archive Clerk',
         lookout: 'Stakeout', veteran: 'Retired Spy', trapper: 'Tripwire', cupid: 'Sworn Partner',
-        eavesdropper: 'Wiretapper', crier: 'Radio Broadcast', framer: 'Forger', janitor: 'Cleaner',
+        eavesdropper: 'Wiretapper', crier: 'Radio Broadcast', mathematician: 'Codebreaker', gamer: 'Sim Operator', zombie: 'Bio-Agent', priest: 'Field Chaplain', framer: 'Forger', janitor: 'Cleaner',
         impostor: 'Deep Cover', storymaker: 'Code Red',
       },
       narration: {
@@ -437,7 +437,7 @@
         silencer: 'Mob Lawyer', sorcerer: 'Lab Analyst', hustler: 'Fast Talker', alchemist: 'Mob Chemist',
         executioner: 'Fall Guy', hunter: 'Mob Informant', headhunter: 'Hitman', medium: 'Coroner',
         lookout: 'Stakeout Agent', veteran: 'Retired Agent', trapper: 'Sting Operation', cupid: 'Sworn Partners',
-        eavesdropper: 'Wiretap', crier: 'News Anchor', framer: 'Evidence Planter', janitor: 'Cleaner',
+        eavesdropper: 'Wiretap', crier: 'News Anchor', mathematician: 'Data Analyst', gamer: 'Arcade Kid', zombie: 'Patient Zero', priest: 'Bureau Chaplain', framer: 'Evidence Planter', janitor: 'Cleaner',
         impostor: 'The Mole', storymaker: 'Breaking News',
       },
       narration: {
@@ -521,7 +521,7 @@
         silencer: 'Frozen Tongue', sorcerer: 'Ice Oracle', hustler: 'Blizzard Rusher', alchemist: 'Frost Brewer',
         executioner: 'Ice Martyr', hunter: 'Wolf Scout', headhunter: 'Pelt Collector', medium: 'Spirit Listener',
         lookout: 'Chimney Watch', veteran: 'Old Mountaineer', trapper: 'Snare Setter', cupid: 'Snow Angel',
-        eavesdropper: 'Howl Listener', crier: 'Horn Caller', framer: 'Pawprint Faker', janitor: 'Snow Sweeper',
+        eavesdropper: 'Howl Listener', crier: 'Horn Caller', mathematician: 'Snow Counter', gamer: 'Sled Racer', zombie: 'Frost Walker', priest: 'Hearth Priest', framer: 'Pawprint Faker', janitor: 'Snow Sweeper',
         impostor: 'Wolf in Wool', storymaker: 'Fireside Teller',
       },
       narration: {
@@ -605,7 +605,7 @@
         silencer: 'Chat Muter', sorcerer: 'Data Miner', hustler: 'Speed Runner', alchemist: 'Potion Crafter',
         executioner: 'Swap Block', hunter: 'Griefer Scout', headhunter: 'Bounty Builder', medium: 'Ghost Pixel',
         lookout: 'Tower Builder', veteran: 'Iron Knight', trapper: 'Pit Builder', cupid: 'Heart Block',
-        eavesdropper: 'Chat Logger', crier: 'Broadcast Block', framer: 'Skin Swapper', janitor: 'Block Cleaner',
+        eavesdropper: 'Chat Logger', crier: 'Broadcast Block', mathematician: 'Block Counter', gamer: 'Speedrunner', zombie: 'Shambler', priest: 'Block Healer', framer: 'Skin Swapper', janitor: 'Block Cleaner',
         impostor: 'Fake Skin', storymaker: 'Server Event',
       },
       narration: {
@@ -689,7 +689,7 @@
         silencer: 'Hush Caster', sorcerer: 'Truesight Wizard', hustler: 'Initiative Thief', alchemist: 'Potion Master',
         executioner: 'Noble Martyr', hunter: 'Cult Spy', headhunter: 'Bounty Seeker', medium: 'Speak with Dead',
         lookout: 'Night Watch', veteran: 'Retired Hero', trapper: 'Trapsmith', cupid: 'Love Charm',
-        eavesdropper: 'Lurking Familiar', crier: 'Town Herald', framer: 'Illusionist', janitor: 'Cleanup Crew',
+        eavesdropper: 'Lurking Familiar', crier: 'Town Herald', mathematician: 'Sage', gamer: 'Dice Champion', zombie: 'Grave Ghoul', priest: 'Cleric', framer: 'Illusionist', janitor: 'Cleanup Crew',
         impostor: 'Doppelganger', storymaker: 'Plot Twist',
       },
       narration: {
@@ -773,7 +773,7 @@
         silencer: 'Intimidator', sorcerer: 'Forensic Analyst', hustler: 'Smooth Talker', alchemist: 'Pharmacist',
         executioner: 'Stand-In', hunter: 'Syndicate Tail', headhunter: 'Hired Gun', medium: 'Coroner',
         lookout: 'Neighborhood Watch', veteran: 'Retired Marine', trapper: 'Alarm Installer', cupid: 'Sweetheart',
-        eavesdropper: 'Wire Listener', crier: 'Radio Host', framer: 'Evidence Planter', janitor: 'Fixer',
+        eavesdropper: 'Wire Listener', crier: 'Radio Host', mathematician: 'Professor', gamer: 'Pro Gamer', zombie: 'The Infected', priest: 'Pastor', framer: 'Evidence Planter', janitor: 'Fixer',
         impostor: 'The Mole', storymaker: 'Emergency Meeting',
       },
       narration: {
@@ -857,7 +857,7 @@
         silencer: 'Hush Money', sorcerer: 'The Insider', hustler: 'Card Sharp', alchemist: 'Bootlegger',
         executioner: 'Fall Guy', hunter: 'Outfit Tail', headhunter: 'Hired Gun', medium: 'Fortune Teller',
         lookout: 'Night Watchman', veteran: 'Old Soldier', trapper: 'Snare Man', cupid: 'Sweetheart',
-        eavesdropper: 'Phone Tapper', crier: 'Newsboy', framer: 'Frame-Up Artist', janitor: 'Cleaner',
+        eavesdropper: 'Phone Tapper', crier: 'Newsboy', mathematician: 'Bookie', gamer: 'Pinball Wizard', zombie: 'Walker', priest: 'Padre', framer: 'Frame-Up Artist', janitor: 'Cleaner',
         impostor: 'Turncoat', storymaker: 'Late Edition',
       },
       narration: {

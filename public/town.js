@@ -327,6 +327,8 @@
         if (!events.length) { this.cinema.play('quietNight', {}, { phaseBound: true }); return; }
         const multi = events.length > 1;
         events.forEach((e) => {
+          // The Zombie horde's break-in: a secret scene at a random house (never the bitten one's name).
+          if (e.type === 'bite') { this.cinema.play('zombieBite', { victimId: e.targetId }, { queue: true, phaseBound: true }); return; }
           const outcome = e.type === 'multiKill' ? 'multiple' : e.type === 'kill' ? 'kill' : e.type === 'guarded' ? (e.guardDied ? 'guardDies' : 'guard') : 'protected';
           // AI narrator: a kill away from home plays its location scene (lake, hearth, tavern,
           // field, or another house). Home deaths and manual mode use the classic murder scene.
