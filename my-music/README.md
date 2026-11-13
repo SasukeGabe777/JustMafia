@@ -58,11 +58,10 @@ says which one.
 ⚙ Host controls → Music mix: *Game + my music* (default), *Game music only* or
 *My music only*. The panel also shows how many of your songs it found and which one is playing.
 
-## Your songs stay on this computer
+## Online (Render)
 
-Audio files in this folder are never committed (see .gitignore), because the repository and
-the website are public. They play on the TV when the game runs from this computer. To use a song
-online, it must be music you have the right to share (your own, or royalty-free with a license
-that allows it); then remove its file type from my-music/.gitignore and commit it.
+Songs here are committed and deploy with the repository. The repository and website are
+public, so only add music you have the right to share (your own, or royalty-free with a license
+that allows sharing the files). Keep files small (a 3-minute mp3 at 128–192 kbps is 3–4 MB).
 
 After adding files, refresh the TV page (no server restart needed).
