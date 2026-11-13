@@ -138,8 +138,14 @@
       <div class="btn-grid">
         <button class="btn" id="judge-open">Open in new tab</button>
         <button class="btn" id="judge-qr-btn">Phone QR</button>
+        <button class="btn" id="judge-key-btn">🔑 Show host key</button>
       </div>
       <img id="judge-qr" alt="Judge console QR" hidden>
+      <div id="judge-key" class="judge-key" hidden>
+        <div>Room code <b id="judge-key-code">----</b></div>
+        <div>Host key <code id="judge-key-value"></code> <button class="btn ghost" id="judge-key-copy">Copy</button></div>
+        <p class="fine">Type these into the Judge console on another device. Keep the key secret: it controls the game.</p>
+      </div>
     </section>
     <section>
       <h4>This screen</h4>
