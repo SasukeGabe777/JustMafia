@@ -284,6 +284,44 @@
   }
 
   const PROTECTOR_AV = { color: '#22252e', skin: '#d9a273', hat: 'none' };
+  // A Zombie: grey-green skin, torn rags, arms reaching forward. It limps: the good leg steps,
+  // the bad one drags, and the whole body lurches and sways (never a player's look).
+  function drawZombie(ctx, x, y, o) {
+    const t = o.t || 0, w = o.walking;
+    const cyc = t * 3.2, step = w ? Math.sin(cyc) : 0;
+    const lurch = w ? Math.max(0, Math.sin(cyc)) * 3.5 : Math.sin(t * 1.5) * 0.8; // rises on the good leg
+    const sway = w ? Math.sin(cyc) * 0.09 + 0.08 : 0.06 + Math.sin(t * 1.2) * 0.02;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale((o.scale || 1) * (o.facing < 0 ? -1 : 1), o.scale || 1);
+    ctx.globalAlpha *= o.alpha == null ? 1 : o.alpha;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(0, 0, 18, 5, 0, 0, TAU); ctx.fill();
+    ctx.translate(0, -lurch);
+    // legs: the good one strides, the bad one drags behind, stiff and twisted
+    ctx.fillStyle = '#3d3a4a';
+    ctx.save(); ctx.translate(-4, -13); ctx.rotate(step * 0.35); roundRect(ctx, -3, 0, 6, 13, 2); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(4, -13); ctx.rotate(-0.25 + Math.abs(step) * 0.08); roundRect(ctx, -3, 0, 6, 14, 2); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#6f8f4e'; ctx.fillRect(4 - 6, 0, 6, 2); // a bare foot dragging
+    ctx.rotate(sway);
+    // torn shirt
+    ctx.fillStyle = '#5a5146'; roundRect(ctx, -10, -40, 20, 28, 4); ctx.fill();
+    ctx.fillStyle = '#3f3830'; ctx.fillRect(-10, -16, 5, 4); ctx.fillRect(2, -14, 6, 3); ctx.fillRect(-4, -30, 3, 6);
+    ctx.fillStyle = '#7d2f2f'; ctx.fillRect(-2, -24, 4, 2); // a stain
+    // arms: both reaching forward, swaying
+    const reach = Math.sin(t * 2.2) * 0.12;
+    ctx.fillStyle = '#7c9a5a';
+    ctx.save(); ctx.translate(6, -36); ctx.rotate(-1.35 + reach); roundRect(ctx, -3, 0, 6, 20, 3); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(-6, -35); ctx.rotate(-1.2 - reach); roundRect(ctx, -3, 0, 6, 19, 3); ctx.fill(); ctx.restore();
+    // head: lolling to one side
+    ctx.save(); ctx.translate(1, -48); ctx.rotate(0.25 + Math.sin(t * 1.7) * 0.08);
+    ctx.fillStyle = '#86a463'; ctx.beginPath(); ctx.ellipse(0, 0, 9, 10, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#5d7a43'; ctx.fillRect(-7, -9, 5, 3); ctx.fillRect(2, -10, 4, 2); // patchy hair
+    ctx.fillStyle = '#e8f7c8'; ctx.fillRect(2, -3, 3, 3); ctx.fillRect(-4, -2, 2, 2); // one wide eye, one squint
+    ctx.fillStyle = '#2b1f1f'; ctx.fillRect(-3, 4, 7, 2); // a slack mouth
+    ctx.restore();
+    ctx.restore();
+  }
+
   function drawProtector(ctx, x, y, o) {
     ctx.save();
     ctx.translate(x, y);
@@ -1038,6 +1076,12 @@
       SFX.play('shatter');
     }
     a_despawn(a) { this.actors.delete(a.id); }
+    // Glass bursting out of a house's window on the town map (the Zombie break-in).
+    a_windowShards() {
+      const p = this.pt('window');
+      for (let i = 0; i < 22; i++) this.fx.push({ type: 'shard', x: p.x + (Math.random() - 0.5) * 14, y: p.y - 14 + (Math.random() - 0.5) * 10, vx: (Math.random() - 0.5) * 240, vy: -60 - Math.random() * 160, g: 700, size: 2.5 + Math.random() * 4, life: 1.2, max: 1.2, stage: this.stage });
+      SFX.play('shatter');
+    }
 
     // ----- execution (vote) scene: the mob, the gallows, the hanging, decay -----
     // The mob is the real living townsfolk: their town figures are held while
@@ -1319,6 +1363,7 @@
         return;
       }
       if (a.kind === 'assassin') drawAssassin(ctx, a.x, a.y, o);
+      else if (a.kind === 'zombie') drawZombie(ctx, a.x, a.y, o);
       else if (a.kind === 'protector') drawProtector(ctx, a.x, a.y, o);
       else if (a.kind === 'detective') drawDetective(ctx, a.x, a.y, o);
       else if (a.kind === 'resident') drawResident(ctx, a, t);

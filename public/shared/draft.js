@@ -62,26 +62,36 @@
     eavesdropper: { min: 7,  weight: 0.7, power: 1, kind: 'info' },
     crafter:      { min: 6,  weight: 0.8, power: 2, kind: 'info' },
     crier:        { min: 6,  weight: 0.8, power: 1 },
+    // DLC 1, part 2
+    mathematician: { min: 6, weight: 0.9, power: 2, kind: 'info' },
+    gamer:        { min: 6,  weight: 0.9, power: 2, kind: 'protect' },
+    zombie:       { min: 11, weight: 0.7, power: 3 }, // recommended for more than 10 players
+    priest:       { min: 11,  weight: 0,   power: 1, companion: true }, // never a card: it comes with the Zombie
   };
-  // Ten unlock tiers for "learn as you play": a room starts with the 9 simplest roles and
-  // unlocks the next tier (3 roles) after every game it finishes, from simple to complex.
-  // Every role in META is in exactly one tier.
+  // Twelve unlock tiers for "learn as you play": after the tutorial, every finished game
+  // unlocks the next tier (3–4 roles). The base game comes first (tiers 1–8, simple to complex),
+  // then DLC 1 (tiers 9–12). Each tier mixes Town roles with a Mafia or Neutral role, so no
+  // unlock tips the balance. Every role in META is in exactly one tier.
   // Tier 0 is the tutorial round (a room's very first game): just Mafia, Detective and Doctor.
   const TUTORIAL = ['mafia', 'detective', 'doctor'];
   const TIER = {
     0: ['detective', 'doctor'],
-    1: ['godfather', 'sheriff', 'bodyguard', 'vigilante', 'mayor', 'jester', 'executioner'],
-    2: ['medium', 'lookout', 'crier'],
-    3: ['roleblocker', 'trapper', 'veteran'],
-    4: ['framer', 'serialKiller', 'cupid'],
-    5: ['sorcerer', 'investigator', 'eavesdropper', 'crafter'],
-    6: ['silencer', 'impostor', 'telepath'],
-    7: ['hunter', 'janitor', 'ghostwriter'],
-    8: ['hustler', 'detonator', 'storymaker'],
-    9: ['puppetMaster', 'alchemist', 'paparazzi'],
-    10: ['headhunter', 'conductor', 'glitch'],
+    // Base game
+    1: ['godfather', 'sheriff', 'mayor'],
+    2: ['jester', 'bodyguard', 'vigilante'],
+    3: ['roleblocker', 'executioner', 'telepath'],
+    4: ['serialKiller', 'sorcerer', 'investigator'],
+    5: ['silencer', 'crafter', 'detonator'],
+    6: ['hunter', 'ghostwriter', 'storymaker'],
+    7: ['hustler', 'paparazzi', 'conductor'],
+    8: ['alchemist', 'puppetMaster', 'headhunter', 'glitch'],
+    // DLC 1
+    9: ['framer', 'lookout', 'medium', 'veteran'],
+    10: ['janitor', 'trapper', 'crier'],
+    11: ['impostor', 'mathematician', 'gamer', 'eavesdropper'],
+    12: ['zombie', 'priest', 'cupid'],
   };
-  const MAX_TIER = 10;
+  const MAX_TIER = 12;
   for (const [t, keys] of Object.entries(TIER)) for (const k of keys) if (META[k]) META[k].tier = Number(t);
   // Game 1: tier 0 (tutorial) · each finished game unlocks one more tier · game 11+: every role.
   const tierForGame = (gamesPlayed) => Math.min(MAX_TIER, gamesPlayed || 0);
@@ -117,7 +127,7 @@
 
   function eligible(k, n, settings) {
     const m = META[k];
-    if (!m || !ROLES[k] || n < m.min || m.tutorialOnly) return false;
+    if (!m || !ROLES[k] || n < m.min || m.tutorialOnly || m.companion) return false;
     if (m.publicVotes && settings.anonymousVotes) return false;
     // In games with a single Mafia member, only a Mafia role that can kill may replace it.
     if (teamOf(k) === 'mafia' && autoMafiaCount(n) < 2 && !killerMafia(k)) return false;
@@ -143,7 +153,7 @@
   // no minimum sizes, no team structure); the final setup is still repaired to be valid.
   function candidates(n, settings = {}, rng = Math.random, seen = {}, opts = {}) {
     if (opts.everyRole) {
-      const all = Object.keys(META).filter((k) => ROLES[k] && !META[k].tutorialOnly && !(META[k].publicVotes && settings.anonymousVotes));
+      const all = Object.keys(META).filter((k) => ROLES[k] && !META[k].tutorialOnly && !META[k].companion && !(META[k].publicVotes && settings.anonymousVotes));
       // Fully random, but always enough Town/Neutral cards for the specials, plus Mafia upgrades.
       const pool = all.slice();
       for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
@@ -211,7 +221,7 @@
     };
     const power = (keys, team) => keys.filter((k) => teamOf(k) === team).reduce((t, k) => t + META[k].power, 0);
     // Solo killers (Serial Killer, Headhunter) mostly cost the Town, so they count on the evil side.
-    const evilPower = (keys) => power(keys, 'mafia') + keys.filter((k) => ['serialKiller', 'headhunter'].includes(k)).reduce((t, k) => t + META[k].power, 0);
+    const evilPower = (keys) => power(keys, 'mafia') + keys.filter((k) => ['serialKiller', 'headhunter', 'zombie'].includes(k)).reduce((t, k) => t + META[k].power, 0);
     const balanced = (keys) => evilPower(keys) <= power(keys, 'town') + 2; // don't hand the Mafia a stacked deck
     // Greedy: walk the ranking, keep each card if the setup stays valid, until we have enough.
     let chosen = [];

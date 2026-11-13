@@ -555,6 +555,7 @@
     if (view.progression) { profile = view.progression; updatePouch(); }
     MT_STORY_UI(view, socket, $('#g-body'), { esc, paint, reply: abilityReply, votingHtml });
     if (window.MT_AFTERLIFE_UI) MT_AFTERLIFE_UI(view, socket, $('#g-body'), { esc, reply: abilityReply });
+    if (window.MT_DLC2_UI) MT_DLC2_UI(view, socket, $('#g-body'), { esc, reply: abilityReply });
     renderReactFab();
     if (focus) { const input = [...body.querySelectorAll('[data-draft]')].find((el) => el.dataset.draft === focus); if (input) { input.focus(); if (caret != null) input.setSelectionRange(caret,caret); } }
   }
@@ -828,6 +829,10 @@
       shoot: ['🎯 Shoot someone?', `${v.shotsLeft} bullet${v.shotsLeft === 1 ? '' : 's'} left. Only shoot if you're sure.`],
       dummy: ['🤔 Who do you suspect?', 'Pick whoever seems most suspicious.'],
       craft: ['🔨 Whose house will you visit?', 'Using a Pickaxe? Pick it in your workshop below. Otherwise tap anyone to blend in.'],
+      calc: ['🧮 Tonight’s proof', 'Pick your two players and solve the problem in the Mathematician card below. (Tapping here only blends in.)'],
+      game: ['🎮 Game night', 'Play your run of Night Flight in the Gamer card below, then pick a power. (Tapping here only blends in.)'],
+      bite: ['🧟 Who will the horde bite?', 'The horde bites whoever most Zombies pick. They turn when the next night ends, unless the Priest cures them.'],
+      bless: ['⛪ Who will you bless?', v.priest && v.priest.cureLeft ? 'A blessing stops a bite and cures the bitten. Your one great cure can turn a Zombie human again.' : 'A blessing stops a bite and cures the bitten. Bless a Zombie and the holy water will hiss.'],
     };
     const [title, sub] = prompts[a.dummy ? 'dummy' : a.kind] || prompts.dummy;
     const picksFor = {};

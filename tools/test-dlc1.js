@@ -23,7 +23,7 @@ const toNight = (room) => { while (room.phase !== 'night' && room.phase !== 'gam
 const noteOf = (p, re) => p.notes.find((n) => re.test(n.text));
 
 test('Ten DLC 1 roles exist with real descriptions and their own Judge pack', () => {
-  assert.equal(R.ROLE_PACKS.dlc1.roles.length, 10);
+  assert.equal(R.ROLE_PACKS.dlc1.roles.length, 14);
   for (const k of R.ROLE_PACKS.dlc1.roles) { assert(R.ROLES[k], k); assert(R.ROLE_ORDER.includes(k), k); assert(R.reference(k).ability.length > 30, k); }
   assert.deepEqual(R.ROLE_PACKS.dlc1.roles.filter((k) => R.ROLES[k].team === 'mafia').sort(), ['framer', 'impostor', 'janitor']);
 });
@@ -114,7 +114,7 @@ test('Eavesdropper hears Mafia messages without names; Town Crier proclaims once
 test('DLC 1 roles work in bot games end to end and can be drafted', () => {
   const D = require('../public/shared/draft');
   const seen = new Set(); for (let i = 0; i < 300; i++) D.candidates(12, {}, Math.random, {}).forEach((k) => seen.add(k));
-  for (const k of R.ROLE_PACKS.dlc1.roles) assert(seen.has(k), 'draftable: ' + k);
+  for (const k of R.ROLE_PACKS.dlc1.roles.filter((r) => !require('../public/shared/draft').META[r].companion)) assert(seen.has(k), 'draftable: ' + k); // the Priest rides with the Zombie
   const { simulateGame } = require('../sim');
   for (let s = 1; s <= 12; s++) {
     const r = simulateGame({ seed: s, players: 12, settings: { autoMafia: true, roleSelection: 'manual', roleCounts: { framer: 1, janitor: 1, medium: 1, lookout: 1, veteran: 1, trapper: 1, cupid: 1, eavesdropper: 1, crier: 1 } } });

@@ -244,6 +244,42 @@
       },
     },
 
+    // The Zombie horde breaks in. Secret on purpose: the zombie limps across the square, toward
+    // no house in particular; it goes dark right before the glass breaks, then the camera flashes
+    // to a RANDOM house (chosen by the server, maybe not the real one). Nobody learns who was bitten.
+    zombieBite: {
+      name: 'Zombie break-in',
+      kind: 'night',
+      needsHouse: true,
+      duration: 12.6,
+      steps: [
+        [0, 'letterbox', true],
+        [0, 'dark', 1],
+        [0, 'music', 'eerie'],
+        [0, 'fog', true],
+        [0, 'camera', { to: 'fountain', zoom: 1.7, dur: 1.4 }],
+        [0.3, 'caption', { lines: ['Something is shambling through {town}…', 'Out of the dark comes a dragging footstep. Then another.'], dur: 2.6 }],
+        [0.5, 'spawn', { id: 'zombie', kind: 'zombie', at: { from: 'fountain', dx: -620, dy: 46 }, facing: 1, fadeIn: 1.2 }],
+        [0.6, 'move', { id: 'zombie', to: { from: 'fountain', dx: -170, dy: 30 }, dur: 5.6, gait: 'limp', ease: 'linear' }],
+        [0.9, 'loop', { sfx: 'drag', every: 0.95, until: 6.2 }],
+        [1.6, 'sfx', 'groan'],
+        [2.2, 'camera', { to: { from: 'fountain', dx: -260, dy: 10 }, zoom: 2.1, dur: 4 }],
+        [3.4, 'bubble', { id: 'zombie', text: 'Uuunnhh…', dur: 1.6 }],
+        [4.6, 'sfx', 'groan'],
+        [6.3, 'fade', { to: 1, dur: 0.35 }], // dark, just before the glass goes
+        [6.7, 'despawn', { id: 'zombie' }],
+        [7.0, 'sfx', 'shatter'], [7.0, 'shake', 0.5],
+        [7.25, 'camera', { to: 'house', zoom: 2.5, dur: 0.01 }],
+        [7.3, 'fade', { to: 0, dur: 0.25 }],
+        [7.3, 'flash', { a: 0.6, color: '200,255,180' }],
+        [7.35, 'windowShards'],
+        [7.6, 'sfx', 'groan'],
+        [8.0, 'title', { text: 'A WINDOW BREAKS', sub: 'Somewhere in {town}, someone was bitten… or was it here?', color: '#a8e07a', dur: 3.6 }],
+        [8.1, 'caption', { lines: ['Was it this house? Or another? The dark keeps its secrets.'], dur: 2.8 }],
+        [11.4, 'fog', false],
+        [11.9, 'letterbox', false],
+      ],
+    },
     quietNight: {
       name: 'Quiet night',
       kind: 'night',

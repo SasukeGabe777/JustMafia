@@ -9,6 +9,7 @@
     jester: { behavior: 'classic', uses: 1, copyDuration: 'night', endsGame: false }, // balance: a Jester win no longer ends the game
     storymaker: { uses: 1 }, puppetMaster: { uses: 1 }, glitch: { uses: 1 },
     serialKiller: { immuneTo: 'everyone', cooldown: 1 } /* balance: kills every other night */, roleblocker: { noRepeat: false },
+    zombie: {}, // the horde bites from night 1 (Judge: First activation night)
     veteran: { uses: 2 }, janitor: { uses: 1 }, cupid: { uses: 1 }, // DLC 1
   };
   const FIELDS = {

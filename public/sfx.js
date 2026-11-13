@@ -114,6 +114,8 @@ window.SFX = (function () {
     boom: () => { tone(55, 1.6, { vol: 0.55, slide: 32 }); noise(1.2, { vol: 0.4, filter: 160 }); tone(110, 0.9, { type: 'triangle', vol: 0.12, slide: 70 }); },
     swell: () => { [262, 330, 392, 523, 659].forEach((f, i) => tone(f, 2.2 - i * 0.2, { type: 'triangle', vol: 0.07, at: i * 0.12 })); noise(1.5, { vol: 0.08, filter: 3000, type: 'bandpass' }); },
     stab: () => { noise(0.12, { vol: 0.35, filter: 900 }); tone(110, 0.3, { vol: 0.35, at: 0.04, slide: 50 }); },
+    groan: () => { tone(110, 1.6, { type: 'sawtooth', vol: 0.09, slide: 82 }); tone(116, 1.5, { type: 'sawtooth', vol: 0.07, at: 0.05, slide: 86 }); noise(1.4, { vol: 0.08, filter: 420, type: 'bandpass' }); }, // a zombie's moan
+    drag: () => { noise(0.35, { vol: 0.16, filter: 380 }); }, // a dragging foot
     // Phase and moment cues.
     chime: () => [659, 784, 988].forEach((f, i) => tone(f, 1.1, { type: 'sine', vol: 0.09, at: i * 0.18 })), // dawn
     gavel: () => [0, 0.32].forEach((a) => { noise(0.07, { vol: 0.8, at: a, filter: 1100, type: 'bandpass' }); tone(170, 0.12, { vol: 0.35, at: a, slide: 110 }); }), // voting opens

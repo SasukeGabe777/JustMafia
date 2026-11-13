@@ -687,6 +687,7 @@ class Room {
     } else {
       const saved = events.find((e) => e.type === 'saved' || e.type === 'guarded');
       if (saved && this.players.get(saved.targetId)) this.narrate('saved', { name: this.players.get(saved.targetId).name });
+      else if (events.some((e) => e.type === 'bite')) this.narrate('zombieBreakIn');
       else this.narrate('quiet');
     }
     const stories = this.publishPhotos();
@@ -1594,6 +1595,7 @@ require('./rules/headhunter')(Room); // wraps kill/night/views from the modules 
 require('./rules/story-bots')(Room);
 require('./rules/dlc1')(Room);
 require('./rules/crafter')(Room);
+require('./rules/dlc2')(Room); // DLC 1 part 2: Mathematician, Gamer, Zombie, Priest
 require('./rules/credits')(Room);
 require('./rules/fate')(Room); // Fate Cards: Role Wish, Team Wish, Reroll
 require('./rules/career')(Room); // career stats, rivalries, mastery, Hall of Fame

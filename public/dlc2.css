@@ -1,0 +1,20 @@
+/* DLC 1, part 2 on the phone: Mathematician, Gamer (Night Flight), the horde, the fever. */
+.card.dlc2 h3 small { font-weight: normal; opacity: 0.7; margin-left: 6px; }
+.card.dlc2.fever { border: 2px solid #8fbf4a; background: rgba(111, 154, 62, 0.15); }
+.card.dlc2.horde { border: 2px solid #6f9a3e; }
+.math-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+.math-pair select, .card.dlc2 select { width: 100%; padding: 8px; font-size: 1rem; }
+.math-q { font-size: 1.8rem; font-weight: bold; text-align: center; padding: 12px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.math-answer { display: flex; gap: 8px; }
+.math-answer input { flex: 1; min-width: 0; font-size: 1.3rem; padding: 8px; text-align: center; }
+.card.dlc2 .bad { color: #ff8a80; }
+.gamer-powers { display: grid; gap: 6px; margin: 8px 0; }
+.gamer-rewards { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.92rem; }
+.gamer-rewards th, .gamer-rewards td { text-align: left; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.12); vertical-align: top; }
+.gamer-rewards td:first-child { white-space: nowrap; font-weight: bold; }
+.gamer-rewards tr.won { background: rgba(142, 91, 214, 0.25); }
+.flight { position: fixed; inset: 0; z-index: 9999; background: #1b1440; display: flex; justify-content: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+.flight canvas { display: block; height: 100%; max-width: 520px; }
+.flight-hud { position: absolute; top: 16px; left: 0; right: 0; text-align: center; color: #fff; pointer-events: none; text-shadow: 0 2px 0 #000; }
+.flight-score { display: block; font-size: 3rem; }
+.flight-hint { font-size: 1.1rem; }
