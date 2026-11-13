@@ -114,6 +114,16 @@ window.SFX = (function () {
     boom: () => { tone(55, 1.6, { vol: 0.55, slide: 32 }); noise(1.2, { vol: 0.4, filter: 160 }); tone(110, 0.9, { type: 'triangle', vol: 0.12, slide: 70 }); },
     swell: () => { [262, 330, 392, 523, 659].forEach((f, i) => tone(f, 2.2 - i * 0.2, { type: 'triangle', vol: 0.07, at: i * 0.12 })); noise(1.5, { vol: 0.08, filter: 3000, type: 'bandpass' }); },
     stab: () => { noise(0.12, { vol: 0.35, filter: 900 }); tone(110, 0.3, { vol: 0.35, at: 0.04, slide: 50 }); },
+    // Phase and moment cues.
+    chime: () => [659, 784, 988].forEach((f, i) => tone(f, 1.1, { type: 'sine', vol: 0.09, at: i * 0.18 })), // dawn
+    gavel: () => [0, 0.32].forEach((a) => { noise(0.07, { vol: 0.8, at: a, filter: 1100, type: 'bandpass' }); tone(170, 0.12, { vol: 0.35, at: a, slide: 110 }); }), // voting opens
+    talk: () => { tone(523, 0.14, { type: 'triangle', vol: 0.12 }); tone(659, 0.2, { type: 'triangle', vol: 0.12, at: 0.12 }); }, // discussion opens
+    ballot: () => { noise(0.05, { vol: 0.35, filter: 2600, type: 'bandpass' }); tone(880, 0.06, { type: 'triangle', vol: 0.07, at: 0.03 }); }, // a vote is cast
+    shrug: () => { tone(392, 0.25, { type: 'triangle', vol: 0.12, slide: 330 }); tone(330, 0.35, { type: 'triangle', vol: 0.12, at: 0.25, slide: 262 }); }, // a tie / no one out
+    laugh: () => [0, 0.16, 0.32, 0.48, 0.64].forEach((a, i) => tone(740 - i * 40, 0.12, { type: 'square', vol: 0.06, at: a, slide: 900 - i * 40 })), // the Jester
+    cheer: () => { noise(1.6, { vol: 0.22, filter: 1600, type: 'bandpass' }); [0.1, 0.35, 0.6, 0.9].forEach((a) => noise(0.08, { vol: 0.3, at: a, filter: 3000, type: 'highpass' })); }, // a crowd and claps
+    pop: () => tone(900 + Math.random() * 300, 0.07, { type: 'sine', vol: 0.07, slide: 1500 }), // a phone reaction
+    spirit: () => { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.9, { type: 'sine', vol: 0.05, at: i * 0.07 })); noise(1.2, { vol: 0.06, filter: 4000, type: 'highpass' }); }, // a farewell: the soul rises
   };
 
   // ---- looping music beds (synthesized pads) ----

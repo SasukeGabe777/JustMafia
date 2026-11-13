@@ -268,6 +268,9 @@
     // Big moments land with the music: a deep hit on deaths and verdicts, a swell for a win.
     if (/^(kill|multiKill|eliminated|hhStrike|hhExecute|crafterStrike)/.test(n.key || '')) SFX.play('boom');
     else if (/Win$/.test(n.key || '')) SFX.play('swell');
+    else if (n.key === 'jesterLaughs') SFX.play('laugh');
+    else if (n.key === 'judgeKill') SFX.play('boom');
+    else if (n.key === 'revive') SFX.play('saved');
     speak(n.text);
   }
 

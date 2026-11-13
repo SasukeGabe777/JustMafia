@@ -231,6 +231,7 @@
         c.homeLook = p.homeLook || (p.avatar && p.avatar.houseStyle ? { style: p.avatar.houseStyle, wall: p.avatar.houseColor, decor: p.avatar.houseDecor } : null);
         if (!c.damagePending) c.houseState = p.houseState || 'normal';
         c.role = p.role;
+        if (p.hasVoted && c.hasVoted === false && st.phase === 'voting' && this.time - (this.lastBallotSfx || 0) > 0.12) { this.lastBallotSfx = this.time; SFX.play('ballot'); } // a vote is cast
         c.hasVoted = p.hasVoted;
         c.connected = p.connected;
         c.deathOrder = p.deathOrder;
@@ -274,6 +275,10 @@
       if (phase !== 'gameover') { this.winner = null; this.targetRed = 0; }
       for (const c of this.chars.values()) this.assign(c);
       if (phase === 'night' && prev !== 'dawn') SFX.play('night');
+      if (phase === 'dawn') SFX.play('chime');
+      if (phase === 'discussion') SFX.play('talk');
+      if (phase === 'voting' || phase === 'accusation') SFX.play('gavel');
+      if (phase === 'defense') SFX.play('gasp');
       if (phase === 'morning') { SFX.play('day'); this.at(0.3, () => SFX.play('rooster')); this.sunrise = this.time; }
     }
 
@@ -399,7 +404,7 @@
       this.at(0.5 + n * interval + 0.9, () => {
         const t = cine.eliminatedId && this.chars.get(cine.eliminatedId);
         if (t) { t.doomed = true; SFX.play('drum'); }
-        else this.floatText(CX, CY - 120, cine.tie ? "IT'S A TIE!" : 'NO ONE ELIMINATED', '#ffe08a');
+        else { this.floatText(CX, CY - 120, cine.tie ? "IT'S A TIE!" : 'NO ONE ELIMINATED', '#ffe08a'); SFX.play('shrug'); }
       });
     }
 
@@ -431,7 +436,9 @@
     playGameOver(cine) {
       this.winner = cine.winner;
       this.targetRed = cine.winner === 'mafia' ? 1 : 0;
-      SFX.play(cine.winner === 'town' ? 'win' : 'lose');
+      // Town and the Jester get a fanfare, a solo killer a sting, the Mafia a dark chord, a draw the wind.
+      SFX.play({ town: 'win', jester: 'laugh', serialKiller: 'sting', headhunter: 'sting', draw: 'wind' }[cine.winner] || 'lose');
+      if (cine.winner === 'jester') this.at(0.8, () => SFX.play('win'));
       const W8 = (window.MT_ROLES.WINNERS || {})[cine.winner];
       if (this.cinema && W8) {
         const good = cine.winner === 'town' || cine.winner === 'jester';
@@ -477,6 +484,7 @@
     react(id, emoji) {
       const c = this.chars.get(id); if (!c || !emoji) return;
       (this.reactions = this.reactions || []).push({ id, emoji, t0: this.time, dx: (Math.random() - 0.5) * 24 });
+      if (this.time - (this.lastPop || 0) > 0.15) { this.lastPop = this.time; SFX.play('pop'); }
       if (this.reactions.length > 40) this.reactions.shift();
     }
     drawReactions(ctx) {
@@ -512,7 +520,7 @@
         g.hauntTarget = targetId;
         g.hauntDone = false;
       } else if (kind === 'spin') {
-        g.spinUntil = this.time + 1.6;
+        g.spinUntil = this.time + 1.6; SFX.play('whoosh');
         g.bubble = { text: pickOne(['Wheee!', '~spin~', 'Woooo!']), until: this.time + 1.8 };
       } else if (kind === 'wail') {
         g.bubble = { text: 'OoooOOOooo~', until: this.time + 2.2 };

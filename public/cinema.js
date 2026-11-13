@@ -1170,7 +1170,7 @@
     farewell(x) {
       const kind = x && x.avatar && x.avatar.deathAnim;
       if (!kind || kind === 'none' || x.farewellDone || !window.MT_FAREWELL) return;
-      x.farewellDone = true;
+      x.farewellDone = true; SFX.play('spirit');
       this.props.push({ type: 'farewell', kind, x: x.x, y: x.y, t0: this.scene.t, dur: 6, scale: (x.scale || 1) / 0.756 * 0.756, stage: this.stage, avatar: x.avatar, interior: this.stage === 'interior' });
     }
     // Narrator caption (AI narrator only; a human narrator tells the story themselves).
@@ -1277,7 +1277,7 @@
     a_untitle() { this.title = null; }
     a_spot(a) { this.spot = a && a.id ? a.id : null; }
     a_fog(on) { this.fogTarget = on ? 1 : 0; }
-    a_confetti(n) { this.town.confetti(n || 120); }
+    a_confetti(n) { this.town.confetti(n || 120); SFX.play('cheer'); }
     // Town residents (used by the execution scene).
     a_execute() { if (this.ctx.owner) this.town.finishDeath(this.ctx.owner.id); }
     a_hold() { if (this.ctx.owner) this.town.hold(this.ctx.owner.id); }
