@@ -505,7 +505,19 @@
     if (a === 'lobby' && state && !['lobby', 'gameover'].includes(state.phase) && !confirmInline(b)) return;
     act(a, a === 'extend' ? { seconds: 30 } : {});
   }));
-  $('#judge-open').addEventListener('click', () => window.open('/judge', 'mafia-judge'));
+  // Open the Judge console signed in to THIS town (code and key in the link, never stale ones).
+  $('#judge-open').addEventListener('click', () => { const s = getSession(); window.open(s ? `/judge#${s.code}.${s.hostKey}` : '/judge', 'mafia-judge'); });
+  // The room code and host key, for typing into a Judge console on another device.
+  $('#judge-key-btn').addEventListener('click', (e) => {
+    const box = $('#judge-key'), s = getSession();
+    if (!box.hidden) { box.hidden = true; e.target.textContent = '🔑 Show host key'; return; }
+    if (!e.target.dataset.armed) { e.target.dataset.armed = '1'; e.target.textContent = 'Secret! Click again'; setTimeout(() => { delete e.target.dataset.armed; if (box.hidden) e.target.textContent = '🔑 Show host key'; }, 3000); return; }
+    delete e.target.dataset.armed;
+    if (!s) { toast('Create a town first.'); return; }
+    $('#judge-key-code').textContent = s.code; $('#judge-key-value').textContent = s.hostKey;
+    box.hidden = false; e.target.textContent = 'Hide host key';
+  });
+  $('#judge-key-copy').addEventListener('click', () => { const s = getSession(); if (!s) return; const txt = s.hostKey; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Host key copied.'), () => toast('Select the key and copy it.')); });
   $('#judge-qr-btn').addEventListener('click', (e) => {
     const img = $('#judge-qr');
     if (!img.hidden) { img.hidden = true; e.target.textContent = 'Phone QR'; return; }
@@ -580,7 +592,7 @@
     const managed = displayOnly();
     drawer.querySelectorAll('[data-act]').forEach((b) => { b.disabled = managed; });
     $('#btn-reclaim').hidden = !managed && !state.governance.vacant;
-    $('#btn-pause').disabled = managed; $('#judge-open').disabled = managed; $('#judge-qr-btn').disabled = managed; jb.disabled = managed;
+    $('#btn-pause').disabled = managed; $('#judge-open').disabled = managed; $('#judge-qr-btn').disabled = managed; $('#judge-key-btn').disabled = managed; if (managed) $('#judge-key').hidden = true; jb.disabled = managed;
     if (managed) $('#judge-qr').hidden = true;
     drawer.querySelector('[data-act="start"]').disabled = managed || !lobby;
     drawer.querySelector('[data-act="openVoting"]').disabled = managed || state.phase !== 'discussion';

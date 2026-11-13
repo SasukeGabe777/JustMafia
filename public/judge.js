@@ -28,21 +28,26 @@
     const h = location.hash.replace('#', '');
     if (h.includes('.player.')) { const [code, , token] = h.split('.'); return { code, token }; }
     if (h.includes('.')) { const [code, hostKey] = h.split('.'); return { code, hostKey }; }
-    return load('mt.judge') || load('mt.host');
+    return null;
   }
-  function connect(creds) {
+  // Saved sign-ins to try, newest town first: this browser's big screen, then the last Judge sign-in.
+  function saved() { const out = []; for (const k of ['mt.host', 'mt.judge']) { const c = load(k); if (c && c.code && (c.hostKey || c.token) && !out.some((x) => x.code === c.code && x.hostKey === c.hostKey)) out.push(c); } return out; }
+  function prefill(c) { if (!c) return; if (c.code && !$('#a-code').value) $('#a-code').value = c.code; if (c.hostKey && !$('#a-key').value) $('#a-key').value = c.hostKey; }
+  function connect(creds, fallbacks = []) {
+    if (!creds) { $('#app').hidden = true; $('#auth').hidden = false; return; }
     socket.emit('judge:attach', creds, (r) => {
       if (r && r.ok) {
         save('mt.judge', creds);
         if (location.hash) history.replaceState(null, '', location.pathname); // don't leave the key in the address bar
         $('#auth').hidden = true; $('#app').hidden = false;
       } else {
-        $('#app').hidden = true; $('#auth').hidden = false;
-        $('#a-err').textContent = creds ? 'That room is gone or the key is wrong. Create a town on the big screen first.' : '';
+        if (fallbacks.length) return connect(fallbacks[0], fallbacks.slice(1)); // an old saved town: try the next one
+        $('#app').hidden = true; $('#auth').hidden = false; prefill(creds);
+        $('#a-err').textContent = 'That room is gone or the key is wrong. On the big screen open ⚙ Host controls → Judge console → 🔑 Show host key, or use Open in new tab there.';
       }
     });
   }
-  socket.on('connect', () => connect(credentials() || load('mt.judge')));
+  socket.on('connect', () => { const h = credentials(), s = saved(); connect(h || s[0], h ? s : s.slice(1)); });
   socket.on('judge:revoked', () => { st = null; $('#app').hidden = true; $('#auth').hidden = false; $('#a-err').textContent = 'Judge access was revoked. Return to your phone Settings.'; });
   $('#a-go').addEventListener('click', () => connect({ code: $('#a-code').value.trim().toUpperCase(), hostKey: $('#a-key').value.trim() }));
 

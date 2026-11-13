@@ -117,6 +117,9 @@ canvas#town { position: fixed; inset: 0; display: block; }
 #player-list button { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 2px 8px; cursor: pointer; font: 500 12px var(--font); }
 #player-list button:hover { color: #fff; border-color: var(--danger); }
 
+.judge-key { margin-top: 10px; padding: 10px; border-radius: 10px; background: rgba(0,0,0,0.25); display: grid; gap: 6px; }
+.judge-key code { font-size: 1.15em; letter-spacing: 1px; user-select: all; word-break: break-all; }
+.judge-key b { font-size: 1.2em; letter-spacing: 3px; }
 #judge-qr { width: 100%; max-width: 240px; background: #fff; border-radius: 12px; padding: 8px; display: block; margin: 10px auto 0; }
 #lobby-error { color: #ffb4b4; font-size: 14px; margin: -6px 0 10px; }
 
