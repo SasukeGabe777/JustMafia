@@ -99,6 +99,9 @@ canvas#town { position: fixed; inset: 0; display: block; }
 .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 #drawer label { display: block; font-size: 14px; margin: 8px 0; color: var(--ink); }
 #drawer label.check { display: flex; gap: 8px; align-items: center; }
+#drawer label.vol { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; margin: 6px 0; }
+#drawer label.vol input[type=range] { grid-column: 1 / -1; width: 100%; }
+#drawer label.vol output { font-size: 12px; opacity: .8; grid-row: 1; grid-column: 2; }
 #drawer input:not([type=checkbox]), #drawer select {
   width: 100%; margin-top: 4px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
   background: #24243c; color: var(--ink); font: 500 15px var(--font);

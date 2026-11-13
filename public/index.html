@@ -145,6 +145,13 @@
       <h4>This screen</h4>
       <label class="check"><input type="checkbox" id="pref-voice"> Read narration aloud</label>
       <label class="check"><input type="checkbox" id="pref-sfx"> Sound effects</label>
+      <label class="check"><input type="checkbox" id="pref-music"> Music</label>
+      <label class="vol">🗣 Narrator volume <input type="range" id="vol-voice" min="0" max="100" step="5"><output id="vol-voice-out"></output></label>
+      <label class="vol">🎵 Music volume <input type="range" id="vol-music" min="0" max="100" step="5"><output id="vol-music-out"></output></label>
+      <label class="vol">🔔 Sound effects volume <input type="range" id="vol-sfx" min="0" max="100" step="5"><output id="vol-sfx-out"></output></label>
+      <label>Narrator voice <select id="pref-voice-name"><option value="">Automatic (best available)</option></select></label>
+      <button class="btn" id="voice-test" type="button">🔊 Test the voice</button>
+      <p class="fine" id="voice-tip"></p>
       <label>Join link base <input id="join-base" placeholder="http://192.168.x.x:3000"></label>
     </section>
     <section>
@@ -165,6 +172,7 @@
   <script src="/farewell-art.js"></script>
   <script src="/world-art.js"></script>
   <script src="/sfx.js"></script>
+  <script src="/music.js"></script>
   <script src="/shared/layout.js"></script>
   <script src="/theme-world.js"></script>
   <script src="/pixel.js"></script>

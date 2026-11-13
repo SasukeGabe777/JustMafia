@@ -34,12 +34,24 @@
 
   // ---------- prefs & session ----------
   const prefs = (() => {
-    try { return Object.assign({ voice: true, sfx: true }, JSON.parse(localStorage.getItem('mt.hostPrefs') || '{}')); } catch { return { voice: true, sfx: true }; }
+    try { return Object.assign({ voice: true, sfx: true, music: true, voiceName: '', volVoice: 100, volMusic: 80, volSfx: 100 }, JSON.parse(localStorage.getItem('mt.hostPrefs') || '{}')); } catch { return { voice: true, sfx: true, music: true, voiceName: '', volVoice: 100, volMusic: 80, volSfx: 100 }; }
   })();
   const savePrefs = () => { try { localStorage.setItem('mt.hostPrefs', JSON.stringify(prefs)); } catch { /* ignore */ } };
   const getSession = () => { try { return JSON.parse(localStorage.getItem('mt.host') || 'null'); } catch { return null; } };
   const setSession = (s) => { try { localStorage.setItem('mt.host', JSON.stringify(s)); } catch { /* ignore */ } };
-  SFX.enabled = prefs.sfx;
+  SFX.enabled = prefs.sfx; SFX.musicOn = prefs.music; SFX.setVolume(prefs.volSfx / 100); SFX.setMusicVolume(prefs.volMusic / 100);
+  // The soundtrack follows the game: each phase has a mood, played in the current world's song.
+  // A cinematic scene (or the Judge's music choice) takes over while it runs.
+  let state0Theme = null;
+  // Peaceful days, suspicious (still upbeat) nights, a tense song for votes, a march at the gallows.
+  const PHASE_MOOD = { lobby: 'lobby', draft: 'lobby', roleReveal: 'reveal', night: 'night', dawn: 'dawn', morning: 'day', discussion: 'day', accusation: 'vote', defense: 'vote', voting: 'vote', verdict: 'vote', execution: 'trial', gameover: 'triumph' };
+  window.MT_PHASE_MOOD = () => (state ? PHASE_MOOD[state.phase] || 'day' : null);
+  function phaseMusic(force) {
+    if (!state) return;
+    if (!force && town && town.cinema && (town.cinema.scene || town.cinema.judgeMood)) return;
+    SFX.music(window.MT_PHASE_MOOD(), 110, state.theme);
+  }
+  window.addEventListener('pointerdown', () => setTimeout(() => phaseMusic(), 50)); // browsers start audio only after a tap or click
 
   fetch('/api/info').then((r) => r.json()).then((info) => { baseUrl = info.baseUrl; renderLobby(); }).catch(() => {});
 
@@ -55,7 +67,8 @@
     if (document.documentElement.dataset.theme !== st.theme) document.documentElement.dataset.theme = st.theme || ''; // themed menus (CSS)
     const phaseChanged = !state || state.phase !== st.phase;
     state = st;
-    if (st.narratorMode === 'human') { speakToken++; if (window.speechSynthesis) speechSynthesis.cancel(); }
+    if (st.narratorMode === 'human' && speaking) stopSpeaking();
+    if (phaseChanged || !state0Theme || state0Theme !== st.theme) { state0Theme = st.theme; phaseMusic(); }
     const g = st.governance;
     $('#judge-announcement').hidden = !(g && g.announcement);
     $('#judge-announcement').textContent = g && g.announcement || '';
@@ -206,7 +219,7 @@
   });
   socket.on('host:music', (m) => { if (town.cinema) town.cinema.judgeMood = m.mood; SFX.music(m.mood, town.cinema ? town.cinema.kit().root : 110, town.themeId); });
   socket.on('host:stop', () => { if (town.cinema) town.cinema.stop(); town.focusSpot('overview', 1.2); });
-  socket.on('host:narration', (m) => { if (m.skip) { speakToken++; if (window.speechSynthesis) speechSynthesis.cancel(); $('#narration').hidden = true; } });
+  socket.on('host:narration', (m) => { if (m.skip) { stopSpeaking(); $('#narration').hidden = true; } });
 
   function showTitle() {
     $('#title').hidden = false;
@@ -258,58 +271,82 @@
     speak(n.text);
   }
 
-  // Each world has its own narrator: a preferred voice (by name/accent, falling back to any
-  // English voice), a pitch and a pace. The classic look keeps the original narrator.
+  // ---------- the narrator's voice ----------
+  // Browsers ship very different voices. The "Natural"/"Online"/"Neural" ones (Microsoft Edge
+  // has many, free) sound human; old desktop voices sound robotic. We pick the most natural
+  // English voice, matching each world's accent where we can, and keep pitch and speed close
+  // to normal (bending them is what makes a voice sound robotic). The Host controls panel
+  // lets you pick a voice by hand.
   const VOICES = {
-    classic: { prefer: [/en-GB/i, /male|daniel|george|ryan/i], rate: 0.92, pitch: 0.85 },
-    noir: { prefer: [/en-US/i, /male|guy|david|mark|christopher/i], rate: 0.84, pitch: 0.7 },
-    tabletop: { prefer: [/en-GB/i, /male|george|ryan|thomas/i], rate: 0.95, pitch: 0.95 },
-    space: { prefer: [/en-US/i, /zira|aria|female|jenny/i], rate: 1.02, pitch: 1.15 },
-    fantasy: { prefer: [/en-GB/i, /female|libby|sonia|hazel/i], rate: 0.9, pitch: 1.1 },
-    dragons: { prefer: [/en-GB/i, /male|ryan|george/i], rate: 0.86, pitch: 0.65 },
-    dungeon: { prefer: [/en/i, /male/i], rate: 0.82, pitch: 0.6 },
-    spies: { prefer: [/en-GB/i, /male|daniel|ryan/i], rate: 0.98, pitch: 0.9 },
-    fbi: { prefer: [/en-US/i, /male|guy|david/i], rate: 1.0, pitch: 0.9 },
-    snow: { prefer: [/en/i, /female|aria|libby|sonia/i], rate: 0.88, pitch: 1.05 },
-    blocky: { prefer: [/en-US/i, /.*/], rate: 1.05, pitch: 1.3 },
-    realistic: { prefer: [/en-US/i, /natural|neural|online/i], rate: 0.94, pitch: 1.0 },
+    classic: { accent: /en-GB/i, like: /ryan|thomas|george|daniel|male/i, rate: 0.97 },
+    noir: { accent: /en-US/i, like: /guy|davis|christopher|eric|male/i, rate: 0.93 },
+    tabletop: { accent: /en-GB/i, like: /ryan|thomas|george|male/i, rate: 0.98 },
+    space: { accent: /en-US/i, like: /aria|jenny|ava|female/i, rate: 1.02 },
+    fantasy: { accent: /en-GB/i, like: /sonia|libby|maisie|female/i, rate: 0.96 },
+    dragons: { accent: /en-GB/i, like: /ryan|thomas|male/i, rate: 0.94 },
+    dungeon: { accent: /en-GB/i, like: /thomas|ryan|male/i, rate: 0.94 },
+    spies: { accent: /en-GB/i, like: /ryan|thomas|male/i, rate: 1.0 },
+    fbi: { accent: /en-US/i, like: /guy|andrew|christopher|male/i, rate: 1.0 },
+    snow: { accent: /en-(GB|IE|AU)/i, like: /libby|sonia|emily|female/i, rate: 0.97 },
+    blocky: { accent: /en-US/i, like: /ana|jenny|aria/i, rate: 1.04 },
+    realistic: { accent: /en-US/i, like: /andrew|brian|ava|emma|jenny|aria/i, rate: 0.98 },
   };
-  const voiceCache = {};
+  const natural = (v) => /natural|neural|online/i.test(v.name);
+  const robotic = (v) => /^Microsoft (David|Zira|Mark|Hazel|George|Susan)( Desktop)?\b/i.test(v.name) && !natural(v);
+  function allVoices() { return window.speechSynthesis ? speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang)) : []; }
   function voiceFor(theme) {
-    const key = VOICES[theme] ? theme : 'classic';
-    if (voiceCache[key] !== undefined) return { v: voiceCache[key], p: VOICES[key] };
-    const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [], [lang, name] = VOICES[key].prefer;
-    const v = vs.find((x) => lang.test(x.lang) && name.test(x.name) && /natural|neural|online|google/i.test(x.name))
-      || vs.find((x) => lang.test(x.lang) && name.test(x.name)) || vs.find((x) => /^en/i.test(x.lang)) || null;
-    if (vs.length) voiceCache[key] = v;
-    return { v, p: VOICES[key] };
+    const p = VOICES[theme] || VOICES.classic, vs = allVoices();
+    const chosen = prefs.voiceName && vs.find((v) => v.name === prefs.voiceName);
+    if (chosen) return { v: chosen, rate: 1 };
+    const score = (v) => (natural(v) ? 100 : 0) + (/google/i.test(v.name) ? 40 : 0) - (robotic(v) ? 30 : 0) + (p.accent.test(v.lang) ? 12 : 0) + (p.like.test(v.name) ? 8 : 0) + (v.localService ? 0 : 2);
+    const v = vs.slice().sort((a, b) => score(b) - score(a))[0] || null;
+    return { v, rate: p.rate };
   }
-  if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => { for (const k of Object.keys(voiceCache)) delete voiceCache[k]; };
+  function fillVoices() {
+    const sel = $('#pref-voice-name'); if (!sel) return;
+    const vs = allVoices().sort((a, b) => (natural(b) - natural(a)) || a.name.localeCompare(b.name));
+    sel.innerHTML = '<option value="">Automatic (best available)</option>' + vs.map((v) => `<option value="${v.name.replace(/"/g, '&quot;')}">${natural(v) ? '★ ' : ''}${v.name.replace(/</g, '&lt;')}</option>`).join('');
+    sel.value = vs.some((v) => v.name === prefs.voiceName) ? prefs.voiceName : '';
+    $('#voice-tip').textContent = vs.some((v) => natural(v) || /google/i.test(v.name)) ? '★ = natural-sounding voice. Microsoft Edge has the most natural ones.'
+      : 'This browser only has robotic voices. For a natural narrator, open the game in Microsoft Edge (free “Natural” voices), or Chrome for its Google voices.';
+  }
+  if (window.speechSynthesis) speechSynthesis.onvoiceschanged = fillVoices;
+  setTimeout(fillVoices, 300);
 
-  // Spoken sentence by sentence, with a dramatic pause between them.
-  let speakToken = 0;
-  // Scene captions (the narrator's story beats) are read aloud too, when the voice is on.
+  // Lines are queued and read in full: a new line waits for the current one instead of
+  // cutting it off. Long sentences are split (some browsers stop after ~15 seconds), and a
+  // watchdog moves on if the browser never reports that it finished.
+  let speakToken = 0, speakQueue = [], speaking = false;
   window.addEventListener('mt-caption', (e) => speak(e.detail));
+  function stopSpeaking() { speakToken++; speakQueue = []; speaking = false; if (window.speechSynthesis) speechSynthesis.cancel(); SFX.duck(false); }
   function speak(text) {
     if (state && state.narratorMode === 'human') return;
-    if (!prefs.voice || !window.speechSynthesis) return;
-    speechSynthesis.cancel();
-    const token = ++speakToken;
-    const style = state && state.settings.narratorStyle, { v: voice, p: vp } = voiceFor(state && state.theme);
-    const parts = String(text).match(/[^.!?…]+[.!?…]*\s*/g) || [text];
-    SFX.duck(true); // the music steps back while the narrator speaks
-    const next = (i) => {
+    if (!prefs.voice || !window.speechSynthesis || !text) return;
+    const parts = (String(text).replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, '').match(/[^.!?…]+[.!?…]*["”’)]*\s*/g) || [String(text)])
+      .flatMap((s) => s.length > 180 ? s.split(/(?<=[,;:])\s+/) : [s]).map((s) => s.trim()).filter(Boolean);
+    if (!parts.length) return;
+    speakQueue.push(parts);
+    while (speakQueue.length > 3) speakQueue.shift(); // far behind: skip the oldest lines, never the current one
+    if (!speaking) nextLine();
+  }
+  function nextLine() {
+    const parts = speakQueue.shift();
+    if (!parts) { speaking = false; SFX.duck(false); return; }
+    speaking = true; SFX.duck(true);
+    const token = speakToken, style = state && state.settings.narratorStyle, { v: voice, rate } = voiceFor(state && state.theme);
+    const say = (i) => {
       if (token !== speakToken) return;
-      if (i >= parts.length) { SFX.duck(false); return; }
-      const u = new SpeechSynthesisUtterance(parts[i].trim());
-      if (voice) u.voice = voice;
-      u.rate = vp.rate * (style === 'comedy' ? 1.1 : 1);
-      u.pitch = vp.pitch;
-      u.onend = () => setTimeout(() => next(i + 1), /[.…]$/.test(parts[i].trim()) ? 650 : 350);
-      u.onerror = () => SFX.duck(false);
+      if (i >= parts.length) { setTimeout(() => { if (token === speakToken) nextLine(); }, 450); return; }
+      const u = new SpeechSynthesisUtterance(parts[i]);
+      if (voice) { u.voice = voice; u.lang = voice.lang; }
+      u.rate = rate * (style === 'comedy' ? 1.06 : 1); u.pitch = 1; u.volume = Math.max(0, Math.min(1, (prefs.volVoice == null ? 100 : prefs.volVoice) / 100));
+      let done = false;
+      const go = () => { if (done) return; done = true; clearTimeout(guard); setTimeout(() => say(i + 1), /[.…!?]["”’)]*$/.test(parts[i]) ? 380 : 180); };
+      const guard = setTimeout(go, 2500 + parts[i].length * 95 / u.rate);
+      u.onend = go; u.onerror = go;
       speechSynthesis.speak(u);
     };
-    next(0);
+    say(0);
   }
 
   // ---------- HUD ----------
@@ -486,7 +523,19 @@
 
   $('#pref-voice').checked = prefs.voice;
   $('#pref-sfx').checked = prefs.sfx;
-  $('#pref-voice').addEventListener('change', (e) => { prefs.voice = e.target.checked; savePrefs(); if (!prefs.voice && window.speechSynthesis) speechSynthesis.cancel(); });
+  $('#pref-voice').addEventListener('change', (e) => { prefs.voice = e.target.checked; savePrefs(); if (!prefs.voice) stopSpeaking(); });
+  $('#pref-music').checked = prefs.music;
+  // Volume sliders (saved on this screen).
+  for (const [id, key, apply] of [['vol-voice', 'volVoice', () => {}], ['vol-music', 'volMusic', (v) => SFX.setMusicVolume(v / 100)], ['vol-sfx', 'volSfx', (v) => SFX.setVolume(v / 100)]]) {
+    const el = $('#' + id), outEl = $('#' + id + '-out');
+    el.value = prefs[key]; outEl.textContent = prefs[key] + '%';
+    el.addEventListener('input', () => { prefs[key] = Number(el.value); outEl.textContent = el.value + '%'; apply(prefs[key]); savePrefs(); });
+  }
+  $('#vol-voice').addEventListener('change', () => { stopSpeaking(); speak('This is how loud I will be.'); });
+  $('#vol-sfx').addEventListener('change', () => SFX.play('vote'));
+  $('#pref-music').addEventListener('change', (e) => { prefs.music = e.target.checked; savePrefs(); SFX.musicOn = prefs.music; if (prefs.music) { SFX.unlock(); phaseMusic(true); } });
+  $('#pref-voice-name').addEventListener('change', (e) => { prefs.voiceName = e.target.value; savePrefs(); });
+  $('#voice-test').addEventListener('click', () => { SFX.unlock(); stopSpeaking(); const was = prefs.voice; prefs.voice = true; speak(`Welcome to ${(state && state.settings && state.settings.townName) || 'Mafia Town'}. Night is falling. Trust no one.`); prefs.voice = was; });
   $('#pref-sfx').addEventListener('change', (e) => { prefs.sfx = e.target.checked; SFX.enabled = prefs.sfx; savePrefs(); });
   $('#join-base').addEventListener('change', (e) => act('joinBase', { url: e.target.value }));
 

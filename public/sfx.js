@@ -2,7 +2,7 @@
 window.SFX = (function () {
   let ctx = null;
   let master = null;
-  let enabled = true;
+  let enabled = true, sfxLevel = 1, musicOut = null;
 
   function ensure() {
     if (!ctx) {
@@ -10,8 +10,9 @@ window.SFX = (function () {
       if (!AC) return null;
       ctx = new AC();
       master = ctx.createGain();
-      master.gain.value = 0.55;
+      master.gain.value = 0.55 * sfxLevel;
       master.connect(ctx.destination);
+      musicOut = ctx.createGain(); musicOut.gain.value = 0.55; musicOut.connect(ctx.destination); // the soundtrack has its own volume
     }
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
@@ -169,14 +170,28 @@ window.SFX = (function () {
     bed = { mood, root, theme, gain, nodes, vol: m.vol };
   }
 
+  // The soundtrack lives in music.js (one song per world); the old pads are the fallback.
+  let musicOn = true;
+  const M = () => window.MT_MUSIC;
   return {
     play(name) { try { if (sounds[name]) sounds[name](); } catch (e) { /* ignore */ } },
     unlock: ensure,
-    music(mood, root, theme) { try { if (mood) music(mood, root, theme); else stopBed(); } catch (e) { /* ignore */ } },
+    music(mood, root, theme) {
+      try {
+        if (!M()) { if (mood) music(mood, root, theme); else stopBed(); return; }
+        if (!mood || !enabled || !musicOn) { M().stop(); return; }
+        const c = ensure(); if (c) M().play(mood, theme, { ctx: c, master: musicOut });
+      } catch (e) { /* ignore */ }
+    },
     // Duck the music under the narrator's voice (and bring it back after).
-    duck(on) { try { if (!bed || !ctx) return; const g = bed.gain.gain, t = ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(on ? bed.vol * 0.3 : bed.vol, t + (on ? 0.25 : 0.8)); } catch (e) { /* ignore */ } },
-    get mood() { return bed ? bed.mood : null; },
+    duck(on) { try { if (M()) { M().duck(on); return; } if (!bed || !ctx) return; const g = bed.gain.gain, t = ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(on ? bed.vol * 0.3 : bed.vol, t + (on ? 0.25 : 0.8)); } catch (e) { /* ignore */ } },
+    get mood() { return M() ? M().mood : bed ? bed.mood : null; },
     get enabled() { return enabled; },
-    set enabled(v) { enabled = !!v; if (!enabled) stopBed(0.2); },
+    set enabled(v) { enabled = !!v; if (!enabled) { stopBed(0.2); if (M()) M().stop(0.2); } },
+    // Volumes, 0 to 1: sound effects here, the soundtrack in music.js.
+    setVolume(v) { sfxLevel = Math.max(0, Math.min(1, v)); if (master) master.gain.value = 0.55 * sfxLevel; },
+    setMusicVolume(v) { if (M()) M().volume(Math.max(0, Math.min(1, v))); },
+    get musicOn() { return musicOn; },
+    set musicOn(v) { musicOn = !!v; if (!musicOn && M()) M().stop(0.3); },
   };
 })();

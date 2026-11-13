@@ -394,3 +394,9 @@ Dying no longer means sitting out. A ghost's phone offers (none of it can leak s
 ## Economy
 
 `public/shared/cosmetics.js` has two dials in `ECONOMY`: every gold reward (games, challenges, season tiers, achievements) is paid at `goldRate` (now 0.5, half the base values written in the file) and every gold price (items, the season pass, Fate Token trades) is charged at `priceRate` (now 1.3, 30% above base, rounded to 5).
+
+## Soundtrack and narrator
+
+- **Music** (`public/music.js`): original chiptune, synthesized live (no audio files). Every world has its own theme song, key and instruments (a tavern jig for Tabletop, swing jazz for Noir, sleigh bells for Snow, big drums for Dragons...). Each moment of the game has its own piece played in that world's sound: an upbeat lobby, peaceful days, a mysterious role reveal, a gentle dawn, sneaky-but-upbeat nights, a tense voting song, a march at the gallows, a heartbeat for murder scenes and a victory fanfare. With the TV narrating, the music follows the game automatically; a Judge's music choice overrides it.
+- **Narrator**: picks the most natural voice the browser has (Microsoft Edge's free "Natural" voices sound the most human; Chrome's Google voices are next) and reads every line in full, queued instead of cut off. Pick a voice by hand and test it in ⚙ Host controls.
+- **Volume**: ⚙ Host controls has separate sliders for the narrator, the music and sound effects (saved on that screen).

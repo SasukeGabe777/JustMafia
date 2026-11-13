@@ -687,7 +687,7 @@
       }
       if (this.scene.id === 'explosion' && this.ctx.owner) { const p = (town.state.players || []).find((p) => p.id === this.ctx.owner.id); this.ctx.owner.houseState = p && p.houseState || 'normal'; }
       town.releaseAll();
-      SFX.music(this.judgeMood, this.kit().root, this.town.themeId);
+      SFX.music(this.judgeMood || (window.MT_PHASE_MOOD ? window.MT_PHASE_MOOD() : null), this.kit().root, this.town.themeId); // back to the phase's soundtrack
       this.scene = null;
       if (!keepQueue && this.queue.length) this.begin(this.queue.shift());
       else if (this.onChange) this.onChange(false);
