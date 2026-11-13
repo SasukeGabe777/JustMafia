@@ -38,7 +38,7 @@ const stages = {
     for (const p of c.alive) {
       const kind = c.kind(p);
       if (r.hasStatus(p, 'protected')) c.healed.add(p.id);
-      if (c.acts[p.id] && ['heal', 'guard'].includes(kind)) last[p.id] = c.acts[p.id];
+      if (c.acts[p.id] && c.acts[p.id] !== 'pass' && ['heal', 'guard', 'block'].includes(kind)) last[p.id] = c.acts[p.id];
       if (!c.effective(p)) continue;
       if (kind === 'heal') c.healed.add(c.acts[p.id]);
       if (kind === 'guard' && !c.guards.has(c.acts[p.id])) c.guards.set(c.acts[p.id], p.id);
@@ -96,7 +96,7 @@ const stages = {
       } else if (c.healed.has(p.id)) { r.stats.saves++; c.events.push({ type: 'saved', targetId: p.id }); outcome = 'protected';
         for (const doctor of c.alive.filter((x) => c.kind(x) === 'heal' && c.effective(x) && c.acts[x.id] === p.id)) { const key = r.day + ':' + p.id; if (!doctor.savedTargets.includes(key)) { doctor.savedTargets.push(key); doctor.metrics.saves++; } }
       }
-      else if (r.role(p).nightImmune) { r.stats.immune++; c.events.push({ type: 'saved', targetId: p.id, immune: true }); outcome = 'immune'; }
+      else if (r.role(p).nightImmune && (attack.by === 'mafia' || r.ruleConfig(p).immuneTo !== 'mafia')) { r.stats.immune++; c.events.push({ type: 'saved', targetId: p.id, immune: true }); outcome = 'immune'; }
       else { c.deaths.set(p.id, attack.by); c.events.push({ type: 'kill', targetId: p.id }); outcome = 'killed'; }
       r.audit('attack.resolved', { ...attack, outcome });
       r.addLog(`${p.name}: ${outcome} (${attack.by}).`, true);
