@@ -13,7 +13,7 @@ const test = (name, fn) => { fn(); passed++; console.log(`  ✓ ${name}`); };
 function game() {
   const clock = new VirtualClock(); clock.advance = (ms) => { const end = clock.t + ms; while ([...clock.queue.values()].some((e) => e.at <= end)) clock.step(); clock.t = Math.max(clock.t, end); };
   const profiles = new ProfileStore(), room = new Room('GHO', null, { clock, seed: 7, profiles });
-  room.updateSettings({ minPlayers: 3, roleSelection: 'manual', autoMafia: true, roleCounts: { medium: 1, doctor: 1 }, botsAuto: false, skipCinematics: true, discussionSeconds: 60, votingSeconds: 60 });
+  room.updateSettings({ minPlayers: 3, roleSelection: 'manual', autoMafia: false, roleCounts: { mafia: 2, medium: 1, doctor: 1 }, botsAuto: false, skipCinematics: true, discussionSeconds: 60, votingSeconds: 60 });
   const P = {};
   for (const name of ['Ana', 'Ben', 'Cy', 'Di', 'Eve', 'Fay', 'Gus', 'Hal']) { const auth = profiles.create(); const p = room.join({ name }).player; p.profileId = auth.id; p.sockets = 1; P[name] = p; profiles.grant(auth.id, 200); }
   assert(room.hostAction({ type: 'start' }).ok);

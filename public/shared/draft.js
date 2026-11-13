@@ -204,13 +204,15 @@
     };
     const valid = (keys) => {
       const s = setupOf(keys);
-      if (s.errors.length) return false;
+      if (s.errors.length || !keys.every((k) => s.roles.includes(k))) return false; // every drafted card must make it in
       const mafia = s.roles.filter((r) => teamOf(r) === 'mafia').length;
       if (mafia < 1 || mafia > autoMafiaCount(n)) return false; // always ≥1 Mafia; never a bigger family than normal
       return s.roles.filter((r) => teamOf(r) === 'neutral').length <= Math.max(1, SCALE.neutrals(n));
     };
     const power = (keys, team) => keys.filter((k) => teamOf(k) === team).reduce((t, k) => t + META[k].power, 0);
-    const balanced = (keys) => power(keys, 'mafia') <= power(keys, 'town') + 2; // don't hand the Mafia a stacked deck
+    // Solo killers (Serial Killer, Headhunter) mostly cost the Town, so they count on the evil side.
+    const evilPower = (keys) => power(keys, 'mafia') + keys.filter((k) => ['serialKiller', 'headhunter'].includes(k)).reduce((t, k) => t + META[k].power, 0);
+    const balanced = (keys) => evilPower(keys) <= power(keys, 'town') + 2; // don't hand the Mafia a stacked deck
     // Greedy: walk the ranking, keep each card if the setup stays valid, until we have enough.
     let chosen = [];
     const dropped = [];

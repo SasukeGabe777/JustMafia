@@ -40,6 +40,7 @@ const LINES = {
     mafiaWin: ['The Mafia now control {town}. The streets belong to them.'],
     multiKill: ['A bloody night in {town}. {name} were all found dead.{role} Only {alive} remain.', 'Dawn reveals {count} bodies. {name} are gone.{role} {alive} remain.'],
     jesterWin: ['The town has made a terrible mistake. {name} was the Jester, and that is exactly what they wanted. The Jester wins!'],
+    jesterLaughs: ['The town has made a terrible mistake. {name} was the Jester, and that is exactly what they wanted! The Jester wins... but the game goes on.'],
     skWin: ['When the dust settles, only the Serial Killer is left standing in {town}.'],
     draw: ['Nobody is left to claim {town}. It is a draw.'],
     judgeKill: ['By order of the Judge, {name} is removed from {town}.{role}'],

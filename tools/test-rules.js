@@ -182,8 +182,17 @@ test('Dead players and non-players cannot vote', () => {
   toMorning(room); toVoting(room);
   ok(!room.vote(p[1], p[2].id), 'ghost vote rejected');
 });
-test('Jester wins when voted out', () => {
+test('Jester voted out: wins, and by default the game goes on', () => {
   const { room, p } = game(['mafia', 'jester', 'villager', 'villager', 'villager', 'villager']);
+  toMorning(room); toVoting(room);
+  voteAll(room, p, { 0: 1, 2: 1, 3: 1 });
+  room.advance(); room.advance(); room.advance();
+  ok(room.phase !== 'gameover' && !room.winner, 'play continues');
+  ok(p[1].jesterWon && !p[1].alive);
+  room.winner = 'mafia'; ok(room.didWin(p[1]) && room.didWin(p[0]) && !room.didWin(p[2]), 'the Jester shares any final result');
+});
+test('Jester wins when voted out (option: ends the game)', () => {
+  const { room, p } = game(['mafia', 'jester', 'villager', 'villager', 'villager', 'villager'], { roleConfig: { jester: { mode: 'custom', endsGame: true } } });
   toMorning(room); toVoting(room);
   voteAll(room, p, { 0: 1, 2: 1, 3: 1 });
   room.advance(); room.advance(); room.advance();

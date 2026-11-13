@@ -853,10 +853,30 @@ All of these hook into the role registry, bots, simulations, the Judge console a
 - A render smoke test over every scene × outcome × theme.
 - Simulations for the new roles: vote manipulation, Investigator clue value, Conductor objective difficulty, Ghostwriter and Paparazzi information strength.
 
-## Balance notes from the first simulation runs
+## Balance pass (November 13, 2026)
 
-These come from 300 games per preset with the built-in bots, so they're only a guide.
+About 40,000 headless games, run in parallel. Bots alone vote almost at random (they catch a
+Mafia member about 25% of the time), so the simulator now models sharp real players:
+`room.simReads` (simulations only, never set in live games) gives each Town bot a noisy gut read
+every day that leans slightly toward the real killers. At reads 20, Town votes out a killer about
+40–50% of the time. The defaults below are tuned for that; check with
+`npm run balance -- 400 all 8 12 16` (add `--reads=0` for the old bot-only numbers).
 
-- **Classic at 7 players:** about 85% Mafia wins. Two Mafia out of seven is harsh. Consider 1 Mafia below 8 players, or adding a Doctor.
-- **Chaos:** the Serial Killer wins about 30–40% of games. Night immunity plus a kill every night is strong. Options: let the Vigilante bypass immunity, or require 12+ players.
-- **Big Party at 60–100 players:** the town wins about 90% of games. Two Detectives plus a Sheriff find the Mafia too fast. Options: drop to one investigator, or raise the automatic Mafia ratio for big games.
+- **Mafia family size** (autoMafiaCount): 1 up to 8 players, 2 up to 12, 3 up to 15, 4 up to 18,
+  5 up to 22, then about 3 in 10 (30 players: 9). Support roles that don't fit (e.g. Godfather plus
+  Roleblocker at 7) are left out with a warning.
+- **Jester:** being voted out still wins, but the game now goes on and the Jester shares the final
+  result (it was ending 15–28% of drafted games). Role option `endsGame` restores the old rule.
+- **Serial Killer:** kills every other night (role option `cooldown`); new option `immuneTo: mafia`.
+- **Puppet Master:** one forced ballot per game (was two).
+- **Draft:** Serial Killer and Headhunter count on the evil side when the draft checks balance.
+- **Presets:** Chaos (10+) swaps the Telepaths for a Sheriff; Storyteller adds a Framer; Cinematic
+  Chaos drops the Doctor; Big party has one Detective (was two).
+
+Results at reads 20: drafted games with every role, Town 49.7% / Mafia 45.4% / solo killers 5%.
+Classic 53–59% Town at 7–14 players, Town vs Family 48% at 7, Storyteller 47–55% at 16–20,
+Cinematic Chaos 44–50% at 16–20, Big party 44–48% at 30–40. Group size still swings a few points
+(8 players leans Town, 10 leans Mafia), as in any Mafia game. Each role's swing (vs an average game
+of the same size) is within ±3 points for most roles; Sheriff (+7) and Detective (+5) are the
+strongest Town roles on purpose. Talk-based roles (Conductor, Crier, Ghostwriter, Investigator)
+look slightly weak with bots, which can't use them well; real players should do better.

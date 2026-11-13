@@ -67,12 +67,12 @@
     },
     jester: {
       name: 'Jester', team: 'neutral', emoji: '🃏', color: '#ff6fb5',
-      blurb: 'You win if the town votes YOU out. Act just suspicious enough... but not too much.',
+      blurb: 'You win if the town votes YOU out (the game keeps going without you). Act just suspicious enough... but not too much.',
     },
     serialKiller: {
       name: 'Serial Killer', team: 'neutral', emoji: '🗡️', color: '#5d6d7e', nightImmune: true, max: 1,
       night: { kind: 'kill', targets: 'others' },
-      blurb: "You're on nobody's side. Kill one person each night. You can't be killed at night. Win by being the last one standing.",
+      blurb: "You're on nobody's side. Kill one person every other night (the Judge can change this). You can't be killed at night. Win by being the last one standing.",
     },
   };
 
@@ -171,8 +171,13 @@
     return r.team === 'mafia';
   }
 
+  // Balanced from bot games that model sharp real players (tools/balance.js --reads):
+  // one Mafia up to 8 players, two up to 12, then roughly one in four, rising to about
+  // three in ten in very big games (more players means more Town information).
+  const MAFIA_BY_SIZE = [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5, 6, 6, 7, 7, 8, 8, 8, 9]; // index = players
   function autoMafiaCount(n) {
-    return Math.min(Math.max(1, Math.floor((n - 1) / 3)), Math.max(1, Math.round(n / 4.5)));
+    if (n < MAFIA_BY_SIZE.length) return MAFIA_BY_SIZE[Math.max(0, n)];
+    return Math.min(Math.floor((n - 1) / 2), Math.round(n * 0.3));
   }
 
   // Turns settings + player count into a concrete role list (unshuffled),
@@ -193,6 +198,12 @@
     if (autoMafia) {
       const otherMafia = ROLE_ORDER.filter((k) => k !== 'mafia' && isMafiaTeam(k)).reduce((s, k) => s + (counts[k] || 0), 0);
       counts.mafia = Math.max(counts.godfather ? 0 : 1, autoMafiaCount(n) - otherMafia);
+      // Too many Mafia roles for this group (e.g. Godfather + Roleblocker at 7 players):
+      // drop support roles (non-killers) until the family is its normal size.
+      let family = otherMafia + counts.mafia;
+      for (const k of ROLE_ORDER.slice().reverse()) {
+        while (family > autoMafiaCount(n) && counts[k] > 0 && isMafiaTeam(k) && k !== 'mafia' && !isKillerRole(k)) { counts[k]--; family--; warnings.push(`${ROLES[k].name} left out: the Mafia family is ${autoMafiaCount(n)} at ${n} players.`); }
+      }
     }
     const list = [];
     for (const k of ROLE_ORDER) for (let i = 0; i < (counts[k] || 0); i++) list.push(k);
@@ -223,14 +234,14 @@
 
   // Built-in setups. They use an automatic Mafia count (autoMafia).
   const PRESETS = {
-    storytellerV2: { label:'Storyteller (16+)', desc:'Optional statuses, bluffs, ghosts, whispers and structured nominations. Recommended for experienced groups.', settings:{ autoMafia:true, storytellerMode:'human', misinformation:'judge', mafiaBluffs:3, ghostVotes:true, ghostChat:true, whispers:true, votingMode:'nomination', roleCounts:{ godfather:1,silencer:1,alchemist:1,sorcerer:1,doctor:1,investigator:1,storymaker:1,ghostwriter:1 }, roleConfig:{ sorcerer:{ mode:'custom',startingInfo:'townTrio' } } } },
-    cinematicChaos: { label:'Cinematic Chaos (18+)', desc:'Delayed explosives, borrowed abilities, a shortened clock and emergency votes.', settings:{ autoMafia:true, ghostVotes:true, ghostChat:true, whispers:true, votingMode:'classic', roleCounts:{ godfather:1,silencer:1,hustler:1,alchemist:1,detonator:1,sorcerer:1,doctor:1,storymaker:1,jester:1 }, roleConfig:{ jester:{ mode:'custom',behavior:'hybrid' } } } },
+    storytellerV2: { label:'Storyteller (16+)', desc:'Optional statuses, bluffs, ghosts, whispers and structured nominations. Recommended for experienced groups.', settings:{ autoMafia:true, storytellerMode:'human', misinformation:'judge', mafiaBluffs:3, ghostVotes:true, ghostChat:true, whispers:true, votingMode:'nomination', roleCounts:{ godfather:1,silencer:1,alchemist:1,framer:1,sorcerer:1,doctor:1,investigator:1,storymaker:1,ghostwriter:1 }, roleConfig:{ sorcerer:{ mode:'custom',startingInfo:'townTrio' } } } },
+    cinematicChaos: { label:'Cinematic Chaos (18+)', desc:'Delayed explosives, borrowed abilities, a shortened clock and emergency votes.', settings:{ autoMafia:true, ghostVotes:true, ghostChat:true, whispers:true, votingMode:'classic', roleCounts:{ godfather:1,silencer:1,hustler:1,alchemist:1,detonator:1,sorcerer:1,storymaker:1,jester:1 }, roleConfig:{ jester:{ mode:'custom',behavior:'hybrid' } } } },
     storytellers: { label: 'Storytellers (14+)', desc: 'Investigator, Ghostwriter, Puppet Master, Paparazzi, Conductor and Glitch.', settings: { autoMafia: true, anonymousVotes: false, roleCounts: { puppetMaster: 1, detective: 1, investigator: 1, doctor: 1, ghostwriter: 1, paparazzi: 1, conductor: 1, glitch: 1 } } },
     classic: { label: 'Classic', desc: 'Mafia, Detective, Doctor, Villagers.', settings: { autoMafia: true, roleCounts: { detective: 1, doctor: 1 } } },
     beginner: { label: 'First timers', desc: 'Just Mafia and Villagers plus a Detective. Longer discussion.', settings: { autoMafia: true, roleCounts: { detective: 1 }, discussionSeconds: 180 } },
     expanded: { label: 'Town vs Family', desc: 'Godfather and Roleblocker against a stacked town.', settings: { autoMafia: true, roleCounts: { godfather: 1, roleblocker: 1, detective: 1, doctor: 1, bodyguard: 1, vigilante: 1, mayor: 1 } } },
-    chaos: { label: 'Chaos', desc: 'Jester, Serial Killer, Telepaths, everything.', settings: { autoMafia: true, roleCounts: { godfather: 1, detective: 1, doctor: 1, vigilante: 1, telepath: 2, jester: 1, serialKiller: 1 } } },
-    bigParty: { label: 'Big party (30+)', desc: 'Scaled for large groups.', settings: { autoMafia: true, roleCounts: { godfather: 1, roleblocker: 1, detective: 2, sheriff: 1, doctor: 2, bodyguard: 1, vigilante: 1, mayor: 1, telepath: 2, jester: 1 }, discussionSeconds: 180, votingSeconds: 60 } },
+    chaos: { label: 'Chaos (10+)', desc: 'Jester, Serial Killer, Sheriff, Vigilante: everyone for themselves.', settings: { autoMafia: true, roleCounts: { godfather: 1, detective: 1, sheriff: 1, doctor: 1, vigilante: 1, jester: 1, serialKiller: 1 } } },
+    bigParty: { label: 'Big party (30+)', desc: 'Scaled for large groups.', settings: { autoMafia: true, roleCounts: { godfather: 1, roleblocker: 1, detective: 1, sheriff: 1, doctor: 2, bodyguard: 1, vigilante: 1, mayor: 1, telepath: 2, jester: 1 }, discussionSeconds: 180, votingSeconds: 60 } },
   };
 
   // Judge reference card for a role, generated from the registry so it never
@@ -257,7 +268,7 @@
     if (key === 'headhunter') restrictions.push('Levels up each time a marked player dies. Powers: 1 disguise · 2 puppet a Mafia vote · 3 one strike · 4 nightly role reveal · 5 sees all roles · 6 daily execution.');
     if (key === 'hunter') restrictions.push('Results are shared with the whole Mafia team.');
     if (key === 'bodyguard') restrictions.push('Dies in place of the person they guard (unless the Doctor saved the Bodyguard).');
-    const win = key === 'paparazzi' ? 'Survive to game end and publish the configured number of photos (default two). May win alongside any faction.' : key === 'jester' ? 'Wins if the town votes them out.'
+    const win = key === 'paparazzi' ? 'Survive to game end and publish the configured number of photos (default two). May win alongside any faction.' : key === 'jester' ? 'Wins if the town votes them out. By default the game then continues and the Jester shares the win (option: end the game).'
       : key === 'serialKiller' || key === 'headhunter' ? 'Wins by being the last one standing.'
         : r.team === 'mafia' ? 'Wins with the Mafia: when they equal the rest (or everyone else is gone, by setting).'
           : 'Wins with the Town: when no Mafia or Serial Killer is left.';

@@ -6,8 +6,9 @@
     detonator: { uses: 1, minDelay: 3, maxDelay: 12 }, silencer: {}, sorcerer: {},
     hustler: { uses: 1, fraction: 0.4, minSeconds: 15 },
     alchemist: { midasUses: 1, volatileUses: 1, temporaryVoting: true },
-    jester: { behavior: 'classic', uses: 1, copyDuration: 'night' },
-    storymaker: { uses: 1 }, puppetMaster: { uses: 2 }, glitch: { uses: 1 },
+    jester: { behavior: 'classic', uses: 1, copyDuration: 'night', endsGame: false }, // balance: a Jester win no longer ends the game
+    storymaker: { uses: 1 }, puppetMaster: { uses: 1 }, glitch: { uses: 1 },
+    serialKiller: { immuneTo: 'everyone', cooldown: 1 } /* balance: kills every other night */, roleblocker: { noRepeat: false },
     veteran: { uses: 2 }, janitor: { uses: 1 }, cupid: { uses: 1 }, // DLC 1
   };
   const FIELDS = {
@@ -24,6 +25,8 @@
     volatileUses: { label: 'Volatile potions', type: 'number', min: 1, max: 3 },
     temporaryVoting: { label: 'Temporary return may vote', type: 'boolean' },
     behavior: { label: 'Jester behavior', choices: ['classic', 'mimic', 'hybrid'] },
+    immuneTo: { label: 'Night attacks that fail on them', choices: ['everyone', 'mafia'] },
+    endsGame: { label: 'Voting out the Jester ends the game', type: 'boolean' },
     copyDuration: { label: 'Copied ability lasts', choices: ['night', 'game'] },
     startingInfo: { label: 'Starting information', choices: ['none', 'neighborEvil', 'teamPair', 'infoTrio', 'townTrio'] },
   };

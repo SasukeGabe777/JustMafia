@@ -9,12 +9,13 @@ const { Room } = require('./game');
 const { VirtualClock } = require('./clock');
 const { ROLES } = require('./public/shared/roles');
 
-function simulateGame({ players = 10, settings = {}, seed = Math.floor(Math.random() * 2 ** 31), personality } = {}) {
+function simulateGame({ players = 10, settings = {}, seed = Math.floor(Math.random() * 2 ** 31), personality, reads = 0 } = {}) {
   const clock = new VirtualClock();
   const room = new Room('SIM', null, { clock, headless: true, seed });
   // Simulations never wait for a human: automatic phases and reveals.
   room.updateSettings({ ...settings, maxPlayers: 100, minPlayers: 3, skipCinematics: false, speed: 1, botsAuto: true, botChatter: settings.botChatter !== false, narratorMode: 'ai', revealMode: 'auto', autoAdvance: true });
   room.addBots(players, personality);
+  room.simReads = reads; // model real players' gut reads (see Room.humanReads)
   const started = room.startGame();
   if (!started.ok) return { error: started.error, seed };
   let steps = 0;
@@ -98,13 +99,13 @@ function aggregate(results) {
   return out;
 }
 
-function runBatch({ games = 100, players = [10], settings = {}, seed, personality } = {}) {
+function runBatch({ games = 100, players = [10], settings = {}, seed, personality, reads = 0 } = {}) {
   const sizes = Array.isArray(players) ? players : [players];
   const results = [];
   const t0 = Date.now();
   for (let i = 0; i < games; i++) {
     const n = sizes[i % sizes.length];
-    results.push(simulateGame({ players: n, settings, personality, seed: seed != null ? seed + i : undefined }));
+    results.push(simulateGame({ players: n, settings: typeof settings === 'function' ? settings(n, i) : settings, personality, reads, seed: seed != null ? seed + i : undefined }));
   }
   return { ...aggregate(results), elapsedMs: Date.now() - t0, roleNames: Object.fromEntries(Object.entries(ROLES).map(([k, v]) => [k, v.name])) };
 }

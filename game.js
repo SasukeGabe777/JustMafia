@@ -57,7 +57,7 @@ const DEFAULT_SETTINGS = {
   speed: 1,
   skipCinematics: false,
   botsAuto: true,
-  puppetUses: 2,
+  puppetUses: 1,              // balance: one forced ballot per game (Judge can raise it)
   glitchUses: 1,
   harmonyGoal: 2,
   paparazziGoal: 2,
@@ -321,7 +321,7 @@ class Room {
       alive: true, role: null, originalRole: null, spectator: false, investigations: [], notes: [],
       diedDay: null, deathCause: null, deathOrder: null, shotsLeft: 0, telepathSent: 0, telepathAt: -Infinity, won: null,
       abilityUses: 0, ghostDay: -1, ghostMessage: null, photos: 0, photoPending: null,
-      harmony: 0, objective: null, privateScene: null, interventionUsed: {}, revealedExecutioner: false,
+      harmony: 0, objective: null, privateScene: null, interventionUsed: {}, revealedExecutioner: false, jesterWon: false,
       statuses: [], actionUses: {}, actionDays: {}, copiedAbility: null, stolenAbilities: [],
       houseState: 'normal', ghostVoteUsed: false, whispersUsed: 0, whisperAt: -Infinity, whispers: [],
       ghostChat: [], nominations: 0, ashes: false, potions: { midas: 0, volatile: 0 },
@@ -846,7 +846,10 @@ class Room {
     if (p && p.alive) {
       this.kill(p, 'vote');
       this.stats.lynches.push({ role: p.role, team: this.team(p) });
-      if (p.role === 'jester' && this.ruleConfig(p).behavior !== 'mimic') {
+      if (p.role === 'jester' && this.ruleConfig(p).behavior !== 'mimic' && !this.ruleConfig(p).endsGame) {
+        p.jesterWon = true; // balance default: the Jester wins alongside whoever wins; play continues
+        this.narrate('jesterLaughs', { name: p.name });
+      } else if (p.role === 'jester' && this.ruleConfig(p).behavior !== 'mimic') {
         this.winner = 'jester';
         this.jesterId = p.id;
         this.narrate('jesterWin', { name: p.name });
@@ -941,6 +944,7 @@ class Room {
   // Did this player win?
   didWin(p) {
     const w = this.winner;
+    if (p.jesterWon) return !!w;
     if (p.role === 'paparazzi') return !!w && p.alive && p.photos >= this.settings.paparazziGoal;
     if (!w || w === 'draw') return false;
     if (w === 'jester') return p.id === this.jesterId;
@@ -1247,6 +1251,19 @@ class Room {
     return { ok: true };
   }
 
+  // Balance simulations only (sim.js sets room.simReads; live games never do): real people
+  // pick up tells from faces, nerves and table talk, which bots can't. Each discussion,
+  // every Town bot gets a noisy gut read on the others that leans slightly toward the
+  // real killers. Bigger simReads = sharper players.
+  humanReads() {
+    const R = this.simReads;
+    const evil = (q) => ROLES[q.role] && (ROLES[q.role].team === 'mafia' || ['serialKiller', 'headhunter'].includes(q.role));
+    for (const p of this.alive().filter((x) => x.isBot && ROLES[x.role] && ROLES[x.role].team === 'town')) {
+      const brain = this.brains.get(p.id); if (!brain) continue;
+      for (const q of this.alive()) if (q.id !== p.id) brain.add(brain.sus, q.id, R * this.rng() * (evil(q) ? 1 : 0.4));
+    }
+  }
+
   // ---------- bots ----------
   // Bots decide from their own playerView, exactly what a phone would show.
   scheduleBots(now = false) {
@@ -1255,6 +1272,7 @@ class Room {
     const sp = this.speed();
     const later = (ms, fn) => this.later(now ? 50 : ms / sp, () => { if (this.phaseId === phaseId && !this.paused) fn(); });
     const r = (a, b) => a + this.rng() * (b - a);
+    if (this.simReads && this.phase === 'discussion') this.humanReads();
     for (const p of this.alive().filter((x) => x.isBot)) {
       const brain = this.brains.get(p.id);
       if (!brain) continue;
