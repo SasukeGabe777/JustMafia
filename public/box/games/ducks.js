@@ -243,18 +243,19 @@
   }
 
   // ---------- the game's own title screen (TV) ----------
-  function titleScreen(el, { start, back }) {
+  function titleScreen(el, { start, back, resume, code }) {
     el.innerHTML = `<div class="dk-title"><canvas id="dk-title-cv"></canvas>
       <div class="dk-title-card">
         <div class="dk-logo"><span class="a">Just</span><span class="b">Raise</span><span class="c">Ducks</span></div>
         <p class="dk-tagline">Hatch a duckling. Raise it on your farm. Race the whole valley.</p>
-        <button class="dk-go" id="dk-go">🥚 Start a new valley</button>
+        ${resume ? `<button class="dk-go" id="dk-resume">▶ Continue valley ${esc(code || '')}</button><br>` : ''}<button class="dk-go ${resume ? 'alt' : ''}" id="dk-go">🥚 Start a new valley</button>
         <button class="dk-how-btn" id="dk-how-btn">How to play</button>
         <ol class="dk-how" id="dk-how" hidden>${BOX.games.ducks.how.map((h) => `<li>${esc(h)}</li>`).join('')}</ol>
         <p class="dk-fine">Open this on the TV. Everyone plays on their phone. 1–100 players.</p>
         <button class="dk-back" id="dk-back">◀ Back to JustGameBox</button>
       </div></div>`;
     el.querySelector('#dk-go').onclick = start;
+    const rs = el.querySelector('#dk-resume'); if (rs) rs.onclick = resume;
     el.querySelector('#dk-back').onclick = back;
     el.querySelector('#dk-how-btn').onclick = () => { const h = el.querySelector('#dk-how'); h.hidden = !h.hidden; };
     const cv = el.querySelector('#dk-title-cv'), art = A();

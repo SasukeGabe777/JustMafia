@@ -38,9 +38,16 @@
   function showTitle() {
     state = null; rendered = 'title'; onTitle = true;
     const c = $('#corner'); if (c) c.remove();
+    const s = saved(), mine = s && s.game === gameKey;
     G.title($('#tv-main'), {
       start: () => { create(); BOX.sfx('start'); },
       back: () => { location.href = '/'; },
+      // A valley that is still running can be picked up again from the title screen.
+      code: mine ? s.code : null,
+      resume: mine ? () => socket.emit('host:resume', s, (r) => {
+        if (r && r.ok) { onTitle = false; BOX.sfx('start'); }
+        else { try { localStorage.removeItem(KEY); } catch { /* */ } showTitle(); }
+      }) : null,
     });
   }
   function quitToTitle() { try { localStorage.removeItem(KEY); } catch { /* */ } showTitle(); }
@@ -48,8 +55,9 @@
   socket.on('connect', () => {
     const s = saved(), mine = s && s.game === gameKey && !params.has('new');
     if (STAND) {
-      if (mine) socket.emit('host:resume', s, (r) => { if (!r || !r.ok) showTitle(); });
-      else if (firstConnect) showTitle();
+      // Big games always open on their title screen; a reconnect mid-game picks the room back up.
+      if (firstConnect) showTitle();
+      else if (mine && !onTitle) socket.emit('host:resume', s, (r) => { if (!r || !r.ok) showTitle(); });
     } else if (mine) socket.emit('host:resume', s, (r) => { if (!r || !r.ok) create(); });
     else create();
     firstConnect = false;

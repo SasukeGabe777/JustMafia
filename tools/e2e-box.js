@@ -118,8 +118,17 @@ async function setup(browser, game, settings = {}) {
     await ph.click('[data-vip="start"]');
     await tv.until(`!!document.querySelector('#corner') && !document.querySelector('#corner').hidden`, 'corner badge in game');
     await wait(900); await tv.shot('box-ducks-own-game');
+    // Reloading always opens the title screen first; Continue picks the running valley back up.
+    await tv.go(`${URL}/ducks`);
+    await tv.until(`!!document.querySelector('.dk-title-card #dk-resume') && !document.querySelector('#dk-valley')`, 'title screen first, with Continue');
+    await tv.shot('box-ducks-title-continue');
+    await tv.click('#dk-resume');
+    await tv.until(`!!document.querySelector('#dk-valley') && !document.querySelector('#corner').hidden`, 'valley resumed');
+    // A crowded valley: one shared map with many farms.
+    for (let i = 0; i < 6; i++) { await tv.eval(`(() => { document.querySelector('#corner .cg').click(); document.querySelector('#corner [data-h="bots"]').click(); return true; })()`); await wait(150); }
+    await wait(1500); await tv.shot('box-ducks-valley-crowd');
     PAGES.push(tv, ph);
-    ok('JustRaiseDucks at /ducks: its own title screen and look, no JustGameBox bar, phone joins at /ducks/play, corner badge + host menu in game');
+    ok('JustRaiseDucks at /ducks: its own title screen and look, no JustGameBox bar, phone joins at /ducks/play, corner badge + host menu; reloading opens the title first and Continue resumes');
   }
 
   // ---------- JustRaiseDucks ----------
