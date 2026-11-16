@@ -163,7 +163,7 @@
     for (const e of fx) {
       const age = (performance.now() - e.at) / 1000; if (age > 1.6) continue;
       g.globalAlpha = 1 - age / 1.6; g.font = `${Math.max(10, 18 * ds)}px sans-serif`; g.textAlign = 'center';
-      g.fillText({ pet: '❤️', levelUp: '⭐', eat: '🌽', build: '🔨', badge: '🏅', farm: '✨', hatch: '🐣', grow: '🌱' }[e.kind] || '✨', ix + iw * sp.x + Math.sin(age * 6) * 8, iy + ih * sp.y - 30 * ds - age * 30);
+      g.fillText({ pet: '❤️', levelUp: '⭐', eat: '🌽', build: '🔨', badge: '🏅', farm: '✨', hatch: '🐣', grow: '🌱', spin: '🎡', gift: '🎁' }[e.kind] || '✨', ix + iw * sp.x + Math.sin(age * 6) * 8, iy + ih * sp.y - 30 * ds - age * 30);
       g.globalAlpha = 1; g.textAlign = 'left';
     }
     // sign: owner, mood, rank (the phone draws its own overlay instead)

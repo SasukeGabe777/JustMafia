@@ -31,9 +31,22 @@ class BoxRoom {
     let s = (seed == null ? crypto.randomBytes(4).readUInt32LE(0) : seed) >>> 0 || 1;
     this.rng = () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s >>>= 0; s ^= s << 5; s >>>= 0; return s / 4294967296; };
     this.pending = false;
+    // Games with a live lobby (JustRaiseDucks) exist from the start: farms appear as people join.
+    if (game.liveLobby) this.game = game.create(this, this.settings);
   }
 
   now() { return this.clock.now(); }
+  // Jackbox-style host: the first person (not a bot) who joined and is still here.
+  vip() { for (const p of this.players.values()) if (!p.bot) return p; return null; }
+  // What the host's phone may do: start from the lobby, or play again when the game is over.
+  vipAction(p, type) {
+    const v = this.vip();
+    if (!v || v.id !== p.id) return { ok: false, error: 'Only the host can do that.' };
+    if (type === 'start' && this.phase === 'lobby') return this.start();
+    if (type === 'again' && this.game && this.game.phase === 'over') return this.hostAction({ type: 'again' });
+    if (type === 'lobby' && this.game && this.game.phase === 'over') return this.hostAction({ type: 'lobby' });
+    return { ok: false, error: 'Not now.' };
+  }
   // Timers belong to the room: cleared on restart/destroy; each one re-syncs the screens.
   after(ms, fn) {
     const h = this.clock.set(() => { this.timers.delete(h); fn(); this.sync(); }, Math.max(0, ms));
@@ -97,17 +110,25 @@ class BoxRoom {
       case 'addBots': return { ok: true, added: this.addBots(Math.max(1, Math.min(50, Number(msg.count) || 5))) };
       case 'removeBots': for (const p of this.list()) if (p.bot) this.remove(p.id); return { ok: true };
       case 'kick': this.remove(msg.id); return { ok: true };
-      case 'start': case 'again': return this.start();
+      case 'start': return this.start();
+      case 'again': if (this.def.liveLobby) this.resetLobby(); return this.start();
       case 'next': if (!this.game || !this.game.next) return { ok: false }; this.game.next(); this.sync(); return { ok: true };
-      case 'lobby': this.clearTimers(); this.game = null; this.phase = 'lobby'; this.sync(); return { ok: true };
+      case 'lobby': this.resetLobby(); this.sync(); return { ok: true };
       default: return { ok: false, error: 'Unknown action.' };
     }
   }
 
+  resetLobby() {
+    this.clearTimers(); this.phase = 'lobby';
+    this.game = this.def.liveLobby ? this.def.create(this, this.settings) : null;
+    if (this.game) for (const p of this.players.values()) if (this.game.joined) this.game.joined(p);
+  }
   start() {
+    if (this.phase !== 'lobby') return { ok: false, error: 'The game is already running.' };
     if (this.players.size < this.def.min) return { ok: false, error: `${this.def.name} needs at least ${this.def.min} players (bots count).` };
     this.clearTimers();
-    this.game = this.def.create(this, { ...this.settings });
+    if (this.def.liveLobby && this.game) this.game.s = { ...this.settings }; // the lobby world carries on into the game
+    else this.game = this.def.create(this, { ...this.settings });
     this.phase = 'game';
     this.fx('start');
     this.game.start();
@@ -126,7 +147,8 @@ class BoxRoom {
   tvState() {
     return {
       code: this.code, game: this.def.key, title: this.def.name, phase: this.phase, settings: this.settings,
-      fields: this.def.fields || [], min: this.def.min, max: MAX_PLAYERS, fx: this.fxLog,
+      fields: this.def.fields || [], min: this.def.min, max: MAX_PLAYERS, fx: this.fxLog, live: !!this.def.liveLobby,
+      vip: this.vip() ? this.vip().name : null,
       players: this.list().map((p) => ({ id: p.id, name: p.name, bot: p.bot, color: p.color, online: p.bot || p.sockets > 0 })),
       state: this.game ? this.game.tv() : null,
     };
@@ -134,7 +156,8 @@ class BoxRoom {
   playerState(p) {
     return {
       code: this.code, game: this.def.key, title: this.def.name, phase: this.phase,
-      me: { id: p.id, name: p.name, color: p.color }, count: this.players.size,
+      me: { id: p.id, name: p.name, color: p.color }, count: this.players.size, min: this.def.min, live: !!this.def.liveLobby,
+      vip: !!this.vip() && this.vip().id === p.id, vipName: this.vip() ? this.vip().name : null,
       state: this.game ? this.game.view(p) : null,
     };
   }

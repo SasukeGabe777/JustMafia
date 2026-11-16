@@ -38,6 +38,20 @@ phones; mini-game difficulty and race balance are first guesses.
   Blackjack Night and four coming-soon slots in the smaller row.
 - Validation: test-box (20) and e2e-box (8) pass. Still untested by real players on real phones.
 
+### JustRaiseDucks third pass + Jackbox-style host (same day)
+
+- Live lobby: JustRaiseDucks opens straight into Duck Valley (like JustMafia's town). Farms pop
+  in as people join; players hatch their egg, name and color their duck before the start.
+- Host: the first person (not a bot) to join is the host and gets Start / Play again on their
+  phone in every box game; the TV can still start too. JustMafia keeps its own Judge rules.
+- Training difficulty: Easy (0.7x XP, 10 energy), Medium, Hard (1.7x XP, 22 energy, faster
+  mini-games, wipeout under 7). ⭐ targets build a streak worth up to +30% XP; personal bests.
+- Perks: a choice of three each time the duck grows up (8 perks that change races).
+- Gifts between farms, a Lucky Spin each training period, more quest types.
+- Calmer phone: farm picture with only name/stage/coins, energy and mood bars below, a skill
+  sheet for picking difficulty, collapsible quests.
+- Validation: test-box 24 and e2e-box 9 pass. Still untested by real players.
+
 ## November 10, 2026 - shared GitHub development
 
 Gabe/Codex and Justin/Claude collaborate in
