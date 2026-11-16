@@ -26,7 +26,7 @@ const emit = (s, ev, d = {}) => new Promise((r) => s.emit(ev, d, r));
   const browser = new Browser({ shots: SHOTS, debugPort: 9338 }); await browser.launch();
   const t = await browser.page();
   await t.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
-  await t.go(`${URL}/`); await t.eval(`localStorage.setItem('mt.host', JSON.stringify(${JSON.stringify({ code: room.code, hostKey: room.hostKey })}))`);
+  await t.go(`${URL}/mafia`); await t.eval(`localStorage.setItem('mt.host', JSON.stringify(${JSON.stringify({ code: room.code, hostKey: room.hostKey })}))`);
   await t.send('Page.reload'); await wait(500);
   await t.until(`!document.querySelector('#lobby').hidden`, 'TV lobby');
 

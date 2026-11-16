@@ -26,7 +26,7 @@ const emit = (s, ev, d = {}) => new Promise((r) => s.emit(ev, d, r));
   // TV: lobby how-to.
   const t = await browser.page();
   await t.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
-  await t.go(`${URL}/`); await t.eval(`localStorage.setItem('mt.host', JSON.stringify(${JSON.stringify({ code: room.code, hostKey: room.hostKey })}))`);
+  await t.go(`${URL}/mafia`); await t.eval(`localStorage.setItem('mt.host', JSON.stringify(${JSON.stringify({ code: room.code, hostKey: room.hostKey })}))`);
   await t.send('Page.reload'); await wait(500);
   await t.until(`!document.querySelector('#lobby-how').hidden && document.querySelectorAll('#lobby-how li').length === 4`, 'TV lobby how-to');
   ok('TV lobby shows a 4-step how-to');

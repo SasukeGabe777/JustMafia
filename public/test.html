@@ -78,8 +78,8 @@
         room = r;
         save('mt.host', r); // the big screen and Judge pick this up
         $('#code').textContent = r.code;
-        $('#tv').src = '/';
-        $('#l-tv').href = '/';
+        $('#tv').src = '/mafia';
+        $('#l-tv').href = '/mafia';
         $('#judge').src = `/judge#${r.code}.${r.hostKey}`;
         $('#l-judge').href = `/judge#${r.code}.${r.hostKey}`;
         renderPhones();

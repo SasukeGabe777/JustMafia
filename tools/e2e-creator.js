@@ -159,7 +159,7 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   // --- The TV shows each house with a sign naming the owner and residents.
   const tvPage = await browser.page();
   await tvPage.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
-  await tvPage.go(`${URL}/`);
+  await tvPage.go(`${URL}/mafia`);
   await tvPage.click('#create');
   await tvPage.until(`/^[A-Z]{4}$/.test(document.querySelector('#room-code').textContent.trim())`, 'TV room code');
   const tvCode = await tvPage.eval(`document.querySelector('#room-code').textContent.trim()`);
