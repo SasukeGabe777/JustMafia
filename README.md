@@ -21,7 +21,7 @@ npm install
 npm start
 ```
 
-1. Open **http://localhost:3000** on the computer connected to the TV or projector, then click **Create a town**.
+1. Open **http://localhost:3000** on the computer connected to the TV or projector. This is the **JustGameBox** title screen: pick **JustMafia** (or go straight to **/mafia**), then click **Create a town**.
 2. Open the **Judge console**: ⚙ → *Open in new tab*, or *Phone QR* to run it from your phone. It shows every secret role, so keep it off the TV.
 3. Players scan the QR code on the TV (or go to the printed `/play` link) and enter the 4-letter room code.
 4. Pick a setup in the Judge console (Setup tab), then press **Start game**.

@@ -19,7 +19,7 @@ npm test
 npm start
 ```
 
-The server prints its LAN address. Local entry points are `/`, `/play`,
+The server prints its LAN address. Local entry points are `/` (JustGameBox title screen), `/mafia`, `/play`,
 `/judge`, `/test`, `/preview`, and `/art`. The Judge needs credentials issued
 by a created town; opening `/judge` alone does not grant access.
 Profiles are local in `.data/profiles.json`; running rooms are memory-only.

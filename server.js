@@ -43,6 +43,9 @@ const server = http.createServer(app);
 const io = new Server(server, { pingInterval: 10000, pingTimeout: 20000, perMessageDeflate: { threshold: 1024 }, httpCompression: { threshold: 1024 } });
 const rooms = new Map();
 
+// JustGameBox: the title screen picks a game; JustMafia's big screen lives at /mafia.
+app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'hub.html')));
+app.get('/mafia', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get(['/play', '/join'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'play.html')));
 app.get('/judge', (req, res) => res.sendFile(path.join(__dirname, 'public', 'judge.html')));

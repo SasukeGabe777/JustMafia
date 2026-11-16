@@ -70,7 +70,7 @@ const emit = (s, ev, d = {}) => new Promise((r) => s.emit(ev, d, r));
 
   // The optional Rundown on the big screen: hidden until someone clicks it.
   const t = await browser.page();
-  await t.go(`${URL}/`); await t.eval(`localStorage.setItem('mt.host', JSON.stringify(${JSON.stringify({ code: room.code, hostKey: room.hostKey })}))`);
+  await t.go(`${URL}/mafia`); await t.eval(`localStorage.setItem('mt.host', JSON.stringify(${JSON.stringify({ code: room.code, hostKey: room.hostKey })}))`);
   await t.send('Page.reload'); await wait(500);
   await t.until(`!document.querySelector('#gameover').hidden`, 'TV game-over screen (after the victory celebration)', 15000);
   // "You just unlocked!": the next tier's cards float in and flip; then Play again / See results.

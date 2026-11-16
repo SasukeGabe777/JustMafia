@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JustGameBox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/hub.css">
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+  <main class="hub">
+    <header class="hub-head">
+      <h1 class="logo"><span class="just">Just</span><span class="game">Game</span><span class="box">Box</span></h1>
+      <p class="tag">Party games for the big screen. Everyone plays from their phone.</p>
+    </header>
+
+    <!-- One tile per game. Empty slots are placeholders for games still to be designed. -->
+    <section class="tiles" id="tiles" aria-label="Games">
+      <a class="tile live mafia" href="/mafia" data-game="mafia">
+        <div class="art" aria-hidden="true"><span class="icon">🔪</span></div>
+        <div class="info">
+          <h2>JustMafia</h2>
+          <p>Find the killers before they find you. A big-screen murder mystery.</p>
+          <div class="meta"><span>👥 5–100</span><span>⏱ 20–60 min</span><span>🕵️ Social deduction</span></div>
+        </div>
+      </a>
+      <div class="tile empty" tabindex="0" data-game="slot2"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2><p>A new game is on its way.</p></div></div>
+      <div class="tile empty" tabindex="0" data-game="slot3"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2><p>A new game is on its way.</p></div></div>
+      <div class="tile empty" tabindex="0" data-game="slot4"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2><p>A new game is on its way.</p></div></div>
+      <div class="tile empty" tabindex="0" data-game="slot5"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2><p>A new game is on its way.</p></div></div>
+      <div class="tile empty" tabindex="0" data-game="slot6"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2><p>A new game is on its way.</p></div></div>
+    </section>
+
+    <footer class="hub-foot">
+      <p>Open this page on the TV or projector and pick a game. Players join on their phones at <b id="join-url">/play</b> with the room code.</p>
+      <p class="keys">Arrow keys to choose · Enter to play</p>
+    </footer>
+  </main>
+  <script src="/sfx.js"></script>
+  <script src="/hub.js"></script>
+</body>
+</html>
