@@ -182,6 +182,7 @@ test('Ducks: buildings speed up training; a happy duck learns faster than a grum
   const { r, clock } = room('ducks', 0, { startCoins: 120 }, 4);
   const a = human(r, 'Ann'), b = human(r, 'Bo'); assert(r.start().ok);
   const da = r.game.ducks.get(a.id), db = r.game.ducks.get(b.id);
+  da.quests = []; db.quests = []; // no quest bonuses in this count
   assert(r.act(a, { op: 'build', item: 'track' }).ok); assert.equal(da.buildings.track, 1); assert.equal(da.coins, 80);
   da.mood = 50; db.mood = 50;
   const run = (p) => { r.act(p, { op: 'train', stat: 'run' }); clock.t += 20000; return r.act(p, { op: 'score', score: 20 }).xp; };
@@ -213,6 +214,18 @@ test('Ducks: farm events (a fox!) resolve by choice or by timeout; badges pay co
   clock.t += 3000; clock.step(); while (d.event && clock.step());
   assert(d.coins < c, 'ignored fox steals coins');
   d.xp.swim = 300; r.game.checkBadges(a.id, d); assert(d.badges.includes('level5'));
+});
+test('Ducks: quests pay coins when done; rivals are the duck just ahead; boost pads show in races', () => {
+  const { r, clock } = room('ducks', 0, { races: 2, raceEvery: 60 }, 8);
+  const a = human(r, 'Ann'), b = human(r, 'Bo'); assert(r.start().ok);
+  const da = r.game.ducks.get(a.id);
+  assert.equal(da.quests.length, 3);
+  da.quests = [{ kind: 'pet', n: 1, have: 0, done: false, reward: 8, text: 'Pet' }];
+  const c = da.coins; assert(r.act(a, { op: 'pet' }).ok); assert(da.quests[0].done); assert.equal(da.coins, c + 8);
+  while (r.game.phase === 'training') clock.step();
+  const res = r.game.lastRace.results, first = res[0].id, second = res[1].id;
+  assert.equal(r.game.ducks.get(second).rival, first, 'the duck just ahead is your rival');
+  assert(Array.isArray(r.game.lastRace.boosts) && r.game.lastRace.boosts.length > 0);
 });
 test('Room: names are unique, tokens reconnect, 100-player cap, settings only take listed values', () => {
   const { r } = room('ducks', 0);

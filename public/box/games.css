@@ -178,3 +178,9 @@
 .dk-select { width: 100%; font: inherit; font-size: 18px; padding: 10px; border-radius: 12px; background: #2b1c58; color: #fff; border: 2px solid rgba(255, 255, 255, 0.2); }
 .dk-cheer { width: 100%; font-size: 40px; padding: 28px; margin: 10px 0; }
 .dk-ready { position: absolute; inset: 0; display: grid; place-items: center; font-size: 72px; font-weight: 800; color: #ffd23f; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.4); pointer-events: none; z-index: 4; }
+
+.dk-quests { display: flex; flex-direction: column; gap: 4px; }
+.dk-quests .q { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.dk-quests .q.done { opacity: 0.6; text-decoration: line-through; }
+.dk-quests .q.rival { display: block; border-top: 1px solid var(--line); padding-top: 6px; margin-top: 2px; }
+.dk-news .n-quest { background: rgba(179, 136, 255, 0.2); }

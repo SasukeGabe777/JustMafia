@@ -155,7 +155,7 @@
     if (w > 150) { const L = f.levels; g.font = `600 ${fs * 0.8}px Fredoka, sans-serif`; g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(ix + 3, iy + ih - fs - 6, iw - 6, fs + 4); g.fillStyle = '#fff'; g.fillText(`🏃${L.run} 🌊${L.swim} 🪽${L.fly} 🧗${L.climb} 💪${L.stamina}`, ix + 8, iy + ih - 8, iw - 14); }
   }
   const DECOR_ICON = { flowers: '🌷', flag: '🚩', gnome: '🧙', lantern: '🏮', scarecrow: '🎃', fountain: '⛲', statue: '🗿', rainbow: '🌈' };
-  function drawValley(g, W, H, farms, t, fxBy, born) {
+  function drawValley(g, W, H, farms, t, fxBy, born, weather) {
     // meadow + paths + trees around the edge
     g.fillStyle = '#5fb04a'; g.fillRect(0, 0, W, H);
     const L = valleyLayout(Math.max(1, farms.length), W - 20, H - 20);
@@ -172,6 +172,10 @@
       g.restore();
     });
     g.restore();
+    if (weather === 'rain') { g.fillStyle = 'rgba(40,60,90,.18)'; g.fillRect(0, 0, W, H); g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 1.5; for (let i = 0; i < 160; i++) { const rx = (i * 97 + t * 300) % W, ry = (i * 53 + t * 700) % H; g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx - 3, ry + 12); g.stroke(); } }
+    else if (weather === 'fog') { g.fillStyle = 'rgba(235,240,245,.28)'; g.fillRect(0, 0, W, H); }
+    else if (weather === 'heat') { g.fillStyle = 'rgba(255,170,60,.12)'; g.fillRect(0, 0, W, H); }
+    else if (weather === 'windy') { g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 2; for (let i = 0; i < 14; i++) { const wx = (i * 211 + t * 260) % (W + 200) - 100, wy = (i * 67) % H; g.beginPath(); g.moveTo(wx, wy); g.quadraticCurveTo(wx + 40, wy - 10, wx + 80, wy); g.stroke(); } }
     if (!farms.length) { g.fillStyle = '#fff'; g.font = '600 32px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('Farms appear here as players join', W / 2, H / 2); g.textAlign = 'left'; }
   }
 
@@ -213,6 +217,14 @@
         g.fillStyle = '#5b4636'; g.fillRect(x0, base + 6, x1 - x0, H); g.fillStyle = '#2b1d14'; g.fillRect(x0 + 20, base + 6, x1 - x0 - 40, H);
         g.fillStyle = '#6cc26a'; g.fillRect(x0, base, 20, 10); g.fillRect(x1 - 20, base, 20, 10);
       }
+    }
+    // boost pads (track), fast currents (pond), updrafts (ravine)
+    for (const bx of R.boosts || []) {
+      const x = m2x(bx); if (x < -40 || x > W + 40) continue;
+      const gt = groundAt(G, bx).type;
+      if (gt === 'track') { g.fillStyle = '#ffd23f'; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(x - 20 + i * 14, base + 2); g.lineTo(x - 10 + i * 14, base + 7); g.lineTo(x - 20 + i * 14, base + 12); g.fill(); } }
+      else if (gt === 'pond') { g.strokeStyle = '#bff3ff'; g.lineWidth = 3; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(x - 30 + ((t * 60 + i * 20) % 60), base + 18 + i * 8); g.lineTo(x - 14 + ((t * 60 + i * 20) % 60), base + 18 + i * 8); g.stroke(); } }
+      else if (gt === 'gap') { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 3; for (let i = 0; i < 3; i++) { const yy = base - ((t * 80 + i * 40) % 120); g.beginPath(); g.moveTo(x - 8, yy); g.quadraticCurveTo(x + 8, yy - 10, x - 4, yy - 22); g.stroke(); } }
     }
     // hurdles
     for (const hx of R.hurdles) { const x = m2x(hx); if (x < -20 || x > W + 20) continue; g.fillStyle = '#fff'; g.fillRect(x - 10, base - 30, 4, 32); g.fillRect(x + 8, base - 30, 4, 32); g.fillStyle = '#e63946'; g.fillRect(x - 12, base - 32, 26, 7); }
