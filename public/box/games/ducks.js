@@ -307,6 +307,7 @@
 
     tv(el, s) {
       if (!s) return;
+      document.body.classList.toggle('dk-racing', s.phase === 'race');
       if (s.phase === 'race') {
         if (tvw.mode !== 'race' || tvw.raceN !== s.lastRace.n) {
           tvw.mode = 'race'; tvw.raceN = s.lastRace.n;
@@ -343,6 +344,7 @@
       }
       for (const f of s.farms) if (!(f.id in tvw.born)) tvw.born[f.id] = performance.now();
       el.querySelector('.dk-wrap').classList.toggle('lobby', s.phase === 'lobby');
+      el.classList.toggle('dk-lobby', s.phase === 'lobby'); el.classList.add('dk-host');
       if (s.phase === 'lobby') {
         const hatched = s.farms.filter((f) => f.stage >= 0).length;
         el.querySelector('#dk-next').innerHTML = `<div class="muted">Welcome to</div><div class="dk-rname">🦆 Duck Valley</div><div class="muted">${s.farms.length ? `${s.farms.length} farm${s.farms.length === 1 ? '' : 's'} · ${hatched} hatched · scan the code to claim yours!` : 'Scan the code: every player gets a farm here.'}</div>`;
