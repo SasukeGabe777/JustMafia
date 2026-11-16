@@ -43,9 +43,9 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,President,Blackjack Night,JustBlanks,Two Truths & a Lie');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,President,Blackjack Night,JustBlanks,Two Truths & a Lie,JustFunny');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
-  assert.equal(await hub.eval(`document.querySelectorAll('.tile.empty').length`), 3, 'one big and two small coming-soon slots');
+  assert.equal(await hub.eval(`document.querySelectorAll('.tile.empty').length`), 2, 'one big and one small coming-soon slot');
   await hub.shot('box-hub');
   ok('Title screen: JustMafia and JustRaiseDucks big on top (plus a big coming-soon); President, Blackjack Night and four coming-soon slots below');
 
@@ -137,6 +137,23 @@ async function setup(browser, game, settings = {}) {
     }
     await tv.until(`!!document.querySelector('.tt-item.lie')`, 'the lie is revealed', 45000); await tv.shot('box-truths-reveal');
     ok('Two Truths & a Lie: typed on the phone with the lie marked; statements on the TV; vote; the lie is stamped');
+  }
+
+  // ---------- JustFunny ----------
+  {
+    const { tv, ph } = await setup(browser, 'funny', { maxSeconds: 60 });
+    await ph.until(`!!document.querySelector('[data-vip="start"]') && !document.querySelector('[data-vip="start"]').disabled`, 'host start button');
+    await ph.click('[data-vip="start"]');
+    await ph.until(`!!document.querySelector('#fn-paste')`, 'pick screen');
+    assert(await ph.eval(`document.querySelectorAll('[data-plat]').length === 4 || !!document.querySelector('#fn-go')`), 'search buttons for YouTube, Shorts, TikTok, Instagram');
+    await ph.shot('box-funny-pick');
+    await ph.eval(`(() => { const i = document.querySelector('#fn-paste'); i.value = 'https://www.instagram.com/reel/C0abcdEFGhi/'; i.oninput(); return true; })()`);
+    await ph.click('#fn-use');
+    await tv.until(`/Instagram/.test((document.querySelector('#fn-top') || {}).textContent || '') && !!document.querySelector('#fn-alt iframe')`, 'the Reel plays on the TV', 15000);
+    await wait(1500); await tv.shot('box-funny-tv');
+    await tv.eval(`document.querySelector('[data-h="next"]').click(); true`); // skip it
+    await tv.until(`/Skipped/.test(document.body.textContent) || !!document.querySelector('.fn-board:not([hidden])')`, 'skipped', 15000);
+    ok('JustFunny: host starts; phone pastes an Instagram Reel (YouTube/Shorts/TikTok/Instagram search buttons); it plays upright on the TV; skip works');
   }
 
   // ---------- JustRaiseDucks as its own game (/ducks) ----------

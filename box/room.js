@@ -114,7 +114,9 @@ class BoxRoom {
       case 'again': if (this.def.liveLobby) this.resetLobby(); return this.start();
       case 'next': if (!this.game || !this.game.next) return { ok: false }; this.game.next(); this.sync(); return { ok: true };
       case 'lobby': this.resetLobby(); this.sync(); return { ok: true };
-      default: return { ok: false, error: 'Unknown action.' };
+      default: // game-specific TV reports (e.g. JustFunny: a video ended)
+        if (this.game && this.game.hostAct) { const r = this.game.hostAct(msg) || { ok: true }; this.sync(); return r; }
+        return { ok: false, error: 'Unknown action.' };
     }
   }
 

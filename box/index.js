@@ -10,6 +10,7 @@ const GAMES = {
   ducks: require('./games/ducks'),
   blanks: require('./games/blanks'),
   truths: require('./games/truths'),
+  funny: require('./games/funny'),
 };
 
 function installBox(app, io, { takenElsewhere = () => false } = {}) {
@@ -93,6 +94,15 @@ function installBox(app, io, { takenElsewhere = () => false } = {}) {
       const { room, p } = ctx();
       if (!room || !p) return reply(cb, { ok: false, error: 'You are not in this room.' });
       reply(cb, room.vipAction(p, String(msg.type || '')));
+    });
+    // Moves that wait on the outside world (JustFunny: YouTube search and checking a video).
+    socket.on('player:async', async (msg, cb) => {
+      const { room, p } = ctx();
+      if (!room || !p || !room.game || !room.game.actAsync) return reply(cb, { ok: false, error: 'Not now.' });
+      const now = Date.now(); if (now - (socket.data.lastAsync || 0) < 700) return reply(cb, { ok: false, error: 'One moment…' });
+      socket.data.lastAsync = now;
+      try { reply(cb, await room.game.actAsync(p, msg)); } catch (e) { console.error('[guard] box async failed:', e); reply(cb, { ok: false, error: 'Something went wrong. Try again.' }); }
+      room.sync();
     });
     socket.on('player:leave', (_m, cb) => { const { room, p } = ctx(); if (room && p) { detach(); room.remove(p.id); } reply(cb, { ok: true }); });
     socket.on('disconnect', () => { const { room, p } = ctx(); if (p) { p.sockets = Math.max(0, p.sockets - 1); room.sync(); } });

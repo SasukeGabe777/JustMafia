@@ -77,3 +77,5 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
 
 .tile.live.blanks .art { background: radial-gradient(circle at 50% 60%, #3a3a3a, #0b0b0b 70%); }
 .tile.live.truths .art { background: radial-gradient(circle at 50% 60%, #d94f7a, #4a0f26 70%); }
+
+.tile.live.funny .art { background: radial-gradient(circle at 50% 60%, #ff3d3d, #4a0b0b 70%); }
