@@ -102,6 +102,24 @@ Set in the Judge console → Setup → Roles.
 - After the vote, the **Mafia coordination** panel lists which roles are in this game (never who holds them), so the Mafia know which Town threats to hunt and which claims are risky.
 - **Next phase** steps through the draft stages. Back to lobby cancels it. People can join during the draft and are dealt in.
 
+## JustGameBox (the other games)
+
+The title screen (`/`) lists every game. Each box game works like JustMafia: the TV page
+(`/box/tv?game=<key>`) creates a room with a QR code and a 4-letter code, shows the game's
+settings in the lobby, and keeps a live view of everyone's progress during the game. Phones
+scan the QR code (`/box/play?room=CODE`) or type the code into `/play`, which forwards box
+codes to the right game. Refreshing a phone reconnects it. Up to 100 players; bots fill seats
+for testing (**+ add 5 test bots** in the lobby).
+
+| Game | Key | Players | What happens |
+|---|---|---|---|
+| 👑 President | `president` | 3–100 | Beat the cards on the table (3 low … A, 2 high). Finishing order sets titles; the Scum hands the President their best cards. Several tables at once; Presidents move up, Scums move down. |
+| 🃏 Blackjack Night | `blackjack` | 1–100 | Everyone plays the same dealer at the same time. Bust Bets: bet a friend goes bust. Most chips after the last hand wins. |
+| 🦆 JustRaiseDucks | `ducks` | 1–100 | Each player gets a farm in Duck Valley (on the TV). Train Run, Swim, Fly, Climb and Stamina with phone mini-games; buy food, buildings, decorations, hats and race gear; every few minutes the valley races an obstacle course (track, pond, cliff, ravine) with weather, tactics, predictions and cheering. |
+
+Code: `box/` (rooms and rules: `room.js`, `games/*.js`) and `public/box/` (TV and phone shells, per-game screens).
+Tests: `node tools/test-box.js` (rules, 100-player bot games) and `npm run e2e-box` (real pages in headless Chrome).
+
 ## Roles
 
 The **Storytellers (14+)** setup includes the new Investigator, Ghostwriter,

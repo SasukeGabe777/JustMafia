@@ -80,6 +80,7 @@
     $('#j-next').disabled = true;
     socket.emit('room:check', { code }, (r) => {
       $('#j-next').disabled = false;
+      if (r && r.box && r.url) return void location.replace(r.url); // another JustGameBox game
       if (!r || !r.ok) return void ($('#j-err').textContent = (r && r.error) || 'Room not found.');
       roomHelp = r.help !== false; // the room's "New player help" setting (Quick join on the creator)
       MT_CREATOR.setParty(!!r.party); // party mode: every cosmetic is unlocked in this room

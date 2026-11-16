@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#1b1240">
+  <title>JustGameBox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/box/box.css">
+  <link rel="stylesheet" href="/box/games.css">
+</head>
+<body>
+  <div class="offline" id="offline" hidden>Reconnecting…</div>
+  <section class="ph ph-join" id="join" hidden>
+    <h1>Just<span style="color:var(--pink)">Game</span><span style="color:var(--yellow)">Box</span></h1>
+    <div class="game" id="j-game"></div>
+    <label for="j-code">Room code</label>
+    <input id="j-code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
+    <label for="j-name">Your name</label>
+    <input id="j-name" maxlength="14" autocomplete="nickname" placeholder="Name">
+    <button class="btn big" id="j-go">Join</button>
+    <p class="err" id="j-err"></p>
+  </section>
+  <section class="ph" id="game" hidden>
+    <div class="ph-head"><span id="h-game"></span><b id="h-name"></b><span class="right"><button class="link" id="h-leave">Leave</button></span></div>
+    <div id="g-body"></div>
+  </section>
+  <div class="toast" id="toast" hidden></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/sfx.js"></script>
+  <script src="/box/box.js"></script>
+  <script src="/box/games/president.js"></script>
+  <script src="/box/games/blackjack.js"></script>
+  <script src="/box/games/ducks-art.js"></script>
+  <script src="/box/games/ducks-mini.js"></script>
+  <script src="/box/games/ducks.js"></script>
+  <script src="/box/play.js"></script>
+</body>
+</html>

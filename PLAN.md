@@ -1,5 +1,28 @@
 # Mafia Town: expansion plan
 
+## November 16, 2026 - JustGameBox
+
+JustMafia became one game in a party box. `/` is the JustGameBox title screen (JustMafia,
+President, Blackjack Night, JustRaiseDucks, two empty slots for games still to be chosen);
+JustMafia's TV moved to `/mafia`. Box games share one framework (`box/room.js`, socket
+namespace `/box`): room code + QR, lobby settings, bots, reconnect tokens, coalesced syncs,
+server-owned rules, public TV state and private phone state. Box and Mafia room codes never
+collide, and Mafia's join page forwards box codes.
+
+- President: multi-table, card trading, promotion/relegation between tables, turn timers, bots.
+- Blackjack Night: simultaneous play for the whole room, splits/doubles, Bust Bets, comeback chips.
+- JustRaiseDucks: a farm per player in Duck Valley (TV canvas: buildings, decorations, ducks
+  animate what their owner is doing), five skills with phone mini-games, energy/mood, food,
+  buildings, decorations, hats, race gear, tactics, weather, farm events, predictions, badges,
+  end-of-season awards. Races are simulated on the server and replayed on the TV as a
+  side-scrolling course with a following camera, commentary and phone cheering. All art is
+  original and drawn in code (duck-raising genre, not copied from any existing game).
+
+Validation: `tools/test-box.js` (18 tests, including 100-player bot games of all three) and
+`tools/e2e-box.js` (8 headless-Chrome checks: title screen, QR lobbies, phone joins, a real
+turn of each game, Duck Valley, a race, no page errors). Not yet played by real people on
+phones; mini-game difficulty and race balance are first guesses.
+
 ## November 10, 2026 - shared GitHub development
 
 Gabe/Codex and Justin/Claude collaborate in

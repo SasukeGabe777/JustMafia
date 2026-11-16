@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JustGameBox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/box/box.css">
+  <link rel="stylesheet" href="/box/games.css">
+</head>
+<body>
+  <div class="tv">
+    <header class="tv-bar">
+      <a class="btn ghost small" href="/" id="to-hub">◀ Games</a>
+      <div class="title" id="tv-title">JustGameBox</div>
+      <div class="code" id="tv-code" hidden></div>
+    </header>
+    <main class="tv-main" id="tv-main"><p class="muted">Setting up the room…</p></main>
+  </div>
+  <div class="sound-hint" id="sound-hint">Click anywhere to turn on sound</div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/sfx.js"></script>
+  <script src="/box/box.js"></script>
+  <script src="/box/games/president.js"></script>
+  <script src="/box/games/blackjack.js"></script>
+  <script src="/box/games/ducks-art.js"></script>
+  <script src="/box/games/ducks-mini.js"></script>
+  <script src="/box/games/ducks.js"></script>
+  <script src="/box/tv.js"></script>
+</body>
+</html>

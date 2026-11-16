@@ -53,3 +53,6 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
 .hub-foot .keys { font-size: 13px; opacity: 0.7; }
 
 @media (prefers-reduced-motion: reduce) { .bg, .logo, .tile.live.sel .icon { animation: none; } }
+.tile.live.president .art { background: radial-gradient(circle at 50% 60%, #1f8a55, #0b3b24 70%); }
+.tile.live.blackjack .art { background: radial-gradient(circle at 50% 60%, #2f5fd0, #101f4d 70%); }
+.tile.live.ducks .art { background: radial-gradient(circle at 50% 60%, #4fb3ff, #11507f 70%); }

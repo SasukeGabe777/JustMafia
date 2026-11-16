@@ -42,6 +42,8 @@ const server = http.createServer(app);
 // which matters with 20+ phones sharing one Wi-Fi network.
 const io = new Server(server, { pingInterval: 10000, pingTimeout: 20000, perMessageDeflate: { threshold: 1024 }, httpCompression: { threshold: 1024 } });
 const rooms = new Map();
+// JustGameBox's other games (President, Blackjack Night, JustRaiseDucks) share the code space.
+const box = require('./box').installBox(app, io, { takenElsewhere: (c) => rooms.has(c) });
 
 // JustGameBox: the title screen picks a game; JustMafia's big screen lives at /mafia.
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'hub.html')));
@@ -95,7 +97,7 @@ function newCode() {
   const L = 'ABCDEFGHJKMNPQRSTUVWXYZ';
   let c;
   do c = Array.from({ length: 4 }, () => L[Math.floor(Math.random() * L.length)]).join('');
-  while (rooms.has(c));
+  while (rooms.has(c) || box.has(c));
   return c;
 }
 
@@ -323,6 +325,8 @@ io.on('connection', (socket) => {
     reply(cb, { ok: true, profile: profiles.view(socket.profileId) });
   });
   socket.on('room:check', (msg = {}, cb) => {
+    // A JustGameBox code (another game): send the phone to that game's join page.
+    if (box.has(String(msg.code || '').trim().toUpperCase())) return reply(cb, { ok: false, box: true, url: '/box/play?room=' + encodeURIComponent(String(msg.code).trim().toUpperCase()) });
     const room = findRoom(msg.code);
     reply(cb, room ? { ok: true, code: room.code, lobby: room.phase === 'lobby', help: room.settings.newPlayerHelp !== false, party: !!room.settings.partyMode } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
   });
