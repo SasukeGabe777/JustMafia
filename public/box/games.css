@@ -380,3 +380,76 @@
 .tt-vote .num { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--yellow); color: #2a1650; }
 .tt-vote.sel { border-color: var(--red); background: rgba(255, 90, 95, 0.2); }
 @media (max-width: 1100px) { .bl-wrap { grid-template-columns: 1fr; } }
+
+/* ---------- JustFunny ---------- */
+.fn-wrap { position: relative; }
+.fn-stage { position: relative; height: calc(100vh - 150px); min-height: 380px; border-radius: 18px; overflow: hidden; background: #000; }
+.fn-video, .fn-video #fn-player, .fn-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.fn-cover { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, #3a1466, #120a2b); display: grid; place-items: center; text-align: center; z-index: 2; }
+.fn-cover img { max-width: 60%; border-radius: 14px; }
+.fn-wait h2 { font-size: 40px; margin: 8px 0; } .fn-big { font-size: 90px; animation: bob 1.6s ease-in-out infinite; }
+.fn-next { font-size: 20px; color: var(--yellow); }
+.fn-thumb { width: min(560px, 60vw); border-radius: 16px; box-shadow: 0 10px 0 rgba(0, 0, 0, 0.4); }
+.fn-score { font-size: 26px; font-weight: 700; }
+.fn-top { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; gap: 8px; justify-content: space-between; z-index: 3; pointer-events: none; }
+.fn-pill { background: rgba(10, 5, 30, 0.75); padding: 8px 16px; border-radius: 99px; font-size: 20px; max-width: 75%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fn-pill.small { font-size: 15px; }
+.fn-bottom { position: absolute; left: 12px; right: 12px; bottom: 12px; display: grid; grid-template-columns: 1.3fr 1fr 0.8fr; gap: 10px; z-index: 3; pointer-events: none; }
+.fn-meter { display: flex; gap: 10px; align-items: center; background: rgba(10, 5, 30, 0.75); padding: 8px 14px; border-radius: 16px; font-size: 17px; }
+.fn-meter > div { flex: 1; } .fn-meter .big { font-size: 34px; }
+.fn-bar { height: 10px; border-radius: 99px; background: rgba(255, 255, 255, 0.18); overflow: hidden; margin-top: 4px; }
+.fn-bar i { display: block; height: 100%; transition: width 0.4s; }
+.fn-bar.funny i { background: linear-gradient(90deg, #ffd23f, #ff4f9a); } .fn-bar.skip i { background: #ff5a5f; } .fn-bar.time i { background: #3ee6ff; }
+.fn-react { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.fn-float { position: absolute; bottom: 90px; font-size: 54px; animation: fnUp 2.6s ease-out forwards; }
+@keyframes fnUp { to { transform: translateY(-60vh) scale(1.3); opacity: 0; } }
+.fn-board .banner { margin-top: 0; }
+.fn-champ { display: flex; gap: 20px; align-items: center; justify-content: center; margin: 10px auto 18px; max-width: 1100px; }
+.fn-champ img { width: 420px; border-radius: 16px; border: 5px solid var(--yellow); box-shadow: 0 0 40px rgba(255, 210, 63, 0.4); }
+.fn-champ h2 { font-size: 34px; margin: 0 0 8px; }
+.fn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.fn-card { position: relative; background: var(--panel); border: 2px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+.fn-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.fn-card b { padding: 6px 10px 0; font-size: 15px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fn-card small { padding: 2px 10px 8px; color: var(--muted); }
+.fn-num { position: absolute; top: 6px; left: 6px; background: var(--yellow); color: #2a1650; font-weight: 800; padding: 2px 8px; border-radius: 99px; }
+.fn-now { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
+.fn-rate { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px; }
+.fn-rate button { font-size: 34px; padding: 10px 0; border-radius: 16px; border: 3px solid var(--line); background: var(--panel); cursor: pointer; }
+.fn-rate button.sel { border-color: var(--yellow); background: rgba(255, 210, 63, 0.25); transform: scale(1.08); }
+.fn-skip { width: 100%; font: inherit; font-weight: 800; font-size: 20px; color: #fff; background: #ff5a5f; border: 0; border-radius: 16px; padding: 16px; box-shadow: 0 5px 0 #b33a3e; display: flex; flex-direction: column; align-items: center; margin-bottom: 12px; cursor: pointer; }
+.fn-skip small { font-weight: 500; font-size: 13px; opacity: 0.9; }
+.fn-skip.on { background: #6b2a2e; box-shadow: none; }
+.fn-search { display: flex; gap: 6px; margin: 6px 0; }
+.fn-search .dk-select { flex: 1; min-width: 0; font-size: 16px; }
+.fn-search .btn { white-space: nowrap; font-size: 15px; padding: 8px 12px; }
+.fn-results { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto; margin: 6px 0; }
+.fn-row { display: flex; gap: 10px; align-items: center; text-align: left; font: inherit; color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 6px; cursor: pointer; }
+.fn-row img { width: 112px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; flex: none; }
+.fn-row b { display: block; font-size: 14px; } .fn-row small { color: var(--muted); font-size: 12px; }
+.fn-queued { display: flex; gap: 10px; align-items: center; }
+.fn-queued img { width: 120px; border-radius: 8px; } .fn-queued small { display: block; color: var(--muted); }
+.fn-yourturn { border-color: var(--yellow); background: rgba(255, 210, 63, 0.14); animation: pulse 1.2s ease-in-out infinite; }
+.fn-vote { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fn-vcard { font: inherit; color: var(--ink); background: var(--panel); border: 3px solid var(--line); border-radius: 14px; padding: 0 0 8px; overflow: hidden; display: flex; flex-direction: column; text-align: left; cursor: pointer; }
+.fn-vcard img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.fn-vcard b { font-size: 13px; padding: 4px 8px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fn-vcard small { padding: 0 8px; color: var(--muted); font-size: 11px; }
+.fn-vcard.sel { border-color: var(--green); } .fn-vcard:disabled { opacity: 0.45; }
+.small { font-size: 13px; }
+
+/* JustFunny: TikTok / Instagram players, vertical videos, thumbnail stand-ins */
+.fn-alt { position: absolute; inset: 0; z-index: 1; background: #000; display: flex; justify-content: center; }
+.fn-alt iframe { width: 100%; height: 100%; border: 0; }
+.fn-video.vertical { background: radial-gradient(circle at 50% 50%, #2a1650, #000); }
+.fn-video.vertical #fn-player, .fn-video.vertical iframe { left: 50%; right: auto; width: calc((100vh - 150px) * 9 / 16); max-width: 100%; transform: translateX(-50%); }
+.fn-video.vertical .fn-alt iframe { position: relative; left: auto; transform: none; }
+.fn-noimg { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; aspect-ratio: 16 / 9; width: 100%; font-weight: 800; color: #fff; background: #333; }
+.fn-noimg span { font-size: 2.2em; }
+.fn-noimg.src-instagram { background: linear-gradient(45deg, #f9ce34, #ee2a7b, #6228d7); }
+.fn-noimg.src-tiktok { background: linear-gradient(45deg, #25f4ee, #000 45%, #000 55%, #fe2c55); }
+.fn-row .fn-noimg, .fn-queued .fn-noimg { width: 112px; flex: none; border-radius: 8px; font-size: 11px; }
+.fn-champ .fn-noimg { width: 420px; border-radius: 16px; font-size: 28px; }
+.fn-plat { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0; }
+.fn-plat .btn { font-size: 13px; padding: 8px 4px; }
+.fn-shorts { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }

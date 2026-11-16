@@ -339,6 +339,45 @@ test('Two Truths & a Lie: write three (mark the lie); voters who spot it score; 
   const big = room('truths', 40, { featured: 100 }, 4); go(big.r); let i = 0; while (big.r.game.phase !== 'over' && big.clock.step() && i++ < 200000);
   assert.equal(big.r.game.phase, 'over');
 });
+const asyncTests = [];
+const atest = (name, fn) => asyncTests.push([name, fn]);
+atest('JustFunny: links from YouTube, Shorts, TikTok and Instagram; blocked videos are refused; turns, ratings, skips and the final vote', async () => {
+  const FN = GAMES.funny._test;
+  assert.deepEqual(FN.parseLink('https://youtu.be/abcdefghijk'), { src: 'youtube', id: 'abcdefghijk', vertical: false });
+  assert.equal(FN.parseLink('https://www.youtube.com/shorts/abcdefghijk').vertical, true);
+  assert.equal(FN.parseLink('https://www.tiktok.com/@a.b/video/7301234567890123456').id, '7301234567890123456');
+  assert.equal(FN.parseLink('https://www.instagram.com/reel/C1a2B3c4D5e/').src, 'instagram');
+  assert.equal(FN.parseLink('https://evil.example/tiktok.com/t/abc'), null, 'short links only from TikTok itself');
+  assert.equal(FN.parseLink('hello'), null);
+  // A fake YouTube: one video blocks embedding, the rest are fine.
+  const fake = async (url) => ({ ok: !url.includes('BLOCKEDvid1'), status: url.includes('BLOCKEDvid1') ? 401 : 200, url, json: async () => ({ title: 'A funny cat', author_name: 'Cats', width: 480, height: 270 }) });
+  const { r, clock } = room('funny', 3, { turns: 1, maxSeconds: 60, skip: 0.5 }, 5);
+  const a = human(r, 'Ann'), b = human(r, 'Bo');
+  go(r); const g = r.game; g.fetch = fake; g.key = '';
+  assert.equal(g.order.length, 2, 'people take turns; bots only watch');
+  const first = r.get(g.picker), second = first.id === a.id ? b : a;
+  assert.equal((await g.actAsync(first, { op: 'pick', url: 'https://youtu.be/BLOCKEDvid1' })).ok, false, 'embedding off: refused');
+  const q = await g.actAsync(second, { op: 'pick', url: 'https://www.instagram.com/reel/C1a2B3c4D5e/' });
+  assert(q.ok && q.queued, 'line up your video before your turn');
+  assert((await g.actAsync(first, { op: 'pick', url: 'https://www.youtube.com/watch?v=abcdefghijk' })).ok);
+  assert.equal(g.phase, 'play'); assert.equal(g.cur.title, 'A funny cat');
+  assert.equal(r.act(first, { op: 'rate', v: 5 }).ok, false, 'no rating your own video');
+  assert(r.act(second, { op: 'rate', v: 5 }).ok);
+  assert((await g.actAsync(first, { op: 'search', q: 'cats' })).noKey, 'search says when there is no API key');
+  clock.t += 5000; r.act(second, { op: 'skip' });
+  for (const p of r.list()) if (p.bot) { g.cur.skips.add(p.id); }
+  g.checkSkip();
+  assert.equal(g.phase, 'score'); assert.equal(g.videos[0].why, 'skipped');
+  while (g.phase === 'score') clock.step();
+  assert.equal(g.phase, 'play', 'the queued Instagram Reel plays straight away');
+  assert.equal(g.cur.src, 'instagram'); assert.equal(g.cur.vertical, true);
+  r.hostAction({ type: 'video', ev: 'ended', id: g.cur.id });
+  while (g.phase === 'score') clock.step();
+  assert.equal(g.phase, 'final'); assert.equal(r.act(first, { op: 'final', n: 1 }).ok, false, 'not your own video');
+  assert(r.act(first, { op: 'final', n: 2 }).ok);
+  while (g.phase !== 'over') clock.step();
+  assert(g.ranked.length === 2 && g.ranked[0].final >= g.ranked[1].final);
+});
 test('Room: names are unique, tokens reconnect, 100-player cap, settings only take listed values', () => {
   const { r } = room('ducks', 0);
   const a = r.join('Ann'); assert(a.ok); assert.equal(r.join('ann').ok, false);
@@ -349,4 +388,4 @@ test('Room: names are unique, tokens reconnect, 100-player cap, settings only ta
   r.hostAction({ type: 'settings', settings: { raceEvery: '60' } }); assert.equal(r.settings.raceEvery, 60);
 });
 
-console.log(`\nAll ${passed} JustGameBox tests passed.`);
+(async () => { for (const [name, fn] of asyncTests) { await fn(); passed++; console.log(`  ✓ ${name}`); } console.log(`\nAll ${passed} JustGameBox tests passed.`); })().catch((e) => { console.error(e); process.exit(1); });

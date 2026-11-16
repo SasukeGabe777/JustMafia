@@ -117,6 +117,16 @@ for testing (**+ add 5 test bots** in the lobby).
 | 🃏 Blackjack Night | `blackjack` | 1–100 | Everyone plays the same dealer at the same time. Bust Bets: bet a friend goes bust. Most chips after the last hand wins. |
 | 🦆 JustRaiseDucks | `ducks` | 1–100 | Each player gets a farm in Duck Valley (on the TV). Train Run, Swim, Fly, Climb and Stamina with phone mini-games; buy food, buildings, decorations, hats and race gear; every few minutes the valley races an obstacle course (track, pond, cliff, ravine) with weather, tactics, predictions and cheering. |
 
+| 🃏 JustBlanks | `blanks` | 3–100 | Fill-in-the-blank party cards (all original) or write your own; a rotating Judge or everyone votes. |
+| 🤥 Two Truths & a Lie | `truths` | 3–100 | Type two truths and a lie on your phone; the room votes on the lie. |
+| 😂 JustFunny | `funny` | 2–100 | Watch party: take turns putting YouTube, YouTube Shorts, TikTok or Instagram Reel videos on the TV; rate them, vote to skip, vote for the funniest. |
+
+JustFunny search: set `YOUTUBE_API_KEY` (a free YouTube Data API v3 key from Google Cloud) on the server
+(Render → Environment) to search YouTube inside the game, with a Shorts filter. Without a key, phones open
+YouTube, TikTok or Instagram search and paste the link back. The server checks YouTube/TikTok videos with
+their public oEmbed endpoints; Instagram shares no details without a Facebook app token, so Reels get a
+styled card instead of a thumbnail, and Instagram may ask for a tap to play on the TV.
+
 Code: `box/` (rooms and rules: `room.js`, `games/*.js`) and `public/box/` (TV and phone shells, per-game screens).
 Tests: `node tools/test-box.js` (rules, 100-player bot games) and `npm run e2e-box` (real pages in headless Chrome).
 

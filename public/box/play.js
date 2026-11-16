@@ -15,7 +15,9 @@
 
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
   const act = (msg) => new Promise((res) => socket.emit('player:act', msg, (r) => { r = r || { ok: false, error: 'No answer from the server.' }; if (!r.ok && r.error) toast(r.error); res(r); }));
-  const ctx = { act, toast, sfx: BOX.sfx, vibrate: (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch { /* no */ } } };
+  // Moves that take a moment (search, picking a video): no toast here, the game shows its own message.
+  const actAsync = (msg) => new Promise((res) => socket.emit('player:async', msg, (r) => res(r || { ok: false, error: 'No answer from the server.' })));
+  const ctx = { act, actAsync, toast, sfx: BOX.sfx, vibrate: (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch { /* no */ } } };
 
   function showJoin(err) {
     $('#join').hidden = false; $('#game').hidden = true;
