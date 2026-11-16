@@ -134,7 +134,8 @@
         const c = hero.canvas;
         if (document.body.contains(c) && hero.farm) {
           const W = c.clientWidth, H = c.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
-          if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+          if (W < 40 || H < 40) { hero.raf = requestAnimationFrame(step); return; } // hidden or not laid out yet
+          if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
           const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
           g.fillStyle = '#5fb04a'; g.fillRect(0, 0, W, H);
           A().drawFarm(g, { ...hero.farm, owner: '' }, -W * 0.03, -H * 0.03, W * 1.06, H * 1.06, performance.now() / 1000, petFx);
@@ -298,11 +299,11 @@
     ],
     fx: { raceDone: 'cheer', levelUp: 'pop', win: 'win', farm: 'join', build: 'click', badge: 'chime', event: 'knock', pet: 'pop', hatch: 'flip', grow: 'chime', spin: 'shuffle', gift: 'chime' },
     onFx(f) {
-      if (f.kind === 'cheer') { race.cheers.push({ id: f.id, at: performance.now() }); if (race.cheers.length > 60) race.cheers.shift(); return; }
-      if (!f.id) return;
-      if (f.kind === 'farm') { tvw.born[f.id] = performance.now(); return; }
-      (tvw.fxBy[f.id] = tvw.fxBy[f.id] || []).push({ kind: f.kind, at: performance.now() });
-      if (tvw.fxBy[f.id].length > 4) tvw.fxBy[f.id].shift();
+      if (f.kind === 'cheer') { race.cheers.push({ id: f.who, at: performance.now() }); if (race.cheers.length > 60) race.cheers.shift(); return; }
+      const who = f.who; if (!who) return;
+      if (f.kind === 'farm') { tvw.born[who] = performance.now(); return; }
+      (tvw.fxBy[who] = tvw.fxBy[who] || []).push({ kind: f.kind, at: performance.now() });
+      if (tvw.fxBy[who].length > 4) tvw.fxBy[who].shift();
     },
 
     tv(el, s) {

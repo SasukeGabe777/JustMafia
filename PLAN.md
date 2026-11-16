@@ -52,6 +52,24 @@ phones; mini-game difficulty and race balance are first guesses.
   sheet for picking difficulty, collapsible quests.
 - Validation: test-box 24 and e2e-box 9 pass. Still untested by real players.
 
+### More small games and JustKingdoms (same day)
+
+- Seven more small games on the shared framework (built by parallel agents, integrated and tested
+  together): JustSketch Relay, Who Said It?, Price Panic, Emoji Charades, Most Likely To…,
+  Where Do You Stand?, JustBid. Each has its own rules tests (tools/test-box-<key>.js).
+- JustKingdoms, the third big game (/kingdoms, own title and look): engine (economy, 5 ages, buildings,
+  units with counters, hex map with seating-order placement, villages, armies, battles, vassals,
+  rebellion, alliances, trades, events, three win modes + score, computer players with four
+  personalities), a full-screen animated world map on the TV, and a five-tab phone. Design in
+  docs/justkingdoms.md, the screen contract in docs/justkingdoms-api.md.
+- Platform fixes: "Play again" works for every game; sound cues carrying a player id no longer stop
+  later sounds and animations (the id moves to `who`).
+- Title screen: small games sorted by type, each tile shows players, time and type.
+- Validation: every game's rules tests, and tools/e2e-box.js (22 headless-Chrome checks: every game
+  started from the host's phone, played with real taps/typing/drawing to its end screen, no page
+  errors; JustKingdoms title → lobby → world map; JustRaiseDucks flows). Not yet played by real
+  groups; JustKingdoms balance (ages arrive by ~minute 20 with bots) needs real playtests.
+
 ## November 10, 2026 - shared GitHub development
 
 Gabe/Codex and Justin/Claude collaborate in

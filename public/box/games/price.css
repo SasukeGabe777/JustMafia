@@ -1,0 +1,144 @@
+/* Price Panic (pp-): shelf-tag product cards, the price line, the phone price picker. */
+.pp-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+.pp-stage { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.pp-top { display: flex; align-items: center; gap: 14px; }
+.pp-logo { font-weight: 700; font-size: 22px; background: var(--yellow); color: #2a1650; padding: 4px 14px; border-radius: 10px; transform: rotate(-2deg); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3); }
+.pp-round { font-size: 20px; color: var(--muted); }
+.pp-note { color: var(--muted); font-size: 13px; text-align: right; opacity: 0.8; }
+
+/* Product cards: a white shelf card with a "photo" and a hanging price tag */
+.pp-cards { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+.pp-card { position: relative; background: #fffdf7; color: #2a1650; border-radius: 18px; padding: 14px 18px 18px; width: 300px; text-align: center; box-shadow: 0 8px 0 rgba(0, 0, 0, 0.3); border-top: 10px solid var(--pink); }
+.pp-card.hero { width: min(520px, 100%); }
+.pp-card.slim { width: min(460px, 100%); display: grid; grid-template-columns: 110px 1fr; grid-template-rows: auto auto auto; text-align: left; column-gap: 14px; padding: 10px 14px; }
+.pp-card.slim .pp-photo { grid-row: 1 / span 3; height: 100px; font-size: 64px; margin: 0; }
+.pp-card.slim .pp-ribbon { position: static; justify-self: start; margin-bottom: 4px; }
+.pp-card.slim .pp-tag { position: absolute; right: -14px; top: -14px; }
+.pp-ribbon { position: absolute; top: 10px; left: 10px; font-size: 13px; font-weight: 700; background: #2a1650; color: var(--yellow); padding: 2px 10px; border-radius: 99px; }
+.pp-photo { height: 170px; margin: 14px 0 8px; display: grid; place-items: center; font-size: 110px; border-radius: 14px; background: radial-gradient(circle at 50% 40%, #fff 0, #ffe8f3 55%, #f3dcff 100%); box-shadow: inset 0 -6px 0 rgba(42, 22, 80, 0.08); }
+.pp-card.hero .pp-photo { height: 230px; font-size: 150px; }
+.pp-photo span { filter: drop-shadow(0 8px 6px rgba(42, 22, 80, 0.25)); }
+.pp-name { font-size: 26px; font-weight: 700; line-height: 1.15; }
+.pp-card.hero .pp-name { font-size: 34px; }
+.pp-desc { font-size: 17px; color: #6a5a8e; margin-top: 2px; }
+.pp-card.mini { width: auto; flex: 1 1 0; min-width: 0; padding: 8px 10px 10px; border-top-width: 6px; border-radius: 14px; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3); }
+.pp-card.mini .pp-ribbon { display: none; }
+.pp-card.mini .pp-photo { height: 64px; font-size: 44px; margin: 0 0 4px; }
+.pp-card.mini .pp-name { font-size: 16px; }
+.pp-card.mini .pp-desc { font-size: 12px; }
+.pp-cards.n3 .pp-card.mini .pp-photo { height: 48px; font-size: 32px; }
+.pp-cards.n3 .pp-card.mini .pp-name { font-size: 13px; }
+.pp-cards.n3 .pp-card.mini .pp-desc { display: none; }
+.pp-tag { position: relative; display: inline-block; margin-top: 12px; background: var(--yellow); color: #2a1650; font-weight: 700; font-size: 30px; padding: 6px 18px 6px 34px; border-radius: 6px 14px 14px 6px; clip-path: polygon(16px 0, 100% 0, 100% 100%, 16px 100%, 0 50%); transform: rotate(-3deg); letter-spacing: 0.04em; }
+.pp-tag .pp-hole { position: absolute; left: 14px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: #fffdf7; }
+.pp-tag.real { background: var(--green); font-size: 36px; }
+.pp-tag.big { font-size: 64px; padding: 10px 30px 10px 48px; clip-path: polygon(24px 0, 100% 0, 100% 100%, 24px 100%, 0 50%); }
+.pp-tag.big .pp-hole { left: 20px; width: 14px; height: 14px; margin-top: -7px; background: #2a1650; }
+.pp-drop { animation: ppDrop 0.7s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes ppDrop { from { transform: translateY(-160px) rotate(12deg); opacity: 0; } }
+.pp-enter .pp-card { animation: ppEnter 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) backwards; }
+.pp-enter .pp-card:nth-child(2) { animation-delay: 0.15s; } .pp-enter .pp-card:nth-child(3) { animation-delay: 0.3s; }
+@keyframes ppEnter { from { transform: translateX(-120px) rotate(-8deg); opacity: 0; } }
+
+.pp-ask { text-align: center; font-size: 26px; }
+.pp-ask.small { font-size: 18px; margin: 8px 0; }
+.pp-ask .pp-tag { display: block; width: max-content; margin: 12px auto 0; }
+.pp-status { display: flex; justify-content: center; gap: 24px; font-size: 22px; font-weight: 600; }
+.pp-clock .timer { color: var(--yellow); }
+.pp-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.pp-chip { padding: 3px 10px; border-radius: 99px; background: var(--panel); border: 2px solid var(--line); font-size: 14px; opacity: 0.55; }
+.pp-chip.in { opacity: 1; border-color: var(--c, var(--green)); background: rgba(46, 230, 166, 0.14); }
+.pp-fast .pp-chip { opacity: 1; border-color: var(--c); }
+
+/* Intro banners for special rounds */
+.pp-intro { text-align: center; padding: 50px 20px; }
+.pp-intro-ic { font-size: 110px; }
+.pp-intro h2 { font-size: 64px; margin: 6px 0; color: var(--yellow); text-shadow: 0 5px 0 rgba(0, 0, 0, 0.3); }
+.pp-intro p { font-size: 24px; color: var(--muted); }
+.pp-intro.small { padding: 24px 6px; } .pp-intro.small .pp-intro-ic { font-size: 64px; } .pp-intro.small h2 { font-size: 34px; } .pp-intro.small p { font-size: 17px; }
+.pp-pop { animation: ppPop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes ppPop { from { transform: scale(0.3) rotate(-10deg); opacity: 0; } }
+
+/* The price line */
+.pp-line { position: relative; height: 170px; margin: 18px 40px 6px; }
+.pp-line.crowd { height: 120px; }
+.pp-axis { position: absolute; left: 0; right: 0; top: 50%; height: 10px; margin-top: -5px; border-radius: 99px; background: linear-gradient(90deg, var(--cyan), var(--yellow), var(--pink)); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3); }
+.pp-tick { position: absolute; bottom: -4px; transform: translateX(-50%); font-size: 13px; color: var(--muted); }
+.pp-mark { position: absolute; top: 50%; width: 0; height: 0; }
+.pp-mark i { position: absolute; left: -11px; top: -11px; width: 22px; height: 22px; border-radius: 50%; background: var(--c); border: 3px solid #fff; display: grid; place-items: center; font-style: normal; font-size: 16px; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); transition: transform 0.3s; }
+.pp-line.crowd .pp-mark i { width: 14px; height: 14px; left: -7px; top: -7px; border-width: 2px; }
+.pp-mark.pp-slide { animation: ppSlide 1.1s cubic-bezier(0.25, 1.2, 0.4, 1) backwards; animation-delay: var(--d); }
+@keyframes ppSlide { from { left: 0; opacity: 0; } }
+.pp-lab { position: absolute; left: 0; transform: translateX(-50%); white-space: nowrap; font-size: 14px; background: rgba(18, 10, 43, 0.85); border: 2px solid var(--c); padding: 1px 8px; border-radius: 8px; }
+.pp-lab.up { bottom: 16px; } .pp-lab.dn { top: 16px; }
+.pp-lab b { color: var(--yellow); }
+.pp-mark.bust i { background: #3a1010; transform: scale(1.4); border-color: var(--red); }
+.pp-mark.bust { opacity: 0.75; }
+.pp-mark.top i { transform: scale(1.5); box-shadow: 0 0 0 4px var(--yellow), 0 0 22px var(--yellow); }
+.pp-mark.top .pp-lab { border-color: var(--yellow); z-index: 3; font-size: 16px; }
+.pp-mark.bull i { border-color: var(--green); }
+.pp-pin { position: absolute; top: -26px; bottom: -26px; width: 0; border-left: 4px dashed var(--green); z-index: 4; }
+.pp-pin b { position: absolute; top: -34px; left: 0; transform: translateX(-50%); background: var(--green); color: #12301f; font-size: 24px; padding: 2px 12px; border-radius: 10px; white-space: nowrap; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3); }
+.pp-pin-drop { animation: ppPin 0.8s cubic-bezier(0.3, 1.7, 0.5, 1); }
+@keyframes ppPin { from { transform: translateY(-260px); opacity: 0; } }
+.pp-total { text-align: center; font-size: 30px; } .pp-total b { color: var(--green); }
+.pp-sum { display: flex; gap: 18px; justify-content: center; font-size: 20px; }
+.pp-drum { animation: ppShake 0.25s linear infinite alternate; }
+@keyframes ppShake { from { transform: translateX(-3px) rotate(-1deg); } to { transform: translateX(3px) rotate(1deg); } }
+.pp-best { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.pp-bestcard { background: var(--panel); border: 2px solid var(--c); border-radius: 14px; padding: 8px 12px; min-width: 230px; }
+.pp-bestcard.first { border-color: var(--yellow); box-shadow: 0 0 18px rgba(255, 210, 63, 0.35); }
+.pp-bestcard h4 { margin: 0 0 4px; font-size: 18px; } .pp-bestcard h4 span { color: var(--yellow); }
+.pp-math { width: 100%; border-collapse: collapse; font-size: 15px; }
+.pp-math td { padding: 2px 0; } .pp-math td + td { text-align: right; font-weight: 700; padding-left: 10px; white-space: nowrap; }
+.pp-tot { text-align: right; font-size: 22px; font-weight: 700; color: var(--green); border-top: 2px solid var(--line); margin-top: 4px; }
+
+/* Higher / lower */
+.pp-hilo-res { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; }
+.pp-hl-col { text-align: center; font-size: 28px; font-weight: 700; background: var(--panel); border: 3px solid var(--line); border-radius: 18px; padding: 14px; }
+.pp-hl-col b { display: block; font-size: 54px; }
+.pp-hl-col.win { border-color: var(--green); background: rgba(46, 230, 166, 0.18); }
+.pp-hl-col.lose { opacity: 0.45; }
+.pp-hl-mid { text-align: center; font-size: 28px; } .pp-hl-mid b { color: var(--yellow); font-size: 44px; }
+.pp-fast { text-align: center; font-size: 20px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; align-items: center; }
+
+/* End screen */
+.pp-awards { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+.pp-award { background: #fffdf7; color: #2a1650; border-radius: 16px; padding: 12px 16px; width: 210px; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.3); border-top: 8px solid var(--yellow); }
+.pp-award .ic { font-size: 44px; } .pp-award b { font-size: 20px; } .pp-award small { color: #6a5a8e; }
+.pp-finalboard { max-width: 560px; margin: 0 auto; text-align: left; }
+.pp-myaward { background: rgba(255, 210, 63, 0.15); border: 2px solid var(--yellow); border-radius: 12px; padding: 8px; margin-top: 8px; }
+
+/* Phone price picker */
+.pp-guess { background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 12px; margin: 10px 0; }
+.pp-amt { text-align: center; font-size: 52px; font-weight: 700; color: var(--yellow); font-variant-numeric: tabular-nums; line-height: 1.1; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.3); }
+.pp-range { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; border-radius: 99px; background: linear-gradient(90deg, var(--cyan), var(--yellow), var(--pink)); margin: 14px 0 4px; outline: none; touch-action: none; }
+.pp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 46px; height: 46px; border-radius: 50%; background: #fffdf7; border: 5px solid #2a1650; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4); cursor: grab; }
+.pp-range::-moz-range-thumb { width: 38px; height: 38px; border-radius: 50%; background: #fffdf7; border: 5px solid #2a1650; cursor: grab; }
+.pp-scale { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.pp-tune { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 5px; margin-top: 10px; }
+.pp-tune button { border: 0; border-radius: 10px; padding: 10px 2px; font-weight: 700; font-size: 14px; background: rgba(255, 255, 255, 0.12); color: var(--ink); cursor: pointer; }
+.pp-tune button:active { transform: translateY(2px); background: rgba(255, 255, 255, 0.25); }
+.pp-type { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
+.pp-type span { font-size: 22px; font-weight: 700; color: var(--yellow); }
+.pp-type input { flex: 1; min-width: 0; font: inherit; font-size: 18px; padding: 8px 10px; border-radius: 10px; border: 2px solid var(--line); background: #2b1c58; color: var(--ink); }
+.pp-powers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pp-pow { border: 2px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 14px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; font-size: 26px; cursor: pointer; }
+.pp-pow b { font-size: 13px; } .pp-pow small { font-size: 11px; color: var(--muted); }
+.pp-pow.on { border-color: var(--yellow); background: rgba(255, 210, 63, 0.2); box-shadow: 0 0 12px rgba(255, 210, 63, 0.4); }
+.pp-pow:disabled { opacity: 0.4; cursor: default; }
+.pp-pow.on:disabled { opacity: 1; }
+.pp-peek { margin-top: 8px; text-align: center; background: rgba(62, 230, 255, 0.12); border: 2px solid var(--cyan); border-radius: 12px; padding: 8px; }
+.pp-lockbtn { width: 100%; margin-top: 12px; }
+.pp-locked { text-align: center; background: var(--panel); border: 2px solid var(--green); border-radius: 18px; padding: 16px; margin: 10px 0; }
+.pp-hl-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.pp-hl { border: 0; border-radius: 20px; padding: 28px 6px; font-size: 54px; display: flex; flex-direction: column; align-items: center; cursor: pointer; color: #2a1650; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35); }
+.pp-hl b { font-size: 22px; } .pp-hl.up { background: var(--green); } .pp-hl.down { background: var(--pink); color: #fff; }
+.pp-hl:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
+.pp-result .pp-big { font-size: 34px; margin: 6px 0; } .pp-big.good { color: var(--green); } .pp-big.bad { color: var(--red); }
+.pp-result .pp-math { text-align: left; }
+
+@media (max-width: 900px) {
+  .pp-wrap { grid-template-columns: 1fr; }
+  .pp-line { margin: 18px 10px 6px; }
+}
