@@ -4,6 +4,9 @@
 (function () {
   const $ = (s) => document.querySelector(s);
   const params = new URLSearchParams(location.search);
+  // Big games have their own look on the phone too (/ducks/play, or once we know the game).
+  const theme = (key) => { if (key && BOX.games[key] && BOX.games[key].standalone) { document.body.classList.add('g-' + key); const b = document.querySelector('.ph-join h1'); if (b) b.textContent = BOX.games[key].icon + ' ' + BOX.games[key].name; document.title = BOX.games[key].name; } };
+  theme(location.pathname.split('/')[1]);
   const socket = io('/box', { transports: ['websocket', 'polling'] });
   let me = null, view = null, G = null, toastT = 0, renderQueued = false, lastRender = 0;
   const tokenKey = (code) => 'box.p.' + code;
@@ -20,15 +23,15 @@
     if (code && !$('#j-code').value) $('#j-code').value = code;
     try { if (!$('#j-name').value) $('#j-name').value = localStorage.getItem('box.name') || ''; } catch { /* private */ }
     $('#j-err').textContent = err || '';
-    if ($('#j-code').value.length === 4) socket.emit('room:check', { code: $('#j-code').value }, (r) => { $('#j-game').textContent = r && r.ok ? 'Joining ' + r.title : ''; });
+    if ($('#j-code').value.length === 4) socket.emit('room:check', { code: $('#j-code').value }, (r) => { $('#j-game').textContent = r && r.ok ? 'Joining ' + r.title : ''; if (r && r.ok) theme(r.game); });
   }
   function join(code, name, token) {
     socket.emit('player:join', { code, name, token }, (r) => {
       if (!r || !r.ok) { if (token) { try { localStorage.removeItem(tokenKey(code)); } catch { /* */ } return showJoin(); } return showJoin(r && r.error); }
       me = { code: r.code, id: r.id, token: r.token, game: r.game, name: name || (load(r.code) || {}).name };
       store(r.code, { token: r.token, name: me.name });
-      G = BOX.games[r.game];
-      history.replaceState(null, '', '/box/play?room=' + r.code);
+      G = BOX.games[r.game]; theme(r.game);
+      history.replaceState(null, '', (G && G.standalone ? '/' + r.game + '/play' : '/box/play') + '?room=' + r.code);
       $('#join').hidden = true; $('#game').hidden = false;
       $('#h-game').textContent = G ? G.icon + ' ' + G.name + ' ·' : '';
       try { SFX.unlock(); } catch { /* */ }
