@@ -43,10 +43,11 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,President,Blackjack Night,JustRaiseDucks');
-  assert.equal(await hub.eval(`document.querySelectorAll('.tile.empty').length`), 2);
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,President,Blackjack Night');
+  assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
+  assert.equal(await hub.eval(`document.querySelectorAll('.tile.empty').length`), 5, 'one big and four small coming-soon slots');
   await hub.shot('box-hub');
-  ok('Title screen: JustMafia, President, Blackjack Night, JustRaiseDucks and two empty slots');
+  ok('Title screen: JustMafia and JustRaiseDucks big on top (plus a big coming-soon); President, Blackjack Night and four coming-soon slots below');
 
   // ---------- President ----------
   {
@@ -98,14 +99,20 @@ async function setup(browser, game, settings = {}) {
   {
     const { tv, ph } = await setup(browser, 'ducks', { raceEvery: 60, races: 3 });
     await tv.click('#start');
-    await ph.until(`!!document.querySelector('[data-train="run"]')`, 'train buttons');
+    await ph.until(`document.querySelectorAll('[data-hatch]').length === 3`, 'egg picker');
+    await ph.shot('box-ducks-eggs');
+    await ph.click('[data-hatch="1"]');
+    await ph.until(`!!document.querySelector('[data-train="run"]')`, 'hatched: train buttons', 8000);
+    await ph.until(`!!document.querySelector('.dk-herocv')`, 'farm hero canvas');
     await tv.until(`!!document.querySelector('#dk-valley') && /6 farms/.test(document.querySelector('#dk-next').textContent)`, 'Duck Valley with 6 farms');
     await ph.shot('box-ducks-phone');
-    await ph.click('[data-tab="style"]'); await ph.until(`!!document.querySelector('[data-color="mallard"]')`, 'style tab');
+    await ph.click('[data-tab="duck"]'); await ph.until(`!!document.querySelector('[data-color="mallard"]')`, 'my duck tab');
     await ph.click('[data-color="mallard"]');
-    await ph.click('[data-tab="farm"]'); await ph.until(`!!document.querySelector('[data-build="pool"]')`, 'farm tab');
+    await ph.click('[data-tab="shop"]'); await ph.until(`!!document.querySelector('[data-cat="farm"]')`, 'shop tab');
+    await ph.click('[data-cat="farm"]'); await ph.until(`!!document.querySelector('[data-build="pool"]')`, 'farm category');
+    await ph.shot('box-ducks-shop');
     await ph.click('[data-build="pool"]'); await tv.until(`/built a Lap Pool/.test(document.querySelector('#dk-news').textContent)`, 'TV news: Lap Pool built');
-    await ph.click('#dk-pet');
+    await ph.click('.dk-hero'); // tap the farm to pet the duck
     await ph.click('[data-tab="race"]'); await ph.until(`!!document.querySelector('[data-tactic="sprint"]')`, 'race tab');
     await ph.click('[data-tactic="sprint"]'); await ph.until(`document.querySelector('[data-tactic="sprint"]').classList.contains('on')`, 'tactic chosen');
     await ph.shot('box-ducks-racetab'); await wait(1200); await tv.shot('box-ducks-valley');
@@ -120,7 +127,7 @@ async function setup(browser, game, settings = {}) {
     assert(/Score (\d+)/.test(res) && Number(res.match(/Score (\d+)/)[1]) >= 8, res);
     await ph.shot('box-ducks-reward');
     await ph.click('.dk-result button');
-    ok('JustRaiseDucks: Duck Valley shows every farm; color, Lap Pool (TV news), pet, tactic; Paddle Power earned XP and coins');
+    ok('JustRaiseDucks: egg picked and hatched; Duck Valley shows every farm; color, Lap Pool from the shop (TV news), pet, tactic; Paddle Power earned XP and coins');
     await tv.eval(`document.querySelector('[data-h="next"]').click(); true`); // start the race now
     await tv.until(`!!document.querySelector('#dk-race')`, 'race canvas');
     await wait(4000); await tv.shot('box-ducks-race-intro'); await wait(9000); await tv.shot('box-ducks-race');
