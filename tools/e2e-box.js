@@ -43,9 +43,9 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,President,Blackjack Night,JustBlanks,Two Truths & a Lie,JustFunny');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,JustBlanks,Blackjack Night,JustBid,Price Panic,Emoji Charades,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustSketch Relay,JustFunny');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
-  assert.equal(await hub.eval(`document.querySelectorAll('.tile.empty').length`), 2, 'one big and one small coming-soon slot');
+  assert.equal(await hub.eval(`document.querySelectorAll('.tile.empty').length`), 0, 'every slot is a game');
   await hub.shot('box-hub');
   ok('Title screen: JustMafia and JustRaiseDucks big on top (plus a big coming-soon); President, Blackjack Night and four coming-soon slots below');
 
@@ -154,6 +154,67 @@ async function setup(browser, game, settings = {}) {
     await tv.eval(`document.querySelector('[data-h="next"]').click(); true`); // skip it
     await tv.until(`/Skipped/.test(document.body.textContent) || !!document.querySelector('.fn-board:not([hidden])')`, 'skipped', 15000);
     ok('JustFunny: host starts; phone pastes an Instagram Reel (YouTube/Shorts/TikTok/Instagram search buttons); it plays upright on the TV; skip works');
+  }
+
+  // ---------- The five newer small games: real play over sockets ----------
+  // A "monkey" phone taps whatever it can and types answers; the TV skips ahead; every game must reach its end screen.
+  for (const game of ['sketch', 'whosaid', 'price', 'emoji', 'likely', 'spectrum', 'bid']) {
+    const { tv, ph } = await setup(browser, game, {});
+    await ph.until(`!!document.querySelector('[data-vip="start"]') && !document.querySelector('[data-vip="start"]').disabled`, game + ' host start');
+    await ph.click('[data-vip="start"]');
+    await tv.until(`!document.querySelector('#lobby-err') || !/#g-area/.test('') `, 'started');
+    let shots = 0;
+    for (let i = 0; i < 40; i++) {
+      await ph.eval(`(() => {
+        window.confirm = () => true; window.alert = () => {}; window.prompt = () => ''; // pop-ups would freeze a headless page
+        // type into any text box and submit
+        for (const t of document.querySelectorAll('#g-body input:not([type=checkbox]):not([type=range]), #g-body textarea, .sk-pad textarea, .sk-pad input')) { if (t.offsetParent && !t.value) { t.value = 'a banana ' + Math.floor(Math.random() * 9); t.dispatchEvent(new Event('input', { bubbles: true })); if (t.oninput) t.oninput(); t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); } }
+        // draw a stroke on any canvas pad
+        for (const c of document.querySelectorAll('body > div canvas')) { const r = c.getBoundingClientRect(); if (r.width > 100) { const ev = (type, x, y) => c.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: r.left + x * r.width, clientY: r.top + y * r.height, pointerId: 1 })); ev('pointerdown', 0.2, 0.2); ev('pointermove', 0.5, 0.6); ev('pointermove', 0.8, 0.3); ev('pointerup', 0.8, 0.3); } }
+        // tap one enabled button that isn't Leave
+        const btns = [...document.querySelectorAll('#g-body button, body > div button')].filter((b) => !b.disabled && b.offsetParent && !/Leave|Lobby|Clear|undo|Undo/i.test(b.textContent));
+        if (btns.length) btns[Math.floor(Math.random() * btns.length)].click();
+        return true; })()`);
+      if (i === 12 && shots++ < 1) { await ph.shot('box-' + game + '-phone'); await tv.shot('box-' + game + '-tv'); }
+      await wait(350);
+    }
+    for (let k = 0; k < 80 && !(await tv.eval(`!!document.querySelector('[data-h="again"]')`)); k++) { await tv.eval(`(() => { const b = document.querySelector('[data-h="next"]'); if (b) b.click(); return true; })()`); await wait(450); }
+    assert(await tv.eval(`!!document.querySelector('[data-h="again"]')`), game + ' reached its end screen');
+    await wait(1200); await tv.shot('box-' + game + '-end'); await ph.shot('box-' + game + '-phone-end');
+    if (game === 'price') { // Play again starts a fresh game (this used to fail for every game but JustRaiseDucks)
+      await tv.click('[data-h="again"]'); await wait(1500);
+      assert(await tv.eval(`!document.querySelector('[data-h="again"]') && !!document.querySelector('[data-h="next"]')`), 'Play again restarts');
+    }
+    const errs = [...(tv.errors || []).map((e) => 'TV: ' + String(e && (e.message || e)).slice(0, 300)), ...(ph.errors || []).map((e) => 'phone: ' + String(e && (e.message || e)).slice(0, 300))];
+    if (errs.length) console.log(`    ${game} page errors:\n      ` + errs.join('\n      '));
+    ok(`${game}: host starts from the phone; real taps, typing and drawing; skips to the end screen${errs.length ? ' (errors above)' : ' with no errors'}${game === 'price' ? '; Play again restarts' : ''}`);
+  }
+
+  // ---------- JustKingdoms (/kingdoms) ----------
+  {
+    const tv = await browser.page();
+    await tv.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
+    await tv.go(`${URL}/kingdoms`);
+    await tv.until(`/Found a new world/.test(document.body.textContent)`, 'kingdoms title', 10000);
+    assert(await tv.eval(`document.querySelector('.tv-bar').hidden && document.body.classList.contains('g-kingdoms')`), 'own look, no JustGameBox bar');
+    await tv.eval(`[...document.querySelectorAll('button')].find((b) => /Found a new world/.test(b.textContent)).click(); true`);
+    await tv.until(`/^[A-Z]{4}$/.test((document.querySelector('#code') || {}).textContent || '')`, 'kingdoms lobby', 10000);
+    const code = await tv.eval(`document.querySelector('#code').textContent`);
+    await tv.click('#add-bots');
+    const ph = await browser.page();
+    await ph.send('Emulation.setDeviceMetricsOverride', { width: 400, height: 820, deviceScaleFactor: 1, mobile: true });
+    await ph.go(`${URL}/kingdoms/play?room=${code}`);
+    await ph.until(`document.body.classList.contains('g-kingdoms') && !document.querySelector('#join').hidden`, 'kingdoms join');
+    await ph.eval(`document.querySelector('#j-name').value = 'Kai'`); await ph.click('#j-go');
+    await ph.until(`/Where are you sitting/.test(document.body.textContent)`, 'seat picker', 8000);
+    await tv.shot('box-kingdoms-lobby'); await ph.shot('box-kingdoms-phone-lobby');
+    await ph.until(`!!document.querySelector('[data-vip="start"]')`, 'host start'); await ph.click('[data-vip="start"]');
+    await tv.until(`(() => { const c = document.querySelector('#kt-cv'); return c && c.width >= 800; })()`, 'world map canvas sized', 10000);
+    await ph.until(`/Kingdom/.test(document.body.textContent) && !!document.querySelector('.kp-nav, nav')`, 'phone tabs', 10000);
+    for (let i = 0; i < 4; i++) { await tv.eval(`(() => { const c = document.querySelector('#corner .cg'); if (c) c.click(); const n = document.querySelector('#corner [data-h="next"]'); if (n) n.click(); return true; })()`); await wait(600); }
+    await wait(1500); await tv.shot('box-kingdoms-world'); await ph.shot('box-kingdoms-phone');
+    PAGES.push(tv, ph);
+    ok('JustKingdoms at /kingdoms: title, Round Table lobby, phone joins at /kingdoms/play, host starts, the world map fills the TV, phone tabs work');
   }
 
   // ---------- JustRaiseDucks as its own game (/ducks) ----------
@@ -272,7 +333,9 @@ async function setup(browser, game, settings = {}) {
     ok('JustRaiseDucks: the race runs on the TV (canvas), then the podium and points');
   }
   PAGES.push(hub);
-  assert.deepEqual(PAGES.flatMap((p) => p.errors || []), [], 'no page errors');
+  const pageErrors = PAGES.flatMap((p) => p.errors || []);
+  if (pageErrors.length) console.log('PAGE ERRORS:\n' + pageErrors.map((e) => '  ' + String(e && (e.stack || e.message || JSON.stringify(e))).slice(0, 400)).join('\n'));
+  assert.deepEqual(pageErrors, [], 'no page errors');
   ok('No page errors on the title screen, TVs or phones');
   console.log(`\nAll ${passed} JustGameBox end-to-end checks passed. Screenshots: ${SHOTS}`);
   await cleanup(); process.exit(0);

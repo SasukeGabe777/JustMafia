@@ -79,3 +79,19 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
 .tile.live.truths .art { background: radial-gradient(circle at 50% 60%, #d94f7a, #4a0f26 70%); }
 
 .tile.live.funny .art { background: radial-gradient(circle at 50% 60%, #ff3d3d, #4a0b0b 70%); }
+
+/* Small tiles show players · time · type too (compact chips) */
+.tiles.small .tile .meta { display: flex; gap: 4px; margin-top: 6px; }
+.tiles.small .tile .meta span { font-size: 11px; padding: 2px 7px; }
+.tiles.small .tile { min-height: 190px; }
+.tile.live.sketch .art { background: radial-gradient(circle at 50% 60%, #ffb347, #7a3b00 70%); }
+.tile.live.whosaid .art { background: radial-gradient(circle at 50% 60%, #5b6cff, #141a5c 70%); }
+.tile.live.price .art { background: radial-gradient(circle at 50% 60%, #2ecc71, #0b4a26 70%); }
+.tile.live.emoji .art { background: radial-gradient(circle at 50% 60%, #ffd23f, #7a5a00 70%); }
+.tile.live.likely .art { background: radial-gradient(circle at 50% 60%, #ff4f9a, #5c0f33 70%); }
+
+.tile.live.spectrum .art { background: radial-gradient(circle at 50% 60%, #3ee6ff, #0b4a5c 70%); }
+
+.tile.live.bid .art { background: radial-gradient(circle at 50% 60%, #c98b4a, #3d2410 70%); }
+
+.tile.live.kingdoms .art { background: radial-gradient(circle at 50% 60%, #c9a227, #3d2a0a 70%); }

@@ -11,6 +11,14 @@ const GAMES = {
   blanks: require('./games/blanks'),
   truths: require('./games/truths'),
   funny: require('./games/funny'),
+  sketch: require('./games/sketch'),
+  whosaid: require('./games/whosaid'),
+  price: require('./games/price'),
+  emoji: require('./games/emoji'),
+  likely: require('./games/likely'),
+  spectrum: require('./games/spectrum'),
+  bid: require('./games/bid'),
+  kingdoms: require('./games/kingdoms'),
 };
 
 function installBox(app, io, { takenElsewhere = () => false } = {}) {
@@ -20,6 +28,8 @@ function installBox(app, io, { takenElsewhere = () => false } = {}) {
   // Big games get their own address, like JustMafia's /mafia.
   app.get('/ducks', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
   app.get('/ducks/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
+  app.get('/kingdoms', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
+  app.get('/kingdoms/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
 
   const nsp = io.of('/box');
   const rooms = new Map();

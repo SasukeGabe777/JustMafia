@@ -120,6 +120,14 @@ for testing (**+ add 5 test bots** in the lobby).
 | 🃏 JustBlanks | `blanks` | 3–100 | Fill-in-the-blank party cards (all original) or write your own; a rotating Judge or everyone votes. |
 | 🤥 Two Truths & a Lie | `truths` | 3–100 | Type two truths and a lie on your phone; the room votes on the lie. |
 | 😂 JustFunny | `funny` | 2–100 | Watch party: take turns putting YouTube, YouTube Shorts, TikTok or Instagram Reel videos on the TV; rate them, vote to skip, vote for the funniest. |
+| ✏️ JustSketch Relay | `sketch` | 3–100 | Draw it, guess it, pass it on in rings; replay each chain on the TV; vote for the funniest moment. |
+| 🕵️ Who Said It? | `whosaid` | 3–100 | Anonymous answers to personal questions; guess who wrote each one (4 names), double down, bluff badges. |
+| 💸 Price Panic | `price` | 1–100 | Guess prices on a slider; going over halves your points; power-ups, Higher or Lower and a Shopping Spree final. |
+| 😜 Emoji Charades | `emoji` | 3–100 | The clue giver builds a clue from emojis; forgiving typed guesses; parallel stages for big rooms. |
+| 👑 Most Likely To… | `likely` | 3–100 | Vote who fits the prompt, predict the winner, Hot Seat and Double Trouble rounds, a Hall of Titles. |
+| 🧭 Where Do You Stand? | `spectrum` | 3–100 | Place yourself on fun scales; read-a-friend rounds; find your twin and your opposite in the room. |
+| 📦 JustBid | `bid` | 1–100 | Storage-locker auctions: clues, live bidding, flashlight peeks, sealed bids, collections, loans, unpacking reveals. |
+| 🏰 JustKingdoms | `kingdoms` | 2–100 (best 5–10) | Big game at `/kingdoms`: everyone rules a kingdom on one hex world map; sit next to your neighbours; grow from a hamlet to an empire; win by conquest, a peace monument, or a rocket. Design: `docs/justkingdoms.md`. |
 
 JustFunny search: set `YOUTUBE_API_KEY` (a free YouTube Data API v3 key from Google Cloud) on the server
 (Render → Environment) to search YouTube inside the game, with a Shorts filter. Without a key, phones open

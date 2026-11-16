@@ -55,7 +55,7 @@ class BoxRoom {
   cancel(h) { if (h != null) { this.clock.clear(h); this.timers.delete(h); } }
   clearTimers() { for (const h of this.timers) this.clock.clear(h); this.timers.clear(); }
   // A sound/animation cue for the big screen (the TV plays each new id once).
-  fx(kind, data = {}) { this.fxLog.push({ id: ++this.fxSeq, kind, ...data }); if (this.fxLog.length > 30) this.fxLog.shift(); }
+  fx(kind, data = {}) { this.fxLog.push({ ...data, who: data.id, kind, id: ++this.fxSeq }); /* a player id in data moves to `who`, so the cue's own id keeps counting up */ if (this.fxLog.length > 30) this.fxLog.shift(); }
 
   list() { return [...this.players.values()]; }
   get(id) { return this.players.get(id); }
@@ -111,7 +111,7 @@ class BoxRoom {
       case 'removeBots': for (const p of this.list()) if (p.bot) this.remove(p.id); return { ok: true };
       case 'kick': this.remove(msg.id); return { ok: true };
       case 'start': return this.start();
-      case 'again': if (this.def.liveLobby) this.resetLobby(); return this.start();
+      case 'again': this.resetLobby(); return this.start(); // every game: back to a fresh lobby, then start
       case 'next': if (!this.game || !this.game.next) return { ok: false }; this.game.next(); this.sync(); return { ok: true };
       case 'lobby': this.resetLobby(); this.sync(); return { ok: true };
       default: // game-specific TV reports (e.g. JustFunny: a video ended)
