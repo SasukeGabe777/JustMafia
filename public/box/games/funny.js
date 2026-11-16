@@ -28,10 +28,17 @@
   function sync() {
     if (!yt.ready || !yt.player) return;
     try {
-      if (yt.want && yt.want !== yt.loaded) { yt.loaded = yt.want; yt.player.loadVideoById(yt.want); }
-      else if (!yt.want && yt.loaded) { yt.loaded = null; yt.player.stopVideo(); }
+      if (yt.want && yt.want !== yt.loaded) {
+        yt.loaded = yt.want; yt.player.loadVideoById(yt.want);
+        // Browsers block sound until someone has clicked the TV page. If the video didn't
+        // start, start it muted and ask for one click to turn the sound on.
+        const id = yt.want;
+        setTimeout(() => { try { if (yt.loaded === id && yt.player.getPlayerState() !== 1) { yt.player.mute(); yt.player.playVideo(); soundHint(true); } } catch { /* */ } }, 1800);
+      } else if (!yt.want && yt.loaded) { yt.loaded = null; yt.player.stopVideo(); }
     } catch (e) { /* player not ready */ }
   }
+  function soundHint(on) { const h = document.getElementById('fn-sound'); if (h) h.hidden = !on; }
+  document.addEventListener('pointerdown', () => { try { if (yt.player && yt.player.isMuted && yt.player.isMuted()) yt.player.unMute(); } catch { /* */ } soundHint(false); });
   function float(el, text) {
     const f = document.createElement('div'); f.className = 'fn-float'; f.textContent = text;
     f.style.left = 8 + Math.random() * 84 + '%'; el.appendChild(f); setTimeout(() => f.remove(), 2600);
@@ -46,10 +53,22 @@
     const key = c && c.src !== 'youtube' ? c.src + ':' + c.id : null;
     if (key === alt.key) return; alt.key = key;
     box.innerHTML = !key ? '' : c.src === 'tiktok'
-      ? `<iframe src="https://www.tiktok.com/player/v1/${encodeURIComponent(c.id)}?autoplay=1&music_info=0&description=0&rel=0&controls=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`
-      : `<iframe src="https://www.instagram.com/reel/${encodeURIComponent(c.id)}/embed/" allow="autoplay; encrypted-media" scrolling="no"></iframe>`;
+      ? `<iframe src="https://www.tiktok.com/player/v1/${encodeURIComponent(c.id)}?autoplay=1&music_info=0&description=0&rel=0&controls=1&progress_bar=1" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`
+      // Instagram's player is a whole post (name, likes, caption). Crop it to just the video.
+      : `<div class="fn-ig"><div class="fn-ig-crop"><iframe src="https://www.instagram.com/reel/${encodeURIComponent(c.id)}/embed/" allow="autoplay; encrypted-media" scrolling="no"></iframe></div></div>
+         <div class="fn-ig-hint"><span>👆</span><b>Click the video to play</b><small>Instagram needs one click on the TV</small></div>`;
     box.hidden = !key;
+    fitIg(box);
   }
+  // Scale the cropped Instagram video to fill the stage height.
+  function fitIg(box) {
+    const crop = box.querySelector('.fn-ig-crop'); if (!crop) return;
+    const H = box.clientHeight || 600, sc = H / 666;
+    crop.style.transform = `scale(${sc})`; crop.parentElement.style.width = `${525 * sc}px`; crop.parentElement.style.height = `${H}px`;
+  }
+  window.addEventListener('resize', () => { const b = document.getElementById('fn-alt'); if (b) fitIg(b); });
+  // A click into the video moves focus into its frame: hide the "click to play" prompt.
+  window.addEventListener('blur', () => { setTimeout(() => { const a2 = document.activeElement; if (a2 && a2.tagName === 'IFRAME') { const h = document.querySelector('.fn-ig-hint'); if (h) h.hidden = true; } }, 0); });
   // TikTok's player tells the page when a video ends.
   window.addEventListener('message', (e) => { try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d && d['x-tiktok-player'] && d.type === 'onStateChange' && d.value === 0 && alt.key && yt.host) yt.host('video', { ev: 'ended', id: alt.key.split(':')[1] }); } catch { /* not ours */ } });
   const meter = (pct, cls) => `<div class="fn-bar ${cls}"><i style="width:${Math.max(0, Math.min(100, pct))}%"></i></div>`;
@@ -75,7 +94,7 @@
       if (!s) return;
       yt.host = ctx && ctx.host;
       if (!el.querySelector('#fn-stage')) {
-        el.innerHTML = `<div class="fn-wrap"><div class="fn-stage" id="fn-stage"><div class="fn-video" id="fn-video"><div id="fn-player"></div><div class="fn-alt" id="fn-alt" hidden></div><div class="fn-cover" id="fn-cover"></div></div><div class="fn-react" id="fn-react"></div><div class="fn-top" id="fn-top"></div><div class="fn-bottom" id="fn-bottom"></div></div><div class="fn-board" id="fn-board"></div></div>`;
+        el.innerHTML = `<div class="fn-wrap"><div class="fn-stage" id="fn-stage"><div class="fn-video" id="fn-video"><div id="fn-player"></div><div class="fn-alt" id="fn-alt" hidden></div><div class="fn-cover" id="fn-cover"></div></div><div class="fn-sound" id="fn-sound" hidden>🔇 Click anywhere on the TV to turn the sound on</div><div class="fn-react" id="fn-react"></div><div class="fn-top" id="fn-top"></div><div class="fn-bottom" id="fn-bottom"></div></div><div class="fn-board" id="fn-board"></div></div>`;
         loadApi();
       }
       const stage = el.querySelector('#fn-stage'), board = el.querySelector('#fn-board'), cover = el.querySelector('#fn-cover');
