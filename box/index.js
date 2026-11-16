@@ -83,6 +83,12 @@ function installBox(app, io, { takenElsewhere = () => false } = {}) {
       if (!room || !p) return reply(cb, { ok: false, error: 'You are not in this room.' });
       reply(cb, room.act(p, msg));
     });
+    // The host's phone (first to join) can start the game or play again.
+    socket.on('player:host', (msg, cb) => {
+      const { room, p } = ctx();
+      if (!room || !p) return reply(cb, { ok: false, error: 'You are not in this room.' });
+      reply(cb, room.vipAction(p, String(msg.type || '')));
+    });
     socket.on('player:leave', (_m, cb) => { const { room, p } = ctx(); if (room && p) { detach(); room.remove(p.id); } reply(cb, { ok: true }); });
     socket.on('disconnect', () => { const { room, p } = ctx(); if (p) { p.sockets = Math.max(0, p.sockets - 1); room.sync(); } });
   });

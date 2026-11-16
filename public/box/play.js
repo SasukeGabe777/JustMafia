@@ -64,7 +64,18 @@
     const a = document.activeElement;
     if (a && a.tagName === 'INPUT' && $('#g-body').contains(a)) { setTimeout(queue, 400); return; }
     lastRender = Date.now();
-    if (view.phase === 'lobby') { $('#g-body').innerHTML = `<div class="card-box" style="text-align:center"><h3>You’re in! 🎉</h3><p>Waiting for the host to start <b>${BOX.esc(view.title)}</b>.</p><p class="muted">${view.count} player${view.count === 1 ? '' : 's'} so far. Watch the big screen.</p></div>${G.lobby ? G.lobby(view, ctx) : ''}`; if (G.lobbyBind) G.lobbyBind($('#g-body'), view, ctx); return; }
+    // Jackbox-style host bar: the first player to join starts the game from their phone.
+    const vb = $('#vip-bar'), over = view.state && view.state.phase === 'over';
+    if (view.vip && (view.phase === 'lobby' || over)) {
+      const can = view.count >= view.min;
+      const html = view.phase === 'lobby'
+        ? `<span>👑 You’re the host</span><button class="btn green" data-vip="start" ${can ? '' : 'disabled'}>Start game ▶</button>${can ? '' : `<small>Needs ${view.min}+ players</small>`}`
+        : '<span>👑 You’re the host</span><button class="btn green" data-vip="again">Play again ▶</button><button class="btn ghost small" data-vip="lobby">Lobby</button>';
+      if (vb.dataset.html !== html) { vb.innerHTML = html; vb.dataset.html = html; for (const b of vb.querySelectorAll('[data-vip]')) b.onclick = () => socket.emit('player:host', { type: b.dataset.vip }, (r) => { if (r && !r.ok && r.error) toast(r.error); }); }
+      vb.hidden = false;
+    } else vb.hidden = true;
+    if (view.phase === 'lobby' && view.live && view.state) { G.phone($('#g-body'), view.state, ctx, view); return; }
+    if (view.phase === 'lobby') { $('#g-body').innerHTML = `<div class="card-box" style="text-align:center"><h3>You’re in! 🎉</h3><p>${view.vip ? 'You’re the host! Press <b>Start game</b> when everyone is in.' : `Waiting for ${view.vipName ? '<b>' + BOX.esc(view.vipName) + '</b> (the host)' : 'the host'} to start <b>${BOX.esc(view.title)}</b>.`}</p><p class="muted">${view.count} player${view.count === 1 ? '' : 's'} so far. Watch the big screen.</p></div>${G.lobby ? G.lobby(view, ctx) : ''}`; if (G.lobbyBind) G.lobbyBind($('#g-body'), view, ctx); return; }
     G.phone($('#g-body'), view.state, ctx, view);
   }
   ctx.redraw = () => { lastRender = 0; draw(); };

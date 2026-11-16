@@ -58,6 +58,8 @@ const QUESTS = {
   build: { text: () => 'Build or decorate something on your farm', n: [1, 1], reward: 12 },
   mood: { text: (q) => `Get your duck’s mood to ${q.n}`, n: [90, 95], reward: 10 },
   gear: { text: () => 'Pack some race-day gear', n: [1, 1], reward: 8 },
+  gift: { text: () => 'Send a gift to a friend’s farm', n: [1, 1], reward: 10 },
+  star: { text: (q) => `Hit the ⭐ target ${q.n} times`, n: [2, 3], reward: 15 },
 };
 const SKILL_NAME = { run: 'Run', swim: 'Swim', fly: 'Fly', climb: 'Climb', stamina: 'Stamina' };
 // Eggs: every duck hatches with a natural talent (+25% XP in one skill and a head start).
@@ -91,6 +93,29 @@ const VARIANT = {
 };
 const WILD = ['Puddles', 'Sir Waddles', 'Biscuit', 'Captain Quack', 'Noodle', 'Pepper', 'Marsh Mallow', 'Drizzle', 'Tumble', 'Pip Squeak', 'Ziggy', 'Rusty', 'Bramble', 'Coco'];
 const NAMES = ['Puddle Cup', 'Reed Run', 'Pond Prix', 'Feather Derby', 'Lily Classic', 'Breadcrumb Bowl', 'Cattail Chase', 'Quackathon', 'Splash Open'];
+// Training difficulty: easier is cheap and safe, hard is costly and risky but pays far more.
+const DIFF = {
+  easy: { label: 'Easy', icon: '🌱', mult: 0.7, cost: 10, speed: 0.8, target: 12, wipe: 0, about: 'Slower game, less energy, less XP.' },
+  medium: { label: 'Medium', icon: '⚡', mult: 1, cost: 15, speed: 1, target: 16, wipe: 0, about: 'The normal game.' },
+  hard: { label: 'Hard', icon: '🔥', mult: 1.7, cost: 22, speed: 1.3, target: 18, wipe: 7, about: 'Fast and tricky. Big XP, but score under 7 and it’s a wipeout (almost nothing).' },
+};
+// Perks: pick one each time your duck grows up. They change how it races.
+const PERKS = {
+  burst: { icon: '🚀', label: 'Rocket Start', about: '+15% speed for the first fifth of every race' },
+  webbed: { icon: '🦶', label: 'Webbed Pro', about: '+8% speed in ponds' },
+  feather: { icon: '🪶', label: 'Featherweight', about: '+8% speed over ravines' },
+  grip: { icon: '🧲', label: 'Sure Grip', about: 'Never slips on cliffs' },
+  lungs: { icon: '🫁', label: 'Iron Lungs', about: '+40% stamina tank' },
+  lucky: { icon: '🍀', label: 'Lucky Feather', about: 'Catches boosts much more often' },
+  nimble: { icon: '🦘', label: 'Nimble Feet', about: 'Half as many trips and skids' },
+  closer: { icon: '🏁', label: 'Closer', about: '+10% speed in the last fifth of every race' },
+};
+// Lucky Spin: one free spin each training period.
+const SPIN = [
+  { w: 22, kind: 'coins', n: 10, label: '10 coins', icon: '🪙' }, { w: 14, kind: 'coins', n: 25, label: '25 coins', icon: '💰' }, { w: 4, kind: 'coins', n: 75, label: 'JACKPOT 75 coins', icon: '🎰' },
+  { w: 16, kind: 'energy', n: 40, label: '+40 energy', icon: '⚡' }, { w: 14, kind: 'xp', n: 60, label: '+60 XP', icon: '⭐' }, { w: 10, kind: 'mood', n: 40, label: '+40 mood', icon: '😊' },
+  { w: 8, kind: 'gear', label: 'Free race gear', icon: '🎒' }, { w: 6, kind: 'hat', label: 'A new hat', icon: '🎩' }, { w: 6, kind: 'nothing', label: 'A feather… nice?', icon: '🪶' },
+];
 const RUN_SECONDS = 20, TRAIN_COST = 15, NAP_SECONDS = 15, MAX_LEVEL = 25, SCORE_RATE = 2.2, SCORE_MAX = 45;
 const RACE_INTRO = 5000, RACE_RUN = 32000, RACE_OUTRO = 6000, RESULT_SHOW = 10000;
 const POINTS = [10, 8, 6, 5, 4, 3, 2];
@@ -121,7 +146,7 @@ const defaults = { raceEvery: 120, races: 5, course: 'classic', terrain: 'mixed'
 class Ducks {
   constructor(room, settings) {
     this.room = room; this.s = settings;
-    this.ducks = new Map(); this.race = 0; this.phase = 'training';
+    this.ducks = new Map(); this.race = 0; this.phase = 'lobby'; // the valley is open before the game starts
     this.endsAt = 0; this.timer = null; this.course = null; this.lastRace = null;
     this.ticker = []; this.plots = 0; this.tickSeq = 0;
   }
@@ -137,6 +162,7 @@ class Ducks {
         training: null, trainingSince: 0, napUntil: 0, petAt: -1e12, last: null, history: [], badges: [], event: null, nextEvent: 0, cheers: 0,
         stats: { trained: 0, bestScore: 0, foodEaten: 0, boosts: 0 }, quests: [], rival: null, rivalWon: null,
         gene: null, eggs: this.offerEggs(), stage: 0, trophies: [],
+        perks: [], perkChoice: null, streak: 0, bestStreak: 0, bests: {}, stars: 0, spunRace: -1, giftAt: -1e12, gifts: 0,
       });
       if (this.started) { this.log(`🏡 A new farm appears: ${owner}’s farm!`, 'join'); if (this.phase === 'training') this.newQuests(this.ducks.get(p.id)); }
       this.room.fx('farm', { id: p.id });
@@ -146,6 +172,7 @@ class Ducks {
   }
   start() {
     for (const p of this.room.list()) this.duck(p);
+    for (const d of this.ducks.values()) d.coins = this.s.startCoins; // settings may have changed in the lobby
     this.started = true;
     for (const d of this.ducks.values()) this.newQuests(d);
     this.log('🌅 Welcome to Duck Valley! Train your ducks, the first race is coming.');
@@ -161,10 +188,31 @@ class Ducks {
     this.room.fx('hatch', { id });
     return { ok: true, gene };
   }
+  offerPerks(d) {
+    const left = Object.keys(PERKS).filter((k) => !d.perks.includes(k));
+    const out = []; while (out.length < 3 && left.length) out.push(left.splice(Math.floor(this.room.rng() * left.length), 1)[0]);
+    d.perkChoice = out.length ? out : null;
+  }
+  spin(id, d) {
+    if (d.spunRace === this.race) return { ok: false, error: 'You already spun this round. Next spin after the race!' };
+    d.spunRace = this.race;
+    const tot = SPIN.reduce((a, x) => a + x.w, 0); let r = this.room.rng() * tot, i = 0;
+    for (; i < SPIN.length; i++) { r -= SPIN[i].w; if (r <= 0) break; }
+    const p = SPIN[Math.min(i, SPIN.length - 1)]; let label = p.label;
+    if (p.kind === 'coins') d.coins += p.n;
+    else if (p.kind === 'energy') d.energy = Math.min(100, d.energy + p.n);
+    else if (p.kind === 'mood') d.mood = Math.min(100, d.mood + p.n);
+    else if (p.kind === 'xp') { const k = SKILLS[Math.floor(this.room.rng() * SKILLS.length)]; d.xp[k] += p.n; label = `+60 ${SKILL_NAME[k]} XP`; this.checkGrowth(id, d); }
+    else if (p.kind === 'gear') { const g = Object.keys(GEAR).filter((k) => !d.gear.includes(k)); if (g.length && this.s.gear) { const k = g[Math.floor(this.room.rng() * g.length)]; d.gear.push(k); label = `Free ${GEAR[k].label}`; } else { d.coins += 20; label = '20 coins'; } }
+    else if (p.kind === 'hat') { const h = HATS.filter((x) => x !== 'none' && !d.hats.includes(x)); if (h.length) { const k = h[Math.floor(this.room.rng() * h.length)]; d.hats.push(k); d.hat = k; label = `A new hat: ${k}`; } else { d.coins += 20; label = '20 coins'; } }
+    if (p.n >= 75) this.log(`🎰 ${this.room.name(id)} hit the JACKPOT on the Lucky Spin!`, 'win');
+    this.room.fx('spin', { id });
+    return { ok: true, index: SPIN.indexOf(p), prize: label, icon: p.icon };
+  }
   stageOf(d) { const total = SKILLS.reduce((a, k) => a + level(d.xp[k]), 0); let i = 0; while (i + 1 < STAGES.length && total >= STAGES[i + 1].from) i++; return i; }
   checkGrowth(id, d) {
     const st = this.stageOf(d);
-    if (st > d.stage) { d.stage = st; d.grew = STAGES[st].label; this.log(`🌱 ${d.name} grew into a ${STAGES[st].label.toLowerCase()}!`, 'level'); this.room.fx('grow', { id }); }
+    if (st > d.stage) { d.stage = st; d.grew = STAGES[st].label; this.offerPerks(d); this.log(`🌱 ${d.name} grew into a ${STAGES[st].label.toLowerCase()}!`, 'level'); this.room.fx('grow', { id }); }
   }
 
   // Every 2 seconds: energy refills, moods drift, farm events happen.
@@ -232,7 +280,8 @@ class Ducks {
     const L = C.length, DT = 0.1, SAMPLE = 0.5;
     for (const [id, d] of racers) {
       const lv = this.levels(d), gear = new Set(d.gear), rng = this.room.rng;
-      let x = 0, t = 0, lastV = 1, pool = 30 + 10 * lv.stamina + (gear.has('energybar') ? 20 : 0), stopped = 0, tired = false, nextH = 0, nextB = 0, boostUntil = 0;
+      const perk = new Set(d.perks || []);
+      let x = 0, t = 0, lastV = 1, pool = (30 + 10 * lv.stamina + (gear.has('energybar') ? 20 : 0)) * (perk.has('lungs') ? 1.4 : 1), stopped = 0, tired = false, nextH = 0, nextB = 0, boostUntil = 0;
       const slipAt = {}; bounds.forEach(([a, b, s, v], i) => { if (s === 'cliff') slipAt[i] = a + (b - a) * (0.3 + rng() * 0.5); if (s === 'track' && v === 'ice') slipAt[i] = a + (b - a) * (0.2 + rng() * 0.6); });
       const luck = 0.97 + rng() * 0.06 + (C.weather === 'fog' ? (rng() - 0.5) * 0.1 : 0);
       const samples = [0], events = [];
@@ -260,6 +309,7 @@ class Ducks {
           if (d.energy < 20) v *= 0.92;
           if (tired) v *= 0.72;
           if (t < boostUntil) v *= 1.35;
+          if (perk.size) { const pg = x / L; if (perk.has('burst') && pg < 0.2) v *= 1.15; if (perk.has('closer') && pg > 0.8) v *= 1.1; if (perk.has('webbed') && sec === 'pond') v *= 1.08; if (perk.has('feather') && sec === 'gap') v *= 1.08; }
           v *= luck;
           const drain = (d.tactic === 'sprint' && prog < 0.4 ? 1.5 : d.tactic === 'steady' ? 0.85 : 1) * (C.weather === 'heat' ? 1.3 : 1);
           pool -= drain * DT;
@@ -270,18 +320,18 @@ class Ducks {
           // Boost pads / currents / updrafts: a better-trained duck catches them more often.
           while (nextB < boosts.length && boosts[nextB].x <= nx) {
             const B = boosts[nextB++];
-            if (B.x > x && rng() < 0.25 + 0.04 * lv[SECTIONS[B.s].skill]) { boostUntil = t + 1.2; events.push({ t: +t.toFixed(1), id, k: 'boost' }); }
+            if (B.x > x && rng() < (0.25 + 0.04 * lv[SECTIONS[B.s].skill]) * (perk.has('lucky') ? 1.6 : 1)) { boostUntil = t + 1.2; events.push({ t: +t.toFixed(1), id, k: 'boost' }); }
           }
           while (nextH < hurdles.length && hurdles[nextH].x <= nx) {
             if (hurdles[nextH].x > x) {
               const p = gear.has('sneakers') ? 0 : clamp(0.32 - 0.03 * lv.run, 0.03, 0.32) * (C.weather === 'rain' ? 1.6 : 1) * (hurdles[nextH].log ? 1.3 : 1);
-              if (rng() < p) { stopped = 0.9; events.push({ t: +t.toFixed(1), id, k: 'trip' }); }
+              if (rng() < p * (perk.has('nimble') ? 0.5 : 1)) { stopped = 0.9; events.push({ t: +t.toFixed(1), id, k: 'trip' }); }
             }
             nextH++;
           }
           x = stopped > 0 ? Math.min(nx, hurdles[nextH - 1] ? hurdles[nextH - 1].x : nx) : nx;
           if (si >= 0 && slipAt[si] != null && x >= slipAt[si]) {
-            const ice = bounds[si][3] === 'ice', p = ice && sec === 'track' ? clamp(0.35 - 0.02 * lv.run, 0.08, 0.35) : clamp(0.3 - 0.025 * lv.climb, 0.02, 0.3) * (gear.has('claws') ? 0.5 : 1) * (ice ? 1.6 : 1);
+            const ice = bounds[si][3] === 'ice', p = (sec === 'cliff' && perk.has('grip')) ? 0 : (sec === 'track' && perk.has('nimble') ? 0.5 : 1) * ice && sec === 'track' ? clamp(0.35 - 0.02 * lv.run, 0.08, 0.35) : clamp(0.3 - 0.025 * lv.climb, 0.02, 0.3) * (gear.has('claws') ? 0.5 : 1) * (ice ? 1.6 : 1);
             if (rng() < p) { if (sec === 'track') stopped = 0.8; else x = Math.max(bounds[si][0], x - 5); events.push({ t: +t.toFixed(1), id, k: sec === 'track' ? 'skid' : 'slip' }); }
             delete slipAt[si];
           }
@@ -466,7 +516,14 @@ class Ducks {
     }
     if (this.phase === 'over') return { ok: false, error: 'The season is over.' };
     if (m.op === 'hatch') return this.hatch(id, d, Number(m.pick));
+    if (m.op === 'perk') {
+      if (!d.perkChoice || !d.perkChoice.includes(m.key)) return { ok: false, error: 'Pick one of the offered perks.' };
+      d.perks.push(m.key); d.perkChoice = null;
+      this.log(`${PERKS[m.key].icon} ${d.name} learned ${PERKS[m.key].label}!`, 'level');
+      return { ok: true };
+    }
     if (!d.gene && m.op !== 'event') return { ok: false, error: 'Hatch your egg first! 🥚' };
+    if (this.phase === 'lobby') return { ok: false, error: 'Waiting for the host to start the game…' };
     if (m.op === 'event') return this.resolveEvent(id, d, String(m.choice || ''));
     if (this.phase !== 'training') return { ok: false, error: 'Race time! Watch the big screen.' };
     switch (m.op) {
@@ -474,17 +531,18 @@ class Ducks {
         if (!SKILLS.includes(m.stat)) return { ok: false, error: 'Pick a skill to train.' };
         if (d.napUntil > now) return { ok: false, error: 'Your duck is napping.' };
         if (d.training && now - d.training.at < (RUN_SECONDS + 15) * 1000) return { ok: false, error: 'Finish your training first.' };
-        const cost = this.s.energy === 'unlimited' ? 0 : TRAIN_COST;
+        const diff = DIFF[m.diff] ? m.diff : 'medium';
+        const cost = this.s.energy === 'unlimited' ? 0 : DIFF[diff].cost;
         if (d.energy < cost) return { ok: false, error: 'Too tired! Feed your duck or take a nap.' };
-        d.energy -= cost; d.training = { stat: m.stat, at: now };
-        return { ok: true, game: GAME_FOR[m.stat], seconds: RUN_SECONDS };
+        d.energy -= cost; d.training = { stat: m.stat, at: now, diff };
+        return { ok: true, game: GAME_FOR[m.stat], seconds: RUN_SECONDS, diff, speed: DIFF[diff].speed, target: DIFF[diff].target, best: (d.bests[m.stat] || {})[diff] || 0 };
       }
       case 'score': {
         const tr = d.training; if (!tr) return { ok: false, error: 'No training in progress.' };
         d.training = null;
         const secs = Math.min(RUN_SECONDS + 2, (now - tr.at) / 1000);
         const score = Math.max(0, Math.min(SCORE_MAX, Math.floor(Number(m.score) || 0), Math.floor(secs * SCORE_RATE) + 1));
-        return { ok: true, ...this.reward(id, d, tr.stat, score) };
+        return { ok: true, ...this.reward(id, d, tr.stat, score, tr.diff || 'medium') };
       }
       case 'cancel': d.training = null; return { ok: true };
       case 'nap': {
@@ -540,6 +598,18 @@ class Ducks {
         if (d.coins < g.cost) return { ok: false, error: 'Not enough coins.' };
         d.coins -= g.cost; d.gear.push(m.item); this.quest(id, d, 'gear'); return { ok: true };
       }
+      case 'spin': return this.spin(id, d);
+      case 'gift': {
+        const to = this.ducks.get(m.to);
+        if (!to || m.to === id || !this.room.get(m.to)) return { ok: false, error: 'Pick a friend’s farm.' };
+        if (now - d.giftAt < 30000) return { ok: false, error: 'You can send another gift in a few seconds.' };
+        if (d.coins < 5) return { ok: false, error: 'A gift costs 5 coins.' };
+        d.coins -= 5; d.giftAt = now; d.gifts++; d.mood = Math.min(100, d.mood + 5);
+        to.energy = Math.min(100, to.energy + 15); to.mood = Math.min(100, to.mood + 8); to.giftFrom = this.room.name(id);
+        this.log(`🎁 ${this.room.name(id)} sent seeds to ${this.room.name(m.to)}’s farm.`, 'event');
+        this.room.fx('gift', { id: m.to }); this.quest(id, d, 'gift');
+        return { ok: true };
+      }
       case 'tactic': if (!TACTICS[m.tactic]) return { ok: false, error: 'Unknown tactic.' }; d.tactic = m.tactic; return { ok: true };
       case 'predict': {
         if (!this.s.predictions) return { ok: false, error: 'Predictions are off.' };
@@ -549,8 +619,16 @@ class Ducks {
       default: return { ok: false, error: 'Unknown action.' };
     }
   }
-  reward(id, d, stat, score) {
-    let xp = score * 4;
+  reward(id, d, stat, score, diff = 'medium') {
+    const D = DIFF[diff];
+    let xp = score * 4 * D.mult;
+    const wipeout = D.wipe && score < D.wipe;
+    const star = score >= D.target;
+    // Streak: hit the ⭐ target again and again for up to +30% XP; a miss resets it.
+    if (star) { d.streak++; d.stars++; d.bestStreak = Math.max(d.bestStreak, d.streak); } else d.streak = 0;
+    xp *= 1 + 0.05 * Math.min(6, d.streak);
+    if (wipeout) xp *= 0.25;
+    const bests = (d.bests[stat] = d.bests[stat] || {}); const newBest = score > (bests[diff] || 0); if (newBest) bests[diff] = score;
     const b = BUILDINGS[Object.keys(BUILDINGS).find((k) => BUILDINGS[k].skill === stat)];
     const bl = b ? d.buildings[Object.keys(BUILDINGS).find((k) => BUILDINGS[k] === b)] : 0;
     xp *= 1 + 0.2 * bl;
@@ -559,13 +637,14 @@ class Ducks {
     if (this.s.catchUp && this.race > 0) { const st = this.standings(), i = st.findIndex((x) => x.id === id); if (i >= st.length / 2) xp *= 1.5; }
     xp = Math.round(xp);
     const before = level(d.xp[stat]);
-    d.xp[stat] += xp; const coins = Math.ceil(score / 2); d.coins += coins;
+    d.xp[stat] += xp; const coins = Math.ceil((score / 2) * (diff === 'easy' ? 0.7 : diff === 'hard' ? 1.5 : 1)) + (star ? 5 : 0); d.coins += coins;
+    if (diff === 'hard' && star && score >= 25) this.log(`🔥 ${d.name} crushed a Hard ${SKILL_NAME[stat]} run: ${score}!`, 'level');
     d.mood = Math.max(0, d.mood - 2); d.stats.trained++; d.stats.bestScore = Math.max(d.stats.bestScore, score);
     const after = level(d.xp[stat]);
     this.checkGrowth(id, d);
     if (after > before) { this.room.fx('levelUp', { id }); if (after % 5 === 0) this.log(`⬆️ ${d.name} reached ${stat} level ${after}!`, 'level'); }
-    this.checkBadges(id, d); this.quest(id, d, 'train', 1, stat); this.quest(id, d, 'score', score);
-    return { score, xp, coins, stat, levelUp: after > before ? after : null, mood: d.mood };
+    this.checkBadges(id, d); this.quest(id, d, 'train', 1, stat); this.quest(id, d, 'score', score); if (star) this.quest(id, d, 'star');
+    return { score, xp, coins, stat, levelUp: after > before ? after : null, mood: d.mood, diff, star, wipeout, streak: d.streak, newBest, target: D.target };
   }
 
   // ---- bots: train, eat, build, pick tactics ----
@@ -574,6 +653,8 @@ class Ducks {
       if (this.phase !== 'training' || !this.room.get(p.id)) return;
       const d = this.duck(p), r = this.room.rng();
       if (d.event) this.resolveEvent(p.id, d, d.event.choices[0][0]);
+      if (d.perkChoice) this.act(p, { op: 'perk', key: d.perkChoice[0] });
+      if (d.spunRace !== this.race && r < 0.3) this.spin(p.id, d);
       if (!d.predict && this.s.predictions) { const ids = [...this.ducks.keys()].filter((x) => this.room.get(x)); this.act(p, { op: 'predict', id: ids[Math.floor(r * ids.length)] }); }
       if (r < 0.15) this.act(p, { op: 'tactic', tactic: Object.keys(TACTICS)[Math.floor(this.room.rng() * 3)] });
       const cheapest = Object.keys(BUILDINGS).filter((k) => d.buildings[k] < 3).sort((a, b) => d.buildings[a] - d.buildings[b])[0];
@@ -596,6 +677,7 @@ class Ducks {
     return {
       id, plot: d.plot, owner: this.room.name(id), name: d.name, color: d.color, hat: d.hat, levels: this.levels(d), energy: Math.round(d.energy), mood: Math.round(d.mood),
       points: d.points, wins: d.wins, buildings: d.buildings, decor: d.decor, badges: d.badges.length,
+      perks: d.perks, streak: d.streak,
       stage: d.gene ? d.stage : -1, stageName: d.gene ? STAGES[d.stage].label : 'Egg', gene: d.gene, trophies: d.trophies.map((t) => t.place), eggColor: d.gene ? null : EGGS[d.eggs[0]].color,
       busy: d.training ? GAME_FOR[d.training.stat] : d.napUntil > now ? 'nap' : null, event: d.event ? d.event.kind : null,
     };
@@ -623,6 +705,10 @@ class Ducks {
       eggs: d.gene ? null : d.eggs.map((k) => ({ skill: k, ...EGGS[k] })), gene: d.gene ? { skill: d.gene, ...EGGS[d.gene] } : null, stages: STAGES, trophies: d.trophies, leagues: LEAGUES, variants: VARIANT, themes: Object.fromEntries(Object.entries(THEMES).map(([k, t]) => [k, t.label])),
       quests: d.quests.map((q) => ({ text: q.text, have: Math.min(q.have, q.n), n: q.n, done: q.done, reward: q.reward })),
       rival: d.rival && this.ducks.has(d.rival) ? { name: this.ducks.get(d.rival).name, owner: this.room.name(d.rival) } : null, rivalWon: this.phase === 'results' ? d.rivalWon : null,
+      diffs: Object.fromEntries(Object.entries(DIFF).map(([k, x]) => [k, { ...x, cost: this.s.energy === 'unlimited' ? 0 : x.cost }])),
+      perks: d.perks.map((k) => ({ key: k, ...PERKS[k] })), perkChoice: d.perkChoice ? d.perkChoice.map((k) => ({ key: k, ...PERKS[k] })) : null,
+      streak: d.streak, bestStreak: d.bestStreak, bests: d.bests, canSpin: this.phase === 'training' && d.spunRace !== this.race, spinTable: SPIN.map((x) => ({ icon: x.icon, label: x.label })),
+      giftFrom: d.giftFrom || null, neighbors: this.phase === 'training' ? [...this.ducks].filter(([x]) => x !== p.id && this.room.get(x)).map(([x, o]) => ({ id: x, owner: this.room.name(x), duck: o.name })) : [], giftIn: Math.max(0, d.giftAt + 30000 - now),
       trainCost: this.s.energy === 'unlimited' ? 0 : TRAIN_COST, runSeconds: RUN_SECONDS, napSeconds: NAP_SECONDS - 3 * d.buildings.coop,
       food: FOOD, gear: this.s.gear ? GEAR : null, buildings: BUILDINGS, buildCost: BUILD_COST, decor: DECOR, tactics: TACTICS, badges: BADGES, hats: HATS, colors: COLORS, hatCost: 15,
       predictions: this.s.predictions, rivals: this.s.predictions && this.phase === 'training' ? st.map((x) => ({ id: x.id, duck: x.duck, owner: x.owner })) : [],
@@ -630,13 +716,13 @@ class Ducks {
       rank: st.findIndex((x) => x.id === p.id) + 1, of: st.length,
       final: this.phase === 'over' ? st.slice(0, 10) : null, awards: this.phase === 'over' ? this.awards || [] : null,
     };
-    d.newBadge = null; d.eventMsg = null; d.questDone = null; d.grew = null;
+    d.newBadge = null; d.eventMsg = null; d.questDone = null; d.grew = null; d.giftFrom = null;
     return out;
   }
 }
 
 module.exports = {
-  key: 'ducks', name: 'JustRaiseDucks', min: 1, fields, defaults,
+  key: 'ducks', name: 'JustRaiseDucks', min: 1, fields, defaults, liveLobby: true,
   create: (room, settings) => new Ducks(room, settings),
-  _test: { level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES },
+  _test: { level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, DIFF, PERKS, SPIN },
 };

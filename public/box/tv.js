@@ -60,8 +60,31 @@
     for (const b of document.querySelectorAll('[data-h]')) b.onclick = () => { const h = b.dataset.h; if (h === 'lobby' && !over && !confirm('End this game and go back to the lobby?')) return; host(h === 'bots' ? 'addBots' : h, { count: 5 }); };
   }
 
+  const joinPanel = () => `
+          <h2 style="margin:0">Join on your phone!</h2>
+          <img id="qr" alt="QR code to join">
+          <div class="muted">Room code</div>
+          <div class="codebig" id="code"></div>
+          <div class="url" id="url"></div>
+          <div class="count" id="count"></div>
+          <div class="vip" id="vip"></div>
+          <div class="err" id="lobby-err"></div>
+          <button class="btn big" id="start">Start game</button>
+          <div><button class="link" id="add-bots">+ add 5 test bots</button> <button class="link" id="rm-bots">remove bots</button></div>
+          <a class="link" href="?game=${esc(gameKey)}&new=1">New room</a>`;
   function lobby() {
     const main = $('#tv-main');
+    // Live-lobby games (JustRaiseDucks) show their world right away; the join panel sits beside it.
+    if (state.live) {
+      if (rendered !== 'live') {
+        main.innerHTML = `<div class="live-wrap"><div id="g-area"></div><aside class="panel join live-join">${joinPanel()}
+          <details class="live-set"><summary>⚙ Settings</summary><div class="settings" id="settings"></div></details>
+          <div class="roster" id="roster" hidden></div><span id="roster-title" hidden></span></aside></div>`;
+        rendered = 'live'; bindJoin();
+      }
+      G.tv($('#g-area'), state.state, { players: state.players, settings: state.settings, host, lobby: true });
+      return updateJoin();
+    }
     if (rendered !== 'lobby') {
       main.innerHTML = `<div class="lobby">
         <section>
@@ -73,24 +96,20 @@
           <h3 id="roster-title">Players</h3>
           <div class="roster" id="roster"></div>
         </section>
-        <aside class="panel join">
-          <h2 style="margin:0">Join on your phone!</h2>
-          <img id="qr" alt="QR code to join">
-          <div class="muted">Room code</div>
-          <div class="codebig" id="code"></div>
-          <div class="url" id="url"></div>
-          <div class="count" id="count"></div>
-          <div class="err" id="lobby-err"></div>
-          <button class="btn big" id="start">Start game</button>
-          <div><button class="link" id="add-bots">+ add 5 test bots</button> <button class="link" id="rm-bots">remove bots</button></div>
-          <a class="link" href="?game=${esc(gameKey)}&new=1">New room</a>
+        <aside class="panel join">${joinPanel()}
         </aside></div>`;
-      rendered = 'lobby';
-      $('#start').onclick = async () => { const r = await host('start'); $('#lobby-err').textContent = r.ok ? '' : r.error || ''; };
-      $('#add-bots').onclick = () => host('addBots', { count: 5 });
-      $('#rm-bots').onclick = () => host('removeBots');
+      rendered = 'lobby'; bindJoin();
     }
+    updateJoin();
+  }
+  function bindJoin() {
+    $('#start').onclick = async () => { const r = await host('start'); $('#lobby-err').textContent = r.ok ? '' : r.error || ''; };
+    $('#add-bots').onclick = () => host('addBots', { count: 5 });
+    $('#rm-bots').onclick = () => host('removeBots');
+  }
+  function updateJoin() {
     const url = joinUrl();
+    $('#vip').innerHTML = state.vip ? `👑 <b>${esc(state.vip)}</b> is the host and can start from their phone` : 'The first person to join becomes the host 👑';
     if ($('#qr').dataset.url !== url) { $('#qr').src = qr(); $('#qr').dataset.url = url; }
     $('#code').textContent = state.code;
     $('#url').textContent = url.replace(/^https?:\/\//, '');

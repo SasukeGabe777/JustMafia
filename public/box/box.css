@@ -93,3 +93,17 @@ button { font: inherit; }
 .cards { display: flex; flex-wrap: wrap; gap: 6px; }
 .cards.fan { gap: 0; } .cards.fan .pc + .pc { margin-left: -22px; }
 .cards.fan .pc.sm + .pc.sm { margin-left: -16px; }
+
+/* Host (VIP) bar on the phone */
+.vip-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: linear-gradient(90deg, rgba(255, 210, 63, 0.25), rgba(255, 79, 154, 0.2)); border: 2px solid var(--yellow); border-radius: 16px; padding: 8px 12px; margin-bottom: 10px; font-weight: 600; }
+.vip-bar .btn { margin-left: auto; padding: 8px 16px; font-size: 16px; }
+.vip-bar small { width: 100%; color: var(--muted); font-weight: 400; }
+/* Live lobby on the TV: the game world with the join panel beside it */
+.live-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
+.live-join { gap: 8px; }
+.live-join img { width: 200px; height: 200px; }
+.live-join .codebig { font-size: 52px; }
+.live-set { width: 100%; text-align: left; }
+.live-set summary { cursor: pointer; color: var(--muted); }
+.live-set .settings { grid-template-columns: 1fr; margin-top: 8px; }
+.join .vip { font-size: 15px; color: var(--yellow); }

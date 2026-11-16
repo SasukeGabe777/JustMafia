@@ -13,9 +13,10 @@
   };
   const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch { /* none */ } };
 
-  function play(kind, seconds, duck, done) {
+  function play(kind, seconds, duck, done, opts = {}) {
+    const SP = opts.speed || 1, TARGET = opts.target || 0, DL = { easy: '🌱 Easy', medium: '⚡ Medium', hard: '🔥 Hard' }[opts.diff] || '';
     const ov = document.createElement('div'); ov.className = 'dk-over';
-    ov.innerHTML = `<div class="dk-hud"><b class="sc">0</b><span class="tm">${seconds}</span></div><canvas></canvas>${kind === 'paddle' ? '<div class="dk-pads"><button data-pad="L">LEFT</button><button data-pad="R">RIGHT</button></div>' : ''}<div class="dk-tip">${TIPS[kind]}</div><div class="dk-ready">Ready…</div>`;
+    ov.innerHTML = `<div class="dk-hud"><b class="sc">0</b><span class="mid">${DL}${TARGET ? ` · ⭐ ${TARGET}` : ''}${opts.best ? ` · best ${opts.best}` : ''}</span><span class="tm">${seconds}</span></div><canvas></canvas>${kind === 'paddle' ? '<div class="dk-pads"><button data-pad="L">LEFT</button><button data-pad="R">RIGHT</button></div>' : ''}<div class="dk-tip">${TIPS[kind]}</div><div class="dk-ready">Ready…</div>`;
     document.body.appendChild(ov);
     const cv = ov.querySelector('canvas'), g = cv.getContext('2d');
     cv.width = ov.clientWidth; cv.height = ov.clientHeight - (kind === 'paddle' ? 130 : 0);
@@ -23,7 +24,7 @@
     const drawDuck = A().drawDuck;
     let score = 0, t0 = 0, last = 0, over = false, holding = false, started = false;
     const S = { y: H * 0.6, vy: 0, items: [], spawn: 0, stun: 0, x: 0, side: null, strokes: 0, height: 0, hand: 0, holds: [] };
-    const add = (n) => { score = Math.max(0, score + n); ov.querySelector('.sc').textContent = score; };
+    const add = (n) => { score = Math.max(0, score + n); const el = ov.querySelector('.sc'); el.textContent = score; if (TARGET && score >= TARGET && !el.classList.contains('star')) { el.classList.add('star'); BOX.sfx('chime'); } };
     // A 1.5 s "Ready… GO!" so the clock doesn't start before you're looking.
     setTimeout(() => { const r = ov.querySelector('.dk-ready'); r.textContent = 'GO!'; started = true; t0 = last = performance.now(); setTimeout(() => r.remove(), 500); requestAnimationFrame(frame); }, 1300);
 
@@ -38,7 +39,7 @@
     else for (const b of ov.querySelectorAll('[data-pad]')) b.addEventListener('pointerdown', (e) => {
       e.preventDefault(); if (!started || over) return;
       const sd = b.dataset.pad;
-      if (sd !== S.side) { S.strokes++; S.x += 1; if (S.strokes % 4 === 0) add(1); BOX.sfx('step'); } else { S.x -= 0.3; S.stun = 0.35; buzz(30); }
+      if (sd !== S.side) { S.strokes++; S.x += 1; if (S.strokes % (SP < 1 ? 3 : SP > 1 ? 5 : 4) === 0) add(1); BOX.sfx('step'); } else { S.x -= 0.3; S.stun = 0.35; buzz(30); }
       S.side = sd;
     });
     function tapBug(e) {
@@ -46,7 +47,7 @@
       for (const b of S.items) if (!b.hit && Math.hypot(b.x - x, b.y - y) < b.r * 1.5) { b.hit = true; b.ttl = 0.3; if (b.bee) { add(-2); BOX.sfx('boo'); buzz(80); } else { add(1); BOX.sfx('pop'); } return; }
     }
     // Climb: a hand swings left-right; holds sit at random spots on the next row.
-    function nextHold(el) { const w = Math.max(0.12, 0.3 - el * 0.008); S.holds = [{ c: 0.15 + Math.random() * (0.7 - w), w }]; }
+    function nextHold(el) { const w = Math.max(0.1, (0.3 - el * 0.008) / SP); S.holds = [{ c: 0.15 + Math.random() * (0.7 - w), w }]; }
     function grab() {
       if (S.stun > 0) return;
       const h = S.holds[0], hand = (Math.sin(S.hand) + 1) / 2;
@@ -62,10 +63,10 @@
       ov.querySelector('.tm').textContent = Math.ceil(left);
       g.clearRect(0, 0, W, H);
       if (kind === 'hurdles') {
-        const ground = H * 0.7, speed = W * (0.45 + el * 0.02);
+        const ground = H * 0.7, speed = W * (0.45 + el * 0.02) * SP;
         g.fillStyle = '#9fdcff'; g.fillRect(0, 0, W, ground); g.fillStyle = '#6cc26a'; g.fillRect(0, ground + 18, W, H); g.fillStyle = '#d9a86c'; g.fillRect(0, ground + 14, W, 8);
         S.vy += H * 4.2 * dt; S.y = Math.min(ground, S.y + S.vy * dt); if (S.y >= ground) S.vy = 0;
-        S.spawn -= dt; if (S.spawn <= 0) { S.items.push({ x: W + 20 }); S.spawn = 0.85 + Math.random() * 0.6; }
+        S.spawn -= dt; if (S.spawn <= 0) { S.items.push({ x: W + 20 }); S.spawn = (0.85 + Math.random() * 0.6) / SP; }
         for (const it of S.items) {
           it.x -= speed * dt * (S.stun > 0 ? 0.4 : 1);
           g.fillStyle = '#fff'; g.fillRect(it.x, ground - 22, 6, 36); g.fillRect(it.x + 18, ground - 22, 6, 36); g.fillStyle = '#e63946'; g.fillRect(it.x - 2, ground - 24, 30, 7);
@@ -84,9 +85,9 @@
       } else if (kind === 'rings') {
         g.fillStyle = '#bfe6ff'; g.fillRect(0, 0, W, H);
         S.vy += (holding ? -H * 2.2 : H * 1.6) * dt; S.vy = Math.max(-H * 0.7, Math.min(H * 0.7, S.vy)); S.y = Math.max(20, Math.min(H - 20, S.y + S.vy * dt));
-        S.spawn -= dt; if (S.spawn <= 0) { const cloud = Math.random() < 0.25; S.items.push({ x: W + 30, y: H * (0.15 + Math.random() * 0.7), gold: !cloud && Math.random() < 0.18, cloud }); S.spawn = 0.75 + Math.random() * 0.4; }
+        S.spawn -= dt; if (S.spawn <= 0) { const cloud = Math.random() < 0.25 * SP; S.items.push({ x: W + 30, y: H * (0.15 + Math.random() * 0.7), gold: !cloud && Math.random() < 0.18, cloud }); S.spawn = (0.75 + Math.random() * 0.4) / SP; }
         for (const it of S.items) {
-          it.x -= W * 0.42 * dt;
+          it.x -= W * 0.42 * SP * dt;
           if (it.cloud) { g.fillStyle = '#6b7280'; for (const [dx, dy, r] of [[0, 0, 18], [16, -6, 14], [-16, -4, 13], [6, 8, 13]]) { g.beginPath(); g.arc(it.x + dx, it.y + dy, r, 0, Math.PI * 2); g.fill(); } }
           else { g.strokeStyle = it.gold ? '#ffcc00' : '#ff4f9a'; g.lineWidth = 6; g.beginPath(); g.ellipse(it.x, it.y, 12, 30, 0, 0, Math.PI * 2); g.stroke(); }
           if (!it.done && Math.abs(it.x - W * 0.3) < 14) {
@@ -101,7 +102,7 @@
         g.fillStyle = '#8a7f76'; g.fillRect(0, 0, W, H);
         const off = (S.height * 70) % 140;
         g.fillStyle = '#7a7068'; for (let r = -1; r < H / 70 + 1; r++) for (let c = 0; c < 5; c++) g.fillRect(((c * 97 + r * 41) % W), r * 70 + off, 30, 14);
-        S.stun -= dt; S.hand += dt * (2.4 + el * 0.08);
+        S.stun -= dt; S.hand += dt * (2.4 + el * 0.08) * SP;
         const rowY = H * 0.32, h = S.holds[0];
         g.fillStyle = '#2ee6a6'; g.fillRect(W * h.c, rowY - 14, W * h.w, 28);
         g.fillStyle = '#1b6f55'; g.fillRect(W * h.c + 6, rowY - 6, W * h.w - 12, 12);
@@ -113,7 +114,7 @@
         g.fillStyle = '#7bc96f'; g.fillRect(0, 0, W, H);
         const cols = 3, rows = 4, cw = W / cols, ch = H / rows;
         g.fillStyle = '#5aa64f'; for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) { g.beginPath(); g.ellipse(i * cw + cw / 2, j * ch + ch / 2 + 18, cw * 0.32, 14, 0, 0, Math.PI * 2); g.fill(); }
-        S.spawn -= dt; if (S.spawn <= 0) { const i = Math.floor(Math.random() * cols), j = Math.floor(Math.random() * rows); if (!S.items.some((b) => b.i === i && b.j === j)) S.items.push({ i, j, x: i * cw + cw / 2, y: j * ch + ch / 2, r: Math.min(cw, ch) * 0.22, ttl: Math.max(0.55, 1.1 - el * 0.025), bee: Math.random() < 0.22 }); S.spawn = Math.max(0.28, 0.6 - el * 0.012); }
+        S.spawn -= dt; if (S.spawn <= 0) { const i = Math.floor(Math.random() * cols), j = Math.floor(Math.random() * rows); if (!S.items.some((b) => b.i === i && b.j === j)) S.items.push({ i, j, x: i * cw + cw / 2, y: j * ch + ch / 2, r: Math.min(cw, ch) * 0.22, ttl: Math.max(0.45, (1.1 - el * 0.025) / SP), bee: Math.random() < 0.22 * SP }); S.spawn = Math.max(0.24, (0.6 - el * 0.012) / SP); }
         for (const b of S.items) {
           b.ttl -= dt;
           g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -133,8 +134,8 @@
       ov.appendChild(card);
       done(score, (r) => {
         const SK = { run: 'Run', swim: 'Swim', fly: 'Fly', climb: 'Climb', stamina: 'Stamina' };
-        card.innerHTML = r && r.ok ? `<h2>Score ${r.score}</h2><p>+${r.xp} XP · +${r.coins} 🪙</p>${r.levelUp ? `<p class="lvup">LEVEL UP! ${SK[r.stat]} is now level ${r.levelUp} 🎉</p>` : ''}<button class="btn big">Back to my farm</button>` : `<h2>Score ${score}</h2><p>${BOX.esc((r && r.error) || 'Not saved.')}</p><button class="btn big">Back</button>`;
-        BOX.sfx(r && r.levelUp ? 'win' : 'chime');
+        card.innerHTML = r && r.ok ? `${r.wipeout ? '<div class="dk-badge bad">💥 WIPEOUT</div>' : r.star ? '<div class="dk-badge good">⭐ TARGET HIT</div>' : ''}<h2>Score ${r.score}</h2><p class="dk-gain"><b>+${r.xp}</b> XP · <b>+${r.coins}</b> 🪙</p>${r.newBest ? '<p class="lvup">🏅 New personal best!</p>' : ''}${r.streak > 1 ? `<p>🔥 Streak ×${r.streak} (+${Math.min(6, r.streak) * 5}% XP)</p>` : ''}${r.levelUp ? `<p class="lvup">LEVEL UP! ${SK[r.stat]} is now level ${r.levelUp} 🎉</p>` : ''}<button class="btn big">Back to my farm</button>` : `<h2>Score ${score}</h2><p>${BOX.esc((r && r.error) || 'Not saved.')}</p><button class="btn big">Back</button>`;
+        BOX.sfx(r && r.wipeout ? 'boo' : r && (r.levelUp || r.newBest) ? 'win' : 'chime');
         card.querySelector('button').onclick = () => ov.remove();
       });
     }

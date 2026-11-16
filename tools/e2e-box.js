@@ -98,11 +98,18 @@ async function setup(browser, game, settings = {}) {
   // ---------- JustRaiseDucks ----------
   {
     const { tv, ph } = await setup(browser, 'ducks', { raceEvery: 60, races: 3 });
-    await tv.click('#start');
-    await ph.until(`document.querySelectorAll('[data-hatch]').length === 3`, 'egg picker');
+    // Live lobby: the TV is already Duck Valley; the phone hatches and dresses its duck before the start.
+    await ph.until(`document.querySelectorAll('[data-hatch]').length === 3`, 'egg picker in the lobby');
     await ph.shot('box-ducks-eggs');
     await ph.click('[data-hatch="1"]');
-    await ph.until(`!!document.querySelector('[data-train="run"]')`, 'hatched: train buttons', 8000);
+    await ph.until(`!!document.querySelector('.dk-lobbycard')`, 'lobby: dress up your duck', 8000);
+    await tv.until(`!!document.querySelector('#dk-valley') && /Duck Valley/.test(document.querySelector('#dk-next').textContent)`, 'TV shows Duck Valley in the lobby');
+    await wait(800); await ph.shot('box-ducks-lobby-phone'); await tv.shot('box-ducks-lobby-tv');
+    // Jackbox-style: the first player to join is the host and starts the game from their phone.
+    await ph.until(`!!document.querySelector('[data-vip="start"]')`, 'host start button on the phone');
+    await ph.click('[data-vip="start"]');
+    await ph.until(`!!document.querySelector('[data-sheet="run"]')`, 'started: skill cards', 8000);
+    ok('JustRaiseDucks lobby: Duck Valley on the TV before the start; egg hatched and duck named in the lobby; the first player (host) started from their phone');
     await ph.until(`!!document.querySelector('.dk-herocv')`, 'farm hero canvas');
     await tv.until(`!!document.querySelector('#dk-valley') && /6 farms/.test(document.querySelector('#dk-next').textContent)`, 'Duck Valley with 6 farms');
     await ph.shot('box-ducks-phone');
@@ -116,8 +123,13 @@ async function setup(browser, game, settings = {}) {
     await ph.click('[data-tab="race"]'); await ph.until(`!!document.querySelector('[data-tactic="sprint"]')`, 'race tab');
     await ph.click('[data-tactic="sprint"]'); await ph.until(`document.querySelector('[data-tactic="sprint"]').classList.contains('on')`, 'tactic chosen');
     await ph.shot('box-ducks-racetab'); await wait(1200); await tv.shot('box-ducks-valley');
-    await ph.click('[data-tab="train"]'); await ph.until(`!!document.querySelector('[data-train="swim"]')`, 'train tab');
-    await ph.click('[data-train="swim"]');
+    await ph.click('[data-tab="train"]'); await ph.until(`!!document.querySelector('[data-spin]')`, 'train tab with Lucky Spin');
+    await ph.click('[data-spin]'); await ph.until(`!!document.querySelector('.dk-prize button')`, 'spin prize', 8000);
+    await ph.shot('box-ducks-spin'); await ph.click('.dk-prize button');
+    await ph.click('[data-sheet="swim"]'); await ph.until(`document.querySelectorAll('[data-diff]').length === 3`, 'difficulty sheet');
+    await ph.click('[data-diff="easy"]'); await ph.until(`document.querySelector('[data-diff="easy"]').classList.contains('on')`, 'easy chosen');
+    await ph.shot('box-ducks-sheet');
+    await ph.click('[data-play]');
     await ph.until(`!!document.querySelector('.dk-over [data-pad]')`, 'paddle mini-game', 5000);
     await ph.until(`!document.querySelector('.dk-ready') || document.querySelector('.dk-ready').textContent === 'GO!'`, 'GO');
     for (let i = 0; i < 40; i++) { await ph.eval(`document.querySelector('[data-pad="${i % 2 ? 'R' : 'L'}"]').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); true`); await wait(60); }
@@ -127,7 +139,7 @@ async function setup(browser, game, settings = {}) {
     assert(/Score (\d+)/.test(res) && Number(res.match(/Score (\d+)/)[1]) >= 8, res);
     await ph.shot('box-ducks-reward');
     await ph.click('.dk-result button');
-    ok('JustRaiseDucks: egg picked and hatched; Duck Valley shows every farm; color, Lap Pool from the shop (TV news), pet, tactic; Paddle Power earned XP and coins');
+    ok('JustRaiseDucks: Lucky Spin; Easy/Medium/Hard sheet; egg picked and hatched; Duck Valley shows every farm; color, Lap Pool from the shop (TV news), pet, tactic; Paddle Power earned XP and coins');
     await tv.eval(`document.querySelector('[data-h="next"]').click(); true`); // start the race now
     await tv.until(`!!document.querySelector('#dk-race')`, 'race canvas');
     await wait(4000); await tv.shot('box-ducks-race-intro'); await wait(9000); await tv.shot('box-ducks-race');

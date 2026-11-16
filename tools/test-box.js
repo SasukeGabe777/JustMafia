@@ -187,9 +187,9 @@ test('Ducks: buildings speed up training; a happy duck learns faster than a grum
   da.quests = []; db.quests = []; // no quest bonuses in this count
   assert(r.act(a, { op: 'build', item: 'track' }).ok); assert.equal(da.buildings.track, 1); assert.equal(da.coins, 80);
   da.mood = 50; db.mood = 50;
-  const run = (p) => { r.act(p, { op: 'train', stat: 'run' }); clock.t += 20000; return r.act(p, { op: 'score', score: 20 }).xp; };
-  assert.equal(run(b), 80); assert.equal(run(a), 96, 'Running Track level 1: +20%');
-  db.mood = 90; assert.equal(run(b), 92, 'happy: +15%'); db.mood = 10; assert.equal(run(b), 64, 'grumpy: −20%');
+  const run = (p) => { r.act(p, { op: 'train', stat: 'run' }); clock.t += 20000; return r.act(p, { op: 'score', score: 15 }).xp; }; // 15 is under the ⭐ target, so no streak bonus
+  assert.equal(run(b), 60); assert.equal(run(a), 72, 'Running Track level 1: +20%');
+  db.mood = 90; assert.equal(run(b), 69, 'happy: +15%'); db.mood = 10; assert.equal(run(b), 48, 'grumpy: −20%');
   assert(r.act(a, { op: 'pet' }).ok); assert.equal(r.act(a, { op: 'pet' }).ok, false, 'petting has a short cooldown');
 });
 test('Ducks: Track Sneakers prevent trips; gear is used up by the race; predictions pay', () => {
@@ -245,6 +245,62 @@ test('Ducks: eggs hatch with a talent; ducks grow up; wild ducks fill small race
   assert(r.game.lastRace.results.some((x) => x.wild));
   const mine = r.game.lastRace.results.find((x) => x.id === a.id);
   if (mine.place <= 3) assert.equal(d.trophies.length, 1);
+});
+test('Ducks: Easy / Medium / Hard training trade energy and risk for XP; streaks, wipeouts, bests', () => {
+  const { r, clock } = room('ducks', 0, {}, 12);
+  const a = human(r, 'Ann'); go(r);
+  const d = r.game.ducks.get(a.id); d.mood = 50; d.quests = [];
+  const run = (diff, score) => { const t = r.act(a, { op: 'train', stat: 'run', diff }); assert(t.ok, t.error); clock.t += 20000; return r.act(a, { op: 'score', score }); };
+  const e0 = d.energy; const easy = run('easy', 10); assert.equal(e0 - d.energy, D.DIFF.easy.cost);
+  d.energy = 100; const med = run('medium', 10); d.energy = 100; const hard = run('hard', 10);
+  assert(easy.xp < med.xp && med.xp < hard.xp, [easy.xp, med.xp, hard.xp].join(' < '));
+  d.energy = 100; const wipe = run('hard', 3); assert(wipe.wipeout && wipe.xp < 10, 'a Hard wipeout earns almost nothing');
+  d.energy = 100; const s1 = run('medium', 20); d.energy = 100; const s2 = run('medium', 20);
+  assert(s1.star && s2.star && s2.streak === 2 && s2.xp > s1.xp, 'streak bonus grows');
+  assert.equal(d.bests.run.medium, 20);
+  d.energy = 100; run('medium', 5); assert.equal(d.streak, 0, 'a miss resets the streak');
+});
+test('Ducks: growing up offers 3 perks; perks change races; gifts and the Lucky Spin', () => {
+  const { r, clock } = room('ducks', 0, { races: 1, raceEvery: 60, startCoins: 60 }, 14);
+  const a = human(r, 'Ann'), b = human(r, 'Bo'); go(r);
+  const d = r.game.ducks.get(a.id);
+  for (const k of D.SKILLS) d.xp[k] = D.xpFor(3); r.game.checkGrowth(a.id, d);
+  assert.equal(d.stage, 1); assert.equal(d.perkChoice.length, 3);
+  const key = d.perkChoice[0]; assert(r.act(a, { op: 'perk', key }).ok); assert.deepEqual(d.perks, [key]);
+  assert.equal(r.act(a, { op: 'gift', to: a.id }).ok, false, 'not to yourself');
+  const e = r.game.ducks.get(b.id); e.energy = 50;
+  assert(r.act(a, { op: 'gift', to: b.id }).ok); assert.equal(e.energy, 65);
+  assert.equal(r.act(a, { op: 'gift', to: b.id }).ok, false, 'gift cooldown');
+  const sp = r.act(a, { op: 'spin' }); assert(sp.ok && sp.prize); assert.equal(r.act(a, { op: 'spin' }).ok, false, 'one spin per round');
+  d.perks = ['grip']; for (const k of D.SKILLS) d.xp[k] = 0;
+  r.game.course.sections = [{ type: 'track', v: 'hurdles' }, { type: 'cliff', v: 'rock' }, { type: 'cliff', v: 'ice' }]; r.game.course.length = 160;
+  while (r.game.phase === 'training') clock.step();
+  const tr = r.game.lastRace.tracks.find((x) => x.id === a.id);
+  assert(!tr.ev.some(([, k]) => k === 'slip'), 'Sure Grip: no cliff slips');
+});
+test('Host (Jackbox-style): the first person to join starts from their phone; bots never host; the next person takes over', () => {
+  const { r } = room('president', 3, {}, 2);
+  assert.equal(r.vip(), null, 'bots are never the host');
+  const a = human(r, 'Ann'), b = human(r, 'Bo');
+  assert.equal(r.vip().id, a.id);
+  assert.equal(r.vipAction(b, 'start').ok, false, 'only the host');
+  assert(r.playerState(a).vip && !r.playerState(b).vip);
+  r.remove(a.id); assert.equal(r.vip().id, b.id, 'the next player becomes host');
+  assert(r.vipAction(b, 'start').ok); assert.equal(r.phase, 'game');
+  assert.equal(r.vipAction(b, 'start').ok, false, 'already running');
+});
+test('Ducks live lobby: farms exist before the start; eggs hatch and ducks are styled in the lobby; training waits for the start', () => {
+  const { r } = room('ducks', 2, {}, 4);
+  assert(r.game && r.game.phase === 'lobby', 'the valley exists in the lobby');
+  const a = human(r, 'Ann');
+  const d = r.game.ducks.get(a.id); assert(d, 'a farm appears when you join');
+  assert.equal(r.tvState().state.farms.length, 3);
+  assert(r.act(a, { op: 'hatch', pick: 0 }).ok); assert(r.act(a, { op: 'style', name: 'Quackers', color: 'mint' }).ok);
+  assert.equal(r.act(a, { op: 'train', stat: 'run' }).ok, false, 'no training before the start');
+  r.hostAction({ type: 'settings', settings: { startCoins: 120 } });
+  assert(r.vipAction(a, 'start').ok);
+  assert.equal(r.game.phase, 'training'); assert.equal(d.name, 'Quackers'); assert.equal(d.coins, 120, 'start coins from the final settings');
+  r.hostAction({ type: 'lobby' }); assert.equal(r.game.phase, 'lobby'); assert(r.game.ducks.get(a.id), 'back in the lobby, everyone still has a farm');
 });
 test('Room: names are unique, tokens reconnect, 100-player cap, settings only take listed values', () => {
   const { r } = room('ducks', 0);

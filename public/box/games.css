@@ -248,3 +248,70 @@
 @keyframes eggIdle { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-8deg); } 90% { transform: rotate(8deg); } 95% { transform: rotate(-4deg); } }
 @keyframes eggShake { 0% { transform: rotate(-10deg) scale(1.05); } 50% { transform: rotate(10deg) scale(1.1); } 100% { transform: rotate(-10deg) scale(1.05); } }
 .dk-res .row.wild { opacity: 0.75; }
+
+/* ---------- JustRaiseDucks v5: calmer phone, difficulty sheet, spin wheel, perks ---------- */
+.dk-hero { height: 210px; margin-bottom: 6px; }
+.dk-hero-top .name small { opacity: 0.8; font-weight: 500; margin-left: 4px; }
+.dk-tap { bottom: 10px; right: 50%; transform: translateX(50%); font-size: 13px; background: rgba(20, 10, 40, 0.6); padding: 4px 10px; border-radius: 99px; }
+.dk-meters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+.dk-meters span { display: block; margin-bottom: 3px; }
+.dk-meters .bar { height: 9px; }
+.dk-actions { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.dk-spinbtn { flex: 1; font: inherit; font-weight: 700; font-size: 16px; color: #2a1650; border: 0; border-radius: 14px; padding: 10px; background: linear-gradient(90deg, #ffd23f, #ff8cc6, #3ee6ff); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3); animation: shimmer 2.5s ease-in-out infinite; text-align: center; }
+.dk-spinbtn small { font-weight: 500; }
+.dk-spinbtn.used { background: var(--panel); color: var(--muted); box-shadow: none; animation: none; font-weight: 500; font-size: 13px; border: 2px dashed var(--line); }
+@keyframes shimmer { 50% { filter: brightness(1.15) saturate(1.2); } }
+.dk-streak { font-weight: 700; color: #ff8c42; background: rgba(255, 140, 66, 0.15); border: 2px solid rgba(255, 140, 66, 0.5); padding: 8px 12px; border-radius: 14px; }
+.dk-quests { padding: 8px 12px; }
+.dk-qhead { width: 100%; display: flex; gap: 8px; align-items: center; justify-content: space-between; font: inherit; color: var(--ink); background: none; border: 0; padding: 4px 0; text-align: left; }
+.dk-quests.open .dk-qhead { margin-bottom: 6px; }
+.dk-sheet-bg { position: fixed; inset: 0; background: rgba(5, 2, 20, 0.6); z-index: 35; }
+.dk-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 36; max-width: 520px; margin: 0 auto; background: #241650; border-top: 4px solid var(--c, var(--yellow)); border-radius: 24px 24px 0 0; padding: 16px 16px calc(18px + env(safe-area-inset-bottom)); animation: sheetUp 0.22s ease-out; }
+@keyframes sheetUp { from { transform: translateY(100%); } }
+.dk-sheet-head { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.dk-sheet-head .big { font-size: 44px; }
+.dk-sheet-head b { font-size: 20px; }
+.dk-sheet-head .link { margin-left: auto; font-size: 22px; text-decoration: none; }
+.dk-diffs { display: flex; flex-direction: column; gap: 8px; }
+.dk-diff { display: grid; grid-template-columns: 1fr auto auto; grid-template-areas: 'n x c' 't t t' 's s s'; gap: 2px 10px; text-align: left; font: inherit; color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.dk-diff .dn { grid-area: n; font-weight: 700; font-size: 17px; } .dk-diff .dx { grid-area: x; font-weight: 700; color: var(--yellow); } .dk-diff .dc { grid-area: c; color: var(--cyan); }
+.dk-diff .dt { grid-area: t; font-size: 13px; } .dk-diff small { grid-area: s; color: var(--muted); font-size: 12px; }
+.dk-diff.on { border-color: var(--yellow); background: rgba(255, 210, 63, 0.14); }
+.dk-diff.hard.on { border-color: #ff6b3d; background: rgba(255, 107, 61, 0.16); }
+.dk-diff.easy.on { border-color: var(--green); background: rgba(46, 230, 166, 0.12); }
+.dk-diff:disabled { opacity: 0.45; }
+.dk-play { width: 100%; margin-top: 12px; }
+.dk-perks { text-align: center; }
+.dk-perks h2 { margin: 8px 0 2px; }
+.dk-perk { width: 100%; display: grid; grid-template-columns: 52px 1fr; grid-template-areas: 'i b' 'i s'; text-align: left; gap: 0 10px; font: inherit; color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 16px; padding: 12px; margin-top: 8px; }
+.dk-perk span { grid-area: i; font-size: 38px; align-self: center; } .dk-perk b { grid-area: b; font-size: 18px; } .dk-perk small { grid-area: s; color: var(--muted); }
+.dk-perk:active { border-color: var(--yellow); }
+.dk-perklist { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.dk-perklist small { color: var(--muted); }
+.dk-perkicons { font-size: 20px; }
+.dk-gifts { display: flex; flex-wrap: wrap; gap: 6px; }
+.dk-gifts button { font: inherit; font-size: 14px; color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 99px; padding: 6px 12px; }
+.dk-gifts button:disabled { opacity: 0.45; }
+.dk-wheel-ov { position: fixed; inset: 0; z-index: 50; background: rgba(5, 2, 20, 0.8); display: grid; place-items: center; }
+.dk-wheel-box { text-align: center; width: min(92vw, 380px); }
+.dk-wheel-wrap { position: relative; width: min(80vw, 300px); height: min(80vw, 300px); margin: 10px auto; }
+.dk-wheel { width: 100%; height: 100%; border-radius: 50%; border: 6px solid #fff; box-shadow: 0 0 30px rgba(255, 210, 63, 0.5); transition: transform 3.2s cubic-bezier(0.15, 0.85, 0.2, 1); position: relative; }
+.dk-wheel span { position: absolute; left: 50%; top: 50%; width: 30px; margin: -15px 0 0 -15px; font-size: 26px; transform-origin: 50% 50%; }
+.dk-pointer { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 30px; color: #fff; z-index: 2; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
+.dk-prize { font-size: 22px; min-height: 80px; }
+.dk-prize .btn { margin-top: 10px; }
+.dk-hud .mid { font-size: 15px; align-self: center; background: rgba(0, 0, 0, 0.35); padding: 4px 10px; border-radius: 99px; }
+.dk-hud .sc.star { color: #ffd23f; }
+.dk-hud .sc.star::after { content: ' ⭐'; }
+.dk-badge { display: inline-block; font-weight: 800; padding: 4px 12px; border-radius: 99px; margin-bottom: 6px; }
+.dk-badge.good { background: #ffd23f; color: #3a2400; } .dk-badge.bad { background: #ff5a5f; color: #fff; }
+.dk-gain b { color: var(--yellow); font-size: 1.2em; }
+
+/* JustRaiseDucks lobby */
+.dk-wrap.lobby { grid-template-columns: 1fr; }
+.dk-wrap.lobby .dk-side { display: none; }
+.dk-wait { font-size: 26px; color: var(--yellow); }
+.dk-in { color: var(--green); font-weight: 600; margin: 0 0 4px; }
+.dk-lobbycard h3 { margin: 0 0 4px; }
+
+.dk-wheel { --r: calc(min(80vw, 300px) * -0.36); }

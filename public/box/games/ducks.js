@@ -10,6 +10,7 @@
   const VAR_ICON = { hurdles: '🚧', logs: '🪵', mud: '🟤', sand: '🏖️', ice: '🧊', calm: '💧', lily: '🪷', waves: '🌊', rapids: '💨', icy: '🧊', rock: '🪨', clouds: '☁️', canyon: '🏜️' };
   const HAT_NAME = { none: 'No hat', cap: 'Cap', tophat: 'Top hat', crown: 'Crown', flower: 'Flower', shades: 'Shades', bow: 'Bow', viking: 'Viking', pirate: 'Pirate', party: 'Party', chef: 'Chef', headband: 'Headband' };
   const typeOf = (s) => s.type || s;
+  const PERK_ICON = { burst: '🚀', webbed: '🦶', feather: '🪶', grip: '🧲', lungs: '🫁', lucky: '🍀', nimble: '🦘', closer: '🏁' };
   const course = (c) => (c ? `<div class="dk-legs">${c.sections.map((s) => `<span class="leg ${typeOf(s)}">${SEC[typeOf(s)][0]} ${SEC[typeOf(s)][1]}${s.v ? ' ' + (VAR_ICON[s.v] || '') : ''}</span>`).join('<span class="arrow">→</span>')}</div>` : '');
   const weatherChip = (c, W) => (c && W ? `<span class="dk-weather">${W[c.weather].icon} ${W[c.weather].label}${c.wind ? (c.wind > 0 ? ' (tailwind)' : ' (headwind)') : ''}</span>` : '');
   const bar = (v, cls = '') => `<div class="bar ${cls}"><i style="width:${Math.max(0, Math.min(100, v))}%"></i></div>`;
@@ -119,7 +120,7 @@
     const L = f.levels;
     return `<div class="dk-spot"><img src="${A().duckImg(f.color, f.hat, 'stand', f.stage)}" alt=""><div><b>${esc(f.name)}</b><div class="muted">${esc(f.owner)} · ${esc(f.stageName)} ${A().MOOD(f.mood)}</div>
       ${Object.entries(SK).map(([k, [ic]]) => `<div class="dk-mini"><span>${ic}</span>${bar(L[k] * 4)}<b>${L[k]}</b></div>`).join('')}
-      <div class="muted">${f.trophies.length ? '🏆×' + f.trophies.length + ' · ' : ''}${f.badges ? '🏅×' + f.badges + ' · ' : ''}${Object.values(f.buildings).reduce((a, b) => a + b, 0)} upgrades</div></div></div>`;
+      ${f.perks && f.perks.length ? `<div class="dk-perkicons">${f.perks.map((k) => (PERK_ICON[k] || '')).join(' ')}</div>` : ''}${f.streak > 2 ? `<div>🔥 streak ×${f.streak}</div>` : ''}<div class="muted">${f.trophies.length ? '🏆×' + f.trophies.length + ' · ' : ''}${f.badges ? '🏅×' + f.badges + ' · ' : ''}${Object.values(f.buildings).reduce((a, b) => a + b, 0)} upgrades</div></div></div>`;
   }
 
   // ---------- phone ----------
@@ -144,14 +145,47 @@
     }
     return hero.canvas;
   }
+  let petted = false, sheet = null, questsOpen = false, sheetDiff = 'medium';
+  // The farm picture with only what matters on it: name, stage, coins; energy and mood underneath.
   function heroHtml(v) {
-    const d = v.duck, st = d.stage >= 0 ? v.stages[d.stage] : null, nextSt = d.stage >= 0 ? v.stages[d.stage + 1] : null;
-    const total = Object.values(d.levels).reduce((a, b) => a + b, 0);
+    const d = v.duck, st = d.stage >= 0 ? v.stages[d.stage] : null;
     return `<div class="dk-hero"><div id="dk-hero-slot"></div>
-      <div class="dk-hero-top"><span class="pill name">${esc(d.name)}</span><span class="pill">${st ? esc(st.label) : '🥚 Egg'}</span><span class="pill coins">🪙 ${d.coins}</span></div>
-      <div class="dk-hero-bot"><span>⚡</span>${bar(d.energy)}<span>${A().MOOD(d.mood)}</span>${bar(d.mood, 'mood')}<span class="pill small">#${v.rank || '-'} · ${d.points} pts</span></div>
-      ${nextSt ? `<div class="dk-grow">🌱 ${Math.max(1, nextSt.from - total)} more levels to grow into a ${esc(nextSt.label.toLowerCase())}</div>` : ''}
-      <div class="dk-tap">tap to pet</div></div>`;
+      <div class="dk-hero-top"><span class="pill name">${esc(d.name)} <small>${st ? esc(st.label) : '🥚'}</small></span><span class="pill coins">🪙 ${d.coins}</span></div>
+      ${petted ? '' : '<div class="dk-tap">👆 tap your duck to pet it</div>'}</div>
+      <div class="dk-meters"><div><span>⚡ Energy</span>${bar(d.energy)}</div><div><span>${A().MOOD(d.mood)} Mood</span>${bar(d.mood, 'mood')}</div></div>`;
+  }
+  // Skill sheet: choose Easy, Medium or Hard before playing.
+  function sheetHtml(v, d) {
+    const k = sheet, [icon, label, game, color] = SK[k], best = v.bests[k] || {};
+    const cards = Object.entries(v.diffs).map(([dk, D]) => `<button class="dk-diff ${sheetDiff === dk ? 'on' : ''} ${dk}" data-diff="${dk}" ${d.energy < D.cost ? 'disabled' : ''}>
+      <span class="dn">${D.icon} ${D.label}</span><span class="dx">×${D.mult} XP</span><span class="dc">⚡ ${D.cost}</span><span class="dt">⭐ ${D.target}${best[dk] ? ' · best ' + best[dk] : ''}</span><small>${esc(D.about)}</small></button>`).join('');
+    const D = v.diffs[sheetDiff];
+    return `<div class="dk-sheet-bg" data-close></div><div class="dk-sheet" style="--c:${color}">
+      <div class="dk-sheet-head"><span class="big">${icon}</span><div><b>${label} · Lv ${d.levels[k]}${v.gene && v.gene.skill === k ? ' 🧬' : ''}</b><div class="muted">${game}</div></div><button class="link" data-close>✕</button></div>
+      <div class="dk-diffs">${cards}</div>
+      <button class="btn big green dk-play" data-play ${d.energy < D.cost ? 'disabled' : ''}>Play ${D.label} (⚡ ${D.cost})</button>
+      ${v.streak ? `<p class="muted" style="text-align:center">🔥 Streak ×${v.streak}: hit the ⭐ target again for +${Math.min(6, v.streak + 1) * 5}% XP</p>` : '<p class="muted" style="text-align:center">Hit the ⭐ target to start a streak (up to +30% XP).</p>'}</div>`;
+  }
+  function perkModal(v) {
+    return `<div class="dk-perks"><h2>🌱 Your duck grew up!</h2><p class="muted">Pick a perk. It stays for the whole season.</p>${v.perkChoice.map((p) => `<button class="dk-perk" data-perk="${p.key}"><span>${p.icon}</span><b>${esc(p.label)}</b><small>${esc(p.about)}</small></button>`).join('')}</div>`;
+  }
+  // Lucky Spin: a wheel drawn on top of the page (outside the re-rendered body).
+  function spinWheel(v, ctx) {
+    const ov = document.createElement('div'); ov.className = 'dk-wheel-ov';
+    const n = v.spinTable.length, seg = 360 / n;
+    const cols = ['#ff4f9a', '#ffd23f', '#3ec1ff', '#2ee6a6', '#b388ff', '#ff8c42', '#7bc96f', '#f25f5c', '#c49a6c'];
+    const grad = v.spinTable.map((_, i) => `${cols[i % cols.length]} ${i * seg}deg ${(i + 1) * seg}deg`).join(',');
+    ov.innerHTML = `<div class="dk-wheel-box"><h2>🎡 Lucky Spin</h2><div class="dk-wheel-wrap"><div class="dk-pointer">▼</div><div class="dk-wheel" style="background:conic-gradient(${grad})">${v.spinTable.map((x, i) => `<span style="transform:rotate(${i * seg + seg / 2}deg) translateY(var(--r))">${x.icon}</span>`).join('')}</div></div><p class="dk-prize">Spinning…</p></div>`;
+    document.body.appendChild(ov);
+    ctx.sfx('shuffle');
+    ctx.act({ op: 'spin' }).then((r) => {
+      if (!r.ok) { ov.remove(); return; }
+      const wheel = ov.querySelector('.dk-wheel');
+      const to = 360 * 5 + (360 - (r.index * seg + seg / 2));
+      requestAnimationFrame(() => { wheel.style.transform = `rotate(${to}deg)`; });
+      setTimeout(() => { ov.querySelector('.dk-prize').innerHTML = `${r.icon} <b>${esc(r.prize)}</b><br><button class="btn big">Collect</button>`; ctx.sfx('win'); ctx.vibrate(80); ov.querySelector('button').onclick = () => ov.remove(); }, 3300);
+    });
+    ov.addEventListener('click', (e) => { if (e.target === ov && ov.querySelector('.dk-prize button')) ov.remove(); });
   }
   function eventCard(v) {
     const e = v.event; if (!e) return '';
@@ -162,11 +196,14 @@
 
   function pageTrain(v, d) {
     const needs = [...new Set(v.course.sections.map((s) => SEC[typeOf(s)][2]))];
-    const quests = v.quests && v.quests.length ? `<div class="card-box dk-quests"><b>📜 Quests</b>${v.quests.map((q) => `<div class="q ${q.done ? 'done' : ''}"><span>${q.done ? '✅' : '⬜'} ${esc(q.text)}</span><span class="muted">${q.done ? 'done' : q.have + '/' + q.n} · 🪙${q.reward}</span></div>`).join('')}${v.rival ? `<div class="q rival">⚔️ Rival: <b>${esc(v.rival.name)}</b> <span class="muted">(${esc(v.rival.owner)}) · beat them for 🪙15</span></div>` : ''}</div>` : '';
-    return `${v.napLeft ? `<div class="big-status">💤 Napping… ${timer(v.napLeft)}</div>` : ''}
-      <div class="dk-skillgrid">${Object.entries(SK).map(([k, [icon, label, game, color]]) => { const p = d.progress[k], pct = p ? Math.round((p.have / p.need) * 100) : 100; return `<button class="dk-skill ${needs.includes(k) || k === 'stamina' ? 'need' : ''}" style="--c:${color}" data-train="${k}" ${v.napLeft || d.energy < v.trainCost ? 'disabled' : ''}>${ring(d.levels[k], pct, color)}<span class="t"><b>${icon} ${label}${v.gene && v.gene.skill === k ? ' 🧬' : ''}</b><small>${game}</small></span></button>`; }).join('')}
+    const done = (v.quests || []).filter((q) => q.done).length;
+    const quests = v.quests && v.quests.length ? `<div class="card-box dk-quests ${questsOpen ? 'open' : ''}"><button class="dk-qhead" data-quests><b>📜 Quests ${done}/${v.quests.length}</b>${v.rival ? `<span class="muted">⚔️ rival: ${esc(v.rival.name)}</span>` : ''}<span>${questsOpen ? '▲' : '▼'}</span></button>
+      ${questsOpen ? v.quests.map((q) => `<div class="q ${q.done ? 'done' : ''}"><span>${q.done ? '✅' : '⬜'} ${esc(q.text)}</span><span class="muted">${q.done ? 'done' : q.have + '/' + q.n} · 🪙${q.reward}</span></div>`).join('') + (v.rival ? `<div class="q rival">⚔️ Beat <b>${esc(v.rival.name)}</b> <span class="muted">(${esc(v.rival.owner)})</span> next race for 🪙15</div>` : '') : ''}</div>` : '';
+    const top = `<div class="dk-actions">${v.canSpin ? '<button class="dk-spinbtn" data-spin>🎡 Lucky Spin <small>free!</small></button>' : '<span class="dk-spinbtn used">🎡 spun · next after the race</span>'}${v.streak ? `<span class="dk-streak">🔥 ×${v.streak}</span>` : ''}</div>`;
+    return `${top}${v.napLeft ? `<div class="big-status">💤 Napping… ${timer(v.napLeft)}</div>` : ''}
+      <div class="dk-skillgrid">${Object.entries(SK).map(([k, [icon, label, game, color]]) => { const p = d.progress[k], pct = p ? Math.round((p.have / p.need) * 100) : 100; return `<button class="dk-skill ${needs.includes(k) || k === 'stamina' ? 'need' : ''}" style="--c:${color}" data-sheet="${k}" ${v.napLeft ? 'disabled' : ''}>${ring(d.levels[k], pct, color)}<span class="t"><b>${icon} ${label}${v.gene && v.gene.skill === k ? ' 🧬' : ''}</b><small>${game}</small></span></button>`; }).join('')}
         <button class="dk-skill nap" id="dk-nap" ${v.napLeft ? 'disabled' : ''}><div class="dk-ring" style="background:#3b2a6b"><span>💤</span></div><span class="t"><b>Nap</b><small>${v.napSeconds}s · free ⚡</small></span></button></div>
-      <p class="muted dk-hint">Training costs ${v.trainCost} ⚡ · ✨ = skills the next course needs${v.gene ? ' · 🧬 = natural talent (+25% XP)' : ''}</p>${quests}`;
+      <p class="muted dk-hint">✨ = needed for the next course${v.gene ? ' · 🧬 = natural talent' : ''}</p>${quests}${sheet ? sheetHtml(v, d) : ''}`;
   }
   function pageShop(v, d) {
     const cats = [['food', '🍎 Food'], ['farm', '🏡 Farm'], ['decor', '🌷 Decor'], ...(v.gear ? [['gear', '🎒 Gear']] : []), ['hats', '🎩 Hats']];
@@ -189,14 +226,19 @@
       <h3>🏆 Trophy shelf</h3><div class="dk-trophies">${v.trophies.length ? v.trophies.map((t) => `<span title="${esc(v.leagues[t.league].label)}">${['🏆', '🥈', '🥉'][t.place - 1]}<small>${esc(v.leagues[t.league].label)}</small></span>`).join('') : '<span class="muted">Finish top 3 to win a trophy.</span>'}</div>`;
   }
   function pageDuck(v, d) {
+    const total = Object.values(d.levels).reduce((a, b) => a + b, 0), nextSt = d.stage >= 0 ? v.stages[d.stage + 1] : null, curSt = v.stages[Math.max(0, d.stage)];
+    const growPct = nextSt ? Math.round(((total - curSt.from) / (nextSt.from - curSt.from)) * 100) : 100;
     return `<div class="card-box"><label class="muted">Duck name</label><input id="dk-name" class="dk-select" maxlength="18" value="${esc(d.name)}"></div>
+      <div class="card-box"><h3>🌱 ${esc(curSt.label)}</h3>${nextSt ? `<div class="dk-statrow"><span>Growing</span>${bar(growPct)}<b>${total}/${nextSt.from}</b></div><p class="muted">${nextSt.from - total} more skill levels until it grows into a ${esc(nextSt.label.toLowerCase())} (and you pick a new perk).</p>` : '<p class="muted">Fully grown. A true champion!</p>'}
+        <div class="dk-perklist">${v.perks.length ? v.perks.map((p) => `<span>${p.icon} <b>${esc(p.label)}</b> <small>${esc(p.about)}</small></span>`).join('') : '<span class="muted">No perks yet. You get one each time your duck grows up.</span>'}</div></div>
       ${v.gene ? `<div class="card-box">🧬 <b>${esc(v.gene.label)}</b>: ${esc(v.gene.about)} <span class="muted">(+25% ${SK[v.gene.skill][1]} XP)</span></div>` : ''}
+      ${v.neighbors.length ? `<div class="card-box"><h3>🎁 Send a gift</h3><p class="muted">5 coins: their duck gets +15 energy and you both feel good.${v.giftIn ? ' Next gift in ' + timer(v.giftIn) : ''}</p><div class="dk-gifts">${v.neighbors.slice(0, 30).map((n) => `<button data-gift="${esc(n.id)}" ${v.giftIn || d.coins < 5 ? 'disabled' : ''}>🎁 ${esc(n.owner)}</button>`).join('')}</div></div>` : ''}
       <div class="card-box"><h3>Skills</h3>${Object.entries(SK).map(([k, [ic, label, , color]]) => `<div class="dk-statrow"><span>${ic} ${label}</span><div class="bar"><i style="width:${Math.min(100, d.levels[k] * 4)}%;background:${color}"></i></div><b>Lv ${d.levels[k]}</b></div>`).join('')}</div>
       <div class="card-box"><h3>Color</h3><div class="dk-swatches">${v.colors.map((c) => `<button data-color="${c}" class="${d.color === c ? 'on' : ''}"><img src="${A().duckImg(c, 'none', 'stand', Math.max(0, d.stage))}" alt="${c}"></button>`).join('')}</div></div>
       <div class="card-box"><h3>Badges (${d.badges.length}/${Object.keys(v.badges).length})</h3><div class="dk-badges">${Object.entries(v.badges).map(([k, [ic, label, c]]) => `<span class="${d.badges.includes(k) ? 'got' : ''}" title="${esc(label)}">${ic}<small>${esc(label)}${c ? ' · ' + c + '🪙' : ''}</small></span>`).join('')}</div></div>`;
   }
   function eggPicker(v) {
-    return `<div class="dk-eggs"><h2>Choose your egg 🥚</h2><p class="muted">Every egg hatches into a duckling with a natural talent.</p>
+    return `<div class="dk-eggs"><p class="dk-in">You’re in! 🎉 Your farm just appeared on the big screen.</p><h2>Choose your egg 🥚</h2><p class="muted">Every egg hatches into a duckling with a natural talent.</p>
       <div class="dk-eggrow">${v.eggs.map((e, i) => `<button class="dk-egg" data-hatch="${i}"><img src="${A().eggImg(e.color, e.spots)}" alt=""><b>${esc(e.label)}</b><small>${esc(e.about)}</small><span class="muted">${SK[e.skill][0]} +25% ${SK[e.skill][1]}</span></button>`).join('')}</div></div>`;
   }
 
@@ -211,7 +253,7 @@
       'Climb from the Rookie Cup to the Grand Championship. Top 3 win trophies for your farm.',
       'Pick a tactic, predict the winner, finish quests, beat your rival, and cheer from your phone!',
     ],
-    fx: { raceDone: 'cheer', levelUp: 'pop', win: 'win', farm: 'join', build: 'click', badge: 'chime', event: 'knock', pet: 'pop', hatch: 'flip', grow: 'chime' },
+    fx: { raceDone: 'cheer', levelUp: 'pop', win: 'win', farm: 'join', build: 'click', badge: 'chime', event: 'knock', pet: 'pop', hatch: 'flip', grow: 'chime', spin: 'shuffle', gift: 'chime' },
     onFx(f) {
       if (f.kind === 'cheer') { race.cheers.push({ id: f.id, at: performance.now() }); if (race.cheers.length > 60) race.cheers.shift(); return; }
       if (!f.id) return;
@@ -249,7 +291,7 @@
         return;
       }
       tvw.farms = s.farms; tvw.weather = s.course && s.course.weather;
-      if (tvw.mode !== 'valley') {
+      if (tvw.mode !== 'valley' || !el.querySelector('#dk-valley')) {
         tvw.mode = 'valley';
         for (const f of s.farms) if (!(f.id in tvw.born)) tvw.born[f.id] = 0;
         el.innerHTML = `<div class="dk-hudrow"><div id="dk-next"></div><div class="dk-count"><div class="muted">Race starts in</div><span id="dk-timer"></span></div></div>
@@ -257,6 +299,13 @@
         loop(el.querySelector('#dk-valley'), drawValley);
       }
       for (const f of s.farms) if (!(f.id in tvw.born)) tvw.born[f.id] = performance.now();
+      el.querySelector('.dk-wrap').classList.toggle('lobby', s.phase === 'lobby');
+      if (s.phase === 'lobby') {
+        const hatched = s.farms.filter((f) => f.stage >= 0).length;
+        el.querySelector('#dk-next').innerHTML = `<div class="muted">Welcome to</div><div class="dk-rname">🦆 Duck Valley</div><div class="muted">${s.farms.length ? `${s.farms.length} farm${s.farms.length === 1 ? '' : 's'} · ${hatched} hatched · scan the code to claim yours!` : 'Scan the code: every player gets a farm here.'}</div>`;
+        el.querySelector('#dk-timer').innerHTML = '<span class="dk-wait">Waiting for the host…</span>';
+        return;
+      }
       const c = s.course;
       el.querySelector('#dk-next').innerHTML = `<div class="muted">${c.leagueIcon || ''} ${esc(c.leagueName || '')} · race ${s.race + 1} of ${s.races} · 📍 ${esc(c.themeName || '')} · ${s.farms.length} farm${s.farms.length === 1 ? '' : 's'}</div><div class="dk-rname">${esc(c.name)}${c.final ? ' <span class="dk-x2">×2 points</span>' : ''} ${weatherChip(c, s.weather)}</div>${course(c)}`;
       el.querySelector('#dk-timer').innerHTML = timer(s.endsIn);
@@ -276,7 +325,7 @@
       const mount = () => {
         const slot = el.querySelector('#dk-hero-slot'); if (slot) slot.appendChild(heroCanvas());
         const h = el.querySelector('.dk-hero');
-        if (h) h.onclick = async (e) => { if (e.target.closest('button')) return; const r = await ctx.act({ op: 'pet' }); if (r.ok) { petFx.push({ kind: 'pet', at: performance.now() }); if (petFx.length > 4) petFx.shift(); ctx.sfx('pop'); ctx.vibrate(20); } };
+        if (h) h.onclick = async (e) => { if (e.target.closest('button')) return; const r = await ctx.act({ op: 'pet' }); if (r.ok) { petted = true; petFx.push({ kind: 'pet', at: performance.now() }); if (petFx.length > 4) petFx.shift(); ctx.sfx('pop'); ctx.vibrate(20); } };
       };
       if (v.phase === 'over') {
         el.innerHTML = `<div class="card-box" style="text-align:center"><img src="${A().duckImg(d.color, d.hat, 'stand', Math.max(0, d.stage))}" width="120" alt=""><h3>Season over!</h3><p>${esc(d.name)} finished <b>#${v.rank}</b> of ${v.of} with ${d.points} points and ${v.trophies.length} troph${v.trophies.length === 1 ? 'y' : 'ies'}.</p></div>
@@ -286,6 +335,16 @@
       if (v.eggs) {
         el.innerHTML = eggPicker(v);
         for (const b of el.querySelectorAll('[data-hatch]')) b.onclick = () => { b.classList.add('hatching'); ctx.sfx('flip'); ctx.vibrate(60); setTimeout(async () => { const r = await ctx.act({ op: 'hatch', pick: Number(b.dataset.hatch) }); if (r.ok) { ctx.toast('🐣 It hatched! Say hi to your duckling.'); ctx.sfx('win'); } }, 900); };
+        return;
+      }
+      if (v.phase === 'lobby') {
+        el.innerHTML = `${heroHtml(v)}<div class="card-box dk-lobbycard"><h3>🏡 Your farm is on the big screen!</h3><p class="muted">Get your duck ready while everyone joins. ${ctx && v.duck ? '' : ''}The game starts when the host presses Start.</p></div>
+          <div class="card-box"><label class="muted">Name your duck</label><input id="dk-name" class="dk-select" maxlength="18" value="${esc(d.name)}"></div>
+          <div class="card-box"><h3>Pick a color</h3><div class="dk-swatches">${v.colors.map((c) => `<button data-color="${c}" class="${d.color === c ? 'on' : ''}"><img src="${A().duckImg(c, d.hat, 'stand', Math.max(0, d.stage))}" alt="${c}"></button>`).join('')}</div></div>
+          ${v.gene ? `<div class="card-box">🧬 <b>${esc(v.gene.label)}</b>: ${esc(v.gene.about)} <span class="muted">(+25% ${SK[v.gene.skill][1]} XP)</span></div>` : ''}`;
+        mount();
+        for (const b of el.querySelectorAll('[data-color]')) b.onclick = () => ctx.act({ op: 'style', color: b.dataset.color });
+        const nm = el.querySelector('#dk-name'); if (nm) { nm.onchange = () => ctx.act({ op: 'style', name: nm.value }); nm.onkeydown = (e) => { if (e.key === 'Enter') nm.blur(); }; }
         return;
       }
       if (v.phase === 'race') {
@@ -298,8 +357,14 @@
         el.innerHTML = `${heroHtml(v)}<div class="card-box" style="text-align:center"><h3>${l ? (l.place <= 3 ? ['🏆', '🥈', '🥉'][l.place - 1] + ' ' : '') + 'You finished #' + l.place + ' of ' + l.of : 'Race over'}</h3>${l ? `<p>+${l.pts} points · +${l.coins} 🪙${l.place <= 3 ? ' · a trophy for your farm!' : ''}</p><p class="muted">${l.trips ? '💫 Tripped ' + l.trips + '× · ' : ''}${l.slips ? '😱 Slipped ' + l.slips + '× · ' : ''}${l.tired ? '😮‍💨 Ran out of stamina' : 'Stamina held up'}</p>` : ''}${v.rivalWon != null ? `<p>⚔️ Rival: ${v.rivalWon ? 'you beat them! +15 coins' : 'they beat you this time.'}</p>` : ''}${v.predictWon != null ? `<p>🔮 Prediction: ${v.predictWon ? '+' + v.predictWon + ' coins!' : 'no luck this time.'}</p>` : ''}</div>`;
         mount(); return;
       }
+      if (v.giftFrom) { ctx.toast(`🎁 ${v.giftFrom} sent your duck some seeds! +15 energy`); ctx.sfx('chime'); }
+      if (v.perkChoice) {
+        el.innerHTML = `${heroHtml(v)}${perkModal(v)}`; mount();
+        for (const b of el.querySelectorAll('[data-perk]')) b.onclick = async () => { if ((await ctx.act({ op: 'perk', key: b.dataset.perk })).ok) { ctx.sfx('win'); ctx.toast('Perk learned!'); } };
+        return;
+      }
       const pages = { train: pageTrain, shop: pageShop, race: pageRace, duck: pageDuck };
-      const next = `<div class="dk-nextbar"><span>${v.course.leagueIcon || '🏁'} <b>${esc(v.course.name)}</b></span><span>${weatherChip(v.course, v.weather)} ⏱ ${timer(v.endsIn)}</span></div>`;
+      const next = `<div class="dk-nextbar"><span>${v.course.leagueIcon || '🏁'} <b>${esc(v.course.name)}</b> <span class="muted">· #${v.rank || '-'} · ${d.points} pts</span></span><span>${weatherChip(v.course, v.weather)} ⏱ ${timer(v.endsIn)}</span></div>`;
       el.innerHTML = `<div class="dk-phone">${heroHtml(v)}${eventCard(v)}${next}<div class="dk-page">${(pages[tab] || pageTrain)(v, d)}</div>
         <nav class="dk-nav">${[['train', '🏋️', 'Train'], ['shop', '🛒', 'Shop'], ['race', '🏁', 'Race'], ['duck', '🦆', 'My duck']].map(([k, i, l]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}"><span>${i}</span>${l}</button>`).join('')}</nav></div>`;
       mount();
@@ -308,7 +373,18 @@
       on('[data-tab]', (b) => { tab = b.dataset.tab; ctx.redraw(); window.scrollTo(0, 0); });
       on('[data-cat]', (b) => { shopCat = b.dataset.cat; ctx.redraw(); });
       on('[data-goshop]', (b) => { tab = 'shop'; shopCat = b.dataset.goshop; ctx.redraw(); });
-      on('[data-train]', async (b) => { const r = await ctx.act({ op: 'train', stat: b.dataset.train }); if (r.ok) window.DUCK_MINI.play(r.game, r.seconds, { ...d, stage: Math.max(0, d.stage) }, (score, show) => ctx.act({ op: 'score', score }).then(show)); });
+      on('[data-sheet]', (b) => { sheet = b.dataset.sheet; ctx.redraw(); });
+      on('[data-close]', () => { sheet = null; ctx.redraw(); });
+      on('[data-diff]', (b) => { sheetDiff = b.dataset.diff; ctx.redraw(); });
+      on('[data-play]', async () => {
+        const stat = sheet; sheet = null;
+        const r = await ctx.act({ op: 'train', stat, diff: sheetDiff });
+        ctx.redraw();
+        if (r.ok) window.DUCK_MINI.play(r.game, r.seconds, { ...d, stage: Math.max(0, d.stage) }, (score, show) => ctx.act({ op: 'score', score }).then(show), { speed: r.speed, target: r.target, best: r.best, diff: r.diff });
+      });
+      on('[data-spin]', () => spinWheel(v, ctx));
+      on('[data-quests]', () => { questsOpen = !questsOpen; ctx.redraw(); });
+      on('[data-gift]', async (b) => { if ((await ctx.act({ op: 'gift', to: b.dataset.gift })).ok) { ctx.toast('🎁 Gift sent!'); ctx.sfx('chime'); } });
       const nap = el.querySelector('#dk-nap'); if (nap) nap.onclick = () => ctx.act({ op: 'nap' });
       on('[data-feed]', async (b) => { if ((await ctx.act({ op: 'feed', item: b.dataset.feed })).ok) { ctx.sfx('chime'); petFx.push({ kind: 'eat', at: performance.now() }); } });
       on('[data-build]', async (b) => { if ((await ctx.act({ op: 'build', item: b.dataset.build })).ok) { ctx.sfx('click'); petFx.push({ kind: 'build', at: performance.now() }); ctx.toast('Built! It’s on your farm 🏡'); } });
