@@ -242,7 +242,49 @@
       <div class="dk-eggrow">${v.eggs.map((e, i) => `<button class="dk-egg" data-hatch="${i}"><img src="${A().eggImg(e.color, e.spots)}" alt=""><b>${esc(e.label)}</b><small>${esc(e.about)}</small><span class="muted">${SK[e.skill][0]} +25% ${SK[e.skill][1]}</span></button>`).join('')}</div></div>`;
   }
 
+  // ---------- the game's own title screen (TV) ----------
+  function titleScreen(el, { start, back }) {
+    el.innerHTML = `<div class="dk-title"><canvas id="dk-title-cv"></canvas>
+      <div class="dk-title-card">
+        <div class="dk-logo"><span class="a">Just</span><span class="b">Raise</span><span class="c">Ducks</span></div>
+        <p class="dk-tagline">Hatch a duckling. Raise it on your farm. Race the whole valley.</p>
+        <button class="dk-go" id="dk-go">🥚 Start a new valley</button>
+        <button class="dk-how-btn" id="dk-how-btn">How to play</button>
+        <ol class="dk-how" id="dk-how" hidden>${BOX.games.ducks.how.map((h) => `<li>${esc(h)}</li>`).join('')}</ol>
+        <p class="dk-fine">Open this on the TV. Everyone plays on their phone. 1–100 players.</p>
+        <button class="dk-back" id="dk-back">◀ Back to JustGameBox</button>
+      </div></div>`;
+    el.querySelector('#dk-go').onclick = start;
+    el.querySelector('#dk-back').onclick = back;
+    el.querySelector('#dk-how-btn').onclick = () => { const h = el.querySelector('#dk-how'); h.hidden = !h.hidden; };
+    const cv = el.querySelector('#dk-title-cv'), art = A();
+    const parade = [['sunny', 'crown'], ['mallard', 'cap'], ['bubblegum', 'bow'], ['snow', 'tophat'], ['sky', 'party'], ['ember', 'viking'], ['mint', 'flower']];
+    loop(cv, (g, W, H, t) => {
+      // sky, sun, clouds
+      const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#5ec2ff'); sky.addColorStop(1, '#c9f0ff'); g.fillStyle = sky; g.fillRect(0, 0, W, H);
+      g.fillStyle = '#ffe066'; g.beginPath(); g.arc(W * 0.82, H * 0.18, 60, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,224,102,.25)'; g.beginPath(); g.arc(W * 0.82, H * 0.18, 90 + Math.sin(t * 2) * 6, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.9)';
+      for (let i = 0; i < 6; i++) { const cx = ((i * 330 + t * 18) % (W + 300)) - 150, cy = 60 + (i % 3) * 55; g.beginPath(); g.arc(cx, cy, 30, 0, 7); g.arc(cx + 32, cy - 10, 26, 0, 7); g.arc(cx + 62, cy, 28, 0, 7); g.fill(); }
+      // rolling hills
+      const hill = (col, base, amp, f, off) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W; x += 16) g.lineTo(x, base + Math.sin(x / f + off) * amp); g.lineTo(W, H); g.fill(); };
+      hill('#8fd47e', H * 0.58, 30, 210, 1); hill('#6cc26a', H * 0.68, 22, 160, 3);
+      // pond + reeds
+      g.fillStyle = '#3b9be8'; g.beginPath(); g.ellipse(W * 0.2, H * 0.84, W * 0.16, H * 0.07, 0, 0, 7); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 3; g.beginPath(); g.ellipse(W * 0.2, H * 0.84, W * 0.1, H * 0.035, 0, 0.3 + Math.sin(t) * 0.2, 2.2); g.stroke();
+      g.strokeStyle = '#3d8b37'; g.lineWidth = 4; for (let i = 0; i < 7; i++) { const rx = W * 0.05 + i * 14; g.beginPath(); g.moveTo(rx, H * 0.86); g.quadraticCurveTo(rx + 6, H * 0.8, rx + Math.sin(t + i) * 4, H * 0.74); g.stroke(); }
+      art.drawDuck(g, W * 0.22 + Math.sin(t * 0.6) * W * 0.06, H * 0.83, 2, 'snow', 'none', t, 'swim', Math.cos(t * 0.6) < 0, 2);
+      // a parade of ducks waddling across the meadow
+      parade.forEach(([c, h], i) => { const x = ((t * 70 + i * 150) % (W + 300)) - 150; art.drawDuck(g, x, H * 0.92 - (i % 2) * 10, 1.8, c, h, t + i, 'run', false, i === 3 ? 0 : 2); });
+      // a flyer overhead and an egg about to hatch
+      art.drawDuck(g, ((t * 120) % (W + 400)) - 200, H * 0.3 + Math.sin(t * 2) * 20, 1.5, 'lilac', 'shades', t, 'fly', false, 2);
+      g.fillStyle = '#c99a5b'; g.beginPath(); g.ellipse(W * 0.86, H * 0.86, 48, 14, 0, 0, 7); g.fill();
+      art.drawEgg(g, W * 0.86, H * 0.8, 2.2, '#f2c14e', '#c47f17', t, (Math.sin(t * 1.3) > 0.6) ? 1 : 0);
+    }, 'titleRaf');
+  }
+
   BOX.games.ducks = {
+    standalone: true, title: titleScreen,
     name: 'JustRaiseDucks', icon: '🦆',
     about: 'Everyone gets a farm in Duck Valley. Hatch a duckling, raise it with phone mini-games, and race up the leagues on the big screen.',
     how: [

@@ -6,11 +6,16 @@
   const $ = (s) => document.querySelector(s);
   const { esc } = BOX;
   const params = new URLSearchParams(location.search);
-  const gameKey = params.get('game');
+  // Big games have their own address (/ducks) and open like a game of their own: own title
+  // screen, own look, no JustGameBox bar. Small games use /box/tv?game=<key>.
+  const pathGame = location.pathname.replace(/\/+$/, '').split('/')[1];
+  const gameKey = params.get('game') || pathGame;
   const G = BOX.games[gameKey];
   if (!G) { $('#tv-main').innerHTML = '<p>Unknown game. <a href="/">Back to the games</a></p>'; return; }
-  document.title = G.name + ' · JustGameBox';
+  const STAND = !!G.standalone && !params.get('game');
+  document.title = STAND ? G.name : G.name + ' · JustGameBox';
   $('#tv-title').textContent = G.icon + ' ' + G.name;
+  if (STAND) { document.body.classList.add('standalone', 'g-' + gameKey); document.querySelector('.tv-bar').hidden = true; }
 
   const socket = io('/box', { transports: ['websocket', 'polling'] });
   let state = null, baseUrl = location.origin, lastFx = 0, rendered = '';
@@ -21,19 +26,36 @@
 
   fetch('/api/info').then((r) => r.json()).then((i) => { if (i.baseUrl) { baseUrl = i.baseUrl; render(); } }).catch(() => {});
 
+  let onTitle = false;
   function create() {
+    onTitle = false;
     socket.emit('host:create', { game: gameKey }, (r) => {
       if (!r || !r.ok) { $('#tv-main').innerHTML = `<p class="err">${esc((r && r.error) || 'Could not create a room.')}</p>`; return; }
       save({ code: r.code, hostKey: r.hostKey, game: gameKey });
     });
   }
+  // The game's own title screen (big games): nothing is created until the host presses start.
+  function showTitle() {
+    state = null; rendered = 'title'; onTitle = true;
+    const c = $('#corner'); if (c) c.remove();
+    G.title($('#tv-main'), {
+      start: () => { create(); BOX.sfx('start'); },
+      back: () => { location.href = '/'; },
+    });
+  }
+  function quitToTitle() { try { localStorage.removeItem(KEY); } catch { /* */ } showTitle(); }
+  let firstConnect = true;
   socket.on('connect', () => {
-    const s = saved();
-    if (s && s.game === gameKey && !params.has('new')) socket.emit('host:resume', s, (r) => { if (!r || !r.ok) create(); });
+    const s = saved(), mine = s && s.game === gameKey && !params.has('new');
+    if (STAND) {
+      if (mine) socket.emit('host:resume', s, (r) => { if (!r || !r.ok) showTitle(); });
+      else if (firstConnect) showTitle();
+    } else if (mine) socket.emit('host:resume', s, (r) => { if (!r || !r.ok) create(); });
     else create();
-    if (params.has('new')) history.replaceState(null, '', location.pathname + '?game=' + gameKey);
+    firstConnect = false;
+    if (params.has('new')) history.replaceState(null, '', STAND ? location.pathname : location.pathname + '?game=' + gameKey);
   });
-  socket.on('tv', (s) => { state = s; render(); playFx(s.fx || []); });
+  socket.on('tv', (s) => { if (onTitle) return; state = s; render(); playFx(s.fx || []); });
 
   // Sound: browsers need one click on the page first.
   document.addEventListener('pointerdown', () => { try { SFX.unlock(); } catch { /* none */ } $('#sound-hint').hidden = true; }, { once: true });
@@ -42,19 +64,47 @@
     if (list.length) lastFx = Math.max(lastFx, list[list.length - 1].id);
   }
 
-  const joinUrl = () => `${baseUrl}/box/play?room=${state.code}`;
+  const joinUrl = () => (STAND ? `${baseUrl}/${gameKey}/play?room=${state.code}` : `${baseUrl}/box/play?room=${state.code}`);
   const qr = () => `/api/qr?text=${encodeURIComponent(joinUrl())}`;
+
+  // Big games: a small corner badge (code + QR for late joiners) and a ⚙ host menu.
+  function corner() {
+    let c = $('#corner');
+    if (!c) {
+      c = document.createElement('div'); c.id = 'corner'; c.className = 'corner';
+      c.innerHTML = '<div class="cj"><span class="cl">Join</span><b class="cc"></b></div><img class="cq" alt="QR code to join"><button class="cg" title="Host menu">⚙</button><div class="cm" hidden></div>';
+      document.body.appendChild(c);
+      c.querySelector('.cg').onclick = () => { const m = c.querySelector('.cm'); m.hidden = !m.hidden; };
+    }
+    c.querySelector('.cc').textContent = state.code;
+    const q = c.querySelector('.cq'); if (q.dataset.u !== joinUrl()) { q.src = qr(); q.dataset.u = joinUrl(); }
+    const over = state.state && state.state.phase === 'over';
+    const html = `${over ? '<button data-h="again">▶ Play again</button>' : '<button data-h="next">⏩ Skip ahead</button>'}<button data-h="lobby">↩ Back to the lobby</button><button data-h="bots">🤖 Add 5 bots</button><button data-h="quit">🚪 Quit to title</button>`;
+    const m = c.querySelector('.cm');
+    if (m.dataset.html !== html) {
+      m.innerHTML = html; m.dataset.html = html;
+      for (const b of m.querySelectorAll('[data-h]')) b.onclick = () => {
+        const h = b.dataset.h; m.hidden = true;
+        if (h === 'quit') { if (confirm('Quit this game and go back to the title screen?')) quitToTitle(); return; }
+        if (h === 'lobby' && !over && !confirm('End this game and go back to the lobby?')) return;
+        host(h === 'bots' ? 'addBots' : h, { count: 5 });
+      };
+    }
+    c.hidden = state.phase === 'lobby';
+  }
 
   function render() {
     if (!state) return;
+    if (STAND) corner();
     const code = $('#tv-code');
-    code.hidden = state.phase === 'lobby';
+    code.hidden = state.phase === 'lobby' || STAND;
     const codeHtml = `<span>Join: <b>${esc(state.code)}</b></span><img src="${qr()}" alt="QR code to join">`;
     if (code.dataset.code !== state.code + baseUrl) { code.innerHTML = codeHtml; code.dataset.code = state.code + baseUrl; }
     if (state.phase === 'lobby') return lobby();
     const main = $('#tv-main');
     if (rendered !== 'game') { main.innerHTML = '<div id="g-area"></div><div class="host-row" id="host-row"></div>'; rendered = 'game'; }
     G.tv($('#g-area'), state.state, { players: state.players, settings: state.settings, host });
+    if (STAND) { $('#host-row').hidden = true; return; }
     const over = state.state && state.state.phase === 'over';
     $('#host-row').innerHTML = `${over ? '<button class="btn" data-h="again">▶ Play again</button>' : '<button class="btn ghost small" data-h="next">Skip ahead ▶</button>'} <button class="btn ghost small" data-h="lobby">Back to lobby</button> <button class="btn ghost small" data-h="bots">+ 5 bots</button>`;
     for (const b of document.querySelectorAll('[data-h]')) b.onclick = () => { const h = b.dataset.h; if (h === 'lobby' && !over && !confirm('End this game and go back to the lobby?')) return; host(h === 'bots' ? 'addBots' : h, { count: 5 }); };
@@ -71,7 +121,7 @@
           <div class="err" id="lobby-err"></div>
           <button class="btn big" id="start">Start game</button>
           <div><button class="link" id="add-bots">+ add 5 test bots</button> <button class="link" id="rm-bots">remove bots</button></div>
-          <a class="link" href="?game=${esc(gameKey)}&new=1">New room</a>`;
+          ${STAND ? '<button class="link" id="quit-title">Quit to title</button>' : `<a class="link" href="?game=${esc(gameKey)}&new=1">New room</a>`}`;
   function lobby() {
     const main = $('#tv-main');
     // Live-lobby games (JustRaiseDucks) show their world right away; the join panel sits beside it.
@@ -106,6 +156,7 @@
     $('#start').onclick = async () => { const r = await host('start'); $('#lobby-err').textContent = r.ok ? '' : r.error || ''; };
     $('#add-bots').onclick = () => host('addBots', { count: 5 });
     $('#rm-bots').onclick = () => host('removeBots');
+    const q = $('#quit-title'); if (q) q.onclick = () => { if (confirm('Close this valley and go back to the title screen?')) quitToTitle(); };
   }
   function updateJoin() {
     const url = joinUrl();

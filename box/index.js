@@ -14,6 +14,9 @@ function installBox(app, io, { takenElsewhere = () => false } = {}) {
   const pub = path.join(__dirname, '..', 'public', 'box');
   app.get('/box/tv', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
   app.get('/box/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
+  // Big games get their own address, like JustMafia's /mafia.
+  app.get('/ducks', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
+  app.get('/ducks/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
 
   const nsp = io.of('/box');
   const rooms = new Map();

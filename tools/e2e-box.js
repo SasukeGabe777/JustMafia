@@ -95,6 +95,33 @@ async function setup(browser, game, settings = {}) {
     ok('Blackjack: chips → bet 35 → dealt → stand → paid out (or lost) on the phone');
   }
 
+  // ---------- JustRaiseDucks as its own game (/ducks) ----------
+  {
+    const tv = await browser.page();
+    await tv.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
+    await tv.go(`${URL}/ducks`);
+    await tv.until(`!!document.querySelector('.dk-title-card #dk-go')`, 'duck title screen');
+    assert(await tv.eval(`document.querySelector('.tv-bar').hidden && document.body.classList.contains('g-ducks')`), 'no JustGameBox bar; duck look');
+    assert(await tv.eval(`/Back to JustGameBox/.test(document.querySelector('#dk-back').textContent)`));
+    await wait(700); await tv.shot('box-ducks-title');
+    await tv.click('#dk-go');
+    await tv.until(`/^[A-Z]{4}$/.test((document.querySelector('#code') || {}).textContent || '') && !!document.querySelector('#dk-valley')`, 'valley lobby after Start');
+    const code = await tv.eval(`document.querySelector('#code').textContent`);
+    const ph = await browser.page();
+    await ph.send('Emulation.setDeviceMetricsOverride', { width: 400, height: 820, deviceScaleFactor: 1, mobile: true });
+    await ph.go(`${URL}/ducks/play?room=${code}`);
+    await ph.until(`document.body.classList.contains('g-ducks') && /JustRaiseDucks/.test(document.querySelector('.ph-join h1').textContent)`, 'duck-styled join page');
+    await ph.eval(`document.querySelector('#j-name').value = 'Rex'`); await ph.click('#j-go');
+    await ph.until(`document.querySelectorAll('[data-hatch]').length === 3`, 'egg picker');
+    await ph.shot('box-ducks-own-join');
+    await ph.click('[data-hatch="0"]'); await ph.until(`!!document.querySelector('[data-vip="start"]')`, 'host start');
+    await ph.click('[data-vip="start"]');
+    await tv.until(`!!document.querySelector('#corner') && !document.querySelector('#corner').hidden`, 'corner badge in game');
+    await wait(900); await tv.shot('box-ducks-own-game');
+    PAGES.push(tv, ph);
+    ok('JustRaiseDucks at /ducks: its own title screen and look, no JustGameBox bar, phone joins at /ducks/play, corner badge + host menu in game');
+  }
+
   // ---------- JustRaiseDucks ----------
   {
     const { tv, ph } = await setup(browser, 'ducks', { raceEvery: 60, races: 3 });
