@@ -16,8 +16,8 @@
       <p class="tag">Party games for the big screen. Everyone plays from their phone.</p>
     </header>
 
-    <!-- One tile per game. Empty slots are placeholders for games still to be designed. -->
-    <section class="tiles" id="tiles" aria-label="Games">
+    <!-- The big games on top; smaller games and empty slots (still to be chosen) below. -->
+    <section class="tiles big" id="tiles" aria-label="Featured games">
       <a class="tile live mafia" href="/mafia" data-game="mafia">
         <div class="art" aria-hidden="true"><span class="icon">🔪</span></div>
         <div class="info">
@@ -26,6 +26,17 @@
           <div class="meta"><span>👥 5–100</span><span>⏱ 20–60 min</span><span>🕵️ Social deduction</span></div>
         </div>
       </a>
+      <a class="tile live ducks" href="/box/tv?game=ducks" data-game="ducks">
+        <div class="art" aria-hidden="true"><span class="icon">🦆</span></div>
+        <div class="info">
+          <h2>JustRaiseDucks</h2>
+          <p>Hatch a duckling, raise it on your farm with phone mini-games, and race up the leagues on the big screen.</p>
+          <div class="meta"><span>👥 1–100</span><span>⏱ 15–40 min</span><span>🏁 Racing</span></div>
+        </div>
+      </a>
+      <div class="tile empty" tabindex="0" data-game="big3"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2><p>Another big game is on its way.</p></div></div>
+    </section>
+    <section class="tiles small" aria-label="More games">
       <a class="tile live president" href="/box/tv?game=president" data-game="president">
         <div class="art" aria-hidden="true"><span class="icon">👑</span></div>
         <div class="info">
@@ -42,16 +53,10 @@
           <div class="meta"><span>👥 1–100</span><span>⏱ 10–25 min</span><span>🪙 Casino</span></div>
         </div>
       </a>
-      <a class="tile live ducks" href="/box/tv?game=ducks" data-game="ducks">
-        <div class="art" aria-hidden="true"><span class="icon">🦆</span></div>
-        <div class="info">
-          <h2>JustRaiseDucks</h2>
-          <p>Raise a racing duck with phone mini-games, then race the whole room on the big screen.</p>
-          <div class="meta"><span>👥 1–100</span><span>⏱ 10–30 min</span><span>🏁 Racing</span></div>
-        </div>
-      </a>
-      <div class="tile empty" tabindex="0" data-game="slot5"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2><p>A new game is on its way.</p></div></div>
-      <div class="tile empty" tabindex="0" data-game="slot6"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2><p>A new game is on its way.</p></div></div>
+      <div class="tile empty" tabindex="0" data-game="slot1"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2></div></div>
+      <div class="tile empty" tabindex="0" data-game="slot2"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2></div></div>
+      <div class="tile empty" tabindex="0" data-game="slot3"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2></div></div>
+      <div class="tile empty" tabindex="0" data-game="slot4"><div class="art" aria-hidden="true"><span class="icon">?</span></div><div class="info"><h2>Coming soon</h2></div></div>
     </section>
 
     <footer class="hub-foot">

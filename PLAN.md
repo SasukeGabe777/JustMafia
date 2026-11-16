@@ -23,6 +23,21 @@ Validation: `tools/test-box.js` (18 tests, including 100-player bot games of all
 turn of each game, Duck Valley, a race, no page errors). Not yet played by real people on
 phones; mini-game difficulty and race balance are first guesses.
 
+### JustRaiseDucks, second pass (same day)
+
+- Hatching: each player picks one of three eggs; the egg's talent gives +25% XP in one skill.
+  Ducks grow (duckling, young, grown, champion) as their total level rises, and look bigger on the TV.
+- Leagues: Rookie Cup up to the Grand Championship (double points); top 3 earn trophies shown on the farm.
+- Wild ducks fill races to 6 racers; their level follows the room's average (about a third of
+  small-room races go to a wild duck in bot tests).
+- Six course themes (meadow, beach, forest, snow, canyon, night) with obstacle variants:
+  hurdles, logs, mud, sand, ice, lily pads, waves, rapids, icy water, ice cliffs, cloud updrafts.
+- Phone redesign: your own animated farm at the top (tap to pet), skill cards with level rings,
+  a categorized shop (food, farm, decor, gear, hats), a race tab, a "My duck" tab and a bottom nav.
+- Title screen: JustMafia and JustRaiseDucks as big tiles with one big coming-soon slot; President,
+  Blackjack Night and four coming-soon slots in the smaller row.
+- Validation: test-box (20) and e2e-box (8) pass. Still untested by real players on real phones.
+
 ## November 10, 2026 - shared GitHub development
 
 Gabe/Codex and Justin/Claude collaborate in
