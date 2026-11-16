@@ -62,7 +62,7 @@
       const mode = done ? 'stand' : ev.includes('trip') ? 'stand' : gr.mode;
       art.drawDuck(g, x, y, sc, d.color, d.hat, now + lane * 0.37, mode);
       g.textAlign = 'center';
-      if (ev.length) { g.font = `${22 * sc}px sans-serif`; g.fillText(ev.includes('trip') ? '💫' : ev.includes('slip') ? '😱' : '😮‍💨', x, y - 34 * sc); }
+      if (ev.length) { g.font = `${22 * sc}px sans-serif`; g.fillText(ev.includes('trip') ? '💫' : ev.includes('slip') ? '😱' : ev.includes('boost') ? '⚡' : '😮‍💨', x, y - 34 * sc); }
       else if (tired) { g.font = `${14 * sc}px sans-serif`; g.fillText('💦', x - 18 * sc, y - 26 * sc); }
       if (labelled.has(p.id) || done && race.place[p.id].place <= 3) {
         g.font = `600 ${13 * sc}px Fredoka, sans-serif`; const label = (done ? ['🥇', '🥈', '🥉'][race.place[p.id].place - 1] || '#' + race.place[p.id].place : '') + ' ' + (d.name || '');
@@ -72,7 +72,7 @@
       // cheers from phones float above that duck
       for (const c of race.cheers) if (c.id === p.id) { const age = (performance.now() - c.at) / 1000; if (age < 1.5) { g.globalAlpha = 1 - age / 1.5; g.font = `${18 * sc}px sans-serif`; g.fillText('📣', x + Math.sin(age * 8 + c.at) * 10, y - 60 * sc - age * 40); g.globalAlpha = 1; } }
       // commentary from events and finishes
-      for (const [t, k] of p.tr.ev) { const key = p.id + t + k; if (t <= simT && !race.seenEv.has(key)) { race.seenEv.add(key); if (k !== 'tired' ? labelled.has(p.id) || R.tracks.length <= 12 : p.id === race.leader) say(`${d.name} ${k === 'trip' ? 'trips on a hurdle!' : k === 'slip' ? 'slips down the cliff!' : 'is running out of steam…'}`); } }
+      for (const [t, k] of p.tr.ev) { const key = p.id + t + k; if (t <= simT && !race.seenEv.has(key)) { race.seenEv.add(key); if (k === 'boost' ? labelled.has(p.id) && Math.random() < 0.5 : k !== 'tired' ? labelled.has(p.id) || R.tracks.length <= 12 : p.id === race.leader) say(`${d.name} ${k === 'trip' ? 'trips on a hurdle!' : k === 'slip' ? 'slips down the cliff!' : k === 'boost' ? 'catches a boost! ⚡' : 'is running out of steam…'}`); } }
       if (done && !race.finished.has(p.id)) { race.finished.add(p.id); const pl = race.place[p.id].place; if (pl === 1) { say(`🏆 ${d.name} WINS the ${R.name}!`); BOX.sfx('cheer'); } else if (pl <= 3) say(`${['', '🥈', '🥉'][pl - 1]} ${d.name} takes ${pl === 2 ? 'second' : 'third'}!`); }
     }
     if (lead && e > R.intro && lead.x < G.L && race.leader !== lead.id) { if (race.leader) say(`${(race.ducks[lead.id] || {}).name} takes the lead!`); race.leader = lead.id; }
@@ -95,7 +95,7 @@
   }
 
   // ---------- Duck Valley on the TV ----------
-  function drawValley(g, W, H, now) { A().drawValley(g, W, H, tvw.farms, now, tvw.fxBy, tvw.born); }
+  function drawValley(g, W, H, now) { A().drawValley(g, W, H, tvw.farms, now, tvw.fxBy, tvw.born, tvw.weather); }
   function spotlight(s) {
     if (!s.farms.length) return '';
     if (Date.now() - tvw.spotAt > 7000) { tvw.spot = (tvw.spot + 1) % s.farms.length; tvw.spotAt = Date.now(); }
@@ -168,7 +168,7 @@
         return;
       }
       // Training: Duck Valley.
-      tvw.farms = s.farms;
+      tvw.farms = s.farms; tvw.weather = s.course && s.course.weather;
       if (tvw.mode !== 'valley') {
         tvw.mode = 'valley';
         for (const f of s.farms) if (!(f.id in tvw.born)) tvw.born[f.id] = 0;
@@ -189,6 +189,7 @@
       const d = v.duck;
       if (v.newBadge) { ctx.toast(`${v.badges[v.newBadge][0]} Badge: ${v.badges[v.newBadge][1]}! +${v.badges[v.newBadge][2]} coins`); ctx.vibrate(100); }
       if (v.eventMsg) ctx.toast(v.eventMsg);
+      if (v.questDone) { ctx.toast('📜 Quest done: ' + v.questDone + '!'); ctx.sfx('chime'); }
       if (v.phase === 'over') {
         el.innerHTML = `<div class="card-box" style="text-align:center"><img src="${A().duckImg(d.color, d.hat)}" width="120" alt=""><h3>Season over!</h3><p>${esc(d.name)} finished <b>#${v.rank}</b> of ${v.of} with ${d.points} points.</p></div>
           ${v.awards && v.awards.length ? `<div class="card-box">${v.awards.map((a) => `<div>${esc(a.title)}: <b>${esc(a.duck)}</b> (${esc(a.owner)})</div>`).join('')}</div>` : ''}<div class="card-box">${BOX.board(v.final.map((x) => ({ name: x.duck, points: x.points })), (r) => r.points, ' pts')}</div>`;
@@ -201,7 +202,7 @@
       }
       if (v.phase === 'results') {
         const l = d.last;
-        el.innerHTML = `${header(v)}<div class="card-box" style="text-align:center"><h3>${l ? (l.place <= 3 ? ['🥇', '🥈', '🥉'][l.place - 1] + ' ' : '') + 'You finished #' + l.place + ' of ' + l.of : 'Race over'}</h3>${l ? `<p>+${l.pts} points · +${l.coins} 🪙</p><p class="muted">${l.trips ? '💫 Tripped ' + l.trips + '× · ' : ''}${l.slips ? '😱 Slipped ' + l.slips + '× · ' : ''}${l.tired ? '😮‍💨 Ran out of stamina' : 'Stamina held up'}</p>` : ''}${v.predictWon != null ? `<p>🔮 Prediction: ${v.predictWon ? '+' + v.predictWon + ' coins!' : 'no luck this time.'}</p>` : ''}</div>`;
+        el.innerHTML = `${header(v)}<div class="card-box" style="text-align:center"><h3>${l ? (l.place <= 3 ? ['🥇', '🥈', '🥉'][l.place - 1] + ' ' : '') + 'You finished #' + l.place + ' of ' + l.of : 'Race over'}</h3>${l ? `<p>+${l.pts} points · +${l.coins} 🪙</p><p class="muted">${l.trips ? '💫 Tripped ' + l.trips + '× · ' : ''}${l.slips ? '😱 Slipped ' + l.slips + '× · ' : ''}${l.tired ? '😮‍💨 Ran out of stamina' : 'Stamina held up'}</p>` : ''}${v.rivalWon != null ? `<p>⚔️ Rival: ${v.rivalWon ? 'you beat them! +15 coins' : 'they beat you this time.'}</p>` : ''}${v.predictWon != null ? `<p>🔮 Prediction: ${v.predictWon ? '+' + v.predictWon + ' coins!' : 'no luck this time.'}</p>` : ''}</div>`;
         return;
       }
       const tabs = `<div class="dk-tabs">${[['train', '🏋️', 'Train'], ['feed', '🍎', 'Feed'], ['farm', '🏡', 'Farm'], ['race', '🏁', 'Race'], ['style', '🎨', 'Style']].map(([k, i, l]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}"><span>${i}</span>${l}</button>`).join('')}</div>`;
@@ -209,7 +210,8 @@
       let body = '';
       if (tab === 'train') {
         const needs = [...new Set(v.course.sections.map((s) => SEC[s][2]))];
-        body = `${v.napLeft ? `<div class="big-status">💤 Napping… ${timer(v.napLeft)}</div>` : ''}<div class="dk-train">${Object.entries(SK).map(([k, [icon, label, game]]) => { const p = d.progress[k]; return `<button class="dk-tb ${needs.includes(k) || k === 'stamina' ? 'need' : ''}" data-train="${k}" ${v.napLeft || d.energy < v.trainCost ? 'disabled' : ''}><span class="i">${icon}</span><b>${label} · Lv ${d.levels[k]}</b><span class="muted">${game}</span>${bar(p ? Math.round((p.have / p.need) * 100) : 100)}</button>`; }).join('')}
+        const quests = v.quests && v.quests.length ? `<div class="card-box dk-quests"><b>📜 Quests</b>${v.quests.map((q) => `<div class="q ${q.done ? 'done' : ''}"><span>${q.done ? '✅' : '⬜'} ${esc(q.text)}</span><span class="muted">${q.done ? 'done' : q.have + '/' + q.n} · 🪙${q.reward}</span></div>`).join('')}${v.rival ? `<div class="q rival">⚔️ Rival: <b>${esc(v.rival.name)}</b> <span class="muted">(${esc(v.rival.owner)}) · beat them next race for 🪙15</span></div>` : ''}</div>` : '';
+        body = `${quests}${v.napLeft ? `<div class="big-status">💤 Napping… ${timer(v.napLeft)}</div>` : ''}<div class="dk-train">${Object.entries(SK).map(([k, [icon, label, game]]) => { const p = d.progress[k]; return `<button class="dk-tb ${needs.includes(k) || k === 'stamina' ? 'need' : ''}" data-train="${k}" ${v.napLeft || d.energy < v.trainCost ? 'disabled' : ''}><span class="i">${icon}</span><b>${label} · Lv ${d.levels[k]}</b><span class="muted">${game}</span>${bar(p ? Math.round((p.have / p.need) * 100) : 100)}</button>`; }).join('')}
           <button class="dk-tb" id="dk-nap" ${v.napLeft ? 'disabled' : ''}><span class="i">💤</span><b>Nap</b><span class="muted">${v.napSeconds}s, free energy</span></button></div>
           <p class="muted" style="text-align:center">Training costs ${v.trainCost} ⚡ · ✨ = skills the next course needs.</p>`;
       } else if (tab === 'feed') {
