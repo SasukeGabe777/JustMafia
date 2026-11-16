@@ -119,7 +119,7 @@
     // idle: wander slowly between a few spots
     const a = t * 0.25 + k * 7; return { x: 0.45 + Math.sin(a) * 0.15, y: 0.6 + Math.sin(a * 1.7) * 0.1, mode: Math.sin(a * 3) > 0.6 ? 'peck' : 'stand', flip: Math.cos(a) < 0 };
   }
-  function drawFarm(g, f, x, y, w, h, t, fx) {
+  function drawFarm(g, f, x, y, w, h, t, fx, zoom = 1) {
     const k = hash(f.plot) * 10, pad = w * 0.04;
     const ix = x + pad, iy = y + pad, iw = w - pad * 2, ih = h - pad * 2;
     // grass + tufts
@@ -168,37 +168,93 @@
     }
     // sign: owner, mood, rank (the phone draws its own overlay instead)
     if (!f.owner) return;
-    const fs = Math.max(9, Math.min(18, w * 0.065));
+    const fs = Math.max(9 / zoom, Math.min(18 / Math.min(1, zoom), w * 0.075)); // readable even when the map is zoomed out
     g.font = `600 ${fs}px Fredoka, sans-serif`; const label = `${f.rank && f.rank <= 3 ? ['🥇', '🥈', '🥉'][f.rank - 1] + ' ' : ''}${f.owner}`;
     const tw = Math.min(iw - 6, g.measureText(label).width + 12);
     g.fillStyle = 'rgba(40,24,10,.75)'; g.fillRect(ix + 3, iy + 3, tw, fs + 6);
     g.fillStyle = '#fff'; g.fillText(label, ix + 9, iy + fs + 4, iw - 18);
-    if (w > 90) { g.font = `${fs}px sans-serif`; g.fillText(MOOD(f.mood), ix + iw - fs * 1.4, iy + fs + 4); }
-    if (w > 150) { const L = f.levels; g.font = `600 ${fs * 0.8}px Fredoka, sans-serif`; g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(ix + 3, iy + ih - fs - 6, iw - 6, fs + 4); g.fillStyle = '#fff'; g.fillText(`🏃${L.run} 🌊${L.swim} 🪽${L.fly} 🧗${L.climb} 💪${L.stamina}`, ix + 8, iy + ih - 8, iw - 14); }
+    if (w * zoom > 90) { g.font = `${fs}px sans-serif`; g.fillText(MOOD(f.mood), ix + iw - fs * 1.4, iy + fs + 4); }
+    if (w * zoom > 150) { const L = f.levels; g.font = `600 ${fs * 0.8}px Fredoka, sans-serif`; g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(ix + 3, iy + ih - fs - 6, iw - 6, fs + 4); g.fillStyle = '#fff'; g.fillText(`🏃${L.run} 🌊${L.swim} 🪽${L.fly} 🧗${L.climb} 💪${L.stamina}`, ix + 8, iy + ih - 8, iw - 14); }
   }
   const DECOR_ICON = { flowers: '🌷', flag: '🚩', gnome: '🧙', lantern: '🏮', scarecrow: '🎃', fountain: '⛲', statue: '🗿', rainbow: '🌈' };
+  // ---------- Duck Valley: one shared map ----------
+  // Farm plots sit on a grid of lots around the Raceway (centre), nearest lots first, so the
+  // first players live close to the middle. Roads run along every gap; a river crosses the map.
+  const CW = 300, CH = 230, FW = 244, FH = 182;
+  function farmCells(n) {
+    const R = Math.ceil(Math.sqrt(n + 1)) + 2, cells = [];
+    for (let gx = -R; gx <= R; gx++) for (let gy = -R; gy <= R; gy++) if (gx || gy) cells.push({ gx, gy, d: Math.hypot(gx * 1.25, gy) + hash(gx * 31 + gy * 7 + 500) * 0.35 });
+    cells.sort((a, b) => a.d - b.d);
+    return cells.slice(0, n);
+  }
+  function drawTree(g, x, y, s, kind) {
+    g.fillStyle = 'rgba(0,0,0,.15)'; g.beginPath(); g.ellipse(x, y + 4 * s, 16 * s, 5 * s, 0, 0, TAU); g.fill();
+    g.fillStyle = '#7a4f2f'; g.fillRect(x - 3 * s, y - 14 * s, 6 * s, 16 * s);
+    g.fillStyle = kind ? '#3f9a4a' : '#4caf50'; g.beginPath(); g.arc(x, y - 22 * s, 15 * s, 0, TAU); g.arc(x - 10 * s, y - 14 * s, 10 * s, 0, TAU); g.arc(x + 10 * s, y - 14 * s, 10 * s, 0, TAU); g.fill();
+    if (kind === 2) { g.fillStyle = '#ff6b6b'; for (const [dx, dy] of [[-6, -24], [5, -18], [8, -28]]) { g.beginPath(); g.arc(x + dx * s, y + dy * s, 2.4 * s, 0, TAU); g.fill(); } }
+  }
+  function drawRaceway(g, cx, cy, t) {
+    // the valley's own race ground in the middle of town: oval track, flags, a grandstand
+    g.fillStyle = '#7ccf6a'; g.fillRect(cx - FW / 2, cy - FH / 2, FW, FH);
+    g.strokeStyle = '#d9a86c'; g.lineWidth = 22; g.beginPath(); g.ellipse(cx, cy + 8, 95, 58, 0, 0, TAU); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1.5; g.setLineDash([6, 6]); g.beginPath(); g.ellipse(cx, cy + 8, 95, 58, 0, 0, TAU); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#4fb3ff'; g.beginPath(); g.ellipse(cx, cy + 8, 50, 22, 0, 0, TAU); g.fill();
+    for (let i = 0; i < 6; i++) { const fx = cx - 100 + i * 40, fy = cy - 78; g.fillStyle = '#6b4420'; g.fillRect(fx, fy, 2, 22); g.fillStyle = ['#ff4f9a', '#ffd23f', '#3ec1ff', '#2ee6a6', '#b388ff', '#ff8c42'][i]; g.beginPath(); g.moveTo(fx + 2, fy); g.lineTo(fx + 16 + Math.sin(t * 4 + i) * 3, fy + 5); g.lineTo(fx + 2, fy + 10); g.fill(); }
+    g.fillStyle = '#8b5a2b'; g.fillRect(cx - 60, cy + 64, 120, 18); g.fillStyle = '#fff4d6'; g.font = '700 12px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('DUCK VALLEY RACEWAY', cx, cy + 77); g.textAlign = 'left';
+    for (let i = 0; i < 9; i++) { const x = cx - 80 + i * 20; for (let j = 0; j < 4; j++) { if (hash(i * 9 + j + 77) < 0.75) continue; g.fillStyle = ['#ffd23f', '#f7f7f2', '#a8774d', '#ff9dcf'][j]; g.beginPath(); g.arc(x, cy + 8 + Math.sin(t * 6 + i) * 1.5 - 30 + j * 4, 2.6, 0, TAU); g.fill(); } }
+  }
   function drawValley(g, W, H, farms, t, fxBy, born, weather) {
-    // meadow + paths + trees around the edge
+    const n = farms.length, cells = farmCells(n);
+    // world bounds: always at least the 3×3 lots around the Raceway
+    let x0 = -1, x1 = 1, y0 = -1, y1 = 1;
+    for (const c of cells) { x0 = Math.min(x0, c.gx); x1 = Math.max(x1, c.gx); y0 = Math.min(y0, c.gy); y1 = Math.max(y1, c.gy); }
+    const wx0 = (x0 - 0.5) * CW - 40, wx1 = (x1 + 0.5) * CW + 40, wy0 = (y0 - 0.5) * CH - 40, wy1 = (y1 + 0.5) * CH + 40;
+    const sc = Math.min(W / (wx1 - wx0), H / (wy1 - wy0));
+    const ox = W / 2 - ((wx0 + wx1) / 2) * sc, oy = H / 2 - ((wy0 + wy1) / 2) * sc;
+    // meadow everywhere (also beyond the map edge)
     g.fillStyle = '#5fb04a'; g.fillRect(0, 0, W, H);
-    const L = valleyLayout(Math.max(1, farms.length), W - 20, H - 20);
-    g.save(); g.translate(10, 10);
-    g.fillStyle = '#c9a26b';
-    for (let r = 0; r <= L.rows; r++) g.fillRect(L.ox - 4, L.oy + r * L.fh - 3, L.cols * L.fw + 8, 6);
-    for (let c = 0; c <= L.cols; c++) g.fillRect(L.ox + c * L.fw - 3, L.oy - 4, 6, L.rows * L.fh + 8);
-    const sorted = farms.slice().sort((a, b) => a.plot - b.plot);
-    sorted.forEach((f, i) => {
-      const { x, y } = L.cell(i);
-      const age = (performance.now() - (born[f.id] || 0)) / 600, sc = Math.min(1, 0.3 + age * 0.7);
-      g.save(); g.translate(x + L.fw / 2, y + L.fh / 2); g.scale(sc, sc); g.translate(-L.fw / 2, -L.fh / 2);
-      drawFarm(g, f, 0, 0, L.fw, L.fh, t, fxBy[f.id] || []);
+    g.save(); g.translate(ox, oy); g.scale(sc, sc);
+    const gx0 = Math.floor(wx0 / CW) - 2, gx1 = Math.ceil(wx1 / CW) + 2, gy0 = Math.floor(wy0 / CH) - 2, gy1 = Math.ceil(wy1 / CH) + 2;
+    g.fillStyle = '#58a845'; for (let i = 0; i < 260; i++) { const px = gx0 * CW + hash(i * 3) * (gx1 - gx0) * CW, py = gy0 * CH + hash(i * 3 + 1) * (gy1 - gy0) * CH; g.fillRect(px, py, 10, 4); }
+    // roads along every gap between lots
+    const riverRow = 0; // the river runs in the gap just above the Raceway row
+    g.fillStyle = '#d2ab72';
+    for (let gx = gx0; gx <= gx1; gx++) g.fillRect((gx + 0.5) * CW - 14, gy0 * CH, 28, (gy1 - gy0) * CH);
+    for (let gy = gy0; gy <= gy1; gy++) if (gy !== riverRow - 1) g.fillRect(gx0 * CW, (gy + 0.5) * CH - 12, (gx1 - gx0) * CW, 24);
+    g.fillStyle = 'rgba(120,80,40,.25)'; for (let gx = gx0; gx <= gx1; gx++) for (let y = gy0 * CH; y < gy1 * CH; y += 26) g.fillRect((gx + 0.5) * CW - 1, y, 2, 12);
+    // the river (with bridges where the roads cross)
+    const ry = (riverRow - 0.5) * CH;
+    g.fillStyle = '#3d9be0'; g.beginPath(); g.moveTo(gx0 * CW, ry - 16);
+    for (let x = gx0 * CW; x <= gx1 * CW; x += 20) g.lineTo(x, ry - 16 + Math.sin(x / 90) * 5);
+    for (let x = gx1 * CW; x >= gx0 * CW; x -= 20) g.lineTo(x, ry + 16 + Math.sin(x / 90) * 5);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 2; for (let x = gx0 * CW; x < gx1 * CW; x += 60) { const xx = x + ((t * 25) % 60); g.beginPath(); g.moveTo(xx, ry + Math.sin(xx / 90) * 5); g.lineTo(xx + 18, ry + Math.sin((xx + 18) / 90) * 5); g.stroke(); }
+    for (let gx = gx0; gx <= gx1; gx++) { const bx = (gx + 0.5) * CW; g.fillStyle = '#9c6b3c'; g.fillRect(bx - 18, ry - 22, 36, 44); g.fillStyle = '#7a4f2f'; for (let k = 0; k < 6; k++) g.fillRect(bx - 18, ry - 20 + k * 7, 36, 2); }
+    // trees on empty lots and along the edges
+    const used = new Set(cells.map((c) => c.gx + ',' + c.gy)); used.add('0,0');
+    for (let gx = gx0; gx <= gx1; gx++) for (let gy = gy0; gy <= gy1; gy++) {
+      if (used.has(gx + ',' + gy)) continue;
+      const k = gx * 131 + gy * 17;
+      for (let i = 0; i < 4; i++) drawTree(g, gx * CW + (hash(k + i) - 0.5) * FW * 0.9, gy * CH + (hash(k + i + 9) - 0.5) * FH * 0.8, 1.4 + hash(k + i + 3) * 0.6, Math.floor(hash(k + i + 5) * 3));
+    }
+    drawRaceway(g, 0, 0, t);
+    // the farms
+    farms.slice().sort((a, b) => a.plot - b.plot).forEach((f, i) => {
+      const c = cells[i]; if (!c) return;
+      const jx = (hash(f.plot * 13) - 0.5) * 16, jy = (hash(f.plot * 29) - 0.5) * 10;
+      const fx = c.gx * CW - FW / 2 + jx, fy = c.gy * CH - FH / 2 + jy;
+      const age = (performance.now() - (born[f.id] || 0)) / 600, pop = Math.min(1, 0.3 + age * 0.7);
+      g.save(); g.translate(fx + FW / 2, fy + FH / 2); g.scale(pop, pop); g.translate(-FW / 2, -FH / 2);
+      // screen-size aware: signs only when big enough to read
+      drawFarm(g, { ...f, owner: f.owner }, 0, 0, FW, FH, t, fxBy[f.id] || [], sc);
       g.restore();
     });
     g.restore();
-    if (weather === 'rain') { g.fillStyle = 'rgba(40,60,90,.18)'; g.fillRect(0, 0, W, H); g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 1.5; for (let i = 0; i < 160; i++) { const rx = (i * 97 + t * 300) % W, ry = (i * 53 + t * 700) % H; g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx - 3, ry + 12); g.stroke(); } }
+    if (weather === 'rain') { g.fillStyle = 'rgba(40,60,90,.18)'; g.fillRect(0, 0, W, H); g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 1.5; for (let i = 0; i < 160; i++) { const rx = (i * 97 + t * 300) % W, ry2 = (i * 53 + t * 700) % H; g.beginPath(); g.moveTo(rx, ry2); g.lineTo(rx - 3, ry2 + 12); g.stroke(); } }
     else if (weather === 'fog') { g.fillStyle = 'rgba(235,240,245,.28)'; g.fillRect(0, 0, W, H); }
     else if (weather === 'heat') { g.fillStyle = 'rgba(255,170,60,.12)'; g.fillRect(0, 0, W, H); }
     else if (weather === 'windy') { g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 2; for (let i = 0; i < 14; i++) { const wx = (i * 211 + t * 260) % (W + 200) - 100, wy = (i * 67) % H; g.beginPath(); g.moveTo(wx, wy); g.quadraticCurveTo(wx + 40, wy - 10, wx + 80, wy); g.stroke(); } }
-    if (!farms.length) { g.fillStyle = '#fff'; g.font = '600 32px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('Farms appear here as players join', W / 2, H / 2); g.textAlign = 'left'; }
+    if (!farms.length) { g.fillStyle = 'rgba(20,10,40,.55)'; g.fillRect(W / 2 - 260, H - 70, 520, 48); g.fillStyle = '#fff'; g.font = '600 24px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('Scan the code: your farm appears here!', W / 2, H - 38); g.textAlign = 'left'; }
   }
 
   // ---------- the race (side-scrolling) ----------
