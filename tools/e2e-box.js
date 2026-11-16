@@ -43,9 +43,9 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,President,Blackjack Night');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,President,Blackjack Night,JustBlanks,Two Truths & a Lie');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
-  assert.equal(await hub.eval(`document.querySelectorAll('.tile.empty').length`), 5, 'one big and four small coming-soon slots');
+  assert.equal(await hub.eval(`document.querySelectorAll('.tile.empty').length`), 3, 'one big and two small coming-soon slots');
   await hub.shot('box-hub');
   ok('Title screen: JustMafia and JustRaiseDucks big on top (plus a big coming-soon); President, Blackjack Night and four coming-soon slots below');
 
@@ -93,6 +93,50 @@ async function setup(browser, game, settings = {}) {
     await ph.until(`/You won|You lost|Push/.test(document.body.textContent)`, 'hand settled', 40000);
     await ph.shot('box-blackjack-result');
     ok('Blackjack: chips → bet 35 → dealt → stand → paid out (or lost) on the phone');
+  }
+
+  // ---------- JustBlanks ----------
+  {
+    const { tv, ph } = await setup(browser, 'blanks', { mode: 'vote', toWin: 3 });
+    await ph.until(`!!document.querySelector('[data-vip="start"]') && !document.querySelector('[data-vip="start"]').disabled`, 'host start button');
+    await ph.click('[data-vip="start"]'); // the first player is the host
+    await ph.until(`document.querySelectorAll('.bl-card').length >= 7 || /Judge/.test(document.body.textContent)`, 'hand dealt', 8000);
+    await ph.click('#bl-blank'); await ph.until(`!!document.querySelector('#bl-write')`, 'write box');
+    await ph.eval(`(() => { const i = document.querySelector('#bl-write'); i.value = 'a goose with a briefcase'; i.oninput(); return true; })()`);
+    await ph.click('#bl-wadd');
+    const need = await ph.eval(`Number((document.querySelector('#bl-play').textContent.match(/\\/(\\d)/) || [0, 1])[1])`);
+    if (need > 1) await ph.click('.bl-card:not(.sel)');
+    await ph.until(`!document.querySelector('#bl-play').disabled`, 'play enabled');
+    await ph.shot('box-blanks-hand'); await ph.click('#bl-play');
+    await ph.until(`/Played/.test(document.body.textContent)`, 'played'); // the round moves on by itself once everyone has played
+    await tv.until(`document.querySelectorAll('.bl-white').length >= 3`, 'answers on the TV', 40000);
+    await tv.until(`/a goose with a briefcase/.test(document.body.textContent)`, 'the written card is on the TV', 40000);
+    await tv.shot('box-blanks-tv');
+    await ph.until(`document.querySelectorAll('.bl-ans').length >= 3`, 'vote list', 40000);
+    await ph.click('.bl-ans:not(.mine)'); await ph.shot('box-blanks-vote');
+    await tv.until(`!!document.querySelector('.bl-win')`, 'winner shown', 45000); await tv.shot('box-blanks-win');
+    ok('JustBlanks: the host starts from their phone; a written-your-own card shows on the TV without a name; vote; the winner is revealed');
+  }
+
+  // ---------- Two Truths & a Lie ----------
+  {
+    const { tv, ph } = await setup(browser, 'truths', { talk: 0, featured: 6 });
+    await ph.until(`!!document.querySelector('[data-vip="start"]') && !document.querySelector('[data-vip="start"]').disabled`, 'host start button');
+    await ph.click('[data-vip="start"]');
+    await ph.until(`document.querySelectorAll('[data-i]').length === 3`, 'write form');
+    await ph.eval(`(() => { const t = ['I have been to Iceland', 'I can play the banjo', 'I once ate a bug on purpose']; document.querySelectorAll('[data-i]').forEach((i, k) => { i.value = t[k]; i.oninput(); }); return true; })()`);
+    await ph.click('[data-lie="1"]'); await ph.shot('box-truths-write'); await ph.click('#tt-send');
+    await ph.until(`/Ready/.test(document.body.textContent)`, 'locked in');
+    await tv.until(`!!document.querySelector('.tt-item')`, 'statements on the TV', 30000);
+    await tv.shot('box-truths-tv');
+    // vote on whoever is in the hot seat (or wait if it's us)
+    for (let k = 0; k < 6; k++) {
+      await ph.until(`!!document.querySelector('.tt-vote') || /hot seat|fooled|spotted|Fooled|didn’t vote|Game over/.test(document.body.textContent)`, 'vote or seat', 40000);
+      if (await ph.eval(`!!document.querySelector('.tt-vote')`)) { await ph.click('.tt-vote'); break; }
+      await wait(1500);
+    }
+    await tv.until(`!!document.querySelector('.tt-item.lie')`, 'the lie is revealed', 45000); await tv.shot('box-truths-reveal');
+    ok('Two Truths & a Lie: typed on the phone with the lie marked; statements on the TV; vote; the lie is stamped');
   }
 
   // ---------- JustRaiseDucks as its own game (/ducks) ----------

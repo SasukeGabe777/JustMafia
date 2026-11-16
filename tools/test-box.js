@@ -302,6 +302,43 @@ test('Ducks live lobby: farms exist before the start; eggs hatch and ducks are s
   assert.equal(r.game.phase, 'training'); assert.equal(d.name, 'Quackers'); assert.equal(d.coins, 120, 'start coins from the final settings');
   r.hostAction({ type: 'lobby' }); assert.equal(r.game.phase, 'lobby'); assert(r.game.ducks.get(a.id), 'back in the lobby, everyone still has a farm');
 });
+test('JustBlanks: play cards or write your own; answers stay anonymous; the Judge picks; vote mode for big groups', () => {
+  const { r, clock } = room('blanks', 0, { mode: 'judge', blanks: 2, toWin: 1 }, 6);
+  const a = human(r, 'Ann'), b = human(r, 'Bo'), c = human(r, 'Cy'); go(r);
+  const g = r.game, judge = r.get(g.judge), players = [a, b, c].filter((p) => p.id !== judge.id);
+  g.prompt = { text: 'My secret talent is ___.', pick: 1 };
+  assert.equal(r.act(judge, { op: 'play', cards: [g.hands.get(judge.id)[0].id] }).ok, false, 'the Judge does not play');
+  const [p1, p2] = players;
+  assert.equal(r.act(p1, { op: 'play', cards: [] }).ok, false, 'must play one card');
+  assert(r.act(p1, { op: 'play', cards: [g.hands.get(p1.id)[0].id] }).ok);
+  assert(r.act(p2, { op: 'play', cards: [], written: ['juggling eggs blindfolded'], order: ['w'] }).ok);
+  assert.equal(g.blanksLeft.get(p2.id), 1);
+  while (g.phase !== 'choose') clock.step();
+  assert(!JSON.stringify(r.tvState().state.answers).includes(p1.name), 'answers on the TV carry no names');
+  const mine = g.subs.find((x) => x.by === p2.id);
+  assert.equal(r.act(p1, { op: 'pick', sid: mine.sid }).ok, false, 'only the Judge picks');
+  assert(r.act(judge, { op: 'pick', sid: mine.sid }).ok);
+  assert.equal(g.scores.get(p2.id), 1); assert.equal(g.last.winners[0].cards[0], 'juggling eggs blindfolded');
+  const big = room('blanks', 14, {}, 3); go(big.r); assert.equal(big.r.game.mode(), 'vote', 'auto mode: vote above 10 players');
+});
+test('Two Truths & a Lie: write three (mark the lie); voters who spot it score; the liar scores for each person fooled', () => {
+  const { r, clock } = room('truths', 0, { talk: 0 }, 9);
+  const a = human(r, 'Ann'), b = human(r, 'Bo'), c = human(r, 'Cy'); go(r);
+  assert.equal(r.act(a, { op: 'write', items: ['I can juggle', 'I have a twin'], lie: 0 }).ok, false, 'three statements');
+  assert.equal(r.act(a, { op: 'write', items: ['I can juggle', 'I have a twin', 'I met a llama'] }).ok, false, 'mark the lie');
+  assert(r.act(a, { op: 'write', items: ['I can juggle', 'I have a twin', 'I met a llama'], lie: 2 }).ok);
+  assert(r.act(b, { op: 'write', items: ['x one', 'x two', 'x three'], lie: 0 }).ok);
+  assert(r.act(c, { op: 'write', items: ['y one', 'y two', 'y three'], lie: 1 }).ok);
+  while (r.game.phase !== 'vote') clock.step();
+  const g = r.game, seat = g.cur.id, voters = [a, b, c].filter((p) => p.id !== seat);
+  assert.equal(r.act(r.get(seat), { op: 'vote', pick: 0 }).ok, false, 'no voting on your own');
+  assert(!JSON.stringify(r.tvState().state.seat).includes('"lie":' + g.cur.lie) || r.tvState().state.seat.lie === null, 'the TV does not show the lie before the reveal');
+  r.act(voters[0], { op: 'vote', pick: g.cur.lie }); r.act(voters[1], { op: 'vote', pick: (g.cur.lie + 1) % 3 });
+  assert.equal(g.phase, 'reveal');
+  assert.equal(g.scores.get(voters[0].id), 1); assert.equal(g.scores.get(seat), 1, 'fooled one');
+  const big = room('truths', 40, { featured: 100 }, 4); go(big.r); let i = 0; while (big.r.game.phase !== 'over' && big.clock.step() && i++ < 200000);
+  assert.equal(big.r.game.phase, 'over');
+});
 test('Room: names are unique, tokens reconnect, 100-player cap, settings only take listed values', () => {
   const { r } = room('ducks', 0);
   const a = r.join('Ann'); assert(a.ok); assert.equal(r.join('ann').ok, false);

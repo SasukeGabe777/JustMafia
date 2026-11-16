@@ -8,6 +8,8 @@ const GAMES = {
   president: require('./games/president'),
   blackjack: require('./games/blackjack'),
   ducks: require('./games/ducks'),
+  blanks: require('./games/blanks'),
+  truths: require('./games/truths'),
 };
 
 function installBox(app, io, { takenElsewhere = () => false } = {}) {
