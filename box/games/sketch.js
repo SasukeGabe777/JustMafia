@@ -546,7 +546,7 @@ class Sketch {
 }
 
 module.exports = {
-  key: 'sketch', name: 'JustSketch Relay', min: 3, fields, defaults,
+  key: 'sketch', name: 'JustSketch Relay', min: 3, best: [4, 10], fields, defaults,
   create: (room, settings) => new Sketch(room, settings),
   _test: { similarity, matches, cleanStrokes, PROMPTS, PACKS, MAX_POINTS, MAX_STROKES, MAX_FILLS, REACTS },
 };

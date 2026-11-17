@@ -594,7 +594,7 @@ class Spectrum {
 }
 
 module.exports = {
-  key: 'spectrum', name: 'Where Do You Stand?', min: 3, fields, defaults,
+  key: 'spectrum', name: 'Where Do You Stand?', min: 3, best: [4, 16], fields, defaults,
   create: (room, settings) => new Spectrum(room, settings),
   _test: { PACKS, PTS, isRead, specText },
 };

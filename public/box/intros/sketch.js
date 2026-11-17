@@ -142,6 +142,14 @@
 
   BOX.intros.sketch = {
     title: 'JustSketch Relay',
+    // How to play (box/howto.js): one card per step, 5 steps (module howSteps).
+    tutorial: [
+      { icon: '✏️', title: 'Draw it', text: 'Everyone gets a secret prompt and draws it on their phone.', phone: 'Draw with your finger, then tap Done ✓. (🎲 New prompt swaps it.)' },
+      { icon: '🔁', title: 'Pass it on', text: 'Your book passes around the circle. The next player sees only your drawing and guesses what it is.', phone: 'Type what you think it is, then tap Send guess ✓.' },
+      { icon: '🎨', title: 'Draw the guess', text: 'The next player sees only that guess and draws it… and so on around the circle. Things get weird fast!', phone: 'Draw the words you see, then tap Done ✓.' },
+      { icon: '📖', title: 'The reveal', text: 'The TV replays every book, entry by entry, from the first prompt to the final guess.' },
+      { icon: '🏆', title: 'Scoring', text: 'Vote for the funniest entry: 100 points a vote. If a book’s last guess still matches the prompt, everyone on it gets +50!', phone: 'Tap the funniest entry to vote.' },
+    ],
     theme: { accent: RED, accent2: BLUE, accent3: '#ffd23f', ink: INK, panel: '#fffdf4', fade: PAPER, rim: '#ffffff',
       confetti: ['#ff5a5f', '#3d7bd9', '#ffd23f', '#2bb673', '#ff8fa8', '#2b2a4a'] },
     host: null,

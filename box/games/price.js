@@ -343,7 +343,7 @@ class Price {
 }
 
 module.exports = {
-  key: 'price', name: 'Price Panic', min: 1, fields, defaults, show: true, // game-show opening (box/show.js)
+  key: 'price', name: 'Price Panic', min: 1, best: [2, 20], howSteps: 6, fields, defaults, show: true, // game-show opening (box/show.js)
   create: (room, settings) => new Price(room, settings),
   scoreGuess, niceUp, fmt,
 };

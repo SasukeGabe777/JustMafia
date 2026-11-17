@@ -160,3 +160,6 @@ body.pm-open { overflow: hidden; }
 }
 @media (max-width: 520px) { .pm-types { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { .pm-rays, .pm-dot, .pm-pop, .pm-btn.go, .pm-slot.finale.landed::before { animation: none; } }
+
+/* While Party Mode is open, the menu behind it does not scroll. */
+body:has(> .pm) { overflow: hidden; }

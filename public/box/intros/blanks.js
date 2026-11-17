@@ -137,6 +137,14 @@
   }
   BOX.intros.blanks = {
     title: 'JustBlanks',
+    // How to play (box/howto.js): one card per step, 5 steps (module howSteps).
+    tutorial: [
+      { icon: '🃏', title: 'The prompt', text: 'A prompt card with a blank goes up on the big screen. Fill it in with the funniest card in your hand!' },
+      { icon: '📱', title: 'Play a card', text: 'Pick the answer that fits best. Some prompts need two cards. Blank cards let you write your own.', phone: 'Tap your funniest card, then tap Play it!' },
+      { icon: '🎤', title: 'The reading', text: 'Answers are read out one by one with no names, so nobody knows whose is whose. Once a game you can swap your whole hand.', phone: '🔄 New hand swaps all your cards (once a game).' },
+      { icon: '👑', title: 'The Judge', text: 'The Judge crowns the funniest card (in big groups everyone votes). Not judging? Send a ❤️ to your favourite.', phone: 'Judge? Tap the funniest, then tap 👑 Crown the winner.' },
+      { icon: '🏆', title: 'Winning', text: 'The winning card earns a point. First to the target score wins, with awards and the best lines of the night!' },
+    ],
     theme: { accent: '#ff4f8b', accent2: '#ffe14d', accent3: '#ffe14d', ink: '#fff6e8', fade: '#2a0b4f', floor1: '#3a1470', floor2: '#1a0538', disc1: '#5a249c', disc2: '#2a0b4f', rim: '#ffb0d6',
       pod1: '#3a1470', pod2: '#1a0538', podTop: '#ff4f8b', spots: ['255,240,170', '255,140,200', '120,220,255', '255,240,170'], confetti: ['#ffe14d', '#ff4f8b', '#3ec7ff', '#7ee06a', '#ffffff', '#b77bff'] },
     host: {

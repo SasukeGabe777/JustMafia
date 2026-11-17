@@ -74,6 +74,15 @@
 
   BOX.intros.price = {
     title: 'Price Panic',
+    // How to play (box/howto.js): one card per step, 6 steps (module howSteps).
+    tutorial: [
+      { icon: '🏷️', title: 'Guess the price', text: 'A product goes up on the big screen. How much does it cost?', phone: 'Slide or tap to set your guess (or ⌨️ Type an exact price), then tap 🔒 Lock in.' },
+      { icon: '📉', title: 'Don’t go over!', text: 'The closer you are, the more points, up to 1000. Go OVER the real price and your points are cut in half!' },
+      { icon: '🎯', title: 'Bonuses', text: 'Within 5% without going over: Bullseye, +500. The exact price: Jackpot, +1000! Three close rounds in a row: Hot Streak, +300.' },
+      { icon: '⚡', title: 'Power-ups', text: 'Once each per game: 🎯 Double Down (×2), 🛡️ Bust Shield (no halving) and 👀 Peek at the room’s average.', phone: 'Tap a power-up before you lock in.' },
+      { icon: '⬆️', title: 'Quick rounds', text: 'Higher or Lower? and Which Costs More? are fast-tap rounds. Be right AND quick for a speed bonus.', phone: 'Tap ⬆️ or ⬇️, or tap the pricier item.' },
+      { icon: '🛒', title: 'Shopping Spree', text: 'The last round shows three items. Guess the TOTAL: it’s worth double points. Highest score wins!' },
+    ],
     theme: { accent: '#ff4f9a', accent2: '#ffd23f', accent3: '#ffd23f', ink: '#fff8ef', fade: '#0d0322', wall1: '#2b0a4d', wall2: '#0f0424', floor1: '#2a0f4a', floor2: '#0b0318', disc1: '#5a1d7a', disc2: '#2a0b45',
       pod1: '#6b2196', pod2: '#2a0b4a', podTop: '#ffd23f', podPanel: '#1d0838', rim: '#ff8fd8', seat: '#4a1663', audWall1: '#22093c', audWall2: '#080212',
       spots: ['255,236,190', '255,120,200', '120,230,255', '255,236,190'], confetti: ['#ff4f9a', '#ffd23f', '#3ee6ff', '#2ee6a6', '#ffffff', '#b06cff'] },

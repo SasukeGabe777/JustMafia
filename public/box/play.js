@@ -39,6 +39,11 @@
   // Long-press must not open the copy/save menu or select the page (mini-games use holds).
   document.addEventListener('contextmenu', (e) => { if (!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
 
+  // Phone sound volume (the TV has its own in its ⚙ / 🔊 menus). Remembered on this phone.
+  const phoneVol = () => { try { const v = Number(localStorage.getItem('box.phoneVol')); return Number.isFinite(v) && localStorage.getItem('box.phoneVol') != null ? Math.max(0, Math.min(1, v)) : 1; } catch { return 1; } };
+  const setPhoneVol = (v) => { try { localStorage.setItem('box.phoneVol', String(v)); } catch { /* private */ } try { window.SFX && SFX.setVolume && SFX.setVolume(v); } catch { /* none */ } };
+  try { window.SFX && SFX.setVolume && SFX.setVolume(phoneVol()); } catch { /* none */ }
+
   // ---------- join ----------
   function avatarPicker() {
     const box = $('#j-av');
@@ -94,14 +99,16 @@
     sheet(`<h2>${G.icon} How to play ${esc(G.name)}</h2><p class="muted">${esc(G.about || '')}</p><ol class="how">${(G.how || []).map((h) => `<li>${esc(h)}</li>`).join('')}</ol>`);
   };
   $('#h-me').onclick = () => {
+    const pv = Math.round(phoneVol() * 100), snd = `<h3>🔈 Phone sounds</h3><label class="ph-vol"><input type="range" id="pvol" min="0" max="100" value="${pv}"><output id="pvol-o">${pv}%</output></label>`;
     const hz = window.HAPTIC && window.HAPTIC.supported ? `<h3>📳 Vibration</h3><button class="btn ${window.HAPTIC.enabled ? 'green' : 'ghost'}" id="hz">${window.HAPTIC.enabled ? 'On: tap to turn off' : 'Off: tap to turn on'}</button>` : '';
-    sheet(`<h2>Pick your avatar</h2><div class="j-av big">${AVATARS.map((a) => `<button class="${view && view.me.avatar === a ? 'on' : ''}" data-av="${a}">${a}</button>`).join('')}</div>${hz}`, (s, close) => {
+    sheet(`<h2>Pick your avatar</h2><div class="j-av big">${AVATARS.map((a) => `<button class="${view && view.me.avatar === a ? 'on' : ''}" data-av="${a}">${a}</button>`).join('')}</div>${snd}${hz}`, (s, close) => {
+      const pr = s.querySelector('#pvol'); if (pr) pr.oninput = () => { setPhoneVol(pr.value / 100); s.querySelector('#pvol-o').textContent = pr.value + '%'; BOX.sfx('pop'); };
       const hb = s.querySelector('#hz'); if (hb) hb.onclick = () => { window.HAPTIC.set(!window.HAPTIC.enabled); close(); toast(window.HAPTIC.enabled ? '📳 Vibration on' : 'Vibration off'); };
       for (const b of s.querySelectorAll('[data-av]')) b.onclick = () => { avatar = b.dataset.av; try { localStorage.setItem('box.avatar', avatar); } catch { /* */ } socket.emit('player:avatar', { avatar }, () => {}); close(); };
     });
   };
   // Games the room can switch to (the ones this page knows how to draw).
-  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'ducks', 'kingdoms'];
+  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
   const LOCKABLE = { zombie: 'Finish a Party Mode to unlock it.' };
   function gamePicker() {
     const list = SWITCHABLE.filter((k) => BOX.games[k] && k !== gameKey);
@@ -138,10 +145,30 @@
     $('#offline').hidden = true;
     const code = (me && me.code) || (params.get('room') || '').toUpperCase();
     const s = code && load(code);
-    if (s && s.token) join(code, s.name, s.token); else if (!me) showJoin();
+    if (s && s.token) join(code, s.name, s.token);
+    else if (!me && code && params.get('auto') && params.get('name')) autoJoin(code, params.get('name'), 0);
+    else if (!me) showJoin();
   });
+  // Sent here by another game (JustMafia's "Play another game"): ?room=CODE&name=NAME&auto=1
+  // joins straight away with that name. A taken name gets a number; anything else shows the form.
+  function autoJoin(code, name, tries) {
+    const clean = String(name).replace(/[<>&"]/g, '').replace(/\s+/g, ' ').trim().slice(0, tries ? 12 : 14);
+    if (!clean) return showJoin();
+    const nm = tries ? clean + ' ' + (tries + 1) : clean;
+    socket.emit('player:join', { code, name: nm, avatar }, (r) => {
+      if (r && r.ok) {
+        me = { code: r.code, id: r.id, token: r.token, name: nm }; store(r.code, { token: r.token, name: nm });
+        gameKey = null; setGame(r.game); $('#join').hidden = true; $('#game').hidden = false;
+        return;
+      }
+      if (r && /already has that name/.test(r.error || '') && tries < 5) return autoJoin(code, name, tries + 1);
+      $('#j-name').value = nm; showJoin(r && r.error);
+    });
+  }
   socket.on('disconnect', () => { $('#offline').hidden = false; });
   socket.on('me', (v) => {
+    // The room went to a game outside the box (JustMafia): follow it, joined with my name.
+    if (v.away && v.away.url && v.away.url.charAt(0) === '/') { if (!socket.leaving) { socket.leaving = true; toast('🔪 Off to JustMafia!'); setTimeout(() => { location.href = v.away.url; }, 500); } return; }
     const view0 = view; view = v; v._at = Date.now();
     if (view0 && v.unlocks && view0.unlocks && v.unlocks.length > view0.unlocks.length) { const k = v.unlocks.find((x) => !view0.unlocks.includes(x)); const g = BOX.games[k]; toast(`🔓 New game unlocked: ${g ? g.icon + ' ' + g.name : k}!`); haptic('win'); }
     if (v.phase !== (view0 && view0.phase) && v.phase === 'show') haptic('big');
@@ -221,8 +248,30 @@
   // ---------- game-show opening: you're a contestant! ----------
   const STARTERS = ['My secret talent is…', 'I’m weirdly scared of…', 'I once got lost in…', 'My most useless skill:', 'I could eat ___ every day', 'Nobody knows I…'];
   let factDraft = '', factEdit = false;
+  // The tutorial steps live in the game's intro file: load it on the phone too.
+  const introLoaded = new Set();
+  function loadIntro(key) {
+    if (!key || introLoaded.has(key) || (BOX.intros && BOX.intros[key])) return;
+    introLoaded.add(key); const sc = document.createElement('script'); sc.src = `/box/intros/${key}.js`; sc.onload = () => ctx.redraw(); document.head.appendChild(sc);
+  }
+  function howtoPhone(sh) {
+    const body = $('#g-body');
+    loadIntro(sh.game);
+    const steps = BOX.howtoSteps ? BOX.howtoSteps(sh.game) : [];
+    const { i, done } = BOX.howtoStepAt ? BOX.howtoStepAt(sh, steps, view._at) : { i: 0, done: false };
+    const s = steps[i] || {};
+    BOX.morph(body, `<div class="card-box ph-ht">
+      <div class="muted small">HOW TO PLAY · step ${Math.min(i + 1, steps.length)} of ${steps.length}</div>
+      ${done ? '<div class="ph-ht-icon">🎮</div><h3>That’s it. Let’s play!</h3>' : `<div class="ph-ht-icon">${esc(s.icon || '👉')}</div><h3>${esc(s.title || '')}</h3><p class="ph-ht-text">${esc(s.text || '')}</p>${s.phone ? `<div class="ph-ht-do">📱 ${esc(s.phone)}</div>` : ''}`}
+      <div class="ph-ht-dots">${steps.map((_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</div>
+      <button class="btn big ${sh.gotIt ? 'ghost' : 'green'}" id="ht-got" ${sh.gotIt ? 'disabled' : ''}>${sh.gotIt ? '✓ Got it! Waiting for the others…' : '✓ Got it'}</button>
+      <p class="muted small">When everyone taps Got it, the game starts.</p></div>`);
+    const gb = $('#ht-got'); if (gb) gb.onclick = async () => { const r = await act({ op: 'gotit' }); if (r.ok) { haptic('success'); ctx.redraw(); } };
+    if (howtoPhone.last !== i) { howtoPhone.last = i; if (!done) haptic('tap'); }
+  }
   function showPhone(sh) {
     const body = $('#g-body');
+    if (sh.step === 'howto') return howtoPhone(sh);
     if (sh.step === 'facts' && (!sh.myFact || factEdit)) {
       BOX.morph(body, `<div class="card-box sh-card"><div class="sh-mic">🎤</div><h3>You’re a contestant on <b>${esc(sh.title)}</b>!</h3>
         <p>Tell the host a funny fact about you. It goes up on the big screen when they introduce you.</p>

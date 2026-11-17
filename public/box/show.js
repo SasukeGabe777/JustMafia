@@ -149,42 +149,75 @@
   }
 
   // ---------- speech: one line at a time, a new line cancels the stale one ----------
+  // The host's voice goes through BOX.voice.speak(text, spec) -> Promise (resolves when the line
+  // has been spoken). spec = the intro's host.voice { like, accent, gender ('f'|'m'), lang, pitch,
+  // rate }. The default uses the browser's speechSynthesis with the best matching voice (neural /
+  // "Natural" / "Online" / Google / Premium / Enhanced voices first, then accent and gender). A
+  // better voice engine can be plugged in later by replacing BOX.voice.speak (and .stop); the music
+  // is ducked while any line plays, whichever engine speaks it.
   const Speech = (function () {
-    let voices = [], cache = new Map(), keep = null;
+    let voices = [], cache = new Map(), keep = null, token = 0, safety = 0;
     const has = () => { try { return !!window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function'; } catch { return false; } };
     const load = () => { try { voices = speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang)); cache = new Map(); } catch { voices = []; } };
     if (has()) { load(); try { speechSynthesis.addEventListener('voiceschanged', load); } catch { /* old browser */ } }
-    const natural = (v) => /natural|neural|online/i.test(v.name);
+    const FEMALE = /female|woman|zira|aria|jenny|\bava\b|emma|michelle|\bana\b|sara|nancy|jane|hazel|libby|sonia|susan|samantha|karen|moira|tessa|fiona|victoria|allison|serena|catherine|natasha|clara|emily|elizabeth|maisie|olivia|amber|ashley|cora|monica|joanna|kendra|kimberly|salli|\bivy\b|\bamy\b|\bmia\b|isabella|heather|linda|kate|ruth/i;
+    const MALE = /\bmale\b|\bman\b|\bguy\b|davis|george|ryan|eric|christopher|andrew|brian|daniel|thomas|\balex\b|\bfred\b|\btom\b|oliver|william|roger|steffan|jason|tony|liam|\bmark\b|david|james|matthew|joey|justin|kevin|russell|arthur|aaron|gordon|\blee\b/i;
+    const genderOf = (n) => (FEMALE.test(n) ? 'f' : MALE.test(n) ? 'm' : null);
+    const wants = (V) => V.gender || (V.like ? (/female|zira|aria|jenny|samantha|emma|ava|hazel|libby|sonia|susan/i.test(V.like.source) ? 'f' : /male|guy|davis|george|ryan|eric|christopher|andrew|brian|daniel/i.test(V.like.source) ? 'm' : null) : null);
+    function rate(v, V) {
+      const n = v.name; let s = 0;
+      if (/natural|neural/i.test(n)) s += 60; else if (/online|premium|enhanced/i.test(n)) s += 45; else if (/google/i.test(n)) s += 30;
+      if (V.accent && V.accent.test(v.lang)) s += 25; else if (/^en[-_]US/i.test(v.lang)) s += 6;
+      const g = wants(V), vg = genderOf(n);
+      if (g) s += vg ? (vg === g ? 40 : -60) : -5;
+      if (V.like && V.like.test(n) && (!g || vg === g)) s += 20;
+      return s;
+    }
     function voiceFor(V) {
       if (!voices.length) load();
       if (cache.has(V)) return cache.get(V);
-      const score = (v) => (natural(v) ? 50 : 0) + (/google/i.test(v.name) ? 25 : 0) + (V.accent && V.accent.test(v.lang) ? 12 : 0) + (V.like && V.like.test(v.name) ? 30 : 0);
-      const v = voices.slice().sort((a, b) => score(b) - score(a))[0] || null;
+      const v = voices.slice().sort((a, b) => rate(b, V) - rate(a, V))[0] || null;
       if (voices.length) cache.set(V, v);
       return v;
     }
+    function speak(text, V = {}) {
+      return new Promise((resolve) => {
+        if (!has()) return resolve();
+        try {
+          const S = window.speechSynthesis;
+          if (S.speaking || S.pending) S.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          const v = voiceFor(V); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = V.lang || 'en-US';
+          u.rate = clamp(V.rate || 1, 0.5, 2); u.pitch = clamp(V.pitch || 1, 0, 2); u.volume = 1;
+          keep = u; u.onend = u.onerror = () => { if (keep === u) keep = null; resolve(); };
+          S.speak(u);
+        } catch { resolve(); }
+      });
+    }
+    function cancel() { try { if (has()) window.speechSynthesis.cancel(); } catch { /* none */ } keep = null; }
+    const duck = (on) => { try { if (B.audio) B.audio.duck(on); } catch { /* no music */ } };
+    B.voice = B.voice || {};
+    if (!B.voice.speak) B.voice.speak = speak;
+    if (!B.voice.stop) B.voice.stop = cancel;
+    B.voice.pick = voiceFor; B.voice.voices = () => voices.slice();
     const clean = (s) => String(s || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}]/gu, '').replace(/["“”]/g, '').replace(/\s+/g, ' ').trim();
     // Returns how long the line takes (ms, estimated), so the mouth and subtitles keep going even with no voice.
     function say(str, V, fitMs) {
       V = V || { pitch: 1, rate: 1.05 };
       const t = clean(str); if (!t) return 0;
       const base = t.length * 60 + 350;
-      let rate = V.rate || 1;
-      if (fitMs) rate = clamp(base / fitMs, rate, rate * 1.45);
-      const est = base / rate;
-      try {
-        if (!has() || (window.SFX && window.SFX.enabled === false)) return est;
-        const S = window.speechSynthesis;
-        if (S.speaking || S.pending) S.cancel();
-        const u = new SpeechSynthesisUtterance(t);
-        const v = voiceFor(V); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-US';
-        u.rate = rate; u.pitch = V.pitch || 1; u.volume = 1;
-        keep = u; u.onend = () => { if (keep === u) keep = null; };
-        S.speak(u);
-      } catch { /* subtitles only */ }
+      let r = V.rate || 1;
+      if (fitMs) r = clamp(base / fitMs, r, r * 1.45);
+      const est = base / r;
+      if (window.SFX && window.SFX.enabled === false) return est;
+      const tok = ++token;
+      duck(true); clearTimeout(safety);
+      safety = setTimeout(() => { if (tok === token) duck(false); }, est + 2500);
+      let p = null; try { p = B.voice.speak(t, { ...V, rate: r }); } catch { /* subtitles only */ }
+      Promise.resolve(p).catch(() => {}).then(() => setTimeout(() => { if (tok === token) { clearTimeout(safety); duck(false); } }, 300));
       return est;
     }
-    function stop() { try { if (has()) window.speechSynthesis.cancel(); } catch { /* none */ } keep = null; }
+    function stop() { token++; clearTimeout(safety); try { B.voice.stop(); } catch { /* none */ } duck(false); }
     return { say, stop, clean };
   })();
 

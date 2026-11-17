@@ -496,6 +496,8 @@
 
   // ---------- the game object ----------
   Object.assign(BOX.games.kingdoms = BOX.games.kingdoms || {}, {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => (s.phase === 'over' ? 'finale' : s.phase === 'lobby' ? 'lobby' : s.timeLeft != null && s.timeLeft < 60000 ? 'tense' : 'play'),
     standalone: true, title: titleScreen,
     name: 'JustKingdoms', icon: '🏰',
     about: 'Everyone rules a kingdom on one shared world map. Gather, build and climb five ages from a hamlet to a mighty kingdom, then conquer, make peace, or launch a rocket.',

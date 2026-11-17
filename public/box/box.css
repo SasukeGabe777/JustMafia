@@ -214,3 +214,17 @@ button { font: inherit; }
 .up-card p { font-size: 20px; color: var(--muted); margin: 0; }
 /* The sound hint sits in the corner, clear of the host buttons and game footers. */
 .sound-hint { left: 14px; bottom: 12px; transform: none; font-size: 13px; opacity: 0.8; z-index: 5; }
+
+/* Phone header: readable on every game's colours (light paper, bright skies, dark felt). */
+#game > .ph-head { position: sticky; top: 0; z-index: 20; background: rgba(14, 8, 32, 0.82); backdrop-filter: blur(6px); color: #f1ecff; border-radius: 16px; padding: 6px 8px 6px 10px; margin: 0 0 10px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
+#game > .ph-head b, #game > .ph-head .h-me { color: #fff; }
+#game > .ph-head .link { color: #d9d0ff; }
+#game > .ph-head .hbtn { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.22); }
+#game > .ph-head #h-game { font-size: 20px; }
+/* Host row under a game: buttons never squash; the party strip gets its own line. */
+.host-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
+.host-row .btn { white-space: nowrap; }
+.host-row .party-strip { flex-basis: 100%; }
+/* The sound hint: bottom-right, away from the host buttons. */
+.sound-hint { left: auto; right: 14px; }
+.ph-vol { display: flex; align-items: center; gap: 10px; } .ph-vol input { flex: 1; accent-color: var(--yellow); } .ph-vol output { width: 44px; text-align: right; color: var(--muted); }

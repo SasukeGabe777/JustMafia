@@ -533,6 +533,8 @@
   const lobbyPhone = () => `<div class="fn-pguide"><div class="fn-pguide-h">Tonight on JustFunny</div><ol><li><b>Find</b> a funny YouTube, Short, TikTok or Reel</li><li><b>Paste</b> the link: it plays on the big TV</li><li><b>Rate</b>, throw reactions, or vote to skip the duds</li></ol><p>Tip: line your video up early. It plays the moment your turn comes.</p></div>`;
 
   BOX.games.funny = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => { const m = { pick: 'think', play: null, reel: null, score: 'reveal', final: 'finale', over: 'finale' }; return s.phase in m ? m[s.phase] : 'play'; },
     name: 'JustFunny', icon: '😂',
     about: 'A watch party. Take turns putting funny videos on the big screen. React live, fill the laugh meter, skip the duds, crown the funniest.',
     how: [

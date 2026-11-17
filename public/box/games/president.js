@@ -329,6 +329,8 @@
   }
 
   BOX.games.president = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => (s.phase === 'over' ? 'finale' : s.phase === 'break' ? 'reveal' : s.phase === 'trade' ? 'think' : (s.tables || []).some((t) => t.rev) ? 'tense' : 'play'),
     name: 'President', icon: '👑',
     about: 'Climb from Scum to President. First to get rid of their cards rules the next round.',
     how: [

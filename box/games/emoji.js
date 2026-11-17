@@ -368,7 +368,7 @@ class EmojiCharades {
 }
 
 module.exports = {
-  key: 'emoji', name: 'Emoji Charades', min: 3, fields, defaults,
+  key: 'emoji', name: 'Emoji Charades', min: 3, best: [4, 16], fields, defaults,
   create: (room, settings) => new EmojiCharades(room, settings),
   _test: { judge, words, lev, pattern },
 };

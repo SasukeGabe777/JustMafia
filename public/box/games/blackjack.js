@@ -239,6 +239,8 @@
   }
 
   BOX.games.blackjack = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ betting: 'think', playing: 'play', dealer: 'tense', results: 'reveal', over: 'finale' }[s.phase] || 'play'),
     name: 'Blackjack Night', icon: '🃏',
     about: 'Everyone plays against the dealer at the same time. Most chips after the last hand wins.',
     how: [

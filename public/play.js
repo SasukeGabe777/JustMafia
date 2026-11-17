@@ -442,6 +442,9 @@
     } else if (!view) showJoin();
   });
 
+  // JustGameBox: the big screen took everyone to another game (joined with this name).
+  socket.on('mt:goto', (m) => { if (m && typeof m.url === 'string' && /^\/[a-z]/.test(m.url)) location.href = m.url; });
+
   socket.on('player:kicked', () => {
     session = null;
     save('mt.player', null);

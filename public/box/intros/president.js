@@ -186,6 +186,15 @@
 
   BOX.intros.president = {
     title: 'President',
+    // How to play (box/howto.js): one card per step, 6 steps (module howSteps).
+    tutorial: [
+      { icon: '👑', title: 'Empty your hand', text: 'Be the first to get rid of every card in your hand. Finish first and you’re crowned President!', say: 'Hear ye! Be the first to empty thy hand, and the crown is thine!' },
+      { icon: '🃏', title: 'Beat the pile', text: 'Play a single, pair, triple or four of a kind. The next player must beat it with the same number of cards.', phone: 'Tap a set to play it, or tap your cards, then tap Play.' },
+      { icon: '📈', title: 'Card order', text: '3 is the lowest card, then up through King and Ace. 2 is the highest, and a 2 clears the pile so you lead again.' },
+      { icon: '⚡', title: 'Pass or rebel', text: 'Can’t beat it? You pass automatically. Four of a kind starts a REVOLUTION: low cards beat high ones until the next deal.', phone: 'Nothing beats the pile? Your phone passes for you.' },
+      { icon: '🤝', title: 'The royal trade', text: 'Finishing order gives titles, President down to Scum. Next deal the Scum must hand the President their best cards!', phone: 'President? Tap the cards to give back, then tap Give.' },
+      { icon: '🏆', title: 'Points', text: 'President 4, Vice President 3, Citizen 2, Vice Scum 1, Scum 0. The last round counts double. Most points wins!', say: 'The President scores four, the Scum scores nothing. The last round counts double, and the most points wins the realm!' },
+    ],
     theme: { accent: '#ffd34d', accent2: '#c11a3a', accent3: '#ffd34d', ink: '#fff4dc', fade: '#120318', wall1: '#4a1260', wall2: '#16041e', floor1: '#3a1028', floor2: '#12030b', disc1: '#8f1029', disc2: '#4d0717',
       pod1: '#8c0f29', pod2: '#3a0616', podTop: '#e8b43a', podPanel: '#2a0618', rim: '#ffd86a', seat: '#5c0619', audWall1: '#2a0838', audWall2: '#0c0210',
       spots: ['255,226,160', '255,200,120', '255,226,160', '255,170,190'], confetti: ['#ffd34d', '#fff2a8', '#c11a3a', '#ffffff', '#b06cff', '#e8b43a'] },

@@ -502,7 +502,7 @@ class Funny {
 }
 
 module.exports = {
-  key: 'funny', name: 'JustFunny', min: 2, fields, defaults,
+  key: 'funny', name: 'JustFunny', min: 2, best: [3, 12], fields, defaults,
   create: (room, settings) => new Funny(room, settings),
   _test: { videoId, parseLink, linkProblem, startTime, Funny, thumb, REACTS, CLIP_MS },
 };

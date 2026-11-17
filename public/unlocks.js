@@ -6,6 +6,11 @@
 (function () {
   const LIST = {
     zombie: { title: 'Zombie Survival', icon: '🧟', how: 'Finish a Party Mode to unlock it.' },
+    plinko: { title: 'JustDrop', icon: '🎯', how: 'Finish a game of Blackjack Night to unlock it.' },
+    trivia: { title: "Hot Take Trivia", icon: "🧠", how: "Finish a game of Price Panic to unlock it." },
+    colormatch: { title: "Color Match", icon: "🎨", how: "Finish a game of Emoji Charades to unlock it." },
+    memes: { title: "Meme Maker", icon: "🖼️", how: "Finish a game of JustBlanks to unlock it." },
+    letters: { title: "Letter Rush", icon: "🔤", how: "Finish a game of Who Said It? to unlock it." },
   };
   const KEY = 'box.unlocks', SEEN = 'box.unlocksSeen';
   const read = (k) => { try { const v = JSON.parse(localStorage.getItem(k) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };

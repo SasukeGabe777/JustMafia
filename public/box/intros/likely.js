@@ -151,6 +151,14 @@
   }
   BOX.intros.likely = {
     title: 'Most Likely To…',
+    // How to play (box/howto.js): one card per step, 5 steps (module howSteps).
+    tutorial: [
+      { icon: '🎭', title: 'The prompt', text: 'A prompt goes up: “Who’s most likely to… survive a zombie apocalypse?” Think about everyone in the room.' },
+      { icon: '🗳️', title: 'Vote', text: 'Vote for the player who fits it best. Votes are secret!', phone: 'Tap a player’s name to vote.' },
+      { icon: '🔮', title: 'Predict', text: 'Then guess who the ROOM will pick. +100 if your vote matches the winner, +150 for a correct prediction.', phone: 'Tap who you think will win (or Skip prediction).' },
+      { icon: '👑', title: 'The title', text: 'The winner is crowned with a new TITLE: fame, not points. Ties share the crown!' },
+      { icon: '🔥', title: 'Bonus rounds', text: '👯 Double Trouble: pick two people. 🔥 Hot Seat: would they actually do it? The final prompt counts double!', phone: 'Hot Seat: tap 👍 YES or 👎 NO. Double Trouble: tap two, then Lock in the duo.' },
+    ],
     theme: { accent: '#ff6b8b', accent2: '#ffd54a', accent3: '#ffd54a', ink: '#fff3d6', fade: '#16020a', rim: '#ffd54a',
       floor1: '#6b2a12', floor2: '#2a0d05', disc1: '#7a1030', disc2: '#3c0719', pod1: '#5a0b22', pod2: '#2a0412', podTop: '#e9b53c', seat: '#5a0b22', audWall1: '#2a0412', audWall2: '#0c0105',
       spots: ['255,236,190', '255,214,150', '255,236,190', '255,200,210'], confetti: ['#ffd54a', '#fff3d6', '#ff6b8b', '#e9b53c', '#ffffff', '#ffb43c'] },

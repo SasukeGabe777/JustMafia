@@ -181,6 +181,15 @@
 
   BOX.intros.blackjack = {
     title: 'Blackjack Night',
+    // How to play (box/howto.js): one card per step, 6 steps (module howSteps).
+    tutorial: [
+      { icon: '🎰', title: 'Beat the dealer', text: 'Everyone plays at once against the dealer. Get closer to 21 than the dealer without going over. Most chips at the end wins!', say: 'Evening, high rollers! You all play against me at once. Beat my hand, and the most chips at the end wins.' },
+      { icon: '🪙', title: 'Place your bet', text: 'Before every hand, bet some of your chips before the timer runs out.', phone: 'Tap chips to stack your bet, then tap Bet.' },
+      { icon: '🃏', title: 'Card values', text: 'Face cards are 10, Aces are 1 or 11. Blackjack (an Ace and a 10-card) pays 3 to 2. The dealer draws to 17.' },
+      { icon: '👆', title: 'Your move', text: 'Hit for another card, Stand to stop. Double doubles your bet for one last card. Split turns a pair into two hands.', phone: 'Tap Hit, Stand, Double or Split.' },
+      { icon: '🎯', title: 'Bust Bets', text: 'Think a friend will go over 21? Bet 25 chips on it. If they bust, you get 75!', phone: 'Under Bust Bet, tap a friend’s name (or Nobody).' },
+      { icon: '🍸', title: 'Twists & finale', text: 'Some hands get a twist: Happy Hour, Five-Card Charlie, Ties Win or Lucky 21. The last hand pays DOUBLE. Broke? Free comeback chips!' },
+    ],
     theme: { accent: '#ffd166', accent2: '#ff2f7d', accent3: '#ffd166', ink: '#fdf6e3', fade: '#06030e', wall1: '#0d0820', wall2: '#2a1240', floor1: '#0b6440', floor2: '#042a1a', disc1: '#1db06f', disc2: '#063a25',
       pod1: '#2a1206', pod2: '#1a0b04', podTop: '#d4a73c', podPanel: '#0c0616', rim: '#ffb8e8', seat: '#3a1d0c', audWall1: '#120a24', audWall2: '#06030e',
       spots: ['255,236,190', '255,120,200', '120,230,255', '255,236,190'], confetti: ['#ffd166', '#e8323c', '#2f6bff', '#2fbf71', '#ffffff', '#ff2f7d'] },

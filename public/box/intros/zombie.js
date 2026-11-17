@@ -60,6 +60,15 @@
 
   BOX.intros.zombie = {
     title: 'Zombie Survival',
+    // How to play (box/howto.js): one card per step, 6 steps (module howSteps).
+    tutorial: [
+      { icon: '🧟', title: 'Survive', text: 'Survive six days of a zombie outbreak until the rescue arrives. Every scene, you make a choice.', say: 'This is an emergency broadcast. Survive six days until the rescue arrives. Every scene, you make a choice.' },
+      { icon: '📱', title: 'Choose', text: 'The TV shows what’s happening. Pick an option, then watch what happens to everyone who picked it.', phone: 'Tap one of the options before time runs out. Freezing is risky!' },
+      { icon: '🎒', title: 'Items', text: 'Items help: a 🔫 makes fights safer, a 🪢 helps you climb, a 🩹 cures a bite. Bullets run out!', phone: 'Tap 🎁 Give an item to a survivor to help a friend.' },
+      { icon: '🤝', title: 'Teamwork', text: 'Some choices need the group: the door only holds if enough people hold it, and one decoy keeps everyone else safer.' },
+      { icon: '👻', title: 'Bitten? Fallen?', text: 'Bitten? Find a 🩹 medkit by the end of the next scene or you turn. Fall and you become a ghost.', phone: 'Ghost? Bless 🍀 or curse 🕯️ a survivor each scene.' },
+      { icon: '🚁', title: 'Scoring', text: '+100 for every scene you survive, +500 if you make the rescue. Ghosts score by calling it. The longest survivor wins!' },
+    ],
     theme: { accent: '#9dff5a', accent2: '#ffd34a', accent3: '#9dff5a', ink: '#ffffff', fade: '#05070a', rim: '#9dff5a',
       confetti: ['#9dff5a', '#ffd34a', '#ffffff', '#ff7ab8', '#6be4ff'], spots: ['200,255,170', '255,240,200', '200,220,255', '200,255,170'] },
     host: null,

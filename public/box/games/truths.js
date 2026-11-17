@@ -84,6 +84,7 @@
 
   // ---------- TV ----------
   function items(c, reveal) {
+    reveal = reveal && !!c.result; // the reveal needs the result (it can arrive a moment later)
     const r = c.result, voted = r ? Math.max(1, r.voted) : 1;
     return `<div class="tt-items tx-items ${reveal ? 'tx-reveal' : ''}" id="tti-${c.n}-${reveal ? 'r' : 'q'}">${c.items.map((t, i) => {
       if (!reveal) return `<div class="tt-item tx-card" style="--tl:${tilt(t, 1.2).toFixed(2)}deg;--d:${0.25 + i * 0.35}s"><span class="num">${N[i]}</span><span class="txt">${esc(t)}</span></div>`;
@@ -210,6 +211,8 @@
   }
 
   BOX.games.truths = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ write: 'think', talk: 'play', vote: 'tense', reveal: 'reveal', over: 'finale' }[s.phase] || 'play'),
     name: 'Two Truths & a Lie', icon: '🤥',
     about: 'Type two true things and one lie about yourself. Can the room spot your lie?',
     how: [

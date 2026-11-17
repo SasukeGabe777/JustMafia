@@ -13,25 +13,30 @@
   const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // ---- The games (JustMafia is not part of Party Mode) ----
+  // ---- The games (JustMafia joins as a big game: the party hands over to /mafia and comes back) ----
   const TYPES = [
     { k: 'cards', name: 'Cards', icon: '🃏', games: ['president', 'blanks'], c: '#18b06a' },
-    { k: 'money', name: 'Money', icon: '🪙', games: ['blackjack', 'bid'], c: '#ef9d10' },
-    { k: 'guess', name: 'Guessing', icon: '🎯', games: ['price', 'emoji'], c: '#ff4f9a' },
+    { k: 'money', name: 'Money', icon: '🪙', games: ['blackjack', 'bid', 'plinko'], c: '#ef9d10' },
+    { k: 'guess', name: 'Guessing', icon: '🎯', games: ['price', 'emoji', 'colormatch', 'trivia'], c: '#ff4f9a' },
     { k: 'bluff', name: 'Bluff & voting', icon: '🗳️', games: ['truths', 'likely'], c: '#8b5cff' },
     { k: 'know', name: 'Get to know you', icon: '💬', games: ['whosaid', 'spectrum'], c: '#14b8dc' },
-    { k: 'creative', name: 'Creative', icon: '🎨', games: ['sketch', 'funny'], c: '#ff7134' },
+    { k: 'creative', name: 'Creative', icon: '🎨', games: ['sketch', 'funny', 'letters', 'memes'], c: '#ff7134' },
     // Unlockable games join Party Mode once this TV has unlocked them (public/unlocks.js).
     ...(window.UNLOCKS && window.UNLOCKS.has('zombie') ? [{ k: 'story', name: 'Survival story', icon: '🧟', games: ['zombie'], c: '#6bbf3a' }] : []),
-    { k: 'big', name: 'Big games', icon: '🏰', games: ['ducks', 'kingdoms'], c: '#f5b400', big: true },
+    { k: 'battle', name: 'Strategy & Battle', icon: '⚔️', games: ['summon'], c: '#e0483e' },
+    { k: 'big', name: 'Big games', icon: '🏰', games: ['ducks', 'kingdoms', 'mafia'], c: '#f5b400', big: true },
   ];
+  // Locked games (public/unlocks.js) join the shuffle once this TV has unlocked them.
+  for (const t of TYPES) t.games = t.games.filter((k) => !window.UNLOCKS || window.UNLOCKS.has(k));
+  for (let i = TYPES.length - 1; i >= 0; i--) if (!TYPES[i].games.length) TYPES.splice(i, 1);
   // Used only if a tile is missing: icon, name, min players, max players, average minutes.
   const FALLBACK = {
     president: ['👑', 'President', 3, 100, 22], blanks: ['🃏', 'JustBlanks', 3, 100, 22], blackjack: ['🃏', 'Blackjack Night', 1, 100, 17],
     bid: ['📦', 'JustBid', 1, 100, 22], price: ['💸', 'Price Panic', 1, 100, 15], emoji: ['😜', 'Emoji Charades', 3, 100, 17],
     truths: ['🤥', 'Two Truths & a Lie', 3, 100, 17], likely: ['👑', 'Most Likely To…', 3, 100, 10], whosaid: ['🕵️', 'Who Said It?', 3, 100, 15],
     spectrum: ['🧭', 'Where Do You Stand?', 3, 100, 15], sketch: ['✏️', 'JustSketch Relay', 3, 100, 15], funny: ['😂', 'JustFunny', 2, 100, 30],
-    zombie: ['🧟', 'Zombie Survival', 2, 100, 20], ducks: ['🦆', 'JustRaiseDucks', 1, 100, 27], kingdoms: ['🏰', 'JustKingdoms', 2, 100, 40],
+    zombie: ['🧟', 'Zombie Survival', 2, 100, 20], summon: ["⚔️", "JustSummon", 2, 100, 15], letters: ["🔤", "Letter Rush", 2, 100, 15], memes: ["🖼️", "Meme Maker", 2, 100, 15], colormatch: ["🎨", "Color Match", 2, 100, 15], trivia: ["🧠", "Hot Take Trivia", 2, 16, 8], plinko: ["🎯", "JustDrop", 1, 100, 12], ducks: ['🦆', 'JustRaiseDucks', 1, 100, 27], kingdoms: ['🏰', 'JustKingdoms', 2, 100, 40],
+    mafia: ['🔪', 'JustMafia', 5, 100, 40],
   };
   const range = (txt) => { const m = txt && txt.match(/(\d+)\s*[–-]\s*(\d+)/); return m ? [Number(m[1]), Number(m[2])] : null; };
   const GAMES = {};
@@ -44,9 +49,12 @@
       if (h) g.name = h.textContent.trim();
       const pl = range(meta.find((m) => m.includes('👥')) || meta[0]);
       if (pl) { g.min = pl[0]; g.max = pl[1]; }
+      // The ideal crowd for the game (data-best="4-10" on its tile).
+      const bs = (tile.dataset.best || '').split('-').map(Number); if (bs.length === 2 && bs.every((x) => x > 0)) g.best = bs;
       const tm = range(meta.find((m) => m.includes('⏱')) || meta[1]);
       if (tm) g.avg = Math.round((tm[0] + tm[1]) / 2);
     }
+    if (!g.best) g.best = [Math.max(g.min, 2), Math.min(g.max, 12)];
     GAMES[k] = g;
   }
   const typeOf = (k) => TYPES.find((t) => t.k === GAMES[k].type);
@@ -70,13 +78,18 @@
   ];
 
   // ---- Options ----
-  const opt = { p: 1, t: 1, mood: 'all', types: new Set(TYPES.filter((t) => !t.big).map((t) => t.k)), big: 'maybe' };
+  const opt = { flow: 'auto', p: 1, t: 1, mood: 'all', types: new Set(TYPES.filter((t) => !t.big).map((t) => t.k)), big: 'maybe' };
   try { // start from the main menu's "How many of you?" choice
     const on = document.querySelector('#count .on'), n = on && Number(on.dataset.n);
     if (n) opt.p = n <= 3 ? 0 : n <= 8 ? 1 : n <= 20 ? 2 : 3;
   } catch { /* fine */ }
   const players = () => PLAYERS[opt.p].n;
   const fits = (k) => GAMES[k].min <= players() && GAMES[k].max >= players();
+  // How well a game suits the group: the share of the group's size range inside the game's best range.
+  const GROUP = [[2, 3], [4, 8], [9, 20], [21, 100]];
+  const fitScore = (k) => { const [lo, hi] = GROUP[opt.p], [blo, bhi] = GAMES[k].best; return Math.max(0, Math.min(hi, bhi) - Math.max(lo, blo) + 1) / (hi - lo + 1); };
+  // Best-suited games first; games that suit the group equally well stay shuffled.
+  const rank = (keys) => shuffle(keys).map((k, i) => [k, fitScore(k) + i * 1e-6]).sort((a, b) => b[1] - a[1]).map((x) => x[0]);
   function setMood(m) {
     opt.mood = m;
     opt.types = new Set(TYPES.filter((t) => !t.big).map((t) => t.k));
@@ -104,7 +117,7 @@
   }
   function build() {
     const minutes = TIMES[opt.t].m;
-    const small = shuffle(poolOf(false)), bigs = shuffle(poolOf(true));
+    const small = rank(poolOf(false)), bigs = rank(poolOf(true));
     let want = 0;
     if (opt.big === 'yes') want = minutes >= 120 && small.length < 3 ? 2 : 1;
     else if (opt.big === 'maybe') want = minutes >= 60 && Math.random() < 0.5 ? 1 : 0;
@@ -144,6 +157,7 @@
     if (!root) return;
     runId++;
     const r = root; root = null; mode = 'closed';
+    try { if (window.BOX && BOX.audio) BOX.audio.music('title', 'menu'); } catch { /* no audio */ }
     r.classList.remove('in'); r.classList.add('out');
     document.body.classList.remove('pm-open');
     setTimeout(() => r.remove(), 260);
@@ -179,6 +193,8 @@
       <div class="pm-q"><h2><span class="pm-num">3</span> Which games?</h2>
         <div class="pm-opts three">${MOODS.map((m) => `<button class="pm-opt pm-mood pm-f ${opt.mood === m.k ? 'on' : ''}" data-id="o-${m.k}" data-mood="${m.k}" aria-pressed="${opt.mood === m.k}"><span class="pm-oi">${m.icon}</span><b>${m.label}</b><small>${m.sub}</small></button>`).join('')}</div>
         <div class="pm-types">${TYPES.map(typeCard).join('')}</div></div>
+      <div class="pm-q"><h2><span class="pm-num">4</span> Between games</h2>
+        <div class="pm-opts two">${[['auto', '⏩', 'Keep it flowing', 'Each game starts right after the standings'], ['lobby', '⚙️', 'Let the host adjust', 'Stop at each game’s settings first']].map(([k, ic, l, sub]) => `<button class="pm-opt pm-f ${opt.flow === k ? 'on' : ''}" data-id="f-${k}" data-flow="${k}" aria-pressed="${opt.flow === k}"><span class="pm-oi">${ic}</span><b>${l}</b><small>${sub}</small></button>`).join('')}</div></div>
       <footer class="pm-foot">
         <button class="pm-btn ghost pm-f" data-id="back" data-act="close">◀ Back</button>
         <div class="pm-sum">${can ? `<b>${small.length + big.length}</b> games in the hat · about <b>${esc(TIMES[opt.t].label)}</b>` : '<b class="pm-warn">Pick at least one kind of game</b>'}</div>
@@ -191,6 +207,7 @@
   function onSetupClick(el) {
     if (el.dataset.p != null) { opt.p = Number(el.dataset.p); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.t != null) { opt.t = Number(el.dataset.t); sfx('pop'); return setup(el.dataset.id); }
+    if (el.dataset.flow) { opt.flow = el.dataset.flow === 'lobby' ? 'lobby' : 'auto'; sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.mood) { setMood(el.dataset.mood); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.type) {
       const t = TYPES.find((x) => x.k === el.dataset.type);
@@ -298,6 +315,7 @@
 
   async function shuffleShow(quick) {
     mode = 'shuffle'; skipping = false;
+    try { if (window.BOX && BOX.audio) BOX.audio.music('shuffle', 'party'); } catch { /* no audio */ }
     const id = ++runId, alive = () => id === runId && root;
     const b = body(); b.innerHTML = stageHtml();
     focusId('skip');
@@ -440,7 +458,8 @@
     if (a === 'start') {
       sfx('start');
       root.classList.add('launch');
-      const url = `/box/tv?game=${encodeURIComponent(lineup[0])}&party=${lineup.map(encodeURIComponent).join(',')}&minutes=${TIMES[opt.t].m}`;
+      // A party needs a box game to start in; a lone JustMafia is just a game of JustMafia.
+      const url = lineup.length === 1 && lineup[0] === 'mafia' ? '/mafia' : `/box/tv?game=${encodeURIComponent(lineup[0])}&party=${lineup.map(encodeURIComponent).join(',')}&minutes=${TIMES[opt.t].m}${opt.flow === 'lobby' ? '&flow=lobby' : ''}`;
       try { localStorage.setItem('box.recent', lineup[0]); } catch { /* private */ }
       setTimeout(() => { location.href = url; }, 600);
     }

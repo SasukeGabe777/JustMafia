@@ -251,6 +251,8 @@
   }
 
   BOX.games.spectrum = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ intro: 'think', spot: 'think', place: 'play', guess: 'play', reveal: 'reveal', over: 'finale' }[s.phase] || 'play'),
     name: 'Where Do You Stand?', icon: '🧭', lobbyTv,
     about: 'Drag a marker to where YOU stand: morning person or night owl? Beach or mountains? See where everyone lands, read your friends, and meet your twin tonight.',
     how: [

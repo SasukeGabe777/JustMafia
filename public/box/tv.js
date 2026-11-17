@@ -12,6 +12,7 @@
   let gameKey = params.get('game') || pathGame;
   let G = BOX.games[gameKey];
   if (!G) { $('#tv-main').innerHTML = '<p>Unknown game. <a href="/">Back to the games</a></p>'; return; }
+  if (G.external) { location.replace(G.href || '/'); return; } // JustMafia lives at /mafia
   const STAND = !!G.standalone && !params.get('game');
   document.title = STAND ? G.name : G.name + ' · JustGameBox';
   $('#tv-title').textContent = G.icon + ' ' + G.name;
@@ -19,7 +20,7 @@
   else if (!G.standalone) document.body.classList.add('g-' + gameKey); // every game styles its own screens (public/box/games/<key>.css)
 
   const socket = io('/box', { transports: ['websocket', 'polling'] });
-  let state = null, baseUrl = location.origin, lastFx = 0, rendered = '';
+  let state = null, baseUrl = location.origin, lastFx = 0, rendered = '', stateAt = 0;
   const KEY = 'box.host';
   const saved = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } };
   const save = (v) => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch { /* private mode */ } };
@@ -33,13 +34,13 @@
   const hasTitle = () => STAND || !!(BOX.titles && BOX.titles[gameKey] && BOX.titles[gameKey].draw);
   const showBar = () => { if (!STAND) document.querySelector('.tv-bar').hidden = false; };
   // Party Mode from the main menu: /box/tv?game=<first>&party=<k1,k2,…>&minutes=60
-  const partyParam = params.get('party') ? { games: params.get('party').split(',').filter(Boolean).slice(0, 20), minutes: Number(params.get('minutes')) || 60 } : null;
+  const partyParam = params.get('party') ? { games: params.get('party').split(',').filter(Boolean).slice(0, 20), minutes: Number(params.get('minutes')) || 60, flow: params.get('flow') === 'lobby' ? 'lobby' : 'auto' } : null;
   let partyUsed = false;
   const myUnlocks = () => (window.UNLOCKS ? window.UNLOCKS.all() : []);
   const isLockedHere = (key) => !!(window.UNLOCKS && window.UNLOCKS.isLockable(key) && !window.UNLOCKS.has(key));
   // A locked game opened directly: say how to unlock it.
   function lockedScreen() {
-    onTitle = true; rendered = 'locked'; state = null;
+    onTitle = true; rendered = 'locked'; state = null; if (AU) AU.stop();
     const L = (window.UNLOCKS && window.UNLOCKS.LIST[gameKey]) || {};
     document.querySelector('.tv-bar').hidden = true;
     $('#tv-main').innerHTML = `<div class="locked-screen"><div class="lk-icon">${esc(L.icon || G.icon)}</div><div class="lk-lock">🔒</div><h1>${esc(L.title || G.name)} is locked</h1><p>${esc(L.how || 'Keep playing to unlock it.')}</p><a class="btn big" href="/">◀ Pick a game</a></div>`;
@@ -80,6 +81,7 @@
         else { try { localStorage.removeItem(KEY); } catch { /* */ } showTitle(); }
       }) : null,
     });
+    music();
   }
   function quitToTitle() { try { localStorage.removeItem(KEY); } catch { /* */ } showTitle(); }
   let firstConnect = true;
@@ -106,8 +108,9 @@
   });
   socket.on('tv', (s) => {
     if (onTitle) return;
+    if (s.away) return goAway(s);
     if (s.game && s.game !== gameKey) return switchTo(s);
-    state = s; render(); playFx(s.fx || []);
+    state = s; stateAt = Date.now(); render(); playFx(s.fx || []); music();
   });
   // The host picked another game: same room, same players. Small games swap in place (the
   // page keeps its sound permission); big games have their own page.
@@ -119,7 +122,18 @@
     document.body.classList.remove('g-' + gameKey); gameKey = s.game; G = next; rendered = ''; showBar(); document.body.classList.add('g-' + gameKey);
     document.title = G.name + ' · JustGameBox'; $('#tv-title').textContent = G.icon + ' ' + G.name;
     history.replaceState(null, '', location.pathname + '?game=' + gameKey);
-    state = s; render(); playFx(s.fx || []);
+    if (AU) AU.use(gameKey);
+    state = s; stateAt = Date.now(); render(); playFx(s.fx || []); music();
+  }
+  // The room went to a game outside the box (JustMafia): this TV opens it, signed in as its
+  // big screen. The box room waits; JustMafia sends everyone back here afterwards.
+  let leaving = false;
+  function goAway(s) {
+    if (leaving || s.away.game !== 'mafia' || !s.away.hostKey) return;
+    leaving = true;
+    try { localStorage.setItem('mt.host', JSON.stringify({ code: s.away.code, hostKey: s.away.hostKey })); } catch { /* private mode */ }
+    $('#tv-main').innerHTML = '<div class="final"><h2>🔪 Off to JustMafia…</h2><p class="muted">Phones follow by themselves.</p></div>';
+    setTimeout(() => { location.href = '/mafia?resume=1'; }, 600);
   }
   // Emoji reactions from phones float up the screen with the sender's name.
   socket.on('react', (r) => {
@@ -132,7 +146,7 @@
     o.appendChild(el); setTimeout(() => el.remove(), 3300);
   });
   // Pick the next game from the TV (the host's phone can do the same).
-  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'ducks', 'kingdoms'];
+  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
   function tvPicker() {
     let o = $('#tv-pick'); if (o) o.remove();
     o = document.createElement('div'); o.id = 'tv-pick'; o.className = 'tv-pick';
@@ -143,11 +157,47 @@
   }
   const partyHtml = () => (state && state.played && state.played.length ? `<div class="party-strip">🎉 <b>Party points</b> ${state.party.slice(0, 5).map((r, i) => `<span>${['👑', '2.', '3.', '4.', '5.'][i]} ${esc(r.avatar || '')} ${esc(r.name)} <b>${r.pts}</b></span>`).join('')}<span class="muted">${state.played.length} game${state.played.length === 1 ? '' : 's'} tonight</span></div>` : '');
 
+  // ---- Music: public/box/audio.js plays public/box/scores/<key>.js ----
+  // title -> 'title', lobby -> 'lobby', intro cutscene -> 'intro' (ducked under the host),
+  // Party Mode board / finale -> the 'party' score, in game -> the game's music(s) (or its
+  // score's phaseCue(s)), default 'play', game over 'finale'. The last 10 s of a timed
+  // 'think' phase (or a cue in the score's tenseFrom list) turn 'tense'.
+  const AU = BOX.audio;
+  let tenseTimer = 0;
+  function music() {
+    if (!AU) return;
+    clearTimeout(tenseTimer);
+    if (onTitle) { if (rendered !== 'locked') AU.music('title', gameKey); return; }
+    if (!state) return;
+    const pm = state.partyMode;
+    if (pm && (pm.phase === 'board' || pm.phase === 'done')) return AU.music(pm.phase === 'done' ? 'finale' : 'board', 'party');
+    if (state.phase === 'lobby') return AU.music('lobby', gameKey);
+    if (state.phase === 'show') return AU.music('intro', gameKey);
+    const s = state.state || {}, sc = BOX.scores && BOX.scores[gameKey];
+    let cue = s.phase === 'over' ? 'finale' : 'play';
+    const pick = G.music || (sc && sc.phaseCue);
+    if (pick) { try { const c = pick(s); if (c !== undefined) cue = c; } catch (e) { console.error(e); } }
+    if ((cue === 'think' || (sc && sc.tenseFrom && sc.tenseFrom.includes(cue))) && s.endsIn > 0) {
+      const left = s.endsIn - (Date.now() - stateAt);
+      if (left <= 10000) cue = 'tense'; else tenseTimer = setTimeout(music, left - 10000 + 30);
+    }
+    AU.music(cue, gameKey);
+  }
+  if (AU) {
+    AU.use(gameKey); AU.need(gameKey, music);
+    if (partyParam) AU.need('party');
+    if (!STAND) { const b = AU.button(); b.classList.add('tv-sound'); document.querySelector('.tv-bar').appendChild(b); }
+  }
+
   // Sound: browsers need one click on the page first.
   document.addEventListener('pointerdown', () => { try { SFX.unlock(); } catch { /* none */ } $('#sound-hint').hidden = true; }, { once: true });
   function playFx(list) {
     for (const f of list) if (f.id > lastFx && lastFx && f.kind === 'unlock') celebrateUnlock(f);
-    for (const f of list) if (f.id > lastFx) { if (lastFx && G.onFx) { try { G.onFx(f); } catch (e) { console.error(e); } } if (lastFx) { const snd = (G.fx && G.fx[f.kind]) || { start: 'start', win: 'win', shuffle: 'shuffle', deal: 'deal' }[f.kind]; if (snd) BOX.sfx(snd); } }
+    for (const f of list) if (f.id > lastFx) {
+      if (lastFx && G.onFx) { try { G.onFx(f); } catch (e) { console.error(e); } }
+      // The game's score can play its own styled stinger for this fx (score.fx); otherwise the SFX name.
+      if (lastFx && !(AU && AU.fx(gameKey, f.kind))) { const snd = (G.fx && G.fx[f.kind]) || { start: 'start', win: 'win', shuffle: 'shuffle', deal: 'deal' }[f.kind]; if (snd) BOX.sfx(snd); }
+    }
     if (list.length) lastFx = Math.max(lastFx, list[list.length - 1].id);
   }
 
@@ -166,13 +216,14 @@
     c.querySelector('.cc').textContent = state.code;
     const q = c.querySelector('.cq'); if (q.dataset.u !== joinUrl()) { q.src = qr(); q.dataset.u = joinUrl(); }
     const over = state.state && state.state.phase === 'over';
-    const html = `${over ? '<button data-h="again">▶ Play again</button><button data-h="pick">🎮 Another game</button>' : '<button data-h="next">⏩ Skip ahead</button>'}<button data-h="lobby">↩ Back to the lobby</button><button data-h="bots">🤖 Add 5 bots</button><button data-h="quit">🚪 Quit to title</button>`;
+    const html = `${over ? '<button data-h="again">▶ Play again</button><button data-h="pick">🎮 Another game</button>' : '<button data-h="next">⏩ Skip ahead</button>'}<button data-h="lobby">↩ Back to the lobby</button><button data-h="bots">🤖 Add 5 bots</button>${AU ? '<button data-h="sound">🔊 Music & sound</button>' : ''}<button data-h="quit">🚪 Quit to title</button>`;
     const m = c.querySelector('.cm');
     if (m.dataset.html !== html) {
       m.innerHTML = html; m.dataset.html = html;
       for (const b of m.querySelectorAll('[data-h]')) b.onclick = () => {
         const h = b.dataset.h; m.hidden = true;
         if (h === 'pick') return tvPicker();
+        if (h === 'sound') return AU.panel(c.querySelector('.cg'));
         if (h === 'quit') { if (confirm('Quit this game and go back to the title screen?')) quitToTitle(); return; }
         if (h === 'lobby' && !over && !confirm('End this game and go back to the lobby?')) return;
         host(h === 'bots' ? 'addBots' : h, { count: 5 });
@@ -188,10 +239,11 @@
     code.hidden = state.phase === 'lobby' || STAND;
     const codeHtml = `<span>Join: <b>${esc(state.code)}</b></span><img src="${qr()}" alt="QR code to join">`;
     if (code.dataset.code !== state.code + baseUrl) { code.innerHTML = codeHtml; code.dataset.code = state.code + baseUrl; }
-    if (state.phase === 'lobby') return lobby();
     const main = $('#tv-main');
     // Party Mode: the standings board between games, and the finale (drawn by partyboard.js).
+    // After a game played elsewhere (pm.ext) the room sits in a lobby, but the board shows.
     const pm = state.partyMode;
+    if (state.phase === 'lobby' && !(pm && pm.ext && (pm.phase === 'board' || pm.phase === 'done'))) return lobby();
     if (pm && (pm.phase === 'board' || pm.phase === 'done') && BOX.partyBoard) {
       if (rendered !== 'board') { main.innerHTML = '<div id="pb-area" class="pb-area"></div>'; rendered = 'board'; }
       BOX.partyBoard($('#pb-area'), state, { host });
@@ -199,6 +251,16 @@
     }
     // Game-show opening (studio, audience, host, contestants): full screen, drawn by show.js.
     if (state.phase === 'show' && state.show) {
+      // How to play (after the intro): its own full-screen tutorial (howto.js).
+      if (state.show.step === 'howto' && BOX.showHowto) {
+        if (rendered !== 'howto') {
+          main.innerHTML = '<div id="howto-area" class="show-area"></div><button class="show-skip" id="show-skip" data-h="next">Start the game ⏩</button>';
+          rendered = 'howto';
+          $('#show-skip').onclick = () => host('next');
+        }
+        BOX.showHowto($('#howto-area'), state.show, { players: state.players, host });
+        return;
+      }
       if (rendered !== 'show') {
         main.innerHTML = '<div id="show-area" class="show-area"></div><button class="show-skip" id="show-skip" data-h="next">Skip intro ⏩</button>';
         rendered = 'show';

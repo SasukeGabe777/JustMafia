@@ -22,7 +22,6 @@
   };
   const ANIM_SFX = { run: 'step', decoy: 'siren', climb: 'creak', fight: 'hit', hide: 'heartbeat', sneak: 'drag', drive: 'whoosh', search: 'click', swim: 'whoosh', hold: 'knock', rest: 'chime', talk: 'talk' };
   const VOICE = { like: /guy|male|david|mark|daniel|george|ryan/i, accent: /en-(US|GB)/i, pitch: 0.82, rate: 1.0 };
-  const OUT = { intro: 2400, group: 3600, reveal: 1500, fever: 3400 };
   const tag = (o) => [o.need ? `<i class="zs-t need">needs ${o.need}</i>` : '', o.help ? `<i class="zs-t help">better with ${o.help}</i>` : '', o.gain ? `<i class="zs-t gain">find ${o.gain}</i>` : '', o.heal ? '<i class="zs-t heal">heals</i>' : '', o.cure ? '<i class="zs-t cure">cures bites</i>' : '', o.hero ? '<i class="zs-t hero">🦸 hero</i>' : ''].join('');
   // countdowns whose end time stays fixed for one phase (so renders don't jitter)
   const ends = {};
@@ -37,7 +36,7 @@
   function addLoop(fn) { loops.add(fn); if (!raf) raf = requestAnimationFrame(tick); }
   function tick(now) {
     raf = 0;
-    for (const fn of [...loops]) { try { if (fn(now) === false) loops.delete(fn); } catch (e) { console.error(e); loops.delete(fn); } }
+    for (const fn of [...loops]) { try { if (fn(now) === false) loops.delete(fn); } catch (e) { fn.errs = (fn.errs || 0) + 1; if (fn.errs < 4) { console.error(e); window.__zsErr = String(e && e.stack); } if (fn.errs > 300) loops.delete(fn); } }
     if (loops.size) raf = requestAnimationFrame(tick);
   }
   function fit(cv, cap = 1.5) {
@@ -75,12 +74,16 @@
   const cue = (k, at, u, fn) => { if (u >= at && !T.cues.has(k)) { T.cues.add(k); if (u - at < 1500) fn(); } };
 
   // ---------- the scene ----------
+  // The part of the 1920×1080 world that is visible (cover-fit crops top and bottom on wide
+  // screens): the ground line follows it, so feet and name plates are never cut off.
+  const V = { top: 0, bottom: 1080 };
   function drawTv(z, now) {
     const s = T.s; if (!s) return;
     const Z = A(); if (!Z) return;
     const { w, h, d } = fit(z.cv), g = z.cv.getContext('2d'), t = now / 1000;
     g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0a0612'; g.fillRect(0, 0, z.cv.width, z.cv.height);
-    Z.cover(g, w, h, d);
+    const sc = Z.cover(g, w, h, d);
+    V.top = Math.max(0, (1080 - h / sc) / 2); V.bottom = 1080 - V.top;
     const u = elapsed();
     const loc = s.phase === 'over' ? (s.epilogue && s.epilogue.wipe ? 'streets' : 'rescue') : s.chapter.loc;
     if (s.phase === 'chapter') drawChapter(g, s, t, u, loc);
@@ -89,10 +92,11 @@
     else if (s.phase === 'board') drawBoard(g, s, t, loc);
     else if (s.phase === 'over') drawOver(g, s, t, u);
     else Z.backdrop(g, loc, t, { dark: 0.3 });
-    Z.vignette(g, 0.5);
-    // the HUD follows the timeline (4× a second is plenty)
-    if (!z._h || now - z._h > 240) { z._h = now; const html = hud(s, u); if (html !== T.hud) { T.hud = html; BOX.morph(z.hud, html); } }
+    Z.vignette(g, 0.45);
+    // the HUD follows the timeline
+    if (!z._h || now - z._h > 120) { z._h = now; const html = hud(s, u); if (html !== T.hud) { T.hud = html; BOX.morph(z.hud, html); } }
   }
+  const W0 = 1920;
   function shamblers(g, t, n, y, s, o = {}) {
     const Z = A();
     for (let i = 0; i < n; i++) {
@@ -101,32 +105,41 @@
       Z.zombie(g, x, y + (i % 3) * 14, s * (0.9 + (i % 3) * 0.08), t, { seed: i + 3, dir, alpha: o.alpha, speed: 2.4 });
     }
   }
-  const W0 = 1920;
+  // A row of people with name plates under their feet. Plates stagger on 1–3 levels so they never overlap.
+  function rowLayout(n, o = {}) {
+    const m = Math.min(n, o.max || 16);
+    const levels = m <= 8 ? 1 : m <= 16 ? 2 : 3, px = m <= 6 ? 36 : m <= 12 ? 32 : 28, step = px * 1.55 + 8;
+    const y = o.y || Math.min(905, V.bottom - 24 - levels * step);
+    const sc = (o.scale || 1) * (m <= 2 ? 1.2 : m <= 4 ? 1.05 : m <= 6 ? 0.92 : m <= 8 ? 0.8 : m <= 12 ? 0.66 : m <= 16 ? 0.56 : 0.44);
+    const span = o.span || 1720, gap = Math.min(380 * sc + 70, span / Math.max(1, m));
+    return Array.from({ length: m }, (_, i) => ({ x: (o.cx || 960) + (i - (m - 1) / 2) * gap, y, s: sc, lv: i % levels, step, px, pmax: Math.min(380, gap * levels - 18), i }));
+  }
+  function namePlate(g, name, P, o = {}) {
+    A().plate(g, P.x, P.y + 14 + P.lv * P.step, name, { color: o.color, px: P.px, max: P.pmax, bg: o.bg, icon: o.icon });
+  }
   function crowd(g, list, t, o = {}) {
-    const Z = A(), n = Math.min(list.length, o.max || 36);
-    const per = n <= 8 ? n : n <= 20 ? Math.ceil(n / 2) : Math.ceil(n / 3), rows = Math.ceil(n / Math.max(1, per));
-    const sc = (o.scale || 1) * (n <= 4 ? 1.05 : n <= 8 ? 0.9 : n <= 20 ? 0.72 : 0.58);
-    for (let row = rows - 1; row >= 0; row--) {
-      const items = list.slice(row * per, Math.min(n, (row + 1) * per)), cnt = items.length, gap = Math.min((o.wide ? 300 : 210) * sc, (o.wide ? 1640 : 1600) / Math.max(1, cnt));
-      items.forEach((p, i) => {
-        const x = 960 + (i - (cnt - 1) / 2) * gap + (row % 2 ? gap / 2 : 0), y = (o.y || 1040) - row * (o.rowGap || 62) * sc, s2 = sc * (1 - row * 0.08);
-        Z.survivor(g, x, y, s2, t, { avatar: p.avatar, color: p.color, pose: o.pose || 'idle', ph: i * 1.7, tint: p.status === 'bitten' ? 'sick' : null, dir: i % 2 ? -1 : 1 });
-        if (p.status === 'bitten') Z.glow(g, x, y - 120 * s2, 90 * s2, 'rgba(140,255,90,A)', 0.25 + 0.15 * Math.sin(t * 4 + i));
-        if (o.names && n <= 12) { Z.text(g, p.name, x, y + 28, 26 * Math.max(0.8, s2), '#fff', { font: A().BODY, stroke: '#120d1c', lw: 6, max: gap * 0.95 }); }
-        if (o.badges) { const b = p.status === 'hurt' ? '🩹' : p.status === 'bitten' ? '🦷' : null; if (b) Z.emoji(g, b, x + 38 * s2, y - 190 * s2, 40 * s2 + 10); if (p.items && n <= 16) Z.text(g, p.items, x, y + 62, 30 * s2 + 4, '#fff', { font: '"Segoe UI Emoji", sans-serif' }); }
-      });
+    const Z = A(), L = rowLayout(list.length, { max: o.max || 24, scale: o.scale, y: o.y });
+    for (const P of L) {
+      const p = list[P.i];
+      Z.survivor(g, P.x, P.y, P.s, t, { avatar: p.avatar, color: p.color, pose: o.pose || 'idle', ph: P.i * 1.7, tint: p.status === 'bitten' ? 'sick' : null, dir: P.i % 2 ? -1 : 1 });
+      if (p.status === 'bitten') Z.glow(g, P.x, P.y - 120 * P.s, 90 * P.s, 'rgba(140,255,90,A)', 0.25 + 0.15 * Math.sin(t * 4 + P.i));
+      const b = p.status === 'hurt' ? '🩹' : p.status === 'bitten' ? '🦷' : null;
+      if (b) Z.emoji(g, b, P.x + 36 * P.s, P.y - 200 * P.s, 30 + 20 * P.s);
+      if (o.items && p.items) Z.text(g, p.items, P.x, P.y - 236 * P.s, 22 + 14 * P.s, '#fff', { font: '"Segoe UI Emoji", sans-serif' });
     }
-    if (list.length > n) Z.text(g, `+${list.length - n} more`, 1800, (o.y || 1040) - 30, 34, '#fff', { stroke: '#120d1c', lw: 8 });
+    if (o.names !== false) for (const P of L) namePlate(g, list[P.i].name, P, { color: list[P.i].color });
+    if (list.length > L.length) A().plate(g, 1830, L[0].y - 60, `+${list.length - L.length} more`, { px: 28, color: '#9dff5a' });
   }
   function ghosts(g, list, t, o = {}) {
-    const Z = A(), n = Math.min(list.length, 16);
+    const Z = A(), n = Math.min(list.length, 14);
     for (let i = 0; i < n; i++) {
-      const p = list[i], x = (o.x0 || 120) + ((i * 263 + t * 14 * (i % 2 ? 1 : -1)) % (o.span || 1700) + (o.span || 1700)) % (o.span || 1700), y = (o.y || 170) + (i % 3) * 70;
-      Z.ghost(g, x, y, o.s || 0.75, t, { avatar: p.avatar, ph: i, alpha: 0.55 });
+      const p = list[i], span = o.span || 1700, x = (o.x0 || 120) + ((i * 263 + t * 14 * (i % 2 ? 1 : -1)) % span + span) % span, y = (o.y || 170) + (i % 3) * 70;
+      Z.ghost(g, x, y, o.s || 0.75, t, { avatar: p.avatar, ph: i, alpha: 0.6 });
+      if (o.names) Z.plate(g, x, y + 50 * (o.s || 0.75) + 8 + Math.sin(t * 2 + i) * 10, p.name, { px: 22, max: 200, color: '#c9d4ff', bg: 'rgba(24,28,60,0.85)' });
     }
   }
   function drawChapter(g, s, t, u, loc) {
-    const Z = A(), k = Math.min(1, u / 6000);
+    const Z = A(), k = Math.min(1, u / 8000);
     g.save(); g.translate(960, 540); g.scale(1.08 - 0.08 * k, 1.08 - 0.08 * k); g.translate(-960, -540);
     Z.backdrop(g, loc, t, { dark: 0.15 }); shamblers(g, t, 4, 900, 0.55, { alpha: 0.85 }); Z.fog(g, t, 0.2);
     g.restore();
@@ -135,162 +148,246 @@
   function drawChoose(g, s, t, loc) {
     const Z = A();
     Z.backdrop(g, loc, t, { dark: 0.42 });
-    shamblers(g, t, 4, 860, 0.5, { alpha: 0.7 });
-    Z.fog(g, t, 0.16, 930);
-    if (s.ghosts) ghosts(g, s.ghostList || [], t, { y: 660, s: 0.5 });
-    crowd(g, s.people || [], t, { y: 990, scale: 0.85 });
+    shamblers(g, t, 4, 820, 0.5, { alpha: 0.7 });
+    Z.fog(g, t, 0.16, 900);
+    if (s.ghosts) ghosts(g, s.ghostList || [], t, { y: 640, s: 0.5 });
+    crowd(g, s.people || [], t, { scale: 0.9 });
   }
   function drawBoard(g, s, t, loc) {
     const Z = A();
     Z.backdrop(g, loc, t, { dark: 0.5 });
     Z.fog(g, t, 0.18, 960);
-    ghosts(g, s.ghostList || [], t, { y: 330, s: 0.8, x0: 80, span: 1250 });
-    crowd(g, s.people || [], t, { y: 930, names: true, badges: true, pose: 'idle', scale: 1.0, wide: true, rowGap: 105 });
+    ghosts(g, s.ghostList || [], t, { y: 330, s: 0.75, x0: 80, span: 1250, names: (s.ghostList || []).length <= 8 });
+    crowd(g, s.people || [], t, { items: true });
   }
-  // ---------- the outcome: each group acts out its choice ----------
-  function layout(n) {
-    const per = n <= 6 ? n : n <= 14 ? Math.ceil(n / 2) : Math.ceil(n / 3), rows = Math.ceil(n / Math.max(1, per));
-    const sc = n <= 3 ? 1.35 : n <= 6 ? 1.15 : n <= 14 ? 0.92 : 0.72, out = [];
-    for (let i = 0; i < n; i++) {
-      const row = Math.floor(i / per), cnt = Math.min(per, n - row * per), col = i % per, gap = Math.min(250 * sc, 1180 / Math.max(1, cnt - 1 || 1));
-      out.push({ x: 900 + (col - (cnt - 1) / 2) * gap + (row % 2 ? gap * 0.4 : 0), y: 950 - row * 76 * sc, s: sc * (1 - row * 0.1), row });
-    }
-    return out;
+
+  // ---------- the outcome, beat by beat ----------
+  const CONSEQ = 1500; // matches the server: act, then the consequence, then one verdict per person
+  const VERDICT = {
+    safe: { icon: '✅', word: 'MADE IT', say: 'made it!', col: '#7dff8a', bg: 'rgba(20,70,30,0.95)' },
+    hurt: { icon: '🤕', word: 'HURT', say: 'got hurt!', col: '#ffb347', bg: 'rgba(80,46,10,0.95)' },
+    bitten: { icon: '🦷', word: 'BITTEN', say: 'got BITTEN!', col: '#c8ff5a', bg: 'rgba(40,70,10,0.95)' },
+    dead: { icon: '💀', word: 'FELL', say: 'fell!', col: '#ff6b6b', bg: 'rgba(80,16,20,0.95)' },
+    turned: { icon: '🧟', word: 'TURNED', say: 'turned!', col: '#ff6b6b', bg: 'rgba(80,16,20,0.95)' },
+    cured: { icon: '🩹', word: 'CURED', say: 'is cured!', col: '#7dff8a', bg: 'rgba(20,70,30,0.95)' },
+  };
+  const gainList = (G) => Array.from(G.gain || '');
+  const VEHICLES = ['🚜', '🚑', '🛺', '🚌', '♿', '🚨'];
+  function stamp(g, x, y, f, rv, big) {
+    const Z = A(), k = Z.util.back(Z.util.clamp(rv / 260)), V2 = VERDICT[f];
+    g.save(); g.translate(x, y); g.scale(k * big, k * big); g.rotate(-0.05);
+    g.font = `46px ${Z.FONT}`; const tw = g.measureText(V2.word).width + 96;
+    g.fillStyle = 'rgba(0,0,0,0.5)'; Z.rr(g, -tw / 2 + 5, -34, tw, 74, 37); g.fill();
+    g.fillStyle = V2.bg; Z.rr(g, -tw / 2, -38, tw, 74, 37); g.fill(); g.lineWidth = 6; g.strokeStyle = V2.col; g.stroke();
+    Z.emoji(g, V2.icon, -tw / 2 + 40, 0, 44); Z.text(g, V2.word, 22, 2, 46, V2.col);
+    g.restore();
   }
-  function fateAt(G, i) { return G.at + OUT.reveal + Math.min(i, 24) * 90; }
-  function drawGroup(g, s, G, u, t) {
-    const Z = A(), { clamp, easeOut, lerp, back } = Z.util, v = u - G.at, ppl = G.people, L = layout(ppl.length), anim = G.anim;
-    const zn = Math.max(2, Math.min(6, Math.ceil(G.total / 2) + 1)), approach = easeOut(clamp(v / 1400));
-    // props behind the group
-    if (anim === 'climb') { g.fillStyle = '#5a4a3a'; g.fillRect(260, 620, 1400, 26); g.strokeStyle = '#c9a36b'; g.lineWidth = 6; for (const p of L) { g.beginPath(); g.moveTo(p.x, 640); g.lineTo(p.x + 6, 1020); g.stroke(); } }
-    if (anim === 'search') { for (const x of [250, 760, 1270]) { g.fillStyle = '#2e2420'; g.fillRect(x, 560, 420, 330); g.fillStyle = '#5a4030'; g.fillRect(x - 10, 550, 440, 18); for (const y of [650, 760, 870]) g.fillRect(x - 10, y, 440, 16); g.fillRect(x - 10, 550, 18, 340); g.fillRect(x + 412, 550, 18, 340); } for (let i = 0; i < 18; i++) Z.emoji(g, ['🥫', '📦', '🧴', '🔋', '🧃', '🧻'][i % 6], 300 + (i % 6) * 250 + (i % 2) * 40, 618 + Math.floor(i / 6) * 110, 50); }
-    if (anim === 'hold' && G.role === 'hold') {
-      const open = s.outcome.groupOk === false && v > 1300, shake = open ? 0 : Math.sin(t * 40) * 6 * (v < 1400 ? 1 : 0.4);
-      g.save(); g.translate(1640 + shake, 1010); if (open) g.rotate(-Math.min(1.3, (v - 1300) / 300));
-      g.fillStyle = '#6a4a2e'; g.strokeStyle = '#120d1c'; g.lineWidth = 8; Z.rr(g, 0, -380, 190, 380, 8); g.fill(); g.stroke();
-      g.strokeStyle = '#4a321e'; g.lineWidth = 14; g.beginPath(); g.moveTo(10, -330); g.lineTo(180, -60); g.stroke(); g.restore();
-      if (!open) for (let i = 0; i < 3; i++) { g.save(); g.translate(1840, 760 + i * 70 + Math.sin(t * 6 + i) * 10); g.strokeStyle = '#9ccf7a'; g.lineWidth = 16; g.lineCap = 'round'; g.beginPath(); g.moveTo(40, 0); g.lineTo(-30 - Math.sin(t * 5 + i) * 20, 0); g.stroke(); g.restore(); }
+  // Where each person stands for this group's action.
+  function groupLayout(G) {
+    const n = G.people.length, a = G.anim, door = a === 'hold' && G.role === 'hold';
+    if (door) { const span = Math.min(1150, 220 + n * 170); return rowLayout(n, { cx: 1585 - span / 2, span }); }
+    if (a === 'run' || a === 'decoy') return rowLayout(n, { cx: 1080, span: 1500 });
+    if (a === 'fight') return rowLayout(n, { cx: 780, span: 1250 });
+    return rowLayout(n);
+  }
+  function drawGroup(g, s, G, u, t, loc) {
+    const Z = A(), Pr = Z.props, { clamp, easeOut, lerp, ease } = Z.util;
+    const v = u - G.at, actEnd = Math.max(1200, G.verdictAt - G.at - CONSEQ), inConseq = v >= actEnd, ppl = G.people, L = groupLayout(G), a = G.anim;
+    const G0 = L.length ? L[0].y : 880, lastAt = ppl.length ? ppl[ppl.length - 1].at : G.verdictAt, gains = gainList(G);
+    const minX = L.length ? L[0].x : 960, maxX = L.length ? L[L.length - 1].x : 960;
+    const door = a === 'hold' && G.role === 'hold', doorOpen = door && s.outcome.groupOk === false ? clamp((v - actEnd - 500) / 400) : 0;
+    // ----- the set for this action -----
+    let shelfY = 0, ledge = 0;
+    if (a === 'search') shelfY = Pr.shelf(g, loc, Math.min(minX - 150, 960 - 460), Math.max(maxX + 150, 960 + 460), G0 - 470, G0 - 40, G0 - 550 > V.top + 0.34 * (V.bottom - V.top) ? (s.outcome.title || '').toUpperCase() : null);
+    if (a === 'climb') {
+      ledge = G0 - Math.min(330, 0.3 * (V.bottom - V.top)); Pr.wall(g, loc, Math.min(minX - 170, 560), Math.max(maxX + 170, 1360), ledge, G0);
+      L.forEach((P, i) => { const rope = ppl[i].used === '🪢' || G.icon === '🪢'; g.lineCap = 'round'; if (rope) { g.strokeStyle = '#c9a36b'; g.lineWidth = 9; g.beginPath(); g.moveTo(P.x + 18, ledge - 10); for (let yy = ledge; yy <= G0; yy += 30) g.lineTo(P.x + 18 + Math.sin(yy / 30 + t * 2) * 5, yy); g.stroke(); } else { g.strokeStyle = '#8a8fa8'; g.lineWidth = 16; g.beginPath(); g.moveTo(P.x + 22, ledge - 10); g.lineTo(P.x + 22, G0); g.stroke(); g.strokeStyle = '#5a5e74'; g.lineWidth = 22; for (let yy = ledge + 40; yy < G0; yy += 90) { g.beginPath(); g.moveTo(P.x + 22, yy); g.lineTo(P.x + 22, yy + 8); g.stroke(); } } });
     }
-    if (anim === 'rest' && v > 200) { g.fillStyle = '#5a3a1a'; g.fillRect(900, 1010, 120, 14); Z.glow(g, 960, 980, 160, 'rgba(255,160,60,A)', 0.4 + 0.1 * Math.sin(t * 9)); Z.emoji(g, '🔥', 960, 980, 70); }
-    if (anim === 'swim') { g.fillStyle = 'rgba(40,90,170,0.75)'; g.fillRect(-200, 900, 2400, 300); g.strokeStyle = 'rgba(200,230,255,0.6)'; g.lineWidth = 5; g.beginPath(); for (let x = -200; x < 2200; x += 40) g.lineTo(x, 900 + Math.sin(x / 50 + t * 4) * 8); g.stroke(); }
-    // the choice, faded behind the action
-    g.globalAlpha = 0.16; Z.emoji(g, G.icon, 960, 520, 300); g.globalAlpha = 1;
-    // zombies close in
-    for (let i = 0; i < zn; i++) {
-      const fromLeft = anim === 'run' || anim === 'decoy' || anim === 'sneak' ? true : anim === 'hide' ? i % 2 === 0 : anim === 'fight' ? false : i % 2 === 0;
-      let x;
-      if (anim === 'hide') { x = fromLeft ? lerp(-200, 2100, clamp(v / 3400)) - i * 160 : lerp(2100, -200, clamp(v / 3400)) + i * 160; }
-      else if (anim === 'decoy') x = lerp(-300, 1500, clamp((v - 300) / 3000)) - i * 140;
-      else if (anim === 'fight') { const hit = clamp((v - 900 - i * 120) / 500); x = lerp(2150, 1500 + i * 70, approach) + hit * 260 * (G.counts.safe ? 1 : 0); }
-      else if (anim === 'hold' && G.role === 'hold') x = -9999;
-      else x = fromLeft ? lerp(-260 - i * 120, 160 + i * 90, approach) : lerp(2180 + i * 120, 1700 - i * 90, approach);
-      if (x > -400 && x < 2400) Z.zombie(g, x, 975 - (i % 2) * 26, 0.9, t, { seed: i + G.k.length, dir: anim === 'hide' ? (fromLeft ? 1 : -1) : fromLeft ? 1 : -1, speed: 3 });
+    if (door) Pr.door(g, loc, 1620, G0, doorOpen, inConseq && !doorOpen ? Math.sin(t * 45) * 7 : v < actEnd ? Math.sin(t * 30) * 3 : 0);
+    if (a === 'run') Pr.exitSign(g, 1790, G0 - 420);
+    if (a === 'rest') { if (loc === 'hospital') L.forEach((P) => Pr.cover(g, loc, 'bed', P.x, P.y - 4, P.s)); else Pr.campfire(g, 960, G0 - 10, t); }
+    if (a === 'talk') { g.fillStyle = '#6a4a2e'; Z.rr(g, 900, G0 - 90, 120, 90, 8); g.fill(); Z.emoji(g, ppl.some((p) => p.used === '📻') ? '📻' : G.icon, 960, G0 - 130, 80); }
+    if (a === 'swim') Pr.water(g, G0 - 60, t);
+    // ----- zombies closing in -----
+    const zn = Math.max(2, Math.min(6, Math.ceil(G.total / 2) + 1));
+    for (let j = 0; j < zn; j++) {
+      const left = j % 2 === 0, near = clamp((v - 200) / (actEnd + CONSEQ - 200)), seed = j + G.k.length;
+      let x, y = G0 + 6 - (j % 3) * 14, dir = left ? 1 : -1;
+      if (a === 'run' || a === 'decoy') { x = lerp(-420 - j * 140, minX - 230 - j * 110 + (a === 'decoy' ? 220 : 0), easeOut(clamp((v - 500) / (actEnd + CONSEQ - 500)))); dir = 1; }
+      else if (a === 'sneak') { x = 620 + j * 280; y = G0 - 70; dir = inConseq && j === 1 ? -1 : 1; }
+      else if (a === 'hide') { x = lerp(2150 + j * 170, -400 + j * 170, clamp((v - actEnd + 300) / (CONSEQ + 2600))); dir = -1; y = G0 + 12; }
+      else if (a === 'fight') { x = lerp(2200 + j * 130, maxX + 230 + 60 * (L[0] ? L[0].s : 1) + j * 100, easeOut(near)); dir = -1; }
+      else if (door) { if (!doorOpen) continue; x = lerp(1760, maxX + 170 + j * 90, easeOut(clamp((v - actEnd - 700) / 700))); dir = -1; }
+      else { const gap = 250 + 110 * (L[0] ? L[0].s : 1); x = left ? lerp(-260 - j * 120, minX - gap - j * 90, easeOut(near)) : lerp(2180 + j * 120, maxX + gap + j * 90, easeOut(near)); }
+      if (x > -400 && x < 2400) Z.zombie(g, x, y, (a === 'sneak' ? 0.75 : 0.9) * (L[0] ? Math.max(0.7, L[0].s) : 1), t, { seed, dir, speed: 3 });
+      if (a === 'sneak' && inConseq && j === 1) Z.text(g, '?', x, y - 230, 70, '#ffd34a', { stroke: '#120d1c', lw: 10 });
     }
-    // the survivors (back rows first)
-    const order = ppl.map((p, i) => i).sort((a, b) => L[b].row - L[a].row);
+    if (door && !doorOpen) for (let k = 0; k < 3; k++) { g.save(); g.translate(1870, G0 - 300 + k * 90 + Math.sin(t * 6 + k) * 10); g.strokeStyle = '#9ccf7a'; g.lineWidth = 18; g.lineCap = 'round'; g.beginPath(); g.moveTo(60, 0); g.lineTo(-30 - Math.max(0, Math.sin(t * 5 + k)) * 40, 0); g.stroke(); g.restore(); }
+    // ----- cars for the drivers -----
+    const cars = a === 'drive' ? Math.ceil(ppl.length / 4) : 0, carX = [];
+    if (cars) {
+      const drive = clamp((u - lastAt - 1400) / 1800);
+      for (let c = 0; c < cars; c++) {
+        const cx0 = 960 + (c - (cars - 1) / 2) * 600, cx = lerp(-500, cx0, easeOut(clamp(v / (actEnd * 0.6)))) + drive * drive * 1600 + (inConseq && !drive ? Math.sin(t * 40 + c) * 5 : 0);
+        carX.push(cx);
+      }
+    }
+    // ----- the survivors -----
+    const order = L.map((P) => P.i);
+    const pos = [];
     for (const i of order) {
-      const p = ppl[i], P = L[i], rv = u - fateAt(G, i), F = rv >= 0 ? p.fate : null;
-      let x = P.x, y = P.y, pose = anim === 'decoy' ? 'run' : anim, lean = 0, alpha = 1, crouch = 0, dir = 1;
-      if (anim === 'run' || anim === 'decoy' || anim === 'sneak') x = lerp(-300 - i * 70, P.x * 0.8 + (anim === 'decoy' ? 330 : 180), easeOut(clamp(v / (anim === 'sneak' ? 1700 : 1200))));
-      if (anim === 'drive') x = lerp(-500, P.x, easeOut(clamp(v / 1300)));
-      if (anim === 'swim') { x = lerp(-200 - i * 60, P.x, easeOut(clamp(v / 1600))); y = 960 + Math.sin(t * 3 + i) * 6; }
-      if (anim === 'climb') y = lerp(P.y, 650, easeOut(clamp((v - 200) / 1300))) ;
-      if (anim === 'hold' && G.role === 'hold') { x = 1180 + (P.x - 900) * 0.35; dir = 1; } else if (anim === 'hold') pose = 'idle';
-      if (anim === 'run' && v > 1200 && v < 1500) pose = 'idle';
-      if (F === 'safe' && rv < 600) y -= Math.sin(clamp(rv / 600) * Math.PI) * 50 * P.s;
-      if (F === 'hurt' || F === 'bitten') x += Math.sin(t * 40) * 4 * clamp(1 - rv / 600);
-      let fallK = 0;
-      if (F === 'dead') { fallK = clamp((rv - 300) / 450); lean = -1.45 * back(fallK); alpha = 1 - clamp((rv - 900) / 600); }
-      if (anim === 'drive' && alpha > 0) { Z.emoji(g, p.avatar || '🙂', x, 850 + Math.sin(t * 8 + i) * 4, 70 * P.s, F === 'bitten' ? 'sick' : null); if (i === ppl.length - 1 || ppl.length > 6) A().car(g, x + 60, 985, 0.85, ['#c94a4a', '#3d6f8f', '#7a6a2a'][i % 3]); }
-      else if (alpha > 0) {
-        if (F === 'dead') { g.save(); g.translate(x, y); g.rotate(lean); g.translate(-x, -y); }
-        Z.survivor(g, x, y, P.s, t, { avatar: p.avatar, color: p.color, pose: F ? (F === 'safe' && anim !== 'swim' ? 'cheer' : pose === 'swim' ? 'swim' : 'idle') : pose, ph: i * 1.3, tint: F === 'bitten' ? 'sick' : null, crouch, alpha, dir, item: p.used || (anim === 'fight' && !F ? '👊' : null) });
-        if (F === 'dead') g.restore();
+      const p = ppl[i], P = L[i], rv = u - p.at, F = rv >= 0 ? p.fate : null, bad = F && F !== 'safe';
+      let x = P.x, y = P.y, pose = 'idle', dir = 1, crouch = 0, item = p.used || null, alpha = 1, lean = 0, hidden = false;
+      const walk = easeOut(clamp(v / (actEnd * 0.5)));
+      if (a === 'search') {
+        x = lerp(-220 - i * 90, P.x, walk); pose = walk < 1 ? 'run' : F ? (bad ? 'idle' : 'cheer') : 'search';
+      } else if (a === 'climb') {
+        const up = 0.72 * ease(clamp((v - 200) / (actEnd + CONSEQ - 200)));
+        y = lerp(P.y, ledge, up); pose = 'climb';
+        if (F === 'safe') { y = lerp(lerp(P.y, ledge, 0.72), ledge, easeOut(clamp(rv / 500))); pose = rv > 500 ? 'cheer' : 'climb'; }
+        else if (bad) { y = lerp(lerp(P.y, ledge, 0.72), P.y, clamp(rv / 380) ** 2); pose = 'idle'; }
+      } else if (a === 'run') { x = lerp(-300 - i * 80, P.x, easeOut(clamp(v / actEnd))); pose = v < actEnd ? 'run' : F === 'safe' ? 'cheer' : 'idle'; }
+      else if (a === 'decoy') { x = lerp(P.x - 520, P.x, easeOut(clamp(v / actEnd))); pose = v < actEnd + CONSEQ ? 'run' : F === 'safe' ? 'cheer' : 'idle'; }
+      else if (a === 'sneak') { x = lerp(-260 - i * 80, P.x, clamp(v / (actEnd + CONSEQ))); pose = F ? (F === 'safe' ? 'cheer' : 'idle') : 'sneak'; }
+      else if (a === 'hide') { x = lerp(-240 - i * 80, P.x, walk); pose = walk < 1 ? 'run' : F === 'safe' && rv > 200 ? 'cheer' : 'hide'; if (F === 'safe' && rv > 200) crouch = 0; }
+      else if (door) { x = lerp(-240 - i * 80, P.x, walk); pose = walk < 1 ? 'run' : doorOpen > 0.5 && !F ? 'idle' : F === 'safe' ? 'cheer' : 'hold'; lean = pose === 'hold' ? 0.05 : 0; }
+      else if (a === 'fight') { pose = F ? (F === 'safe' ? 'cheer' : 'idle') : inConseq ? 'fight' : 'idle'; item = p.used || (inConseq ? '👊' : null); }
+      else if (a === 'drive') {
+        const cx = carX[Math.floor(i / 4)], seat = i % 4;
+        x = lerp(-260 - i * 70, cx - 60 + seat * 40, walk); pose = 'run';
+        if (walk >= 1 && !bad) hidden = true; // inside the car
+        if (bad) { x = cx + (seat % 2 ? 260 : -260); pose = 'idle'; }
+        pos[i] = { x, y, hidden, cx, seat };
+      } else if (a === 'swim') { x = lerp(-240 - i * 70, P.x, easeOut(clamp(v / actEnd))); pose = 'swim'; y = P.y - 40 + Math.sin(t * 3 + i) * 6; }
+      else if (a === 'rest') { pose = F === 'safe' && rv > 300 ? 'cheer' : 'rest'; }
+      else if (a === 'talk') { pose = 'talk'; }
+      else { pose = 'idle'; item = item || (inConseq ? G.icon : null); }
+      // the verdict: a zombie lunges at the unlucky ones; the fallen topple and a ghost rises
+      if (bad && a !== 'drive') {
+        const side = x < 960 ? -1 : 1, zk = clamp(rv / 260), zx = x + side * (150 - 40 * zk) * P.s;
+        if (!(F === 'hurt' && rv > 1100)) Z.zombie(g, zx, y + 4, P.s * 0.95, t, { seed: i + 11, dir: -side, alpha: F === 'hurt' ? 1 - clamp((rv - 800) / 300) : zk });
+      }
+      if (F === 'dead') { const fk = clamp((rv - 350) / 450); lean = -1.45 * fk; alpha = 1 - clamp((rv - 1500) / 600); }
+      if (F === 'safe' && rv < 600 && a !== 'climb') y -= Math.sin(clamp(rv / 600) * Math.PI) * 46 * P.s;
+      if (rv > -120 && rv < 1400) Z.glow(g, x, y - 140 * P.s, 260 * P.s + 40, 'rgba(255,250,210,A)', 0.3 * (1 - clamp(rv / 1400)));
+      if (!hidden && alpha > 0) {
+        if (lean) { g.save(); g.translate(x, y); g.rotate(lean); g.translate(-x, -y); }
+        if (a === 'swim') { Z.emoji(g, p.avatar, x, y - 30 * P.s, 90 * P.s, F === 'bitten' ? 'sick' : null); g.strokeStyle = 'rgba(220,240,255,0.8)'; g.lineWidth = 5; g.beginPath(); g.ellipse(x, y + 8, 60 * P.s, 12, 0, 0, Math.PI * 2); g.stroke(); }
+        else Z.survivor(g, x, y, P.s, t, { avatar: p.avatar, color: p.color, pose, ph: i * 1.3, tint: F === 'bitten' ? 'sick' : null, crouch, alpha, dir, lean: 0, item: a === 'search' && F && p.got && !bad ? null : item });
+        if (lean) g.restore();
       }
       if (F === 'bitten') Z.glow(g, x, y - 120 * P.s, 110 * P.s, 'rgba(140,255,90,A)', 0.35);
-      // a ghost rises from the fallen
-      if (F === 'dead' && rv > 800) { const gk = clamp((rv - 800) / 1400); Z.ghost(g, x, y - 120 - gk * 260, P.s * 0.8, t, { avatar: p.avatar, alpha: 0.85 * (1 - clamp((rv - 2600) / 600)) }); }
-      // the stamp and name
-      if (F) {
-        const f = FATE[F], sk = back(clamp(rv / 260)), ty = anim === 'drive' ? 760 : y - 230 * P.s;
-        g.save(); g.translate(x, ty); g.scale(sk, sk); g.rotate(-0.06);
-        g.font = `${Math.round(30 * Math.max(0.8, P.s))}px ${A().FONT}`; const tw = g.measureText(f.word).width + 64;
-        g.fillStyle = 'rgba(14,8,24,0.88)'; A().rr(g, -tw / 2, -26, tw, 52, 26); g.fill(); g.strokeStyle = f.col; g.lineWidth = 4; g.stroke();
-        Z.emoji(g, f.icon, -tw / 2 + 26, 0, 30); Z.text(g, f.word, 14, 2, Math.round(30 * Math.max(0.8, P.s)), f.col);
-        g.restore();
-        if (p.got && F !== 'dead') { const gk = clamp((rv - 200) / 900); g.globalAlpha = 1 - clamp((rv - 1600) / 400); Z.text(g, '+', x - 34, ty - 60 - gk * 50, 44, '#fff', { stroke: '#120d1c', lw: 8 }); Z.emoji(g, p.got, x + 10, ty - 60 - gk * 50, 56); g.globalAlpha = 1; }
-      }
-      if ((ppl.length <= 6 || P.row === 0) && ppl.length <= 21 && alpha > 0.3 && anim !== 'drive') Z.text(g, p.name, x, (anim === 'swim' ? 1000 : y + 30), 26 * Math.max(0.8, P.s), '#fff', { font: A().BODY, stroke: '#120d1c', lw: 6, max: 230 });
-      if (p.froze && !F) Z.text(g, '❄️ froze!', x, y - 250 * P.s, 26, '#9fe8ff', { stroke: '#120d1c', lw: 6 });
+      if (F === 'dead' && rv > 900) { const gk = clamp((rv - 900) / 1500); Z.ghost(g, x, y - 140 - gk * 240, P.s * 0.8, t, { avatar: p.avatar, alpha: 0.85 * (1 - clamp((rv - 2600) / 700)) }); }
+      if (a === 'hide' && !(F === 'safe' && rv > 200)) Pr.cover(g, loc, null, P.x, P.y + 2, P.s * 1.05);
+      // pick-ups: the item lifts off the shelf into their hands
+      const icon = p.got || (a === 'search' ? gains[i % Math.max(1, gains.length)] : null);
+      if (a === 'search' && icon) {
+        const lift = F && p.got && !bad ? clamp(rv / 650) : 0, hx = x + 10, hy = y - 250 * P.s;
+        const sx = P.x + 95 * P.s + 20, ix = lerp(sx, hx, easeOut(lift)), iy = lerp(shelfY - 30, hy, easeOut(lift)) - Math.sin(lift * Math.PI) * 60;
+        if (!lift) Z.glow(g, sx, shelfY - 30, 70, 'rgba(255,240,150,A)', 0.35 + 0.15 * Math.sin(t * 5 + i));
+        Z.emoji(g, icon, ix, iy, 58 + 20 * lift);
+      } else if (p.got && F && !bad) { const gk = clamp((rv - 200) / 900); g.globalAlpha = 1 - clamp((rv - 2600) / 400); Z.text(g, '+', x - 34, y - 270 * P.s - gk * 40, 46, '#fff', { stroke: '#120d1c', lw: 8 }); Z.emoji(g, p.got, x + 12, y - 270 * P.s - gk * 40, 58); g.globalAlpha = 1; }
+      if (a === 'fight' && inConseq && !F) { const k2 = clamp((v - actEnd - i * 140) / 220); if (k2 > 0 && k2 < 1) Z.burst(g, x + 120 * P.s, y - 170 * P.s, 70, p.used === '🔫' ? 'BANG!' : 'POW!', '#ffd34a', '#120d1c', Z.util.back(k2)); }
+      if (a === 'decoy' && v > 200 && v < actEnd + CONSEQ) Z.emoji(g, G.icon, x + 110 * P.s + 30, y - 150 * P.s - Math.abs(Math.sin(t * 8 + i)) * 30, 70 + 30 * P.s);
+      if (a === 'decoy' && v > 200 && v < actEnd + CONSEQ) Z.text(g, '!!!', x + 60, y - 260 * P.s + Math.sin(t * 12 + i) * 6, 50, '#ff7ab8', { stroke: '#120d1c', lw: 8 });
+      if (a === 'rest' && !F) Z.text(g, 'z', x + 40 + Math.sin(t * 2 + i) * 10, y - 230 * P.s - ((t * 30 + i * 20) % 60), 40, '#c9d4ff', { stroke: '#120d1c', lw: 6 });
+      if (a === 'talk' && !F && Math.floor(t * 1.5 + i) % 2) { g.fillStyle = '#fff'; Z.rr(g, x - 40, y - 300 * P.s, 80, 46, 20); g.fill(); Z.text(g, '…', x, y - 280 * P.s, 36, '#120d1c'); }
+      if (p.froze && !F) Z.text(g, '❄️ froze!', x, y - 260 * P.s, 30, '#9fe8ff', { stroke: '#120d1c', lw: 6 });
+      if (!pos[i]) pos[i] = { x, y };
     }
-    // comic bursts in fights
-    if (anim === 'fight' && v > 800 && v < 1700) { const k = clamp((v - 800) / 200); A().burst(g, 1450, 760, 110, ppl.some((p) => p.used === '🔫') ? 'BANG!' : 'POW!', '#ffd34a', '#120d1c', A().util.back(k)); }
-    if (anim === 'decoy' && v > 300 && v < 2600) A().burst(g, lerp(500, 1600, clamp(v / 2600)), 640, 90, '!!!', '#ff7ab8', '#120d1c', 1);
-    if (anim === 'hide') for (let i = 0; i < ppl.length; i++) { const P = L[i], rv = u - fateAt(G, i); if (rv > 0) continue; const x = P.x; g.fillStyle = i % 2 ? '#6a4a2e' : '#2f5a32'; g.strokeStyle = '#120d1c'; g.lineWidth = 6; if (i % 2) { Z.rr(g, x - 95 * P.s, P.y - 120 * P.s, 190 * P.s, 124 * P.s, 8); g.fill(); g.stroke(); g.beginPath(); g.moveTo(x - 95 * P.s, P.y - 120 * P.s); g.lineTo(x + 95 * P.s, P.y); g.stroke(); } else { g.beginPath(); g.arc(x - 50 * P.s, P.y - 50 * P.s, 70 * P.s, 0, Math.PI * 2); g.arc(x + 50 * P.s, P.y - 60 * P.s, 76 * P.s, 0, Math.PI * 2); g.arc(x, P.y - 100 * P.s, 70 * P.s, 0, Math.PI * 2); g.fill(); } }
-    if (G.more) Z.text(g, `+${G.more} more`, 1780, 1000, 34, '#fff', { stroke: '#120d1c', lw: 8 });
+    // the cars over their passengers (heads in the windows)
+    const veh = VEHICLES.includes(G.icon) ? G.icon : null;
+    carX.forEach((cx, c) => {
+      if (veh) { g.save(); g.translate(cx, G0 - 120); g.scale(-1, 1); Z.emoji(g, veh, 0, 0, 260); g.restore(); ppl.forEach((p, i) => { if (Math.floor(i / 4) !== c || !pos[i] || !pos[i].hidden) return; Z.emoji(g, p.avatar, cx - 70 + (i % 4) * 46, G0 - 280 + Math.sin(t * 8 + i) * 3, 64, p.at <= u && p.fate === 'bitten' ? 'sick' : null); }); return; }
+      Z.car(g, cx, G0 - 10, 1.05, ['#c94a4a', '#3d6f8f', '#7a6a2a', '#5a7a4a'][c % 4]);
+      ppl.forEach((p, i) => { if (Math.floor(i / 4) !== c || !pos[i] || !pos[i].hidden) return; Z.emoji(g, p.avatar, cx - 30 + (i % 4) * 42, G0 - 125 + Math.sin(t * 8 + i) * 3, 52, p.at <= u && p.fate === 'bitten' ? 'sick' : null); });
+    });
+    // big verdict stamps (the newest one large, the rest as a small icon)
+    for (const i of order) {
+      const p = ppl[i], P = L[i], rv = u - p.at; if (rv < 0) continue;
+      const x = pos[i].hidden ? pos[i].cx - 30 + (i % 4) * 42 : pos[i].x, top = pos[i].hidden ? G0 - 200 : pos[i].y - 250 * P.s;
+      if (rv < 1500 && i === lastRevealed(ppl, u)) stamp(g, x, Math.max(V.top + 0.4 * (V.bottom - V.top), top - 60), p.fate, rv, Math.max(0.75, Math.min(1.1, P.s + 0.25)));
+      else if (p.fate !== 'dead') Z.emoji(g, VERDICT[p.fate].icon, x - 60 * P.s - 10, top + 30, 30 + 18 * P.s);
+    }
+    // name plates last, so nothing ever covers them; after the verdict they take its colour
+    for (const P of L) {
+      const p = ppl[P.i], F = u >= p.at ? p.fate : null, V2 = F && VERDICT[F];
+      const px = pos[P.i] && !pos[P.i].hidden && a !== 'climb' ? pos[P.i].x : P.x;
+      namePlate(g, p.name, { ...P, x: px }, { color: V2 ? V2.col : p.color, bg: V2 ? V2.bg : null, icon: V2 ? V2.icon : null });
+    }
+    if (G.more) A().plate(g, 1830, G0 - 80, `+${G.more} more`, { px: 28, color: '#9dff5a' });
   }
+  function lastRevealed(ppl, u) { let k = -1; ppl.forEach((p, i) => { if (u >= p.at) k = i; }); return k; }
   function drawFever(g, s, F, u, t) {
-    const Z = A(), { clamp, back } = Z.util, v = u - F.at, n = Math.min(F.people.length, 12), L = layout(n);
+    const Z = A(), { clamp } = Z.util, n = F.people.length, L = rowLayout(n);
     g.fillStyle = 'rgba(20,60,10,0.35)'; g.fillRect(-200, -200, 2400, 1500);
-    for (let i = 0; i < n; i++) {
-      const p = F.people[i], P = L[i], rv = v - OUT.reveal - i * 140, done = rv >= 0;
+    for (const P of L) {
+      const p = F.people[P.i], rv = u - p.at, done = rv >= 0;
       if (done && p.fate === 'turned') {
-        Z.zombie(g, P.x, P.y, P.s * 0.95, t, { seed: i + 7, dir: i % 2 ? -1 : 1 });
-        Z.emoji(g, p.avatar, P.x + 4 * P.s * (i % 2 ? -1 : 1), P.y - 188 * P.s, 74 * P.s, 'sick');
+        Z.zombie(g, P.x, P.y, P.s * 0.95, t, { seed: P.i + 7, dir: P.i % 2 ? -1 : 1 });
+        Z.emoji(g, p.avatar, P.x + 4 * P.s * (P.i % 2 ? -1 : 1), P.y - 188 * P.s, 74 * P.s, 'sick');
       } else {
-        Z.survivor(g, P.x, P.y + Math.sin(t * 20) * (done ? 0 : 2), P.s, t, { avatar: p.avatar, color: p.color, pose: done ? 'cheer' : 'idle', ph: i, tint: done ? null : 'sick' });
+        Z.survivor(g, P.x + (done ? 0 : Math.sin(t * 30 + P.i) * 3), P.y, P.s, t, { avatar: p.avatar, color: p.color, pose: done ? 'cheer' : 'idle', ph: P.i, tint: done ? null : 'sick' });
         if (!done) Z.glow(g, P.x, P.y - 130 * P.s, 120 * P.s, 'rgba(140,255,90,A)', 0.3 + 0.2 * Math.sin(t * 6));
-        if (done) { const k = clamp(rv / 700); Z.emoji(g, '🩹', P.x + 50, P.y - 200 * P.s - k * 40, 60); Z.glow(g, P.x, P.y - 120 * P.s, 160, 'rgba(255,255,200,A)', 0.4 * (1 - k)); }
+        else { const k = clamp(rv / 700); Z.emoji(g, '🩹', P.x + 50, P.y - 220 * P.s - k * 40, 64); Z.glow(g, P.x, P.y - 120 * P.s, 160, 'rgba(255,255,200,A)', 0.4 * (1 - k)); }
       }
-      if (done) { const f = FATE[p.fate === 'turned' ? 'turned' : 'cured'], sk = back(clamp(rv / 260)); g.save(); g.translate(P.x, P.y - 250 * P.s); g.scale(sk, sk); Z.text(g, `${f.icon} ${f.word}`, 0, 0, 36, f.col, { stroke: '#120d1c', lw: 8 }); g.restore(); }
-      Z.text(g, p.name, P.x, P.y + 32, 28, '#fff', { font: A().BODY, stroke: '#120d1c', lw: 6, max: 230 });
+      if (done && rv < 1600) stamp(g, P.x, P.y - 300 * P.s, p.fate === 'turned' ? 'turned' : 'cured', rv, Math.max(0.75, P.s + 0.2));
     }
+    for (const P of L) { const p = F.people[P.i], V2 = u >= p.at ? VERDICT[p.fate === 'turned' ? 'turned' : 'cured'] : null; namePlate(g, p.name, P, { color: V2 ? V2.col : '#c8ff5a', bg: V2 ? V2.bg : null, icon: V2 ? V2.icon : '🦷' }); }
+  }
+  function aliveAfter(O) {
+    const out = []; for (const G of O.groups) for (const p of G.people) if (p.fate !== 'dead') out.push({ ...p, status: p.fate === 'safe' ? 'ok' : p.fate });
+    if (O.fever) for (const p of O.fever.people) { const i = out.findIndex((x) => x.id === p.id); if (p.fate === 'turned' && i >= 0) out.splice(i, 1); }
+    return out;
   }
   function drawOutcome(g, s, t, u, loc) {
     const Z = A(), O = s.outcome, groups = O.groups;
-    const cur = groups.filter((G) => u >= G.at && u < G.at + OUT.group).pop();
-    const fever = O.fever && u >= O.fever.at && u < O.fever.at + OUT.fever ? O.fever : null;
-    const dark = cur || fever ? 0.35 : 0.5;
-    // a slow push in for each group
-    const seg = cur ? (u - cur.at) / OUT.group : 0, zoom = 1 + 0.05 * seg;
-    g.save(); g.translate(960, 600); g.scale(zoom, zoom); g.translate(-960, -600);
-    Z.backdrop(g, loc, t, { dark });
-    if (cur) drawGroup(g, s, cur, u, t);
+    const cur = groups.find((G) => u >= G.at && u < G.at + G.ms);
+    const fever = O.fever && u >= O.fever.at && u < O.endAt ? O.fever : null;
+    const seg = cur ? (u - cur.at) / cur.ms : 0, zoom = 1 + 0.035 * seg;
+    g.save(); g.translate(960, 640); g.scale(zoom, zoom); g.translate(-960, -640);
+    Z.backdrop(g, loc, t, { dark: cur || fever ? 0.3 : 0.55 });
+    if (cur) drawGroup(g, s, cur, u, t, loc);
     else if (fever) drawFever(g, s, fever, u, t);
-    else if (u < OUT.intro) { shamblers(g, t, 7, 970, 0.85); Z.fog(g, t, 0.25); }
-    else drawSummary(g, s, t, u);
+    else if (u < O.recapMs) { shamblers(g, t, 5, 860, 0.6, { alpha: 0.8 }); Z.fog(g, t, 0.25); }
+    else drawTally(g, s, t, u);
     g.restore();
-    // sound + voice cues on the timeline
-    cue('intro', 0, u, () => { BOX.sfx('groan'); if (O.groupLine) say(s, O.groupLine, 2300); });
+    // sound + narration on each beat
+    cue('recap', 0, u, () => { BOX.sfx('groan'); say(s, 'Here’s what everyone chose. ' + O.recap, O.recapMs); });
     groups.forEach((G, gi) => {
-      cue('g' + gi, G.at, u, () => { BOX.sfx(ANIM_SFX[G.anim] || 'whoosh'); if (G.people.some((p) => p.used === '🔫')) setTimeout(() => BOX.sfx('shot'), 900); });
-      cue('r' + gi, G.at + OUT.reveal, u, () => {
-        const c = G.counts; BOX.sfx(c.dead ? 'fall' : c.bitten ? 'groan' : c.hurt ? 'hit' : 'saved');
-        if (c.dead) setTimeout(() => BOX.sfx('spirit'), 900);
-        say(s, G.line, OUT.group - OUT.reveal + 400);
+      const actEnd = G.verdictAt - CONSEQ;
+      cue('g' + gi, G.at, u, () => { BOX.sfx(ANIM_SFX[G.anim] || 'whoosh'); say(s, G.setup + '…', actEnd - G.at); });
+      cue('c' + gi, actEnd, u, () => {
+        if (G.role === 'hold' && G.anim === 'hold') BOX.sfx(O.groupOk === false ? 'shatter' : 'knock'); else BOX.sfx('groan');
+        if (G.people.some((p) => p.used === '🔫')) BOX.sfx('shot');
       });
+      cue('v' + gi, G.verdictAt, u, () => say(s, G.line, G.at + G.ms - G.verdictAt));
+      G.people.forEach((p, i) => cue(`p${gi}-${i}`, p.at, u, () => {
+        if (G.per < 450 && p.fate === 'safe') return;
+        BOX.sfx({ safe: 'pop', hurt: 'hit', bitten: 'groan', dead: 'fall' }[p.fate] || 'pop');
+        if (p.fate === 'dead') setTimeout(() => BOX.sfx('spirit'), 900);
+      }));
     });
-    if (O.fever) { cue('fv', O.fever.at, u, () => { BOX.sfx('heartbeat'); say(s, O.fever.line, OUT.fever); }); cue('fv2', O.fever.at + OUT.reveal, u, () => BOX.sfx(O.fever.people.some((p) => p.fate === 'turned') ? 'groan' : 'shield')); }
-    cue('end', O.endAt, u, () => BOX.sfx(O.final ? 'win' : 'reveal'));
-    if (O.final) cue('chop', O.endAt, u, () => setTimeout(() => BOX.sfx('whoosh'), 300));
+    if (O.fever) {
+      cue('fv', O.fever.at, u, () => { BOX.sfx('heartbeat'); say(s, O.fever.line, O.endAt - O.fever.at); });
+      O.fever.people.forEach((p, i) => cue('fp' + i, p.at, u, () => BOX.sfx(p.fate === 'turned' ? 'groan' : 'shield')));
+    }
+    cue('end', O.endAt, u, () => { BOX.sfx(O.final ? 'win' : 'reveal'); say(s, O.final ? `${O.tally.made} survivors made the last flight!` : `${O.tally.made} still standing${O.tally.fell ? `, ${O.tally.fell} fell` : ''}.`, 4000); });
   }
-  function drawSummary(g, s, t, u) {
-    const Z = A(), O = s.outcome, v = u - O.endAt;
-    const alive = []; for (const G of O.groups) for (const p of G.people) if (p.fate !== 'dead') alive.push(p);
-    if (O.fever) for (const p of O.fever.people) { const i = alive.findIndex((x) => x.id === p.id); if (p.fate === 'turned' && i >= 0) alive.splice(i, 1); }
+  function drawTally(g, s, t, u) {
+    const Z = A(), O = s.outcome, v = u - O.endAt, alive = aliveAfter(O);
     if (O.final) {
-      // the chopper lifts everyone out
-      const k = Z.util.clamp(v / 4200), x = 960 + k * 1400 - 200, y = 330 - k * 260;
+      const k = Z.util.clamp(v / 4500), x = 960 + k * 1500 - 200, y = 330 - k * 260;
       Z.chopper(g, x, y, 0.85, t, { faces: alive.map((p) => p.avatar), ladder: 200 * (1 - k), light: true, lightX: -100 });
-      crowd(g, alive.slice(0, Math.max(0, Math.round(alive.length * (1 - k * 1.6)))), t, { y: 980, pose: 'cheer' });
+      crowd(g, alive.slice(0, Math.max(0, Math.round(alive.length * (1 - k * 1.6)))), t, { pose: 'cheer', names: false });
       return;
     }
-    crowd(g, alive, t, { y: 960, pose: 'idle', names: alive.length <= 12 });
-    shamblers(g, t, 3, 860, 0.5, { alpha: 0.6 });
+    crowd(g, alive, t, { pose: 'idle', names: false });
+    shamblers(g, t, 3, 800, 0.5, { alpha: 0.6 });
   }
   function drawOver(g, s, t, u) {
     const Z = A(), E = s.epilogue || { rescued: [], wipe: true };
-    if (E.wipe) { Z.backdrop(g, 'streets', t, { dark: 0.6 }); shamblers(g, t, 9, 1030, 0.9); Z.fog(g, t, 0.3); return; }
+    if (E.wipe) { Z.backdrop(g, 'streets', t, { dark: 0.6 }); shamblers(g, t, 9, 1000, 0.9); Z.fog(g, t, 0.3); return; }
     Z.backdrop(g, 'rescue', t, { dark: 0.15 });
     const k = ((u / 1000) % 14) / 14, x = -400 + k * 2800, y = 260 + Math.sin(t * 0.8) * 20;
     Z.chopper(g, x, y, 0.7, t, { faces: E.rescued.map((p) => p.avatar), tilt: -0.08 });
@@ -300,6 +397,8 @@
   function topBar(s, right = '') {
     return `<div class="zs-top"><span class="zs-day">DAY ${s.chapter.day}</span><span class="zs-loc">${esc(s.chapter.name)}</span><span class="zs-n">Scene ${s.n} of ${s.total}</span><span class="zs-sp"></span>${right}<span class="zs-pop">🧍 ${s.alive}${s.ghosts || s.dead ? ` · 👻 ${s.dead}` : ''}</span></div>`;
   }
+  const chip = (p) => `<span class="zs-nchip" style="--c:${esc(p.color || '#9dff5a')}"><i>${esc(p.avatar || '🙂')}</i>${esc(p.name)}</span>`;
+  const chips = (list, more = 0, cap = 12) => list.slice(0, cap).map(chip).join('') + (list.length > cap || more ? `<span class="zs-nchip more">+${list.length - cap > 0 ? list.length - cap + more : more} more</span>` : '');
   function hud(s, u) {
     if (s.phase === 'chapter') {
       return `<div class="zs-chapter" id="zsc-${s.chapter.day}"><div class="zs-cday">DAY ${s.chapter.day}</div><div class="zs-cname">${esc(s.chapter.name)}</div><div class="zs-cline">${esc(s.chapter.line)}</div>${s.chapter.last ? '<div class="zs-clast">🚁 THE LAST NIGHT 🚁</div>' : ''}</div>`;
@@ -314,22 +413,29 @@
           ${s.gifts && s.gifts.length ? `<div class="zs-gifts">${s.gifts.map((x) => `<span>🎁 ${esc(x.from)} gave ${x.item} to ${esc(x.to)}</span>`).join('')}</div>` : ''}</div>`;
     }
     if (s.phase === 'outcome' && s.outcome) {
-      const O = s.outcome, cur = O.groups.filter((G) => u >= G.at && u < G.at + OUT.group).pop();
-      const fever = O.fever && u >= O.fever.at && u < O.fever.at + OUT.fever;
-      let mid = '', sub = '';
-      if (u < OUT.intro) mid = `<div class="zs-big" id="zsb-i-${s.n}">${O.groupLine ? `<span class="${O.groupOk === false ? 'bad' : 'good'}">${esc(O.groupLine)}</span>` : `<span>${esc(s.scene ? s.scene.title : '')}…</span><small>Let’s see what happened.</small>`}</div>`;
-      else if (cur) {
-        const i = O.groups.indexOf(cur);
-        mid = `<div class="zs-banner" id="zsb-${s.n}-${i}"><span class="zs-bi">${cur.icon}</span><b>${esc(cur.label)}</b><small>${plural(cur.total, 'survivor')}</small></div>`;
-        if (u >= cur.at + OUT.reveal) sub = `<div class="zs-sub" id="zss-${s.n}-${i}">${esc(cur.line)}</div>`;
+      const O = s.outcome, cur = O.groups.find((G) => u >= G.at && u < G.at + G.ms);
+      const fever = O.fever && u >= O.fever.at && u < O.endAt;
+      let mid = '';
+      if (u < O.recapMs) {
+        mid = `<div class="zs-recap" id="zsr-${s.n}"><h2>${esc(O.title || '')}: what everyone chose</h2><div class="zs-rgrid n${Math.min(5, O.groups.length)}">${O.groups.map((G, i) => `<div class="zs-rcard" style="--d:${0.2 + i * 0.35}s"><div class="zs-rh"><span>${G.icon}</span><b>${esc(G.label)}</b><small>${G.total}</small></div><div class="zs-rnames">${chips(G.people, G.more, 10)}</div></div>`).join('')}</div></div>`;
+      } else if (cur) {
+        const i = O.groups.indexOf(cur), actEnd = cur.verdictAt - CONSEQ, k = lastRevealed(cur.people, u), last = cur.people[cur.people.length - 1];
+        let beat;
+        if (u < actEnd) beat = `<div class="zs-beat" id="zsbt-${s.n}-${i}-a">▶ ${esc(cur.setup)}…</div>`;
+        else if (u < cur.verdictAt) beat = `<div class="zs-beat warn" id="zsbt-${s.n}-${i}-c">${cur.role && O.groupLine ? `<b class="${O.groupOk === false ? 'bad' : 'good'}">${esc(O.groupLine)}</b>` : '🧟 Here they come…'}</div>`;
+        else if (last && u < last.at + 1300 && k >= 0) { const p = cur.people[k], V2 = VERDICT[p.fate]; beat = `<div class="zs-beat verdict" id="zsbt-${s.n}-${i}-v${k}" style="--c:${V2.col}">${V2.icon} <b>${esc(p.name)}</b> ${V2.say}</div>`; }
+        else beat = `<div class="zs-beat line" id="zsbt-${s.n}-${i}-l">${esc(cur.line)}</div>`;
+        mid = `<div class="zs-banner" id="zsb-${s.n}-${i}"><span class="zs-bi">${cur.icon}</span><b>${esc(cur.label)}</b><small>${plural(cur.total, 'survivor')} · ${i + 1} of ${O.groups.length}</small></div>${beat}`;
       } else if (fever) {
-        mid = `<div class="zs-banner fever" id="zsb-${s.n}-f"><span class="zs-bi">🌡️</span><b>The fever</b><small>bites from last time</small></div>`;
-        if (u >= O.fever.at + OUT.reveal) sub = `<div class="zs-sub" id="zss-${s.n}-f">${esc(O.fever.line)}</div>`;
+        const F = O.fever, k = lastRevealed(F.people, u);
+        mid = `<div class="zs-banner fever" id="zsb-${s.n}-f"><span class="zs-bi">🌡️</span><b>The fever</b><small>bites from the last scene</small></div>${k >= 0 ? `<div class="zs-beat verdict" id="zsbt-${s.n}-f${k}" style="--c:${F.people[k].fate === 'turned' ? '#ff6b6b' : '#7dff8a'}">${F.people[k].fate === 'turned' ? '🧟' : '🩹'} <b>${esc(F.people[k].name)}</b> ${F.people[k].fate === 'turned' ? 'turned!' : 'is cured!'}</div>` : `<div class="zs-beat" id="zsbt-${s.n}-f">🦷 No medkit by now means trouble…</div>`}`;
       } else {
-        const tl = O.tally;
-        mid = `<div class="zs-tally" id="zst-${s.n}">${O.final ? `<div class="zs-rescued">🚁 ${plural(tl.made, 'survivor')} made the last flight!</div>` : ''}<span class="ok">✅ ${tl.made} still standing</span>${tl.hurt ? `<span class="hu">🤕 ${tl.hurt} hurt</span>` : ''}${tl.bitten ? `<span class="bi">🦷 ${tl.bitten} bitten</span>` : ''}${tl.fell ? `<span class="de">💀 ${tl.fell} fell</span>` : ''}</div>`;
+        const tl = O.tally, Ls = tl.lists || {};
+        const col = (cls, icon, title, list, n) => (n ? `<div class="zs-tcol ${cls}"><h3>${icon} ${title} <b>${n}</b></h3><div class="zs-tnames">${chips(list, Math.max(0, n - list.length), 14)}</div></div>` : '');
+        mid = `<div class="zs-tally2" id="zst-${s.n}">${O.final ? `<div class="zs-rescued">🚁 ${plural(tl.made, 'survivor')} made the last flight!</div>` : `<h2>End of the scene · ${tl.made} still standing</h2>`}
+          <div class="zs-tcols">${col('ok', '✅', 'Made it', Ls.ok || [], tl.made - tl.hurt - tl.bitten)}${col('hu', '🤕', 'Hurt', Ls.hurt || [], tl.hurt)}${col('bi', '🦷', 'Bitten', Ls.bitten || [], tl.bitten)}${col('de', '💀', 'Fell', Ls.fell || [], tl.fell)}</div></div>`;
       }
-      return `${topBar(s)}${mid}${sub}`;
+      return `${topBar(s)}${mid}`;
     }
     if (s.phase === 'board') {
       return `${topBar(s, `<span class="zs-clock">Next scene ${timer('b' + s.n, s.endsIn)}</span>`)}

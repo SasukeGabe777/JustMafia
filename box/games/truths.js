@@ -211,6 +211,6 @@ class Truths {
 }
 
 module.exports = {
-  key: 'truths', name: 'Two Truths & a Lie', min: 3, fields, defaults,
+  key: 'truths', name: 'Two Truths & a Lie', min: 3, best: [4, 10], fields, defaults,
   create: (room, settings) => new Truths(room, settings),
 };

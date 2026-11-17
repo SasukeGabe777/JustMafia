@@ -581,7 +581,7 @@ class Bid {
 }
 
 module.exports = {
-  key: 'bid', name: 'JustBid', min: 1, fields, defaults, show: true, // game-show opening (box/show.js)
+  key: 'bid', name: 'JustBid', min: 1, best: [3, 10], howSteps: 6, fields, defaults, show: true, // game-show opening (box/show.js)
   create: (room, settings) => new Bid(room, settings),
   sealedPrice, fmt, ADDS, MIN_INC,
 };

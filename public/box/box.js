@@ -48,5 +48,8 @@ window.BOX = (function () {
     if (a.tagName === 'INPUT' && !focused) { if (a.type === 'checkbox' || a.type === 'radio') a.checked = b.hasAttribute('checked'); else if (a.value !== (b.getAttribute('value') || '')) a.value = b.getAttribute('value') || ''; }
     if (a.tagName === 'SELECT' && !focused) { const o = b.querySelector('option[selected]'); a.value = o ? o.getAttribute('value') : (a.options[0] ? a.options[0].value : ''); }
   }
-  return { games: {}, esc, card, timer, mmss, board, sfx, morph, ICON };
+  // JustMafia is not a box game (its own pages at /mafia), but a box room can switch to it:
+  // the room hands everyone over and gets the result back (box/index.js EXTERNAL).
+  const games = { mafia: { name: 'JustMafia', icon: '🔪', external: true, href: '/mafia', about: 'Find the killers before they find you. A big-screen murder mystery.', how: ['Everyone gets a secret role on their phone.', 'At night the Mafia picks a victim; by day the town votes someone out.', 'The town wins when the Mafia is gone; the Mafia wins when they match the town.'] } };
+  return { games, esc, card, timer, mmss, board, sfx, morph, ICON };
 })();

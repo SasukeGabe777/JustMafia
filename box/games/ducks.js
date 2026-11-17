@@ -792,7 +792,7 @@ class Ducks {
 }
 
 module.exports = {
-  key: 'ducks', name: 'JustRaiseDucks', min: 1, fields, defaults, liveLobby: true,
+  key: 'ducks', name: 'JustRaiseDucks', min: 1, best: [2, 12], fields, defaults, liveLobby: true,
   create: (room, settings) => new Ducks(room, settings),
   _test: { level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, DIFF, PERKS, SPIN, HYPE_MS, CHEER_GAP },
 };

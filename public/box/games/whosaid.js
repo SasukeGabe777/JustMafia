@@ -225,6 +225,8 @@
   }
 
   BOX.games.whosaid = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ custom: 'think', answer: 'think', spot: 'play', reveal: 'reveal', wall: 'reveal', over: 'finale' }[s.phase] || 'play'),
     name: 'Who Said It?', icon: '🗣️',
     about: 'Everyone answers a question anonymously. Then guess who wrote each answer. How well do you really know each other?',
     how: [

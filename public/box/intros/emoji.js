@@ -171,6 +171,14 @@
   }
   BOX.intros.emoji = {
     title: 'Emoji Charades',
+    // How to play (box/howto.js): one card per step, 5 steps (module howSteps).
+    tutorial: [
+      { icon: '🎬', title: 'The Clue Giver', text: 'Each round a Clue Giver secretly picks a movie, animal, food, place or saying from three choices.', phone: 'Clue Giver? Tap one of the three answers.' },
+      { icon: '😀', title: 'Emojis only', text: 'They spell it out using ONLY emojis. Each one pops up on the big screen.', phone: 'Tap emojis to add them. ⌫ Undo takes one back, │ New word starts the next word.' },
+      { icon: '⌨️', title: 'Guess it', text: 'Everyone else races to type the answer. Guess as often as you like: small typos are fine!', phone: 'Type your guess and tap Send ➤.' },
+      { icon: '⭐', title: 'Scoring', text: 'The first right answer scores 500, then less. Fewer emojis means bigger points. The Clue Giver scores when people get it.' },
+      { icon: '🏆', title: 'Hints & winning', text: 'Stuck? Hints show the words, then the first letters. The last round counts DOUBLE. Most points wins!' },
+    ],
     theme: { accent: '#ff4f9a', accent2: '#ffe14d', accent3: '#ffe14d', ink: '#ffffff', fade: '#2a0a55', rim: '#ffe14d',
       confetti: ['#ffe14d', '#ff4f9a', '#3ee0ff', '#7dff6b', '#ffffff', '#a46bff'], spots: ['255,250,210', '255,200,240', '200,240,255', '255,250,210'] },
     host: {

@@ -1272,7 +1272,7 @@ class Kingdoms {
 }
 
 module.exports = {
-  key: 'kingdoms', name: 'JustKingdoms', min: 1, liveLobby: true, fields, defaults,
+  key: 'kingdoms', name: 'JustKingdoms', min: 1, best: [5, 10], liveLobby: true, fields, defaults,
   create: (room, settings) => new Kingdoms(room, settings),
   _test: { Kingdoms, D, M, AI, SPEED, sumU, fightersOf },
 };

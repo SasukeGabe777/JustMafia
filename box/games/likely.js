@@ -448,7 +448,7 @@ class Likely {
 }
 
 module.exports = {
-  key: 'likely', name: 'Most Likely To…', min: 3, fields, defaults,
+  key: 'likely', name: 'Most Likely To…', min: 3, best: [6, 20], fields, defaults,
   create: (room, settings) => new Likely(room, settings),
   _test: { PACKS, kindOf, MATCH, PREDICT },
 };

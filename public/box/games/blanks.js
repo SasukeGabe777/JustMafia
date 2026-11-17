@@ -216,6 +216,8 @@
   }
 
   BOX.games.blanks = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ pick: 'think', reveal: 'play', choose: 'think', win: 'reveal', over: 'finale' }[s.phase] || 'play'),
     name: 'JustBlanks', icon: '🃏',
     about: 'Fill in the blank with the funniest card in your hand (or write your own). Anonymous answers, one winner a round.',
     how: [

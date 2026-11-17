@@ -345,7 +345,7 @@ class Blackjack {
 }
 
 module.exports = {
-  key: 'blackjack', name: 'Blackjack Night', min: 1, fields, defaults,
+  key: 'blackjack', name: 'Blackjack Night', min: 1, best: [2, 12], howSteps: 6, fields, defaults,
   create: (room, settings) => new Blackjack(room, settings),
   _test: { total, isBJ, MIN_BET, BUST_STAKE, BUST_PAYS, EVENTS },
 };

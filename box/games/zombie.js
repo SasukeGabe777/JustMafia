@@ -21,7 +21,7 @@ const { ITEMS, CHAPTERS, SCENARIOS, BITE_LINES } = require('./zombie-story');
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
-  { key: 'length', label: 'Story length', options: opt([['short', 'Short (~10 min)'], ['normal', 'Normal (~15 min)'], ['long', 'Long (~20 min)']]) },
+  { key: 'length', label: 'Story length', options: opt([['short', 'Short (~12 min)'], ['normal', 'Normal (~20 min)'], ['long', 'Long (~25 min)']]) },
   { key: 'difficulty', label: 'Difficulty', options: opt([['forgiving', 'Forgiving'], ['normal', 'Normal'], ['brutal', 'Brutal']]) },
   { key: 'timer', label: 'Time to choose', options: opt([[20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds']]) },
   { key: 'ghosts', label: 'Ghosts', options: opt([[true, 'On: the dead haunt the living'], [false, 'Off: the dead just watch']]) },
@@ -32,12 +32,15 @@ const defaults = { length: 'normal', difficulty: 'normal', timer: 30, ghosts: tr
 const PER_CHAPTER = { short: 2, normal: 3, long: 4 };
 const RESCUE_PRE = { short: 0, normal: 1, long: 1 };
 const DIFF = { forgiving: 0.5, normal: 0.78, brutal: 1.12 };
-const CHAPTER_MS = 6500, READ_MS = 4000, BOARD_MS = 6500, ALLIN_MS = 3500;
-const OUT_INTRO = 2400, GROUP_MS = 3600, FEVER_MS = 3400, OUT_END = 3000, REVEAL_IN = 1500;
+const CHAPTER_MS = 8000, READ_MS = 4000, BOARD_MS = 5500, ALLIN_MS = 3500;
+// Outcome beats (ms): see buildOutcome.
+const RECAP_BASE = 3600, RECAP_PER = 900, RECAP_MAX = 8000, ACT_MS = 2400, CONSEQ_MS = 1500, TAIL_MS = 1500;
+const FEV_IN = 1800, FEV_PER = 900, TALLY_MS = 6000, FINAL_MS = 5000, MIN_OUT = 14000;
+const perOf = (n) => (n <= 4 ? 1000 : Math.max(250, Math.round(4000 / n))); // one verdict stamp at a time
 const SURVIVE = 100, RESCUE = 500, GIFT = 20, SAVE = 30, BLESS = 30, CURSE = 50;
 const CAP = 4; // backpack slots
 const MIN_GROUP = 4; // fewer players than this: AI survivors join
-const SHOW = 30; // people per group in the TV payload
+const SHOW = 16; // people per group acted out on the TV (the rest are counted)
 const NPCS = [['Granny Mae', '👵'], ['Coach Duffy', '🧔'], ['Chef Rosa', '👩‍🍳'], ['Dusty', '🤠'], ['Nurse Ivy', '👩‍⚕️'], ['Skater Leo', '🛹']];
 const NPC_COLORS = ['#c9a36b', '#8fb3a0', '#d98a6c', '#a3a0d9'];
 const SC = new Map(SCENARIOS.map((s) => [s.id, s]));
@@ -386,36 +389,54 @@ class Zombie {
     return `${ns.slice(0, 2).join(', ')} and ${ns.length - 2} others`;
   }
   buildOutcome(r, fates, fever, groupLine, groupOk, count) {
+    // The outcome plays in beats, so a first-time viewer can follow who did what:
+    //  recap (what everyone chose) → each group in turn: ACT (they do it), CONSEQ (zombies arrive,
+    //  the door holds or breaks), then one verdict stamp per person → the bites resolving → a calm tally.
     const sc = r.sc, groups = [];
     const order = { safe: 0, hurt: 1, bitten: 2, dead: 3 };
     for (const o of sc.options) {
       const fs = [...fates.values()].filter((f) => f.o.k === o.k);
       if (!fs.length) continue;
-      fs.sort((a, b) => order[a.fate] - order[b.fate] || (a.x.npc ? 1 : 0) - (b.x.npc ? 1 : 0));
+      fs.sort((a, b) => (a.x.npc ? 1 : 0) - (b.x.npc ? 1 : 0) || order[a.fate] - order[b.fate]);
       const clean = fs.filter((f) => f.fate === 'safe'), hit = fs.filter((f) => f.fate !== 'safe');
       const parts = [];
       if (clean.length) parts.push(`${this.names(clean)} ${o.ok}.`);
       if (hit.length) parts.push(`${this.names(hit)} ${o.bad}.`);
       const c = { safe: clean.length, hurt: 0, bitten: 0, dead: 0 }; for (const f of hit) c[f.fate]++;
-      groups.push({ k: o.k, icon: o.icon, label: o.label, anim: o.anim, role: o.role || null, line: parts.join(' '), counts: c, total: fs.length,
-        people: fs.slice(0, SHOW).map((f) => ({ ...this.pub(f.x), fate: f.fate, got: f.got ? ITEMS[f.got].icon : null, used: f.used ? ITEMS[f.used].icon : null, froze: r.froze.has(f.x.id), lucky: !!f.lucky, healed: f.healed, cured: f.cured })),
+      groups.push({ k: o.k, icon: o.icon, label: o.label, anim: o.anim, role: o.role || null, need: o.need ? ITEMS[o.need].icon : null,
+        gain: o.gain ? [].concat(o.gain).map((k) => ITEMS[k].icon).join('') : '', line: parts.join(' '), counts: c, total: fs.length,
+        setup: `${this.names(fs)}: ${o.label.charAt(0).toLowerCase() + o.label.slice(1)}`, fs,
+        people: fs.slice(0, SHOW).map((f) => ({ ...this.pub(f.x), fate: f.fate, got: f.got ? ITEMS[f.got].icon : null, used: f.used ? ITEMS[f.used].icon : null, froze: r.froze.has(f.x.id), lucky: !!f.lucky, healed: f.healed, cured: f.cured, fi: fs.indexOf(f) })),
         more: Math.max(0, fs.length - SHOW), sev: c.dead * 3 + c.bitten * 2 + c.hurt });
     }
     groups.sort((a, b) => a.sev - b.sev); // the worst news last
-    let t = OUT_INTRO;
-    for (const g of groups) { g.at = t; t += GROUP_MS; }
+    const recapMs = Math.min(RECAP_MAX, RECAP_BASE + RECAP_PER * groups.length);
+    let t = recapMs;
+    for (const g of groups) {
+      const shown = Math.min(g.total, SHOW), per = perOf(shown);
+      g.at = t; g.verdictAt = t + ACT_MS + CONSEQ_MS; g.per = per; g.ms = ACT_MS + CONSEQ_MS + shown * per + TAIL_MS;
+      g.fs.forEach((f, i) => { f.revealAt = g.verdictAt + Math.min(i, shown) * per; });
+      g.people.forEach((p, i) => { p.at = g.verdictAt + i * per; delete p.fi; });
+      delete g.fs; t += g.ms;
+    }
     let feverOut = null;
     if (fever.length) {
-      feverOut = { at: t, line: BITE_LINES[r.n % BITE_LINES.length] + ' ' + [
+      const shown = Math.min(fever.length, SHOW);
+      fever.forEach((v, i) => { v.revealAt = t + FEV_IN + Math.min(i, shown) * FEV_PER; });
+      feverOut = { at: t, per: FEV_PER, revealIn: FEV_IN, line: BITE_LINES[r.n % BITE_LINES.length] + ' ' + [
         fever.filter((v) => v.fate === 'cured').length ? `${this.names(fever.filter((v) => v.fate === 'cured').map((v) => v.f))} patched up the bite just in time.` : '',
         fever.filter((v) => v.fate === 'turned').length ? `${this.names(fever.filter((v) => v.fate === 'turned').map((v) => v.f))} turned. Groan.` : '',
-      ].filter(Boolean).join(' '), people: fever.slice(0, SHOW).map((v) => ({ ...this.pub(v.f.x), fate: v.fate })) };
-      t += FEVER_MS;
+      ].filter(Boolean).join(' '), people: fever.slice(0, SHOW).map((v) => ({ ...this.pub(v.f.x), fate: v.fate, at: v.revealAt })) };
+      t += FEV_IN + shown * FEV_PER + TAIL_MS;
     }
-    const all = [...fates.values()];
-    const tally = { made: all.filter((f) => f.x.alive).length, bitten: all.filter((f) => f.x.alive && f.x.status === 'bitten').length, hurt: all.filter((f) => f.x.alive && f.x.status === 'hurt').length, fell: all.filter((f) => !f.x.alive).length };
-    const ms = t + OUT_END + (sc.final ? 3000 : 0);
-    return { n: r.n, ms, final: !!sc.final, groupLine, groupOk, groups, fever: feverOut, tally, endAt: t, picks: Object.fromEntries(count) };
+    const all = [...fates.values()], list = (fn) => all.filter(fn).slice(0, 40).map((f) => this.pub(f.x));
+    const tally = {
+      made: all.filter((f) => f.x.alive).length, bitten: all.filter((f) => f.x.alive && f.x.status === 'bitten').length, hurt: all.filter((f) => f.x.alive && f.x.status === 'hurt').length, fell: all.filter((f) => !f.x.alive).length,
+      lists: { ok: list((f) => f.x.alive && f.x.status === 'ok'), hurt: list((f) => f.x.alive && f.x.status === 'hurt'), bitten: list((f) => f.x.alive && f.x.status === 'bitten'), fell: list((f) => !f.x.alive) },
+    };
+    const ms = Math.max(MIN_OUT, t + TALLY_MS + (sc.final ? FINAL_MS : 0));
+    const recap = groups.map((g) => g.setup).join('. ') + '.';
+    return { n: r.n, ms, final: !!sc.final, title: sc.title, groupLine, groupOk, groups, fever: feverOut, tally, endAt: t, recapMs, recap, picks: Object.fromEntries(count) };
   }
   finish() {
     if (this.phase === 'over') return;
@@ -532,7 +553,7 @@ class Zombie {
       if (f) {
         const g = r.outcome.groups.find((y) => y.k === f.o.k), fev = r.outcome.fever && r.outcome.fever.people.find((y) => y.id === x.id);
         out.mine = { fate: !x.alive && fev ? 'turned' : f.fate, cured: f.cured || !!(fev && fev.fate === 'cured'), healed: f.healed, label: f.o.label, icon: f.o.icon, line: g ? g.line : '', got: f.got ? ITEMS[f.got].icon + ' ' + ITEMS[f.got].name : null, dropped: f.dropped ? ITEMS[f.dropped].icon + ' ' + ITEMS[f.dropped].name : null, used: f.used ? ITEMS[f.used].icon : null, froze: r.froze.has(x.id), lucky: !!f.lucky,
-          at: (g ? g.at : 0) + REVEAL_IN, feverAt: fev ? r.outcome.fever.at + REVEAL_IN : null, ms: r.outcome.ms, alive: x.alive };
+          at: f.revealAt || 0, feverAt: fev ? fev.at : null, ms: r.outcome.ms, alive: x.alive };
       }
       const h = r.haunts.get(x.id);
       if (h) out.myHaunt = { to: this.name(this.ppl.get(h.to)), mode: h.mode, hit: !!h.hit, pts: h.hit ? (h.mode === 'bless' ? BLESS : CURSE) : 0, at: r.outcome.endAt };
@@ -547,7 +568,7 @@ class Zombie {
 }
 
 module.exports = {
-  key: 'zombie', name: 'Zombie Survival', min: 1, fields, defaults,
+  key: 'zombie', name: 'Zombie Survival', min: 1, best: [4, 16], howSteps: 6, fields, defaults,
   locked: { how: 'Finish a Party Mode to unlock it.' },
   create: (room, settings) => new Zombie(room, settings),
   _test: { ITEMS, CHAPTERS, SCENARIOS, DIFF, PER_CHAPTER },

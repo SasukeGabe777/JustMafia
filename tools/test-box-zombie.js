@@ -257,6 +257,31 @@ test('Screens: TV state is public (no picks during the choice), the phone knows 
   assert(room.tvState().state.people.length + room.tvState().state.ghostList.length >= 4);
 });
 
+test('Pacing: recap, each group in turn, one verdict per person, bites, then a tally; the next scene waits for all of it', () => {
+  for (const n of [4, 12, 100]) {
+    const { room, clock } = setup({ bots: n, seed: n + 1 });
+    room.start(); until(room, clock, 'outcome');
+    const O = g(room).r.outcome, t0 = clock.now();
+    assert(O.ms >= 14000, 'min length ' + O.ms);
+    assert(O.ms <= 80000, 'capped ' + O.ms);
+    assert(O.recapMs >= 3600 && O.recap.length > 5);
+    let last = O.recapMs - 1;
+    for (const G of O.groups) {
+      assert(G.at > last, 'groups in turn'); assert(G.verdictAt >= G.at + 3000, 'act + consequence before the verdicts');
+      G.people.forEach((p, i) => { assert.equal(p.at, G.verdictAt + i * G.per); assert(p.at < G.at + G.ms); });
+      if (G.people.length <= 4) assert.equal(G.per, 1000, 'a second per person in small groups');
+      last = G.at + G.ms - 1;
+    }
+    if (O.fever) assert(O.fever.at >= last);
+    assert(O.endAt + 6000 <= O.ms, 'the tally stays up');
+    assert(O.tally.lists && Array.isArray(O.tally.lists.ok));
+    // every phone's reveal matches its stamp on the TV
+    for (const p of room.list().slice(0, 3)) { const m = room.playerState(p).state.mine; if (m) assert(O.groups.some((G) => G.people.some((q) => q.id === p.id && q.at === m.at)) || m.at > 0); }
+    until(room, clock, 'board');
+    assert.equal(clock.now() - t0, O.ms, 'the board only comes after the whole outcome');
+  }
+});
+
 for (const n of [3, 20, 100]) {
   test(`Full game with ${n} bots: finishes, results() best-first, epilogue with fates and awards`, () => {
     const { room, clock } = setup({ bots: n, seed: n, settings: { length: n === 100 ? 'normal' : 'short' } });

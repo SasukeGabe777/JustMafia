@@ -623,6 +623,8 @@
   }
 
   BOX.games.sketch = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ write: 'think', step: 'think', pass: 'play', show: 'reveal', final: 'reveal', vote: 'play', results: 'reveal', over: 'finale' }[s.phase] || 'play'),
     name: 'JustSketch Relay', icon: '🎨',
     about: 'Draw it, guess it, pass it on! Watch a prompt mutate around the ring, react live, then vote for the funniest moment.',
     how: [

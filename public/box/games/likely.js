@@ -234,6 +234,8 @@
   }
 
   BOX.games.likely = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ intro: 'think', vote: 'play', drum: 'tense', reveal: 'reveal', over: 'finale' }[s.phase] || 'play'),
     name: 'Most Likely To…', icon: '👑', lobbyTv,
     about: 'Who’s most likely to survive a zombie apocalypse? Vote for your friends, predict the room, and collect ridiculous titles.',
     how: [

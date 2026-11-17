@@ -396,6 +396,6 @@ class WhoSaid {
 }
 
 module.exports = {
-  key: 'whosaid', name: 'Who Said It?', min: 3, fields, defaults, PACKS,
+  key: 'whosaid', name: 'Who Said It?', min: 3, best: [4, 12], fields, defaults, PACKS,
   create: (room, settings) => new WhoSaid(room, settings),
 };

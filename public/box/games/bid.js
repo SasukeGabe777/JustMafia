@@ -183,6 +183,8 @@
   }
 
   BOX.games.bid = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ preview: 'think', auction: 'play', sealed: 'tense', sold: 'reveal', reveal: 'reveal', over: 'finale' }[s.phase] || 'play'),
     name: 'JustBid', icon: '🚪',
     about: 'Storage locker auctions! Peek at the clues, bid live against everyone, then watch the locker get unpacked. Treasure or trash?',
     how: [

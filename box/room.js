@@ -22,7 +22,15 @@ const BOARD_DELAY = 7000, BOARD_MS = 15000, MAX_LINEUP = 20;
 // Unlockable games (module `locked: { how }`): finishing a whole Party Mode opens every one of
 // them. The TV remembers unlocks (public/unlocks.js) and sends them when it creates a room.
 const partyFinished = (room) => !!(room.partyMode && room.partyMode.phase === 'done' && room.played.length >= 1);
-const UNLOCK_RULES = { zombie: { title: 'Zombie Survival', test: partyFinished } };
+const playedGame = (key) => (room) => room.played.some((g) => g.game === key);
+const UNLOCK_RULES = {
+  zombie: { title: 'Zombie Survival', test: partyFinished },
+  plinko: { title: 'JustDrop', test: playedGame('blackjack') }, // finish a casino game (Blackjack Night)
+  trivia: { title: "Hot Take Trivia", test: playedGame('price') },
+  colormatch: { title: "Color Match", test: playedGame('emoji') },
+  memes: { title: "Meme Maker", test: playedGame('blanks') },
+  letters: { title: "Letter Rush", test: playedGame('whosaid') },
+};
 
 const cleanName = (s) => String(s || '').replace(/[\u0000-\u001f<>&"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 14);
 
@@ -56,6 +64,11 @@ class BoxRoom {
     this.partyMode = null; // Party Mode: { defs, index, minutes, phase: playing|ending|board|done, at, paused, timer }
     this.lastGain = new Map(); // points each player won in the last scored game (board animation)
     this.prevRank = new Map(); // rank before the last scored game
+    // Games played somewhere else (JustMafia has its own server and pages): the room hands
+    // everyone over and waits. onExternal(def, room) → { ok, code, hostKey } is set by the
+    // box server; `away` = { game, title, code, hostKey } while the party is over there.
+    this.onExternal = null;
+    this.away = null;
     // Games with a live lobby (JustRaiseDucks) exist from the start: farms appear as people join.
     if (game.liveLobby) this.game = game.create(this, this.settings);
   }
@@ -86,8 +99,11 @@ class BoxRoom {
     if (!def) return { ok: false, error: 'Unknown game.' };
     if (this.isLocked(def)) return { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim() };
     if (this.phase !== 'lobby' && !(this.game && this.game.phase === 'over')) return { ok: false, error: 'Finish this game first (or go back to the lobby).' };
+    if (def.external) return this.goExternal(def);
     this.scoreParty();
     this.clearTimers();
+    this.away = null;
+    if (this.partyMode) this.partyMode.ext = false;
     if (this.partyMode && this.partyMode.phase !== 'done') this.partyMode.phase = 'playing';
     this.def = def; this.settings = this.defaultSettings(def); this.phase = 'lobby'; this.show = null;
     this.game = def.liveLobby ? def.create(this, this.settings) : null;
@@ -95,6 +111,51 @@ class BoxRoom {
     this.fx('switch');
     this.sync();
     return { ok: true, game: def.key };
+  }
+  // ---- games played elsewhere (JustMafia) ----
+  // Hand the whole room over: the TV and phones follow `away` (in their state) to the other
+  // game. This room keeps its players and points, and waits in the lobby of its last game.
+  goExternal(def) {
+    if (typeof this.onExternal !== 'function') return { ok: false, error: `${def.name} can't be reached from here.` };
+    let r; try { r = this.onExternal(def, this); } catch (e) { r = null; }
+    if (!r || !r.ok) return r || { ok: false, error: `Could not open ${def.name}.` };
+    this.scoreParty();
+    this.clearTimers();
+    if (this.partyMode) this.partyMode.ext = false;
+    if (this.partyMode && this.partyMode.phase !== 'done') this.partyMode.phase = 'playing';
+    this.phase = 'lobby'; this.show = null;
+    this.game = this.def.liveLobby ? this.def.create(this, this.settings) : null;
+    if (this.game && this.game.joined) for (const p of this.players.values()) this.game.joined(p);
+    this.away = { game: def.key, title: def.name, code: r.code, hostKey: r.hostKey || null, at: this.now() };
+    this.fx('away', { game: def.key });
+    this.sync();
+    return { ok: true, game: def.key, external: true, code: r.code };
+  }
+  // The other game finished: award party points (players best first, like scoreParty) and
+  // remember it as played. In Party Mode the lineup moves on: standings board, then the
+  // next game (or the finale), exactly like a normal game end.
+  externalResult(gameKey, title, orderedIds) {
+    const order = [...new Set((Array.isArray(orderedIds) ? orderedIds : []).filter((id) => this.players.has(id)))];
+    this.prevRank = new Map(this.partyBoard().map((r, i) => [r.id, i + 1])); this.lastGain = new Map();
+    order.forEach((id, i) => { const r = this.partyRow(id), add = PARTY_POINTS[i] || 1; r.pts += add; r.games++; if (i === 0) r.wins++; this.lastGain.set(id, add); });
+    this.played.push({ game: String(gameKey || 'external'), title: String(title || gameKey || 'Game'), winner: order[0] ? this.name(order[0]) : null });
+    if (this.played.length > 40) this.played.shift();
+    this.away = null;
+    this.checkUnlocks();
+    this.fx('back', { game: gameKey });
+    if (this.partyMode && this.partyMode.phase === 'playing') { this.partyMode.ext = true; this.partyAfterGame(0); }
+    this.sync();
+    return { ok: true, awarded: order.length };
+  }
+  // Everyone came back without a finished game: in Party Mode the lineup moves on anyway.
+  externalBack() {
+    if (!this.away) return { ok: true };
+    this.away = null;
+    this.fx('back');
+    const pm = this.partyMode;
+    if (pm && pm.phase === 'playing' && pm.defs[pm.index] && pm.defs[pm.index].external) { pm.ext = true; this.partyAfterGame(0); }
+    this.sync();
+    return { ok: true };
   }
   setAvatar(p, a) { if (!AVATARS.includes(a)) return { ok: false, error: 'Pick one of the avatars.' }; p.avatar = a; this.sync(); return { ok: true }; }
 
@@ -131,19 +192,20 @@ class BoxRoom {
   }
 
   // ---- Party Mode ----
-  setParty(defs, minutes) {
+  // flow 'auto': each game starts right after the standings; 'lobby': it waits in its lobby so the host can adjust settings.
+  setParty(defs, minutes, flow = 'auto') {
     defs = (defs || []).filter((d) => d && !this.isLocked(d)).slice(0, MAX_LINEUP);
     if (!defs.length) return { ok: false, error: 'Pick some games.' };
-    this.partyMode = { defs, index: 0, minutes: Math.max(10, Math.min(600, Number(minutes) || 60)), phase: 'playing', at: this.now(), startedAt: null, paused: false, timer: null };
+    this.partyMode = { defs, index: 0, minutes: Math.max(10, Math.min(600, Number(minutes) || 60)), phase: 'playing', at: this.now(), startedAt: null, paused: false, timer: null, flow: flow === 'lobby' ? 'lobby' : 'auto' };
     return { ok: true };
   }
   // A game just ended: let its end screen breathe, then the standings board, then the next game.
-  partyAfterGame() {
+  partyAfterGame(delay = BOARD_DELAY) {
     const pm = this.partyMode; if (!pm || pm.phase !== 'playing') return;
     const last = pm.index >= pm.defs.length - 1;
-    pm.phase = 'ending'; pm.at = this.now() + BOARD_DELAY;
+    pm.phase = 'ending'; pm.at = this.now() + delay;
     this.cancel(pm.timer);
-    pm.timer = this.after(BOARD_DELAY, () => {
+    pm.timer = this.after(delay, () => {
       if (!this.partyMode || pm.phase !== 'ending') return;
       pm.phase = last ? 'done' : 'board'; pm.at = this.now() + (last ? 0 : BOARD_MS);
       if (last) this.checkUnlocks();
@@ -161,6 +223,8 @@ class BoxRoom {
     if (i >= pm.defs.length) { pm.phase = 'done'; pm.at = this.now(); this.checkUnlocks(); this.sync(); return { ok: true, done: true }; }
     pm.index = i; pm.phase = 'playing'; pm.at = this.now();
     const sw = this.switchGame(pm.defs[i]); if (!sw.ok) return sw;
+    if (sw.external) return sw; // played elsewhere: the room waits for its result
+    if (pm.flow === 'lobby') { this.sync(); return { ok: true, lobby: true }; } // the host adjusts the settings, then presses Start
     const st = this.start();
     this.sync();
     return st;
@@ -187,7 +251,7 @@ class BoxRoom {
     const pm = this.partyMode; if (!pm) return null;
     return { games: pm.defs.map((d) => d.key), titles: pm.defs.map((d) => d.name), index: pm.index, minutes: pm.minutes, phase: pm.phase, paused: pm.paused,
       in: Math.max(0, pm.at - this.now()), elapsed: pm.startedAt == null ? 0 : this.now() - pm.startedAt,
-      next: pm.defs[pm.index + 1] ? pm.defs[pm.index + 1].key : null, boardMs: BOARD_MS };
+      next: pm.defs[pm.index + 1] ? pm.defs[pm.index + 1].key : null, boardMs: BOARD_MS, ext: !!pm.ext, flow: pm.flow };
   }
   partyBoard() {
     return [...this.party].filter(([id]) => this.players.has(id)).map(([id, r]) => { const p = this.players.get(id); return { id, name: p.name, avatar: p.avatar, color: p.color, bot: p.bot, pts: r.pts, wins: r.wins, games: r.games, gain: this.lastGain.get(id) || 0, prevRank: this.prevRank.get(id) || null }; })
@@ -304,6 +368,7 @@ class BoxRoom {
     this.lastActivity = Date.now();
     if (this.phase === 'show' && this.show) {
       if (msg && msg.op === 'fact') { const r = this.show.submit(p, msg.text); this.sync(); return r; }
+      if (msg && msg.op === 'gotit') { const r = this.show.gotit(p); this.sync(); return r; }
       return { ok: false, error: 'The show is about to start!' };
     }
     if (!this.game || !this.game.act) return { ok: false, error: 'The game has not started yet.' };
@@ -321,7 +386,7 @@ class BoxRoom {
       fields: this.fieldsOf(), min: this.def.min, max: MAX_PLAYERS, fx: this.fxLog, live: !!this.def.liveLobby,
       vip: this.vip() ? this.vip().name : null,
       players: this.list().map((p) => ({ id: p.id, name: p.name, bot: p.bot, color: p.color, avatar: p.avatar, online: p.bot || p.sockets > 0 })),
-      party: this.partyBoard().slice(0, 24), played: this.played.slice(-24), partyMode: this.partyState(), unlocks: [...this.unlocks],
+      party: this.partyBoard().slice(0, 24), played: this.played.slice(-24), partyMode: this.partyState(), unlocks: [...this.unlocks], away: this.away,
       state: this.game && this.phase !== 'show' ? this.game.tv() : null, show: this.show ? this.show.tv() : null,
     };
   }
@@ -330,7 +395,8 @@ class BoxRoom {
       code: this.code, game: this.def.key, title: this.def.name, phase: this.phase,
       me: { id: p.id, name: p.name, color: p.color, avatar: p.avatar },
       party: (() => { const b = this.partyBoard(), i = b.findIndex((r) => r.id === p.id); return { played: this.played.length, pts: i >= 0 ? b[i].pts : 0, wins: i >= 0 ? b[i].wins : 0, gain: i >= 0 ? b[i].gain : 0, rank: i + 1, of: b.length, top: b.slice(0, 5) }; })(),
-      partyMode: this.partyState(), unlocks: [...this.unlocks], count: this.players.size, min: this.def.min, live: !!this.def.liveLobby,
+      partyMode: this.partyState(), unlocks: [...this.unlocks], count: this.players.size,
+      away: this.away ? { game: this.away.game, title: this.away.title, code: this.away.code, url: `/play?room=${encodeURIComponent(this.away.code)}&autojoin=1&name=${encodeURIComponent(p.name)}` } : null, min: this.def.min, live: !!this.def.liveLobby,
       vip: !!this.vip() && this.vip().id === p.id, vipName: this.vip() ? this.vip().name : null,
       state: this.game && this.phase !== 'show' ? this.game.view(p) : null, show: this.show ? this.show.view(p) : null,
     };

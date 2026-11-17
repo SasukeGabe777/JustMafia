@@ -1,0 +1,39 @@
+/* JustMafia title screen (night over Mafia Town) and the JustGameBox bridge on the big screen:
+   "Play another game" picker and the "Back to the party" countdown. Uses host.css's pixel skin. */
+.mt-title { background: #0d0b1e; overflow: hidden; }
+.title-art { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.mt-title .title-card { position: relative; z-index: 1; padding: 34px 56px 28px; max-width: 760px; margin-top: -9vh; animation: mt-drop .7s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes mt-drop { from { transform: translateY(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.title-kicker { display: inline-block; font-size: 15px; letter-spacing: 4px; text-transform: uppercase; color: #fbecc6; background: #8e2d2a; padding: 4px 14px; box-shadow: 0 0 0 3px #4a2e1e; margin-bottom: 6px; }
+.mt-title .logo { white-space: nowrap; font-size: 72px; line-height: 1.05; }
+.mt-title .tagline { margin: 6px 0 18px; font-size: 21px; }
+.title-btns { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.title-btns .btn-big { min-width: 320px; }
+#title-continue { background: #7ed37a; }
+#title-continue b { letter-spacing: 3px; }
+#title-continue:not([hidden]) + #create { background: var(--parch-l); font-size: 18px; padding: 10px 22px; }
+.title-how-btn { margin-top: 14px; color: #7a5536; font-size: 17px; }
+.title-how { text-align: left; margin: 10px auto 4px; padding: 12px 16px 12px 36px; max-width: 500px; font-size: 16px; line-height: 1.4; color: var(--ink-dark, #3a2418); background: var(--parch-l, #fbecc6); box-shadow: 0 0 0 3px var(--wood, #8f5e34); }
+.title-how li { margin: 4px 0; }
+.mt-title .fine { margin-top: 14px; }
+.title-back { position: absolute; top: 22px; left: 24px; z-index: 1; font: 600 18px var(--font); color: var(--ink-dark, #3a2418); background: var(--parch, #f0d29a); padding: 8px 16px; text-decoration: none; box-shadow: var(--frame); }
+.title-back:hover { background: var(--parch-l, #fbecc6); }
+
+/* Play another game: the JustGameBox games */
+.mt-pick { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(10, 8, 22, 0.78); }
+.mt-pick .panel { background: var(--parch, #f0d29a); color: var(--ink-dark, #3a2418); box-shadow: var(--frame); padding: 22px 28px; max-width: min(980px, 94vw); max-height: 90vh; overflow: auto; text-align: center; }
+.mt-pick h2 { margin: 0 0 4px; font-size: 32px; }
+.mt-pick p { margin: 0 0 14px; color: #7a5536; }
+.mt-pick .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.mt-pick .games button { font: 600 16px var(--font); color: var(--ink-dark, #3a2418); background: var(--parch-l, #fbecc6); border: 3px solid var(--wood-d, #4a2e1e); padding: 10px 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: 0 4px 0 var(--wood-d, #4a2e1e); }
+.mt-pick .games button span { font-size: 34px; }
+.mt-pick .games button:hover:not(:disabled), .mt-pick .games button:focus-visible { background: #ffe08a; transform: translateY(-2px); }
+.mt-pick .games button:disabled { opacity: .5; cursor: not-allowed; }
+.mt-pick .games button small { font-size: 12px; color: #7a5536; font-weight: 500; }
+.mt-pick .games button.big-g { background: #f7d08a; }
+
+/* Back to the party: countdown after a Mafia game that came from Party Mode */
+.party-back { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 35; display: flex; align-items: center; gap: 14px; padding: 10px 18px; font: 600 20px var(--font); color: var(--ink-dark, #3a2418); background: var(--parch, #f0d29a); box-shadow: var(--frame); animation: mt-drop .5s ease both; }
+.party-back b { color: #b8621a; font-size: 26px; display: inline-block; min-width: 1.4em; text-align: center; }
+.party-back .btn { font-size: 16px; padding: 6px 14px; }
+.mt-leaving { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: #0d0b1e; color: #fbecc6; font: 600 34px var(--font); }

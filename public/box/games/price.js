@@ -92,6 +92,8 @@
   }
 
   BOX.games.price = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ intro: 'play', guess: 'think', reveal: 'reveal', over: 'finale' }[s.phase] || 'play'),
     name: 'Price Panic', icon: '🏷️',
     about: 'A product hits the shelf. Guess its price on your phone. Close is good, exact is a jackpot, and going over is a bust!',
     how: [

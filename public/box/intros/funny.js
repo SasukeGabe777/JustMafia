@@ -121,6 +121,14 @@
 
   BOX.intros.funny = {
     title: 'JustFunny',
+    // How to play (box/howto.js): one card per step, 5 steps (module howSteps).
+    tutorial: [
+      { icon: '📺', title: 'Your turn', text: 'Everyone takes turns putting a funny video on the big screen: YouTube, Shorts, TikTok or Instagram Reels.', phone: 'Search with 🔎 or paste a link, then tap Use it.' },
+      { icon: '⏳', title: 'Line it up', text: 'Pick your video early! It plays the moment your turn comes, and ready videos never wait for a slow picker.' },
+      { icon: '🤣', title: 'Rate & react', text: 'While it plays, rate how funny it is and spam reactions. They float up the TV and fill the laugh meter.', phone: 'Tap 😐 to 🤣 to rate, and tap reactions as much as you like.' },
+      { icon: '⏭️', title: 'Skip it', text: 'Not funny? Vote to skip. Enough skips and the next video starts.', phone: 'Tap ⏭ Boring! Skip it.' },
+      { icon: '🏆', title: 'Funniest video', text: 'At the end everyone votes for the funniest video. The best-of reel replays the winners from their biggest laugh.', phone: 'Tap the funniest video to vote.' },
+    ],
     theme: { accent: '#ff4f6d', accent2: '#7fe3ff', accent3: '#ffd23f', ink: '#fff4e0', panel: '#2c2440', fade: '#170c26', rim: '#7fe3ff',
       confetti: ['#ffd23f', '#ff4f6d', '#7fe3ff', '#7ee081', '#fff1c8', '#b48cff'] },
     host: null,

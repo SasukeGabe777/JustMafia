@@ -304,6 +304,6 @@ class Blanks {
 }
 
 module.exports = {
-  key: 'blanks', name: 'JustBlanks', min: 3, fields, defaults,
+  key: 'blanks', name: 'JustBlanks', min: 3, best: [4, 10], fields, defaults,
   create: (room, settings) => new Blanks(room, settings),
 };

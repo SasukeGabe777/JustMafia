@@ -14,6 +14,11 @@ const PER_MS = 5200; // each featured contestant
 const OUTRO_MS = 6000; // "Let's play!" before the game
 const MAX_FEATURED = 8; // more than this: the rest wave from a contestant wall
 const CAST_OPEN_MS = 7000, CAST_PER_MS = 900, CAST_OUTRO_MS = 3000, CAST_MAX = 12; // cast mode
+// How to play: after the intro, the TV walks through the rules step by step (the steps are the
+// game's intro `tutorial`, else its `how` list) while phones show each step with a "Got it" button.
+// When every player has tapped Got it, it moves on. Module `howSteps` = how many steps (default 5).
+const HOWTO_STEP_MS = 7500, HOWTO_END_MS = 2500, HOWTO_MIN_MS = 6000;
+const howMs = (def) => Math.max(1, Math.min(8, def.howSteps || 5)) * HOWTO_STEP_MS + HOWTO_END_MS;
 
 const CAST_FIELD = { key: 'showIntro', label: 'Intro cutscene', options: [{ value: true, label: 'On' }, { value: false, label: 'Off: straight to the game' }] };
 const SHOW_FIELD = { key: 'showIntro', label: 'Game-show opening', options: [{ value: true, label: 'On: meet the contestants' }, { value: false, label: 'Off: straight to the game' }] };
@@ -38,7 +43,7 @@ class Show {
   constructor(room) {
     const cfg = room.def.show;
     this.mode = cfg && typeof cfg === 'object' && cfg.facts === false ? 'cast' : 'facts';
-    this.room = room; this.step = 'facts'; this.facts = new Map(); this.featured = [];
+    this.room = room; this.step = 'facts'; this.facts = new Map(); this.featured = []; this.ready = new Set();
     this.stepAt = room.now(); this.endsAt = this.stepAt + FACT_MS; this.timer = null; this.minTimer = null;
   }
   humans() { return this.room.list().filter((p) => !p.bot); }
@@ -59,7 +64,25 @@ class Show {
     this.step = 'intros'; this.stepAt = this.room.now();
     const ms = CAST_OPEN_MS + this.featured.length * CAST_PER_MS + CAST_OUTRO_MS;
     this.endsAt = this.stepAt + ms;
+    this.timer = this.room.after(ms, () => this.howto());
+  }
+  // How to play: step by step on the TV and every phone.
+  howto() {
+    if (this.step === 'howto' || this.step === 'done') return;
+    this.room.cancel(this.timer);
+    this.step = 'howto'; this.stepAt = this.room.now(); this.ready = new Set();
+    const ms = howMs(this.room.def);
+    this.endsAt = this.stepAt + ms;
+    this.room.fx('howto');
     this.timer = this.room.after(ms, () => this.finish());
+  }
+  // A player tapped "Got it": once everyone has, the game starts (after a short beat).
+  gotit(p) {
+    if (this.step !== 'howto') return { ok: false, error: 'Watch the big screen!' };
+    this.ready.add(p.id);
+    const waiting = this.humans().filter((q) => q.sockets > 0 && !this.ready.has(q.id));
+    if (!waiting.length && this.room.now() - this.stepAt >= HOWTO_MIN_MS) { this.room.cancel(this.timer); this.endsAt = this.room.now() + 1500; this.timer = this.room.after(1500, () => this.finish()); }
+    return { ok: true };
   }
   submit(p, text) {
     if (this.mode === 'cast') return { ok: false, error: 'Watch the big screen!' };
@@ -88,9 +111,9 @@ class Show {
     const ms = this.featured.length * PER_MS + OUTRO_MS;
     this.endsAt = this.stepAt + ms;
     this.room.fx('showIntros');
-    this.timer = this.room.after(ms, () => this.finish());
+    this.timer = this.room.after(ms, () => this.howto());
   }
-  skip() { if (this.step === 'facts') this.intros(); else this.finish(); return { ok: true }; }
+  skip() { if (this.step === 'facts') this.intros(); else if (this.step === 'intros') this.howto(); else this.finish(); return { ok: true }; }
   finish() { if (this.step === 'done') return; this.step = 'done'; this.room.cancel(this.timer); this.room.cancel(this.minTimer); this.room.beginGame(); }
   card(id) { const p = this.room.get(id); return p ? { id, name: p.name, avatar: p.avatar, color: p.color, bot: !!p.bot, fact: this.facts.get(id) || null } : null; }
   tv() {
@@ -99,6 +122,7 @@ class Show {
       mode: this.mode, step: this.step, game: this.room.def.key, title: this.room.def.name,
       stepAgo: now - this.stepAt, endsIn: Math.max(0, this.endsAt - now),
       ...(this.mode === 'cast' ? { openMs: CAST_OPEN_MS, perMs: CAST_PER_MS, outroMs: CAST_OUTRO_MS } : { perMs: PER_MS, outroMs: OUTRO_MS, minMs: FACT_MIN_MS }),
+      howMs: howMs(this.room.def), howStepMs: HOWTO_STEP_MS, howSteps: Math.max(1, Math.min(8, this.room.def.howSteps || 5)), ready: this.ready.size, readyOf: humans.filter((p) => p.sockets > 0).length,
       submitted: humans.filter((p) => this.facts.has(p.id)).length, of: humans.length,
       waiting: humans.filter((p) => !this.facts.has(p.id) && p.sockets > 0).slice(0, 8).map((p) => p.name),
       featured: this.featured.map((id) => this.card(id)).filter(Boolean),
@@ -110,8 +134,9 @@ class Show {
     const per = this.mode === 'cast' ? CAST_PER_MS : PER_MS, open = this.mode === 'cast' ? CAST_OPEN_MS : 0;
     return { mode: this.mode, step: this.step, title: this.room.def.name, myFact: this.facts.get(p.id) || null, endsIn: Math.max(0, this.endsAt - now), submitted: this.facts.size, of: this.room.list().length,
       // When it's your turn to be introduced, your phone lights up.
-      introIn: i >= 0 && this.step === 'intros' ? open + i * per - (now - this.stepAt) : null, perMs: per, featured: i >= 0 };
+      introIn: i >= 0 && this.step === 'intros' ? open + i * per - (now - this.stepAt) : null, perMs: per, featured: i >= 0,
+      game: this.room.def.key, stepAgo: now - this.stepAt, howStepMs: HOWTO_STEP_MS, howSteps: Math.max(1, Math.min(8, this.room.def.howSteps || 5)), gotIt: this.ready.has(p.id) };
   }
 }
 
-module.exports = { CAST_FIELD, CAST_OPEN_MS, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX, Show, SHOW_FIELD, FACT_MS, FACT_MIN_MS, PER_MS, OUTRO_MS, MAX_FEATURED, BOT_FACTS };
+module.exports = { HOWTO_STEP_MS, HOWTO_END_MS, HOWTO_MIN_MS, howMs, CAST_FIELD, CAST_OPEN_MS, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX, Show, SHOW_FIELD, FACT_MS, FACT_MIN_MS, PER_MS, OUTRO_MS, MAX_FEATURED, BOT_FACTS };

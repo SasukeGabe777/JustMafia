@@ -191,6 +191,14 @@
   }
   BOX.intros.spectrum = {
     title: 'Where Do You Stand?',
+    // How to play (box/howto.js): one card per step, 5 steps (module howSteps).
+    tutorial: [
+      { icon: '↔️', title: 'The spectrum', text: 'A spectrum goes up on the big screen, like 🌅 Morning person ↔ Night owl 🌙. No wrong answers!' },
+      { icon: '📍', title: 'Find your spot', text: 'Place yourself where YOU stand. Nobody sees it until the reveal.', phone: 'Drag the marker (or tap ◀ ▶), then tap Lock it in 🔒.' },
+      { icon: '📊', title: 'The reveal', text: 'Everyone’s dots slide onto one line. +50 if you’re within 10 of the room average, +25 for the closest pair.', phone: 'Waiting? Guess where the room average lands: +75 if you’re close.' },
+      { icon: '🔦', title: 'Read a Friend', text: 'Every 3rd round, one player places themselves and everyone guesses where. Closest: 300, 200, 100, +150 for a bullseye.', phone: 'Drag to where you think they stand, then lock it in.' },
+      { icon: '🔗', title: 'Twins', text: 'At the end, meet your twin tonight (the person most like you) and your opposite. Go say hi!', say: 'Hoo-hoo! At the end you meet your twin tonight, and your opposite. Go say hi!' },
+    ],
     theme: { accent: '#ff7a59', accent2: '#ffc23d', accent3: '#fff3c4', ink: '#fff9f0', fade: '#181645', rim: '#fff3c4',
       spots: ['255,240,200', '255,200,170', '200,190,255', '255,240,200'], confetti: ['#ffc23d', '#ff7a8a', '#5b4fd8', '#7fd862', '#ffffff', '#4cc4ff'] },
     host: {

@@ -814,6 +814,8 @@ const KB_CATS = [
   }
 
   BOX.games.emoji = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ pick: 'think', clue: 'play', reveal: 'reveal', over: 'finale' }[s.phase] || 'play'),
     name: 'Emoji Charades', icon: '🤔', lobbyTv,
     about: 'Say it with emojis only! The Clue Giver taps out a secret on their phone, one emoji at a time. Everyone races to guess it.',
     how: [

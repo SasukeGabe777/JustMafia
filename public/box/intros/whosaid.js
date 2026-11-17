@@ -106,6 +106,14 @@
   }
   BOX.intros.whosaid = {
     title: 'Who Said It?',
+    // How to play (box/howto.js): one card per step, 5 steps (module howSteps).
+    tutorial: [
+      { icon: '🌙', title: 'The question', text: 'A question goes up on the big screen. Everyone answers in secret: nobody sees whose answer is whose.', phone: 'Type your answer, then tap Whisper it 🤫.' },
+      { icon: '🔦', title: 'The spotlight', text: 'Answers go into the spotlight one at a time. Guess who wrote each one.', phone: 'Tap the name of who you think said it.' },
+      { icon: '💯', title: 'Scoring', text: 'Right guess: +100, and +50 more if you were one of the fastest. Three right in a row: 🔥 +50.' },
+      { icon: '🎭', title: 'Poker face', text: 'When it’s your answer, don’t give yourself away! You get +50 for everyone you fool.' },
+      { icon: '🎲', title: 'Double Down', text: 'Once a game, Double Down: double points if you’re right, −50 if you’re wrong. Most points wins!', phone: 'Tap 🎲 Double Down, then tap a name.' },
+    ],
     theme: { accent: '#9b7bff', accent2: '#7ef3d0', accent3: '#7ef3d0', ink: '#fdf3ff', fade: '#0c0628', rim: '#9b7bff', floor1: '#2a1663', floor2: '#120a34', disc1: '#3b2a7a', disc2: '#1c0f45',
       spots: ['200,180,255', '126,243,208', '255,122,200', '200,180,255'], confetti: ['#fff3b0', '#c8f7e8', '#ffd6ec', '#e3d6ff', '#7ef3d0', '#ff7ac8'] },
     host: {

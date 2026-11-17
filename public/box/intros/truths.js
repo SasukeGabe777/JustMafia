@@ -139,6 +139,14 @@
   }
   BOX.intros.truths = {
     title: 'Two Truths & a Lie',
+    // How to play (box/howto.js): one card per step, 5 steps (module howSteps).
+    tutorial: [
+      { icon: '🕵️', title: 'The statement', text: 'Everyone files three statements about themselves: two truths and one lie. Make that lie believable.', phone: 'Type three statements, mark the LIE, then tap File my statement.', say: 'Every suspect files three statements. Two are true. One is a lie. Make it a good one.' },
+      { icon: '📂', title: 'The hot seat', text: 'One by one, each suspect’s three statements go up on the big screen, shuffled.' },
+      { icon: '🗣️', title: 'Interrogate', text: 'Grill the suspect out loud. Ask questions, watch them sweat. Then everyone votes for the lie.', phone: 'Tap the statement you think is the lie.' },
+      { icon: '✅', title: 'Scoring', text: 'Spot the lie: +1 point. In the hot seat: +1 for every person you fool, up to 5 a turn.' },
+      { icon: '🏆', title: 'Case closed', text: 'Most points wins. Then the awards: the most believable lie and the truth nobody believed.', say: 'Most points wins. And at the end, we open the files on the best lies of the night.' },
+    ],
     theme: { accent: '#c9a24a', accent2: '#ff4b3e', accent3: '#f3ead2', ink: '#f3ead2', fade: '#04060c', rim: '#c9a24a', floor1: '#1a1208', floor2: '#0a0704', disc1: '#2a1c10', disc2: '#0a0704',
       spots: ['255,226,150', '255,226,150', '255,226,150', '255,226,150'], confetti: ['#f3ead2', '#c9a24a', '#ff4b3e', '#ffffff', '#56d98a'] },
     host: {

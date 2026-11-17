@@ -437,6 +437,8 @@
   }
 
   BOX.games.ducks = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ lobby: 'lobby', training: 'think', race: 'play', results: 'reveal', over: 'finale' }[s.phase] || 'lobby'),
     standalone: true, title: titleScreen,
     name: 'JustRaiseDucks', icon: '🦆',
     about: 'Everyone gets a farm in Duck Valley. Hatch a duckling, raise it with phone mini-games, and race up the leagues on the big screen.',

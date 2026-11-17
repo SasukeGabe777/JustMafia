@@ -377,7 +377,7 @@ class President {
 }
 
 module.exports = {
-  key: 'president', name: 'President', min: 3, fields, defaults,
+  key: 'president', name: 'President', min: 3, best: [4, 10], howSteps: 6, fields, defaults,
   create: (room, settings) => new President(room, settings),
   _test: { power, titlesFor, POINTS },
 };

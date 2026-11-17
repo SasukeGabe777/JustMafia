@@ -74,6 +74,15 @@
 
   BOX.intros.bid = {
     title: 'JustBid',
+    // How to play (box/howto.js): one card per step, 6 steps (module howSteps).
+    tutorial: [
+      { icon: '🔐', title: 'The locker', text: 'A storage locker rolls in with its door half up. You get 3 peeks inside, but careful: clues can lie!', say: 'A locker rolls in with the door half up. Three peeks inside, partner, but them clues can lie!' },
+      { icon: '💵', title: 'Bid live', text: 'Everyone bids at the same time. Every new bid restarts “Going once… going twice… SOLD!”', phone: 'Tap +$10, +$25, +$100 or +$500 (or type an amount), then tap Bid.' },
+      { icon: '🔦', title: 'Flashlight', text: 'Pay 5% of your cash (at least $25) for a private hint about what’s hidden inside.', phone: 'Tap 🔦 Flashlight peek for a secret hint.' },
+      { icon: '📦', title: 'Unpacking', text: 'The winner’s locker is unpacked item by item, from Junk to LEGENDARY. Profit or loss?' },
+      { icon: '🧩', title: 'Sets & loans', text: 'Collect 3 items from the same set for a bonus. Broke? Take a bank loan (2 max), repaid with 20% interest.', phone: 'Tap 🧩 My collection to see your sets, or 🏦 Loan for cash.' },
+      { icon: '👑', title: 'Specials & winning', text: 'Watch for Sealed Bid, Mystery, Premium and the Grand Locker finale. Highest net worth (cash plus items) wins!', phone: 'Sealed Bid? Type one secret bid and tap Seal it ✉️.' },
+    ],
     theme: { accent: '#ff8a3d', accent2: '#ffcf7a', accent3: '#ffd23f', ink: '#fff8ef', fade: '#120b07', wall1: '#3b2a20', wall2: '#140e0a', floor1: '#3a2b20', floor2: '#100b07', disc1: '#5a3c26', disc2: '#2a1c12',
       pod1: '#7a4a2a', pod2: '#2a1a10', podTop: '#c98a4a', rim: '#ffc27a', seat: '#4a2a18', audWall1: '#24170f', audWall2: '#0a0604',
       spots: ['255,222,170', '255,190,120', '255,222,170', '160,210,255'], confetti: ['#ffd23f', '#ff8a3d', '#2ee68a', '#7fd1ff', '#ffffff', '#ff4f6a'] },

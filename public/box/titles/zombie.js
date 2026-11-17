@@ -9,7 +9,7 @@
     logo: '<span class="a">ZOMBIE</span><span class="b">SURVIVAL</span>',
     tagline: 'Six days. One horde. Pick your moves, grab the right gear, and try to make the last chopper out.',
     start: '🧟 Open the safehouse',
-    meta: '1–100 players · 10–20 min',
+    meta: '1–100 players · 12–25 min',
     font: "'Black Ops One', 'Bungee', sans-serif",
     theme: { card: 'rgba(10, 14, 8, 0.9)', ink: '#f4f1e6', muted: '#c9d4b0', accent: '#9dff5a', button: '#9dff5a', buttonInk: '#10140a', border: '#9dff5a' },
     css: `.bt-zombie .bt-logo { line-height: .9; display: flex; flex-direction: column; align-items: center; }
