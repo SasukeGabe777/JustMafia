@@ -221,7 +221,7 @@ test('externalResult: party points best first (10/7/5…, everyone else 1), play
   const pts = Object.fromEntries(r.partyBoard().map((x) => [x.name, x.pts]));
   assert.equal(pts.Cy, 10); assert.equal(pts.Ana, 7); assert.equal(pts.Ben, 1);
   assert.equal(r.partyBoard()[0].wins, 1);
-  assert.deepEqual(r.played.at(-1), { game: 'mafia', title: 'JustMafia', winner: 'Cy' });
+  { const g = r.played.at(-1); assert.deepEqual({ game: g.game, title: g.title, winner: g.winner }, { game: 'mafia', title: 'JustMafia', winner: 'Cy' }); }
   assert.equal(r.away, null, 'the room is back');
   assert.equal(r.partyRow(c.id).games, 1);
   assert(r.fxLog.some((f) => f.kind === 'back'));
@@ -314,6 +314,32 @@ test('How to play: after the intro every game teaches its rules; "Got it" from e
   assert(r.act(ben, { op: 'gotit' }).ok);
   const t0 = r.now(); while (r.phase === 'show' && clock.step());
   assert.equal(r.phase, 'game'); assert(r.now() - t0 <= 2000, 'starts right after everyone has it');
+});
+
+test('Party Mode ending: the end screen stays 12 s; the host can show the standings now or hold the countdown', () => {
+  const { r, clock } = newRoom('price', 6);
+  const ana = r.join('Ana').player; r.addBots(4);
+  assert(r.setParty([GAMES.price, GAMES.likely, GAMES.emoji], 30).ok); assert(r.start().ok);
+  runOut(r, clock); r.flush();
+  assert.equal(r.partyMode.phase, 'ending'); const end = r.now();
+  assert.equal(r.partyState().in, 12000, 'the end screen gets 12 seconds');
+  while (r.partyMode.phase === 'ending' && clock.step());
+  assert.equal(r.partyMode.phase, 'board'); assert.equal(r.now() - end, 12000);
+  // Next game: skip straight to the standings from the host's phone.
+  assert(r.partyNext().ok); runOut(r, clock); r.flush();
+  assert.equal(r.partyMode.phase, 'ending');
+  assert.equal(r.vipAction(r.list().find((p) => p.bot), 'partyBoardNow').ok, false, 'bots are not the host');
+  assert(r.vipAction(ana, 'partyBoardNow').ok); assert.equal(r.partyMode.phase, 'board', 'standings now');
+  assert.equal(r.hostAction({ type: 'partyBoardNow' }).ok, false, 'only while the end screen is up');
+  // Last game: hold the ending countdown, then let go (5 more seconds, then the finale).
+  assert(r.partyNext().ok); runOut(r, clock); r.flush();
+  assert.equal(r.partyMode.phase, 'ending');
+  assert(r.hostAction({ type: 'partyPause', on: true }).ok);
+  for (let i = 0; i < 50; i++) clock.step();
+  assert.equal(r.partyMode.phase, 'ending', 'held while paused');
+  const t0 = r.now(); assert(r.hostAction({ type: 'partyPause', on: false }).ok);
+  while (r.partyMode.phase === 'ending' && clock.step());
+  assert.equal(r.partyMode.phase, 'done'); assert.equal(r.now() - t0, 5000);
 });
 
 console.log(`\nAll ${passed} party tests passed.`);

@@ -168,7 +168,7 @@
   // Each setting is a line in the awards-night programme; the chosen option is gold foil.
   // Players walk the red carpet as nominees. The real <select>s stay in #settings (hidden).
   const PROG = {
-    pack: { lab: 'The Prompts', sub: 'what the awards are for', opts: { classic: '🎭 Classic', wild: '🌶️ Wild', work: '💼 Work-safe', family: '🧸 Family', mix: '🎲 Mix' } },
+    pack: { lab: 'The Prompts', sub: 'what the awards are for', opts: { classic: '🎭 Classic', wild: '🌶️ Wild', work: '💼 Work-safe', family: '🧸 Family', holiday: '🎄 Holiday', classics: '🎬 Classics', travel: '🌍 Travel', mix: '🎲 Mix' } },
     rounds: { lab: 'Awards Tonight', sub: 'how long the show runs', opts: { 10: '10', 15: '15', 20: '20', 30: '30' } },
     voteSeconds: { lab: 'Voting Time', sub: 'seconds per ballot', opts: { 15: '15s', 20: '20s', 30: '30s' } },
     selfVote: { lab: 'Self-Nomination', sub: 'vote for yourself?', opts: { false: '🙅 Not allowed', true: '🙋 Allowed' } },

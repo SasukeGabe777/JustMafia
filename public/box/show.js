@@ -26,7 +26,8 @@
                 confetti: ['#hex', ...] },
        host: {                                   // or null for no host / narrator only
          name: 'Sterling Sparks',                // subtitle speaker tag
-         voice: { like: /guy|male/i, accent: /en-US/i, pitch: 1.1, rate: 1.1 },
+         voice: { kokoro: 'am_puck', speed: 1.15,  // Kokoro voice + speed for the pre-rendered
+                  like: /guy|male/i, accent: /en-US/i, pitch: 1.1, rate: 1.1 }, // clips (npm run voices; public/box/voice.js); the rest picks the browser fallback voice
          look: { ... },                          // a BOX.studio.makeHost spec (see below) OR
          draw(g, a) { ... },                     // your own drawing; a = see HOST ANIM below
        },
@@ -153,8 +154,9 @@
   // has been spoken). spec = the intro's host.voice { like, accent, gender ('f'|'m'), lang, pitch,
   // rate }. The default uses the browser's speechSynthesis with the best matching voice (neural /
   // "Natural" / "Online" / Google / Premium / Enhanced voices first, then accent and gender). A
-  // better voice engine can be plugged in later by replacing BOX.voice.speak (and .stop); the music
-  // is ducked while any line plays, whichever engine speaks it.
+  // better voice engine plugs in by replacing BOX.voice.speak (and .stop): public/box/voice.js does,
+  // with pre-rendered Kokoro clips (spec.kokoro / spec.speed pick the Kokoro voice; see that file).
+  // The music is ducked while any line plays, whichever engine speaks it.
   const Speech = (function () {
     let voices = [], cache = new Map(), keep = null, token = 0, safety = 0;
     const has = () => { try { return !!window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function'; } catch { return false; } };
@@ -208,7 +210,8 @@
       const base = t.length * 60 + 350;
       let r = V.rate || 1;
       if (fitMs) r = clamp(base / fitMs, r, r * 1.45);
-      const est = base / r;
+      let est = base / r;
+      try { const ms = B.voice.clipMs && B.voice.clipMs(t, { ...V, rate: r }); if (ms) est = ms; } catch { /* estimate */ }
       if (window.SFX && window.SFX.enabled === false) return est;
       const tok = ++token;
       duck(true); clearTimeout(safety);
@@ -579,7 +582,7 @@
   }
   intros.generic = {
     theme: GEN_THEME,
-    host: { name: 'Vicky Volume', voice: { like: /aria|jenny|ava|emma|samantha|zira|female/i, accent: /en-US/i, pitch: 1.2, rate: 1.1 },
+    host: { name: 'Vicky Volume', voice: { kokoro: 'af_heart', speed: 1.15, like: /aria|jenny|ava|emma|samantha|zira|female/i, accent: /en-US/i, pitch: 1.2, rate: 1.1 },
       look: { skin: '#8d5a3b', suit: '#16b8b0', suit2: '#0b6f6a', lapel: '#ff4f9a', shirt: '#1b1240', tie: 'none', hair: 'curly', hairColor: '#7b3fe4', brow: '#2a1240', prop: 'headset', grin: true, sparkle: '#c9fffb' } },
     lines: {
       welcome: 'Welcome, welcome to {title}! I\'m Vicky Volume, and tonight we turn it UP!',
@@ -666,6 +669,7 @@
       this.shot = ''; this.cutAt = 0; this.subUntil = 0; this.saidMeet = false; this.crowd = 'idle'; this.crowdUntil = 0; this.factsHtml = '';
       this.s = makeCtx(this, this.g);
       this.setIntro(); need(show.game, () => this.setIntro());
+      try { if (B.voice.preload) B.voice.preload(show.game); } catch { /* no clips */ }
       this.update(show);
       addLoop(this);
     }
@@ -686,6 +690,18 @@
       this.title = show.title || this.I.title || '';
       this.el.querySelector('.si-title').textContent = this.I.title || this.title;
       this.renderFacts(show);
+      this.prepareLines(show);
+    }
+    // The live narrator voice (if it is on) starts on the lines with names before they are due.
+    prepareLines(S) {
+      if (!B.voice.prepare) return;
+      const F = S.featured || [], sig = this.mode + S.step + F.map((c) => c.name + c.fact).join('|') + (S.others || []).length;
+      if (sig === this.prepSig) return; this.prepSig = sig;
+      const V = this.I.host && this.I.host.voice;
+      try {
+        if (this.mode === 'facts' && S.step === 'intros') F.forEach((c, i) => B.voice.prepare(Speech.clean(this.factLine(i, c, F.length)), V));
+        else if (this.mode === 'cast' && (S.others || []).length) B.voice.prepare(Speech.clean(this.line('more', { n: S.others.length })), V);
+      } catch { /* subtitles only */ }
     }
     alive() { return this.el.isConnected; }
     lines() { return { ...intros.generic.lines, ...(this.I.lines || {}) }; }
@@ -960,6 +976,7 @@
       this.aud = makeAudience(hash(key)); this.backsM = makeBacks(hash(key) + 11); this.conf = new Confetti(180);
       this.crowd = 'idle'; this.crowdUntil = 0; this.pending = null; this.lastSpoke = -1e9; this.subUntil = 0; this.n = 0; this.fxLive = false;
       this.s = null; this.setIntro(); need(key, () => this.setIntro());
+      try { if (B.voice.preload) B.voice.preload(key); } catch { /* no clips */ }
       addLoop(this);
     }
     setIntro() { const I = introFor(this.key); if (I === this.I) return; this.I = I; this.theme = themeOf(I); this.A = new HostAnim(I.host || {}); this._draw = null; this.subEl.querySelector('b').textContent = I.host ? I.host.name : ''; }

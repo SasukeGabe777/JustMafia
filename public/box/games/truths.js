@@ -27,7 +27,7 @@
     'A nickname you had growing up', 'A hobby you tried and quit', 'Something you built or made yourself',
     'A rule you got in trouble for breaking', 'A language or instrument you can (sort of) do', 'A celebrity you’ve been mistaken for',
   ];
-  const hint = () => (hintN < 0 ? 'Mix the boring-but-true with the wild-but-false. Make your lie believable!' : '💡 ' + HINTS[hintN % HINTS.length]);
+  const hint = () => (hintN < 0 ? 'Mix the boring-but-true with the wild-but-false. Make your lie believable!' : '💡 ' + (served || HINTS)[hintN % (served || HINTS).length]);
   // A suspect in the lineup: silhouette, their avatar as the face, a numbered placard.
   const suspect = (p, i, o = {}) => `<div class="tx-sus ${o.cls || ''}" ${o.id ? `id="${esc(o.id)}"` : ''} style="--h:${(0.86 + (hash(p.name) % 22) / 100).toFixed(2)};--d:${(o.d || 0).toFixed(2)}s"><div class="tx-head"><span>${esc(p.av || p.avatar || '🙂')}</span></div><div class="tx-body"></div><div class="tx-plac"><b>${o.num != null ? o.num : i + 1}</b><span>${esc(p.name)}</span></div>${o.stamp ? `<div class="tx-sstamp">${o.stamp}</div>` : ''}</div>`;
   const polygraph = (wild) => `<div class="tx-poly ${wild ? 'wild' : ''}"><div class="tx-roll"><svg class="tx-trace" viewBox="0 0 1200 60" preserveAspectRatio="none"><path d="${TRACE}"/></svg></div><div class="tx-mach"><span class="tx-bulb ${wild ? 'on' : ''}">LIE</span><i></i><i></i><i></i></div></div>`;
@@ -140,7 +140,9 @@
   }
 
   // ---------- phone ----------
+  let served = null; // the room's idea-starter pack (server sends it while writing)
   function phone(el, v, ctx) {
+    if (v && Array.isArray(v.ideas) && v.ideas.length) served = v.ideas;
     if (!v) return;
     const head = `<div class="tx-me"><span>🏅 <b>${v.points}</b> pt${v.points === 1 ? '' : 's'} · #${v.rank || '-'}</span><span>CASE FILE</span></div>`;
     const wrap = (phase, html) => `<div class="tx tx-ph" data-phase="${phase}">${head}${html}</div>`;
@@ -173,7 +175,7 @@
         inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); const nx = el.querySelector(`[data-i="${Number(inp.dataset.i) + 1}"]`); if (nx) nx.focus(); else inp.blur(); } };
       }
       for (const b of el.querySelectorAll('[data-lie]')) b.onclick = () => { lie = Number(b.dataset.lie); ctx.haptic('select'); ctx.redraw(); };
-      el.querySelector('#tt-idea').onclick = () => { hintN = hintN < 0 ? Math.floor(Math.random() * HINTS.length) : hintN + 1; ctx.redraw(); };
+      el.querySelector('#tt-idea').onclick = () => { hintN = hintN < 0 ? Math.floor(Math.random() * (served || HINTS).length) : hintN + 1; ctx.redraw(); };
       const cancel = el.querySelector('#tt-cancel'); if (cancel) cancel.onclick = () => { editing = false; ctx.redraw(); };
       el.querySelector('#tt-send').onclick = async () => {
         for (const inp of el.querySelectorAll('[data-i]')) draft[Number(inp.dataset.i)] = inp.value;

@@ -66,7 +66,7 @@ const DEFAULT_SETTINGS = {
 
 const ENV_SPEED = Number(process.env.MT_SPEED) || 1; // test knob: >1 makes every phase faster
 // Phase lengths that wait for the big screen's cinematics (see public/scenes.js).
-const REVEAL_WAIT_MS = 60000; // the longest the role reveal waits for players to look at their cards
+const REVEAL_WAIT_MS = 30000; // the role reveal: 30 s to look at your card (sooner once everyone has), with a countdown on the TV and phones
 const CINE_MS = { roleReveal: 14000, dawn: 8000, dawnEvent: 16200, morning: 8000, verdict: 7500, execution: 28500, noExecution: 4500 }; // execution = the vote-elimination scene (up to 27.6s)
 
 const HARD_MIN_PLAYERS = 3;

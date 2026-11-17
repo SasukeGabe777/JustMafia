@@ -15,9 +15,10 @@ const fields = [
   { key: 'seconds', label: 'Writing time', options: opt([[60, '60 seconds'], [90, '90 seconds'], [120, '2 minutes']]) },
   { key: 'cats', label: 'Categories', options: opt([[6, '6 per list'], [8, '8 per list'], [10, '10 per list']]) },
   { key: 'set', label: 'Category set', options: opt([['family', 'Family (all ages)'], ['party', 'Party (grown-up, still clean)'], ['mix', 'Everything']]) },
+  { key: 'pack', label: 'Category pack', options: opt([['standard', 'Standard themes'], ['holiday', '🎄 Holidays & seasons'], ['office', '💼 Office-safe'], ['travel', '🌍 Travel & world'], ['classics', '📜 Timeless classics'], ['all', 'Everything + all packs']]) },
   { key: 'hard', label: 'Hard letters', options: opt([['off', 'Off (no Q, X, Z)'], ['on', 'On (Q, X, Z too)']]) },
 ];
-const defaults = { rounds: 3, seconds: 90, cats: 8, set: 'mix', hard: 'off' };
+const defaults = { rounds: 3, seconds: 90, cats: 8, set: 'mix', pack: 'standard', hard: 'off' };
 
 const ROLL_MS = 5600, VOTE_MS = 12000, VERDICT_MS = 3600, SCORES_MS = 9000, ALL_IN_MS = 1200;
 const ANSWER_MAX = 40, STREAK_EVERY = 5, MAX_CHALLENGED = 6;
@@ -141,14 +142,19 @@ class LetterRush {
     const L = this.pick(bag.filter((x) => !exclude.includes(x)).length ? bag.filter((x) => !exclude.includes(x)) : COMMON.split(''));
     this.usedLetters.add(L); return L;
   }
-  pool() {
-    if (this.s.set === 'family') return CATS.filter((c) => !c.p);
-    return CATS;
+  // Family categories only: the host's "Family" set, or the TV's room-wide Family Mode (which wins).
+  famOn() { return this.s.set === 'family' || !!(this.room && this.room.family); }
+  // The chosen category pack: Standard themes, one extra pack, or everything.
+  packCats() {
+    const k = this.s.pack;
+    if (k === 'all') return CATS;
+    if (THEMES[k] && THEMES[k].pack) return CATS.filter((c) => c.th === k);
+    return CATS.filter((c) => !c.x);
   }
-  weight(c) { return this.s.set === 'party' ? (c.p ? 4 : 1) : 1; }
+  pool() { return this.famOn() ? this.packCats().filter((c) => !c.p) : this.packCats(); }
+  weight(c) { return this.s.set === 'party' && !this.famOn() ? (c.p ? 4 : 1) : 1; }
   drawCats(n, theme) {
     let pool = this.pool().filter((c) => !this.used.has(c.t) && (!theme || c.th === theme));
-    if (pool.length < n) pool = CATS.filter((c) => !this.used.has(c.t) && (!theme || c.th === theme));
     if (pool.length < n) { this.used.clear(); pool = this.pool().filter((c) => !theme || c.th === theme); }
     const out = [], bag = pool.slice();
     while (out.length < n && bag.length) {
@@ -163,7 +169,7 @@ class LetterRush {
   spread(list) { const a = this.shuffle(list.slice()); for (let i = 1; i < a.length; i++) if (a[i].th === a[i - 1].th) { const j = a.findIndex((x, k) => k > i && x.th !== a[i - 1].th); if (j > 0) [a[i], a[j]] = [a[j], a[i]]; } return a; }
   pickTheme(n) {
     const keys = Object.keys(THEMES).filter((k) => this.pool().filter((c) => c.th === k && !this.used.has(c.t)).length >= n);
-    return this.pick(keys.length ? keys : Object.keys(THEMES));
+    return this.pick(keys.length ? keys : [...new Set(this.pool().map((c) => c.th))]);
   }
   catCount() { const n = Number(this.s.cats) || 8; return this.type === 'speed' ? Math.max(4, Math.ceil(n / 2)) : n; }
   writeMs() { const sec = Number(this.s.seconds) || 90; return (this.type === 'speed' ? Math.round((sec * 0.45) / 5) * 5 : sec) * 1000; }

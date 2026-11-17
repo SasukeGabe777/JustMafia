@@ -40,7 +40,7 @@ body.g-summon .tv-main { padding: 8px; }
 .sml-head h1 .b { background: linear-gradient(90deg, #ffb347, #ffe14d 50%, #b9c2ff 50%, #8f7dff); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 5px 0 #1b1030); }
 .sml-head p { margin: 4px 0 0; font-size: 20px; color: #ffe0b0; text-shadow: 0 2px 0 #000; }
 .sml-grid { position: relative; display: grid; grid-template-columns: 1fr minmax(420px, 1.15fr) 1fr; gap: 18px; padding: 22px 4% 18px; align-items: start; }
-#roster { display: contents; }
+.sml-grid > #roster { display: contents; } /* scoped: never touch other games' lobbies */
 .sml-side { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .sml-side.t0 { grid-column: 1; grid-row: 1; } .sml-side.t1 { grid-column: 3; grid-row: 1; }
 .sml-banner { width: 210px; padding: 18px 10px 34px; text-align: center; color: #fff; clip-path: polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%); filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.4)); animation: smlSway 4s ease-in-out infinite; transform-origin: top center; }

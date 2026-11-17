@@ -7,6 +7,12 @@
   const LIST = {
     zombie: { title: 'Zombie Survival', icon: '🧟', how: 'Finish a Party Mode to unlock it.' },
     plinko: { title: 'JustDrop', icon: '🎯', how: 'Finish a game of Blackjack Night to unlock it.' },
+    quickdraw: { title: "Quick Draw", icon: "⚡", how: "Finish a game of President to unlock it." },
+    bomb: { title: "Bomb Squad", icon: "💣", how: "Finish a game of Two Truths & a Lie to unlock it." },
+    alien: { title: "Alien Abduction", icon: "🛸", how: "Finish a game of Most Likely To… to unlock it." },
+    tune: { title: "Tune Buzz", icon: "🎵", how: "Finish a game of JustFunny to unlock it." },
+    actout: { title: "Act It Out", icon: "🎭", how: "Finish a game of JustSketch Relay to unlock it." },
+    debate: { title: "Debate Club", icon: "🗣️", how: "Finish a game of Where Do You Stand? to unlock it." },
     trivia: { title: "Hot Take Trivia", icon: "🧠", how: "Finish a game of Price Panic to unlock it." },
     colormatch: { title: "Color Match", icon: "🎨", how: "Finish a game of Emoji Charades to unlock it." },
     memes: { title: "Meme Maker", icon: "🖼️", how: "Finish a game of JustBlanks to unlock it." },

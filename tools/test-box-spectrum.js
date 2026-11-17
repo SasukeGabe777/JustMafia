@@ -368,4 +368,30 @@ test('Everyone placed: a few seconds remain for the optional room-average guess,
   until(room, clock, 'reveal', 1); assert(clock.now() - t < 2000, 'closes as soon as the guess is in');
 });
 
+test('Family Mode (room.family): Friends, Deep and Mix only ever deal family-safe spectrums', () => {
+  const { PACKS, FAMILY_KEYS } = def._test;
+  const safe = new Set(FAMILY_KEYS.flatMap((k) => PACKS[k].list.map((s) => s[1] + '|' + s[2])));
+  for (const pack of ['friends', 'deep', 'mix', 'nonsense']) {
+    const { room, clock } = setup({ bots: 4, settings: { pack, rounds: 16 }, seed: 3 });
+    room.family = true; ok(room.start());
+    assert(g(room).deck.every((s) => safe.has(s[1] + '|' + s[2])), pack + ' deck');
+    runOut(room, clock);
+    for (const sp of g(room).specs.filter(Boolean)) assert(safe.has(sp.l + '|' + sp.r), pack + ": " + sp.l);
+  }
+  const { room } = setup({ bots: 3, settings: { pack: 'deep' } }); ok(room.start()); // Family Mode off: Deep still works
+  assert(g(room).deck.every((s) => PACKS.deep.list.includes(s)));
+});
+
+test('New Holiday, Office-safe, Classics and Travel packs: offered in settings and play end to end', () => {
+  const opts = def.fields.find((f) => f.key === 'pack').options.map((o) => o.value);
+  for (const pack of ['holiday', 'office', 'classics', 'travel']) {
+    assert(opts.includes(pack), pack);
+    const { room, clock } = setup({ bots: 4, settings: { pack, rounds: 8 }, seed: 5 });
+    ok(room.start()); runOut(room, clock);
+    const keys = new Set(def._test.PACKS[pack].list.map((s) => s[1] + '|' + s[2]));
+    assert(g(room).specs.filter(Boolean).every((sp) => keys.has(sp.l + '|' + sp.r)), pack);
+    assert(g(room).results().length === 4);
+  }
+});
+
 console.log(`\n${passed} Where Do You Stand? tests passed.`);

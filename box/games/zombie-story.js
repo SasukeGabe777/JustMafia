@@ -484,4 +484,45 @@ const SCENARIOS = [
 const BITE_LINES = ['A fever sets in…', 'The bite is turning green…', 'Bad news travels slowly…'];
 const DEATH_FLAVOR = ['is a ghost now', 'joins the spooky side', 'will haunt this place'];
 
-module.exports = { ITEMS, CHAPTERS, SCENARIOS, BITE_LINES, DEATH_FLAVOR };
+// FAMILY MODE (the TV's room-wide Family setting): the same story, told gentler. The pistol is
+// a foam blaster, nobody "didn't make it", and the few grisly lines get a goofier version.
+// Only the words change: ids, risks, items and rules stay exactly the same.
+const FAMILY = {
+  items: { gun: { name: 'Foam blaster', unit: 'foam darts' } },
+  chapters: {
+    mall: 'Day two. The mall was supposed to be a shelter. The muzak is still playing. The shamblers seem to like it.',
+    hospital: 'Day three. Hospitals have medicine. Hospitals also have shamblers in paper gowns. Visiting hours are over.',
+  },
+  scenes: {
+    hardware: { opts: { gun: { label: 'The foam blaster behind the counter', ok: 'vaulted the counter and came back with a foam blaster', bad: 'found Hank still behind the counter. Hank wanted a very slimy hug' } } },
+    icecream: { opts: { fight: { label: 'Stand your ground' } } },
+    cruiser: { opts: { trunk: { ok: 'found a spare foam blaster in the trunk' } } },
+    pemberton: { opts: { attic: { ok: 'curled up behind the boxes of holiday decorations' }, window: { label: 'Shoo them from the window', ok: 'shooed them back from the window' } } },
+    mannequins: { opts: { sprint: { bad: 'knocked over a whole row of mannequins and one of them hugged back' } } },
+    arcade: { opts: { play: { bad: 'got a game over and a slimy high-five' } } },
+    pharmacy: { opts: { meds: { bad: 'knocked over a tower of bandage boxes' }, fridge: { label: 'The antidote fridge', ok: 'gulped a glowing antidote smoothie and felt amazing', bad: 'opened the fridge and something inside waved hello' }, locker: { ok: 'pried the locker open and found a foam blaster' } } },
+    gas: { opts: { gun: { ok: 'found the clerk’s foam blaster under the register' } } },
+    gridlock: { text: 'Six lanes of abandoned cars, bumper to bumper, as far as you can see. A few shamblers are still sitting in them, gripping the wheels and going nowhere.' },
+    convoy: { text: 'A line of army trucks, abandoned in a hurry. Crates in the back, a radio in the cab, and a lot of very confused shamblers in camouflage.', opts: { crate: { ok: 'pried open a crate and found a foam blaster' } } },
+    hitchhiker: { opts: { ride: { bad: 'learned the bandage was not ketchup after all' } } },
+    chopper: { opts: { guard: { bad: 'held off the horde so everyone else could climb aboard' } } },
+    boat: { opts: { gate: { bad: 'held the gate so everyone else could make it' } } },
+    cargo: { opts: { cover: { bad: 'covered the runners right up to the end' } } },
+  },
+  biteLines: ['A fever sets in…', 'Somebody is looking a little green…', 'Bad news travels slowly…'],
+};
+
+// The story to tell: the normal one, or (family) a copy with the gentler lines swapped in.
+function story(family) {
+  if (!family) return { ITEMS, CHAPTERS, SCENARIOS, BITE_LINES };
+  const items = {};
+  for (const [k, it] of Object.entries(ITEMS)) items[k] = { ...it, ...(FAMILY.items[k] || {}) };
+  const chapters = CHAPTERS.map((c) => (FAMILY.chapters[c.key] ? { ...c, line: FAMILY.chapters[c.key] } : c));
+  const scenarios = SCENARIOS.map((s) => {
+    const f = FAMILY.scenes[s.id]; if (!f) return s;
+    return { ...s, ...(f.text ? { text: f.text } : {}), options: s.options.map((op) => (f.opts && f.opts[op.k] ? { ...op, ...f.opts[op.k] } : op)) };
+  });
+  return { ITEMS: items, CHAPTERS: chapters, SCENARIOS: scenarios, BITE_LINES: FAMILY.biteLines };
+}
+
+module.exports = { ITEMS, CHAPTERS, SCENARIOS, BITE_LINES, DEATH_FLAVOR, FAMILY, story };

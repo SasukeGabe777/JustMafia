@@ -247,4 +247,28 @@ test('results() best-first, highlights and the TV “still deciding” list', ()
   if (g.spotted.get(ps[0].id)) { assert.ok(h.bluff, 'a best bluff'); assert.strictEqual(h.bluff.name, 'Ann'); }
 });
 
+test('holiday, classics and travel packs: 40+ fresh questions each, and each plays to the end', () => {
+  for (const k of ['holiday', 'classics', 'travel']) {
+    assert.ok(def.PACKS[k].length >= 40, k); assert.ok(def.FAMILY_SAFE.includes(k), k + ' is family-safe');
+    assert.ok(def.fields[0].options.some((o) => o.value === k), k + ' is in the settings');
+    const { r, clock } = room(4, { pack: k, rounds: 3 }); r.start();
+    const set = new Set(def.PACKS[k]); assert.ok(set.has(r.game.question), k);
+    runOut(r, clock); assert.strictEqual(r.game.phase, 'over');
+  }
+});
+
+test('Family Mode (room.family): every pick falls back to family-safe questions only', () => {
+  const famPool = new Set(def.FAMILY_SAFE.flatMap((k) => def.PACKS[k]));
+  for (const pack of ['classic', 'spicy', 'deep', 'silly', 'work', 'mix', 'holiday', 'family']) {
+    const clock = new VirtualClock(), r = new BoxRoom('TEST', def, { clock, seed: 3 });
+    r.family = true; Object.assign(r.settings, { pack, rounds: 6 }); r.addBots(4); assert.ok(r.start().ok);
+    const g = r.game; assert.ok(g.pool.every((q) => famPool.has(q)), pack + ': pool is family-safe');
+    if (pack === 'holiday') assert.ok(g.pool.every((q) => def.PACKS.holiday.includes(q)), 'a family-safe pick is kept');
+    if (pack === 'mix') assert.strictEqual(g.pool.length, famPool.size, 'mix = all family-safe packs');
+    for (let i = 0; i < 200; i++) { g.deck = i % 50 ? g.deck : []; assert.ok(famPool.has(g.drawQuestion()), pack); }
+    runOut(r, clock); assert.strictEqual(g.phase, 'over');
+  }
+  const { r } = room(4, { pack: 'spicy' }); r.start(); assert.ok(r.game.pool.every((q) => def.PACKS.spicy.includes(q)), 'family off: own pick still works');
+});
+
 console.log(`\n${passed} tests passed`);

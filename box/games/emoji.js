@@ -113,7 +113,7 @@ class EmojiCharades {
   // Answers allowed by the settings, not used yet this game.
   pool() {
     const d = this.s.difficulty, ok = (a) => (d === 'easy' ? a.diff === 1 : d === 'medium' ? a.diff <= 2 : d === 'hard' ? a.diff >= 2 : true);
-    const fam = this.s.family === true || this.s.family === 'true';
+    const fam = this.s.family === true || this.s.family === 'true' || !!(this.room && this.room.family); // the TV's room-wide Family Mode wins
     const inCat = ANSWERS.filter((a) => (this.s.category === 'all' || a.cat === this.s.category) && (!fam || a.family));
     let list = inCat.filter((a) => ok(a) && !this.used.has(a.id));
     if (list.length < 3) list = inCat.filter((a) => !this.used.has(a.id));

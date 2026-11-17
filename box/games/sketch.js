@@ -9,7 +9,7 @@ const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'ringSize', label: 'Players per ring', options: opt([[4, 'About 4 per ring'], [6, 'About 6 per ring'], [8, 'About 8 per ring']]) },
   { key: 'prompts', label: 'Starting prompts', options: opt([['deck', 'Secret prompts from the deck'], ['write', 'Everyone writes their own']]) },
-  { key: 'pack', label: 'Prompt pack', options: opt([['mix', '🎲 A bit of everything'], ['classic', '🎨 Silly scenes'], ['easy', '✏️ Easy to draw (great for non-artists)'], ['food', '🍕 Food fight'], ['fantasy', '🐉 Myths & monsters'], ['everyday', '🏠 Everyday chaos']]) },
+  { key: 'pack', label: 'Prompt pack', options: opt([['mix', '🎲 A bit of everything'], ['classic', '🎨 Silly scenes'], ['easy', '✏️ Easy to draw (great for non-artists)'], ['food', '🍕 Food fight'], ['fantasy', '🐉 Myths & monsters'], ['everyday', '🏠 Everyday chaos'], ['holiday', '🎄 Holiday (winter, spooky, summer)'], ['office', '💼 Office-safe'], ['classics', '🎬 Classics (no pop culture)'], ['travel', '🌍 Travel & world']]) },
   { key: 'drawSeconds', label: 'Time to draw', options: opt([[45, '45 seconds'], [60, '60 seconds'], [90, '90 seconds']]) },
   { key: 'guessSeconds', label: 'Time to guess', options: opt([[20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds']]) },
   { key: 'showBooks', label: 'Books revealed on the TV', options: opt([[3, 'Up to 3 books'], [6, 'Up to 6 books'], [0, 'Every book']]) },
@@ -92,8 +92,52 @@ const EVERYDAY = [
   'a group photo where someone blinks', 'a selfie with a seagull', 'an empty fridge', 'a hair dryer disaster', 'a bicycle with a flat tire', 'a cat ignoring its fancy new bed',
   'a wave knocking down a sandcastle', 'a monday morning', 'an alarm clock thrown across the room', 'a shopping cart with a wobbly wheel', 'a wet dog shaking off water', 'running out of toilet paper',
 ];
-const PACKS = { classic: PROMPTS, easy: EASY, food: FOOD, fantasy: FANTASY, everyday: EVERYDAY };
+// Seasonal fun: winter, spooky season and summer (no specific religious holidays).
+const HOLIDAY = [
+  'a snowman losing its carrot nose', 'a penguin ice skating', 'a mitten that lost its partner', 'a sled racing down a hill', 'a cozy cabin in a blizzard', 'a polar bear sipping hot cocoa',
+  'a snowflake looking in a mirror', 'an igloo with a front porch', 'a scarf that is way too long', 'a gift box that is wiggling', 'a cat tangled in string lights', 'a gingerbread house with a moat',
+  'a reindeer in ear muffs', 'a snow angel', 'a frozen pond with a hockey goal', 'fireworks over a sleepy town', 'a party hat on a dog', 'a countdown clock at midnight',
+  'a jack-o’-lantern with braces', 'a ghost trick-or-treating', 'a black cat on a pumpkin', 'a bat wearing a bow tie', 'a witch hat blowing away', 'a candy bucket overflowing',
+  'a costume parade of pets', 'a friendly monster handing out candy', 'a haunted treehouse', 'a scarecrow at a harvest fair', 'a pile of autumn leaves with feet sticking out', 'a pumpkin patch at sunset',
+  'a sandcastle with a drawbridge', 'a beach ball bouncing off a seagull', 'an ice pop melting on a hot day', 'a crab building a sandcastle', 'a beach umbrella flying away', 'a flamingo pool float',
+  'a picnic invaded by ants', 'a camping tent in the rain', 'a hammock between two palm trees', 'a sunflower taller than a house', 'a kid jumping through a sprinkler', 'a lemonade stand run by a dog',
+  'a kite stuck in a tree', 'a birthday cake shaped like a castle', 'a piñata running away', 'a garden full of spring flowers', 'a snowball rolling into a giant snowball', 'a surfing grandpa',
+];
+const OFFICE = [
+  'a printer with a paper jam', 'a coffee mug that never empties', 'a desk buried in sticky notes', 'a very long meeting', 'a stapler with sharp teeth', 'a cat joining a video call',
+  'an office chair race', 'a robot running a meeting', 'a water cooler gossip session', 'an email flying out of a laptop', 'a calendar with no free days', 'a pie chart made of real pie',
+  'a team high-five', 'a desk plant taking over the office', 'an elevator stuck between floors', 'a presentation with upside-down slides', 'a boss who is a golden retriever', 'a paperclip with big dreams',
+  'a filing cabinet exploding with papers', 'someone talking while on mute', 'a lunch stolen from the office fridge', 'a whiteboard covered in arrows', 'a keyboard missing its spacebar', 'a deadline chasing a worker',
+  'a spinning office chair', 'a fire drill with everyone in a line', 'a laptop with a sunburn', 'a goldfish employee of the month', 'a tower of donuts in the break room', 'a coffee machine taking a break',
+  'a nap under the desk', 'a desk made of pizza boxes', 'a mouse cursor chasing a real mouse', 'a meeting held on a rollercoaster', 'a cactus in a tie', 'an inbox overflowing like a bathtub',
+  'a superhero commuting by bus', 'a name badge on a llama', 'a pencil holder full of carrots', 'a team photo where everyone is a duck', 'a briefcase with legs', 'a promotion cake with one candle',
+];
+// Timeless scenes: no characters, brands, films or famous people.
+const CLASSICS = [
+  'a lighthouse in a storm', 'a windmill on a hill', 'a hot cup of tea', 'a sailboat at sunset', 'a bowl of fruit', 'a grandfather clock striking midnight',
+  'a cuckoo clock bird popping out', 'a teapot pouring itself', 'a cottage with a smoking chimney', 'a horse and cart', 'a rowboat on a calm lake', 'a hen sitting on eggs',
+  'a farmer milking a cow', 'a steam train crossing a bridge', 'a bird building a nest', 'a well in a village square', 'a candle in a window', 'a swing hanging from an oak tree',
+  'a fisherman with a tiny fish', 'a juggler at a fair', 'a tightrope walker', 'a strongman lifting a barbell', 'an old map with an X', 'a message in a bottle',
+  'a pocket watch', 'a hot air balloon over fields', 'a bicycle built for two', 'a kite festival', 'a spinning top', 'a rocking horse',
+  'a band playing in a park', 'a castle with a moat', 'a treasure buried on an island', 'a ship in a bottle', 'a parade with a marching drum', 'a quilt on a washing line',
+  'a beehive on a branch', 'a fox and a crow', 'a tortoise beating a hare', 'a goose laying a golden egg', 'a cat chasing a ball of yarn', 'a scarecrow guarding a cornfield',
+  'a carousel horse', 'a picnic by a river', 'a snail climbing a fence',
+];
+const TRAVEL = [
+  'a suitcase that won’t close', 'a passport with a goofy photo', 'a plane full of animals', 'a camel at a desert oasis', 'a gondola on a canal', 'a pyramid in the sand',
+  'a tall tower with a flag on top', 'a cable car up a mountain', 'a tourist with a giant camera', 'a map blowing away in the wind', 'a train racing through mountains', 'a lost luggage carousel',
+  'a postcard from the moon', 'a tuk-tuk zooming through a city', 'a hiker at the top of a mountain', 'a rainforest with a hidden waterfall', 'a glacier with a penguin family', 'a desert with a lonely cactus',
+  'a market stall full of spices', 'a street food cart', 'a ferry crossing the sea', 'a road trip in a tiny car', 'a kangaroo crossing sign', 'a jungle bridge made of rope',
+  'a canoe on a jungle river', 'a palm tree on a tiny island', 'a hotel room with a bad view', 'a hammock on a beach hut', 'a snowy mountain village', 'a lighthouse on a rocky coast',
+  'a safari jeep and a giraffe', 'a hot air balloon over canyons', 'a family taking a selfie at a landmark', 'a scuba diver meeting a turtle', 'a night market with lanterns', 'a sleeper train bunk',
+  'a backpack covered in patches', 'a compass pointing the wrong way', 'an airport security line', 'a plane meal that looks strange', 'a volcano on the horizon', 'a houseboat',
+  'a mountain goat on a cliff', 'a rice terrace on a hillside', 'a city skyline at night',
+];
+const PACKS = { classic: PROMPTS, easy: EASY, food: FOOD, fantasy: FANTASY, everyday: EVERYDAY, holiday: HOLIDAY, office: OFFICE, classics: CLASSICS, travel: TRAVEL };
 PACKS.mix = [...new Set(Object.values(PACKS).flat())];
+// Family Mode (room.family) skips the few prompts that are a little scary or toilet-humour for young kids.
+const NOT_FAMILY = new Set(['a house on fire', 'a sleepwalking zombie', 'a zombie learning to knit', 'running out of toilet paper', 'a coconut falling on someone’s head']);
+const familyPool = (list) => list.filter((p) => !NOT_FAMILY.has(p));
 // Silly guesses for test bots.
 const BOT_GUESSES = [
   'my uncle at a wedding', 'a potato', 'spaghetti', 'a confused lamp', 'modern art', 'a very angry egg', 'abstract feelings',
@@ -164,7 +208,10 @@ class Sketch {
   }
   shuffle(a) { const r = this.room.rng; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   setTimer(ms, fn, grace = 0) { this.room.cancel(this.timer); this.endsAt = this.room.now() + ms; this.timer = this.room.after(ms + grace, fn); }
-  draw() { if (!this.deck.length) this.deck = this.shuffle((PACKS[this.s.pack] || PACKS.mix).slice()); return this.deck.pop(); }
+  draw() {
+    if (!this.deck.length) { const list = PACKS[this.s.pack] || PACKS.mix; this.deck = this.shuffle(this.room && this.room.family ? familyPool(list) : list.slice()); }
+    return this.deck.pop();
+  }
   add(id, pts) { if (!pts) return; this.scores.set(id, (this.scores.get(id) || 0) + pts); this.ver++; }
   stat(id) { if (!this.stats.has(id)) this.stats.set(id, { drawVotes: 0, guessVotes: 0, correct: 0, guesses: 0, chaos: 0, wild: null, draws: 0, drawMs: 0, ink: 0 }); return this.stats.get(id); }
 
@@ -548,5 +595,5 @@ class Sketch {
 module.exports = {
   key: 'sketch', name: 'JustSketch Relay', min: 3, best: [4, 10], fields, defaults,
   create: (room, settings) => new Sketch(room, settings),
-  _test: { similarity, matches, cleanStrokes, PROMPTS, PACKS, MAX_POINTS, MAX_STROKES, MAX_FILLS, REACTS },
+  _test: { similarity, matches, cleanStrokes, PROMPTS, PACKS, NOT_FAMILY, MAX_POINTS, MAX_STROKES, MAX_FILLS, REACTS },
 };

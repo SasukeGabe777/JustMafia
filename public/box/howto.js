@@ -22,17 +22,18 @@
     return { i: Math.min(n - 1, Math.floor(t / slot)), done: t >= slot * n, slot, t };
   }
   const st = { el: null, key: null, at: 0, show: null, said: -1, raf: 0 };
-  function speak(text) {
+  // fitMs: the time the step gives the line (a pre-rendered voice clip plays a little faster to fit).
+  function speak(text, fitMs) {
     try {
       const I = BOX.intros && BOX.intros[st.key], spec = I && I.host && I.host.voice;
-      if (BOX.voice && BOX.voice.speak) BOX.voice.speak(text, spec || {});
+      if (BOX.voice && BOX.voice.speak) BOX.voice.speak(text, { ...(spec || {}), fitMs });
       else if (window.speechSynthesis) { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.02; speechSynthesis.speak(u); }
     } catch { /* no voice */ }
   }
   function frame() {
     if (!st.el || !document.body.contains(st.el)) { st.el = null; return; }
     const show = st.show, steps = howtoSteps(st.key), G = BOX.games[st.key] || {}, I = (BOX.intros && BOX.intros[st.key]) || {};
-    const { i, done } = stepAt(show, steps, st.at), s = steps[i] || {};
+    const { i, done, slot } = stepAt(show, steps, st.at), s = steps[i] || {};
     if (st.el.dataset.i !== String(i) || st.el.dataset.done !== String(done)) {
       st.el.dataset.i = String(i); st.el.dataset.done = String(done);
       const th = I.theme || {};
@@ -45,7 +46,7 @@
             ${s.phone ? `<div class="ht-phone"><div class="ht-ph"><div class="ht-ph-notch"></div><div class="ht-ph-screen"><span>📱</span><b>${esc(s.phone)}</b></div></div><div class="ht-ph-label">On your phone</div></div>` : ''}
           </div>`);
       st.el.querySelector('.ht-dots').innerHTML = steps.map((_, k) => `<i class="${k < i || done ? 'past' : k === i ? 'on' : ''}"></i>`).join('');
-      if (!done && st.said !== i) { st.said = i; speak(s.say || [s.title, s.text, s.phone].filter(Boolean).join('. ')); BOX.sfx('pop'); }
+      if (!done && st.said !== i) { st.said = i; speak(s.say || [s.title, s.text, s.phone].filter(Boolean).join('. '), slot - 400); BOX.sfx('pop'); }
       if (done && st.said !== 99) { st.said = 99; speak('That’s it. Let’s play!'); }
     }
     st.raf = requestAnimationFrame(frame);

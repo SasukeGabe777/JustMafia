@@ -18,10 +18,10 @@ function setup(settings = {}) {
   return { room, clock, humans };
 }
 
-test('Nobody looks: the reveal moves on after 60 seconds', () => {
+test('Nobody looks: the reveal moves on after 30 seconds', () => {
   const { room, clock } = setup();
-  assert.equal(room.endsAt - room.now(), 60000);
-  clock.advance(59000); assert.equal(room.phase, 'roleReveal');
+  assert.equal(room.endsAt - room.now(), 30000);
+  clock.advance(29000); assert.equal(room.phase, 'roleReveal');
   clock.advance(1500); assert.equal(room.phase, 'night');
 });
 
@@ -33,17 +33,17 @@ test('Everyone looks: it carries on right after the reveal scene (bots and disco
   clock.advance(14000); assert.equal(room.phase, 'night');
 });
 
-test('Some look: still waits for the rest, up to the minute', () => {
+test('Some look: still waits for the rest, up to 30 seconds', () => {
   const { room, clock, humans } = setup();
   room.flipCard(humans[0]); room.flipCard(humans[1]);
-  clock.advance(30000); assert.equal(room.phase, 'roleReveal');
-  clock.advance(31000); assert.equal(room.phase, 'night');
+  clock.advance(15000); assert.equal(room.phase, 'roleReveal');
+  clock.advance(16000); assert.equal(room.phase, 'night');
 });
 
-test('A Judge narrating in person: the reveal is still capped at 60 seconds', () => {
+test('A Judge narrating in person: the reveal is still capped at 30 seconds', () => {
   const { room, clock } = setup({ narratorMode: 'human' });
   assert(room.endsAt, 'the reveal has a timer');
-  clock.advance(61000); assert.equal(room.phase, 'night');
+  clock.advance(31000); assert.equal(room.phase, 'night');
   assert.equal(room.endsAt, null, 'the rest of the game is still paced by the Judge');
 });
 

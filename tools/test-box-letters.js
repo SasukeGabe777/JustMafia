@@ -143,6 +143,32 @@ test('family set never shows party categories', () => {
   for (let i = 0; i < 20; i++) for (const c of room.game.drawCats(10)) assert(!party.has(c), c);
 });
 
+test('room Family Mode (TV) forces family categories even with the Party set, in every pack', () => {
+  const party = new Set(CATS.filter((c) => c.p).map((c) => c.t));
+  for (const pack of ['standard', 'all', 'holiday']) {
+    const room = new BoxRoom('T', def, { clock: new VirtualClock(), seed: 3 }); room.settings.set = 'party'; room.settings.pack = pack; room.family = true; room.addBots(3); room.start();
+    for (let i = 0; i < 30; i++) for (const c of room.game.drawCats(10)) assert(!party.has(c), pack + ': ' + c);
+    for (let i = 0; i < 10; i++) { const th = room.game.pickTheme(6); for (const c of room.game.drawCats(6, th)) assert(!party.has(c), 'theme ' + c); }
+  }
+  const off = new BoxRoom('T', def, { clock: new VirtualClock(), seed: 3 }); off.settings.set = 'party'; off.addBots(3); off.start();
+  assert([...Array(30)].some(() => off.game.drawCats(10).some((c) => party.has(c))), 'without Family Mode the party set still deals party categories');
+});
+
+test('category packs: Holidays, Office-safe, Travel and Classics are family-safe, stay out of Standard, and play whole games', () => {
+  const field = def.fields.find((f) => f.key === 'pack');
+  for (const k of ['holiday', 'office', 'travel', 'classics']) {
+    assert(field.options.some((o) => o.value === k), k);
+    assert(THEMES[k].pack && THEMES[k].family.length >= 40 && !THEMES[k].party.length, k);
+    const room = new BoxRoom('T', def, { clock: new VirtualClock(), seed: 5 }); Object.assign(room.settings, { pack: k, rounds: 5, cats: 10 }); room.addBots(4); room.start();
+    const g = room.game, seen = new Set();
+    run(room, room.clock, () => { for (const c of g.cats) seen.add(c); return g.phase === 'over'; });
+    for (const c of seen) assert(THEMES[k].family.includes(c), k + ' shows ' + c);
+  }
+  const std = new BoxRoom('T', def, { clock: new VirtualClock(), seed: 5 }); std.addBots(3); std.start();
+  const extra = new Set(CATS.filter((c) => c.x).map((c) => c.t));
+  for (let i = 0; i < 20; i++) for (const c of std.game.drawCats(10)) assert(!extra.has(c), 'standard shows ' + c);
+});
+
 test('phone input is validated and stripped', () => {
   const { g, ps: [a, b] } = setup();
   for (const bad of [{ op: 'ans', i: 99, text: 'x' }, { op: 'ans', i: -1, text: 'x' }, { op: 'ans', i: 1.5, text: 'x' }, { op: 'ans', i: 0, text: 42 }, { op: 'ans', i: '0x', text: 'x' },

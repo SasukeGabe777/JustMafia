@@ -326,4 +326,23 @@ test('Host skip walks through every phase; leaving mid-scene does not stall it',
   assert(g(room).endsAt - clock.now() <= 1200, 'closes once the rest are in');
 });
 
+test('Family mode (room.family): the gentler telling, same rules, and no grisly line ever shows', () => {
+  const { TOLD } = def._test, [plain, fam] = TOLD;
+  assert.equal(fam.SCENARIOS.length, plain.SCENARIOS.length);
+  fam.SCENARIOS.forEach((s, i) => { const p = plain.SCENARIOS[i]; assert.equal(s.id, p.id); assert.deepEqual(s.options.map((o) => [o.k, o.risk, o.need, o.gain, o.role]), p.options.map((o) => [o.k, o.risk, o.need, o.gain, o.role])); });
+  assert.equal(fam.ITEMS.gun.name, 'Foam blaster'); assert.equal(ITEMS.gun.name, 'Pistol', 'the normal telling is unchanged');
+  const banned = /pistol|bullet|not friendly|bit back|didn’t make it|the real kind|not ketchup\b(?! after)|pill bottles|drank something|so the others could|very end/i;
+  for (const s of fam.SCENARIOS) assert(!banned.test(JSON.stringify(s)), 'family scene ' + s.id);
+  for (const seed of [3, 8]) {
+    const { room, clock } = setup({ bots: 6, seed }); room.family = true; room.start();
+    assert.equal(g(room).family, true); assert.equal(g(room).T, fam);
+    let i = 0;
+    while (g(room).phase !== 'over' && clock.step()) {
+      if (++i > 3000000) throw new Error('never ended');
+      if (i % 5 === 0) { const out = json(g(room).tv()) + json(g(room).view(room.list()[0])); assert(!banned.test(out), 'family screen: ' + out.match(banned)); }
+    }
+  }
+  const { room } = setup({ bots: 3 }); room.start(); assert.equal(g(room).family, false, 'undefined room.family = normal telling');
+});
+
 console.log(`\n${passed} zombie tests passed`);

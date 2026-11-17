@@ -7,7 +7,7 @@
 // earn a set bonus. Highest net worth (cash + items + bonuses − loans with interest) wins.
 // Special lockers: Sealed Bid (second-price), Mystery (no clues), Premium (better pool,
 // higher opening) and the final Grand Locker (double size). All content is in bid-items.js.
-const { ITEMS, THEMES, SETS, RARITIES, W_DEFAULT } = require('./bid-items');
+const { ITEMS, THEMES, SETS, RARITIES, W_DEFAULT, PACKS } = require('./bid-items');
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
@@ -16,8 +16,9 @@ const fields = [
   { key: 'countdown', label: 'Going once… countdown', options: opt([[5, '5 seconds'], [7, '7 seconds'], [10, '10 seconds']]) },
   { key: 'specials', label: 'Special lockers', options: opt([[true, 'On (sealed, mystery, premium)'], [false, 'Off']]) },
   { key: 'loans', label: 'Bank loans', options: opt([[true, 'On'], [false, 'Off']]) },
+  { key: 'pack', label: 'Locker mix', options: opt([['all', '🎲 Everything'], ...PACKS.map((p) => [p.key, p.label + ' pack'])]) },
 ];
-const defaults = { rounds: 8, cash: 2000, countdown: 7, specials: true, loans: true };
+const defaults = { rounds: 8, cash: 2000, countdown: 7, specials: true, loans: true, pack: 'all' };
 
 const PREVIEW_MS = 6000, SOLD_MS = 3000, SEALED_MS = 20000, END_EARLY_MS = 900, TOTAL_MS = 5500, BONUS_MS = 2500;
 const ADDS = [10, 25, 100, 500];
@@ -52,17 +53,23 @@ function sealedPrice(sorted, opening) {
 }
 
 // Weighted rarity pools per theme: themed items count 4×, "any" filler 1×.
+// ctx: { fam } keeps only family-safe items (room-wide Family mode); { pack } keeps a Mystery
+// locker (which draws from everything) inside the chosen content pack's lockers.
+const PACK_THEMES = Object.fromEntries(PACKS.map((p) => [p.key, THEMES.filter((t) => t.pack === p.key).map((t) => t.key)]));
+const inPack = (it, pack) => !pack || it.themes.includes('any') || it.themes.some((t) => PACK_THEMES[pack].includes(t));
+const okItem = (it, ctx) => !(ctx && ctx.fam && !it.family);
 const pools = new Map();
-function poolFor(theme, r) {
-  const k = theme.key + ':' + r;
+function poolFor(theme, r, ctx = {}) {
+  const pack = ctx.pack || null, k = theme.key + ':' + r + ':' + (ctx.fam ? 'f' : '') + ':' + (pack || '');
   if (!pools.has(k)) {
     const list = [];
     for (const it of ITEMS) {
-      if (it.r !== r) continue;
-      const w = theme.key === 'mystery' ? 1 : it.themes.includes(theme.key) ? 4 : it.themes.includes('any') ? 1 : 0;
+      if (it.r !== r || !okItem(it, ctx)) continue;
+      const w = theme.key === 'mystery' ? (inPack(it, pack) ? 1 : 0) : it.themes.includes(theme.key) ? 4 : it.themes.includes('any') ? 1 : 0;
       if (w) list.push({ it, w });
     }
-    if (!list.length) for (const it of ITEMS) if (it.r === r) list.push({ it, w: 1 });
+    if (!list.length) for (const it of ITEMS) if (it.r === r && okItem(it, ctx) && inPack(it, pack)) list.push({ it, w: 1 });
+    if (!list.length) for (const it of ITEMS) if (it.r === r && okItem(it, ctx)) list.push({ it, w: 1 });
     pools.set(k, list);
   }
   return pools.get(k);
@@ -70,13 +77,13 @@ function poolFor(theme, r) {
 const mid = (it) => (it.lo + it.hi) / 2;
 // The expected value of one random item from a theme with given rarity weights (base dollars).
 const evCache = new Map();
-function itemEV(theme, w) {
-  const k = theme.key + JSON.stringify(w);
+function itemEV(theme, w, ctx = {}) {
+  const k = theme.key + JSON.stringify(w) + (ctx.fam ? 'f' : '') + (ctx.pack || '');
   if (!evCache.has(k)) {
     const tot = Object.values(w).reduce((a, b) => a + b, 0);
     let ev = 0;
     for (const r of Object.keys(w)) {
-      const pool = poolFor(theme, r), pw = pool.reduce((a, x) => a + x.w, 0);
+      const pool = poolFor(theme, r, ctx), pw = pool.reduce((a, x) => a + x.w, 0);
       ev += (w[r] / tot) * pool.reduce((a, x) => a + x.w * mid(x.it), 0) / pw;
     }
     evCache.set(k, ev);
@@ -109,6 +116,10 @@ class Bid {
   loanAmt() { return Math.max(50, Math.round((500 * this.scale()) / 50) * 50); }
   loanLine() { return Math.round(this.startCash() * 0.6); } // "low cash": under 60% of the starting bankroll
   setTimer(ms, fn) { this.room.cancel(this.timer); this.endsAt = this.room.now() + ms; this.dur = ms; this.timer = this.room.after(ms, fn); }
+  // Locker mix: one content pack's lockers only (null = everything). Family mode is room-wide (TV).
+  pack() { return PACK_THEMES[this.s.pack] && PACK_THEMES[this.s.pack].length ? this.s.pack : null; }
+  famRoom() { return !!(this.room && this.room.family); }
+  ctx() { return { fam: this.famRoom(), pack: this.pack() }; }
   stopAll() { for (const k of ['timer', 't1', 't2', 'botTimer']) { this.room.cancel(this[k]); this[k] = null; } }
 
   seat(p, waiting = false) {
@@ -141,11 +152,11 @@ class Bid {
       const m = n <= 6 ? 2 : n <= 8 ? 3 : 4, sp = this.shuffle(['sealed', 'mystery', 'premium']);
       for (let k = 0; k < m; k++) kinds[Math.max(1, Math.min(n - 2, Math.round(((k + 1) * (n - 1)) / (m + 1))))] = sp[k % sp.length];
     }
-    const normal = THEMES.filter((t) => !t.special);
+    const pack = this.pack(), normal = THEMES.filter((t) => !t.special && (!pack || t.pack === pack));
     let deck = [];
     this.plan = kinds.map((kind) => {
       if (kind === 'mystery') return { kind, theme: 'mystery' };
-      if (kind === 'premium' && this.rng() < 0.5) return { kind, theme: 'vault' };
+      if (kind === 'premium' && !pack && this.rng() < 0.5) return { kind, theme: 'vault' };
       if (!deck.length) deck = this.shuffle(normal.slice());
       return { kind, theme: deck.pop().key };
     });
@@ -164,11 +175,12 @@ class Bid {
   makeLocker(spec) {
     const theme = THEME[spec.theme], kind = spec.kind, w = this.weightsFor(theme, kind), sc = this.scale();
     const base = 5 + Math.floor(this.rng() * 3), size = kind === 'grand' ? base * 2 : base;
-    const items = [], used = new Set();
+    const items = [], used = new Set(), ctx = this.ctx();
     for (let i = 0; i < size; i++) {
       const r = this.pickWeighted(Object.keys(w), (k) => w[k]);
-      let pool = poolFor(theme, r).filter((x) => !used.has(x.it.id));
-      if (!pool.length) pool = ITEMS.filter((it) => it.r === r && !used.has(it.id)).map((it) => ({ it, w: 1 }));
+      let pool = poolFor(theme, r, ctx).filter((x) => !used.has(x.it.id));
+      if (!pool.length) pool = ITEMS.filter((it) => it.r === r && !used.has(it.id) && okItem(it, ctx) && inPack(it, ctx.pack)).map((it) => ({ it, w: 1 }));
+      if (!pool.length) pool = ITEMS.filter((it) => it.r === r && !used.has(it.id) && okItem(it, ctx)).map((it) => ({ it, w: 1 }));
       const it = this.pickWeighted(pool, (x) => x.w).it; used.add(it.id);
       items.push({ ...it, value: niceVal((it.lo + this.rng() * (it.hi - it.lo)) * sc) });
     }
@@ -185,7 +197,7 @@ class Bid {
         else { const i = order.pop(); clues.push({ icon: items[i].clue.icon, text: items[i].clue.text, idx: i }); }
       }
     }
-    const evItem = itemEV(theme, w) * sc;
+    const evItem = itemEV(theme, w, ctx) * sc;
     const ev = evItem * size;
     const opening = round10(ev * (kind === 'premium' ? 0.35 : kind === 'grand' ? 0.22 : kind === 'sealed' ? 0.15 : 0.12));
     return { kind, theme, items, clues, size, opening, evItem, ev };

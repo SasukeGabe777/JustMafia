@@ -232,4 +232,37 @@ test('Final round counts double; results() lists players best-first at the end',
   assert.equal(order[0], a.id, 'Ann scored, Bo did not');
 });
 
+test('Content packs: Holiday, Office, Classics, Travel each stock 40+ items and play to the end on their own shelf', () => {
+  for (const key of ['holiday', 'office', 'classics', 'travel']) {
+    const c = CATEGORIES.find((x) => x.key === key);
+    assert(c && c.pack, 'pack ' + key);
+    assert(ITEMS.filter((i) => i.cat === key).length >= 40, key + ' too small');
+    assert(def.fields.find((f) => f.key === 'category').options.some((o) => o.value === key), key + ' not in the menu');
+    const { room, clock } = setup(3, { rounds: 15, category: key });
+    room.start(); const seen = new Set();
+    while (room.game.phase !== 'over') { for (const i of room.game.items) seen.add(i.cat); if (!clock.step()) break; }
+    assert.equal(room.game.phase, 'over', key);
+    assert.deepEqual([...seen], [key], key + ' showed other aisles: ' + [...seen]);
+  }
+});
+
+test('Family mode (room.family): no item outside the family pool ever appears, in any aisle', () => {
+  const bad = new Set(ITEMS.filter((i) => !i.family).map((i) => i.name));
+  assert(bad.size >= 1 && bad.has('Whoopee Cushion'));
+  for (const category of ['all', 'weird', 'fashion', 'everyday', 'holiday']) {
+    for (const seed of [1, 2, 3]) {
+      const { room, clock } = setup(3, { rounds: 15, category }, seed);
+      room.family = true; room.start();
+      const g = room.game;
+      assert(g.deck.every((i) => i.family), 'deck has a non-family item');
+      while (g.phase !== 'over') { for (const i of g.items) assert(!bad.has(i.name), category + ': ' + i.name); if (!clock.step()) break; }
+      assert.equal(g.phase, 'over');
+    }
+  }
+  // Long weird-aisle games run the shelf dry and reshuffle: still family-only.
+  const { room } = setup(1, { category: 'weird' }); room.family = true; room.start();
+  for (let k = 0; k < 300; k++) assert(!bad.has(room.game.draw().name));
+  for (let k = 0; k < 100; k++) for (const i of room.game.drawPair()) assert(!bad.has(i.name));
+});
+
 console.log(`\nPrice Panic: ${passed} tests passed.`);

@@ -48,6 +48,46 @@ test('the family deck only deals family cards and prompts', () => {
   }
 });
 
+test('family mode on the TV (room.family) overrides the party deck: only family prompts and cards', () => {
+  const clock = new VirtualClock(), r = new BoxRoom('TEST', def, { clock, seed: 3 });
+  Object.assign(r.settings, { deck: 'party', rounds: 20 }); r.family = true;
+  const ps = ['Ann', 'Bob', 'Cat', 'Dan'].map((n) => r.join(n).player);
+  assert.ok(r.start().ok); const g = r.game;
+  const famP = new Set(C.FAMILY_PROMPTS), famA = new Set(C.FAMILY_ANSWERS);
+  assert.ok(g.answerPool().every((t) => famA.has(t)) && g.promptPool().every((t) => famP.has(t)), 'family pools');
+  for (let k = 0; k < 10; k++) {
+    assert.ok(famP.has(g.prompt.text), 'family prompt: ' + g.prompt.text);
+    for (const p of ps) for (const c of g.hands.get(p.id)) assert.ok(famA.has(c.text), 'family card: ' + c.text);
+    playAll(g, ps); stepUntil(r, clock, () => g.phase === 'choose' || g.phase === 'over');
+    if (g.phase === 'over') break;
+    r.hostAction({ type: 'next' }); r.hostAction({ type: 'next' });
+  }
+});
+
+test('theme packs: 40+ original prompts and cards each, family-safe, and each deals only its pool (plus the family base)', () => {
+  assert.ok(def.fields.find((f) => f.key === 'pack').options.length === 1 + Object.keys(C.PACKS).length);
+  const all = C.PROMPTS.concat(...Object.values(C.PACKS).map((p) => p.prompts)), allA = C.ANSWERS.concat(...Object.values(C.PACKS).map((p) => p.answers));
+  for (const list of [all, allA]) { const low = list.map((x) => x.toLowerCase()); assert.strictEqual(new Set(low).size, low.length, 'duplicates: ' + low.filter((x, i) => low.indexOf(x) !== i)); }
+  const party = new Set(C.PARTY_PROMPTS.concat(C.PARTY_ANSWERS));
+  for (const [key, pk] of Object.entries(C.PACKS)) {
+    assert.ok(pk.prompts.length >= 40 && pk.answers.length >= 50, key + ' size');
+    for (const p of pk.prompts) { const n = (p.match(/___/g) || []).length; assert.ok(n >= 1 && n <= 2, p); }
+    for (const a of pk.answers) assert.ok(a.length <= 70 && !/[<>]/.test(a) && !party.has(a), a);
+    for (const fam of [false, true]) {
+      const clock = new VirtualClock(), r = new BoxRoom('TEST', def, { clock, seed: 5 });
+      Object.assign(r.settings, { deck: 'party', pack: key, rounds: 8, toWin: 10 }); r.family = fam; r.addBots(5);
+      assert.ok(r.start().ok); const g = r.game;
+      const okP = new Set(pk.prompts), okA = new Set(pk.answers.concat(C.FAMILY_ANSWERS));
+      let rounds = 0;
+      while (g.phase !== 'over' && rounds < 200) {
+        if (g.phase === 'pick') { assert.ok(okP.has(g.prompt.text), key + ' prompt: ' + g.prompt.text); for (const h of g.hands.values()) for (const c of h) assert.ok(okA.has(c.text), key + ' card: ' + c.text); rounds++; }
+        if (!clock.step()) break;
+      }
+      assert.strictEqual(g.phase, 'over', key + ' game finishes');
+    }
+  }
+});
+
 test('weird input never crashes; written cards are cleaned; cards must be yours', () => {
   const { g, ps } = humans(['Ann', 'Bob', 'Cat'], { mode: 'vote', blanks: 2 });
   const p = ps[0]; g.prompt = { text: 'My secret talent is ___.', pick: 1 };

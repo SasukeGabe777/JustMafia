@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const { VirtualClock } = require('../clock');
 const { BoxRoom } = require('../box/room');
 const def = require('../box/games/bid');
-const { ITEMS, THEMES, SETS } = require('../box/games/bid-items');
+const { ITEMS, THEMES, SETS, PACKS } = require('../box/games/bid-items');
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log(`  ✓ ${name}`); };
@@ -30,9 +30,9 @@ function forceLocker(g, kind, theme = 'attic') {
   g.plan = g.plan.map(() => ({ kind, theme })); g.round = 0; g.newLocker();
 }
 
-test('Content: ~180 original items, 14 themes, sets that can be completed', () => {
+test('Content: ~180 original items, 22 themes, sets that can be completed', () => {
   assert(ITEMS.length >= 180, 'only ' + ITEMS.length + ' items');
-  assert.equal(THEMES.length, 14);
+  assert.equal(THEMES.length, 22);
   assert.equal(new Set(ITEMS.map((i) => i.name)).size, ITEMS.length, 'duplicate item names');
   for (const it of ITEMS) {
     assert(it.emoji && it.name && it.clue.icon && it.clue.text && it.lo > 0 && it.hi >= it.lo, it.name);
@@ -331,6 +331,59 @@ test('results() best-first by net worth; the TV names who a sealed bid is waitin
   const res = g.results(), nets = res.map((id) => g.net(g.st.get(id)));
   assert.equal(res.length, 5);
   assert.deepEqual(nets, nets.slice().sort((x, y) => y - x));
+});
+
+// Run a whole game, noting every locker that rolls in (theme + contents).
+function playAll(settings, seed, family) {
+  const { room, clock } = setup(3, settings, seed);
+  if (family) room.family = true;
+  human(room, 'Ann'); room.start();
+  const lockers = []; let last = null;
+  stepUntil(room, clock, () => { const L = room.game.locker; if (L && L !== last) { last = L; lockers.push(L); } return room.game.phase === 'over'; }, 3000000);
+  return { room, lockers };
+}
+
+test('Content packs: Holiday, Office, Classics, Travel lockers, 40+ items each, play end to end on their own', () => {
+  const field = def.fields.find((x) => x.key === 'pack');
+  assert(field && field.options.some((o) => o.value === def.defaults.pack), 'Locker mix setting');
+  for (const p of PACKS) {
+    assert(field.options.some((o) => o.value === p.key), p.key + ' not in the menu');
+    const themes = THEMES.filter((t) => t.pack === p.key).map((t) => t.key);
+    assert(themes.length >= 1, p.key);
+    const items = ITEMS.filter((i) => i.themes.some((t) => themes.includes(t)));
+    assert(items.length >= 40, p.key + ': only ' + items.length);
+    for (const r of ['J', 'C', 'G', 'R', 'E', 'L']) assert(items.some((i) => i.r === r), p.key + ' has no ' + r);
+    const { room, lockers } = playAll({ rounds: 12, pack: p.key }, 5);
+    assert.equal(room.game.phase, 'over');
+    assert.equal(lockers.length, 12);
+    for (const L of lockers) {
+      if (L.theme.key !== 'mystery') assert.equal(L.theme.pack, p.key, p.key + ' rolled a ' + L.theme.key + ' locker');
+      for (const it of L.items) assert(it.themes.includes('any') || it.themes.some((t) => themes.includes(t)), p.key + ' locker had ' + it.name);
+    }
+  }
+  // The default mix still uses every original locker theme.
+  const { lockers } = playAll({ rounds: 12 }, 3);
+  assert(lockers.some((L) => !L.theme.pack || L.theme.key === 'office'));
+});
+
+test('Family mode (room.family): no non-family item ever turns up, in any locker kind or pack', () => {
+  const bad = new Set(ITEMS.filter((i) => !i.family).map((i) => i.name));
+  assert(bad.has('Very old bottle of wine') && bad.has('Jeweled ceremonial dagger'));
+  for (const pack of ['all', 'holiday', 'office']) for (const seed of [1, 2]) {
+    const { lockers } = playAll({ rounds: 12, pack }, seed, true);
+    for (const L of lockers) for (const it of L.items) assert(!bad.has(it.name), pack + ': ' + it.name);
+  }
+  // Hammer the lockers most likely to hold them: the Vault, Mystery, Movie Props, Kitchen.
+  const { room } = setup(0, {}); room.family = true; human(room, 'Ann'); room.start();
+  const g = room.game;
+  for (let k = 0; k < 60; k++) for (const [kind, theme] of [['premium', 'vault'], ['mystery', 'mystery'], ['grand', 'movie'], ['normal', 'kitchen'], ['normal', 'pirate']]) {
+    forceLocker(g, kind, theme);
+    for (const it of g.locker.items) assert(!bad.has(it.name), theme + ': ' + it.name);
+  }
+  // Without Family mode they can still appear.
+  const off = setup(0, {}); human(off.room, 'Bo'); off.room.start(); let seen = false;
+  for (let k = 0; k < 200 && !seen; k++) { forceLocker(off.room.game, 'premium', 'vault'); seen = off.room.game.locker.items.some((it) => bad.has(it.name)); }
+  assert(seen, 'non-family items never appeared with Family mode off');
 });
 
 console.log(`\nJustBid: ${passed} tests passed`);

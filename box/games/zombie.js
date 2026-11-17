@@ -17,7 +17,10 @@
 // The dead become ghosts: each scene they bless 🍀 or curse 🕯️ a survivor (a small nudge to
 // their luck) and score if they called it. Points: +100 per scene survived, +500 for the
 // rescue, hero / helper bonuses, ghost points. With 1–3 players, AI survivors join the group.
-const { ITEMS, CHAPTERS, SCENARIOS, BITE_LINES } = require('./zombie-story');
+const STORY = require('./zombie-story');
+const { ITEMS, CHAPTERS, SCENARIOS } = STORY;
+// Two tellings of the same story: the normal one and the gentler Family one (room.family).
+const TOLD = [false, true].map((fam) => { const t = STORY.story(fam); return { ...t, SC: new Map(t.SCENARIOS.map((x) => [x.id, x])), CH: new Map(t.CHAPTERS.map((c) => [c.key, c])) }; });
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
@@ -43,12 +46,11 @@ const MIN_GROUP = 4; // fewer players than this: AI survivors join
 const SHOW = 16; // people per group acted out on the TV (the rest are counted)
 const NPCS = [['Granny Mae', '👵'], ['Coach Duffy', '🧔'], ['Chef Rosa', '👩‍🍳'], ['Dusty', '🤠'], ['Nurse Ivy', '👩‍⚕️'], ['Skater Leo', '🛹']];
 const NPC_COLORS = ['#c9a36b', '#8fb3a0', '#d98a6c', '#a3a0d9'];
-const SC = new Map(SCENARIOS.map((s) => [s.id, s]));
-const CH = new Map(CHAPTERS.map((c) => [c.key, c]));
 
 class Zombie {
   constructor(room, settings) {
     this.room = room; this.s = { ...defaults, ...settings };
+    this.family = !!(room && room.family); this.T = TOLD[this.family ? 1 : 0]; // the story as told in this room
     this.phase = 'chapter'; this.ppl = new Map(); this.plan = []; this.idx = -1; this.r = null;
     this.timer = null; this.endsAt = 0; this.chapter = null; this.history = []; this.epilogue = null; this.npcN = 0;
   }
@@ -90,17 +92,17 @@ class Zombie {
   // ---- the story: one chapter per day, scenes drawn from each chapter's pool ----
   buildPlan() {
     const per = PER_CHAPTER[this.s.length] || 3, pre = RESCUE_PRE[this.s.length] == null ? 1 : RESCUE_PRE[this.s.length];
-    const anyPool = this.shuffle(SCENARIOS.filter((s) => s.ch === 'any'));
-    for (const c of CHAPTERS) {
+    const anyPool = this.shuffle(this.T.SCENARIOS.filter((s) => s.ch === 'any'));
+    for (const c of this.T.CHAPTERS) {
       if (c.key === 'rescue') {
-        const pool = this.shuffle(SCENARIOS.filter((s) => s.ch === 'rescue' && !s.final));
+        const pool = this.shuffle(this.T.SCENARIOS.filter((s) => s.ch === 'rescue' && !s.final));
         for (const s of pool.slice(0, pre)) this.plan.push({ id: s.id, ch: c.key });
-        const fin = this.shuffle(SCENARIOS.filter((s) => s.final))[0];
+        const fin = this.shuffle(this.T.SCENARIOS.filter((s) => s.final))[0];
         this.plan.push({ id: fin.id, ch: c.key });
         continue;
       }
-      const pool = this.shuffle(SCENARIOS.filter((s) => s.ch === c.key && !s.first));
-      const first = c.key === 'outbreak' ? SCENARIOS.filter((s) => s.first) : [];
+      const pool = this.shuffle(this.T.SCENARIOS.filter((s) => s.ch === c.key && !s.first));
+      const first = c.key === 'outbreak' ? this.T.SCENARIOS.filter((s) => s.first) : [];
       const list = [...first];
       // From three scenes a chapter, one of them may be a wildcard (night watch, the fog…).
       const wild = per >= 3 && anyPool.length && this.rng() < 0.6 ? 1 : 0;
@@ -109,7 +111,7 @@ class Zombie {
       for (const s of list.slice(0, per)) this.plan.push({ id: s.id, ch: c.key });
     }
   }
-  sceneOf(i = this.idx) { const p = this.plan[i]; return p ? SC.get(p.id) : null; }
+  sceneOf(i = this.idx) { const p = this.plan[i]; return p ? this.T.SC.get(p.id) : null; }
   living() { return [...this.ppl.values()].filter((x) => x.alive && this.here(x)); }
   livingPlayers() { return this.living().filter((x) => !x.npc); }
 
@@ -118,7 +120,7 @@ class Zombie {
     if (this.idx >= 0 && !this.livingPlayers().length) return this.finish();
     this.idx++;
     if (this.idx >= this.plan.length) return this.finish();
-    const ch = CH.get(this.plan[this.idx].ch);
+    const ch = this.T.CH.get(this.plan[this.idx].ch);
     this.r = null;
     if (!this.chapter || this.chapter.key !== ch.key) {
       this.chapter = ch; this.phase = 'chapter';
@@ -149,7 +151,7 @@ class Zombie {
   has(x, k) { return x.items.some((i) => i.k === k); }
   itemCount(x, k) { const i = x.items.find((y) => y.k === k); return i ? (i.n == null ? 1 : i.n) : 0; }
   addItem(x, k) {
-    const I = ITEMS[k]; if (!I) return null;
+    const I = this.T.ITEMS[k]; if (!I) return null;
     const cur = x.items.find((i) => i.k === k);
     if (cur) { if (I.uses) cur.n = Math.min(I.uses * 3, (cur.n || 0) + (k === 'gun' ? 2 : I.uses)); return { got: k, dropped: null }; }
     let dropped = null;
@@ -186,17 +188,17 @@ class Zombie {
     if (m.op === 'choose') {
       const o = typeof m.k === 'string' ? r.sc.options.find((y) => y.k === m.k) : null;
       if (!o) return { ok: false, error: 'Pick one of the options.' };
-      if (this.locked(x, o)) return { ok: false, error: `You need ${ITEMS[o.need].icon} ${ITEMS[o.need].name.toLowerCase()} for that.` };
+      if (this.locked(x, o)) return { ok: false, error: `You need ${this.T.ITEMS[o.need].icon} ${this.T.ITEMS[o.need].name.toLowerCase()} for that.` };
       r.picks.set(x.id, o.k);
       this.maybeAllIn();
       return { ok: true };
     }
     // give one item to another survivor
     if (r.gifts.has(x.id)) return { ok: false, error: 'You already gave something this scene.' };
-    if (typeof m.item !== 'string' || !ITEMS[m.item] || !this.has(x, m.item)) return { ok: false, error: 'You don’t have that.' };
+    if (typeof m.item !== 'string' || !this.T.ITEMS[m.item] || !this.has(x, m.item)) return { ok: false, error: 'You don’t have that.' };
     const t = typeof m.to === 'string' ? this.ppl.get(m.to) : null;
     if (!t || t === x || !t.alive || !this.here(t)) return { ok: false, error: 'Pick a survivor to give it to.' };
-    if (this.has(t, m.item) && !ITEMS[m.item].uses) return { ok: false, error: 'They already have one.' };
+    if (this.has(t, m.item) && !this.T.ITEMS[m.item].uses) return { ok: false, error: 'They already have one.' };
     if (!this.has(t, m.item) && t.items.length >= CAP) return { ok: false, error: 'Their backpack is full.' };
     return { ok: true, ...this.give(x, t, m.item) };
   }
@@ -204,7 +206,7 @@ class Zombie {
     const it = x.items.find((i) => i.k === k), whole = k === 'gun' || k === 'bat';
     if (whole || it.n == null || it.n <= 1) x.items.splice(x.items.indexOf(it), 1); else it.n--;
     const cur = t.items.find((i) => i.k === k);
-    if (cur) { if (cur.n != null) cur.n += whole ? it.n : 1; } else t.items.push({ k, n: whole ? it.n : ITEMS[k].uses ? 1 : null });
+    if (cur) { if (cur.n != null) cur.n += whole ? it.n : 1; } else t.items.push({ k, n: whole ? it.n : this.T.ITEMS[k].uses ? 1 : null });
     this.r.gifts.set(x.id, { to: t.id, item: k });
     let pts = GIFT; x.st.gifts++;
     const saving = k === 'medkit' && t.status === 'bitten';
@@ -313,7 +315,7 @@ class Zombie {
       if (x.status === 'hurt') risk *= 1.4;
       let used = null;
       if (o.help) { let best = 1; for (const [k, f] of Object.entries(o.help)) if (this.has(x, k) && f < best) { best = f; used = k; } if (used) { risk *= best; if (used === 'gun') x.st.shots++; this.useItem(x, used); } }
-      if (o.need && ITEMS[o.need].uses && o.need !== 'medkit') this.useItem(x, o.need);
+      if (o.need && this.T.ITEMS[o.need].uses && o.need !== 'medkit') this.useItem(x, o.need);
       let nudge = 0; for (const [, h] of r.haunts) if (h.to === x.id) nudge += h.mode === 'curse' ? 0.07 : -0.07;
       risk += Math.max(-0.2, Math.min(0.2, nudge));
       if (r.froze.has(x.id)) risk += 0.1;
@@ -403,10 +405,10 @@ class Zombie {
       if (clean.length) parts.push(`${this.names(clean)} ${o.ok}.`);
       if (hit.length) parts.push(`${this.names(hit)} ${o.bad}.`);
       const c = { safe: clean.length, hurt: 0, bitten: 0, dead: 0 }; for (const f of hit) c[f.fate]++;
-      groups.push({ k: o.k, icon: o.icon, label: o.label, anim: o.anim, role: o.role || null, need: o.need ? ITEMS[o.need].icon : null,
-        gain: o.gain ? [].concat(o.gain).map((k) => ITEMS[k].icon).join('') : '', line: parts.join(' '), counts: c, total: fs.length,
+      groups.push({ k: o.k, icon: o.icon, label: o.label, anim: o.anim, role: o.role || null, need: o.need ? this.T.ITEMS[o.need].icon : null,
+        gain: o.gain ? [].concat(o.gain).map((k) => this.T.ITEMS[k].icon).join('') : '', line: parts.join(' '), counts: c, total: fs.length,
         setup: `${this.names(fs)}: ${o.label.charAt(0).toLowerCase() + o.label.slice(1)}`, fs,
-        people: fs.slice(0, SHOW).map((f) => ({ ...this.pub(f.x), fate: f.fate, got: f.got ? ITEMS[f.got].icon : null, used: f.used ? ITEMS[f.used].icon : null, froze: r.froze.has(f.x.id), lucky: !!f.lucky, healed: f.healed, cured: f.cured, fi: fs.indexOf(f) })),
+        people: fs.slice(0, SHOW).map((f) => ({ ...this.pub(f.x), fate: f.fate, got: f.got ? this.T.ITEMS[f.got].icon : null, used: f.used ? this.T.ITEMS[f.used].icon : null, froze: r.froze.has(f.x.id), lucky: !!f.lucky, healed: f.healed, cured: f.cured, fi: fs.indexOf(f) })),
         more: Math.max(0, fs.length - SHOW), sev: c.dead * 3 + c.bitten * 2 + c.hurt });
     }
     groups.sort((a, b) => a.sev - b.sev); // the worst news last
@@ -423,7 +425,7 @@ class Zombie {
     if (fever.length) {
       const shown = Math.min(fever.length, SHOW);
       fever.forEach((v, i) => { v.revealAt = t + FEV_IN + Math.min(i, shown) * FEV_PER; });
-      feverOut = { at: t, per: FEV_PER, revealIn: FEV_IN, line: BITE_LINES[r.n % BITE_LINES.length] + ' ' + [
+      feverOut = { at: t, per: FEV_PER, revealIn: FEV_IN, line: this.T.BITE_LINES[r.n % this.T.BITE_LINES.length] + ' ' + [
         fever.filter((v) => v.fate === 'cured').length ? `${this.names(fever.filter((v) => v.fate === 'cured').map((v) => v.f))} patched up the bite just in time.` : '',
         fever.filter((v) => v.fate === 'turned').length ? `${this.names(fever.filter((v) => v.fate === 'turned').map((v) => v.f))} turned. Groan.` : '',
       ].filter(Boolean).join(' '), people: fever.slice(0, SHOW).map((v) => ({ ...this.pub(v.f.x), fate: v.fate, at: v.revealAt })) };
@@ -500,10 +502,10 @@ class Zombie {
   // ---- public / private state ----
   sceneInfo() {
     const sc = this.r ? this.r.sc : this.phase === 'chapter' ? null : this.sceneOf();
-    return sc ? { id: sc.id, title: sc.title, text: sc.text, final: !!sc.final, options: sc.options.map((o) => ({ k: o.k, icon: o.icon, label: o.label, anim: o.anim, need: o.need ? ITEMS[o.need].icon : null, help: o.help ? Object.keys(o.help).map((k) => ITEMS[k].icon).join('') : '', gain: o.gain ? [].concat(o.gain).map((k) => ITEMS[k].icon).join('') : '', heal: !!o.heal, cure: !!o.cure, hero: !!o.hero, role: o.role || null })) } : null;
+    return sc ? { id: sc.id, title: sc.title, text: sc.text, final: !!sc.final, options: sc.options.map((o) => ({ k: o.k, icon: o.icon, label: o.label, anim: o.anim, need: o.need ? this.T.ITEMS[o.need].icon : null, help: o.help ? Object.keys(o.help).map((k) => this.T.ITEMS[k].icon).join('') : '', gain: o.gain ? [].concat(o.gain).map((k) => this.T.ITEMS[k].icon).join('') : '', heal: !!o.heal, cure: !!o.cure, hero: !!o.hero, role: o.role || null })) } : null;
   }
   common() {
-    const ch = this.chapter || CHAPTERS[0];
+    const ch = this.chapter || this.T.CHAPTERS[0];
     return {
       phase: this.phase, endsIn: this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0,
       n: this.r ? this.r.n : this.idx + 1, total: this.plan.length, ghosts: !!this.s.ghosts, narrator: this.s.narrator !== false,
@@ -512,7 +514,7 @@ class Zombie {
     };
   }
   person(x) {
-    return { ...this.pub(x), alive: x.alive, status: x.status, items: x.items.map((i) => ITEMS[i.k].icon).join(''), pts: x.npc ? null : x.pts, diedAt: x.diedAt };
+    return { ...this.pub(x), alive: x.alive, status: x.status, items: x.items.map((i) => this.T.ITEMS[i.k].icon).join(''), pts: x.npc ? null : x.pts, diedAt: x.diedAt };
   }
   tv() {
     const r = this.r, all = [...this.ppl.values()].filter((x) => this.here(x));
@@ -525,7 +527,7 @@ class Zombie {
       of: choosing ? r.ids.filter((id) => { const x = this.ppl.get(id); return x && !x.npc && x.alive && this.here(x); }).length : 0,
       haunted: choosing ? r.haunts.size : 0,
       waiting: choosing && r.ids.length <= 24 ? r.ids.map((id) => this.ppl.get(id)).filter((x) => x && !x.npc && x.alive && this.here(x) && !r.picks.has(x.id)).map((x) => this.name(x)) : null,
-      gifts: r ? [...r.gifts].slice(-6).map(([g, v]) => ({ from: this.name(this.ppl.get(g)), to: this.name(this.ppl.get(v.to)), item: ITEMS[v.item].icon })) : [],
+      gifts: r ? [...r.gifts].slice(-6).map(([g, v]) => ({ from: this.name(this.ppl.get(g)), to: this.name(this.ppl.get(v.to)), item: this.T.ITEMS[v.item].icon })) : [],
       people: living.slice(0, 100).map((x) => this.person(x)), ghostList: ghosts.slice(0, 100).map((x) => this.person(x)),
       alive: living.length, dead: ghosts.length,
       outcome: r && r.outcome && (this.phase === 'outcome' || this.phase === 'board') ? r.outcome : null, haunts,
@@ -537,7 +539,7 @@ class Zombie {
     const x = this.ppl.get(p.id), r = this.r, st = this.standings();
     const base = { ...this.common(), rank: st.findIndex((y) => y.id === p.id) + 1, of: st.length };
     if (!x) return { ...base, me: null };
-    const me = { ...this.person(x), items: x.items.map((i) => ({ k: i.k, icon: ITEMS[i.k].icon, name: ITEMS[i.k].name, n: i.n, unit: ITEMS[i.k].unit || null })), bittenNow: x.status === 'bitten' && r && x.bittenAt < r.n, inScene: !!(r && r.ids.includes(x.id)), joinedAt: x.joinedAt, st: x.st };
+    const me = { ...this.person(x), items: x.items.map((i) => ({ k: i.k, icon: this.T.ITEMS[i.k].icon, name: this.T.ITEMS[i.k].name, n: i.n, unit: this.T.ITEMS[i.k].unit || null })), bittenNow: x.status === 'bitten' && r && x.bittenAt < r.n, inScene: !!(r && r.ids.includes(x.id)), joinedAt: x.joinedAt, st: x.st };
     const out = { ...base, me };
     if (r && this.phase === 'choose') {
       out.pick = r.picks.get(x.id) || null;
@@ -552,7 +554,7 @@ class Zombie {
       const f = r.fates.get(x.id);
       if (f) {
         const g = r.outcome.groups.find((y) => y.k === f.o.k), fev = r.outcome.fever && r.outcome.fever.people.find((y) => y.id === x.id);
-        out.mine = { fate: !x.alive && fev ? 'turned' : f.fate, cured: f.cured || !!(fev && fev.fate === 'cured'), healed: f.healed, label: f.o.label, icon: f.o.icon, line: g ? g.line : '', got: f.got ? ITEMS[f.got].icon + ' ' + ITEMS[f.got].name : null, dropped: f.dropped ? ITEMS[f.dropped].icon + ' ' + ITEMS[f.dropped].name : null, used: f.used ? ITEMS[f.used].icon : null, froze: r.froze.has(x.id), lucky: !!f.lucky,
+        out.mine = { fate: !x.alive && fev ? 'turned' : f.fate, cured: f.cured || !!(fev && fev.fate === 'cured'), healed: f.healed, label: f.o.label, icon: f.o.icon, line: g ? g.line : '', got: f.got ? this.T.ITEMS[f.got].icon + ' ' + this.T.ITEMS[f.got].name : null, dropped: f.dropped ? this.T.ITEMS[f.dropped].icon + ' ' + this.T.ITEMS[f.dropped].name : null, used: f.used ? this.T.ITEMS[f.used].icon : null, froze: r.froze.has(x.id), lucky: !!f.lucky,
           at: f.revealAt || 0, feverAt: fev ? fev.at : null, ms: r.outcome.ms, alive: x.alive };
       }
       const h = r.haunts.get(x.id);
@@ -571,5 +573,5 @@ module.exports = {
   key: 'zombie', name: 'Zombie Survival', min: 1, best: [4, 16], howSteps: 6, fields, defaults,
   locked: { how: 'Finish a Party Mode to unlock it.' },
   create: (room, settings) => new Zombie(room, settings),
-  _test: { ITEMS, CHAPTERS, SCENARIOS, DIFF, PER_CHAPTER },
+  _test: { ITEMS, CHAPTERS, SCENARIOS, DIFF, PER_CHAPTER, TOLD },
 };

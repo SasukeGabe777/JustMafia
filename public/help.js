@@ -119,7 +119,7 @@
   const TV = {
     lobby: 'Scan the QR code with your phone camera to join. No app needed!',
     draft: 'Vote on your phone for the roles you want in this game.',
-    roleReveal: 'Check your phone for your secret role. Don’t show anyone!',
+    roleReveal: 'Check your phone for your secret role. Don’t show anyone! (30 seconds)',
     night: 'Night: everyone, tap someone on your phone. Keep it secret!',
     dawn: 'What happened in the night…',
     morning: 'Listen to the narrator: who didn’t make it?',

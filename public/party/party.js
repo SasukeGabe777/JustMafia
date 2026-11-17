@@ -17,10 +17,10 @@
   const TYPES = [
     { k: 'cards', name: 'Cards', icon: '🃏', games: ['president', 'blanks'], c: '#18b06a' },
     { k: 'money', name: 'Money', icon: '🪙', games: ['blackjack', 'bid', 'plinko'], c: '#ef9d10' },
-    { k: 'guess', name: 'Guessing', icon: '🎯', games: ['price', 'emoji', 'colormatch', 'trivia'], c: '#ff4f9a' },
-    { k: 'bluff', name: 'Bluff & voting', icon: '🗳️', games: ['truths', 'likely'], c: '#8b5cff' },
+    { k: 'guess', name: 'Guessing', icon: '🎯', games: ['price', 'emoji', 'tune', 'quickdraw', 'colormatch', 'trivia'], c: '#ff4f9a' },
+    { k: 'bluff', name: 'Bluff & voting', icon: '🗳️', games: ['truths', 'likely', 'debate', 'alien', 'bomb'], c: '#8b5cff' },
     { k: 'know', name: 'Get to know you', icon: '💬', games: ['whosaid', 'spectrum'], c: '#14b8dc' },
-    { k: 'creative', name: 'Creative', icon: '🎨', games: ['sketch', 'funny', 'letters', 'memes'], c: '#ff7134' },
+    { k: 'creative', name: 'Creative', icon: '🎨', games: ['sketch', 'funny', 'actout', 'letters', 'memes'], c: '#ff7134' },
     // Unlockable games join Party Mode once this TV has unlocked them (public/unlocks.js).
     ...(window.UNLOCKS && window.UNLOCKS.has('zombie') ? [{ k: 'story', name: 'Survival story', icon: '🧟', games: ['zombie'], c: '#6bbf3a' }] : []),
     { k: 'battle', name: 'Strategy & Battle', icon: '⚔️', games: ['summon'], c: '#e0483e' },
@@ -35,7 +35,7 @@
     bid: ['📦', 'JustBid', 1, 100, 22], price: ['💸', 'Price Panic', 1, 100, 15], emoji: ['😜', 'Emoji Charades', 3, 100, 17],
     truths: ['🤥', 'Two Truths & a Lie', 3, 100, 17], likely: ['👑', 'Most Likely To…', 3, 100, 10], whosaid: ['🕵️', 'Who Said It?', 3, 100, 15],
     spectrum: ['🧭', 'Where Do You Stand?', 3, 100, 15], sketch: ['✏️', 'JustSketch Relay', 3, 100, 15], funny: ['😂', 'JustFunny', 2, 100, 30],
-    zombie: ['🧟', 'Zombie Survival', 2, 100, 20], summon: ["⚔️", "JustSummon", 2, 100, 15], letters: ["🔤", "Letter Rush", 2, 100, 15], memes: ["🖼️", "Meme Maker", 2, 100, 15], colormatch: ["🎨", "Color Match", 2, 100, 15], trivia: ["🧠", "Hot Take Trivia", 2, 16, 8], plinko: ["🎯", "JustDrop", 1, 100, 12], ducks: ['🦆', 'JustRaiseDucks', 1, 100, 27], kingdoms: ['🏰', 'JustKingdoms', 2, 100, 40],
+    zombie: ['🧟', 'Zombie Survival', 2, 100, 20], debate: ["🗣️", "Debate Club", 2, 100, 15], actout: ["🎭", "Act It Out", 2, 100, 15], tune: ["🎵", "Tune Buzz", 2, 100, 15], alien: ["🛸", "Alien Abduction", 2, 100, 15], bomb: ["💣", "Bomb Squad", 2, 100, 15], quickdraw: ["⚡", "Quick Draw", 2, 100, 15], summon: ["⚔️", "JustSummon", 2, 100, 15], letters: ["🔤", "Letter Rush", 2, 100, 15], memes: ["🖼️", "Meme Maker", 2, 100, 15], colormatch: ["🎨", "Color Match", 2, 100, 15], trivia: ["🧠", "Hot Take Trivia", 2, 16, 8], plinko: ["🎯", "JustDrop", 1, 100, 12], ducks: ['🦆', 'JustRaiseDucks', 1, 100, 27], kingdoms: ['🏰', 'JustKingdoms', 2, 100, 40],
     mafia: ['🔪', 'JustMafia', 5, 100, 40],
   };
   const range = (txt) => { const m = txt && txt.match(/(\d+)\s*[–-]\s*(\d+)/); return m ? [Number(m[1]), Number(m[2])] : null; };

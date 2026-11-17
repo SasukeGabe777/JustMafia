@@ -51,5 +51,10 @@ window.BOX = (function () {
   // JustMafia is not a box game (its own pages at /mafia), but a box room can switch to it:
   // the room hands everyone over and gets the result back (box/index.js EXTERNAL).
   const games = { mafia: { name: 'JustMafia', icon: '🔪', external: true, href: '/mafia', about: 'Find the killers before they find you. A big-screen murder mystery.', how: ['Everyone gets a secret role on their phone.', 'At night the Mafia picks a victim; by day the town votes someone out.', 'The town wins when the Mafia is gone; the Mafia wins when they match the town.'] } };
-  return { games, esc, card, timer, mmss, board, sfx, morph, ICON };
+  // Streamer option "Filter player text" (and family mode): game TV renderers can wrap typed
+  // content in BOX.filterText(s). tv.js sets BOX.filter = { on, strict } and also cleans the
+  // text it draws. The word list is shared with the server (public/box/filter.js).
+  const filter = { on: false, strict: false };
+  const filterText = (s) => (filter.on && window.BOX_FILTER ? window.BOX_FILTER.filter(s, { strict: filter.strict }) : s);
+  return { games, esc, card, timer, mmss, board, sfx, morph, ICON, filter, filterText };
 })();

@@ -157,7 +157,7 @@
   const DESK = {
     questions: { lab: 'Questions', sub: 'how long the show runs', opts: { 8: '8', 12: '12', 16: '16' } },
     seconds: { lab: 'Answer Clock', sub: 'seconds per question', opts: { 10: '⚡ 10s', 15: '15s', 20: '🐢 20s' } },
-    cats: { lab: 'Categories', sub: 'what gets asked', opts: { all: '🎲 Everything', brainy: '🧠 Brainy', fun: '🎉 Fun', general: '💡 General', science: '🔬 Science', geography: '🌍 Places', food: '🍕 Food', animals: '🐾 Animals', pop: '🎬 Pop', sports: '🏅 Sports', history: '🏛️ History', weird: '🤯 Weird' } },
+    cats: { lab: 'Categories', sub: 'what gets asked', opts: { all: '🎲 Everything', brainy: '🧠 Brainy', fun: '🎉 Fun', general: '💡 General', science: '🔬 Science', geography: '🌍 Places', food: '🍕 Food', animals: '🐾 Animals', pop: '🎬 Pop', sports: '🏅 Sports', history: '🏛️ History', weird: '🤯 Weird', holiday: '🎄 Holidays', office: '💼 Office', classics: '📜 Classics', travel: '✈️ Travel' } },
     family: { lab: 'Heat Level', sub: 'family friendly?', opts: { false: '🌶️ Full heat', true: '🧸 Family' } },
     showIntro: { lab: 'Opening Show', sub: 'the studio intro', opts: { true: '🎬 On', false: '⏩ Skip' } },
   };

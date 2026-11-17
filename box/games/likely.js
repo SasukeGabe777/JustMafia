@@ -156,11 +156,115 @@ const PACKS = {
       'eat a whole raw onion slice', 'tell a joke at dinner tonight',
     ],
   },
+  holiday: {
+    label: '🎄 Holiday',
+    classic: [
+      'build a snowman taller than their house', 'get their tongue stuck to a frozen pole', 'wear a sweater with blinking lights', 'start a snowball fight and lose it',
+      'wrap a present so badly it looks like a potato', 'shake every gift to guess what’s inside', 'still have decorations up in spring', 'drink hot cocoa with way too many marshmallows',
+      'fall asleep before midnight on New Year’s Eve', 'slip on the ice in the most dramatic way', 'knit a scarf long enough for three people', 'bake cookies shaped like everyone in the room',
+      'make a snow angel in their good coat', 'build an igloo in the front yard', 'sing loudly while shoveling snow', 'forget where they hid the presents',
+      'carve the scariest pumpkin on the street', 'jump at their own reflection on a spooky night', 'wear a costume nobody can figure out', 'eat all the candy before the trick-or-treaters arrive',
+      'hand out toothbrushes instead of candy', 'scream first in a haunted house', 'dress up as a vegetable for a costume party', 'make a whole costume out of cardboard boxes',
+      'keep their costume on for a whole week', 'tell a spooky story by flashlight', 'leave fake cobwebs up all year long', 'roast the perfect marshmallow',
+      'set their marshmallow on fire every single time', 'get a sunburn shaped like their sunglasses', 'build a sandcastle with a working moat', 'forget the sunscreen',
+      'win the watermelon-seed spitting contest', 'fall asleep in a hammock for hours', 'cannonball into the pool and splash everyone', 'eat a popsicle faster than it melts',
+      'lose a flip-flop to the ocean', 'organize the neighborhood water-balloon fight', 'bring a giant inflatable flamingo to the beach', 'catch the most fireflies',
+      'grill the best burger at the cookout', 'bring way too many snacks to a picnic', 'make a playlist for every season', 'start counting down to summer in January',
+      'buy a new calendar and never turn the page', 'make a New Year’s resolution and forget it by lunch', 'throw a party for the first snowfall', 'rake a leaf pile and jump right in',
+      'order pumpkin-spice everything', 'decorate their bike for a summer parade', 'wear shorts in the middle of winter', 'wear a winter hat in the middle of summer',
+      'run a hot-cocoa stand in the snow', 'build a gingerbread house that collapses', 'send holiday cards in February', 'regift a present to the person who gave it to them',
+      'hum seasonal songs all year round', 'get tangled in a string of lights', 'turn the whole house into a winter wonderland', 'win the ugly sweater contest',
+      'sled down the biggest hill in town', 'build a snow fort with a secret tunnel', 'have the best costume three years in a row', 'eat the last slice of holiday pie',
+      'stay up late to watch the fireworks', 'write their name in the air with a sparkler',
+    ],
+    pair: [
+      'build a snowman army', 'win the matching-costume contest', 'carve a pumpkin together without arguing', 'dig a hole all the way to the ocean',
+      'start a snowball war on the whole street', 'bake a mountain of holiday cookies', 'sing seasonal songs door to door', 'plan the ultimate summer road trip',
+      'throw a backyard beach party', 'decorate the whole street with lights', 'go sledding on a cafeteria tray', 'win the sandcastle contest',
+      'set up a haunted house in the garage', 'stay up to see the first sunrise of the year', 'buy matching holiday sweaters', 'build a gingerbread mansion',
+    ],
+    hot: [
+      'jump into a freezing lake on New Year’s Day', 'eat candy corn on purpose', 'wear a full costume to the grocery store', 'walk through a haunted house with their eyes open',
+      'sing a holiday song solo in front of everyone', 'give a handmade present instead of a store-bought one', 'eat a snow cone in a snowstorm', 'skip dessert at a holiday dinner',
+      'wear matching pajamas with the whole family', 'spend a whole summer day with no phone', 'try ice skating this year', 'go sledding head first',
+      'wake up at dawn to watch a sunrise on the beach', 'let everyone bury them in sand', 'hand out full-size candy bars', 'put reindeer antlers on their pet for a photo',
+      'wear sunglasses to a snowy party', 'hold a tarantula in a haunted house',
+    ],
+  },
+  classics: {
+    label: '🎬 Classics',
+    classic: [
+      'talk to their plants to help them grow', 'alphabetize their spice rack', 'return a library book ten years late', 'write a letter by hand',
+      'fix anything with tape', 'win a game of chess in five moves', 'whistle with two fingers', 'learn to juggle in one afternoon',
+      'read the instructions only after building it', 'always carry a pen', 'keep every birthday card they’ve ever gotten', 'still own their very first toy',
+      'grow a vegetable the size of a dog', 'know the name of every type of cloud', 'build a birdhouse from scratch', 'wave back at someone who was waving at someone else',
+      'say “you too” when the waiter says “enjoy your meal”', 'hum while they eat', 'tell knock-knock jokes to the mail carrier', 'walk into a room and forget why',
+      'fold a fitted sheet perfectly', 'own a mug for every mood', 'beat everyone at checkers', 'keep a diary for fifty years',
+      'still know their childhood phone number', 'learn to play the piano by ear', 'bring an umbrella on a sunny day', 'paint their whole bedroom in one night',
+      'find a coin on every walk', 'make friends with everyone on the bus', 'cook a five-course dinner from leftovers', 'fall asleep reading a book',
+      'tell a story that takes an hour to get to the point', 'know a fun fact about everything', 'sharpen pencils for fun', 'knit sweaters for every pet in town',
+      'start a garden and name every tomato', 'win a pie contest at the county fair', 'restore an old bicycle', 'finish a 1,000-piece puzzle in a day',
+      'lose at hide-and-seek because they giggled', 'keep a perfectly tidy sock drawer', 'send postcards from their own town', 'talk back to the radio',
+      'do the crossword in pen', 'make pancakes shaped like animals', 'be the first one on the dance floor', 'clap when the plane lands',
+      'save the wrapping paper to use again', 'give a nickname to every car they own', 'bring a casserole to every gathering', 'keep a jar of buttons just in case',
+      'win an argument with a goose', 'build a kite that actually flies', 'skip a stone ten times across a pond', 'write a poem for someone’s birthday',
+      'always know the time without a clock', 'keep their old school report cards', 'hold the door for someone very far away', 'apologize to a chair after bumping into it',
+      'learn a card trick and show it to everyone', 'start a collection of interesting rocks', 'spend all day at the hardware store',
+    ],
+    pair: [
+      'open a bakery', 'build a raft and float down the river', 'open a cozy bookshop', 'win a dance-off',
+      'write a song together', 'run a bed-and-breakfast', 'restore an old boat', 'get lost following a paper map',
+      'start a vegetable garden', 'win a rowing race', 'finish a jigsaw puzzle with one piece missing', 'build a go-kart',
+      'put on a play in the living room', 'start a singing group', 'tie their shoelaces together by accident', 'plant a whole orchard',
+    ],
+    hot: [
+      'eat soup with a fork', 'write a thank-you note for every gift', 'go a week without looking at a clock', 'fix their own flat tire',
+      'sew a button back on today', 'climb a tree in the park', 'eat the same breakfast every day for a month', 'read a dictionary cover to cover',
+      'sing in the shower loud enough for the neighbors', 'dance in the rain', 'give a speech with no notes', 'bake bread from scratch',
+      'walk ten miles in one day', 'feed the pigeons in the park every morning', 'wear a bow tie to breakfast', 'take a cold shower every morning',
+      'learn to play the harmonica', 'sleep under the stars',
+    ],
+  },
+  travel: {
+    label: '🌍 Travel & world',
+    classic: [
+      'pack for a beach trip and end up in the snow', 'learn “thank you” in twenty languages', 'miss their flight because they were buying snacks', 'make friends with the person in the next seat',
+      'come home with a suitcase full of souvenirs', 'lose their passport inside their own bag', 'try every street food on the block', 'get lost without a map and love it',
+      'take a photo of every meal on vacation', 'sleep through the whole road trip', 'ask for the window seat just to wave at clouds', 'visit every continent',
+      'climb to the top of a volcano', 'ride a camel across the desert', 'see the northern lights', 'swim with sea turtles',
+      'send a postcard from every city', 'hike up a mountain just for the view', 'order a dish without knowing what it is', 'accidentally join a tour group of strangers',
+      'spend the whole trip in one museum', 'live on a sailboat for a year', 'spend a week on a houseboat', 'learn to cook a dish from every country they visit',
+      'overpack for a two-day trip', 'travel for a month with only a backpack', 'haggle at a market and still pay extra', 'have their luggage sent to another country',
+      'plan a trip down to the minute', 'show up at the airport a day early', 'take a train across a whole continent', 'make a scrapbook of every vacation',
+      'bring home sand from every beach', 'fall asleep on the airport floor', 'become a tour guide', 'speak a new language using only hand gestures',
+      'know the capital of every country', 'explore a rainforest', 'go on a safari', 'ride a hot-air balloon at sunrise',
+      'go snorkeling over a coral reef', 'sleep in a treehouse hotel', 'drive across the country on a whim', 'bring their own pillow everywhere',
+      'lose their sunglasses on the first day', 'visit the same place every single year', 'eat breakfast in one country and dinner in another', 'befriend a local cat in every town',
+      'collect a fridge magnet from every city', 'take the scenic route every time', 'get on the wrong bus and discover somewhere amazing', 'learn to surf on vacation',
+      'watch the sunrise from a mountaintop', 'travel somewhere just to try one famous dish', 'book a trip and forget to ask for time off', 'read every road sign out loud on a road trip',
+      'photograph every interesting door they see', 'plan a whole vacation around a festival', 'be the first to ask “are we there yet?”', 'travel around the world in a single year',
+      'forget their toothbrush on every trip', 'make friends with the pilot', 'pack snacks for a ten-minute drive',
+    ],
+    pair: [
+      'get lost in a foreign city', 'drive across a desert in a tiny car', 'open a café by the sea', 'sail around the world',
+      'win an international cooking contest', 'backpack through the mountains', 'miss the last train home', 'climb a famous mountain',
+      'go on a round-the-world scavenger hunt', 'cross an ocean in a hot-air balloon', 'argue about directions the whole trip', 'hike one trail for a whole month',
+      'start a travel blog', 'ride a tandem bike across the countryside', 'get the giggles in a quiet museum', 'open a food truck that tours the world',
+    ],
+    hot: [
+      'eat a crunchy bug snack on vacation', 'ride a zip line through the jungle', 'camp in a tent in the desert', 'speak only a new language for a whole day',
+      'go bungee jumping on vacation', 'take a twenty-hour train ride', 'jump off a high dive into the ocean', 'travel for two weeks with just a carry-on',
+      'go on a trip without a phone', 'order the spiciest dish on the menu', 'take an overnight bus', 'feed a giraffe at a wildlife park',
+      'go on vacation with no plans at all', 'swim in a freezing glacier lake', 'ride a roller coaster in another country', 'wake up at 4 a.m. for a sunrise hike',
+      'try every flavor of gelato in one day',
+    ],
+  },
 };
 
+const FAMILY_SAFE = ['family', 'holiday', 'classics', 'travel']; // every prompt in these packs is fine for all ages
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
-  { key: 'pack', label: 'Prompt pack', options: opt([['classic', 'Classic'], ['wild', 'Wild (cheeky but clean)'], ['work', 'Work-safe'], ['family', 'Family'], ['mix', 'Mix of everything']]) },
+  { key: 'pack', label: 'Prompt pack', options: opt([['classic', 'Classic'], ['wild', 'Wild (cheeky but clean)'], ['work', 'Work-safe'], ['family', 'Family'], ['holiday', '🎄 Holiday (winter, spooky, summer)'], ['classics', '🎬 Classics (no pop culture)'], ['travel', '🌍 Travel & world'], ['mix', 'Mix of everything']]) },
   { key: 'rounds', label: 'Number of prompts', options: opt([[10, '10 prompts'], [15, '15 prompts'], [20, '20 prompts'], [30, '30 prompts']]) },
   { key: 'voteSeconds', label: 'Time to vote', options: opt([[15, '15 seconds'], [20, '20 seconds'], [30, '30 seconds']]) },
   { key: 'selfVote', label: 'Vote for yourself', options: opt([[false, 'Not allowed'], [true, 'Allowed']]) },
@@ -195,8 +299,15 @@ class Likely {
     if (this.phase === 'vote') { r.votes.delete(p.id); r.preds.delete(p.id); if (r.seat === p.id) { this.room.cancel(this.timer); this.close(); } else this.maybeAllIn(); }
   }
 
+  // Room-wide Family Mode (TV setting) keeps every prompt family-safe: Wild/Classic/Work/Mix fall back to the
+  // family-safe packs (Family + Holiday + Classics + Travel), and a family-safe pick is kept as chosen.
+  packKeys() {
+    const pick = this.s.pack;
+    if (this.room && this.room.family) return FAMILY_SAFE.includes(pick) ? [pick] : pick === 'mix' ? FAMILY_SAFE.slice() : ['family'];
+    return pick === 'mix' || !PACKS[pick] ? Object.keys(PACKS) : [pick];
+  }
   draw(kind) {
-    const packs = this.s.pack === 'mix' || !PACKS[this.s.pack] ? Object.keys(PACKS) : [this.s.pack];
+    const packs = this.packKeys();
     const k = packs.join() + ':' + kind;
     if (!this.decks[k] || !this.decks[k].length) this.decks[k] = this.shuffle(packs.flatMap((pk) => PACKS[pk][kind]));
     return this.decks[k].pop();
@@ -450,5 +561,5 @@ class Likely {
 module.exports = {
   key: 'likely', name: 'Most Likely To…', min: 3, best: [6, 20], fields, defaults,
   create: (room, settings) => new Likely(room, settings),
-  _test: { PACKS, kindOf, MATCH, PREDICT },
+  _test: { PACKS, FAMILY_SAFE, kindOf, MATCH, PREDICT },
 };

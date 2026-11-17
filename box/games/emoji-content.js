@@ -17,6 +17,9 @@ const CATEGORIES = [
   { key: 'party', label: 'Party Stuff', icon: '🎉' },
   { key: 'home', label: 'Around the House', icon: '🏠' },
   { key: 'holidays', label: 'Holidays & Seasons', icon: '🎄' },
+  { key: 'office', label: 'Office-safe', icon: '💼' },
+  { key: 'classics', label: 'Classics (no pop culture)', icon: '📜' },
+  { key: 'travel', label: 'Travel & World', icon: '🌍' },
 ];
 
 // Answers left out when the host picks "Family-friendly answers" (grown-up shows and games).
@@ -89,6 +92,56 @@ Family Reunion | 3 | 👨 👩 👶 🤝 | reunion
 Wedding Anniversary | 3 | 💍 📅 🎉 | anniversary
 Spring Break | 3 | 🌸 🏖️ ⏸️
 Hibernation | 3 | 🐻 😴 ❄️ | hibernate
+Snowball Fight | 1 | ❄️ ⚾ 🥊 | snowball
+Snow Angel | 1 | ❄️ 😇
+Hot Cocoa | 1 | 🔥 🍫 ☕ | cocoa
+Jack-o'-Lantern | 1 | 🎃 🕯️ | jack o lantern; jackolantern
+Haunted Hayride | 2 | 👻 🌽 🐴 💨 | hayride
+Costume Contest | 2 | 🧛 🧙 🏆
+Candy Corn | 1 | 🍬 🌽
+Bobbing for Apples | 2 | 💧 🍎 👄 | apple bobbing
+Scarecrow | 1 | 👨‍🌾 🌽 🐦 🚫 | scare crow
+Pumpkin Carving | 2 | 🎃 🔪
+Witch's Hat | 2 | 🧙 🎩 | witch hat
+Spider Web | 1 | 🕷️ 🕸️ | cobweb
+Ice Skating | 1 | ⛸️ ❄️ | skating
+Sledding | 1 | ❄️ 🏔️ 💨 | sledging; sled
+Mittens | 1 | 🧤 ❄️ | mitts
+Fuzzy Socks | 1 | 🧦 ☁️ | cozy socks
+Icicle | 2 | ❄️ 💧 ⬇️ | icicles
+Fireplace | 1 | 🔥 🏠 | fire place
+Snowflake | 1 | ❄️ ✨ | snow flake
+Wrapping Paper | 1 | 🎁 📖 ✂️ | gift paper
+Ugly Sweater | 2 | 🤢 👔 ❄️ | ugly jumper
+Countdown | 2 | 3️⃣ 2️⃣ 1️⃣ 🎆 | count down
+New Year's Resolution | 3 | 🆕 📅 ✏️ 💪 | resolution; new years resolution
+Party Popper | 1 | 🎉 💥
+Ice Cream Truck | 1 | 🍦 🚗 🎶 | ice cream van
+Lemonade Stand | 2 | 🍋 🥤 🏪
+Beach Ball | 1 | 🏖️ 🎈 ⚾
+Sunburn | 1 | ☀️ 🥵 🔥 | sun burn
+Sunscreen | 1 | ☀️ 🚫 🥵 💧 | sun cream; sunblock
+Water Balloon Fight | 2 | 💧 🎈 🥊 | water balloon
+Barbecue | 1 | 🔥 🍔 🌭 | bbq; cookout
+Campfire | 1 | 🏕️ 🔥 | camp fire; bonfire
+Toasted Marshmallows | 2 | 🔥 ☁️ 🍬 | smores; marshmallows
+Picnic Blanket | 2 | 🍉 🥪 🌲 ☀️ | picnic
+Fireflies | 2 | 🐛 💡 🌃 | firefly; lightning bugs
+Kite Flying | 1 | 🪁 💨 | kite
+Flower Crown | 2 | 🌸 👑
+Rainy Day | 1 | 🌧️ 📅 | rain day
+Rain Boots | 1 | 🌧️ 👟 💧 | wellies; rainboots
+Harvest Moon | 3 | 🌽 🌙 | full moon
+Hayride | 2 | 🌽 🐴 💨
+Leaf Pile | 1 | 🍁 🍁 🍁 🐶 | pile of leaves
+First Snow | 2 | 1️⃣ ❄️
+Lunar New Year | 2 | 🌙 🆕 📅 🐉 | chinese new year; spring festival
+Lantern Festival | 3 | 🕯️ 🎈 🌙 🎉 | lanterns
+Gift Exchange | 2 | 🎁 🔄 🎁 | secret gift swap
+Snow Fort | 2 | ❄️ 🏰 | snow castle
+Winter Solstice | 3 | ❄️ 🌃 📅 | shortest day
+Summer Solstice | 3 | ☀️ ⏳ 📅 | longest day
+Ghost Story | 2 | 👻 📖 🔦 | ghost stories
 `,
   movies: `
 The Lion King | 1 | 🦁 👑
@@ -411,6 +464,155 @@ Limbo | 3 | ⬇️ 🕺
 Party Crasher | 3 | 🚫 🎟️ 🎉 | gatecrasher; party pooper
 Spin the Bottle | 3 | 🌀 🍺 😘
 Conga Line | 3 | 💃 🚂 🎶
+`,
+  office: `
+Coffee Break | 1 | ☕ ⏸️ | break
+Stapler | 1 | 📎 🔨 📖 | staple
+Paperclip | 1 | 📎 | paper clip
+Sticky Note | 1 | 📌 ✏️ 🍯 | post it; sticky notes
+Printer Jam | 2 | 🖥️ 😡 📖 | paper jam
+Video Call | 1 | 💻 🎥 👋 | video chat; zoom call
+You're on Mute | 2 | 🎤 🔕 🗣️ | youre muted; on mute
+Reply All | 2 | ✉️ ↩️ 👨 👩 | reply to all
+Inbox Zero | 3 | ✉️ 🚫 ✅ | empty inbox
+Spreadsheet | 2 | 💻 ➕ ➖ ✖️ | excel
+Pie Chart | 1 | 🥧 ➗ 💻
+Team Meeting | 1 | 👨 👩 🗣️ 📅 | meeting
+Name Tag | 1 | 👋 🔤 📌 | name badge
+Water Cooler | 2 | 💧 ❄️ 🗣️ | water cooler chat
+Office Plant | 1 | 🌵 💻 | desk plant
+Swivel Chair | 2 | 🪑 🔄 | office chair; spinning chair
+Elevator Pitch | 3 | ⬆️ 🗣️ 💡 | elevator speech
+Brainstorming | 2 | 🧠 🌪️ 💡 | brainstorm session
+Deadline | 2 | ⏰ 📅 😱 | due date
+Overtime | 2 | ⏰ ➕ 💻 | over time
+Lunch Break | 1 | 🥪 ⏸️ | lunch hour
+Casual Friday | 2 | 👟 🎉 📅 | dress down day
+Job Interview | 2 | 👔 🤝 ❓ | interview
+Promotion | 2 | 👔 ⬆️ 🎉 | promoted
+Paycheck | 1 | 💰 ✉️ | pay day; payday; salary
+Calculator | 1 | ➕ ➖ ✖️ ➗ | calc
+Filing Cabinet | 2 | 📖 🗝️ 📦 | file cabinet
+Desk Lamp | 1 | 💡 🪑 | lamp
+Keyboard Shortcut | 3 | ⌨️ ⚡ | shortcut
+Out of Office | 2 | 💻 ❌ 🏖️ | ooo; on vacation
+Work From Home | 1 | 💻 🏠 | wfh; remote work
+Commute | 1 | 🚗 🚇 👔 | commuting
+Rush Hour | 2 | 🚗 🚗 🚗 ⏰ | traffic jam
+Business Card | 2 | 👔 🃏 | calling card
+Laptop Bag | 1 | 💻 🎒 | laptop case
+Whiteboard | 1 | 🏳️ ✏️ | white board; dry erase board
+Conference Room | 2 | 👨 👩 🪑 🚪 | meeting room
+Group Project | 2 | 👨 👩 📦 🤝 | team project
+Employee of the Month | 3 | 👩‍💻 🏅 📅 | worker of the month
+Office Birthday Cake | 2 | 👔 🎂 🎉 | office cake
+Retirement Party | 3 | 👴 🎉 👔 👋 | retirement
+To-Do List | 1 | ✅ ✏️ 📖 | todo list; checklist
+Rubber Stamp | 2 | ✉️ 💥 ✅ | stamp
+Password | 1 | 🔒 🔤 | passcode
+Unread Email | 2 | ✉️ ❗ | new email
+Tech Support | 2 | 💻 🆘 🔧 | it support; help desk
+Coffee Mug | 1 | ☕ 🍵 | mug
+`,
+  classics: `
+Hopscotch | 2 | 🐸 1️⃣ 2️⃣ 3️⃣ | hop scotch
+Jump Rope | 1 | ⬆️ 🏃 🔄 | skipping rope
+Hula Hoop | 1 | 💃 🌀 | hoop
+Yo-Yo | 1 | 🔄 ⬆️ ⬇️ | yoyo
+Paper Airplane | 1 | 📖 ✈️ | paper plane
+Rocking Horse | 2 | 🐴 🪑 🔄
+Jack-in-the-Box | 2 | 📦 🤡 💥 | jack in the box
+Sandbox | 1 | 🏖️ 📦 | sandpit
+Treehouse | 1 | 🌲 🏠 | tree house
+Lemon Drop | 2 | 🍋 🍬
+Marching Band | 2 | 🥁 🎺 🚶
+Hot Air Balloon | 1 | 🔥 💨 🎈 | balloon ride
+Lighthouse | 1 | 💡 🗼 🌊 | light house
+Windmill | 1 | 💨 🏠 🔄 | wind mill
+Pocket Watch | 2 | ⏰ 👔 | fob watch
+Typewriter | 2 | ⌨️ ✉️ 🔔 | type writer
+Gramophone | 3 | 🎵 🔊 🌀 | record player
+Message in a Bottle | 2 | ✉️ 🥤 🌊 | bottle message
+Treasure Map | 1 | 🗺️ ❌ 💰 | pirate map
+Knight in Armor | 2 | 🛡️ ⚔️ 🐴 | knight
+Dragon Slayer | 3 | 🐉 ⚔️ 🦸
+Wishing Well | 2 | 🌟 💰 ⛲ | well
+Fairy Godmother | 2 | 🧚 👵 ✨
+Magic Carpet | 2 | ✨ 🧞 💨 | flying carpet
+Genie in a Lamp | 2 | 🧞 🕯️ | genie
+Crystal Ball | 1 | 🔮 | fortune teller ball
+Little Red Riding Hood | 3 | 👧 ❤️ 🐺 | red riding hood
+The Tortoise and the Hare | 3 | 🐢 🐰 🏁 | tortoise and hare
+The Three Little Pigs | 2 | 3️⃣ 🐷 🐺 🏠 | three little pigs
+The Boy Who Cried Wolf | 3 | 👦 😭 🐺 | cried wolf
+Jack and the Beanstalk | 2 | 👦 🍀 ☁️ 🏰 | beanstalk
+The Ugly Duckling | 2 | 🤢 🦆 | ugly duckling
+Goldilocks | 2 | 👧 🐻 🐻 🐻 | goldilocks and the three bears
+Humpty Dumpty | 2 | 🥚 🏰 💥
+Hickory Dickory Dock | 3 | 🐭 ⏰ 🔔
+Twinkle Twinkle Little Star | 2 | ✨ ✨ ⭐ | twinkle twinkle
+Sleeping Beauty | 2 | 😴 👸 🌹
+Rapunzel | 2 | 👸 🗼 ⬇️ | rapunzel rapunzel
+Pied Piper | 3 | 🎶 🐭 🐭 🚶 | the pied piper
+Trojan Horse | 3 | 🐴 🎁 ⚔️ | wooden horse
+Robin Hood | 2 | 🏹 💰 👑 ➡️ 👨‍🌾
+King Arthur | 3 | 👑 ⚔️ 🗿 | sword in the stone
+Mermaid's Song | 3 | 🧜 🎶 🌊 | siren song
+Sailing Ship | 1 | ⛵ 🌊 | sailboat; tall ship
+Steam Train | 2 | 🚂 💨 | steam engine
+Penny Farthing | 3 | 🚲 🎩 | high wheeler
+Quill Pen | 2 | 🐦 ✏️ | quill; feather pen
+Spinning Top | 2 | 🌀 🔄 | top
+`,
+  travel: `
+Passport | 1 | 📖 ✈️ 🌍 | passport book
+Suitcase | 1 | 🎒 ✈️ 👗 | luggage
+Boarding Pass | 2 | 🎟️ ✈️ | plane ticket
+Jet Lag | 2 | ✈️ 😴 🌏 | jetlag
+Window Seat | 2 | 🪑 ✈️ ☁️
+Lost Luggage | 2 | 🎒 ❓ 😱 | lost bag; lost suitcase
+Road Trip | 1 | 🚗 🛣️ 🗺️ | roadtrip
+Postcard | 1 | ✉️ 🏖️ ✏️ | post card
+Souvenir | 2 | 🎁 🗽 🎒 | souvenirs; keepsake
+Hotel Room | 1 | 🏨 🛏️ | hotel
+Room Service | 2 | 🏨 🍽️ 🔔
+Cruise Ship | 1 | 🚢 🌊 🎉 | cruise
+Backpacking | 2 | 🎒 🌍 🚶 | backpacker
+Tour Guide | 2 | 🚩 🗣️ 🚶 | guide
+Train Station | 1 | 🚂 🏪 | railway station
+Safari | 2 | 🦁 🦒 🚗 | game drive
+Snorkeling | 2 | 👓 🐠 🌊 | snorkelling; snorkel
+Scuba Diving | 2 | 👓 🌊 🐙 | scuba; diving
+Hiking Trail | 1 | 👟 🏔️ | hike; hiking
+Ski Resort | 2 | 🎿 🏔️ 🏨 | ski lodge
+Waterfall | 1 | 💧 ⬇️ 🏔️ | falls
+Rainforest Canopy | 3 | 🌴 🌴 ⬆️ 🐵 | canopy
+Northern Lights | 2 | 🌃 🌈 ❄️ | aurora; aurora borealis
+Great Wall of China | 2 | 🏰 🐉 🌏 | great wall
+Eiffel Tower | 1 | 🗼 🥐 | eiffel
+Statue of Liberty | 1 | 🗽 | lady liberty
+Pyramids | 1 | 🐪 🏜️ 🗿 | pyramid; great pyramid
+Leaning Tower of Pisa | 2 | 🗼 ↩️ 🍕 | tower of pisa; leaning tower
+Big Ben | 2 | ⏰ 🔔 🗼 | elizabeth tower
+Taj Mahal | 3 | 🏰 💍 🌏
+Sydney Opera House | 3 | 🎭 🐨 ⛵ | opera house
+Machu Picchu | 3 | 🏔️ 🏰 🌎
+Stonehenge | 3 | 🗿 🗿 🌅 | stone henge
+Gondola Ride | 2 | 🛶 🎶 🌊 | gondola; venice
+Floating Market | 3 | 🛶 🍍 🏪
+Hot Springs | 2 | 🔥 💧 🛁 | hot spring; onsen
+Igloo | 1 | ❄️ 🏠 | snow house
+Desert Oasis | 2 | 🏜️ 🌴 💧 | oasis
+Coral Reef | 2 | 🐠 🌈 🌊 | reef
+Lost in Translation | 3 | 🗣️ ❓ 🌍 | language barrier
+Currency Exchange | 3 | 💵 🔄 💰 | money exchange
+Night Market | 2 | 🌃 🏪 🍜
+Tuk-Tuk | 3 | 🛵 🚕 💨 | tuk tuk; auto rickshaw
+Camel Ride | 1 | 🐪 🏜️
+Fjord | 3 | 🏔️ 🌊 🏔️ ⛵ | fjords
+Volcano Hike | 2 | 🌋 👟 | volcano trek
+Airport Security | 2 | ✈️ 👮 🔍 | security check
+Bullet Train | 2 | 🚂 ⚡ 🗻 | high speed train
 `,
 };
 

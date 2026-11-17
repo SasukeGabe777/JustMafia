@@ -96,6 +96,7 @@
         <span class="lbl">How many of you?</span>
         <div class="seg" id="count"><button data-n="0" class="on">Any</button><button data-n="2">2–3</button><button data-n="6">4–8</button><button data-n="14">9–20</button><button data-n="40">21+</button></div>
         <button class="surprise" id="surprise">🎲 Surprise me</button>
+        <button class="surprise pick-us" id="pick-us">🤔 Pick for us</button>
       </nav>
     </div>
     <section class="tiles small" aria-label="More games">
@@ -189,6 +190,36 @@
         <div class="info"><h2>JustSummon</h2><p>Summon troops, counter your rivals and push the battle line into their base. A tug-of-war of tactics.</p>
           <div class="meta"><span>👥 2–100 · best 2–8</span><span>⏱ 10–20 min</span><span>⚔️ Battle</span></div></div>
       </a>
+      <a class="tile live quickdraw" href="/box/tv?game=quickdraw" data-game="quickdraw" data-best="2-20" data-lock="quickdraw">
+        <div class="art" aria-hidden="true"><span class="icon">⚡</span></div>
+        <div class="info"><h2>Quick Draw</h2><p>Wait for it… DRAW! A lightning western showdown: duels, a green lantern, a chicken count, a shake-to-gallop stampede and a copycat drum.</p>
+          <div class="meta"><span>👥 2–100 · best 2–20</span><span>⏱ 5–8 min</span><span>⚡ Reflex</span></div></div>
+      </a>
+      <a class="tile live bomb" href="/box/tv?game=bomb" data-game="bomb" data-best="3-8" data-lock="bomb">
+        <div class="art" aria-hidden="true"><span class="icon">💣</span></div>
+        <div class="info"><h2>Bomb Squad</h2><p>One of you sees the bomb. Everyone else holds a different page of the manual. Talk fast, cut carefully.</p>
+          <div class="meta"><span>👥 2–20 · best 3–8</span><span>⏱ 10–15 min</span><span>💣 Co-op</span></div></div>
+      </a>
+      <a class="tile live alien" href="/box/tv?game=alien" data-game="alien" data-best="5-12" data-lock="alien">
+        <div class="art" aria-hidden="true"><span class="icon">🛸</span></div>
+        <div class="info"><h2>Alien Abduction</h2><p>Some of the crew are secretly aliens. Fix the ship, spot the saboteurs, and pop them into the bubble pod before the Biscuit breaks down.</p>
+          <div class="meta"><span>👥 4–100 · best 5–12</span><span>⏱ 8–12 min</span><span>🛸 Bluff</span></div></div>
+      </a>
+      <a class="tile live tune" href="/box/tv?game=tune" data-game="tune" data-best="2-16" data-lock="tune">
+        <div class="art" aria-hidden="true"><span class="icon">🎵</span></div>
+        <div class="info"><h2>Tune Buzz</h2><p>A music quiz on the big screen: name the game from its soundtrack, guess the vibe, spot the instrument, finish the melody and tap the beat. Buzz in first!</p>
+          <div class="meta"><span>👥 2–100 · best 2–16</span><span>⏱ 8–12 min</span><span>🎵 Music quiz</span></div></div>
+      </a>
+      <a class="tile live actout" href="/box/tv?game=actout" data-game="actout" data-best="4-12" data-lock="actout">
+        <div class="art" aria-hidden="true"><span class="icon">🎭</span></div>
+        <div class="info"><h2>Act It Out</h2><p>Charades with a twist: act out a secret prompt while the room guesses on their phones. Silent movies, freeze frames, relays and two-person scenes!</p>
+          <div class="meta"><span>👥 3–100 · best 4–12</span><span>⏱ 10–15 min</span><span>🎭 Acting</span></div></div>
+      </a>
+      <a class="tile live debate" href="/box/tv?game=debate" data-game="debate" data-best="4-14" data-lock="debate">
+        <div class="art" aria-hidden="true"><span class="icon">🗣️</span></div>
+        <div class="info"><h2>Debate Club</h2><p>Is cereal a soup? Argue a silly side, dodge the tomatoes and win the crowd. Swap sides, lawyer mode and hot takes!</p>
+          <div class="meta"><span>👥 3–100 · best 4–14</span><span>⏱ 10–15 min</span><span>🗣️ Debate</span></div></div>
+      </a>
       <a class="tile live zombie" href="/box/tv?game=zombie" data-game="zombie" data-best="4-16" data-lock="zombie">
         <div class="art" aria-hidden="true"><span class="icon">🧟</span></div>
         <div class="info"><h2>Zombie Survival</h2><p>Grab the medkit, the gun or the rope… and hope you picked right. Who makes it to the last chopper?</p>
@@ -206,5 +237,6 @@
   <script src="/unlocks.js"></script>
   <script src="/hub.js"></script>
   <script src="/party/party.js"></script>
+  <script src="/hub-pick.js"></script>
 </body>
 </html>

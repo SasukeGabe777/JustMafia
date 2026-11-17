@@ -1,6 +1,8 @@
 'use strict';
 // Letter Rush categories: all original. Each theme has a family list (all ages) and a party
 // list (grown-up silliness, still clean). Theme rounds draw every category from one theme.
+// Themes marked pack: true are the optional category packs (Holidays, Office-safe, Travel,
+// Classics): all family-safe, picked with the Category pack setting.
 const THEMES = {
   food: {
     name: 'Food & Drink', icon: '🍕',
@@ -108,13 +110,69 @@ const THEMES = {
       'Something you do when no one is watching', 'A secret talent', 'Something overrated', 'A dramatic way to leave a party', 'A terrible password',
       'Something you say to win an argument', 'Something you pretend to understand'],
   },
+  // ---------- Category packs (all family-safe). `pack: true` keeps them out of the Standard set. ----------
+  holiday: {
+    name: 'Holidays & Seasons', icon: '🎄', pack: true,
+    family: ['Something you see in winter', 'Something you wear in the snow', 'A warm winter drink', 'Something you build in the snow', 'A cozy winter activity',
+      'Something you hang up to decorate', 'Something that sparkles or twinkles', 'Something you wrap', 'A gift for a friend', 'Something you find in a stocking',
+      'A food at a big holiday meal', 'A holiday cookie or treat', 'Something that smells like the holidays', 'Something you do at a New Year’s party',
+      'Something you’d write on a greeting card', 'A costume idea', 'Something spooky but friendly', 'Something orange', 'Something in a pumpkin patch',
+      'A candy you get at the door', 'Something in a (friendly) haunted house', 'Something a scarecrow might say', 'A name for a friendly ghost',
+      'Something you do in autumn', 'Something that falls from the sky', 'A sound you hear in a thunderstorm', 'Something you plant in spring',
+      'Something that blooms', 'A spring cleaning job', 'Something you do on a summer day', 'Something you bring to the beach', 'A summer fruit',
+      'Something you do at a campfire', 'A frozen treat', 'Something you’d find at a summer fair', 'A thing you see at a fireworks show',
+      'Something to do on the longest day of the year', 'A way to cool off', 'Something you pack for a picnic', 'A holiday tradition',
+      'Something you count down to', 'Something you light up', 'A word that rhymes with “snow”', 'A party decoration', 'Something to do with family on a day off',
+      'A game to play at a holiday party', 'A name for a reindeer', 'A name for a snowman'],
+    party: [],
+  },
+  office: {
+    name: 'Office-safe', icon: '💼', pack: true,
+    family: ['Something on an office desk', 'Something in a supply closet', 'Something you say on a video call', 'A reason for a meeting', 'Something in the break room',
+      'A snack for the office kitchen', 'A job title', 'A department at a big company', 'Something you print', 'A word in a work email', 'Something you sign',
+      'A team-building activity', 'Something with a password', 'A name for a conference room', 'A good name for a new app', 'A business you’d start',
+      'Something you’d find in a briefcase', 'Something you plug into a laptop', 'A good plant for an office', 'Something you staple', 'A piece of office furniture',
+      'A polite way to say no', 'A word that means “great job”', 'Something you put on a calendar', 'Something to do on a lunch break',
+      'A way to get to work', 'Something in a filing cabinet', 'Something written on a whiteboard', 'A theme for an office party', 'Something at a trade show',
+      'Something on a résumé', 'A skill to list on a résumé', 'A question at a job interview', 'Something a good manager does', 'A goal for next year',
+      'Something on a to-do list', 'Something with a deadline', 'Something you measure', 'A number word', 'Something you count', 'A shape in a chart',
+      'Something a receptionist says', 'Something in a waiting room', 'Something that beeps', 'A way to say thank you', 'A tool you can’t work without',
+      'An award for the office party', 'A name for the office pet fish'],
+    party: [],
+  },
+  travel: {
+    name: 'Travel & World', icon: '🌍', pack: true,
+    family: ['A country in Europe', 'A country in Africa', 'A country in Asia', 'A country in the Americas', 'An island', 'A river', 'A mountain or mountain range',
+      'A desert', 'An ocean or sea', 'A big city', 'A city by the sea', 'A world landmark', 'A word in another language', 'A way to say hello in any language',
+      'A food from another country', 'A dish named after a place', 'A street food', 'Something you buy at a market', 'Something on a plane', 'Something on a train',
+      'Something on a boat', 'Something in a backpack for a trip', 'Something you need on a hike abroad', 'A type of transport', 'Something you need a ticket for',
+      'Something you see from a plane window', 'Something you photograph on vacation', 'Something you send home from a trip', 'A travel snack',
+      'A thing you forget to pack', 'A place to stay overnight', 'Something at a train station', 'Something at a border crossing', 'A currency',
+      'A flag color', 'Something you need a map for', 'A direction or compass word', 'A national animal', 'A national sport', 'A famous bridge',
+      'A famous tower', 'A sight in a rainforest', 'A ride at a fair abroad', 'A warm place to visit in winter', 'A cold place to visit',
+      'Something you see on a safari', 'A thing on a postcard', 'A souvenir worth keeping'],
+    party: [],
+  },
+  classics: {
+    name: 'Timeless Classics', icon: '📜', pack: true,
+    family: ['A fairy-tale place', 'Something in a castle', 'A job from long ago', 'An old-fashioned toy', 'A playground classic', 'A nursery rhyme character',
+      'Something in a fable', 'Something a knight carries', 'Something on a pirate ship', 'A creature from a myth', 'A magic word', 'Something in a treasure chest',
+      'Something with a crown', 'An old-fashioned way to send a message', 'Something you’d find in an attic', 'Something in a grandparent’s house',
+      'A classic dessert', 'Something made by hand', 'A traditional craft', 'Something in a garden', 'A game played with a deck of cards', 'A game played with dice',
+      'A game played outside', 'A classic party game', 'A riddle answer', 'Something in a lighthouse', 'Something at an old train station',
+      'Something on a farm long ago', 'An invention that changed the world', 'A famous explorer', 'Something in a museum', 'Something carved from stone',
+      'A musical instrument from long ago', 'A dance done in a circle', 'A tale told around a fire', 'Something in a fairy-tale forest', 'Something that ticks',
+      'Something made of glass', 'A wise saying or proverb', 'A hero’s quest item', 'Something a wizard keeps in a tower', 'Something in a library long ago',
+      'An old-fashioned name', 'A word that sounds old-fashioned', 'Something on a sailing ship', 'A picnic-in-the-park game'],
+    party: [],
+  },
 };
 
-// Flat list: { t: text, th: theme key, p: party? }
+// Flat list: { t: text, th: theme key, p: party?, x: from an extra pack (not in the Standard set)? }
 const CATS = [];
 for (const [th, T] of Object.entries(THEMES)) {
-  for (const t of T.family) CATS.push({ t, th, p: false });
-  for (const t of T.party) CATS.push({ t, th, p: true });
+  for (const t of T.family) CATS.push({ t, th, p: false, x: !!T.pack });
+  for (const t of T.party) CATS.push({ t, th, p: true, x: !!T.pack });
 }
 
 module.exports = { THEMES, CATS };

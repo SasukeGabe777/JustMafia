@@ -93,11 +93,92 @@ const PACKS = {
       ['⚡', 'Fall for people fast', 'Warm up slowly', '🐢'], ['🧸', 'Childhood felt long', 'Childhood flew by', '💨'],
     ],
   },
+  holiday: {
+    label: 'Holiday',
+    list: [
+      ['🧣', 'Winter is the coziest season', 'Winter is a long wait for spring', '🌷'], ['⛄', 'Build a snow fort', 'Watch the snow from the window', '🪟'], ['🎁', 'Open gifts right away', 'Save gifts for later', '⏳'],
+      ['💡', 'Lights on every surface', 'One small candle is plenty', '🕯️'], ['🍪', 'Bake a mountain of treats', 'Eat everyone else’s treats', '😋'], ['🧤', 'Mittens', 'Gloves', '🖐️'],
+      ['❄️', 'Snow day: go sledding', 'Snow day: pajamas all day', '🛌'], ['🎶', 'Seasonal songs from day one', 'Seasonal songs? Not yet!', '🙉'], ['🧦', 'Cozy matching pajamas', 'Whatever’s clean', '👕'],
+      ['📮', 'Handwritten cards for everyone', 'A quick message on the phone', '📱'], ['🎉', 'Huge New Year’s countdown', 'Asleep before midnight', '😴'], ['📝', 'New Year’s resolutions', 'Resolutions are not for me', '🙅'],
+      ['🎃', 'Spooky season is the best season', 'Spooky season is too spooky', '😨'], ['👻', 'Homemade costume', 'Store-bought costume', '🛒'], ['🍬', 'Trade away the sour candy', 'Sour candy is the treasure', '🍋'],
+      ['🏚️', 'Haunted house: lead the way', 'Haunted house: wait outside', '🚪'], ['🍂', 'Jump in the leaf pile', 'Rake the leaf pile', '🧹'], ['🥧', 'Pumpkin everything', 'Pumpkin nothing', '🚫'],
+      ['🕸️', 'Decorate the whole house for autumn', 'One pumpkin on the step', '🎃'], ['🦇', 'Spooky stories by flashlight', 'Funny stories by daylight', '☀️'], ['🍎', 'Caramel apple', 'Candy corn', '🌽'],
+      ['🏖️', 'Summer: beach every day', 'Summer: shade and a fan', '🪭'], ['🍉', 'Watermelon', 'Ice pops', '🧊'], ['🎆', 'Front row for fireworks', 'Watch fireworks from far away', '🔭'],
+      ['🏕️', 'Summer camp', 'Summer at home', '🏡'], ['🌞', 'Sunscreen every hour', 'Forgets sunscreen until it’s too late', '🦞'], ['🍔', 'Grill master', 'Salad bringer', '🥗'],
+      ['🌊', 'Ride the biggest wave', 'Build the biggest sandcastle', '🏰'], ['🦟', 'Bugs don’t bother me', 'Bugs ruin everything', '😖'], ['🏊', 'Pool party', 'Lake day', '🛶'],
+      ['🌅', 'Long summer evenings outside', 'Air-conditioned evenings inside', '❄️'], ['🎈', 'Big birthday party', 'Small birthday dinner', '🍰'], ['🧁', 'Cake', 'Cupcakes', '🎂'],
+      ['🗓️', 'Holiday plans set months ahead', 'Holiday plans set that morning', '🌀'], ['🧳', 'Travel for the holidays', 'Everyone comes to us', '🛋️'], ['🍽️', 'Big holiday feast', 'Simple snacks and games', '🥨'],
+      ['🎀', 'Wrap gifts like an artist', 'Wrap gifts in newspaper', '🗞️'], ['🛷', 'Sled down the steepest hill', 'Sled down the gentle slope', '⛰️'], ['☃️', 'Classic three-ball snowman', 'Creative snow sculpture', '🗿'],
+      ['🌸', 'Spring cleaning party', 'Spring cleaning? Maybe next year', '📦'], ['🪁', 'Kite in the park', 'Picnic blanket nap', '🧺'], ['🌧️', 'Puddle stomping', 'Umbrella and dry shoes', '☂️'],
+      ['🎊', 'Holiday at full volume', 'Holiday as a quiet reset', '🧘'], ['🍫', 'Hot cocoa with marshmallows', 'Hot cocoa, no extras', '☕'], ['🗑️', 'Take decorations down right away', 'Decorations stay up for months', '📅'],
+    ],
+  },
+  office: {
+    label: 'Office-safe',
+    list: [
+      ['📧', 'Inbox zero', 'Thousands unread', '📬'], ['🗓️', 'Meetings: keep them short', 'Meetings: let’s really talk', '💬'], ['🎥', 'Camera on', 'Camera off', '🙈'],
+      ['🏢', 'Work in the office', 'Work from home', '🏠'], ['📋', 'Detailed agenda', 'Let’s just see where it goes', '🌊'], ['🖊️', 'Notes on paper', 'Notes on a screen', '💻'],
+      ['🧹', 'Spotless desk', 'Creative clutter', '🗂️'], ['⏰', 'Early start, early finish', 'Late start, late finish', '🌙'], ['🍱', 'Lunch at my desk', 'Lunch out with the team', '🥪'],
+      ['🔕', 'Notifications off', 'Notifications for everything', '🔔'], ['👋', 'Quick hello on the way in', 'Long chat at the coffee machine', '☕'], ['📊', 'Charts and numbers', 'Stories and examples', '📖'],
+      ['✅', 'Finish one task at a time', 'Juggle ten at once', '🤹'], ['🚀', 'Start projects fast', 'Plan projects carefully', '🧭'], ['🧠', 'Brainstorm out loud', 'Think quietly first', '🤫'],
+      ['📞', 'Pick up the phone', 'Send a message', '✉️'], ['🎧', 'Headphones on to focus', 'Background chatter helps', '🗣️'], ['🖥️', 'One giant screen', 'Three screens', '🖥'],
+      ['🗂️', 'Folders for everything', 'Search for everything', '🔍'], ['🎂', 'Office birthday cake: yes please', 'Office birthday cake: no fuss', '🙏'], ['🌿', 'Desk full of plants', 'Desk full of gadgets', '🔌'],
+      ['🏃', 'Walking meetings', 'Sitting meetings', '🪑'], ['📝', 'Long, careful emails', 'Two-word emails', '👍'], ['🌅', 'Most focused in the morning', 'Most focused in the afternoon', '🌇'],
+      ['🧑‍🤝‍🧑', 'Team projects', 'Solo projects', '🧑‍💻'], ['🎯', 'Clear instructions', 'Freedom to figure it out', '🗺️'], ['🍩', 'Bring snacks to share', 'Find the snacks others brought', '👀'],
+      ['😄', 'Emojis in work chat', 'Strictly professional text', '👔'], ['🗣️', 'Present to the whole room', 'Write the report instead', '📄'], ['🧾', 'Read the whole manual', 'Learn by clicking around', '🖱️'],
+      ['🛗', 'Elevator', 'Stairs', '🪜'], ['☕', 'Fresh coffee every hour', 'One drink lasts all day', '💧'], ['🧩', 'Fix it myself', 'Ask for help right away', '🙋'],
+      ['🎉', 'Team outings: count me in', 'Team outings: I’ll pass', '🏡'], ['📌', 'Sticky notes everywhere', 'Everything in one app', '📲'], ['🪴', 'Same desk every day', 'New desk every day', '🔄'],
+      ['📅', 'Calendar booked solid', 'Calendar wide open', '🌤️'], ['🏁', 'Done early', 'Done right at the deadline', '⌛'], ['🗳️', 'Decide by vote', 'Decide by the expert', '🎓'],
+      ['🧑‍🏫', 'Learn by watching', 'Learn by doing', '🛠️'], ['💡', 'New ideas every day', 'Perfect one idea', '💎'], ['🎙️', 'Speak first in meetings', 'Speak last in meetings', '🔚'],
+    ],
+  },
+  classics: {
+    label: 'Classics',
+    list: [
+      ['🥚', 'Scrambled eggs', 'Fried eggs', '🍳'], ['🍞', 'Toast lightly golden', 'Toast nearly black', '⬛'], ['🧂', 'Salty snacks', 'Sweet snacks', '🍬'],
+      ['🌄', 'Sunrise', 'Sunset', '🌇'], ['🌕', 'Stargazing', 'Cloud watching', '☁️'], ['🎻', 'Quiet music', 'Loud music', '🥁'],
+      ['📬', 'Write a letter', 'Make a phone call', '☎️'], ['🧘', 'Relax by doing nothing', 'Relax by doing a hobby', '🧶'], ['🌳', 'Climb the tree', 'Sit under the tree', '🍃'],
+      ['🔥', 'Campfire stories', 'Campfire songs', '🎸'], ['🎲', 'Games of luck', 'Games of skill', '♟️'], ['🍋', 'Lemonade', 'Iced tea', '🧊'],
+      ['🏞️', 'Lake', 'Ocean', '🌊'], ['🛶', 'Rowing a boat', 'Sailing a boat', '⛵'], ['🧁', 'Frosting first', 'Cake first', '🍰'],
+      ['🐦', 'Wake up to birdsong', 'Wake up to an alarm', '⏰'], ['🖍️', 'Crayons', 'Markers', '🖊️'], ['🧺', 'Picnic in the park', 'Dinner at a table', '🍽️'],
+      ['🪁', 'Fly a kite', 'Throw a frisbee', '🥏'], ['🥄', 'Soup', 'Salad', '🥗'], ['🌼', 'Wildflowers', 'Neat garden rows', '🌷'],
+      ['📻', 'Talking radio', 'Music radio', '🎵'], ['🐎', 'Ride a horse', 'Ride a bicycle', '🚴'], ['🍯', 'Honey', 'Jam', '🍓'],
+      ['🏔️', 'Climb to the top', 'Enjoy the view from the bottom', '👀'], ['🧵', 'Fix it with a needle and thread', 'Fix it with tape', '🩹'], ['🪵', 'Fireplace', 'Open window breeze', '🌬️'],
+      ['🥜', 'Crunchy peanut butter', 'Smooth peanut butter', '🥄'], ['🍿', 'Popcorn: butter', 'Popcorn: caramel', '🍯'], ['🌌', 'Night sky full of stars', 'Bright city lights', '🌃'],
+      ['🛏️', 'Soft pillow', 'Firm pillow', '🧱'], ['🎨', 'Paint with a brush', 'Paint with fingers', '🖐️'], ['🦆', 'Feed the ducks', 'Watch the ducks', '🔭'],
+      ['📐', 'Neat handwriting', 'Speedy scribbles', '✍️'], ['🧃', 'Juice with pulp', 'Juice with no pulp', '🚫'], ['🐚', 'Collect shells', 'Collect rocks', '🪨'],
+      ['🔔', 'Bells', 'Whistles', '😗'], ['🏡', 'Small cozy house', 'Big open house', '🏛️'], ['🥕', 'Carrots raw', 'Carrots cooked', '🍲'],
+      ['🌦️', 'Rainbow after rain', 'Sunshine all day', '😎'], ['🎈', 'Balloons', 'Streamers', '🎏'], ['🍝', 'Long noodles', 'Short pasta shapes', '🐚'],
+      ['🧸', 'Teddy bear', 'Toy robot', '🤖'], ['✉️', 'Keep every letter', 'Recycle after reading', '♻️'],
+    ],
+  },
+  travel: {
+    label: 'Travel & world',
+    list: [
+      ['🗺️', 'Every stop planned', 'Wander and see', '🚶'], ['🧳', 'Big suitcase', 'Tiny carry-on', '👜'], ['🏨', 'Fancy hotel', 'Cozy guesthouse', '🛖'],
+      ['🍜', 'Eat what the locals eat', 'Stick to familiar food', '🍟'], ['🏛️', 'Museums all day', 'Markets all day', '🧺'], ['🚆', 'Train journey', 'Road trip', '🚙'],
+      ['🌋', 'Volcano hike', 'Lazy river float', '🛟'], ['🗣️', 'Learn the local language first', 'Point and smile', '😊'], ['📷', 'Hundreds of photos', 'A single favorite photo', '🖼️'],
+      ['🌇', 'Explore at night', 'Explore at dawn', '🌄'], ['🏝️', 'Tropical island', 'Snowy mountain town', '🏔️'], ['🎒', 'Backpacking adventure', 'All-inclusive relaxing', '🍹'],
+      ['🛫', 'Arrive at the airport hours early', 'Run to the gate', '🏃'], ['🧭', 'Paper map', 'Phone map', '📱'], ['🧑‍🏫', 'Guided tour', 'Explore on my own', '🔦'],
+      ['🏰', 'Ancient ruins', 'Modern skyscrapers', '🏙️'], ['🐘', 'Wildlife safari', 'Underwater reef', '🐠'], ['🚤', 'Boat trip', 'Hot-air balloon ride', '🎈'],
+      ['🧁', 'Bakery breakfast', 'Hotel breakfast buffet', '🥐'], ['🛍️', 'Bring home souvenirs', 'Bring home only memories', '💭'], ['🌍', 'See every continent', 'Know one place really well', '📍'],
+      ['🏕️', 'Sleep under the stars', 'Sleep in a comfy bed', '🛏️'], ['🚲', 'Rent a bike', 'Walk everywhere', '👟'], ['📮', 'Send postcards', 'Post online', '💻'],
+      ['🌶️', 'Try the spiciest local dish', 'Try the sweetest local dessert', '🍮'], ['🗿', 'Famous landmarks', 'Hidden gems', '💎'], ['🧊', 'Glacier walk', 'Desert dunes', '🏜️'],
+      ['🚌', 'Overnight bus', 'Short flight', '✈️'], ['🎡', 'Big city festival', 'Quiet village fair', '🎪'], ['🛤️', 'Same trip every year', 'Somewhere new every time', '🆕'],
+      ['📓', 'Keep a travel journal', 'Just remember it', '🧠'], ['👫', 'Travel with a big group', 'Travel solo', '🧍'], ['⛺', 'Weekend getaway', 'Month-long journey', '🌐'],
+      ['🌉', 'Walk across famous bridges', 'Ride every cable car', '🚡'], ['🥾', 'Long hikes', 'Short scenic strolls', '🌺'], ['🗼', 'Climb the tower', 'Photograph the tower', '📸'],
+      ['🍦', 'Gelato every day', 'Street snacks every day', '🥟'], ['🌅', 'Room with a view', 'Room near the action', '🎶'], ['🧾', 'Strict travel budget', 'It’s a holiday, treat yourself', '💳'],
+      ['🛂', 'Love the airport', 'Can’t wait to leave the airport', '🚕'], ['🐪', 'Camel ride', 'Horseback ride', '🐎'], ['🧳', 'Unpack right away', 'Live out of the suitcase', '🫳'],
+      ['🌏', 'Learn the history first', 'Learn the history on the way', '📚'],
+    ],
+  },
 };
+// Family-safe packs: the only ones dealt when the TV turns on Family Mode (room.family).
+const FAMILY_KEYS = ['family', 'icebreaker', 'holiday', 'office', 'classics', 'travel'];
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
-  { key: 'pack', label: 'Spectrum pack', options: opt([['icebreaker', 'Icebreaker (strangers & work)'], ['friends', 'Friends'], ['family', 'Family'], ['deep', 'Deep Thoughts (still kind)'], ['mix', 'Mix of everything']]) },
+  { key: 'pack', label: 'Spectrum pack', options: opt([['icebreaker', 'Icebreaker (strangers & work)'], ['friends', 'Friends'], ['family', 'Family'], ['deep', 'Deep Thoughts (still kind)'], ['holiday', '🎄 Holiday (winter, spooky, summer)'], ['office', '💼 Office-safe'], ['classics', '🎬 Classics (no pop culture)'], ['travel', '🌍 Travel & world'], ['mix', 'Mix of everything']]) },
   { key: 'rounds', label: 'Rounds', options: opt([[8, '8 rounds'], [12, '12 rounds'], [16, '16 rounds']]) },
   { key: 'seconds', label: 'Time to place', options: opt([[15, '15 seconds'], [20, '20 seconds'], [30, '30 seconds']]) },
   { key: 'names', label: 'Names on dots', options: opt([['on', 'Show names'], ['off', 'Dots only (shy mode)']]) },
@@ -135,9 +216,14 @@ class Spectrum {
     const rng = this.room.rng;
     this.traits.set(p.id, { t: Array.from({ length: TRAITS }, () => rng()), noise: 6 + rng() * 14, read: 6 + rng() * 26 });
   }
+  // Family Mode (room.family) keeps every deal family-safe: Friends/Deep become Family, Mix mixes only the safe packs.
+  packKeys() {
+    const fam = !!(this.room && this.room.family), safe = (k) => !fam || FAMILY_KEYS.includes(k);
+    if (this.s.pack === 'mix' || !PACKS[this.s.pack]) return Object.keys(PACKS).filter(safe);
+    return safe(this.s.pack) ? [this.s.pack] : ['family'];
+  }
   start() {
-    const keys = this.s.pack === 'mix' || !PACKS[this.s.pack] ? Object.keys(PACKS) : [this.s.pack];
-    this.deck = this.shuffle(keys.flatMap((k) => PACKS[k].list.slice()));
+    this.deck = this.shuffle(this.packKeys().flatMap((k) => PACKS[k].list.slice()));
     for (const p of this.room.list()) this.seat(p);
     this.nextRound();
   }
@@ -152,7 +238,7 @@ class Spectrum {
     }
     if (this.phase === 'place' || this.phase === 'guess') this.maybeAllIn();
   }
-  draw() { if (!this.deck.length) this.deck = this.shuffle(Object.values(PACKS).flatMap((pk) => pk.list.slice())); return specOf(this.deck.pop()); }
+  draw() { if (!this.deck.length) this.deck = this.shuffle(this.packKeys().flatMap((k) => PACKS[k].list.slice())); return specOf(this.deck.pop()); }
   pickSpot(ids) {
     const here = ids.filter((id) => this.room.get(id));
     let pool = here.filter((id) => !this.spotted.has(id));
@@ -596,5 +682,5 @@ class Spectrum {
 module.exports = {
   key: 'spectrum', name: 'Where Do You Stand?', min: 3, best: [4, 16], fields, defaults,
   create: (room, settings) => new Spectrum(room, settings),
-  _test: { PACKS, PTS, isRead, specText },
+  _test: { PACKS, FAMILY_KEYS, PTS, isRead, specText },
 };

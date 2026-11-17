@@ -53,7 +53,7 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,JustBlanks,Blackjack Night,JustBid,Price Panic,Emoji Charades,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustSketch Relay,JustFunny,JustSummon,JustDrop,Hot Take Trivia,Color Match,Meme Maker,Letter Rush,Zombie Survival');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,JustBlanks,Blackjack Night,JustBid,Price Panic,Emoji Charades,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustSketch Relay,JustFunny,JustSummon,JustDrop,Hot Take Trivia,Color Match,Meme Maker,Letter Rush,Quick Draw,Bomb Squad,Alien Abduction,Tune Buzz,Act It Out,Debate Club,Zombie Survival');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
   assert.equal(await hub.eval(`document.querySelectorAll('.tile.empty').length`), 0, 'every slot is a game');
   assert(await hub.eval(`document.querySelector('.tile.zombie').classList.contains('locked')`), 'Zombie Survival starts locked');

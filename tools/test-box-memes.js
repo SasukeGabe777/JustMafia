@@ -221,4 +221,38 @@ test('host Next skips through every phase', () => {
   assert.equal(g.phase, 'over');
 });
 
+test('Family Mode (room.family): Uncut/Party lock to family: strict filter, no party situations, in any theme', () => {
+  const party = new Set(def.PARTY_SITUATIONS);
+  for (const theme of ['everyday', 'mix', 'holiday']) {
+    const { clock, room } = make(4, { content: 'uncut', rounds: 5, theme }, 3);
+    room.family = true;
+    const p = room.join('Ana').player; p.sockets = 1; room.start(); const g = room.game;
+    assert.equal(g.level(), 'family');
+    assert(g.sitPool().every((x) => !party.has(x)), theme + ' pool');
+    run(room, clock, () => g.phase === 'write');
+    room.act(p, { op: 'post', caps: ['oh crap', 'damn it'] });
+    const seen = [];
+    run(room, clock, () => { if (g.prompt) seen.push(g.prompt); for (const c of g.cards.values()) seen.push(...c.ideas); return g.phase === 'over'; }, 400000);
+    assert(seen.length && seen.every((x) => !party.has(x)), theme + ': ' + seen.find((x) => party.has(x)));
+    const m = g.all.concat(g.entries).find((x) => x.by === p.id);
+    assert(m, "my meme"); assert(!/crap|damn/i.test(m.caps.join(" ")), "strict filter");
+  }
+  const { room } = make(3, { content: 'party' }); room.start(); // Family Mode off: Party still adds its situations
+  assert.equal(room.game.level(), 'party'); assert(room.game.sitPool().some((x) => party.has(x)));
+});
+
+test('Situation themes: Holiday, Office-safe, Classics and Travel are offered and play end to end', () => {
+  const opts = def.fields.find((f) => f.key === 'theme').options.map((o) => o.value);
+  assert(opts.includes(def.defaults.theme));
+  const all = Object.values(def.THEMES).flat(); assert.equal(new Set(all).size, all.length, 'no duplicate situations');
+  for (const theme of ['holiday', 'office', 'classics', 'travel']) {
+    assert(opts.includes(theme) && def.THEMES[theme].length >= 40, theme);
+    const { clock, room } = make(5, { rounds: 3, theme, content: 'party' }, 2);
+    room.start(); const g = room.game; const prompts = [];
+    run(room, clock, () => { if (g.prompt) prompts.push(g.prompt); for (const c of g.cards.values()) prompts.push(...c.ideas); return g.phase === 'over'; }, 400000);
+    assert.equal(g.phase, 'over');
+    assert(prompts.length && prompts.every((x) => def.THEMES[theme].includes(x)), theme + ': ' + prompts.find((x) => !def.THEMES[theme].includes(x)));
+  }
+});
+
 console.log(`\n${passed} Meme Maker tests passed.`);
