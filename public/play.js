@@ -494,7 +494,7 @@
     const el = $('#g-timer');
     if (!view) return;
     if (view.paused) { el.textContent = '⏸'; el.classList.remove('urgent'); return; }
-    if (!view.endsAt || !['night', 'discussion', 'voting', 'accusation', 'defense', 'emergencyIntro'].includes(view.phase)) { el.textContent = ''; return; }
+    if (!view.endsAt || !['roleReveal', 'night', 'discussion', 'voting', 'accusation', 'defense', 'emergencyIntro'].includes(view.phase)) { el.textContent = ''; return; }
     const s = Math.max(0, Math.ceil((view.endsAt - (Date.now() + clockOffset)) / 1000));
     el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     el.classList.toggle('urgent', s <= 10);
@@ -703,7 +703,7 @@
     const v = view;
     switch (v.phase) {
       case 'roleReveal':
-        return `<p class="center muted">Your secret role (tap the card). Don't let anyone see!</p>${roleCard(true)}`;
+        return `<p class="center muted">Your secret role (tap the card). Don't let anyone see!</p>${roleCard(true)}<p class="center muted small">⏱ You have 30 seconds to look. The game starts when the timer runs out (or sooner once everyone has looked).</p>`;
       case 'night':
         return nightHtml();
       case 'dawn':

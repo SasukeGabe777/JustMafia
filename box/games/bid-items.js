@@ -31,6 +31,16 @@ const SETS = {
   antiques: { label: 'Antique Parlor', icon: '🕰️', bonus: 600 },
   office: { label: 'Corner Office', icon: '💼', bonus: 300 },
   treasure: { label: 'Treasure Vault', icon: '💎', bonus: 1000 },
+  // Content-pack sets (Holiday, Office, Classics, Travel)
+  winter: { label: 'Winter Wonderland', icon: '❄️', bonus: 400 },
+  spooky: { label: 'Haunted House', icon: '🎃', bonus: 400 },
+  summer: { label: 'Beach Bash', icon: '🏖️', bonus: 300 },
+  stationery: { label: 'Stationery Cupboard', icon: '✏️', bonus: 300 },
+  startup: { label: 'Startup Swag', icon: '🚀', bonus: 400 },
+  games: { label: 'Game Night Classics', icon: '♟️', bonus: 400 },
+  library: { label: 'Reading Room', icon: '📚', bonus: 500 },
+  globe: { label: 'Souvenir Shelf', icon: '🌍', bonus: 400 },
+  voyage: { label: 'Grand Voyage', icon: '🧳', bonus: 500 },
 };
 
 const ROWS = [
@@ -253,11 +263,179 @@ const ROWS = [
   ['👝', 'Pouch of real doubloons', 'R', 400, 900, 'pirate', 'pirate', '👝 a tiny salty pouch'],
   ['🎩', 'Captain’s jeweled tricorn hat', 'E', 800, 1800, 'pirate', 'pirate', '🎩 a three-cornered hatbox'],
   ['🔴', 'Cursed ruby (probably fine)', 'L', 3000, 7000, 'pirate', 'pirate vault', '🔴 something red glinting in a jar', true],
+
+  // ---- 🎄 Holiday pack: Winter Storage ----
+  ['🔮', 'Box of cracked snow globes', 'J', 1, 5, null, 'winter', '📦 a box that sloshes'],
+  ['🦌', 'Half a plastic reindeer', 'J', 2, 8, null, 'winter', '🦌 a pair of antlers sticking up'],
+  ['🧤', 'Tub of mismatched mittens', 'J', 1, 4, null, 'winter', '🧺 a tub of woolly things'],
+  ['⛄', 'Light-up yard snowman', 'C', 15, 45, 'winter', 'winter', '⛄ a round white shape with a plug'],
+  ['🛷', 'Wooden toboggan', 'C', 25, 70, 'winter', 'winter camping', '🛷 a long curled-up board'],
+  ['🥫', 'Tower of cookie tins', 'C', 10, 30, null, 'winter kitchen', '🥫 a stack of round tins'],
+  ['🧦', 'Hand-knit stocking collection', 'C', 15, 40, 'winter', 'winter attic', '🧦 a bundle of long socks'],
+  ['🎁', 'Hand-painted glass ornaments', 'G', 60, 150, 'winter', 'winter', '🎁 a box of tissue-wrapped balls'],
+  ['⛸️', 'Antique ice skates', 'G', 50, 130, 'winter', 'winter attic', '⛸️ blades peeking out of a bag'],
+  ['🧝', 'Animated shop-window elves', 'G', 90, 220, 'winter', 'winter', '🧝 little pointy hats under a sheet'],
+  ['💂', 'Hand-carved nutcracker parade', 'R', 250, 600, 'winter', 'winter toys', '💂 a row of tall painted figures'],
+  ['🚂', 'Department-store holiday train display', 'R', 300, 700, 'winter', 'winter toys', '🚂 a loop of track around fake snow'],
+  ['⭐', 'Hand-blown glass tree topper', 'E', 600, 1400, 'winter', 'winter', '⭐ something sparkly in bubble wrap'],
+  ['🔔', 'Antique musical sleigh', 'L', 2500, 5500, 'winter', 'winter vault', '🛷 something huge with bells, under a tarp', true],
+
+  // ---- 🎄 Holiday pack: Spooky Season ----
+  ['🎃', 'Bag of burnt-out pumpkin lights', 'J', 1, 5, null, 'spooky', '🎃 a bag of orange plastic'],
+  ['🕸️', 'Fake cobwebs (very real dust)', 'J', 1, 3, null, 'spooky', '🕸️ a gray fluffy mess'],
+  ['🦇', 'Squeaky rubber bats', 'J', 1, 6, null, 'spooky', '🦇 something hanging from the ceiling'],
+  ['👕', 'Glow-in-the-dark skeleton costume', 'C', 15, 40, 'spooky', 'spooky', '👕 a costume bag that glows'],
+  ['🌫️', 'Fog machine', 'C', 20, 60, 'spooky', 'spooky movie', '🌫️ a box with a nozzle on the front'],
+  ['🫕', 'Giant plastic cauldron', 'C', 10, 30, 'spooky', 'spooky', '🫕 a big black pot'],
+  ['🧙', 'Witch-hat lampshades', 'C', 15, 40, null, 'spooky furniture', '💡 pointy shades in a stack'],
+  ['🐦‍⬛', 'Animatronic talking raven', 'G', 70, 180, 'spooky', 'spooky', '🪶 a cage with a black feathered shape'],
+  ['👾', 'Handmade felt monster puppets', 'G', 50, 140, 'spooky', 'spooky toys', '🧦 a box of fuzzy googly eyes'],
+  ['🎹', 'Wheezing haunted-house organ', 'G', 120, 280, 'spooky', 'spooky band', '🎹 a tall instrument with pipes'],
+  ['🔮', 'Antique fortune-teller machine', 'R', 300, 750, 'spooky', 'spooky', '🔮 a booth with a glass top'],
+  ['🌾', 'Hand-carved wooden scarecrow', 'R', 220, 500, 'spooky', 'spooky', '🌾 a straw-stuffed figure'],
+  ['📦', 'Vintage paper spooky-season decorations', 'E', 600, 1300, 'spooky', 'spooky attic', '📦 a flat box of crinkly old paper'],
+  ['🌕', 'Crystal ball that really glows', 'L', 2500, 6000, 'spooky', 'spooky vault', '👝 a velvet bag that hums', true],
+
+  // ---- 🎄 Holiday pack: Summer Shack ----
+  ['🛟', 'Deflated pool floats', 'J', 1, 4, null, 'summer', '🛟 a sad rubbery pile'],
+  ['🏖️', 'Sandy beach towels', 'J', 1, 5, null, 'summer', '🏖️ a gritty bundle'],
+  ['🪑', 'Rusty beach chairs', 'J', 3, 10, null, 'summer', '🪑 folded metal frames'],
+  ['🍧', 'Snow-cone machine', 'C', 15, 45, 'summer', 'summer kitchen', '🍧 a little cart with a crank'],
+  ['🏄', 'Stack of boogie boards', 'C', 15, 40, 'summer', 'summer', '🟦 flat foam slabs'],
+  ['🧊', 'Retro metal picnic cooler', 'C', 20, 55, 'summer', 'summer camping', '🧊 a metal box with a handle'],
+  ['🪕', 'Ukulele with three strings', 'C', 15, 40, null, 'summer band', '🪕 a tiny guitar shape'],
+  ['🌊', 'Vintage wooden surfboard', 'G', 120, 300, 'summer', 'summer', '🏄 something long and pointy, with a fin'],
+  ['⛱️', 'Hand-painted beach umbrella', 'G', 50, 120, 'summer', 'summer', '⛱️ a pole wrapped in striped fabric'],
+  ['🍦', 'Old-time ice cream cart', 'G', 100, 250, 'summer', 'summer kitchen', '🛎️ a cart with wheels and a bell'],
+  ['🎠', 'Restored carousel horse', 'R', 300, 700, 'summer', 'summer toys', '🎠 a painted horse on a pole'],
+  ['🎿', 'Classic wooden water skis', 'R', 220, 480, 'summer', 'summer', '🎿 two long boards with foot straps'],
+  ['🕹️', 'Seaside claw machine', 'E', 600, 1400, 'summer', 'summer gadget', '🧸 a glass box full of plushies'],
+  ['💡', 'Antique lighthouse lens', 'L', 2500, 6000, 'summer', 'summer vault', '🔆 a giant glass beehive shape', true],
+
+  // ---- 💼 Office pack: Startup Clear-out (plus more for the Office Clear-out) ----
+  ['🔴', 'Logo stress balls', 'J', 1, 4, 'startup', 'cowork', '🔴 a bin of squishy balls'],
+  ['🪪', 'Box of conference lanyards', 'J', 1, 3, null, 'cowork office', '🪪 a tangle of ribbons'],
+  ['🫘', 'Office bean bags (slightly flat)', 'J', 1, 5, null, 'cowork', '🫘 lumpy cushions in a heap'],
+  ['📋', 'Whiteboard full of big ideas', 'J', 2, 8, null, 'cowork office', '📋 a board covered in arrows'],
+  ['👕', 'Crate of hoodies with the old logo', 'J', 2, 10, 'startup', 'cowork', '👕 a crate of soft gray fabric'],
+  ['🖍️', 'Drawer of dried-out highlighters', 'J', 1, 3, null, 'office cowork', '🗄️ a drawer that rattles'],
+  ['🏓', 'Wobbly ping-pong table', 'C', 30, 80, 'startup', 'cowork sports', '🏓 a big folded green board'],
+  ['🧍', 'Standing desk stuck halfway', 'C', 25, 70, null, 'cowork office', '🧍 a desk at an odd height'],
+  ['🧊', 'Mini fridge of fizzy water', 'C', 15, 40, 'startup', 'cowork', '🧊 a humming cube'],
+  ['🏷️', 'Label maker collection', 'C', 10, 30, 'stationery', 'cowork office', '🏷️ a box of chunky gadgets'],
+  ['🕐', 'Wall clocks for five time zones', 'C', 20, 50, 'office', 'cowork office', '🕐 a row of round faces'],
+  ['📓', 'Carton of fancy notebooks', 'C', 10, 35, 'stationery', 'cowork office', '📓 a carton of hard covers'],
+  ['🪨', 'Desk-size zen sand garden', 'C', 10, 30, null, 'cowork', '🪨 a tray of sand and a tiny rake'],
+  ['🛞', 'Rolling whiteboard', 'C', 15, 45, 'office', 'office cowork', '📋 a big board on wheels'],
+  ['🧽', 'Pencil cup of novelty erasers', 'C', 5, 20, 'stationery', 'office toys', '✏️ a cup of tiny rubber shapes'],
+  ['💺', 'Designer ergonomic chair', 'G', 80, 200, 'startup', 'cowork office', '💺 a chair that looks expensive'],
+  ['📎', 'Antique brass stapler', 'G', 50, 120, 'stationery', 'cowork office attic', '📎 something small, heavy and brass'],
+  ['🖋️', 'Calligraphy set with silver nibs', 'G', 60, 150, 'stationery', 'cowork art', '🖋️ a lacquered box'],
+  ['☕', 'Retro espresso bar cart', 'G', 80, 200, 'startup', 'cowork kitchen', '🛒 a shiny cart with a spout'],
+  ['📒', 'Leather-bound ledgers', 'G', 70, 160, 'stationery', 'cowork office attic', '📒 a row of cracked spines'],
+  ['🎰', 'Break-room pinball machine', 'R', 300, 700, 'startup', 'cowork gadget', '💡 a glass-topped box on legs'],
+  ['🔏', 'Wax seal and stamp collection', 'R', 220, 500, 'stationery', 'cowork office', '🔏 a tray of little brass handles'],
+  ['🌈', 'Neon company logo sign', 'R', 250, 550, 'startup', 'cowork art', '💡 glass tubes bent into letters'],
+  ['📦', 'Founder’s very first prototype', 'E', 700, 1600, 'startup', 'cowork', '📦 a box labeled DO NOT THROW AWAY'],
+  ['✒️', 'Solid-gold fountain pen', 'E', 800, 1800, 'stationery', 'cowork vault', '✒️ a tiny velvet box'],
+  ['🧻', 'Billion-dollar idea on a napkin', 'L', 2500, 6000, 'startup', 'cowork vault', '🖼️ a napkin in a museum frame', true],
+
+  // ---- 🎬 Classics pack: Game Night Closet ----
+  ['⚫', 'Checkers with bottle-cap pieces', 'J', 1, 4, null, 'gamenight', '⚫ a board with odd round pieces'],
+  ['🁢', 'Dominoes with the dots worn off', 'J', 1, 5, null, 'gamenight', '📦 a long wooden box that clacks'],
+  ['🃏', 'Deck of 51 cards', 'J', 1, 3, null, 'gamenight', '🃏 a battered card box'],
+  ['🧩', 'Jigsaw of a cloudless sky', 'J', 2, 6, null, 'gamenight', '🧩 a box that is entirely blue'],
+  ['🎲', 'Wooden backgammon case', 'C', 20, 60, 'games', 'gamenight', '🎲 a hinged wooden case'],
+  ['🫙', 'Jar of glass marbles', 'C', 15, 45, 'games', 'gamenight toys', '🫙 a jar of glassy colors'],
+  ['🏑', 'Croquet set (one mallet missing)', 'C', 15, 40, 'games', 'gamenight camping', '🏑 long wooden handles in a bag'],
+  ['🔘', 'Tiddlywinks tournament kit', 'C', 10, 30, 'games', 'gamenight', '🔘 a tin of tiny discs'],
+  ['🌀', 'Wooden spinning tops', 'C', 10, 30, 'games', 'gamenight toys', '🌀 a pouch of pointy wooden shapes'],
+  ['♟️', 'Hand-carved chess set', 'G', 80, 220, 'games', 'gamenight', '♟️ a heavy board with felt underneath'],
+  ['🀄', 'Vintage mahjong tiles', 'G', 100, 250, 'games', 'gamenight attic', '🀄 a case of tiny tiles'],
+  ['🗝️', 'Antique wooden puzzle box', 'G', 70, 170, 'games', 'gamenight', '📦 a box with no visible lid'],
+  ['🟫', 'Carrom board with brass corners', 'G', 90, 200, 'games', 'gamenight', '🟫 a square board with corner pockets'],
+  ['⚪', 'Handmade go board and stones', 'R', 250, 550, 'games', 'gamenight', '⚪ a thick wooden block and two bowls'],
+  ['🐷', 'Mechanical penny bank', 'R', 220, 500, 'games', 'gamenight toys attic', '🪙 a painted iron figure with a coin slot'],
+  ['💎', 'Jeweled backgammon set', 'E', 700, 1500, 'games', 'gamenight vault', '💎 a sparkling folding case'],
+  ['🪵', 'Centuries-old carved game board', 'L', 2500, 5500, 'games', 'gamenight vault', '🪵 an ancient-looking slab of wood', true],
+
+  // ---- 🎬 Classics pack: Old Library ----
+  ['📚', 'Very overdue library books', 'J', 1, 4, null, 'library', '📚 a stack with a stamp card in each'],
+  ['🔖', 'Box of bent bookmarks', 'J', 1, 3, null, 'library', '🔖 a shoebox of paper strips'],
+  ['📖', 'Phone books from every year', 'J', 1, 5, null, 'library office', '📖 a tower of thick yellow books'],
+  ['🪜', 'Rolling library ladder', 'C', 30, 80, 'library', 'library furniture', '🪜 a ladder on little wheels'],
+  ['💚', 'Green banker’s lamp', 'C', 20, 55, 'library', 'library office', '💡 a lamp with a glass shade'],
+  ['🗺️', 'Box of old folded maps', 'C', 15, 45, 'library', 'library trunk', '🗺️ a box of creased paper'],
+  ['🦉', 'Brass owl bookends', 'C', 15, 40, 'library', 'library', '🦉 two heavy little figures'],
+  ['📜', 'Leather-bound poetry collection', 'G', 60, 150, 'library', 'library attic', '📕 a row of gold-stamped spines'],
+  ['🔍', 'Antique magnifying glass', 'G', 50, 120, 'library', 'library', '🔍 a round glass on a carved handle'],
+  ['🎞️', 'Typewriter ribbon tin collection', 'G', 40, 100, 'library', 'library office', '🥫 a case of little colorful tins'],
+  ['🌌', 'Celestial globe', 'G', 100, 240, 'library', 'library', '🌌 a sphere covered in stars'],
+  ['🗾', 'Hand-illustrated atlas', 'R', 300, 700, 'library', 'library travel', '📘 an enormous book with a cracked spine'],
+  ['🪐', 'Brass orrery', 'R', 300, 700, 'library', 'library', '🪐 little planets on brass arms'],
+  ['🖋️', 'Handwritten fairy-tale manuscript', 'E', 700, 1600, 'library', 'library vault', '📜 a ribbon-tied bundle of yellowed pages'],
+  ['📕', 'Hand-printed first dictionary', 'L', 2500, 6000, 'library', 'library vault', '📕 a giant book under glass', true],
+  ['🪀', 'Wooden yo-yo collection', 'C', 10, 30, 'games', 'gamenight toys', '🪀 a tackle box of round wooden things'],
+  ['🎯', 'Tabletop shuffleboard', 'G', 90, 220, 'games', 'gamenight sports', '🟫 a long polished plank'],
+  ['🃏', 'Hand-painted playing cards', 'R', 220, 480, 'games', 'gamenight art', '🃏 a slim box with gold edges'],
+  ['🕰️', 'Brass chess clock', 'C', 20, 55, 'games', 'gamenight office', '⏱️ two little clock faces side by side'],
+  ['📗', 'Crate of school readers', 'J', 2, 6, null, 'library', '📗 a crate of thin green books'],
+  ['🪶', 'Quill pens and inkwell', 'C', 15, 45, 'library', 'library office', '🪶 a feather sticking out of a box'],
+  ['🗄️', 'Map chest with flat drawers', 'R', 250, 600, 'library', 'library furniture', '🗄️ a wide cabinet of shallow drawers'],
+  ['🔠', 'Wooden printing-press letters', 'G', 70, 180, 'library', 'library art', '🔠 a tray of tiny backwards blocks'],
+  ['📚', 'Complete set of classic novels', 'E', 600, 1300, 'library', 'library attic', '📚 a matching row of cloth spines'],
+
+  // ---- 🌍 Travel pack: Globetrotter’s Locker ----
+  ['👛', 'Pouch of tiny foreign coins', 'J', 1, 5, null, 'travel', '👛 a little pouch that clinks'],
+  ['📰', 'Expired travel brochures', 'J', 1, 3, null, 'travel', '📰 a fan of glossy paper'],
+  ['😴', 'Squashed travel pillow', 'J', 1, 3, null, 'travel', '😴 a flat U-shape'],
+  ['🥜', 'Airline snack stash', 'J', 1, 2, null, 'travel', '🥜 a pile of tiny foil packets'],
+  ['🔮', 'Snow globes from 30 cities', 'C', 20, 60, 'globe', 'travel', '🔮 rows of little glass domes'],
+  ['🥄', 'Souvenir spoon collection', 'C', 15, 45, 'globe', 'travel kitchen', '🥄 a velvet board of tiny spoons'],
+  ['🚗', 'Wall of license plates', 'C', 20, 55, 'globe', 'travel', '🚗 metal rectangles nailed to a board'],
+  ['🧺', 'Hand-woven market basket', 'C', 10, 35, 'globe', 'travel kitchen', '🧺 something woven and round'],
+  ['🧲', 'Mountain of souvenir magnets', 'C', 10, 30, 'globe', 'travel', '🧲 a fridge door, just the door'],
+  ['🟦', 'Hand-painted ceramic tiles', 'G', 60, 150, 'globe', 'travel art', '🟦 a crate of square tiles'],
+  ['🐘', 'Carved wooden animal parade', 'G', 50, 130, 'globe', 'travel toys', '🐘 a line of little carved shapes'],
+  ['🧶', 'Woven wall rug', 'G', 90, 220, 'globe', 'travel furniture', '🧶 a heavy rolled-up rug'],
+  ['📐', 'Brass sextant', 'G', 100, 240, 'voyage', 'travel pirate', '📐 a brass triangle with a mirror'],
+  ['📔', 'Explorer’s handwritten journal', 'R', 300, 700, 'voyage', 'travel', '📔 a leather book with a compass on the cover'],
+  ['🪁', 'Festival silk dragon kite', 'R', 220, 500, 'globe', 'travel toys', '🪁 a long painted tube of silk'],
+  ['🕌', 'Antique silk carpet', 'E', 700, 1600, 'globe', 'travel furniture', '🧶 a rug that shimmers'],
+  ['🧭', 'Lost explorer’s golden compass', 'L', 2500, 6000, 'voyage', 'travel vault', '📦 a tiny chest with a gold glint', true],
+
+  // ---- 🌍 Travel pack: Steamer Trunks ----
+  ['🧳', 'Suitcase with a stuck zipper', 'J', 2, 6, null, 'trunk', '🧳 a bag bursting at the seams'],
+  ['👕', 'Faded tourist T-shirts', 'J', 1, 4, null, 'trunk', '👕 a pile of bright, washed-out shirts'],
+  ['🎫', 'Shoebox of ticket stubs', 'J', 1, 3, null, 'trunk', '📦 a shoebox of paper scraps'],
+  ['🎩', 'Hatbox full of postcards', 'C', 15, 40, 'voyage', 'trunk', '🎩 a round striped box'],
+  ['🛂', 'Leather passport wallets', 'C', 10, 30, 'voyage', 'trunk', '👛 a stack of slim leather cases'],
+  ['🏷️', 'Vintage hotel luggage labels', 'C', 15, 40, 'voyage', 'trunk art', '🏷️ an envelope of colorful stickers'],
+  ['🧺', 'Wicker picnic hamper', 'C', 20, 50, null, 'trunk kitchen', '🧺 a basket with leather straps'],
+  ['🗃️', 'Leather steamer trunk', 'G', 100, 260, 'voyage', 'trunk attic', '🧳 a giant box with brass corners'],
+  ['🔭', 'Brass binoculars', 'G', 60, 150, 'voyage', 'trunk camping', '🔭 a pair of tubes in a strap case'],
+  ['🕰️', 'Railway station clock', 'G', 90, 220, 'voyage', 'trunk attic', '🕰️ a huge two-sided clock face'],
+  ['✍️', 'Fold-out travel writing desk', 'G', 80, 200, 'voyage', 'trunk office', '🪵 a wooden box that unfolds'],
+  ['🍽️', 'Ocean liner menu collection', 'R', 250, 550, 'voyage', 'trunk', '📜 a folder of fancy cards'],
+  ['🚆', 'Hand-drawn railway map', 'R', 220, 500, 'voyage', 'trunk art', '🗺️ a long scroll of lines and dots'],
+  ['💼', 'Monogrammed luggage set', 'E', 700, 1500, 'voyage', 'trunk vault', '🧳 a tower of matching cases'],
+  ['🚢', 'Hand-built ocean liner model', 'L', 2500, 5500, 'voyage', 'trunk vault', '🛳️ something long in a glass case', true],
+  ['🌏', 'Wooden puzzle globe', 'G', 60, 150, 'globe', 'travel toys', '🌐 a ball made of wooden slices'],
+  ['🎎', 'Hand-painted festival masks', 'C', 15, 45, 'globe', 'travel art', '🎭 a wall of bright painted faces'],
+  ['🫖', 'Copper tea kettle from a night market', 'G', 50, 130, 'globe', 'travel kitchen', '🫖 a shiny round pot with a long spout'],
+  ['🗼', 'Mini landmark model collection', 'C', 15, 40, 'globe', 'travel toys', '🏰 a shelf of tiny buildings'],
+  ['🎒', 'Backpack covered in country patches', 'C', 20, 50, 'voyage', 'travel trunk camping', '🎒 a bag stitched with flags'],
+  ['📷', 'Folding travel camera', 'R', 250, 550, 'voyage', 'trunk gadget', '📷 a leather case with bellows'],
+  ['🗺️', 'Pinned world map of every trip', 'C', 15, 40, 'voyage', 'trunk travel', '📍 a board full of tiny pins'],
+  ['🧭', 'Pocket sundial', 'G', 60, 140, 'voyage', 'trunk camping', '☀️ a little brass disc with a fin'],
 ];
+
+// Never in a locker when the room is in Family mode (alcohol, weapons, scary masks).
+const NOT_FAMILY = new Set(['Very old bottle of wine', 'Jeweled ceremonial dagger', 'Rubber zombie mask']);
 
 const ITEMS = ROWS.map(([emoji, name, r, lo, hi, set, themes, clue, jackpot], id) => {
   const sp = clue.indexOf(' ');
-  return { id, emoji, name, r, lo, hi, set: set || null, themes: themes.split(' '), clue: { icon: clue.slice(0, sp), text: clue.slice(sp + 1) }, jackpot: !!jackpot };
+  return { id, emoji, name, r, lo, hi, set: set || null, themes: themes.split(' '), clue: { icon: clue.slice(0, sp), text: clue.slice(sp + 1) }, jackpot: !!jackpot, family: !NOT_FAMILY.has(name) };
 });
 
 // Rarity weights: how likely each slot in a locker is to be Junk … Legendary.
@@ -275,11 +453,28 @@ const THEMES = [
   { key: 'camping', name: 'Camping Gear', icon: '🏕️', door: '#4c7a32', decoys: ['📦 a box labeled SURVIVAL', '🪵 a pile of firewood'] },
   { key: 'art', name: 'Abandoned Art Studio', icon: '🎨', door: '#c2477e', decoys: ['🖼️ a frame wrapped in brown paper', '📦 a box labeled MY BEST WORK'] },
   { key: 'kitchen', name: 'Kitchen Chaos', icon: '🍳', door: '#cf5d2e', decoys: ['📦 a box labeled GRANDMA’S SECRET RECIPES', '🍲 a stack of pots and pans'] },
-  { key: 'office', name: 'Office Clear-out', icon: '🗄️', door: '#56607a', decoys: ['📦 a box labeled CONFIDENTIAL', '🗄️ a cabinet with a broken lock'] },
+  { key: 'office', pack: 'office', name: 'Office Clear-out', icon: '🗄️', door: '#56607a', decoys: ['📦 a box labeled CONFIDENTIAL', '🗄️ a cabinet with a broken lock'] },
   { key: 'pirate', name: 'Pirate’s Basement', icon: '🏴‍☠️', door: '#3b3b55', decoys: ['📦 a box labeled DEFINITELY NOT TREASURE', '🦜 a feather trail on the floor'] },
+  // Content-pack lockers (`pack` = the Locker mix setting that picks them on their own)
+  { key: 'winter', pack: 'holiday', name: 'Winter Holiday Storage', icon: '❄️', door: '#4f8fc0', decoys: ['📦 a box labeled DECORATIONS - THIS SIDE UP', '🎀 a heap of ribbon'] },
+  { key: 'spooky', pack: 'holiday', name: 'Spooky Season Storage', icon: '🎃', door: '#d0661e', decoys: ['📦 a box labeled DO NOT OPEN (BOO!)', '🕯️ a row of fake candles'] },
+  { key: 'summer', pack: 'holiday', name: 'Summer Beach Shack', icon: '🏖️', door: '#e0b03a', decoys: ['📦 a box labeled BEACH STUFF', '🐚 a bucket of shells'] },
+  { key: 'cowork', pack: 'office', name: 'Startup Clear-out', icon: '🚀', door: '#5a4fcf', decoys: ['📦 a box labeled Q3 GOALS', '🪴 a very tired office plant'] },
+  { key: 'gamenight', pack: 'classics', name: 'Game Night Closet', icon: '♟️', door: '#2e7d5b', decoys: ['📦 a box labeled ALL THE PIECES (PROBABLY)', '🎲 a bowl of loose dice'] },
+  { key: 'library', pack: 'classics', name: 'Old Library', icon: '📚', door: '#6b4a2b', decoys: ['📦 a box labeled RARE BOOKS', '📚 a wall of dusty spines'] },
+  { key: 'travel', pack: 'travel', name: 'Globetrotter’s Locker', icon: '🌍', door: '#1f8a9a', decoys: ['📦 a box covered in stamps from everywhere', '🗺️ a map with pins in it'] },
+  { key: 'trunk', pack: 'travel', name: 'Steamer Trunks', icon: '🧳', door: '#8a5a2b', decoys: ['🧳 a trunk with a broken lock', '📦 a crate stamped FIRST CLASS'] },
   // Special themes: the Vault is rare and pricey (Premium lockers); Mystery has no clues at all.
   { key: 'vault', name: 'Collector’s Vault', icon: '💎', door: '#2b5d8f', special: true, w: { J: 6, C: 14, G: 30, R: 30, E: 15, L: 5 }, decoys: ['🔐 a locked strongbox', '📦 a crate stamped INSURED'] },
   { key: 'mystery', name: 'Mystery Locker', icon: '❓', door: '#444', special: true, noClues: true, decoys: [] },
 ].map((t) => ({ w: W_DEFAULT, ...t, decoys: t.decoys.map(decoy) }));
 
-module.exports = { ITEMS, THEMES, SETS, RARITIES, W_DEFAULT };
+// Content packs for the Locker mix setting (Everything mixes them all in).
+const PACKS = [
+  { key: 'holiday', label: '🎄 Holiday (winter, spooky, summer)' },
+  { key: 'office', label: '💼 Office' },
+  { key: 'classics', label: '🎬 Classics (no pop culture)' },
+  { key: 'travel', label: '🌍 Travel & world' },
+];
+
+module.exports = { ITEMS, THEMES, SETS, RARITIES, W_DEFAULT, PACKS };

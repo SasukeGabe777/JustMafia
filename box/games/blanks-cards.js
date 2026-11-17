@@ -147,4 +147,6 @@ const PROMPTS = FAMILY_PROMPTS.concat(PARTY_PROMPTS);
 const ANSWERS = FAMILY_ANSWERS.concat(PARTY_ANSWERS);
 // Ready-made answers for test bots when they "write their own".
 const BOT_WRITES = ['a goose with a briefcase', 'my tax return, but framed', 'an angry violin', 'Steve from accounting', 'a sock full of pudding', 'the dramatic chipmunk'];
-module.exports = { PROMPTS, ANSWERS, FAMILY_PROMPTS, PARTY_PROMPTS, FAMILY_ANSWERS, PARTY_ANSWERS, BOT_WRITES };
+// Theme packs (holiday, office, classics, travel): all family-safe, in blanks-packs.js.
+const { PACKS } = require('./blanks-packs');
+module.exports = { PROMPTS, ANSWERS, FAMILY_PROMPTS, PARTY_PROMPTS, FAMILY_ANSWERS, PARTY_ANSWERS, BOT_WRITES, PACKS };

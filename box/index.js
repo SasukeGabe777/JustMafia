@@ -3,6 +3,7 @@
 // QR join, lobby settings, bots and reconnection — the way JustMafia works.
 const path = require('path');
 const { BoxRoom, REACTIONS } = require('./room');
+const { BoxProfileStore } = require('./profiles');
 
 const GAMES = {
   president: require('./games/president'),
@@ -20,6 +21,12 @@ const GAMES = {
   bid: require('./games/bid'),
   kingdoms: require('./games/kingdoms'),
   zombie: require('./games/zombie'),
+  debate: require('./games/debate'),
+  actout: require('./games/actout'),
+  tune: require('./games/tune'),
+  alien: require('./games/alien'),
+  bomb: require('./games/bomb'),
+  quickdraw: require('./games/quickdraw'),
   summon: require('./games/summon'),
   letters: require('./games/letters'),
   memes: require('./games/memes'),
@@ -40,7 +47,11 @@ const EXTERNAL = {
 };
 const defOf = (k) => (typeof k === 'string' ? (Object.prototype.hasOwnProperty.call(GAMES, k) ? GAMES[k] : Object.prototype.hasOwnProperty.call(EXTERNAL, k) ? EXTERNAL[k] : null) : null);
 
-function installBox(app, io, { takenElsewhere = () => false, external = {} } = {}) {
+// Lifetime profiles for box games: .data/box-profiles.json (git-ignored), like JustMafia's
+// profiles.json; MT_PROFILE_STORE=memory keeps them in memory (tests).
+const defaultProfiles = () => new BoxProfileStore(process.env.MT_PROFILE_STORE === 'memory' ? null : path.join(__dirname, '..', '.data', 'box-profiles.json'));
+
+function installBox(app, io, { takenElsewhere = () => false, external = {}, profiles = defaultProfiles() } = {}) {
   const pub = path.join(__dirname, '..', 'public', 'box');
   app.get('/box/tv', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
   app.get('/box/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
@@ -65,7 +76,7 @@ function installBox(app, io, { takenElsewhere = () => false, external = {} } = {
   // A room made from outside the box (JustMafia's "Play another game"): same as host:create.
   function createRoom(gameKey, { unlocks } = {}) {
     const def = GAMES[gameKey]; if (!def) return { ok: false, error: 'Unknown game.' };
-    const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true }));
+    const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true, profiles }));
     room.setUnlocks(unlocks);
     if (room.isLocked(def)) return { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim(), locked: true };
     rooms.set(room.code, room);
@@ -86,10 +97,24 @@ function installBox(app, io, { takenElsewhere = () => false, external = {} } = {
     const detach = () => {
       const r = rooms.get(socket.data.code), p = r && socket.data.playerId && r.get(socket.data.playerId);
       if (p) p.sockets = Math.max(0, p.sockets - 1);
+      const a = r && socket.data.audienceId && r.audience.get(socket.data.audienceId);
+      if (a) { a.sockets = Math.max(0, a.sockets - 1); a.at = Date.now(); r.syncAudience(); }
       for (const ch of socket.rooms) if (ch !== socket.id) socket.leave(ch);
       socket.data = {};
     };
-    const ctx = () => { const room = rooms.get(socket.data.code); return { room, p: room && socket.data.playerId ? room.get(socket.data.playerId) : null }; };
+    const ctx = () => { const room = rooms.get(socket.data.code); return { room, p: room && socket.data.playerId ? room.get(socket.data.playerId) : null, a: room && socket.data.audienceId ? room.audience.get(socket.data.audienceId) : null }; };
+    // A phone's lifetime profile ({ id, token } from its localStorage), or null.
+    const profileOf = (auth) => (profiles && auth && typeof auth === 'object' ? profiles.authenticate(auth) : null);
+    const linkProfile = (room, p, prof) => {
+      if (!prof || !p) return;
+      p.profileId = prof.id; p.title = profiles.titleOf(prof.id);
+      if (!prof.claimed) profiles.setName(prof.id, p.name);
+    };
+    const audienceReply = (room, a, back) => ({ ok: true, audience: true, code: room.code, id: a.id, token: a.token, name: a.name, avatar: a.avatar, playNext: a.playNext, game: room.def.key, back: !!back, state: room.audienceState() });
+    const seatAudience = (room, a) => {
+      detach(); socket.data = { code: room.code, audienceId: a.id }; socket.join('au:' + room.code); socket.join('aum:' + room.code + ':' + a.id);
+      a.sockets++; a.at = Date.now(); room.syncAudience();
+    };
 
     socket.on('host:create', (msg, cb) => {
       // Party Mode: msg.party = { games: [keys], minutes } plays the lineup back to back.
@@ -98,7 +123,7 @@ function installBox(app, io, { takenElsewhere = () => false, external = {} } = {
       if (lineup) lineup = [...lineup.filter((d) => !d.external), ...lineup.filter((d) => d.external)];
       if (lineup && lineup.length && lineup[0].external) return reply(cb, { ok: false, error: 'Add at least one more game to the party.' });
       const def = lineup && lineup.length ? lineup[0] : GAMES[msg.game]; if (!def) return reply(cb, { ok: false, error: 'Unknown game.' });
-      const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true }));
+      const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true, profiles }));
       room.setUnlocks(msg.unlocks);
       if (room.isLocked(def)) return reply(cb, { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim(), locked: true });
       if (lineup && lineup.length) room.setParty(lineup, msg.party.minutes, msg.party.flow);
@@ -123,17 +148,76 @@ function installBox(app, io, { takenElsewhere = () => false, external = {} } = {
 
     socket.on('room:check', (msg, cb) => {
       const room = find(msg.code);
-      reply(cb, room ? { ok: true, code: room.code, game: room.def.key, title: room.def.name } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
+      reply(cb, room ? { ok: true, code: room.code, game: room.def.key, title: room.def.name, busy: room.busy(), players: room.players.size, audience: room.audienceCount() } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
     });
+    // Join as a player, or as the audience: msg.mode = 'watch' (just watch) | 'next' (watch now,
+    // play from the next game's lobby). Without a mode, a busy room (game running, full or
+    // locked) answers { busy } so the phone can ask which one.
     socket.on('player:join', (msg, cb) => {
       const room = find(msg.code);
       if (!room) return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.' });
-      const r = room.join(msg.name, typeof msg.token === 'string' ? msg.token : null, typeof msg.avatar === 'string' ? msg.avatar : null);
+      const token = typeof msg.token === 'string' ? msg.token : null, avatar = typeof msg.avatar === 'string' ? msg.avatar : null;
+      const prof = profileOf(msg.profile);
+      const back = token && room.list().find((p) => p.token === token);
+      const backA = !back && token && [...room.audience.values()].find((a) => a.token === token);
+      if (backA) { seatAudience(room, backA); if (prof) backA.profileId = prof.id; return reply(cb, audienceReply(room, backA, true)); }
+      const mode = msg.mode === 'watch' || msg.mode === 'next' ? msg.mode : null, busy = room.busy();
+      if (!back && (mode === 'watch' || (busy && mode === 'next'))) {
+        const r = room.joinAudience(msg.name, null, avatar, mode === 'next');
+        if (!r.ok) return reply(cb, r);
+        if (prof) r.member.profileId = prof.id;
+        seatAudience(room, r.member);
+        return reply(cb, audienceReply(room, r.member, false));
+      }
+      if (!back && busy) return reply(cb, { ok: false, busy, error: busy === 'running' ? 'A game is running right now.' : busy === 'full' ? 'This room is full.' : 'The host locked this room.' });
+      const r = room.join(msg.name, token, avatar);
       if (!r.ok) return reply(cb, r);
       detach(); socket.data = { code: room.code, playerId: r.player.id }; socket.join('pl:' + room.code + ':' + r.player.id);
       r.player.sockets++;
+      if (prof) linkProfile(room, r.player, prof);
       reply(cb, { ok: true, code: room.code, id: r.player.id, token: r.player.token, game: room.def.key, back: !!r.back });
       room.sync();
+    });
+    // ---- the audience ----
+    socket.on('audience:vote', (msg, cb) => {
+      const { room, a } = ctx(); if (!room || !a) return reply(cb, { ok: false, error: 'Join the audience first.' });
+      reply(cb, room.vote(a, msg.option));
+    });
+    socket.on('audience:next', (msg, cb) => {
+      const { room, a } = ctx(); if (!room || !a) return reply(cb, { ok: false });
+      reply(cb, room.setPlayNext(a, msg.on !== false));
+    });
+    // ---- lifetime profiles (box/profiles.js) ----
+    // Every call carries the phone's { id, token }; nothing is kept on the socket.
+    const profileView = (prof) => profiles.view(prof.id);
+    socket.on('profile:create', (msg, cb) => {
+      if (!profiles) return reply(cb, { ok: false, error: 'Profiles are off on this server.' });
+      const now = Date.now(); if (now - (socket.data.lastProfile || 0) < 1500) return reply(cb, { ok: false, error: 'One moment…' });
+      socket.data.lastProfile = now;
+      const auth = profiles.create(typeof msg.name === 'string' ? msg.name : null);
+      const { room, p } = ctx(); if (p) { linkProfile(room, p, profiles.get(auth.id)); room.sync(); }
+      reply(cb, { ok: true, id: auth.id, token: auth.token, profile: profiles.view(auth.id) });
+    });
+    socket.on('profile:get', (msg, cb) => {
+      const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: false, error: 'Profile not found.' });
+      const { room, p } = ctx(); if (p && p.profileId !== prof.id) { linkProfile(room, p, prof); room.sync(); }
+      reply(cb, { ok: true, profile: profileView(prof) });
+    });
+    socket.on('profile:claim', (msg, cb) => {
+      const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: false, error: 'Profile not found.' });
+      reply(cb, profiles.claim(prof.id, msg.name, String(msg.pin == null ? '' : msg.pin)));
+    });
+    socket.on('profile:login', (msg, cb) => {
+      if (!profiles) return reply(cb, { ok: false, error: 'Profiles are off on this server.' });
+      const r = profiles.login(msg.name, String(msg.pin == null ? '' : msg.pin));
+      if (r.ok) { const { room, p } = ctx(); if (p) { linkProfile(room, p, profiles.get(r.id)); room.sync(); } }
+      reply(cb, r);
+    });
+    socket.on('profile:title', (msg, cb) => {
+      const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: false, error: 'Profile not found.' });
+      const r = profiles.setTitle(prof.id, msg.title || null);
+      if (r.ok) { for (const room of rooms.values()) for (const p of room.players.values()) if (p.profileId === prof.id) { p.title = profiles.titleOf(prof.id); room.sync(); } }
+      reply(cb, r);
     });
     socket.on('player:act', (msg, cb) => {
       const { room, p } = ctx();
@@ -150,10 +234,15 @@ function installBox(app, io, { takenElsewhere = () => false, external = {} } = {
     });
     // Emoji reactions float up on the TV (sent straight to the TV, not stored in the game).
     socket.on('player:react', (msg, cb) => {
-      const { room, p } = ctx();
-      if (!room || !p || !REACTIONS.includes(msg.e)) return reply(cb, { ok: false });
+      const { room, p, a } = ctx();
+      if (!room || (!p && !a) || !REACTIONS.includes(msg.e)) return reply(cb, { ok: false });
       const now = Date.now(); if (now - (socket.data.lastReact || 0) < 600) return reply(cb, { ok: false });
       socket.data.lastReact = now;
+      if (a) {
+        if (!room.audienceReactOk()) return reply(cb, { ok: true, dropped: true });
+        nsp.to('host:' + room.code).emit('react', { e: msg.e, name: a.name, avatar: a.avatar, color: a.color, audience: true });
+        return reply(cb, { ok: true });
+      }
       nsp.to('host:' + room.code).emit('react', { e: msg.e, name: p.name, avatar: p.avatar, color: p.color });
       reply(cb, { ok: true });
     });
@@ -167,16 +256,19 @@ function installBox(app, io, { takenElsewhere = () => false, external = {} } = {
       try { reply(cb, await room.game.actAsync(p, msg)); } catch (e) { console.error('[guard] box async failed:', e); reply(cb, { ok: false, error: 'Something went wrong. Try again.' }); }
       room.sync();
     });
-    socket.on('player:leave', (_m, cb) => { const { room, p } = ctx(); if (room && p) { detach(); room.remove(p.id); } reply(cb, { ok: true }); });
-    socket.on('disconnect', () => { const { room, p } = ctx(); if (p) { p.sockets = Math.max(0, p.sockets - 1); room.sync(); } });
+    socket.on('player:leave', (_m, cb) => { const { room, p, a } = ctx(); if (room && p) { detach(); room.remove(p.id); } else if (room && a) { detach(); room.removeAudience(a.id); } reply(cb, { ok: true }); });
+    socket.on('disconnect', () => { const { room, p, a } = ctx(); if (p) { p.sockets = Math.max(0, p.sockets - 1); room.sync(); } if (a) { a.sockets = Math.max(0, a.sockets - 1); a.at = Date.now(); room.syncAudience(); } });
   });
 
   setInterval(() => {
     const cutoff = Date.now() - 6 * 60 * 60 * 1000;
     for (const [code, room] of rooms) if (room.lastActivity < cutoff) { room.destroy(); rooms.delete(code); }
+    // Watchers who left more than 15 minutes ago are forgotten.
+    const gone = Date.now() - 15 * 60 * 1000;
+    for (const room of rooms.values()) for (const a of [...room.audience.values()]) if (a.sockets <= 0 && a.at < gone) room.removeAudience(a.id);
   }, 10 * 60 * 1000).unref();
 
-  return { has: (code) => rooms.has(String(code || '').toUpperCase()), get: (code) => find(code), rooms, GAMES, createRoom };
+  return { has: (code) => rooms.has(String(code || '').toUpperCase()), get: (code) => find(code), rooms, GAMES, createRoom, profiles };
 }
 
 module.exports = { installBox, GAMES, EXTERNAL };

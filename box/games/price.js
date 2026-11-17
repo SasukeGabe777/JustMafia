@@ -14,7 +14,8 @@ const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'rounds', label: 'Rounds', options: opt([[6, '6 rounds'], [10, '10 rounds'], [15, '15 rounds']]) },
   { key: 'seconds', label: 'Time to guess', options: opt([[20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds']]) },
-  { key: 'category', label: 'Aisles', options: opt([['all', 'Everything'], ['everyday', 'Everything but Big Ticket'], ...CATEGORIES.map((c) => [c.key, `${c.icon} ${c.label} only`])]) },
+  { key: 'category', label: 'Aisles', options: opt([['all', 'Everything'], ['everyday', 'Everything but Big Ticket'], ...CATEGORIES.filter((c) => !c.pack).map((c) => [c.key, `${c.icon} ${c.label} only`]),
+    ...CATEGORIES.filter((c) => c.pack).map((c) => [c.key, `${c.icon} ${c.pack} pack`])]) },
 ];
 const defaults = { rounds: 10, seconds: 30, category: 'all' };
 const INTRO_MS = 3500, DRUM_MS = 2400, REVEAL_MS = 8000, HILO_REVEAL_MS = 6000, HILO_SECONDS = 12, END_EARLY_MS = 900;
@@ -79,17 +80,22 @@ class Price {
   left() { if (this.phase === 'guess') this.maybeAllIn(); }
   setTimer(ms, fn) { this.room.cancel(this.timer); this.endsAt = this.room.now() + ms; this.timer = this.room.after(ms, fn); }
 
+  // Family mode (room-wide, set on the TV) keeps every shelf item family-safe, whatever the aisle.
+  famRoom() { return !!(this.room && this.room.family); }
+  stock() { return this.famRoom() ? ITEMS.filter((i) => i.family) : ITEMS; }
   start() {
-    const cat = this.s.category;
-    const pool = ITEMS.filter((i) => cat === 'all' || (cat === 'everyday' ? i.cat !== 'big' : i.cat === cat));
+    const cat = this.s.category, base = this.base = this.stock();
+    const pool = this.pool = base.filter((i) => cat === 'all' || (cat === 'everyday' ? i.cat !== 'big' : i.cat === cat));
+    this.packOnly = !!(CAT[cat] && CAT[cat].pack && pool.length >= 20);
     const need = this.rounds() + 2;
     // A small aisle tops up from the rest of the store so a long game never runs out.
     this.deck = this.shuffle(pool.slice());
-    if (this.deck.length < need) this.deck = this.deck.concat(this.shuffle(ITEMS.filter((i) => !pool.includes(i) && i.cat !== 'big')));
+    if (this.deck.length < need) this.deck = this.deck.concat(this.shuffle(base.filter((i) => !pool.includes(i) && i.cat !== 'big')));
     for (const p of this.room.list()) this.seat(p);
     this.nextRound();
   }
-  draw() { if (!this.deck.length) this.deck = this.shuffle(ITEMS.slice()); return this.deck.pop(); }
+  // A content pack reshuffles its own shelf; otherwise the whole (family-filtered) store.
+  draw() { if (!this.deck.length) this.deck = this.shuffle((this.packOnly ? this.pool : this.base || this.stock()).slice()); return this.deck.pop(); }
   kindOf(n) { if (n === this.rounds()) return 'spree'; if (n % 4 === 0) return 'hilo'; return n % 4 === 2 && n > 2 ? 'versus' : 'guess'; }
   tap() { return TAP_KINDS.has(this.kind); }
   // Two items for "Which Costs More?": clearly different prices (15% to 4x apart), ideally the same aisle.
@@ -100,7 +106,7 @@ class Price {
     if (i < 0) i = this.deck.findIndex(ok);
     let b;
     if (i >= 0) b = this.deck.splice(i, 1)[0];
-    else { const pool = ITEMS.filter((x) => ok(x) && x.cat !== 'big'); b = pool.length ? pool[Math.floor(this.room.rng() * pool.length)] : ITEMS.find((x) => x !== a && x.price !== a.price); }
+    else { const base = this.base || this.stock(), pool = base.filter((x) => ok(x) && x.cat !== 'big'); b = pool.length ? pool[Math.floor(this.room.rng() * pool.length)] : base.find((x) => x !== a && x.price !== a.price); }
     return this.room.rng() < 0.5 ? [a, b] : [b, a];
   }
 

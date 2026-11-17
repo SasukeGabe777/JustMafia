@@ -5,13 +5,96 @@
 // Guess right: +1. Fool people: +1 for each one you fooled (at most 5 a turn, so big rooms stay fair). The game ends with awards, the
 // most believable lie, the truth nobody believed, and the lies we never got to.
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
+// Idea starters for shy writers (all original, all family-safe). The host picks a pack; the
+// phone shows them one at a time on the 💡 Idea button. Family mode (room.family) keeps to the
+// family-safe list, which every pack here already is.
+const IDEAS = {
+  classic: [
+    'A food you’ve tried that most people haven’t', 'Somewhere surprising you’ve been', 'A weird job or chore you’ve done',
+    'A famous person you’ve met (or nearly met)', 'An animal encounter you’ll never forget', 'A strange talent or party trick',
+    'Something you were really good at as a kid', 'An injury with a silly story', 'A thing you’ve never done that everyone else has',
+    'A record you hold in your family', 'A collection you have (or had)', 'The oddest thing you own',
+    'A time you got lost', 'A competition you won (or badly lost)', 'Something you’re secretly scared of',
+    'A song or movie you know by heart', 'A food you refuse to eat', 'The most spontaneous thing you’ve done',
+    'A nickname you had growing up', 'A hobby you tried and quit', 'Something you built or made yourself',
+    'A rule you got in trouble for breaking', 'A language or instrument you can (sort of) do', 'A celebrity you’ve been mistaken for',
+  ],
+  holiday: [
+    'The best snow day you ever had', 'A homemade costume you’re proud of', 'The strangest gift you’ve ever been given',
+    'A gift you made by hand', 'Your record for most snowballs thrown', 'A winter tradition only your family does',
+    'The scariest haunted house you’ve walked through', 'The best treat you ever got trick-or-treating', 'A costume that went badly wrong',
+    'A time the power went out during a storm', 'Your best ever snowman (or snow creature)', 'A New Year’s resolution you actually kept',
+    'A New Year’s resolution that lasted one day', 'The latest you’ve ever stayed up', 'A pumpkin carving you’re proud of',
+    'A summer job you had', 'The best sandcastle you ever built', 'A time you got sunburned somewhere silly',
+    'A summer camp story', 'The hottest day you can remember', 'Something you found on a beach',
+    'A road trip that went off the map', 'A fireworks show you’ll never forget', 'A barbecue disaster',
+    'A water fight you won (or lost)', 'A holiday meal that went sideways', 'A decoration you put up every single year',
+    'A time you fell on the ice', 'The biggest icicle you’ve ever seen', 'A holiday song you can’t stand (or secretly love)',
+    'A family recipe you only make once a year', 'The longest car ride to a family gathering', 'A wrapped present you peeked at early',
+    'A spooky story from your neighbourhood', 'A time you got scared by a decoration', 'The best fort you ever built',
+    'A sled ride that went too fast', 'A swimming spot only locals know', 'A lemonade stand (or other kid business) you ran',
+    'A firefly or stargazing night to remember', 'A holiday you spent somewhere unexpected', 'The longest you’ve gone without shoes in summer',
+  ],
+  office: [
+    'The first job you ever had', 'The strangest thing on your desk right now', 'A job interview that went sideways',
+    'A skill you learned on the job', 'A time you replied to the wrong person', 'The longest meeting you’ve sat through',
+    'Your go-to lunch order', 'A hidden talent your coworkers don’t know about', 'The best boss you’ve ever had (no names)',
+    'A work trip story', 'A time you were the last one in the office', 'The oddest job title you’ve held (or seen)',
+    'A tech disaster you survived', 'A time you forgot you were unmuted', 'Your record for unread emails',
+    'A team-building activity you actually enjoyed', 'A volunteering day you remember', 'A course or certificate you’ve earned',
+    'A time you got locked out (of a building, account, or car)', 'The earliest you’ve ever started work', 'A dream job you had as a kid',
+    'A job you’d be terrible at', 'A coffee (or tea) habit you have', 'A presentation you nailed (or bombed)',
+    'Something you’ve fixed with tape', 'A desk snack you always keep', 'The best piece of career advice you’ve received',
+    'A job you had for one day', 'A time you said yes and figured it out later', 'A workplace award you’ve won',
+    'Your commute in one surprising fact', 'A spreadsheet you’re secretly proud of', 'A conference you went to',
+    'A time you were mistaken for someone else at work', 'A strange request a customer or client made', 'The most people you’ve presented to',
+    'A keyboard shortcut you swear by', 'A plant you’ve kept alive (or didn’t)', 'A language or tool you taught yourself',
+    'A work potluck dish you brought', 'The furthest you’ve travelled for work', 'A time you dressed up for a work event',
+  ],
+  classics: [
+    'The first book you read on your own', 'A board game you always win', 'A card game you learned from a grandparent',
+    'Something you’ve grown in a garden', 'A tree you’ve climbed', 'A pet you had as a child',
+    'The oldest thing in your home', 'A handwritten letter you’ve sent or received', 'A skill an older relative taught you',
+    'A time you got a perfect score', 'A musical instrument you’ve played', 'A puzzle you finished (or never did)',
+    'Something you’ve sewn, knitted or woven', 'A recipe you know by heart', 'A time you camped under the stars',
+    'A bike ride you’ll never forget', 'A treehouse, fort or den you built', 'A place you’ve been fishing',
+    'A school subject you loved', 'A prize you won at a fair', 'The longest walk you’ve ever taken',
+    'A family heirloom you own', 'A lake, river or sea you’ve swum in', 'A time you got caught in the rain',
+    'A paper plane, kite or model you made', 'A chess, checkers or dominoes victory', 'A dance you can still do',
+    'A hobby you picked up from a book', 'A tooth you lost in a funny way', 'A farm animal you’ve met up close',
+    'A play or show you performed in', 'A diary or journal you kept', 'A garden pest you battled',
+    'A sandwich you invented', 'A time you whistled, hummed or sang in public', 'Something you’ve repaired by hand',
+    'A spelling word you always get wrong', 'A place you love to sit and read', 'A clock, watch or radio you’ve taken apart',
+    'A thing you saved up for as a kid', 'A friendship that started in an unusual way', 'A race you ran',
+  ],
+  travel: [
+    'The furthest you’ve ever been from home', 'A country or city you’ve visited', 'A food you ate abroad (or far from home)',
+    'A time you missed a train, bus or flight', 'A souvenir you still have', 'A word you know in another language',
+    'A mountain or hill you’ve climbed', 'The longest flight or journey you’ve taken', 'A time your luggage got lost',
+    'A landmark you’ve seen in person', 'A place you’ve been stuck overnight', 'A time you got lost in a new city',
+    'A wild animal you’ve seen on a trip', 'A boat or ferry you’ve ridden', 'A night train or sleeper bus ride',
+    'The coldest place you’ve visited', 'The hottest place you’ve visited', 'A place where you didn’t speak the language',
+    'A tour that went off script', 'A travel mishap you laugh about now', 'Someone kind you met on a trip',
+    'A local dish you tried and loved (or didn’t)', 'A place you went back to twice', 'A road trip highlight',
+    'A national park or nature spot you’ve explored', 'The smallest town you’ve visited', 'The tallest building you’ve been up',
+    'A hostel, cabin or odd place you’ve stayed', 'A festival you went to while travelling', 'A time you got upgraded (or downgraded)',
+    'A market you shopped at abroad', 'A passport stamp you’re proud of', 'A place you want to go next',
+    'A bridge, tunnel or border you’ve crossed', 'An island you’ve been to', 'A time zone mix-up you had',
+    'A beach, desert or glacier you’ve stood on', 'A hike that was harder than expected', 'A postcard you sent (or received)',
+    'A cave, castle or ruin you’ve explored', 'A dish you learned to cook on a trip', 'The earliest flight you’ve taken',
+  ],
+};
+const IDEA_LABELS = { classic: '💡 Everyday life', holiday: '🎄 Holiday (winter, spooky, summer)', office: '💼 Office-safe', classics: '🎬 Classics (no pop culture)', travel: '🌍 Travel & world', mix: '🎲 Mix of everything' };
+// The family-safe idea pool: every pack above is written to be safe for all ages.
+const FAMILY_IDEAS = new Set(Object.values(IDEAS).flat());
 const fields = [
   { key: 'writeSeconds', label: 'Time to write', options: opt([[90, '1½ minutes'], [120, '2 minutes'], [180, '3 minutes']]) },
   { key: 'voteSeconds', label: 'Time to vote', options: opt([[20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds']]) },
   { key: 'featured', label: 'Players in the hot seat', options: opt([['auto', 'Auto (everyone, up to 12)'], [6, '6 players'], [10, '10 players'], [20, '20 players'], [100, 'Everyone']]) },
+  { key: 'ideas', label: 'Idea starters (💡 on phones)', options: opt(Object.entries(IDEA_LABELS)) },
   { key: 'talk', label: 'Grill them before the vote', options: opt([[0, 'None'], [15, '15 seconds'], [30, '30 seconds'], [45, '45 seconds']]) },
 ];
-const defaults = { writeSeconds: 120, voteSeconds: 30, featured: 'auto', talk: 15 };
+const defaults = { writeSeconds: 120, voteSeconds: 30, featured: 'auto', talk: 15, ideas: 'classic' };
 const REVEAL_SECONDS = 10, ITEM_MAX = 90, AUTO_FEATURED = 12;
 const clean = (s) => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f-\u009f\u200b\u200c\u200e\u200f\u202a-\u202e\u2066-\u2069<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, ITEM_MAX);
 // Statements for test bots (made up).
@@ -44,6 +127,18 @@ class Truths {
     for (const p of this.room.list()) if (p.bot) { const f = BOT_FACTS[i++ % BOT_FACTS.length]; this.room.after(2000 + this.room.rng() * 6000, () => this.act(p, { op: 'write', items: f, lie: Math.floor(this.room.rng() * 3) })); }
   }
   joined(p) { this.seat(p); }
+  // The idea starters for this game: the chosen pack (or all of them), shuffled once. In family
+  // mode (room.family) anything outside the family-safe pool is dropped.
+  ideaList() {
+    if (!this.ideas) {
+      const k = this.s.ideas, own = Object.prototype.hasOwnProperty.call(IDEAS, k);
+      let list = own ? IDEAS[k].slice() : Object.values(IDEAS).flat();
+      if (this.room && this.room.family) list = list.filter((x) => FAMILY_IDEAS.has(x));
+      const r = this.room.rng; for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+      this.ideas = list;
+    }
+    return this.ideas;
+  }
   left(p) {
     if (this.phase === 'write') return this.maybeAllWritten();
     if (!this.cur) return;
@@ -201,7 +296,7 @@ class Truths {
     const sp = this.seatPublic();
     return {
       phase: this.phase, endsIn: this.endsIn(),
-      written: !!this.sets.get(p.id), mySet: this.sets.get(p.id) || null, progress: { done: this.sets.size, of: this.room.players.size },
+      written: !!this.sets.get(p.id), mySet: this.sets.get(p.id) || null, ideas: this.phase === 'write' ? this.ideaList() : null, progress: { done: this.sets.size, of: this.room.players.size },
       seat: sp ? { ...sp, notVoted: undefined, mine: c.id === p.id, myVote: c.votes.has(p.id) ? c.votes.get(p.id) : null, gain: c.gains && p.id in c.gains ? c.gains[p.id] : null } : null,
       points: this.scores.get(p.id) || 0, rank: st.findIndex((x) => x.id === p.id) + 1, of: st.length, final: this.phase === 'over' ? st.slice(0, 10) : null,
       awards: this.phase === 'over' ? (this.awards || []).filter((a) => a.id === p.id).map((a) => ({ icon: a.icon, title: a.title, value: a.value })) : null,
@@ -211,6 +306,6 @@ class Truths {
 }
 
 module.exports = {
-  key: 'truths', name: 'Two Truths & a Lie', min: 3, best: [4, 10], fields, defaults,
+  key: 'truths', name: 'Two Truths & a Lie', min: 3, best: [4, 10], fields, defaults, IDEAS, FAMILY_IDEAS,
   create: (room, settings) => new Truths(room, settings),
 };

@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/box/box.css">
   <link rel="stylesheet" href="/box/title.css">
   <link rel="stylesheet" href="/box/howto.css">
+  <link rel="stylesheet" href="/box/platform.css"> <!-- profiles, recap, audience, family badge -->
   <link rel="stylesheet" href="/box/games.css">
   <link rel="stylesheet" href="/box/ducks-theme.css">
   <link rel="stylesheet" href="/box/kingdoms-theme.css">
@@ -29,6 +30,12 @@
   <link rel="stylesheet" href="/box/games/funny.css">
   <link rel="stylesheet" href="/box/games/ducks.css">
   <link rel="stylesheet" href="/box/games/zombie.css">
+  <link rel="stylesheet" href="/box/games/debate.css">
+  <link rel="stylesheet" href="/box/games/actout.css">
+  <link rel="stylesheet" href="/box/games/tune.css">
+  <link rel="stylesheet" href="/box/games/alien.css">
+  <link rel="stylesheet" href="/box/games/bomb.css">
+  <link rel="stylesheet" href="/box/games/quickdraw.css">
   <link rel="stylesheet" href="/box/games/summon.css">
   <link rel="stylesheet" href="/box/games/letters.css">
   <link rel="stylesheet" href="/box/games/memes.css">
@@ -47,11 +54,13 @@
     <input id="j-name" maxlength="14" autocomplete="nickname" placeholder="Name">
     <label>Pick your avatar</label>
     <div class="j-av" id="j-av"></div>
+    <div class="j-busy" id="j-busy" hidden><p id="j-busy-msg"></p><button class="btn big green" id="j-next">🎮 Play next game</button><button class="btn big ghost" id="j-watch">👀 Watch as audience</button><small>Next-game players watch until the next lobby, then join in by themselves.</small></div>
     <button class="btn big" id="j-go">Join</button>
+    <button class="link j-watch-link" id="j-watch2">👀 Just watch (join the audience)</button>
     <p class="err" id="j-err"></p>
   </section>
   <section class="ph" id="game" hidden>
-    <div class="ph-head"><span id="h-game"></span><button class="h-me" id="h-me" title="Change avatar"><span id="h-av"></span><b id="h-name"></b></button><span class="right"><button class="hbtn" id="h-react" title="React on the TV">😀</button><button class="hbtn" id="h-help" title="How to play">❓</button><button class="hbtn" id="h-menu" title="Host menu" hidden>⚙️</button><button class="link" id="h-leave">Leave</button></span></div>
+    <div class="ph-head"><span id="h-game"></span><button class="h-me" id="h-me" title="Change avatar"><span id="h-av"></span><b id="h-name"></b></button><span class="right"><button class="hbtn" id="h-react" title="React on the TV">😀</button><button class="hbtn" id="h-prof" title="My profile">🏆</button><button class="hbtn" id="h-help" title="How to play">❓</button><button class="hbtn" id="h-menu" title="Host menu" hidden>⚙️</button><button class="link" id="h-leave">Leave</button></span></div>
     <div class="react-tray" id="react-tray" hidden></div>
     <div id="vip-bar" class="vip-bar" hidden></div>
     <div id="party-bar" class="party-bar" hidden></div>
@@ -62,6 +71,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/sfx.js"></script>
   <script src="/haptics.js"></script>
+  <script src="/box/filter.js"></script>
   <script src="/box/box.js"></script>
   <script src="/box/title.js"></script>
   <script src="/box/show.js"></script> <!-- the intro files (tutorials) build on its studio helpers -->
@@ -79,6 +89,12 @@
   <script src="/box/games/spectrum.js"></script>
   <script src="/box/games/bid.js"></script>
   <script src="/box/games/zombie.js"></script>
+  <script src="/box/games/debate.js"></script>
+  <script src="/box/games/actout.js"></script>
+  <script src="/box/games/tune.js"></script>
+  <script src="/box/games/alien.js"></script>
+  <script src="/box/games/bomb.js"></script>
+  <script src="/box/games/quickdraw.js"></script>
   <script src="/box/games/summon.js"></script>
   <script src="/box/games/letters.js"></script>
   <script src="/box/games/memes.js"></script>
@@ -91,6 +107,7 @@
   <script src="/box/games/ducks-art.js"></script>
   <script src="/box/games/ducks-mini.js"></script>
   <script src="/box/games/ducks.js"></script>
+  <script src="/box/recap.js"></script>
   <script src="/box/play.js"></script>
 </body>
 </html>

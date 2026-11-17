@@ -7,11 +7,11 @@
 // everyone else bets on whether they'll get it right. The last question is ALL IN: you see the
 // category, wager any share of your points (players under 100 can wager up to 100), then answer.
 // Categories rotate. Awards at the end: Big Better, Coward, Comeback, On Fire, Speed Demon…
-const { CATEGORIES, Q } = require('./trivia-questions');
+const { CATEGORIES, Q, GROWN_UP } = require('./trivia-questions');
 
 const CAT = Object.fromEntries(CATEGORIES.map((c) => [c.key, c]));
 const GROUPS = {
-  all: CATEGORIES.map((c) => c.key),
+  all: CATEGORIES.map((c) => c.key), // every category, the content packs included
   brainy: ['general', 'science', 'geography', 'history'],
   fun: ['food', 'animals', 'pop', 'sports', 'weird'],
 };
@@ -42,7 +42,8 @@ class Trivia {
   }
   get total() { return Number(this.s.questions) || 12; }
   get secs() { return Number(this.s.seconds) || 15; }
-  get family() { return this.s.family === true || this.s.family === 'true'; }
+  // The room-wide Family mode (TV setting, room.family) forces this game's own Family setting on.
+  get family() { return this.s.family === true || this.s.family === 'true' || !!(this.room && this.room.family); }
   shuffle(a) { const r = this.room.rng; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   setTimer(ms, fn) { this.room.cancel(this.timer); this.endsAt = this.room.now() + ms; this.timer = this.room.after(ms, fn); }
   seat(p) {
@@ -69,7 +70,7 @@ class Trivia {
   draw(cat, want) {
     const seen = recent.get(this.room) || new Set(); recent.set(this.room, seen);
     if (!this.decks[cat] || !this.decks[cat].length) {
-      let pool = Q[cat].map((row, i) => ({ row, id: cat + ':' + i })).filter((x) => !this.family || x.row[0] < 3);
+      let pool = Q[cat].map((row, i) => ({ row, id: cat + ':' + i })).filter((x) => !this.family || (x.row[0] < 3 && !GROWN_UP.has(x.row[1])));
       const fresh = pool.filter((x) => !seen.has(x.id));
       if (fresh.length >= 4) pool = fresh; else for (const x of pool) seen.delete(x.id);
       this.decks[cat] = this.shuffle(pool);
@@ -372,5 +373,5 @@ module.exports = {
   show: { facts: false }, // intro cutscene before the game (public/box/intros/trivia.js)
   locked: { how: 'Finish a game of Price Panic to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js
   create: (room, settings) => new Trivia(room, settings),
-  _test: { CATEGORIES, Q, hotSeats, BASE, LOSS, SPEED_MAX, STREAK_BONUS, HOT_MULT, PRED_WIN, PRED_LOSS, ALLIN_FLOOR },
+  _test: { CATEGORIES, Q, GROWN_UP, hotSeats, BASE, LOSS, SPEED_MAX, STREAK_BONUS, HOT_MULT, PRED_WIN, PRED_LOSS, ALLIN_FLOOR },
 };

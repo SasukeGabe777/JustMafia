@@ -989,16 +989,24 @@
 .ba-btn{font-size:20px;line-height:1;padding:6px 9px;border-radius:12px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:#fff;cursor:pointer}`;
     document.head.appendChild(s);
   }
+  // The natural live narrator voice (public/box/voice.js): only on pages that load it.
+  function liveRow() {
+    const V = BOX.voice; if (!V || typeof V.setLive !== 'function') return '';
+    const st = V.liveStatus(), note = { unsupported: 'needs WebGPU (Chrome or Edge)', loading: 'downloading…', failed: 'could not load', ready: 'ready' }[st] || '';
+    return `<button data-live class="${V.live ? 'on' : ''}" ${st === 'unsupported' ? 'disabled' : ''} title="Reads names and fun facts with the same natural voices as the rest of the show">🎙️ Natural live voice (downloads ~160 MB once): <b>${V.live ? 'ON' : 'OFF'}</b>${note ? `<br><small>${note}</small>` : ''}</button>`;
+  }
   function panel(anchor) {
     css();
     if (panelEl) { panelEl.remove(); panelEl = null; return; }
     const p = panelEl = document.createElement('div'); p.className = 'ba-panel';
     const row = (k, label) => `<label><span>${label}</span><input type="range" min="0" max="100" value="${Math.round(settings[k] * 100)}" data-k="${k}"></label>`;
-    p.innerHTML = `<h4>🔊 Sound</h4>${row('music', '🎵 Music')}${row('sfx', '✨ Effects')}${row('master', '🔈 Master')}<button data-mute class="${settings.mute ? 'on' : ''}">${settings.mute ? '🔇 Muted (tap to unmute)' : '🔇 Mute everything'}</button>`;
+    p.innerHTML = `<h4>🔊 Sound</h4>${row('music', '🎵 Music')}${row('sfx', '✨ Effects')}${row('master', '🔈 Master')}<button data-mute class="${settings.mute ? 'on' : ''}">${settings.mute ? '🔇 Muted (tap to unmute)' : '🔇 Mute everything'}</button>${liveRow()}`;
     document.body.appendChild(p);
     const r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : null;
     if (r) { p.style.top = Math.min(innerHeight - p.offsetHeight - 8, r.bottom + 8) + 'px'; p.style.left = clamp(r.right - 260, 8, innerWidth - 268) + 'px'; } else { p.style.right = '16px'; p.style.bottom = '16px'; }
     for (const i of p.querySelectorAll('input')) i.oninput = () => api.set(i.dataset.k, i.value / 100);
+    const bindLive = () => { const lv = p.querySelector('[data-live]'); if (lv) lv.onclick = () => { BOX.voice.setLive(!BOX.voice.live); lv.outerHTML = liveRow(); bindLive(); }; };
+    bindLive();
     p.querySelector('[data-mute]').onclick = (e) => { api.mute(!settings.mute); e.target.className = settings.mute ? 'on' : ''; e.target.textContent = settings.mute ? '🔇 Muted (tap to unmute)' : '🔇 Mute everything'; };
     setTimeout(() => { const off = (e) => { if (!panelEl) return document.removeEventListener('pointerdown', off, true); if (!p.contains(e.target) && e.target !== anchor) { p.remove(); panelEl = null; document.removeEventListener('pointerdown', off, true); } }; document.addEventListener('pointerdown', off, true); }, 0);
   }

@@ -195,7 +195,7 @@
       spots: ['255,236,190', '255,120,200', '120,230,255', '255,236,190'], confetti: ['#ffd166', '#e8323c', '#2f6bff', '#2fbf71', '#ffffff', '#ff2f7d'] },
     host: {
       name: 'Lucky Lou, your dealer',
-      voice: { like: /guy|davis|christopher|eric|andrew|brian|male/i, accent: /en-US/i, pitch: 0.85, rate: 1.05 },
+      voice: { kokoro: 'am_michael', speed: 1.15, like: /guy|davis|christopher|eric|andrew|brian|male/i, accent: /en-US/i, pitch: 0.85, rate: 1.05 },
       draw: hostDraw,
     },
     lines: {

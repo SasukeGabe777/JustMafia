@@ -5,9 +5,10 @@
 // fastest third of correct guessers). Authors earn +50 for everyone they fool. Once per game a
 // guesser can Double Down (double points, or -50 if wrong). Three right in a row: a fire bonus.
 // All questions are original.
+const FAMILY_SAFE = ['family', 'holiday', 'classics', 'travel']; // every question in these packs is fine for all ages
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
-  { key: 'pack', label: 'Question pack', options: opt([['classic', 'Classic'], ['family', 'Family (all ages)'], ['work', 'Coworkers (safe for work)'], ['silly', 'Silly'], ['deep', 'Deep'], ['spicy', 'Spicy (but clean)'], ['mix', 'Mix of everything']]) },
+  { key: 'pack', label: 'Question pack', options: opt([['classic', 'Classic'], ['family', 'Family (all ages)'], ['work', 'Coworkers (safe for work)'], ['silly', 'Silly'], ['deep', 'Deep'], ['spicy', 'Spicy (but clean)'], ['holiday', '🎄 Holiday (winter, spooky, summer)'], ['classics', '🎬 Classics (no pop culture)'], ['travel', '🌍 Travel & world'], ['mix', 'Mix of everything']]) },
   { key: 'rounds', label: 'Rounds', options: opt([[3, '3 rounds'], [4, '4 rounds'], [6, '6 rounds']]) },
   { key: 'answerSeconds', label: 'Time to answer', options: opt([[45, '45 seconds'], [60, '60 seconds'], [90, '90 seconds']]) },
   { key: 'spotSeconds', label: 'Time to guess', options: opt([[15, '15 seconds'], [20, '20 seconds'], [30, '30 seconds']]) },
@@ -116,6 +117,60 @@ const PACKS = {
     'What’s the best compliment you’ve gotten at work?', 'What would you teach in a ten-minute class?', 'What’s your favorite day of the work week, and why?',
     'If you started a company tomorrow, what would it do?', 'What’s your go-to karaoke song for the holiday party?', 'What’s a skill you learned on the job that you use at home?',
   ],
+  holiday: [
+    'What’s the best snow creation you’ve ever made?', 'What’s the best costume you’ve ever worn?', 'What would your dream costume be if money were no object?',
+    'What’s your favorite candy to find in a treat bag?', 'What’s the spookiest place you’ve ever been?', 'What’s your favorite cozy winter drink?',
+    'What’s the best summer day you can remember?', 'What’s your go-to cookout food?', 'What’s your favorite thing to do on a hot summer night?',
+    'What’s the best gift you ever made by hand?', 'How do you celebrate the start of a new year?', 'What’s a New Year’s resolution you actually kept?',
+    'What would you carve into a pumpkin this year?', 'What’s the scariest story you know by heart?', 'What’s your favorite ice-cream flavor on a hot day?',
+    'What would a holiday in your honor be called?', 'What’s a decoration you’d keep up all year if you could?', 'What’s your favorite winter sport or snow activity?',
+    'What’s the most memorable thing you did over a school break?', 'What food tastes like the holidays to you?', 'What’s the best thing about long summer evenings?',
+    'Sledding, skating, or staying inside with a blanket?', 'What’s a kind thing you love to do for others during the holidays?', 'What would you name a snowman?',
+    'What’s the best thing to put on top of hot cocoa?', 'Beach, pool, or lake? Why?', 'What sound reminds you of summer?',
+    'What’s your favorite way to cool off on a hot day?', 'What’s the funniest holiday mishap you’ve seen?', 'What’s a holiday food you could eat all year?',
+    'What would you put in a winter survival kit?', 'What’s the best sandcastle feature you’ve ever built?', 'What’s the spookiest noise you’ve heard at night?',
+    'What monster would you be at a costume party?', 'What’s your favorite thing about autumn leaves?', 'How do you stay warm on the coldest day of the year?',
+    'What’s the best gift for someone who has everything?', 'What’s your favorite holiday song to sing along to?', 'What would your perfect snow-day menu be?',
+    'What’s the best summer project you’ve ever had?', 'What’s the longest you’ve ever counted down to a holiday?', 'Fireworks: love them or cover your ears?',
+    'What’s your favorite thing to grill?', 'What would you write in a card to your future self next year?', 'What’s the best gift-wrapping job you’ve ever done (or seen)?',
+    'What’s a holiday tradition you’d love to start?', 'What’s your favorite picnic food?', 'What would you name a friendly ghost?',
+  ],
+  classics: [
+    'What’s a chore you secretly enjoy?', 'What’s the best thing you’ve ever found on the ground?', 'What smell brings back a favorite memory?',
+    'What’s your favorite word, and why?', 'What’s the oldest thing you own?', 'What’s something you always carry with you?',
+    'What’s your favorite thing to cook from scratch?', 'What’s the best nickname you’ve ever had?', 'What would you name a boat?',
+    'What’s your favorite kind of weather?', 'What’s a simple thing that always makes you smile?', 'What’s the most useful thing you know how to fix?',
+    'What’s your favorite sandwich of all time?', 'What’s a skill an older relative or neighbor taught you?', 'What’s your favorite way to spend a quiet evening?',
+    'What’s the nicest compliment a stranger ever gave you?', 'What’s your favorite card game to play at the kitchen table?', 'What’s the best thing to bring to a potluck?',
+    'What’s your favorite thing about mornings?', 'What’s the most beautiful view you’ve ever seen?', 'What’s a sound you find relaxing?',
+    'What’s the best handwritten note you’ve ever gotten?', 'If you ran a little shop, what would it sell?', 'What’s your favorite kind of bread?',
+    'What’s something you’ve kept since you were little?', 'What would you do with a whole day of silence?', 'What’s your favorite thing to make with your hands?',
+    'What’s your favorite flower or plant?', 'What’s the best way to cheer up a friend?', 'What would your signature dish be at a dinner party?',
+    'What’s a rule you live by?', 'Early bird or night owl? Prove it.', 'What’s a small luxury you love?',
+    'What’s the best thing you’ve ever grown (or tried to grow)?', 'What’s your favorite thing to collect?', 'What’s a proverb or saying you think is true?',
+    'What’s your favorite room in your home, and why?', 'Which animal would make the best roommate?', 'What would you name a bakery?',
+    'What’s your favorite thing to do on a long walk?', 'What’s the best soup?', 'What old-fashioned thing should make a comeback?',
+    'What’s the most patient thing you’ve ever done?', 'What would you invent to make chores easier?', 'What’s your favorite game to play outdoors?',
+    'What’s the best piece of furniture you’ve ever owned?', 'What’s your favorite pie?', 'What would you write on a sign in your front yard?',
+  ],
+  travel: [
+    'What’s the farthest you’ve ever been from home?', 'What’s a place you’d love to visit someday?', 'Window seat or aisle seat? Defend it.',
+    'What’s the best food you’ve tried on a trip?', 'What’s one thing you always forget to pack?', 'What’s your favorite souvenir?',
+    'What natural wonder would you most like to see?', 'Mountains, beach, city, or countryside?', 'What’s a word in another language you love?',
+    'What would you pack for a year on a desert island?', 'What’s your best travel tip?', 'What’s the longest journey you’ve ever taken?',
+    'Which country’s food could you eat for a whole month?', 'What’s the funniest travel mix-up you’ve had?', 'What would your dream road-trip route be?',
+    'Train, plane, boat, or car?', 'What’s a festival anywhere in the world you’d love to see?', 'If you could live in any city for a year, which one?',
+    'What’s the best place you’ve ever stayed overnight?', 'What’s your favorite thing to do on the first day of a trip?', 'What’s something you learned from traveling?',
+    'Which landmark would you most like to see in person?', 'What’s the most unusual food you’ve ever tried?', 'What would you name your own country?',
+    'What’s the best way to pass the time on a long trip?', 'What’s a language you wish you could speak fluently?', 'What’s your must-have road-trip snack?',
+    'If you could visit any place at any time in history, where and when?', 'What’s the coldest place you’ve ever been?', 'What’s the hottest place you’ve ever been?',
+    'Planner or go-with-the-flow traveler?', 'What’s an animal you’d travel the world to see?', 'What’s the best view you’ve had from a plane, train, or car?',
+    'What’s a place near home that more people should visit?', 'What would be the first stop on your trip around the world?', 'What’s something you bring back from every trip?',
+    'What’s the best market you’ve ever wandered through?', 'What’s your dream vacation with no budget at all?', 'What’s the smallest town you’ve ever visited?',
+    'Which ocean, sea, or lake would you dive into first?', 'If you gave a tour of your hometown, where would you start?', 'Would you rather explore outer space or the deep sea?',
+    'What’s a travel habit you can’t break?', 'What’s the best meal you’ve eaten outdoors?', 'What’s a custom from another place you’d love to adopt?',
+    'Where would you go to see the stars?', 'What’s your favorite way to get around a new city?', 'What postcard would you send from where you are right now?',
+  ],
 };
 // Canned answers for test bots (made up, deliberately goofy).
 const BOT_ANSWERS = [
@@ -147,8 +202,15 @@ class WhoSaid {
   host() { return this.room.vip(); }
   isCustomRound() { return this.s.custom === 'on' && this.round === this.s.rounds && !!this.host(); }
 
+  // Room-wide Family Mode (TV setting): Classic/Silly/Deep/Spicy/Coworkers/Mix fall back to the family-safe
+  // packs (Family + Holiday + Classics + Travel); a family-safe pick is kept as chosen.
+  packKeys() {
+    const pick = this.s.pack;
+    if (this.room && this.room.family) return FAMILY_SAFE.includes(pick) ? [pick] : pick === 'mix' ? FAMILY_SAFE.slice() : ['family'];
+    return pick === 'mix' || !PACKS[pick] ? Object.keys(PACKS) : [pick];
+  }
   start() {
-    this.pool = this.s.pack === 'mix' || !PACKS[this.s.pack] ? Object.values(PACKS).flat() : PACKS[this.s.pack];
+    this.pool = this.packKeys().flatMap((k) => PACKS[k]);
     this.deck = this.shuffle(this.pool.slice()); this.highlights = null;
     for (const p of this.room.list()) this.seat(p);
     this.nextRound();
@@ -159,7 +221,7 @@ class WhoSaid {
     if (this.phase === 'answer') this.maybeAllAnswered();
     else if (this.phase === 'spot') this.maybeAllGuessed();
   }
-  drawQuestion() { if (!this.deck.length) this.deck = this.shuffle((this.pool || Object.values(PACKS).flat()).slice()); return this.deck.pop(); }
+  drawQuestion() { if (!this.deck.length) this.deck = this.shuffle((this.pool || this.packKeys().flatMap((k) => PACKS[k])).slice()); return this.deck.pop(); }
 
   nextRound() {
     this.round++; this.answers = new Map(); this.cur = null; this.wall = []; this.queue = []; this.spotN = 0; this.spotTotal = 0;
@@ -396,6 +458,6 @@ class WhoSaid {
 }
 
 module.exports = {
-  key: 'whosaid', name: 'Who Said It?', min: 3, best: [4, 12], fields, defaults, PACKS,
+  key: 'whosaid', name: 'Who Said It?', min: 3, best: [4, 12], fields, defaults, PACKS, FAMILY_SAFE,
   create: (room, settings) => new WhoSaid(room, settings),
 };

@@ -1,0 +1,191 @@
+'use strict';
+/* =====================================================================================
+   JustGameBox NARRATOR VOICE (public/box/voice.js) -> window.BOX.voice
+   =====================================================================================
+   Load it on the TV after show.js (show.js installs the browser speechSynthesis voice
+   first; this file wraps it). Every host line goes through BOX.voice.speak(text, spec),
+   where spec is the intro's host.voice ({ like, accent, pitch, rate, kokoro, speed }).
+
+   Each line is spoken by the first of these that is ready within DEADLINE ms, so the
+   cutscene never waits on a voice:
+     1. clip      a pre-rendered Kokoro clip (tools/voice-gen.js, `npm run voices`):
+                  public/audio/voice/<game>/<hash>.webm, listed in manifest.json. The hash
+                  is of the Kokoro voice + speed + the cleaned text (keyOf below). Always on,
+                  no download beyond the small clips themselves.
+     2. live      lines with names or fun facts, generated on the fly by kokoro-js in a Web
+                  Worker (public/box/voice-worker.js, WebGPU only). Off by default: the 🔊
+                  panel's "Natural live voice" toggle turns it on (localStorage 'box.voice.live')
+                  and only then is kokoro-js and the model (~160 MB, cached) downloaded.
+     3. fallback  the browser's speechSynthesis voice chosen by show.js.
+   spec.kokoro picks the Kokoro voice (e.g. 'am_fenrir'), spec.speed its speed (default 1).
+   A spec without kokoro (narrators, intros with no host) uses NARRATOR.
+
+   API
+     BOX.voice.speak(text, spec) -> Promise (resolves when the line ends)   stop()
+     BOX.voice.preload(gameKey)   fetch a game's clips ahead of the cutscene
+     BOX.voice.prepare(text, spec)  warm the live cache for a dynamic line (if live is on)
+     BOX.voice.clipMs(text, spec) -> how long the clip plays (ms) or 0 if there is none
+     BOX.voice.live / setLive(on) / liveStatus()   the live-voice setting
+     BOX.voice.clean(text), spoken(text), keyOf(text, spec), voiceOf(spec)  (shared with the generator)
+     BOX.voice.log   the last lines spoken: { at, path: 'clip'|'live'|'fallback', text, lag }
+   ===================================================================================== */
+(function () {
+  const W = window;
+  if (!W.BOX) return;
+  const B = W.BOX;
+  B.voice = B.voice || {};
+  if (B.voice.engine === 'kokoro') return; // loaded twice
+  const prev = { speak: B.voice.speak, stop: B.voice.stop };
+  const DEADLINE = 1200;
+  const NARRATOR = { kokoro: 'bf_emma', speed: 1.05 };
+  const ROOT = '/audio/voice/';
+  const LIVE_KEY = 'box.voice.live';
+  const KOKORO_URL = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const now = () => performance.now();
+
+  // Same cleaning as show.js's Speech.clean (show.js cleans before speaking; howto.js does not).
+  const clean = (s) => String(s || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}]/gu, '').replace(/["“”]/g, '').replace(/\s+/g, ' ').trim();
+  // What the TTS model reads: symbols spelled out, no emoji, no SHOUTED words read as letters.
+  const KEEP_CAPS = new Set(['TV', 'DJ', 'VIP', 'ID', 'USA', 'UK', 'DNA', 'UFO']);
+  function spoken(s) {
+    return clean(s)
+      .replace(/\s*↔\s*/g, ' or ').replace(/\p{Extended_Pictographic}/gu, '').replace(/[←-⇿⌀-⏿─-◿│⌫]/g, ' ')
+      .replace(/…/g, '...').replace(/(\d)\s*×/g, '$1 times').replace(/×\s*(\d)/g, 'times $1').replace(/×/g, ' times ')
+      .replace(/\+\s?(\$?\d)/g, 'plus $1').replace(/[−–]\s?(\$?\d)/g, 'minus $1').replace(/(\d)\s?%/g, '$1 percent').replace(/&/g, ' and ')
+      .replace(/\b[A-Z]{2,}\b/g, (w) => (KEEP_CAPS.has(w) ? w : w.toLowerCase()))
+      .replace(/\(\s*\)/g, '').replace(/\(\s+/g, '(').replace(/\s+\)/g, ')')
+      .replace(/\s+([.,!?])/g, '$1').replace(/([!?])\.(?=\s|$)/g, '$1').replace(/(^|[^.])\.\.(?=\s|$)/g, '$1.').replace(/\s+/g, ' ').trim();
+  }
+  // 64-bit FNV-1a style hash (two 32-bit lanes) -> 16 hex chars.
+  function hash(str) {
+    let a = 0x811c9dc5, b = 0x5bd1e995;
+    for (const ch of String(str)) { const c = ch.codePointAt(0); a = Math.imul(a ^ c, 0x01000193); b = Math.imul(b ^ c, 0x01000193); b ^= b >>> 13; }
+    return (a >>> 0).toString(16).padStart(8, '0') + (b >>> 0).toString(16).padStart(8, '0');
+  }
+  const voiceOf = (V) => (V && V.kokoro ? { kokoro: String(V.kokoro), speed: Number(V.speed) || 1 } : NARRATOR);
+  function keyOf(text, V) { const v = voiceOf(V); return hash(v.kokoro + '|' + v.speed.toFixed(2) + '|' + clean(text)); }
+
+  // ---------- the clip manifest + a small blob cache ----------
+  let manifest = null;
+  const ready = (W.fetch ? fetch(ROOT + 'manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)) : Promise.resolve(null))
+    .catch(() => null).then((m) => (manifest = m && m.clips ? m : { clips: {}, games: {} }));
+  const blobs = new Map(); // hash -> Promise<objectURL|null>
+  function fetchClip(h) {
+    if (blobs.has(h)) return blobs.get(h);
+    const c = manifest && manifest.clips[h]; if (!c) return Promise.resolve(null);
+    const p = fetch(ROOT + c.g + '/' + h + '.webm').then((r) => (r.ok ? r.blob() : null)).then((b) => (b ? URL.createObjectURL(b) : null)).catch(() => null);
+    blobs.set(h, p);
+    if (blobs.size > 400) { const [k, old] = blobs.entries().next().value; blobs.delete(k); old.then((u) => u && URL.revokeObjectURL(u)); }
+    return p;
+  }
+  function preload(key) { return ready.then((m) => { for (const h of (m.games && m.games[key]) || []) fetchClip(h); }); }
+  const race = (p, deadline) => Promise.race([Promise.resolve(p).catch(() => null), new Promise((r) => setTimeout(() => r(null), Math.max(0, deadline - now())))]);
+
+  // ---------- live generation (kokoro-js in a worker, WebGPU only) ----------
+  let live = (() => { try { return localStorage.getItem(LIVE_KEY) === '1'; } catch { return false; } })();
+  const gpu = !!(W.navigator && navigator.gpu) && typeof W.Worker === 'function';
+  let worker = null, wState = 'off', reqId = 0;
+  const waits = new Map(), liveCache = new Map(); // hash -> Promise<{url, ms}|null>
+  function startWorker() {
+    if (worker || !gpu) return;
+    try {
+      worker = new Worker('/box/voice-worker.js', { type: 'module' }); wState = 'loading';
+      worker.onmessage = (e) => {
+        const m = e.data || {};
+        if (m.type === 'ready') wState = 'ready';
+        else if (m.type === 'error') { wState = 'failed'; console.warn('Natural voice unavailable:', m.error); for (const f of waits.values()) f(null); waits.clear(); }
+        else if (waits.has(m.id)) { const f = waits.get(m.id); waits.delete(m.id); f(m.type === 'done' ? m : null); }
+      };
+      worker.onerror = (e) => { wState = 'failed'; console.warn('Natural voice worker failed', e && e.message); for (const f of waits.values()) f(null); waits.clear(); };
+      worker.postMessage({ type: 'init', url: KOKORO_URL });
+    } catch (e) { wState = 'failed'; console.warn(e); }
+  }
+  const liveUsable = () => live && gpu && wState === 'ready';
+  function liveGen(t, V, h) {
+    if (liveCache.has(h)) return liveCache.get(h);
+    if (!liveUsable()) return Promise.resolve(null);
+    const v = voiceOf(V), id = ++reqId;
+    const p = new Promise((res) => { waits.set(id, res); worker.postMessage({ type: 'say', id, text: spoken(t), voice: v.kokoro, speed: v.speed }); })
+      .then((m) => (m && m.blob ? { url: URL.createObjectURL(m.blob), ms: m.ms } : null));
+    liveCache.set(h, p);
+    p.then((r) => { if (!r) liveCache.delete(h); });
+    if (liveCache.size > 40) { const [k, old] = liveCache.entries().next().value; liveCache.delete(k); old.then((r) => r && URL.revokeObjectURL(r.url)); }
+    return p;
+  }
+  function setLive(on) {
+    live = !!on;
+    try { localStorage.setItem(LIVE_KEY, live ? '1' : '0'); } catch { /* private mode */ }
+    if (live) startWorker();
+  }
+  if (live) startWorker();
+
+  // ---------- playback ----------
+  const LOG = [];
+  function log(path, t, t0, why) {
+    const e = { at: Math.round(now()), path, text: t.slice(0, 80), lag: Math.round(now() - t0), why: why || '' };
+    LOG.push(e); if (LOG.length > 200) LOG.shift();
+    try { W.dispatchEvent(new CustomEvent('box:voice', { detail: e })); } catch { /* old browser */ }
+  }
+  const vol = () => { try { const s = B.audio && B.audio.settings; return s ? (s.mute ? 0 : clamp(s.master, 0, 1)) : 1; } catch { return 1; } };
+  // How fast to play a clip so it fits the time the scene gives the line (pitch is preserved).
+  function rateFor(ms, t, V) {
+    const target = V && V.fitMs ? V.fitMs : (t.length * 60 + 350) / clamp((V && V.rate) || 1, 0.5, 2);
+    return clamp(ms / Math.max(400, target), 1, 1.3);
+  }
+  function clipMs(text, V) {
+    const t = clean(text), c = manifest && manifest.clips[keyOf(t, V)];
+    return c ? Math.round(c.ms / rateFor(c.ms, t, V)) : 0;
+  }
+  let cur = null, tok = 0;
+  function halt() { if (!cur) return; const c = cur; cur = null; try { c.a.pause(); c.a.removeAttribute('src'); } catch { /* gone */ } c.done(); }
+  // -> null if it could not start in time (or a newer line took over), else { ended: Promise }.
+  async function play(url, ms, t, V, my, deadline) {
+    const a = new Audio(); a.preload = 'auto'; a.src = url;
+    try { a.preservesPitch = true; a.mozPreservesPitch = true; a.webkitPreservesPitch = true; } catch { /* old */ }
+    a.volume = vol(); a.defaultPlaybackRate = a.playbackRate = rateFor(ms, t, V);
+    let done; const ended = new Promise((r) => { done = r; });
+    a.onended = a.onerror = () => { if (cur && cur.a === a) cur = null; done(); };
+    cur = { a, done };
+    // play() resolves once sound is coming out; give up at the deadline (the fallback speaks instead).
+    const started = await race(a.play().then(() => true, () => false), Math.max(deadline, now() + 300));
+    if (!started || my !== tok) { if (cur && cur.a === a) halt(); else try { a.pause(); } catch { /* gone */ } return null; }
+    return { ended };
+  }
+  function speak(text, V = {}) {
+    const t = clean(text), my = ++tok, t0 = now(), deadline = t0 + DEADLINE;
+    halt(); try { if (prev.stop) prev.stop(); } catch { /* none */ }
+    if (!t) return Promise.resolve();
+    return (async () => {
+      const m = await race(ready, deadline);
+      if (my !== tok) return;
+      const h = keyOf(t, V), c = m && m.clips[h];
+      let url = null, ms = 0, path = 'fallback', why = '';
+      if (c) { url = await race(fetchClip(h), deadline); ms = c.ms; if (url) path = 'clip'; else why = 'clip not ready'; }
+      else if (live && gpu) { const r = await race(liveGen(t, V, h), deadline); if (r) { url = r.url; ms = r.ms; path = 'live'; } else why = wState === 'ready' ? 'live too slow' : 'live ' + wState; }
+      else why = 'no clip';
+      if (my !== tok) return;
+      if (url) {
+        const p = await play(url, ms, t, V, my, deadline);
+        if (my !== tok) return;
+        if (p) { log(path, t, t0); return p.ended; }
+        why = path + ' failed to start';
+      }
+      log('fallback', t, t0, why);
+      if (prev.speak) return prev.speak(t, V);
+    })().catch(() => {});
+  }
+  function stop() { tok++; halt(); try { if (prev.stop) prev.stop(); } catch { /* none */ } }
+  function prepare(text, V) {
+    const t = clean(text); if (!t || !liveUsable()) return;
+    ready.then((m) => { const h = keyOf(t, V); if (!m.clips[h]) liveGen(t, V, h); });
+  }
+
+  Object.assign(B.voice, {
+    engine: 'kokoro', speak, stop, preload, prepare, clipMs, clean, spoken, keyOf, voiceOf, hash, NARRATOR,
+    setLive, liveSupported: gpu, liveStatus: () => (!gpu ? 'unsupported' : !live ? 'off' : wState), log: LOG, ready,
+  });
+  Object.defineProperty(B.voice, 'live', { get: () => live, configurable: true });
+  Object.defineProperty(B.voice, 'manifest', { get: () => manifest, configurable: true });
+  try { const q = new URLSearchParams(location.search).get('game'); if (q) preload(q); } catch { /* fine */ }
+})();

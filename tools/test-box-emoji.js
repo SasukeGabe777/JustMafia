@@ -52,9 +52,10 @@ test('Hints: word shapes first, then first letters (never the whole answer)', ()
   assert.deepEqual(pattern('Spider-Man', 2), ['S_____-M__']);
   assert.deepEqual(pattern('Monsters, Inc.', 2), ['M_______,', 'I__.']);
 });
-test('Content: 250+ answers in 10 categories, every bot clue uses keyboard emojis, ~400+ emojis', () => {
+test('Content: 250+ answers in 13 categories, every bot clue uses keyboard emojis, ~400+ emojis', () => {
   assert(C.ANSWERS.length >= 250, 'answers: ' + C.ANSWERS.length);
-  assert.equal(new Set(C.ANSWERS.map((a) => a.cat)).size, 10);
+  assert.equal(new Set(C.ANSWERS.map((a) => a.cat)).size, 13);
+  for (const k of ['holidays', 'office', 'classics', 'travel']) { const n = C.ANSWERS.filter((a) => a.cat === k).length; assert(n >= 40, k + ' pack: ' + n); }
   assert(C.ALLOWED.size >= 400, 'emojis: ' + C.ALLOWED.size);
   for (const a of C.ANSWERS) { assert(a.clue.length, a.text + ' has a clue'); for (const e of a.clue) assert(C.ALLOWED.has(e), `${a.text}: ${e} is on the keyboard`); }
   assert.equal(new Set(C.ANSWERS.map((a) => a.text.toLowerCase())).size, C.ANSWERS.length, 'no duplicate answers');
@@ -214,6 +215,29 @@ test('Family-friendly answers: grown-up titles are never offered when the host t
     while (room.game.phase !== 'over') { for (const st of room.game.stages) for (const o of st.options) seen.add(o.text); if (!clock.step()) break; }
     assert(seen.size > 0);
     for (const t of seen) assert(!C.GROWN_UP.has(t), cat + ': offered ' + t);
+  }
+});
+
+test('Room Family Mode (TV) forces family answers even when the host picked "Everything"', () => {
+  for (const cat of ['all', 'movies', 'party']) {
+    const { room, clock } = mk({ bots: 6, settings: { family: false, category: cat, maxRounds: 20, turns: 3 }, seed: 11 });
+    room.family = true; room.start();
+    const seen = new Set();
+    while (room.game.phase !== 'over') { for (const st of room.game.stages) for (const o of st.options) seen.add(o.text); if (!clock.step()) break; }
+    assert(seen.size > 0);
+    for (const t of seen) assert(C.ANSWERS.find((a) => a.text === t).family, cat + ': offered ' + t);
+  }
+});
+test('New packs (Holidays, Office-safe, Classics, Travel) are family-safe and play end to end', () => {
+  for (const cat of ['holidays', 'office', 'classics', 'travel']) {
+    assert(def.fields.find((f) => f.key === 'category').options.some((o) => o.value === cat), cat + ' in settings');
+    if (cat !== 'holidays') assert(C.ANSWERS.filter((a) => a.cat === cat).every((a) => a.family), cat + ' all family');
+    const { room, clock } = mk({ bots: 5, settings: { category: cat, maxRounds: 5 }, seed: 3 });
+    room.start();
+    const seen = new Set();
+    while (room.game.phase !== 'over') { for (const st of room.game.stages) for (const o of st.options) seen.add(o.cat); if (!clock.step()) break; }
+    assert.equal(room.game.phase, 'over', cat + ' finished');
+    assert.deepEqual([...seen], [cat], cat + ' only offers its own answers');
   }
 });
 

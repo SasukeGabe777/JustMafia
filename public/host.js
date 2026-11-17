@@ -428,7 +428,7 @@
   function updateTimer() {
     const el = $('#hud-timer');
     if (!state) return;
-    const timed = ['night', 'discussion', 'voting', 'accusation', 'defense', 'emergencyIntro'].includes(state.phase);
+    const timed = ['roleReveal', 'night', 'discussion', 'voting', 'accusation', 'defense', 'emergencyIntro'].includes(state.phase);
     if (state.paused) { el.hidden = false; el.textContent = '⏸ Paused'; el.classList.remove('urgent'); return; }
     const ms = remainingMs();
     if (!timed || ms == null) {

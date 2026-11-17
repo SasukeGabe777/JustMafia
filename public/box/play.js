@@ -26,6 +26,12 @@
   const store = (code, v) => { try { localStorage.setItem(tokenKey(code), JSON.stringify(v)); localStorage.setItem('box.name', v.name); } catch { /* private */ } };
   const getAv = () => { try { return localStorage.getItem('box.avatar'); } catch { return null; } };
   let avatar = AVATARS.includes(getAv()) ? getAv() : AVATARS[Math.floor(Math.random() * AVATARS.length)];
+  // Lifetime profile (box/profiles.js): { id, token } on this phone; the server keeps the stats.
+  const PROF_KEY = 'box.profile';
+  const getProf = () => { try { const p = JSON.parse(localStorage.getItem(PROF_KEY) || 'null'); return p && p.id && p.token ? p : null; } catch { return null; } };
+  const setProf = (p) => { try { if (p) localStorage.setItem(PROF_KEY, JSON.stringify({ id: p.id, token: p.token })); else localStorage.removeItem(PROF_KEY); } catch { /* private mode */ } };
+  let audience = null; // { id, name, avatar, playNext } while watching; the shared state is in audState
+  let audState = null; const myVotes = {};
 
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
   const act = (msg) => new Promise((res) => socket.emit('player:act', msg, (r) => { r = r || { ok: false, error: 'No answer from the server.' }; if (!r.ok && r.error) { toast(r.error); haptic('error'); } res(r); }));
@@ -57,7 +63,16 @@
     try { if (!$('#j-name').value) $('#j-name').value = localStorage.getItem('box.name') || ''; } catch { /* private */ }
     $('#j-err').textContent = err || '';
     avatarPicker();
-    if ($('#j-code').value.length === 4) socket.emit('room:check', { code: $('#j-code').value }, (r) => { $('#j-game').textContent = r && r.ok ? 'Joining ' + r.title : ''; if (r && r.ok) theme(r.game); });
+    busyChoice(null);
+    if ($('#j-code').value.length === 4) socket.emit('room:check', { code: $('#j-code').value }, (r) => { $('#j-game').textContent = r && r.ok ? 'Joining ' + r.title : ''; if (r && r.ok) { theme(r.game); busyChoice(r.busy, r); } });
+  }
+  // A game is running (or the room is full / locked): play next game, or watch as audience.
+  function busyChoice(busy, info) {
+    const box = $('#j-busy'); if (!box) return;
+    box.hidden = !busy; $('#j-go').hidden = !!busy; $('#j-watch2').hidden = !!busy;
+    if (!busy) return;
+    $('#j-busy-msg').innerHTML = busy === 'running' ? `🎬 <b>${esc((info && info.title) || 'A game')}</b> is in full swing!` : busy === 'full' ? '🙀 This room is full.' : '🔒 The host locked this room.';
+    $('#j-next').hidden = busy === 'full';
   }
   function setGame(key) {
     if (key === gameKey) return;
@@ -66,25 +81,33 @@
     $('#h-game').textContent = G ? G.icon : ''; $('#h-game').title = G ? G.name : '';
     $('#g-body').innerHTML = ''; window.scrollTo(0, 0);
   }
-  function join(code, name, token) {
-    socket.emit('player:join', { code, name, token, avatar }, (r) => {
+  function join(code, name, token, mode) {
+    socket.emit('player:join', { code, name, token, avatar, mode, profile: getProf() }, (r) => {
+      if (r && !r.ok && r.busy && !token) { showJoin(); busyChoice(r.busy, { title: $('#j-game').textContent.replace(/^Joining /, '') }); return; }
       if (!r || !r.ok) { if (token) { try { localStorage.removeItem(tokenKey(code)); } catch { /* */ } return showJoin(); } return showJoin(r && r.error); }
       me = { code: r.code, id: r.id, token: r.token, name: name || (load(r.code) || {}).name };
       store(r.code, { token: r.token, name: me.name });
+      ensureProfile();
+      if (r.audience) { enterAudience(r); return; }
+      audience = null; audState = null;
       gameKey = null; setGame(r.game);
       $('#join').hidden = true; $('#game').hidden = false;
       try { SFX.unlock(); } catch { /* */ }
     });
   }
-  $('#j-go').onclick = () => {
+  const joinWith = (mode) => {
     const code = $('#j-code').value.trim().toUpperCase(), name = $('#j-name').value.trim();
     if (code.length !== 4) return void ($('#j-err').textContent = 'Enter the 4-letter code from the big screen.');
     if (!name) return void ($('#j-err').textContent = 'Type your name.');
-    join(code, name, null);
+    join(code, name, null, mode);
   };
+  $('#j-go').onclick = () => joinWith();
+  $('#j-next').onclick = () => joinWith('next');
+  $('#j-watch').onclick = () => joinWith('watch');
+  $('#j-watch2').onclick = () => joinWith('watch');
   $('#j-code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); if (e.target.value.length === 4) showJoin(); });
   $('#j-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#j-go').click(); });
-  $('#h-leave').onclick = () => { if (!confirm('Leave this game?')) return; socket.emit('player:leave', {}, () => { try { localStorage.removeItem(tokenKey(me.code)); } catch { /* */ } me = null; showJoin(); }); };
+  $('#h-leave').onclick = () => { if (!confirm('Leave this game?')) return; socket.emit('player:leave', {}, () => { try { localStorage.removeItem(tokenKey(me.code)); } catch { /* */ } me = null; audience = null; audState = null; document.body.classList.remove('is-audience'); showJoin(); }); };
 
   // ---------- sheets: How to play, host menu, avatar, next game ----------
   function sheet(html, bind) {
@@ -101,14 +124,15 @@
   $('#h-me').onclick = () => {
     const pv = Math.round(phoneVol() * 100), snd = `<h3>🔈 Phone sounds</h3><label class="ph-vol"><input type="range" id="pvol" min="0" max="100" value="${pv}"><output id="pvol-o">${pv}%</output></label>`;
     const hz = window.HAPTIC && window.HAPTIC.supported ? `<h3>📳 Vibration</h3><button class="btn ${window.HAPTIC.enabled ? 'green' : 'ghost'}" id="hz">${window.HAPTIC.enabled ? 'On: tap to turn off' : 'Off: tap to turn on'}</button>` : '';
-    sheet(`<h2>Pick your avatar</h2><div class="j-av big">${AVATARS.map((a) => `<button class="${view && view.me.avatar === a ? 'on' : ''}" data-av="${a}">${a}</button>`).join('')}</div>${snd}${hz}`, (s, close) => {
+    sheet(`<button class="btn ghost prof-link" id="to-prof">🏆 My profile</button><h2>Pick your avatar</h2><div class="j-av big">${AVATARS.map((a) => `<button class="${view && view.me.avatar === a ? 'on' : ''}" data-av="${a}">${a}</button>`).join('')}</div>${snd}${hz}`, (s, close) => {
+      s.querySelector('#to-prof').onclick = () => { close(); profileSheet(); };
       const pr = s.querySelector('#pvol'); if (pr) pr.oninput = () => { setPhoneVol(pr.value / 100); s.querySelector('#pvol-o').textContent = pr.value + '%'; BOX.sfx('pop'); };
       const hb = s.querySelector('#hz'); if (hb) hb.onclick = () => { window.HAPTIC.set(!window.HAPTIC.enabled); close(); toast(window.HAPTIC.enabled ? '📳 Vibration on' : 'Vibration off'); };
       for (const b of s.querySelectorAll('[data-av]')) b.onclick = () => { avatar = b.dataset.av; try { localStorage.setItem('box.avatar', avatar); } catch { /* */ } socket.emit('player:avatar', { avatar }, () => {}); close(); };
     });
   };
   // Games the room can switch to (the ones this page knows how to draw).
-  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
+  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'debate', 'actout', 'tune', 'alien', 'bomb', 'quickdraw', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
   const LOCKABLE = { zombie: 'Finish a Party Mode to unlock it.' };
   function gamePicker() {
     const list = SWITCHABLE.filter((k) => BOX.games[k] && k !== gameKey);
@@ -131,6 +155,84 @@
       };
     });
   };
+  // ---------- 🏆 My profile: lifetime stats, trophy case, titles, name + PIN ----------
+  const pemit = (ev, msg) => new Promise((res) => socket.emit(ev, msg, (r) => res(r || { ok: false, error: 'No answer from the server.' })));
+  let profBusy = false;
+  async function ensureProfile() {
+    if (getProf() || profBusy) return; profBusy = true;
+    const r = await pemit('profile:create', { name: me && me.name }); profBusy = false;
+    if (r.ok) setProf(r);
+  }
+  const gname = (k) => (BOX.games[k] ? BOX.games[k].icon + ' ' + BOX.games[k].name : k);
+  async function profileSheet(tab = 'stats') {
+    let auth = getProf();
+    if (!auth) { await ensureProfile(); auth = getProf(); }
+    let r = auth ? await pemit('profile:get', { auth }) : { ok: false };
+    if (!r.ok && auth) { setProf(null); await ensureProfile(); auth = getProf(); r = auth ? await pemit('profile:get', { auth }) : r; }
+    if (!r.ok) return toast(r.error || 'Profiles are not available here.');
+    const P = r.profile, S = P.stats, earned = P.trophies.filter((t) => t.earned);
+    const nm = P.name || (view && view.me.name) || (me && me.name) || 'Player';
+    const tabs = `<div class="pf-tabs">${[['stats', '📊 Stats'], ['trophies', `🏆 Trophies ${earned.length}/${P.trophies.length}`], ['account', '🔑 Save']].map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+    let body = '';
+    if (tab === 'stats') {
+      body = `<div class="pf-tiles"><div><b>${S.nights}</b><span>nights</span></div><div><b>${S.games}</b><span>games</span></div><div><b>${S.wins}</b><span>wins</span></div><div><b>${S.partyPts}</b><span>party pts</span></div></div>
+        <div class="pf-tiles small"><div><b>${S.bestPlace ? '#' + S.bestPlace : '–'}</b><span>best finish</span></div><div><b>${S.podiums}</b><span>top-3s</span></div><div><b>${S.partyWins}</b><span>party wins</span></div><div><b>${S.audienceFavs}</b><span>crowd favs</span></div></div>
+        <h3>🎮 By game</h3>${S.byGame.length ? `<div class="pf-games">${S.byGame.map((g) => `<div><span>${esc(gname(g.game))}</span><small>${g.played} played</small><b>${g.won ? '🏆 ' + g.won : '–'}</b></div>`).join('')}</div>` : '<p class="muted">Finish a game and it shows up here.</p>'}
+        ${P.nights.length ? `<h3>🌙 Recent nights</h3><div class="pf-nights">${P.nights.slice(0, 5).map((n) => `<div><span>${esc(new Date(n.at).toLocaleDateString())}</span><small>${n.games} game${n.games === 1 ? '' : 's'} · ${n.wins} win${n.wins === 1 ? '' : 's'}${n.place ? ' · party #' + n.place : ''}</small><b>${n.pts} pts</b></div>`).join('')}</div>` : ''}`;
+    } else if (tab === 'trophies') {
+      body = `<p class="muted small">Tap a trophy you’ve earned to wear its title next to your name.</p><div class="pf-case">${P.trophies.map((t) => `<button class="pf-tro ${t.earned ? 'got' : ''} ${P.title === t.id ? 'worn' : ''}" data-tro="${t.id}" ${t.earned ? '' : 'disabled'}><span class="pf-ti">${t.earned ? esc(t.icon) : '🔒'}</span><b>${esc(t.name)}</b><small>${esc(t.earned ? '“' + t.title + '”' : t.how)}</small>${P.title === t.id ? '<em>WORN</em>' : ''}</button>`).join('')}</div>
+        ${P.title ? '<button class="btn ghost small" data-tro="">Take off my title</button>' : ''}`;
+    } else {
+      body = P.claimed ? `<p>✅ Saved as <b>${esc(P.claimed)}</b> with a PIN. On another phone, open 🏆 My profile and sign in with that name and PIN.</p>`
+        : `<p>Save your profile with a name and a PIN, so you can use it on another phone too.</p><label>Name<input id="pf-name" maxlength="14" value="${esc(nm)}" autocomplete="off"></label><label>PIN (4 to 6 digits)<input id="pf-pin" inputmode="numeric" maxlength="6" autocomplete="off" type="password"></label><button class="btn green" id="pf-claim">🔑 Save my profile</button>`;
+      body += `<h3>📱 Already have a profile?</h3><label>Name<input id="pf-lname" maxlength="14" autocomplete="off"></label><label>PIN<input id="pf-lpin" inputmode="numeric" maxlength="6" type="password" autocomplete="off"></label><button class="btn ghost" id="pf-login">Sign in on this phone</button><p class="muted small">${esc(P.storage)}. Without a PIN your profile lives on this phone only.</p>`;
+    }
+    sheet(`<div class="pf-head"><span class="pf-av">${esc((view && view.me.avatar) || avatar)}</span><div><h2>${esc(nm)}</h2>${P.titleText ? `<span class="pf-title">${esc(P.titleText)}</span>` : '<span class="muted small">No title yet: earn trophies!</span>'}</div></div>${tabs}<div class="pf-body">${body}</div>`, (sh, close) => {
+      for (const b of sh.querySelectorAll('[data-tab]')) b.onclick = () => profileSheet(b.dataset.tab);
+      for (const b of sh.querySelectorAll('[data-tro]')) b.onclick = async () => { const x = await pemit('profile:title', { auth: getProf(), title: b.dataset.tro || null }); if (!x.ok) return toast(x.error); haptic('success'); toast(b.dataset.tro ? '🏆 New title on!' : 'Title off'); profileSheet('trophies'); };
+      const cb = sh.querySelector('#pf-claim'); if (cb) cb.onclick = async () => { const x = await pemit('profile:claim', { auth: getProf(), name: sh.querySelector('#pf-name').value, pin: sh.querySelector('#pf-pin').value }); if (!x.ok) return toast(x.error); haptic('success'); toast('🔑 Profile saved!'); profileSheet('account'); };
+      const lb = sh.querySelector('#pf-login'); if (lb) lb.onclick = async () => { const x = await pemit('profile:login', { name: sh.querySelector('#pf-lname').value, pin: sh.querySelector('#pf-lpin').value }); if (!x.ok) return toast(x.error); setProf(x); haptic('success'); toast('📱 Signed in!'); profileSheet('stats'); };
+    });
+  }
+  $('#h-prof').onclick = () => profileSheet();
+  socket.on('trophy', (list) => {
+    for (const t of list || []) { toast(`🏆 Trophy unlocked: ${t.icon} ${t.name}!`); }
+    haptic('win'); BOX.sfx('win');
+  });
+
+  // ---------- the audience: watch, react, vote, then play next ----------
+  function enterAudience(r) {
+    audience = { id: r.id, name: r.name, avatar: r.avatar, playNext: r.playNext };
+    audState = r.state || audState; view = null;
+    document.body.classList.add('is-audience');
+    $('#join').hidden = true; $('#game').hidden = false;
+    gameKey = null; setGame(r.game);
+    $('#h-name').textContent = r.name; $('#h-av').textContent = r.avatar || '';
+    audienceDraw();
+  }
+  socket.on('aud', (st) => { if (!audience) return; const g0 = audState && audState.game; audState = st; if (st.game !== g0) setGame(st.game); audienceDraw(); });
+  socket.on('promoted', (m) => { if (!audience || !me) return; toast('🎮 You’re in! Joining the game…'); haptic('big'); const code = me.code; audience = null; document.body.classList.remove('is-audience'); join(code, m.name || me.name, m.token); });
+  function audienceDraw() {
+    const st = audState; if (!audience || !st) return;
+    const g = BOX.games[st.game], P = st.poll, mine = P ? myVotes[P.id] : null;
+    const phase = st.phase === 'lobby' ? 'In the lobby' : st.phase === 'show' ? 'The intro is on' : st.phase === 'over' ? 'Game over!' : 'Playing now';
+    const max = P ? Math.max(1, ...Object.values(P.counts)) : 1;
+    const poll = P ? `<div class="card-box au-poll"><div class="au-q">📣 ${esc(P.q)}</div><div class="au-opts">${P.options.map((o) => `<button class="au-opt ${mine === o.id ? 'on' : ''}" data-vote="${esc(o.id)}" style="--pc:${esc(o.color || '#ffd23f')}"><span class="au-oa">${esc(o.avatar || '⭐')}</span><b>${esc(o.label)}</b><i style="width:${Math.round((100 * (P.counts[o.id] || 0)) / max)}%"></i><em>${P.counts[o.id] || 0}</em></button>`).join('')}</div><small class="muted">${mine ? 'Vote counted! You can change it.' : 'Tap your favourite.'} ${P.votes} vote${P.votes === 1 ? '' : 's'} · ${BOX.timer(P.endsIn)}</small></div>`
+      : st.lastPoll && st.lastPoll.winner ? `<div class="card-box au-poll done"><div class="au-q">📣 ${esc(st.lastPoll.q)}</div><p><b>${esc(st.lastPoll.winner.avatar || '')} ${esc(st.lastPoll.winner.label)}</b> wins the crowd!</p></div>` : '';
+    const recap = st.recap ? `<div class="card-box au-recap"><h3>🎬 Night recap on the TV</h3>${st.recap.champion ? `<p>👑 Champion: <b>${esc(st.recap.champion.avatar || '')} ${esc(st.recap.champion.name)}</b></p>` : ''}<ol>${st.recap.played.slice(-8).map((x) => `<li>${esc(BOX.games[x.game] ? BOX.games[x.game].icon : '🎮')} ${esc(x.title)}${x.winner ? `: 🏆 ${esc(x.winner)}` : ''}</li>`).join('')}</ol></div>` : '';
+    BOX.morph($('#g-body'), `<div class="card-box au-card"><div class="au-badge">👀 AUDIENCE</div>
+        <div class="au-now"><span class="au-gi">${esc(g ? g.icon : '🎮')}</span><div><small>${esc(phase)}</small><b>${esc(st.title)}</b></div></div>
+        <div class="au-counts"><span>🎮 <b>${st.players}</b> playing</span><span>👀 <b>${st.audience}</b> watching</span></div>
+        <button class="btn ${audience.playNext ? 'green' : 'ghost'} au-next" id="au-next">${audience.playNext ? '✅ You’ll join the next game' : '🎮 Play next game'}</button>
+        ${audience.playNext && st.locked ? '<small class="muted">The host locked the room for now.</small>' : ''}</div>
+      ${poll}${recap}
+      <div class="card-box au-react"><h3>React on the big screen</h3><div class="au-rgrid">${REACTIONS.map((e) => `<button data-ar="${e}">${e}</button>`).join('')}</div></div>
+      ${st.top && st.top.length ? `<div class="card-box au-top"><h3>🎉 Party points</h3><div class="board">${st.top.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${esc(r.avatar || '')} ${esc(r.name)}</span><b>${r.pts}</b></div>`).join('')}</div></div>` : ''}`);
+    const nb = $('#au-next'); if (nb) nb.onclick = () => socket.emit('audience:next', { on: !audience.playNext }, (r) => { if (r && r.ok) { audience.playNext = r.playNext; haptic('success'); audienceDraw(); } });
+    for (const b of document.querySelectorAll('[data-vote]')) b.onclick = () => socket.emit('audience:vote', { option: b.dataset.vote }, (r) => { if (r && r.ok) { myVotes[r.poll] = b.dataset.vote; haptic('select'); audienceDraw(); } else if (r && r.error) toast(r.error); });
+    for (const b of document.querySelectorAll('[data-ar]')) b.onclick = () => { socket.emit('player:react', { e: b.dataset.ar }, () => {}); vibrate(12); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); };
+  }
+
   // Reactions: a small tray under the header; each tap floats up on the TV.
   $('#h-react').onclick = () => {
     const t = $('#react-tray'); t.hidden = !t.hidden;
@@ -173,7 +275,7 @@
     if (view0 && v.unlocks && view0.unlocks && v.unlocks.length > view0.unlocks.length) { const k = v.unlocks.find((x) => !view0.unlocks.includes(x)); const g = BOX.games[k]; toast(`🔓 New game unlocked: ${g ? g.icon + ' ' + g.name : k}!`); haptic('win'); }
     if (v.phase !== (view0 && view0.phase) && v.phase === 'show') haptic('big');
     if (v.game !== gameKey) { setGame(v.game); haptic('success'); toast(`${G ? G.icon + ' ' : ''}Next game: ${v.title}!`); vibrate(80); }
-    $('#h-name').textContent = v.me.name; $('#h-av').textContent = v.me.avatar || '';
+    $('#h-name').textContent = v.me.name + (v.me.title ? ' · ' + v.me.title : ''); $('#h-av').textContent = v.me.avatar || '';
     queue();
   });
 
@@ -189,8 +291,10 @@
     $('#h-menu').hidden = !view.vip;
     const PM = view.partyMode;
     if (view.vip && PM && over && PM.phase !== 'done') {
-      // Party Mode: the lineup carries on by itself; the host can hurry it or hold it.
-      const html = `<span>👑 Party host</span><button class="btn green" data-vip="partyNext">⏩ Next game now</button><button class="btn ghost small" data-vip="partyPause">${PM.paused ? '▶ Resume' : '⏸ Wait'}</button>`;
+      // Party Mode: the lineup carries on by itself; the host can hurry it or hold it. While the
+      // game's end screen is up ('ending') the next step is the standings; on the board, the next game.
+      const html = PM.phase === 'ending' ? `<span>👑 Party host</span><button class="btn green" data-vip="partyBoardNow">⏩ Standings now</button><button class="btn ghost small" data-vip="partyPause">${PM.paused ? '▶ Resume' : '⏸ Wait'}</button>`
+        : `<span>👑 Party host</span><button class="btn green" data-vip="partyNext">⏩ Next game now</button><button class="btn ghost small" data-vip="partyPause">${PM.paused ? '▶ Resume' : '⏸ Wait'}</button>`;
       if (vb.dataset.html !== html) { vb.innerHTML = html; vb.dataset.html = html; for (const b of vb.querySelectorAll('[data-vip]')) b.onclick = () => hostDo(b.dataset.vip); }
       vb.hidden = false;
     } else if (view.vip && PM && PM.phase === 'done') {
@@ -207,6 +311,10 @@
         for (const b of vb.querySelectorAll('[data-vip]')) b.onclick = () => (b.dataset.vip === 'pick' ? gamePicker() : hostDo(b.dataset.vip));
       }
       vb.hidden = false;
+    } else if (PM && PM.phase === 'ending' && over) {
+      const html = `<span class="pe-strip">🎉 Party standings coming up…${PM.paused ? ' (the host is holding them)' : ''}</span>`;
+      if (vb.dataset.html !== html) { vb.innerHTML = html; vb.dataset.html = html; }
+      vb.hidden = false;
     } else vb.hidden = true;
     // Party points across the night (once at least one game has finished).
     const pb = $('#party-bar'), P = view.party;
@@ -222,6 +330,7 @@
     if (a && a.tagName === 'INPUT' && $('#g-body').contains(a)) { setTimeout(queue, 400); return; }
     lastRender = Date.now();
     bars();
+    if (view.recap && BOX.recapCard && !recapSeen[view.recap.id]) { recapPhone(view.recap); return; }
     if (view.phase === 'show' && view.show) { showPhone(view.show); return; }
     if (view.partyMode && (view.partyMode.phase === 'board' || view.partyMode.phase === 'done')) { partyPhone(view); return; }
     if (view.phase === 'lobby' && view.live && view.state) { G.phone($('#g-body'), view.state, ctx, view); return; }
@@ -232,6 +341,14 @@
       return;
     }
     G.phone($('#g-body'), view.state, ctx, view);
+  }
+  // ---------- the night recap: my card, with a picture to save ----------
+  const recapSeen = {};
+  function recapPhone(c) {
+    BOX.morph($('#g-body'), BOX.recapCard(c, view.me) + '<button class="btn ghost small rc-back" id="rc-back">Back to the game</button>');
+    const sv = $('#rc-save'); if (sv) sv.onclick = () => { try { BOX.saveImage(BOX.recapCardImage(c, view.me), 'my-justgamebox-night.png'); haptic('success'); } catch (e) { toast('Could not make the picture.'); } };
+    const bk = $('#rc-back'); if (bk) bk.onclick = () => { recapSeen[c.id] = true; ctx.redraw(); };
+    if (recapPhone.last !== c.id) { recapPhone.last = c.id; haptic('win'); }
   }
   // ---------- Party Mode: the standings between games ----------
   function partyPhone(v) {

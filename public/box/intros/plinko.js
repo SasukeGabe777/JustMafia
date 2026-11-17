@@ -133,7 +133,7 @@
     theme: { accent: '#ffd23f', accent2: '#ff2f7d', accent3: '#3ee6ff', ink: '#fff4d6', fade: '#0b0216', confetti: ['#ffd23f', '#ff2f7d', '#3ee6ff', '#ffffff', '#8bd346'] },
     host: {
       name: 'Rocco Ricochet',
-      voice: { like: /guy|davis|christopher|eric|andrew|brian|male/i, accent: /en-US/i, pitch: 1.05, rate: 1.12 },
+      voice: { kokoro: 'am_liam', speed: 1.15, like: /guy|davis|christopher|eric|andrew|brian|male/i, accent: /en-US/i, pitch: 1.05, rate: 1.12 },
       look,
     },
     lines: {

@@ -165,6 +165,7 @@
       else if (a === 'pause') await s.ctx.host('partyPause');
       else if (a === 'again') { const r = await s.ctx.host('partyAgain'); if (r && r.ok === false && r.error) alert(r.error); }
       else if (a === 'menu') { location.href = '/'; return; }
+      else if (a === 'recap') await s.ctx.host('recap');
       b.disabled = false;
     };
   }
@@ -243,7 +244,7 @@
         </aside>
       </div>
       ${rows.length > 3 ? `<div class="pb-frest">${rows.slice(3, 15).map((r, j) => `<span style="--pc:${esc(r.color || '#7b61ff')}"><i>${j + 4}</i>${esc(r.avatar || '')} ${esc(r.name)} <b>${r.pts}</b></span>`).join('')}${rows.length > 15 ? `<span class="more">+${rows.length - 15} more</span>` : ''}</div>` : ''}
-      <footer class="pb-fbtns"><button class="pb-btn go" data-pb="again">🔁 Party again</button><button class="pb-btn ghost" data-pb="menu">🏠 Main menu</button></footer>
+      <footer class="pb-fbtns"><button class="pb-btn go" data-pb="recap">🎬 Night recap</button><button class="pb-btn ghost" data-pb="again">🔁 Party again</button><button class="pb-btn ghost" data-pb="menu">🏠 Main menu</button></footer>
     </div>`;
     bindButtons(el, s);
     const fin = el.querySelector('.pb-final');

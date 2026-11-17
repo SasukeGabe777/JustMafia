@@ -18,7 +18,7 @@ function setup(settings = {}, bots = 2) {
 }
 const toPhase = (s, ph) => run(s.room, s.clock, () => s.g.phase === ph);
 
-test('at least 250 original questions, every one well-formed, across all nine categories', () => {
+test('at least 400 original questions, every one well-formed, across the nine core categories and four packs', () => {
   let n = 0; const seen = new Set();
   for (const c of T.CATEGORIES) {
     const list = T.Q[c.key]; assert(list.length >= 25, c.key + ' has enough questions');
@@ -28,8 +28,11 @@ test('at least 250 original questions, every one well-formed, across all nine ca
       assert(!seen.has(q[1]), 'no duplicate: ' + q[1]); seen.add(q[1]);
     }
   }
-  assert(n >= 250, `${n} questions`);
-  assert.equal(T.CATEGORIES.length, 9);
+  assert(n >= 400, `${n} questions`);
+  assert.equal(T.CATEGORIES.length, 13);
+  for (const k of ['holiday', 'office', 'classics', 'travel']) { assert(T.Q[k].length >= 40, k + ' pack size'); assert(T.Q[k].filter((q) => q[0] < 3).length >= 30, k + ' has plenty of Family-level questions'); }
+  for (const f of def.fields) assert(f.options.some((o) => o.value === def.defaults[f.key]), 'default for ' + f.key);
+  for (const k of ['holiday', 'office', 'classics', 'travel']) assert(def.fields.find((f) => f.key === 'cats').options.some((o) => o.value === k), k + ' is a Categories option');
 });
 
 test('bots play a whole game (all lengths); results() lists everyone best-first', () => {
@@ -51,7 +54,7 @@ test('bots play a whole game (all lengths); results() lists everyone best-first'
 test('categories rotate and stick to the setting; Family mode skips the hardest questions', () => {
   const s = setup({ questions: 16, cats: 'all' }, 4); const cats = [];
   run(s.room, s.clock, () => { if (s.g.r && cats[s.g.n - 1] == null) cats[s.g.n - 1] = s.g.r.cat; return s.g.phase === 'over'; });
-  assert(new Set(cats.slice(0, 9)).size === 9, 'the first nine questions cover all nine categories');
+  assert(new Set(cats.slice(0, 9)).size === 9, 'the first nine questions are nine different categories');
   for (let i = 1; i < cats.length; i++) assert.notEqual(cats[i], cats[i - 1], 'no category twice in a row');
   const f = setup({ questions: 16, cats: 'science', family: true }, 4);
   run(f.room, f.clock, () => { if (f.g.r) { assert.equal(f.g.r.cat, 'science'); assert(f.g.r.q.diff < 3); } return f.g.phase === 'over'; });
@@ -163,6 +166,29 @@ test('awards: Coward for always 1×, Big Better for big bets, and a full game wi
   s2.room.remove(s2.room.list().find((p) => p.bot).id);
   run(s2.room, s2.clock, () => s2.g.phase === 'over');
   assert(s2.g.results().length >= 5);
+});
+
+test('content packs: each new category plays a whole game on its own', () => {
+  for (const cats of ['holiday', 'office', 'classics', 'travel']) {
+    const s = setup({ questions: 16, cats }, 4); const seen = new Set();
+    run(s.room, s.clock, () => { if (s.g.r) { assert.equal(s.g.r.cat, cats); seen.add(s.g.r.q.text); } return s.g.phase === 'over'; });
+    assert.equal(s.g.n, 16); assert.equal(seen.size, 16, cats + ': no repeats'); assert(s.g.tv().final);
+  }
+});
+
+test('room-wide Family mode (room.family): forces the Family setting and never asks a question outside the family pool', () => {
+  const famPool = new Set(); for (const c of T.CATEGORIES) for (const q of T.Q[c.key]) if (q[0] < 3 && !T.GROWN_UP.has(q[1])) famPool.add(q[1]);
+  for (const cats of ['all', 'holiday', 'classics']) for (const seed of [1, 2]) {
+    const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed });
+    room.join('Ana'); room.addBots(5); room.family = true;
+    Object.assign(room.settings, { showIntro: false, questions: 16, cats, family: false }); // the host left the game's own setting off
+    assert(room.start().ok); const g = room.game;
+    assert.equal(g.family, true); let asked = 0;
+    run(room, clock, () => { if (g.r && g.r.n > asked) { asked = g.r.n; assert(famPool.has(g.r.q.text), 'family question: ' + g.r.q.text); assert(g.r.q.diff < 3); assert.equal(g.tv().family, true); } return g.phase === 'over'; });
+    assert.equal(asked, 16);
+    for (const id of g.results()) assert(g.scores.get(id) >= 0);
+  }
+  const s = setup({ questions: 8 }, 2); assert.equal(s.g.family, false, 'room.family undefined: normal game');
 });
 
 console.log(`\n${passed} Hot Take Trivia tests passed.`);

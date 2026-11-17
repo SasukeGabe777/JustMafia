@@ -32,6 +32,30 @@ test('module shape: every field has options and the defaults are valid', () => {
   for (const f of def.fields) assert.ok(f.options.some((o) => o.value === def.defaults[f.key]), 'default for ' + f.key);
 });
 
+test('idea packs: 40+ original starters per new pack, no duplicates, each phone gets only its pack', () => {
+  const all = Object.values(def.IDEAS).flat().map((x) => x.toLowerCase());
+  assert.strictEqual(new Set(all).size, all.length, 'duplicate ideas');
+  for (const k of ['holiday', 'office', 'classics', 'travel']) {
+    assert.ok(def.IDEAS[k].length >= 40, k + ' size');
+    const { g, ps } = humans(['Ann', 'Bob', 'Cat'], { ideas: k });
+    const v = g.view(ps[0]); assert.ok(Array.isArray(v.ideas) && v.ideas.length === def.IDEAS[k].length, k);
+    assert.ok(v.ideas.every((x) => def.IDEAS[k].includes(x)), k + ' only');
+  }
+  const { g, ps } = humans(['Ann', 'Bob', 'Cat'], { ideas: 'mix' });
+  assert.strictEqual(g.view(ps[0]).ideas.length, all.length);
+});
+
+test('family mode on the TV (room.family): idea starters stay in the family-safe pool', () => {
+  for (const k of ['mix', 'classic', 'office', 'nonsense']) {
+    const clock = new VirtualClock(), r = new BoxRoom('TEST', def, { clock, seed: 3 });
+    Object.assign(r.settings, { ideas: k }); r.family = true;
+    const ps = ['Ann', 'Bob', 'Cat'].map((n) => r.join(n).player);
+    assert.ok(r.start().ok);
+    const v = r.game.view(ps[1]);
+    assert.ok(v.ideas.length > 0 && v.ideas.every((x) => def.FAMILY_IDEAS.has(x)), k);
+  }
+});
+
 test('weird input never crashes; statements are cleaned and must differ', () => {
   const { g, ps } = humans(['Ann', 'Bob', 'Cat']);
   const p = ps[0];

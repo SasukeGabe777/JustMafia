@@ -221,6 +221,30 @@ test('Prompt packs: every pack is big and unique, and the deck only deals from t
   }
 });
 
+test('Family Mode (room.family): the deck never deals the few not-for-kids prompts, in any pack', () => {
+  for (const pack of ['mix', 'easy', 'fantasy', 'everyday', 'classic']) {
+    const { r } = make(8, { pack, ringSize: 8 });
+    r.family = true; r.start();
+    const dealt = [...r.game.books.map((b) => b.entries[0].text), ...r.game.deck];
+    assert(dealt.length >= 30, pack);
+    for (const t of dealt) assert(!T.NOT_FAMILY.has(t) && T.PACKS[pack].includes(t), `${pack}: ${t}`);
+  }
+  const { r } = make(4, { pack: 'easy' }); r.start(); // Family Mode off: the whole pack is in play
+  assert.equal(r.game.books.length + r.game.deck.length, T.PACKS.easy.length);
+});
+
+test('New Holiday, Office-safe, Classics and Travel packs: offered in settings and play end to end', () => {
+  const opts = def.fields.find((f) => f.key === 'pack').options.map((o) => o.value);
+  for (const pack of ['holiday', 'office', 'classics', 'travel']) {
+    assert(opts.includes(pack), pack);
+    assert(T.PACKS[pack].length >= 40 && T.PACKS[pack].every((p) => T.PACKS.mix.includes(p)), pack + ' size / in the mix');
+    const { r, clock } = make(5, { pack, ringSize: 6 });
+    r.start();
+    for (const b of r.game.books) assert(T.PACKS[pack].includes(b.entries[0].text), `${pack}: ${b.entries[0].text}`);
+    runOut(r, clock); assert.equal(r.game.phase, 'over');
+  }
+});
+
 test('Paint bucket fills: one point each, capped; mixed with strokes they pass', () => {
   const ok = T.cleanStrokes([{ c: 9, s: 4, p: [0, 0, 1000, 1000] }, { c: 12, s: 0, f: 1, p: [500, 500] }]);
   assert(ok.strokes && ok.strokes[1].f === 1 && ok.strokes[1].s === 0);

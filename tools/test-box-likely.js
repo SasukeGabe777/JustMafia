@@ -278,4 +278,30 @@ test('Votes received: each phone sees its own count after a classic reveal', () 
   assert.equal(room.playerState(c).state.mine.got, 0);
 });
 
+test('holiday, classics and travel packs are in the settings, family-safe, and play to the end', () => {
+  const { PACKS, FAMILY_SAFE } = def._test;
+  for (const k of ['holiday', 'classics', 'travel']) {
+    assert(FAMILY_SAFE.includes(k)); assert(def.fields[0].options.some((o) => o.value === k), k);
+    assert(PACKS[k].pair.length >= 15 && PACKS[k].hot.length >= 15, k);
+    const { room, clock } = setup({ bots: 4, settings: { pack: k, rounds: 10 }, seed: 5 });
+    ok(room.start()); const all = new Set([...PACKS[k].classic, ...PACKS[k].pair, ...PACKS[k].hot]);
+    let seen = 0; while (g(room).phase !== 'over' && clock.step()) if (g(room).r && g(room).phase === 'vote') { assert(all.has(g(room).r.text), g(room).r.text); seen++; }
+    assert(seen > 0); assert.equal(g(room).phase, 'over');
+  }
+});
+
+test('Family Mode (room.family): Wild/Classic/Work/Mix only ever deal family-safe prompts', () => {
+  const { PACKS, FAMILY_SAFE } = def._test;
+  const fam = new Set(FAMILY_SAFE.flatMap((k) => [...PACKS[k].classic, ...PACKS[k].pair, ...PACKS[k].hot]));
+  for (const pack of ['wild', 'classic', 'work', 'mix', 'travel']) {
+    const { room, clock } = setup({ bots: 5, settings: { pack, rounds: 30 }, seed: 9 });
+    room.family = true; ok(room.start());
+    const G = g(room); for (let i = 0; i < 300; i++) for (const kind of ['classic', 'pair', 'hot']) assert(fam.has(G.draw(kind)), pack + ' ' + kind);
+    if (pack === 'travel') for (let i = 0; i < 50; i++) assert(PACKS.travel.classic.includes(G.draw('classic')), 'a family-safe pick is kept');
+    runOut(room, clock); assert.equal(G.phase, 'over');
+  }
+  const { room } = setup({ bots: 4, settings: { pack: 'wild' } }); ok(room.start());
+  assert.deepEqual(g(room).packKeys(), ['wild'], 'family off: own pick still works');
+});
+
 console.log(`\n${passed} Most Likely To… tests passed.`);

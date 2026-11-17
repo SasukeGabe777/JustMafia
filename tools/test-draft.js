@@ -188,6 +188,18 @@ test('Flipping: only your own card, only while dealing; everyone flipped ends th
   clock.advance(3600); assert.equal(room.phase, 'night');
 });
 
+test('The role reveal never gets stuck: 30 seconds to look, then the game goes on even if nobody flips', () => {
+  for (const settings of [{}, { narratorMode: 'human' }]) {
+    const { room, clock } = makeRoom({ humans: 3, bots: 3, settings });
+    room.hostAction({ type: 'start' });
+    for (let i = 0; i < 6 && room.phase !== 'roleReveal'; i++) room.hostAction({ type: 'skip' });
+    assert.equal(room.phase, 'roleReveal');
+    assert(room.endsAt - room.now() <= 30000, 'at most 30 s');
+    clock.advance(30100);
+    assert.notEqual(room.phase, 'roleReveal', 'moved on without anyone flipping');
+  }
+});
+
 test('Disconnects, leaving and joining mid-draft never restart the draft or duplicate roles', () => {
   const { room, clock, people } = makeRoom({ humans: 5, bots: 3 });
   room.hostAction({ type: 'start' }); toVote(room, clock);

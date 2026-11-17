@@ -37,6 +37,11 @@
   const partyParam = params.get('party') ? { games: params.get('party').split(',').filter(Boolean).slice(0, 20), minutes: Number(params.get('minutes')) || 60, flow: params.get('flow') === 'lobby' ? 'lobby' : 'auto' } : null;
   let partyUsed = false;
   const myUnlocks = () => (window.UNLOCKS ? window.UNLOCKS.all() : []);
+  // Streamer options (⚙ host menu, remembered on this TV): hide the code, filter player text,
+  // a short delay before a new room code shows.
+  const STREAM_KEY = 'box.streamer', DELAY_MS = 8000;
+  const streamer = (() => { try { return { hide: false, filter: false, delay: false, ...JSON.parse(localStorage.getItem(STREAM_KEY) || '{}') }; } catch { return { hide: false, filter: false, delay: false }; } })();
+  const saveStreamer = () => { try { localStorage.setItem(STREAM_KEY, JSON.stringify(streamer)); } catch { /* private mode */ } };
   const isLockedHere = (key) => !!(window.UNLOCKS && window.UNLOCKS.isLockable(key) && !window.UNLOCKS.has(key));
   // A locked game opened directly: say how to unlock it.
   function lockedScreen() {
@@ -110,8 +115,9 @@
     if (onTitle) return;
     if (s.away) return goAway(s);
     if (s.game && s.game !== gameKey) return switchTo(s);
-    state = s; stateAt = Date.now(); render(); playFx(s.fx || []); music();
+    state = s; stateAt = Date.now(); render(); playFx(s.fx || []); music(); platform();
   });
+  socket.on('aud', (a) => { if (!state || !a) return; state.audience = { count: a.audience, poll: a.poll }; lastPoll = a.lastPoll || null; audienceUi(); });
   // The host picked another game: same room, same players. Small games swap in place (the
   // page keeps its sound permission); big games have their own page.
   function switchTo(s) {
@@ -123,7 +129,7 @@
     document.title = G.name + ' · JustGameBox'; $('#tv-title').textContent = G.icon + ' ' + G.name;
     history.replaceState(null, '', location.pathname + '?game=' + gameKey);
     if (AU) AU.use(gameKey);
-    state = s; stateAt = Date.now(); render(); playFx(s.fx || []); music();
+    state = s; stateAt = Date.now(); render(); playFx(s.fx || []); music(); platform();
   }
   // The room went to a game outside the box (JustMafia): this TV opens it, signed in as its
   // big screen. The box room waits; JustMafia sends everyone back here afterwards.
@@ -142,11 +148,12 @@
     if (o.children.length > 40) return;
     const el = document.createElement('div'); el.className = 'react-f';
     el.style.left = 4 + Math.random() * 88 + '%';
-    el.innerHTML = `<span class="e">${esc(r.e)}</span><small style="border:2px solid ${esc(r.color || '#fff')}">${esc(r.avatar || '')} ${esc(r.name)}</small>`;
+    if (r.audience) el.classList.add('aud');
+    el.innerHTML = `<span class="e">${esc(r.e)}</span><small style="border:2px solid ${esc(r.color || '#fff')}">${r.audience ? '👀 ' : ''}${esc(r.avatar || '')} ${esc(BOX.filterText(r.name))}</small>`;
     o.appendChild(el); setTimeout(() => el.remove(), 3300);
   });
   // Pick the next game from the TV (the host's phone can do the same).
-  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
+  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'debate', 'actout', 'tune', 'alien', 'bomb', 'quickdraw', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
   function tvPicker() {
     let o = $('#tv-pick'); if (o) o.remove();
     o = document.createElement('div'); o.id = 'tv-pick'; o.className = 'tv-pick';
@@ -192,7 +199,12 @@
   // Sound: browsers need one click on the page first.
   document.addEventListener('pointerdown', () => { try { SFX.unlock(); } catch { /* none */ } $('#sound-hint').hidden = true; }, { once: true });
   function playFx(list) {
-    for (const f of list) if (f.id > lastFx && lastFx && f.kind === 'unlock') celebrateUnlock(f);
+    for (const f of list) if (f.id > lastFx && lastFx && f.kind === 'unlock') celebrate(() => celebrateUnlock(f), 6500);
+    for (const f of list) if (f.id > lastFx && lastFx) {
+      if (f.kind === 'trophy') celebrate(() => tvToast(`<span class="tt-i">${esc(f.icon || '🏆')}</span><div><small>TROPHY UNLOCKED</small><b>${esc(f.avatar || '')} ${esc(BOX.filterText(f.name))}</b><span>${esc(f.trophy)}</span></div>`, 'trophy'), 2600);
+      else if (f.kind === 'audFav') { tvToast(`<span class="tt-i">📣</span><div><small>AUDIENCE FAVOURITE</small><b>${esc(f.avatar || '')} ${esc(BOX.filterText(f.name))}</b><span>+${f.bonus} party points</span></div>`, 'fav'); BOX.sfx('cheer'); }
+      else if (f.kind === 'audJoin') tvToast(`<span class="tt-i">👀</span><div><small>FROM THE AUDIENCE</small><b>${f.n} new player${f.n === 1 ? '' : 's'}</b><span>joined for this game</span></div>`, 'aud');
+    }
     for (const f of list) if (f.id > lastFx) {
       if (lastFx && G.onFx) { try { G.onFx(f); } catch (e) { console.error(e); } }
       // The game's score can play its own styled stinger for this fx (score.fx); otherwise the SFX name.
@@ -215,14 +227,16 @@
     }
     c.querySelector('.cc').textContent = state.code;
     const q = c.querySelector('.cq'); if (q.dataset.u !== joinUrl()) { q.src = qr(); q.dataset.u = joinUrl(); }
-    const over = state.state && state.state.phase === 'over';
-    const html = `${over ? '<button data-h="again">▶ Play again</button><button data-h="pick">🎮 Another game</button>' : '<button data-h="next">⏩ Skip ahead</button>'}<button data-h="lobby">↩ Back to the lobby</button><button data-h="bots">🤖 Add 5 bots</button>${AU ? '<button data-h="sound">🔊 Music & sound</button>' : ''}<button data-h="quit">🚪 Quit to title</button>`;
+    const over = state.state && state.state.phase === 'over', inParty = partyRunning();
+    const html = `${over && inParty ? `<button data-h="partyBoardNow">⏩ Show standings now</button><button data-h="partyPause">${state.partyMode.paused ? '▶ Resume' : '⏸ Wait'}</button>` : over ? '<button data-h="again">▶ Play again</button><button data-h="pick">🎮 Another game</button>' : '<button data-h="next">⏩ Skip ahead</button>'}<button data-h="lobby">↩ Back to the lobby</button><button data-h="bots">🤖 Add 5 bots</button>${AU ? '<button data-h="sound">🔊 Music & sound</button>' : ''}<button data-h="recap">🎬 Night recap</button><button data-h="streamer">🎥 Streamer options</button><button data-h="quit">🚪 Quit to title</button>`;
     const m = c.querySelector('.cm');
     if (m.dataset.html !== html) {
       m.innerHTML = html; m.dataset.html = html;
       for (const b of m.querySelectorAll('[data-h]')) b.onclick = () => {
         const h = b.dataset.h; m.hidden = true;
         if (h === 'pick') return tvPicker();
+        if (h === 'recap') return startRecap();
+        if (h === 'streamer') return hostMenu(true);
         if (h === 'sound') return AU.panel(c.querySelector('.cg'));
         if (h === 'quit') { if (confirm('Quit this game and go back to the title screen?')) quitToTitle(); return; }
         if (h === 'lobby' && !over && !confirm('End this game and go back to the lobby?')) return;
@@ -230,6 +244,157 @@
       };
     }
     c.hidden = state.phase === 'lobby';
+  }
+
+  // ---------- platform: ⚙ host menu, streamer options, audience, recap ----------
+  let lastPoll = null, toastN = 0, delayUntil = 0, delayCode = '', revealT = 0, filterSent = null;
+  // Celebrations (unlocks, trophies) never pile onto the end of a game: they wait while an
+  // intro or tutorial plays, while a game's end screen is fresh (10 s), and while Party Mode
+  // counts down to the standings, then play one at a time.
+  const celebQ = []; let celebNext = 0, overSince = 0;
+  function celebQuiet() {
+    if (!state) return false;
+    if (state.phase === 'show') return true;
+    const pm = state.partyMode; if (pm && pm.phase === 'ending') return true;
+    const over = state.state && state.state.phase === 'over';
+    if (over && !overSince) overSince = Date.now(); if (!over) overSince = 0;
+    return over && Date.now() - overSince < 10000;
+  }
+  function celebrate(fn, gap) { celebQ.push({ fn, gap }); }
+  setInterval(() => {
+    if (!celebQ.length || Date.now() < celebNext || celebQuiet()) return;
+    const c = celebQ.shift(); celebNext = Date.now() + c.gap;
+    try { c.fn(); } catch (e) { console.error(e); }
+  }, 400);
+  function tvToast(html, kind) {
+    let box = $('#tv-toasts'); if (!box) { box = document.createElement('div'); box.id = 'tv-toasts'; box.className = 'tv-toasts'; document.body.appendChild(box); }
+    if (box.children.length > 4) box.firstChild.remove();
+    const t = document.createElement('div'); t.className = 'tv-toast ' + (kind || ''); t.innerHTML = html; t.dataset.n = ++toastN;
+    box.appendChild(t); setTimeout(() => t.classList.add('out'), 5200); setTimeout(() => t.remove(), 5800);
+  }
+  function startRecap() {
+    if (!state || !state.played || !state.played.length) return tvToast('<span class="tt-i">🎬</span><div><small>NIGHT RECAP</small><b>Play a game first!</b><span>Then there is a night to recap.</span></div>');
+    host('recap').then((r) => { if (r && !r.ok && r.error) tvToast(`<span class="tt-i">🎬</span><div><b>${esc(r.error)}</b></div>`); });
+  }
+  // The ⚙ host menu (small games: in the top bar; big games: their corner ⚙ opens it too).
+  function hostMenu(streamOnly) {
+    let o = $('#host-menu'); if (o) o.remove();
+    o = document.createElement('div'); o.id = 'host-menu'; o.className = 'tv-pick host-menu-ov';
+    const tog = (k, label, sub) => `<button class="hm-tog ${streamer[k] ? 'on' : ''}" data-st="${k}"><span class="hm-sw"><i></i></span><span><b>${label}</b><small>${sub}</small></span></button>`;
+    const played = state && state.played ? state.played.length : 0;
+    o.innerHTML = `<div class="panel hm-panel"><h2>⚙ Host menu</h2>
+      ${streamOnly ? '' : `<div class="hm-row"><button class="btn" data-hm="recap" ${played ? '' : 'disabled'}>🎬 Night recap</button><button class="btn ghost" data-hm="lock">${state && state.locked ? '🔓 Unlock the room' : '🔒 Lock the room'}</button></div>
+      <p class="muted small">${played ? `${played} game${played === 1 ? '' : 's'} played tonight.` : 'The recap is ready after the first game.'} ${state && state.locked ? 'The room is locked: new people can only watch.' : 'Lock the room and new people join the audience.'}</p>`}
+      <h3>🎥 Streamer options</h3>
+      <div class="hm-togs">${tog('hide', 'Hide room code', 'Blur the code and QR code. Tap them to peek.')}${tog('filter', 'Filter player text', 'Cover swear words and slurs in names and answers.')}${tog('delay', 'Streamer delay', 'Wait a few seconds before a new room code shows.')}</div>
+      <button class="btn ghost small" data-close>Done</button></div>`;
+    document.body.appendChild(o);
+    o.onclick = (e) => { if (e.target === o || e.target.closest('[data-close]')) o.remove(); };
+    for (const b of o.querySelectorAll('[data-st]')) b.onclick = () => { const k = b.dataset.st; streamer[k] = !streamer[k]; saveStreamer(); b.classList.toggle('on', streamer[k]); BOX.sfx('pop'); if (k === 'delay' && streamer.delay) delayCode = ''; platform(); };
+    for (const b of o.querySelectorAll('[data-hm]')) b.onclick = () => { o.remove(); if (b.dataset.hm === 'recap') startRecap(); else host('lockRoom', { on: !(state && state.locked) }); };
+  }
+  function gearButton() {
+    if (STAND || $('#tv-gear')) return;
+    const b = document.createElement('button'); b.id = 'tv-gear'; b.className = 'btn ghost small tv-gear'; b.title = 'Host menu'; b.textContent = '⚙'; b.onclick = () => hostMenu(false);
+    document.querySelector('.tv-bar').appendChild(b);
+  }
+  // Everything on screen that shows the room code or its QR code.
+  function codeEls() {
+    const list = [...document.querySelectorAll('#code, #url, #tv-code, .corner .cc, .corner .cq, img[src*="/api/qr"]')];
+    if (state && state.code) for (const el of document.querySelectorAll('#tv-main *')) if (!el.children.length && el.textContent.trim() === state.code) list.push(el);
+    return list;
+  }
+  // Swear words and slurs in what the screen shows (every game, without each renderer knowing).
+  function filterDom(root) {
+    if (!root || !BOX.filter.on || !window.BOX_FILTER) return;
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n;
+    while ((n = w.nextNode())) { const v = n.nodeValue; if (v && /[A-Za-z0-9@$]{2}/.test(v)) { const c = BOX.filterText(v); if (c !== v) n.nodeValue = c; } }
+  }
+  function audienceUi() {
+    if (!state) return;
+    const A = state.audience || {}, n = A.count || 0, P = A.poll;
+    let pill = $('#aud-pill'); if (!pill) { pill = document.createElement('div'); pill.id = 'aud-pill'; pill.className = 'aud-pill'; document.body.appendChild(pill); }
+    const busy = state.locked || state.phase === 'show' || (state.phase === 'game' && !(state.state && state.state.phase === 'over'));
+    const ph = n ? `👀 <b>${n}</b> watching` : busy ? '👀 Late? Scan to watch' : '';
+    if (pill.dataset.h !== ph) { pill.innerHTML = ph; pill.dataset.h = ph; pill.classList.remove('bump'); void pill.offsetWidth; pill.classList.add('bump'); }
+    pill.hidden = !ph || !!state.recap || rendered === 'title';
+    let pv = $('#aud-poll');
+    if (!P && lastPoll && lastPoll.winner) {
+      if (!pv) { pv = document.createElement('div'); pv.id = 'aud-poll'; pv.className = 'aud-poll'; document.body.appendChild(pv); }
+      const h = `<div class="ap-q">📣 ${esc(lastPoll.q)}</div><div class="ap-win">${esc(lastPoll.winner.avatar || '')} <b>${esc(BOX.filterText(lastPoll.winner.label))}</b> wins the crowd!</div><small>${lastPoll.votes} vote${lastPoll.votes === 1 ? '' : 's'}</small>`;
+      if (pv.dataset.h !== h) { pv.innerHTML = h; pv.dataset.h = h; }
+      pv.hidden = !!state.recap; return;
+    }
+    if (!P) { if (pv) pv.remove(); return; }
+    if (!pv) { pv = document.createElement('div'); pv.id = 'aud-poll'; pv.className = 'aud-poll'; document.body.appendChild(pv); }
+    const max = Math.max(1, ...Object.values(P.counts));
+    const rows = P.options.map((o) => ({ o, c: P.counts[o.id] || 0 })).sort((a, b) => b.c - a.c).slice(0, 6);
+    const h = `<div class="ap-q">📣 ${esc(P.q)}</div><div class="ap-rows">${rows.map(({ o, c }) => `<div class="ap-row"><span class="ap-n">${esc(o.avatar || '')} ${esc(BOX.filterText(o.label))}</span><span class="ap-bar"><i style="width:${Math.round((100 * c) / max)}%;background:${esc(o.color || '#ffd23f')}"></i></span><b>${c}</b></div>`).join('')}</div><small>${P.votes} vote${P.votes === 1 ? '' : 's'} · the audience votes on their phones · ${BOX.timer(P.endsIn)}</small>`;
+    if (pv.dataset.h !== h.replace(/data-ends="\d+"/, '')) { pv.innerHTML = h; pv.dataset.h = h.replace(/data-ends="\d+"/, ''); }
+    pv.hidden = !!state.recap;
+  }
+  function recapUi() {
+    let ov = $('#recap-ov');
+    if (!state || !state.recap || !BOX.recapReel) { if (ov) ov.remove(); document.body.classList.remove('recap-on'); return; }
+    if (!ov) { ov = document.createElement('div'); ov.id = 'recap-ov'; ov.className = 'recap-ov'; document.body.appendChild(ov); }
+    document.body.classList.add('recap-on');
+    BOX.recapReel(ov, state.recap, { host, close: () => host('recapClose') });
+  }
+  // Party Mode: the lineup is still going (no "play again" until it's done).
+  const partyRunning = () => !!(state && state.partyMode && state.partyMode.phase !== 'done');
+  // Party Mode, after a game: its end screen stays up, with a countdown bar to the standings.
+  let pe = { at: 0, tick: -1, raf: 0 };
+  function partyEndingUi() {
+    const pm = state && state.partyMode;
+    let bar = $('#pe-bar');
+    const on = pm && pm.phase === 'ending' && state.phase === 'game' && !state.recap;
+    if (!on) { if (bar) { bar.classList.add('out'); setTimeout(() => bar.remove(), 400); bar.id = ''; } cancelAnimationFrame(pe.raf); pe.raf = 0; return; }
+    const last = pm.index >= (pm.games || []).length - 1, nx = pm.next && BOX.games[pm.next];
+    const nextHtml = last ? '🏆 Then the grand finale!' : nx ? `Next up: <b>${nx.icon} ${esc(nx.name)}</b>` : '';
+    if (!bar) { bar = document.createElement('div'); bar.id = 'pe-bar'; bar.className = 'pe-bar'; bar.innerHTML = '<div class="pe-fill"></div><span class="pe-main"></span><span class="pe-next"></span>'; document.body.appendChild(bar); }
+    bar.querySelector('.pe-next').innerHTML = nextHtml;
+    pe.at = Date.now() + (pm.in || 0); pe.paused = !!pm.paused; pe.total = Math.max(pe.total || 0, pm.in || 0);
+    if (pe.key !== pm.index + ':' + pm.phase) { pe.key = pm.index + ':' + pm.phase; pe.total = pm.in || 12000; pe.tick = -1; }
+    if (!pe.raf) {
+      const f = () => {
+        const b = $('#pe-bar'); if (!b) { pe.raf = 0; return; }
+        const left = Math.max(0, pe.at - Date.now()), sec = Math.ceil(left / 1000);
+        b.classList.toggle('paused', pe.paused);
+        b.querySelector('.pe-main').innerHTML = pe.paused ? '⏸ The host is holding the party standings' : `🎉 Party standings in <b>${sec}</b>…`;
+        b.querySelector('.pe-fill').style.width = pe.paused ? '100%' : (100 * left) / (pe.total || 12000) + '%';
+        if (!pe.paused && sec !== pe.tick) { pe.tick = sec; if (sec > 0 && sec <= 3) BOX.sfx('tick'); }
+        pe.raf = requestAnimationFrame(f);
+      };
+      pe.raf = requestAnimationFrame(f);
+    }
+  }
+  function platform() {
+    if (!state) return;
+    partyEndingUi();
+    gearButton();
+    // Text filter: on with the streamer option; the room filters typed text too.
+    BOX.filter.on = !!streamer.filter;
+    if (state.filterOn !== streamer.filter && filterSent !== streamer.filter) { filterSent = streamer.filter; host('streamer', { filter: streamer.filter }).then(() => { filterSent = null; }); }
+    filterDom($('#tv-main'));
+    // Streamer: hide the code (tap to peek) and a delay before a new code shows.
+    if (streamer.delay && state.code !== delayCode) { delayCode = state.code; delayUntil = Date.now() + DELAY_MS; tickDelay(); }
+    const waiting = streamer.delay && Date.now() < delayUntil;
+    document.body.classList.toggle('st-hide', !!streamer.hide || waiting);
+    document.body.classList.toggle('st-waiting', waiting);
+    for (const el of codeEls()) if (!el.classList.contains('st-code')) { el.classList.add('st-code'); el.addEventListener('click', peek); }
+    audienceUi(); recapUi();
+  }
+  function peek(e) {
+    if (!document.body.classList.contains('st-hide') || document.body.classList.contains('st-waiting')) return;
+    e.preventDefault(); e.stopPropagation();
+    document.body.classList.add('st-reveal'); clearTimeout(revealT); revealT = setTimeout(() => document.body.classList.remove('st-reveal'), 6000);
+  }
+  function tickDelay() {
+    let b = $('#st-delay'); if (!b) { b = document.createElement('div'); b.id = 'st-delay'; b.className = 'st-delay'; document.body.appendChild(b); }
+    const left = delayUntil - Date.now();
+    if (left <= 0 || !streamer.delay) { b.remove(); platform(); return; }
+    b.innerHTML = `🎥 Streamer delay · the room code shows in <b>${Math.ceil(left / 1000)}</b>`;
+    setTimeout(tickDelay, 250);
   }
 
   function render() {
@@ -271,13 +436,14 @@
       return;
     }
     if (rendered !== 'game') { main.innerHTML = '<div id="g-area"></div><div class="host-row" id="host-row"></div>'; rendered = 'game'; }
-    G.tv($('#g-area'), state.state, { players: state.players, settings: state.settings, host });
+    G.tv($('#g-area'), state.state, { players: state.players, settings: state.settings, host, filterText: BOX.filterText });
     if (STAND) { $('#host-row').hidden = true; return; }
     const over = state.state && state.state.phase === 'over';
-    const hr = `${over ? '<button class="btn" data-h="again">▶ Play again</button> <button class="btn cyan" data-h="pick">🎮 Another game</button>' : '<button class="btn ghost small" data-h="next">Skip ahead ▶</button>'} <button class="btn ghost small" data-h="lobby">Back to lobby</button> <button class="btn ghost small" data-h="bots">+ 5 bots</button>${over ? partyHtml() : ''}`;
+    const inParty = partyRunning();
+    const hr = `${over && inParty ? `<button class="btn" data-h="partyBoardNow">⏩ Show standings now</button> <button class="btn ghost" data-h="partyPause">${state.partyMode.paused ? '▶ Resume' : '⏸ Wait'}</button>` : over ? '<button class="btn" data-h="again">▶ Play again</button> <button class="btn cyan" data-h="pick">🎮 Another game</button>' : '<button class="btn ghost small" data-h="next">Skip ahead ▶</button>'} <button class="btn ghost small" data-h="lobby">Back to lobby</button> <button class="btn ghost small" data-h="bots">+ 5 bots</button>${over ? ' <button class="btn ghost small" data-h="recap">🎬 Night recap</button>' + partyHtml() : ''}`;
     if ($('#host-row').dataset.html === hr) return;
     $('#host-row').innerHTML = hr; $('#host-row').dataset.html = hr;
-    for (const b of document.querySelectorAll('#host-row [data-h]')) b.onclick = () => { const h = b.dataset.h; if (h === 'pick') return tvPicker(); if (h === 'lobby' && !over && !confirm('End this game and go back to the lobby?')) return; host(h === 'bots' ? 'addBots' : h, { count: 5 }); };
+    for (const b of document.querySelectorAll('#host-row [data-h]')) b.onclick = () => { const h = b.dataset.h; if (h === 'pick') return tvPicker(); if (h === 'recap') return startRecap(); if (h === 'lobby' && !over && !confirm('End this game and go back to the lobby?')) return; host(h === 'bots' ? 'addBots' : h, { count: 5 }); };
   }
 
   const joinPanel = () => `
@@ -300,7 +466,7 @@
   //     set(key, value), start() → Promise<{ok,error}>, bots(n), removeBots(), kick(id), pick(), back() }
   function lobbyApi() {
     return {
-      code: state.code, joinUrl: joinUrl(), qr: qr(), players: state.players, vip: state.vip, min: state.min, max: state.max,
+      code: state.code, joinUrl: joinUrl(), qr: qr(), players: state.players, vip: state.vip, min: state.min, max: state.max, audience: (state.audience && state.audience.count) || 0,
       fields: state.fields, settings: state.settings, partyMode: state.partyMode || null,
       lineupHtml: state.partyMode && BOX.partyLineup ? BOX.partyLineup(state) : '',
       set: (key, value) => host('settings', { settings: { [key]: value } }),
@@ -362,7 +528,7 @@
     $('#count').textContent = n ? `${n} player${n > 1 ? 's' : ''} in` : 'Waiting for players…';
     $('#roster-title').textContent = `Players (${n}/${state.max})`;
     $('#start').disabled = n < state.min;
-    $('#roster').innerHTML = state.players.map((p) => `<span class="chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove"><i style="background:${esc(p.color)}"></i><span class="av">${esc(p.avatar || '')}</span>${esc(p.name)}</span>`).join('') || '<span class="muted">Scan the QR code to join.</span>';
+    $('#roster').innerHTML = state.players.map((p) => `<span class="chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove"><i style="background:${esc(p.color)}"></i><span class="av">${esc(p.avatar || '')}</span>${esc(p.name)}${p.title ? `<em class="ptitle">${esc(p.title)}</em>` : ''}</span>`).join('') || '<span class="muted">Scan the QR code to join.</span>';
     const lu = $('#lineup'); if (lu) { const lh = state.partyMode && BOX.partyLineup ? BOX.partyLineup(state) : ''; if (lu.dataset.html !== lh) { lu.innerHTML = lh; lu.dataset.html = lh; } }
     const pp = $('#party');
     if (pp) { const ph = state.played && state.played.length ? `<h3>🎉 Party points · ${state.played.length} game${state.played.length === 1 ? '' : 's'} tonight</h3><div class="board">${state.party.slice(0, 8).map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span class="av">${esc(r.avatar || '')}</span><span>${esc(r.name)}${r.wins ? ' ' + '🏆'.repeat(Math.min(3, r.wins)) : ''}</span><b>${r.pts}</b></div>`).join('')}</div><div class="played">${state.played.slice(-6).map((g) => `${esc(g.title)}${g.winner ? ': ' + esc(g.winner) : ''}`).join(' · ')}</div>` : ''; if (pp.dataset.html !== ph) { pp.innerHTML = ph; pp.dataset.html = ph; } }

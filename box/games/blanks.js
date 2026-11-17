@@ -10,13 +10,14 @@ const C = require('./blanks-cards');
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'deck', label: 'Card deck', options: opt([['party', 'Party (all cards, a bit cheeky)'], ['family', 'Family-friendly only']]) },
+  { key: 'pack', label: 'Theme pack', options: opt([['standard', 'Standard (the deck above)'], ...Object.entries(C.PACKS).map(([k, p]) => [k, p.label])]) },
   { key: 'mode', label: 'Who picks the winner', options: opt([['auto', 'Auto (Judge up to 10 players, vote above)'], ['judge', 'A rotating Judge'], ['vote', 'Everyone votes']]) },
   { key: 'toWin', label: 'Points to win', options: opt([[3, '3 points'], [5, '5 points'], [7, '7 points'], [10, '10 points']]) },
   { key: 'rounds', label: 'Round limit', options: opt([[8, '8 rounds'], [12, '12 rounds'], [20, '20 rounds'], [40, 'No limit']]) },
   { key: 'pickSeconds', label: 'Time to play a card', options: opt([[45, '45 seconds'], [60, '60 seconds'], [90, '90 seconds']]) },
   { key: 'blanks', label: 'Write-your-own cards per player', options: opt([[0, 'None'], [2, '2 per game'], [4, '4 per game'], [99, 'Unlimited']]) },
 ];
-const defaults = { deck: 'party', mode: 'auto', toWin: 5, rounds: 12, pickSeconds: 60, blanks: 2 };
+const defaults = { deck: 'party', pack: 'standard', mode: 'auto', toWin: 5, rounds: 12, pickSeconds: 60, blanks: 2 };
 const HAND = 7, WIN_SECONDS = 9, MAX_ROUNDS = 40, HURRY_MS = 20000, REVEAL_TOTAL = 15000, REVEAL_MAX_STEPS = 30, WRITE_MAX = 70;
 const clean = (s, max = WRITE_MAX) => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f-\u009f\u200b\u200c\u200e\u200f\u202a-\u202e\u2066-\u2069<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
 const str = (s) => (typeof s === 'string' ? s.slice(0, 40) : '');
@@ -31,9 +32,12 @@ class Blanks {
   }
   shuffle(a) { const r = this.room.rng; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   mode() { return this.s.mode === 'auto' ? (this.room.players.size <= 10 ? 'judge' : 'vote') : this.s.mode; }
-  family() { return this.s.deck === 'family'; }
-  promptPool() { return this.family() ? C.FAMILY_PROMPTS : C.PROMPTS; }
-  answerPool() { return this.family() ? C.FAMILY_ANSWERS : C.ANSWERS; }
+  // Family mode on the TV (room.family) forces the family deck; theme packs are all family-safe.
+  family() { return this.s.deck === 'family' || !!(this.room && this.room.family); }
+  pack() { return Object.prototype.hasOwnProperty.call(C.PACKS, this.s.pack) ? C.PACKS[this.s.pack] : null; }
+  promptPool() { const pk = this.pack(); return pk ? pk.prompts : this.family() ? C.FAMILY_PROMPTS : C.PROMPTS; }
+  // A theme pack deals its own answers twice over (so they show up often) plus the family base.
+  answerPool() { const pk = this.pack(); return pk ? pk.answers.concat(pk.answers, C.FAMILY_ANSWERS) : this.family() ? C.FAMILY_ANSWERS : C.ANSWERS; }
   freshAnswers() { this.deckN = (this.deckN || 0) + 1; return this.shuffle(this.answerPool().map((text, i) => ({ id: 'a' + i + (this.deckN > 1 ? '_' + this.deckN : ''), text }))); }
   start() {
     this.answers = this.freshAnswers();
