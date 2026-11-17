@@ -5,40 +5,80 @@
 (function () {
   const { esc, timer } = BOX;
   // ---------- TV: one YouTube player that stays on the page ----------
-  const yt = { player: null, ready: false, want: null, loaded: null, host: null, loading: false };
+  // The player is rebuilt whenever the TV page redraws the game area (Play again, Back to
+  // lobby): a player whose frame left the page is thrown away, never reused.
+  const yt = { player: null, stage: null, ready: false, want: null, loaded: null, host: null, loading: false, vol: 80, muted: false };
+  // Videos start by themselves with sound. Browsers allow that because the TV page was
+  // opened by a click on the title screen. If a browser still refuses (e.g. the TV page
+  // was refreshed), the video plays muted and a small corner note offers sound; nothing
+  // ever waits for a click.
+  const sound = { blocked: false };
   function loadApi() {
     if (window.YT && window.YT.Player) return makePlayer();
     if (yt.loading) return; yt.loading = true;
     window.onYouTubeIframeAPIReady = makePlayer;
     const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; s.async = true;
-    s.onerror = () => { yt.failed = true; }; // offline: the TV shows the title and thumbnail instead
+    s.onerror = () => { yt.failed = true; yt.loading = false; }; // offline: the TV shows the title and thumbnail instead
     document.head.appendChild(s);
   }
+  function stale() { return yt.player && (!yt.stage || !yt.stage.isConnected); }
+  function dropPlayer() { try { yt.player.destroy(); } catch { /* already gone */ } yt.player = null; yt.stage = null; yt.ready = false; yt.loaded = null; }
   function makePlayer() {
-    const el = document.getElementById('fn-player'); if (!el || yt.player) return;
-    yt.player = new window.YT.Player('fn-player', {
-      width: '100%', height: '100%', playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1 },
-      events: {
-        onReady: () => { yt.ready = true; sync(); },
-        onStateChange: (e) => { if (e.data === 0 && yt.loaded && yt.host) yt.host('video', { ev: 'ended', id: yt.loaded }); },
-        onError: () => { if (yt.loaded && yt.host) yt.host('video', { ev: 'error', id: yt.loaded }); },
-      },
-    });
+    if (stale()) dropPlayer();
+    const el = document.getElementById('fn-player'); if (!el || yt.player || !(window.YT && window.YT.Player)) return;
+    try {
+      yt.stage = document.getElementById('fn-stage');
+      yt.player = new window.YT.Player('fn-player', {
+        width: '100%', height: '100%', playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, fs: 0 },
+        events: {
+          onReady: () => { yt.ready = true; applyVolume(); sync(); },
+          onStateChange: (e) => { if (e.data === 0 && yt.loaded && yt.host) yt.host('video', { ev: 'ended', id: yt.loaded }); },
+          onError: (e) => { if (yt.loaded && yt.host) yt.host('video', { ev: 'error', id: yt.loaded, code: e && e.data }); },
+          onAutoplayBlocked: () => mutedFallback(),
+        },
+      });
+    } catch { yt.player = null; yt.stage = null; }
+  }
+  function mutedFallback() {
+    sound.blocked = true;
+    try { yt.player.mute(); yt.player.playVideo(); } catch { /* */ }
+    soundHint();
+  }
+  function applyVolume() {
+    if (!yt.ready || !yt.player) return;
+    try {
+      yt.player.setVolume(yt.vol);
+      if (yt.muted || yt.vol === 0 || sound.blocked) yt.player.mute(); else yt.player.unMute();
+    } catch { /* */ }
   }
   function sync() {
+    if (stale()) { dropPlayer(); makePlayer(); return; }
     if (!yt.ready || !yt.player) return;
     try {
       if (yt.want && yt.want !== yt.loaded) {
-        yt.loaded = yt.want; yt.player.loadVideoById(yt.want);
-        // Browsers block sound until someone has clicked the TV page. If the video didn't
-        // start, start it muted and ask for one click to turn the sound on.
-        const id = yt.want;
-        setTimeout(() => { try { if (yt.loaded === id && yt.player.getPlayerState() !== 1) { yt.player.mute(); yt.player.playVideo(); soundHint(true); } } catch { /* */ } }, 1800);
+        yt.loaded = yt.want; applyVolume(); yt.player.loadVideoById(yt.want);
+        // Still not started? Nudge it; if it still won't start, the browser blocked sound:
+        // play it muted rather than stall.
+        const id = yt.want, idle = () => { try { const st = yt.player.getPlayerState(); return yt.loaded === id && (st === -1 || st === 5); } catch { return false; } };
+        setTimeout(() => { if (idle()) try { yt.player.playVideo(); } catch { /* */ } }, 2500);
+        setTimeout(() => { if (idle()) mutedFallback(); }, 5000);
       } else if (!yt.want && yt.loaded) { yt.loaded = null; yt.player.stopVideo(); }
     } catch (e) { /* player not ready */ }
   }
-  function soundHint(on) { const h = document.getElementById('fn-sound'); if (h) h.hidden = !on; }
-  document.addEventListener('pointerdown', () => { try { if (yt.player && yt.player.isMuted && yt.player.isMuted()) yt.player.unMute(); } catch { /* */ } soundHint(false); });
+  function soundHint() { const h = document.getElementById('fn-sound'); if (h) h.hidden = !sound.blocked; }
+  // Any click or key press on the TV page lifts the browser's block for good.
+  function unlock() {
+    if (!sound.blocked) return; sound.blocked = false; soundHint();
+    applyVolume();
+    try { if (yt.player && yt.loaded) yt.player.playVideo(); } catch { /* */ }
+    tiktok('unMute');
+  }
+  // For tests and troubleshooting: what the TV player is doing right now.
+  window.__fnState = () => { const p = yt.player; let state = null, muted = null; try { state = p && p.getPlayerState ? p.getPlayerState() : null; muted = p && p.isMuted ? p.isMuted() : null; } catch { /* */ } return { ready: yt.ready, state, muted, blocked: sound.blocked, loaded: yt.loaded }; };
+  document.addEventListener('pointerdown', unlock, true);
+  document.addEventListener('keydown', unlock, true);
+  // TikTok's player takes simple commands by message.
+  function tiktok(type, value) { const f = document.querySelector('#fn-alt iframe[data-tt]'); if (f && f.contentWindow) try { f.contentWindow.postMessage({ 'x-tiktok-player': true, type, value }, '*'); } catch { /* */ } }
   function float(el, text) {
     const f = document.createElement('div'); f.className = 'fn-float'; f.textContent = text;
     f.style.left = 8 + Math.random() * 84 + '%'; el.appendChild(f); setTimeout(() => f.remove(), 2600);
@@ -47,17 +87,19 @@
   const SRC_NAME = { youtube: 'YouTube', tiktok: 'TikTok', instagram: 'Instagram' };
   const pic = (v, cls = '') => (v && v.thumb ? `<img class="${cls}" src="${esc(v.thumb)}" alt="">` : `<div class="fn-noimg ${cls} src-${esc((v && v.src) || 'x')}"><span>${SRC_ICON[(v && v.src)] || '🎬'}</span>${SRC_NAME[(v && v.src)] || 'Video'}</div>`);
   // TikTok and Instagram play in their own embed (YouTube uses the YouTube player above).
-  const alt = { key: null };
+  const alt = { key: null, box: null };
   function altPlayer(el, c) {
     const box = el.querySelector('#fn-alt'); if (!box) return;
     const key = c && c.src !== 'youtube' ? c.src + ':' + c.id : null;
-    if (key === alt.key) return; alt.key = key;
+    if (key === alt.key && box === alt.box) return; alt.key = key; alt.box = box;
     box.innerHTML = !key ? '' : c.src === 'tiktok'
-      ? `<iframe src="https://www.tiktok.com/player/v1/${encodeURIComponent(c.id)}?autoplay=1&music_info=0&description=0&rel=0&controls=1&progress_bar=1" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`
+      ? `<iframe data-tt src="https://www.tiktok.com/player/v1/${encodeURIComponent(c.id)}?autoplay=1&music_info=0&description=0&rel=0&controls=1&progress_bar=1" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`
       // Instagram's player is a whole post (name, likes, caption). Crop it to just the video.
       : `<div class="fn-ig"><div class="fn-ig-crop"><iframe src="https://www.instagram.com/reel/${encodeURIComponent(c.id)}/embed/" allow="autoplay; encrypted-media" scrolling="no"></iframe></div></div>
          <div class="fn-ig-hint"><span>👆</span><b>Click the video to play</b><small>Instagram needs one click on the TV</small></div>`;
     box.hidden = !key;
+    const tt = box.querySelector('iframe[data-tt]');
+    if (tt) tt.onload = () => { setTimeout(() => { tiktok('play'); tiktok(sound.blocked || yt.muted ? 'mute' : 'unMute'); }, 600); };
     fitIg(box);
   }
   // Scale the cropped Instagram video to fill the stage height.
@@ -94,12 +136,14 @@
       if (!s) return;
       yt.host = ctx && ctx.host;
       if (!el.querySelector('#fn-stage')) {
-        el.innerHTML = `<div class="fn-wrap"><div class="fn-stage" id="fn-stage"><div class="fn-video" id="fn-video"><div id="fn-player"></div><div class="fn-alt" id="fn-alt" hidden></div><div class="fn-cover" id="fn-cover"></div></div><div class="fn-sound" id="fn-sound" hidden>🔇 Click anywhere on the TV to turn the sound on</div><div class="fn-react" id="fn-react"></div><div class="fn-top" id="fn-top"></div><div class="fn-bottom" id="fn-bottom"></div></div><div class="fn-board" id="fn-board"></div></div>`;
+        el.innerHTML = `<div class="fn-wrap"><div class="fn-stage" id="fn-stage"><div class="fn-video" id="fn-video"><div id="fn-player"></div><div class="fn-alt" id="fn-alt" hidden></div><div class="fn-cover" id="fn-cover"></div></div><div class="fn-sound" id="fn-sound" hidden>🔇 This browser blocked sound: click the TV once</div><div class="fn-react" id="fn-react"></div><div class="fn-top" id="fn-top"></div><div class="fn-bottom" id="fn-bottom"></div></div><div class="fn-board" id="fn-board"></div></div>`;
         loadApi();
       }
       const stage = el.querySelector('#fn-stage'), board = el.querySelector('#fn-board'), cover = el.querySelector('#fn-cover');
       const showBoard = s.phase === 'final' || s.phase === 'over';
       stage.hidden = showBoard; board.hidden = !showBoard;
+      if (s.vol != null && (s.vol !== yt.vol || !!s.muted !== yt.muted)) { yt.vol = s.vol; yt.muted = !!s.muted; applyVolume(); tiktok(yt.muted ? 'mute' : 'unMute'); }
+      soundHint();
       yt.want = s.phase === 'play' && s.cur && s.cur.src === 'youtube' ? s.cur.id : null; sync();
       altPlayer(el, s.phase === 'play' ? s.cur : null);
       el.querySelector('#fn-video').classList.toggle('vertical', !!(s.phase === 'play' && s.cur && s.cur.vertical));
@@ -126,8 +170,11 @@
       }
     },
 
-    phone(el, v, ctx) {
+    phone(el, v, ctx, room) {
       if (!v) return;
+      const canVol = v.phase === 'play' && v.cur && (v.cur.mine || (room && room.vip));
+      const volRow = canVol ? `<div class="fn-vol"><span>TV volume</span><button class="btn small" data-vol="-1">🔉</button><b>${v.muted ? '🔇' : v.vol + '%'}</b><button class="btn small" data-vol="1">🔊</button><button class="btn small ghost" data-mute>${v.muted ? 'Unmute' : 'Mute'}</button></div>` : '';
+      const bindVol = () => { for (const b of el.querySelectorAll('[data-vol]')) b.onclick = () => ctx.act({ op: 'vol', d: Number(b.dataset.vol) }); const mu = el.querySelector('[data-mute]'); if (mu) mu.onclick = () => ctx.act({ op: 'vol', mute: !v.muted }); };
       const head = `<div class="bl-me"><span>😂 ${v.points} pts · #${v.rank || '-'}</span><span class="muted">video ${Math.min(v.n, v.of)} of ${v.of}</span></div>`;
       if (v.phase === 'over') {
         el.innerHTML = `${head}<div class="card-box"><h3>🏆 Funniest videos</h3>${v.videos.slice(0, 5).map((x, i) => `<div class="fn-row">${pic(x)}<div><b>${i + 1}. ${esc(x.title)}</b><small>${esc(x.by)} · ${x.final} vote${x.final === 1 ? '' : 's'}</small></div></div>`).join('')}</div><div class="card-box">${BOX.board(v.final, (r) => r.points, ' pts')}</div>`; return;
@@ -139,12 +186,13 @@
       }
       if (v.phase === 'play' && v.cur) {
         const c = v.cur;
-        if (c.mine) { el.innerHTML = `${head}<div class="card-box" style="text-align:center"><h3>🎬 Your video is on!</h3><p>${esc(c.title)}</p><p class="fn-score">${emojiFor(c.avg)} ${c.avg || '–'} funny · ⏭ ${c.skips}/${c.need} skips</p></div>${picker(v, true)}`; bindPicker(el, v, ctx); return; }
+        if (c.mine) { el.innerHTML = `${head}<div class="card-box" style="text-align:center"><h3>🎬 Your video is on!</h3><p>${esc(c.title)}</p><p class="fn-score">${emojiFor(c.avg)} ${c.avg || '–'} funny · ⏭ ${c.skips}/${c.need} skips</p>${volRow}</div>${picker(v, true)}`; bindPicker(el, v, ctx); bindVol(); return; }
         el.innerHTML = `${head}<div class="fn-now">🎬 <b>${esc(c.by)}</b>: ${esc(c.title)}</div>
           <div class="bl-pickinfo">How funny is it?</div><div class="fn-rate">${v.rate.map((e, i) => `<button class="${c.myRating === i + 1 ? 'sel' : ''}" data-r="${i + 1}">${e}</button>`).join('')}</div>
-          <button class="fn-skip ${c.mySkip ? 'on' : ''}" id="fn-skip">${c.mySkip ? '⏭ You voted to skip (tap to undo)' : '⏭ Boring! Skip it'}<small>${c.skips}/${c.need} to skip</small></button>${picker(v, true)}`;
+          <button class="fn-skip ${c.mySkip ? 'on' : ''}" id="fn-skip">${c.mySkip ? '⏭ You voted to skip (tap to undo)' : '⏭ Boring! Skip it'}<small>${c.skips}/${c.need} to skip</small></button>${volRow}${picker(v, true)}`;
         for (const b of el.querySelectorAll('[data-r]')) b.onclick = () => { ctx.act({ op: 'rate', v: Number(b.dataset.r) }); ctx.vibrate(15); };
         el.querySelector('#fn-skip').onclick = () => { ctx.act({ op: 'skip', on: !c.mySkip }); ctx.vibrate(25); };
+        bindVol();
         bindPicker(el, v, ctx); return;
       }
       if (v.phase === 'score' && v.last) {

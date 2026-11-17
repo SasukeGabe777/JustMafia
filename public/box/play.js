@@ -17,6 +17,8 @@
   const act = (msg) => new Promise((res) => socket.emit('player:act', msg, (r) => { r = r || { ok: false, error: 'No answer from the server.' }; if (!r.ok && r.error) toast(r.error); res(r); }));
   // Moves that take a moment (search, picking a video): no toast here, the game shows its own message.
   const actAsync = (msg) => new Promise((res) => socket.emit('player:async', msg, (r) => res(r || { ok: false, error: 'No answer from the server.' })));
+  // Long-press must not open the copy/save menu or select the page (mini-games use holds).
+  document.addEventListener('contextmenu', (e) => { if (!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
   const ctx = { act, actAsync, toast, sfx: BOX.sfx, vibrate: (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch { /* no */ } } };
 
   function showJoin(err) {

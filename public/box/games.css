@@ -465,3 +465,28 @@
 .fn-ig-hint[hidden] { display: none; }
 
 .fn-ig { clip-path: inset(3px 3px 6px 3px); }
+
+/* ---- JustRaiseDucks phone: calmer layout (playtest) ---- */
+.dk-hero { height: 190px; margin-bottom: 8px; }
+.dk-hero-top .streak { background: #ff8c42; color: #2a1000; }
+.dk-hero-meters { position: absolute; left: 8px; right: 8px; bottom: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(20, 10, 40, 0.55); padding: 6px 10px; border-radius: 12px; pointer-events: none; }
+.dk-hero-meters > div { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+.dk-hero-meters .bar { flex: 1; height: 8px; margin: 0; }
+.dk-tap { bottom: 52px; }
+.dk-nextbar { padding: 8px 14px; font-size: 15px; flex-wrap: nowrap; }
+.dk-nextbar .dk-nt { font-size: 18px; margin-left: 4px; }
+.dk-actions { margin-bottom: 8px; }
+.dk-skillgrid { gap: 10px; }
+.dk-skill { padding: 12px 10px; }
+.dk-skill .t small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dk-skill.need b::after { content: ''; }
+.dk-skill.need .t small { color: var(--c, var(--cyan)); font-weight: 700; }
+.dk-quests { margin-top: 10px; }
+
+/* JustFunny: small corner note instead of a banner; phone volume row */
+.fn-sound { left: auto; right: 16px; top: auto; bottom: 110px; transform: none; font-size: 14px; padding: 6px 12px; background: rgba(20, 10, 40, 0.75); opacity: 0.85; }
+.fn-vol { display: flex; align-items: center; gap: 8px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
+.fn-vol > span { color: var(--muted); font-size: 13px; }
+.fn-vol b { min-width: 48px; text-align: center; }
+.dk-sheet { max-height: 88vh; overflow-y: auto; overscroll-behavior: contain; }
+.dk-sheet .dk-play { position: sticky; bottom: 0; }
