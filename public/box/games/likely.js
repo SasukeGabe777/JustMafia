@@ -9,18 +9,23 @@
   // A countdown whose end time stays fixed for one phase, so identical renders can be skipped.
   const ends = {};
   const timer = (key, endsIn) => { if (!endsIn) return ''; if (!ends[key]) ends[key] = Date.now() + endsIn; return `<span class="timer" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span>`; };
+  const av = (x) => (x && x.avatar ? esc(x.avatar) + ' ' : '');
   const dot = (c) => `<i class="ml-dot" style="background:${esc(c || '#888')}"></i>`;
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
-  const lead = (s) => (s.kind === 'pair' ? 'Which <b>two</b> are most likely to…' : s.kind === 'hot' ? `Would ${dot(s.seat && s.seat.color)}<b>${esc(s.seat ? s.seat.name : '?')}</b> actually…` : 'Who’s most likely to…');
+  const lead = (s) => (s.kind === 'pair' ? 'Which <b>two</b> are most likely to…' : s.kind === 'hot' ? `Would ${dot(s.seat && s.seat.color)}<b>${av(s.seat)}${esc(s.seat ? s.seat.name : '?')}</b> actually…` : 'Who’s most likely to…');
   const badge = (s) => (s.kind === 'pair' ? '<div class="ml-badge pair">👯 DOUBLE TROUBLE</div>' : s.kind === 'hot' ? '<div class="ml-badge hot">🔥 HOT SEAT</div>' : '');
   const promptCard = (s, cls = '') => `<div class="ml-card ${s.kind} ${cls}">${badge(s)}<div class="ml-lead">${lead(s)}</div><div class="ml-text">${esc(s.text)}?</div></div>`;
-  const names = (list) => list.map((w) => `${dot(w.color)}${esc(w.name)}`).join(' <span class="muted">&amp;</span> ');
-  // Swap the HTML only when it changed (keeps animations from restarting on every sync).
-  function paint(el, html, after) {
-    const root = el.firstElementChild;
-    if (root && root.classList.contains('ml-root') && el._mlHtml === html) return false;
-    el._mlHtml = html; el.innerHTML = `<div class="ml-root">${html}</div>`;
-    if (after) after(); return true;
+  const names = (list) => list.map((w) => `${dot(w.color)}${av(w)}${esc(w.name)}`).join(' <span class="muted">&amp;</span> ');
+  // Update in place (BOX.morph). Each phase of each prompt gets its own root id, so a new phase
+  // starts fresh (its entrance animations play once) while re-renders within it never restart them.
+  // Returns true the first time a given key is painted.
+  function paint(el, html, key) {
+    const fresh = el._mlKey !== key;
+    el._mlKey = key;
+    if (!fresh && el._mlHtml === html) return false;
+    el._mlHtml = html;
+    BOX.morph(el, `<div class="ml-root" id="ml-${esc(key)}">${html}</div>`);
+    return fresh;
   }
   // Numbers that count up from 0 (each waits for its row's animation delay).
   function countUp(el) {
@@ -54,7 +59,7 @@
     const top = res.top, max = Math.max(1, ...top.map((t) => t.votes)), rows = top.length;
     const bars = top.map((t, i) => {
       const delay = (rows - 1 - i) * 0.35; // lowest first, the winner last
-      return `<div class="ml-row ${t.win ? 'win' : ''}" style="animation-delay:${delay}s"><span class="ml-rank">${t.win ? '👑' : '#' + (i + 1)}</span>${dot(t.color)}<span class="ml-name">${esc(t.name)}</span>
+      return `<div class="ml-row ${t.win ? 'win' : ''}" style="animation-delay:${delay}s"><span class="ml-rank">${t.win ? '👑' : '#' + (i + 1)}</span>${dot(t.color)}<span class="ml-name">${av(t)}${esc(t.name)}</span>
         <div class="ml-bar"><div class="fill" style="--w:${Math.round((t.votes / max) * 100)}%;--c:${esc(t.color)};animation-delay:${delay}s"></div></div><b class="ml-votes" data-count="${t.votes}" data-delay="${Math.round(delay * 1000)}">${t.votes}</b>
         ${t.voters ? `<div class="ml-by">${t.voters.slice(0, 16).map(esc).join(', ')}${t.voters.length > 16 ? ` +${t.voters.length - 16}` : ''}</div>` : ''}</div>`;
     }).join('');
@@ -69,9 +74,21 @@
     const champ = f.hall[0];
     return `<div class="ml-hall">${out.map((x, i) => {
       const isChamp = x === champ && x.titles.length;
-      return `<div class="ml-plaque ${isChamp ? 'champ' : ''} ${x.titles.length ? '' : 'none'}" style="--c:${esc(x.color)};animation-delay:${(i * 0.06).toFixed(2)}s"><div class="ml-pname">${isChamp ? '👑 ' : ''}${esc(x.name)}<span class="ml-pc">${x.titles.length}</span></div>
+      return `<div class="ml-plaque ${isChamp ? 'champ' : ''} ${x.titles.length ? '' : 'none'}" style="--c:${esc(x.color)};animation-delay:${(i * 0.06).toFixed(2)}s"><div class="ml-pname">${isChamp ? '👑 ' : ''}${av(x)}${esc(x.name)}<span class="ml-pc">${x.titles.length}</span></div>
         ${x.titles.length ? `<ul>${x.titles.slice(0, isChamp ? 5 : 3).map((t) => `<li>${esc(t)}</li>`).join('')}${x.titles.length > (isChamp ? 5 : 3) ? `<li class="muted">+${x.titles.length - (isChamp ? 5 : 3)} more</li>` : ''}</ul>` : '<div class="muted ml-quiet">A person of mystery ✨</div>'}</div>`;
     }).join('')}${f.hallMore ? `<div class="muted ml-more">+${f.hallMore} more players</div>` : ''}</div>`;
+  }
+
+  // The nominees on the stage floor: ballots go up as people vote, the winner gets the crown.
+  function carpet(s, ctx) {
+    const all = (ctx && ctx.players) || [];
+    if (!all.length || all.length > 40) return '';
+    const show = all.slice(0, 16), wait = s.waiting ? new Set(s.waiting) : null;
+    const res = s.phase === 'reveal' && s.result, win = new Set(res ? (res.kind === 'hot' ? (res.verdict && s.seat ? [s.seat.name] : []) : (res.winners || []).map((w) => w.name)) : []);
+    return `<div class="ml-carpet ${s.phase}"><div class="mll-noms ingame ${show.length > 12 ? 'many' : ''}">${show.map((p, i) => {
+      const voted = s.phase === 'vote' && wait && !wait.has(p.name), w = win.has(p.name);
+      return `<span class="chip ${voted ? 'voted' : ''} ${w ? 'vip win' : ''} ${res && !w ? 'look' : ''}" style="--c:${esc(p.color || '#ff6b8b')};--d:${((i * 0.23) % 2.4).toFixed(2)}s"><span class="bd"><span class="f">${esc(p.avatar || '🙂')}</span></span><b>${esc(p.name)}</b></span>`;
+    }).join('')}${all.length > show.length ? `<span class="ml-cmore">+${all.length - show.length}</span>` : ''}</div></div>`;
   }
 
   // ---------- phone ----------
@@ -79,7 +96,7 @@
     const list = v.choices || [], big = list.length > 12;
     const btns = list.map((c) => {
       const self = c.id === v.me, off = self && disableSelf, sel = chosen.includes(c.id);
-      return `<button class="ml-pick ${sel ? 'sel' : ''} ${self ? 'me' : ''}" data-id="${esc(c.id)}" data-n="${esc(c.name.toLowerCase())}" ${off ? 'disabled' : ''}>${dot(c.color)}<span>${esc(c.name)}</span>${self ? '<small>you</small>' : ''}${sel ? '<em>✓</em>' : ''}</button>`;
+      return `<button class="ml-pick ${sel ? 'sel' : ''} ${self ? 'me' : ''}" data-id="${esc(c.id)}" data-n="${esc(c.name.toLowerCase())}" ${off ? 'disabled' : ''}>${dot(c.color)}<span>${av(c)}${esc(c.name)}</span>${self ? '<small>you</small>' : ''}${sel ? '<em>✓</em>' : ''}</button>`;
     }).join('');
     return `${big ? `<input class="ml-search" id="ml-q" type="search" placeholder="🔎 Search ${list.length} names…" autocomplete="off">` : ''}<div class="ml-grid ${mode}" id="ml-grid">${btns}</div>`;
   }
@@ -94,6 +111,10 @@
     for (const b of g.querySelectorAll('[data-id]')) b.onclick = () => onPick(b.dataset.id);
   }
   const resetGrid = () => { q = ''; scroll = 0; };
+  // Haptics (ctx.haptic on new phones; a plain vibration otherwise). feel() buzzes once per moment.
+  function haptic(ctx, kind) { try { if (ctx.haptic) ctx.haptic(kind); else ctx.vibrate(kind === 'tap' ? 10 : 40); } catch { /* no vibration */ } }
+  let felt = {};
+  const feel = (ctx, chan, key, kind) => { if (felt[chan] === key) return; felt[chan] = key; haptic(ctx, kind); };
 
   function phoneVote(v, ctx, head) {
     const key = v.n + ':' + v.phase, t = timer('p' + key, v.endsIn);
@@ -108,7 +129,7 @@
       if (voteStep) return { html: `${head}${card}<div class="ml-step">${v.isSeat ? '🔥 You’re in the hot seat! Would you <b>actually</b> do it? Be honest…' : `Would ${esc(v.seat.name)} <b>actually</b> do it?`} ${t}</div>${yn(v.myVote)}`, bind: (el) => bindYes(el, ctx, 'vote', key) };
       if (predStep) return { html: `${head}${card}<div class="ml-step">🔮 ${v.isSeat ? 'What will the <b>room</b> say about you?' : `What will <b>${esc(v.seat.name)}</b> say about themself?`} <span class="muted">(+150)</span> ${t}</div>${yn(v.myPred)}<button class="btn ghost small ml-skip" id="ml-skip">Skip prediction</button>`, bind: (el) => { bindYes(el, ctx, 'predict', key); bindSkip(el, ctx); } };
       const yesno = (b) => (b === true ? '<b class="ml-yes-t">YES</b>' : b === false ? '<b class="ml-no-t">NO</b>' : '—');
-      return { html: `${head}${card}<div class="card-box ml-locked"><div class="big-status">Locked in ✅</div><p>Your answer: ${yesno(v.myVote)} <button class="ml-link" data-edit="vote">change</button></p><p>🔮 Prediction: ${v.skipped && v.myPred === null ? 'skipped' : yesno(v.myPred)} <button class="ml-link" data-edit="pred">change</button></p><p class="muted">Waiting for the room… ${t}</p></div>`, bind: (el) => bindEdit(el, ctx, key) };
+      return { html: `${head}${card}<div class="card-box ml-locked"><div class="ml-sealed">✉️</div><div class="big-status">Ballot sealed!</div><p>Your answer: ${yesno(v.myVote)} <button class="ml-link" data-edit="vote">change</button></p><p>🔮 Prediction: ${v.skipped && v.myPred === null ? 'skipped' : yesno(v.myPred)} <button class="ml-link" data-edit="pred">change</button></p><p class="muted">Waiting for the room… ${t}</p></div>`, bind: (el) => bindEdit(el, ctx, key) };
     }
     const pair = v.kind === 'pair';
     const voteStep = v.myVote === null || (edit && edit.step === 'vote');
@@ -121,30 +142,101 @@
         html: `${head}${card}<div class="ml-step">${step} ${t}</div>${grid(v, ctx, { mode: 'vote', chosen, disableSelf: !v.selfVote })}${pair ? `<button class="btn big green ml-go" id="ml-duo" ${duo.length === 2 ? '' : 'disabled'}>Lock in the duo 👯</button>` : ''}`,
         bind: (el) => {
           bindGrid(el, async (id) => {
-            if (pair) { const k = duo.indexOf(id); if (k >= 0) duo.splice(k, 1); else { if (duo.length >= 2) duo.shift(); duo.push(id); } ctx.vibrate(10); ctx.redraw(); return; }
-            const r = await ctx.act({ op: 'vote', id }); if (r && r.ok) { ctx.vibrate(25); ctx.sfx('pop'); edit = null; resetGrid(); ctx.redraw(); }
+            if (pair) { const k = duo.indexOf(id); if (k >= 0) duo.splice(k, 1); else { if (duo.length >= 2) duo.shift(); duo.push(id); } haptic(ctx, 'tap'); ctx.redraw(); return; }
+            const r = await ctx.act({ op: 'vote', id }); if (r && r.ok) { haptic(ctx, 'success'); ctx.sfx('pop'); edit = null; resetGrid(); ctx.redraw(); }
           });
-          const d = el.querySelector('#ml-duo'); if (d) d.onclick = async () => { const r = await ctx.act({ op: 'vote', ids: duo }); if (r && r.ok) { ctx.vibrate(25); ctx.sfx('pop'); edit = null; resetGrid(); ctx.redraw(); } };
+          const d = el.querySelector('#ml-duo'); if (d) d.onclick = async () => { const r = await ctx.act({ op: 'vote', ids: duo }); if (r && r.ok) { haptic(ctx, 'success'); ctx.sfx('pop'); edit = null; resetGrid(); ctx.redraw(); } };
         },
       };
     }
     if (predStep) {
       return {
         html: `${head}${card}<div class="ml-step">🔮 Prediction: who will the <b>room</b> ${pair ? 'put in the duo' : 'pick'}? <span class="muted">(+150)</span> ${t}</div>${grid(v, ctx, { mode: 'pred', chosen: v.myPred ? [v.myPred] : [], disableSelf: false })}<button class="btn ghost small ml-skip" id="ml-skip">Skip prediction</button>`,
-        bind: (el) => { bindGrid(el, async (id) => { const r = await ctx.act({ op: 'predict', id }); if (r && r.ok) { ctx.vibrate(25); ctx.sfx('chime'); edit = null; resetGrid(); ctx.redraw(); } }); bindSkip(el, ctx); },
+        bind: (el) => { bindGrid(el, async (id) => { const r = await ctx.act({ op: 'predict', id }); if (r && r.ok) { haptic(ctx, 'select'); ctx.sfx('chime'); edit = null; resetGrid(); ctx.redraw(); } }); bindSkip(el, ctx); },
       };
     }
     const voted = Array.isArray(v.myVote) ? v.myVote.map(nameOf).join(' &amp; ') : nameOf(v.myVote);
-    return { html: `${head}${card}<div class="card-box ml-locked"><div class="big-status">Locked in ✅</div><p>Your vote: <b>${voted}</b> <button class="ml-link" data-edit="vote">change</button></p><p>🔮 Prediction: <b>${v.myPred ? nameOf(v.myPred) : 'skipped'}</b> <button class="ml-link" data-edit="pred">change</button></p><p class="muted">Waiting for the room… ${t}</p></div>`, bind: (el) => bindEdit(el, ctx, key) };
+    return { html: `${head}${card}<div class="card-box ml-locked"><div class="ml-sealed">✉️</div><div class="big-status">Ballot sealed!</div><p>Your vote: <b>${voted}</b> <button class="ml-link" data-edit="vote">change</button></p><p>🔮 Prediction: <b>${v.myPred ? nameOf(v.myPred) : 'skipped'}</b> <button class="ml-link" data-edit="pred">change</button></p><p class="muted">Waiting for the room… ${t}</p></div>`, bind: (el) => bindEdit(el, ctx, key) };
   }
   function bindYes(el, ctx, op, key) {
-    for (const b of el.querySelectorAll('[data-yes]')) b.onclick = async () => { const r = await ctx.act({ op, yes: b.dataset.yes === '1' }); if (r && r.ok) { ctx.vibrate(25); ctx.sfx(op === 'vote' ? 'pop' : 'chime'); edit = null; ctx.redraw(); } };
+    for (const b of el.querySelectorAll('[data-yes]')) b.onclick = async () => { const r = await ctx.act({ op, yes: b.dataset.yes === '1' }); if (r && r.ok) { haptic(ctx, op === 'vote' ? 'success' : 'select'); ctx.sfx(op === 'vote' ? 'pop' : 'chime'); edit = null; ctx.redraw(); } };
   }
   function bindSkip(el, ctx) { const s = el.querySelector('#ml-skip'); if (s) s.onclick = async () => { const r = await ctx.act({ op: 'skip' }); if (r && r.ok) { edit = null; resetGrid(); ctx.redraw(); } }; }
   function bindEdit(el, ctx, key) { for (const b of el.querySelectorAll('[data-edit]')) b.onclick = () => { edit = { key, step: b.dataset.edit }; resetGrid(); ctx.redraw(); }; }
 
+  // ---------- TV lobby: tonight's programme ----------
+  // Each setting is a line in the awards-night programme; the chosen option is gold foil.
+  // Players walk the red carpet as nominees. The real <select>s stay in #settings (hidden).
+  const PROG = {
+    pack: { lab: 'The Prompts', sub: 'what the awards are for', opts: { classic: '🎭 Classic', wild: '🌶️ Wild', work: '💼 Work-safe', family: '🧸 Family', mix: '🎲 Mix' } },
+    rounds: { lab: 'Awards Tonight', sub: 'how long the show runs', opts: { 10: '10', 15: '15', 20: '20', 30: '30' } },
+    voteSeconds: { lab: 'Voting Time', sub: 'seconds per ballot', opts: { 15: '15s', 20: '20s', 30: '30s' } },
+    selfVote: { lab: 'Self-Nomination', sub: 'vote for yourself?', opts: { false: '🙅 Not allowed', true: '🙋 Allowed' } },
+    reveal: { lab: 'The Ballots', sub: 'shown on the TV', opts: { anon: '🤫 Sealed (totals)', public: '👀 Public' } },
+    showIntro: { lab: 'Opening Number', sub: 'the red-carpet intro', opts: { true: '🎺 On', false: '⏩ Skip' } },
+  };
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+  function lobbyTv(el, L) {
+    el.__L = L;
+    if (!el.__mll) {
+      el.__mll = true;
+      el.innerHTML = `<div class="mll">
+        <div class="mll-marquee"><span class="cr">👑</span><small>★ TONIGHT’S AWARDS CEREMONY ★</small><span class="t">Most Likely <em>To…</em></span></div>
+        <section class="mll-prog"><div class="mll-ph"><b>The Programme</b><span>Tap to change</span></div><div id="mll-lines"></div><div id="settings" class="mll-sr"></div></section>
+        <aside class="mll-pass"><div class="mll-pt"><small>ADMIT ALL · VIP</small>Join on your phone</div><img id="qr" alt="QR code to join"><div class="mll-url" id="mll-url"></div>
+          <div class="mll-codecap">ROOM CODE</div><div class="mll-code" id="code"></div><div class="mll-vip" id="mll-vip"></div><div class="err" id="lobby-err"></div>
+          <button class="mll-start" id="start">🏆 Raise the curtain</button>
+          <div class="mll-links"><button id="add-bots">+ 5 test bots</button><button id="rm-bots">remove bots</button><button id="mll-pick">🎮 Other game</button></div></aside>
+        <section class="mll-carpet"><div class="mll-tally" id="mll-tally"></div><div class="mll-noms" id="roster"></div></section>
+        <div class="mll-party" id="mll-party"></div></div>`;
+      const $ = (s) => el.querySelector(s);
+      $('#start').onclick = async () => { const r = await el.__L.start(); $('#lobby-err').textContent = r && r.ok ? '' : (r && r.error) || ''; };
+      $('#add-bots').onclick = () => el.__L.bots(5);
+      $('#rm-bots').onclick = () => el.__L.removeBots();
+      $('#mll-pick').onclick = () => el.__L.pick();
+      el.addEventListener('click', (e) => {
+        const k = e.target.closest('[data-k]');
+        if (k) {
+          for (const b of k.parentNode.querySelectorAll('.mll-opt')) b.classList.toggle('on', b === k);
+          const s = el.querySelector(`select[data-set="${k.dataset.k}"]`); if (s) s.value = k.dataset.v;
+          el.__L.set(k.dataset.k, k.dataset.v); BOX.sfx('ballot'); return;
+        }
+        const c = e.target.closest('[data-kick]');
+        if (c && confirm('Remove this player?')) el.__L.kick(c.dataset.kick);
+      });
+    }
+    const $ = (s) => el.querySelector(s);
+    if ($('#code').textContent !== L.code) $('#code').textContent = L.code;
+    if ($('#qr').dataset.u !== L.joinUrl) { $('#qr').src = L.qr; $('#qr').dataset.u = L.joinUrl; }
+    $('#mll-url').textContent = L.joinUrl.replace(/^https?:\/\//, '');
+    const n = L.players.length;
+    $('#start').disabled = n < L.min;
+    $('#mll-vip').innerHTML = L.vip ? `👑 <b>${esc(L.vip)}</b> can start from their phone` : n < L.min ? `${L.min - n} more nominee${L.min - n === 1 ? '' : 's'} needed…` : 'The first to arrive hosts 👑';
+    BOX.morph($('#mll-tally'), `${n}<small>NOMINEE${n === 1 ? '' : 'S'}</small>`);
+    const html = L.fields.map((f, i) => {
+      const P = PROG[f.key] || { lab: f.label, opts: {} }, cur = String(L.settings[f.key]);
+      return `<div class="mll-line"><span class="mll-num">${ROMAN[i] || i + 1}</span><div class="mll-lab">${esc(P.lab)}${P.sub ? `<small>${esc(P.sub)}</small>` : ''}</div>
+        <div class="mll-opts">${f.options.map((o) => `<button class="mll-opt ${String(o.value) === cur ? 'on' : ''}" data-k="${esc(f.key)}" data-v="${esc(String(o.value))}" title="${esc(o.label)}">${esc(P.opts[String(o.value)] || o.label)}</button>`).join('')}</div></div>`;
+    }).join('');
+    const lines = $('#mll-lines'); if (lines.__h !== html) { lines.__h = html; BOX.morph(lines, html); }
+    const box = $('#settings'), sig = L.fields.map((f) => f.key + ':' + f.options.map((o) => o.value).join('|')).join(';');
+    if (box.__sig !== sig) { box.__sig = sig; box.innerHTML = L.fields.map((f) => `<label>${esc(f.label)}<select data-set="${esc(f.key)}">${f.options.map((o) => `<option value="${esc(String(o.value))}">${esc(o.label)}</option>`).join('')}</select></label>`).join(''); }
+    for (const s of box.querySelectorAll('select[data-set]')) {
+      if (document.activeElement !== s) s.value = String(L.settings[s.dataset.set]);
+      s.onchange = () => { s.blur(); el.__L.set(s.dataset.set, s.value); };
+    }
+    const r = $('#roster');
+    r.classList.toggle('many', n > 14 && n <= 30); r.classList.toggle('lots', n > 30);
+    const rh = n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" id="mll-p-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ff6b8b')};--d:${((i * 0.23) % 2.4).toFixed(2)}s"><span class="bd"><span class="f">${esc(p.avatar || '🙂')}</span></span><b>${esc(p.name)}</b></span>`).join('')
+      : '<div class="mll-empty">The red carpet awaits its nominees… ✨</div>';
+    if (r.__h !== rh) { r.__h = rh; BOX.morph(r, rh); }
+    const lp = $('#mll-party'), lh = L.lineupHtml || ''; if (lp.__h !== lh) { lp.__h = lh; lp.innerHTML = lh; }
+  }
+
   BOX.games.likely = {
-    name: 'Most Likely To…', icon: '👑',
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ intro: 'think', vote: 'play', drum: 'tense', reveal: 'reveal', over: 'finale' }[s.phase] || 'play'),
+    name: 'Most Likely To…', icon: '👑', lobbyTv,
     about: 'Who’s most likely to survive a zombie apocalypse? Vote for your friends, predict the room, and collect ridiculous titles.',
     how: [
       'A prompt goes up on the big screen: “Who’s most likely to…?”',
@@ -156,18 +248,18 @@
     ],
     fx: { prompt: 'whoosh', bonus: 'sting', open: 'tick', allin: 'chime', drum: 'drum', reveal: 'reveal', none: 'shrug', crown: 'cheer', yes: 'gasp', no: 'poof', split: 'shrug', win: 'win' },
 
-    tv(el, s) {
+    tv(el, s, ctx) {
       if (!s) return;
       if (s.phase === 'over' && s.final) {
         const f = s.final;
         paint(el, `<div class="ml-over"><h1 class="ml-h">🏛️ Hall of Titles</h1>${hall(f)}${awardsHtml(f.awards)}
-          <div class="ml-final-board"><h3>Best room readers</h3>${BOX.board(f.standings, (r) => r.points, ' pts')}</div></div>`);
+          <div class="ml-final-board"><h3>Best room readers</h3>${BOX.board(f.standings.map((r) => ({ ...r, name: (r.avatar ? r.avatar + ' ' : '') + r.name })), (r) => r.points, ' pts')}</div></div>`, 'over');
         return;
       }
       const key = s.n + ':' + s.phase, t = timer('t' + key, s.endsIn);
       let main = '';
       if (s.phase === 'intro') {
-        main = `<div class="ml-intro">${s.kind === 'classic' ? '' : `<div class="ml-sweep ${s.kind}">${s.kind === 'hot' ? '🔥 HOT SEAT 🔥' : '👯 DOUBLE TROUBLE 👯'}</div>`}${promptCard(s, 'in')}
+        main = `<div class="ml-intro">${s.last ? `<div class="ml-sweep final">🏁 FINAL PROMPT · POINTS ×${s.mult} 🏁</div>` : ''}${s.kind === 'classic' ? '' : `<div class="ml-sweep ${s.kind}">${s.kind === 'hot' ? '🔥 HOT SEAT 🔥' : '👯 DOUBLE TROUBLE 👯'}</div>`}${promptCard(s, 'in')}
           <div class="ml-status">${s.kind === 'hot' ? `Everyone answers YES or NO about ${esc(s.seat ? s.seat.name : '')}…` : s.kind === 'pair' ? 'Pick TWO people this time!' : 'Get your phones ready…'} ${t}</div></div>`;
       } else if (s.phase === 'vote') {
         const pct = s.of ? Math.round((s.voted / s.of) * 100) : 0;
@@ -175,41 +267,49 @@
           <div class="ml-progress"><div class="fill" style="width:${pct}%"></div><span>${s.voted} / ${s.of} votes in · 🔮 ${s.predicted} predictions</span></div>
           ${s.waiting && s.waiting.length ? `<div class="ml-waiting">Still deciding: ${s.waiting.map(esc).join(', ')}</div>` : s.waiting ? '<div class="ml-waiting">Everyone’s in! 🎉</div>' : ''}`;
       } else if (s.phase === 'drum') {
-        main = `${promptCard(s, 'shake')}<div class="ml-drum">🥁</div><div class="ml-status">${plural(s.voted, 'vote')} in… the room has spoken.</div>`;
+        main = `${promptCard(s, 'shake')}<div class="ml-drum"><span>🥁</span></div><div class="ml-status">${plural(s.voted, 'vote')} in… the room has spoken.</div>`;
       } else if (s.phase === 'reveal' && s.result) main = tvReveal(s);
-      const bonus = s.kind === 'hot' ? ' · 🔥 Hot Seat' : s.kind === 'pair' ? ' · 👯 Double Trouble' : '';
-      paint(el, `<div class="ml-wrap"><section class="ml-main"><div class="ml-top"><span>Prompt <b>${s.n}</b> of ${s.total}${bonus}</span><span class="muted">${s.anon ? '🙈 Anonymous votes' : '👀 Public votes'}</span></div>${main}</section>
-        <aside class="panel ml-side"><h3>Room readers</h3>${s.standings.length ? s.standings.map((r, i) => `<div class="ml-srow"><span class="n">${i + 1}</span>${dot(r.color)}<span class="nm">${esc(r.name)}</span>${r.titles ? `<span class="ml-tc">👑${r.titles}</span>` : ''}<b>${r.points}</b></div>`).join('') : ''}</aside></div>`, () => countUp(el));
+      const bonus = (s.kind === 'hot' ? ' · 🔥 Hot Seat' : s.kind === 'pair' ? ' · 👯 Double Trouble' : '') + (s.last ? ` · <span class="ml-final">🏁 FINAL ×${s.mult}</span>` : '');
+      const fresh = paint(el, `<div class="ml-wrap"><section class="ml-main"><div class="ml-top"><span>Prompt <b>${s.n}</b> of ${s.total}${bonus}</span><span class="muted">${s.anon ? '🙈 Anonymous votes' : '👀 Public votes'}</span></div>${main}</section>
+        <aside class="panel ml-side"><h3>Room readers</h3>${s.standings.length ? s.standings.map((r, i) => `<div class="ml-srow"><span class="n">${i + 1}</span>${dot(r.color)}<span class="nm">${av(r)}${esc(r.name)}</span>${r.titles ? `<span class="ml-tc">👑${r.titles}</span>` : ''}<b>${r.points}</b></div>`).join('') : ''}</aside></div>${carpet(s, ctx)}`, key);
+      if (fresh && s.phase === 'reveal') countUp(el);
     },
 
     phone(el, v, ctx) {
       if (!v) return;
-      const head = `<div class="ml-me"><span>🏅 ${v.points} pts · #${v.rank || '-'}</span><span>👑 ${v.myTitles.length}</span><span class="muted">${v.n}/${v.total}</span></div>`;
+      const head = `<div class="ml-me"><span>🏅 ${v.points} pts · #${v.rank || '-'}</span><span>👑 ${v.myTitles.length}</span>${v.last ? `<span class="ml-final">🏁 Final ×${v.mult}</span>` : `<span class="muted">${v.n}/${v.total}</span>`}</div>`;
       if (v.phase === 'over' && v.final) {
-        paint(el, `<div class="card-box" style="text-align:center"><h3>Game over!</h3><p>You finished <b>#${v.rank}</b> with ${v.points} points.</p></div>
+        feel(ctx, 'over', 1, v.rank === 1 ? 'win' : 'success');
+        paint(el, `<div class="card-box" style="text-align:center"><div class="ml-place">${v.rank === 1 ? '🏆' : v.rank === 2 ? '🥈' : v.rank === 3 ? '🥉' : '👑'}</div><h3>You finished #${v.rank} of ${v.of}</h3><p>${v.points} points · ${v.myTitles.length} title${v.myTitles.length === 1 ? '' : 's'}</p></div>
           <div class="card-box"><h3>👑 Your titles</h3>${v.myTitles.length ? `<ul class="ml-mytitles">${v.myTitles.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '<p class="muted">No titles this time: you’re a person of mystery ✨</p>'}</div>
-          ${awardsHtml(v.final.awards)}<div class="card-box">${BOX.board(v.final.standings, (r) => r.points, ' pts')}</div>`);
+          ${awardsHtml(v.final.awards)}<div class="card-box">${BOX.board(v.final.standings, (r) => r.points, ' pts')}</div>`, 'over');
         return;
       }
+      if (felt.over) felt = {}; // a new game started
+      if (v.phase === 'intro') feel(ctx, 'prompt', v.n, v.isSeat ? 'turn' : 'select');
+      if (v.phase === 'drum') feel(ctx, 'drum', v.n, 'buzz');
       let out;
       if (v.phase === 'intro') out = { html: `${head}${promptCard(v, 'phone in')}<div class="big-status">${v.isSeat ? '🔥 You’re in the HOT SEAT!' : v.kind === 'pair' ? '👯 Double Trouble: pick two!' : 'Get ready to vote…'}</div>` };
       else if (v.phase === 'vote') out = phoneVote(v, ctx, head);
-      else if (v.phase === 'drum') out = { html: `${head}${promptCard(v, 'phone')}<div class="big-status ml-pulse">🥁 Drumroll… eyes on the TV!</div>` };
+      else if (v.phase === 'drum') out = { html: `${head}<div class="ml-envelope"></div><div class="big-status">The envelope, please… 🥁</div><p class="muted" style="text-align:center">Eyes on the big screen!</p>` };
       else if (v.phase === 'reveal' && v.result) {
         const m = v.mine || {}, r = v.result, lines = [];
-        if (m.won) lines.push(`<div class="ml-you-won">👑 You got the title!<div class="ml-title">${esc(r.title)}</div></div>`);
+        if (m.won) lines.push(`<div class="ml-you-won"><div class="crown">👑</div>You got the title!<div class="ml-title">${esc(r.title)}</div></div>`);
         if (v.kind === 'hot') {
           lines.push(`<p>The room said <b class="${r.verdict ? 'ml-yes-t' : 'ml-no-t'}">${r.verdict === null ? 'SPLIT' : r.verdict ? 'YES' : 'NO'}</b> (${r.yes}–${r.no})${r.seatSaid !== null && !v.isSeat ? ` · ${esc(v.seat.name)} said ${r.seatSaid ? 'YES' : 'NO'}` : ''}</p>`);
         } else lines.push(r.winners.length ? `<p>${r.winners.length > 1 && v.kind !== 'pair' ? 'Shared title: ' : ''}${names(r.winners)}</p>` : '<p>Nobody voted!</p>');
-        if (m.matched) { const hits = Array.isArray(m.vote) ? m.vote.filter((id) => r.winners.some((w) => w.id === id)).length * 50 : 100; lines.push(`<div class="ml-gain">+${hits} You read the room 📖</div>`); }
-        if (m.foresaw) lines.push('<div class="ml-gain">+150 Fortune teller 🔮</div>');
+        const mul = v.last ? v.mult : 1;
+        if (v.kind !== 'hot' && m.got != null && v.inRound) lines.push(m.got ? `<p class="ml-got">🗳️ <b>${m.got}</b> ${m.got === 1 ? 'person' : 'people'} picked you${m.won ? '' : ' this time'}</p>` : '<p class="muted ml-got">🗳️ Nobody picked you this time</p>');
+        if (m.matched) { const hits = (Array.isArray(m.vote) ? m.vote.filter((id) => r.winners.some((w) => w.id === id)).length * 50 : 100) * mul; lines.push(`<div class="ml-gain">+${hits} You read the room 📖</div>`); }
+        if (m.foresaw) lines.push(`<div class="ml-gain">+${150 * mul} Fortune teller 🔮</div>`);
         if (!m.matched && !m.foresaw && m.vote != null) lines.push('<p class="muted">The room disagreed with you this time 🙃</p>');
         if (m.vote == null && v.inRound) lines.push('<p class="muted">You didn’t vote this time.</p>');
         out = { html: `${head}<div class="card-box ml-result">${lines.join('')}${m.gained ? `<div class="ml-total">+${m.gained} this round</div>` : ''}</div>` };
         const k = String(v.n);
-        if (celebrated !== k) { celebrated = k; if (m.won) { ctx.sfx('win'); ctx.vibrate(150); } else if (m.gained) { ctx.sfx('chime'); ctx.vibrate(40); } }
+        if (celebrated !== k) { celebrated = k; if (m.won) { ctx.sfx('win'); haptic(ctx, 'win'); } else if (m.gained) { ctx.sfx('chime'); haptic(ctx, 'success'); } else if (m.got) haptic(ctx, 'select'); }
       } else out = { html: `${head}<div class="big-status">Next prompt coming…</div>` };
-      if (paint(el, out.html) && out.bind) out.bind(el);
+      paint(el, out.html, v.n + '-' + v.phase);
+      if (out.bind) out.bind(el);
     },
   };
 })();

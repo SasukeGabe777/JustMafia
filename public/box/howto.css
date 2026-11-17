@@ -1,0 +1,60 @@
+/* How to play (howto.js): the tutorial after every intro. Colours come from the game's intro theme. */
+.ht { position: fixed; inset: 0; z-index: 31; display: flex; flex-direction: column; align-items: center; padding: 4vh 5vw 3vh; color: #fff; overflow: hidden; }
+.ht-bg { position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--ht-a) 28%, #1b1240), #0b0618 75%); }
+.ht-bg::after { content: ''; position: absolute; inset: -50%; background: repeating-conic-gradient(color-mix(in srgb, var(--ht-b) 10%, transparent) 0 8deg, transparent 8deg 16deg); animation: htSpin 60s linear infinite; }
+@keyframes htSpin { to { transform: rotate(360deg); } }
+.ht-head { text-align: center; }
+.ht-tag { display: inline-block; letter-spacing: 0.3em; font-weight: 700; font-size: clamp(14px, 1.3vw, 22px); padding: 6px 18px; border-radius: 99px; background: var(--ht-a); color: #1b1240; }
+.ht-head h1 { margin: 10px 0 0; font-family: 'Lilita One', 'Fredoka', sans-serif; font-weight: 400; font-size: clamp(36px, 4.4vw, 76px); text-shadow: 0 5px 0 rgba(0, 0, 0, 0.35); }
+.ht-body { flex: 1; width: 100%; display: grid; place-items: center; }
+.ht-card { display: grid; grid-template-columns: 1fr auto; gap: 4vw; align-items: center; width: min(1500px, 92vw); padding: clamp(24px, 3vw, 56px); border-radius: 34px; background: rgba(20, 10, 48, 0.82); border: 4px solid var(--ht-a); box-shadow: 0 18px 0 rgba(0, 0, 0, 0.3), 0 0 80px color-mix(in srgb, var(--ht-a) 30%, transparent); animation: htIn 0.55s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes htIn { from { transform: translateY(40px) scale(0.92); opacity: 0; } }
+.ht-step { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 12px; }
+.ht-num { font-family: 'Lilita One', sans-serif; font-size: clamp(40px, 4vw, 72px); color: var(--ht-a); line-height: 1; }
+.ht-of { font-size: clamp(16px, 1.4vw, 24px); color: rgba(255, 255, 255, 0.7); }
+.ht-main { display: flex; gap: 2.4vw; align-items: center; }
+.ht-icon { font-size: clamp(80px, 8vw, 150px); line-height: 1; animation: bob 2s ease-in-out infinite; }
+.ht-main h2 { margin: 0 0 8px; font-family: 'Lilita One', sans-serif; font-weight: 400; font-size: clamp(34px, 3.4vw, 62px); color: var(--ht-a); }
+.ht-main p { margin: 0; font-size: clamp(22px, 2.1vw, 38px); line-height: 1.3; max-width: 26em; }
+.ht-phone { display: flex; flex-direction: column; align-items: center; gap: 10px; animation: htPhone 0.7s 0.25s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes htPhone { from { transform: translateX(60px) rotate(8deg); opacity: 0; } }
+.ht-ph { width: clamp(180px, 15vw, 260px); aspect-ratio: 9 / 18; border-radius: 34px; background: #0e0a1e; border: 6px solid #e8e3ff; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5); position: relative; padding: 26px 12px 16px; transform: rotate(-4deg); }
+.ht-ph-notch { position: absolute; top: 8px; left: 50%; width: 34%; height: 10px; margin-left: -17%; border-radius: 99px; background: #e8e3ff; }
+.ht-ph-screen { height: 100%; border-radius: 18px; background: linear-gradient(160deg, var(--ht-b), var(--ht-c)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 14px; color: #12082a; }
+.ht-ph-screen span { font-size: clamp(30px, 2.6vw, 48px); }
+.ht-ph-screen b { font-size: clamp(16px, 1.35vw, 24px); line-height: 1.25; }
+.ht-ph-label { font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; font-size: clamp(13px, 1vw, 18px); color: var(--ht-c); }
+.ht-go { text-align: center; animation: htIn 0.5s both; }
+.ht-go-icon { font-size: clamp(110px, 12vw, 220px); animation: bob 1.4s ease-in-out infinite; }
+.ht-go h2 { font-family: 'Lilita One', sans-serif; font-weight: 400; font-size: clamp(48px, 5vw, 96px); color: var(--ht-a); margin: 0; }
+.ht-foot { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ht-dots { display: flex; gap: 10px; }
+.ht-dots i { width: 14px; height: 14px; border-radius: 50%; background: rgba(255, 255, 255, 0.25); transition: all 0.3s; }
+.ht-dots i.on { background: var(--ht-a); transform: scale(1.4); }
+.ht-dots i.past { background: color-mix(in srgb, var(--ht-a) 60%, #fff); }
+.ht-ready { font-size: clamp(15px, 1.3vw, 22px); color: rgba(255, 255, 255, 0.85); }
+.ht-ready b { color: var(--ht-a); }
+/* Phone: the same step, with Got it. */
+.ph-ht { text-align: center; }
+.ph-ht .ph-ht-icon { font-size: 64px; line-height: 1; }
+.ph-ht h3 { margin: 6px 0; font-size: 24px; }
+.ph-ht .ph-ht-text { font-size: 18px; line-height: 1.35; }
+.ph-ht .ph-ht-do { margin: 12px 0; padding: 12px; border-radius: 14px; background: rgba(255, 210, 63, 0.16); border: 2px dashed rgba(255, 210, 63, 0.7); font-weight: 700; }
+.ph-ht .ph-ht-dots { display: flex; gap: 6px; justify-content: center; margin: 10px 0; }
+.ph-ht .ph-ht-dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255, 255, 255, 0.25); }
+.ph-ht .ph-ht-dots i.on { background: var(--yellow); }
+/* Fit shorter TVs (720–900px tall): scale by height too, and keep clear of the Start button. */
+.ht { padding-bottom: calc(3vh + 56px); }
+.ht-body { min-height: 0; }
+.ht-card { max-height: 100%; padding: clamp(18px, min(3vw, 4vh), 56px); gap: min(4vw, 5vh); }
+.ht-icon { font-size: min(clamp(80px, 8vw, 150px), 15vh); }
+.ht-main h2 { font-size: min(clamp(34px, 3.4vw, 62px), 6.5vh); }
+.ht-main p { font-size: min(clamp(22px, 2.1vw, 38px), 4vh); }
+.ht-ph { width: auto; height: min(46vh, 520px); padding: 22px 10px 12px; }
+.ht-ph-screen b { font-size: min(clamp(16px, 1.35vw, 24px), 2.6vh); }
+.ht-head h1 { font-size: min(clamp(36px, 4.4vw, 76px), 8vh); }
+.ht-ph { height: min(40vh, 460px); }
+.ht-body { overflow: hidden; padding: 8px 0; }
+.ht-foot { position: relative; z-index: 2; margin-top: 10px; }
+.ht-body { overflow: visible; }
+.ht-card { width: min(1500px, 100%); box-sizing: border-box; max-height: calc(100vh - 290px); }

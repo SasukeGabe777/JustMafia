@@ -56,11 +56,30 @@
   fetch('/api/info').then((r) => r.json()).then((info) => { baseUrl = info.baseUrl; renderLobby(); }).catch(() => {});
 
   // ---------- connection ----------
+  // The page opens on the title screen (Continue picks a saved town back up). It goes straight
+  // back in after a reload, with ?resume (sent here by JustGameBox) or after a dropped connection.
+  let firstConnect = true;
   socket.on('connect', () => {
-    const s = getSession();
-    if (s) socket.emit('host:resume', s, (r) => (r && r.ok ? enterGame() : showTitle()));
+    const s = getSession(), q = new URLSearchParams(location.search);
+    const nav = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
+    const straight = firstConnect ? q.has('resume') || !!(nav && nav.type === 'reload') : $('#title').hidden;
+    firstConnect = false;
+    if (q.has('resume')) history.replaceState(null, '', location.pathname);
+    if (s && straight) socket.emit('host:resume', s, (r) => (r && r.ok ? enterGame() : showTitle()));
     else showTitle();
   });
+  // Continue: the town saved on this screen.
+  $('#title-continue').addEventListener('click', () => {
+    const s = getSession(); if (!s) return showTitle();
+    SFX.unlock();
+    socket.emit('host:resume', s, (r) => {
+      if (r && r.ok) return enterGame();
+      setSession(null); showTitle(); toast('That town has closed. Start a new game.');
+    });
+  });
+  $('#title-how-btn').addEventListener('click', () => { const h = $('#title-how'); h.hidden = !h.hidden; $('#title-how-btn').setAttribute('aria-expanded', String(!h.hidden)); });
+  // For the JustGameBox bridge (mafia-box.js): the socket, the latest state and the toast.
+  window.MT_HOST = { socket, state: () => state, toast: (m) => toast(m), session: () => getSession() };
 
   socket.on('host:state', (st) => {
     clockOffset = st.serverNow - Date.now();
@@ -222,6 +241,8 @@
   socket.on('host:narration', (m) => { if (m.skip) { stopSpeaking(); $('#narration').hidden = true; } });
 
   function showTitle() {
+    const s = getSession();
+    $('#title-continue').hidden = !s; $('#title-code').textContent = s ? s.code : '';
     $('#title').hidden = false;
     $('#hud').hidden = true;
     $('#lobby').hidden = true;

@@ -7,117 +7,204 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/hub.css">
+  <link rel="stylesheet" href="/party/party.css">
 </head>
 <body>
+<!--
+  JustGameBox title screen.
+
+  HOW TO ADD A GAME TILE
+  Small games go in <section class="tiles small"> below (anywhere in the list; zombie stays last).
+  Copy one tile and keep the attributes in this order: class, href, data-game, data-best, data-lock:
+
+    <a class="tile live KEY" href="/box/tv?game=KEY" data-game="KEY" data-best="3-10">
+      <div class="art" aria-hidden="true"><span class="icon">🎲</span></div>
+      <div class="info"><h2>Game Name</h2><p>One short line that sells the game.</p>
+        <div class="meta"><span>👥 2–100 · best 3–10</span><span>⏱ 10–20 min</span><span>🎲 guess</span></div></div>
+    </a>
+
+  - The 👥 and ⏱ ranges are read by hub.js (player filter) and party/party.js (Party Mode).
+  - Add data-lock="KEY" (last attribute) if the game is unlockable (public/unlocks.js); while
+    locked it sits on the "🔒 Unlockables" shelf with its unlock hint.
+  - Shelf: hub.js puts each tile on a shelf by type. It uses data-type="cards|guess|bluff|know|creative|story"
+    if the tile has one (put it after data-lock), otherwise it reads the third chip (the type chip):
+    card/casino/money/auction → Cards & Casino, guess/trivia/quiz → Guessing, bluff/vote → Bluff & Voting,
+    know → Get to Know You, draw/creative/watch/meme/word → Creative, story/survival → Story.
+    Anything else lands on "More". Give it an art colour in hub.css: .tile.live.KEY .art { background: … }.
+  - The 3 big games stay in <section class="tiles big"> (exactly three).
+-->
   <div class="bg" aria-hidden="true"></div>
+  <div class="hub-gear"><button id="gear" title="Settings" aria-label="Settings">⚙️</button>
+    <div class="gear-menu" id="gear-menu" hidden>
+      <b>Settings</b>
+      <div class="vol-title">🔊 Volume</div>
+      <label class="vol"><span>🔈 Master</span><input type="range" id="master-vol" min="0" max="100"><output id="master-vol-o"></output></label>
+      <label class="vol"><span>🎵 Music</span><input type="range" id="music-vol" min="0" max="100"><output id="music-vol-o"></output></label>
+      <label class="vol"><span>✨ Effects</span><input type="range" id="sfx-vol" min="0" max="100"><output id="sfx-vol-o"></output></label>
+      <button id="mute-all">🔇 Mute everything</button>
+      <hr>
+      <button id="unlock-all">🔓 Unlock all games</button>
+      <button id="lock-all">🔒 Lock them again</button>
+      <small>For testing. Locked games normally open when you do what their tile says.</small>
+    </div></div>
   <main class="hub">
     <header class="hub-head">
-      <h1 class="logo"><span class="just">Just</span><span class="game">Game</span><span class="box">Box</span></h1>
-      <p class="tag">Party games for the big screen. Everyone plays from their phone.</p>
+      <div class="brand">
+        <h1 class="logo"><span class="just">Just</span><span class="game">Game</span><span class="box">Box</span></h1>
+        <p class="tag">Party games for the big screen. Everyone plays from their phone.</p>
+      </div>
+      <div class="head-actions">
+        <a class="continue" id="continue" hidden></a>
+        <button class="party-btn" id="party-open"><span class="pb-ic" aria-hidden="true">🎉</span><span class="pb-txt"><b>Party Mode</b><small>A whole night of games, picked for you</small></span></button>
+      </div>
     </header>
 
-    <!-- The big games on top; smaller games and empty slots (still to be chosen) below. -->
+    <a class="phone-join" href="/box/play">📱 On your phone? <b>Tap here to join a game</b></a>
+
+    <!-- The three big games. -->
     <section class="tiles big" id="tiles" aria-label="Featured games">
-      <a class="tile live mafia" href="/mafia" data-game="mafia">
+      <a class="tile live mafia" href="/mafia" data-game="mafia" data-best="8-20">
         <div class="art" aria-hidden="true"><span class="icon">🔪</span></div>
         <div class="info">
           <h2>JustMafia</h2>
           <p>Find the killers before they find you. A big-screen murder mystery.</p>
-          <div class="meta"><span>👥 5–100</span><span>⏱ 20–60 min</span><span>🕵️ Social deduction</span></div>
+          <div class="meta"><span>👥 5–100 · best 8–20</span><span>⏱ 20–60 min</span><span>🕵️ Social deduction</span></div>
         </div>
       </a>
-      <a class="tile live ducks" href="/ducks" data-game="ducks">
+      <a class="tile live ducks" href="/ducks" data-game="ducks" data-best="2-12">
         <div class="art" aria-hidden="true"><span class="icon">🦆</span></div>
         <div class="info">
           <h2>JustRaiseDucks</h2>
-          <p>Hatch a duckling, raise it on your farm with phone mini-games, and race up the leagues on the big screen.</p>
-          <div class="meta"><span>👥 1–100</span><span>⏱ 15–40 min</span><span>🏁 Racing</span></div>
+          <p>Hatch a duckling, raise it with phone mini-games, and race up the leagues.</p>
+          <div class="meta"><span>👥 1–100 · best 2–12</span><span>⏱ 15–40 min</span><span>🏁 Racing</span></div>
         </div>
       </a>
-      <a class="tile live kingdoms" href="/kingdoms" data-game="kingdoms">
+      <a class="tile live kingdoms" href="/kingdoms" data-game="kingdoms" data-best="5-10">
         <div class="art" aria-hidden="true"><span class="icon">🏰</span></div>
         <div class="info">
           <h2>JustKingdoms</h2>
-          <p>Grow a peasant village into an empire on one shared world map. Conquer, make peace, or launch a rocket.</p>
-          <div class="meta"><span>👥 2–100 (best 5–10)</span><span>⏱ 20–60 min</span><span>🗺️ Strategy</span></div>
+          <p>Grow a village into an empire on one shared map. Conquer, make peace, or launch a rocket.</p>
+          <div class="meta"><span>👥 2–100 · best 5–10</span><span>⏱ 20–60 min</span><span>🗺️ Strategy</span></div>
         </div>
       </a>
     </section>
+
+    <!-- More games: hub.js sorts these onto labelled shelves by type (see the note at the top). -->
+    <div class="more-head">
+      <h2 class="more-title">More games <small id="more-count"></small></h2>
+      <nav class="hub-tools" aria-label="Find a game">
+        <span class="lbl">How many of you?</span>
+        <div class="seg" id="count"><button data-n="0" class="on">Any</button><button data-n="2">2–3</button><button data-n="6">4–8</button><button data-n="14">9–20</button><button data-n="40">21+</button></div>
+        <button class="surprise" id="surprise">🎲 Surprise me</button>
+      </nav>
+    </div>
     <section class="tiles small" aria-label="More games">
-      <a class="tile live president" href="/box/tv?game=president" data-game="president">
+      <a class="tile live president" href="/box/tv?game=president" data-game="president" data-best="4-10">
         <div class="art" aria-hidden="true"><span class="icon">👑</span></div>
-        <div class="info">
-          <h2>President</h2>
-          <p>Climb from Scum to President. Beat the cards on the table and empty your hand first.</p>
-          <div class="meta"><span>👥 3–100</span><span>⏱ 15–30 min</span><span>🃏 Card game</span></div>
-        </div>
+        <div class="info"><h2>President</h2><p>Climb from Scum to President. Empty your hand first.</p>
+          <div class="meta"><span>👥 3–100 · best 4–10</span><span>⏱ 15–30 min</span><span>🃏 Card game</span></div></div>
       </a>
-      <a class="tile live blanks" href="/box/tv?game=blanks" data-game="blanks">
+      <a class="tile live blanks" href="/box/tv?game=blanks" data-game="blanks" data-best="4-10">
         <div class="art" aria-hidden="true"><span class="icon">🃏</span></div>
-        <div class="info"><h2>JustBlanks</h2><p>Fill in the blank with the funniest card (or write your own).</p>
-          <div class="meta"><span>👥 3–100</span><span>⏱ 15–30 min</span><span>😂 Party cards</span></div></div>
+        <div class="info"><h2>JustBlanks</h2><p>Fill in the blank with the funniest card.</p>
+          <div class="meta"><span>👥 3–100 · best 4–10</span><span>⏱ 15–30 min</span><span>😂 Party cards</span></div></div>
       </a>
-      <a class="tile live blackjack" href="/box/tv?game=blackjack" data-game="blackjack">
-        <div class="art" aria-hidden="true"><span class="icon">🃏</span></div>
-        <div class="info">
-          <h2>Blackjack Night</h2>
-          <p>The whole room against one dealer. Bet, hit, stand, and bet on your friends going bust.</p>
-          <div class="meta"><span>👥 1–100</span><span>⏱ 10–25 min</span><span>🪙 Casino</span></div>
-        </div>
+      <a class="tile live blackjack" href="/box/tv?game=blackjack" data-game="blackjack" data-best="2-12">
+        <div class="art" aria-hidden="true"><span class="icon">♠️</span></div>
+        <div class="info"><h2>Blackjack Night</h2><p>The whole room against one dealer.</p>
+          <div class="meta"><span>👥 1–100 · best 2–12</span><span>⏱ 10–25 min</span><span>🪙 Casino</span></div></div>
       </a>
-      <a class="tile live bid" href="/box/tv?game=bid" data-game="bid">
+      <a class="tile live bid" href="/box/tv?game=bid" data-game="bid" data-best="3-10">
         <div class="art" aria-hidden="true"><span class="icon">📦</span></div>
         <div class="info"><h2>JustBid</h2><p>Bid on mystery storage lockers. Treasure or trash?</p>
-          <div class="meta"><span>👥 1–100</span><span>⏱ 15–30 min</span><span>💰 Auction</span></div></div>
+          <div class="meta"><span>👥 1–100 · best 3–10</span><span>⏱ 15–30 min</span><span>💰 Auction</span></div></div>
       </a>
-      <a class="tile live price" href="/box/tv?game=price" data-game="price">
+      <a class="tile live price" href="/box/tv?game=price" data-game="price" data-best="2-20">
         <div class="art" aria-hidden="true"><span class="icon">💸</span></div>
-        <div class="info"><h2>Price Panic</h2><p>Guess what it costs. Closest wins, but go over and you bust!</p>
-          <div class="meta"><span>👥 1–100</span><span>⏱ 10–20 min</span><span>🎯 Guessing</span></div></div>
+        <div class="info"><h2>Price Panic</h2><p>Guess what it costs. Go over and you bust!</p>
+          <div class="meta"><span>👥 1–100 · best 2–20</span><span>⏱ 10–20 min</span><span>🎯 Guessing</span></div></div>
       </a>
-      <a class="tile live emoji" href="/box/tv?game=emoji" data-game="emoji">
+      <a class="tile live emoji" href="/box/tv?game=emoji" data-game="emoji" data-best="4-16">
         <div class="art" aria-hidden="true"><span class="icon">😜</span></div>
-        <div class="info"><h2>Emoji Charades</h2><p>Describe it with emojis only. Fewer emojis, more points.</p>
-          <div class="meta"><span>👥 3–100</span><span>⏱ 10–25 min</span><span>🧩 Guessing</span></div></div>
+        <div class="info"><h2>Emoji Charades</h2><p>Describe it with emojis only. Fewer is better.</p>
+          <div class="meta"><span>👥 3–100 · best 4–16</span><span>⏱ 10–25 min</span><span>🧩 Guessing</span></div></div>
       </a>
-      <a class="tile live truths" href="/box/tv?game=truths" data-game="truths">
+      <a class="tile live truths" href="/box/tv?game=truths" data-game="truths" data-best="4-10">
         <div class="art" aria-hidden="true"><span class="icon">🤥</span></div>
-        <div class="info"><h2>Two Truths & a Lie</h2><p>Type two truths and a lie on your phone. Can they spot it?</p>
-          <div class="meta"><span>👥 3–100</span><span>⏱ 10–25 min</span><span>🕵️ Bluffing</span></div></div>
+        <div class="info"><h2>Two Truths & a Lie</h2><p>Two truths and a lie. Can they spot it?</p>
+          <div class="meta"><span>👥 3–100 · best 4–10</span><span>⏱ 10–25 min</span><span>🕵️ Bluffing</span></div></div>
       </a>
-      <a class="tile live likely" href="/box/tv?game=likely" data-game="likely">
-        <div class="art" aria-hidden="true"><span class="icon">👑</span></div>
-        <div class="info"><h2>Most Likely To…</h2><p>Vote who fits the prompt. Read the room and collect titles.</p>
-          <div class="meta"><span>👥 3–100</span><span>⏱ 5–15 min</span><span>🗳️ Party voting</span></div></div>
+      <a class="tile live likely" href="/box/tv?game=likely" data-game="likely" data-best="6-20">
+        <div class="art" aria-hidden="true"><span class="icon">🏆</span></div>
+        <div class="info"><h2>Most Likely To…</h2><p>Vote who fits the prompt and collect titles.</p>
+          <div class="meta"><span>👥 3–100 · best 6–20</span><span>⏱ 5–15 min</span><span>🗳️ Party voting</span></div></div>
       </a>
-      <a class="tile live whosaid" href="/box/tv?game=whosaid" data-game="whosaid">
+      <a class="tile live whosaid" href="/box/tv?game=whosaid" data-game="whosaid" data-best="4-12">
         <div class="art" aria-hidden="true"><span class="icon">🕵️</span></div>
-        <div class="info"><h2>Who Said It?</h2><p>Anonymous answers to personal questions. Guess who wrote each one.</p>
-          <div class="meta"><span>👥 3–100</span><span>⏱ 10–20 min</span><span>💬 Get to know you</span></div></div>
+        <div class="info"><h2>Who Said It?</h2><p>Anonymous answers. Guess who wrote each one.</p>
+          <div class="meta"><span>👥 3–100 · best 4–12</span><span>⏱ 10–20 min</span><span>💬 Get to know you</span></div></div>
       </a>
-      <a class="tile live spectrum" href="/box/tv?game=spectrum" data-game="spectrum">
+      <a class="tile live spectrum" href="/box/tv?game=spectrum" data-game="spectrum" data-best="4-16">
         <div class="art" aria-hidden="true"><span class="icon">🧭</span></div>
-        <div class="info"><h2>Where Do You Stand?</h2><p>Place yourself on fun scales and find your twin in the room.</p>
-          <div class="meta"><span>👥 3–100</span><span>⏱ 10–20 min</span><span>💬 Get to know you</span></div></div>
+        <div class="info"><h2>Where Do You Stand?</h2><p>Place yourself on fun scales. Find your twin.</p>
+          <div class="meta"><span>👥 3–100 · best 4–16</span><span>⏱ 10–20 min</span><span>💬 Get to know you</span></div></div>
       </a>
-      <a class="tile live sketch" href="/box/tv?game=sketch" data-game="sketch">
+      <a class="tile live sketch" href="/box/tv?game=sketch" data-game="sketch" data-best="4-10">
         <div class="art" aria-hidden="true"><span class="icon">✏️</span></div>
-        <div class="info"><h2>JustSketch Relay</h2><p>Draw it, guess it, pass it on. Watch your prompt fall apart.</p>
-          <div class="meta"><span>👥 3–100</span><span>⏱ 10–20 min</span><span>🎨 Drawing</span></div></div>
+        <div class="info"><h2>JustSketch Relay</h2><p>Draw it, guess it, pass it on.</p>
+          <div class="meta"><span>👥 3–100 · best 4–10</span><span>⏱ 10–20 min</span><span>🎨 Drawing</span></div></div>
       </a>
-      <a class="tile live funny" href="/box/tv?game=funny" data-game="funny">
+      <a class="tile live funny" href="/box/tv?game=funny" data-game="funny" data-best="3-12">
         <div class="art" aria-hidden="true"><span class="icon">😂</span></div>
-        <div class="info"><h2>JustFunny</h2><p>A watch party: take turns putting funny videos on the TV. Boring? Skip it!</p>
-          <div class="meta"><span>👥 2–100</span><span>⏱ 15–45 min</span><span>🎬 Watch party</span></div></div>
+        <div class="info"><h2>JustFunny</h2><p>Take turns putting funny videos on the TV.</p>
+          <div class="meta"><span>👥 2–100 · best 3–12</span><span>⏱ 15–45 min</span><span>🎬 Watch party</span></div></div>
+      </a>
+      <a class="tile live plinko" href="/box/tv?game=plinko" data-game="plinko" data-best="2-10" data-lock="plinko">
+        <div class="art" aria-hidden="true"><span class="icon">🎯</span></div>
+        <div class="info"><h2>JustDrop</h2><p>A Plinko-style peg drop: pick your spot, draw one line to bend everyone’s luck, and chase the jackpot.</p>
+          <div class="meta"><span>👥 1–100 · best 2–10</span><span>⏱ 8–15 min</span><span>🎰 Casino drop</span></div></div>
+      </a>
+      <a class="tile live trivia" href="/box/tv?game=trivia" data-game="trivia" data-best="2-16" data-lock="trivia">
+        <div class="art" aria-hidden="true"><span class="icon">🧠</span></div>
+        <div class="info"><h2>Hot Take Trivia</h2><p>Fast trivia where you bet on how sure you are. 1× hunch, 2× sure, 3× HOT TAKE.</p>
+          <div class="meta"><span>👥 2–16 · best 2–16</span><span>⏱ 5–10 min</span><span>🧠 Quiz</span></div></div>
+      </a>
+      <a class="tile live colormatch" href="/box/tv?game=colormatch" data-game="colormatch" data-best="2-20" data-lock="colormatch">
+        <div class="art" aria-hidden="true"><span class="icon">🎨</span></div>
+        <div class="info"><h2>Color Match</h2><p>A colour flashes for three seconds. Mix it from memory on your phone. Closest match wins!</p>
+          <div class="meta"><span>👥 2–20 · best 2–20</span><span>⏱ 5–10 min</span><span>🎨 Guessing</span></div></div>
+      </a>
+      <a class="tile live memes" href="/box/tv?game=memes" data-game="memes" data-best="3-12" data-lock="memes">
+        <div class="art" aria-hidden="true"><span class="icon">🖼️</span></div>
+        <div class="info"><h2>Meme Maker</h2><p>Caption original meme templates on your phone, then vote for the funniest on the big screen.</p>
+          <div class="meta"><span>👥 3–100 · best 3–12</span><span>⏱ 5–15 min</span><span>🖼️ Memes</span></div></div>
+      </a>
+      <a class="tile live letters" href="/box/tv?game=letters" data-game="letters" data-best="3-10" data-lock="letters">
+        <div class="art" aria-hidden="true"><span class="icon">🔤</span></div>
+        <div class="info"><h2>Letter Rush</h2><p>Roll a letter, fill the list fast. Match anyone and it scores nothing!</p>
+          <div class="meta"><span>👥 2–100 · best 3–10</span><span>⏱ 8–15 min</span><span>🔤 Word game</span></div></div>
+      </a>
+      <a class="tile live summon" href="/box/tv?game=summon" data-game="summon" data-best="2-8">
+        <div class="art" aria-hidden="true"><span class="icon">⚔️</span></div>
+        <div class="info"><h2>JustSummon</h2><p>Summon troops, counter your rivals and push the battle line into their base. A tug-of-war of tactics.</p>
+          <div class="meta"><span>👥 2–100 · best 2–8</span><span>⏱ 10–20 min</span><span>⚔️ Battle</span></div></div>
+      </a>
+      <a class="tile live zombie" href="/box/tv?game=zombie" data-game="zombie" data-best="4-16" data-lock="zombie">
+        <div class="art" aria-hidden="true"><span class="icon">🧟</span></div>
+        <div class="info"><h2>Zombie Survival</h2><p>Grab the medkit, the gun or the rope… and hope you picked right. Who makes it to the last chopper?</p>
+          <div class="meta"><span>👥 2–100 · best 4–16</span><span>⏱ 15–25 min</span><span>🧟 Survival story</span></div></div>
       </a>
     </section>
 
     <footer class="hub-foot">
-      <p>Open this page on the TV or projector and pick a game. Players join on their phones at <b id="join-url">/play</b> with the room code.</p>
+      <p>Players join on their phones at <b id="join-url">/play</b> with the room code.</p>
       <p class="keys">Arrow keys to choose · Enter to play</p>
     </footer>
   </main>
   <script src="/sfx.js"></script>
+  <script src="/box/audio.js"></script>
+  <script src="/unlocks.js"></script>
   <script src="/hub.js"></script>
+  <script src="/party/party.js"></script>
 </body>
 </html>

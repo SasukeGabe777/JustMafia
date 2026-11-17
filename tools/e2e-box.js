@@ -13,6 +13,16 @@ if (!CHROME) { console.log('SKIP e2e-box: Chrome not found (set CHROME=path).');
 let passed = 0; const PAGES = [];
 const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
 
+// After the host presses Start, small games play an intro cutscene (game shows also collect
+// fun facts first). Check it's on the TV, then skip it from the TV.
+async function skipShow(tv) {
+  // The intro appears a moment after Start; give it a few seconds to show up.
+  try { await tv.until(`!!document.querySelector('#show-skip')`, 'intro', 5000); } catch { return; }
+  for (let i = 0; i < 4; i++) {
+    if (!(await tv.eval(`!!document.querySelector('#show-skip')`))) return;
+    await tv.eval(`(document.querySelector('#show-skip') || {}).click && document.querySelector('#show-skip').click(); true`); await wait(500);
+  }
+}
 async function setup(browser, game, settings = {}) {
   const tv = await browser.page();
   await tv.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
@@ -43,9 +53,11 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,JustBlanks,Blackjack Night,JustBid,Price Panic,Emoji Charades,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustSketch Relay,JustFunny');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,JustBlanks,Blackjack Night,JustBid,Price Panic,Emoji Charades,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustSketch Relay,JustFunny,JustSummon,JustDrop,Hot Take Trivia,Color Match,Meme Maker,Letter Rush,Zombie Survival');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
   assert.equal(await hub.eval(`document.querySelectorAll('.tile.empty').length`), 0, 'every slot is a game');
+  assert(await hub.eval(`document.querySelector('.tile.zombie').classList.contains('locked')`), 'Zombie Survival starts locked');
+  assert(await hub.eval(`!!document.querySelector('#party-open') && !!document.querySelector('#gear')`), 'Party Mode and ⚙ settings on the main menu');
   await hub.shot('box-hub');
   ok('Title screen: JustMafia and JustRaiseDucks big on top (plus a big coming-soon); President, Blackjack Night and four coming-soon slots below');
 
@@ -58,7 +70,7 @@ async function setup(browser, game, settings = {}) {
     const m = await browser.page(); await m.go(`${URL}/play?room=${code}`);
     await m.until(`location.pathname === '/box/play'`, 'redirect to the box phone page', 8000);
     ok('A box room code typed into JustMafia’s join page goes to the right game');
-    await tv.click('#start');
+    await tv.click('#start'); await skipShow(tv);
     await ph.until(`document.querySelectorAll('.pr-hand .pc').length > 5`, 'hand dealt', 8000);
     await tv.until(`!!document.querySelector('.pr-table')`, 'TV table');
     // Play one real turn from the phone.
@@ -81,7 +93,7 @@ async function setup(browser, game, settings = {}) {
   // ---------- Blackjack ----------
   {
     const { tv, ph } = await setup(browser, 'blackjack', { hands: 5 });
-    await tv.click('#start');
+    await tv.click('#start'); await skipShow(tv);
     await ph.until(`!!document.querySelector('[data-add="25"]')`, 'betting');
     await ph.click('[data-add="25"]'); await wait(200); await ph.click('[data-add="10"]'); await wait(200);
     await ph.until(`/Bet 35/.test(document.querySelector('#bj-bet').textContent)`, 'bet 35');
@@ -99,7 +111,8 @@ async function setup(browser, game, settings = {}) {
   {
     const { tv, ph } = await setup(browser, 'blanks', { mode: 'vote', toWin: 3 });
     await ph.until(`!!document.querySelector('[data-vip="start"]') && !document.querySelector('[data-vip="start"]').disabled`, 'host start button');
-    await ph.click('[data-vip="start"]'); // the first player is the host
+    await ph.click('[data-vip="start"]');
+    await skipShow(tv); // the first player is the host
     await ph.until(`document.querySelectorAll('.bl-card').length >= 7 || /Judge/.test(document.body.textContent)`, 'hand dealt', 8000);
     await ph.click('#bl-blank'); await ph.until(`!!document.querySelector('#bl-write')`, 'write box');
     await ph.eval(`(() => { const i = document.querySelector('#bl-write'); i.value = 'a goose with a briefcase'; i.oninput(); return true; })()`);
@@ -108,7 +121,7 @@ async function setup(browser, game, settings = {}) {
     if (need > 1) await ph.click('.bl-card:not(.sel)');
     await ph.until(`!document.querySelector('#bl-play').disabled`, 'play enabled');
     await ph.shot('box-blanks-hand'); await ph.click('#bl-play');
-    await ph.until(`/Played/.test(document.body.textContent)`, 'played'); // the round moves on by itself once everyone has played
+    await ph.until(`/played/i.test(document.body.textContent)`, 'played'); // the round moves on by itself once everyone has played
     await tv.until(`document.querySelectorAll('.bl-white').length >= 3`, 'answers on the TV', 40000);
     await tv.until(`/a goose with a briefcase/.test(document.body.textContent)`, 'the written card is on the TV', 40000);
     await tv.shot('box-blanks-tv');
@@ -123,6 +136,7 @@ async function setup(browser, game, settings = {}) {
     const { tv, ph } = await setup(browser, 'truths', { talk: 0, featured: 6 });
     await ph.until(`!!document.querySelector('[data-vip="start"]') && !document.querySelector('[data-vip="start"]').disabled`, 'host start button');
     await ph.click('[data-vip="start"]');
+    await skipShow(tv);
     await ph.until(`document.querySelectorAll('[data-i]').length === 3`, 'write form');
     await ph.eval(`(() => { const t = ['I have been to Iceland', 'I can play the banjo', 'I once ate a bug on purpose']; document.querySelectorAll('[data-i]').forEach((i, k) => { i.value = t[k]; i.oninput(); }); return true; })()`);
     await ph.click('[data-lie="1"]'); await ph.shot('box-truths-write'); await ph.click('#tt-send');
@@ -144,6 +158,7 @@ async function setup(browser, game, settings = {}) {
     const { tv, ph } = await setup(browser, 'funny', { maxSeconds: 60 });
     await ph.until(`!!document.querySelector('[data-vip="start"]') && !document.querySelector('[data-vip="start"]').disabled`, 'host start button');
     await ph.click('[data-vip="start"]');
+    await skipShow(tv);
     await ph.until(`!!document.querySelector('#fn-paste')`, 'pick screen');
     assert(await ph.eval(`document.querySelectorAll('[data-plat]').length === 4 || !!document.querySelector('#fn-go')`), 'search buttons for YouTube, Shorts, TikTok, Instagram');
     await ph.shot('box-funny-pick');
@@ -162,6 +177,7 @@ async function setup(browser, game, settings = {}) {
     const { tv, ph } = await setup(browser, game, {});
     await ph.until(`!!document.querySelector('[data-vip="start"]') && !document.querySelector('[data-vip="start"]').disabled`, game + ' host start');
     await ph.click('[data-vip="start"]');
+    await skipShow(tv);
     await tv.until(`!document.querySelector('#lobby-err') || !/#g-area/.test('') `, 'started');
     let shots = 0;
     for (let i = 0; i < 40; i++) {
@@ -268,7 +284,8 @@ async function setup(browser, game, settings = {}) {
         if (i === 18) await ph.shot('box-mini-' + game);
         i++; await wait(game === 'paddle' ? 90 : game === 'bugs' ? 120 : 380);
       }
-      await ph.until(`/XP/.test((document.querySelector('.dk-result') || {}).textContent || '')`, game + ' reward', 12000);
+      try { await ph.until(`/XP/.test((document.querySelector('.dk-result') || {}).textContent || '')`, game + ' reward', 15000); }
+      catch (e) { throw new Error(game + ' reward: the card says ' + JSON.stringify(await ph.eval(`(document.querySelector('.dk-result') || {}).textContent || '(no card)'`))); }
       scores[game] = await ph.eval(`Number((document.querySelector('.dk-result h2').textContent.match(/\\d+/) || [0])[0])`);
       await ph.click('.dk-result button');
     }

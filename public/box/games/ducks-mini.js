@@ -20,17 +20,23 @@
   function play(kind, seconds, duck, done, opts = {}) {
     const SP = opts.speed || 1, TARGET = opts.target || 0, DIFF = opts.diff || 'medium';
     const DL = { easy: '🌱 Easy', medium: '⚡ Medium', hard: '🔥 Hard' }[DIFF] || '';
+    // Hit windows: Easy forgives a little more, Hard a little less.
+    const EASE = { easy: 1.3, medium: 1, hard: 0.85 }[DIFF] || 1;
+    const seenKey = 'dk.seen.' + kind; let first = false;
+    try { first = !localStorage.getItem(seenKey); localStorage.setItem(seenKey, '1'); } catch { /* private mode */ }
     const ov = document.createElement('div'); ov.className = 'dk-over';
     ov.innerHTML = `<div class="dk-hud"><b class="sc">0</b><span class="mid">${DL}${TARGET ? ` · ⭐ ${TARGET}` : ''}${opts.best ? ` · best ${opts.best}` : ''}</span><span class="tm">${seconds}</span></div>
       <div class="dk-combo" hidden></div><div class="dk-banner" hidden></div>
       <canvas></canvas>${kind === 'paddle' ? '<div class="dk-pads"><button data-pad="L">LEFT</button><button data-pad="R">RIGHT</button></div>' : ''}
-      <div class="dk-tip">${TIPS[kind]}</div><div class="dk-ready">3</div>`;
-    document.body.appendChild(ov);
+      <div class="dk-tip ${first ? 'first' : ''}">${first ? '<b>How to play</b>' : ''}${TIPS[kind]}</div><div class="dk-ready">3</div>`;
+    document.body.appendChild(ov); document.body.classList.add('dk-lock');
+    const close = () => { ov.remove(); document.body.classList.remove('dk-lock'); };
     // iPhones start selecting text / show the magnifier on a held finger: stop that here.
     ov.addEventListener('touchstart', (e) => { if (!e.target.closest('button')) e.preventDefault(); }, { passive: false });
     const cv = ov.querySelector('canvas'), g = cv.getContext('2d');
-    cv.width = ov.clientWidth; cv.height = ov.clientHeight - (kind === 'paddle' ? 130 : 0);
-    const W = cv.width, H = cv.height, drawDuck = A().drawDuck, stageOf = (el) => (el < seconds / 3 ? 0 : el < (seconds * 2) / 3 ? 1 : 2);
+    const DPR = Math.min(2, window.devicePixelRatio || 1), W = ov.clientWidth, H = ov.clientHeight - (kind === 'paddle' ? 130 : 0);
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.flex = 'none'; g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const drawDuck = A().drawDuck, stageOf = (el) => (el < seconds / 3 ? 0 : el < (seconds * 2) / 3 ? 1 : 2);
     const SM = [1, 1.15, 1.32]; // speed per stage
     let score = 0, combo = 0, bestCombo = 0, t0 = 0, last = 0, over = false, holding = false, started = false, stage = 0;
     const stats = { ok: 0, perfect: 0, miss: 0 };
@@ -48,7 +54,7 @@
     function good(x, y, base = 1, perfect = false, label = '', noMult = false) {
       combo++; bestCombo = Math.max(bestCombo, combo);
       const mult = noMult ? 1 : combo >= 16 ? 3 : combo >= 8 ? 2 : 1, pts = (base + (perfect ? 1 : 0)) * mult;
-      score += pts; stats.ok++; if (perfect) stats.perfect++;
+      score += pts; stats.ok++; if (perfect) { stats.perfect++; buzz(12); }
       float(x, y, `${label || (perfect ? 'PERFECT' : '')} +${pts}`.trim(), perfect ? '#ffd23f' : base > 1 ? '#7fe0ff' : '#ffffff', perfect ? 26 : 22);
       burst(x, y, perfect ? '#ffd23f' : '#ffffff', perfect ? 12 : 6);
       BOX.sfx(perfect ? 'chime' : 'pop');
@@ -68,10 +74,11 @@
     const GAMES = {
       hurdles: {
         init() { S.ground = H * 0.72; S.y = S.ground; S.vy = 0; S.jumps = 0; S.scroll = 0; },
-        press() { if (S.jumps < 2) { S.vy = -H * (S.jumps ? 1.2 : 1.55); S.jumps++; BOX.sfx('pop'); } },
+        press() { if (S.jumps < 2) { S.vy = -H * (S.jumps ? 1.2 : 1.55); S.jumps++; S.buf = 0; BOX.sfx('pop'); } else S.buf = 0.16; }, // a tap just before landing still jumps
         update(dt, el) {
           const spd = W * 0.46 * SP * SM[stage] * (S.stun > 0 ? 0.45 : 1);
-          S.vy += H * 4.2 * dt; S.y = Math.min(S.ground, S.y + S.vy * dt); if (S.y >= S.ground) { S.vy = 0; S.jumps = 0; }
+          S.vy += H * 4.2 * dt; S.y = Math.min(S.ground, S.y + S.vy * dt); if (S.y >= S.ground) { S.vy = 0; S.jumps = 0; if (S.buf > 0) this.press(); }
+          S.buf = Math.max(0, (S.buf || 0) - dt);
           S.scroll += spd * dt; S.stun -= dt;
           S.spawn -= dt;
           if (S.spawn <= 0) {
@@ -87,7 +94,7 @@
             const near = Math.abs(it.x - dx) < 22;
             if (it.k === 'hurdle') {
               const top = S.ground - (it.tall ? 52 : 34);
-              if (near && !it.hit) { if (S.y > top + 6) { it.hit = true; S.stun = 0.6; bad(dx, S.ground - 60, 'Trip!'); } else it.clear = Math.min(it.clear == null ? 1e9 : it.clear, top - S.y); }
+              if (near && !it.hit) { if (S.y > top + 6 + (EASE - 1) * 24) { it.hit = true; S.stun = 0.6; bad(dx, S.ground - 60, 'Trip!'); } else it.clear = Math.min(it.clear == null ? 1e9 : it.clear, top - S.y); }
               if (!it.done && !it.hit && it.x < dx - 24) { it.done = true; good(dx, S.ground - 70, it.tall ? 2 : 1, it.clear < 30); }
             } else if (it.k === 'corn') {
               if (!it.done && near && Math.abs(S.y - 20 - it.y) < 30) { it.done = true; good(it.x, it.y, 1, false, '🌽'); }
@@ -163,8 +170,8 @@
             it.x -= W * 0.42 * SP * SM[stage] * dt;
             if (it.wob != null) it.y += Math.sin(el * 3 + it.wob) * 60 * dt;
             if (it.done || Math.abs(it.x - dx) > 12) continue;
-            if (it.cloud) { if (Math.abs(it.y - S.y) < 30) { it.done = true; S.vy = H * 0.4; bad(dx, S.y - 30, 'Bonk!'); } }
-            else if (Math.abs(it.y - S.y) < 28) { it.done = true; good(dx, S.y - 34, it.gold ? 2 : 1, Math.abs(it.y - S.y) < 10); }
+            if (it.cloud) { if (Math.abs(it.y - S.y) < 30 / EASE) { it.done = true; S.vy = H * 0.4; bad(dx, S.y - 30, 'Bonk!'); } }
+            else if (Math.abs(it.y - S.y) < 28 * EASE) { it.done = true; good(dx, S.y - 34, it.gold ? 2 : 1, Math.abs(it.y - S.y) < 10 * EASE); }
           }
           for (const it of S.items) if (!it.done && !it.cloud && it.x < dx - 20) { it.done = true; it.missed = true; quietMiss(); }
           S.items = S.items.filter((i) => i.x > -50);
@@ -219,7 +226,7 @@
         init() { S.cols = 3; S.rows = 4; },
         press(x, y, el) {
           let best = null, bd = 1e9;
-          for (const b of S.items) if (!b.hit) { const d = Math.hypot(b.x - x, b.y - y); if (d < b.r * 1.6 && d < bd) { bd = d; best = b; } }
+          for (const b of S.items) if (!b.hit) { const d = Math.hypot(b.x - x, b.y - y); if (d < b.r * 1.6 * EASE && d < bd) { bd = d; best = b; } }
           if (!best) { if (combo) { float(x, y, 'miss', '#ffffffaa', 16); quietMiss(); } return; } // empty taps only break the combo
           best.hit = true; best.ttl = 0.3;
           if (best.bee) bad(best.x, best.y, 'Ouch!', 1);
@@ -258,6 +265,7 @@
       },
     };
     const G = GAMES[kind]; G.init();
+    g.save(); G.draw(0); g.restore(); // the course is visible behind the countdown
 
     // ---- input ----
     const press = (e) => {
@@ -266,18 +274,19 @@
       if (G.press) G.press.call(G, x, y, (performance.now() - t0) / 1000);
     };
     const release = () => { holding = false; };
-    if (kind !== 'paddle') { cv.addEventListener('pointerdown', press); window.addEventListener('pointerup', release); }
+    if (kind !== 'paddle') { cv.addEventListener('pointerdown', press); window.addEventListener('pointerup', release); window.addEventListener('pointercancel', release); }
     else for (const b of ov.querySelectorAll('[data-pad]')) b.addEventListener('pointerdown', (e) => { e.preventDefault(); if (started && !over) G.pad(b.dataset.pad, (performance.now() - t0) / 1000); });
 
     // ---- 3, 2, 1, GO! ----
     const ready = ov.querySelector('.dk-ready');
-    let n = 3; BOX.sfx('tick');
+    let n = 3; BOX.sfx('tick'); const STEP = first ? 1000 : 520;
     const countdown = setInterval(() => {
       n--;
       if (n > 0) { ready.textContent = n; BOX.sfx('tick'); return; }
       clearInterval(countdown); ready.textContent = 'GO!'; BOX.sfx('start'); started = true; t0 = last = performance.now();
-      setTimeout(() => ready.remove(), 450); requestAnimationFrame(frame);
-    }, 450);
+      setTimeout(() => ready.remove(), 400); requestAnimationFrame(frame);
+      setTimeout(() => { const tp = ov.querySelector('.dk-tip'); if (tp) tp.classList.add('fade'); }, first ? 4000 : 2500);
+    }, STEP);
 
     function frame(now) {
       if (over) return;
@@ -303,17 +312,22 @@
       requestAnimationFrame(frame);
     }
     function finish() {
-      over = true; window.removeEventListener('pointerup', release);
+      over = true; window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release);
       const tip = ov.querySelector('.dk-tip'); if (tip) tip.remove();
       const card = document.createElement('div'); card.className = 'dk-result'; card.innerHTML = `<h2>Time! Score: ${score}</h2><p class="muted">Saving…</p>`;
       ov.appendChild(card);
       const line = `<p class="dk-stats">✅ ${stats.ok} · ✨ ${stats.perfect} perfect · 🔗 best combo ${bestCombo}${stats.miss ? ` · 💥 ${stats.miss}` : ''}</p>`;
       done(score, (r) => {
         const SK = { run: 'Run', swim: 'Swim', fly: 'Fly', climb: 'Climb', stamina: 'Stamina' };
-        card.innerHTML = r && r.ok ? `${r.wipeout ? '<div class="dk-badge bad">💥 WIPEOUT</div>' : r.star ? '<div class="dk-badge good">⭐ TARGET HIT</div>' : ''}<h2>Score ${r.score}</h2>${line}<p class="dk-gain"><b>+${r.xp}</b> XP · <b>+${r.coins}</b> 🪙</p>${r.newBest ? '<p class="lvup">🏅 New personal best!</p>' : ''}${r.streak > 1 ? `<p>🔥 Streak ×${r.streak} (+${Math.min(6, r.streak) * 5}% XP)</p>` : ''}${r.levelUp ? `<p class="lvup">LEVEL UP! ${SK[r.stat]} is now level ${r.levelUp} 🎉</p>` : ''}<button class="btn big">Back to my farm</button>`
+        const pr = r && r.progress, bar = pr ? `<div class="dk-xpbar"><span>${SK[r.stat]} Lv ${pr.level}</span><div class="bar"><i style="width:${Math.round(((pr.have - pr.gained) / pr.need) * 100)}%"></i><i class="gain" style="width:${Math.round((pr.gained / pr.need) * 100)}%"></i></div><small>${pr.need - pr.have} XP to Lv ${pr.level + 1}</small></div>` : '';
+        const again = opts.again ? '<button class="btn ghost dk-again">↻ Again</button>' : '';
+        if (r && r.practice) card.innerHTML = `<div class="dk-badge good">🎮 PRACTICE</div><h2>Score ${score}</h2>${line}<p class="muted">In the game a run like this earns XP and coins for your duck.</p><div class="dk-resbtns"><button class="btn big">Done</button>${again}</div>`;
+        else card.innerHTML = r && r.ok ? `${r.wipeout ? '<div class="dk-badge bad">💥 WIPEOUT</div>' : r.star ? '<div class="dk-badge good">⭐ TARGET HIT</div>' : ''}<h2>Score ${r.score}</h2>${line}<p class="dk-gain"><b>+${r.xp}</b> XP · <b>+${r.coins}</b> 🪙</p>${r.newBest ? '<p class="lvup">🏅 New personal best!</p>' : ''}${r.streak > 1 ? `<p>🔥 Streak ×${r.streak} (+${Math.min(6, r.streak) * 5}% XP)</p>` : ''}${r.levelUp ? `<p class="lvup">LEVEL UP! ${SK[r.stat]} is now level ${r.levelUp} 🎉</p>` : ''}${bar}<div class="dk-resbtns"><button class="btn big">Back to my farm</button>${again}</div>`
           : `<h2>Score ${score}</h2>${line}<p>${BOX.esc((r && r.error) || 'Not saved.')}</p><button class="btn big">Back</button>`;
         BOX.sfx(r && r.wipeout ? 'boo' : r && (r.levelUp || r.newBest) ? 'win' : 'chime');
-        card.querySelector('button').onclick = () => ov.remove();
+        card.querySelector('button').onclick = close;
+        const ag = card.querySelector('.dk-again'); if (ag) ag.onclick = () => { close(); opts.again(); };
+        if (r && r.levelUp) buzz([30, 40, 60]);
       });
     }
     return ov;

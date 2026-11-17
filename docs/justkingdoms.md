@@ -38,6 +38,8 @@ Best with 5–10 players; must keep working up to 100. All art is drawn in code;
 
 ## 4. Ages (the "farmer to empire" climb)
 Upgrading the **Castle** advances your age and unlocks things. Costs and build times:
+(Costs below are the v1 numbers; the current costs and the time-limit pace are in §13b.)
+
 | Age | Castle | Cost | Time | Unlocks |
 |---|---|---|---|---|
 | 1 Hamlet | Lv1 | — | — | Farm, Houses, Lumber Camp, Militia, Scout |
@@ -145,6 +147,41 @@ attacked) attacks a reachable weaker tile. Bots accept alliances from neighbours
   🗺️ Map (your area of the map: tap a tile → actions), 🤝 Diplomacy (kingdoms list, alliances,
   gifts, trade, messages), 🔬 Research. Big buttons, clear costs (greyed if unaffordable, with what's
   missing), a notifications feed ("⚔️ Sam is marching on your village! 0:24").
+
+## 13b. Upgrade v2: pacing, comebacks, table diplomacy, guidance (as built)
+- **Pacing.** Base worker yield 0.45/s. Age costs: 2 = 160🌾 160🪵 (45 s); 3 = 450🌾 400🪵 250🪨 (75 s);
+  4 = 900🌾 750🪵 650🪨 500🪙 (100 s); 5 = 1500🌾 1300🪵 1300🪨 1200🪙 500🔬 (120 s). Ages 3–5, the Launch Pad,
+  rocket stages (cost and time) and the Peace Monument scale with the time limit (**pace**: 20 min ×0.55,
+  30 ×1, 45 ×1.6, 60 ×2.2). Bot-only timeline, 8 kingdoms, 30 min (seeds 7/11/13): Age 2 ≈ 3.3 min,
+  Age 3 first ≈ 6.5 (median ≈ 7), Age 4 first ≈ 12–13 (median ≈ 14–15), Age 5 first ≈ 18–21 (median ≈ 22–24),
+  wins at 23–30 min (science or peace) or on time.
+- **Royal Decrees** (a guided path for first-timers, 11 steps: put everyone to work → Houses → 6 peasants →
+  Age 2 → a village → 6 soldiers → Age 3 → Library → a friend → Age 4 → pick a victory). One is active;
+  finishing it pays a small reward at once. The phone's goal card shows it with a one-tap button.
+- **Auto workers** (`jobs {auto:true}`): the steward spreads every peasant toward the next age with food covered.
+  **Recall** brings every soldier on villages/land back to the capital.
+- **Comebacks.** Underdog bonus: after minute 3, a kingdom below 75% of the leader's score produces up to
+  +40% ((0.75 − ratio) × 0.8). The people rise: losing a village gives 2+age/2 free Militia at the capital,
+  losing the capital 3+age (max 6 times a game). Rebels need only 75% of the liege's capital defence.
+  **Coalition:** a kingdom holding ≥3 capitals and ≥30% of them (or, after minute 10, scoring ≥1.6× the
+  runner-up) is marked 🎯: everyone else gets +20% attack against its land.
+- **Royal Council** (≥3 kingdoms): at minute 7, then every 5.5 min, a 40 s vote on the phones, one vote each,
+  not yourself, changeable. Motions alternate: 🏅 Royal Grant (winner gets (80+60×age) gold and stone;
+  ties → the lowest score) and ⚖️ Sanctions (−30% production for 2 min; ties → the highest score). Bots vote
+  for the leader / whoever hit them, and grant to friends or the weakest.
+- **Bounties:** put ≥50 gold (escrowed) on a kingdom that isn't your ally; whoever takes one of its villages or
+  its capital collects every bounty on it; unclaimed bounties return after 5 minutes. Shown on the TV.
+- **Peace needs to hold:** contributing to the monument needs Age 4; need = 400 × max(4, kingdoms) × pace.
+  When every free kingdom is in one alliance and the monument is complete, a 60 s countdown starts; anyone
+  leaving the alliance breaks it. Bots won't join a bloc of over half the free kingdoms before 70% of the time.
+- **Final 3 minutes** are announced on the TV and phones. New awards: 💰 Bounty Hunter, 🔥 Comeback Kid.
+- **TV:** right-hand column with the live council vote, ⚔️ attacks on capitals/villages with countdowns, and
+  🏆 the race (conquest / monument or peace countdown / best rocket / score); alliance threads and red war
+  lines between capitals, 👑 over the score leader, 🎯 over a coalition target, 💰 bounty and ⚖️ sanction
+  badges, avatars; ribbons for first-to-age, council results, coalitions, bounties, peace holds/breaks.
+- **Phone:** updates in place with BOX.morph (the map canvas lives in a data-keep slot); council banner →
+  two-tap vote; status tags (🔥 underdog, ⚖️ sanctioned, 🎯 coalition, 💰 bounty); 💰 Bounty sheet.
+- `results()` returns player ids best-first (winners, then score) once the game is over.
 
 ## 14. State contract (server ↔ screens)
 Server module `box/games/kingdoms.js`, key `kingdoms`, `liveLobby: true`, `standalone` on the client.

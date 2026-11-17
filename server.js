@@ -43,7 +43,9 @@ const server = http.createServer(app);
 const io = new Server(server, { pingInterval: 10000, pingTimeout: 20000, perMessageDeflate: { threshold: 1024 }, httpCompression: { threshold: 1024 } });
 const rooms = new Map();
 // JustGameBox's other games (President, Blackjack Night, JustRaiseDucks) share the code space.
-const box = require('./box').installBox(app, io, { takenElsewhere: (c) => rooms.has(c) });
+// JustMafia can be picked from a box room (and Party Mode): the bridge opens a town for it.
+let bridge = null;
+const box = require('./box').installBox(app, io, { takenElsewhere: (c) => rooms.has(c), external: { mafia: (b) => bridge.fromBox(b) } });
 
 // JustGameBox: the title screen picks a game; JustMafia's big screen lives at /mafia.
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'hub.html')));
@@ -100,6 +102,9 @@ function newCode() {
   while (rooms.has(c) || box.has(c));
   return c;
 }
+
+// JustMafia ⇄ JustGameBox: moving the whole group between the two (mafia-bridge.js).
+bridge = require('./mafia-bridge').createBridge({ io, rooms, box, createMafiaRoom: () => { const room = new Room(newCode(), io, { profiles }); rooms.set(room.code, room); return room; } });
 
 const findRoom = (code) => rooms.get(String(code || '').trim().toUpperCase());
 // Customizing and shopping are lobby-only: once a game starts, a profile seated in
@@ -182,7 +187,21 @@ io.on('connection', (socket) => {
     if (!room || room.hostKey !== msg.hostKey) return reply(cb, { ok: false });
     attachHost(room);
     reply(cb, { ok: true, code: room.code });
+    bridge.hostAttached(socket, room);
     room.sync();
+  });
+  // JustGameBox from the big screen: take everyone to another game, or back to the party.
+  socket.on('host:toBox', (msg = {}, cb) => {
+    const { room } = ctx();
+    if (!room || socket.data.kind !== 'host') return reply(cb, { ok: false, error: 'Only the big screen can do that.' });
+    if (!['lobby', 'gameover'].includes(room.phase)) return reply(cb, { ok: false, error: 'Finish this game first (or go back to the lobby).' });
+    reply(cb, bridge.toBox(room, String(msg.game || ''), Array.isArray(msg.unlocks) ? msg.unlocks.slice(0, 20) : []));
+  });
+  socket.on('host:boxBack', (_msg, cb) => {
+    const { room } = ctx();
+    if (!room || socket.data.kind !== 'host') return reply(cb, { ok: false, error: 'Only the big screen can do that.' });
+    if (!['lobby', 'gameover'].includes(room.phase)) return reply(cb, { ok: false, error: 'Finish this game first (or go back to the lobby).' });
+    reply(cb, bridge.back(room));
   });
 
   socket.on('host:action', (msg, cb) => {
@@ -351,6 +370,7 @@ io.on('connection', (socket) => {
     if (!p || p.left) return reply(cb, { ok: false });
     attachPlayer(room, p);
     reply(cb, { ok: true, code: room.code, playerId: p.id });
+    bridge.playerAttached(socket, room, p); // the group moved on to a box game while this phone was away
   });
 
   socket.on('player:profile', (msg = {}) => { const { room, p } = ctx(); if (p && room.phase === 'lobby') { room.updateProfile(p, { name: msg.name, avatar: lookFor(room, p.profileId, msg.avatar || p.avatar) }); if (p.profileId) profiles.select(p.profileId, p.avatar); } });

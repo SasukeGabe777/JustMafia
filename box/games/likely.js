@@ -5,6 +5,7 @@
 // vote matched the room, +150 for a correct prediction. Every 5th prompt is a HOT SEAT (one
 // player, "Would they actually…?" yes/no) and some are DOUBLE TROUBLE (pick two people).
 // With anonymous voting the TV only ever shows totals; tallies are never sent before the reveal.
+// The last prompt is the FINAL: all its points count double, so anyone can still catch up.
 // Most Likely To… prompt packs (all original). Each pack has:
 //   classic: finishes "Who’s most likely to …?"            (title: "Most likely to …")
 //   pair:    finishes "Which TWO are most likely to …?"     (title: "Most likely to … (with X)")
@@ -35,12 +36,16 @@ const PACKS = {
       'win a three-legged race', 'pull off a movie-style heist', 'go viral with a dance duet', 'start a podcast nobody listens to',
       'become roommates and fight over dishes', 'solve a mystery together', 'get banned from the same arcade', 'survive a desert island together',
       'win a reality show as a team', 'open a very weird museum together',
+      'finish each other’s sentences', 'win a couples dance contest', 'build a blanket fort and live in it', 'get matching haircuts by accident',
+      'invent a brand-new holiday', 'enter a pie-eating contest together',
     ],
     hot: [
       'eat a bug for $100', 'go a whole week without their phone', 'sing karaoke solo in front of strangers', 'go skydiving',
       'shave their head for charity', 'move to another country tomorrow', 'spend a night alone in a haunted house', 'give up coffee for a month',
       'eat the same meal every day for a month', 'go on a reality show', 'swim with sharks', 'camp alone in the woods for a weekend',
       'give a speech in a packed stadium', 'read a 1,000-page book', 'wake up at 5 a.m. every day for a year',
+      'eat dessert for every meal for a week', 'learn a whole dance routine by tomorrow', 'go a month without buying anything new', 'try stand-up comedy for one night',
+      'adopt a pet tomorrow', 'run a marathon next year',
     ],
   },
   wild: {
@@ -67,12 +72,16 @@ const PACKS = {
       'get kicked out of a club together', 'elope in Las Vegas', 'start a karaoke rivalry', 'take a spontaneous trip to another country',
       'get matching tattoos', 'crash a wedding together', 'become a famous prank duo', 'end up in a viral fail video',
       'stay out until sunrise', 'run off to join the circus', 'start a rival group chat', 'get lost at a music festival together',
+      'start a food truck that only sells dessert', 'win a talent show with a terrible act', 'accidentally go viral at a wedding', 'get stranded on the wrong train',
+      'sneak into a fancy gala', 'start a dramatic friendly rivalry',
     ],
     hot: [
       'text their ex right now', 'dye their hair neon green', 'do stand-up at an open mic', 'go on a blind date picked by this room',
       'let this room post one photo on their socials', 'jump into a freezing lake', 'eat the world’s hottest pepper', 'get a tattoo of a cartoon character',
       'propose on a stadium jumbotron', 'crash a stranger’s party', 'wear a costume to work for a whole week', 'quit their job to travel the world',
       'sing on a busy street for tips', 'let a stranger cut their hair', 'show this room their screen time',
+      'sing the national anthem at a ballgame', 'wear a full clown costume to brunch', 'eat a spoonful of hot sauce right now', 'go on stage at a comedy club tonight',
+      'learn to fire-dance', 'post a baby photo of themselves',
     ],
   },
   work: {
@@ -99,12 +108,16 @@ const PACKS = {
       'co-found a startup', 'get stuck in the longest meeting ever', 'become the office power duo', 'win team-building trivia night',
       'take over the break room', 'accidentally delete the shared drive', 'plan the best office party ever', 'get caught gossiping on a hot mic',
       'start a desk-plant empire', 'run the company together one day', 'win the office bake-off', 'invent a secret team handshake',
+      'win the office holiday decorating contest', 'host a lunch-and-learn nobody forgets', 'build a desk fort over a weekend', 'run the best team offsite ever',
+      'win a paper-airplane contest', 'start an office band',
     ],
     hot: [
       'quit on the spot after a lottery win', 'present without any slides', 'answer work emails on vacation', 'take a pay cut for a four-day week',
       'dress up for costume day', 'eat lunch at their desk every day', 'be first on the dance floor at the office party', 'show up to a 7 a.m. meeting voluntarily',
       'say yes to being boss for a day', 'move their desk right next to the printer', 'lead a karaoke night with the team', 'keep their camera on for every call',
       'take the stairs to the top floor every day', 'volunteer to run the fire drill', 'give up meetings forever',
+      'give a toast at the company party', 'switch jobs with the boss for a week', 'bring a homemade cake every Friday', 'go a full week without a single meeting',
+      'learn a new language for a work trip', 'run the next all-hands meeting',
     ],
   },
   family: {
@@ -131,12 +144,16 @@ const PACKS = {
       'build the biggest sandcastle', 'get into trouble at a sleepover', 'win the egg-and-spoon race', 'start a lemonade empire',
       'go on a treasure hunt', 'build a treehouse', 'eat a whole pizza between them', 'get lost at the theme park',
       'put on a puppet show', 'bake a giant cake', 'start a secret club', 'become a superhero team',
+      'win the three-legged race', 'build the best snowman on the block', 'bake the world’s biggest cookie', 'put on a backyard circus',
+      'find a hidden treasure map', 'train the family pet a new trick',
     ],
     hot: [
       'eat broccoli ice cream', 'go a whole day without screens', 'sleep in a tent in the backyard', 'ride the scariest roller coaster',
       'hold a snake', 'jump into a leaf pile in their nicest clothes', 'eat pickles dipped in chocolate', 'perform in a talent show',
       'clean their room without being asked', 'give away their favorite toy', 'go a week without dessert', 'dance in front of the whole school',
       'pet a stingray at the aquarium', 'wear socks with sandals in public', 'try a food they’ve never heard of',
+      'taste a lemon without making a face', 'sing a song to the whole family', 'try every flavor at the ice cream shop', 'sleep with all the lights off',
+      'eat a whole raw onion slice', 'tell a joke at dinner tonight',
     ],
   },
 };
@@ -151,7 +168,7 @@ const fields = [
 ];
 const defaults = { pack: 'classic', rounds: 15, voteSeconds: 20, selfVote: false, reveal: 'anon' };
 const INTRO_MS = 3500, BONUS_INTRO_MS = 5500, DRUM_MS = 3000, REVEAL_MS = 9000, FINAL_REVEAL_MS = 10000;
-const MATCH = 100, PREDICT = 150, SEAT_SELF = 100;
+const MATCH = 100, PREDICT = 150, SEAT_SELF = 100, FINAL_MULT = 2;
 const TV_TOP = 6; // the TV shows the top vote-getters only
 const kindOf = (n) => (n % 5 === 0 ? 'hot' : n % 5 === 3 ? 'pair' : 'classic');
 
@@ -202,7 +219,7 @@ class Likely {
     this.r = { n: this.n, kind, text: this.draw(kind), ids, votes: new Map(), preds: new Map(), skipped: new Set(), seat: null, result: null, gained: new Map() };
     if (kind === 'hot') this.r.seat = this.pickSeat(ids);
     this.phase = 'intro'; this.last = null;
-    this.room.fx(kind === 'classic' ? 'prompt' : 'bonus', { kind });
+    this.room.fx(this.isFinal() ? 'final' : kind === 'classic' ? 'prompt' : 'bonus', { kind });
     this.setTimer(kind === 'classic' ? INTRO_MS : BONUS_INTRO_MS, () => this.openVote());
   }
   openVote() {
@@ -277,8 +294,10 @@ class Likely {
     if (this.room.rng() < 0.9) this.act(p, { op: 'predict', id: this.weighted(this.r.ids.filter((id) => this.room.get(id))) }); else this.act(p, { op: 'skip' });
   }
 
+  isFinal() { return this.n >= this.s.rounds && this.s.rounds >= 3; }
   add(id, pts, stat) {
     if (!this.scores.has(id)) return;
+    if (this.isFinal()) pts *= FINAL_MULT;
     this.scores.set(id, this.scores.get(id) + pts);
     this.r.gained.set(id, (this.r.gained.get(id) || 0) + pts);
     if (stat) this.stats.get(id)[stat]++;
@@ -318,7 +337,7 @@ class Likely {
       const partners = winners.filter((x) => x !== id).map((x) => this.room.name(x));
       this.giveTitle(id, r.kind === 'pair' && partners.length ? `${title} (with ${partners.join(' & ')})` : title);
     }
-    r.result = { kind: r.kind, winners, ranked, voters, total: r.votes.size, title };
+    r.result = { kind: r.kind, winners, ranked, voters, total: r.votes.size, title, count };
   }
   scoreHot() {
     const r = this.r; let yes = 0, no = 0, seatSaid = null;
@@ -355,8 +374,10 @@ class Likely {
   }
 
   // ---- public / private state ----
-  pub(id) { const p = this.room.get(id); return p ? { id, name: p.name, color: p.color } : { id, name: '—', color: '#888' }; }
-  standings() { return [...this.scores].filter(([id]) => this.room.get(id)).map(([id, pts]) => ({ id, name: this.room.name(id), color: this.room.get(id).color, points: pts, titles: this.titles.get(id).length })).sort((a, b) => b.points - a.points || b.titles - a.titles); }
+  pub(id) { const p = this.room.get(id); return p ? { id, name: p.name, avatar: p.avatar || null, color: p.color } : { id, name: '—', avatar: null, color: '#888' }; }
+  standings() { return [...this.scores].filter(([id]) => this.room.get(id)).map(([id, pts]) => ({ id, name: this.room.name(id), avatar: this.room.get(id).avatar || null, color: this.room.get(id).color, points: pts, titles: this.titles.get(id).length })).sort((a, b) => b.points - a.points || b.titles - a.titles); }
+  // Player ids best-first once the game is over (for the party scoreboard across games).
+  results() { return this.phase === 'over' ? this.standings().map((x) => x.id) : []; }
   publicResult() {
     const r = this.r, res = r && r.result;
     if (!res || (this.phase !== 'reveal' && this.phase !== 'over')) return null;
@@ -375,7 +396,7 @@ class Likely {
   finalState() {
     if (this.phase !== 'over') return null;
     const st = this.standings();
-    const hall = st.map((x) => ({ name: x.name, color: x.color, titles: this.titles.get(x.id) })).sort((a, b) => b.titles.length - a.titles.length);
+    const hall = st.map((x) => ({ name: x.name, avatar: x.avatar, color: x.color, titles: this.titles.get(x.id) })).sort((a, b) => b.titles.length - a.titles.length);
     const best = (fn) => { let top = 0, who = []; for (const x of st) { const v = fn(x.id); if (v > top) { top = v; who = [x.name]; } else if (v === top && v > 0) who.push(x.name); } return top ? { names: who.slice(0, 4), value: top } : null; };
     const awards = {
       reader: best((id) => this.stats.get(id).matched),
@@ -390,7 +411,7 @@ class Likely {
     return {
       phase: this.phase, endsIn: this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0,
       n: this.n, total: this.s.rounds, kind: r ? r.kind : null, text: r ? r.text : '', seat: r && r.seat ? this.pub(r.seat) : null,
-      anon: this.s.reveal !== 'public', selfVote: !!this.s.selfVote,
+      anon: this.s.reveal !== 'public', selfVote: !!this.s.selfVote, last: this.phase !== 'over' && this.isFinal(), mult: FINAL_MULT,
     };
   }
   tv() {
@@ -412,7 +433,7 @@ class Likely {
     if (res && r) {
       const g = r.gained.get(p.id) || 0;
       mine = { gained: g, won: (r.result.winners || []).includes(p.id), vote: r.votes.has(p.id) ? r.votes.get(p.id) : null, pred: r.preds.has(p.id) ? r.preds.get(p.id) : null };
-      if (r.kind !== 'hot') { const win = new Set(r.result.winners); mine.matched = mine.vote != null && [].concat(mine.vote).some((id) => win.has(id)); mine.foresaw = mine.pred != null && win.has(mine.pred); }
+      if (r.kind !== 'hot') { mine.got = (r.result.count && r.result.count.get(p.id)) || 0; const win = new Set(r.result.winners); mine.matched = mine.vote != null && [].concat(mine.vote).some((id) => win.has(id)); mine.foresaw = mine.pred != null && win.has(mine.pred); }
       else { const v = r.result.verdict; mine.matched = mine.vote != null && v !== null && mine.vote === v; mine.foresaw = mine.pred != null && (p.id === r.seat ? v !== null && mine.pred === v : r.result.seatSaid !== null && mine.pred === r.result.seatSaid); }
     }
     return {
@@ -427,7 +448,7 @@ class Likely {
 }
 
 module.exports = {
-  key: 'likely', name: 'Most Likely To…', min: 3, fields, defaults,
+  key: 'likely', name: 'Most Likely To…', min: 3, best: [6, 20], fields, defaults,
   create: (room, settings) => new Likely(room, settings),
   _test: { PACKS, kindOf, MATCH, PREDICT },
 };

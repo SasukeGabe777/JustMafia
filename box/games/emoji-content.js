@@ -15,9 +15,81 @@ const CATEGORIES = [
   { key: 'phrases', label: 'Sayings & Phrases', icon: '💬' },
   { key: 'sports', label: 'Sports & Games', icon: '🏆' },
   { key: 'party', label: 'Party Stuff', icon: '🎉' },
+  { key: 'home', label: 'Around the House', icon: '🏠' },
+  { key: 'holidays', label: 'Holidays & Seasons', icon: '🎄' },
 ];
 
+// Answers left out when the host picks "Family-friendly answers" (grown-up shows and games).
+const GROWN_UP = new Set(['Breaking Bad', 'The Godfather', 'Squid Game', 'The Matrix', 'Snakes on a Plane', 'Game of Thrones', 'Spin the Bottle', 'Truth or Dare', 'Las Vegas', 'Tattoo Artist', 'Sharknado', 'Bite the Bullet']);
+
 const ANSWER_TEXT = {
+  home: `
+Alarm Clock | 1 | ⏰ 🔔
+Toothbrush | 1 | 🦷 🧹 | tooth brush
+Bathtub | 1 | 🛁 | bath tub; bath
+Doorbell | 1 | 🚪 🔔 | door bell
+Teddy Bear | 1 | 🧸 | teddy
+Umbrella | 1 | ☂️ 🌧️
+Toilet Paper | 1 | 🚽 🧻 | loo roll
+Couch | 1 | 🛋️ | sofa
+Light Bulb | 1 | 💡 | lightbulb
+Candle | 1 | 🕯️
+Front Door | 1 | 🚪 🏠 | door
+Rubber Duck | 1 | 🦆 🛁 | rubber ducky
+Keys | 1 | 🔑 🗝️ | key; house keys
+Bunk Bed | 2 | 🛏️ ⬆️ 🛏️ | bunk beds
+Washing Machine | 2 | 👔 💧 🌀 | washer
+Vacuum Cleaner | 2 | 🧹 💨 | vacuum; hoover
+Fire Alarm | 2 | 🔥 🔔 ⚠️ | smoke alarm; smoke detector
+Mailbox | 2 | ✉️ 📦 | letterbox; post box
+TV Remote | 2 | 📺 🕹️ | remote; remote control
+Rocking Chair | 2 | 🤘 🪑 | rocker
+Frying Pan | 2 | 🍳 | pan; skillet
+Refrigerator | 2 | ❄️ 🥛 🧀 | fridge
+Doghouse | 2 | 🐶 🏠 | dog house; kennel
+Piggy Bank | 2 | 🐷 🏦 | piggybank
+Toolbox | 2 | 🔨 🔧 📦 | tool box
+Night Light | 2 | 🌙 💡 | nightlight
+Bookshelf | 2 | 📚 ⬆️ | bookcase; book shelf
+Snow Globe | 3 | ❄️ 🔮 | snowglobe
+Garden Hose | 3 | 🌻 💧 🐍 | hose
+Cuckoo Clock | 3 | 🐦 ⏰ 🤪
+Hammock | 3 | 🌴 😴 🌴
+Junk Drawer | 3 | 💩 📦 🔑 📎 | messy drawer
+`,
+  holidays: `
+Christmas Tree | 1 | 🎄 | xmas tree
+Snowman | 1 | ⛄ | snow man
+Easter Egg | 1 | 🐰 🥚
+Halloween | 1 | 🎃 👻
+Valentine's Day | 1 | 💘 📅 | valentines day; valentine
+New Year's Eve | 1 | 🎆 🆕 📅 | new years eve; new year
+Summer Vacation | 1 | ☀️ 🏖️ | summer holiday
+Trick or Treat | 1 | 🎃 🍬 | trick-or-treat
+Birthday Party | 1 | 🎂 🎉
+Santa Claus | 1 | 🎅 | santa; father christmas
+Snow Day | 1 | ❄️ 🏫 🚫 | snowday
+Sandcastle | 1 | 🏖️ 🏰 | sand castle
+Spring Cleaning | 2 | 🌸 🧹
+Autumn Leaves | 2 | 🍁 💨 | fall leaves
+April Fools | 2 | 🃏 🤡 📅 | april fools day
+Mother's Day | 2 | 👩 ❤️ 📅 | mothers day
+Father's Day | 2 | 👨 👔 📅 | fathers day
+Gingerbread House | 2 | 🍪 🏠
+Sleigh Ride | 2 | 🎅 🦌 💨 | sleigh
+Back to School | 2 | ⬅️ 🏫 🎒
+Pumpkin Patch | 2 | 🎃 🌽 | pumpkin farm
+Thanksgiving Dinner | 2 | 🙏 🍽️ 🥧 | thanksgiving
+Fourth of July | 2 | 🗽 🎆 | july fourth; independence day
+Winter Wonderland | 2 | ❄️ ⛄ ✨
+Summer Camp | 2 | ☀️ 🏕️ | camp
+Groundhog Day | 3 | 🐿️ 👀 ☀️
+Leap Year | 3 | 🐸 📅 | leap day
+Family Reunion | 3 | 👨 👩 👶 🤝 | reunion
+Wedding Anniversary | 3 | 💍 📅 🎉 | anniversary
+Spring Break | 3 | 🌸 🏖️ ⏸️
+Hibernation | 3 | 🐻 😴 ❄️ | hibernate
+`,
   movies: `
 The Lion King | 1 | 🦁 👑
 Finding Nemo | 1 | 🔍 🐠
@@ -913,8 +985,8 @@ for (const c of CATEGORIES) {
   for (const line of ANSWER_TEXT[c.key].split('\n')) {
     if (!line.trim()) continue;
     const [text, d, clue, alts] = line.split('|').map((x) => x.trim());
-    ANSWERS.push({ id: c.key + ':' + ANSWERS.length, cat: c.key, text, diff: Math.max(1, Math.min(3, Number(d) || 2)), clue: clue ? clue.split(/\s+/).filter(Boolean) : [], alts: alts ? alts.split(';').map((x) => x.trim()).filter(Boolean) : [] });
+    ANSWERS.push({ id: c.key + ':' + ANSWERS.length, cat: c.key, text, family: !GROWN_UP.has(text), diff: Math.max(1, Math.min(3, Number(d) || 2)), clue: clue ? clue.split(/\s+/).filter(Boolean) : [], alts: alts ? alts.split(';').map((x) => x.trim()).filter(Boolean) : [] });
   }
 }
 
-module.exports = { CATEGORIES, ANSWERS, KEYBOARD_TEXT, KEYBOARD, KB_CATS, ALLOWED, SEPARATOR, parseKeyboard };
+module.exports = { CATEGORIES, GROWN_UP, ANSWERS, KEYBOARD_TEXT, KEYBOARD, KB_CATS, ALLOWED, SEPARATOR, parseKeyboard };

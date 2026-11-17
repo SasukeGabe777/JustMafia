@@ -6,7 +6,12 @@
   <title>JustGameBox</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Lilita+One&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Bungee&family=Bungee+Shade&family=Caveat+Brush&family=Monoton&family=Pacifico&family=Permanent+Marker&family=Press+Start+2P&family=Righteous&family=Rubik+Mono+One&family=Special+Elite&family=Abril+Fatface&family=Black+Ops+One&family=Luckiest+Guy&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/box/box.css">
+  <link rel="stylesheet" href="/box/title.css">
+  <link rel="stylesheet" href="/box/show.css">
+  <link rel="stylesheet" href="/box/howto.css">
+  <link rel="stylesheet" href="/box/partyboard.css">
   <link rel="stylesheet" href="/box/games.css">
   <link rel="stylesheet" href="/box/ducks-theme.css">
   <link rel="stylesheet" href="/box/kingdoms-theme.css">
@@ -17,6 +22,19 @@
   <link rel="stylesheet" href="/box/games/likely.css">
   <link rel="stylesheet" href="/box/games/spectrum.css">
   <link rel="stylesheet" href="/box/games/bid.css">
+  <link rel="stylesheet" href="/box/games/president.css">
+  <link rel="stylesheet" href="/box/games/blackjack.css">
+  <link rel="stylesheet" href="/box/games/blanks.css">
+  <link rel="stylesheet" href="/box/games/truths.css">
+  <link rel="stylesheet" href="/box/games/funny.css">
+  <link rel="stylesheet" href="/box/games/ducks.css">
+  <link rel="stylesheet" href="/box/games/zombie.css">
+  <link rel="stylesheet" href="/box/games/summon.css">
+  <link rel="stylesheet" href="/box/games/letters.css">
+  <link rel="stylesheet" href="/box/games/memes.css">
+  <link rel="stylesheet" href="/box/games/colormatch.css">
+  <link rel="stylesheet" href="/box/games/trivia.css">
+  <link rel="stylesheet" href="/box/games/plinko.css">
 </head>
 <body>
   <div class="tv">
@@ -30,7 +48,9 @@
   <div class="sound-hint" id="sound-hint">Click anywhere to turn on sound</div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/sfx.js"></script>
+  <script src="/unlocks.js"></script>
   <script src="/box/box.js"></script>
+  <script src="/box/audio.js"></script>
   <script src="/box/games/president.js"></script>
   <script src="/box/games/blackjack.js"></script>
   <script src="/box/games/blanks.js"></script>
@@ -43,11 +63,42 @@
   <script src="/box/games/likely.js"></script>
   <script src="/box/games/spectrum.js"></script>
   <script src="/box/games/bid.js"></script>
+  <script src="/box/games/zombie-art.js"></script>
+  <script src="/box/games/zombie.js"></script>
+  <script src="/box/games/summon.js"></script>
+  <script src="/box/games/letters.js"></script>
+  <script src="/box/games/memes.js"></script>
+  <script src="/box/games/colormatch.js"></script>
+  <script src="/box/games/trivia.js"></script>
+  <script src="/box/games/plinko.js"></script>
   <script src="/box/games/kingdoms-art.js"></script>
   <script src="/box/games/kingdoms-tv.js"></script>
   <script src="/box/games/ducks-art.js"></script>
   <script src="/box/games/ducks-mini.js"></script>
   <script src="/box/games/ducks.js"></script>
+  <script src="/box/title.js"></script>
+  <script src="/box/show.js"></script>
+  <script src="/box/howto.js"></script>
+  <script src="/box/partyboard.js"></script>
+  <script src="/box/titles/president.js"></script>
+  <script src="/box/titles/blanks.js"></script>
+  <script src="/box/titles/blackjack.js"></script>
+  <script src="/box/titles/bid.js"></script>
+  <script src="/box/titles/price.js"></script>
+  <script src="/box/titles/emoji.js"></script>
+  <script src="/box/titles/truths.js"></script>
+  <script src="/box/titles/likely.js"></script>
+  <script src="/box/titles/whosaid.js"></script>
+  <script src="/box/titles/spectrum.js"></script>
+  <script src="/box/titles/sketch.js"></script>
+  <script src="/box/titles/funny.js"></script>
+  <script src="/box/titles/zombie.js"></script>
+  <script src="/box/titles/summon.js"></script>
+  <script src="/box/titles/letters.js"></script>
+  <script src="/box/titles/memes.js"></script>
+  <script src="/box/titles/colormatch.js"></script>
+  <script src="/box/titles/trivia.js"></script>
+  <script src="/box/titles/plinko.js"></script>
   <script src="/box/tv.js"></script>
 </body>
 </html>

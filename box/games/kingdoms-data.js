@@ -26,18 +26,21 @@ const JOBS = {
   study: { res: 'sci', name: 'Study', icon: '🔬', needBld: 'library' },
 };
 const JOB_KEYS = Object.keys(JOBS);
-const BASE_YIELD = 0.6, STUDY_YIELD = 0.3, TILE_BONUS = 0.25;
+const BASE_YIELD = 0.45, STUDY_YIELD = 0.3, TILE_BONUS = 0.25;
 const FOOD_PEASANT = 0.1, FOOD_SOLDIER = 0.2;
 
 // Ages: the Castle level. cost/time to REACH that age.
 const AGES = [
   null,
   { n: 1, name: 'Hamlet', icon: '🛖', cost: {}, time: 0 },
-  { n: 2, name: 'Village', icon: '🏘️', cost: { food: 150, wood: 150 }, time: 40 },
-  { n: 3, name: 'Town', icon: '🏰', cost: { food: 300, wood: 250, stone: 200 }, time: 60 },
-  { n: 4, name: 'City', icon: '🏙️', cost: { food: 500, wood: 400, stone: 400, gold: 300 }, time: 80 },
-  { n: 5, name: 'Kingdom', icon: '👑', cost: { food: 800, wood: 800, stone: 800, gold: 800, sci: 300 }, time: 100 },
+  { n: 2, name: 'Village', icon: '🏘️', cost: { food: 160, wood: 160 }, time: 45 },
+  { n: 3, name: 'Town', icon: '🏰', cost: { food: 450, wood: 400, stone: 250 }, time: 75 },
+  { n: 4, name: 'City', icon: '🏙️', cost: { food: 900, wood: 750, stone: 650, gold: 500 }, time: 100 },
+  { n: 5, name: 'Kingdom', icon: '👑', cost: { food: 1500, wood: 1300, stone: 1300, gold: 1200, sci: 500 }, time: 120 },
 ];
+// Pace: age, monument and rocket costs scale with the time limit so a 20-minute game still sees
+// the whole arc and a 60-minute game doesn't end at minute 25.
+const PACE = { 20: 0.55, 30: 1, 45: 1.6, 60: 2.2 };
 
 // Buildings (in the capital). cost ×1.8 per level, time (s) = BUILD_TIME[age] × 1.4^(level-1).
 const BUILDINGS = {
@@ -97,7 +100,32 @@ const TRACKS = { economy: ['plows', 'saws', 'masonry', 'banking'], war: ['tactic
 // The rocket: 3 stages, each 60 s.
 const ROCKET = [null, { wood: 200, stone: 400, gold: 300, sci: 100 }, { wood: 300, stone: 600, gold: 450, sci: 150 }, { wood: 400, stone: 800, gold: 600, sci: 200 }];
 const ROCKET_TIME = 60;
-const MONUMENT_PER_KINGDOM = 250; // gold+stone needed per kingdom in the world
+const MONUMENT_PER_KINGDOM = 400; // gold+stone needed per kingdom in the world (× pace)
+const MONUMENT_AGE = 4, PEACE_HOLD = 60; // contributing needs a City; a finished monument must hold the peace 60 s
+
+// Royal Decrees: a first-timer's path through the game. One is active at a time; finishing it pays
+// the reward at once. `check(g, k)` lives in kingdoms.js (keyed by `key`).
+const DECREES = [
+  { key: 'work', icon: '🧑‍🌾', title: 'Put every peasant to work', hint: 'Tap + on Farm or Chop until nobody is idle.', reward: { food: 40 } },
+  { key: 'houses', icon: '🏠', title: 'Build Houses', hint: 'Houses make room for more people.', reward: { wood: 50 } },
+  { key: 'peasants', icon: '👨‍👩‍👧', title: 'Grow to 6 peasants', hint: 'Train peasants: more workers, more of everything.', reward: { food: 60 } },
+  { key: 'age2', icon: '🏘️', title: 'Reach Age 2: Village', hint: 'Save food and wood, then tap Advance.', reward: { wood: 60, stone: 60 } },
+  { key: 'village', icon: '🛻', title: 'Found a village', hint: 'Train Settlers, then tap a free tile next to your land.', reward: { food: 100 } },
+  { key: 'army', icon: '🗡️', title: 'Raise 6 soldiers', hint: 'Soldiers at home defend your capital.', reward: { wood: 80 } },
+  { key: 'age3', icon: '🏰', title: 'Reach Age 3: Town', hint: 'Quarry stone now: Age 3 needs it.', reward: { gold: 100 } },
+  { key: 'library', icon: '📚', title: 'Build a Library', hint: 'It unlocks research and the Study job.', reward: { sci: 60 } },
+  { key: 'friend', icon: '🤝', title: 'Make a friend', hint: 'Ally, trade or send a gift (🤝 Allies tab).', reward: { gold: 120 } },
+  { key: 'age4', icon: '🏙️', title: 'Reach Age 4: City', hint: 'Mine gold: Age 4 needs it.', reward: { food: 150, wood: 150, stone: 150, gold: 150 } },
+  { key: 'path', icon: '🏆', title: 'Choose your victory', hint: 'Hold a vassal, give 200 to the Peace Monument, or build a Launch Pad.', reward: { gold: 250, stone: 250 } },
+];
+
+// The Royal Council: every few minutes all kingdoms vote on a motion (one vote each, not yourself).
+const COUNCIL = {
+  sanction: { name: 'Sanctions', icon: '⚖️', ask: 'Who is the greatest threat?', text: 'The chosen kingdom makes 30% less for 2 minutes.', secs: 120 },
+  grant: { name: 'Royal Grant', icon: '🏅', ask: 'Who deserves the royal treasury?', text: 'The chosen kingdom receives a chest of gold and stone.' },
+};
+const COUNCIL_FIRST = 420000, COUNCIL_EVERY = 330000, COUNCIL_VOTE = 40000;
+const BOUNTY_MIN = 50, BOUNTY_TTL = 300000;
 
 // Village upgrades (level → next) and village walls.
 const VILLAGE_UP = [null, { wood: 100, stone: 60 }, { wood: 180, stone: 120 }];
@@ -127,6 +155,7 @@ const BANDIT_NAMES = ['the Red Hoods', 'the Mud Rats', 'the Night Crows', 'the G
 module.exports = {
   RES, RES_ICON, TERRAIN, TERRAIN_WEIGHTS, JOBS, JOB_KEYS, BASE_YIELD, STUDY_YIELD, TILE_BONUS, FOOD_PEASANT, FOOD_SOLDIER,
   AGES, BUILDINGS, BUILD_TIME, COST_GROWTH, TIME_GROWTH, BUILD_QUEUE, TRAIN_QUEUE, UNITS, SOLDIERS, FIGHTERS,
-  TECH_COST, TECH_TIME, TECHS, TRACKS, ROCKET, ROCKET_TIME, MONUMENT_PER_KINGDOM, VILLAGE_UP, VILLAGE_WALL,
+  TECH_COST, TECH_TIME, TECHS, TRACKS, ROCKET, ROCKET_TIME, MONUMENT_PER_KINGDOM, MONUMENT_AGE, PEACE_HOLD, VILLAGE_UP, VILLAGE_WALL,
+  PACE, DECREES, COUNCIL, COUNCIL_FIRST, COUNCIL_EVERY, COUNCIL_VOTE, BOUNTY_MIN, BOUNTY_TTL,
   EVENTS, PRESETS, PERSONALITIES, BANDIT_NAMES,
 };

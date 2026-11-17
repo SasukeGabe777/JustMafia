@@ -45,6 +45,8 @@
 // - A player who leaves mid-game is replaced by a Builder bot; a player who joins mid-game gets a
 //   kingdom on a free spot if the map has one (otherwise watches).
 // - "Skip ahead" (next) runs 60 one-second game steps instantly (game time is room time + skew).
+// - v2 (docs/justkingdoms.md §13b): pace by time limit, Royal Decrees, auto workers, recall, underdog bonus,
+//   rallies, coalition, the Royal Council vote, bounties, a 60 s peace hold, final-minutes call, results().
 const D = require('./kingdoms-data');
 const M = require('./kingdoms-map');
 const AI = require('./kingdoms-ai');
@@ -83,7 +85,15 @@ class Kingdoms {
     this.alliances = new Map(); this.allySeq = 0; this.skew = 0; this.tickNo = 0; this.alertSeq = 0;
     this.event = null; this.nextEventAt = 0; this.winner = null; this.awards = null; this.standings = null;
     this.timer = null; this.errors = 0; this.peaceUntil = 0; this.startAt = 0; this.endAt = 0;
+    this.council = null; this.nextCouncilAt = 0; this.councilSeq = 0; this.lastMotion = 'sanction';
+    this.bounties = []; this.bountySeq = 0; this.wars = new Map(); this.peaceHoldUntil = 0; this.finalWarned = false;
+    this.firstAge = {}; this.marked = null; this.leaderScore = 0;
   }
+  // Age, monument and rocket costs follow the time limit (D.PACE).
+  pace() { return D.PACE[this.s.timeLimit] || Math.max(0.6, Math.min(1.8, Number(this.s.timeLimit) / 30 || 1)); }
+  avatarOf(id) { const p = this.room.get(id), a = p && p.avatar; return typeof a === 'string' && a.length <= 16 && !/[<>&"]/.test(a) ? a : null; }
+  // Production multiplier: the underdog bonus (comeback) and council sanctions.
+  prodMult(k, now = this.now()) { return (1 + (k.underdog || 0)) * (k.sanctionUntil > now ? 0.7 : 1); }
   now() { return this.room.now() + this.skew; }
   speed() { return SPEED[this.s.speed] || 1; }
   log(text, kind = 'info') { this.ticker.push({ id: ++this.tickSeq, text, kind }); if (this.ticker.length > 14) this.ticker.shift(); }
@@ -100,8 +110,8 @@ class Kingdoms {
     k.gone = true; if (!k.ai) { k.ai = AI.fresh('builder'); this.log(`🤖 ${k.name} is now run by a steward.`); }
   }
   seatList() {
-    if (this.phase !== 'lobby') return [...this.k.values()].map((k) => ({ id: k.id, name: this.room.name(k.id), color: k.color, seat: k.seat }));
-    return this.room.list().map((p) => ({ id: p.id, name: p.name, color: p.color, seat: this.seatOf.has(p.id) ? this.seatOf.get(p.id) : null }));
+    if (this.phase !== 'lobby') return [...this.k.values()].map((k) => ({ id: k.id, name: this.room.name(k.id), color: k.color, seat: k.seat, avatar: this.avatarOf(k.id) }));
+    return this.room.list().map((p) => ({ id: p.id, name: p.name, color: p.color, seat: this.seatOf.has(p.id) ? this.seatOf.get(p.id) : null, avatar: this.avatarOf(p.id) }));
   }
   defaultName(p) { return cleanName(p.name.replace(/ 🤖$/, ''), 16) + "'s Kingdom"; }
 
@@ -127,7 +137,7 @@ class Kingdoms {
     const ks = bySeat.map((p) => this.k.get(p.id));
     if (N >= 2) ks.forEach((k, i) => { k.neighbours = [...new Set([ks[(i + 1) % N].id, ks[(i - 1 + N) % N].id])].filter((x) => x !== k.id); });
     this.phase = 'play'; this.startAt = this.now(); this.endAt = this.startAt + this.s.timeLimit * 60000;
-    this.nextEventAt = this.startAt + EVENT_FIRST; this.peaceUntil = this.startAt + PEACE_MS;
+    this.nextEventAt = this.startAt + EVENT_FIRST; this.peaceUntil = this.startAt + PEACE_MS; this.nextCouncilAt = this.startAt + D.COUNCIL_FIRST;
     this.census();
     this.log('🏰 The kingdoms awaken. Gather, build, and grow!');
     this.tick();
@@ -140,8 +150,9 @@ class Kingdoms {
       b: Object.fromEntries(Object.keys(BUILDINGS).map((x) => [x, 0])), queue: [], training: [], techs: new Set(), researching: null,
       vassalOf: null, ally: null, traitorUntil: 0, msg: null, msgAt: -1e12, stage: 0, rocket: null, alerts: [], scouted: new Map(),
       neighbours: [], ai: personality ? AI.fresh(personality) : null, gone: false, rebelAt: -1e12, attackedAt: -1e12, starveSince: 0,
-      stats: { built: 0, kills: 0, lost: 0, gifts: 0, alliances: 0, betrayals: 0, battles: 0, won: 0, sci: 0, monument: 0, villages: 0, captures: 0, peakPower: 0, tribute: 0 },
-      rates: {}, match: { p: 0, f: 0, h: 0, g: 0 }, land: 0, vlevels: 0, villages: 0, soldiers: 0, power: 0, score: 0, ruins: false, tiles: [],
+      stats: { built: 0, kills: 0, lost: 0, gifts: 0, alliances: 0, betrayals: 0, battles: 0, won: 0, sci: 0, monument: 0, villages: 0, captures: 0, peakPower: 0, tribute: 0, trades: 0, bounties: 0, comebacks: 0 },
+      rates: {}, match: { p: 0, f: 0, h: 0, g: 0 }, land: 0, vlevels: 0, villages: 0, soldiers: 0, fighters: 0, power: 0, score: 0, ruins: false, tiles: [],
+      decree: 0, sanctionUntil: 0, underdog: 0, rallies: 0,
     };
     k.b.farm = 1;
     T.o = p.id; T.cap = p.id; T.v = 0; T.units = {};
@@ -182,6 +193,12 @@ class Kingdoms {
       this.moveArmies(now);
       this.housekeeping(now);
       this.runEvents(now);
+      this.runCouncil(now);
+      for (const k of this.k.values()) this.checkDecree(k);
+      if (!this.finalWarned && this.endAt - now <= 180000 && this.s.timeLimit >= 20) {
+        this.finalWarned = true; this.log('⏳ Final 3 minutes! The best Kingdom Score wins if nobody gets there first.', 'win'); this.room.fx('final', {});
+        for (const k of this.k.values()) this.alert(k, '⏳ Final 3 minutes! Grab land, finish your wonder, or strike now.', 'info');
+      }
       for (const k of this.k.values()) if (k.ai && (this.tickNo + k.seat) % 4 === 0 && this.phase === 'play') AI.turn(this, k, now);
       this.checkWin(now);
     } catch (e) { this.errors++; this.lastError = e; if (this.errors < 5) console.error('[kingdoms] step failed:', e); }
@@ -189,16 +206,16 @@ class Kingdoms {
 
   // Recount land, terrain matches, soldiers, power and score (O(tiles + armies)).
   census() {
-    for (const k of this.k.values()) { k.match = { p: 0, f: 0, h: 0, g: 0 }; k.land = 0; k.vlevels = 0; k.villages = 0; k.soldiers = 0; k.power = 0; k.ruins = false; k.tiles = []; }
+    for (const k of this.k.values()) { k.match = { p: 0, f: 0, h: 0, g: 0 }; k.land = 0; k.vlevels = 0; k.villages = 0; k.soldiers = 0; k.fighters = 0; k.power = 0; k.ruins = false; k.tiles = []; }
     for (const T of this.world.tiles) {
       if (!T.o) continue; const k = this.k.get(T.o); if (!k) continue;
       k.land++; k.tiles.push(T.i);
       if (k.match[T.t] != null) k.match[T.t] += (T.rich ? 2 : 1) + T.v;
       if (T.v) { k.villages++; k.vlevels += T.v; }
       if (T.t === 'r') k.ruins = true;
-      for (const u in T.units) { k.soldiers += T.units[u]; k.power += T.units[u] * (UNITS[u].atk + UNITS[u].def); }
+      for (const u in T.units) { k.soldiers += T.units[u]; if (!UNITS[u].noFight) k.fighters += T.units[u]; k.power += T.units[u] * (UNITS[u].atk + UNITS[u].def); }
     }
-    for (const a of this.armies.values()) { const k = a.o && this.k.get(a.o); if (!k) continue; for (const u in a.units) { k.soldiers += a.units[u]; k.power += a.units[u] * (UNITS[u].atk + UNITS[u].def); } }
+    for (const a of this.armies.values()) { const k = a.o && this.k.get(a.o); if (!k) continue; for (const u in a.units) { k.soldiers += a.units[u]; if (!UNITS[u].noFight) k.fighters += a.units[u]; k.power += a.units[u] * (UNITS[u].atk + UNITS[u].def); } }
     const vassals = this.vassalCounts();
     for (const k of this.k.values()) {
       k.stats.peakPower = Math.max(k.stats.peakPower, k.power);
@@ -207,6 +224,28 @@ class Kingdoms {
       k.capitals = 1 + (vassals.get(k.id) || 0);
       k.score = Math.round(2 * k.land + 10 * k.vlevels + 5 * blv + 25 * (k.age - 1) + k.power / 10 + 15 * k.techs.size + 60 * k.stage + mon / 25 + k.res.gold / 50 + 40 * (vassals.get(k.id) || 0));
     }
+    this.comeback();
+  }
+  // Comebacks: kingdoms far behind the leader produce more (up to +40%), and a runaway leader is
+  // marked: everyone else gets +20% attack against their land (the coalition).
+  comeback() {
+    const ks = [...this.k.values()]; if (ks.length < 2 || this.phase !== 'play') { for (const k of ks) k.underdog = 0; return; }
+    const sorted = ks.slice().sort((a, b) => b.score - a.score), lead = sorted[0], second = sorted[1];
+    this.leaderScore = lead.score;
+    const early = this.now() - this.startAt < 180000;
+    for (const k of ks) { const ratio = k.score / Math.max(1, lead.score); k.underdog = early ? 0 : Math.round(Math.max(0, Math.min(0.4, (0.75 - ratio) * 0.8)) * 100) / 100; }
+    let mark = null;
+    if (ks.length >= 3 && !early) {
+      const byCap = ks.slice().sort((a, b) => b.capitals - a.capitals || b.score - a.score)[0];
+      if (byCap.capitals >= 3 && byCap.capitals >= Math.ceil(ks.length * 0.3)) mark = byCap.id;
+      else if (this.now() - this.startAt > 600000 && lead.score >= 1.6 * Math.max(1, second.score) && lead.score >= 150) mark = lead.id;
+    }
+    if (mark && this.marked !== mark && this.lastMarkLog !== mark) {
+      const m = this.k.get(mark); this.lastMarkLog = mark;
+      this.log(`🎯 The world unites against ${m.name}! Everyone gets +20% attack against them.`, 'war'); this.room.fx('coalition', { id: mark });
+      for (const k of ks) this.alert(k, k.id === mark ? '🎯 You lead by far, so the world has united against you: they get +20% attack on your land!' : `🎯 Coalition! You get +20% attack against ${m.name}.`, k.id === mark ? 'bad' : 'info');
+    }
+    this.marked = mark;
   }
   pop(k) { let q = 0; for (const t of k.training) q += t.n; return k.peasants + k.soldiers + q; }
   cap(k) { return 5 + 4 * k.b.houses + 3 * k.vlevels; }
@@ -238,6 +277,7 @@ class Kingdoms {
     const gain = { food: 0, wood: 0, stone: 0, gold: 0, sci: 0 };
     for (const j of JOB_KEYS) if (k.jobs[j] > 0) gain[JOBS[j].res] += k.jobs[j] * this.perWorker(k, j);
     if (k.ruins) gain.sci += 0.6 * this.speed();
+    const pm = this.prodMult(k, now); if (pm !== 1) for (const r in gain) gain[r] *= pm;
     if (starving) for (const r in gain) gain[r] *= 0.5;
     const liege = k.vassalOf && this.k.get(k.vassalOf);
     if (liege) for (const r of ['food', 'wood', 'stone', 'gold']) { const t = gain[r] * 0.25; gain[r] -= t; liege.res[r] += t; liege.stats.tribute += t; }
@@ -272,14 +312,14 @@ class Kingdoms {
     if (b === 'castle') {
       const next = k.age + 1 + k.queue.filter((q) => q.b === 'castle').length;
       if (next > 5) return { ok: false, error: 'Your castle is already at the last age.', why: 'max' };
-      const A = D.AGES[next], cost = this.costOf(k, A.cost), time = A.time / this.speed();
+      const A = D.AGES[next], cost = this.costOf(k, A.cost, next >= 3 ? this.pace() : 1), time = A.time / this.speed();
       if (next > k.age + 1) return { ok: false, error: 'The next age is already being built.', why: 'queued', cost, time, next };
       if (k.queue.length >= D.BUILD_QUEUE) return { ok: false, error: 'Your build queue is full (3).', why: 'queue', cost, time, next };
       return this.needRes(k, cost) ? { ...this.needRes(k, cost), cost, time, next, why: 'cost' } : { ok: true, cost, time, next };
     }
     const B = BUILDINGS[b]; if (!B) return { ok: false, error: 'Unknown building.', why: 'unknown' };
     const lvl = k.b[b] + k.queue.filter((q) => q.b === b).length, next = lvl + 1;
-    const cost = this.costOf(k, B.cost, Math.pow(D.COST_GROWTH, lvl)), time = D.BUILD_TIME[B.age] * Math.pow(D.TIME_GROWTH, lvl) / this.speed();
+    const cost = this.costOf(k, B.cost, Math.pow(D.COST_GROWTH, lvl) * (B.science ? this.pace() : 1)), time = D.BUILD_TIME[B.age] * Math.pow(D.TIME_GROWTH, lvl) / this.speed();
     const max = b === 'walls' ? B.max + (k.techs.has('engineering') ? 1 : 0) : B.max;
     if (B.science && !this.modeHas('science')) return { ok: false, error: 'The Launch Pad is only for the science win.', why: 'mode', cost, time, next };
     if (k.age < B.age) return { ok: false, error: `${B.name} needs Age ${B.age} (${D.AGES[B.age].name}).`, why: 'age', cost, time, next };
@@ -333,7 +373,8 @@ class Kingdoms {
       const q = k.queue.shift();
       if (q.b === 'castle') {
         k.age = q.lvl; const A = D.AGES[k.age];
-        this.log(`${A.icon} ${k.name} reached Age ${k.age}: ${A.name}!`, 'build'); this.room.fx('age', { id: k.id, age: k.age });
+        const first = !this.firstAge[k.age]; if (first) this.firstAge[k.age] = k.id;
+        this.log(first && k.age >= 3 ? `🥇 ${k.name} is the first to reach Age ${k.age}: ${A.name}!` : `${A.icon} ${k.name} reached Age ${k.age}: ${A.name}!`, 'build'); this.room.fx('age', { id: k.id, age: k.age, first });
         this.alert(k, `${A.icon} Welcome to the ${A.name} age! New buildings and units unlocked.`, 'good');
       } else {
         k.b[q.b] = q.lvl; k.stats.built++;
@@ -501,7 +542,7 @@ class Kingdoms {
   attackPower(units, k, T) {
     const walls = this.wallsOf(T); let p = 0;
     for (const u in units) { const U = UNITS[u]; if (U.noFight || !U.atk) continue; p += units[u] * U.atk * this.counter(u, T.units) * (U.walls && walls > 0 ? U.walls : 1); }
-    return p * (k && k.techs.has('tactics') ? 1.1 : 1);
+    return p * (k && k.techs.has('tactics') ? 1.1 : 1) * (k && this.marked && T.o === this.marked && k.id !== this.marked ? 1.2 : 1);
   }
   defMult(T, attUnits) {
     const owner = T.o && this.k.get(T.o), fa = fightersOf(attUnits || {});
@@ -533,6 +574,7 @@ class Kingdoms {
     if (win) { aLost = this.lose(a.units, winnerFrac); dLost = this.lose(T.units, loserFrac); } else { aLost = this.lose(a.units, loserFrac); dLost = this.lose(T.units, winnerFrac); }
     if (att) { att.stats.kills += dLost; att.stats.lost += aLost; att.stats.battles++; if (win) att.stats.won++; }
     if (defK) { defK.stats.kills += aLost; defK.stats.lost += dLost; defK.stats.battles++; if (!win) defK.stats.won++; defK.attackedAt = now; defK.lastAttacker = a.o; }
+    if (att && defK) { const wk = [att.id, defK.id].sort().join('|'), w = this.wars.get(wk); this.wars.set(wk, { a: att.id, b: defK.id, at: now, n: (w ? w.n : 0) + 1 }); }
     const winner = win ? (a.o || 'bandits') : (T.o || null);
     this.battles.push({ q: T.q, r: T.r, at: now, win: winner, a: a.o || 'bandits', d: T.o || null, aLost, dLost });
     if (this.battles.length > 30) this.battles.shift();
@@ -568,7 +610,8 @@ class Kingdoms {
     T.o = att.id; T.v = Math.max(0, T.v - 1); T.units = addU({}, a.units);
     if (defK && wasVillage) for (const n of T.nb) { const N = this.tile(n); if (N.o === defK.id && !N.cap && !N.v && !sumU(N.units)) N.o = att.id; }
     att.stats.captures++;
-    this.room.fx('capture', { q: T.q, r: T.r, id: att.id });
+    this.room.fx('capture', { q: T.q, r: T.r, id: att.id, village: wasVillage });
+    if (defK && wasVillage) { this.rally(defK, 2 + Math.floor(defK.age / 2)); this.collectBounty(att, defK); }
     if (defK) { this.log(`⚔️ ${aName} captured ${wasVillage ? 'a village' : 'land'} from ${dName}!`, 'war'); this.alert(defK, `🔥 ${aName} took your ${wasVillage ? 'village' : 'land'}!`, 'bad'); }
     this.alert(att, `🚩 You took ${defK ? dName + '’s ' + (wasVillage ? 'village' : 'land') : 'new land'}!`, 'good');
   }
@@ -580,13 +623,33 @@ class Kingdoms {
     this.room.fx('vassal', { id: v.id, by: liege.id });
     this.alert(v, `⛓️ ${liege.name} took your capital. You are their vassal: 25% of your production goes to them. Grow strong and rebel!`, 'bad');
     this.alert(liege, `👑 ${v.name} is now your vassal!`, 'good');
+    this.collectBounty(liege, v);
+    this.rally(v, 3 + v.age);
+  }
+  // Comeback: losing a village or your capital makes the people rise (free Militia at the capital).
+  rally(k, n) {
+    if (!k || k.rallies >= 6 || n < 1) return;
+    k.rallies++; k.stats.comebacks++;
+    const H = this.tile(k.home); H.units.militia = (H.units.militia || 0) + n;
+    this.alert(k, `✊ Your people rise! ${n} Militia joined your capital's defence.`, 'good');
+  }
+  // Bounties: gold put on a kingdom's head goes to whoever takes a village or capital from them.
+  collectBounty(att, defK) {
+    if (!att || !defK) return;
+    const mine = this.bounties.filter((b) => b.on === defK.id); if (!mine.length) return;
+    this.bounties = this.bounties.filter((b) => b.on !== defK.id);
+    const gold = mine.reduce((a, b) => a + b.gold, 0);
+    att.res.gold += gold; att.stats.bounties += gold;
+    this.log(`💰 ${att.name} claimed the ${gold}-gold bounty on ${defK.name}!`, 'war'); this.room.fx('bountyClaim', { id: att.id, on: defK.id, gold });
+    this.alert(att, `💰 You claimed a ${gold}-gold bounty!`, 'good');
+    for (const b of mine) if (b.from !== att.id) this.alert(this.k.get(b.from), `💰 ${att.name} claimed your bounty on ${defK.name}.`, 'info');
   }
   rebelInfo(k) {
     if (!k.vassalOf) return null;
     const L = this.k.get(k.vassalOf); if (!L) return null;
     let my = 0; for (const i of k.tiles) my += this.attackPower(this.tile(i).units, k, this.tile(L.home));
     for (const a of this.armies.values()) if (a.o === k.id) my += this.attackPower(a.units, k, this.tile(L.home));
-    const need = this.defencePower(this.tile(L.home), {});
+    const need = this.defencePower(this.tile(L.home), {}) * 0.75; // the liege's grip is stretched thin
     const chance = Math.max(0.4, Math.min(0.9, 0.4 + 0.3 * (my / Math.max(1, need) - 1)));
     const cooldown = Math.max(0, k.rebelAt + REBEL_CD - this.now());
     return { liege: L.id, liegeName: L.name, my: Math.round(my), need: Math.round(need), can: my > need && !cooldown, chance: Math.round(chance * 100) / 100, cooldown };
@@ -656,6 +719,71 @@ class Kingdoms {
       for (const [i, s] of k.scouted) if (now - s.at > SCOUT_TTL) k.scouted.delete(i);
     }
     while (this.battles.length && now - this.battles[0].at > BATTLE_SHOW) this.battles.shift();
+    for (const [wk, w] of this.wars) if (now - w.at > 90000) this.wars.delete(wk);
+    for (const b of this.bounties.slice()) if (now >= b.exp || !this.k.has(b.on)) {
+      this.bounties = this.bounties.filter((x) => x !== b);
+      const f = this.k.get(b.from); if (f) { f.res.gold += b.gold; this.alert(f, `⌛ Nobody claimed your bounty on ${this.kn(b.on)}. ${b.gold} gold came back.`); }
+    }
+  }
+
+  // ---------- the Royal Council ----------
+  runCouncil(now) {
+    const C = this.council;
+    if (C && now >= C.end) return this.resolveCouncil(now);
+    if (C || this.k.size < 3 || now < this.nextCouncilAt || this.endAt - now < 90000) return;
+    const kind = this.lastMotion === 'sanction' ? 'grant' : 'sanction'; this.lastMotion = kind;
+    const M0 = D.COUNCIL[kind];
+    this.council = { id: ++this.councilSeq, kind, start: now, end: now + D.COUNCIL_VOTE, votes: new Map() };
+    this.log(`${M0.icon} The Royal Council meets: ${M0.ask} Vote on your phone!`, 'diplo'); this.room.fx('council', { kind });
+    for (const k of this.k.values()) this.alert(k, `🗳️ Royal Council: ${M0.ask} Vote now (🤝 Allies tab)!`, 'diplo');
+  }
+  vote(k, to) {
+    const C = this.council; if (!C) return { ok: false, error: 'The council is not in session.' };
+    const t = this.k.get(to); if (!t) return { ok: false, error: 'Pick a kingdom.' };
+    if (t.id === k.id) return { ok: false, error: 'You can’t vote for yourself.' };
+    C.votes.set(k.id, t.id); return { ok: true };
+  }
+  tally() { const m = new Map(); if (this.council) for (const t of this.council.votes.values()) m.set(t, (m.get(t) || 0) + 1); return m; }
+  resolveCouncil(now) {
+    const C = this.council, t = this.tally(); this.council = null; this.nextCouncilAt = now + D.COUNCIL_EVERY;
+    const M0 = D.COUNCIL[C.kind];
+    if (!t.size) { this.log(`${M0.icon} The council could not agree on anything.`, 'diplo'); return; }
+    const top = Math.max(...t.values()), tied = [...t].filter(([, n]) => n === top).map(([id]) => this.k.get(id)).filter(Boolean);
+    tied.sort((a, b) => (C.kind === 'sanction' ? b.score - a.score : a.score - b.score));
+    const w = tied[0]; if (!w) return;
+    if (C.kind === 'sanction') {
+      w.sanctionUntil = now + M0.secs * 1000;
+      this.log(`⚖️ The council sanctions ${w.name} (${top} vote${top > 1 ? 's' : ''}): −30% production for 2 minutes!`, 'diplo');
+      this.alert(w, '⚖️ The council sanctioned you: −30% production for 2 minutes.', 'bad');
+    } else {
+      const n = 80 + 60 * w.age; w.res.gold += n; w.res.stone += n;
+      this.log(`🏅 The council grants the royal treasury to ${w.name} (${top} vote${top > 1 ? 's' : ''}): +${n} 🪙 and +${n} 🪨!`, 'diplo');
+      this.alert(w, `🏅 The council chose you! +${n} gold and +${n} stone.`, 'good');
+    }
+    this.room.fx('councilResult', { kind: C.kind, id: w.id, votes: top });
+  }
+
+  // ---------- Royal Decrees (the guided path) ----------
+  decreeDone(k, key) {
+    switch (key) {
+      case 'work': return JOB_KEYS.reduce((a, j) => a + k.jobs[j], 0) >= k.peasants;
+      case 'houses': return k.b.houses > 0;
+      case 'peasants': return k.peasants >= 6;
+      case 'age2': return k.age >= 2;
+      case 'village': return k.villages > 0 || k.stats.villages > 0;
+      case 'army': return k.fighters >= 6;
+      case 'age3': return k.age >= 3;
+      case 'library': return k.b.library > 0;
+      case 'friend': return !!k.ally || k.stats.gifts > 0 || k.stats.trades > 0;
+      case 'age4': return k.age >= 4;
+      case 'path': return k.capitals > 1 || k.stats.monument >= 200 || k.b.launchpad > 0;
+      default: return true;
+    }
+  }
+  checkDecree(k) {
+    const Dc = D.DECREES[k.decree]; if (!Dc || !this.decreeDone(k, Dc.key)) return;
+    k.decree++; this.refund(k, Dc.reward);
+    this.alert(k, `📜 Decree fulfilled: ${Dc.title}! Reward: ${fmtMissing(Dc.reward)}.`, 'good');
   }
 
   // ---------- world events ----------
@@ -703,7 +831,13 @@ class Kingdoms {
   }
 
   // ---------- winning ----------
-  monumentNeed() { return D.MONUMENT_PER_KINGDOM * this.k.size; }
+  monumentNeed() { return Math.round(D.MONUMENT_PER_KINGDOM * Math.max(4, this.k.size) * this.pace() / 10) * 10; }
+  // Peace is possible when every free kingdom is in one alliance whose monument is complete.
+  peaceAlliance() {
+    const free = [...this.k.values()].filter((k) => !k.vassalOf);
+    const A = free.length >= 2 && free[0].ally && this.alliances.get(free[0].ally);
+    return A && free.every((k) => k.ally === A.id) && A.monument >= this.monumentNeed() ? A : null;
+  }
   progress() {
     const all = [...this.k.values()], tops = new Map();
     for (const k of all) { const t = this.top(k); tops.set(t.id, (tops.get(t.id) || 0) + 1); }
@@ -713,7 +847,8 @@ class Kingdoms {
     return {
       domination: all.length ? n / all.length : 0, leader: all.length >= 2 ? lead : null, capitals: n, of: all.length,
       monument: Math.min(1, mon / Math.max(1, this.monumentNeed())), monumentBy: monBy, monumentNeed: this.monumentNeed(),
-      rockets: all.filter((k) => k.b.launchpad || k.stage).map((k) => ({ id: k.id, stage: k.stage, building: k.rocket ? k.rocket.stage : null, endsIn: k.rocket ? Math.max(0, k.rocket.end - now) : null })),
+      peaceIn: this.peaceHoldUntil ? Math.max(0, this.peaceHoldUntil - now) : null, marked: this.marked,
+      rockets: all.filter((k) => k.b.launchpad || k.stage).map((k) => ({ id: k.id, stage: k.stage, building: k.rocket ? k.rocket.stage : null, endsIn: k.rocket ? Math.max(0, k.rocket.end - now) : null, dur: k.rocket ? k.rocket.dur || 60000 : null })),
     };
   }
   checkWin(now) {
@@ -724,9 +859,14 @@ class Kingdoms {
       if (all.every((k) => this.top(k) === t0)) { this.log(`👑 ${t0.name} rules the whole world!`, 'win'); return this.end('conquest', [t0.id]); }
     }
     if (this.modeHas('diplomacy')) {
-      const free = all.filter((k) => !k.vassalOf);
-      const A = free.length >= 2 && free[0].ally && this.alliances.get(free[0].ally);
-      if (A && free.every((k) => k.ally === A.id) && A.monument >= this.monumentNeed()) { this.log('🕊️ The Peace Monument is complete! The world is at peace.', 'win'); this.room.fx('monument', { done: true }); return this.end('diplomacy', A.members.slice()); }
+      const A = this.peaceAlliance();
+      if (A && !this.peaceHoldUntil) {
+        this.peaceHoldUntil = now + D.PEACE_HOLD * 1000;
+        this.log(`🕊️ The whole world is one alliance and the Peace Monument stands! If the peace holds for ${D.PEACE_HOLD} s, they all win.`, 'diplo'); this.room.fx('peacehold', {});
+        for (const k of all) this.alert(k, `🕊️ Peace in ${D.PEACE_HOLD} s! Anyone who leaves the alliance breaks it.`, 'diplo');
+      } else if (!A && this.peaceHoldUntil) {
+        this.peaceHoldUntil = 0; this.log('💔 The peace is broken!', 'war'); this.room.fx('peacebroken', {});
+      } else if (A && now >= this.peaceHoldUntil) { this.log('🕊️ The peace held! The world is at peace.', 'win'); this.room.fx('monument', { done: true }); return this.end('diplomacy', A.members.slice()); }
     }
     if (now >= this.endAt) {
       this.census();
@@ -753,6 +893,8 @@ class Kingdoms {
       ['🧠 Smartest', pick((k) => k.stats.sci, -1)],
       ['💐 Best Friend', pick((k) => k.stats.alliances * 3 + k.stats.gifts)],
       ['🗡️ Traitor of the Year', pick((k) => k.stats.betrayals)],
+      ['💰 Bounty Hunter', pick((k) => k.stats.bounties)],
+      ['🔥 Comeback Kid', pick((k) => (k.stats.comebacks ? k.stats.comebacks * 10 + k.score / 20 : 0))],
     ].filter(([, w]) => w).map(([title, w]) => ({ title, ...w }));
     this.room.fx('win', { mode, ids });
   }
@@ -786,6 +928,7 @@ class Kingdoms {
       case 'seat': return { ok: false, error: 'Seats are fixed once the game starts.' };
       case 'rename': return this.rename(k.id, m.name);
       case 'jobs': {
+        if (m.auto === true) { k.jobs = AI.autoJobs(this, k); return { ok: true, jobs: { ...k.jobs } }; }
         const want = { ...k.jobs }, open = this.jobsOpen(k);
         for (const j of JOB_KEYS) {
           if (m[j] == null) continue;
@@ -794,7 +937,7 @@ class Kingdoms {
           if (n > 0 && !open[j]) return { ok: false, error: j === 'study' ? 'Studying needs a Library.' : `${JOBS[j].name} opens in Age ${JOBS[j].age}.` };
           want[j] = n;
         }
-        for (const x of Object.keys(m)) if (x !== 'op' && !JOBS[x]) return { ok: false, error: 'Unknown job.' };
+        for (const x of Object.keys(m)) if (x !== 'op' && x !== 'auto' && !JOBS[x]) return { ok: false, error: 'Unknown job.' };
         const tot = JOB_KEYS.reduce((a, j) => a + want[j], 0);
         if (tot > k.peasants) return { ok: false, error: `You only have ${k.peasants} peasants.` };
         k.jobs = want; return { ok: true };
@@ -896,6 +1039,7 @@ class Kingdoms {
         this.pay(k, o.get);
         for (const r in o.give) k.res[r] += Math.floor(o.give[r] * fee);
         for (const r in o.get) f.res[r] += Math.floor(o.get[r] * fee);
+        k.stats.trades++; f.stats.trades++;
         this.alert(f, `⚖️ ${k.name} accepted your trade.`, 'good'); this.log(`⚖️ ${f.name} and ${k.name} made a trade.`, 'diplo');
         return { ok: true };
       }
@@ -910,19 +1054,36 @@ class Kingdoms {
         return { ok: true };
       }
       case 'rebel': return this.rebel(k);
+      case 'recall': return this.recall(k);
+      case 'vote': return this.vote(k, m.to);
+      case 'bounty': {
+        const t = this.k.get(m.to); if (!t || t.id === k.id) return { ok: false, error: 'Pick another kingdom.' };
+        if (this.allied(k.id, t.id)) return { ok: false, error: `${t.name} is your ally.` };
+        const n = Number(m.gold); if (!Number.isInteger(n) || n < D.BOUNTY_MIN) return { ok: false, error: `A bounty is at least ${D.BOUNTY_MIN} gold.` };
+        if (k.res.gold < n) return { ok: false, error: `You only have ${Math.floor(k.res.gold)} 🪙.` };
+        k.res.gold -= n;
+        const b = this.bounties.find((x) => x.from === k.id && x.on === t.id);
+        if (b) { b.gold += n; b.exp = now + D.BOUNTY_TTL; } else this.bounties.push({ id: 'b' + (++this.bountySeq), from: k.id, on: t.id, gold: n, exp: now + D.BOUNTY_TTL });
+        const tot = this.bounties.filter((x) => x.on === t.id).reduce((a, x) => a + x.gold, 0);
+        this.log(`💰 ${k.name} put a bounty on ${t.name}! ${tot} gold to whoever takes a village or their capital.`, 'war');
+        this.room.fx('bounty', { id: k.id, on: t.id, gold: tot });
+        this.alert(t, `💰 ${k.name} put ${n} gold on your head! Guard your villages.`, 'bad');
+        return { ok: true, total: tot };
+      }
       case 'rocket': {
         if (!this.modeHas('science')) return { ok: false, error: 'The science win is off in this game.' };
         if (!k.b.launchpad) return { ok: false, error: 'Build a Launch Pad first.' };
         if (k.rocket) return { ok: false, error: 'A rocket stage is already being built.' };
         if (k.stage >= 3) return { ok: false, error: 'The rocket is complete.' };
         const cost = this.rocketCost(k), nr = this.needRes(k, cost); if (nr) return nr;
-        this.pay(k, cost); k.rocket = { stage: k.stage + 1, end: now + D.ROCKET_TIME * 1000, cost };
-        this.log(`🚀 ${k.name} started building rocket stage ${k.stage + 1}! (60 s)`, 'war'); this.room.fx('rocket', { id: k.id, stage: k.stage, building: k.stage + 1 });
+        this.pay(k, cost); const dur = Math.round(D.ROCKET_TIME * 1000 * Math.max(1, this.pace())); k.rocket = { stage: k.stage + 1, end: now + dur, dur, cost };
+        this.log(`🚀 ${k.name} started building rocket stage ${k.stage + 1}! (${Math.round(dur / 1000)} s)`, 'war'); this.room.fx('rocket', { id: k.id, stage: k.stage, building: k.stage + 1 });
         return { ok: true };
       }
       case 'monument': {
         if (!this.modeHas('diplomacy')) return { ok: false, error: 'The peace win is off in this game.' };
         const A = k.ally && this.alliances.get(k.ally); if (!A) return { ok: false, error: 'Join an alliance first.' };
+        if (k.age < D.MONUMENT_AGE) return { ok: false, error: `Building the monument needs Age ${D.MONUMENT_AGE} (${D.AGES[D.MONUMENT_AGE].name}).` };
         const cr = this.cleanRes(m.res, ['gold', 'stone']); if (cr.error) return { ok: false, error: cr.error };
         const nr = this.needRes(k, cr.res); if (nr) return nr;
         this.pay(k, cr.res); const n = (cr.res.gold || 0) + (cr.res.stone || 0);
@@ -948,7 +1109,19 @@ class Kingdoms {
       default: return { ok: false, error: 'Unknown action.' };
     }
   }
-  rocketCost(k) { return this.costOf(k, D.ROCKET[Math.min(3, k.stage + 1)], k.techs.has('physics') ? 0.8 : 1); }
+  rocketCost(k) { return this.costOf(k, D.ROCKET[Math.min(3, k.stage + 1)], (k.techs.has('physics') ? 0.8 : 1) * this.pace()); }
+  // Player ids best-first once the game is over (for the party scoreboard).
+  results() { return this.phase === 'over' && this.standings ? this.standings.map((s) => s.id) : []; }
+  // Every soldier out on villages and land walks back to the capital.
+  recall(k) {
+    let n = 0;
+    for (const i of k.tiles) {
+      if (i === k.home) continue;
+      const T = this.tile(i), send = {}; for (const u in T.units) if (!UNITS[u].noFight && T.units[u] > 0) send[u] = T.units[u];
+      if (sumU(send) && this.march(k, { from: i, to: k.home, units: send, order: 'move' }).ok) n += sumU(send);
+    }
+    return n ? { ok: true, n } : { ok: false, error: 'All your soldiers are already at the capital.' };
+  }
 
   // ---------- views ----------
   tileOut(T) {
@@ -969,7 +1142,17 @@ class Kingdoms {
       msg: k.msg ? { key: k.msg.key, text: k.msg.text, to: k.msg.to, endsIn: Math.max(0, k.msg.until - now) } : null,
       alive: true, gone: k.gone, bot: !!k.ai, stage: k.stage, building: k.rocket ? k.rocket.stage : null,
       land: k.land, villages: k.villages, army: k.soldiers, capitals: k.capitals,
+      avatar: this.avatarOf(k.id), bounty: this.bountyOn(k.id), sanction: Math.max(0, k.sanctionUntil - now), underdog: k.underdog || 0, marked: this.marked === k.id,
     };
+  }
+  bountyOn(id) { let n = 0; for (const b of this.bounties) if (b.on === id) n += b.gold; return n; }
+  councilOut(now, k) {
+    const C = this.council; if (!C) return null;
+    const M0 = D.COUNCIL[C.kind], t = this.tally();
+    const o = { id: C.id, kind: C.kind, name: M0.name, icon: M0.icon, ask: M0.ask, text: M0.text, endsIn: Math.max(0, C.end - now), votes: C.votes.size, of: this.k.size,
+      tally: [...t].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, n]) => ({ id, n })) };
+    if (k) o.mine = C.votes.get(k.id) || null;
+    return o;
   }
   eventsOut(now) {
     return { current: this.event ? { kind: this.event.kind, name: this.event.name, icon: this.event.icon, text: this.event.text, endsIn: Math.max(0, this.event.until - now) } : null, nextIn: this.s.events && this.phase === 'play' ? Math.max(0, Math.round(this.nextEventAt - now)) : null, on: !!this.s.events };
@@ -984,6 +1167,8 @@ class Kingdoms {
       armies: [...this.armies.values()].map((a) => this.armyOut(a)),
       battles: this.battles.map((b) => ({ q: b.q, r: b.r, at: b.at, win: b.win, a: b.a, d: b.d })),
       alliances: [...this.alliances.values()].map((A) => ({ id: A.id, members: A.members.slice(), monument: Math.floor(A.monument) })),
+      wars: [...this.wars.values()].map((w) => ({ a: w.a, b: w.b, n: w.n, ago: now - w.at })),
+      council: this.councilOut(now, null),
       events: this.eventsOut(now), mode: this.s.mode, speed: this.s.speed, timeLimit: this.s.timeLimit,
       progress: this.world ? this.progress() : { domination: 0, leader: null, monument: 0, rockets: [] },
       timeLeft: this.phase === 'play' ? Math.max(0, this.endAt - now) : this.phase === 'over' ? 0 : this.s.timeLimit * 60000,
@@ -1022,7 +1207,7 @@ class Kingdoms {
       else if (k && k.scouted.has(T.i)) { const s = k.scouted.get(T.i); o.u = { ...s.units }; o.seen = now - s.at; }
       return o;
     });
-    const out = { ...base, world: { R: this.world.R, tiles }, kingdoms, events: this.eventsOut(now), progress: this.progress(), ticker: this.ticker.slice(-6), spectator: !k };
+    const out = { ...base, world: { R: this.world.R, tiles }, kingdoms, events: this.eventsOut(now), progress: this.progress(), ticker: this.ticker.slice(-6), spectator: !k, council: this.councilOut(now, k) };
     out.armies = [...this.armies.values()].filter((a) => !k || a.o === k.id || this.tile(a.to).o === k.id || this.allied(a.o, k.id)).map((a) => this.armyOut(a));
     if (!k) return out;
     const tower = k.b.tower > 0;
@@ -1058,7 +1243,10 @@ class Kingdoms {
         market: k.b.market ? { rate: MARKET_RATE[k.b.market] } : null, canGift: !!k.b.market,
       },
       rebel: this.rebelInfo(k),
-      rocket: k.b.launchpad && this.modeHas('science') ? { stage: k.stage, building: k.rocket ? k.rocket.stage : null, endsIn: k.rocket ? Math.max(0, k.rocket.end - now) : null, cost: k.stage < 3 ? this.rocketCost(k) : null, missing: k.stage < 3 ? this.missing(k, this.rocketCost(k)) : null } : null,
+      decree: (() => { const Dc = D.DECREES[k.decree]; return Dc ? { n: k.decree + 1, of: D.DECREES.length, key: Dc.key, icon: Dc.icon, title: Dc.title, hint: Dc.hint, reward: Dc.reward } : null; })(),
+      bounties: this.bounties.filter((b) => b.from === k.id).map((b) => ({ on: b.on, name: this.kn(b.on), gold: b.gold, expiresIn: Math.max(0, b.exp - now) })),
+      monumentAge: D.MONUMENT_AGE,
+      rocket: k.b.launchpad && this.modeHas('science') ? { stage: k.stage, building: k.rocket ? k.rocket.stage : null, endsIn: k.rocket ? Math.max(0, k.rocket.end - now) : null, dur: k.rocket ? k.rocket.dur : null, cost: k.stage < 3 ? this.rocketCost(k) : null, missing: k.stage < 3 ? this.missing(k, this.rocketCost(k)) : null } : null,
     });
     return out;
   }
@@ -1084,7 +1272,7 @@ class Kingdoms {
 }
 
 module.exports = {
-  key: 'kingdoms', name: 'JustKingdoms', min: 1, liveLobby: true, fields, defaults,
+  key: 'kingdoms', name: 'JustKingdoms', min: 1, best: [5, 10], liveLobby: true, fields, defaults,
   create: (room, settings) => new Kingdoms(room, settings),
   _test: { Kingdoms, D, M, AI, SPEED, sumU, fightersOf },
 };

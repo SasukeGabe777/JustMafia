@@ -11,19 +11,33 @@
   <link rel="stylesheet" href="/help.css">
   <link rel="stylesheet" href="/unlock.css">
   <link rel="stylesheet" href="/credits.css">
+  <link rel="stylesheet" href="/mafia-box.css">
 </head>
 <body>
   <canvas id="town"></canvas>
 
   <!-- Title screen -->
-  <section id="title" class="overlay">
+  <section id="title" class="overlay mt-title">
+    <canvas id="title-art" class="title-art" aria-hidden="true"></canvas>
     <div class="title-card">
+      <div class="title-kicker">JustMafia</div>
       <div class="logo">🔪 Mafia Town</div>
       <p class="tagline">A big-screen murder mystery. Everyone plays from their phone.</p>
-      <button id="create" class="btn btn-big">Create a town</button>
-      <p class="fine">Open this page on the TV or projector. Players join by scanning a QR code.</p>
-      <a class="fine back-box" href="/">◀ Back to JustGameBox</a>
+      <div class="title-btns">
+        <button id="title-continue" class="btn btn-big" hidden>▶ Continue town <b id="title-code"></b></button>
+        <button id="create" class="btn btn-big">▶ Start a new game</button>
+      </div>
+      <button id="title-how-btn" class="link title-how-btn" aria-expanded="false">❓ How to play</button>
+      <ol id="title-how" class="title-how" hidden>
+        <li>Open this page on the TV. Everyone scans the QR code and makes a townsperson on their phone.</li>
+        <li>Each phone secretly shows a role: most are townsfolk, a few are the Mafia.</li>
+        <li>At night the Mafia picks a victim while helpers like the Doctor and Detective act in secret.</li>
+        <li>By day the town argues, accuses and votes someone to the gallows.</li>
+        <li>The town wins when every Mafia member is gone. The Mafia wins when they match the town.</li>
+      </ol>
+      <p class="fine">5–100 players · 20–60 min · Players join by scanning a QR code.</p>
     </div>
+    <a class="title-back" href="/">◀ All games</a>
   </section>
 
   <!-- Heads-up display -->
@@ -57,6 +71,8 @@
     <ul id="lobby-how" class="lobby-how" hidden></ul>
     <button id="lobby-start" class="btn btn-big">Start game</button>
     <button id="lobby-bots" class="link">+ add 5 test bots</button>
+    <button id="lobby-pick" class="link">🎮 Play another game</button>
+    <button id="lobby-party" class="link" hidden>🎉 Back to the party</button>
     <div id="hof" class="hof" hidden></div>
   </aside>
 
@@ -68,6 +84,8 @@
     <div class="go-actions">
       <button id="go-rundown" class="btn">📜 Rundown of the game</button>
       <button id="go-again" class="btn">Play again</button>
+      <button id="go-pick" class="btn">🎮 Play another game</button>
+      <button id="go-party" class="btn" hidden>🎉 Back to the party</button>
     </div>
   </div>
   <!-- Optional after-game story: who did what, night by night (revealed only at game over). -->
@@ -192,5 +210,7 @@
   <script src="/draft-ui.js"></script>
   <script src="/rundown-ui.js"></script>
   <script src="/host.js"></script>
+  <script src="/unlocks.js"></script>
+  <script src="/mafia-box.js"></script>
 </body>
 </html>

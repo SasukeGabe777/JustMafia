@@ -52,9 +52,9 @@ test('Hints: word shapes first, then first letters (never the whole answer)', ()
   assert.deepEqual(pattern('Spider-Man', 2), ['S_____-M__']);
   assert.deepEqual(pattern('Monsters, Inc.', 2), ['M_______,', 'I__.']);
 });
-test('Content: 250+ answers in 8 categories, every bot clue uses keyboard emojis, ~400+ emojis', () => {
+test('Content: 250+ answers in 10 categories, every bot clue uses keyboard emojis, ~400+ emojis', () => {
   assert(C.ANSWERS.length >= 250, 'answers: ' + C.ANSWERS.length);
-  assert.equal(new Set(C.ANSWERS.map((a) => a.cat)).size, 8);
+  assert.equal(new Set(C.ANSWERS.map((a) => a.cat)).size, 10);
   assert(C.ALLOWED.size >= 400, 'emojis: ' + C.ALLOWED.size);
   for (const a of C.ANSWERS) { assert(a.clue.length, a.text + ' has a clue'); for (const e of a.clue) assert(C.ALLOWED.has(e), `${a.text}: ${e} is on the keyboard`); }
   assert.equal(new Set(C.ANSWERS.map((a) => a.text.toLowerCase())).size, C.ANSWERS.length, 'no duplicate answers');
@@ -203,5 +203,39 @@ for (const n of [3, 20, 100]) {
     assert(room.playerState(ps.Ann).state.final.length > 0);
   });
 }
+
+
+test('Family-friendly answers: grown-up titles are never offered when the host turns it on', () => {
+  assert(C.ANSWERS.filter((a) => !a.family).length >= 8, 'some answers are flagged');
+  for (const cat of ['all', 'movies', 'party']) {
+    const { room, clock } = mk({ bots: 6, settings: { family: true, category: cat, maxRounds: 20, turns: 3 }, seed: 11 });
+    room.start();
+    const seen = new Set();
+    while (room.game.phase !== 'over') { for (const st of room.game.stages) for (const o of st.options) seen.add(o.text); if (!clock.step()) break; }
+    assert(seen.size > 0);
+    for (const t of seen) assert(!C.GROWN_UP.has(t), cat + ': offered ' + t);
+  }
+});
+
+test('The final round counts double; results() lists players best-first at the end', () => {
+  const { room, clock, ps } = mk({ humans: ['Ann', 'Bo', 'Cy'], settings: { maxRounds: 3 } });
+  room.start();
+  const g = room.game;
+  assert.deepEqual(g.results(), []);
+  until(room, clock, () => g.round === 3 && g.phase === 'pick');
+  assert.equal(room.tvState().state.lastRound, true);
+  const giver = room.get(g.stages[0].giver), guesser = [ps.Ann, ps.Bo, ps.Cy].find((p) => p.id !== giver.id);
+  room.act(giver, { op: 'pick', i: 0 });
+  room.act(giver, { op: 'emoji', e: '🦁' });
+  const before = g.scores.get(guesser.id);
+  const r = room.act(guesser, { op: 'guess', text: g.stages[0].answer.text });
+  assert.equal(r.result, 'correct');
+  assert.equal(r.pts, 750 * 2, 'first solver with one emoji: 500 × 1.5, doubled');
+  assert.equal(g.scores.get(guesser.id) - before, 1500);
+  runOut(room, clock);
+  const order = g.results();
+  assert.equal(order.length, 3);
+  assert.deepEqual(order, g.standings().map((x) => x.id));
+});
 
 console.log(`\nEmoji Charades: ${passed} tests passed`);

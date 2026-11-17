@@ -7,6 +7,8 @@
 // themselves, everyone else guesses where (300/200/100 for the closest, +150 bullseye within 5),
 // and the spotlight earns +50 per person who read them within 15. The payoff is the end screen:
 // everyone's "twin tonight" (closest answers on average) and "opposite" (most different).
+// While waiting for the others, anyone who has placed can guess where the ROOM AVERAGE will land
+// (+75 within 5: "Crowd Whisperer"). Reveals call out a lone "hot take" and a split room.
 // Positions are never sent to the TV or other phones before the reveal. All content is original.
 
 // A spectrum: [left emoji, left label, right label, right emoji, optional title].
@@ -101,8 +103,9 @@ const fields = [
   { key: 'names', label: 'Names on dots', options: opt([['on', 'Show names'], ['off', 'Dots only (shy mode)']]) },
 ];
 const defaults = { pack: 'icebreaker', rounds: 12, seconds: 20, names: 'on' };
-const INTRO_MS = 3500, READ_INTRO_MS = 5500, REVEAL_MS = 9500, READ_REVEAL_MS = 12000, LAST_BONUS_MS = 2000, ALLIN_MS = 900, DROP_MS = 3000;
-const PTS = { avg: 50, neighbour: 25, read: [300, 200, 100], bullseye: 150, book: 50 };
+const INTRO_MS = 3500, READ_INTRO_MS = 5500, REVEAL_MS = 9500, READ_REVEAL_MS = 12000, LAST_BONUS_MS = 2000, ALLIN_MS = 900, DROP_MS = 3000, AVG_GRACE_MS = 6000;
+const PTS = { avg: 50, neighbour: 25, read: [300, 200, 100], bullseye: 150, book: 50, whisper: 75 };
+const WHISPER = 5, HOT_TAKE = 25, SPLIT_GAP = 30;
 const NEAR_AVG = 10, BULLSEYE = 5, OPEN = 15, TRAITS = 4;
 const isRead = (n) => n % 3 === 0;
 const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -126,7 +129,7 @@ class Spectrum {
   seat(p) {
     if (this.scores.has(p.id)) return;
     this.scores.set(p.id, 0); this.answers.set(p.id, new Map());
-    this.stats.set(p.id, { nearAvg: 0, neighbours: 0, guessErr: 0, guessN: 0, bonus: 0, spotN: 0, spotGuessers: 0, spotReaders: 0 });
+    this.stats.set(p.id, { nearAvg: 0, neighbours: 0, guessErr: 0, guessN: 0, bonus: 0, spotN: 0, spotGuessers: 0, spotReaders: 0, whispers: 0, whisperN: 0 });
     // Bots get a hidden personality (a few traits + how scattered they are + how well they read people),
     // so their answers are consistent and twins/opposites mean something.
     const rng = this.room.rng;
@@ -167,7 +170,7 @@ class Spectrum {
     this.n++;
     const ids = this.room.list().map((p) => p.id);
     const spec = this.draw(); this.specs[this.n] = spec;
-    this.r = { n: this.n, kind: isRead(this.n) && ids.length >= 2 ? 'read' : 'normal', spec, ids, pos: new Map(), guesses: new Map(), spot: null, spotPos: null, result: null, gained: new Map(), soon: false };
+    this.r = { n: this.n, kind: isRead(this.n) && ids.length >= 2 ? 'read' : 'normal', spec, ids, pos: new Map(), avgPreds: new Map(), guesses: new Map(), spot: null, spotPos: null, result: null, gained: new Map(), soon: false };
     if (this.r.kind === 'read') this.setSpot(this.pickSpot(ids));
     this.phase = 'intro';
     this.room.fx(this.r.kind === 'read' ? 'bonus' : 'round');
@@ -195,7 +198,7 @@ class Spectrum {
   // The spotlight never locked in (or left): this round becomes a normal round for everyone.
   toNormal() {
     const r = this.r;
-    r.kind = 'normal'; r.dozed = !r.left; r.spot = null; r.spotPos = null; r.pos.clear();
+    r.kind = 'normal'; r.dozed = !r.left; r.spot = null; r.spotPos = null; r.pos.clear(); r.avgPreds.clear();
     this.room.fx('dozed');
     this.openPlace();
   }
@@ -219,11 +222,21 @@ class Spectrum {
   }
   maybeAllIn() {
     const r = this.r;
-    if (!r || r.soon || (this.phase !== 'place' && this.phase !== 'guess')) return;
+    if (!r || r.soon === true || (this.phase !== 'place' && this.phase !== 'guess')) return;
     if (this.waitingFor().length) return;
     const any = this.phase === 'place' ? r.pos.size : r.guesses.size;
     if (!any && this.phase === 'place') return; // nobody left to wait for: the timer handles it
-    r.soon = true; this.room.fx('allin');
+    // Everyone has placed: people who haven't made their (optional) room-average guess get a
+    // few seconds for it, so the last one to lock in isn't cut off.
+    const missingAvg = this.phase === 'place' ? r.ids.filter((id) => { const p = this.room.get(id); return p && !p.bot && r.pos.has(id) && !r.avgPreds.has(id); }).length : 0;
+    if (missingAvg) {
+      if (r.soon === 'avg') return;
+      r.soon = 'avg'; this.room.fx('allin');
+      this.setTimer(Math.min(AVG_GRACE_MS, Math.max(ALLIN_MS, this.endsAt - this.room.now())), () => this.closePlace());
+      return;
+    }
+    if (r.soon !== 'avg') this.room.fx('allin');
+    r.soon = true;
     this.setTimer(ALLIN_MS, () => (this.phase === 'place' ? this.closePlace() : this.closeGuess()));
   }
 
@@ -231,9 +244,16 @@ class Spectrum {
     const r = this.r;
     if (this.phase === 'over') return { ok: false, error: 'The game is over.' };
     if (!r || !this.scores.has(p.id) || !r.ids.includes(p.id)) return { ok: false, error: 'You’re in from the next round! 🎟️' };
-    if (m.op !== 'place' && m.op !== 'guess') return { ok: false, error: 'Unknown move.' };
+    if (m.op !== 'place' && m.op !== 'guess' && m.op !== 'avg') return { ok: false, error: 'Unknown move.' };
     if (typeof m.pos !== 'number' || !Number.isFinite(m.pos) || m.pos < 0 || m.pos > 100) return { ok: false, error: 'Drag the marker somewhere on the line.' };
     const pos = clamp(m.pos);
+    if (m.op === 'avg') {
+      if (this.phase !== 'place') return { ok: false, error: 'Too late for that one!' };
+      if (!r.pos.has(p.id)) return { ok: false, error: 'Place your own marker first.' };
+      r.avgPreds.set(p.id, pos);
+      this.maybeAllIn();
+      return { ok: true };
+    }
     if (m.op === 'place') {
       if (this.phase === 'spot') {
         if (p.id !== r.spot) return { ok: false, error: 'Wait for the spotlight to place themselves.' };
@@ -269,7 +289,10 @@ class Spectrum {
     const r = this.r;
     if (!r || r.n !== n || this.phase !== phase || !this.room.get(p.id)) return;
     if (phase === 'place' && r.pos.has(p.id)) return;
-    this.act(p, { op: 'place', pos: this.botOpinion(p, r.spec) });
+    const pos = this.botOpinion(p, r.spec);
+    this.act(p, { op: 'place', pos });
+    // Some bots also guess the room average (a blend of their own view and the middle).
+    if (phase === 'place' && this.room.rng() < 0.4) this.act(p, { op: 'avg', pos: clamp(pos * 0.4 + 30 + (this.room.rng() - 0.5) * 30) });
   }
   botGuess(p, n) {
     const r = this.r;
@@ -317,9 +340,34 @@ class Spectrum {
         cluster = { from, to, count: size, center, side: sideOf(r.spec, center), all: size === count };
       }
     }
+    // A lone "hot take": the dot furthest from its nearest neighbour (if it's really alone).
+    let hotTake = null;
+    if (count >= 4) {
+      sorted.forEach((d, i) => {
+        const gap = Math.min(i > 0 ? d.pos - sorted[i - 1].pos : Infinity, i < count - 1 ? sorted[i + 1].pos - d.pos : Infinity);
+        if (gap >= HOT_TAKE && (!hotTake || gap > hotTake.gap)) hotTake = { id: d.id, pos: d.pos, gap };
+      });
+    }
+    // A split room: one big gap with a real crowd on each side.
+    let split = null;
+    if (count >= 4) {
+      let gi = -1, gap = 0;
+      for (let i = 1; i < count; i++) { const g = sorted[i].pos - sorted[i - 1].pos; if (g > gap) { gap = g; gi = i; } }
+      const left = gi, right = count - gi, small = Math.min(left, right);
+      if (gap >= SPLIT_GAP && small >= 2 && small >= count * 0.25) split = { left, right, at: Math.round((sorted[gi - 1].pos + sorted[gi].pos) / 2), gap };
+    }
+    // Crowd Whisperers: guessed the room average within WHISPER.
+    const whisperers = new Set();
+    if (count >= 3 && avg != null) {
+      for (const [id, g] of r.avgPreds) {
+        if (!this.room.get(id) || !this.stats.has(id)) continue;
+        const st = this.stats.get(id); st.whisperN++;
+        if (Math.abs(g - avg) <= WHISPER) { whisperers.add(id); this.add(id, PTS.whisper); st.whispers++; }
+      }
+    }
     const lo = sorted[0], hi = sorted[count - 1];
     const extremes = count >= 2 && hi.pos - lo.pos >= 20 ? { lo: { id: lo.id, pos: lo.pos }, hi: { id: hi.id, pos: hi.pos } } : null;
-    r.result = { kind: 'normal', count, avg: avg == null ? null : Math.round(avg), dots: sorted, nearAvg, pair, cluster, extremes, dozed: !!r.dozed, left: !!r.left };
+    r.result = { kind: 'normal', count, avg: avg == null ? null : Math.round(avg), dots: sorted, nearAvg, pair, cluster, extremes, dozed: !!r.dozed, left: !!r.left, hotTake, split, whisperers, exactAvg: avg };
     this.phase = 'reveal'; this.room.fx('reveal', { count });
     if (cluster && cluster.count >= 3) { const n = r.n; this.room.after(2600, () => { if (this.r && this.r.n === n && this.phase === 'reveal') this.room.fx('cluster'); }); }
     this.setTimer(REVEAL_MS + (this.n >= this.s.rounds ? LAST_BONUS_MS : 0), () => this.nextRound());
@@ -373,7 +421,7 @@ class Spectrum {
       common[i][j] = common[j][i] = c;
       if (c) diff[i][j] = diff[j][i] = s / c;
     }
-    const pub = (i) => ({ id: ppl[i].id, name: ppl[i].name, color: ppl[i].color, bot: !!ppl[i].bot });
+    const pub = (i) => ({ id: ppl[i].id, name: ppl[i].name, avatar: ppl[i].avatar || null, color: ppl[i].color, bot: !!ppl[i].bot });
     const pct = (d) => Math.max(0, Math.round(100 - d));
     // A conversation starter: the spectrum two people agreed on most (or differed on most).
     const about = (i, j, most) => {
@@ -420,10 +468,11 @@ class Spectrum {
       if (c >= 2 && answered[i] >= 2) { const v = s / c; if (!unique || v > unique.v) unique = { i, v }; }
     }
     // Mind Reader: smallest average error when guessing the spotlight. Open Book: easiest to read.
-    let mind = null, book = null;
+    let mind = null, book = null, whisper = null;
     for (let i = 0; i < N; i++) {
       const st = this.stats.get(ppl[i].id);
       if (st.guessN) { const v = st.guessErr / st.guessN; if (!mind || v < mind.v || (v === mind.v && st.guessN > mind.n)) mind = { i, v, n: st.guessN }; }
+      if (st.whispers && (!whisper || st.whispers > whisper.v)) whisper = { i, v: st.whispers };
       if (st.spotGuessers) { const v = st.spotReaders / st.spotGuessers; if (v > 0 && (!book || v > book.v || (v === book.v && st.spotReaders > book.n))) book = { i, v, n: st.spotReaders, of: st.spotGuessers }; }
     }
     return {
@@ -431,12 +480,15 @@ class Spectrum {
       unique: unique ? { ...pub(unique.i), pct: pct(unique.v) } : null,
       mind: mind ? { ...pub(mind.i), err: Math.round(mind.v), guesses: mind.n } : null,
       book: book ? { ...pub(book.i), readers: book.n, of: book.of } : null,
+      whisper: whisper ? { ...pub(whisper.i), hits: whisper.v } : null,
     };
   }
 
   // ---- public / private state ----
-  pub(id) { const p = this.room.get(id); return p ? { id, name: p.name, color: p.color } : { id, name: '—', color: '#888' }; }
-  standings() { return [...this.scores].filter(([id]) => this.room.get(id)).map(([id, points]) => ({ id, name: this.room.name(id), color: this.room.get(id).color, points })).sort((a, b) => b.points - a.points); }
+  pub(id) { const p = this.room.get(id); return p ? { id, name: p.name, avatar: p.avatar || null, color: p.color } : { id, name: '—', avatar: null, color: '#888' }; }
+  standings() { return [...this.scores].filter(([id]) => this.room.get(id)).map(([id, points]) => ({ id, name: this.room.name(id), avatar: this.room.get(id).avatar || null, color: this.room.get(id).color, points })).sort((a, b) => b.points - a.points); }
+  // Player ids best-first once the game is over (for the party scoreboard across games).
+  results() { return this.phase === 'over' ? this.standings().map((x) => x.id) : []; }
   endsIn() { return this.endsAt && this.phase !== 'over' ? Math.max(0, this.endsAt - this.room.now()) : 0; }
   common() {
     const r = this.r;
@@ -464,11 +516,12 @@ class Spectrum {
       dots: res.dots.map((d) => dot(d.id, d.pos)),
       cluster: res.cluster, lo: res.extremes ? named(res.extremes.lo) : null, hi: res.extremes ? named(res.extremes.hi) : null,
       pair: res.pair ? { a: nm ? this.room.name(res.pair.a) : null, b: nm ? this.room.name(res.pair.b) : null, gap: res.pair.gap } : null,
+      hotTake: res.hotTake ? { ...named(res.hotTake), gap: res.hotTake.gap } : null, split: res.split, whisperers: res.whisperers.size,
     };
   }
   finalTv() {
     const f = this.final; if (!f) return null;
-    const strip = (x) => (x ? { name: x.name, color: x.color } : null);
+    const strip = (x) => (x ? { name: x.name, avatar: x.avatar || null, color: x.color } : null);
     const pairs = f.pairs.filter((x) => this.room.get(x.a.id) && this.room.get(x.b.id));
     return {
       players: f.players, more: Math.max(0, pairs.length - 24),
@@ -476,6 +529,7 @@ class Spectrum {
       unique: f.unique && this.room.get(f.unique.id) ? { ...strip(f.unique), pct: f.unique.pct } : null,
       mind: f.mind && this.room.get(f.mind.id) ? { ...strip(f.mind), err: f.mind.err, guesses: f.mind.guesses } : null,
       book: f.book && this.room.get(f.book.id) ? { ...strip(f.book), readers: f.book.readers, of: f.book.of } : null,
+      whisper: f.whisper && this.room.get(f.whisper.id) ? { ...strip(f.whisper), hits: f.whisper.hits } : null,
     };
   }
   tv() {
@@ -506,6 +560,7 @@ class Spectrum {
     const pair = res.pair && (res.pair.a === p.id || res.pair.b === p.id) ? (res.pair.a === p.id ? res.pair.b : res.pair.a) : null;
     const nm = this.namesOn();
     return { kind: 'normal', avg: res.avg, count: res.count, gained, pos: mine ? mine.pos : null, nearAvg: res.nearAvg.has(p.id),
+      avgPred: r.avgPreds.has(p.id) ? r.avgPreds.get(p.id) : null, whisper: res.whisperers.has(p.id), hotTake: !!(res.hotTake && res.hotTake.id === p.id),
       neighbour: pair ? { name: nm ? this.room.name(pair) : null, gap: res.pair.gap } : null,
       closest: closest ? { name: nm ? this.room.name(closest.id) : null, color: this.pub(closest.id).color, gap: closest.gap } : null,
       lo: res.extremes ? res.extremes.lo.pos : null, hi: res.extremes ? res.extremes.hi.pos : null };
@@ -516,19 +571,21 @@ class Spectrum {
     let final = null;
     if (this.phase === 'over' && this.final) {
       const me = this.final.per.get(p.id) || { twin: null, opp: null };
-      const strip = (x) => (x ? { name: x.name, color: x.color, pct: x.pct, mutual: x.mutual, shared: x.shared, about: x.about ? { ...x.about.spec, me: x.about.me, them: x.about.them } : null } : null);
+      const strip = (x) => (x ? { name: x.name, avatar: x.avatar || null, color: x.color, pct: x.pct, mutual: x.mutual, shared: x.shared, about: x.about ? { ...x.about.spec, me: x.about.me, them: x.about.them } : null } : null);
       const aw = [];
       const f = this.final;
       if (f.pairs[0] && (f.pairs[0].a.id === p.id || f.pairs[0].b.id === p.id)) aw.push({ icon: '👯', title: 'Most Alike Pair' });
       if (f.unique && f.unique.id === p.id) aw.push({ icon: '🦄', title: 'Most Unique' });
       if (f.mind && f.mind.id === p.id) aw.push({ icon: '🔮', title: 'Mind Reader' });
       if (f.book && f.book.id === p.id) aw.push({ icon: '📖', title: 'Open Book' });
+      if (f.whisper && f.whisper.id === p.id) aw.push({ icon: '🔮', title: 'Crowd Whisperer' });
       final = { twin: strip(me.twin), opp: strip(me.opp), awards: aw, standings: st.slice(0, 10).map(({ id, ...x }) => x) };
     }
     return {
       ...this.common(), me: p.id, inRound, isSpot,
       myPos: r ? (isSpot ? r.spotPos : r.pos.has(p.id) ? r.pos.get(p.id) : null) : null,
       myGuess: r && r.guesses.has(p.id) ? r.guesses.get(p.id).pos : null,
+      myAvg: r && r.avgPreds.has(p.id) ? r.avgPreds.get(p.id) : null, whisper: PTS.whisper,
       locked: r ? (this.phase === 'guess' ? r.guesses.size : r.pos.size) : 0,
       result: this.myResult(p), final,
       points: this.scores.get(p.id) || 0, rank: st.findIndex((x) => x.id === p.id) + 1, of: st.length,
@@ -537,7 +594,7 @@ class Spectrum {
 }
 
 module.exports = {
-  key: 'spectrum', name: 'Where Do You Stand?', min: 3, fields, defaults,
+  key: 'spectrum', name: 'Where Do You Stand?', min: 3, best: [4, 16], fields, defaults,
   create: (room, settings) => new Spectrum(room, settings),
   _test: { PACKS, PTS, isRead, specText },
 };

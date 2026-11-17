@@ -12,6 +12,7 @@
   }
   const money = (v) => (v == null ? '' : (v < 0 ? '−$' : '$') + Math.abs(Math.round(v)).toLocaleString('en-US'));
   const signed = (v) => (v >= 0 ? '+' : '') + money(v);
+  let F = null, last = null; // the studio frame (public/box/show.js) and the latest TV state
   const seen = new Set();
   let lastRound = 0; // a new game (Play again) starts the one-shot animations over
   const newGame = (r) => { if (r < lastRound) seen.clear(); lastRound = r || 0; };
@@ -98,7 +99,8 @@
           <p>Highest bid wins and pays the <b>second-highest + $10</b>.</p>
           <div class="jb-opening">Minimum <b>${money(L.opening)}</b></div>
           <div class="jb-envs">${'✉️'.repeat(Math.min(s.sealedIn || 0, 24))}${(s.sealedIn || 0) > 24 ? ' …' : ''}</div>
-          <div class="jb-meta">${s.sealedIn} / ${s.eligible} envelopes in · ⏱ <b data-jb-ends="${endsAt(s.endsIn)}">${Math.ceil(s.endsIn / 1000)}</b>s</div></div></div></div>`;
+          <div class="jb-meta">${s.sealedIn} / ${s.eligible} envelopes in · ⏱ <b data-jb-ends="${endsAt(s.endsIn)}">${Math.ceil(s.endsIn / 1000)}</b>s</div>
+          ${(s.sealWaiting || []).length ? `<div class="jb-sealwait">⏳ Waiting on ${s.sealWaiting.map((n) => `<b>${esc(n)}</b>`).join(', ')}</div>` : ''}</div></div></div>`;
   }
   function tvSold(s) {
     const sale = s.sale, fresh = once('sold:' + s.round);
@@ -124,15 +126,17 @@
   }
   function tvOver(s) {
     const w = s.final[0], top = Math.max(1, ...s.final.map((r) => r.net));
-    const bars = s.final.map((r, i) => `<div class="jb-bar"><span class="n">${i + 1}</span><span class="nm">${esc(r.name)}${r.loans ? ' 🏦'.repeat(r.loans) : ''}</span>
+    const bars = s.final.slice(0, 6).map((r, i) => `<div class="jb-bar"><span class="n">${i + 1}</span><span class="nm">${esc(r.name)}${r.loans ? ' 🏦'.repeat(r.loans) : ''}</span>
       <span class="tr"><i style="width:${Math.max(2, (Math.max(0, r.net) / top) * 100)}%;--c:${esc(r.color)}"></i></span><b>${money(r.net)}</b>
       <small>💵${money(r.cash)} · 📦${money(r.itemValue)}${r.bonus ? ` · 🧩${money(r.bonus)}` : ''}${r.debt ? ` · 🏦−${money(r.debt)}` : ''}</small></div>`).join('');
-    return `<div class="jb-root jb-over final"><div class="crown">🏆</div><div class="muted">Storage tycoon</div><h2>${esc(w ? w.name : '')}</h2>
-      <div class="jb-awards">${(s.awards || []).map((a) => `<div class="jb-award"><div class="ic">${a.icon}</div><b>${esc(a.title)}</b><div>${esc(a.name)}</div><small class="muted">${esc(a.why)}</small></div>`).join('')}</div>
+    const pod = [s.final[1], s.final[0], s.final[2]];
+    const podium = `<div class="jb-podium">${pod.map((r, i) => (r ? `<div class="pd p${[2, 1, 3][i]}"><div class="who">${r.av ? esc(r.av) : ['🥈', '🏆', '🥉'][i]}</div><div class="nm">${esc(r.name)}</div><div class="blk"><b>${[2, 1, 3][i]}</b><small>${money(r.net)}</small></div></div>` : '<div class="pd"></div>')).join('')}</div>`;
+    return `<div class="jb-root jb-over final"><div class="jb-overhost"><div class="st-slot"></div></div><div class="muted">Storage tycoon of the night</div>${podium}<div class="jb-winner">🏆 ${esc(w ? w.name : '')} wins!</div>
+      <div class="jb-awards">${(s.awards || []).slice(0, 6).map((a) => `<div class="jb-award"><div class="ic">${a.icon}</div><b>${esc(a.title)}</b><div>${esc(a.name)}</div><small class="muted">${esc(a.why)}</small></div>`).join('')}</div>
       <div class="jb-bars">${bars}</div><p class="muted">Net worth = cash + item values + set bonuses − loans with 20% interest</p></div>`;
   }
-  const side = (s) => `<aside class="jb-side panel"><h3>💰 Net worth</h3>${s.standings.map((r, i) => `<div class="jb-row"><span class="n">${i + 1}</span><span class="dot" style="background:${esc(r.color)}"></span><span class="nm">${esc(r.name)}${r.loans ? ` <span title="loans">${'🏦'.repeat(r.loans)}</span>` : ''}</span><b>${money(r.net)}</b></div>`).join('')}
-    ${s.players > s.standings.length ? `<div class="muted jb-more">+${s.players - s.standings.length} more bidders</div>` : ''}</aside>`;
+  const side = (s) => `<aside class="jb-side"><div class="st-slot"></div><div class="panel"><h3>💰 Net worth</h3>${s.standings.map((r, i) => `<div class="jb-row"><span class="n">${i + 1}</span><span class="dot" style="background:${esc(r.color)}"></span><span class="nm">${esc(r.name)}${r.loans ? ` <span title="loans">${'🏦'.repeat(r.loans)}</span>` : ''}</span><b>${money(r.net)}</b></div>`).join('')}
+    ${s.players > s.standings.length ? `<div class="muted jb-more">+${s.players - s.standings.length} more bidders</div>` : ''}</div></aside>`;
 
   // Confetti for jackpots and legendary finds (TV only).
   function rain(chars, n = 40) {
@@ -179,6 +183,8 @@
   }
 
   BOX.games.bid = {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => ({ preview: 'think', auction: 'play', sealed: 'tense', sold: 'reveal', reveal: 'reveal', over: 'finale' }[s.phase] || 'play'),
     name: 'JustBid', icon: '🚪',
     about: 'Storage locker auctions! Peek at the clues, bid live against everyone, then watch the locker get unpacked. Treasure or trash?',
     how: [
@@ -199,12 +205,43 @@
       if (f.kind === 'jackpot') rain(['💰', '💎', '✨', '🤑', '💵']);
       else if (f.kind === 'itemL') rain(['✨', '⭐', '💛'], 28);
       else if (f.kind === 'set') rain(['🧩', '✨'], 18);
+      // Rusty Rattlebang and the studio audience react.
+      if (!F) return;
+      const s = last || {}, sale = s.sale, pick = (a) => a[Math.floor(Math.random() * a.length)];
+      const R = (o) => F.react(o);
+      switch (f.kind) {
+        case 'door': R({ line: pick(['Fresh locker comin’ in! Take a peek, folks!', 'Ooh, what’s behind this door?', 'Step right up and eyeball this one!']), pose: 'point', mood: 'clap', prio: 2 }); break;
+        case 'premium': R({ line: 'A premium locker! Fancy stuff, folks!', pose: 'point', mood: 'gasp', prio: 3 }); break;
+        case 'mystery': R({ line: 'A mystery locker! No clues, no mercy!', pose: 'shrug', mood: 'gasp', prio: 3 }); break;
+        case 'sealed': R({ line: 'Sealed bids! Envelopes, please!', pose: 'point', prio: 3 }); break;
+        case 'grand': R({ line: 'The GRAND locker! Double the stuff!', pose: 'cheer', mood: 'cheer', prio: 3 }); break;
+        case 'open': R({ line: 'Biddin’ is OPEN! Who’ll start me off?', pose: 'gavel', poseMs: 700, mood: 'clap', prio: 2 }); break;
+        case 'bid': R({ pose: 'point', poseMs: 600, mood: 'clap', moodMs: 900, prio: 0 }); break;
+        case 'once': R({ line: 'Going once…', pose: 'gavel', poseMs: 300, prio: 1 }); break;
+        case 'twice': R({ line: 'Going twice!', pose: 'gavel', poseMs: 300, mood: 'gasp', moodMs: 1500, prio: 2 }); break;
+        case 'sold': R({ line: `SOLD! To ${f.name || (sale && sale.name) || 'our bidder'} for ${money(f.price != null ? f.price : sale && sale.price)}!`, pose: 'gavel', poseMs: 700, mood: 'cheer', prio: 3 }); break;
+        case 'nosale': R({ line: 'No takers? Not even a nibble!', pose: 'shrug', mood: 'groan', prio: 3 }); break;
+        case 'rollup': R({ line: 'Let’s see what’s inside!', pose: 'point', mood: 'gasp', moodMs: 1500, prio: 2 }); break;
+        case 'tension': R({ line: 'Ooh, something shiny back there…', pose: 'point', mood: 'gasp', moodMs: 1700, prio: 2 }); break;
+        case 'itemL': R({ line: 'LEGENDARY! Would you look at that!', pose: 'cheer', mood: 'cheer', confetti: true, prio: 3 }); break;
+        case 'itemE': R({ line: 'Ooh, an epic find!', mood: 'clap', prio: 1 }); break;
+        case 'itemJ': R({ mood: 'groan', moodMs: 1200, prio: 0 }); break;
+        case 'jackpot': R({ line: 'JACKPOT, partner! Jackpot!', pose: 'cheer', mood: 'cheer', confetti: true, prio: 3 }); break;
+        case 'profit': R({ line: `Cha-ching! ${(sale && sale.name) || 'Our bidder'} turns a profit!`, pose: 'cheer', mood: 'cheer', confetti: true, prio: 3 }); break;
+        case 'loss': R({ line: pick(['Oof! That one’s a money pit!', 'Ouch! Paid too much, partner!']), pose: 'shrug', mood: 'groan', prio: 3 }); break;
+        case 'missed': R({ line: 'Y’all missed out on that one!', pose: 'shrug', mood: 'groan', prio: 3 }); break;
+        case 'over': { const w = (s.final || [])[0]; R({ line: `What a night! ${w ? w.name : 'Our winner'} is the storage tycoon!`, pose: 'cheer', mood: 'cheer', moodMs: 5000, confetti: true, prio: 4 }); break; }
+        default:
+      }
     },
 
     tv(el, s) {
       if (!s) return;
       newGame(s.round);
-      if (s.phase === 'over') { paint(el, sigOf(s), tvOver(s)); return; }
+      // The auction runs inside a TV studio: the warehouse set behind, Rusty at his podium, the audience below.
+      F = BOX.studio ? BOX.studio.frame(el, 'bid') : null; last = s;
+      if (F) el = F.content;
+      if (s.phase === 'over') { paint(el, sigOf(s), tvOver(s)); if (F) F.attach(); return; }
       if (!s.locker) return;
       let main = '';
       if (s.phase === 'preview') main = tvPreview(s);
@@ -214,6 +251,15 @@
       else if (s.phase === 'reveal') main = tvReveal(s);
       paint(el, sigOf(s), `<div class="jb-root jb-tv"><section class="jb-stage"><div class="jb-lights">${'<i></i>'.repeat(7)}</div>
         <div class="jb-top"><span class="jb-logo">🚪 JustBid</span>${kindPill(s.locker)}<span class="jb-round">Locker ${s.round} of ${s.rounds}</span></div>${main}</section>${side(s)}</div>`);
+      if (F) F.attach();
+    },
+
+    // The lobby is a storage locker: the door rolls up and every setting is an item inside.
+    lobbyTv(el, L) {
+      if (!BOX.studio) return;
+      BOX.studio.lobby(el, L, { key: 'bid', title: '<span class="a">Just</span><span class="b">Bid</span>', tagline: 'Storage locker auctions! Bid live, unpack the loot. Treasure or trash?',
+        icons: { rounds: '🚪', cash: '💵', countdown: '🔨', specials: '🎲', loans: '🏦', showIntro: '🎤' }, setTitle: 'UNIT 1 · House rules (click an item to change it)', joinTitle: 'Bidder check-in',
+        startLabel: '🔨 Open the auction!', crowdTitle: 'bidders on the floor', emptyCrowd: 'No bidders yet… scan the tag to grab a paddle!', door: true });
     },
 
     phone(el, v, ctx) {
@@ -228,7 +274,7 @@
       if (draftKey !== k) { draftKey = k; draft = ''; sealDraft = ''; }
       if (v.phase === 'over') {
         const my = v.my || {};
-        paint(el, sigOf(v), `<div class="jb-root"><div class="card-box" style="text-align:center"><h3>Game over!</h3><p>You finished <b>#${v.rank}</b> of ${v.of}</p>
+        BOX.morph(el, `<div class="jb-root"><div class="card-box" style="text-align:center"><h3>Game over!</h3><p>You finished <b>#${v.rank}</b> of ${v.of}</p>
           <div class="jb-bignet">${money(v.net)}</div><div class="muted">💵 ${money(my.cash)} · 📦 ${money(my.itemValue)} · 🧩 ${money(my.bonus)}${my.debt ? ` · 🏦 −${money(my.debt)}` : ''}</div>
           ${v.awards.map((a) => `<div class="jb-myaward">${a.icon} <b>${esc(a.title)}</b><br><small class="muted">${esc(a.why)}</small></div>`).join('')}</div>
           <div class="card-box">${BOX.board(v.final, (r) => money(r.net), '')}</div>${collection(v)}</div>`);
@@ -268,8 +314,9 @@
           <div class="jb-minis">${R.items.slice().reverse().map((it) => `<div class="jb-mini r-${esc(it.r)}"><span>${esc(it.emoji)}</span><span class="nm">${esc(it.name)}</span><b>${money(it.value)}</b></div>`).join('')}</div>
           <div class="jb-sofar sm">So far ${money(R.sofar)}${s ? ` · paid ${money(s.price)}` : ''}</div>${res}${news}`;
       }
-      const html = `<div class="jb-root jb-phone">${head(v)}${title}${body}${collection(v)}</div>`;
-      if (paint(el, sigOf(v, { showCol }), html)) this.bind(el, v, ctx);
+      // Morph in place: bid buttons stay under fingers while the price climbs.
+      BOX.morph(el, `<div class="jb-root jb-phone">${head(v)}${title}${body}${collection(v)}</div>`);
+      this.bind(el, v, ctx);
     },
 
     bind(el, v, ctx) {

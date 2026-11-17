@@ -49,7 +49,7 @@ function goal(g, k) {
   return k.age < 5 ? 'castle' : null;
 }
 
-function assignJobs(g, k, need) {
+function jobsFor(g, k, need) {
   const P = k.peasants, open = g.jobsOpen(k), per = {};
   for (const j of JOB_KEYS) if (open[j]) per[j] = Math.max(0.05, g.perWorker(k, j));
   // keep food income just above upkeep; eat into a big stockpile instead of hoarding it
@@ -57,7 +57,7 @@ function assignJobs(g, k, need) {
   let farmers = Math.ceil(Math.max(0, g.upkeep(k) + net) / per.farm);
   farmers = Math.min(P, Math.max(P > 0 ? 1 : 0, farmers));
   const rest = P - farmers;
-  const base = { farm: 10, chop: 30, quarry: 22, mine: 20, study: k.ai.p === 'scholar' ? 45 : 15 };
+  const base = { farm: 10, chop: 30, quarry: 22, mine: 20, study: k.ai && k.ai.p === 'scholar' ? 45 : 15 };
   const w = {}; let tot = 0;
   for (const j of Object.keys(per)) { const r = JOBS[j].res; w[j] = (need[r] || 0) / per[j] + base[j] * (k.age >= 3 ? 2 : 1); tot += w[j]; }
   const jobs = { farm: farmers, chop: 0, quarry: 0, mine: 0, study: 0 };
@@ -67,7 +67,29 @@ function assignJobs(g, k, need) {
     share.sort((a, b) => (b[1] % 1) - (a[1] % 1));
     for (let i = 0; used < rest; i = (i + 1) % share.length) { jobs[share[i][0]]++; used++; }
   }
-  g.actK(k, { op: 'jobs', ...jobs });
+  return jobs;
+}
+function assignJobs(g, k, need) { g.actK(k, { op: 'jobs', ...jobsFor(g, k, need) }); }
+// One-tap 'Auto' on the phone: workers toward the next age (or what is queued) with food covered.
+function autoJobs(g, k) {
+  const need = { food: 40 }, c = g.canBuild(k, 'castle');
+  if (c.cost) for (const r in c.cost) need[r] = (need[r] || 0) + Math.max(0, c.cost[r] - k.res[r]);
+  if (!c.cost) { need.gold = 300; need.stone = 300; if (k.b.library) need.sci = 200; }
+  return jobsFor(g, k, need);
+}
+// The Royal Council: bots sanction the leader (or whoever hit them) and grant to a friend or the weakest.
+function councilVote(g, k, now) {
+  const C = g.council; if (!C || C.votes.has(k.id)) return;
+  const others = [...g.k.values()].filter((x) => x.id !== k.id); if (!others.length) return;
+  let to;
+  if (C.kind === 'sanction') {
+    const foe = k.lastAttacker && now - k.attackedAt < 120000 && g.k.get(k.lastAttacker);
+    to = foe && foe.id !== k.id ? foe : others.filter((x) => !g.allied(x.id, k.id) && !g.chain(k).includes(x.id)).sort((a, b) => b.score - a.score)[0] || others.sort((a, b) => b.score - a.score)[0];
+  } else {
+    const friends = others.filter((x) => g.allied(x.id, k.id) || k.neighbours.includes(x.id));
+    to = (friends.length && g.room.rng() < 0.6 ? friends : others).sort((a, b) => a.score - b.score)[0];
+  }
+  g.actK(k, { op: 'vote', to: to.id });
 }
 
 function unitPick(g, k) {
@@ -118,7 +140,11 @@ function diplomacy(g, k, now) {
     if (o.kind === 'ally') {
       const nb = k.neighbours.includes(o.from);
       const p = { diplomat: nb ? 0.9 : 0.45, builder: nb ? 0.6 : 0.15, scholar: nb ? 0.6 : 0.15, warlord: nb ? 0.3 : 0.05 }[ai.p];
-      g.actK(k, { op: 'allyAnswer', from: o.from, yes: rng() < p });
+      // wary of a world alliance: before the late game a bot won't join a bloc holding over half the free kingdoms
+      const size = (id) => { const x = g.k.get(id); const A = x && x.ally && g.alliances.get(x.ally); return A ? A.members.length : 1; };
+      const free = [...g.k.values()].filter((x) => !x.vassalOf).length, late = now - g.startAt > (g.s.timeLimit * 60000) * 0.7;
+      const tooBig = !late && size(o.from) + size(k.id) > Math.max(2, Math.ceil(free / 2));
+      g.actK(k, { op: 'allyAnswer', from: o.from, yes: !tooBig && rng() < p });
     } else if (o.kind === 'trade') {
       const val = (r) => Object.entries(r).reduce((a, [x, n]) => a + n * VALUE[x], 0);
       const fair = val(o.give) >= 0.9 * val(o.get) && !g.missing(k, o.get);
@@ -141,7 +167,8 @@ function diplomacy(g, k, now) {
     if (mates.length && k.res[r] > 200) g.actK(k, { op: 'gift', to: mates[Math.floor(rng() * mates.length)], res: { [r]: 40 } });
   }
   // the Peace Monument
-  if (k.ally && g.modeHas('diplomacy') && k.age >= 3) {
+  if (k.ally && g.modeHas('diplomacy') && k.age >= 4 && now >= (ai.nextMonument || 0)) {
+    ai.nextMonument = now + 20000;
     const n = ai.p === 'diplomat' ? 80 : 40;
     if (k.res.gold >= 150 + n && k.res.stone >= 150 + n) g.actK(k, { op: 'monument', res: { gold: n, stone: n } });
   }
@@ -157,6 +184,13 @@ function diplomacy(g, k, now) {
 function turn(g, k, now) {
   const ai = k.ai, rng = g.room.rng;
   diplomacy(g, k, now);
+  councilVote(g, k, now);
+  // bounties: a bot that keeps being hit (or watches a runaway leader) puts gold on their head
+  if (k.res.gold > 400 && g.room.rng() < 0.04) {
+    const foe = k.lastAttacker && now - k.attackedAt < 60000 && g.k.get(k.lastAttacker);
+    const t = foe || (g.marked && g.marked !== k.id && g.k.get(g.marked));
+    if (t && !g.allied(t.id, k.id) && !g.bounties.some((b) => b.from === k.id && b.on === t.id)) g.actK(k, { op: 'bounty', to: t.id, gold: 100 });
+  }
   if (k.vassalOf) { const r = g.rebelInfo(k); if (r && r.can) g.actK(k, { op: 'rebel' }); }
   // building goal & workers
   const gl = goal(g, k), gc = gl ? g.canBuild(k, gl) : null;
@@ -222,4 +256,4 @@ function countKind(g, k, u) {
   return n;
 }
 
-module.exports = { fresh, personalities, turn, PLANS, goal };
+module.exports = { fresh, personalities, turn, PLANS, goal, autoJobs, jobsFor };

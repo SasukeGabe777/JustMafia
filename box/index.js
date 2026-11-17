@@ -2,7 +2,7 @@
 // JustGameBox socket server (namespace /box): every box game shares the same room code,
 // QR join, lobby settings, bots and reconnection — the way JustMafia works.
 const path = require('path');
-const { BoxRoom } = require('./room');
+const { BoxRoom, REACTIONS } = require('./room');
 
 const GAMES = {
   president: require('./games/president'),
@@ -19,9 +19,28 @@ const GAMES = {
   spectrum: require('./games/spectrum'),
   bid: require('./games/bid'),
   kingdoms: require('./games/kingdoms'),
+  zombie: require('./games/zombie'),
+  summon: require('./games/summon'),
+  letters: require('./games/letters'),
+  memes: require('./games/memes'),
+  colormatch: require('./games/colormatch'),
+  trivia: require('./games/trivia'),
+  plinko: require('./games/plinko'),
 };
 
-function installBox(app, io, { takenElsewhere = () => false } = {}) {
+// Every small game opens with its own intro cutscene (box/show.js, 'cast' mode); the game
+// shows (Price Panic, JustBid) set `show: true` themselves for the contestant-fact opening.
+for (const k of ['president', 'blackjack', 'blanks', 'truths', 'whosaid', 'emoji', 'likely', 'spectrum', 'sketch', 'funny', 'zombie']) if (!GAMES[k].show) GAMES[k].show = { facts: false };
+
+// Games that live outside the box (their own server code and pages). A box room hands
+// everyone over to them and gets the result back: see BoxRoom.goExternal / externalResult.
+// `external.<key>(boxRoom, def)` (an installBox option) opens the game → { ok, code, hostKey }.
+const EXTERNAL = {
+  mafia: { key: 'mafia', name: 'JustMafia', icon: '🔪', min: 5, best: [8, 20], external: true },
+};
+const defOf = (k) => (typeof k === 'string' ? (Object.prototype.hasOwnProperty.call(GAMES, k) ? GAMES[k] : Object.prototype.hasOwnProperty.call(EXTERNAL, k) ? EXTERNAL[k] : null) : null);
+
+function installBox(app, io, { takenElsewhere = () => false, external = {} } = {}) {
   const pub = path.join(__dirname, '..', 'public', 'box');
   app.get('/box/tv', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
   app.get('/box/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
@@ -40,6 +59,18 @@ function installBox(app, io, { takenElsewhere = () => false } = {}) {
     do c = Array.from({ length: 4 }, () => L[Math.floor(Math.random() * L.length)]).join(''); while (rooms.has(c) || takenElsewhere(c));
     return c;
   };
+
+  // Wire a room to the games outside the box.
+  const wire = (room) => { room.onExternal = (def, r) => (typeof external[def.key] === 'function' ? external[def.key](r, def) : { ok: false, error: `${def.name} can't be reached from here.` }); return room; };
+  // A room made from outside the box (JustMafia's "Play another game"): same as host:create.
+  function createRoom(gameKey, { unlocks } = {}) {
+    const def = GAMES[gameKey]; if (!def) return { ok: false, error: 'Unknown game.' };
+    const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true }));
+    room.setUnlocks(unlocks);
+    if (room.isLocked(def)) return { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim(), locked: true };
+    rooms.set(room.code, room);
+    return { ok: true, room, code: room.code, hostKey: room.hostKey, game: def.key };
+  }
 
   nsp.on('connection', (socket) => {
     const rawOn = socket.on.bind(socket);
@@ -61,8 +92,16 @@ function installBox(app, io, { takenElsewhere = () => false } = {}) {
     const ctx = () => { const room = rooms.get(socket.data.code); return { room, p: room && socket.data.playerId ? room.get(socket.data.playerId) : null }; };
 
     socket.on('host:create', (msg, cb) => {
-      const def = GAMES[msg.game]; if (!def) return reply(cb, { ok: false, error: 'Unknown game.' });
-      const room = new BoxRoom(newCode(), def, { nsp });
+      // Party Mode: msg.party = { games: [keys], minutes } plays the lineup back to back.
+      let lineup = msg.party && Array.isArray(msg.party.games) ? msg.party.games.map(defOf).filter(Boolean) : null;
+      // The party starts in a box game; games played elsewhere (JustMafia) come later.
+      if (lineup) lineup = [...lineup.filter((d) => !d.external), ...lineup.filter((d) => d.external)];
+      if (lineup && lineup.length && lineup[0].external) return reply(cb, { ok: false, error: 'Add at least one more game to the party.' });
+      const def = lineup && lineup.length ? lineup[0] : GAMES[msg.game]; if (!def) return reply(cb, { ok: false, error: 'Unknown game.' });
+      const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true }));
+      room.setUnlocks(msg.unlocks);
+      if (room.isLocked(def)) return reply(cb, { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim(), locked: true });
+      if (lineup && lineup.length) room.setParty(lineup, msg.party.minutes, msg.party.flow);
       rooms.set(room.code, room);
       detach(); socket.data = { code: room.code, host: true }; socket.join('host:' + room.code);
       reply(cb, { ok: true, code: room.code, hostKey: room.hostKey, game: def.key });
@@ -71,12 +110,14 @@ function installBox(app, io, { takenElsewhere = () => false } = {}) {
     socket.on('host:resume', (msg, cb) => {
       const room = find(msg.code);
       if (!room || room.hostKey !== msg.hostKey) return reply(cb, { ok: false });
+      room.setUnlocks(msg.unlocks);
       detach(); socket.data = { code: room.code, host: true }; socket.join('host:' + room.code);
       reply(cb, { ok: true, code: room.code, game: room.def.key }); room.sync();
     });
     socket.on('host:action', (msg, cb) => {
       const { room } = ctx();
       if (!room || !socket.data.host) return reply(cb, { ok: false, error: 'Only the big screen can do that.' });
+      if (msg.type === 'switch') return reply(cb, room.switchGame(defOf(msg.game)));
       reply(cb, room.hostAction(msg));
     });
 
@@ -87,7 +128,7 @@ function installBox(app, io, { takenElsewhere = () => false } = {}) {
     socket.on('player:join', (msg, cb) => {
       const room = find(msg.code);
       if (!room) return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.' });
-      const r = room.join(msg.name, typeof msg.token === 'string' ? msg.token : null);
+      const r = room.join(msg.name, typeof msg.token === 'string' ? msg.token : null, typeof msg.avatar === 'string' ? msg.avatar : null);
       if (!r.ok) return reply(cb, r);
       detach(); socket.data = { code: room.code, playerId: r.player.id }; socket.join('pl:' + room.code + ':' + r.player.id);
       r.player.sockets++;
@@ -103,8 +144,20 @@ function installBox(app, io, { takenElsewhere = () => false } = {}) {
     socket.on('player:host', (msg, cb) => {
       const { room, p } = ctx();
       if (!room || !p) return reply(cb, { ok: false, error: 'You are not in this room.' });
-      reply(cb, room.vipAction(p, String(msg.type || '')));
+      const type = String(msg.type || '');
+      if (type === 'switch') { const v = room.vip(); if (!v || v.id !== p.id) return reply(cb, { ok: false, error: 'Only the host can pick the next game.' }); return reply(cb, room.switchGame(defOf(msg.game))); }
+      reply(cb, room.vipAction(p, type));
     });
+    // Emoji reactions float up on the TV (sent straight to the TV, not stored in the game).
+    socket.on('player:react', (msg, cb) => {
+      const { room, p } = ctx();
+      if (!room || !p || !REACTIONS.includes(msg.e)) return reply(cb, { ok: false });
+      const now = Date.now(); if (now - (socket.data.lastReact || 0) < 600) return reply(cb, { ok: false });
+      socket.data.lastReact = now;
+      nsp.to('host:' + room.code).emit('react', { e: msg.e, name: p.name, avatar: p.avatar, color: p.color });
+      reply(cb, { ok: true });
+    });
+    socket.on('player:avatar', (msg, cb) => { const { room, p } = ctx(); if (!room || !p) return reply(cb, { ok: false }); reply(cb, room.setAvatar(p, msg.avatar)); });
     // Moves that wait on the outside world (JustFunny: YouTube search and checking a video).
     socket.on('player:async', async (msg, cb) => {
       const { room, p } = ctx();
@@ -123,7 +176,7 @@ function installBox(app, io, { takenElsewhere = () => false } = {}) {
     for (const [code, room] of rooms) if (room.lastActivity < cutoff) { room.destroy(); rooms.delete(code); }
   }, 10 * 60 * 1000).unref();
 
-  return { has: (code) => rooms.has(String(code || '').toUpperCase()), rooms, GAMES };
+  return { has: (code) => rooms.has(String(code || '').toUpperCase()), get: (code) => find(code), rooms, GAMES, createRoom };
 }
 
-module.exports = { installBox, GAMES };
+module.exports = { installBox, GAMES, EXTERNAL };

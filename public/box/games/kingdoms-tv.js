@@ -203,6 +203,20 @@
     { const [x, y] = hexXY(0, 0); const gl = g.createRadialGradient(x, y, 2, x, y, S * 1.6); gl.addColorStop(0, `rgba(255,230,140,${0.22 + Math.sin(t * 1.5) * 0.08})`); gl.addColorStop(1, 'rgba(255,230,140,0)'); g.fillStyle = gl; g.beginPath(); g.arc(x, y, S * 1.6, 0, Math.PI * 2); g.fill(); }
     const ks = s.kingdoms, capXY = new Map();
     for (const k of ks) capXY.set(k.id, hexXY(k.home.q, k.home.r));
+    // alliance threads (members chained in seat order) and war lines (recent battles between two kingdoms)
+    for (const Al of s.alliances || []) {
+      const mem = Al.members.map((id) => kv.kById.get(id)).filter(Boolean).sort((a, b) => a.seat - b.seat); if (mem.length < 2) continue;
+      g.save(); g.strokeStyle = art.rgba(art.allyColor(Al.id), 0.6); g.lineWidth = Math.max(2, S * 0.09); g.setLineDash([S * 0.05, S * 0.2]); g.lineCap = 'round'; g.lineDashOffset = -t * 6;
+      g.beginPath(); mem.forEach((k, i) => { const [x, y] = capXY.get(k.id); if (i) g.lineTo(x, y); else g.moveTo(x, y); }); g.stroke(); g.restore();
+    }
+    const wars = (s.wars || []).slice().sort((a, b) => a.ago - b.ago).slice(0, 12);
+    for (const w of wars) {
+      if (!capXY.has(w.a) || !capXY.has(w.b)) continue;
+      const [x0, y0] = capXY.get(w.a), [x1, y1] = capXY.get(w.b), fade = clamp(1 - (w.ago + (performance.now() - kv.recvAt)) / 90000, 0, 1); if (fade <= 0) continue;
+      g.save(); g.globalAlpha = 0.35 + 0.45 * fade; g.strokeStyle = '#d8281c'; g.lineWidth = Math.max(2, S * (0.06 + Math.min(0.08, w.n * 0.01))); g.setLineDash([S * 0.25, S * 0.12]); g.lineDashOffset = t * 30;
+      g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.setLineDash([]);
+      g.font = `${Math.round(clamp(S * 0.55, 14, 28))}px serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('⚔️', (x0 + x1) / 2, (y0 + y1) / 2 + Math.sin(t * 5) * 2); g.restore();
+    }
     // vassal chains
     g.save(); g.setLineDash([S * 0.12, S * 0.1]); g.lineWidth = Math.max(1.5, S * 0.06);
     for (const k of ks) if (k.vassalOf && capXY.has(k.vassalOf)) {
@@ -228,6 +242,7 @@
     const labelAll = ks.length <= 20, top = new Set(ks.slice().sort((a, b) => b.score - a.score).slice(0, 10).map((k) => k.id));
     const rockets = new Map((pr.rockets || []).map((r) => [r.id, r]));
     const sortedK = ks.slice().sort((a, b) => a.home.r - b.home.r);
+    const leadId = ks.length ? ks.reduce((a, b) => (b.score > a.score ? b : a)).id : null;
     for (const k of sortedK) {
       const [x, y] = capXY.get(k.id), F = art.castleFlag(x, y, S, Math.max(1, Math.min(5, k.age || 1)));
       art.flag(g, F.x, F.y, F.h, k.color, t + k.seat * 0.7, F.big);
@@ -287,7 +302,7 @@
       const [x, y] = capXY.get(k.id);
       const T0 = kv.tileAt.get(k.home.q + ',' + k.home.r);
       if (labelAll || top.has(k.id) || k.msg) {
-        const label = `${AGE_ICON[k.age] || ''} ${short(kname(k), labelAll ? 16 : 10)}${k.vassalOf ? ' ⛓️' : ''}`;
+        const label = `${k.avatar ? k.avatar + ' ' : ''}${AGE_ICON[k.age] || ''} ${short(kname(k), labelAll ? 16 : 10)}${k.vassalOf ? ' ⛓️' : ''}`;
         g.font = `700 ${fs}px 'Cinzel', Fredoka, serif`;
         const w = g.measureText(label).width + fs * 0.9, ly = y + S * 0.82;
         g.fillStyle = 'rgba(28,16,6,.82)'; art.roundRect(g, x - w / 2, ly - fs * 0.72, w, fs * 1.44, fs * 0.3); g.fill();
@@ -296,6 +311,10 @@
       }
       if (T0 && T0.g > 0 && S >= 22) art.badge(g, x + S * 0.62, y - S * 0.05, String(T0.g), clamp(S * 0.26, 9, 14), 'rgba(28,16,6,.82)');
       if (k.traitor) { g.font = `${Math.round(S * 0.6)}px serif`; g.fillText('🗡️', x - S * 0.7, y - S * 0.6 + Math.sin(t * 4) * 3); }
+      if (k.id === leadId && ks.length > 1) { g.font = `${Math.round(clamp(S * 0.7, 16, 34))}px serif`; g.fillText('👑', x, y - S * 1.25 + Math.sin(t * 2) * 2); }
+      if (k.marked) { const r = S * (1.15 + Math.sin(t * 4) * 0.06); g.save(); g.strokeStyle = 'rgba(230,40,30,.9)'; g.lineWidth = Math.max(2, S * 0.07); g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.moveTo(x - r * 1.25, y); g.lineTo(x - r * 0.7, y); g.moveTo(x + r * 0.7, y); g.lineTo(x + r * 1.25, y); g.moveTo(x, y - r * 1.25); g.lineTo(x, y - r * 0.7); g.stroke(); g.restore(); }
+      if (k.bounty > 0) art.badge(g, x - S * 0.75, y + S * 0.2, `💰${k.bounty}`, clamp(S * 0.28, 10, 15), 'rgba(120,70,0,.92)', '#ffe9a8');
+      if (k.sanction > 0) art.badge(g, x + S * 0.7, y + S * 0.35, '⚖️ −30%', clamp(S * 0.24, 9, 13), 'rgba(90,40,140,.9)');
       if (k.msg && k.msg.endsIn > 0) {
         const left = k.msg.endsIn - (performance.now() - kv.recvAt); if (left <= 0) continue;
         const text = k.msg.text || '', mf = clamp(S * 0.42, 13, 22);
@@ -329,7 +348,8 @@
     if (kv.mode !== 'play') {
       kv.mode = 'play';
       hud.innerHTML = `<div class="kt-top" id="kt-top"></div><div class="kt-event" id="kt-event" hidden></div>
-        <div class="kt-list" id="kt-list"></div><div class="kt-ticker" id="kt-ticker"></div><div class="kt-moments" id="kt-moments"></div>`;
+        <div class="kt-list" id="kt-list"></div><div class="kt-ticker" id="kt-ticker"></div><div class="kt-moments" id="kt-moments"></div>
+        <div class="kt-side"><div class="kt-council" id="kt-council" hidden></div><div class="kt-threats" id="kt-threats" hidden></div><div class="kt-race" id="kt-race"></div></div>`;
       hud.dataset.html = ''; hud.dataset.sig = '';
     }
     const [mi, ml] = MODE[s.mode] || MODE.any, pr = s.progress || {};
@@ -338,7 +358,7 @@
     if (s.mode === 'any' || s.mode === 'conquest') bits.push(`<span class="kt-prog" title="Capitals held">⚔️ ${lead ? `<i style="background:${esc(lead.color)}"></i>` : ''}${pr.capitals || 0}/${pr.of || 0}</span>`);
     if (s.mode === 'any' || s.mode === 'diplomacy') bits.push(`<span class="kt-prog" title="Peace Monument">🕊️ ${Math.round((pr.monument || 0) * 100)}%</span>`);
     if (s.mode === 'any' || s.mode === 'science') { const best = Math.max(0, ...(pr.rockets || []).map((r) => r.stage || 0), ...s.kingdoms.map((k) => k.stage || 0)); bits.push(`<span class="kt-prog" title="Best rocket">🚀 ${best}/3</span>`); }
-    const top = `<span class="kt-clock">⏳ <b id="kt-time">${mmss(s.timeLeft)}</b></span><span class="kt-mode">${mi} ${esc(ml)}</span>${bits.join('')}${s.peaceIn > 0 ? `<span class="kt-peace">🛡️ Beginner's peace <b id="kt-peace">${mmss(s.peaceIn)}</b></span>` : ''}`;
+    const top = `<span class="kt-clock${s.timeLeft <= 180000 ? ' final' : ''}">⏳ <b id="kt-time">${mmss(s.timeLeft)}</b></span><span class="kt-mode">${mi} ${esc(ml)}</span>${s.peaceIn > 0 ? `<span class="kt-peace">🛡️ Beginner's peace <b id="kt-peace">${mmss(s.peaceIn)}</b></span>` : ''}`;
     const tEl = kv.el.querySelector('#kt-top');
     if (tEl.dataset.html !== top) { tEl.innerHTML = top; tEl.dataset.html = top; }
     // event banner
@@ -348,9 +368,11 @@
     // kingdom list (top 10 for big games)
     const ks = s.kingdoms.slice().sort((a, b) => b.score - a.score), big = ks.length > 12, shown = big ? ks.slice(0, 10) : ks;
     const allies = new Map((s.alliances || []).map((A2) => [A2.id, A2]));
-    const list = `<div class="kt-lh">👑 Kingdoms${big ? ` <small>top 10 of ${ks.length}</small>` : ''}</div>${shown.map((k, i) => `<div class="kt-row${k.gone ? ' gone' : ''}"><span class="n">${i + 1}</span><i class="sw" style="background:${esc(k.color)}"></i><span class="nm">${esc(short(kname(k), 15))}</span><span class="tags">${k.ally && allies.has(k.ally) ? `<em class="al" style="background:${A().allyColor(k.ally)}">🤝</em>` : ''}${k.vassalOf ? '⛓️' : ''}${k.traitor ? '🗡️' : ''}${k.stage ? '🚀' + k.stage : ''}</span><span class="ag" title="${AGE_NAME[k.age]}">${AGE_ICON[k.age] || ''}</span><b>${k.score}</b></div>`).join('')}`;
+    const atWar = new Set(); for (const w of s.wars || []) if (w.ago < 60000) { atWar.add(w.a); atWar.add(w.b); }
+    const list = `<div class="kt-lh">👑 Kingdoms${big ? ` <small>top 10 of ${ks.length}</small>` : ''}</div>${shown.map((k, i) => `<div class="kt-row${k.gone ? ' gone' : ''}"><span class="n">${i + 1}</span><i class="sw" style="background:${esc(k.color)}"></i><span class="nm">${k.avatar ? esc(k.avatar) + ' ' : ''}${esc(short(kname(k), 15))}</span><span class="tags">${atWar.has(k.id) ? '⚔️' : ''}${k.marked ? '🎯' : ''}${k.bounty ? '💰' : ''}${k.ally && allies.has(k.ally) ? `<em class="al" style="background:${A().allyColor(k.ally)}">🤝</em>` : ''}${k.vassalOf ? '⛓️' : ''}${k.traitor ? '🗡️' : ''}${k.stage ? '🚀' + k.stage : ''}</span><span class="ag" title="${AGE_NAME[k.age]}">${AGE_ICON[k.age] || ''}</span><b>${k.score}</b></div>`).join('')}`;
     const lEl = kv.el.querySelector('#kt-list');
     if (lEl.dataset.html !== list) { lEl.innerHTML = list; lEl.dataset.html = list; }
+    sidePanels(s, pr);
     // news ticker: last 4, fading with age
     const T = tnow();
     for (const it of s.ticker || []) if (!kv.tickSeen.has(it.id)) kv.tickSeen.set(it.id, T);
@@ -361,12 +383,49 @@
     const kEl = kv.el.querySelector('#kt-ticker');
     if (kEl.dataset.html !== tk) { kEl.innerHTML = tk; kEl.dataset.html = tk; }
   }
+  // ---------- the right-hand column: council vote, threats, the race to victory ----------
+  const setHtml = (el, h) => { if (el && el.dataset.html !== h) { el.innerHTML = h; el.dataset.html = h; } };
+  const bar = (pct, col, label) => `<div class="kt-bar"><i style="width:${Math.round(clamp(pct, 0, 1) * 100)}%;background:${esc(col)}"></i><span>${label}</span></div>`;
+  function sidePanels(s, pr) {
+    const C = s.council, cEl = kv.el.querySelector('#kt-council');
+    cEl.hidden = !C;
+    if (C) {
+      const max = Math.max(1, ...(C.tally || []).map((t) => t.n));
+      setHtml(cEl, `<div class="kt-ch">🗳️ Royal Council <b class="kt-cd" data-left="${C.endsIn}">${mmss(C.endsIn)}</b></div><div class="kt-ask">${esc(C.icon)} ${esc(C.ask)}</div><div class="kt-csub">${esc(C.text)} Vote on your phone!</div>
+        ${(C.tally || []).slice(0, 4).map((t) => { const k = kv.kById.get(t.id); return k ? `<div class="kt-vrow"><i class="sw" style="background:${esc(k.color)}"></i><span class="nm">${esc(short(kname(k), 14))}</span><span class="kt-vbar"><i style="width:${Math.round(100 * t.n / max)}%"></i></span><b>${t.n}</b></div>` : ''; }).join('')}<div class="kt-csub">${C.votes} of ${C.of} have voted</div>`);
+    }
+    // threats: attacks on capitals and villages, soonest first
+    const now = gameNow(), th = [];
+    for (const a of s.armies || []) {
+      if (a.order !== 'attack') continue;
+      const T = kv.tileAt.get(a.to.q + ',' + a.to.r); if (!T || !T.o || !(T.c || T.v)) continue;
+      th.push({ a, T, left: a.t1 - now });
+    }
+    th.sort((x, y) => (y.T.c ? 1 : 0) - (x.T.c ? 1 : 0) || x.left - y.left);
+    const tEl = kv.el.querySelector('#kt-threats'); tEl.hidden = !th.length;
+    setHtml(tEl, `<div class="kt-ch">⚔️ Under attack</div>${th.slice(0, 4).map(({ a, T }) => { const att = a.o ? kv.kById.get(a.o) : null, def = kv.kById.get(T.o); return `<div class="kt-trow"><i class="sw" style="background:${esc(att ? att.color : '#222')}"></i><span class="nm">${esc(att ? short(kname(att), 10) : 'Bandits')} <em>→</em> ${esc(def ? short(kname(def), 10) : '?')}${T.c ? ' 🏰' : ' 🏠'}</span><span class="n">${a.n}</span><b class="kt-cd" data-t1="${a.t1}"></b></div>`; }).join('')}${th.length > 4 ? `<div class="kt-csub">+${th.length - 4} more armies on the march</div>` : ''}`);
+    // the race: each open win mode with its leader
+    const rows = [], mode = s.mode;
+    if (mode === 'any' || mode === 'conquest') { const L = pr.leader && kv.kById.get(pr.leader); rows.push(`<div class="kt-rl">⚔️ Conquest <small>${L ? esc(short(kname(L), 12)) : 'nobody yet'}</small></div>${bar(pr.domination || 0, L ? L.color : '#888', `${pr.capitals || 0}/${pr.of || 0} capitals`)}`); }
+    if (mode === 'any' || mode === 'diplomacy') rows.push(`<div class="kt-rl">🕊️ Peace Monument <small>${pr.peaceIn != null ? 'PEACE HOLDS' : ''}</small></div>${bar(pr.monument || 0, '#8fd3ff', pr.peaceIn != null ? `peace in <b id="kt-peacehold">${mmss(pr.peaceIn)}</b>` : `${Math.round((pr.monument || 0) * 100)}%`)}`);
+    if (mode === 'any' || mode === 'science') {
+      const rk = (pr.rockets || []).map((r) => ({ ...r, v: r.stage + (r.building ? 1 - (r.endsIn || 0) / Math.max(1, r.dur || 60000) : 0) })).sort((a, b) => b.v - a.v)[0];
+      const K = rk && kv.kById.get(rk.id);
+      rows.push(`<div class="kt-rl">🚀 Rocket <small>${K ? esc(short(kname(K), 12)) : 'no launch pad yet'}</small></div>${bar(rk ? rk.v / 3 : 0, K ? K.color : '#888', rk ? `stage ${rk.stage}/3${rk.building ? ' · building ' + rk.building : ''}` : '0/3')}`);
+    }
+    const ks = s.kingdoms.slice().sort((a, b) => b.score - a.score);
+    if (ks.length > 1) rows.push(`<div class="kt-rl">⭐ Score <small>if time runs out</small></div>${bar(1, ks[0].color, `${esc(short(kname(ks[0]), 12))} ${ks[0].score}${ks[1] ? ' · next ' + ks[1].score : ''}`)}`);
+    setHtml(kv.el.querySelector('#kt-race'), `<div class="kt-ch">🏆 The race</div>${rows.join('')}`);
+  }
   // per-frame bits: clocks and ticker fade
   function tickHud() {
     const s = kv.s; if (!s || !kv.el) return;
     const dt = performance.now() - kv.recvAt;
     const tm = kv.el.querySelector('#kt-time'); if (tm && s.phase === 'play') { const v = mmss(Math.max(0, s.timeLeft - dt)); if (tm.textContent !== v) tm.textContent = v; }
     const pc = kv.el.querySelector('#kt-peace'); if (pc) { const v = mmss(Math.max(0, s.peaceIn - dt)); if (pc.textContent !== v) pc.textContent = v; }
+    const ph = kv.el.querySelector('#kt-peacehold'); if (ph && s.progress && s.progress.peaceIn != null) { const v = mmss(Math.max(0, s.progress.peaceIn - dt)); if (ph.textContent !== v) ph.textContent = v; }
+    for (const el of kv.el.querySelectorAll('.kt-cd[data-left]')) { const v = mmss(Math.max(0, Number(el.dataset.left) - dt)); if (el.textContent !== v) el.textContent = v; }
+    const gn = gameNow(); for (const el of kv.el.querySelectorAll('.kt-cd[data-t1]')) { const v = mmss(Math.max(0, Number(el.dataset.t1) - gn)); if (el.textContent !== v) el.textContent = v; }
     const T = tnow();
     for (const n of kv.el.querySelectorAll('.kt-n')) { const at = kv.tickSeen.get(Number(n.dataset.t)) || T, age = T - at; const o = age < 12 ? 1 : Math.max(0, 1 - (age - 12) / 6); const v = o.toFixed(2); if (n.style.opacity !== v) n.style.opacity = v; }
   }
@@ -437,6 +496,8 @@
 
   // ---------- the game object ----------
   Object.assign(BOX.games.kingdoms = BOX.games.kingdoms || {}, {
+    // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
+    music: (s) => (s.phase === 'over' ? 'finale' : s.phase === 'lobby' ? 'lobby' : s.timeLeft != null && s.timeLeft < 60000 ? 'tense' : 'play'),
     standalone: true, title: titleScreen,
     name: 'JustKingdoms', icon: '🏰',
     about: 'Everyone rules a kingdom on one shared world map. Gather, build and climb five ages from a hamlet to a mighty kingdom, then conquer, make peace, or launch a rocket.',
@@ -448,7 +509,7 @@
       'Talk at the table! Make alliances, send gifts, trade, or betray your friends at the worst moment.',
       'Win by ⚔️ conquest, 🕊️ a Peace Monument built by everyone, or 🚀 launching a rocket. Otherwise the best Kingdom Score wins.',
     ],
-    fx: { seat: 'pop', age: 'swell', village: 'chime', capture: 'boom', vassal: 'gavel', rebel: 'roar', alliance: 'bell', betray: 'stab', gift: 'chime', message: 'talk', event: 'bell', rocket: 'reveal', launchpad: 'reveal', launch: 'explosion', monument: 'chime', kingdom: 'join', win: 'win' },
+    fx: { seat: 'pop', age: 'swell', village: 'chime', capture: 'boom', vassal: 'gavel', rebel: 'roar', alliance: 'bell', betray: 'stab', gift: 'chime', message: 'talk', event: 'bell', rocket: 'reveal', launchpad: 'reveal', launch: 'explosion', monument: 'chime', kingdom: 'join', win: 'win', council: 'bell', councilResult: 'gavel', coalition: 'roar', bounty: 'reveal', bountyClaim: 'chime', peacehold: 'swell', peacebroken: 'stab', final: 'reveal' },
     onFx(f) {
       const s = kv.s, T = tnow();
       // the engine passes the kingdom id as `id`; if the room keeps its own sequence id there, use `k`
@@ -458,7 +519,15 @@
         case 'battle': if (T - kv.lastBattleSnd > 1.2) { kv.lastBattleSnd = T; BOX.sfx('hit'); } break;
         case 'capture': kv.bursts.push({ kind: 'capture', q: f.q, r: f.r, at: T, dur: 1.6, color: k ? k.color : null }); break;
         case 'village': if (f.q != null) kv.bursts.push({ kind: 'village', q: f.q, r: f.r, at: T, dur: 1.2 }); break;
-        case 'age': if (k) { kv.bursts.push({ kind: 'age', q: k.home.q, r: k.home.r, at: T, dur: 2.4 }); if (f.age >= 4) moment(AGE_ICON[f.age], `${n} became a ${AGE_NAME[f.age]}!`); } break;
+        case 'age': if (k) { kv.bursts.push({ kind: 'age', q: k.home.q, r: k.home.r, at: T, dur: 2.4 }); if (f.first && f.age >= 3) moment('🥇', `${n} is the first ${AGE_NAME[f.age]}!`); else if (f.age >= 4) moment(AGE_ICON[f.age], `${n} became a ${AGE_NAME[f.age]}!`); } break;
+        case 'council': moment('🗳️', 'The Royal Council meets! Vote on your phone', 'diplo'); break;
+        case 'councilResult': if (k) moment(f.kind === 'sanction' ? '⚖️' : '🏅', f.kind === 'sanction' ? `The council sanctions ${n}!` : `The royal treasury goes to ${n}!`, f.kind === 'sanction' ? 'war' : 'win'); break;
+        case 'coalition': if (k) moment('🎯', `The world unites against ${n}!`, 'war'); break;
+        case 'bounty': { const on = kv.kById.get(f.on); if (on) moment('💰', `${f.gold} gold on ${kname(on)}'s head!`, 'war'); break; }
+        case 'bountyClaim': if (k) moment('💰', `${n} claims the bounty!`, 'war'); break;
+        case 'peacehold': moment('🕊️', 'One world alliance! If the peace holds, everyone wins', 'diplo'); break;
+        case 'peacebroken': moment('💔', 'The peace is broken!', 'war'); break;
+        case 'final': moment('⏳', 'Final 3 minutes!', 'win'); break;
         case 'gift': { const to = kv.kById.get(f.to); if (to) kv.bursts.push({ kind: 'gift', q: to.home.q, r: to.home.r, at: T, dur: 2 }); break; }
         case 'vassal': { const by = kv.kById.get(f.by); if (k && by) moment('⛓️', `${n} bows to ${kname(by)}!`, 'war'); break; }
         case 'rebel': if (k) moment('✊', f.ok ? `${n} broke free!` : `${n}'s rebellion failed!`, 'war'); break;

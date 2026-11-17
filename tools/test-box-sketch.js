@@ -30,8 +30,8 @@ test('Fuzzy matching: same idea matches, different idea does not', () => {
 test('Stroke validation: palette colours, sizes, coordinates and caps', () => {
   assert(T.cleanStrokes([]).strokes, 'a blank page is allowed');
   assert(T.cleanStrokes([{ c: 8, s: 2, p: [0, 0, 1000, 1000] }]).strokes, 'eraser + corners ok');
-  for (const bad of [null, 'x', {}, [{ c: 9, s: 0, p: [1, 1] }], [{ c: -1, s: 0, p: [1, 1] }], [{ c: '#ff0000', s: 0, p: [1, 1] }],
-    [{ c: 0, s: 3, p: [1, 1] }], [{ c: 0, s: 0, p: [1] }], [{ c: 0, s: 0, p: [] }], [{ c: 0, s: 0, p: [1, 1001] }], [{ c: 0, s: 0, p: [1.5, 2] }],
+  for (const bad of [null, 'x', {}, [{ c: 13, s: 0, p: [1, 1] }], [{ c: -1, s: 0, p: [1, 1] }], [{ c: '#ff0000', s: 0, p: [1, 1] }],
+    [{ c: 0, s: 5, p: [1, 1] }], [{ c: 1, s: 0, f: 1, p: [1, 1, 2, 2] }], [{ c: 1, s: 0, f: true, p: [1, 1] }], [{ c: 0, s: 0, p: [1] }], [{ c: 0, s: 0, p: [] }], [{ c: 0, s: 0, p: [1, 1001] }], [{ c: 0, s: 0, p: [1.5, 2] }],
     [{ c: 0, s: 0, p: [-1, 2] }], [{ c: 0, s: 0, p: 'nope' }], [null]]) assert(T.cleanStrokes(bad).error, 'rejected: ' + JSON.stringify(bad));
   const many = Array.from({ length: T.MAX_STROKES + 1 }, () => ({ c: 0, s: 0, p: [1, 1] }));
   assert(T.cleanStrokes(many).error, 'too many strokes');
@@ -55,7 +55,7 @@ test('4 humans: one ring, draw → guess → draw → guess; each player sees on
   }
   // Wrong move / bad data rejected.
   assert.equal(r.act(ps[0], { op: 'guess', text: 'hi' }).ok, false, 'this step is for drawing');
-  assert.equal(r.act(ps[0], { op: 'draw', strokes: [{ c: 12, s: 0, p: [1, 1] }] }).ok, false, 'bad colour');
+  assert.equal(r.act(ps[0], { op: 'draw', strokes: [{ c: 14, s: 0, p: [1, 1] }] }).ok, false, 'bad colour');
   assert.equal(r.act(ps[0], { op: 'draw', strokes: [{ c: 0, s: 0, p: [5000, 1] }] }).ok, false, 'off the page');
   assert.equal(r.act(ps[0], { op: 'draw' }).ok, false, 'no strokes array');
   assert.equal(r.act(ps[0], { op: 'nonsense' }).ok, false);
@@ -162,7 +162,7 @@ test('Full game with 4 bots reaches the end with awards and a gallery', () => {
   assert.equal(s.gallery.length, 4);
   assert(s.standings.length === 4);
   assert(s.awards.length >= 1, 'some awards were given');
-  for (const a of s.awards) assert(['artist', 'guesser', 'chaos', 'mind'].includes(a.key) && a.name);
+  for (const a of s.awards) assert(['artist', 'guesser', 'chaos', 'mind', 'speedy', 'detail'].includes(a.key) && a.name);
   const gb = r.hostAction({ type: 'sketchBook', book: 0 });
   assert(gb.ok && gb.book.entries.length === 5 && gb.book.entries[1].strokes.length > 0);
   assert.equal(r.hostAction({ type: 'sketchBook', book: 99 }).ok, false);
@@ -208,6 +208,76 @@ test('A player leaving mid-step doesn’t stall it; nobody leaving mid-vote stal
   until(r, clock, () => g.phase !== 'step' || g.step > 0);
   assert(clock.now() - t0 < g.s.drawSeconds * 1000, 'moved on without waiting for the timer');
   runOut(r, clock);
+});
+
+test('Prompt packs: every pack is big and unique, and the deck only deals from the chosen pack', () => {
+  const all = Object.entries(T.PACKS).filter(([k]) => k !== 'mix').flatMap(([, v]) => v);
+  assert.equal(new Set(all).size, all.length, 'no prompt appears twice across the packs');
+  for (const [k, v] of Object.entries(T.PACKS)) assert(v.length >= 36, k + ' has enough prompts');
+  for (const pack of ['easy', 'food', 'fantasy', 'everyday']) {
+    const { r } = make(6, { pack, ringSize: 6 });
+    r.start();
+    for (const b of r.game.books) assert(T.PACKS[pack].includes(b.entries[0].text), `${pack}: ${b.entries[0].text}`);
+  }
+});
+
+test('Paint bucket fills: one point each, capped; mixed with strokes they pass', () => {
+  const ok = T.cleanStrokes([{ c: 9, s: 4, p: [0, 0, 1000, 1000] }, { c: 12, s: 0, f: 1, p: [500, 500] }]);
+  assert(ok.strokes && ok.strokes[1].f === 1 && ok.strokes[1].s === 0);
+  assert(T.cleanStrokes(Array.from({ length: T.MAX_FILLS + 1 }, () => ({ c: 1, s: 0, f: 1, p: [5, 5] }))).error, 'too many fills');
+  assert(!('f' in T.cleanStrokes([{ c: 1, s: 1, p: [5, 5] }]).strokes[0]), 'plain strokes stay plain');
+});
+
+test('Last call: when only a few players are left, the timer drops to 20 seconds', () => {
+  const { r, clock } = make(0, { ringSize: 8, drawSeconds: 90 });
+  const ps = Array.from({ length: 8 }, (_, i) => r.join('P' + i).player);
+  r.start(); const g = r.game;
+  for (const p of ps.slice(0, 5)) r.act(p, { op: 'draw', strokes: dot() });
+  assert(!g.hurried, '3 of 8 left: not yet');
+  r.act(ps[5], { op: 'draw', strokes: dot() });
+  assert(g.hurried, '2 of 8 left: last call');
+  assert(g.endsAt - clock.now() <= 20000);
+  assert(r.tvState().state.hurried && r.playerState(ps[7]).state.hurried);
+  r.act(ps[6], { op: 'draw', strokes: dot() });
+  until(r, clock, () => g.phase !== 'step');
+  assert(g.books.some((b) => b.entries[1] && b.entries[1].auto), 'the straggler got an auto entry');
+});
+
+test('Reactions during the reveal: valid emoji only, rate-limited, never during the relay', () => {
+  const { r, clock } = make(3, { ringSize: 4, showBooks: 3 });
+  const a = r.join('Ann').player;
+  r.start(); const g = r.game;
+  assert.equal(r.act(a, { op: 'react', e: 0 }).ok, false, 'not during the relay');
+  until(r, clock, () => g.phase === 'show');
+  const before = g.room.fxLog.filter((f) => f.kind === 'react').length;
+  assert(r.act(a, { op: 'react', e: 2 }).ok);
+  r.act(a, { op: 'react', e: 2 }); // same instant: ignored
+  assert.equal(r.act(a, { op: 'react', e: 9 }).ok, false);
+  assert.equal(r.act(a, { op: 'react', e: 'x' }).ok, false);
+  const fx = g.room.fxLog.filter((f) => f.kind === 'react');
+  assert.equal(fx.length - before, 1); assert.equal(fx[fx.length - 1].e, T.REACTS[2]);
+  assert.deepEqual(r.playerState(a).state.reacts, T.REACTS);
+});
+
+test('The end: results() best-first, a book of the night, speed and detail awards', () => {
+  const { r, clock } = make(0, { ringSize: 4, showBooks: 0 });
+  const ps = ['Ann', 'Bo', 'Cy', 'Di'].map((n) => r.join(n).player);
+  r.start(); const g = r.game;
+  const big = { c: 1, s: 2, p: Array.from({ length: 120 }, (_, i) => 100 + i * 5) };
+  while (g.phase !== 'over') {
+    if (g.phase === 'step') for (const p of ps) { const t = g.tasks.get(p.id); if (t && !t.done) { r.act(p, t.kind === 'draw' ? { op: 'draw', strokes: p === ps[1] ? [big] : dot() } : { op: 'guess', text: 'a potato ' + p.name }); } }
+    if (g.phase === 'vote') for (const p of ps) { const ok = g.votable(g.cur, p.id); if (ok.length) r.act(p, { op: 'vote', entry: ok[0] }); }
+    clock.step();
+  }
+  const res = g.results();
+  assert.equal(res.length, 4);
+  const pts = res.map((id) => g.scores.get(id));
+  assert.deepEqual(pts, pts.slice().sort((x, y) => y - x));
+  const s = r.tvState().state;
+  assert(s.best && s.best.votes > 0 && s.best.entries.length === 5, 'book of the night');
+  const keys = s.awards.map((x) => x.key);
+  assert(keys.includes('speedy'), 'speed award: ' + keys);
+  assert(s.awards.find((x) => x.key === 'detail' && x.id === ps[1].id) || s.awards.find((x) => x.key === 'speedy' && x.id === ps[1].id), 'Bo drew the most');
 });
 
 console.log(`JustSketch Relay: ${passed} tests passed.`);

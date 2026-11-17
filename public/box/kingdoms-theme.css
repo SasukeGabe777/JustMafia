@@ -134,3 +134,34 @@ body.g-kingdoms .sound-hint { background: rgba(46, 26, 10, 0.85); color: var(--m
 .kt-award .t { font-family: 'Cinzel', serif; font-weight: 800; color: #8a1f12; font-size: 15px; }
 .kt-award .w { font-weight: 700; font-size: 17px; }
 .kt-award .v { color: #6b4a20; font-size: 14px; }
+
+/* ---------- v2: right-hand column (council vote, threats, the race), final minutes ---------- */
+.kt-side { position: absolute; top: 96px; right: 12px; width: 300px; display: flex; flex-direction: column; gap: 10px; }
+.kt-side > div { padding: 8px 10px; border-radius: 12px; background: rgba(40, 22, 8, 0.88); border: 2px solid rgba(226, 182, 90, 0.75); color: #fff3d6; }
+.kt-ch { display: flex; align-items: center; gap: 6px; font-family: 'Cinzel', serif; font-weight: 800; color: #f2c14e; font-size: 15px; margin-bottom: 5px; }
+.kt-ch b { margin-left: auto; font-family: 'Fredoka', sans-serif; font-variant-numeric: tabular-nums; color: #fff3d6; font-size: 18px; }
+.kt-council { border-color: #b38cff !important; background: linear-gradient(180deg, rgba(70, 40, 120, 0.94), rgba(40, 20, 70, 0.94)) !important; animation: kt-cpulse 1.6s ease-in-out infinite; }
+@keyframes kt-cpulse { 50% { box-shadow: 0 0 0 4px rgba(179, 140, 255, 0.4); } }
+.kt-council .kt-ch { color: #e3d2ff; }
+.kt-ask { font-family: 'Cinzel', serif; font-weight: 800; font-size: 19px; line-height: 1.2; margin: 2px 0 3px; }
+.kt-csub { font-size: 13px; color: #d9c9f5; margin: 3px 0; }
+.kt-vrow, .kt-trow { display: flex; align-items: center; gap: 6px; font-size: 15px; padding: 2px 0; }
+.kt-vrow .sw, .kt-trow .sw { width: 12px; height: 12px; border-radius: 3px; flex: none; border: 1px solid rgba(0, 0, 0, 0.5); }
+.kt-vrow .nm { width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kt-vbar { flex: 1; height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+.kt-vbar i { display: block; height: 100%; background: #b38cff; transition: width 0.4s; }
+.kt-vrow b { min-width: 18px; text-align: right; }
+.kt-threats { border-color: #e4573d !important; }
+.kt-threats .kt-ch { color: #ff9a85; }
+.kt-trow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kt-trow em { font-style: normal; color: #ff8a70; }
+.kt-trow .n { font-size: 13px; color: #e6cfa4; }
+.kt-trow .n::before { content: '🗡️'; font-size: 11px; }
+.kt-trow b { min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; color: #ffb4a3; }
+.kt-rl { display: flex; align-items: baseline; gap: 6px; font-size: 14px; font-weight: 700; margin-top: 4px; }
+.kt-rl small { margin-left: auto; color: #c9b08a; font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.kt-bar { position: relative; height: 18px; border-radius: 9px; background: rgba(255, 255, 255, 0.12); overflow: hidden; margin-top: 2px; }
+.kt-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 9px; transition: width 0.6s; opacity: 0.9; }
+.kt-bar span { position: relative; display: block; text-align: center; font-size: 12px; font-weight: 800; line-height: 18px; color: #fff; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
+.kt-clock.final b { color: #ff7a5c; animation: kt-blink 1s steps(2) infinite; }
+@keyframes kt-blink { 50% { opacity: 0.55; } }
