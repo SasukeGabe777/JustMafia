@@ -26,6 +26,8 @@
       <canvas></canvas>${kind === 'paddle' ? '<div class="dk-pads"><button data-pad="L">LEFT</button><button data-pad="R">RIGHT</button></div>' : ''}
       <div class="dk-tip">${TIPS[kind]}</div><div class="dk-ready">3</div>`;
     document.body.appendChild(ov);
+    // iPhones start selecting text / show the magnifier on a held finger: stop that here.
+    ov.addEventListener('touchstart', (e) => { if (!e.target.closest('button')) e.preventDefault(); }, { passive: false });
     const cv = ov.querySelector('canvas'), g = cv.getContext('2d');
     cv.width = ov.clientWidth; cv.height = ov.clientHeight - (kind === 'paddle' ? 130 : 0);
     const W = cv.width, H = cv.height, drawDuck = A().drawDuck, stageOf = (el) => (el < seconds / 3 ? 0 : el < (seconds * 2) / 3 ? 1 : 2);

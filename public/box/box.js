@@ -20,5 +20,33 @@ window.BOX = (function () {
   setInterval(() => { for (const el of document.querySelectorAll('[data-ends]')) el.textContent = mmss(Number(el.dataset.ends) - Date.now()); }, 250);
   const board = (rows, val, label = '') => `<div class="board">${rows.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${esc(r.name)}</span><b>${esc(val(r))}${label}</b></div>`).join('')}</div>`;
   const sfx = (n) => { try { window.SFX && window.SFX.play(n); } catch { /* no audio */ } };
-  return { games: {}, esc, card, timer, mmss, board, sfx, ICON };
+  // Update `el` to match `html` in place: only changed text and attributes are touched, so
+  // buttons stay under the finger, animations don't replay and scrolling doesn't jump.
+  // Elements marked data-keep keep their own children (e.g. a canvas mounted by script).
+  function morph(el, html) {
+    const tpl = document.createElement('template'); tpl.innerHTML = html;
+    kids(el, tpl.content);
+  }
+  const same = (a, b) => a.nodeType === b.nodeType && a.nodeName === b.nodeName && (a.nodeType !== 1 || (a.id || '') === (b.id || ''));
+  function kids(a, b) {
+    if (a.nodeType === 1 && a.hasAttribute('data-keep')) return;
+    const want = b.childNodes;
+    for (let i = 0; i < want.length; i++) {
+      const nb = want[i], na = a.childNodes[i];
+      if (!na) a.appendChild(document.importNode(nb, true));
+      else if (!same(na, nb)) a.replaceChild(document.importNode(nb, true), na);
+      else node(na, nb);
+    }
+    while (a.childNodes.length > want.length) a.removeChild(a.lastChild);
+  }
+  function node(a, b) {
+    if (a.nodeType !== 1) { if (a.nodeValue !== b.nodeValue) a.nodeValue = b.nodeValue; return; }
+    for (const at of [...a.attributes]) if (!b.hasAttribute(at.name)) a.removeAttribute(at.name);
+    for (const at of b.attributes) if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+    kids(a, b);
+    const focused = a === document.activeElement;
+    if (a.tagName === 'INPUT' && !focused) { if (a.type === 'checkbox' || a.type === 'radio') a.checked = b.hasAttribute('checked'); else if (a.value !== (b.getAttribute('value') || '')) a.value = b.getAttribute('value') || ''; }
+    if (a.tagName === 'SELECT' && !focused) { const o = b.querySelector('option[selected]'); a.value = o ? o.getAttribute('value') : (a.options[0] ? a.options[0].value : ''); }
+  }
+  return { games: {}, esc, card, timer, mmss, board, sfx, morph, ICON };
 })();

@@ -51,6 +51,7 @@ class Funny {
     this.key = deps.apiKey !== undefined ? deps.apiKey : process.env.YOUTUBE_API_KEY || '';
     this.phase = 'pick'; this.order = []; this.turn = -1; this.videos = []; this.queued = new Map(); this.cur = null;
     this.endsAt = 0; this.timer = null; this.points = new Map(); this.finalVotes = new Map(); this.retry = new Set();
+    this.vol = 80; this.muted = false; // TV volume, set from the host's phone
   }
   setTimer(ms, fn) { this.room.cancel(this.timer); this.endsAt = this.room.now() + ms; this.timer = this.room.after(ms, fn); }
   humans() { return this.room.list().filter((p) => !p.bot); }
@@ -67,7 +68,7 @@ class Funny {
     this.points.set(p.id, this.points.get(p.id) || 0);
     if (!p.bot && this.phase !== 'final' && this.phase !== 'over' && this.order.length < this.s.maxVideos) this.order.push(p.id); // late joiners get a turn at the end
   }
-  left(p) { if (this.cur && this.cur.by === p.id && this.phase === 'pick') this.nextTurn(); }
+  left(p) { if (this.phase === 'pick' && this.picker === p.id) this.nextTurn(); }
 
   nextTurn() {
     this.turn++;
@@ -156,6 +157,14 @@ class Funny {
       if (v.by === p.id) return { ok: false, error: 'You can’t vote for your own video!' };
       this.finalVotes.set(p.id, v.n); this.maybeAllVoted(); return { ok: true };
     }
+    if (m.op === 'vol') {
+      // The host, or whoever's video is on, controls the TV volume.
+      const vip = this.room.vip && this.room.vip();
+      if (!(vip && vip.id === p.id) && !(this.cur && this.cur.by === p.id)) return { ok: false, error: 'Only the host or the video’s owner can change the volume.' };
+      if (m.mute != null) this.muted = !!m.mute;
+      if (m.d) { this.vol = Math.max(0, Math.min(100, this.vol + Math.sign(Number(m.d)) * 10)); this.muted = false; }
+      return { ok: true };
+    }
     if (m.op === 'unqueue') { this.queued.delete(p.id); return { ok: true }; }
     return { ok: false, error: 'Unknown move.' };
   }
@@ -226,7 +235,7 @@ class Funny {
       upNext: this.order.slice(this.turn + 1, this.turn + 4).map((id) => ({ name: this.room.name(id), ready: this.queued.has(id) })),
       cur: this.phase === 'play' ? this.curView() : null, last: this.phase === 'score' ? this.last && { ...this.last, by: this.room.name(this.last.by) } : null,
       videos: this.phase === 'final' || this.phase === 'over' ? (this.ranked || this.videos).map((v) => ({ ...v, by: this.room.name(v.by) })) : [],
-      finalVoted: this.finalVotes.size, standings: this.standings().slice(0, 10), rate: RATE,
+      finalVoted: this.finalVotes.size, standings: this.standings().slice(0, 10), rate: RATE, vol: this.vol, muted: this.muted,
     };
   }
   view(p) {
@@ -239,7 +248,7 @@ class Funny {
       search: !!this.key, cur: this.phase === 'play' ? { ...this.curView(), mine: c.by === p.id, myRating: c.ratings.get(p.id) || 0, mySkip: c.skips.has(p.id) } : null,
       last: this.phase === 'score' ? this.last && { ...this.last, mine: this.last.by === p.id, by: this.room.name(this.last.by) } : null,
       videos: this.phase === 'final' || this.phase === 'over' ? (this.ranked || this.videos).map((v) => ({ n: v.n, id: v.id, title: v.title, by: this.room.name(v.by), mine: v.by === p.id, src: v.src, thumb: v.thumb, avg: v.avg, final: v.final })) : [],
-      myFinal: this.finalVotes.get(p.id) || null, rate: RATE,
+      myFinal: this.finalVotes.get(p.id) || null, rate: RATE, vol: this.vol, muted: this.muted,
       points: this.points.get(p.id) || 0, rank: st.findIndex((x) => x.id === p.id) + 1, of2: st.length, final: this.phase === 'over' ? st.slice(0, 10) : null,
     };
   }

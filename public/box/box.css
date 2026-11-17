@@ -107,3 +107,10 @@ button { font: inherit; }
 .live-set summary { cursor: pointer; color: var(--muted); }
 .live-set .settings { grid-template-columns: 1fr; margin-top: 8px; }
 .join .vip { font-size: 15px; color: var(--yellow); }
+
+/* Phones: holding a finger down must never select or copy the page (mini-games, buttons). */
+#game, .dk-over, .dk-wheel-ov, .dk-sheet, .toast { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+#game input, #game textarea, #game select { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+#game button, #game canvas, #game img { touch-action: manipulation; }
+#game img { -webkit-user-drag: none; }
+.dk-over canvas { touch-action: none; }
