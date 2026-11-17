@@ -12,7 +12,7 @@ const { D, M } = def._test;
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log(`  ✓ ${name}`); };
-function setup({ bots = 0, humans = [], settings = {}, seed = 7, start = true, seats = {}, keepPeace = false } = {}) {
+function setup({ bots = 0, humans = [], settings = {}, seed = 7, start = true, seats = {}, keepPeace = false, decrees = false } = {}) {
   const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed });
   room.addBots(bots); Object.assign(room.settings, settings);
   const H = humans.map((n) => room.join(n).player);
@@ -20,6 +20,7 @@ function setup({ bots = 0, humans = [], settings = {}, seed = 7, start = true, s
   if (start) ok(room.start());
   const g = room.game;
   if (start && !keepPeace) g.peaceUntil = 0; // most tests attack capitals right away
+  if (start && !decrees) for (const p of H) g.k.get(p.id).decree = 999; // decree rewards would skew exact numbers
   const K = (p) => g.k.get(p.id);
   const secs = (n) => { const t = clock.t + n * 1000; while (clock.t < t && g.phase === 'play' && clock.step()); };
   return { clock, room, g, H, K, secs };
@@ -107,14 +108,14 @@ test('Economy: worker yields, tile bonus, upkeep, starvation, pop cap', () => {
   ok(act(room, a, { op: 'jobs', farm: 1, chop: 2 }));
   const f0 = k.res.food, w0 = k.res.wood;
   secs(1);
-  const farm = 0.6 * (1 + 0.25 * k.match.p) * 1.2, chop = 2 * 0.6 * (1 + 0.25 * k.match.f);
+  const Y = D.BASE_YIELD, farm = Y * (1 + 0.25 * k.match.p) * 1.2, chop = 2 * Y * (1 + 0.25 * k.match.f);
   near(k.res.food - f0, farm - 0.3, 1e-9); near(k.res.wood - w0, chop, 1e-9);
   assert(k.match.p >= 1 && k.match.f >= 1);
   // fast speed multiplies production and upkeep
   g.s.speed = 'fast'; const f1 = k.res.food; secs(1); near(k.res.food - f1, (farm - 0.3) * 1.6, 1e-9); g.s.speed = 'normal';
   // starving halves production
   ok(act(room, a, { op: 'jobs', farm: 0, chop: 3 })); k.res.food = 0.1; secs(1); assert.equal(k.starving, true);
-  const w1 = k.res.wood; secs(1); near(k.res.wood - w1, 3 * 0.6 * (1 + 0.25 * k.match.f) * 0.5, 1e-9);
+  const w1 = k.res.wood; secs(1); near(k.res.wood - w1, 3 * Y * (1 + 0.25 * k.match.f) * 0.5, 1e-9);
   // locked jobs
   bad(act(room, a, { op: 'jobs', quarry: 1 }), /Age 2/); bad(act(room, a, { op: 'jobs', study: 1 }), /Library/);
   bad(act(room, a, { op: 'jobs', farm: 4 }), /3 peasants/); bad(act(room, a, { op: 'jobs', farm: -1 }), /whole/);
@@ -146,7 +147,7 @@ test('Gating: build queue (3, one at a time), ages, training, pop cap, research'
   ok(act(room, a, { op: 'build', b: 'houses' })); secs(40); assert.equal(k.b.houses, 3);
   bad(act(room, a, { op: 'build', b: 'houses' }), /top level/);
   ok(act(room, a, { op: 'age' })); bad(act(room, a, { op: 'age' }), /already being built/);
-  secs(40); assert.equal(k.age, 2);
+  secs(45); assert.equal(k.age, 2);
   ok(act(room, a, { op: 'build', b: 'quarry' }));
   bad(act(room, a, { op: 'train', u: 'spear', n: 1 }), /Barracks/);
   bad(act(room, a, { op: 'train', u: 'militia', n: 0 }), /between 1 and 50/);
@@ -435,18 +436,26 @@ test('Win: World Domination (every capital directly or through vassals)', () => 
   assert(room.fxLog.some((f) => f.kind === 'win'));
 });
 
-test('Win: World Diplomacy (all free kingdoms in one alliance + the Peace Monument)', () => {
+test('Win: World Diplomacy (one alliance + the Peace Monument + 60 s of peace; leaving breaks it)', () => {
   const { room, g, H: [a, b, c], K, secs } = setup({ humans: ['Ann', 'Bo', 'Cy'], settings: { events: false, mode: 'diplomacy' } });
   const A = K(a), B = K(b), C = K(c);
   bad(act(room, a, { op: 'monument', res: { gold: 10 } }), /alliance/);
   ok(act(room, a, { op: 'ally', to: b.id })); ok(act(room, b, { op: 'allyAnswer', from: a.id, yes: true }));
   for (const k of [A, B, C]) k.res.gold = k.res.stone = 1000;
-  ok(act(room, a, { op: 'monument', res: { gold: 400, stone: 400 } }));
+  bad(act(room, a, { op: 'monument', res: { gold: 400 } }), /Age 4/);
+  A.age = 4; assert.equal(g.monumentNeed(), 1600, "400 × max(4, kingdoms)");
+  ok(act(room, a, { op: "monument", res: { gold: 1000, stone: 600 } }));
   bad(act(room, a, { op: 'monument', res: { food: 10 } }), /Unknown resource/);
   secs(1); assert.equal(g.phase, 'play', 'C is still outside the alliance');
   assert.equal(room.tvState().state.progress.monument, 1);
   ok(act(room, c, { op: 'ally', to: a.id })); ok(act(room, a, { op: 'allyAnswer', from: c.id, yes: true }));
-  secs(1);
+  secs(1); assert.equal(g.phase, 'play', 'the peace must hold first');
+  assert(room.tvState().state.progress.peaceIn > 50000); assert(room.fxLog.some((f) => f.kind === 'peacehold'));
+  secs(20); ok(act(room, c, { op: 'leaveAlly' })); secs(1);
+  assert.equal(room.tvState().state.progress.peaceIn, null, 'a betrayal breaks the peace'); assert(room.fxLog.some((f) => f.kind === 'peacebroken'));
+  C.traitorUntil = 0; A.res.gold = A.res.stone = 1000; ok(act(room, a, { op: 'monument', res: { gold: 400, stone: 200 } })); // the betrayal cost 30%
+  ok(act(room, c, { op: 'ally', to: b.id })); ok(act(room, b, { op: 'allyAnswer', from: c.id, yes: true }));
+  secs(30); assert.equal(g.phase, 'play'); secs(31);
   assert.equal(g.phase, 'over'); assert.equal(g.winner.mode, 'diplomacy');
   assert.deepEqual(g.winner.ids.slice().sort(), [a.id, b.id, c.id].sort());
   bad(act(room, a, { op: 'rocket' }), /over/);
@@ -617,6 +626,129 @@ test('Joining and leaving mid-game: a newcomer gets a free spot or watches; leav
   for (const p of room.list()) if (!p.bot && p.id !== a.id) room.remove(p.id);
   K(a).vassalOf = null; g.end('score', [a.id]);
   ok(room.hostAction({ type: 'again' })); assert.equal(room.game.phase, 'play');
+});
+
+test('results(): player ids best-first once the game is over (winners first), empty before', () => {
+  const { room, g, H: [a, b, c], K } = setup({ humans: ['Ann', 'Bo', 'Cy'], settings: { events: false } });
+  assert.deepEqual(g.results(), []);
+  K(c).age = 4; K(c).b.houses = 3; g.census();
+  g.end('score', [b.id]);
+  const r = g.results(); assert.equal(r.length, 3); assert.equal(r[0], b.id, 'the winner first'); assert.equal(r[1], c.id, 'then by score');
+  assert.deepEqual(room.tvState().state.standings.map((s) => s.id), r);
+});
+
+test('Royal Decrees: a guided path; each one pays its reward once and the next one shows', () => {
+  const { room, g, H: [a], K, secs } = setup({ humans: ['Ann'], settings: { events: false }, decrees: true });
+  const k = K(a);
+  let v = g.view(a); assert.equal(v.decree.key, 'work'); assert.equal(v.decree.n, 1); assert.equal(v.decree.of, D.DECREES.length);
+  const f0 = k.res.food;
+  ok(act(room, a, { op: 'jobs', farm: 2, chop: 1 })); secs(1);
+  assert.equal(k.decree, 1); assert(k.res.food > f0 + 39, 'got the food reward');
+  assert(k.alerts.some((x) => /Decree fulfilled/.test(x.text)));
+  v = g.view(a); assert.equal(v.decree.key, 'houses');
+  k.b.houses = 1; k.peasants = 6; k.jobs.farm = 6; secs(1); secs(1);
+  assert.equal(g.view(a).decree.key, 'age2', 'one decree per tick, in order');
+  k.decree = D.DECREES.length; secs(1); assert.equal(g.view(a).decree, null);
+});
+
+test('Auto workers: one tap spreads every peasant over the open jobs with food covered', () => {
+  const { room, g, H: [a], K, secs } = setup({ humans: ['Ann'], settings: { events: false } });
+  const k = K(a); k.peasants = 9; k.age = 2;
+  const r = ok(act(room, a, { op: 'jobs', auto: true }));
+  const tot = Object.values(k.jobs).reduce((x, y) => x + y, 0);
+  assert.equal(tot, 9, 'nobody idle'); assert(k.jobs.farm >= 1); assert.equal(k.jobs.mine, 0, 'mine is locked in Age 2'); assert.equal(k.jobs.study, 0);
+  assert.deepEqual(r.jobs, k.jobs);
+  secs(1); assert(k.rates.food >= 0, 'food is covered');
+  bad(act(room, a, { op: 'jobs', auto: 'yes', dance: 1 }), /Unknown job/);
+});
+
+test('Recall: every soldier out on villages and land marches back to the capital', () => {
+  const { room, g, H: [a], K, secs } = duel();
+  const k = K(a), out = k.tiles.filter((i) => i !== k.home).slice(0, 2);
+  bad(act(room, a, { op: 'recall' }), /already/);
+  g.tile(out[0]).units = { spear: 3 }; g.tile(out[1]).units = { militia: 2, scout: 1 };
+  const r = ok(act(room, a, { op: 'recall' })); assert.equal(r.n, 5);
+  assert.equal(g.tile(out[1]).units.scout, 1, 'scouts stay');
+  secs(30); assert.equal(g.tile(k.home).units.spear, 3); assert.equal(g.tile(k.home).units.militia, 2);
+});
+
+test('Royal Council: a vote opens on schedule; sanctions cut production, grants pay; validation', () => {
+  const { room, g, H: [a, b, c, d], K, secs } = setup({ humans: ['Ann', 'Bo', 'Cy', 'Di'], settings: { events: false } });
+  bad(act(room, a, { op: 'vote', to: b.id }), /not in session/);
+  g.nextCouncilAt = g.now() + 1000; g.lastMotion = 'grant'; secs(2);
+  const C = room.tvState().state.council; assert(C && C.kind === 'sanction' && C.endsIn > 30000); assert.equal(C.of, 4);
+  assert(room.fxLog.some((f) => f.kind === 'council'));
+  bad(act(room, a, { op: 'vote', to: a.id }), /yourself/); bad(act(room, a, { op: 'vote', to: 'nope' }), /Pick/);
+  ok(act(room, a, { op: 'vote', to: c.id })); ok(act(room, b, { op: 'vote', to: d.id })); ok(act(room, b, { op: 'vote', to: c.id })); // change of mind
+  ok(act(room, d, { op: 'vote', to: a.id }));
+  assert.equal(g.view(a).council.mine, c.id); assert.deepEqual(room.tvState().state.council.tally[0], { id: c.id, n: 2 });
+  secs(41); assert.equal(g.council, null);
+  const Cy = K(c); assert(Cy.sanctionUntil > g.now()); assert(room.fxLog.some((f) => f.kind === 'councilResult' && f.who === c.id));
+  near(g.prodMult(Cy), 0.7); assert(g.view(c).me.sanction > 0);
+  // the next motion is a grant: the chosen kingdom gets gold and stone; ties go to the weakest
+  g.nextCouncilAt = g.now(); secs(1); assert.equal(g.council.kind, 'grant');
+  K(b).b.houses = 3; g.census();
+  ok(act(room, a, { op: 'vote', to: b.id })); ok(act(room, c, { op: 'vote', to: d.id }));
+  const g0 = K(d).res.gold; secs(41); assert(K(d).res.gold >= g0 + 140, 'the tie went to the lower score');
+});
+
+test('Bounties: escrowed gold goes to whoever takes a village or the capital; expiry refunds', () => {
+  const { room, g, H: [a, b, c], K, secs } = setup({ humans: ['Ann', 'Bo', 'Cy'], settings: { events: false } });
+  const A = K(a), B = K(b), C = K(c);
+  A.res.gold = 500;
+  bad(act(room, a, { op: 'bounty', to: a.id, gold: 100 }), /another/); bad(act(room, a, { op: 'bounty', to: b.id, gold: 10 }), /at least/);
+  bad(act(room, a, { op: 'bounty', to: b.id, gold: 9000 }), /only have/); bad(act(room, a, { op: 'bounty', to: b.id, gold: 'x' }), /at least/);
+  ok(act(room, a, { op: 'bounty', to: b.id, gold: 100 })); ok(act(room, a, { op: 'bounty', to: b.id, gold: 50 }));
+  assert.equal(A.res.gold, 350); assert.equal(room.tvState().state.kingdoms.find((k) => k.id === b.id).bounty, 150);
+  assert.equal(g.view(a).bounties[0].gold, 150);
+  // Cy takes one of Bo's villages
+  const vi = B.tiles.find((i) => i !== B.home); g.tile(vi).v = 1; g.tile(vi).units = {};
+  g.tile(C.home).units = { spear: 20 }; const cg = C.res.gold;
+  ok(act(room, c, { op: 'march', to: qr(g, vi), units: { spear: 20 } })); secs(60);
+  assert.equal(g.tile(vi).o, c.id); assert.equal(C.res.gold, cg + 150); assert.equal(g.bounties.length, 0);
+  assert(room.fxLog.some((f) => f.kind === 'bountyClaim'));
+  // the people of Bo rise after losing a village
+  assert(g.tile(B.home).units.militia >= 2);
+  // an unclaimed bounty comes back after 5 minutes
+  ok(act(room, a, { op: 'bounty', to: c.id, gold: 100 })); const ag = A.res.gold;
+  secs(301); assert.equal(A.res.gold, ag + 100);
+  ok(act(room, a, { op: 'ally', to: c.id })); ok(act(room, c, { op: 'allyAnswer', from: a.id, yes: true }));
+  bad(act(room, a, { op: 'bounty', to: c.id, gold: 100 }), /ally/);
+});
+
+test('Comebacks: underdog bonus, a coalition against a runaway leader, a rally after losing the capital', () => {
+  const { room, g, H: [a, b, c], K, secs } = setup({ humans: ['Ann', 'Bo', 'Cy'], settings: { events: false } });
+  const A = K(a), B = K(b), C = K(c);
+  secs(1); assert.equal(B.underdog, 0, 'no bonus in the first 3 minutes');
+  g.skew += 200000; A.b.houses = 3; A.age = 4; A.b.farm = 3; A.b.lumber = 3; secs(1);
+  assert(B.underdog > 0.1 && B.underdog <= 0.4, `underdog ${B.underdog}`); assert.equal(A.underdog, 0);
+  near(g.prodMult(B), 1 + B.underdog);
+  assert.equal(g.view(b).me.underdog, B.underdog);
+  // two vassals → Ann is marked: others hit her land 20% harder
+  B.vassalOf = a.id; C.vassalOf = null; const D4 = room.join('Di').player; const Dk = g.k.get(D4.id); if (Dk) Dk.vassalOf = a.id;
+  secs(1);
+  assert(Dk, 'Di got a kingdom'); {
+    assert.equal(g.marked, a.id); assert(room.fxLog.some((f) => f.kind === 'coalition'));
+    const T = g.tile(A.home), units = { spear: 10 };
+    const pc = g.attackPower(units, C, T), pa = g.attackPower(units, A, g.tile(C.home));
+    near(pc / (10 * 4 * g.counter('spear', T.units)), 1.2, 1e-6); assert(pa > 0);
+    assert.equal(room.tvState().state.kingdoms.find((k) => k.id === a.id).marked, true);
+  }
+  // losing your capital: free militia at home
+  C.vassalOf = null; g.tile(C.home).units = {}; g.vassalize(C, A);
+  assert.equal(g.tile(C.home).units.militia, 3 + C.age);
+  assert(C.alerts.some((x) => /people rise/.test(x.text)));
+});
+
+test('Pacing: ages, monument and rocket follow the time limit; avatars reach the screens', () => {
+  const s20 = setup({ humans: ['Ann', 'Bo'], settings: { timeLimit: 20 } }), s60 = setup({ humans: ['Ann', 'Bo'], settings: { timeLimit: 60 } });
+  const k20 = s20.K(s20.H[0]), k60 = s60.K(s60.H[0]); k20.age = k60.age = 2;
+  const c20 = s20.g.canBuild(k20, 'castle').cost, c60 = s60.g.canBuild(k60, 'castle').cost;
+  assert(c60.food > 3 * c20.food, `${c60.food} vs ${c20.food}`);
+  assert(s60.g.monumentNeed() > s20.g.monumentNeed());
+  const r = setup({ humans: ['Ann'], start: false }); r.room.get(r.H[0].id).avatar = '🦊';
+  assert.equal(r.room.tvState().state.seats[0].avatar, '🦊');
+  r.room.get(r.H[0].id).avatar = '<b>x</b>'; assert.equal(r.room.tvState().state.seats[0].avatar, null, 'unsafe avatars are dropped');
 });
 
 test('Bots: a 2-bot game left alone fights and ends', () => {

@@ -9,16 +9,21 @@ const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'ringSize', label: 'Players per ring', options: opt([[4, 'About 4 per ring'], [6, 'About 6 per ring'], [8, 'About 8 per ring']]) },
   { key: 'prompts', label: 'Starting prompts', options: opt([['deck', 'Secret prompts from the deck'], ['write', 'Everyone writes their own']]) },
+  { key: 'pack', label: 'Prompt pack', options: opt([['mix', '🎲 A bit of everything'], ['classic', '🎨 Silly scenes'], ['easy', '✏️ Easy to draw (great for non-artists)'], ['food', '🍕 Food fight'], ['fantasy', '🐉 Myths & monsters'], ['everyday', '🏠 Everyday chaos']]) },
   { key: 'drawSeconds', label: 'Time to draw', options: opt([[45, '45 seconds'], [60, '60 seconds'], [90, '90 seconds']]) },
   { key: 'guessSeconds', label: 'Time to guess', options: opt([[20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds']]) },
   { key: 'showBooks', label: 'Books revealed on the TV', options: opt([[3, 'Up to 3 books'], [6, 'Up to 6 books'], [0, 'Every book']]) },
 ];
-const defaults = { ringSize: 6, prompts: 'deck', drawSeconds: 60, guessSeconds: 30, showBooks: 6 };
+const defaults = { ringSize: 6, prompts: 'deck', pack: 'mix', drawSeconds: 60, guessSeconds: 30, showBooks: 6 };
 
-const PALETTE = 8, ERASER = 8, SIZES = 3, MAX_STROKES = 400, MAX_POINTS = 8000;
+// Colours 0–7 and 9–12 (8 is the eraser), 5 brush sizes; a fill is a one-point stroke with f: 1.
+const COLORS = [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12], ERASER = 8, MAX_COLOR = 12, SIZES = 5, MAX_STROKES = 400, MAX_POINTS = 8000, MAX_FILLS = 40;
+const LAST_CALL_DRAW = 20, LAST_CALL_GUESS = 12; // when only a few are left, the rest of the room doesn't wait long
+const REACTS = ['😂', '🤣', '😱', '🔥', '👏', '🤯'], REACT_GAP_MS = 350, FX_PER_SECOND = 8;
 const WRITE_SECONDS = 35, GRACE_MS = 1200, PASS_MS = 2500, ENTRY_DRAW_MS = 3600, ENTRY_TEXT_MS = 2600, FINAL_MS = 5000;
 const VOTE_SECONDS = 15, RESULTS_MS = 4500, VOTE_POINTS = 100, CHAIN_BONUS = 50;
 const AUTO_GUESS = '???';
+const REVEAL = new Set(['show', 'final', 'vote', 'results']);
 const clean = (s, n = 60) => String(s == null ? '' : s).replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
 
 // ~120 original, family-friendly prompts.
@@ -55,6 +60,40 @@ const PROMPTS = [
   'a parrot that won’t stop talking', 'an ice cream cone melting in the sun', 'a mole popping up on a golf course', 'a dog walking its human',
   'a scarecrow scared of a crow', 'a sock puppet show', 'a hippo on a tightrope', 'a snail in a race car',
 ];
+// Simple things anyone can draw in a few lines.
+const EASY = [
+  'a happy sun', 'a house on fire', 'a snail', 'a rainy day', 'a birthday cake', 'a fish in a bowl', 'a broken heart', 'a rocket ship',
+  'a sleeping cat', 'a very tall tree', 'a slice of pizza', 'a snowman', 'a smiling flower', 'a boat on big waves', 'an angry cloud', 'a ghost',
+  'a full moon', 'a spider on its web', 'a hot air balloon', 'a crying baby', 'a light bulb', 'a ladder to the clouds', 'a tiny mouse', 'a giant foot',
+  'a stack of books', 'a smiling tooth', 'a robot', 'a pair of sunglasses', 'a mountain', 'a bouncing ball', 'a melting candle', 'a key',
+  'a treasure chest', 'a crown', 'a sad banana', 'a kite', 'a lollipop', 'a traffic light', 'an umbrella', 'a worm in an apple',
+];
+const FOOD = [
+  'a taco on vacation', 'a donut doing a cartwheel', 'an egg telling a joke', 'a watermelon with a sunburn', 'a muffin in a top hat', 'cheese escaping a mousetrap',
+  'soup that is way too hot', 'a cookie hiding from a glass of milk', 'a pancake flip gone wrong', 'a lemon making a sour face', 'popcorn exploding out of a pot', 'a sandwich on a diet',
+  'a pepper breathing fire', 'jelly wobbling on a plate', 'a sushi roll on a skateboard', 'a carrot at the gym', 'french fries waiting in line for ketchup', 'a pear doing ballet',
+  'a cupcake with far too many candles', 'a burrito taking a nap', 'a grumpy onion', 'a coconut falling on someone’s head', 'a chili pepper in a hot tub', 'an avocado that lost its pit',
+  'a milkshake giving someone brain freeze', 'a hot dog running a marathon', 'a pretzel tied in a knot', 'noodles slurped by a giant', 'a wedding cake collapsing', 'a pie in the face',
+  'one lonely pea on a big plate', 'a broccoli tree house', 'a strawberry wearing sunglasses', 'a pineapple at the hairdresser', 'a banana slipping on a banana peel', 'a meatball rolling down a hill',
+];
+const FANTASY = [
+  'a dragon afraid of the dark', 'a witch with a broken broom', 'a unicorn at the car wash', 'a troll under a tiny bridge', 'a genie stuck in a teapot', 'a fairy with a leaf blower',
+  'a werewolf at the barber', 'a zombie learning to knit', 'a mermaid riding a bicycle', 'a giant tripping over a castle', 'a wizard duel with spoons', 'a haunted bathtub',
+  'a phoenix rising from a toaster', 'an elf on a ladder', 'a sea monster in a puddle', 'a vampire afraid of garlic bread', 'a ghost who is scared of people', 'a knight with a pool noodle sword',
+  'a crystal ball with bad news', 'a goblin selling hats', 'a cyclops at the eye doctor', 'a magic carpet in a traffic jam', 'a pumpkin carriage with a flat tire', 'a skeleton walking a skeleton dog',
+  'a sphinx asking a riddle', 'a talking mirror', 'a haunted house for sale', 'a centaur on roller skates', 'a yeti building a sandcastle', 'a frog prince waiting for a kiss',
+  'a baby dragon hatching', 'a magic spell going wrong', 'a castle in the clouds', 'a pirate ghost ship', 'a robot knight', 'an alien learning to dance',
+];
+const EVERYDAY = [
+  'missing the bus', 'stepping on a toy brick', 'a cat sitting on a laptop', 'a phone at 1% battery', 'fighting over the last slice of pizza', 'a sock lost in the dryer',
+  'burning the toast', 'a traffic jam', 'a dog eating homework', 'a grocery bag ripping open', 'a sneeze in a quiet library', 'tangled headphones',
+  'looking for the glasses on your head', 'an umbrella blown inside out', 'waking up late', 'a crowded elevator', 'a kid too scared to go down the slide', 'brain freeze',
+  'a very long queue', 'a printer eating the paper', 'a toddler tantrum in a shop', 'spilled coffee on a white shirt', 'stuck in a revolving door', 'a mosquito at night',
+  'a group photo where someone blinks', 'a selfie with a seagull', 'an empty fridge', 'a hair dryer disaster', 'a bicycle with a flat tire', 'a cat ignoring its fancy new bed',
+  'a wave knocking down a sandcastle', 'a monday morning', 'an alarm clock thrown across the room', 'a shopping cart with a wobbly wheel', 'a wet dog shaking off water', 'running out of toilet paper',
+];
+const PACKS = { classic: PROMPTS, easy: EASY, food: FOOD, fantasy: FANTASY, everyday: EVERYDAY };
+PACKS.mix = [...new Set(Object.values(PACKS).flat())];
 // Silly guesses for test bots.
 const BOT_GUESSES = [
   'my uncle at a wedding', 'a potato', 'spaghetti', 'a confused lamp', 'modern art', 'a very angry egg', 'abstract feelings',
@@ -91,21 +130,24 @@ function similarity(x, y) {
 const matches = (x, y) => similarity(x, y) >= 0.5;
 
 // ---------- drawings: compact strokes, validated ----------
-// A drawing is [{ c: colour 0–7 (8 = eraser), s: size 0–2, p: [x0, y0, x1, y1, …] }] in a 0–1000 square.
+// A drawing is [{ c: colour 0–12 (8 = eraser), s: size 0–4, p: [x0, y0, x1, y1, …] }] in a
+// 0–1000 square. A paint-bucket fill is { c, s: 0, f: 1, p: [x, y] }.
 function cleanStrokes(raw) {
   if (!Array.isArray(raw)) return { error: 'That drawing didn’t arrive. Press Done again.' };
   if (raw.length > MAX_STROKES) return { error: `Too many strokes (max ${MAX_STROKES}).` };
-  const out = []; let pts = 0;
+  const out = []; let pts = 0, fills = 0;
   for (const s of raw) {
     if (!s || typeof s !== 'object') return { error: 'That drawing is broken.' };
-    if (!Number.isInteger(s.c) || s.c < 0 || s.c > ERASER) return { error: 'Only the palette colours, please.' };
+    if (!Number.isInteger(s.c) || s.c < 0 || s.c > MAX_COLOR) return { error: 'Only the palette colours, please.' };
     if (!Number.isInteger(s.s) || s.s < 0 || s.s >= SIZES) return { error: 'Unknown brush size.' };
+    if (s.f !== undefined && s.f !== 1) return { error: 'That drawing is broken.' };
     const p = s.p;
     if (!Array.isArray(p) || p.length < 2 || p.length % 2 || p.length > MAX_POINTS * 2) return { error: 'That drawing is broken.' };
+    if (s.f === 1 && (p.length !== 2 || ++fills > MAX_FILLS)) return { error: p.length !== 2 ? 'That drawing is broken.' : `Too many fills (max ${MAX_FILLS}).` };
     pts += p.length / 2;
     if (pts > MAX_POINTS) return { error: 'That drawing is too detailed. Try fewer strokes.' };
     for (const n of p) if (!Number.isInteger(n) || n < 0 || n > 1000) return { error: 'That drawing is off the page.' };
-    out.push({ c: s.c, s: s.s, p: p.slice() });
+    out.push(s.f === 1 ? { c: s.c, s: 0, f: 1, p: p.slice() } : { c: s.c, s: s.s, p: p.slice() });
   }
   return { strokes: out };
 }
@@ -118,12 +160,13 @@ class Sketch {
     this.endsAt = 0; this.timer = null; this.ending = false; this.deck = [];
     this.show = []; this.showPos = -1; this.cur = null; this.entry = 0; this.votes = new Map(); this.awards = [];
     this.ver = 0; this.stCache = null;
+    this.stepStart = 0; this.hurried = false; this.lastReact = new Map(); this.fxWin = { t: 0, n: 0 }; this.best = null;
   }
   shuffle(a) { const r = this.room.rng; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   setTimer(ms, fn, grace = 0) { this.room.cancel(this.timer); this.endsAt = this.room.now() + ms; this.timer = this.room.after(ms + grace, fn); }
-  draw() { if (!this.deck.length) this.deck = this.shuffle(PROMPTS.slice()); return this.deck.pop(); }
+  draw() { if (!this.deck.length) this.deck = this.shuffle((PACKS[this.s.pack] || PACKS.mix).slice()); return this.deck.pop(); }
   add(id, pts) { if (!pts) return; this.scores.set(id, (this.scores.get(id) || 0) + pts); this.ver++; }
-  stat(id) { if (!this.stats.has(id)) this.stats.set(id, { drawVotes: 0, guessVotes: 0, correct: 0, guesses: 0, chaos: 0, wild: null }); return this.stats.get(id); }
+  stat(id) { if (!this.stats.has(id)) this.stats.set(id, { drawVotes: 0, guessVotes: 0, correct: 0, guesses: 0, chaos: 0, wild: null, draws: 0, drawMs: 0, ink: 0 }); return this.stats.get(id); }
 
   start() {
     const ids = this.shuffle(this.room.list().map((p) => p.id));
@@ -174,7 +217,7 @@ class Sketch {
     this.step++;
     if (this.step >= this.steps) return this.beginReveal();
     const kind = this.step % 2 === 0 ? 'draw' : 'guess';
-    this.phase = 'step'; this.kind = kind; this.tasks = new Map(); this.ending = false;
+    this.phase = 'step'; this.kind = kind; this.tasks = new Map(); this.ending = false; this.hurried = false; this.stepStart = this.room.now();
     for (const ring of this.rings) {
       if (this.step >= ring.steps) continue;
       ring.members.forEach((pid, i) => {
@@ -206,15 +249,26 @@ class Sketch {
     for (let i = 0; i < n; i++) {
       let x = 150 + Math.floor(r() * 700), y = 150 + Math.floor(r() * 700); const p = [x, y], k = 4 + Math.floor(r() * 12);
       for (let j = 0; j < k; j++) { x = Math.max(0, Math.min(1000, x + Math.floor((r() - 0.5) * 160))); y = Math.max(0, Math.min(1000, y + Math.floor((r() - 0.5) * 160))); p.push(x, y); }
-      out.push({ c: Math.floor(r() * PALETTE), s: Math.floor(r() * SIZES), p });
+      out.push({ c: COLORS[Math.floor(r() * COLORS.length)], s: Math.floor(r() * SIZES), p });
     }
     return out;
   }
   checkDone() {
     if (this.phase !== 'step' || this.ending) return;
-    for (const [pid, t] of this.tasks) if (!t.done && this.room.get(pid)) return;
+    for (const [pid, t] of this.tasks) if (!t.done && this.room.get(pid)) return this.lastCall();
     this.ending = true; this.room.cancel(this.timer); this.endsAt = this.room.now() + 800;
     this.timer = this.room.after(800, () => this.endStep());
+  }
+  // Only a few players left (and plenty of time on the clock)? Last call: the room isn't kept waiting.
+  lastCall() {
+    if (this.phase !== 'step' || this.ending || this.hurried) return;
+    let of = 0, left = 0;
+    for (const [pid, t] of this.tasks) { if (!this.room.get(pid)) continue; of++; if (!t.done) left++; }
+    if (of < 4 || !left || left > Math.max(1, Math.floor(of / 4))) return;
+    const cap = (this.kind === 'draw' ? LAST_CALL_DRAW : LAST_CALL_GUESS) * 1000;
+    if (this.endsAt - this.room.now() <= cap + 3000) return;
+    this.hurried = true; this.setTimer(cap, () => this.endStep(), GRACE_MS);
+    this.room.fx('hurry');
   }
   endStep() {
     if (this.phase !== 'step') return;
@@ -332,11 +386,22 @@ class Sketch {
     const cha = pick((s) => s.chaos, 0.01);
     if (cha) { const w = this.stats.get(cha.id).wild; A.push({ key: 'chaos', icon: '🌀', title: 'Chaos Agent', id: cha.id, detail: w ? `“${w.from}” → “${w.to}”` : 'Sent the books off the rails' }); }
     const mind = pick((s) => s.correct); if (mind) A.push({ key: 'mind', icon: '🔮', title: 'Mind Reader', id: mind.id, detail: `${mind.v} spot-on guess${mind.v === 1 ? '' : 'es'}` });
+    // Fastest finisher (at least two drawings) and the most ink on the page.
+    const minDraws = Math.min(2, Math.ceil(this.steps / 2));
+    const fast = pick((s) => (s.draws >= minDraws ? 1e6 / (s.drawMs / s.draws + 1) : 0), 0.0001);
+    if (fast) { const s = this.stats.get(fast.id); A.push({ key: 'speedy', icon: '⚡', title: 'Speed Sketcher', id: fast.id, detail: `done in ${Math.max(1, Math.round(s.drawMs / s.draws / 1000))}s a drawing, on average` }); }
+    const ink = pick((s) => s.ink, 40);
+    if (ink && (!fast || ink.id !== fast.id)) A.push({ key: 'detail', icon: '🖌️', title: 'Master of Detail', id: ink.id, detail: 'the most ink on the page' });
     this.awards = A.map((a) => ({ ...a, name: this.room.name(a.id) }));
+    // Book of the night: the one whose entries got the most votes.
+    let best = null, bv = 0;
+    for (const b of this.books) { const v = (b.tally || []).reduce((x, y) => x + y, 0); if (v > bv) { best = b; bv = v; } }
+    this.best = best ? { id: best.id, votes: bv } : null;
     this.phase = 'over'; this.endsAt = 0; this.room.cancel(this.timer); this.cur = null;
     this.room.fx('win');
   }
 
+  results() { return this.standings().map((r) => r.id); }
   next() {
     const ph = this.phase;
     if (ph === 'write') { this.room.cancel(this.timer); this.beginSteps(); }
@@ -373,10 +438,23 @@ class Sketch {
       if (t.done) return { ok: false, error: 'Already sent!' };
       if (t.kind !== m.op) return { ok: false, error: t.kind === 'draw' ? 'This step is for drawing.' : 'This step is for guessing.' };
       let entry;
-      if (m.op === 'draw') { const r = cleanStrokes(m.strokes); if (r.error) return { ok: false, error: r.error }; entry = { kind: 'draw', by: p.id, strokes: r.strokes }; }
+      if (m.op === 'draw') {
+        const r = cleanStrokes(m.strokes); if (r.error) return { ok: false, error: r.error };
+        entry = { kind: 'draw', by: p.id, strokes: r.strokes };
+        if (r.strokes.length) { const st = this.stat(p.id); st.draws++; st.drawMs += this.room.now() - this.stepStart; st.ink += r.strokes.reduce((n, s) => n + s.p.length / 2, 0); }
+      }
       else { const text = clean(m.text); if (!text) return { ok: false, error: 'Type your guess first.' }; entry = { kind: 'guess', by: p.id, text }; }
       this.books[t.book].entries[t.idx] = entry; t.done = true;
       this.checkDone();
+      return { ok: true };
+    }
+    if (m.op === 'react') { // live reactions while the books are revealed
+      if (!REVEAL.has(this.phase)) return { ok: false, error: 'Reactions open when the books are revealed.' };
+      const i = Number(m.e); if (!Number.isInteger(i) || i < 0 || i >= REACTS.length) return { ok: false, error: 'Pick a reaction.' };
+      const now = this.room.now(); if (now - (this.lastReact.get(p.id) || -1e9) < REACT_GAP_MS) return { ok: true, quiet: true };
+      this.lastReact.set(p.id, now);
+      if (now - this.fxWin.t >= 1000) this.fxWin = { t: now, n: 0 };
+      if (++this.fxWin.n <= FX_PER_SECOND) this.room.fx('react', { e: REACTS[i] });
       return { ok: true };
     }
     if (m.op === 'vote') {
@@ -412,18 +490,20 @@ class Sketch {
       const owners = this.books.map((b) => b.owner).filter((id) => this.room.get(id));
       return { ...base, done: owners.filter((id) => this.written.has(id)).length, of: owners.length, waiting: owners.filter((id) => !this.written.has(id)).slice(0, 30).map((id) => this.room.name(id)) };
     }
-    if (this.phase === 'step' || this.phase === 'pass') return { ...base, kind: this.kind, nextKind: this.step % 2 === 0 ? 'guess' : 'draw', ...this.progress() };
+    if (this.phase === 'step' || this.phase === 'pass') return { ...base, kind: this.kind, hurried: this.hurried, nextKind: this.step % 2 === 0 ? 'guess' : 'draw', ...this.progress() };
     if (this.cur) {
       const b = this.cur, upto = this.phase === 'show' ? this.entry + 1 : b.entries.length;
       return {
         ...base, n: this.showPos + 1, of: this.show.length, entry: this.entry, book: this.pubBook(b, upto),
-        survived: this.phase !== 'show' ? b.survived : null, voted: this.phase === 'vote' ? this.votes.size : 0,
+        survived: this.phase !== 'show' ? b.survived : null, drift: this.phase !== 'show' ? Math.round((b.change || 0) * 100) : null, voted: this.phase === 'vote' ? this.votes.size : 0,
+        voters: this.phase === 'vote' ? this.room.list().filter((p) => this.votable(b, p.id).length).length : 0,
         tally: this.phase === 'results' ? b.tally : null, top: this.phase === 'results' ? b.top : null,
       };
     }
     if (this.phase === 'over') {
       return {
         ...base, standings: this.standings().slice(0, 12), awards: this.awards,
+        best: this.best ? { ...this.pubBook(this.books[this.best.id]), votes: this.best.votes, survived: this.books[this.best.id].survived } : null,
         gallery: this.books.map((b) => ({ id: b.id, owner: this.room.name(b.owner), prompt: b.entries[0] && b.entries[0].text, final: b.final ? b.final.text : '', survived: b.survived, shown: b.shown })),
       };
     }
@@ -442,7 +522,7 @@ class Sketch {
     if (this.phase === 'write') return { ...base, wrote: this.written.get(p.id) || null };
     if (this.phase === 'step' || this.phase === 'pass') {
       const t = this.tasks.get(p.id), pr = this.progress();
-      const v = { ...base, kind: this.kind, nextKind: this.step % 2 === 0 ? 'guess' : 'draw', done: pr.done, total: pr.of, task: null };
+      const v = { ...base, kind: this.kind, hurried: this.hurried, nextKind: this.step % 2 === 0 ? 'guess' : 'draw', done: pr.done, total: pr.of, task: null };
       if (t && this.phase === 'step') {
         const b = this.books[t.book], src = b.entries[t.idx - 1];
         v.task = { key: `${this.step}:${b.id}`, kind: t.kind, done: t.done, first: t.idx === 1, own: t.idx === 1 && !!src.own, canReroll: t.idx === 1 && !src.own && !this.rerolled.has(p.id) };
@@ -451,7 +531,7 @@ class Sketch {
       return v;
     }
     if (this.cur) {
-      const b = this.cur, v = { ...base, n: this.showPos + 1, of: this.show.length, owner: this.room.name(b.owner), mine: b.owner === p.id, inBook: b.entries.some((e) => e && e.by === p.id) };
+      const b = this.cur, v = { ...base, reacts: REACTS, n: this.showPos + 1, of: this.show.length, owner: this.room.name(b.owner), mine: b.owner === p.id, inBook: b.entries.some((e) => e && e.by === p.id) };
       if (this.phase === 'vote') { v.book = this.pubBook(b); v.can = this.votable(b, p.id); v.myVote = this.votes.has(p.id) ? this.votes.get(p.id) : null; }
       if (this.phase === 'results') { v.gain = b.entries.reduce((s, e, i) => s + (e && e.by === p.id ? (b.tally[i] || 0) : 0), 0); v.survived = b.survived; }
       if (this.phase === 'final') v.survived = b.survived;
@@ -468,5 +548,5 @@ class Sketch {
 module.exports = {
   key: 'sketch', name: 'JustSketch Relay', min: 3, fields, defaults,
   create: (room, settings) => new Sketch(room, settings),
-  _test: { similarity, matches, cleanStrokes, PROMPTS, MAX_POINTS, MAX_STROKES },
+  _test: { similarity, matches, cleanStrokes, PROMPTS, PACKS, MAX_POINTS, MAX_STROKES, MAX_FILLS, REACTS },
 };

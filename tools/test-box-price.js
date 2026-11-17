@@ -84,7 +84,7 @@ test('Power-ups: Double Down ×2, Bust Shield, once per game; Peek after half ti
   assert.equal(room.act(b, { op: 'peek' }).ok, false, 'peek twice');
   assert(room.act(b, { op: 'lock', guess: price * 1.04, shield: true }).ok);
   stepUntil(room, clock, () => g.dropped);
-  const ra = g.results.get(a.id), rb = g.results.get(b.id);
+  const ra = g.scored.get(a.id), rb = g.scored.get(b.id);
   assert.equal(ra.pts, def.scoreGuess(g.guesses.get(a.id).guess, price).pts * 2);
   assert(!rb.bust && rb.bull, 'shield: no bust, still a bullseye');
   assert.equal(room.playerState(a).state.result.pts, ra.pts);
@@ -103,7 +103,7 @@ test('Hot streak: three rounds within 15% in a row gives +300', () => {
     stepUntil(room, clock, () => g.round === n && g.phase === 'guess');
     room.act(a, { op: 'lock', guess: g.price * 0.9 });
     stepUntil(room, clock, () => g.dropped);
-    const r = g.results.get(a.id);
+    const r = g.scored.get(a.id);
     assert.equal(r.streak, n);
     assert.equal(r.pts, def.scoreGuess(g.guesses.get(a.id).guess, g.price).pts + (n >= 3 ? 300 : 0));
   }
@@ -123,14 +123,14 @@ test('Special rounds: every 4th is Higher or Lower (speed bonus), the last is a 
   assert(room.act(a, { op: 'hilo', pick: g.price > g.hiloPrice ? 'higher' : 'lower' }).ok);
   assert.equal(room.act(a, { op: 'hilo', pick: 'higher' }).ok, false, 'one answer only');
   stepUntil(room, clock, () => g.dropped);
-  const r = g.results.get(a.id); assert(r.right && r.pts === 1000, 'instant right answer = 500 + full 500 speed bonus');
+  const r = g.scored.get(a.id); assert(r.right && r.pts === 1000, 'instant right answer = 500 + full 500 speed bonus');
   stepUntil(room, clock, () => g.round === 6);
   assert.equal(g.kind, 'spree'); assert.equal(g.items.length, 3);
   assert(Math.abs(g.price - g.items.reduce((s, i) => s + i.price, 0)) < 0.01);
   stepUntil(room, clock, () => g.phase === 'guess');
   assert(room.act(a, { op: 'lock', guess: g.price }).ok);
   stepUntil(room, clock, () => g.dropped);
-  assert(g.results.get(a.id).exact);
+  assert(g.scored.get(a.id).exact);
   runOut(room, clock);
   assert.equal(g.round, 6);
 });
@@ -189,6 +189,47 @@ test('Back to the lobby and start again: a fresh game', () => {
   assert(room.vipAction(a, 'lobby').ok); assert(room.start().ok); // (room 'again' needs the lobby reset: see report)
   assert.equal(room.game.round, 1); assert.equal(room.game.phase, 'guess');
   assert.equal(room.game.scores.get(a.id), 0);
+});
+
+
+test('Which Costs More: two different-priced items, tap the pricier one, hidden until the drop', () => {
+  const { room, clock } = setup(3, { rounds: 10 });
+  const a = human(room, 'Ann'), b = human(room, 'Bo'); room.start();
+  const g = room.game;
+  stepUntil(room, clock, () => g.round === 6);
+  assert.equal(g.kind, 'versus'); assert.equal(g.items.length, 2);
+  assert.notEqual(g.items[0].price, g.items[1].price);
+  assert(!leaks(room.tvState()) && !leaks(room.playerState(a)), 'versus leaked a price');
+  stepUntil(room, clock, () => g.phase === 'guess');
+  assert.equal(room.act(a, { op: 'lock', guess: 5 }).ok, false, 'no typed guesses in versus');
+  assert.equal(room.act(a, { op: 'versus', pick: '0' }).ok, false, 'pick must be 0 or 1');
+  assert.equal(room.act(a, { op: 'versus', pick: 7 }).ok, false);
+  assert(room.act(a, { op: 'versus', pick: g.pricier }).ok);
+  assert(room.act(b, { op: 'versus', pick: 1 - g.pricier }).ok);
+  assert.equal(room.act(a, { op: 'versus', pick: 0 }).ok, false, 'one answer only');
+  stepUntil(room, clock, () => g.dropped);
+  assert(g.scored.get(a.id).right && g.scored.get(a.id).pts > 500);
+  assert.equal(g.scored.get(b.id).pts, 0);
+  assert.equal(room.playerState(a).state.result.place, 1);
+  assert(room.tvState().state.items.every((i) => i.price > 0), 'prices shown after the drop');
+});
+
+test('Final round counts double; results() lists players best-first at the end', () => {
+  const { room, clock } = setup(0, { rounds: 6 });
+  const a = human(room, 'Ann'), b = human(room, 'Bo'); room.start();
+  const g = room.game;
+  assert.deepEqual(g.results(), [], 'no results before the end');
+  stepUntil(room, clock, () => g.round === 6 && g.phase === 'guess');
+  assert.equal(room.playerState(a).state.final, true);
+  room.act(a, { op: 'lock', guess: g.price * 0.9 });
+  stepUntil(room, clock, () => g.dropped);
+  const r = g.scored.get(a.id);
+  assert.equal(r.pts, def.scoreGuess(g.guesses.get(a.id).guess, g.price).pts * 2);
+  assert(r.math.some((m) => /Final/.test(m.label)));
+  runOut(room, clock);
+  const order = g.results();
+  assert.deepEqual(order.slice().sort(), [a.id, b.id].sort());
+  assert.equal(order[0], a.id, 'Ann scored, Bo did not');
 });
 
 console.log(`\nPrice Panic: ${passed} tests passed.`);

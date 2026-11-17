@@ -3,6 +3,7 @@
 // out with emojis only, tapped one by one onto the big screen. Everyone else races to type the
 // answer. First right answer scores the most, fewer emojis score more, and the giver earns points
 // for every person who gets it. Big rooms run 2-3 givers at once on separate "stages".
+// The final round counts DOUBLE (a comeback chance), and the host can keep answers family-friendly.
 const { CATEGORIES, ANSWERS, KEYBOARD, ALLOWED, SEPARATOR } = require('./emoji-content');
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
@@ -13,9 +14,11 @@ const fields = [
   { key: 'stages', label: 'Clue givers at once', options: opt([['auto', 'Auto (more in big groups)'], [1, '1 giver'], [2, '2 givers'], [3, '3 givers']]) },
   { key: 'category', label: 'Categories', options: opt([['all', 'All categories'], ...CATEGORIES.map((c) => [c.key, c.icon + ' ' + c.label])]) },
   { key: 'difficulty', label: 'Difficulty', options: opt([['mix', 'Mixed'], ['easy', 'Easy ★'], ['medium', 'Easy & medium'], ['hard', 'Medium & hard']]) },
+  { key: 'family', label: 'Answers', options: opt([[false, 'Everything'], [true, 'Family-friendly only']]) },
   { key: 'ticker', label: 'Show wrong guesses on TV', options: opt([[true, 'Yes (anonymous)'], [false, 'No']]) },
 ];
-const defaults = { seconds: 90, turns: 1, maxRounds: 8, stages: 'auto', category: 'all', difficulty: 'mix', ticker: true };
+const defaults = { seconds: 90, turns: 1, maxRounds: 8, stages: 'auto', category: 'all', difficulty: 'mix', family: false, ticker: true };
+const FINAL_MULT = 2;
 
 const PICK_SECONDS = 15, REVEAL_SECONDS = 9, MAX_CLUE = 20, MAX_GUESS = 40, GUESS_GAP = 900, HINT_COST = 75;
 const HINT1 = 0.4, HINT2 = 0.7; // hints appear at these fractions of the round
@@ -83,6 +86,8 @@ class EmojiCharades {
     if (!this.given.has(p.id)) this.given.set(p.id, 0);
   }
   add(id, pts) { this.scores.set(id, Math.max(0, (this.scores.get(id) || 0) + pts)); this.roundPts.set(id, (this.roundPts.get(id) || 0) + pts); }
+  isFinal() { return this.totalRounds >= 3 && this.round === this.totalRounds; }
+  mult() { return this.isFinal() ? FINAL_MULT : 1; }
   stageCount() {
     const n = this.room.players.size;
     const want = this.s.stages === 'auto' ? (n <= 8 ? 1 : n <= 24 ? 2 : 3) : Number(this.s.stages) || 1;
@@ -108,7 +113,8 @@ class EmojiCharades {
   // Answers allowed by the settings, not used yet this game.
   pool() {
     const d = this.s.difficulty, ok = (a) => (d === 'easy' ? a.diff === 1 : d === 'medium' ? a.diff <= 2 : d === 'hard' ? a.diff >= 2 : true);
-    const inCat = ANSWERS.filter((a) => this.s.category === 'all' || a.cat === this.s.category);
+    const fam = this.s.family === true || this.s.family === 'true';
+    const inCat = ANSWERS.filter((a) => (this.s.category === 'all' || a.cat === this.s.category) && (!fam || a.family));
     let list = inCat.filter((a) => ok(a) && !this.used.has(a.id));
     if (list.length < 3) list = inCat.filter((a) => !this.used.has(a.id));
     if (list.length < 3) { for (const a of inCat) this.used.delete(a.id); list = inCat.filter(ok); }
@@ -137,7 +143,7 @@ class EmojiCharades {
       this.given.set(p.id, (this.given.get(p.id) || 0) + 1);
       return { id: 'r' + this.round + 's' + i, n: i + 1, giver: p.id, giverName: p.name, color: p.color, options: this.offer(), answer: null, clue: [], seq: 0, solvers: [], hint: 0, giverHints: 0, left: false, emojisAtFirst: 0 };
     });
-    this.room.fx('shuffle');
+    this.room.fx(this.isFinal() ? 'final' : 'shuffle');
     this.setTimer(PICK_SECONDS * 1000, () => this.beginClue());
     for (const st of this.stages) { const g = this.room.get(st.giver); if (g && g.bot) this.room.after(1500 + this.room.rng() * 3000, () => this.act(g, { op: 'pick', i: this.rnd(3) })); }
   }
@@ -205,7 +211,7 @@ class EmojiCharades {
     const order = st.solvers.length, ms = this.room.now() - this.clueStart, n = this.emojiCount(st);
     const base = order < GUESS_BASE.length ? GUESS_BASE[order] : Math.max(100, 150 - 5 * (order - GUESS_BASE.length + 1));
     const mult = n <= 3 ? 1.5 : n <= 5 ? 1.25 : n <= 8 ? 1 : 0.8;
-    const pts = Math.round(base * mult * (1 - 0.15 * st.hint) / 10) * 10;
+    const pts = Math.round(base * mult * (1 - 0.15 * st.hint) / 10) * 10 * this.mult();
     st.solvers.push({ id: p.id, name: p.name, ms, pts });
     if (!order) st.emojisAtFirst = n;
     this.add(p.id, pts);
@@ -228,7 +234,7 @@ class EmojiCharades {
         pts = Math.min(900, pts) * mult;
         if (st.solvers[0].ms <= dur * 0.25) pts += 150;
         if (k >= el) pts += 100;
-        st.giverPts = Math.round(pts / 10) * 10;
+        st.giverPts = Math.round(pts / 10) * 10 * this.mult();
         this.add(st.giver, st.giverPts);
         const s = this.stats.get(st.giver); if (s) { s.giverPts += st.giverPts; s.cluesSolved++; s.emojisOnSolved += n; }
       }
@@ -316,13 +322,15 @@ class EmojiCharades {
     }
   }
 
-  standings() { return [...this.scores].filter(([id]) => this.room.get(id)).map(([id, pts]) => ({ id, name: this.room.name(id), points: pts })).sort((a, b) => b.points - a.points); }
+  standings() { return [...this.scores].filter(([id]) => this.room.get(id)).map(([id, pts]) => ({ id, name: this.room.name(id), avatar: this.room.get(id).avatar || null, points: pts })).sort((a, b) => b.points - a.points); }
+  // Player ids best-first once the game is over (for the party scoreboard across games).
+  results() { return this.phase === 'over' ? this.standings().map((x) => x.id) : []; }
   // What everyone may see about a stage. The answer only appears in the reveal.
   pub(st, viewer) {
     const reveal = this.phase === 'reveal', c = st.answer ? CAT[st.answer.cat] : null;
     const el = this.eligible().length;
     return {
-      id: st.id, n: st.n, giver: st.giverName, color: st.color, left: st.left, picked: !!st.answer,
+      id: st.id, n: st.n, giver: st.giverName, avatar: (this.room.get(st.giver) || {}).avatar || null, color: st.color, left: st.left, picked: !!st.answer,
       cat: c ? { label: c.label, icon: c.icon } : null, diff: st.answer ? st.answer.diff : 0,
       clue: st.clue, emojis: this.emojiCount(st), hint: st.answer && this.phase === 'clue' ? pattern(st.answer.text, st.hint) : null, hintLevel: st.hint,
       solved: st.solvers.length, of: el, firsts: st.solvers.slice(0, 3).map((x) => x.name),
@@ -334,6 +342,7 @@ class EmojiCharades {
   tv() {
     return {
       phase: this.phase, round: this.round, total: this.totalRounds, endsIn: this.endsAt && this.phase !== 'over' ? Math.max(0, this.endsAt - this.room.now()) : 0,
+      lastRound: this.phase !== 'over' && this.isFinal(), mult: FINAL_MULT,
       stages: this.stages.map((st) => this.pub(st)),
       ticker: this.ticker.slice(-8), standings: this.standings().slice(0, 10),
       awards: this.phase === 'over' ? this.awards : null, history: this.phase === 'over' ? this.history.slice(-12) : null,
@@ -349,7 +358,7 @@ class EmojiCharades {
     } : null;
     return {
       phase: this.phase, round: this.round, total: this.totalRounds, endsIn: this.endsAt && this.phase !== 'over' ? Math.max(0, this.endsAt - this.room.now()) : 0,
-      role: st ? 'giver' : 'guesser', giver: me, hintCost: HINT_COST,
+      role: st ? 'giver' : 'guesser', giver: me, hintCost: HINT_COST, lastRound: this.phase !== 'over' && this.isFinal(), mult: FINAL_MULT,
       stages: this.stages.map((x) => this.pub(x, p.id)), guesses: this.myGuesses.get(p.id) || [],
       roundPts: this.roundPts.get(p.id) || 0,
       points: this.scores.get(p.id) || 0, rank: table.findIndex((x) => x.id === p.id) + 1, of: table.length,

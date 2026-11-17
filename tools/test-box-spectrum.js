@@ -236,6 +236,7 @@ test('A player leaving: placing finishes without them; a spotlight leaving mid-p
   const { room, clock, H: [a, b, c, d] } = setup({ humans: ['Ann', 'Bo', 'Cy', 'Dee'] });
   room.start(); until(room, clock, 'place', 1);
   ok(act(room, a, { op: 'place', pos: 20 })); ok(act(room, b, { op: 'place', pos: 30 })); ok(act(room, c, { op: 'place', pos: 40 }));
+  for (const p of [a, b, c]) ok(act(room, p, { op: 'avg', pos: 50 }));
   const t = clock.now();
   room.remove(d.id); // the only one we were waiting for
   until(room, clock, 'reveal', 1);
@@ -303,6 +304,68 @@ test('100 players mid-game: reveal sends every dot; waiting list is hidden on th
   const res = room.tvState().state.result;
   assert.equal(res.dots.length, 100);
   assert(json(room.tvState()).length < 30000);
+});
+
+
+test('While you wait: guess the room average (+75 within 5), only after placing, never leaked early', () => {
+  const { room, clock, H: [a, b, c, d] } = setup({ humans: ['Ann', 'Bo', 'Cy', 'Di'] });
+  ok(room.start());
+  until(room, clock, 'place', 1);
+  bad(act(room, a, { op: 'avg', pos: 50 }), /first/);
+  ok(act(room, a, { op: 'place', pos: 10 })); ok(act(room, b, { op: 'place', pos: 20 })); ok(act(room, c, { op: 'place', pos: 30 }));
+  bad(act(room, a, { op: 'avg', pos: 'x' }));
+  bad(act(room, a, { op: 'avg', pos: 101 }));
+  ok(act(room, a, { op: 'avg', pos: 31 })); // the real average will be 30
+  ok(act(room, b, { op: 'avg', pos: 70 }));
+  assert.equal(room.playerState(a).state.myAvg, 31);
+  assert(!json(room.tvState()).includes('avgPred') && room.playerState(c).state.myAvg === null, 'avg guesses stay private');
+  const before = pts(room, a);
+  ok(act(room, d, { op: 'place', pos: 60 }));
+  until(room, clock, 'reveal', 1);
+  const ra = room.playerState(a).state.result, rb = room.playerState(b).state.result;
+  assert.equal(ra.avg, 30); assert.equal(ra.whisper, true); assert.equal(rb.whisper, false);
+  assert(pts(room, a) - before >= 75);
+  assert.equal(room.tvState().state.result.whisperers, 1);
+  bad(act(room, a, { op: 'avg', pos: 30 }), /late/);
+});
+
+test('Reveal callouts: a lone hot take and a split room', () => {
+  const { room, clock, H } = setup({ humans: ['Ann', 'Bo', 'Cy', 'Di', 'Ed'] });
+  ok(room.start());
+  until(room, clock, 'place', 1);
+  [5, 8, 12, 15, 95].forEach((x, i) => ok(act(room, H[i], { op: 'place', pos: x })));
+  until(room, clock, 'reveal', 1);
+  let res = room.tvState().state.result;
+  assert(res.hotTake && res.hotTake.name === 'Ed' && res.hotTake.pos === 95);
+  assert.equal(res.split, null, 'one person alone is a hot take, not a split');
+  assert.equal(room.playerState(H[4]).state.result.hotTake, true);
+  until(room, clock, 'place', 2);
+  [5, 10, 15, 80, 90].forEach((x, i) => ok(act(room, H[i], { op: 'place', pos: x })));
+  until(room, clock, 'reveal', 2);
+  res = room.tvState().state.result;
+  assert(res.split && res.split.left === 3 && res.split.right === 2, json(res.split));
+});
+
+test('results() lists players best-first once the game is over', () => {
+  const { room, clock } = setup({ bots: 5, settings: { rounds: 8 } });
+  ok(room.start());
+  assert.deepEqual(g(room).results(), []);
+  runOut(room, clock);
+  const order = g(room).results();
+  assert.equal(order.length, 5);
+  assert.deepEqual(order, g(room).standings().map((x) => x.id));
+  for (let i = 1; i < order.length; i++) assert(pts(room, room.get(order[i - 1])) >= pts(room, room.get(order[i])));
+});
+
+test('Everyone placed: a few seconds remain for the optional room-average guess, then it closes early', () => {
+  const { room, clock, H: [a, b, c] } = setup({ humans: ['Ann', 'Bo', 'Cy'] });
+  room.start(); until(room, clock, 'place', 1);
+  for (const p of [a, c]) { ok(act(room, p, { op: 'place', pos: 20 })); ok(act(room, p, { op: 'avg', pos: 40 })); }
+  const t = clock.now(); ok(act(room, b, { op: 'place', pos: 60 }));
+  assert.equal(g(room).phase, 'place', 'Bo still has time to guess the average');
+  assert(g(room).endsAt - clock.now() >= 5000, 'about six seconds for it');
+  ok(act(room, b, { op: 'avg', pos: 45 }));
+  until(room, clock, 'reveal', 1); assert(clock.now() - t < 2000, 'closes as soon as the guess is in');
 });
 
 console.log(`\n${passed} Where Do You Stand? tests passed.`);

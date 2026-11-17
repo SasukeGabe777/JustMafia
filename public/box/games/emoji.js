@@ -570,7 +570,11 @@ const KB_CATS = [
 
   // ---- Small DOM helpers ----
   const h = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
-  const put = (node, html) => { if (node && node.__h !== html) { node.innerHTML = html; node.__h = html; } };
+  // Update a region in place (BOX.morph): only changed text/attributes are touched, so buttons stay
+  // under fingers and animations already running are never restarted.
+  const put = (node, html) => { if (node && node.__h !== html) { BOX.morph(node, html); node.__h = html; } };
+  const av = (x) => (x && x.avatar ? esc(x.avatar) + ' ' : '');
+  const withAv = (rows) => rows.map((r) => ({ ...r, name: (r.avatar ? r.avatar + ' ' : '') + r.name }));
   const clock = (node, endsIn) => {
     if (!endsIn) { if (node.__e) { node.innerHTML = ''; node.__e = 0; } return; }
     const ends = Date.now() + endsIn;
@@ -599,7 +603,7 @@ const KB_CATS = [
     if (T && T.el === el && el.contains(T.root)) return T;
     el.innerHTML = '';
     const root = h('div', 'em-tv');
-    root.innerHTML = '<div class="em-top"><div class="em-round"></div><div class="em-status"></div><div class="em-clock"></div></div><div class="em-body"><section class="em-stages"></section><aside class="em-side panel"><h3>Score</h3><div class="em-board"></div><div class="em-ticker"></div></aside></div><div class="em-over" hidden></div><div class="em-flash"></div>';
+    root.innerHTML = '<div class="em-top"><div class="em-round"></div><div class="em-status"></div><div class="em-clock"></div></div><div class="em-body"><section class="em-stages"></section><aside class="em-side"><h3>🏆 Scores</h3><div class="em-board"></div><div class="em-ticker"></div></aside></div><div class="em-over" hidden></div><div class="em-flash"></div>';
     el.appendChild(root);
     const q = (s) => root.querySelector(s);
     T = { el, root, round: q('.em-round'), status: q('.em-status'), clock: q('.em-clock'), body: q('.em-body'), stages: q('.em-stages'), board: q('.em-board'), ticker: q('.em-ticker'), over: q('.em-over'), flash: q('.em-flash'), nodes: new Map(), seenTick: new Set() };
@@ -609,21 +613,23 @@ const KB_CATS = [
     let n = t.nodes.get(st.id);
     if (!n) {
       const root = h('div', 'em-stage');
-      root.innerHTML = '<div class="em-sh"></div><div class="em-clue"></div><div class="em-hint"></div><div class="em-sf"></div>';
-      n = { root, sh: root.querySelector('.em-sh'), clue: root.querySelector('.em-clue'), hint: root.querySelector('.em-hint'), sf: root.querySelector('.em-sf') };
+      root.innerHTML = '<div class="em-bub"><div class="em-sh"></div><div class="em-clue"></div><div class="em-hint"></div><div class="em-sf"></div></div><div class="em-who"></div>';
+      n = { root, sh: root.querySelector('.em-sh'), clue: root.querySelector('.em-clue'), hint: root.querySelector('.em-hint'), sf: root.querySelector('.em-sf'), who: root.querySelector('.em-who') };
       t.nodes.set(st.id, n);
     }
-    n.root.style.setProperty('--gc', st.color || '#ffd23f');
+    n.root.style.setProperty('--gc', st.color || '#ff4f9a');
     n.root.classList.toggle('revealed', phase === 'reveal');
     n.root.classList.toggle('left', !!st.left);
-    put(n.sh, `<span class="em-giver"><span class="dot"></span>${esc(st.giver)}</span>${st.cat ? `<span class="em-cat">${st.cat.icon} ${esc(st.cat.label)}</span>${stars(st.diff)}` : ''}`);
+    put(n.sh, st.cat ? `<span class="em-cat">${st.cat.icon} ${esc(st.cat.label)}</span>${stars(st.diff)}` : '');
+    const face = phase === 'reveal' ? (st.result && st.result.first ? '🥳' : '🙈') : '';
+    put(n.who, `<span class="em-face">${esc(face || st.avatar || '😜')}</span><span class="em-wn"><b>${esc(st.giver)}</b><small>${phase === 'pick' ? 'is picking a secret… 🤫' : phase === 'clue' ? 'is the Clue Giver 🎨' : 'gave the clue'}</small></span>`);
     clueRow(n.clue, st.clue);
     n.clue.dataset.wait = phase === 'pick' ? (st.picked ? '🔒 Secret locked in…' : '🤫 Choosing a secret…') : st.left ? '😢 The Clue Giver left' : '🤔 Thinking of emojis…';
     put(n.hint, phase === 'clue' ? hintHtml(st.hint) : '');
     let sf = '';
     if (phase === 'reveal' && st.answer) {
       const r = st.result;
-      sf = `<div class="em-answer">${esc(st.answer)}</div><div class="em-res">${r.first ? `⚡ <b>${esc(r.first.name)}</b> got it first (${r.first.s}s) · ${st.solved}/${st.of} solved` : '😶 Nobody got it!'}${r.giverPts ? ` · 🎨 ${esc(st.giver)} +${r.giverPts}` : ''}</div>`;
+      sf = `<div class="em-drumline">🥁</div><div class="em-answer">${esc(st.answer)}</div><div class="em-res">${r.first ? `⚡ <b>${esc(r.first.name)}</b> got it first (${r.first.s}s) · ${st.solved}/${st.of} solved` : '😶 Nobody got it!'}${r.giverPts ? ` · 🎨 ${esc(st.giver)} +${r.giverPts}` : ''}</div>`;
     } else if (phase === 'clue') {
       const pct = st.of ? Math.round(100 * st.solved / st.of) : 0;
       sf = `<div class="em-progress"><div class="em-bar"><i style="width:${pct}%"></i></div><span><b>${st.solved}</b>/${st.of} solved</span></div>${st.firsts.length ? `<div class="em-firsts">${st.firsts.map((nm, i) => `<span>${medal[i]} ${esc(nm)}</span>`).join('')}</div>` : ''}`;
@@ -668,12 +674,12 @@ const KB_CATS = [
   function onTap(ev) {
     const b = ev.target.closest('button'); if (!b || !P || b.disabled) return;
     const ctx = P.ctx;
-    if (b.dataset.e) { const e = b.dataset.e; ctx.act({ op: 'emoji', e }).then((r) => { if (r && r.ok) remember(e); }); ctx.vibrate(10); return; }
+    if (b.dataset.e) { const e = b.dataset.e; ctx.act({ op: 'emoji', e }).then((r) => { if (r && r.ok) remember(e); }); haptic(ctx, 'tap'); return; }
     if (b.dataset.cat) { kbCat = b.dataset.cat; search = ''; if (P.search) P.search.value = ''; drawGrid(); return; }
-    if (b.dataset.pick != null) { ctx.act({ op: 'pick', i: Number(b.dataset.pick) }).then((r) => { if (r && r.ok) { ctx.sfx('click'); ctx.vibrate(30); } }); return; }
+    if (b.dataset.pick != null) { ctx.act({ op: 'pick', i: Number(b.dataset.pick) }).then((r) => { if (r && r.ok) { ctx.sfx('click'); haptic(ctx, 'select'); } }); return; }
     const a = b.dataset.a;
     if (a === 'sep') ctx.act({ op: 'sep' });
-    else if (a === 'undo') { ctx.act({ op: 'undo' }); ctx.vibrate(15); }
+    else if (a === 'undo') { ctx.act({ op: 'undo' }); haptic(ctx, 'tap'); }
     else if (a === 'hint') { if (confirm(`Give everyone a hint? It costs you ${P.v ? P.v.hintCost : 75} points.`)) ctx.act({ op: 'hint' }); }
     else if (a === 'guess') sendGuess();
     else if (a === 'clearq') { search = ''; if (P.search) { P.search.value = ''; } drawGrid(); }
@@ -685,10 +691,15 @@ const KB_CATS = [
     P.guess.value = ''; draft = '';
     const r = await ctx.act({ op: 'guess', text });
     if (!r || !r.ok) { if (P.guess && !P.guess.value) { P.guess.value = text; draft = text; } return; }
-    if (r.result === 'correct') { ctx.sfx('chime'); ctx.vibrate(120); ctx.toast(`✅ ${r.answer}! +${r.pts}`); }
-    else if (r.result === 'close') { ctx.sfx('heartbeat'); ctx.vibrate(60); ctx.toast('🔥 So close! Keep going…'); bump('close'); }
-    else bump('nope');
+    if (r.result === 'correct') { ctx.sfx('chime'); haptic(ctx, 'success'); ctx.toast(`✅ ${r.answer}! +${r.pts}`); }
+    else if (r.result === 'close') { ctx.sfx('heartbeat'); haptic(ctx, 'warn'); ctx.toast('🔥 So close! Keep going…'); bump('close'); }
+    else { haptic(ctx, 'error'); bump('nope'); }
   }
+  // Haptics (ctx.haptic on new phones; a plain vibration otherwise).
+  function haptic(ctx, kind) { try { if (ctx.haptic) ctx.haptic(kind); else ctx.vibrate(kind === 'tap' ? 10 : 40); } catch { /* no vibration */ } }
+  // One buzz per moment: each channel buzzes when its key changes (the game's end resets them).
+  let felt = {};
+  const feel = (ctx, chan, key, kind) => { if (felt[chan] === key) return; felt[chan] = key; haptic(ctx, kind); };
   function bump(cls) { const bar = P && P.root.querySelector('.em-guessbar'); if (!bar) return; bar.classList.remove('close', 'nope'); void bar.offsetWidth; bar.classList.add(cls); }
 
   function phoneMode(p, mode, v) {
@@ -697,7 +708,7 @@ const KB_CATS = [
     const m = p.main;
     if (mode === 'clue-giver') {
       m.innerHTML = `<div class="em-secret"></div><div class="em-clue em-myclue" data-wait="Tap emojis below to build your clue"></div>
-        <div class="em-tools"><button class="btn small ghost" data-a="sep" title="Word break">│ Word</button><button class="btn small ghost" data-a="undo">⌫ Undo</button><button class="btn small ghost" data-a="hint">💡 Hint −${v.hintCost}</button></div>
+        <div class="em-tools"><button data-a="sep" title="Word break">│ New word</button><button data-a="undo">⌫ Undo</button><button data-a="hint">💡 Hint −${v.hintCost}</button></div>
         <div class="em-kb"><div class="em-tabs">${[{ key: 'recent', icon: '🕘' }, ...KB_CATS].map((c) => `<button data-cat="${c.key}" title="${esc(c.label || 'Recent')}">${c.icon}</button>`).join('')}</div>
         <div class="em-searchrow"><textarea class="em-search" rows="1" maxlength="30" placeholder="🔍 Search: king, rain, fast…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"></textarea><button class="em-x" data-a="clearq" aria-label="Clear search">✕</button></div>
         <div class="em-grid"></div></div>`;
@@ -709,7 +720,7 @@ const KB_CATS = [
       if (!recent.length && kbCat === 'recent') kbCat = 'faces';
       drawGrid();
     } else if (mode === 'clue-guesser') {
-      m.innerHTML = `<div class="em-mini"></div><div class="em-guessbar"><textarea class="em-guess" rows="1" maxlength="40" placeholder="Type your guess…" autocomplete="off" enterkeyhint="send"></textarea><button class="btn green" data-a="guess">Guess</button></div><div class="em-done"></div><div class="em-feed"></div>`;
+      m.innerHTML = `<div class="em-mini"></div><div class="em-guessbar"><textarea class="em-guess" rows="1" maxlength="40" placeholder="Type your guess…" autocomplete="off" enterkeyhint="send"></textarea><button class="em-send" data-a="guess">Send ➤</button></div><div class="em-done"></div><div class="em-feed"></div>`;
       p.mini = m.querySelector('.em-mini'); p.guess = m.querySelector('.em-guess'); p.feed = m.querySelector('.em-feed'); p.done = m.querySelector('.em-done'); p.bar = m.querySelector('.em-guessbar');
       p.guess.value = draft;
       p.guess.oninput = () => { draft = p.guess.value.replace(/\n/g, ''); if (p.guess.value !== draft) p.guess.value = draft; };
@@ -718,8 +729,92 @@ const KB_CATS = [
     p.simple = m.querySelector('.em-simple');
   }
 
+  // ================= TV lobby: the settings are an emoji keyboard =================
+  // Each setting is a row of keys; the chosen key is pressed in (yellow). The real <select>s
+  // stay in #settings (visually hidden) for keyboards, screen readers and the tests.
+  const LOOK = {
+    seconds: { ic: '⏱️', lab: 'Time to guess', keys: { 60: ['⚡', '60s'], 90: ['⏳', '90s'], 120: ['🐢', '2 min'] } },
+    turns: { ic: '🎨', lab: 'Clues each', keys: { 1: ['☝️', '1'], 2: ['✌️', '2'], 3: ['🤟', '3'] } },
+    maxRounds: { ic: '🔁', lab: 'Most rounds', keys: { 5: ['', '5'], 8: ['', '8'], 12: ['', '12'], 20: ['', '20'] } },
+    stages: { ic: '🎤', lab: 'Clue givers at once', keys: { auto: ['🤖', 'Auto'], 1: ['', '1'], 2: ['', '2'], 3: ['', '3'] } },
+    difficulty: { ic: '⭐', lab: 'Difficulty', keys: { mix: ['🎲', 'Mixed'], easy: ['', '★'], medium: ['', '★★'], hard: ['', '★★★'] } },
+    family: { ic: '👪', lab: 'Answers', keys: { false: ['😜', 'Everything'], true: ['👪', 'Family'] } },
+    ticker: { ic: '❌', lab: 'Wrong guesses on TV', keys: { true: ['👀', 'Show'], false: ['🙈', 'Hide'] } },
+    showIntro: { ic: '🎬', lab: 'Intro cutscene', keys: { true: ['🎬', 'On'], false: ['⏩', 'Skip'] } },
+    category: { ic: '🗂️', lab: 'Categories', wide: true },
+  };
+  const ORDER = ['category', 'seconds', 'difficulty', 'turns', 'maxRounds', 'stages', 'family', 'ticker', 'showIntro'];
+  function keyFace(f, o) {
+    const L = LOOK[f.key], k = L && L.keys && L.keys[String(o.value)];
+    if (k) return `${k[0] ? `<span class="e">${k[0]}</span>` : ''}<span>${esc(k[1])}</span>`;
+    const m = String(o.label).match(/^(\p{Extended_Pictographic}️?)\s*(.*)$/u); // "🎬 Movies & TV" -> sticker + short label
+    if (m) return `<span class="e">${m[1]}</span><span>${esc(m[2].replace(/ & .*| and .*/, ''))}</span>`;
+    if (f.key === 'category') return `<span class="e">✨</span><span>${esc(o.label.replace(/ categories/i, ''))}</span>`;
+    return `<span>${esc(o.label)}</span>`;
+  }
+  function lobbyTv(el, L) {
+    el.__L = L;
+    if (!el.__eml) {
+      el.__eml = true;
+      el.innerHTML = `<div class="eml">
+        <div class="eml-head"><div class="eml-logo"><span class="a"><i>E</i><i>m</i><i class="o">😜</i><i>j</i><i>i</i></span><span class="b">Charades</span></div>
+          <div class="eml-bubble">Say it with <b>emojis only!</b> 🤫 ➡️ 😂</div></div>
+        <section class="eml-kb"><div class="eml-kbtop"><span>⌨️ Settings keyboard</span><small>Tap a key to change it</small></div><div class="eml-rows" id="eml-keys"></div><div id="settings" class="eml-sr"></div></section>
+        <aside class="eml-join"><div class="eml-jt">📱 Join on your phone!</div><img id="qr" alt="QR code to join"><div class="eml-url" id="eml-url"></div>
+          <div class="eml-codecap">Room code</div><div class="eml-code" id="code"></div>
+          <div class="eml-vip" id="eml-vip"></div><div class="err" id="lobby-err"></div>
+          <button class="eml-start" id="start">🎉 Start the party</button>
+          <div class="eml-links"><button id="add-bots">+ 5 test bots</button><button id="rm-bots">remove bots</button><button id="eml-pick">🎮 Other game</button></div></aside>
+        <section class="eml-hill"><div class="eml-count" id="eml-count"></div><div class="eml-roster" id="roster"></div></section>
+        <div class="eml-party" id="eml-party"></div></div>`;
+      const $ = (s) => el.querySelector(s);
+      $('#start').onclick = async () => { const r = await el.__L.start(); $('#lobby-err').textContent = r && r.ok ? '' : (r && r.error) || ''; };
+      $('#add-bots').onclick = () => el.__L.bots(5);
+      $('#rm-bots').onclick = () => el.__L.removeBots();
+      $('#eml-pick').onclick = () => el.__L.pick();
+      el.addEventListener('click', (e) => {
+        const k = e.target.closest('[data-k]');
+        if (k) {
+          for (const b of k.parentNode.querySelectorAll('.eml-key')) b.classList.toggle('on', b === k);
+          const s = el.querySelector(`select[data-set="${k.dataset.k}"]`); if (s) s.value = k.dataset.v;
+          el.__L.set(k.dataset.k, k.dataset.v); BOX.sfx('pop'); return;
+        }
+        const c = e.target.closest('[data-kick]');
+        if (c && confirm('Remove this player?')) el.__L.kick(c.dataset.kick);
+      });
+    }
+    const $ = (s) => el.querySelector(s);
+    // Room code + QR
+    if ($('#code').textContent !== L.code) $('#code').innerHTML = [...L.code].map((c) => `<span>${esc(c)}</span>`).join('');
+    if ($('#qr').dataset.u !== L.joinUrl) { $('#qr').src = L.qr; $('#qr').dataset.u = L.joinUrl; }
+    $('#eml-url').textContent = L.joinUrl.replace(/^https?:\/\//, '');
+    const n = L.players.length;
+    $('#start').disabled = n < L.min;
+    $('#eml-vip').innerHTML = L.vip ? `👑 <b>${esc(L.vip)}</b> can start from their phone` : n < L.min ? `Need ${L.min - n} more player${L.min - n === 1 ? '' : 's'}…` : 'The first to join is the host 👑';
+    put($('#eml-count'), `${n}<small>player${n === 1 ? '' : 's'}</small>`);
+    // Settings keys + hidden selects
+    const fields = ORDER.map((k) => L.fields.find((f) => f.key === k)).filter(Boolean).concat(L.fields.filter((f) => !ORDER.includes(f.key)));
+    put($('#eml-keys'), fields.map((f) => {
+      const lk = LOOK[f.key] || {}, cur = String(L.settings[f.key]);
+      return `<div class="eml-row ${lk.wide ? 'wide' : ''}"><div class="eml-lab"><span class="ic">${lk.ic || '⚙️'}</span>${esc(lk.lab || f.label)}</div>
+        <div class="eml-keys ${f.key === 'category' ? 'cats' : ''}">${f.options.map((o) => `<button class="eml-key ${String(o.value) === cur ? 'on' : ''}" data-k="${esc(f.key)}" data-v="${esc(String(o.value))}" title="${esc(o.label)}">${keyFace(f, o)}</button>`).join('')}</div></div>`;
+    }).join(''));
+    const box = $('#settings'), sig = L.fields.map((f) => f.key + ':' + f.options.map((o) => o.value).join('|')).join(';');
+    if (box.__sig !== sig) { box.__sig = sig; box.innerHTML = L.fields.map((f) => `<label>${esc(f.label)}<select data-set="${esc(f.key)}">${f.options.map((o) => `<option value="${esc(String(o.value))}">${esc(o.label)}</option>`).join('')}</select></label>`).join(''); }
+    for (const s of box.querySelectorAll('select[data-set]')) {
+      if (document.activeElement !== s) s.value = String(L.settings[s.dataset.set]);
+      s.onchange = () => { s.blur(); el.__L.set(s.dataset.set, s.value); };
+    }
+    // Players pop in as bouncing emoji faces on the candy hill
+    const r = $('#roster');
+    r.classList.toggle('many', n > 14 && n <= 30); r.classList.toggle('lots', n > 30);
+    put(r, n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" id="eml-p-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#2a0a55')};--d:${((i * 0.17) % 1.3).toFixed(2)}s"><span class="f">${esc(p.avatar || '🙂')}</span><b>${esc(p.name)}</b></span>`).join('')
+      : '<div class="eml-empty">Scan the code and pop in! <span>👇</span><span>😜</span><span>🤩</span></div>');
+    put($('#eml-party'), L.lineupHtml || '');
+  }
+
   BOX.games.emoji = {
-    name: 'Emoji Charades', icon: '🤔',
+    name: 'Emoji Charades', icon: '🤔', lobbyTv,
     about: 'Say it with emojis only! The Clue Giver taps out a secret on their phone, one emoji at a time. Everyone races to guess it.',
     how: [
       'Each round a Clue Giver secretly picks a movie, animal, food, place, saying… from three choices.',
@@ -742,20 +837,21 @@ const KB_CATS = [
       if (over) {
         const w = s.standings[0];
         put(t.round, ''); put(t.status, ''); clock(t.clock, 0);
-        put(t.over, `<div class="final"><div class="crown">🤔</div><div class="muted">Emoji Champion</div><h2>${esc(w ? w.name : '')}</h2>${awardsHtml(s.awards)}
-          <div class="em-endgrid"><div>${BOX.board(s.standings, (r) => r.points, ' pts')}</div>${s.history && s.history.some((x) => x.clue) ? `<div class="em-hist"><h3>Clue replay</h3>${s.history.filter((x) => x.clue).slice(-8).map((x) => `<div class="row"><span class="c">${esc(x.clue || '…')}</span><span>= <b>${esc(x.answer)}</b> <span class="muted">by ${esc(x.giver)}</span></span></div>`).join('')}</div>` : ''}</div></div>`);
+        const won = w && w.points;
+        put(t.over, `<div class="em-end"><div class="em-champ"><div class="f">${esc(won ? w.avatar || '😎' : '🤷')}</div><div class="cap">${won ? 'EMOJI CHAMPION' : 'NOBODY CRACKED A CLUE'}</div><h2>${won ? esc(w.name) : 'Tough crowd!'}</h2>${won ? `<div class="pts">${w.points} points</div>` : ''}</div>${awardsHtml(s.awards)}
+          <div class="em-endgrid"><div><h3>🏆 Final scores</h3>${BOX.board(withAv(s.standings), (r) => r.points, ' pts')}</div>${s.history && s.history.some((x) => x.clue) ? `<div class="em-hist"><h3>🔁 Clue replay</h3>${s.history.filter((x) => x.clue).slice(-7).map((x) => `<div class="row"><span class="c">${esc(x.clue || '…')}</span><span>= <b>${esc(x.answer)}</b> <span class="muted">by ${esc(x.giver)}</span></span></div>`).join('')}</div>` : ''}</div></div>`);
         return;
       }
-      put(t.round, `Round <b>${s.round}</b>/${s.total}`);
+      put(t.round, s.lastRound ? `<span class="em-final">🏁 FINAL ROUND · ×${s.mult} points</span>` : `Round <b>${s.round}</b>/${s.total}`);
       const givers = s.stages.map((x) => x.giver);
       const who = givers.length > 1 ? givers.slice(0, -1).map(esc).join(', ') + ' & ' + esc(givers[givers.length - 1]) : esc(givers[0] || '');
-      put(t.status, s.phase === 'pick' ? `🤫 ${who} ${givers.length > 1 ? 'are' : 'is'} choosing a secret…` : s.phase === 'clue' ? '📱 Guess on your phone!' : s.stages.length > 1 ? 'The answers were…' : 'The answer was…');
+      put(t.status, s.phase === 'pick' ? `🤫 ${who} ${givers.length > 1 ? 'are' : 'is'} picking a secret…` : s.phase === 'clue' ? '📱 Type your guesses!' : s.stages.length > 1 ? 'The answers were…' : 'The answer was…');
       clock(t.clock, s.phase === 'reveal' ? 0 : s.endsIn);
       t.stages.className = 'em-stages n' + Math.max(1, s.stages.length);
       const keep = new Set(s.stages.map((x) => x.id));
       for (const [id, n] of t.nodes) if (!keep.has(id)) { n.root.remove(); t.nodes.delete(id); }
       s.stages.forEach((st, i) => { const node = tvStage(t, st, s.phase); if (t.stages.children[i] !== node) t.stages.insertBefore(node, t.stages.children[i] || null); });
-      put(t.board, BOX.board(s.standings, (r) => r.points, ''));
+      put(t.board, BOX.board(withAv(s.standings), (r) => r.points, ''));
       const fresh = (k) => { const f = !t.seenTick.has(k); t.seenTick.add(k); return f; };
       put(t.ticker, s.phase === 'clue' && s.ticker.length ? `<h3>Not quite…</h3>${s.ticker.slice().reverse().map((x) => `<div class="em-tk ${fresh(x.k) ? 'in' : ''}">❌ ${esc(x.text)}</div>`).join('')}` : '');
     },
@@ -763,30 +859,34 @@ const KB_CATS = [
     phone(el, v, ctx) {
       if (!v) return;
       const p = phoneRoot(el, ctx); p.v = v;
-      put(p.pts, `🏅 ${v.points} pts · #${v.rank || '-'}${v.round ? ` <span class="muted">· round ${v.round}/${v.total}</span>` : ''}`);
+      put(p.pts, `🏅 ${v.points} pts · #${v.rank || '-'}${v.lastRound ? ` <span class="em-final sm">🏁 Final ×${v.mult}</span>` : v.round ? ` <span class="muted">· round ${v.round}/${v.total}</span>` : ''}`);
       clock(p.clk, v.phase === 'reveal' || v.phase === 'over' ? 0 : v.endsIn);
       if (v.round !== lastRound) { lastRound = v.round; draft = ''; if (p.guess) p.guess.value = ''; }
       const g = v.giver;
       if (v.phase === 'over') {
         phoneMode(p, 'over', v);
-        put(p.simple, `<div class="card-box" style="text-align:center"><h3>Game over!</h3><p>You finished <b>#${v.rank}</b> with ${v.points} points.</p></div>${awardsHtml(v.awards)}<div class="card-box">${BOX.board(v.final, (r) => r.points, '')}</div>`);
+        feel(ctx, 'over', 'over', v.rank === 1 && v.points > 0 ? 'win' : 'success');
+        put(p.simple, `<div class="em-overcard"><div class="em-place">${v.rank === 1 && v.points > 0 ? '🏆' : v.rank === 2 ? '🥈' : v.rank === 3 ? '🥉' : '😎'}</div><h3>${v.rank === 1 && v.points > 0 ? 'Emoji Champion!' : `You finished #${v.rank} of ${v.of}`}</h3><p>${v.points} points</p></div>${awardsHtml(v.awards)}<div class="card-box">${BOX.board(withAv(v.final), (r) => r.points, '')}</div>`);
         return;
       }
+      if (felt.over) felt = {}; // a new game started
       if (v.phase === 'pick') {
         if (g && g.options) {
           phoneMode(p, 'pick', v);
-          put(p.simple, `<div class="em-you">🎨 You’re the Clue Giver!</div><p class="muted" style="text-align:center">Pick your secret. Only you can see this.</p>
+          feel(ctx, 'turn', v.round + ':' + g.n, 'turn');
+          put(p.simple, `<div class="em-you">🎨 You’re the Clue Giver!</div><p class="em-sub">Pick your secret. Only you can see this.</p>
             <div class="em-opts">${g.options.map((o, i) => `<button class="em-opt" data-pick="${i}"><span class="c">${o.icon} ${esc(o.cat)} ${stars(o.diff)}</span><span class="t">${esc(o.text)}</span></button>`).join('')}</div>`);
           return;
         }
         phoneMode(p, 'wait', v);
         const others = v.stages.filter((x) => !g || x.n !== g.n);
-        put(p.simple, g ? `<div class="em-you">🎨 You’re the Clue Giver!</div><div class="card-box" style="text-align:center"><div class="muted">Your secret</div><div class="em-secretbig">${esc(g.answer)}</div><p class="muted">Get your emoji fingers ready…</p></div>`
-          : `<div class="big-status">🤫 ${others.map((x) => esc(x.giver)).join(' & ')} ${others.length > 1 ? 'are' : 'is'} picking a secret…</div><p class="muted" style="text-align:center">Get ready to guess! Watch the big screen.</p>`);
+        put(p.simple, g ? `<div class="em-you">🎨 You’re the Clue Giver!</div><div class="em-secret"><div class="muted">🤫 Your secret</div><div class="em-secretbig">${esc(g.answer)}</div><div class="muted">Get your emoji fingers ready…</div></div>`
+          : `<div class="em-waitcard"><div class="big">🤫</div><h3>${others.map((x) => esc(x.giver)).join(' & ')} ${others.length > 1 ? 'are' : 'is'} picking a secret…</h3><p>Get ready to guess! Watch the big screen.</p></div>`);
         return;
       }
       if (v.phase === 'reveal') {
         phoneMode(p, 'reveal', v);
+        feel(ctx, 'reveal', v.round, v.roundPts > 0 ? 'success' : 'select');
         put(p.simple, `<div class="em-roundpts ${v.roundPts > 0 ? 'up' : ''}">${v.roundPts > 0 ? `+${v.roundPts} this round 🎉` : v.roundPts < 0 ? `${v.roundPts} this round` : 'No points this round'}</div>
           ${v.stages.map((x) => `<div class="card-box em-rev"><div class="muted">${esc(x.giver)}’s clue ${x.cat ? `· ${x.cat.icon} ${esc(x.cat.label)}` : ''}</div><div class="em-revclue">${x.clue.map((c) => esc(c.e)).join('') || '…'}</div><div class="em-secretbig">${esc(x.answer || '')}</div><div class="muted">${x.result && x.result.first ? `⚡ ${esc(x.result.first.name)} got it first · ${x.solved}/${x.of} solved` : 'Nobody got it!'}${x.mine ? ' · ✅ you got it' : ''}</div></div>`).join('')}`);
         return;
@@ -794,6 +894,8 @@ const KB_CATS = [
       // Clue phase
       if (g && !g.left) {
         phoneMode(p, 'clue-giver', v);
+        feel(ctx, 'go', v.round + ':' + g.n, 'select');
+        if (g.solved && felt.solved !== v.round + ':' + g.solved) { felt.solved = v.round + ':' + g.solved; haptic(ctx, 'select'); } // someone cracked your clue
         put(p.secret, `<div><span class="muted">🤫 Your secret</span> <span class="em-cat">${g.catIcon} ${esc(g.cat)}</span> ${stars(g.diff)}</div><div class="em-secretbig">${esc(g.answer)}</div><div class="muted">Only emojis! <b>${g.solved}</b>/${g.of} have got it · ${g.clue.length}/${g.max}</div>`);
         clueRow(p.myclue, g.clue);
         const [sep, undo, hint] = p.tools.querySelectorAll('button');
@@ -809,8 +911,8 @@ const KB_CATS = [
         ${x.mine ? `<div class="em-got">✅ You got it: <b>${esc(myRight(x.n))}</b></div>` : x.hint ? hintHtml(x.hint) : ''}</div>`).join(''));
       const open = v.stages.filter((x) => !x.left && !solvedIds.has(x.n)).length;
       p.bar.hidden = !open;
-      put(p.done, open ? '' : '<div class="big-status">🎉 You got it! Sit back and watch the others squirm.</div>');
-      put(p.feed, v.guesses.length ? v.guesses.slice().reverse().map((q) => `<div class="em-fg ${q.r}">${q.r === 'correct' ? '✅' : q.r === 'close' ? '🔥' : '✗'} ${esc(q.text)}${q.r === 'close' ? ' <small>so close!</small>' : q.r === 'correct' ? ` <small>+${q.pts}</small>` : ''}</div>`).join('') : '<p class="muted" style="text-align:center">Unlimited guesses. Small typos are OK!</p>');
+      put(p.done, open ? '' : '<div class="em-donecard">🎉 You got it!<small>Sit back and watch the others squirm.</small></div>');
+      put(p.feed, v.guesses.length ? v.guesses.slice().reverse().map((q) => `<div class="em-fg ${q.r}">${q.r === 'correct' ? '✅' : q.r === 'close' ? '🔥' : '✗'} ${esc(q.text)}${q.r === 'close' ? ' <small>so close!</small>' : q.r === 'correct' ? ` <small>+${q.pts}</small>` : ''}</div>`).join('') : '<p class="em-tip">Unlimited guesses. Small typos are OK! 👌</p>');
     },
   };
   BOX.games.emoji._kb = KEYBOARD_TEXT; // for tools/test-box-emoji.js

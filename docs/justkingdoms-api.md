@@ -11,15 +11,17 @@ add bots, start, advance the clock, then call `room.tvState()` / `room.playerSta
 { phase:'lobby'|'play'|'over', now /*game ms; compare with army t0/t1*/, seats:[{id,name,color,seat}] /*seat null = unpicked*/, tableSize,
   world:{ R, tiles:[{q,r,t,o,v,w,g, c?, x?}] }   // t: p plains f forest h hills g gold l lake m mountain r ruins; o owner|null;
                                                  // v village 0-3; w walls; g garrison count; c = capital's owner (capitals only); x:1 rich heartland
-  kingdoms:[{id,name,owner,color,seat,home:{q,r},age,castle,score,ally /*'A3'|null*/,vassalOf,traitor,traitorIn,
+  kingdoms:[{id,name,owner,color,seat,home:{q,r},age,castle,score,ally /*'A3'|null*/,vassalOf,traitor,traitorIn,avatar,bounty /*gold on them*/,sanction /*ms*/,underdog /*0-0.4*/,marked /*coalition target*/,
              msg:{key,text,to,endsIn}|null,alive,gone,bot,stage /*rocket stages done 0-3*/,building,land,villages,army,capitals}],
   armies:[{id,o /*null = bandits*/,from:{q,r},to:{q,r},n,kind /*most common unit or 'bandits'*/,order,t0,t1,path:[q0,r0,q1,r1,…]}],
   battles:[{q,r,at,win /*winner id|'bandits'|null*/,a,d}]   // last ~8 s
   alliances:[{id,members:[ids],monument}],
   events:{current:{kind,name,icon,text,endsIn}|null, nextIn, on},
   mode, speed, timeLimit, timeLeft, peaceIn,
-  progress:{domination /*0-1*/,leader,capitals,of,monument /*0-1*/,monumentBy,monumentNeed,rockets:[{id,stage,building,endsIn}]},
+  progress:{domination /*0-1*/,leader,capitals,of,monument /*0-1*/,monumentBy,monumentNeed,peaceIn /*ms|null: peace countdown*/,marked,rockets:[{id,stage,building,endsIn,dur}]},
   ticker:[{id,text,kind /*info|build|war|diplo|event|win*/}] /*last 14*/,
+  wars:[{a,b,n,ago}] /*kingdom pairs that fought in the last 90 s*/,
+  council:null|{id,kind:'grant'|'sanction',name,icon,ask,text,endsIn,votes,of,tally:[{id,n}] /*top 8*/},
   winner:null|{mode:'conquest'|'diplomacy'|'science'|'score',ids,names,reason:'win'|'time'},
   standings:null|[{rank,id,name,owner,color,score,age,land,villages,capitals,vassalOf,stage}], awards:null|[{title,id,name,value}] }
 ```
@@ -42,15 +44,19 @@ In play/over:
   `available {age:{next,name,icon,cost,time,can,why,missing}|null, buildings:[{b,name,icon,about,age,lvl,max,cost,time,can,why,missing}],
   units:[{u,name,icon,age,atk,def,speed,cost,time,can,why,missing}]}`, `alerts [{id,text,kind:'good'|'bad'|'diplo'|'info',ago}]`,
   `diplomacy {in:[{id,kind:'ally'|'trade',from,name,give,get,expiresIn}], out:[…], neighbours, alliance:{id,members:[{id,name}],monument,need}|null, market:{rate}|null, canGift}`,
-  `rebel {liege,liegeName,my,need,can,chance,cooldown}|null`, `rocket {stage,building,endsIn,cost,missing}|null`.
+  `rebel {liege,liegeName,my,need,can,chance,cooldown}|null`, `rocket {stage,building,endsIn,dur,cost,missing}|null`,
+  `council` (as tv + `mine`: your vote), `decree {n,of,key,icon,title,hint,reward}|null`, `bounties [{on,name,gold,expiresIn}]` (yours), `monumentAge`.
+  seats also carry `avatar`. The game object has `results()` → player ids best-first once over.
 
 ## act ops (phone → server; every op returns {ok} or {ok:false,error}); tiles as {q,r} | [q,r] | "q,r"
 seat {seat} · rename {name} · jobs {farm,chop,quarry,mine,study} (partial ok) · build {b} (incl. 'castle') · age ·
 train {u, n} · cancel {queue:'build'|'train'|'research', i} · research {tech} ·
 march {from?, to, units:{u:n}, order?: move|claim|attack|reinforce|scout} · claim {to} · upgrade {at, what:'village'|'walls'} ·
 ally {to} · allyAnswer {from|id, yes} · leaveAlly · gift {to, res} · trade {to, give, get} · tradeAnswer {id, yes} ·
-message {preset, to?} (peace,next,help,thanks,deal,sorry,watch,gg) · rebel · rocket · monument {res:{gold,stone}} · market {give, get, n}
+message {preset, to?} (peace,next,help,thanks,deal,sorry,watch,gg) · rebel · rocket · monument {res:{gold,stone}} (Age 4+) · market {give, get, n} ·
+jobs {auto:true} · recall · vote {to} · bounty {to, gold ≥ 50}
 
 ## TV fx kinds
 seat · age · village · battle {q,r,win} · capture · vassal · rebel · alliance · betray · gift · message · event {event} ·
-rocket · launchpad · launch · monument · kingdom · win · (start from the room)
+rocket · launchpad · launch · monument · kingdom · win · council · councilResult {kind} · coalition · bounty {on,gold} · bountyClaim {on,gold} ·
+peacehold · peacebroken · final · age {age, first} · (start from the room)

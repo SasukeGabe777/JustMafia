@@ -1,0 +1,92 @@
+/* Intro cutscenes (show.js) and the in-game studio frame (Price Panic, JustBid). */
+.show-area { position: fixed; inset: 0; z-index: 40; background: #05030c; overflow: hidden; --si-accent: #3ee6ff; --si-accent2: #ff4f9a; }
+.show-skip { position: fixed; right: 20px; bottom: 18px; z-index: 45; border: 2px solid rgba(255, 255, 255, 0.35); background: rgba(0, 0, 0, 0.55); color: #fff; font: 600 16px 'Fredoka', sans-serif; padding: 8px 16px; border-radius: 999px; cursor: pointer; opacity: 0.75; }
+.show-skip:hover { opacity: 1; }
+.si-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.si-bug { position: absolute; left: 2.2vw; top: 2.4vh; display: flex; align-items: center; gap: 10px; font: 400 clamp(16px, 1.6vw, 28px) 'Lilita One', 'Fredoka', sans-serif; color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6); }
+.si-live { background: #e8213b; color: #fff; padding: 2px 10px; border-radius: 6px; font-size: 0.75em; letter-spacing: 0.08em; animation: siLive 1.4s ease-in-out infinite; }
+.si-live::before { content: '● '; }
+@keyframes siLive { 50% { opacity: 0.7; } }
+
+/* The subtitle bar */
+.si-sub { position: absolute; left: 50%; bottom: 6vh; transform: translate(-50%, 20px); max-width: min(78vw, 1300px); width: max-content; background: rgba(8, 4, 20, 0.86); border: 3px solid var(--si-accent); border-radius: 18px; padding: 10px 22px 12px; text-align: center; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; }
+.si-sub.on { opacity: 1; transform: translate(-50%, 0); }
+.si-who { display: block; font: 400 clamp(13px, 1.1vw, 20px) 'Lilita One', sans-serif; color: var(--si-accent); letter-spacing: 0.08em; text-transform: uppercase; }
+.si-line { display: block; font: 600 clamp(20px, 2.3vw, 42px) 'Fredoka', sans-serif; color: #fff; line-height: 1.2; }
+
+/* While phones write: a compact corner box during the opening, a big panel beside the host after */
+.si-facts { position: absolute; right: 2vw; top: 2.4vh; width: min(30vw, 420px); background: rgba(8, 4, 20, 0.85); border: 3px solid var(--si-accent2); border-radius: 20px; padding: 12px 16px; color: #fff; font-family: 'Fredoka', sans-serif; transition: all 0.6s cubic-bezier(0.3, 1.3, 0.5, 1); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
+.si-facts.big { right: auto; left: 4vw; top: 18vh; width: min(38vw, 680px); padding: 22px 28px; }
+.si-fh { font: 400 clamp(20px, 1.8vw, 34px) 'Lilita One', sans-serif; color: var(--si-accent2); }
+.si-facts.big .si-fh { font-size: clamp(30px, 3.4vw, 64px); }
+.si-ft { font-size: clamp(14px, 1.1vw, 20px); opacity: 0.9; }
+.si-facts.big .si-ft { font-size: clamp(18px, 1.8vw, 32px); }
+.si-bar { height: 12px; border-radius: 99px; background: rgba(255, 255, 255, 0.14); margin: 10px 0 6px; overflow: hidden; }
+.si-facts.big .si-bar { height: 22px; margin: 18px 0 10px; }
+.si-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--si-accent), var(--si-accent2)); border-radius: 99px; transition: width 0.6s; }
+.si-fc { font-size: clamp(14px, 1.2vw, 22px); } .si-fc b { color: #ffd23f; font-size: 1.3em; }
+.si-facts.big .si-fc { font-size: clamp(20px, 2vw, 36px); }
+.si-fw { margin-top: 4px; font-size: clamp(13px, 1vw, 18px); color: #ffd9a0; }
+.si-facts.big .si-fw { font-size: clamp(17px, 1.6vw, 28px); }
+.si-fw.ok { color: #2ee6a6; font-weight: 700; }
+
+/* ---------- in-game studio frame ---------- */
+.st-frame { position: relative; border-radius: 22px; overflow: hidden; padding: 14px 16px 104px; min-height: calc(100vh - 165px); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); background: #0b0418; }
+.st-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
+.st-content { position: relative; z-index: 1; }
+.st-crowd { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 108px; display: block; z-index: 2; pointer-events: none; }
+.st-fx { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 5; pointer-events: none; }
+.st-slot { position: relative; min-height: 296px; }
+.st-cam { position: relative; }
+.st-cam canvas { display: block; width: 100%; height: 232px; }
+.st-sub { position: relative; margin-top: 4px; min-height: 56px; background: rgba(8, 4, 20, 0.9); border: 2px solid var(--st-accent, #ffd23f); border-radius: 14px; padding: 6px 12px 8px; opacity: 0; transform: translateY(6px); transition: opacity 0.25s, transform 0.25s; }
+.st-sub.on { opacity: 1; transform: none; }
+.st-sub::before { content: ''; position: absolute; top: -10px; left: 50%; margin-left: -9px; border: 9px solid transparent; border-top: 0; border-bottom: 10px solid var(--st-accent, #ffd23f); }
+.st-sub b { display: block; font: 400 13px 'Lilita One', sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: var(--st-accent, #ffd23f); }
+.st-sub span { display: block; font: 600 18px 'Fredoka', sans-serif; line-height: 1.2; color: #fff; }
+.st-price { --st-accent: #ffd23f; }
+.st-bid { --st-accent: #ffcf7a; }
+
+/* ---------- a game's own lobby on its set (BOX.studio.lobby) ---------- */
+.sl-lobby { position: relative; min-height: calc(100vh - 110px); border-radius: 24px; overflow: hidden; background: #0b0418; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); }
+.sl-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.sl-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 340px; grid-template-rows: auto 1fr auto; gap: 16px 22px; padding: 18px 22px 16px; min-height: inherit; }
+.sl-head { grid-column: 1; }
+.sl-title { font: 400 clamp(44px, 5vw, 80px) 'Bungee', 'Lilita One', sans-serif; line-height: 1; text-shadow: 0 6px 0 rgba(0, 0, 0, 0.45); animation: slBob 3s ease-in-out infinite; transform-origin: left center; }
+.sl-tag { font: 600 clamp(16px, 1.5vw, 24px) 'Fredoka', sans-serif; color: #fff; opacity: 0.92; margin-top: 6px; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
+@keyframes slBob { 50% { transform: rotate(-1.5deg) scale(1.02); } }
+.sl-set { grid-column: 1; min-width: 0; }
+.sl-box { position: relative; overflow: hidden; }
+.sl-boxhead { font: 400 20px 'Lilita One', sans-serif; letter-spacing: 0.03em; }
+.sl-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+.sl-item { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; cursor: pointer; animation: slPop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) backwards; animation-delay: calc(1.2s + var(--i) * 0.12s); transition: transform 0.15s; }
+.sl-item:hover { transform: translateY(-4px) rotate(-1deg); }
+.sl-item:focus-within { outline: 4px solid #3ee6ff; outline-offset: 3px; }
+.sl-item select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 18px; }
+.sl-ic { font-size: 54px; line-height: 1.1; filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.35)); }
+.sl-item b { font: 400 18px 'Lilita One', sans-serif; }
+.sl-val { font: 700 17px 'Fredoka', sans-serif; padding: 3px 12px; border-radius: 8px; }
+@keyframes slPop { from { opacity: 0; transform: translateY(40px) scale(0.6) rotate(-8deg); } }
+.sl-join { grid-column: 2; grid-row: 1 / 3; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; position: relative; align-self: start; }
+.sl-join img { width: 190px; height: 190px; border-radius: 10px; background: #fff; padding: 6px; }
+.sl-jt { font: 400 26px 'Lilita One', sans-serif; }
+.sl-cl { font: 600 14px 'Fredoka', sans-serif; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.75; }
+.sl-code { font: 400 64px 'Bungee', 'Lilita One', sans-serif; letter-spacing: 0.1em; line-height: 1; }
+.sl-url { font-size: 14px; opacity: 0.8; word-break: break-all; }
+.sl-vip { font-size: 15px; font-weight: 600; }
+.sl-err { color: #c0102a; font-weight: 700; min-height: 1em; }
+.sl-start { border: 0; border-radius: 18px; padding: 16px 24px; font: 400 26px 'Lilita One', sans-serif; cursor: pointer; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35); width: 100%; animation: slGlow 1.4s ease-in-out infinite alternate; }
+.sl-start:disabled { opacity: 0.45; animation: none; cursor: default; }
+.sl-start:not(:disabled):active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
+@keyframes slGlow { to { transform: scale(1.04); } }
+.sl-links { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.sl-links button { background: rgba(0, 0, 0, 0.15); border: 2px solid rgba(0, 0, 0, 0.2); color: inherit; font: 600 14px 'Fredoka', sans-serif; border-radius: 99px; padding: 4px 12px; cursor: pointer; }
+.sl-crowd { grid-column: 1 / 3; }
+.sl-ct { font: 400 20px 'Lilita One', sans-serif; color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); margin-bottom: 6px; }
+.sl-roster { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; min-height: 90px; }
+.sl-roster .chip { cursor: pointer; }
+.sl-empty { color: #fff; opacity: 0.8; font-size: 18px; }
+.sl-p.new { animation: slJoin 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) backwards; }
+.sl-p.off { opacity: 0.45; }
+@keyframes slJoin { from { opacity: 0; transform: translateY(60px) scale(0.5); } }
+@media (max-width: 1000px) { .sl-grid { grid-template-columns: 1fr; } .sl-join { grid-column: 1; grid-row: auto; } .sl-crowd { grid-column: 1; } }

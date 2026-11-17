@@ -243,4 +243,39 @@ test('100 players: phones get a candidate list during the vote; the TV shows onl
   assert(res.top.length <= 6 || res.top.every((t) => t.win));
 });
 
+
+
+
+test('Final prompt counts double; phones learn how many votes they got; results() best-first at the end', () => {
+  const { room, clock, H: [a, b, c] } = setup({ humans: ['Ann', 'Bo', 'Cy'], settings: { rounds: 10 } });
+  ok(room.start());
+  assert.deepEqual(g(room).results(), []);
+  until(room, clock, 'intro', 10);
+  assert.equal(g(room).r.kind, 'hot'); // 10 is a Hot Seat round
+  assert.equal(room.tvState().state.last, true);
+  until(room, clock, 'vote', 10);
+  const seat = g(room).r.seat, others = [a, b, c].filter((p) => p.id !== seat);
+  for (const p of [a, b, c]) ok(act(room, p, { op: 'vote', yes: true }));
+  for (const p of others) ok(act(room, p, { op: 'predict', yes: true }));
+  ok(act(room, room.get(seat), { op: 'skip' }));
+  until(room, clock, 'reveal', 10);
+  for (const p of others) assert.equal(g(room).r.gained.get(p.id), (100 + 150) * 2, 'match + prediction, doubled');
+  assert.equal(g(room).r.gained.get(seat), 100 * 2);
+  runOut(room, clock);
+  const order = g(room).results();
+  assert.deepEqual(order, g(room).standings().map((x) => x.id));
+  assert.equal(order.length, 3);
+});
+
+test('Votes received: each phone sees its own count after a classic reveal', () => {
+  const { room, clock, H: [a, b, c] } = setup({ humans: ['Ann', 'Bo', 'Cy'] });
+  ok(room.start());
+  until(room, clock, 'vote', 1);
+  ok(act(room, a, { op: 'vote', id: b.id })); ok(act(room, c, { op: 'vote', id: b.id })); ok(act(room, b, { op: 'vote', id: a.id }));
+  until(room, clock, 'reveal', 1);
+  assert.equal(room.playerState(b).state.mine.got, 2);
+  assert.equal(room.playerState(a).state.mine.got, 1);
+  assert.equal(room.playerState(c).state.mine.got, 0);
+});
+
 console.log(`\n${passed} Most Likely To… tests passed.`);

@@ -7,7 +7,9 @@
   <title>JustGameBox</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Lilita+One&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Bungee&family=Bungee+Shade&family=Caveat+Brush&family=Monoton&family=Pacifico&family=Permanent+Marker&family=Press+Start+2P&family=Righteous&family=Rubik+Mono+One&family=Special+Elite&family=Abril+Fatface&family=Black+Ops+One&family=Luckiest+Guy&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/box/box.css">
+  <link rel="stylesheet" href="/box/title.css">
   <link rel="stylesheet" href="/box/games.css">
   <link rel="stylesheet" href="/box/ducks-theme.css">
   <link rel="stylesheet" href="/box/kingdoms-theme.css">
@@ -19,6 +21,13 @@
   <link rel="stylesheet" href="/box/games/likely.css">
   <link rel="stylesheet" href="/box/games/spectrum.css">
   <link rel="stylesheet" href="/box/games/bid.css">
+  <link rel="stylesheet" href="/box/games/president.css">
+  <link rel="stylesheet" href="/box/games/blackjack.css">
+  <link rel="stylesheet" href="/box/games/blanks.css">
+  <link rel="stylesheet" href="/box/games/truths.css">
+  <link rel="stylesheet" href="/box/games/funny.css">
+  <link rel="stylesheet" href="/box/games/ducks.css">
+  <link rel="stylesheet" href="/box/games/zombie.css">
 </head>
 <body>
   <div class="offline" id="offline" hidden>Reconnecting…</div>
@@ -29,18 +38,25 @@
     <input id="j-code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
     <label for="j-name">Your name</label>
     <input id="j-name" maxlength="14" autocomplete="nickname" placeholder="Name">
+    <label>Pick your avatar</label>
+    <div class="j-av" id="j-av"></div>
     <button class="btn big" id="j-go">Join</button>
     <p class="err" id="j-err"></p>
   </section>
   <section class="ph" id="game" hidden>
-    <div class="ph-head"><span id="h-game"></span><b id="h-name"></b><span class="right"><button class="link" id="h-leave">Leave</button></span></div>
+    <div class="ph-head"><span id="h-game"></span><button class="h-me" id="h-me" title="Change avatar"><span id="h-av"></span><b id="h-name"></b></button><span class="right"><button class="hbtn" id="h-react" title="React on the TV">😀</button><button class="hbtn" id="h-help" title="How to play">❓</button><button class="hbtn" id="h-menu" title="Host menu" hidden>⚙️</button><button class="link" id="h-leave">Leave</button></span></div>
+    <div class="react-tray" id="react-tray" hidden></div>
     <div id="vip-bar" class="vip-bar" hidden></div>
+    <div id="party-bar" class="party-bar" hidden></div>
     <div id="g-body"></div>
   </section>
+  <div class="sheet-bg" id="sheet-bg" hidden></div><div class="ph-sheet" id="ph-sheet" hidden></div>
   <div class="toast" id="toast" hidden></div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/sfx.js"></script>
+  <script src="/haptics.js"></script>
   <script src="/box/box.js"></script>
+  <script src="/box/title.js"></script>
   <script src="/box/games/president.js"></script>
   <script src="/box/games/blackjack.js"></script>
   <script src="/box/games/blanks.js"></script>
@@ -53,6 +69,7 @@
   <script src="/box/games/likely.js"></script>
   <script src="/box/games/spectrum.js"></script>
   <script src="/box/games/bid.js"></script>
+  <script src="/box/games/zombie.js"></script>
   <script src="/box/games/kingdoms-art.js"></script>
   <script src="/box/games/kingdoms-tv.js"></script>
   <script src="/box/games/kingdoms-phone.js"></script>

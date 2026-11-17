@@ -213,4 +213,38 @@ test('every phase has a timer (nobody acting still ends the game)', () => {
   assert.strictEqual(r.game.phase, 'over');
 });
 
+test('new packs: family and coworker questions; a pack refills from itself', () => {
+  for (const k of ['family', 'work']) assert.ok(def.PACKS[k].length >= 40, k);
+  const all = Object.values(def.PACKS).flat(); assert.strictEqual(new Set(all).size, all.length, 'no question in two packs');
+  const { g } = humans(['Ann', 'Bob', 'Cat'], { pack: 'family' });
+  const fam = new Set(def.PACKS.family);
+  assert.ok(fam.has(g.question));
+  g.deck = []; assert.ok(fam.has(g.drawQuestion()), 'refill stays in the pack');
+});
+
+test('odd input (objects, non-strings) is refused without crashing', () => {
+  const { g, ps } = humans(['Ann', 'Bob', 'Cat']);
+  for (const m of [null, 3, 'answer', { op: 'answer', text: { a: 1 } }, { op: 'answer', text: ['x'] }, { op: 'guess', pick: {} }, { op: 'question', text: 5 }]) assert.strictEqual(g.act(ps[0], m).ok, false, JSON.stringify(m));
+});
+
+test('results() best-first, highlights and the TV “still deciding” list', () => {
+  const { r, g, ps, clock } = humans(['Ann', 'Bob', 'Cat', 'Dan', 'Eve'], { rounds: 3, spots: 4 });
+  let checked = false;
+  while (g.phase !== 'over') {
+    if (g.phase === 'answer') ps.forEach((p, i) => { if (!g.answers.has(p.id)) g.act(p, { op: 'answer', text: p.name + ' says ' + g.round + i }); });
+    if (g.phase === 'spot') {
+      const c = g.cur, right = c.opts.indexOf(c.id), voters = ps.filter((p) => p.id !== c.id && !c.votes.has(p.id));
+      if (!checked && voters.length === 4) { g.act(voters[0], { op: 'guess', pick: right }); const tv = r.tvState().state; assert.strictEqual(tv.notGuessed.length, 3); assert.ok(!tv.notGuessed.includes(voters[0].name)); checked = true; }
+      // Ann always fools everyone; everyone always spots Bob.
+      for (const p of ps) if (p.id !== c.id && !c.votes.has(p.id)) g.act(p, { op: 'guess', pick: c.id === ps[0].id ? (right + 1) % c.opts.length : right });
+    }
+    if (!clock.step()) break;
+  }
+  assert.ok(checked);
+  const res = g.results(), st = g.standings();
+  assert.deepStrictEqual(res, st.map((x) => x.id)); assert.strictEqual(res.length, 5);
+  const h = r.tvState().state.highlights;
+  if (g.spotted.get(ps[0].id)) { assert.ok(h.bluff, 'a best bluff'); assert.strictEqual(h.bluff.name, 'Ann'); }
+});
+
 console.log(`\n${passed} tests passed`);

@@ -166,14 +166,28 @@
       g.fillText({ pet: '❤️', levelUp: '⭐', eat: '🌽', build: '🔨', badge: '🏅', farm: '✨', hatch: '🐣', grow: '🌱', spin: '🎡', gift: '🎁' }[e.kind] || '✨', ix + iw * sp.x + Math.sin(age * 6) * 8, iy + ih * sp.y - 30 * ds - age * 30);
       g.globalAlpha = 1; g.textAlign = 'left';
     }
+    // what the duck is doing right now: a little bubble with the mini-game's icon
+    const BUSY = { hurdles: '🏃', paddle: '🌊', rings: '🪽', climb: '🧗', bugs: '💪' };
+    if (BUSY[f.busy] && f.owner) {
+      const bx = ix + iw * sp.x + 14 * ds, by = iy + ih * sp.y - 34 * ds, br = Math.max(7, 11 * ds);
+      g.fillStyle = 'rgba(255,255,255,.92)'; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.fill(); g.beginPath(); g.moveTo(bx - br * 0.5, by + br * 0.7); g.lineTo(bx - br * 0.9, by + br * 1.4); g.lineTo(bx, by + br * 0.9); g.fill();
+      g.font = `${br * 1.15}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(BUSY[f.busy], bx, by + 1); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+    }
     // sign: owner, mood, rank (the phone draws its own overlay instead)
     if (!f.owner) return;
     const fs = Math.max(9 / zoom, Math.min(18 / Math.min(1, zoom), w * 0.075)); // readable even when the map is zoomed out
-    g.font = `600 ${fs}px Fredoka, sans-serif`; const label = `${f.rank && f.rank <= 3 ? ['🥇', '🥈', '🥉'][f.rank - 1] + ' ' : ''}${f.owner}`;
-    const tw = Math.min(iw - 6, g.measureText(label).width + 12);
+    g.font = `600 ${fs}px Fredoka, sans-serif`; const label = `${f.rank && f.rank <= 3 ? ['🥇', '🥈', '🥉'][f.rank - 1] + ' ' : ''}${f.avatar ? f.avatar + ' ' : ''}${f.owner}`;
+    const tw = Math.min(iw - fs * 2.2 - 6, g.measureText(label).width + 12);
     g.fillStyle = 'rgba(40,24,10,.75)'; g.fillRect(ix + 3, iy + 3, tw, fs + 6);
-    g.fillStyle = '#fff'; g.fillText(label, ix + 9, iy + fs + 4, iw - 18);
-    if (w * zoom > 90) { g.font = `${fs}px sans-serif`; g.fillText(MOOD(f.mood), ix + iw - fs * 1.4, iy + fs + 4); }
+    g.fillStyle = '#fff'; g.fillText(label, ix + 9, iy + fs + 4, tw - 12);
+    // progress at a glance: the duck's total skill level in a badge (gold once it's a champion)
+    if (f.stage >= 0 && f.total != null) {
+      const r = fs * 0.95, cx = ix + iw - r - 4, cy = iy + r + 4;
+      g.fillStyle = f.stage >= 3 ? '#ffd23f' : f.stage === 2 ? '#8be36a' : f.stage === 1 ? '#7fe0ff' : '#fff4d6'; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(40,24,10,.8)'; g.lineWidth = Math.max(1, fs * 0.12); g.stroke();
+      g.fillStyle = '#3a2400'; g.font = `800 ${fs * 0.95}px Fredoka, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(f.total), cx, cy + 1); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+      if (w * zoom > 90) { g.font = `${fs}px sans-serif`; g.fillText(MOOD(f.mood), cx - r - fs * 1.3, iy + fs + 4); }
+    } else if (w * zoom > 90) { g.font = `${fs}px sans-serif`; g.fillText(MOOD(f.mood), ix + iw - fs * 1.4, iy + fs + 4); }
     if (w * zoom > 150) { const L = f.levels; g.font = `600 ${fs * 0.8}px Fredoka, sans-serif`; g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(ix + 3, iy + ih - fs - 6, iw - 6, fs + 4); g.fillStyle = '#fff'; g.fillText(`🏃${L.run} 🌊${L.swim} 🪽${L.fly} 🧗${L.climb} 💪${L.stamina}`, ix + 8, iy + ih - 8, iw - 14); }
   }
   const DECOR_ICON = { flowers: '🌷', flag: '🚩', gnome: '🧙', lantern: '🏮', scarecrow: '🎃', fountain: '⛲', statue: '🗿', rainbow: '🌈' };
@@ -287,7 +301,7 @@
     if (s.type === 'pond') return { h: -0.6, mode: 'swim', type: 'pond', f };
     return { h: 0, mode: 'run', type: 'track', f };
   }
-  function drawRaceWorld(g, W, H, R, G, cam, PX, t) {
+  function drawRaceWorld(g, W, H, R, G, cam, PX, t, VPX = PX) { // VPX: height scale, so zooming in never makes cliffs huge
     const base = H * 0.72, TH = THEME[R.theme] || THEME.meadow;
     // sky, sun or moon, stars, clouds, far hills with props (parallax)
     const sky = g.createLinearGradient(0, 0, 0, H);
@@ -300,7 +314,7 @@
     for (let i = -1; i < W / 260 + 2; i++) { const off = (cam * PX * 0.55) % 260; drawProp(g, TH.prop, i * 260 - off + 60, base - 10, t); }
     if (TH.night) for (let i = 0; i < 24; i++) { const fx = (i * 173 + Math.sin(t + i) * 40) % W, fy = base - 40 - ((i * 37) % 140) + Math.sin(t * 2 + i) * 10; g.fillStyle = 'rgba(220,255,120,' + (0.4 + 0.6 * Math.abs(Math.sin(t * 3 + i))) + ')'; g.beginPath(); g.arc(fx, fy, 2.5, 0, TAU); g.fill(); }
     // course
-    const m2x = (m) => (m - cam) * PX, cliffTop = 9 * PX * 0.9;
+    const m2x = (m) => (m - cam) * PX, cliffTop = 9 * VPX * 0.9;
     for (const s of G.secs) {
       const x0 = m2x(s.a), x1 = m2x(s.b); if (x1 < -50 || x0 > W + 50) continue;
       if (s.type === 'track') {
@@ -312,7 +326,7 @@
       }
       if (s.type === 'pond') {
         g.fillStyle = TH.ground; g.fillRect(x0, base + 30, x1 - x0, H);
-        g.fillStyle = TH.water; g.fillRect(x0, base + 0.6 * PX * 0.9, x1 - x0, H - base);
+        g.fillStyle = TH.water; g.fillRect(x0, base + 0.6 * VPX * 0.9, x1 - x0, H - base);
         g.fillStyle = 'rgba(255,255,255,.5)';
         const speed = s.v === 'rapids' ? 140 : 30;
         for (let x = x0; x < x1; x += 40) g.fillRect(x + ((t * speed) % 40), base + 12 + Math.sin(x + t * 3) * 2, s.v === 'rapids' ? 28 : 18, 3);
@@ -346,7 +360,7 @@
       else { g.fillStyle = '#fff'; g.fillRect(x - 10, base - 30, 4, 32); g.fillRect(x + 8, base - 30, 4, 32); g.fillStyle = '#e63946'; g.fillRect(x - 12, base - 32, 26, 7); }
     }
     // start and finish lines
-    for (const [m, label] of [[0, 'START'], [G.L, 'FINISH']]) { const x = m2x(m); if (x < -60 || x > W + 60) continue; const gh = groundAt(G, Math.min(m, G.L - 0.01)).h * PX * 0.9; for (let y = 0; y < 120; y += 12) { g.fillStyle = (y / 12) % 2 ? '#fff' : '#1b1b2b'; g.fillRect(x, base - gh - 120 + y, 8, 12); } g.fillStyle = TH.night ? '#fff' : '#1b1240'; g.font = 'bold 18px Fredoka, sans-serif'; g.fillText(label, x - 20, base - gh - 128); }
+    for (const [m, label] of [[0, 'START'], [G.L, 'FINISH']]) { const x = m2x(m); if (x < -60 || x > W + 60) continue; const gh = groundAt(G, Math.min(m, G.L - 0.01)).h * VPX * 0.9; for (let y = 0; y < 120; y += 12) { g.fillStyle = (y / 12) % 2 ? '#fff' : '#1b1b2b'; g.fillRect(x, base - gh - 120 + y, 8, 12); } g.fillStyle = TH.night ? '#fff' : '#1b1240'; g.font = 'bold 18px Fredoka, sans-serif'; g.fillText(label, x - 20, base - gh - 128); }
     if (R.weather === 'rain') { g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1.5; for (let i = 0; i < 120; i++) { const rx = (i * 97 + t * 400) % W, ry = (i * 53 + t * 900) % H; g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx - 4, ry + 14); g.stroke(); } }
     if (R.theme === 'snow') { g.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 70; i++) { const sx = (i * 89 + Math.sin(t + i) * 20 + t * 30) % W, sy = (i * 61 + t * 60) % H; g.beginPath(); g.arc(sx, sy, 2.2, 0, TAU); g.fill(); } }
     if (R.weather === 'fog') { g.fillStyle = 'rgba(230,235,240,.35)'; g.fillRect(0, 0, W, H); }

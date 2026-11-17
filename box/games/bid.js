@@ -468,7 +468,7 @@ class Bid {
     const rows = [];
     for (const [id, st] of this.st) {
       const p = this.room.get(id); if (!p) continue;
-      rows.push({ id, name: p.name, color: p.color, net: this.net(st), cash: st.cash, items: st.items.length, itemValue: this.itemValue(st), bonus: st.bonus, loans: st.loans, debt: Math.round(st.loans * this.loanAmt() * LOAN_RATE) });
+      rows.push({ id, name: p.name, av: p.avatar || null, color: p.color, net: this.net(st), cash: st.cash, items: st.items.length, itemValue: this.itemValue(st), bonus: st.bonus, loans: st.loans, debt: Math.round(st.loans * this.loanAmt() * LOAN_RATE) });
     }
     return rows.sort((a, b) => b.net - a.net);
   }
@@ -493,8 +493,14 @@ class Bid {
     if (co && co.sets > 0) out.push({ icon: '🧩', title: 'Collector', name: co.name, id: co.id, why: `${co.sets} set bonus${co.sets === 1 ? '' : 'es'}` });
     const bs = pick(rows, (a, b) => b.spent - a.spent);
     if (bs && bs.spent > 0) out.push({ icon: '🤑', title: 'Big Spender', name: bs.name, id: bs.id, why: `spent ${fmt(bs.spent)}` });
+    const ws = pick(rows.filter((r) => !r.lockers), (a, b) => b.inspects - a.inspects);
+    if (ws && ws.inspects >= 2) out.push({ icon: '🔦', title: 'Window Shopper', name: ws.name, id: ws.id, why: `peeked ${ws.inspects} times, never bought` });
+    const bw = pick(rows, (a, b) => b.bids - a.bids);
+    if (bw && bw.bids >= 5) out.push({ icon: '🙋', title: 'Paddle Waver', name: bw.name, id: bw.id, why: `${bw.bids} bids placed` });
     return out;
   }
+
+  results() { return this.standings().map((r) => r.id); }
 
   // ---- What the screens may see ----
   endsIn() { return this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0; }
@@ -536,7 +542,11 @@ class Bid {
       s.bidders = bs.length;
       s.ticker = this.bids.slice(-8).reverse().filter((b) => this.room.get(b.id)).map((b) => ({ name: this.room.name(b.id), color: this.room.get(b.id).color, amount: b.amount }));
     }
-    if (this.phase === 'sealed') { s.sealedIn = this.sealed.size; s.eligible = this.room.list().filter((p) => !this.st.get(p.id)?.waiting).length; }
+    if (this.phase === 'sealed') {
+      const elig = this.room.list().filter((p) => !this.st.get(p.id)?.waiting);
+      s.sealedIn = this.sealed.size; s.eligible = elig.length;
+      s.sealWaiting = elig.filter((p) => !p.bot && !this.sealed.has(p.id)).slice(0, 8).map((p) => p.name); // who the envelopes wait on
+    }
     s.inspectors = this.inspectors.slice(-5); s.inspectCount = this.inspected.size;
     if (this.phase === 'over') { s.final = stand.slice(0, 20); s.awards = this.awards; }
     return s;
@@ -571,7 +581,7 @@ class Bid {
 }
 
 module.exports = {
-  key: 'bid', name: 'JustBid', min: 1, fields, defaults,
+  key: 'bid', name: 'JustBid', min: 1, fields, defaults, show: true, // game-show opening (box/show.js)
   create: (room, settings) => new Bid(room, settings),
   sealedPrice, fmt, ADDS, MIN_INC,
 };

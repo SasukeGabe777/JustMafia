@@ -7,14 +7,31 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/hub.css">
+  <link rel="stylesheet" href="/party/party.css">
 </head>
 <body>
   <div class="bg" aria-hidden="true"></div>
+  <div class="hub-gear"><button id="gear" title="Settings" aria-label="Settings">⚙️</button>
+    <div class="gear-menu" id="gear-menu" hidden>
+      <b>Settings</b>
+      <button id="unlock-all">🔓 Unlock all games</button>
+      <button id="lock-all">🔒 Lock them again</button>
+      <small>For testing: unlockable games normally open after you finish a Party Mode.</small>
+    </div></div>
   <main class="hub">
     <header class="hub-head">
       <h1 class="logo"><span class="just">Just</span><span class="game">Game</span><span class="box">Box</span></h1>
       <p class="tag">Party games for the big screen. Everyone plays from their phone.</p>
     </header>
+
+    <a class="phone-join" href="/box/play">📱 On your phone? <b>Tap here to join a game</b></a>
+    <nav class="hub-tools" aria-label="Find a game">
+      <button class="party-btn" id="party-open">🎉 Party Mode</button>
+      <span class="lbl">How many of you?</span>
+      <div class="seg" id="count"><button data-n="0" class="on">Any</button><button data-n="2">2–3</button><button data-n="6">4–8</button><button data-n="14">9–20</button><button data-n="40">21+</button></div>
+      <button class="surprise" id="surprise">🎲 Surprise me</button>
+      <a class="continue" id="continue" hidden></a>
+    </nav>
 
     <!-- The big games on top; smaller games and empty slots (still to be chosen) below. -->
     <section class="tiles big" id="tiles" aria-label="Featured games">
@@ -110,6 +127,11 @@
         <div class="info"><h2>JustFunny</h2><p>A watch party: take turns putting funny videos on the TV. Boring? Skip it!</p>
           <div class="meta"><span>👥 2–100</span><span>⏱ 15–45 min</span><span>🎬 Watch party</span></div></div>
       </a>
+      <a class="tile live zombie" href="/box/tv?game=zombie" data-game="zombie" data-lock="zombie">
+        <div class="art" aria-hidden="true"><span class="icon">🧟</span></div>
+        <div class="info"><h2>Zombie Survival</h2><p>Grab the medkit, the gun or the rope… and hope you picked right. Who makes it to the last chopper?</p>
+          <div class="meta"><span>👥 2–100</span><span>⏱ 15–25 min</span><span>🧟 Survival story</span></div></div>
+      </a>
     </section>
 
     <footer class="hub-foot">
@@ -118,6 +140,8 @@
     </footer>
   </main>
   <script src="/sfx.js"></script>
+  <script src="/unlocks.js"></script>
   <script src="/hub.js"></script>
+  <script src="/party/party.js"></script>
 </body>
 </html>

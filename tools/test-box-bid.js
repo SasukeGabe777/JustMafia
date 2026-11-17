@@ -317,4 +317,20 @@ test('Skip ahead (TV "next") walks every phase to the end', () => {
   assert(room.hostAction({ type: 'again' }).ok); assert.equal(room.game.phase, 'preview');
 });
 
+test('results() best-first by net worth; the TV names who a sealed bid is waiting on', () => {
+  const { room, clock } = setup(3, { rounds: 6 }, 3);
+  const a = human(room, 'Ann'), b = human(room, 'Bo'); room.start();
+  const g = room.game;
+  forceLocker(g, 'sealed'); g.next();
+  assert.equal(g.phase, 'sealed');
+  assert.deepEqual(room.tvState().state.sealWaiting.sort(), ['Ann', 'Bo']);
+  assert(room.act(a, { op: 'sealed', amount: g.locker.opening }).ok);
+  assert.deepEqual(room.tvState().state.sealWaiting, ['Bo'], 'bots never hold things up on the TV list');
+  void b;
+  runOut(room, clock);
+  const res = g.results(), nets = res.map((id) => g.net(g.st.get(id)));
+  assert.equal(res.length, 5);
+  assert.deepEqual(nets, nets.slice().sort((x, y) => y - x));
+});
+
 console.log(`\nJustBid: ${passed} tests passed`);

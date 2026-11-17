@@ -26,6 +26,7 @@
   let tab = 'kingdom', sheet = null, nameDraft = null, techSel = null, kOpen = null, jobsLocal = null, jobsSeq = 0;
   let lastAlert = null, lastHtml = '', V = null, CTX = null, VIEW = null, recvAt = 0, ticker = 0;
   const qty = {}; // training quantity per unit
+  const DET = {}; // which <details> are open (morph keeps the attribute in sync)
   const ENDS = {};
   let base = { res: {}, rates: {}, at: 0 };
   const market = { give: 'food', get: 'gold', n: 60 };
@@ -41,11 +42,14 @@
   const gameNow = () => (V ? V.now + (Date.now() - recvAt) : 0);
   // A countdown end time that stays put for the same thing, so identical renders stay identical.
   function endAt(k, endsIn) { const t = Date.now() + endsIn; const o = ENDS[k]; if (o && Math.abs(o - t) < 1500) return o; ENDS[k] = t; return t; }
-  const cd = (k, endsIn) => (endsIn == null ? '' : `<span class="timer" data-ends="${endAt(k, endsIn)}"></span>`);
-  const bar = (k, endsIn, dur) => (endsIn == null ? '<div class="kp-bar"><i style="width:0"></i></div>' : `<div class="kp-bar"><i data-end="${endAt(k, endsIn)}" data-dur="${dur}"></i></div>`);
+  // Live bits are rendered with their current value too, so a morph never blanks them between ticks.
+  const cd = (k, endsIn) => { if (endsIn == null) return ''; const e = endAt(k, endsIn); return `<span class="timer" data-ends="${e}">${mmss(e - Date.now())}</span>`; };
+  const pctOf = (e, dur) => Math.max(0, Math.min(100, 100 * (1 - (e - Date.now()) / (Number(dur) || 1))));
+  const bar = (k, endsIn, dur) => { if (endsIn == null) return '<div class="kp-bar"><i style="width:0%"></i></div>'; const e = endAt(k, endsIn); return `<div class="kp-bar"><i data-end="${e}" data-dur="${dur}" style="width:${pctOf(e, dur)}%"></i></div>`; };
   // Cost chips turn red live (the ticker compares them with your interpolated stock).
-  const chips = (cost) => (cost ? Object.entries(cost).filter(([, n]) => n > 0).map(([r, n]) => `<span class="kp-c" data-need="${r}" data-amt="${Math.ceil(n)}">${RI[r]} ${fmt(Math.ceil(n))}</span>`).join('') : '');
+  const chips = (cost) => (cost ? Object.entries(cost).filter(([, n]) => n > 0).map(([r, n]) => `<span class="kp-c${resNow(r) < Math.ceil(n) ? ' miss' : ''}" data-need="${r}" data-amt="${Math.ceil(n)}">${RI[r]} ${fmt(Math.ceil(n))}</span>`).join('') : '');
   const resNow = (r) => Math.max(0, (base.res[r] || 0) + (base.rates[r] || 0) * (Date.now() - base.at) / 1000);
+  const resB = (r) => `<b data-res="${r}">${fmt(resNow(r))}</b>`;
   const afford = (cost) => !cost || Object.entries(cost).every(([r, n]) => resNow(r) >= n);
   const stars = (lvl, max) => `<span class="kp-stars">${'★'.repeat(Math.min(lvl, max))}<i>${'★'.repeat(Math.max(0, max - lvl))}</i></span>`;
   const secs = (s) => (s >= 60 ? `${Math.floor(s / 60)}m ${Math.round(s % 60)}s` : `${Math.round(s)}s`);
@@ -57,11 +61,11 @@
   // ---------- the live ticker (4×/s): resources, bars, red chips ----------
   function tick() {
     const root = document.querySelector('.kp-root'); if (!root) return;
-    for (const el of root.querySelectorAll('[data-res]')) el.textContent = fmt(resNow(el.dataset.res));
+    for (const el of root.querySelectorAll('[data-res]')) { const t = fmt(resNow(el.dataset.res)); if (el.textContent !== t) el.textContent = t; }
     const now = Date.now();
-    for (const el of root.querySelectorAll('[data-end]')) { const d = Number(el.dataset.dur) || 1; el.style.width = Math.max(0, Math.min(100, 100 * (1 - (Number(el.dataset.end) - now) / d))) + '%'; }
+    for (const el of root.querySelectorAll('[data-end]')) { const w = pctOf(Number(el.dataset.end), el.dataset.dur) + '%'; if (el.style.width !== w) el.style.width = w; }
     for (const el of root.querySelectorAll('.kp-c[data-need]')) el.classList.toggle('miss', resNow(el.dataset.need) < Number(el.dataset.amt));
-    for (const el of root.querySelectorAll('[data-ends]')) if (!el.textContent) el.textContent = mmss(Number(el.dataset.ends) - now);
+    for (const el of root.querySelectorAll('[data-ends]')) { const t = mmss(Number(el.dataset.ends) - now); if (el.textContent !== t) el.textContent = t; }
     for (const el of root.querySelectorAll('[data-afford]')) { const c = JSON.parse(el.dataset.afford); el.disabled = !afford(c); }
   }
 
@@ -95,16 +99,24 @@
   // ---------- header (always visible in play) ----------
   function headHtml(v) {
     const me = v.me, A = ageInfo(v, me.age);
-    const resRow = RESK.map((r) => `<div class="kp-r ${(v.rates[r] || 0) < 0 ? 'neg' : ''}"><span>${RI[r]}</span><b data-res="${r}"></b><small>${rate(v.rates[r] || 0)}/s</small></div>`).join('');
+    const resRow = RESK.map((r) => `<div class="kp-r ${(v.rates[r] || 0) < 0 ? 'neg' : ''}"><span>${RI[r]}</span>${resB(r)}<small>${rate(v.rates[r] || 0)}/s</small></div>`).join('');
     const banners = [];
+    const C = v.council;
+    if (C) banners.push(`<button class="kp-alert council ${C.mine ? '' : 'vote'}" data-sheet="${J({ kind: 'vote' })}">🗳️ <b>${esc(C.ask)}</b> ${C.mine ? `· you voted ${esc(kName(C.mine))} ✓` : '· <u>Tap to vote</u>'} <span class="kp-cd">${cd('council' + C.id, C.endsIn)}</span></button>`);
+    if (v.progress && v.progress.peaceIn != null) banners.push(`<div class="kp-alert calm">🕊️ The world is at peace in ${cd('peacehold', v.progress.peaceIn)}! Anyone who leaves the alliance breaks it.</div>`);
     for (const a of v.incoming) banners.push(`<button class="kp-alert bad" data-center="${a.to.q},${a.to.r}">⚔️ <b>${esc(a.name)}</b> is attacking your ${a.capital ? 'capital' : 'land'} with ${a.n}! <span class="kp-cd">${cd('i' + a.id, a.endsIn)}</span></button>`);
     if (v.starving) banners.push('<button class="kp-alert bad" data-tab="kingdom">🍞 Your people are starving! Production is halved. Move workers to 🌾 Farm.</button>');
     if (me.vassalOf) banners.push(`<button class="kp-alert warn" data-tab="allies">⛓️ You are a vassal of <b>${esc(kName(me.vassalOf))}</b> (25% tribute)</button>`);
     if (v.peaceIn > 0) banners.push(`<div class="kp-alert calm">🕊️ Beginner’s peace: capitals are safe for ${cd('peace', v.peaceIn)}</div>`);
     const ev = v.events && v.events.current;
     if (ev) banners.push(`<div class="kp-alert calm">${esc(ev.icon)} ${esc(ev.text)}</div>`);
+    const tags = [];
+    if (me.underdog > 0) tags.push(`<span class="kp-tag good" title="You are behind: your people work harder">🔥 +${Math.round(me.underdog * 100)}%</span>`);
+    if (me.sanction > 0) tags.push(`<span class="kp-tag bad" title="Council sanctions">⚖️ −30% ${cd('sanction', me.sanction)}</span>`);
+    if (me.marked) tags.push('<span class="kp-tag bad" title="The world has united against you">🎯 Coalition</span>');
+    if (me.bounty) tags.push(`<span class="kp-tag bad" title="Gold on your head">💰 ${me.bounty}</span>`);
     return `<div class="kp-head">
-      <div class="kp-title">${dot(me.color)}<b>${esc(me.name)}</b><span class="kp-age">${A.icon} Age ${me.age}</span><span class="kp-clock">⏳ ${cd('time', v.timeLeft)}</span></div>
+      <div class="kp-title">${dot(me.color)}<b>${esc(me.name)}</b><span class="kp-age">${A.icon} Age ${me.age}</span>${tags.join('')}<span class="kp-clock">⏳ ${cd('time', v.timeLeft)}</span></div>
       <div class="kp-res">${resRow}<div class="kp-r pop ${v.pop >= v.cap ? 'neg' : ''}"><span>👥</span><b>${v.pop}/${v.cap}</b><small>people</small></div></div>
       ${banners.join('')}</div>`;
   }
@@ -116,13 +128,14 @@
     const unit = (u) => A.units.find((x) => x.u === u);
     const btnBuild = (b) => { const B = bld(b); return B ? `<button class="btn small" data-op="${J({ op: 'build', b })}" data-ok="🏗️ ${esc(B.name)} added to the build queue">Build ${esc(B.name)}</button>` : ''; };
     if (v.incoming.length) return { icon: '🛡️', title: 'You’re under attack!', text: 'Soldiers at home defend your capital. Train some now.', extra: '<button class="btn small" data-tab="army">⚔️ Train soldiers</button>' };
-    if (W.idle > 0) return { icon: '😴', title: `${plural(W.idle, 'peasant')} doing nothing`, text: 'Tap <b>+</b> on a job below to put them to work. Food 🌾 and wood 🪵 come first.' };
+    if (W.idle > 0) return { icon: '😴', title: `${plural(W.idle, 'peasant')} doing nothing`, text: 'Tap <b>+</b> on a job below, or let your steward decide. Food 🌾 and wood 🪵 come first.', extra: AUTO_BTN };
     if (v.starving || (v.rates.food || 0) < 0) return { icon: '🍞', title: 'Food is running out', text: 'Move a worker to 🌾 Farm (tap + next to Farm) or build a bigger Farm.', extra: btnBuild('farm') };
     const houses = bld('houses');
     if (v.pop >= v.cap) {
       if (houses && houses.lvl < houses.max && !v.queue.some((q) => q.b === 'houses')) return { icon: '🏠', title: 'Build Houses so you can grow', text: 'Your kingdom is full. Houses give room for 4 more people.', cost: houses.cost, extra: btnBuild('houses') };
       if (me.age >= 2) return { icon: '🛻', title: 'Found a new village', text: 'Villages give room for more people. Train Settlers, then tap a free tile next to your land on the 🗺️ Map.', extra: '<button class="btn small" data-tab="map">🗺️ Open the map</button>' };
     }
+    const dg = decreeGoal(v, bld, unit, btnBuild); if (dg) return dg;
     const peasant = unit('peasant');
     if (v.peasants < 6 + me.age * 2 && v.pop < v.cap && peasant && v.training.filter((t) => t.u === 'peasant').length < 2) return { icon: '🧑‍🌾', title: 'Train more peasants', text: 'More workers means more of everything.', cost: peasant.cost, extra: `<button class="btn small" data-op="${J({ op: 'train', u: 'peasant', n: 1 })}" data-ok="🧑‍🌾 A peasant is on the way">Train a peasant</button>` };
     const age = A.age;
@@ -136,6 +149,32 @@
     }
     if (v.rocket) return { icon: '🚀', title: 'Build your rocket', text: 'Three stages, then launch to win!', extra: '<button class="btn small" data-tab="research">🚀 Rocket</button>' };
     return { icon: '👑', title: 'You rule a Kingdom!', text: 'Win by conquest, peace or science. Check the 🤝 Allies and 🔬 Research tabs.' };
+  }
+  // The active Royal Decree as the next goal, with the one button that moves it forward.
+  const AUTO_BTN = `<button class="btn small green" data-op="${esc(JSON.stringify({ op: 'jobs', auto: true }))}" data-ok="⚖️ Workers sent where they’re needed">⚖️ Auto workers</button>`;
+  function decreeGoal(v, bld, unit, btnBuild) {
+    const Dc = v.decree; if (!Dc) return null;
+    const A = v.available, age = A.age, me = v.me;
+    const g = { icon: Dc.icon, title: esc(Dc.title), text: esc(Dc.hint), decree: Dc };
+    const train = (u, n, label) => { const U = unit(u); return U ? `<button class="btn small" data-op="${J({ op: 'train', u, n })}" data-ok="${esc(U.icon)} Training ${n} ${esc(U.name)}" ${U.why && !/Not enough/.test(U.why) ? 'disabled' : ''}>${label}</button>` : ''; };
+    const ageBtn = () => (age && v.queue.some((q) => q.b === 'castle') ? '<small class="kp-sub">⏳ Your castle is growing…</small>'
+      : age && age.can ? `<button class="btn small green" data-op="${J({ op: 'age' })}" data-ok="${CASTLE[age.next]} Age ${age.next} is being built">${CASTLE[age.next]} Advance now</button>` : AUTO_BTN);
+    switch (Dc.key) {
+      case 'work': g.extra = AUTO_BTN; break;
+      case 'houses': { const H = bld('houses'); g.cost = H && H.cost; g.extra = btnBuild('houses'); break; }
+      case 'peasants': { const P = unit('peasant'); g.text += ` (${v.peasants}/6)`; g.cost = P && P.cost; g.extra = train('peasant', 1, '🧑‍🌾 Train a peasant'); break; }
+      case 'age2': case 'age3': case 'age4': if (age) { g.cost = age.cost; g.extra = ageBtn(); } break;
+      case 'village': {
+        const has = v.units.some((t) => t.units.settlers > 0) || v.myArmies.some((a) => a.order === 'claim');
+        g.extra = has ? `<button class="btn small green" data-targets="">🚩 Pick a tile to claim</button>` : train('settlers', 1, '🛻 Train Settlers'); break;
+      }
+      case 'army': { const best = ['guard', 'knight', 'archer', 'spear', 'militia'].map(unit).find((U) => U && !(U.why && !/Not enough/.test(U.why))); g.text += ` (${me.army}/6)`; if (best) { g.cost = Object.fromEntries(Object.entries(best.cost || {}).map(([r, n]) => [r, n * 3])); g.extra = train(best.u, 3, `${best.icon} Train 3 ${esc(best.name)}`); } break; }
+      case 'library': { const L = bld('library'); g.cost = L && L.cost; g.extra = btnBuild('library'); break; }
+      case 'friend': g.extra = '<button class="btn small" data-tab="allies">🤝 Open Allies</button>'; break;
+      case 'path': g.extra = '<button class="btn small" data-tab="allies">🕊️ Allies</button> <button class="btn small" data-tab="research">🚀 Rocket</button>'; break;
+      default:
+    }
+    return g;
   }
   function curWorkers(v) {
     if (!jobsLocal) return v.workers;
@@ -170,13 +209,13 @@
     const queue = v.queue.length ? v.queue.map((q, i) => `<div class="kp-qrow"><span>${q.b === 'castle' ? ageInfo(v, q.lvl).icon : (v.defs.buildings[q.b] || {}).icon || '🏗️'}</span><div class="kp-qt"><b>${esc(q.name)}${q.b !== 'castle' ? ` → Lv ${q.lvl}` : ''}</b>${i === 0 ? bar('q' + q.b + q.lvl, q.endsIn, q.dur) : '<small>waiting…</small>'}</div><span class="kp-cd">${i === 0 ? cd('q' + q.b + q.lvl, q.endsIn) : ''}</span><button class="kp-x" data-op="${J({ op: 'cancel', queue: 'build', i })}" data-ok="Cancelled (refunded)">✕</button></div>`).join('') : '<p class="kp-sub">Nothing is being built. Pick something below!</p>';
     const news = (v.alerts || []).slice(-5).reverse().map((a) => `<div class="kp-news ${a.kind}">${esc(a.text)}</div>`).join('');
     return `${scene(v)}
-      <div class="kp-card kp-goal"><div class="kp-goal-ic">${g.icon}</div><div><small>NEXT GOAL</small><b>${g.title}</b><p>${g.text}</p>${g.cost ? `<div class="kp-cost">${chips(g.cost)}</div>` : ''}${g.extra || ''}</div></div>
-      <div class="kp-card"><h3>🧑‍🌾 Workers <span class="kp-h-r">${W.idle > 0 ? `<b class="kp-idle">${W.idle} idle</b>` : `${v.peasants} busy`}</span></h3>${jobs}
+      <div class="kp-card kp-goal"><div class="kp-goal-ic">${g.icon}</div><div class="kp-goal-t"><small>${g.decree ? `📜 ROYAL DECREE ${g.decree.n} OF ${g.decree.of}` : 'NEXT GOAL'}</small><b>${g.title}</b><p>${g.text}</p>${g.cost ? `<div class="kp-cost">${chips(g.cost)}</div>` : ''}${g.decree ? `<div class="kp-reward">🎁 Reward: ${Object.entries(g.decree.reward).map(([r, n]) => `${RI[r]} ${n}`).join(' ')}</div>` : ''}<div class="kp-goal-btns">${g.extra || ''}</div></div></div>
+      <div class="kp-card"><h3>🧑‍🌾 Workers <span class="kp-h-r">${W.idle > 0 ? `<b class="kp-idle">${W.idle} idle</b>` : `${v.peasants} busy`}</span><button class="kp-auto" data-op="${J({ op: 'jobs', auto: true })}" data-ok="⚖️ Workers sent where they’re needed">⚖️ Auto</button></h3>${jobs}
         <p class="kp-sub small">Each person eats 🌾. Food now: <b class="${(v.rates.food || 0) < 0 ? 'kp-neg' : 'kp-pos'}">${rate(v.rates.food || 0)}/s</b></p></div>
       <div class="kp-card"><h3>🏗️ Build queue <span class="kp-h-r">${v.queue.length}/3</span></h3>${queue}</div>
       <div class="kp-card"><h3>⬆️ Grow your castle</h3>${ageCard}</div>
       <div class="kp-card"><h3>🧱 Build</h3>${now.map(card).join('') || '<p class="kp-sub">Nothing new to build right now.</p>'}
-        ${later.length ? `<details class="kp-more"><summary>🔒 Coming in later ages (${later.length})</summary>${later.map((B) => `<div class="kp-lock">${B.icon} <b>${esc(B.name)}</b> <small>${esc(B.why)}</small></div>`).join('')}</details>` : ''}
+        ${later.length ? `<details class="kp-more" data-det="later" ${DET.later ? 'open' : ''}><summary>🔒 Coming in later ages (${later.length})</summary>${later.map((B) => `<div class="kp-lock">${B.icon} <b>${esc(B.name)}</b> <small>${esc(B.why)}</small></div>`).join('')}</details>` : ''}
         ${maxed.length ? `<p class="kp-sub small">✅ Done: ${maxed.map((B) => B.icon + ' ' + esc(B.name)).join(' · ')}</p>` : ''}</div>
       ${news ? `<div class="kp-card"><h3>📜 Royal news</h3>${news}</div>` : ''}`;
   }
@@ -206,10 +245,10 @@
     const marching = v.myArmies.length ? v.myArmies.map((a) => { const T = tileAt(a.to.q, a.to.r), O = ORDER[a.order] || ['🚶', a.order]; return `<div class="kp-qrow"><span>${O[0]}</span><div class="kp-qt"><b>${O[1]} ${tileLabel(v, T || a.to)}</b><div>${unitChips(v, a.units)}</div>${bar('a' + a.id, a.endsIn, a.t1 - a.t0)}</div><span class="kp-cd">${cd('a' + a.id, a.endsIn)}</span></div>`; }).join('') : '<p class="kp-sub">No armies on the move.</p>';
     return `<div class="kp-card kp-center"><button class="btn big kp-sendbtn" data-targets="">🚩 Send an army…</button><p class="kp-sub small">Attack a neighbour, claim land with Settlers, scout, or help an ally. Units at home defend you.</p></div>
       <div class="kp-card"><h3>🏃 On the move</h3>${marching}</div>
-      <div class="kp-card"><h3>🛡️ Your garrisons</h3>${gar}</div>
+      <div class="kp-card"><h3>🛡️ Your garrisons${v.units.some((t) => !t.capital && fighters(t.units)) ? `<button class="kp-auto" data-op="${J({ op: 'recall' })}" data-ok="🏠 Everyone is marching home">🏠 Recall all</button>` : ''}</h3>${gar}</div>
       <div class="kp-card"><h3>⏳ Training <span class="kp-h-r">${v.training.length}/5</span></h3>${training}</div>
       <div class="kp-card"><h3>🎯 Train units <span class="kp-h-r">👥 ${v.pop}/${v.cap}</span></h3>${v.pop >= v.cap ? '<div class="kp-sum warn">🏠 Your kingdom is full (' + v.pop + '/' + v.cap + ' people). Build Houses or found villages to make room.</div>' : ''}${avail.map(tcard).join('')}
-        ${locked.length ? `<details class="kp-more"><summary>🔒 Locked units (${locked.length})</summary>${locked.map((u) => `<div class="kp-lock">${u.icon} <b>${esc(u.name)}</b> <small>⚔️${u.atk} 🛡️${u.def} · ${esc(u.why)}</small></div>`).join('')}</details>` : ''}</div>`;
+        ${locked.length ? `<details class="kp-more" data-det="units" ${DET.units ? 'open' : ''}><summary>🔒 Locked units (${locked.length})</summary>${locked.map((u) => `<div class="kp-lock">${u.icon} <b>${esc(u.name)}</b> <small>⚔️${u.atk} 🛡️${u.def} · ${esc(u.why)}</small></div>`).join('')}</details>` : ''}</div>`;
   }
 
   // ---------- send-army sheets ----------
@@ -384,7 +423,7 @@
   }
   function pageMap(v) {
     const legend = [['p', 'Plains 🌾'], ['f', 'Forest 🪵'], ['h', 'Hills 🪨'], ['g', 'Gold ✨'], ['l', 'Lake'], ['m', 'Mountain']].map(([t, n]) => `<span><i style="background:${T_COLOR[t]}"></i>${n}</span>`).join('');
-    return `<div class="kp-mapwrap"><div id="kp-map-slot"></div>
+    return `<div class="kp-mapwrap"><div id="kp-map-slot" data-keep></div>
       <div class="kp-mapbtns"><button data-zoom="1.3">＋</button><button data-zoom="0.77">－</button><button data-center="${v.me.home.q},${v.me.home.r}">🏰</button></div></div>
       <p class="kp-sub small kp-center">Drag to move · pinch to zoom · <b>tap a tile</b> for actions. Numbers = soldiers there.</p>
       <div class="kp-legend">${legend}<span><i style="background:${esc(v.me.color)}"></i>Your land</span></div>
@@ -433,8 +472,18 @@
   }
 
   // ---------- 🤝 Allies ----------
+  // The Royal Council: one big button per kingdom, your vote highlighted, live tally.
+  function councilHtml(v) {
+    const C = v.council; if (!C) return '';
+    const votes = Object.fromEntries((C.tally || []).map((t) => [t.id, t.n]));
+    const list = v.kingdoms.filter((k) => k.id !== v.me.id).sort((a, b) => (votes[b.id] || 0) - (votes[a.id] || 0) || b.score - a.score);
+    return `<h3>${esc(C.icon)} Royal Council <span class="kp-h-r">${cd('council' + C.id, C.endsIn)}</span></h3><p class="kp-ask"><b>${esc(C.ask)}</b><br><small class="kp-sub">${esc(C.text)} ${C.votes}/${C.of} voted.</small></p>
+      <div class="kp-votes">${list.map((k) => `<button class="kp-vote ${C.mine === k.id ? 'on' : ''}" data-op="${J({ op: 'vote', to: k.id })}" data-ok="🗳️ You voted for ${esc(k.name)}" data-close-after>${dot(k.color)}<span class="kp-kt"><b>${k.avatar ? esc(k.avatar) + ' ' : ''}${esc(k.name)}</b><small>⭐ ${k.score}${k.rel && k.rel !== 'other' ? ' · ' + esc(k.rel) : ''}</small></span><em>${votes[k.id] ? '🗳️'.repeat(Math.min(5, votes[k.id])) + (votes[k.id] > 5 ? '+' : '') : ''}</em>${C.mine === k.id ? '<span class="kp-tick">✓</span>' : ''}</button>`).join('')}</div>`;
+  }
   function pageAllies(v) {
     const D = v.diplomacy, me = v.me, out = [];
+    if (v.council) out.push(`<div class="kp-card kp-council">${councilHtml(v)}</div>`);
+    if (v.bounties && v.bounties.length) out.push(`<div class="kp-card"><h3>💰 Your bounties</h3>${v.bounties.map((b) => `<div class="kp-offer"><div>💰 <b>${b.gold}</b> 🪙 on <b>${esc(b.name)}</b> <small class="kp-cd">${cd('bo' + b.on, b.expiresIn)}</small></div></div>`).join('')}<p class="kp-sub small">Whoever takes one of their villages or their capital collects it. Unclaimed gold comes back.</p></div>`);
     if (D.in.length) out.push(`<div class="kp-card kp-offers"><h3>📨 Offers for you</h3>${D.in.map((o) => `<div class="kp-offer"><div>${dot((kOf(o.from) || {}).color)}<b>${esc(o.name)}</b> ${o.kind === 'ally' ? 'wants to be your <b>ally</b> 🤝' : `offers ${chips(o.give)} for ${chips(o.get)}`} <small class="kp-cd">${cd('o' + o.id, o.expiresIn)}</small></div>
       <div class="kp-row"><button class="btn small green" data-op="${J(o.kind === 'ally' ? { op: 'allyAnswer', id: o.id, from: o.from, yes: true } : { op: 'tradeAnswer', id: o.id, yes: true })}" data-ok="${o.kind === 'ally' ? '🤝 Allied!' : '⚖️ Trade done!'}">Accept</button><button class="btn small ghost" data-op="${J(o.kind === 'ally' ? { op: 'allyAnswer', id: o.id, from: o.from, yes: false } : { op: 'tradeAnswer', id: o.id, yes: false })}">Decline</button></div></div>`).join('')}</div>`);
     if (D.out.length) out.push(`<div class="kp-card"><h3>📤 Your offers</h3>${D.out.map((o) => `<div class="kp-offer"><div>${o.kind === 'ally' ? '🤝 Alliance' : `⚖️ ${chips(o.give)} for ${chips(o.get)}`} → <b>${esc(o.name)}</b> <small class="kp-cd">${cd('o' + o.id, o.expiresIn)}</small></div>${o.kind === 'trade' ? `<button class="btn small ghost" data-op="${J({ op: 'tradeAnswer', id: o.id })}" data-ok="Offer withdrawn">Withdraw</button>` : '<small class="kp-sub">waiting…</small>'}</div>`).join('')}</div>`);
@@ -449,7 +498,7 @@
       const A = D.alliance, pct = Math.min(100, Math.round(100 * A.monument / Math.max(1, A.need)));
       out.push(`<div class="kp-card kp-alliance"><h3>🤝 Your alliance</h3><div class="kp-members">${A.members.map((m) => `<span>${dot((kOf(m.id) || {}).color)}${esc(m.id === me.id ? 'You' : m.name)}</span>`).join('')}</div>
         ${monumentOn ? `<h4>🕊️ Peace Monument</h4><div class="kp-pbar gold"><i style="width:${pct}%"></i><span>${A.monument} / ${A.need} 🪙+🪨</span></div><p class="kp-sub small">When every free kingdom is in one alliance and the monument is done, you all win together.</p>
-        <div class="kp-row wrap">${[[{ gold: 50 }, '50 🪙'], [{ stone: 50 }, '50 🪨'], [{ gold: 200 }, '200 🪙'], [{ stone: 200 }, '200 🪨']].map(([r, l]) => `<button class="btn small" data-op="${J({ op: 'monument', res: r })}" data-ok="🕊️ Thank you! The monument grows." data-afford="${J(r)}">Give ${l}</button>`).join('')}</div>` : ''}
+        ${me.age < (v.monumentAge || 4) ? `<p class="kp-why">🔒 You can add to the monument from Age ${v.monumentAge || 4}.</p>` : `<div class="kp-row wrap">${[[{ gold: 50 }, '50 🪙'], [{ stone: 50 }, '50 🪨'], [{ gold: 200 }, '200 🪙'], [{ stone: 200 }, '200 🪨']].map(([r, l]) => `<button class="btn small" data-op="${J({ op: 'monument', res: r })}" data-ok="🕊️ Thank you! The monument grows." data-afford="${J(r)}" ${afford(r) ? '' : 'disabled'}>Give ${l}</button>`).join('')}</div>`}` : ''}
         <button class="link kp-leave" data-op="${J({ op: 'leaveAlly' })}" data-confirm="Leave the alliance? You’ll be marked 🗡️ Traitor for 3 minutes and the monument loses 30%.">🗡️ Leave alliance</button></div>`);
     } else out.push(`<div class="kp-card kp-sub small">🤝 Allies can’t attack each other, see each other’s land, and can send soldiers to help. ${monumentOn ? 'Together they can build the 🕊️ Peace Monument.' : ''} Tap a kingdom below to propose.</div>`);
     if (D.market) {
@@ -464,12 +513,13 @@
     const relTxt = { ally: '🤝 ally', liege: '⛓️ your liege', vassal: '⛓️ your vassal', neighbour: '🏡 neighbour', other: '' };
     out.push(`<div class="kp-card"><h3>👑 Kingdoms <span class="kp-h-r">${others.length}</span></h3>${others.map((k) => {
       const open = kOpen === k.id, canAlly = k.rel !== 'ally' && !me.vassalOf && !k.vassalOf;
-      return `<div class="kp-king ${open ? 'open' : ''}"><button class="kp-krow" data-kopen="${k.id}">${dot(k.color)}<span class="kp-kt"><b>${esc(k.name)}</b><small>${esc(k.owner || '')} · ${ageInfo(v, k.age).icon} Age ${k.age} · ⭐ ${k.score} · ${k.dist} hexes</small></span>
-        <span class="kp-badges">${relTxt[k.rel] ? `<span class="kp-rel ${k.rel}">${relTxt[k.rel]}</span>` : ''}${k.traitor ? '<span class="kp-rel bad">🗡️ traitor</span>' : ''}${k.vassalOf && k.rel !== 'vassal' ? '<span class="kp-rel">⛓️ vassal</span>' : ''}${k.msg ? `<span class="kp-bubble">${esc(k.msg.text)}</span>` : ''}</span></button>
+      return `<div class="kp-king ${open ? 'open' : ''}"><button class="kp-krow" data-kopen="${k.id}">${dot(k.color)}<span class="kp-kt"><b>${k.avatar ? esc(k.avatar) + ' ' : ''}${esc(k.name)}</b><small>${esc(k.owner || '')} · ${ageInfo(v, k.age).icon} Age ${k.age} · ⭐ ${k.score} · ${k.dist} hexes</small></span>
+        <span class="kp-badges">${relTxt[k.rel] ? `<span class="kp-rel ${k.rel}">${relTxt[k.rel]}</span>` : ''}${k.traitor ? '<span class="kp-rel bad">🗡️ traitor</span>' : ''}${k.marked ? '<span class="kp-rel bad">🎯 coalition</span>' : ''}${k.bounty ? `<span class="kp-rel bad">💰 ${k.bounty}</span>` : ''}${k.vassalOf && k.rel !== 'vassal' ? '<span class="kp-rel">⛓️ vassal</span>' : ''}${k.msg ? `<span class="kp-bubble">${esc(k.msg.text)}</span>` : ''}</span></button>
         ${open ? `<div class="kp-kacts"><button class="btn small green" data-op="${J({ op: 'ally', to: k.id })}" data-ok="🤝 Proposal sent to ${esc(k.name)}" ${canAlly ? '' : 'disabled'}>🤝 Ally</button>
           <button class="btn small" data-sheet="${J({ kind: 'gift', to: k.id, res: {} })}" ${D.canGift ? '' : 'disabled'}>🎁 Gift</button>
           <button class="btn small" data-sheet="${J({ kind: 'trade', to: k.id, give: {}, get: {} })}">⚖️ Trade</button>
           <button class="btn small" data-sheet="${J({ kind: 'msg', to: k.id })}">💬 Say</button>
+          <button class="btn small" data-sheet="${J({ kind: 'bounty', to: k.id, gold: 100 })}" ${k.rel === 'ally' ? 'disabled' : ''}>💰 Bounty</button>
           <button class="btn small ghost" data-center="${k.home.q},${k.home.r}">📍 Map</button>${D.canGift ? '' : '<small class="kp-sub">🎁 Gifts need a Market (Age 3).</small>'}</div>` : ''}</div>`;
     }).join('')}<button class="btn small ghost kp-wide" data-sheet="${J({ kind: 'msg', to: null })}">📣 Say something to everyone</button></div>`);
     return out.join('');
@@ -481,6 +531,10 @@
   function diploSheet(v) {
     const S = sheet, k = S.to ? kOf(S.to) : null, nm = k ? `${dot(k.color)}${esc(k.name)}` : 'everyone';
     if (S.kind === 'msg') return `<h3>💬 Say to ${nm}</h3><p class="kp-sub small">Shows up next to your castle on the TV.</p><div class="kp-presets">${Object.entries(v.presets).map(([p, t]) => `<button data-op="${J({ op: 'message', preset: p, to: S.to || undefined })}" data-ok="💬 Said!" data-close-after>${esc(t)}</button>`).join('')}</div>`;
+    if (S.kind === 'vote') return v.council ? councilHtml(v) : '<h3>🗳️ The council has closed</h3><p class="kp-sub">Watch the TV for the result.</p>';
+    if (S.kind === 'bounty') return `<h3>💰 Bounty on ${nm}</h3><p class="kp-sub small">Put gold on their head. Whoever takes one of their villages or their capital collects it all. Unclaimed after 5 minutes, it comes back to you. Everyone sees it on the TV!</p>
+      <div class="kp-job"><span class="kp-job-ic">🪙</span><div class="kp-job-t"><b>Gold</b><small>you have ${resB('gold')}</small></div><div class="kp-step"><button data-bg="-50" ${S.gold <= 50 ? 'disabled' : ''}>−</button><b>${S.gold}</b><button data-bg="50">+</button></div></div>
+      <button class="btn big pink kp-wide" data-op="${J({ op: 'bounty', to: S.to, gold: S.gold })}" data-ok="💰 Bounty posted!" data-close-after data-afford="${J({ gold: S.gold })}" ${afford({ gold: S.gold }) ? '' : 'disabled'}>💰 Post a ${S.gold}-gold bounty</button>`;
     if (S.kind === 'gift') { const tot = Object.values(S.res).reduce((a, n) => a + n, 0); return `<h3>🎁 Gift to ${nm}</h3>${resSteppers(S.res, 'res')}<button class="btn big green kp-wide" data-op="${J({ op: 'gift', to: S.to, res: S.res })}" data-ok="🎁 Gift sent!" data-close-after ${tot ? '' : 'disabled'}>Send gift</button>`; }
     if (S.kind === 'trade') {
       const g = Object.values(S.give).reduce((a, n) => a + n, 0), w = Object.values(S.get).reduce((a, n) => a + n, 0);
@@ -540,7 +594,7 @@
     if (!fresh.length) return;
     const bad = fresh.filter((a) => a.kind === 'bad'), pick = bad.length ? bad[bad.length - 1] : fresh[fresh.length - 1];
     CTX.toast(pick.text + (fresh.length > 1 ? ` (+${fresh.length - 1} more)` : ''));
-    if (bad.length) { CTX.vibrate(/⚔️|🔥/.test(pick.text) ? [200, 80, 200] : 120); CTX.sfx('sting'); } else CTX.sfx(pick.kind === 'good' ? 'bell' : 'click');
+    if (bad.length) { CTX.vibrate(/⚔️|🔥/.test(pick.text) ? [200, 80, 200] : 120); CTX.sfx('sting'); } else { CTX.sfx(pick.kind === 'good' ? 'bell' : 'click'); if (pick.kind === 'good') CTX.vibrate([20, 40, 30]); }
   }
 
   // ---------- events (one delegated listener) ----------
@@ -601,17 +655,22 @@
     if (d.sheet) { sheet = JSON.parse(d.sheet); return CTX.redraw(); }
     if (d.rs) { const o = sheet[d.rs]; o[d.r] = Math.max(0, (o[d.r] || 0) + Number(d.d)); if (!o[d.r]) delete o[d.r]; return CTX.redraw(); }
     if (d.mk) { market[d.mk] = d.r; if (market.give === market.get) market.get = ['food', 'wood', 'stone', 'gold'].find((x) => x !== market.give); return CTX.redraw(); }
+    if (d.bg) { sheet.gold = Math.max(50, (sheet.gold || 100) + Number(d.bg)); return CTX.redraw(); }
     if (d.mkn) { market.n = Math.max(30, market.n + Number(d.mkn)); return CTX.redraw(); }
   }
 
   // ---------- main ----------
+  // Screens update in place (BOX.morph): buttons stay under the finger, no flicker, scroll stays put.
+  // The map slot is data-keep, so the live canvas inside it survives every update.
   function paint(el, html) {
-    if (el.querySelector(':scope > .kp-root') && html === lastHtml) return false;
-    lastHtml = html; el.innerHTML = `<div class="kp-root">${html}</div>`; return true;
+    let root = el.firstElementChild;
+    if (!root || !root.classList.contains('kp-root') || el.children.length !== 1) { el.innerHTML = '<div class="kp-root"></div>'; root = el.firstElementChild; lastHtml = ''; }
+    if (html === lastHtml) return false;
+    lastHtml = html; BOX.morph(root, html); return true;
   }
   function phone(el, v, ctx, view) {
     CTX = ctx; VIEW = view;
-    if (!el._kpBound) { el._kpBound = true; el.addEventListener('click', onClick); el.addEventListener('change', (e) => { if (e.target.id === 'kp-name') nameDraft = e.target.value; }); }
+    if (!el._kpBound) { el._kpBound = true; el.addEventListener('click', onClick); el.addEventListener('change', (e) => { if (e.target.id === 'kp-name') nameDraft = e.target.value; }); el.addEventListener('toggle', (e) => { const d = e.target; if (d && d.dataset && d.dataset.det) DET[d.dataset.det] = d.open; }, true); }
     if (!ticker) ticker = setInterval(tick, 250);
     if (!v) return;
     if (v !== V) { V = v; recvAt = Date.now(); if (v.res) base = { res: { ...v.res }, rates: { ...v.rates }, at: Date.now() }; }
@@ -628,9 +687,12 @@
     if (sheet && sheet.kind === 'tile' && !tileAt(sheet.q, sheet.r)) sheet = null;
     const pages = { kingdom: pageKingdom, army: pageArmy, map: pageMap, allies: pageAllies, research: pageResearch };
     const offers = v.diplomacy.in.length;
-    const nav = [['kingdom', '🏰', 'Kingdom', curWorkers(v).idle > 0 ? '!' : ''], ['army', '⚔️', 'Army', v.incoming.length ? '!' : ''], ['map', '🗺️', 'Map', ''], ['allies', '🤝', 'Allies', offers ? String(offers) : ''], ['research', '🔬', 'Research', '']]
+    const nav = [['kingdom', '🏰', 'Kingdom', curWorkers(v).idle > 0 ? '!' : ''], ['army', '⚔️', 'Army', v.incoming.length ? '!' : ''], ['map', '🗺️', 'Map', ''], ['allies', '🤝', 'Allies', offers ? String(offers) : v.council && !v.council.mine ? '🗳️' : ''], ['research', '🔬', 'Research', '']]
       .map(([k, i, l, badge]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}"><span class="kp-nic">${i}</span>${l}${badge ? `<em>${badge}</em>` : ''}</button>`).join('');
     let sh = '';
+    if (sheet) {
+      if (sheet.kind === 'vote' && !v.council) sheet = null;
+    }
     if (sheet) {
       const body = sheet.kind === 'tile' ? tileSheet(v) : sheet.kind === 'send' ? sendSheet(v) : sheet.kind === 'targets' ? `<h3>🚩 Where to?</h3>${targetList(v)}` : diploSheet(v);
       sh = `<div class="kp-sheet-bg" data-close></div><div class="kp-sheet"><button class="kp-sheet-x" data-close>✕</button>${body}</div>`;

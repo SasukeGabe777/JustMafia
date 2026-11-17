@@ -229,3 +229,28 @@
 .kp-card .btn.ghost, .kp-sheet .btn.ghost { color: var(--kp-ink); border-color: var(--kp-line); background: rgba(255, 255, 255, 0.5); }
 .kp-krow::after { content: '›'; font-size: 22px; color: var(--kp-ink2); margin-left: 2px; }
 .kp-king.open .kp-krow::after { transform: rotate(90deg); }
+
+/* ---------- v2: decrees, council, bounties, status tags, quick buttons ---------- */
+.kp-goal-t { flex: 1; min-width: 0; }
+.kp-goal .kp-goal-t > b { display: block; font-size: 17px; }
+.kp-reward { display: inline-block; margin: 2px 0 6px; padding: 2px 9px; border-radius: 99px; background: #fff; border: 2px dashed var(--kp-gold); font-size: 13px; font-weight: 800; }
+.kp-goal-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.kp-goal-btns .btn.small { min-height: 44px; }
+.kp-auto { margin-left: 8px; border: 2px solid var(--kp-line); background: #fff7e3; color: var(--kp-ink); font: inherit; font-size: 13px; font-weight: 800; padding: 5px 10px; border-radius: 99px; min-height: 34px; white-space: nowrap; }
+.kp-auto:active { transform: translateY(1px); background: var(--kp-gold); }
+.kp-title { flex-wrap: nowrap; }
+.kp-tag { font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 99px; white-space: nowrap; flex: none; }
+.kp-tag.good { background: #ffcf6b; color: #5a2a00; }
+.kp-tag.bad { background: #ff8a7a; color: #3a0800; }
+.kp-alert.council { background: linear-gradient(90deg, #5b3a9e, #7d55c7); font-weight: 700; }
+.kp-alert.council.vote { animation: kp-glow 1.4s ease-in-out infinite; }
+@keyframes kp-glow { 50% { box-shadow: 0 0 0 4px rgba(200, 160, 255, 0.55); } }
+.kp-council { border-color: #8a63d2; background: linear-gradient(180deg, #f3ecff, #e2d4fb); }
+.kp-ask { margin: 0 0 8px; font-size: 16px; }
+.kp-votes { display: flex; flex-direction: column; gap: 6px; }
+.kp-vote { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 50px; padding: 6px 10px; border: 2px solid var(--kp-line); border-radius: 12px; background: #fffaf0; font: inherit; color: var(--kp-ink); text-align: left; }
+.kp-vote em { font-style: normal; font-size: 13px; white-space: nowrap; }
+.kp-vote.on { border-color: #6a3fc0; background: #e9ddff; box-shadow: 0 0 0 2px #6a3fc0 inset; }
+.kp-tick { font-size: 20px; color: #6a3fc0; font-weight: 900; }
+.kp-sheet .kp-votes { max-height: 55vh; overflow-y: auto; }
+.kp-root .btn.ghost { color: var(--kp-ink); border-color: var(--kp-line); background: #fff7e3; }
