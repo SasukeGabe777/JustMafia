@@ -120,6 +120,7 @@ const COLLECT = `async (key, gi) => {
     if (steps.some((s) => /^step (one|two|three)\\.?$/i.test(String(s.text || '').trim()))) return { lines: [], note: 'unfinished (placeholder how-to steps), skipped' };
     steps.forEach((s, i) => add('step' + (i + 1), s.say || [s.title, s.text, s.phone].filter(Boolean).join('. '), spec));
     if (steps.length) add('done', 'That’s it. Let’s play!', spec);
+    for (const t of [].concat(I.story || [])) add('story', t, spec);
   }
   return { lines: out, note: '' };
 }`;
