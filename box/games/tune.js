@@ -26,6 +26,7 @@ const defaults = { songs: 2, clip: 4, time: 30 };
 
 const SUBMIT_MS = 180000, CARD_MS = 3500, LEAD_MS = 1200, REVEAL_MS = 15000, MIN_REVEAL_MS = 7000, SCORE_MS = 8000;
 const LISTENS = 3, MAX_SONGS = 16, MAX_TRIES = 6, MAX_GUESS = 80, GUESS_GAP_MS = 400;
+const SINGER_TRIES = 3;
 const TOP = 300, BOTTOM = 100, ARTIST_BONUS = 50, SWEET = 150, EASY = 50;
 const PREVIEW_S = 30;
 const RATES = [
@@ -94,7 +95,12 @@ function guessForms(text, artist) {
   for (const part of base(text).split(/\s+[-–—/|]\s+|\s+by\s+/)) out.add(tidy(dropFeat(part)));
   return [...out].filter(Boolean);
 }
-function matchTitle(text, title, artist) { const T = titleForms(title); return guessForms(text, artist).some((g) => T.some((t) => close(g, t))); }
+function matchTitle(text, title, artist) {
+  const T = titleForms(title), G = guessForms(text, artist);
+  if (G.some((g) => T.some((t) => close(g, t)))) return true;
+  // The whole title inside a longer guess counts too ("shape of you ed sheeran"), for titles of 5+ letters.
+  return G.some((g) => T.some((t) => t.replace(/ /g, '').length >= 5 && ` ${g} `.includes(` ${t} `)));
+}
 function matchArtist(text, artist) {
   const A = artistForms(artist), g = tidy(dropFeat(base(text)));
   const parts = [g, ...base(text).split(/\s+[-–—/|]\s+|\s+by\s+/).map((p) => tidy(p))];
@@ -202,7 +208,7 @@ class Game {
     if (this.idx + 1 >= this.list.length) return this.end();
     this.idx++;
     const e = this.list[this.idx];
-    this.cur = { e, got: new Map(), tries: new Map(), artist: new Set(), wrong: [], ratings: new Map(), result: null };
+    this.cur = { e, got: new Map(), tries: new Map(), singerTries: new Map(), artist: new Set(), wrong: [], ratings: new Map(), result: null };
     this.phase = 'card';
     if (this.live) Promise.resolve().then(() => this.lib.refresh(e.song)).catch(() => {});
     this.room.fx('round');
@@ -229,37 +235,49 @@ class Game {
     else if (this.phase === 'guess' && this.guessers().every((p) => this.doneGuessing(p.id))) this.reveal();
     else if (this.phase === 'reveal') this.maybeScore();
   }
-  guess(p, text) {
+  // A guess: the song title (text) and/or the singer (singer, its own box on the phone for a
+  // bonus). Title guesses use up the 6 tries; singer guesses have their own 3.
+  guess(p, text, singer) {
     const c = this.cur, now = this.room.now();
     if (this.phase === 'card') return { ok: false, error: 'Wait for the music!' };
     if (this.phase !== 'guess' || !c) return { ok: false, error: 'No guessing right now.' };
     if (c.e.by === p.id) return { ok: false, error: 'That’s your song! No guessing your own 😉' };
-    if (c.got.has(p.id)) return { ok: false, error: 'You already got it!' };
-    if (typeof text !== 'string') return { ok: false, error: 'Type the song title.' };
-    text = text.replace(/[\u0000-\u001f]/g, ' ').trim();
-    if (!text) return { ok: false, error: 'Type the song title.' };
-    if (text.length > MAX_GUESS) return { ok: false, error: `Too long! ${MAX_GUESS} letters max.` };
-    const tries = c.tries.get(p.id) || 0;
-    if (tries >= MAX_TRIES) return { ok: false, error: 'Out of guesses for this song.' };
+    const clean = (x) => (typeof x === 'string' ? x.replace(/[\u0000-\u001f]/g, ' ').trim() : '');
+    text = clean(text); singer = clean(singer);
+    if (text.length > MAX_GUESS || singer.length > MAX_GUESS) return { ok: false, error: `Too long! ${MAX_GUESS} letters max.` };
+    if (c.got.has(p.id)) text = ''; // already named the title: only the singer box is left
+    if (c.artist.has(p.id)) singer = '';
+    if (!text && !singer) return { ok: false, error: c.got.has(p.id) ? 'You already got it!' : 'Type the song title.' };
+    const tries = c.tries.get(p.id) || 0, sTries = c.singerTries.get(p.id) || 0;
+    if (text && tries >= MAX_TRIES) { if (!singer) return { ok: false, error: 'Out of guesses for this song.' }; text = ''; }
+    if (singer && sTries >= SINGER_TRIES) { if (!text) return { ok: false, error: 'Out of singer guesses.' }; singer = ''; }
     const last = this.lastGuess.get(p.id) || 0;
     if (now - last < GUESS_GAP_MS) return { ok: false, error: 'Easy! One guess at a time.', quiet: true };
     this.lastGuess.set(p.id, now);
-    c.tries.set(p.id, tries + 1);
     const song = c.e.song, st = this.stat(p.id);
-    let artist = false;
-    if (!c.artist.has(p.id) && matchArtist(text, song.artist)) { c.artist.add(p.id); this.add(p.id, ARTIST_BONUS); st.artists++; artist = true; }
+    let artist = false, singerWrong = false;
+    const bonus = () => { c.artist.add(p.id); this.add(p.id, ARTIST_BONUS); st.artists++; artist = true; };
+    if (singer) { c.singerTries.set(p.id, sTries + 1); if (matchArtist(singer, song.artist)) bonus(); else singerWrong = true; }
+    if (!text) {
+      if (artist) this.room.fx('artist', { id: p.id });
+      this.check();
+      return { ok: true, right: c.got.has(p.id), artist, singerWrong, singerLeft: SINGER_TRIES - (c.singerTries.get(p.id) || 0) };
+    }
+    c.tries.set(p.id, tries + 1);
+    // The title box can name the singer too ("toxic by britney spears").
+    if (!c.artist.has(p.id) && matchArtist(text, song.artist)) bonus();
     if (matchTitle(text, song.title, song.artist)) {
       const ms = Math.max(0, now - c.t0), pts = this.worth(now);
       c.got.set(p.id, { at: now, ms, base: pts, order: c.got.size + 1 });
       st.named++; if (st.fastest == null || ms < st.fastest) st.fastest = ms;
       this.room.fx('right', { id: p.id });
       this.check();
-      return { ok: true, right: true, base: pts, artist };
+      return { ok: true, right: true, base: pts, artist, singerWrong, singerLeft: SINGER_TRIES - (c.singerTries.get(p.id) || 0) };
     }
     if (c.wrong.length < 40) c.wrong.push({ id: p.id, text: text.slice(0, 40) });
     if (artist) this.room.fx('artist', { id: p.id });
     this.check();
-    return { ok: true, right: false, artist, left: MAX_TRIES - tries - 1 };
+    return { ok: true, right: false, artist, singerWrong, left: MAX_TRIES - tries - 1, singerLeft: SINGER_TRIES - (c.singerTries.get(p.id) || 0) };
   }
   botsGuess() {
     const c = this.cur, T = this.s.time * 1000, others = BOT_SONGS.filter((x) => x.title !== c.e.song.title);
@@ -379,7 +397,7 @@ class Game {
     if (!this.points.has(p.id)) this.joined(p);
     if (m.op === 'add') return this.addSong(p, m.id, m.start);
     if (m.op === 'remove') return this.removeSong(p, m.key);
-    if (m.op === 'guess') return this.guess(p, m.text);
+    if (m.op === 'guess') return this.guess(p, m.text, m.singer);
     if (m.op === 'rate') return this.rate(p, m.n);
     return { ok: false, error: 'Unknown move.' };
   }
@@ -456,7 +474,7 @@ class Game {
     if (mineSong || this.phase === 'reveal' || this.phase === 'score') v.song = this.songPublic(c.e.song);
     if (this.phase === 'card' || this.phase === 'guess') v.clipInfo = this.clipInfo(false);
     const g = c.got.get(p.id);
-    v.my = { got: !!g, base: g ? g.base : 0, order: g ? g.order : 0, tries: c.tries.get(p.id) || 0, left: MAX_TRIES - (c.tries.get(p.id) || 0), artist: c.artist.has(p.id), rating: c.ratings.get(p.id) || 0 };
+    v.my = { got: !!g, base: g ? g.base : 0, order: g ? g.order : 0, tries: c.tries.get(p.id) || 0, left: MAX_TRIES - (c.tries.get(p.id) || 0), artist: c.artist.has(p.id), singerLeft: SINGER_TRIES - (c.singerTries.get(p.id) || 0), rating: c.ratings.get(p.id) || 0 };
     v.gotCount = c.got.size; v.eligible = this.guessers().length;
     if (this.phase === 'score') {
       const r = c.result, row = r.rows.find((x) => x.id === p.id);

@@ -1,7 +1,7 @@
 'use strict';
 // JustMarble: TV and phone screens. Every phone is one piece of a wooden labyrinth; the phone
-// holding the marble runs the physics from its tilt sensor (or a finger drag / arrow keys when
-// there is no sensor) and tells the server when the marble rolls over the edge to a neighbour,
+// holding the marble runs the physics: the player holds a finger on the board and drags the way
+// the marble should roll (a virtual joystick; arrow keys on a laptop) and tells the server when the marble rolls over the edge to a neighbour,
 // drops in a hole, grabs a gem or reaches the goal. The TV shows the phones as a map and only
 // uncovers the maze where the marble has been, until the end of the round.
 (function () {
@@ -99,30 +99,14 @@
     g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.ellipse(x - r * 0.35, y - r * 0.42, r * 0.22, r * 0.14, -0.6, 0, Math.PI * 2); g.fill();
   }
 
-  // ---------------- phone: tilt ----------------
-  const TILT = { on: false, b: 0, g: 0, b0: 0, g0: 0, got: false, asked: false, drag: null, keys: { x: 0, y: 0 } };
-  function onOrient(e) { if (e.beta == null || e.gamma == null) return; TILT.b = e.beta; TILT.g = e.gamma; if (!TILT.got) { TILT.got = true; TILT.b0 = e.beta; TILT.g0 = e.gamma; } }
-  function listenTilt() { if (TILT.on) return; TILT.on = true; window.addEventListener('deviceorientation', onOrient); }
-  async function askTilt() {
-    TILT.asked = true;
-    try {
-      if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        const r = await DeviceOrientationEvent.requestPermission(); if (r !== 'granted') return false;
-      }
-    } catch { return false; }
-    listenTilt(); return true;
-  }
-  function level() { TILT.b0 = TILT.b; TILT.g0 = TILT.g; }
-  // Tilt as an acceleration direction in board space (−1…1 each way).
+  // ---------------- phone: drag to roll ----------------
+  // Hold a finger on the board and drag: the marble rolls the way you drag, harder the further
+  // you drag (a virtual joystick). (Phone tilt sensors were unreliable in browsers, so it's drag.)
+  const TILT = { drag: null, keys: { x: 0, y: 0 } };
   function tiltVec() {
     if (TILT.drag) return { x: clamp(TILT.drag.dx, -1, 1), y: clamp(TILT.drag.dy, -1, 1) };
     if (TILT.keys.x || TILT.keys.y) return { x: TILT.keys.x * 0.6, y: TILT.keys.y * 0.6 };
-    if (!TILT.got) return { x: 0, y: 0 };
-    const rad = Math.PI / 180;
-    let x = Math.sin(clamp(TILT.g - TILT.g0, -60, 60) * rad), y = Math.sin(clamp(TILT.b - TILT.b0, -60, 60) * rad);
-    const ang = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
-    if (ang === 90) [x, y] = [y, -x]; else if (ang === -90 || ang === 270) [x, y] = [-y, x]; else if (ang === 180) [x, y] = [-x, -y];
-    return { x, y };
+    return { x: 0, y: 0 };
   }
   window.addEventListener('keydown', (e) => { const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!k || !document.body.classList.contains('g-marble')) return; if (k[0]) TILT.keys.x = k[0]; if (k[1]) TILT.keys.y = k[1]; e.preventDefault(); });
   window.addEventListener('keyup', (e) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') TILT.keys.x = 0; if (e.key === 'ArrowUp' || e.key === 'ArrowDown') TILT.keys.y = 0; });
@@ -221,6 +205,12 @@
       if (PH.gone) { const k = clamp((performance.now() - PH.gone.at) / 300, 0, 1); sc = 1 - k; }
       drawMarble(g, ox + x * cs, oy + y * cs, cs, sc, PH.spin);
     }
+    if (TILT.drag && PH.active && !PH.gone) { // the joystick under the finger
+      const jx = TILT.drag.ox, jy = TILT.drag.oy, rad = Math.max(40, Wd / 7), kx = clamp(TILT.drag.dx, -1, 1), ky = clamp(TILT.drag.dy, -1, 1);
+      g.fillStyle = 'rgba(43, 23, 10, 0.25)'; g.strokeStyle = 'rgba(255, 210, 63, 0.8)'; g.lineWidth = 3; g.beginPath(); g.arc(jx, jy, rad, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.strokeStyle = 'rgba(255, 210, 63, 0.9)'; g.beginPath(); g.moveTo(jx, jy); g.lineTo(jx + kx * rad, jy + ky * rad); g.stroke();
+      g.fillStyle = 'rgba(255, 210, 63, 0.95)'; g.beginPath(); g.arc(jx + kx * rad, jy + ky * rad, rad * 0.32, 0, Math.PI * 2); g.fill();
+    }
   }
   function phoneLoop(tm) {
     PH.raf = requestAnimationFrame(phoneLoop);
@@ -232,9 +222,9 @@
     const pad = el.querySelector('#mb-pad'); if (!pad) return;
     if (!pad.querySelector('canvas')) {
       pad.innerHTML = '<canvas></canvas>'; PH.cv = pad.querySelector('canvas');
-      // No tilt sensor (a laptop) or it's off: drag on the board to tilt it.
-      pad.addEventListener('pointerdown', (e) => { pad.setPointerCapture(e.pointerId); TILT.drag = { sx: e.clientX, sy: e.clientY, dx: 0, dy: 0 }; e.preventDefault(); });
-      pad.addEventListener('pointermove', (e) => { if (!TILT.drag) return; const k = Math.max(60, pad.clientWidth / 5); TILT.drag.dx = (e.clientX - TILT.drag.sx) / k; TILT.drag.dy = (e.clientY - TILT.drag.sy) / k; });
+      // Hold and drag anywhere on the board: a joystick appears where the finger went down.
+      pad.addEventListener('pointerdown', (e) => { pad.setPointerCapture(e.pointerId); const r = pad.getBoundingClientRect(); TILT.drag = { sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, dx: 0, dy: 0 }; if (PH.active && !PH.gone) PH.ctx.haptic('tap'); e.preventDefault(); });
+      pad.addEventListener('pointermove', (e) => { if (!TILT.drag) return; const k = Math.max(40, pad.clientWidth / 7); TILT.drag.dx = (e.clientX - TILT.drag.sx) / k; TILT.drag.dy = (e.clientY - TILT.drag.sy) / k; });
       const up = () => { TILT.drag = null; }; pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', up);
     } else PH.cv = pad.querySelector('canvas');
     if (!PH.raf) PH.raf = requestAnimationFrame(phoneLoop);
@@ -264,7 +254,7 @@
     if (v.marble && v.marble.seq !== PH.seq) {
       const fresh = !PH.active || PH.gone;
       Object.assign(PH, { seq: v.marble.seq, x: v.marble.x, y: v.marble.y, vx: v.marble.vx || 0, vy: v.marble.vy || 0, active: true, gone: null, fall: 0, sentFinish: false });
-      if (fresh) { level(); ctx.haptic('turn'); ctx.sfx('pop'); if (v.mirror) ctx.toast('🪞 Your board tilts backwards!'); }
+      if (fresh) { ctx.haptic('turn'); ctx.sfx('pop'); if (v.mirror) ctx.toast('🪞 Your board rolls backwards!'); }
     }
     if (!v.marble && v.phase === 'roll' && PH.active && !PH.gone && !PH.fall) PH.active = false;
     if (v.phase !== 'roll') { PH.active = false; PH.gone = null; PH.fall = 0; }
@@ -281,16 +271,16 @@
         ${b ? miniMap(b.rows, b.cols, b.owners, -1, v.holderTile) : ''}${v.holder ? `<p class="muted">🔮 The marble is on <b>${esc(v.holder)}</b>'s board.</p>` : ''}</div></div>`);
     }
     if (v.phase === 'lineup') {
-      const nb = v.nb, needTilt = !TILT.got && !TILT.asked;
+      const nb = v.nb;
       BOX.morph(el, `<div class="mb-ph">${head}<div class="card-box mb-line">
         <h3>You're board ${v.tile + 1}</h3>
         ${miniMap(v.rows, v.cols, v.owners, v.tile, -1)}
         <p class="mb-nb">${nb.W ? `⬅ <b>${esc(nb.W)}</b>` : ''} ${nb.E ? `<b>${esc(nb.E)}</b> ➡` : ''}${nb.N ? `<br>⬆ above you: <b>${esc(nb.N)}</b>` : ''}${nb.S ? `<br>⬇ below you: <b>${esc(nb.S)}</b>` : ''}</p>
         <p class="muted">Put your phones together like the map on the TV, screens up.</p>
-        <button class="btn big ${v.ready ? 'green' : ''}" id="mb-ready">${v.ready ? '✅ Ready!' : needTilt ? '📱 Turn on tilt & I’m ready' : '✋ I’m ready'}</button></div>
+        <button class="btn big ${v.ready ? 'green' : ''}" id="mb-ready">${v.ready ? '✅ Ready!' : '✋ I’m ready'}</button></div>
         <div class="mb-pad mb-preview" id="mb-pad" data-keep></div></div>`);
       const rb = el.querySelector('#mb-ready');
-      if (rb) rb.onclick = async () => { await askTilt(); const r = await ctx.act({ op: 'ready' }); if (r.ok) { ctx.haptic('success'); level(); } };
+      if (rb) rb.onclick = async () => { const r = await ctx.act({ op: 'ready' }); if (r.ok) ctx.haptic('success'); };
       mountPad(el); return;
     }
     if (v.phase === 'result') {
@@ -300,11 +290,10 @@
     }
     // roll
     const mine = v.holderIsMe;
-    const status = mine ? `<div class="mb-you">🔮 <b>Your marble!</b> Tilt to roll it${v.mirror ? ' · 🪞 backwards!' : ''}</div>`
+    const status = mine ? `<div class="mb-you">🔮 <b>Your marble!</b> Hold &amp; drag to roll it${v.mirror ? ' · 🪞 backwards!' : ''}</div>`
       : `<div class="mb-wait">${arrowTo(v)} The marble is on <b>${esc(v.holder || '…')}</b>'s board</div>`;
     BOX.morph(el, `<div class="mb-ph mb-rolling ${mine ? 'hold' : ''}">${head}${status}<div class="mb-pad" id="mb-pad" data-keep></div>
-      <div class="mb-tools">${mine ? '<button class="link" id="mb-level">⟳ Level</button>' : ''}${!TILT.got ? '<span class="muted small">No tilt sensor? Drag on the board.</span>' : ''}</div></div>`);
-    const lv = el.querySelector('#mb-level'); if (lv) lv.onclick = () => { level(); ctx.haptic('tap'); ctx.toast('Levelled! Hold it like this for still.'); };
+      <div class="mb-tools">${mine ? '<span class="muted small">👆 Hold a finger on the board and drag the way it should roll. Further = faster.</span>' : '<span class="muted small">Get ready: when it lands on your board, hold and drag.</span>'}</div></div>`);
     mountPad(el);
   }
 
@@ -420,10 +409,10 @@
 
   BOX.games.marble = {
     name: 'JustMarble', icon: '🔮',
-    about: 'Every phone is a piece of a wooden maze. Put them together and tilt the marble home.',
+    about: 'Every phone is a piece of a wooden maze. Put them together and roll the marble home.',
     how: [
       'Every phone shows one piece of a wooden maze. Put your phones together, screens up, like the map on the TV.',
-      'The marble starts on one phone. Whoever has it tilts their phone to roll it (no sensor? drag on the board).',
+      'The marble starts on one phone. Whoever has it holds a finger on their board and drags the way it should roll.',
       'Roll it through a gap at the edge and it lands on your neighbour’s phone. Talk! Only together can you see the whole maze.',
       'Get it into the 🏁 before time runs out. Holes send it back to where it came onto your board.',
       'Points: the whole team scores for clearing a maze (more with time left), +30 for a pass that gets closer to the goal, +25 per 💎, +50 for sinking it, −15 per hole.',

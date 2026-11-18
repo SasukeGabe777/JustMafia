@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="mafia-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a0a1c"/>
+      <stop offset="0.6" stop-color="#5e1432"/>
+      <stop offset="1" stop-color="#a3244c"/>
+    </linearGradient>
+    <radialGradient id="mafia-moon" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#ffb08a"/>
+      <stop offset="0.55" stop-color="#ff5a5a"/>
+      <stop offset="1" stop-color="#c41f45"/>
+    </radialGradient>
+    <radialGradient id="mafia-moonglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ff4f6e" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ff4f6e" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mafia-lamp" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd86a" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#ffb21f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mafia-wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a4a2a"/>
+      <stop offset="1" stop-color="#4a2014"/>
+    </linearGradient>
+    <linearGradient id="mafia-blade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4f2ff"/>
+      <stop offset="1" stop-color="#9a94b8"/>
+    </linearGradient>
+    <linearGradient id="mafia-coat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a1640"/>
+      <stop offset="1" stop-color="#1b1030"/>
+    </linearGradient>
+    <radialGradient id="mafia-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.55"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#mafia-sky)"/>
+  <!-- stars -->
+  <g fill="#ffd0e4" opacity="0.8">
+    <circle cx="40" cy="30" r="1.8"/><circle cx="92" cy="58" r="1.4"/><circle cx="322" cy="26" r="2"/>
+    <circle cx="368" cy="70" r="1.5"/><circle cx="130" cy="20" r="1.3"/><circle cx="276" cy="48" r="1.4"/>
+  </g>
+  <!-- moon -->
+  <circle cx="200" cy="96" r="92" fill="url(#mafia-moonglow)"/>
+  <circle cx="200" cy="96" r="54" fill="url(#mafia-moon)" stroke="#6e0f2c" stroke-width="4"/>
+  <circle cx="182" cy="80" r="9" fill="#e8364f" opacity="0.5"/>
+  <circle cx="222" cy="116" r="6" fill="#e8364f" opacity="0.5"/>
+  <!-- crooked rooftops -->
+  <g fill="#2a0d26" stroke="#1b1030" stroke-width="4" stroke-linejoin="round">
+    <path d="M-10 240V132L22 104L58 128V112H70V138L96 118L128 142V240Z"/>
+    <path d="M272 240V140L300 112L336 136V120H348V144L372 106L410 130V240Z"/>
+  </g>
+  <g fill="#ffd166">
+    <rect x="22" y="150" width="12" height="15" rx="2"/><rect x="72" y="160" width="12" height="15" rx="2" opacity="0.6"/>
+    <rect x="300" y="152" width="12" height="15" rx="2" opacity="0.7"/><rect x="358" y="146" width="12" height="15" rx="2"/>
+  </g>
+  <!-- lantern -->
+  <circle cx="112" cy="104" r="44" fill="url(#mafia-lamp)"/>
+  <path d="M112 84V196" stroke="#1b1030" stroke-width="6" stroke-linecap="round"/>
+  <path d="M100 92h24l-4 28h-16z" fill="#ffd86a" stroke="#1b1030" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M97 92h30l-6-10h-18z" fill="#3a1640" stroke="#1b1030" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M107 96v20" stroke="#fffaf0" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  <!-- masked figure -->
+  <ellipse cx="200" cy="198" rx="70" ry="10" fill="#000" opacity="0.35"/>
+  <path d="M146 200C148 160 164 140 184 132L200 142L216 132C236 140 252 160 254 200Z" fill="url(#mafia-coat)" stroke="#1b1030" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M184 132L200 168L216 132L200 142Z" fill="#c41f45" stroke="#1b1030" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M178 96C178 120 188 134 200 134C212 134 222 120 222 96Z" fill="#2a0d26" stroke="#1b1030" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M176 104C186 98 214 98 224 104C222 114 208 116 200 110C192 116 178 114 176 104Z" fill="#c41f45" stroke="#1b1030" stroke-width="3" stroke-linejoin="round"/>
+  <ellipse cx="188" cy="106" rx="5" ry="3" fill="#ffe14d"/>
+  <ellipse cx="212" cy="106" rx="5" ry="3" fill="#ffe14d"/>
+  <path d="M182 92C182 70 190 62 200 62C210 62 218 70 218 92Z" fill="#3a1640" stroke="#1b1030" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M183 86h34" stroke="#c41f45" stroke-width="6"/>
+  <ellipse cx="200" cy="93" rx="38" ry="8" fill="#3a1640" stroke="#1b1030" stroke-width="4"/>
+  <path d="M188 70C192 66 196 65 200 65" stroke="#8a4a9a" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- table and dagger -->
+  <path d="M-10 196H410V250H-10Z" fill="url(#mafia-wood)" stroke="#1b1030" stroke-width="4"/>
+  <path d="M-10 206H410" stroke="#b86a3a" stroke-width="3" opacity="0.6"/>
+  <path d="M40 222h60M150 230h50M300 224h70" stroke="#2a0d14" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <g transform="rotate(14 276 196)">
+    <path d="M269 156H283V199H269Z" fill="url(#mafia-blade)" stroke="#1b1030" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M273 162V194" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/>
+    <rect x="258" y="150" width="36" height="9" rx="4" fill="#ffd166" stroke="#1b1030" stroke-width="3.5"/>
+    <rect x="270" y="122" width="12" height="29" rx="5" fill="#5c0619" stroke="#1b1030" stroke-width="3.5"/>
+    <circle cx="276" cy="119" r="6" fill="#ffd166" stroke="#1b1030" stroke-width="3.5"/>
+  </g>
+  <path d="M262 200l-6 6M292 200l7 5" stroke="#1b1030" stroke-width="3" stroke-linecap="round"/>
+  <rect width="400" height="240" fill="url(#mafia-vig)"/>
+</svg>

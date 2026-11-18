@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="kingdoms-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffcf5a"/>
+      <stop offset="0.55" stop-color="#f0a23a"/>
+      <stop offset="1" stop-color="#b8602a"/>
+    </linearGradient>
+    <radialGradient id="kingdoms-sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fffbe0"/>
+      <stop offset="0.35" stop-color="#ffe680" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#ffe680" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="kingdoms-rock" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a5a2a"/>
+      <stop offset="1" stop-color="#3d2a0a"/>
+    </linearGradient>
+    <path id="kingdoms-hex" d="M0-28L24.25-14V14L0 28L-24.25 14V-14Z"/>
+    <radialGradient id="kingdoms-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#3d1a00" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3d1a00" stop-opacity="0.5"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#kingdoms-sky)"/>
+  <circle cx="320" cy="44" r="90" fill="url(#kingdoms-sun)"/>
+  <g fill="#ffe9b0" opacity="0.75">
+    <path d="M-10 200c20-14 50-10 64-2c16-10 44-8 56 4H-10z"/>
+    <path d="M300 214c16-12 40-10 52 0c14-8 36-6 60 4H300z"/>
+    <path d="M30 70c8-8 22-6 28 0c8-4 18-2 22 4H26z"/>
+  </g>
+  <!-- small far islet -->
+  <path d="M340 120h40l-8 10l-12 14l-10-14z" fill="url(#kingdoms-rock)" stroke="#3d2a0a" stroke-width="3" stroke-linejoin="round"/>
+  <ellipse cx="360" cy="120" rx="22" ry="6" fill="#7fcf4a" stroke="#3d2a0a" stroke-width="3"/>
+  <g transform="translate(0 8)">
+  <!-- island underside -->
+  <ellipse cx="200" cy="220" rx="60" ry="8" fill="#3d1a00" opacity="0.25"/>
+  <path d="M82 146C100 170 130 180 150 196C170 208 186 216 200 222C214 214 236 204 252 192C276 176 304 168 318 146Z" fill="url(#kingdoms-rock)" stroke="#3d2a0a" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M130 172l14 10M236 186l18-10M196 200l4 12" stroke="#2a1a05" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <!-- hex side layer -->
+  <g transform="translate(200 142) scale(1 0.62)" fill="#6b4416" stroke="#3d2a0a" stroke-width="5" stroke-linejoin="round">
+    <use href="#kingdoms-hex" x="-72.75" y="-42"/><use href="#kingdoms-hex" x="72.75" y="-42"/>
+    <use href="#kingdoms-hex" x="-97" y="0"/><use href="#kingdoms-hex" x="97" y="0"/>
+    <use href="#kingdoms-hex" x="-72.75" y="42"/><use href="#kingdoms-hex" x="-24.25" y="42"/><use href="#kingdoms-hex" x="24.25" y="42"/><use href="#kingdoms-hex" x="72.75" y="42"/>
+  </g>
+  <!-- hex top layer -->
+  <g transform="translate(200 130) scale(1 0.62)" stroke="#3d2a0a" stroke-width="4.5" stroke-linejoin="round">
+    <use href="#kingdoms-hex" x="-72.75" y="-42" fill="#a39a8c"/>
+    <use href="#kingdoms-hex" x="-24.25" y="-42" fill="#8fdc54"/>
+    <use href="#kingdoms-hex" x="24.25" y="-42" fill="#4fa83a"/>
+    <use href="#kingdoms-hex" x="72.75" y="-42" fill="#8fdc54"/>
+    <use href="#kingdoms-hex" x="-97" y="0" fill="#3ec7ff"/>
+    <use href="#kingdoms-hex" x="-48.5" y="0" fill="#4fa83a"/>
+    <use href="#kingdoms-hex" x="0" y="0" fill="#9be35e"/>
+    <use href="#kingdoms-hex" x="48.5" y="0" fill="#8fdc54"/>
+    <use href="#kingdoms-hex" x="97" y="0" fill="#d8c08a"/>
+    <use href="#kingdoms-hex" x="-72.75" y="42" fill="#8fdc54"/>
+    <use href="#kingdoms-hex" x="-24.25" y="42" fill="#3ec7ff"/>
+    <use href="#kingdoms-hex" x="24.25" y="42" fill="#4fa83a"/>
+    <use href="#kingdoms-hex" x="72.75" y="42" fill="#3ec7ff"/>
+  </g>
+  <g fill="#fff" opacity="0.55">
+    <path d="M90 128l12-4l4 3l-12 4z"/><path d="M164 154l12-4l4 3l-12 4z"/><path d="M262 154l12-4l4 3l-12 4z"/>
+  </g>
+  <!-- mountain -->
+  <g stroke="#3d2a0a" stroke-width="4" stroke-linejoin="round">
+    <path d="M104 110L128 70L152 110Z" fill="#7d7468"/>
+    <path d="M128 70L118 87L124 84L129 90L136 84L138 87Z" fill="#fff"/>
+  </g>
+  <!-- trees -->
+  <g stroke="#1f4a14" stroke-width="3.5" stroke-linejoin="round">
+    <g fill="#2e8a2a"><path d="M216 106l9-20l9 20z"/><path d="M228 110l8-17l8 17z"/><path d="M142 132l9-20l9 20z"/><path d="M154 136l8-16l8 16z"/><path d="M216 160l9-20l9 20z"/><path d="M230 162l7-15l7 15z"/></g>
+  </g>
+  <!-- castle -->
+  <g stroke="#3d2a0a" stroke-width="4" stroke-linejoin="round">
+    <path d="M176 136V104H224V136Z" fill="#efe2c4"/>
+    <path d="M174 104v-8h8v6h7v-6h8v6h6v-6h8v6h7v-6h8v8z" fill="#efe2c4"/>
+    <path d="M166 138V88H186V138Z" fill="#f7ecd2"/>
+    <path d="M214 138V88H234V138Z" fill="#f7ecd2"/>
+    <path d="M162 90L176 68L190 90Z" fill="#d84a3a"/>
+    <path d="M210 90L224 68L238 90Z" fill="#d84a3a"/>
+    <path d="M192 136V122C192 114 208 114 208 122V136Z" fill="#6b4416"/>
+  </g>
+  <g stroke="#3d2a0a" stroke-width="3" stroke-linejoin="round">
+    <path d="M176 68V52M224 68V52" fill="none"/>
+    <path d="M176 52L192 56L176 61Z" fill="#3ec7ff"/>
+    <path d="M224 52L240 56L224 61Z" fill="#ffd23f"/>
+  </g>
+  <rect x="172" y="98" width="6" height="9" rx="3" fill="#3d2a0a"/><rect x="221" y="98" width="6" height="9" rx="3" fill="#3d2a0a"/>
+  <path d="M179 108v24" stroke="#fff" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
+  <!-- rocket -->
+  <g stroke="#1b1030" stroke-width="4" stroke-linejoin="round">
+    <path d="M286 128l-8 6v-14l8-6zM308 128l8 6v-14l-8-6z" fill="#d84a3a"/>
+    <path d="M286 130V96C286 84 292 74 297 68C302 74 308 84 308 96V130Z" fill="#f7f7ff"/>
+    <path d="M288 90C290 80 294 74 297 68C300 74 304 80 306 90Z" fill="#d84a3a"/>
+    <circle cx="297" cy="106" r="6" fill="#3ec7ff"/>
+    <path d="M290 130h14l-4 10h-6z" fill="#ffb21f"/>
+  </g>
+  <path d="M291 98v24" stroke="#c8c8e0" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <rect width="400" height="240" fill="url(#kingdoms-vig)"/>
+</svg>

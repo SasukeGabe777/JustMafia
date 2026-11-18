@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="memes-bg" cx="0.5" cy="0.45" r="0.75">
+      <stop offset="0" stop-color="#ffb347"/>
+      <stop offset="1" stop-color="#e0561b"/>
+    </radialGradient>
+    <linearGradient id="memes-frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe14d"/>
+      <stop offset="1" stop-color="#e09a1a"/>
+    </linearGradient>
+    <linearGradient id="memes-pic" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a8ecff"/>
+      <stop offset="1" stop-color="#5fc8f0"/>
+    </linearGradient>
+    <radialGradient id="memes-blob" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#e6d6ff"/>
+      <stop offset="1" stop-color="#a98bf0"/>
+    </radialGradient>
+    <radialGradient id="memes-vig" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0.6" stop-color="#4a1505" stop-opacity="0"/>
+      <stop offset="1" stop-color="#4a1505" stop-opacity="0.45"/>
+    </radialGradient>
+    <clipPath id="memes-clip"><rect x="140" y="58" width="120" height="94" rx="4"/></clipPath>
+    <path id="memes-star" d="M0 -12 L2.9 -4 L11.4 -3.7 L4.8 1.5 L7.1 9.7 L0 5 L-7.1 9.7 L-4.8 1.5 L-11.4 -3.7 L-2.9 -4Z"/>
+    <g id="memes-thumb" stroke="#4a1505" stroke-width="3.5" stroke-linejoin="round">
+      <rect x="-26" y="-6" width="12" height="28" rx="3" fill="#4a6bff"/>
+      <path d="M-14 -4 h6 l8 -18 c2 -6 12 -4 10 4 l-3 10 h12 a6 6 0 0 1 0 12 a6 6 0 0 1 -2 11 a6 6 0 0 1 -4 9 h-27z" fill="#ffd2b0"/>
+    </g>
+  </defs>
+  <rect width="400" height="240" fill="url(#memes-bg)"/>
+  <g fill="#fff" opacity="0.1">
+    <path d="M200 105 L140 -10 h40z M200 105 L240 -10 h40z M200 105 L410 30 v40z M200 105 L410 150 v40z M200 105 L-10 30 v40z M200 105 L-10 150 v40z M200 105 L100 250 h50z M200 105 L260 250 h50z"/>
+  </g>
+  <ellipse cx="200" cy="212" rx="90" ry="9" fill="#4a1505" opacity="0.35"/>
+  <g stroke="#4a1505" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M200 28 l-60 186 M200 28 l60 186 M200 28 v186" stroke="#4a1505" stroke-width="13"/>
+    <path d="M200 28 l-60 186 M200 28 l60 186 M200 28 v186" stroke="#b5652a" stroke-width="6"/>
+    <rect x="124" y="42" width="152" height="126" rx="10" fill="url(#memes-frame)"/>
+    <rect x="140" y="58" width="120" height="94" rx="4" fill="url(#memes-pic)"/>
+    <rect x="132" y="166" width="136" height="12" rx="4" fill="#b5652a"/>
+  </g>
+  <g clip-path="url(#memes-clip)" stroke="#4a1505" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M140 140 q60 -14 120 0 v20 h-120z" fill="#7fd36e"/>
+    <path d="M164 152 c-4 -30 4 -60 36 -62 c32 2 40 32 36 62z" fill="url(#memes-blob)"/>
+    <path d="M170 104 l-2 -22 l18 12z M230 104 l2 -22 l-18 12z" fill="url(#memes-blob)"/>
+    <circle cx="186" cy="112" r="12" fill="#fff"/><circle cx="214" cy="112" r="12" fill="#fff"/>
+    <circle cx="187" cy="113" r="3" fill="#1b1030" stroke="none"/><circle cx="213" cy="113" r="3" fill="#1b1030" stroke="none"/>
+    <ellipse cx="200" cy="136" rx="6" ry="8" fill="#5a0b22"/>
+    <path d="M176 100 l-6 -4 M224 100 l6 -4" fill="none"/>
+    <path d="M168 132 h-14 M168 138 l-12 4 M232 132 h14 M232 138 l12 4" stroke-width="2.5" fill="none"/>
+    <ellipse cx="176" cy="127" rx="5" ry="3" fill="#ff9ab8" stroke="none" opacity="0.8"/><ellipse cx="224" cy="127" rx="5" ry="3" fill="#ff9ab8" stroke="none" opacity="0.8"/>
+  </g>
+  <path d="M146 64 h36" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+  <g stroke="#4a1505" stroke-width="3.5" stroke-linejoin="round" fill="#ffe14d">
+    <use href="#memes-star" transform="translate(300 62) scale(1.4)"/>
+    <use href="#memes-star" transform="translate(98 148) rotate(-14) scale(1.2)"/>
+    <use href="#memes-star" transform="translate(316 142) rotate(12)"/>
+    <use href="#memes-star" transform="translate(110 54) rotate(10) scale(0.9)"/>
+  </g>
+  <use href="#memes-thumb" transform="translate(98 100) rotate(-12) scale(1.1)"/>
+  <use href="#memes-thumb" transform="translate(304 104) rotate(14) scale(1.1)"/>
+  <rect width="400" height="240" fill="url(#memes-vig)"/>
+</svg>

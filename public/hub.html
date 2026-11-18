@@ -18,11 +18,13 @@
   Copy one tile and keep the attributes in this order: class, href, data-game, data-best, data-lock:
 
     <a class="tile live KEY" href="/box/tv?game=KEY" data-game="KEY" data-best="3-10" data-type="create">
-      <div class="art" aria-hidden="true"><span class="icon">🎲</span></div>
+      <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/KEY.svg" alt="" onerror="this.remove()"><span class="icon">🎲</span></div>
       <div class="info"><h2>Game Name</h2><p>One short line that sells the game.</p>
         <div class="meta"><span>👥 2–100 · best 3–10</span><span>⏱ 10–20 min</span><span>🎲 guess</span></div></div>
     </a>
 
+  - Art: public/art/tiles/KEY.svg (400x240, keep the subject in the middle; see docs/game-kit.md).
+    The emoji .icon only shows if the picture is missing (and Party Mode uses it as the game's icon).
   - The 👥 and ⏱ ranges are read by hub.js (player filter) and party/party.js (Party Mode).
   - Add data-lock="KEY" (before data-type) if the game is unlockable (public/unlocks.js); while
     locked it stays on its category shelf with a lock and its unlock hint.
@@ -62,7 +64,7 @@
     <!-- The three big games. -->
     <section class="tiles big" id="tiles" aria-label="Featured games">
       <a class="tile live mafia" href="/mafia" data-game="mafia" data-best="8-20">
-        <div class="art" aria-hidden="true"><span class="icon">🔪</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/mafia.svg" alt="" onerror="this.remove()"><span class="icon">🔪</span></div>
         <div class="info">
           <h2>JustMafia</h2>
           <p>Find the killers before they find you. A big-screen murder mystery.</p>
@@ -70,7 +72,7 @@
         </div>
       </a>
       <a class="tile live ducks" href="/ducks" data-game="ducks" data-best="2-12">
-        <div class="art" aria-hidden="true"><span class="icon">🦆</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/ducks.svg" alt="" onerror="this.remove()"><span class="icon">🦆</span></div>
         <div class="info">
           <h2>JustRaiseDucks</h2>
           <p>Hatch a duckling, raise it with phone mini-games, and race up the leagues.</p>
@@ -78,7 +80,7 @@
         </div>
       </a>
       <a class="tile live kingdoms" href="/kingdoms" data-game="kingdoms" data-best="5-10">
-        <div class="art" aria-hidden="true"><span class="icon">🏰</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/kingdoms.svg" alt="" onerror="this.remove()"><span class="icon">🏰</span></div>
         <div class="info">
           <h2>JustKingdoms</h2>
           <p>Grow a village into an empire on one shared map. Conquer, make peace, or launch a rocket.</p>
@@ -99,132 +101,132 @@
     </div>
     <section class="tiles small" aria-label="More games">
       <a class="tile live president" href="/box/tv?game=president" data-game="president" data-best="4-10" data-type="cards">
-        <div class="art" aria-hidden="true"><span class="icon">👑</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/president.svg" alt="" onerror="this.remove()"><span class="icon">👑</span></div>
         <div class="info"><h2>President</h2><p>Climb from Scum to President. Empty your hand first.</p>
           <div class="meta"><span>👥 3–100 · best 4–10</span><span>⏱ 15–30 min</span><span>🃏 Card game</span></div></div>
       </a>
       <a class="tile live blanks" href="/box/tv?game=blanks" data-game="blanks" data-best="4-10" data-type="create">
-        <div class="art" aria-hidden="true"><span class="icon">🃏</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/blanks.svg" alt="" onerror="this.remove()"><span class="icon">🃏</span></div>
         <div class="info"><h2>JustBlanks</h2><p>Fill in the blank with the funniest card.</p>
           <div class="meta"><span>👥 3–100 · best 4–10</span><span>⏱ 15–30 min</span><span>😂 Party cards</span></div></div>
       </a>
       <a class="tile live blackjack" href="/box/tv?game=blackjack" data-game="blackjack" data-best="2-12" data-type="cards">
-        <div class="art" aria-hidden="true"><span class="icon">♠️</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/blackjack.svg" alt="" onerror="this.remove()"><span class="icon">♠️</span></div>
         <div class="info"><h2>Blackjack Night</h2><p>The whole room against one dealer.</p>
           <div class="meta"><span>👥 1–100 · best 2–12</span><span>⏱ 10–25 min</span><span>🪙 Casino</span></div></div>
       </a>
       <a class="tile live bid" href="/box/tv?game=bid" data-game="bid" data-best="3-10" data-type="cards">
-        <div class="art" aria-hidden="true"><span class="icon">📦</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/bid.svg" alt="" onerror="this.remove()"><span class="icon">📦</span></div>
         <div class="info"><h2>JustBid</h2><p>Bid on mystery storage lockers. Treasure or trash?</p>
           <div class="meta"><span>👥 1–100 · best 3–10</span><span>⏱ 15–30 min</span><span>💰 Auction</span></div></div>
       </a>
       <a class="tile live price" href="/box/tv?game=price" data-game="price" data-best="2-20" data-type="guess">
-        <div class="art" aria-hidden="true"><span class="icon">💸</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/price.svg" alt="" onerror="this.remove()"><span class="icon">💸</span></div>
         <div class="info"><h2>Price Panic</h2><p>Guess what it costs. Go over and you bust!</p>
           <div class="meta"><span>👥 1–100 · best 2–20</span><span>⏱ 10–20 min</span><span>🎯 Guessing</span></div></div>
       </a>
       <a class="tile live emoji" href="/box/tv?game=emoji" data-game="emoji" data-best="4-16" data-type="guess">
-        <div class="art" aria-hidden="true"><span class="icon">😜</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/emoji.svg" alt="" onerror="this.remove()"><span class="icon">😜</span></div>
         <div class="info"><h2>Emoji Charades</h2><p>Describe it with emojis only. Fewer is better.</p>
           <div class="meta"><span>👥 3–100 · best 4–16</span><span>⏱ 10–25 min</span><span>🧩 Guessing</span></div></div>
       </a>
       <a class="tile live truths" href="/box/tv?game=truths" data-game="truths" data-best="4-10" data-type="friends">
-        <div class="art" aria-hidden="true"><span class="icon">🤥</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/truths.svg" alt="" onerror="this.remove()"><span class="icon">🤥</span></div>
         <div class="info"><h2>Two Truths & a Lie</h2><p>Two truths and a lie. Can they spot it?</p>
           <div class="meta"><span>👥 3–100 · best 4–10</span><span>⏱ 10–25 min</span><span>🕵️ Bluffing</span></div></div>
       </a>
       <a class="tile live likely" href="/box/tv?game=likely" data-game="likely" data-best="6-20" data-type="friends">
-        <div class="art" aria-hidden="true"><span class="icon">🏆</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/likely.svg" alt="" onerror="this.remove()"><span class="icon">🏆</span></div>
         <div class="info"><h2>Most Likely To…</h2><p>Vote who fits the prompt and collect titles.</p>
           <div class="meta"><span>👥 3–100 · best 6–20</span><span>⏱ 5–15 min</span><span>🗳️ Party voting</span></div></div>
       </a>
       <a class="tile live whosaid" href="/box/tv?game=whosaid" data-game="whosaid" data-best="4-12" data-type="friends">
-        <div class="art" aria-hidden="true"><span class="icon">🕵️</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/whosaid.svg" alt="" onerror="this.remove()"><span class="icon">🕵️</span></div>
         <div class="info"><h2>Who Said It?</h2><p>Anonymous answers. Guess who wrote each one.</p>
           <div class="meta"><span>👥 3–100 · best 4–12</span><span>⏱ 10–20 min</span><span>💬 Get to know you</span></div></div>
       </a>
       <a class="tile live spectrum" href="/box/tv?game=spectrum" data-game="spectrum" data-best="4-16" data-type="friends">
-        <div class="art" aria-hidden="true"><span class="icon">🧭</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/spectrum.svg" alt="" onerror="this.remove()"><span class="icon">🧭</span></div>
         <div class="info"><h2>Where Do You Stand?</h2><p>Place yourself on fun scales. Find your twin.</p>
           <div class="meta"><span>👥 3–100 · best 4–16</span><span>⏱ 10–20 min</span><span>💬 Get to know you</span></div></div>
       </a>
       <a class="tile live sketch" href="/box/tv?game=sketch" data-game="sketch" data-best="4-10" data-type="create">
-        <div class="art" aria-hidden="true"><span class="icon">✏️</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/sketch.svg" alt="" onerror="this.remove()"><span class="icon">✏️</span></div>
         <div class="info"><h2>JustSketch Relay</h2><p>Draw it, guess it, pass it on.</p>
           <div class="meta"><span>👥 3–100 · best 4–10</span><span>⏱ 10–20 min</span><span>🎨 Drawing</span></div></div>
       </a>
       <a class="tile live funny" href="/box/tv?game=funny" data-game="funny" data-best="3-12" data-type="create">
-        <div class="art" aria-hidden="true"><span class="icon">😂</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/funny.svg" alt="" onerror="this.remove()"><span class="icon">😂</span></div>
         <div class="info"><h2>JustFunny</h2><p>Take turns putting funny videos on the TV.</p>
           <div class="meta"><span>👥 2–100 · best 3–12</span><span>⏱ 15–45 min</span><span>🎬 Watch party</span></div></div>
       </a>
       <a class="tile live plinko" href="/box/tv?game=plinko" data-game="plinko" data-best="2-10" data-lock="plinko" data-type="cards">
-        <div class="art" aria-hidden="true"><span class="icon">🎯</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/plinko.svg" alt="" onerror="this.remove()"><span class="icon">🎯</span></div>
         <div class="info"><h2>JustDrop</h2><p>A Plinko-style peg drop: pick your spot, draw one line to bend everyone’s luck, and chase the jackpot.</p>
           <div class="meta"><span>👥 1–100 · best 2–10</span><span>⏱ 8–15 min</span><span>🎰 Casino drop</span></div></div>
       </a>
       <a class="tile live trivia" href="/box/tv?game=trivia" data-game="trivia" data-best="2-16" data-lock="trivia" data-type="guess">
-        <div class="art" aria-hidden="true"><span class="icon">🧠</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/trivia.svg" alt="" onerror="this.remove()"><span class="icon">🧠</span></div>
         <div class="info"><h2>Hot Take Trivia</h2><p>Fast trivia where you bet on how sure you are. 1× hunch, 2× sure, 3× HOT TAKE.</p>
           <div class="meta"><span>👥 2–16 · best 2–16</span><span>⏱ 5–10 min</span><span>🧠 Quiz</span></div></div>
       </a>
       <a class="tile live colormatch" href="/box/tv?game=colormatch" data-game="colormatch" data-best="2-20" data-lock="colormatch" data-type="guess">
-        <div class="art" aria-hidden="true"><span class="icon">🎨</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/colormatch.svg" alt="" onerror="this.remove()"><span class="icon">🎨</span></div>
         <div class="info"><h2>Color Match</h2><p>A colour flashes for three seconds. Mix it from memory on your phone. Closest match wins!</p>
           <div class="meta"><span>👥 2–20 · best 2–20</span><span>⏱ 5–10 min</span><span>🎨 Guessing</span></div></div>
       </a>
       <a class="tile live memes" href="/box/tv?game=memes" data-game="memes" data-best="3-12" data-lock="memes" data-type="create">
-        <div class="art" aria-hidden="true"><span class="icon">🖼️</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/memes.svg" alt="" onerror="this.remove()"><span class="icon">🖼️</span></div>
         <div class="info"><h2>Meme Maker</h2><p>Caption original meme templates on your phone, then vote for the funniest on the big screen.</p>
           <div class="meta"><span>👥 3–100 · best 3–12</span><span>⏱ 5–15 min</span><span>🖼️ Memes</span></div></div>
       </a>
       <a class="tile live letters" href="/box/tv?game=letters" data-game="letters" data-best="3-10" data-lock="letters" data-type="create">
-        <div class="art" aria-hidden="true"><span class="icon">🔤</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/letters.svg" alt="" onerror="this.remove()"><span class="icon">🔤</span></div>
         <div class="info"><h2>Letter Rush</h2><p>Roll a letter, fill the list fast. Match anyone and it scores nothing!</p>
           <div class="meta"><span>👥 2–100 · best 3–10</span><span>⏱ 8–15 min</span><span>🔤 Word game</span></div></div>
       </a>
       <a class="tile live summon" href="/box/tv?game=summon" data-game="summon" data-best="2-8" data-type="action">
-        <div class="art" aria-hidden="true"><span class="icon">⚔️</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/summon.svg" alt="" onerror="this.remove()"><span class="icon">⚔️</span></div>
         <div class="info"><h2>JustSummon</h2><p>Summon troops, counter your rivals and push the battle line into their base. A tug-of-war of tactics.</p>
           <div class="meta"><span>👥 2–100 · best 2–8</span><span>⏱ 10–20 min</span><span>⚔️ Battle</span></div></div>
       </a>
       <a class="tile live quickdraw" href="/box/tv?game=quickdraw" data-game="quickdraw" data-best="2-20" data-lock="quickdraw" data-type="action">
-        <div class="art" aria-hidden="true"><span class="icon">⚡</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/quickdraw.svg" alt="" onerror="this.remove()"><span class="icon">⚡</span></div>
         <div class="info"><h2>Quick Draw</h2><p>Wait for it… DRAW! A lightning western showdown: duels, a green lantern, a chicken count, a shake-to-gallop stampede and a copycat drum.</p>
           <div class="meta"><span>👥 2–100 · best 2–20</span><span>⏱ 5–8 min</span><span>⚡ Reflex</span></div></div>
       </a>
       <a class="tile live bomb" href="/box/tv?game=bomb" data-game="bomb" data-best="3-8" data-lock="bomb" data-type="action">
-        <div class="art" aria-hidden="true"><span class="icon">💣</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/bomb.svg" alt="" onerror="this.remove()"><span class="icon">💣</span></div>
         <div class="info"><h2>Bomb Squad</h2><p>One of you sees the bomb. Everyone else holds a different page of the manual. Talk fast, cut carefully.</p>
           <div class="meta"><span>👥 2–20 · best 3–8</span><span>⏱ 10–15 min</span><span>💣 Co-op</span></div></div>
       </a>
       <a class="tile live alien" href="/box/tv?game=alien" data-game="alien" data-best="5-12" data-lock="alien" data-type="friends">
-        <div class="art" aria-hidden="true"><span class="icon">🛸</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/alien.svg" alt="" onerror="this.remove()"><span class="icon">🛸</span></div>
         <div class="info"><h2>Alien Abduction</h2><p>Some of the crew are secretly aliens. Fix the ship, spot the saboteurs, and pop them into the bubble pod before the Biscuit breaks down.</p>
           <div class="meta"><span>👥 4–100 · best 5–12</span><span>⏱ 8–12 min</span><span>🛸 Bluff</span></div></div>
       </a>
       <a class="tile live tune" href="/box/tv?game=tune" data-game="tune" data-best="3-12" data-lock="tune" data-type="guess">
-        <div class="art" aria-hidden="true"><span class="icon">🎵</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/tune.svg" alt="" onerror="this.remove()"><span class="icon">🎵</span></div>
         <div class="info"><h2>Tune Buzz</h2><p>Name that tune, with songs you bring! Add songs from your phone, pick a few tricky seconds, guess fast, then rate how hard it was: harder songs pay more.</p>
           <div class="meta"><span>👥 2–100 · best 3–12</span><span>⏱ 8–15 min</span><span>🎵 Music quiz</span></div></div>
       </a>
       <a class="tile live actout" href="/box/tv?game=actout" data-game="actout" data-best="4-12" data-lock="actout" data-type="create">
-        <div class="art" aria-hidden="true"><span class="icon">🎭</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/actout.svg" alt="" onerror="this.remove()"><span class="icon">🎭</span></div>
         <div class="info"><h2>Act It Out</h2><p>Charades with a twist: act out a secret prompt while the room guesses on their phones. Silent movies, freeze frames, relays and two-person scenes!</p>
           <div class="meta"><span>👥 3–100 · best 4–12</span><span>⏱ 10–15 min</span><span>🎭 Acting</span></div></div>
       </a>
       <a class="tile live debate" href="/box/tv?game=debate" data-game="debate" data-best="4-14" data-lock="debate" data-type="friends">
-        <div class="art" aria-hidden="true"><span class="icon">🗣️</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/debate.svg" alt="" onerror="this.remove()"><span class="icon">🗣️</span></div>
         <div class="info"><h2>Debate Club</h2><p>Is cereal a soup? Argue a silly side, dodge the tomatoes and win the crowd. Swap sides, lawyer mode and hot takes!</p>
           <div class="meta"><span>👥 3–100 · best 4–14</span><span>⏱ 10–15 min</span><span>🗣️ Debate</span></div></div>
       </a>
       <a class="tile live marble" href="/box/tv?game=marble" data-game="marble" data-best="2-6" data-type="action">
-        <div class="art" aria-hidden="true"><span class="icon">🔮</span></div>
-        <div class="info"><h2>JustMarble</h2><p>Every phone is a piece of the maze. Put them together and tilt the marble home.</p>
-          <div class="meta"><span>👥 1–12 · best 2–6</span><span>⏱ 8–15 min</span><span>🔮 Co-op tilt</span></div></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/marble.svg" alt="" onerror="this.remove()"><span class="icon">🔮</span></div>
+        <div class="info"><h2>JustMarble</h2><p>Every phone is a piece of the maze. Put them together and roll the marble home.</p>
+          <div class="meta"><span>👥 1–12 · best 2–6</span><span>⏱ 8–15 min</span><span>🔮 Co-op maze</span></div></div>
       </a>
       <a class="tile live zombie" href="/box/tv?game=zombie" data-game="zombie" data-best="4-16" data-lock="zombie" data-type="action">
-        <div class="art" aria-hidden="true"><span class="icon">🧟</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/zombie.svg" alt="" onerror="this.remove()"><span class="icon">🧟</span></div>
         <div class="info"><h2>Zombie Survival</h2><p>Grab the medkit, the gun or the rope… and hope you picked right. Who makes it to the last chopper?</p>
           <div class="meta"><span>👥 2–100 · best 4–16</span><span>⏱ 15–25 min</span><span>🧟 Survival story</span></div></div>
       </a>

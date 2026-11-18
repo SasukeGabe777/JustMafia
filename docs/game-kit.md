@@ -29,6 +29,7 @@ Then replace the placeholder with the real game, and restart the server.
 | Soundtrack | `public/box/scores/<key>.js` | Music cues for title, lobby, intro, play moods, reveal and finale, plus stingers (see `public/box/scores/README.md`). Real recordings can replace any cue: `public/audio/<key>/<cue>.mp3`. |
 | Tests | `tools/test-box-<key>.js` | Bots play whole games on a virtual clock; inputs are validated; `results()` works. |
 | Main menu tile | `public/hub.html` | Players, time and type chips, and its category `data-type="cards|guess|create|friends|action"` (from `public/categories.js`). The category puts it on its main-menu shelf **and** in Party Mode; nothing else to register. |
+| Tile art | `public/art/tiles/<key>.svg` | The main-menu picture: an original 400×240 SVG illustration, no text, the subject inside x 90–310, y 55–185 (small tiles crop to a 3:1 strip, phones to a square). Bold flat vector with dark outlines, gradients and the game's colours. `new-game` writes a starter to replace. |
 | Ideal crowd | `best: [lo, hi]` in the module + `data-best="lo-hi"` on the tile | The player count where the game is at its best. Party Mode builds lineups from games that suit the group, and the menu's "How many of you?" badges them. The kit test checks the two match. |
 
 ## Unlockable games

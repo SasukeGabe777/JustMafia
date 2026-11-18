@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bid-wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a3a1e"/>
+      <stop offset="1" stop-color="#2a1608"/>
+    </linearGradient>
+    <linearGradient id="bid-door" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffcf5a"/>
+      <stop offset="1" stop-color="#e8762b"/>
+    </linearGradient>
+    <radialGradient id="bid-inside" cx="0.5" cy="0.2" r="0.9">
+      <stop offset="0" stop-color="#3d2410"/>
+      <stop offset="1" stop-color="#120804"/>
+    </radialGradient>
+    <linearGradient id="bid-beam" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff4c0" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#fff4c0" stop-opacity="0.15"/>
+    </linearGradient>
+    <linearGradient id="bid-gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff0a0"/>
+      <stop offset="1" stop-color="#d9a52a"/>
+    </linearGradient>
+    <radialGradient id="bid-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#bid-wall)"/>
+  <g stroke="#24160a" stroke-width="3" opacity="0.5">
+    <path d="M0 40H80M0 90H80M0 140H80M320 40H400M320 90H400M320 140H400M40 40V90M20 90V140M60 140V190M360 40V90M340 90V140M380 140V190"/>
+  </g>
+  <!-- floor -->
+  <path d="M-10 196H410V250H-10Z" fill="#6e6a66" stroke="#24160a" stroke-width="4"/>
+  <path d="M-10 206H410" stroke="#9a948e" stroke-width="3" opacity="0.7"/>
+  <!-- frame -->
+  <rect x="86" y="30" width="228" height="170" rx="4" fill="#4a4a52" stroke="#1b1030" stroke-width="5" stroke-linejoin="round"/>
+  <rect x="100" y="44" width="200" height="154" fill="url(#bid-inside)" stroke="#1b1030" stroke-width="4"/>
+  <!-- beam -->
+  <path d="M20 250L114 112H300V198L180 250Z" fill="url(#bid-beam)"/>
+  <!-- treasures -->
+  <ellipse cx="200" cy="194" rx="88" ry="8" fill="#000" opacity="0.45"/>
+  <g stroke="#1b1030" stroke-width="4" stroke-linejoin="round">
+    <!-- vase -->
+    <path d="M254 194C238 186 236 164 248 152C250 146 246 142 246 138H270C270 142 266 146 268 152C280 164 278 186 262 194Z" fill="#3ec7ff"/>
+    <path d="M244 168H272" stroke="#ffd166" stroke-width="4"/>
+    <!-- lamp -->
+    <path d="M124 194C122 184 132 180 140 182C146 176 158 176 162 184L174 176L170 188C166 194 150 196 124 194Z" fill="url(#bid-gold)"/>
+    <path d="M136 182C138 174 146 172 150 176" fill="none"/>
+    <!-- chest -->
+    <path d="M168 194V156H232V194Z" fill="#b86a3a"/>
+    <path d="M166 158C166 134 234 134 234 158Z" fill="#d48a4a"/>
+    <path d="M166 158H234M184 140V194M216 140V194" stroke="#d9a52a" stroke-width="5"/>
+    <path d="M166 158H234" fill="none"/>
+    <rect x="193" y="154" width="14" height="16" rx="3" fill="url(#bid-gold)"/>
+    <path d="M172 152C178 146 196 144 204 146" stroke="#ffe0a0" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </g>
+  <g fill="#ffd166" stroke="#1b1030" stroke-width="3">
+    <ellipse cx="184" cy="196" rx="8" ry="3.5"/><ellipse cx="224" cy="196" rx="8" ry="3.5"/>
+  </g>
+  <!-- sparkles -->
+  <g fill="#fffbe0">
+    <path d="M232 128l3 9l9 3l-9 3l-3 9l-3-9l-9-3l9-3z"/>
+    <path d="M150 156l2 6l6 2l-6 2l-2 6l-2-6l-6-2l6-2z"/>
+    <path d="M272 142l2 5l5 2l-5 2l-2 5l-2-5l-5-2l5-2z"/>
+  </g>
+  <!-- rolled-up door -->
+  <path d="M100 44H300V118H100Z" fill="url(#bid-door)" stroke="#1b1030" stroke-width="4" stroke-linejoin="round"/>
+  <g stroke="#b85a1a" stroke-width="3">
+    <path d="M100 56H300M100 68H300M100 80H300M100 92H300M100 104H300"/>
+  </g>
+  <g stroke="#fff4c0" stroke-width="2" opacity="0.6">
+    <path d="M100 58H300M100 70H300M100 82H300M100 94H300"/>
+  </g>
+  <path d="M96 116H304V124H96Z" fill="#c9ccd4" stroke="#1b1030" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="190" y="118" width="20" height="12" rx="3" fill="#4a4a52" stroke="#1b1030" stroke-width="3.5"/>
+  <!-- flashlight -->
+  <g transform="rotate(-38 40 222)" stroke="#1b1030" stroke-width="4" stroke-linejoin="round">
+    <rect x="10" y="212" width="46" height="20" rx="5" fill="#2b2b2b"/>
+    <path d="M56 208H72V236H56Z" fill="#c9ccd4"/>
+  </g>
+  <rect width="400" height="240" fill="url(#bid-vig)"/>
+</svg>

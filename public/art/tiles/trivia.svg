@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="trivia-bg" cx="0.5" cy="0.4" r="0.75">
+      <stop offset="0" stop-color="#8a3cf0"/>
+      <stop offset="1" stop-color="#2a0d55"/>
+    </radialGradient>
+    <radialGradient id="trivia-glass" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.45" stop-color="#fff3a0"/>
+      <stop offset="1" stop-color="#ffc21f"/>
+    </radialGradient>
+    <radialGradient id="trivia-halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffe680" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#ffe680" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="trivia-metal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8f86b0"/>
+      <stop offset="0.45" stop-color="#e8e4f8"/>
+      <stop offset="1" stop-color="#7a7099"/>
+    </linearGradient>
+    <radialGradient id="trivia-vig" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0.6" stop-color="#12052a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#12052a" stop-opacity="0.5"/>
+    </radialGradient>
+    <g id="trivia-q" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-10 -10 a10 10 0 1 1 14 9 c-4 2 -4 5 -4 9" stroke-width="7"/>
+      <circle cx="0" cy="19" r="4" stroke="none"/>
+    </g>
+  </defs>
+  <rect width="400" height="240" fill="url(#trivia-bg)"/>
+  <g fill="#fff" opacity="0.07">
+    <path d="M200 92 L120 -10 h40z M200 92 L240 -10 h40z M200 92 L400 20 v40z M200 92 L400 140 v40z M200 92 L0 20 v40z M200 92 L0 140 v40z M200 92 L80 260 h50z M200 92 L270 260 h50z"/>
+  </g>
+  <use href="#trivia-q" transform="translate(52 64) rotate(-18) scale(1.4)" stroke="#ff8a00" fill="#ff8a00" opacity="0.8"/>
+  <use href="#trivia-q" transform="translate(348 60) rotate(16) scale(1.3)" stroke="#7fe3ff" fill="#7fe3ff" opacity="0.8"/>
+  <use href="#trivia-q" transform="translate(116 40) rotate(10) scale(0.8)" stroke="#ff7ac8" fill="#ff7ac8" opacity="0.6"/>
+  <use href="#trivia-q" transform="translate(290 30) rotate(-12) scale(0.8)" stroke="#ffd23f" fill="#ffd23f" opacity="0.6"/>
+  <circle cx="200" cy="88" r="80" fill="url(#trivia-halo)"/>
+  <g stroke="#ffd23f" stroke-width="6" stroke-linecap="round">
+    <path d="M200 22 v-12 M146 42 l-9 -9 M254 42 l9 -9 M128 90 h-14 M272 90 h14 M144 132 l-10 8 M256 132 l10 8"/>
+  </g>
+  <ellipse cx="200" cy="200" rx="130" ry="10" fill="#12052a" opacity="0.4"/>
+  <g stroke="#2a0d55" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M200 40 c-30 0 -50 22 -50 48 c0 22 14 30 22 44 c3 6 4 10 4 14 h48 c0 -4 1 -8 4 -14 c8 -14 22 -22 22 -44 c0 -26 -20 -48 -50 -48z" fill="url(#trivia-glass)"/>
+    <path d="M186 146 c-2 -18 -6 -30 -10 -40 c8 6 12 6 16 0 c4 6 12 6 16 0 c4 6 8 6 16 0 c-4 10 -8 22 -10 40" fill="none" stroke="#ff8a00" stroke-width="4"/>
+    <path d="M168 76 c4 -14 14 -22 26 -24" fill="none" stroke="#fff" stroke-width="7" opacity="0.9"/>
+    <rect x="174" y="146" width="52" height="12" rx="5" fill="url(#trivia-metal)"/>
+    <rect x="176" y="158" width="48" height="11" rx="5" fill="url(#trivia-metal)"/>
+    <rect x="178" y="169" width="44" height="11" rx="5" fill="url(#trivia-metal)"/>
+    <path d="M188 180 h24 l-6 10 h-12z" fill="#3b2752"/>
+  </g>
+  <g stroke="#2a0d55" stroke-width="4" stroke-linejoin="round">
+    <g transform="translate(116 172)">
+      <rect x="-30" y="-14" width="60" height="22" rx="8" fill="#3b2752"/>
+      <path d="M-22 -14 a22 20 0 0 1 44 0z" fill="#ff3d2e"/>
+      <path d="M-12 -24 q6 -6 14 -4" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.8"/>
+    </g>
+    <g transform="translate(284 172)">
+      <rect x="-30" y="-14" width="60" height="22" rx="8" fill="#3b2752"/>
+      <path d="M-22 -14 a22 20 0 0 1 44 0z" fill="#3ccf6e"/>
+      <path d="M-12 -24 q6 -6 14 -4" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.8"/>
+    </g>
+  </g>
+  <rect width="400" height="240" fill="url(#trivia-vig)"/>
+</svg>

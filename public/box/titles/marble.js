@@ -30,7 +30,7 @@
   }
   BOX.titles.marble = {
     logo: '<span class="a">Just</span><span class="b">Marble</span>',
-    tagline: 'Every phone is a piece of the maze. Put them together. Tilt it home.',
+    tagline: 'Every phone is a piece of the maze. Put them together. Roll it home.',
     start: '▶ Open the workshop', meta: '1–12 players · best 2–6 · 8–15 min',
     font: "'Lilita One', sans-serif",
     theme: { card: 'rgba(43, 23, 10, 0.88)', ink: '#fff2dc', muted: '#e3bb80', accent: '#ffd23f', button: '#2f47d6', buttonInk: '#fff', border: '#c9955a' },

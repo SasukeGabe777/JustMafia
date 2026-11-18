@@ -255,3 +255,13 @@ body.g-tune .tbp { display: flex; flex-direction: column; gap: 12px; padding-bot
 .tbp-rate.sel { border-color: var(--yellow); background: rgba(255, 210, 63, 0.22); box-shadow: 0 0 18px rgba(255, 210, 63, 0.5); transform: scale(1.05); }
 .tbp-diff { text-align: center; font-size: 18px; color: var(--muted); } .tbp-diff b { color: var(--yellow); font-family: var(--tb-font); font-size: 24px; }
 .tbp-songcard h2 { color: var(--yellow); }
+
+/* Title + singer boxes */
+.tbp-guess .tbp-tl { display: block; font-weight: 700; margin: 2px 0 4px; text-align: left; }
+.tbp-singer { display: flex; flex-direction: column; gap: 4px; margin: 10px 0 8px; text-align: left; font-weight: 700; }
+.tbp-singer small { font-weight: 500; opacity: 0.75; }
+.tbp-singer .tbp-srow { display: flex; gap: 6px; } .tbp-singer input { flex: 1; min-width: 0; }
+.tbp-singer.done { flex-direction: row; justify-content: center; gap: 8px; padding: 8px; border-radius: 12px; background: rgba(46, 230, 166, 0.15); }
+.tbp-guess { flex-direction: column; align-items: stretch; }
+.tbp-singer input { padding: 12px 14px; border-radius: 14px; border: 2px solid #ffd23f; background: rgba(10, 3, 26, 0.9); color: #fff; font-size: 17px; }
+.tbp-singer input:focus { outline: none; box-shadow: 0 0 0 3px rgba(255, 210, 63, 0.4); }

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="price-bg" cx="0.5" cy="0.55" r="0.75">
+      <stop offset="0" stop-color="#3fe08a"/>
+      <stop offset="0.55" stop-color="#1fa85a"/>
+      <stop offset="1" stop-color="#0b4a26"/>
+    </radialGradient>
+    <linearGradient id="price-tag" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ffe9a8"/>
+    </linearGradient>
+    <linearGradient id="price-cart" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8ecf4"/>
+      <stop offset="1" stop-color="#9aa4b8"/>
+    </linearGradient>
+    <radialGradient id="price-coin" cx="0.35" cy="0.3" r="0.7">
+      <stop offset="0" stop-color="#fff3a0"/>
+      <stop offset="1" stop-color="#e8a412"/>
+    </radialGradient>
+    <radialGradient id="price-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#002a10" stop-opacity="0"/>
+      <stop offset="1" stop-color="#002a10" stop-opacity="0.55"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#price-bg)"/>
+  <g fill="#7dff6b" opacity="0.18">
+    <rect x="-20" y="20" width="440" height="22" transform="rotate(-8 200 30)"/>
+    <rect x="-20" y="200" width="440" height="22" transform="rotate(-8 200 210)"/>
+  </g>
+  <!-- background coins -->
+  <g stroke="#7a4a00" stroke-width="3">
+    <circle cx="44" cy="62" r="14" fill="url(#price-coin)"/><circle cx="364" cy="58" r="11" fill="url(#price-coin)"/>
+    <circle cx="352" cy="196" r="15" fill="url(#price-coin)"/><circle cx="54" cy="190" r="10" fill="url(#price-coin)"/>
+  </g>
+  <g fill="none" stroke="#b87a10" stroke-width="2.5"><circle cx="44" cy="62" r="8"/><circle cx="352" cy="196" r="9"/></g>
+  <ellipse cx="170" cy="192" rx="80" ry="10" fill="#002a10" opacity="0.4"/>
+  <!-- groceries -->
+  <g stroke="#1b1030" stroke-width="4" stroke-linejoin="round">
+    <rect x="118" y="76" width="18" height="50" rx="5" fill="#3ec7ff"/>
+    <rect x="122" y="66" width="10" height="12" rx="2" fill="#ff4fb0"/>
+    <path d="M140 108C136 84 160 70 178 80C188 86 186 104 180 112Z" fill="#f3b45a"/>
+    <path d="M152 88l6 10M164 82l6 10" stroke="#b8702a" stroke-width="3"/>
+    <rect x="182" y="84" width="34" height="40" rx="4" fill="#ff4f6e"/>
+    <path d="M182 96h34" stroke="#ffe23f" stroke-width="5"/>
+    <circle cx="160" cy="114" r="11" fill="#ff3d3d"/>
+    <path d="M160 103c2-6 6-8 10-8" fill="none" stroke-width="3"/>
+  </g>
+  <!-- trolley -->
+  <g stroke="#1b1030" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M78 82H98L112 172H222" fill="none"/>
+    <path d="M102 104H236L224 158H112Z" fill="url(#price-cart)"/>
+    <path d="M106 122H232M110 140H228M134 104L138 158M162 104L164 158M190 104L190 158M214 104L210 158" fill="none" stroke-width="3"/>
+    <circle cx="124" cy="184" r="10" fill="#2b2b2b"/>
+    <circle cx="208" cy="184" r="10" fill="#2b2b2b"/>
+  </g>
+  <circle cx="124" cy="184" r="3.5" fill="#c9ccd4"/><circle cx="208" cy="184" r="3.5" fill="#c9ccd4"/>
+  <path d="M110 112H220" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <!-- string -->
+  <path d="M86 82C110 30 190 40 226 96" fill="none" stroke="#1b1030" stroke-width="3" stroke-linecap="round"/>
+  <!-- big price tag -->
+  <g transform="rotate(-14 260 112)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M212 112L238 78H298C304 78 308 82 308 88V136C308 142 304 146 298 146H238Z" fill="url(#price-tag)" stroke="#1b1030" stroke-width="4.5"/>
+    <circle cx="230" cy="112" r="6" fill="#0b4a26" stroke="#1b1030" stroke-width="3"/>
+    <path d="M250 96H294" stroke="#1fa85a" stroke-width="8"/>
+    <path d="M250 114H286" stroke="#1b1030" stroke-width="6"/>
+    <path d="M250 130H276" stroke="#ff4fb0" stroke-width="6"/>
+    <path d="M244 84H290" stroke="#fff" stroke-width="3" opacity="0.9"/>
+  </g>
+  <!-- bust spark -->
+  <g transform="translate(298 84) scale(0.85)">
+    <path d="M0-34L9-14L30-22L18-4L36 8L14 10L18 32L2 18L-12 34L-12 12L-34 10L-18-4L-28-24L-8-14Z" fill="#ffe23f" stroke="#1b1030" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M0-18L5-7L16-11L10-1L19 5L7 6L9 17L1 9L-6 18L-6 7L-17 5L-9-2L-14-12L-4-7Z" fill="#ff3d3d"/>
+  </g>
+  <rect width="400" height="240" fill="url(#price-vig)"/>
+</svg>

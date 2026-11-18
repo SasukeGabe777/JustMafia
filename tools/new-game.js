@@ -193,6 +193,15 @@ write(`public/box/intros/${key}.js`, `'use strict';
 })();
 `);
 
+// Main-menu art: a starter picture to replace with a real illustration (docs/game-kit.md, "Tile art").
+write(`public/art/tiles/${key}.svg`, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <!-- STARTER ART for ${name}: replace with an original illustration (no text), subject inside x 90-310, y 55-185. -->
+  <defs><radialGradient id="${key}-bg" cx="50%" cy="55%" r="70%"><stop offset="0" stop-color="#8b5cff"/><stop offset="1" stop-color="#1b1030"/></radialGradient></defs>
+  <rect width="400" height="240" fill="url(#${key}-bg)"/>
+  <circle cx="200" cy="120" r="58" fill="#ffd23f" stroke="#1b1030" stroke-width="5"/>
+  <circle cx="182" cy="104" r="16" fill="#fff" opacity="0.5"/>
+</svg>
+`);
 if (exists('public/box/scores/_template.js')) write(`public/box/scores/${key}.js`, fs.readFileSync(P('public/box/scores/_template.js'), 'utf8').split('__KEY__').join(key));
 
 write(`tools/test-box-${key}.js`, `'use strict';
@@ -226,7 +235,7 @@ insert('public/box/play.html', '  <link rel="stylesheet" href="/box/games/zombie
 insert('public/box/tv.js', "'funny', 'zombie',", ` '${key}',`);
 insert('public/box/play.js', "'funny', 'zombie',", ` '${key}',`);
 insert('public/hub.html', '      <a class="tile live zombie"', `      <a class="tile live ${key}" href="/box/tv?game=${key}" data-game="${key}" data-best="3-10" data-type="${type}">
-        <div class="art" aria-hidden="true"><span class="icon">${icon}</span></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/${key}.svg" alt="" onerror="this.remove()"><span class="icon">${icon}</span></div>
         <div class="info"><h2>${name}</h2><p>One line that sells the game.</p>
           <div class="meta"><span>👥 2–100 · best 3–10</span><span>⏱ 10–20 min</span><span>${icon} ${CAT_NAME}</span></div></div>
       </a>\n`, { before: true });

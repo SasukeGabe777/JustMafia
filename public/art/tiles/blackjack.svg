@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="blackjack-felt" cx="0.5" cy="0.35" r="0.8">
+      <stop offset="0" stop-color="#e8445e"/>
+      <stop offset="0.55" stop-color="#b0243e"/>
+      <stop offset="1" stop-color="#3d0a14"/>
+    </radialGradient>
+    <linearGradient id="blackjack-rail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a4a26"/>
+      <stop offset="1" stop-color="#3d1a0a"/>
+    </linearGradient>
+    <linearGradient id="blackjack-card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffdf5"/>
+      <stop offset="1" stop-color="#f0e2c4"/>
+    </linearGradient>
+    <radialGradient id="blackjack-light" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd166" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ffd166" stop-opacity="0"/>
+    </radialGradient>
+    <g id="blackjack-chip">
+      <ellipse cx="0" cy="6" rx="22" ry="8"/>
+      <rect x="-22" y="0" width="44" height="6"/>
+      <ellipse cx="0" cy="0" rx="22" ry="8"/>
+    </g>
+    <radialGradient id="blackjack-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#1a0006" stop-opacity="0"/>
+      <stop offset="1" stop-color="#1a0006" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#blackjack-felt)"/>
+  <ellipse cx="200" cy="60" rx="200" ry="110" fill="url(#blackjack-light)"/>
+  <!-- table markings -->
+  <g fill="none" stroke="#ffd166" stroke-width="3" opacity="0.55">
+    <path d="M-10 40C80 110 320 110 410 40"/>
+    <path d="M-10 58C80 128 320 128 410 58" stroke-dasharray="2 10" stroke-linecap="round"/>
+  </g>
+  <g fill="none" stroke="#ffd166" stroke-width="3" opacity="0.5">
+    <rect x="18" y="118" width="46" height="62" rx="8"/><rect x="336" y="118" width="46" height="62" rx="8"/>
+  </g>
+  <!-- rail -->
+  <path d="M-10 200C80 184 320 184 410 200V250H-10Z" fill="url(#blackjack-rail)" stroke="#1b1030" stroke-width="4"/>
+  <path d="M-10 208C80 193 320 193 410 208" stroke="#d48a4a" stroke-width="3" fill="none" opacity="0.7"/>
+  <!-- chip stacks -->
+  <ellipse cx="130" cy="186" rx="34" ry="10" fill="#000" opacity="0.35"/>
+  <ellipse cx="272" cy="186" rx="34" ry="10" fill="#000" opacity="0.35"/>
+  <g stroke="#1b1030" stroke-width="3.5" stroke-linejoin="round">
+    <use href="#blackjack-chip" transform="translate(126 172)" fill="#1b1030"/>
+    <use href="#blackjack-chip" transform="translate(126 162)" fill="#3e6cff"/>
+    <use href="#blackjack-chip" transform="translate(126 152)" fill="#e8323c"/>
+    <use href="#blackjack-chip" transform="translate(126 142)" fill="#3e6cff"/>
+    <use href="#blackjack-chip" transform="translate(126 132)" fill="#fffdf5"/>
+    <use href="#blackjack-chip" transform="translate(276 172)" fill="#e8323c"/>
+    <use href="#blackjack-chip" transform="translate(276 162)" fill="#ffd166"/>
+    <use href="#blackjack-chip" transform="translate(276 152)" fill="#1b1030"/>
+  </g>
+  <g fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="5 6" opacity="0.85">
+    <ellipse cx="126" cy="132" rx="14" ry="4.5"/><ellipse cx="276" cy="152" rx="14" ry="4.5" stroke="#ffd166"/>
+  </g>
+  <!-- cards -->
+  <ellipse cx="202" cy="170" rx="70" ry="10" fill="#000" opacity="0.35"/>
+  <g transform="rotate(-12 176 120)" stroke="#1b1030" stroke-width="4" stroke-linejoin="round">
+    <rect x="142" y="66" width="70" height="100" rx="9" fill="url(#blackjack-card)"/>
+    <path d="M177 92C170 102 156 108 158 118C160 125 168 126 172 121L168 132H186L182 121C186 126 194 125 196 118C198 108 184 102 177 92Z" fill="#1b1030" stroke="none"/>
+    <path d="M158 80l3 5l5 2l-5 2l-3 5l-3-5l-5-2l5-2zM196 144l3 5l5 2l-5 2l-3 5l-3-5l-5-2l5-2z" fill="#e8323c" stroke="none"/>
+  </g>
+  <g transform="rotate(10 228 122)" stroke="#1b1030" stroke-width="4" stroke-linejoin="round">
+    <rect x="192" y="70" width="70" height="100" rx="9" fill="url(#blackjack-card)"/>
+    <rect x="200" y="78" width="54" height="84" rx="5" fill="#ffe7b0" stroke="#d4a73c" stroke-width="2.5"/>
+    <path d="M213 106L215 88L222 98L227 84L232 98L239 88L241 106Z" fill="#ffd166" stroke-width="3"/>
+    <circle cx="227" cy="118" r="11" fill="#ffd0b0" stroke-width="3"/>
+    <circle cx="223" cy="117" r="1.8" fill="#1b1030" stroke="none"/><circle cx="231" cy="117" r="1.8" fill="#1b1030" stroke="none"/>
+    <path d="M211 154C211 138 219 132 227 132C235 132 243 138 243 154Z" fill="#e8323c" stroke-width="3"/>
+    <path d="M227 134L222 154M227 134L232 154" stroke="#ffd166" stroke-width="2.5"/>
+  </g>
+  <path d="M150 74l4 30" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.8" transform="rotate(-12 176 120)"/>
+  <rect width="400" height="240" fill="url(#blackjack-vig)"/>
+</svg>

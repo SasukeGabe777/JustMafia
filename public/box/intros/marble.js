@@ -133,7 +133,7 @@
     // How to play (box/howto.js): one card per step (module howSteps = 6).
     tutorial: [
       { icon: '📱', title: 'Your piece of the maze', text: 'Every phone shows one piece of a wooden maze. Put your phones together, screens up, just like the map on the TV.', phone: 'Look for your board number, then put your phone next to your neighbours and tap ✋ I’m ready.', say: 'Every phone shows one piece of a wooden maze. Put your phones together, just like the map on the TV!' },
-      { icon: '🔮', title: 'Tilt to roll', text: 'The marble starts on one phone. Whoever has it tilts their phone to roll it around the walls.', phone: 'When the marble is on your phone, tilt it gently. No tilt sensor? Drag your finger on the board.' },
+      { icon: '🔮', title: 'Drag to roll', text: 'The marble starts on one phone. Whoever has it holds a finger on their board and drags the way it should roll.', phone: 'When the marble is on your phone, hold a finger on the board and drag. Drag further to roll faster.' },
       { icon: '➡️', title: 'Pass it on', text: 'Roll it through a gap at the edge (the little yellow arrows) and it lands on your neighbour’s phone.', phone: 'Yellow arrows at the edge of your board are gaps to your neighbours.' },
       { icon: '🗣️', title: 'Work it out together', text: 'Nobody can see the whole maze alone. Talk! The TV only uncovers the maze where the marble has been.' },
       { icon: '🕳️', title: 'Holes and twists', text: 'Holes send the marble back to where it came onto your board. Each maze has a twist: ice, a backwards board, gems everywhere…' },

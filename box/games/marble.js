@@ -1,7 +1,7 @@
 'use strict';
 // JustMarble: every phone is one piece of a wooden labyrinth. The pieces only make sense when
-// everyone puts their phones together. The marble starts on one phone; whoever holds it tilts
-// their phone to roll it (the physics runs on that phone), and when it rolls off the edge through
+// everyone puts their phones together. The marble starts on one phone; whoever holds it drags
+// a finger on their board to roll it (the physics runs on that phone), and when it rolls off the edge through
 // a gap it lands on the neighbour's phone. Get it into the goal before time runs out.
 //
 // The maze is one big grid split into boards (rows × cols of phones). Cells carry wall bits;
@@ -34,8 +34,8 @@ const PTS = { clear: 100, perSec: 2, sink: 50, pass: 30, passMax: 3, gem: 25, ho
 const MODS = [
   { k: 'classic', name: 'Warm-up', icon: '🪵', about: 'A plain wooden maze. Put your phones together and find the way!', holes: 0, gems: 2 },
   { k: 'holes', name: 'Pitfalls', icon: '🕳️', about: 'Holes! Fall in and the marble goes back to where it came onto your board.', holes: 1, gems: 3 },
-  { k: 'ice', name: 'Ice Rink', icon: '🧊', about: 'The wood is iced over. Tiny tilts!', holes: 1, gems: 3, ice: true },
-  { k: 'mirror', name: 'Mirror Board', icon: '🪞', about: 'One board tilts backwards. Who has it?', holes: 1, gems: 3, mirror: true },
+  { k: 'ice', name: 'Ice Rink', icon: '🧊', about: 'The wood is iced over. Gentle drags!', holes: 1, gems: 3, ice: true },
+  { k: 'mirror', name: 'Mirror Board', icon: '🪞', about: 'One board rolls backwards. Who has it?', holes: 1, gems: 3, mirror: true },
   { k: 'gems', name: 'Gem Rush', icon: '💎', about: 'Gems everywhere. Grab them on the way for points!', holes: 1, gems: 8 },
 ];
 

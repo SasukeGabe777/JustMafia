@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="quickdraw-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e2582a"/>
+      <stop offset="0.5" stop-color="#f59a3a"/>
+      <stop offset="0.75" stop-color="#ffd27a"/>
+    </linearGradient>
+    <radialGradient id="quickdraw-sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fffbe0"/>
+      <stop offset="0.6" stop-color="#ffe066"/>
+      <stop offset="1" stop-color="#f2b632"/>
+    </radialGradient>
+    <radialGradient id="quickdraw-halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff3b0" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#fff3b0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="quickdraw-sand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d98a45"/>
+      <stop offset="1" stop-color="#8a4720"/>
+    </linearGradient>
+    <linearGradient id="quickdraw-cactus" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6fbf4a"/>
+      <stop offset="1" stop-color="#2f7a2e"/>
+    </linearGradient>
+    <radialGradient id="quickdraw-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#3a1206" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3a1206" stop-opacity="0.6"/>
+    </radialGradient>
+    <g id="quickdraw-cowboy">
+      <!-- facing right; origin at feet centre -->
+      <path d="M-16 0 L-12 -40 C-14 -52 -14 -62 -8 -68 L8 -68 C14 -62 14 -52 12 -40 L16 0 Z"/>
+      <path d="M6 -60 L34 -56 L34 -48 L6 -50 Z"/>
+      <path d="M32 -60 L44 -60 L44 -54 L36 -54 L36 -48 L31 -48 Z"/>
+      <circle cx="0" cy="-78" r="11"/>
+      <path d="M-26 -84 C-12 -80 12 -80 26 -84 C22 -88 16 -89 12 -88 L10 -100 C4 -104 -4 -104 -10 -100 L-12 -88 C-16 -89 -22 -88 -26 -84 Z"/>
+    </g>
+  </defs>
+  <rect width="400" height="240" fill="url(#quickdraw-sky)"/>
+  <circle cx="200" cy="118" r="90" fill="url(#quickdraw-halo)"/>
+  <circle cx="200" cy="118" r="52" fill="url(#quickdraw-sun)" stroke="#c9741f" stroke-width="4"/>
+  <!-- far mesas -->
+  <path d="M0 150 L0 128 L40 128 L48 118 L86 118 L94 132 L120 132 L124 150 Z" fill="#b5532a" stroke="#6e2a12" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M276 150 L282 126 L318 126 L326 112 L366 112 L372 128 L400 128 L400 150 Z" fill="#b5532a" stroke="#6e2a12" stroke-width="3" stroke-linejoin="round"/>
+  <!-- ground -->
+  <path d="M0 146 C80 138 140 150 200 146 C270 141 330 140 400 146 L400 240 L0 240 Z" fill="url(#quickdraw-sand)" stroke="#6e2a12" stroke-width="4" stroke-linejoin="round"/>
+  <g stroke="#6e2a12" stroke-width="3" stroke-linecap="round" opacity="0.45">
+    <path d="M40 200 h40 M300 210 h50 M150 222 h30 M240 196 h22"/>
+  </g>
+  <!-- tumbleweed -->
+  <g fill="none" stroke="#7a4a1e" stroke-width="2.5" opacity="0.85">
+    <circle cx="338" cy="176" r="12"/>
+    <path d="M328 170 C336 180 344 168 348 180 M330 182 C338 172 342 186 346 170"/>
+  </g>
+  <!-- cactus -->
+  <g stroke="#1d4a1c" stroke-width="4" stroke-linejoin="round" fill="url(#quickdraw-cactus)">
+    <path d="M52 184 L52 110 C52 98 70 98 70 110 L70 184 Z"/>
+    <path d="M52 150 L42 150 C34 150 32 146 32 140 L32 124 C32 116 42 116 42 124 L42 138 L52 138 Z"/>
+    <path d="M70 140 L80 140 L80 118 C80 110 90 110 90 118 L90 140 C90 148 86 152 80 152 L70 152 Z"/>
+  </g>
+  <path d="M57 112 L57 176" stroke="#b6f08a" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <!-- shadows -->
+  <ellipse cx="126" cy="186" rx="34" ry="6" fill="#3a1206" opacity="0.35"/>
+  <ellipse cx="274" cy="186" rx="34" ry="6" fill="#3a1206" opacity="0.35"/>
+  <!-- flash: impact streak + zap -->
+  <path d="M170 128 L230 120" stroke="#fff8d0" stroke-width="10" stroke-linecap="round" opacity="0.75"/>
+  <path d="M168 122 L192 112 L188 124 L214 114 L206 130 L232 122 L208 140 L212 128 L186 138 L190 126 Z" fill="#fff36b" stroke="#7a2a12" stroke-width="3.5" stroke-linejoin="round"/>
+  <g stroke="#fff6c8" stroke-width="4" stroke-linecap="round">
+    <path d="M200 94 v-10 M224 100 l7 -7 M176 100 l-7 -7 M200 152 v10 M224 146 l7 7 M176 146 l-7 7"/>
+  </g>
+  <!-- cowboys -->
+  <g fill="#2a160a" stroke="#1b0a04" stroke-width="3" stroke-linejoin="round">
+    <use href="#quickdraw-cowboy" transform="translate(126 188) scale(1.15)"/>
+    <use href="#quickdraw-cowboy" transform="translate(274 188) scale(-1.15 1.15)"/>
+  </g>
+  <!-- hat bands -->
+  <path d="M113 87 h26" stroke="#c0392b" stroke-width="4.5"/>
+  <path d="M261 87 h26" stroke="#2f6b8a" stroke-width="4.5"/>
+  <!-- rim light -->
+  <path d="M140 150 L136 122 M260 150 L264 122" stroke="#ffcf6a" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  <!-- muzzle flashes -->
+  <path d="M177 125 l8 -6 l-1 5 l8 1 l-8 4 l3 5 Z" fill="#ffffff"/>
+  <path d="M223 125 l-8 -6 l1 5 l-8 1 l8 4 l-3 5 Z" fill="#ffffff"/>
+  <!-- dust -->
+  <g fill="#f3c48a" stroke="#8a4720" stroke-width="2.5" opacity="0.9">
+    <circle cx="100" cy="184" r="7"/><circle cx="90" cy="180" r="5"/>
+    <circle cx="300" cy="184" r="7"/><circle cx="310" cy="180" r="5"/>
+  </g>
+  <rect width="400" height="240" fill="url(#quickdraw-vig)"/>
+</svg>
