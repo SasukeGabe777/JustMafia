@@ -22,7 +22,9 @@
   };
   const ANIM_SFX = { run: 'step', decoy: 'siren', climb: 'creak', fight: 'hit', hide: 'heartbeat', sneak: 'drag', drive: 'whoosh', search: 'click', swim: 'whoosh', hold: 'knock', rest: 'chime', talk: 'talk' };
   const VOICE = { like: /guy|male|david|mark|daniel|george|ryan/i, accent: /en-(US|GB)/i, pitch: 0.82, rate: 1.0 };
-  const tag = (o) => [o.need ? `<i class="zs-t need">needs ${o.need}</i>` : '', o.help ? `<i class="zs-t help">better with ${o.help}</i>` : '', o.gain ? `<i class="zs-t gain">find ${o.gain}</i>` : '', o.heal ? '<i class="zs-t heal">heals</i>' : '', o.cure ? '<i class="zs-t cure">cures bites</i>' : '', o.hero ? '<i class="zs-t hero">🦸 hero</i>' : ''].join('');
+  const DANGER = ['', '⚠️ risky', '☠️ dangerous', '☠️☠️ deadly'];
+  const danger = (o) => (o.danger ? `<i class="zs-t danger d${o.danger}">${DANGER[o.danger] || ''}</i>` : '');
+  const tag = (o) => [danger(o), o.need ? `<i class="zs-t need">needs ${o.need}</i>` : '', o.help || o.flags ? `<i class="zs-t help">better with ${o.help || ''}${o.flags || ''}</i>` : '', o.gain ? `<i class="zs-t gain">find ${o.gain}</i>` : '', o.heal ? '<i class="zs-t heal">heals</i>' : '', o.cure ? '<i class="zs-t cure">cures bites</i>' : '', o.hero ? '<i class="zs-t hero">🦸 hero</i>' : ''].join('');
   // countdowns whose end time stays fixed for one phase (so renders don't jitter)
   const ends = {};
   const timer = (key, endsIn) => { if (!endsIn) return ''; if (!ends[key]) ends[key] = Date.now() + endsIn; return `<span class="timer" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span>`; };
@@ -308,6 +310,7 @@
       const x = pos[i].hidden ? pos[i].cx - 30 + (i % 4) * 42 : pos[i].x, top = pos[i].hidden ? G0 - 200 : pos[i].y - 250 * P.s;
       if (rv < 1500 && i === lastRevealed(ppl, u)) stamp(g, x, Math.max(V.top + 0.4 * (V.bottom - V.top), top - 60), p.fate, rv, Math.max(0.75, Math.min(1.1, P.s + 0.25)));
       else if (p.fate !== 'dead') Z.emoji(g, VERDICT[p.fate].icon, x - 60 * P.s - 10, top + 30, 30 + 18 * P.s);
+      if (p.why && (p.saved || p.doomed)) { const k2 = Z.util.clamp(rv / 400); Z.glow(g, x + 60 * P.s + 10, top + 30, 50, p.saved ? 'rgba(160,255,140,A)' : 'rgba(255,110,90,A)', 0.5 * k2); Z.emoji(g, p.why.icon, x + 60 * P.s + 10, top + 30 - (1 - k2) * 30, (30 + 18 * P.s) * (0.6 + 0.4 * k2)); }
     }
     // name plates last, so nothing ever covers them; after the verdict they take its colour
     for (const P of L) {
@@ -329,7 +332,7 @@
       } else {
         Z.survivor(g, P.x + (done ? 0 : Math.sin(t * 30 + P.i) * 3), P.y, P.s, t, { avatar: p.avatar, color: p.color, pose: done ? 'cheer' : 'idle', ph: P.i, tint: done ? null : 'sick' });
         if (!done) Z.glow(g, P.x, P.y - 130 * P.s, 120 * P.s, 'rgba(140,255,90,A)', 0.3 + 0.2 * Math.sin(t * 6));
-        else { const k = clamp(rv / 700); Z.emoji(g, '🩹', P.x + 50, P.y - 220 * P.s - k * 40, 64); Z.glow(g, P.x, P.y - 120 * P.s, 160, 'rgba(255,255,200,A)', 0.4 * (1 - k)); }
+        else { const k = clamp(rv / 700); Z.emoji(g, p.how || '🩹', P.x + 50, P.y - 220 * P.s - k * 40, 64); Z.glow(g, P.x, P.y - 120 * P.s, 160, 'rgba(255,255,200,A)', 0.4 * (1 - k)); }
       }
       if (done && rv < 1600) stamp(g, P.x, P.y - 300 * P.s, p.fate === 'turned' ? 'turned' : 'cured', rv, Math.max(0.75, P.s + 0.2));
     }
@@ -423,12 +426,12 @@
         let beat;
         if (u < actEnd) beat = `<div class="zs-beat" id="zsbt-${s.n}-${i}-a">▶ ${esc(cur.setup)}…</div>`;
         else if (u < cur.verdictAt) beat = `<div class="zs-beat warn" id="zsbt-${s.n}-${i}-c">${cur.role && O.groupLine ? `<b class="${O.groupOk === false ? 'bad' : 'good'}">${esc(O.groupLine)}</b>` : '🧟 Here they come…'}</div>`;
-        else if (last && u < last.at + 1300 && k >= 0) { const p = cur.people[k], V2 = VERDICT[p.fate]; beat = `<div class="zs-beat verdict" id="zsbt-${s.n}-${i}-v${k}" style="--c:${V2.col}">${V2.icon} <b>${esc(p.name)}</b> ${V2.say}</div>`; }
+        else if (last && u < last.at + 1300 && k >= 0) { const p = cur.people[k], V2 = VERDICT[p.fate]; beat = `<div class="zs-beat verdict" id="zsbt-${s.n}-${i}-v${k}" style="--c:${V2.col}">${V2.icon} <b>${esc(p.name)}</b> ${V2.say}${p.why ? `<small class="zs-why ${p.why.good ? 'good' : p.why.bad ? 'bad' : ''}">${p.why.icon} ${esc(p.why.text)}</small>` : ''}</div>`; }
         else beat = `<div class="zs-beat line" id="zsbt-${s.n}-${i}-l">${esc(cur.line)}</div>`;
-        mid = `<div class="zs-banner" id="zsb-${s.n}-${i}"><span class="zs-bi">${cur.icon}</span><b>${esc(cur.label)}</b><small>${plural(cur.total, 'survivor')} · ${i + 1} of ${O.groups.length}</small></div>${beat}`;
+        mid = `<div class="zs-banner" id="zsb-${s.n}-${i}"><span class="zs-bi">${cur.icon}</span><b>${esc(cur.label)}</b><small>${plural(cur.total, 'survivor')} · ${i + 1} of ${O.groups.length}</small>${cur.twist && u >= actEnd ? `<em class="zs-twist ${cur.twist}">${cur.twist === 'worse' ? '😬 worse than it looked' : '🍀 better than it looked'}</em>` : ''}</div>${beat}`;
       } else if (fever) {
         const F = O.fever, k = lastRevealed(F.people, u);
-        mid = `<div class="zs-banner fever" id="zsb-${s.n}-f"><span class="zs-bi">🌡️</span><b>The fever</b><small>bites from the last scene</small></div>${k >= 0 ? `<div class="zs-beat verdict" id="zsbt-${s.n}-f${k}" style="--c:${F.people[k].fate === 'turned' ? '#ff6b6b' : '#7dff8a'}">${F.people[k].fate === 'turned' ? '🧟' : '🩹'} <b>${esc(F.people[k].name)}</b> ${F.people[k].fate === 'turned' ? 'turned!' : 'is cured!'}</div>` : `<div class="zs-beat" id="zsbt-${s.n}-f">🦷 No medkit by now means trouble…</div>`}`;
+        mid = `<div class="zs-banner fever" id="zsb-${s.n}-f"><span class="zs-bi">🌡️</span><b>The fever</b><small>bites from the last scene</small></div>${k >= 0 ? `<div class="zs-beat verdict" id="zsbt-${s.n}-f${k}" style="--c:${F.people[k].fate === 'turned' ? '#ff6b6b' : '#7dff8a'}">${F.people[k].fate === 'turned' ? '🧟' : '🩹'} <b>${esc(F.people[k].name)}</b> ${F.people[k].fate === 'turned' ? 'turned!' : F.people[k].how === '💉' ? 'the vaccine kicked in!' : 'is cured!'}</div>` : `<div class="zs-beat" id="zsbt-${s.n}-f">🦷 No medkit by now means trouble…</div>`}`;
       } else {
         const tl = O.tally, Ls = tl.lists || {};
         const col = (cls, icon, title, list, n) => (n ? `<div class="zs-tcol ${cls}"><h3>${icon} ${title} <b>${n}</b></h3><div class="zs-tnames">${chips(list, Math.max(0, n - list.length), 14)}</div></div>` : '');
@@ -440,15 +443,15 @@
     if (s.phase === 'board') {
       return `${topBar(s, `<span class="zs-clock">Next scene ${timer('b' + s.n, s.endsIn)}</span>`)}
         <div class="zs-board"><h2 id="zsbh-${s.n}">${plural(s.alive, 'survivor')} still standing${s.dead ? ` · ${plural(s.dead, 'ghost')}` : ''}</h2>
-        <aside class="zs-lead"><h3>🏆 Longest survivors</h3>${s.standings.slice(0, 8).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i + 1}</span><span class="av">${r.alive ? esc(r.avatar) : '👻'}</span><span class="nm">${esc(r.name)}</span>${r.alive ? `<span class="st">${STATUS[r.status] ? STATUS[r.status][0] : ''}</span>` : ''}<b>${r.pts}</b></div>`).join('')}
+        <aside class="zs-lead"><h3>🏆 Longest survivors</h3>${s.standings.slice(0, 8).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i + 1}</span><span class="av">${r.alive ? esc(r.avatar) : '👻'}</span><span class="nm">${esc(r.name)}${r.alive ? '' : `<small class="zs-rch">${esc(r.reach || '')}</small>`}</span>${r.alive ? `<span class="st">${STATUS[r.status] ? STATUS[r.status][0] : ''}</span>` : ''}<b>${r.pts}</b></div>`).join('')}
         ${s.haunts && s.haunts.length ? `<h3>👻 Hauntings</h3>${s.haunts.slice(0, 5).map((h) => `<div class="zs-haunt">${esc(h.from)} ${h.mode === 'bless' ? '🍀 blessed' : '🕯️ cursed'} ${esc(h.to)} ${h.hit ? '<b>✓</b>' : ''}</div>`).join('')}` : ''}</aside></div>`;
     }
     if (s.phase === 'over' && s.epilogue) {
       const E = s.epilogue, st = s.standings;
       return `<div class="zs-end" id="zse"><div class="zs-endhead">${E.wipe ? '<h1 class="zs-wipe">NOBODY MADE IT</h1><p>The city belongs to the shamblers now… but what a story.</p>' : `<h1>THE END</h1><p>${plural(E.rescued.length, 'survivor')} made it out: ${E.rescued.slice(0, 10).map((p) => `${esc(p.avatar)} ${esc(p.name)}`).join(' · ')}${E.rescued.length > 10 ? ` +${E.rescued.length - 10}` : ''}</p>`}</div>
-        <div class="zs-endgrid"><section class="zs-fates"><h3>📜 What happened to everyone</h3><div class="zs-roll"><div class="zs-rollin" style="--n:${E.fates.length}">${E.fates.map((f) => `<div class="zs-fate ${f.rescued ? 'r' : f.alive ? '' : 'd'}"><span>${f.rescued ? '🚁' : f.alive ? '🧍' : '👻'}</span><span class="av">${esc(f.avatar)}</span><span>${esc(f.line)}</span></div>`).join('')}</div></div></section>
+        <div class="zs-endgrid"><section class="zs-fates"><h3>📜 What happened to everyone</h3><div class="zs-roll"><div class="zs-rollin" style="--n:${E.fates.length}">${E.fates.map((f) => `<div class="zs-fate ${f.rescued ? 'r' : f.alive ? '' : 'd'}"><span>${f.rescued ? '🚁' : f.alive ? '🧍' : '👻'}</span><span class="av">${esc(f.avatar)}</span><span><b class="zs-reach">${esc(f.reach || '')}</b> ${esc(f.line)}${f.flags && f.flags.length ? ` <i class="zs-fflags">${f.flags.map((x) => x.icon).join('')}</i>` : ''}</span></div>`).join('')}</div></div></section>
         <section class="zs-awards">${E.awards.map((a, i) => `<div class="zs-award" style="--d:${0.6 + i * 0.25}s"><span class="ic">${a.icon}</span><b>${esc(a.title)}</b><span>${a.names.map(esc).join(', ')}</span><small>${esc(a.text)}</small></div>`).join('')}
-          <div class="zs-final-board"><h3>🏆 Final scores</h3>${st.slice(0, 6).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i === 0 ? '👑' : i + 1}</span><span class="av">${esc(r.avatar)}</span><span class="nm">${esc(r.name)}</span><b>${r.pts}</b></div>`).join('')}</div></section></div></div>`;
+          <div class="zs-final-board"><h3>🏆 Who got furthest</h3>${st.slice(0, 6).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i === 0 ? '👑' : i + 1}</span><span class="av">${esc(r.avatar)}</span><span class="nm">${esc(r.name)}<small class="zs-rch">${esc(r.reach || '')}</small></span><b>${r.pts}</b></div>`).join('')}</div></section></div></div>`;
     }
     return '';
   }
@@ -531,7 +534,10 @@
     const me = v.me; if (!me) return '';
     const [ic, word] = me.alive ? STATUS[me.status] || STATUS.ok : STATUS.dead;
     const slots = [0, 1, 2, 3].map((i) => { const it = me.items && me.items[i]; return `<span class="zs-slot ${it ? 'on' : ''}">${it ? `${it.icon}${it.n != null && it.n > 1 ? `<i>${it.n}</i>` : ''}` : ''}</span>`; }).join('');
-    return `<div class="zs-phead"><span class="zs-stat ${me.alive ? me.status : 'ghost'}">${ic} ${word}</span><span class="zs-pts">⭐ ${me.pts || 0}</span><span class="zs-scn">Day ${v.chapter.day} · ${v.n}/${v.total}</span></div>${me.alive ? `<div class="zs-pack"><span class="lb">🎒</span>${slots}</div>` : ''}`;
+    const calm = v.phase === 'chapter' || v.phase === 'choose' || v.phase === 'board';
+    const hints = me.alive && calm && me.items && me.items.length ? `<div class="zs-hints">${me.items.map((i) => `<span><b>${i.icon} ${esc(i.name)}${i.n != null && i.unit ? ` (${i.n} ${esc(i.unit)})` : ''}</b> ${esc(i.hint || '')}</span>`).join('')}</div>` : '';
+    const story = me.flags && me.flags.length ? `<div class="zs-story"><span class="lb">📜</span>${me.flags.map((f) => `<span class="zs-badge ${f.bad ? 'bad' : ''}">${f.icon} ${esc(f.label)}</span>`).join('')}</div>` : '';
+    return `<div class="zs-phead"><span class="zs-stat ${me.alive ? me.status : 'ghost'}">${ic} ${word}</span><span class="zs-pts">⭐ ${me.pts || 0}</span><span class="zs-scn">Day ${v.chapter.day} · ${v.n}/${v.total}</span></div>${me.alive ? `<div class="zs-pack"><span class="lb">🎒</span>${slots}</div>${hints}` : ''}${me.alive && calm ? story : ''}`;
   }
   function phone(el, v, ctx, outer) {
     if (!v) return;
@@ -553,10 +559,10 @@
     const me = v.me, sc = v.scene;
     if (!me.inScene) return { html: '<div class="zs-pcard"><div class="zs-pbig">🚪</div><h3>You stumble into the group…</h3><p>You’re in from the next scene.</p></div>' };
     const t = timer('p' + v.n, v.endsIn);
-    const alert = me.status === 'bitten' ? `<div class="zs-alert bite">🦷 <b>You’re bitten!</b> ${me.items.some((i) => i.k === 'medkit') ? 'Your 🩹 medkit will cure it at the end of this scene.' : me.bittenNow ? 'Get a 🩹 medkit from a friend before this scene ends, or you turn!' : 'Find a 🩹 medkit by the end of the NEXT scene, or you turn.'}</div>` : me.status === 'hurt' ? '<div class="zs-alert hurt">🤕 You’re hurt: risky moves are riskier. Rest or patch up to heal.</div>' : '';
+    const alert = me.status === 'bitten' ? `<div class="zs-alert bite">🦷 <b>You’re bitten!</b> ${me.items.some((i) => i.k === 'medkit') ? 'Your 🩹 medkit will cure it at the end of this scene.' : me.bittenNow ? 'Get a 🩹 medkit from a friend before this scene ends, or you turn!' : 'Find a 🩹 medkit by the end of the NEXT scene, or you turn.'}</div>` : me.status === 'hurt' ? '<div class="zs-alert hurt">🤕 You’re hurt: get hurt again and you fall (a 🩹 medkit would patch you up). One clean escape, or a rest, heals you.</div>' : '';
     const opts = sc.options.map((o) => {
       const lock = v.locked.includes(o.k), sel = v.pick === o.k, boost = v.boost.includes(o.k);
-      return `<button class="zs-po ${sel ? 'sel' : ''} ${lock ? 'lock' : ''}" data-k="${esc(o.k)}" ${lock ? 'disabled' : ''}><span class="ic">${o.icon}</span><span class="tx"><b>${esc(o.label)}</b><span class="zs-tags">${lock ? `<i class="zs-t need">🔒 needs ${o.need}</i>` : ''}${boost ? '<i class="zs-t boost">⭐ your gear helps</i>' : ''}${o.gain ? `<i class="zs-t gain">find ${o.gain}</i>` : ''}${o.heal ? '<i class="zs-t heal">heals</i>' : ''}${o.cure ? '<i class="zs-t cure">cures bites</i>' : ''}${o.hero ? '<i class="zs-t hero">🦸 hero</i>' : ''}</span></span>${sel ? '<em>✓</em>' : ''}</button>`;
+      return `<button class="zs-po ${sel ? 'sel' : ''} ${lock ? 'lock' : ''}" data-k="${esc(o.k)}" ${lock ? 'disabled' : ''}><span class="ic">${o.icon}</span><span class="tx"><b>${esc(o.label)}</b><span class="zs-tags">${lock ? `<i class="zs-t need">🔒 needs ${o.need}</i>` : ''}${boost ? '<i class="zs-t boost">⭐ your gear or past could help</i>' : o.help || o.flags ? `<i class="zs-t help">better with ${o.help || ''}${o.flags || ''}</i>` : ''}${danger(o)}${o.gain ? `<i class="zs-t gain">find ${o.gain}</i>` : ''}${o.heal ? '<i class="zs-t heal">heals</i>' : ''}${o.cure ? '<i class="zs-t cure">cures bites</i>' : ''}${o.hero ? '<i class="zs-t hero">🦸 hero</i>' : ''}</span></span>${sel ? '<em>✓</em>' : ''}</button>`;
     }).join('');
     const give = me.items.length && v.others.length ? (v.gave ? `<div class="zs-gave">🎁 You gave ${esc(v.gave.item ? ({ gun: '🔫', medkit: '🩹', rope: '🪢', flashlight: '🔦', bat: '🏏', keys: '🔑', firecrackers: '🧨', radio: '📻' })[v.gave.item] : '')} to ${esc(v.gave.to)}</div>` : !P.give ? '<button class="zs-gbtn" id="zs-give">🎁 Give an item to a survivor</button>' : `<div class="zs-givebox"><div class="zs-gh">🎁 Give what?</div><div class="zs-gitems">${me.items.map((i) => `<button class="${P.item === i.k ? 'sel' : ''}" data-item="${esc(i.k)}">${i.icon}<small>${esc(i.name)}</small></button>`).join('')}</div>
       ${P.item ? `<div class="zs-gh">…to whom?</div><div class="zs-gto">${v.others.map((o) => `<button data-to="${esc(o.id)}" class="${o.status === 'bitten' ? 'bit' : ''}">${esc(o.avatar)} ${esc(o.name)}${o.status === 'bitten' ? ' <i>🦷 bitten</i>' : o.status === 'hurt' ? ' <i>🤕</i>' : ''}</button>`).join('')}</div>` : ''}<button class="zs-link" id="zs-gx">cancel</button></div>`) : '';
@@ -577,7 +583,7 @@
     const t = timer('g' + v.n, v.endsIn), h = v.haunt;
     const list = (v.others || []).map((o) => `<div class="zs-hrow ${h && h.to === o.id ? 'on ' + h.mode : ''}"><span class="nm">${esc(o.avatar)} ${esc(o.name)}${o.status === 'bitten' ? ' 🦷' : o.status === 'hurt' ? ' 🤕' : ''}</span><button data-h="bless" data-to="${esc(o.id)}">🍀</button><button data-h="curse" data-to="${esc(o.id)}">🕯️</button></div>`).join('');
     return {
-      html: `<div class="zs-pcard ghost"><div class="zs-pbig">👻</div><h3>You’re a ghost. Haunt someone!</h3><p>🍀 <b>Bless</b> a survivor: luck nudged their way, <b>+30</b> if they make it.<br>🕯️ <b>Curse</b> one: a little bad luck, <b>+50</b> if they get hurt, bitten or fall.</p><div class="zs-step">${h ? '✅ Haunting locked in.' : 'Pick one survivor.'} ${t}</div></div><div class="zs-hlist">${list || '<p class="muted">Nobody left to haunt…</p>'}</div>`,
+      html: `<div class="zs-pcard ghost"><div class="zs-pbig">👻</div><h3>You’re a ghost. Haunt someone!</h3><p>🍀 <b>Bless</b> a survivor: a scrape becomes a clean escape. <b>+30</b> if they make it.<br>🕯️ <b>Curse</b> one: two ghosts cursing the same survivor trip them up. <b>+50</b> if they get hurt, bitten or fall.</p><div class="zs-step">${h ? '✅ Haunting locked in.' : 'Pick one survivor.'} ${t}</div></div><div class="zs-hlist">${list || '<p class="muted">Nobody left to haunt…</p>'}</div>`,
       bind: (el) => { for (const b of el.querySelectorAll('[data-h]')) b.onclick = async () => { const r = await ctx.act({ op: 'haunt', to: b.dataset.to, mode: b.dataset.h }); if (r && r.ok) { ctx.haptic(b.dataset.h === 'curse' ? 'buzz' : 'select'); ctx.sfx(b.dataset.h === 'curse' ? 'wail' : 'chime'); ctx.redraw(); } }; },
     };
   }
@@ -596,8 +602,8 @@
     if (m) {
       const f = m.fate === 'turned' ? 'turned' : m.cured && m.fate === 'safe' ? 'cured' : m.fate;
       const F = FATE[f] || FATE.safe;
-      const msg = { safe: m.lucky ? 'By sheer luck, you made it!' : 'You made it through!', hurt: 'You got hurt. Careful: hurt again and you fall.', bitten: 'You got BITTEN! Get a 🩹 medkit before the end of the next scene or you turn.', dead: 'You fell… but you’re a ghost now! Haunt the living for points.', turned: 'The bite took hold. You turned! Now haunt the living as a ghost.', cured: 'The medkit cured your bite. Phew!' }[f];
-      html += `<div class="zs-pcard zs-fcard ${F.cls}"><div class="zs-pbig">${F.icon}</div><h2>${F.word}</h2><p>${msg}</p>${m.got ? `<div class="zs-got">🎒 Found: <b>${esc(m.got)}</b>${m.dropped ? ` <small>(dropped ${esc(m.dropped)}: backpack full)</small>` : ''}</div>` : ''}${m.used ? `<div class="zs-got">Used your ${m.used}</div>` : ''}${m.healed ? '<div class="zs-got">💚 Your injury healed</div>' : ''}<p class="zs-line">“${esc(m.line)}”</p></div>`;
+      const msg = { safe: m.lucky ? 'By sheer luck, you made it!' : 'You made it through!', hurt: 'You got hurt. Careful: hurt again and you fall.', bitten: 'You got BITTEN! Get a 🩹 medkit before the end of the next scene or you turn.', dead: 'You fell… but you’re a ghost now! Haunt the living for points.', turned: 'The bite took hold. You turned! Now haunt the living as a ghost.', cured: m.cureHow === '💉' ? 'Dr. Okafor’s shot kicked in. The bite didn’t take!' : 'The medkit cured your bite. Phew!' }[f];
+      html += `<div class="zs-pcard zs-fcard ${F.cls}"><div class="zs-pbig">${F.icon}</div><h2>${F.word}</h2><p>${msg}</p>${m.got ? `<div class="zs-got">🎒 Found: <b>${esc(m.got)}</b>${m.dropped ? ` <small>(dropped ${esc(m.dropped)}: backpack full)</small>` : ''}</div>` : ''}${m.used ? `<div class="zs-got">Used your ${m.used}</div>` : ''}${m.healed ? '<div class="zs-got">💚 Your injury healed</div>' : ''}${m.why && (m.saved || m.doomed) ? `<div class="zs-pwhy ${m.saved ? 'good' : 'bad'}">${m.why.icon} ${m.saved ? 'Your past paid off: ' : 'Your past caught up with you: '}${esc(m.why.text)}</div>` : ''}${m.flags && m.flags.length ? `<div class="zs-got">📜 The story will remember: ${m.flags.map((x) => `<span class="zs-badge ${x.bad ? 'bad' : ''}">${x.icon} ${esc(x.label)}</span>`).join(' ')}</div>` : ''}<p class="zs-line">“${esc(m.line)}”</p></div>`;
       const fk = v.n + f;
       if (P.felt !== fk) { P.felt = fk; ctx.haptic(f === 'dead' || f === 'turned' ? 'big' : f === 'bitten' ? 'warn' : f === 'hurt' ? 'error' : v.scene && v.scene.final ? 'win' : 'success'); ctx.sfx(f === 'dead' || f === 'turned' ? 'lose' : f === 'bitten' ? 'heartbeat' : f === 'hurt' ? 'hit' : 'chime'); }
     } else if (v.me && !v.me.alive) html += '<div class="zs-pcard ghost"><div class="zs-pbig">👻</div><h3>Watch what happens to the living…</h3></div>';
@@ -608,20 +614,20 @@
   function endPhone(v, ctx) {
     const E = v.end || {};
     if (P.felt !== 'end') { P.felt = 'end'; ctx.haptic(E.rescued ? 'win' : 'success'); }
-    return `<div class="zs-pcard zs-fcard ${E.rescued ? 'safe' : 'dead'}"><div class="zs-pbig">${E.rescued ? '🚁' : '👻'}</div><h2>${E.rescued ? 'RESCUED!' : E.wipe ? 'NOBODY MADE IT' : 'THE END'}</h2><p class="zs-line">${esc(E.line || '')}</p><p>🏆 You finished <b>#${v.rank}</b> of ${v.of} with ⭐ ${v.me.pts} points</p>${(E.awards || []).map((a) => `<div class="zs-got">${a.icon} <b>${esc(a.title)}</b></div>`).join('')}</div>
-      <div class="zs-pcard"><h3>Final scores</h3>${(E.standings || []).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i + 1}</span><span class="av">${esc(r.avatar)}</span><span class="nm">${esc(r.name)}</span><b>${r.pts}</b></div>`).join('')}</div>`;
+    return `<div class="zs-pcard zs-fcard ${E.rescued ? 'safe' : 'dead'}"><div class="zs-pbig">${E.rescued ? '🚁' : '👻'}</div><h2>${E.rescued ? 'RESCUED!' : E.wipe ? 'NOBODY MADE IT' : 'THE END'}</h2>${E.reach ? `<div class="zs-reachbig">${esc(E.reach)}</div>` : ''}<p class="zs-line">${esc(E.line || '')}</p><p>🏆 You finished <b>#${v.rank}</b> of ${v.of} with ⭐ ${v.me.pts} points</p>${(E.awards || []).map((a) => `<div class="zs-got">${a.icon} <b>${esc(a.title)}</b></div>`).join('')}</div>
+      <div class="zs-pcard"><h3>Who got furthest</h3>${(E.standings || []).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i + 1}</span><span class="av">${esc(r.avatar)}</span><span class="nm">${esc(r.name)}<small class="zs-rch">${esc(r.reach || '')}</small></span><b>${r.pts}</b></div>`).join('')}</div>`;
   }
 
   BOX.games.zombie = {
     name: 'Zombie Survival', icon: '🧟',
-    about: 'A zombie apocalypse in six days. Pick what you do in each scene (the medkit, the pistol or the rope?), then watch the TV to see who makes it. Last one standing wins.',
+    about: 'A zombie apocalypse in six days. Pick what you do in each scene (the medkit, the pistol or the rope?), then watch the TV to see who makes it. Your choices and what you carry decide your fate, and something from day one can save you on the last night.',
     how: [
-      'Each scene the TV shows what’s happening. Pick one of the 3–5 options on your phone.',
-      'Items help: a 🔫 makes a fight safer, a 🪢 helps you climb, a 🩹 cures a bite. Bullets run out!',
+      'Each scene the TV shows what’s happening. Pick one of the 3–5 options on your phone. No dice: the same choice with the same gear and history always ends the same way.',
+      'Your choices and what you carry decide your fate. A 🔦 gets you through the dark, a 🪢 up the wall, a 🩹 cures a bite. Bullets and swings run out!',
+      'The story remembers. Things you did earlier show as 📜 badges on your phone, and something from day one can save you (or doom you) on the last night.',
       'Some choices depend on the group: the door only holds if enough people hold it, and one decoy keeps everyone else safer.',
-      'Bitten? Find a 🩹 medkit before the end of the next scene or you turn. Friends can give you theirs.',
-      'If you fall, you’re a ghost: bless 🍀 or curse 🕯️ a survivor each scene and score if you call it.',
-      '+100 for every scene you survive, +500 if you make the rescue. The longest survivor wins.',
+      'Bitten? Find a 🩹 medkit by the end of the next scene or you turn. Fall, and you’re a ghost: bless 🍀 or curse 🕯️ the living.',
+      'Points for every scene and every new day you survive, for gear and past choices that save you, +500 for the rescue. Whoever gets furthest wins.',
     ],
     fx: { chapter: 'thunder', scene: 'groan', allin: 'chime', gift: 'chime', win: 'win', wipe: 'lose' },
     lobbyTv,

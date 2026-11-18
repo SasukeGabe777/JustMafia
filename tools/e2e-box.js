@@ -53,7 +53,7 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,Alien Abduction,Debate Club,JustSummon,JustMarble,Quick Draw,Bomb Squad,Zombie Survival');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
   // Every small game sits on a category shelf (public/categories.js); there is no catch-all shelf.
   assert.equal(await hub.eval(`[...document.querySelectorAll('.shelf')].map((x) => x.dataset.shelf).join(',')`), 'cards,guess,create,friends,action');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
@@ -362,6 +362,18 @@ async function setup(browser, game, settings = {}) {
     await ph.until(`!!document.querySelector('#mb-pad canvas')`, 'phone board');
     await tv.shot('box-marble-tv'); await ph.shot('box-marble-phone');
     ok('JustMarble: phones line up, tap ready, the TV maps the boards and the marble starts rolling');
+  }
+
+  // ---------- JustEscape: Hazel's briefing, the phones get their evidence, the case board ----------
+  {
+    const { tv, ph } = await setup(browser, 'escape');
+    await tv.click('#start'); await skipShow(tv);
+    await tv.until(`!!document.querySelector('.es-storybox')`, 'Hazel briefs the room', 20000);
+    await ph.until(`!!document.querySelector('#es-ready')`, 'ready button', 8000); await ph.click('#es-ready');
+    await tv.until(`!!document.querySelector('.es-locks')`, 'the case board', 20000);
+    await ph.until(`document.querySelectorAll('.es-card').length >= 1`, 'evidence on the phone');
+    await tv.shot('box-escape-tv'); await ph.shot('box-escape-phone');
+    ok('JustEscape: Hazel briefs the room, phones get their evidence, the TV shows every lock and who holds what');
   }
 
   const pageErrors = PAGES.flatMap((p) => p.errors || []);

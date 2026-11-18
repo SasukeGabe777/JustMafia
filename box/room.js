@@ -579,7 +579,7 @@ class BoxRoom {
   }
   start() {
     if (this.phase !== 'lobby') return { ok: false, error: 'The game is already running.' };
-    if (this.players.size < this.def.min) return { ok: false, error: `${this.def.name} needs at least ${this.def.min} players (bots count).` };
+    if (this.players.size < this.def.min) return { ok: false, error: `${this.def.name} needs at least ${this.def.min} player${this.def.min === 1 ? '' : 's'} (bots count).` };
     this.clearTimers();
     if (this.def.liveLobby && this.game) this.game.s = { ...this.settings }; // the lobby world carries on into the game
     else this.game = this.def.create(this, { ...this.settings });

@@ -254,3 +254,23 @@ body.g-zombie .ph-head, body.g-zombie .vip-bar { background: #151a10; border-col
 .zs-tcol h3 b { font-weight: 400; opacity: 0.8; }
 .zs-tcol.ok { color: var(--zs-tox); } .zs-tcol.hu { color: #ffb347; } .zs-tcol.bi { color: #c8ff7a; } .zs-tcol.de { color: #ff7a6b; }
 .zs-tnames { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+/* ---------- choices that matter: danger, reasons, the story so far ---------- */
+.zs-t.danger { background: #f6d6b0; } .zs-t.danger.d2 { background: #ffc0a8; } .zs-t.danger.d3 { background: #ff9a8a; color: #3a0c06; }
+.zs-why { display: block; margin-top: 4px; font-family: var(--zs-type); font-weight: 400; font-size: 0.52em; color: #fff; }
+.zs-why.good { color: var(--zs-tox); } .zs-why.bad { color: #ff9a8a; }
+.zs-twist { font-style: normal; margin-left: 10px; padding: 2px 12px; border-radius: 99px; font-size: 0.7em; background: rgba(0, 0, 0, 0.6); }
+.zs-twist.worse { color: #ff9a8a; } .zs-twist.better { color: var(--zs-tox); }
+.zs-rch { display: block; font-size: 0.7em; opacity: 0.75; font-weight: 400; }
+.zs-reach { font-family: var(--zs-stencil); font-weight: 400; color: var(--zs-tox); margin-right: 4px; }
+.zs-fate.d .zs-reach { color: #c9d4ff; }
+.zs-fflags { font-style: normal; opacity: 0.85; }
+.zs-hints { display: flex; flex-direction: column; gap: 2px; margin: -4px 2px 8px; font-size: 12px; color: var(--muted); }
+.zs-hints b { color: var(--ink); font-weight: 600; margin-right: 2px; }
+.zs-story { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 0 0 10px; }
+.zs-story .lb { font-size: 18px; }
+.zs-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: #2c3a1e; color: #d8ffb8; border: 1px solid rgba(157, 255, 90, 0.45); white-space: nowrap; }
+.zs-badge.bad { background: #4a1e18; color: #ffc8bc; border-color: rgba(255, 122, 107, 0.55); }
+.zs-pwhy { border-radius: 10px; padding: 8px 10px; margin: 8px 0; font-weight: 600; text-align: left; }
+.zs-pwhy.good { background: rgba(125, 255, 138, 0.14); border: 2px solid rgba(125, 255, 138, 0.6); }
+.zs-pwhy.bad { background: rgba(255, 122, 107, 0.14); border: 2px solid rgba(255, 122, 107, 0.6); }
+.zs-reachbig { font-family: var(--zs-stencil); font-size: 22px; color: var(--yellow); margin: 2px 0 6px; }

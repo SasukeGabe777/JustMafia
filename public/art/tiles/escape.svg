@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="escape-bg" cx="0.5" cy="0.4" r="0.85">
+      <stop offset="0" stop-color="#2c3a5a"/>
+      <stop offset="0.55" stop-color="#151c30"/>
+      <stop offset="1" stop-color="#070a14"/>
+    </radialGradient>
+    <linearGradient id="escape-door" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3a2a1c"/>
+      <stop offset="0.5" stop-color="#6a4c2e"/>
+      <stop offset="1" stop-color="#2e2116"/>
+    </linearGradient>
+    <linearGradient id="escape-brass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd98a"/>
+      <stop offset="0.5" stop-color="#e8b44a"/>
+      <stop offset="1" stop-color="#9a6a1e"/>
+    </linearGradient>
+    <radialGradient id="escape-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd27a" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#ffd27a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="escape-coat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2f44"/>
+      <stop offset="1" stop-color="#0d1020"/>
+    </linearGradient>
+    <linearGradient id="escape-feather" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4f1ea"/>
+      <stop offset="0.22" stop-color="#f4f1ea"/>
+      <stop offset="0.3" stop-color="#0d1016"/>
+      <stop offset="0.6" stop-color="#1d5f6c"/>
+      <stop offset="0.8" stop-color="#3a3488"/>
+      <stop offset="1" stop-color="#0d1016"/>
+    </linearGradient>
+    <radialGradient id="escape-lens" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#e8f4ff" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#7fb3d5" stop-opacity="0.25"/>
+    </radialGradient>
+    <radialGradient id="escape-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#03050c" stop-opacity="0"/>
+      <stop offset="1" stop-color="#03050c" stop-opacity="0.75"/>
+    </radialGradient>
+    <g id="escape-lock">
+      <path d="M-7 -2 V-9 A7 7 0 0 1 7 -9 V-2" fill="none" stroke="#0a0b10" stroke-width="6"/>
+      <path d="M-7 -2 V-9 A7 7 0 0 1 7 -9 V-2" fill="none" stroke="#b8bccb" stroke-width="3"/>
+      <rect x="-11" y="-3" width="22" height="18" rx="3" fill="url(#escape-brass)" stroke="#0a0b10" stroke-width="2.5"/>
+      <circle cx="0" cy="4" r="2.5" fill="#0a0b10"/>
+      <rect x="-1" y="4" width="2" height="6" fill="#0a0b10"/>
+    </g>
+  </defs>
+  <rect width="400" height="240" fill="url(#escape-bg)"/>
+  <!-- brick wall -->
+  <g fill="#3a2a38" opacity="0.35">
+    <rect x="20" y="20" width="44" height="16"/><rect x="70" y="20" width="44" height="16"/><rect x="290" y="20" width="44" height="16"/><rect x="340" y="20" width="44" height="16"/>
+    <rect x="44" y="42" width="44" height="16"/><rect x="316" y="42" width="44" height="16"/><rect x="20" y="64" width="44" height="16"/><rect x="340" y="64" width="44" height="16"/>
+    <rect x="44" y="86" width="40" height="16"/><rect x="316" y="86" width="44" height="16"/><rect x="0" y="108" width="40" height="16"/><rect x="350" y="108" width="44" height="16"/>
+  </g>
+  <!-- ground -->
+  <rect x="0" y="185" width="400" height="55" fill="#0a0d18"/>
+  <path d="M0 185 H400" stroke="#03050c" stroke-width="4"/>
+  <g stroke="#7fb3d5" stroke-width="2" opacity="0.25"><path d="M40 200 H120 M260 206 H360 M90 222 H190 M230 226 H330"/></g>
+  <rect x="196" y="190" width="8" height="40" fill="#ffd27a" opacity="0.25"/>
+  <!-- keyhole glow -->
+  <circle cx="200" cy="122" r="70" fill="url(#escape-glow)"/>
+  <!-- the door -->
+  <rect x="152" y="47" width="96" height="140" rx="6" fill="#1a130d" stroke="#03050c" stroke-width="4"/>
+  <rect x="160" y="56" width="80" height="131" fill="url(#escape-door)" stroke="#0a0b10" stroke-width="3"/>
+  <g stroke="#1e150d" stroke-width="2.5"><path d="M176 58 V186 M192 58 V186 M208 58 V186 M224 58 V186"/></g>
+  <rect x="156" y="70" width="88" height="8" fill="#2a2c38" stroke="#0a0b10" stroke-width="2"/>
+  <rect x="156" y="162" width="88" height="8" fill="#2a2c38" stroke="#0a0b10" stroke-width="2"/>
+  <!-- keyhole -->
+  <ellipse cx="200" cy="124" rx="11" ry="18" fill="url(#escape-brass)" stroke="#0a0b10" stroke-width="2.5"/>
+  <circle cx="200" cy="119" r="4.5" fill="#fff3c4"/>
+  <path d="M197 121 H203 L205 134 H195 Z" fill="#fff3c4"/>
+  <!-- chains -->
+  <g fill="none" stroke-linecap="round">
+    <path d="M150 64 L250 176 M250 64 L150 176" stroke="#0a0b10" stroke-width="9" stroke-dasharray="10 3"/>
+    <path d="M150 64 L250 176 M250 64 L150 176" stroke="#a4a7b4" stroke-width="5" stroke-dasharray="10 3"/>
+    <path d="M148 100 Q200 108 252 100" stroke="#0a0b10" stroke-width="9" stroke-dasharray="10 3"/>
+    <path d="M148 100 Q200 108 252 100" stroke="#7d8090" stroke-width="5" stroke-dasharray="10 3"/>
+  </g>
+  <use href="#escape-lock" transform="translate(200 150) scale(1.15)"/>
+  <use href="#escape-lock" transform="translate(172 106) rotate(-12)"/>
+  <use href="#escape-lock" transform="translate(229 106) rotate(10) scale(0.9)"/>
+  <!-- trench-coat detective silhouette -->
+  <g stroke="#03050c" stroke-width="3" stroke-linejoin="round">
+    <path d="M103 116 Q96 150 94 186 H140 Q138 150 132 116 Q118 108 103 116 Z" fill="url(#escape-coat)"/>
+    <path d="M110 116 L118 150 L126 116" fill="#1b2034"/>
+    <rect x="96" y="150" width="42" height="6" fill="#0d1020" stroke-width="2"/>
+    <circle cx="118" cy="100" r="12" fill="#1b2034"/>
+    <ellipse cx="118" cy="91" rx="22" ry="5" fill="#0d1020"/>
+    <path d="M106 91 Q106 72 118 73 Q130 72 130 91 Z" fill="#0d1020"/>
+  </g>
+  <rect x="106" y="84" width="24" height="4" fill="#c8102e"/>
+  <!-- magnifying glass -->
+  <g transform="translate(262 122) rotate(40)">
+    <rect x="22" y="-6" width="40" height="12" rx="6" fill="#5a3418" stroke="#0a0b10" stroke-width="3"/>
+    <circle cx="0" cy="0" r="24" fill="url(#escape-lens)" stroke="#0a0b10" stroke-width="10"/>
+    <circle cx="0" cy="0" r="24" fill="none" stroke="url(#escape-brass)" stroke-width="6"/>
+    <path d="M-12 -10 Q-6 -16 2 -16" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  </g>
+  <!-- magpie feather -->
+  <g transform="translate(232 182) rotate(-14)">
+    <path d="M0 0 C10 -12 54 -11 78 -2 C54 6 12 8 0 0 Z" fill="url(#escape-feather)" stroke="#03050c" stroke-width="2.5"/>
+    <path d="M-6 1 Q38 -2 76 -2" fill="none" stroke="#ffffff" stroke-width="1.2" opacity="0.5"/>
+  </g>
+  <!-- rain -->
+  <g stroke="#a9c8e4" stroke-width="1.5" stroke-linecap="round" opacity="0.45">
+    <path d="M30 10 l-4 18 M70 40 l-4 18 M110 15 l-4 18 M150 30 l-4 18 M190 8 l-4 18 M230 26 l-4 18 M270 12 l-4 18 M310 34 l-4 18 M350 14 l-4 18 M385 44 l-4 18"/>
+    <path d="M18 80 l-4 18 M58 120 l-4 18 M88 150 l-4 18 M140 200 l-4 18 M262 60 l-4 18 M300 90 l-4 18 M342 120 l-4 18 M372 160 l-4 18 M42 170 l-4 18 M320 196 l-4 18"/>
+  </g>
+  <rect width="400" height="240" fill="url(#escape-vig)"/>
+</svg>
