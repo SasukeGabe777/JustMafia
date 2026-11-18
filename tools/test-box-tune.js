@@ -271,6 +271,35 @@ test('late joiners and leavers do not break a round', () => {
   assert(s.g.results().includes(s.ana.id));
 });
 
+test('the singer has its own box: +50 bonus, 3 tries, works before or after the title', () => {
+  fresh();
+  const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed: 9 });
+  const [ana, bo, cy] = ['Ana', 'Bo', 'Cy'].map((n) => { const p = room.join(n).player; p.sockets = 1; return p; });
+  room.settings.songs = 1; assert(room.start().ok);
+  const g = room.game;
+  for (const [p, id] of [[ana, 'it:1'], [bo, 'it:2'], [cy, 'it:3']]) assert(room.act(p, { op: 'add', id, start: 4 }).ok);
+  run(clock, room, () => g.phase === 'guess' && g.cur.e.by === ana.id, 400000); // Mr. Brightside by The Killers
+  const pts = (p) => g.points.get(p.id) || 0, b0 = pts(bo), c0 = pts(cy);
+  // Bo: title and singer together.
+  let r = room.act(bo, { op: 'guess', text: 'Mr Brightside!', singer: 'killers' });
+  assert(r.ok && r.right && r.artist); assert.equal(pts(bo) - b0, C.ARTIST_BONUS, 'the singer bonus lands at once');
+  // Cy: a wrong singer, then the title, then the right singer after the title.
+  adv({ clock, room }, 500); r = room.act(cy, { op: 'guess', singer: 'queen' }); assert(r.ok && !r.right && r.singerWrong && r.singerLeft === 2);
+  assert.equal(g.cur.tries.get(cy.id) || 0, 0, 'singer guesses don’t use title tries');
+  adv({ clock, room }, 500); r = room.act(cy, { op: 'guess', text: 'mr. brightside' }); assert(r.ok && r.right && !r.artist);
+  // (Everyone named the title, so the round moves on; the singer box closes with it.)
+  assert.equal(pts(cy) - c0, 0);
+  assert.equal(room.act(bo, { op: 'guess', singer: 'x'.repeat(81) }).ok, false, 'too long');
+});
+
+test('the title only has to be the song’s name: punctuation, apostrophes and extra words around it are fine', () => {
+  const ok = (gs, t, a = '') => assert(def.matchTitle(gs, t, a), `"${gs}" should match "${t}"`);
+  ok("Dont Stop Me Now", "Don't Stop Me Now"); ok('dont stop me now.', "Don't Stop Me Now"); ok("can't stop the feeling", "CAN'T STOP THE FEELING! (Original Song from DreamWorks Animation's \"TROLLS\")");
+  ok('shape of you ed sheeran', 'Shape of You', 'Ed Sheeran'); ok('i think its shape of you', 'Shape of You');
+  ok('sweet child of mine', "Sweet Child O' Mine"); ok('rock n roll', 'Rock & Roll');
+  assert(!def.matchTitle('uptown', 'Uptown Funk'), 'part of a title is not enough');
+});
+
 (async () => {
   for (const [n, fn] of tests) { await fn(); passed++; console.log('  ✓ ' + n); }
   console.log(`\n${passed} Tune Buzz tests passed.`);

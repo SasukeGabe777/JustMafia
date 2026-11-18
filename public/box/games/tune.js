@@ -382,9 +382,22 @@
         <p class="tbp-big">${v.gotCount}<small> of ${v.eligible} got it</small></p><p class="muted">Sweet spot = some, not all. Fingers crossed! 🤞</p></div>`, 'mine');
       return;
     }
+    const singerOpen = !m.artist && (m.singerLeft == null || m.singerLeft > 0);
+    const singerRow = (withBtn) => m.artist ? '<div class="tbp-singer done">🎤 Singer ✓ <b>+50</b></div>'
+      : singerOpen ? `<label class="tbp-singer"><span>🎤 Singer <small>bonus +50 · ${m.singerLeft == null ? 3 : m.singerLeft} tries</small></span><span class="tbp-srow"><input id="tbp-s" type="text" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="Who sings it? (optional)">${withBtn ? '<button class="tbp-btn" id="tbp-sgo" type="button">Check</button>' : ''}</span></label>` : '';
+    const feedback = (r, text, singer) => {
+      if (r.artist) { GF.text = r.right ? '🎤 Singer right too! +50' : '🎤 Right singer! +50'; GF.kind = 'artist'; ctx.haptic('select'); }
+      else if (r.right) GF.text = '';
+      else if (text) { GF.text = `✖ “${text.slice(0, 40)}” isn’t it${r.singerWrong ? ' (and not the singer)' : ''}`; GF.kind = 'no'; ctx.haptic('error'); }
+      else if (r.singerWrong) { GF.text = `✖ Not “${singer.slice(0, 30)}”`; GF.kind = 'no'; ctx.haptic('error'); }
+    };
     if (m.got) {
       feel(ctx, 'got' + v.n, 'success');
-      paint(`<div class="tbp-card tbp-res good"><div class="tbp-ic">🎉</div><h2>You got it!</h2><p class="tbp-big">+${m.base}</p><p class="muted">× the difficulty, once everyone rates it${m.artist ? ' · 🎤 +50 artist' : ''}</p><p>${m.order === 1 ? '<span class="tbp-gold">⚡ FIRST!</span>' : `#${m.order} to get it`}</p></div>`, 'got');
+      paint(`<div class="tbp-card tbp-res good"><div class="tbp-ic">🎉</div><h2>You got it!</h2><p class="tbp-big">+${m.base}</p><p class="muted">× the difficulty, once everyone rates it</p><p>${m.order === 1 ? '<span class="tbp-gold">⚡ FIRST!</span>' : `#${m.order} to get it`}</p></div>
+        ${singerRow(true)}${GF.text && GF.kind !== 'no-title' ? `<div class="tbp-fb ${esc(GF.kind)}">${esc(GF.text)}</div>` : ''}`, 'got' + (m.artist ? 'a' : '') + (m.singerLeft || 0));
+      const sb = document.getElementById('tbp-sgo'), si = document.getElementById('tbp-s');
+      const go = async () => { const singer = si.value.trim(); if (!singer) return; const r = await ctx.act({ op: 'guess', singer }); if (!r || !r.ok) return; si.value = ''; feedback(r, '', singer); ctx.redraw(); };
+      if (sb) sb.onclick = go; if (si) si.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
       return;
     }
     if (m.left <= 0) {
@@ -395,19 +408,19 @@
     feel(ctx, 'guess' + v.n, 'turn');
     paint(`<div class="tbp-gh"><span>${chipLite(v.by)}’s pick</span><span>⏰ ${timer('pg' + v.n, v.endsIn)}</span></div>
       <div class="tbp-worth">Worth <b ${GF.t0 ? `data-wt0="${GF.t0}" data-wend="${GF.end}"` : ''}>${ci.worth || 300}</b> × difficulty</div>
-      <form class="tbp-guess" id="tbp-gf"><input id="tbp-g" type="text" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="Song title (artist = +50)"><button class="tbp-btn big">Guess</button></form>
+      <form class="tbp-guess" id="tbp-gf"><label class="tbp-tl">🎵 Song title</label><input id="tbp-g" type="text" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="Just the name of the song">${singerRow(false)}<button class="tbp-btn big">Guess</button></form>
       ${GF.text ? `<div class="tbp-fb ${esc(GF.kind)}">${esc(GF.text)}</div>` : ''}
-      <div class="tbp-tries">${'●'.repeat(m.left)}${'○'.repeat(Math.max(0, m.tries))} <small>${m.left} guess${m.left === 1 ? '' : 'es'} left${m.artist ? ' · 🎤 artist ✓' : ''}</small></div>
-      <p class="tbp-hint">Typos are OK. Brackets, “feat.” and “the” don’t matter.</p>`, 'guess');
+      <div class="tbp-tries">${'●'.repeat(m.left)}${'○'.repeat(Math.max(0, m.tries))} <small>${m.left} guess${m.left === 1 ? '' : 'es'} left</small></div>
+      <p class="tbp-hint">Just the song’s name: typos, capitals, punctuation (’ . ! ?), brackets, “feat.” and “the” don’t matter.</p>`, 'guess');
     const f = document.getElementById('tbp-gf'), inp = document.getElementById('tbp-g');
     if (f) f.onsubmit = async (e) => {
-      e.preventDefault(); const text = inp.value.trim(); if (!text) return;
-      const r = await ctx.act({ op: 'guess', text });
+      e.preventDefault(); const si = document.getElementById('tbp-s'), text = inp.value.trim(), singer = si ? si.value.trim() : '';
+      if (!text && !singer) return;
+      const r = await ctx.act({ op: 'guess', text, singer });
       if (!r || !r.ok) return;
-      inp.value = '';
-      if (r.right) { GF.text = ''; ctx.haptic('success'); ctx.sfx && ctx.sfx('chime'); inp.blur(); }
-      else if (r.artist) { GF.text = `🎤 Right artist! +50. Now the title?`; GF.kind = 'artist'; ctx.haptic('select'); }
-      else { GF.text = `✖ “${text.slice(0, 40)}” isn’t it`; GF.kind = 'no'; ctx.haptic('error'); }
+      inp.value = ''; if (si && (r.artist || r.singerWrong)) si.value = '';
+      if (r.right) { ctx.haptic('success'); ctx.sfx && ctx.sfx('chime'); inp.blur(); }
+      feedback(r, text, singer);
       ctx.redraw();
     };
   }

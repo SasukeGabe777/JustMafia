@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="president-felt" cx="0.5" cy="0.6" r="0.75">
+      <stop offset="0" stop-color="#2aa866"/>
+      <stop offset="0.6" stop-color="#1f8a55"/>
+      <stop offset="1" stop-color="#0b3b24"/>
+    </radialGradient>
+    <linearGradient id="president-card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffdf5"/>
+      <stop offset="1" stop-color="#f3e6c8"/>
+    </linearGradient>
+    <linearGradient id="president-gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff0a0"/>
+      <stop offset="0.45" stop-color="#ffd34d"/>
+      <stop offset="1" stop-color="#d48a12"/>
+    </linearGradient>
+    <radialGradient id="president-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffe680" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#ffe680" stop-opacity="0"/>
+    </radialGradient>
+    <path id="president-heart" d="M0 10C-16-1-13-14-6-14C-2-14 0-10 0-8C0-10 2-14 6-14C13-14 16-1 0 10Z"/>
+    <path id="president-diamond" d="M0-13L10 0L0 13L-10 0Z"/>
+    <path id="president-spade" d="M0-14C-6-6-14-1-12 6C-10 11-4 11-2 7L-5 14H5L2 7C4 11 10 11 12 6C14-1 6-6 0-14Z"/>
+    <path id="president-club" d="M-2 2L-5 14H5L2 2C6 8 15 7 15 0C15-6 8-8 4-4C7-9 4-15 0-15C-4-15-7-9-4-4C-8-8-15-6-15 0C-15 7-6 8-2 2Z"/>
+    <radialGradient id="president-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.5"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#president-felt)"/>
+  <g fill="none" stroke="#7fe0a8" stroke-width="2" opacity="0.25">
+    <ellipse cx="200" cy="250" rx="230" ry="120"/><ellipse cx="200" cy="250" rx="190" ry="96"/>
+  </g>
+  <!-- loose cards in background -->
+  <g stroke="#0b3b24" stroke-width="3.5" stroke-linejoin="round" opacity="0.8">
+    <rect x="22" y="40" width="50" height="70" rx="7" fill="#c41f45" transform="rotate(-20 47 75)"/>
+    <rect x="328" y="128" width="50" height="70" rx="7" fill="#c41f45" transform="rotate(24 353 163)"/>
+  </g>
+  <g fill="none" stroke="#ff9fb0" stroke-width="2" opacity="0.7">
+    <rect x="29" y="47" width="36" height="56" rx="4" transform="rotate(-20 47 75)"/>
+    <rect x="335" y="135" width="36" height="56" rx="4" transform="rotate(24 353 163)"/>
+  </g>
+  <circle cx="200" cy="100" r="110" fill="url(#president-glow)"/>
+  <g transform="translate(0 18)">
+  <ellipse cx="200" cy="208" rx="120" ry="14" fill="#000" opacity="0.3"/>
+  <!-- fanned hand -->
+  <g stroke="#1b1030" stroke-width="4" stroke-linejoin="round">
+    <g transform="rotate(-36 200 250)">
+      <rect x="164" y="106" width="72" height="104" rx="9" fill="url(#president-card)"/>
+      <use href="#president-club" fill="#1b1030" stroke="none" transform="translate(200 146) scale(1.3)"/>
+      <use href="#president-club" fill="#1b1030" stroke="none" transform="translate(176 124) scale(0.5)"/>
+    </g>
+    <g transform="rotate(-18 200 250)">
+      <rect x="164" y="106" width="72" height="104" rx="9" fill="url(#president-card)"/>
+      <use href="#president-diamond" fill="#e8323c" stroke="none" transform="translate(200 146) scale(1.5)"/>
+      <use href="#president-diamond" fill="#e8323c" stroke="none" transform="translate(176 124) scale(0.5)"/>
+    </g>
+    <g transform="rotate(18 200 250)">
+      <rect x="164" y="106" width="72" height="104" rx="9" fill="url(#president-card)"/>
+      <use href="#president-heart" fill="#e8323c" stroke="none" transform="translate(200 146) scale(1.4)"/>
+      <use href="#president-heart" fill="#e8323c" stroke="none" transform="translate(176 124) scale(0.5)"/>
+    </g>
+    <g transform="rotate(36 200 250)">
+      <rect x="164" y="106" width="72" height="104" rx="9" fill="url(#president-card)"/>
+      <use href="#president-spade" fill="#1b1030" stroke="none" transform="translate(200 146) scale(1.4)"/>
+      <use href="#president-spade" fill="#1b1030" stroke="none" transform="translate(176 124) scale(0.5)"/>
+    </g>
+    <g>
+      <rect x="164" y="106" width="72" height="104" rx="9" fill="url(#president-card)"/>
+      <rect x="172" y="114" width="56" height="88" rx="5" fill="none" stroke="#e8b43a" stroke-width="2.5"/>
+      <use href="#president-spade" fill="#1b1030" stroke="none" transform="translate(200 164) scale(1.6)"/>
+    </g>
+  </g>
+  <!-- crown -->
+  <ellipse cx="200" cy="124" rx="52" ry="8" fill="#000" opacity="0.3"/>
+  <g stroke="#5c3a06" stroke-width="4.5" stroke-linejoin="round">
+    <path d="M152 118L146 66L174 90L200 52L226 90L254 66L248 118Z" fill="url(#president-gold)"/>
+    <rect x="148" y="110" width="104" height="16" rx="6" fill="url(#president-gold)"/>
+    <circle cx="146" cy="64" r="7" fill="#ffd34d"/><circle cx="200" cy="50" r="8" fill="#ffd34d"/><circle cx="254" cy="64" r="7" fill="#ffd34d"/>
+    <path d="M200 84L210 98L200 112L190 98Z" fill="#e8323c" stroke-width="3.5"/>
+    <circle cx="170" cy="104" r="5.5" fill="#3ec7ff" stroke-width="3"/>
+    <circle cx="230" cy="104" r="5.5" fill="#3ec7ff" stroke-width="3"/>
+  </g>
+  <path d="M160 70l4 36M196 64l-6 12" stroke="#fffbe0" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  </g>
+  <g fill="#fffbe0">
+    <path d="M270 50l3 8l8 3l-8 3l-3 8l-3-8l-8-3l8-3z"/>
+    <path d="M128 46l2 5l5 2l-5 2l-2 5l-2-5l-5-2l5-2z"/>
+  </g>
+  <rect width="400" height="240" fill="url(#president-vig)"/>
+</svg>

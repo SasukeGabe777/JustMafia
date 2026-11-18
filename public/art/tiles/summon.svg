@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="summon-sky" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4a7bff"/>
+      <stop offset="0.5" stop-color="#b07be0"/>
+      <stop offset="1" stop-color="#ff5a5a"/>
+    </linearGradient>
+    <linearGradient id="summon-lane" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8b878"/>
+      <stop offset="1" stop-color="#c98a4a"/>
+    </linearGradient>
+    <linearGradient id="summon-beam" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffd23f" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#fff3a0" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#ffd23f" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="summon-vig" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0.6" stop-color="#1b1030" stop-opacity="0"/>
+      <stop offset="1" stop-color="#1b1030" stop-opacity="0.45"/>
+    </radialGradient>
+    <g id="summon-blue" stroke="#1b1030" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M-8 -12 v12 M6 -12 v12" stroke-width="6"/>
+      <rect x="-14" y="-36" width="28" height="26" rx="9" fill="#3a6bff"/>
+      <circle cx="0" cy="-46" r="12" fill="#ffd2b0"/>
+      <path d="M-13 -48 a13 13 0 0 1 26 0z" fill="#8fb0ff"/>
+      <path d="M-2 -61 q-10 -6 -14 2" fill="none" stroke="#ffd23f" stroke-width="5"/>
+      <circle cx="6" cy="-44" r="2" fill="#1b1030" stroke="none"/>
+      <circle cx="15" cy="-26" r="12" fill="#2a4bd0"/>
+      <circle cx="15" cy="-26" r="5" fill="#ffd23f"/>
+    </g>
+    <g id="summon-red" stroke="#1b1030" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M-8 -12 v12 M6 -12 v12" stroke-width="6"/>
+      <rect x="-14" y="-36" width="28" height="26" rx="9" fill="#ff4f5a"/>
+      <circle cx="0" cy="-46" r="12" fill="#e8b48e"/>
+      <path d="M-13 -48 l4 -12 l4 7 l5 -9 l5 9 l4 -7 l4 12z" fill="#c81d3a"/>
+      <circle cx="6" cy="-44" r="2" fill="#1b1030" stroke="none"/>
+      <path d="M5 -38 h20 v14 q0 10 -10 14 q-10 -4 -10 -14z" fill="#c81d3a"/>
+      <path d="M15 -34 v18" stroke="#ffd23f" stroke-width="4"/>
+    </g>
+    <g id="summon-sword" stroke="#1b1030" stroke-width="3.5" stroke-linejoin="round">
+      <path d="M-5 0 v-46 l5 -10 l5 10 v46z" fill="#e8ecff"/>
+      <rect x="-14" y="0" width="28" height="7" rx="3" fill="#ffd23f"/>
+      <rect x="-4" y="7" width="8" height="16" rx="3" fill="#8a4a1a"/>
+      <circle cx="0" cy="26" r="4" fill="#ffd23f"/>
+    </g>
+  </defs>
+  <rect width="400" height="240" fill="url(#summon-sky)"/>
+  <g fill="#fff" opacity="0.4">
+    <ellipse cx="150" cy="40" rx="30" ry="10"/><ellipse cx="270" cy="30" rx="26" ry="9"/>
+  </g>
+  <path d="M0 130 q100 -24 200 -8 q100 -16 200 8 v110 h-400z" fill="#4ccf6e"/>
+  <path d="M0 150 h400 v90 h-400z" fill="#3ab35a"/>
+  <path d="M-10 156 q210 -14 420 0 v40 q-210 14 -420 0z" fill="url(#summon-lane)" stroke="#8a5a2a" stroke-width="4"/>
+  <g stroke="#1b1030" stroke-width="4" stroke-linejoin="round">
+    <path d="M36 172 v-80 h14 v-12 h12 v12 h10 v-12 h12 v12 h14 v80z" fill="#6f95ff"/>
+    <path d="M14 172 v-58 h12 v-10 h10 v68z M98 172 v-62 h12 v-10 h10 v72z" fill="#4a7bff"/>
+    <path d="M58 172 v-26 a10 10 0 0 1 20 0 v26z" fill="#1b2a6a"/>
+    <path d="M67 80 v-30 l22 9 l-22 9" fill="#3a6bff"/>
+    <path d="M364 172 v-80 h-14 v-12 h-12 v12 h-10 v-12 h-12 v12 h-14 v80z" fill="#ff7a7a"/>
+    <path d="M386 172 v-58 h-12 v-10 h-10 v68z M302 172 v-62 h-12 v-10 h-10 v72z" fill="#ff4f5a"/>
+    <path d="M342 172 v-26 a10 10 0 0 0 -20 0 v26z" fill="#6a1b24"/>
+    <path d="M333 80 v-30 l-22 9 l22 9" fill="#ff4f5a"/>
+  </g>
+  <ellipse cx="200" cy="184" rx="80" ry="7" fill="#1b1030" opacity="0.3"/>
+  <rect x="176" y="84" width="48" height="104" fill="url(#summon-beam)"/>
+  <rect x="196" y="90" width="8" height="96" rx="4" fill="#fffbe0" stroke="#ffb347" stroke-width="2"/>
+  <use href="#summon-blue" transform="translate(118 186) scale(1.05)"/>
+  <use href="#summon-blue" transform="translate(148 182) rotate(14) scale(1.15)"/>
+  <use href="#summon-blue" transform="translate(176 186) rotate(18) scale(1.15)"/>
+  <use href="#summon-red" transform="translate(282 186) scale(-1.05 1.05)"/>
+  <use href="#summon-red" transform="translate(252 182) scale(-1.15 1.15) rotate(14)"/>
+  <use href="#summon-red" transform="translate(224 186) scale(-1.15 1.15) rotate(18)"/>
+  <use href="#summon-sword" transform="translate(200 66) rotate(-40) translate(0 22)"/>
+  <use href="#summon-sword" transform="translate(200 66) rotate(40) translate(0 22)"/>
+  <g fill="#fff8d6">
+    <path d="M198 60 q2 -9 4 0 q9 2 0 4 q-2 9 -4 0 q-9 -2 0 -4z"/>
+    <path d="M168 96 q1.5 -6 3 0 q6 1.5 0 3 q-1.5 6 -3 0 q-6 -1.5 0 -3z"/>
+    <path d="M232 104 q1.5 -6 3 0 q6 1.5 0 3 q-1.5 6 -3 0 q-6 -1.5 0 -3z"/>
+  </g>
+  <rect width="400" height="240" fill="url(#summon-vig)"/>
+</svg>

@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="truths-bg" cx="0.5" cy="0.55" r="0.75">
+      <stop offset="0" stop-color="#ef6a95"/>
+      <stop offset="0.55" stop-color="#c23a68"/>
+      <stop offset="1" stop-color="#4a0f26"/>
+    </radialGradient>
+    <linearGradient id="truths-env" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff4e8"/>
+      <stop offset="1" stop-color="#f3d6c8"/>
+    </linearGradient>
+    <linearGradient id="truths-flap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe4ea"/>
+      <stop offset="1" stop-color="#f0b8c8"/>
+    </linearGradient>
+    <linearGradient id="truths-mask" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a2a5c"/>
+      <stop offset="1" stop-color="#1b1030"/>
+    </linearGradient>
+    <g id="truths-envelope">
+      <rect x="-34" y="-46" width="68" height="92" rx="7" fill="url(#truths-env)"/>
+      <path d="M-34 -38L0 -6L34 -38" fill="url(#truths-flap)"/>
+      <path d="M-34 40L-6 10M34 40L6 10" fill="none" stroke-width="3"/>
+      <circle cx="0" cy="-6" r="9" fill="#e8243f" stroke-width="3"/>
+      <path d="M-4 -9C-2 -12 2 -12 4 -9" fill="none" stroke="#ffb0c0" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <radialGradient id="truths-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#2a0010" stop-opacity="0"/>
+      <stop offset="1" stop-color="#2a0010" stop-opacity="0.55"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#truths-bg)"/>
+  <!-- spotlight + stage -->
+  <path d="M150 -10H250L330 200H70Z" fill="#ffd0e4" opacity="0.12"/>
+  <path d="M-10 186C80 176 320 176 410 186V250H-10Z" fill="#7a1a40" stroke="#4a0f26" stroke-width="4"/>
+  <path d="M-10 194C80 184 320 184 410 194" stroke="#ff8fb4" stroke-width="3" fill="none" opacity="0.5"/>
+  <g fill="#ffd0e4" opacity="0.7">
+    <circle cx="40" cy="44" r="3"/><circle cx="360" cy="40" r="4"/><circle cx="72" cy="110" r="2.5"/><circle cx="338" cy="120" r="3"/>
+  </g>
+  <ellipse cx="200" cy="186" rx="120" ry="10" fill="#2a0010" opacity="0.45"/>
+  <!-- sneaky mask behind tipping envelope -->
+  <g stroke="#1b1030" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M252 140C250 100 262 72 284 72C306 72 318 100 316 140Z" fill="#6a1a4a"/>
+    <path d="M262 92C262 80 272 74 284 74" fill="none" stroke="#c23a8a" stroke-width="3"/>
+    <path d="M256 88C266 78 300 76 312 88C314 100 302 108 290 102L284 98L278 102C266 108 254 100 256 88Z" fill="url(#truths-mask)"/>
+    <ellipse cx="270" cy="92" rx="6" ry="4" fill="#fff"/>
+    <ellipse cx="298" cy="92" rx="6" ry="4" fill="#fff"/>
+    <circle cx="267" cy="92" r="2.5" fill="#1b1030" stroke="none"/>
+    <circle cx="295" cy="92" r="2.5" fill="#1b1030" stroke="none"/>
+    <path d="M262 82L278 86M306 82L290 86" stroke="#ff4f8b" stroke-width="3"/>
+  </g>
+  <!-- envelopes -->
+  <g stroke="#4a0f26" stroke-width="4" stroke-linejoin="round">
+    <use href="#truths-envelope" transform="translate(116 136) rotate(-6)"/>
+    <use href="#truths-envelope" transform="translate(196 132) rotate(2)"/>
+    <use href="#truths-envelope" transform="translate(262 146) rotate(26)"/>
+  </g>
+  <g stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.8">
+    <path d="M92 98l1 18" transform="rotate(-6 116 136)"/>
+    <path d="M172 94l0 18" transform="rotate(2 196 132)"/>
+  </g>
+  <!-- motion marks for tipping -->
+  <g fill="none" stroke="#ffd0e4" stroke-width="4" stroke-linecap="round">
+    <path d="M232 92C236 84 244 80 252 80"/><path d="M222 102C224 96 228 92 232 90"/>
+  </g>
+  <g fill="#fff">
+    <path d="M150 64l3 8l8 3l-8 3l-3 8l-3-8l-8-3l8-3z"/>
+    <path d="M226 60l2 5l5 2l-5 2l-2 5l-2-5l-5-2l5-2z"/>
+  </g>
+  <rect width="400" height="240" fill="url(#truths-vig)"/>
+</svg>

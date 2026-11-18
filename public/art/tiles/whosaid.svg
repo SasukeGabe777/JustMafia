@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="whosaid-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4b3bd8"/>
+      <stop offset="1" stop-color="#1c1060"/>
+    </linearGradient>
+    <radialGradient id="whosaid-glow" cx="0.5" cy="0.45" r="0.5">
+      <stop offset="0" stop-color="#9b7bff" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#9b7bff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="whosaid-lensfill" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#e9fffa"/>
+      <stop offset="1" stop-color="#7ef3d0"/>
+    </radialGradient>
+    <linearGradient id="whosaid-rim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffb3e0"/>
+      <stop offset="1" stop-color="#e2479c"/>
+    </linearGradient>
+    <clipPath id="whosaid-clip"><circle cx="206" cy="108" r="46"/></clipPath>
+    <radialGradient id="whosaid-vig" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0.6" stop-color="#0d0630" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0d0630" stop-opacity="0.5"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#whosaid-bg)"/>
+  <rect width="400" height="240" fill="url(#whosaid-glow)"/>
+  <g fill="#fdf3ff" opacity="0.25">
+    <circle cx="30" cy="110" r="3"/><circle cx="370" cy="120" r="3"/><circle cx="120" cy="215" r="2.5"/><circle cx="290" cy="22" r="2.5"/><circle cx="60" cy="200" r="2"/><circle cx="345" cy="210" r="2"/>
+  </g>
+  <g stroke="#1b1030" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <g opacity="0.85">
+      <path d="M18 30 h82 a14 14 0 0 1 14 14 v22 a14 14 0 0 1 -14 14 h-56 l-16 14 v-14 h-10 a14 14 0 0 1 -14 -14 v-22 a14 14 0 0 1 14 -14z" fill="#ff7ac8"/>
+      <path d="M296 160 h82 a14 14 0 0 1 14 14 v22 a14 14 0 0 1 -14 14 h-10 v14 l-16 -14 h-56 a14 14 0 0 1 -14 -14 v-22 a14 14 0 0 1 14 -14z" fill="#ffd23f"/>
+      <path d="M300 28 h70 a14 14 0 0 1 14 14 v20 a14 14 0 0 1 -14 14 h-8 v14 l-16 -14 h-46 a14 14 0 0 1 -14 -14 v-20 a14 14 0 0 1 14 -14z" fill="#7ef3d0"/>
+      <path d="M22 150 h68 a14 14 0 0 1 14 14 v20 a14 14 0 0 1 -14 14 h-44 l-16 14 v-14 h-8 a14 14 0 0 1 -14 -14 v-20 a14 14 0 0 1 14 -14z" fill="#9b7bff"/>
+    </g>
+    <g stroke="none" fill="#1b1030" opacity="0.35">
+      <rect x="26" y="46" width="70" height="7" rx="3.5"/><rect x="26" y="59" width="48" height="7" rx="3.5"/>
+      <rect x="306" y="176" width="72" height="7" rx="3.5"/><rect x="306" y="189" width="44" height="7" rx="3.5"/>
+      <rect x="308" y="43" width="62" height="7" rx="3.5"/><rect x="308" y="56" width="38" height="7" rx="3.5"/>
+      <rect x="30" y="165" width="58" height="7" rx="3.5"/><rect x="30" y="178" width="40" height="7" rx="3.5"/>
+    </g>
+    <path d="M108 62 h176 a18 18 0 0 1 18 18 v58 a18 18 0 0 1 -18 18 h-118 l-26 24 v-24 h-32 a18 18 0 0 1 -18 -18 v-58 a18 18 0 0 1 18 -18z" fill="#fdf3ff"/>
+    <g stroke="none" fill="#9b7bff" opacity="0.55">
+      <rect x="110" y="82" width="54" height="10" rx="5"/><rect x="110" y="100" width="40" height="10" rx="5"/><rect x="110" y="118" width="50" height="10" rx="5"/>
+      <rect x="258" y="82" width="28" height="10" rx="5"/><rect x="262" y="100" width="24" height="10" rx="5"/><rect x="256" y="118" width="30" height="10" rx="5"/>
+    </g>
+  </g>
+  <ellipse cx="282" cy="196" rx="34" ry="7" fill="#0d0630" opacity="0.35"/>
+  <g clip-path="url(#whosaid-clip)">
+    <rect x="150" y="50" width="120" height="120" fill="url(#whosaid-lensfill)"/>
+    <path d="M206 96 m-18 0 a18 18 0 1 0 36 0 a18 18 0 1 0 -36 0z" fill="#2b0a3d"/>
+    <path d="M168 160 c0 -30 16 -42 38 -42 c22 0 38 12 38 42z" fill="#2b0a3d"/>
+    <path d="M218 84 c4 2 7 6 7 12" stroke="#9b7bff" stroke-width="4" stroke-linecap="round" fill="none"/>
+  </g>
+  <g stroke="#1b1030" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M238 142 l42 44" stroke="#1b1030" stroke-width="22"/>
+    <path d="M238 142 l42 44" stroke="#ff7ac8" stroke-width="13"/>
+    <path d="M241 140 l8 8" stroke="#ffd23f" stroke-width="16"/>
+    <circle cx="206" cy="108" r="46" fill="none" stroke="#1b1030" stroke-width="18"/>
+    <circle cx="206" cy="108" r="46" fill="none" stroke="url(#whosaid-rim)" stroke-width="10"/>
+    <path d="M180 82 a36 36 0 0 1 22 -10" stroke="#fff" stroke-width="6" fill="none" opacity="0.85"/>
+  </g>
+  <rect width="400" height="240" fill="url(#whosaid-vig)"/>
+</svg>

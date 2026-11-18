@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="tune-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a0a5e"/>
+      <stop offset="0.6" stop-color="#14043a"/>
+      <stop offset="1" stop-color="#060014"/>
+    </linearGradient>
+    <radialGradient id="tune-pinkglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ff3d8b" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ff3d8b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="tune-cyanglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#38e8ff" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#38e8ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="tune-vinyl" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#3a3550"/>
+      <stop offset="0.6" stop-color="#15121f"/>
+      <stop offset="1" stop-color="#07060c"/>
+    </radialGradient>
+    <radialGradient id="tune-btn" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#ffc2da"/>
+      <stop offset="0.45" stop-color="#ff3d8b"/>
+      <stop offset="1" stop-color="#a80c50"/>
+    </radialGradient>
+    <linearGradient id="tune-base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a4560"/>
+      <stop offset="1" stop-color="#1c1928"/>
+    </linearGradient>
+    <linearGradient id="tune-cup" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7ef3ff"/>
+      <stop offset="1" stop-color="#1590b8"/>
+    </linearGradient>
+    <radialGradient id="tune-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#040010" stop-opacity="0"/>
+      <stop offset="1" stop-color="#040010" stop-opacity="0.7"/>
+    </radialGradient>
+    <g id="tune-note">
+      <ellipse cx="0" cy="0" rx="9" ry="7" transform="rotate(-22)"/>
+      <path d="M6 -3 L6 -34 C14 -30 20 -26 20 -16 C16 -22 12 -23 10 -23 L10 -3 Z"/>
+    </g>
+    <g id="tune-beam">
+      <ellipse cx="-12" cy="0" rx="8" ry="6" transform="rotate(-22 -12 0)"/>
+      <ellipse cx="14" cy="-6" rx="8" ry="6" transform="rotate(-22 14 -6)"/>
+      <path d="M-7 -2 L-7 -30 L19 -36 L19 -8 L15 -8 L15 -28 L-3 -24 L-3 -2 Z"/>
+    </g>
+  </defs>
+  <rect width="400" height="240" fill="url(#tune-bg)"/>
+  <!-- stage lights -->
+  <path d="M40 0 L110 0 L190 240 L120 240 Z" fill="#ff3d8b" opacity="0.08"/>
+  <path d="M290 0 L360 0 L280 240 L210 240 Z" fill="#38e8ff" opacity="0.08"/>
+  <!-- equalizer bars -->
+  <g opacity="0.35">
+    <rect x="12" y="150" width="14" height="90" fill="#38e8ff"/><rect x="32" y="120" width="14" height="120" fill="#38e8ff"/>
+    <rect x="52" y="170" width="14" height="70" fill="#38e8ff"/><rect x="334" y="130" width="14" height="110" fill="#ff3d8b"/>
+    <rect x="354" y="160" width="14" height="80" fill="#ff3d8b"/><rect x="374" y="110" width="14" height="130" fill="#ff3d8b"/>
+  </g>
+  <circle cx="150" cy="122" r="96" fill="url(#tune-cyanglow)"/>
+  <circle cx="272" cy="150" r="80" fill="url(#tune-pinkglow)"/>
+  <!-- floor -->
+  <rect x="0" y="196" width="400" height="44" fill="#0a0420"/>
+  <path d="M0 196 H400" stroke="#38e8ff" stroke-width="3" opacity="0.6"/>
+  <ellipse cx="150" cy="192" rx="66" ry="8" fill="#000" opacity="0.5"/>
+  <!-- vinyl record -->
+  <circle cx="150" cy="124" r="62" fill="url(#tune-vinyl)" stroke="#1b1030" stroke-width="4.5"/>
+  <g fill="none" stroke="#5a5470" stroke-width="1.5" opacity="0.7">
+    <circle cx="150" cy="124" r="52"/><circle cx="150" cy="124" r="44"/><circle cx="150" cy="124" r="36"/>
+  </g>
+  <path d="M104 98 A54 54 0 0 1 128 76" fill="none" stroke="#c9b6ef" stroke-width="5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M196 150 A54 54 0 0 1 176 170" fill="none" stroke="#c9b6ef" stroke-width="4" stroke-linecap="round" opacity="0.45"/>
+  <circle cx="150" cy="124" r="22" fill="#ff3d8b" stroke="#1b1030" stroke-width="3"/>
+  <path d="M136 116 A16 16 0 0 1 152 108" fill="none" stroke="#ffc2da" stroke-width="3.5" stroke-linecap="round"/>
+  <circle cx="150" cy="124" r="4" fill="#0b0b10"/>
+  <!-- spin marks -->
+  <g fill="none" stroke="#38e8ff" stroke-width="4" stroke-linecap="round">
+    <path d="M82 104 A72 72 0 0 1 104 70"/>
+    <path d="M218 144 A72 72 0 0 1 196 178"/>
+  </g>
+  <!-- headphones over the record -->
+  <path d="M96 128 C88 58 212 58 204 128" fill="none" stroke="#1b1030" stroke-width="14" stroke-linecap="round"/>
+  <path d="M96 128 C88 58 212 58 204 128" fill="none" stroke="#38e8ff" stroke-width="7" stroke-linecap="round"/>
+  <g stroke="#1b1030" stroke-width="4" stroke-linejoin="round">
+    <rect x="82" y="112" width="26" height="40" rx="11" fill="url(#tune-cup)"/>
+    <rect x="192" y="112" width="26" height="40" rx="11" fill="url(#tune-cup)"/>
+  </g>
+  <path d="M89 120 v20 M199 120 v20" stroke="#e8fdff" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  <!-- buzzer -->
+  <ellipse cx="276" cy="184" rx="52" ry="12" fill="#000" opacity="0.5"/>
+  <path d="M232 156 L232 172 C232 188 320 188 320 172 L320 156 Z" fill="url(#tune-base)" stroke="#1b1030" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="276" cy="156" rx="44" ry="13" fill="#2a2638" stroke="#1b1030" stroke-width="4"/>
+  <path d="M244 154 C244 116 308 116 308 154 C308 166 244 166 244 154 Z" fill="url(#tune-btn)" stroke="#1b1030" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="262" cy="134" rx="11" ry="6" fill="#ffffff" opacity="0.65" transform="rotate(-25 262 134)"/>
+  <g stroke="#ffd23f" stroke-width="4.5" stroke-linecap="round">
+    <path d="M276 108 v-12 M248 116 l-8 -8 M304 116 l8 -8 M320 138 h10"/>
+  </g>
+  <!-- flying notes -->
+  <g stroke="#1b1030" stroke-width="2.5" stroke-linejoin="round">
+    <use href="#tune-note" transform="translate(226 98) rotate(12)" fill="#ffd23f"/>
+    <use href="#tune-beam" transform="translate(116 70) rotate(-10) scale(0.9)" fill="#ff3d8b"/>
+    <use href="#tune-note" transform="translate(64 80) rotate(-14) scale(0.8)" fill="#38e8ff"/>
+    <use href="#tune-note" transform="translate(338 84) rotate(16) scale(0.85)" fill="#ff3d8b"/>
+    <use href="#tune-beam" transform="translate(250 72) rotate(8) scale(0.7)" fill="#38e8ff"/>
+  </g>
+  <rect width="400" height="240" fill="url(#tune-vig)"/>
+</svg>

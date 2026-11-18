@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="cat-create-bg" cx="0.5" cy="0.45" r="0.75">
+      <stop offset="0" stop-color="#ffc05a"/>
+      <stop offset="0.5" stop-color="#ff7134"/>
+      <stop offset="1" stop-color="#9a2a06"/>
+    </radialGradient>
+    <linearGradient id="cat-create-wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7d29a"/>
+      <stop offset="1" stop-color="#d9964a"/>
+    </linearGradient>
+    <linearGradient id="cat-create-mask" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.6" stop-color="#fff1c9"/>
+      <stop offset="1" stop-color="#ffcf6a"/>
+    </linearGradient>
+    <linearGradient id="cat-create-pencil" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffe066"/>
+      <stop offset="0.5" stop-color="#ffc21a"/>
+      <stop offset="1" stop-color="#e59400"/>
+    </linearGradient>
+    <radialGradient id="cat-create-vig" cx="0.5" cy="0.5" r="0.72">
+      <stop offset="0.6" stop-color="#3a0e02" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3a0e02" stop-opacity="0.55"/>
+    </radialGradient>
+    <path id="cat-create-ray" d="M0 0 L-22 -240 L22 -240Z"/>
+    <path id="cat-create-splat" d="M0 -14 C6 -16 8 -10 12 -12 C18 -14 18 -4 14 -2 C20 2 16 10 10 8 C10 14 4 18 0 14 C-4 18 -12 16 -10 8 C-18 10 -20 0 -14 -2 C-18 -8 -12 -14 -8 -10 C-6 -16 -2 -16 0 -14Z"/>
+  </defs>
+  <rect width="320" height="200" fill="url(#cat-create-bg)"/>
+  <g transform="translate(160 96)" fill="#fff3b0" opacity="0.16">
+    <use href="#cat-create-ray"/><use href="#cat-create-ray" transform="rotate(30)"/><use href="#cat-create-ray" transform="rotate(60)"/><use href="#cat-create-ray" transform="rotate(90)"/><use href="#cat-create-ray" transform="rotate(120)"/><use href="#cat-create-ray" transform="rotate(150)"/>
+    <use href="#cat-create-ray" transform="rotate(180)"/><use href="#cat-create-ray" transform="rotate(210)"/><use href="#cat-create-ray" transform="rotate(240)"/><use href="#cat-create-ray" transform="rotate(270)"/><use href="#cat-create-ray" transform="rotate(300)"/><use href="#cat-create-ray" transform="rotate(330)"/>
+  </g>
+  <circle cx="160" cy="96" r="70" fill="#ffe08a" opacity="0.3"/>
+  <!-- background splats -->
+  <g stroke="#1b1424" stroke-width="3" stroke-linejoin="round">
+    <use href="#cat-create-splat" x="34" y="40" fill="#2fd0ff"/>
+    <use href="#cat-create-splat" x="290" y="44" fill="#8b5cff" transform="rotate(40 290 44)"/>
+    <use href="#cat-create-splat" x="286" y="160" fill="#ff3b8a"/>
+    <use href="#cat-create-splat" x="30" y="170" fill="#4fd36a" transform="rotate(-30 30 170)"/>
+  </g>
+  <ellipse cx="160" cy="180" rx="96" ry="9" fill="#3a0e02" opacity="0.42"/>
+  <!-- palette -->
+  <g transform="translate(92 128) rotate(-16)" stroke="#1b1424" stroke-width="4" stroke-linejoin="round">
+    <path d="M-50 4 C-56 -30 -10 -50 26 -38 C56 -28 58 0 40 8 C26 14 34 26 22 36 C4 50 -44 40 -50 4Z" fill="url(#cat-create-wood)"/>
+    <ellipse cx="14" cy="16" rx="9" ry="7" fill="#9a2a06" opacity="0.9"/>
+    <path d="M-40 -14 C-34 -32 -10 -40 10 -38" fill="none" stroke="#fff6e0" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="-30" cy="-10" r="8" fill="#ff3b5c" stroke-width="3"/>
+    <circle cx="-10" cy="-24" r="8" fill="#ffd23f" stroke-width="3"/>
+    <circle cx="14" cy="-24" r="8" fill="#2fd0ff" stroke-width="3"/>
+    <circle cx="-34" cy="14" r="8" fill="#4fd36a" stroke-width="3"/>
+    <circle cx="-14" cy="26" r="8" fill="#8b5cff" stroke-width="3"/>
+  </g>
+  <!-- brush -->
+  <g transform="translate(58 70) rotate(-50)" stroke="#1b1424" stroke-width="3.5" stroke-linejoin="round">
+    <rect x="-4" y="-2" width="8" height="40" rx="4" fill="#2f7bff"/>
+    <rect x="-6" y="-12" width="12" height="12" rx="2" fill="#cfc8e0"/>
+    <path d="M-6 -12 C-8 -24 -2 -32 0 -36 C2 -32 8 -24 6 -12Z" fill="#ff3b5c"/>
+  </g>
+  <!-- pencil -->
+  <g transform="translate(236 96) rotate(32)" stroke="#1b1424" stroke-width="4" stroke-linejoin="round">
+    <rect x="-13" y="-70" width="26" height="22" rx="7" fill="#ff8fb8"/>
+    <rect x="-14" y="-52" width="28" height="14" rx="2" fill="#d6d0e6"/>
+    <path d="M-14 -46 H14" stroke-width="2"/>
+    <rect x="-13" y="-38" width="26" height="92" fill="url(#cat-create-pencil)"/>
+    <path d="M-4 -36 V52 M4 -36 V52" stroke="#c97a00" stroke-width="2"/>
+    <path d="M-13 54 L0 84 L13 54Z" fill="#ffd9a8"/>
+    <path d="M-5 72 L0 84 L5 72Z" fill="#1b1424"/>
+    <path d="M-8 -34 V48" stroke="#fff6c8" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <!-- comedy mask -->
+  <g transform="translate(160 92)" stroke="#1b1424" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M-42 -38 C-20 -50 20 -50 42 -38 C48 2 30 44 0 50 C-30 44 -48 2 -42 -38Z" fill="url(#cat-create-mask)"/>
+    <path d="M-34 -32 C-16 -40 4 -42 18 -40" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+    <path d="M-30 -12 Q-20 -26 -8 -12" fill="none" stroke-width="5.5"/>
+    <path d="M8 -12 Q20 -26 30 -12" fill="none" stroke-width="5.5"/>
+    <path d="M-30 -24 l-6 -8 M30 -24 l6 -8" stroke-width="3.5"/>
+    <path d="M-26 4 Q0 46 26 4 Q0 14 -26 4Z" fill="#3a1030"/>
+    <path d="M-12 26 Q0 18 12 26 Q0 36 -12 26Z" fill="#ff5f7e" stroke="none"/>
+    <path d="M-22 7 Q0 15 22 7 L20 12 Q0 19 -20 12Z" fill="#fff" stroke="none"/>
+    <ellipse cx="-30" cy="4" rx="7" ry="4.5" fill="#ff8fa8" stroke="none" opacity="0.8"/>
+    <ellipse cx="30" cy="4" rx="7" ry="4.5" fill="#ff8fa8" stroke="none" opacity="0.8"/>
+    <path d="M42 -30 C58 -36 62 -22 70 -28 M42 -22 C54 -20 56 -8 66 -10" fill="none" stroke="#ff3b8a" stroke-width="5"/>
+  </g>
+  <!-- drips and dots -->
+  <g stroke="#1b1424" stroke-width="3" stroke-linejoin="round">
+    <circle cx="118" cy="30" r="6" fill="#ffd23f"/>
+    <circle cx="210" cy="24" r="5" fill="#2fd0ff"/>
+    <circle cx="272" cy="118" r="4.5" fill="#4fd36a"/>
+    <circle cx="206" cy="172" r="5" fill="#ff3b5c"/>
+  </g>
+  <g fill="#fff6c8">
+    <path d="M100 18 q1.4 6.6 8 8 q-6.6 1.4 -8 8 q-1.4 -6.6 -8 -8 q6.6 -1.4 8 -8z"/>
+    <path d="M226 160 q1.4 6.6 8 8 q-6.6 1.4 -8 8 q-1.4 -6.6 -8 -8 q6.6 -1.4 8 -8z"/>
+    <path d="M250 22 q1.2 5.2 6 6 q-4.8 1.2 -6 6 q-1.2 -4.8 -6 -6 q4.8 -1.2 6 -6z"/>
+  </g>
+  <rect width="320" height="200" fill="url(#cat-create-vig)"/>
+</svg>

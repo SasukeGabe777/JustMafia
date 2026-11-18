@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="ducks-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4fb4ff"/>
+      <stop offset="1" stop-color="#bfe9ff"/>
+    </linearGradient>
+    <linearGradient id="ducks-pond" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#38b6ff"/>
+      <stop offset="1" stop-color="#11507f"/>
+    </linearGradient>
+    <radialGradient id="ducks-body" cx="0.38" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#fff3a0"/>
+      <stop offset="0.5" stop-color="#ffd23f"/>
+      <stop offset="1" stop-color="#f5a300"/>
+    </radialGradient>
+    <linearGradient id="ducks-beak" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffab3d"/>
+      <stop offset="1" stop-color="#ff6f1f"/>
+    </linearGradient>
+    <radialGradient id="ducks-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.6" stop-color="#002040" stop-opacity="0"/>
+      <stop offset="1" stop-color="#002040" stop-opacity="0.45"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#ducks-sky)"/>
+  <circle cx="352" cy="34" r="22" fill="#fff3a0" stroke="#ffd23f" stroke-width="6"/>
+  <g fill="#fff" stroke="#9fd2f0" stroke-width="3" stroke-linejoin="round">
+    <path d="M30 60c0-10 12-14 18-8c4-10 20-10 22 2c10-2 14 10 6 14H34c-6 0-8-6-4-8z"/>
+    <path d="M250 40c0-8 10-12 15-6c4-8 17-8 18 2c8-2 11 8 5 11h-34c-5 0-7-5-4-7z"/>
+  </g>
+  <!-- far shore -->
+  <path d="M-10 108C40 96 80 104 120 100S220 94 260 100S360 92 410 102V124H-10Z" fill="#3fbf5f" stroke="#1d7a3a" stroke-width="4" stroke-linejoin="round"/>
+  <g fill="#2ea14f" stroke="#1d7a3a" stroke-width="3">
+    <circle cx="36" cy="98" r="14"/><circle cx="60" cy="94" r="18"/><circle cx="362" cy="94" r="16"/><circle cx="388" cy="98" r="12"/>
+  </g>
+  <rect x="-10" y="116" width="420" height="140" fill="url(#ducks-pond)"/>
+  <path d="M-10 116H410" stroke="#11507f" stroke-width="4"/>
+  <!-- lane ropes -->
+  <path d="M-10 140H410M-10 214H410" stroke="#fff" stroke-width="2" opacity="0.6"/>
+  <g stroke="#11507f" stroke-width="2.5">
+    <g fill="#ff4f5e"><circle cx="10" cy="140" r="5"/><circle cx="70" cy="140" r="5"/><circle cx="130" cy="140" r="5"/><circle cx="270" cy="140" r="5"/><circle cx="330" cy="140" r="5"/><circle cx="390" cy="140" r="5"/>
+      <circle cx="0" cy="214" r="7"/><circle cx="80" cy="214" r="7"/><circle cx="160" cy="214" r="7"/><circle cx="240" cy="214" r="7"/><circle cx="320" cy="214" r="7"/><circle cx="400" cy="214" r="7"/></g>
+    <g fill="#fff"><circle cx="40" cy="140" r="5"/><circle cx="100" cy="140" r="5"/><circle cx="300" cy="140" r="5"/><circle cx="360" cy="140" r="5"/>
+      <circle cx="40" cy="214" r="7"/><circle cx="120" cy="214" r="7"/><circle cx="200" cy="214" r="7"/><circle cx="280" cy="214" r="7"/><circle cx="360" cy="214" r="7"/></g>
+  </g>
+  <!-- lily pads -->
+  <g fill="#4fd36a" stroke="#1d7a3a" stroke-width="3.5" stroke-linejoin="round">
+    <path d="M68 176a26 10 0 1 0 22 -9l-14 6z"/>
+    <path d="M318 172a24 9 0 1 0 -20 -8l12 6z"/>
+    <path d="M352 196a18 7 0 1 0 15 -6l-10 4z"/>
+  </g>
+  <circle cx="82" cy="170" r="6" fill="#ff8fc0" stroke="#c2185b" stroke-width="2.5"/>
+  <!-- wake -->
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-width="4" opacity="0.85">
+    <path d="M118 170C100 168 90 172 76 168"/><path d="M124 182C108 184 96 188 84 186"/><path d="M134 158C120 154 112 156 102 152"/>
+  </g>
+  <ellipse cx="206" cy="176" rx="66" ry="12" fill="#0a3a60" opacity="0.4"/>
+  <!-- duckling -->
+  <g stroke="#7a4a00" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M150 150C140 128 156 116 172 122L176 128" fill="url(#ducks-body)"/>
+    <ellipse cx="200" cy="146" rx="54" ry="34" fill="url(#ducks-body)"/>
+    <path d="M176 140C186 128 206 130 212 146C200 156 184 154 176 140Z" fill="#ffc21a"/>
+    <circle cx="236" cy="98" r="34" fill="url(#ducks-body)"/>
+    <path d="M262 100C278 96 292 100 292 108C286 116 270 116 260 112Z" fill="url(#ducks-beak)"/>
+    <path d="M264 108C274 110 282 110 290 107" fill="none" stroke-width="3"/>
+    <!-- headband -->
+    <path d="M204 84C216 76 254 72 268 86L266 96C252 84 218 88 204 96Z" fill="#ff3d5a"/>
+    <path d="M206 90C194 84 180 86 168 78C176 92 188 96 202 96Z" fill="#ff3d5a"/>
+    <path d="M206 94C194 96 182 104 168 102C178 112 194 106 204 100Z" fill="#e8243f"/>
+  </g>
+  <path d="M220 84C232 80 248 80 258 84" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <circle cx="246" cy="102" r="7" fill="#1b1030"/>
+  <circle cx="248.5" cy="99.5" r="2.5" fill="#fff"/>
+  <ellipse cx="238" cy="116" rx="7" ry="4" fill="#ff8f8f" opacity="0.6"/>
+  <path d="M174 130C182 122 196 120 206 122" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <!-- splashes -->
+  <g fill="#e6f7ff" stroke="#11507f" stroke-width="3" stroke-linejoin="round">
+    <path d="M138 172c-6-10-4-20 2-26c0 8 4 14 10 18c0-10 6-18 14-20c-4 10-2 20 4 28z"/>
+    <path d="M250 174c8-6 18-6 26-2c-6 2-10 6-12 10c8-4 18-2 24 4c-10 0-20 2-28 6z"/>
+  </g>
+  <g fill="#e6f7ff" stroke="#11507f" stroke-width="2.5">
+    <circle cx="128" cy="138" r="5"/><circle cx="116" cy="152" r="3.5"/><circle cx="300" cy="160" r="4"/><circle cx="292" cy="146" r="3"/>
+  </g>
+  <rect width="400" height="240" fill="url(#ducks-vig)"/>
+</svg>

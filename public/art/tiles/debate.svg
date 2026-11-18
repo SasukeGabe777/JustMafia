@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="debate-bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5a0f22"/>
+      <stop offset="0.45" stop-color="#1a1240"/>
+      <stop offset="0.55" stop-color="#1a1240"/>
+      <stop offset="1" stop-color="#0f2a6a"/>
+    </linearGradient>
+    <radialGradient id="debate-redglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ff4a5a" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ff4a5a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="debate-blueglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#4a8cff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#4a8cff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="debate-red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff5a5a"/>
+      <stop offset="1" stop-color="#a5122a"/>
+    </linearGradient>
+    <linearGradient id="debate-blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5aa0ff"/>
+      <stop offset="1" stop-color="#1a3fa5"/>
+    </linearGradient>
+    <linearGradient id="debate-wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c47a3e"/>
+      <stop offset="1" stop-color="#6b3e22"/>
+    </linearGradient>
+    <linearGradient id="debate-floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8c5530"/>
+      <stop offset="1" stop-color="#3a2112"/>
+    </linearGradient>
+    <radialGradient id="debate-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#05081a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#05081a" stop-opacity="0.7"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#debate-bg)"/>
+  <circle cx="110" cy="120" r="110" fill="url(#debate-redglow)"/>
+  <circle cx="290" cy="120" r="110" fill="url(#debate-blueglow)"/>
+  <!-- background rays -->
+  <g opacity="0.12" fill="#ffffff">
+    <path d="M200 100 L150 0 L180 0 Z M200 100 L220 0 L250 0 Z M200 100 L0 30 L0 60 Z M200 100 L400 30 L400 60 Z"/>
+  </g>
+  <!-- floor -->
+  <rect x="0" y="190" width="400" height="50" fill="url(#debate-floor)"/>
+  <path d="M0 190 H400" stroke="#f2b84b" stroke-width="5"/>
+  <ellipse cx="118" cy="192" rx="52" ry="8" fill="#000" opacity="0.45"/>
+  <ellipse cx="282" cy="192" rx="52" ry="8" fill="#000" opacity="0.45"/>
+  <!-- left podium -->
+  <g stroke="#2a0a12" stroke-width="4" stroke-linejoin="round">
+    <path d="M122 120 C124 104 118 94 108 88" fill="none" stroke="#333" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="106" cy="84" rx="7" ry="10" transform="rotate(-30 106 84)" fill="#222"/>
+    <path d="M84 192 L90 128 L150 128 L156 192 Z" fill="url(#debate-red)"/>
+    <rect x="80" y="118" width="80" height="14" rx="5" fill="#f2b84b"/>
+    <circle cx="120" cy="158" r="11" fill="#ffd23f" stroke-width="3"/><circle cx="120" cy="158" r="4" fill="#a5122a" stroke="none"/>
+  </g>
+  <path d="M96 140 L92 182" stroke="#ffb0b0" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  <!-- right podium -->
+  <g stroke="#0a1238" stroke-width="4" stroke-linejoin="round">
+    <path d="M278 120 C276 104 282 94 292 88" fill="none" stroke="#333" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="294" cy="84" rx="7" ry="10" transform="rotate(30 294 84)" fill="#222"/>
+    <path d="M244 192 L250 128 L310 128 L316 192 Z" fill="url(#debate-blue)"/>
+    <rect x="240" y="118" width="80" height="14" rx="5" fill="#f2b84b"/>
+    <path d="M280 144 l4 9 l10 1 l-7 7 l2 10 l-9 -5 l-9 5 l2 -10 l-7 -7 l10 -1 Z" fill="#ffffff" stroke-width="3"/>
+  </g>
+  <path d="M256 140 L252 182" stroke="#b0d0ff" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  <!-- speech blasts -->
+  <path d="M120 72 L134 60 L140 70 L156 56 L160 70 L178 64 L172 78 L190 84 L172 92 L178 106 L160 100 L154 112 L144 100 L128 106 L130 92 L114 86 L128 80 Z" fill="url(#debate-red)" stroke="#2a0a12" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M280 72 L266 60 L260 70 L244 56 L240 70 L222 64 L228 78 L210 84 L228 92 L222 106 L240 100 L246 112 L256 100 L272 106 L270 92 L286 86 L272 80 Z" fill="url(#debate-blue)" stroke="#0a1238" stroke-width="4" stroke-linejoin="round"/>
+  <g fill="#ffffff">
+    <circle cx="140" cy="84" r="5"/><circle cx="154" cy="84" r="5"/><circle cx="168" cy="84" r="5"/>
+    <circle cx="232" cy="84" r="5"/><circle cx="246" cy="84" r="5"/><circle cx="260" cy="84" r="5"/>
+  </g>
+  <!-- lightning clash -->
+  <path d="M206 50 L186 88 L200 88 L188 124 L218 80 L203 80 L216 50 Z" fill="#ffe14a" stroke="#5a3a00" stroke-width="4" stroke-linejoin="round"/>
+  <g stroke="#fff6c8" stroke-width="3.5" stroke-linecap="round">
+    <path d="M182 60 l-8 -6 M226 62 l8 -7 M180 116 l-8 6 M224 112 l8 6"/>
+  </g>
+  <!-- gavel -->
+  <ellipse cx="200" cy="190" rx="34" ry="6" fill="#000" opacity="0.4"/>
+  <path d="M174 176 h52 v10 c0 4 -52 4 -52 0 Z" fill="url(#debate-wood)" stroke="#2a1408" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="200" cy="176" rx="26" ry="6" fill="#d9925a" stroke="#2a1408" stroke-width="4"/>
+  <g transform="translate(202 148) rotate(-28)" stroke="#2a1408" stroke-width="4" stroke-linejoin="round">
+    <rect x="-6" y="-2" width="44" height="8" rx="4" fill="url(#debate-wood)"/>
+    <rect x="-22" y="-14" width="22" height="32" rx="6" fill="url(#debate-wood)"/>
+    <path d="M-22 -6 h22 M-22 10 h22" stroke="#f2b84b" stroke-width="3"/>
+  </g>
+  <g stroke="#ffd23f" stroke-width="3" stroke-linecap="round"><path d="M168 166 l-8 -4 M232 166 l8 -4"/></g>
+  <rect width="400" height="240" fill="url(#debate-vig)"/>
+</svg>

@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="bomb-bg" cx="0.5" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#2c4475"/>
+      <stop offset="0.6" stop-color="#121c33"/>
+      <stop offset="1" stop-color="#070b15"/>
+    </radialGradient>
+    <radialGradient id="bomb-body" cx="0.32" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#7a7f94"/>
+      <stop offset="0.4" stop-color="#2e3140"/>
+      <stop offset="1" stop-color="#0a0a10"/>
+    </radialGradient>
+    <radialGradient id="bomb-spark" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff6b0" stop-opacity="1"/>
+      <stop offset="0.4" stop-color="#ffb21a" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#ff3b30" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bomb-redglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ff3b30" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ff3b30" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bomb-steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef1f7"/>
+      <stop offset="1" stop-color="#9097a8"/>
+    </linearGradient>
+    <radialGradient id="bomb-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.65"/>
+    </radialGradient>
+    <clipPath id="bomb-clip"><circle cx="190" cy="128" r="56"/></clipPath>
+  </defs>
+  <rect width="400" height="240" fill="url(#bomb-bg)"/>
+  <!-- background blueprint grid -->
+  <g stroke="#3a5a99" stroke-width="1.5" opacity="0.25">
+    <path d="M0 40 H400 M0 80 H400 M0 120 H400 M0 160 H400 M0 200 H400 M40 0 V240 M80 0 V240 M120 0 V240 M160 0 V240 M200 0 V240 M240 0 V240 M280 0 V240 M320 0 V240 M360 0 V240"/>
+  </g>
+  <circle cx="190" cy="128" r="110" fill="url(#bomb-redglow)"/>
+  <!-- hazard floor -->
+  <rect x="0" y="196" width="400" height="44" fill="#0a0d14"/>
+  <path d="M-10 196 h30 l-20 20 h-30 Z M40 196 h30 l-20 20 h-30 Z M90 196 h30 l-20 20 h-30 Z M140 196 h30 l-20 20 h-30 Z M190 196 h30 l-20 20 h-30 Z M240 196 h30 l-20 20 h-30 Z M290 196 h30 l-20 20 h-30 Z M340 196 h30 l-20 20 h-30 Z M390 196 h30 l-20 20 h-30 Z" fill="#ffcc1a"/>
+  <path d="M0 196 H400" stroke="#000" stroke-width="3"/>
+  <g transform="translate(0 8)">
+  <!-- shadow -->
+  <ellipse cx="192" cy="184" rx="66" ry="9" fill="#000" opacity="0.5"/>
+  <!-- fuse -->
+  <path d="M206 72 C214 56 232 52 246 62 C254 68 262 68 266 62" fill="none" stroke="#1a120a" stroke-width="11" stroke-linecap="round"/>
+  <path d="M206 72 C214 56 232 52 246 62 C254 68 262 68 266 62" fill="none" stroke="#d9b27a" stroke-width="5" stroke-linecap="round" stroke-dasharray="7 5"/>
+  <!-- cap -->
+  <rect x="180" y="62" width="34" height="22" rx="5" transform="rotate(18 197 73)" fill="#3b3e4a" stroke="#07070a" stroke-width="4" stroke-linejoin="round"/>
+  <!-- body -->
+  <circle cx="190" cy="128" r="56" fill="url(#bomb-body)" stroke="#07070a" stroke-width="5"/>
+  <g clip-path="url(#bomb-clip)">
+    <!-- wires -->
+    <g fill="none" stroke-linecap="round">
+      <path d="M134 150 C160 176 200 176 244 150" stroke="#07070a" stroke-width="12"/>
+      <path d="M134 150 C160 176 200 176 244 150" stroke="#ff4a3d" stroke-width="7"/>
+      <path d="M136 162 C170 186 210 186 240 164" stroke="#07070a" stroke-width="12"/>
+      <path d="M136 162 C170 186 210 186 240 164" stroke="#3a8bff" stroke-width="7"/>
+      <path d="M140 172 C176 196 214 194 236 176" stroke="#07070a" stroke-width="12"/>
+      <path d="M140 172 C176 196 214 194 236 176" stroke="#3ccf6e" stroke-width="7"/>
+    </g>
+  </g>
+  <!-- yellow wire looping out to be snipped -->
+  <path d="M232 140 C262 136 268 160 252 170" fill="none" stroke="#07070a" stroke-width="12" stroke-linecap="round"/>
+  <path d="M232 140 C262 136 268 160 252 170" fill="none" stroke="#ffd23f" stroke-width="7" stroke-linecap="round"/>
+  <!-- panel -->
+  <rect x="156" y="108" width="68" height="34" rx="8" fill="#0b0b0f" stroke="#3d4150" stroke-width="4"/>
+  <path d="M164 126 h10 l5 -10 l7 20 l7 -16 l5 6 h12" fill="none" stroke="#ff3b30" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="215" cy="118" r="3.5" fill="#39e07a"/><circle cx="215" cy="132" r="3.5" fill="#ff3b30"/>
+  <!-- highlight -->
+  <path d="M152 100 C158 86 170 78 182 76" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" opacity="0.5"/>
+  <circle cx="148" cy="112" r="4" fill="#ffffff" opacity="0.45"/>
+  <!-- spark -->
+  <circle cx="268" cy="60" r="30" fill="url(#bomb-spark)"/>
+  <path d="M268 42 l5 13 l14 -5 l-9 11 l12 8 l-15 0 l2 14 l-9 -11 l-9 11 l2 -14 l-15 0 l12 -8 l-9 -11 l14 5 Z" fill="#fff3a0" stroke="#ff8a00" stroke-width="2.5" stroke-linejoin="round"/>
+  <g fill="#ffcc1a"><circle cx="294" cy="52" r="3"/><circle cx="288" cy="80" r="2.5"/><circle cx="246" cy="46" r="2.5"/></g>
+  <!-- pliers -->
+  <g transform="translate(256 164) rotate(-28)" stroke="#07070a" stroke-width="4" stroke-linejoin="round">
+    <path d="M10 -3 L68 -14 L72 -2 L14 6 Z" fill="#ff3b30"/>
+    <path d="M10 3 L66 18 L68 6 L14 -4 Z" fill="#ffcc1a"/>
+    <path d="M-22 -10 L4 -4 L4 4 L-22 8 C-26 4 -26 -6 -22 -10 Z" fill="url(#bomb-steel)"/>
+    <circle cx="6" cy="0" r="7" fill="#c9ccd6"/>
+    <circle cx="6" cy="0" r="2.5" fill="#333"/>
+  </g>
+  <!-- snip sparkle -->
+  <path d="M232 154 l2 -8 l2 8 l8 2 l-8 2 l-2 8 l-2 -8 l-8 -2 Z" fill="#ffffff" opacity="0.9"/>
+  </g>
+  <rect width="400" height="240" fill="url(#bomb-vig)"/>
+</svg>

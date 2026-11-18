@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="actout-back" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a0b33"/>
+      <stop offset="1" stop-color="#1a0518"/>
+    </linearGradient>
+    <linearGradient id="actout-curtL" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5c0618"/>
+      <stop offset="0.5" stop-color="#c8142f"/>
+      <stop offset="1" stop-color="#7a0a20"/>
+    </linearGradient>
+    <linearGradient id="actout-curtR" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0" stop-color="#5c0618"/>
+      <stop offset="0.5" stop-color="#c8142f"/>
+      <stop offset="1" stop-color="#7a0a20"/>
+    </linearGradient>
+    <linearGradient id="actout-spot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff6d0" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#ffe9a0" stop-opacity="0.2"/>
+    </linearGradient>
+    <linearGradient id="actout-floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9a5a2a"/>
+      <stop offset="1" stop-color="#4a2410"/>
+    </linearGradient>
+    <linearGradient id="actout-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff1b8"/>
+      <stop offset="0.5" stop-color="#ffc93c"/>
+      <stop offset="1" stop-color="#a8700f"/>
+    </linearGradient>
+    <linearGradient id="actout-sad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e3c6ff"/>
+      <stop offset="0.5" stop-color="#9b5fd6"/>
+      <stop offset="1" stop-color="#4f2380"/>
+    </linearGradient>
+    <radialGradient id="actout-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#1a0518" stop-opacity="0"/>
+      <stop offset="1" stop-color="#1a0518" stop-opacity="0.7"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#actout-back)"/>
+  <!-- stage floor -->
+  <path d="M0 186 H400 V240 H0 Z" fill="url(#actout-floor)"/>
+  <path d="M0 186 H400" stroke="#ffc93c" stroke-width="5"/>
+  <g stroke="#3a1a08" stroke-width="2" opacity="0.5"><path d="M60 190 L30 240 M140 190 L126 240 M200 190 V240 M260 190 L274 240 M340 190 L370 240"/></g>
+  <!-- spotlight -->
+  <path d="M176 0 L224 0 L300 196 L100 196 Z" fill="url(#actout-spot)"/>
+  <ellipse cx="200" cy="190" rx="102" ry="14" fill="#fff3c0" opacity="0.6"/>
+  <!-- curtains -->
+  <path d="M0 0 H110 C100 60 92 120 96 190 C70 186 50 196 30 200 C20 196 10 198 0 200 Z" fill="url(#actout-curtL)" stroke="#3a0410" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M400 0 H290 C300 60 308 120 304 190 C330 186 350 196 370 200 C380 196 390 198 400 200 Z" fill="url(#actout-curtR)" stroke="#3a0410" stroke-width="4" stroke-linejoin="round"/>
+  <g fill="none" stroke="#3a0410" stroke-width="3" opacity="0.6">
+    <path d="M30 20 C28 90 30 150 34 196 M64 20 C60 90 62 150 66 190"/>
+    <path d="M370 20 C372 90 370 150 366 196 M336 20 C340 90 338 150 334 190"/>
+  </g>
+  <path d="M84 24 C80 80 78 130 82 180" fill="none" stroke="#ff6b7d" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+  <path d="M318 24 C322 80 324 130 320 180" fill="none" stroke="#ff6b7d" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+  <!-- tie-backs -->
+  <path d="M88 132 C96 128 108 130 112 136" fill="none" stroke="#ffc93c" stroke-width="6" stroke-linecap="round"/>
+  <path d="M312 132 C304 128 292 130 288 136" fill="none" stroke="#ffc93c" stroke-width="6" stroke-linecap="round"/>
+  <!-- valance -->
+  <path d="M0 0 H400 V30 C380 44 360 44 340 30 C320 44 300 44 280 30 C260 44 240 44 220 30 C200 44 180 44 160 30 C140 44 120 44 100 30 C80 44 60 44 40 30 C20 44 0 44 0 30 Z" fill="#a50f28" stroke="#3a0410" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M0 30 C20 44 40 44 40 30 C60 44 80 44 100 30 C120 44 140 44 160 30 C180 44 200 44 220 30 C240 44 260 44 280 30 C300 44 320 44 340 30 C360 44 380 44 400 30" fill="none" stroke="#ffc93c" stroke-width="4"/>
+  <!-- shadow under masks -->
+  <ellipse cx="200" cy="188" rx="64" ry="8" fill="#3a0b33" opacity="0.5"/>
+  <!-- sad mask (back, right) -->
+  <g transform="translate(232 112) rotate(14)" stroke="#2a0d26" stroke-width="4" stroke-linejoin="round">
+    <path d="M-34 -38 C-14 -46 14 -46 34 -38 C38 -6 32 26 0 44 C-32 26 -38 -6 -34 -38 Z" fill="url(#actout-sad)"/>
+    <path d="M-22 -14 C-18 -20 -8 -22 -4 -12 C-10 -8 -18 -8 -22 -14 Z M22 -14 C18 -20 8 -22 4 -12 C10 -8 18 -8 22 -14 Z" fill="#2a0d26"/>
+    <path d="M-22 -24 L-6 -20 M22 -24 L6 -20" fill="none" stroke-linecap="round"/>
+    <path d="M-14 26 C-8 14 8 14 14 26 C8 22 -8 22 -14 26 Z" fill="#2a0d26"/>
+    <path d="M-14 -4 C-16 4 -12 8 -14 12" fill="none" stroke="#5ae0ff" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+  <!-- happy mask (front, left) -->
+  <g transform="translate(176 106) rotate(-12)" stroke="#4a1a10" stroke-width="4" stroke-linejoin="round">
+    <path d="M-36 -40 C-14 -48 14 -48 36 -40 C40 -6 34 28 0 46 C-34 28 -40 -6 -36 -40 Z" fill="url(#actout-gold)"/>
+    <path d="M-24 -10 C-20 -20 -8 -20 -4 -10 C-10 -14 -18 -14 -24 -10 Z M24 -10 C20 -20 8 -20 4 -10 C10 -14 18 -14 24 -10 Z" fill="#2a0d26"/>
+    <path d="M-20 12 C-10 30 10 30 20 12 C8 18 -8 18 -20 12 Z" fill="#2a0d26"/>
+    <path d="M-28 4 C-26 0 -22 0 -20 4 M28 4 C26 0 22 0 20 4" fill="none" stroke="#d6264b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M-26 -34 C-14 -38 0 -38 8 -36" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  </g>
+  <!-- sparkles -->
+  <g fill="#fff6c8" stroke="#4a1a10" stroke-width="2" stroke-linejoin="round">
+    <path d="M136 70 l3 9 l9 3 l-9 3 l-3 9 l-3 -9 l-9 -3 l9 -3 Z"/>
+    <path d="M272 62 l2 7 l7 2 l-7 2 l-2 7 l-2 -7 l-7 -2 l7 -2 Z"/>
+    <path d="M268 160 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 l6 -2 Z"/>
+  </g>
+  <rect width="400" height="240" fill="url(#actout-vig)"/>
+</svg>

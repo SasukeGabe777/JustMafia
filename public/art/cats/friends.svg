@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="cat-friends-bg" cx="0.5" cy="0.42" r="0.75">
+      <stop offset="0" stop-color="#b892ff"/>
+      <stop offset="0.5" stop-color="#8b5cff"/>
+      <stop offset="1" stop-color="#2a0f6e"/>
+    </radialGradient>
+    <radialGradient id="cat-friends-face" cx="0.38" cy="0.32" r="0.8">
+      <stop offset="0" stop-color="#fff3c4"/>
+      <stop offset="0.55" stop-color="#ffd76a"/>
+      <stop offset="1" stop-color="#f0a52a"/>
+    </radialGradient>
+    <linearGradient id="cat-friends-hat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a3fa8"/>
+      <stop offset="1" stop-color="#2a1a5e"/>
+    </linearGradient>
+    <linearGradient id="cat-friends-env" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e2dcf2"/>
+    </linearGradient>
+    <radialGradient id="cat-friends-lens" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="0.5" stop-color="#a8f0ff" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#3fb8e8" stop-opacity="0.8"/>
+    </radialGradient>
+    <radialGradient id="cat-friends-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#e9dcff" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#e9dcff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cat-friends-vig" cx="0.5" cy="0.5" r="0.72">
+      <stop offset="0.6" stop-color="#12052e" stop-opacity="0"/>
+      <stop offset="1" stop-color="#12052e" stop-opacity="0.6"/>
+    </radialGradient>
+    <path id="cat-friends-ray" d="M0 0 L-18 -240 L18 -240Z"/>
+    <path id="cat-friends-star" d="M0 -8 q1.4 6.6 8 8 q-6.6 1.4 -8 8 q-1.4 -6.6 -8 -8 q6.6 -1.4 8 -8z"/>
+    <g id="cat-friends-envelope" stroke="#1b1424" stroke-width="3.5" stroke-linejoin="round">
+      <rect x="-26" y="-17" width="52" height="34" rx="4" fill="url(#cat-friends-env)"/>
+      <path d="M-26 -14 L0 6 L26 -14" fill="none"/>
+      <path d="M-24 15 L-8 2 M24 15 L8 2" fill="none" stroke-width="2.5"/>
+      <circle cx="0" cy="5" r="7" fill="#ff3b5c"/>
+      <path d="M0 9 C-6 5 -5 0 -2 0 C-1 0 0 1 0 2 C0 1 1 0 2 0 C5 0 6 5 0 9Z" fill="#ffc2cf" stroke="none"/>
+    </g>
+  </defs>
+  <rect width="320" height="200" fill="url(#cat-friends-bg)"/>
+  <g transform="translate(160 92)" fill="#fff" opacity="0.08">
+    <use href="#cat-friends-ray"/><use href="#cat-friends-ray" transform="rotate(30)"/><use href="#cat-friends-ray" transform="rotate(60)"/><use href="#cat-friends-ray" transform="rotate(90)"/><use href="#cat-friends-ray" transform="rotate(120)"/><use href="#cat-friends-ray" transform="rotate(150)"/>
+    <use href="#cat-friends-ray" transform="rotate(180)"/><use href="#cat-friends-ray" transform="rotate(210)"/><use href="#cat-friends-ray" transform="rotate(240)"/><use href="#cat-friends-ray" transform="rotate(270)"/><use href="#cat-friends-ray" transform="rotate(300)"/><use href="#cat-friends-ray" transform="rotate(330)"/>
+  </g>
+  <g fill="#fff">
+    <use href="#cat-friends-star" x="30" y="30"/><use href="#cat-friends-star" x="292" y="26"/><use href="#cat-friends-star" x="112" y="16" opacity="0.7"/><use href="#cat-friends-star" x="300" y="112" opacity="0.7"/><use href="#cat-friends-star" x="18" y="108" opacity="0.6"/>
+    <circle cx="70" cy="22" r="2.5"/><circle cx="246" cy="14" r="2.5"/><circle cx="12" cy="66" r="2"/><circle cx="308" cy="70" r="2"/><circle cx="210" cy="190" r="2"/><circle cx="150" cy="10" r="2"/>
+  </g>
+  <circle cx="160" cy="96" r="76" fill="url(#cat-friends-glow)"/>
+  <ellipse cx="160" cy="180" rx="84" ry="9" fill="#12052e" opacity="0.5"/>
+  <!-- whisper bubbles -->
+  <g stroke="#1b1424" stroke-width="4" stroke-linejoin="round">
+    <path d="M40 46 Q40 28 60 28 H96 Q114 28 114 46 Q114 62 96 62 H80 L76 76 L68 62 H60 Q40 62 40 46Z" fill="#fff"/>
+    <g fill="#8b5cff" stroke="none"><circle cx="62" cy="45" r="4.5"/><circle cx="77" cy="45" r="4.5"/><circle cx="92" cy="45" r="4.5"/></g>
+    <path d="M226 40 Q226 24 244 24 H268 Q284 24 284 40 Q284 54 268 54 H254 L240 64 L244 54 Q226 54 226 40Z" fill="#ff8fc8"/>
+    <path d="M255 46 C243 38 245 30 250 30 C252 30 254 32 255 34 C256 32 258 30 260 30 C265 30 267 38 255 46Z" fill="#fff" stroke-width="2.5"/>
+  </g>
+  <g stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.8">
+    <path d="M206 96 q8 6 0 14 M216 90 q12 10 0 26"/>
+  </g>
+  <!-- sly face -->
+  <g transform="translate(160 104)" stroke="#1b1424" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round">
+    <circle r="42" fill="url(#cat-friends-face)"/>
+    <path d="M-30 -22 a36 36 0 0 1 20 -14" fill="none" stroke="#fff" stroke-width="5" opacity="0.8"/>
+    <path d="M-44 -6 C-30 -20 -14 -12 0 -10 C14 -12 30 -20 44 -6 C44 10 26 16 14 8 C8 4 4 4 0 6 C-4 4 -8 4 -14 8 C-26 16 -44 10 -44 -6Z" fill="#2a1a5e"/>
+    <path d="M-34 -4 Q-24 -12 -14 -4 Q-24 2 -34 -4Z" fill="#fff" stroke-width="2.5"/>
+    <path d="M12 -4 Q22 -12 32 -4 Q22 2 12 -4Z" fill="#fff" stroke-width="2.5"/>
+    <circle cx="-17" cy="-4.5" r="3.5" fill="#1b1424" stroke="none"/>
+    <circle cx="29" cy="-4.5" r="3.5" fill="#1b1424" stroke="none"/>
+    <path d="M-38 -16 L-12 -20 M14 -22 L38 -12" stroke-width="3.5"/>
+    <path d="M-12 22 Q8 30 22 16" fill="none" stroke-width="4.5"/>
+    <path d="M22 16 l5 -2" stroke-width="4"/>
+    <ellipse cx="-26" cy="18" rx="6" ry="4" fill="#ff8fa8" stroke="none" opacity="0.8"/>
+    <ellipse cx="30" cy="16" rx="6" ry="4" fill="#ff8fa8" stroke="none" opacity="0.8"/>
+    <!-- hat -->
+    <path d="M-30 -34 C-28 -62 28 -62 30 -34Z" fill="url(#cat-friends-hat)"/>
+    <path d="M-30 -38 C-10 -32 10 -32 30 -38 L30 -32 C10 -26 -10 -26 -30 -32Z" fill="#ff3b8a" stroke-width="3"/>
+    <path d="M-56 -30 C-30 -40 30 -40 56 -30 C40 -22 -40 -22 -56 -30Z" fill="url(#cat-friends-hat)"/>
+    <path d="M-16 -56 C-8 -60 4 -60 10 -58" fill="none" stroke="#9d86e8" stroke-width="3"/>
+  </g>
+  <!-- envelopes -->
+  <g transform="translate(66 148) rotate(-14)"><use href="#cat-friends-envelope"/></g>
+  <g transform="translate(90 168) rotate(8) scale(0.85)"><use href="#cat-friends-envelope"/></g>
+  <!-- magnifier -->
+  <g transform="translate(246 138) rotate(-35)" stroke="#1b1424" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="-6" y="24" width="12" height="36" rx="6" fill="#a8562a"/>
+    <rect x="-5" y="20" width="10" height="8" fill="#cfc8e0" stroke-width="3"/>
+    <circle r="24" fill="url(#cat-friends-lens)" stroke-width="9" stroke="#1b1424"/>
+    <circle r="24" fill="none" stroke="#ffd23f" stroke-width="4"/>
+    <path d="M-14 -6 a16 16 0 0 1 10 -10" fill="none" stroke="#fff" stroke-width="4"/>
+  </g>
+  <rect width="320" height="200" fill="url(#cat-friends-vig)"/>
+</svg>

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="likely-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff4f9a"/>
+      <stop offset="1" stop-color="#9a0f4a"/>
+    </linearGradient>
+    <linearGradient id="likely-curtain" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7a0b3a"/>
+      <stop offset="0.5" stop-color="#c81d62"/>
+      <stop offset="1" stop-color="#7a0b3a"/>
+    </linearGradient>
+    <linearGradient id="likely-spot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff3d6" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#fff3d6" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="likely-gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e9a72c"/>
+      <stop offset="0.45" stop-color="#ffe680"/>
+      <stop offset="1" stop-color="#d9962a"/>
+    </linearGradient>
+    <linearGradient id="likely-pod" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff86b3"/>
+      <stop offset="1" stop-color="#d42a6c"/>
+    </linearGradient>
+    <radialGradient id="likely-vig" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0.6" stop-color="#1b1030" stop-opacity="0"/>
+      <stop offset="1" stop-color="#1b1030" stop-opacity="0.45"/>
+    </radialGradient>
+    <g id="likely-hand" stroke="#5a0b22" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+      <rect x="-82" y="-17" width="50" height="34" rx="6" fill="#ffd54a"/>
+      <path d="M-82 -17 h10 v34 h-10" fill="#e9b53c"/>
+      <rect x="-38" y="-21" width="42" height="42" rx="15" fill="#ffd2b0"/>
+      <rect x="-6" y="-21" width="46" height="15" rx="7.5" fill="#ffd2b0"/>
+      <path d="M-26 -18 q12 -8 22 2" fill="#ffd2b0"/>
+      <path d="M-8 2 h8 M-8 12 h6" fill="none"/>
+    </g>
+  </defs>
+  <rect width="400" height="240" fill="url(#likely-bg)"/>
+  <g fill="#fff" opacity="0.18">
+    <circle cx="140" cy="30" r="3"/><circle cx="260" cy="24" r="2.5"/><circle cx="300" cy="50" r="2"/><circle cx="100" cy="56" r="2"/><circle cx="330" cy="20" r="3"/><circle cx="70" cy="22" r="2"/>
+  </g>
+  <path d="M0 0 h70 c-6 40 10 80 -4 120 c10 40 2 80 6 120 h-72z" fill="url(#likely-curtain)" stroke="#5a0b22" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M400 0 h-70 c6 40 -10 80 4 120 c-10 40 -2 80 -6 120 h72z" fill="url(#likely-curtain)" stroke="#5a0b22" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M20 0 c4 60 -4 150 4 240 M380 0 c-4 60 4 150 -4 240" stroke="#5a0b22" stroke-width="3" opacity="0.35" fill="none"/>
+  <ellipse cx="200" cy="214" rx="190" ry="40" fill="#7a0b3a" stroke="#5a0b22" stroke-width="4"/>
+  <path d="M170 -5 h60 l92 220 h-244z" fill="url(#likely-spot)"/>
+  <ellipse cx="200" cy="200" rx="110" ry="20" fill="#fff3d6" opacity="0.35"/>
+  <ellipse cx="200" cy="194" rx="72" ry="9" fill="#1b1030" opacity="0.35"/>
+  <rect x="146" y="150" width="108" height="44" rx="6" fill="url(#likely-pod)" stroke="#5a0b22" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="140" y="144" width="120" height="12" rx="5" fill="#ffb3cf" stroke="#5a0b22" stroke-width="4" stroke-linejoin="round"/>
+  <g stroke="#5a0b22" stroke-width="3" stroke-linejoin="round">
+    <path d="M200 160 l5 6 h8 l-5 6 3 8 -11 -4 -11 4 3 -8 -5 -6 h8z" fill="#ffd54a"/>
+  </g>
+  <g stroke="#5a0b22" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M172 82 c-30 -4 -30 34 4 34 M228 82 c30 -4 30 34 -4 34" fill="none" stroke="#5a0b22" stroke-width="10"/>
+    <path d="M172 82 c-30 -4 -30 34 4 34 M228 82 c30 -4 30 34 -4 34" fill="none" stroke="#ffd54a" stroke-width="4"/>
+    <rect x="190" y="124" width="20" height="14" fill="url(#likely-gold)"/>
+    <rect x="178" y="134" width="44" height="11" rx="3" fill="url(#likely-gold)"/>
+    <path d="M168 70 h64 v14 c0 28 -14 42 -32 44 c-18 -2 -32 -16 -32 -44z" fill="url(#likely-gold)"/>
+    <ellipse cx="200" cy="70" rx="32" ry="7" fill="#fff0b0"/>
+  </g>
+  <path d="M168 88 l64 22 v10 l-64 -22z" fill="#ff4f9a" stroke="#5a0b22" stroke-width="3" stroke-linejoin="round" opacity="0.95"/>
+  <path d="M180 84 c0 18 4 28 10 34" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.7"/>
+  <g fill="#fff8d6">
+    <path d="M148 58 q2 -8 4 0 q8 2 0 4 q-2 8 -4 0 q-8 -2 0 -4z"/>
+    <path d="M250 50 q2.5 -10 5 0 q10 2.5 0 5 q-2.5 10 -5 0 q-10 -2.5 0 -5z"/>
+    <path d="M260 120 q1.5 -6 3 0 q6 1.5 0 3 q-1.5 6 -3 0 q-6 -1.5 0 -3z"/>
+    <path d="M135 115 q1.5 -6 3 0 q6 1.5 0 3 q-1.5 6 -3 0 q-6 -1.5 0 -3z"/>
+  </g>
+  <use href="#likely-hand" transform="translate(86 92) rotate(8)"/>
+  <use href="#likely-hand" transform="translate(76 150) rotate(-14)"/>
+  <use href="#likely-hand" transform="translate(314 92) scale(-1 1) rotate(8)"/>
+  <use href="#likely-hand" transform="translate(324 150) scale(-1 1) rotate(-14)"/>
+  <rect width="400" height="240" fill="url(#likely-vig)"/>
+</svg>

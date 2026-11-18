@@ -176,10 +176,11 @@
       const ok = t.games.some(fits);
       const state = t.big ? (opt.big === 'yes' ? 'As the finale' : opt.big === 'maybe' ? 'Maybe, if time allows' : 'Off') : (on ? 'On' : 'Off');
       return `<button class="pm-type pm-f ${on ? 'on' : ''} ${ok ? '' : 'nofit'} ${t.big ? 'big' : ''} ${t.big && opt.big === 'maybe' ? 'maybe' : ''}" data-id="t-${t.k}" data-type="${t.k}" style="--c:${t.c}" aria-pressed="${on}">
+        <span class="pm-tart" aria-hidden="true"><img src="/art/cats/${esc(t.k)}.svg" alt="" onerror="this.remove()"></span>
         <span class="pm-tick" aria-hidden="true">${on && !(t.big && opt.big === 'maybe') ? '✓' : ''}</span>
-        <span class="pm-ticon">${t.icon}</span><b>${esc(t.name)}</b>
-        <span class="pm-tgames">${t.games.map((k) => `<span class="${fits(k) ? '' : 'x'}" title="${esc(GAMES[k].name)}">${GAMES[k].icon}</span>`).join('')}</span>
-        <small>${ok ? esc(state) : 'Needs more players'}</small></button>`;
+        <span class="pm-tbody"><b>${esc(t.name)}</b>
+        <span class="pm-tsub">${t.big ? 'Mafia, Ducks, Kingdoms' : esc(t.sub || '')} · ${t.games.length} game${t.games.length === 1 ? '' : 's'}</span>
+        <small>${ok ? esc(state) : 'Needs more players'}</small></span></button>`;
     };
     b.innerHTML = `<section class="pm-setup">
       <header class="pm-head"><h1><span class="pm-pop">🎉</span> Party Mode</h1><p>Tell us about tonight and we'll shuffle up a game night, with a points race all the way to the finale.</p></header>

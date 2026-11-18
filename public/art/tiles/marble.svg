@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="marble-bg" cx="0.5" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#6b3a17"/>
+      <stop offset="0.6" stop-color="#2b170a"/>
+      <stop offset="1" stop-color="#170b04"/>
+    </radialGradient>
+    <linearGradient id="marble-maple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f3d6a4"/>
+      <stop offset="0.5" stop-color="#e3bb80"/>
+      <stop offset="1" stop-color="#d0a066"/>
+    </linearGradient>
+    <linearGradient id="marble-edge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a5226"/>
+      <stop offset="1" stop-color="#4a250c"/>
+    </linearGradient>
+    <radialGradient id="marble-ball" cx="0.32" cy="0.28" r="0.8">
+      <stop offset="0" stop-color="#f4fbff"/>
+      <stop offset="0.35" stop-color="#6fb7ff"/>
+      <stop offset="1" stop-color="#1d1773"/>
+    </radialGradient>
+    <radialGradient id="marble-cup" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#000000"/>
+      <stop offset="0.7" stop-color="#1a0c04"/>
+      <stop offset="1" stop-color="#3b1d08"/>
+    </radialGradient>
+    <radialGradient id="marble-brassglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd23f" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#ffd23f" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="marble-vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#0d0602" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0d0602" stop-opacity="0.7"/>
+    </radialGradient>
+    <g id="marble-piece">
+      <rect x="-5" y="2" width="74" height="130" rx="12" fill="url(#marble-edge)" stroke="#100d14" stroke-width="4"/>
+      <rect x="-5" y="-5" width="74" height="130" rx="12" fill="#100d14"/>
+      <rect x="0" y="0" width="64" height="120" rx="6" fill="url(#marble-maple)"/>
+      <g fill="none" stroke="#b07a3e" stroke-width="1.5" opacity="0.45">
+        <path d="M4 10 C20 14 40 6 60 12 M4 40 C24 44 36 36 60 42 M4 74 C22 70 42 80 60 74 M4 104 C20 108 44 100 60 106"/>
+      </g>
+      <path d="M2 4 H40" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+    </g>
+  </defs>
+  <rect width="400" height="240" fill="url(#marble-bg)"/>
+  <!-- table grain -->
+  <g fill="none" stroke="#170b04" stroke-width="2" opacity="0.4">
+    <path d="M0 30 C80 20 160 40 240 28 C300 20 360 34 400 26"/>
+    <path d="M0 210 C90 200 170 222 260 206 C320 198 360 214 400 204"/>
+    <path d="M0 120 C20 116 40 124 60 118 M340 124 C360 118 380 126 400 120"/>
+  </g>
+  <!-- shadow under board -->
+  <ellipse cx="202" cy="194" rx="128" ry="12" fill="#000" opacity="0.5"/>
+  <!-- three phone pieces -->
+  <use href="#marble-piece" transform="translate(94 62)"/>
+  <use href="#marble-piece" transform="translate(170 62)"/>
+  <use href="#marble-piece" transform="translate(246 62)"/>
+  <!-- maze walls -->
+  <g fill="none" stroke="#2b170a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M97 65 H155 V134 M155 166 V179 H97 Z"/>
+    <path d="M113 65 V97 M129 81 V113 H97 M145 81 V97 M113 129 H145 V134 M97 145 H113 M129 161 V179"/>
+    <path d="M173 134 V65 H231 V78 M231 106 V179 H173 V166"/>
+    <path d="M189 81 V118 M202 65 V100 M189 118 H204 M218 81 H231 M218 122 V179 M189 165 H205 V179"/>
+    <path d="M249 78 V65 H307 V179 H249 V106"/>
+    <path d="M249 136 H265 M281 65 V80 M262 120 H292 M262 120 V150 M278 136 V179"/>
+  </g>
+  <g fill="none" stroke="#8a4f22" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M97 65 H155 V134 M155 166 V179 H97 Z"/>
+    <path d="M113 65 V97 M129 81 V113 H97 M145 81 V97 M113 129 H145 V134 M97 145 H113 M129 161 V179"/>
+    <path d="M173 134 V65 H231 V78 M231 106 V179 H173 V166"/>
+    <path d="M189 81 V118 M202 65 V100 M189 118 H204 M218 81 H231 M218 122 V179 M189 165 H205 V179"/>
+    <path d="M249 78 V65 H307 V179 H249 V106"/>
+    <path d="M249 136 H265 M281 65 V80 M262 120 H292 M262 120 V150 M278 136 V179"/>
+  </g>
+  <!-- goal cup -->
+  <circle cx="292" cy="156" r="22" fill="url(#marble-brassglow)"/>
+  <circle cx="292" cy="156" r="12" fill="none" stroke="#ffd23f" stroke-width="3.5" stroke-dasharray="4.5 3.5"/>
+  <circle cx="292" cy="156" r="8" fill="url(#marble-cup)" stroke="#2b170a" stroke-width="2"/>
+  <!-- path hint -->
+  <path d="M134 150 H164 H210 V92 H300 V146" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-dasharray="2 6" stroke-linecap="round" opacity="0.8"/>
+  <!-- motion streaks -->
+  <g stroke="#ffffff" stroke-linecap="round" opacity="0.75">
+    <path d="M126 144 H144" stroke-width="3"/>
+    <path d="M120 152 H146" stroke-width="3.5"/>
+    <path d="M128 160 H144" stroke-width="3"/>
+  </g>
+  <!-- marble -->
+  <ellipse cx="166" cy="168" rx="15" ry="4" fill="#000" opacity="0.45"/>
+  <circle cx="164" cy="150" r="16" fill="url(#marble-ball)" stroke="#14105a" stroke-width="3"/>
+  <path d="M152 154 C154 142 168 140 174 147 C178 156 166 164 159 159" fill="none" stroke="#ff7ac6" stroke-width="3.5" stroke-linecap="round"/>
+  <ellipse cx="157" cy="142" rx="6" ry="3" fill="#ffffff" opacity="0.9" transform="rotate(-35 157 142)"/>
+  <!-- brass sparkles -->
+  <g fill="#ffd23f" stroke="#6b3a17" stroke-width="1.5" stroke-linejoin="round">
+    <path d="M318 132 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 l6 -2 Z"/>
+    <path d="M272 140 l1.5 4 l4 1.5 l-4 1.5 l-1.5 4 l-1.5 -4 l-4 -1.5 l4 -1.5 Z"/>
+  </g>
+  <rect width="400" height="240" fill="url(#marble-vig)"/>
+</svg>

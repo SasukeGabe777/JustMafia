@@ -48,6 +48,14 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
 /* ---------- Tiles: shared ---------- */
 .tile { position: relative; display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; background: var(--card); border: 2px solid var(--line); color: inherit; text-decoration: none; outline: none; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, opacity 0.2s ease; }
 .tile .art { display: grid; place-items: center; position: relative; }
+/* Custom tile art (public/art/tiles/<key>.svg); the emoji only shows if the picture is missing. */
+.tile .art-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; transition: transform 0.35s ease, filter 0.3s; }
+.tile .art-img + .icon { display: none; }
+.tile.live:hover .art-img, .tile.live.sel .art-img { transform: scale(1.06); }
+.tile.locked .art-img { filter: grayscale(1) brightness(0.45); }
+.tile .art:has(.art-img)::before { display: none; }
+/* Big tiles: the picture sits above the title and fades into it. */
+.tiles.big .tile .art-img { height: 74%; -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent); mask-image: linear-gradient(to bottom, #000 72%, transparent); }
 .tile .icon { line-height: 1; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.28)); }
 .tile h2 { margin: 0; font-weight: 700; }
 .tile p { margin: 0; color: var(--muted); }
@@ -111,7 +119,7 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
 /* Compact cards: a short art band on top, then name, one line, and players/time chips. */
 .tiles.small .tile { --cw: calc((100cqw - (var(--cols) - 1) * var(--gap)) / var(--cols)); width: var(--cw); overflow: visible; border-radius: 18px; background: var(--card); }
 @supports not (width: 1cqw) { .tiles.small .tile { width: 270px; } }
-.tiles.small .tile .art { height: clamp(70px, 4.9vw, 96px); border-radius: 16px 16px 0 0; overflow: hidden; }
+.tiles.small .tile .art { height: clamp(100px, 7.4vw, 140px); border-radius: 16px 16px 0 0; overflow: hidden; }
 .tiles.small .tile .art::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.18), transparent 55%); pointer-events: none; }
 .tiles.small .tile .icon { position: relative; font-size: clamp(38px, 2.7vw, 54px); filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.28)); }
 .tiles.small .tile .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding: clamp(10px, 0.7vw, 14px) clamp(12px, 0.85vw, 16px) clamp(12px, 0.8vw, 15px); }
@@ -218,6 +226,7 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
   .tiles.big .tile { height: auto; min-height: 150px; flex-direction: row; }
   .tiles.big .tile .art { position: relative; inset: auto; padding: 0; width: 34%; flex: 0 0 auto; }
   .tiles.big .tile .icon { font-size: 72px; }
+  .tiles.big .tile .art-img { height: 100%; -webkit-mask-image: none; mask-image: none; }
   .tiles.big .tile .info { position: relative; flex: 1; padding: 16px 18px; background: rgba(12, 6, 30, 0.55); display: flex; flex-direction: column; justify-content: center; }
   .tiles.big .tile .info::after { display: none; }
 }
