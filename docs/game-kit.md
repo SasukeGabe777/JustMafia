@@ -6,7 +6,7 @@ them, and `node tools/test-box-kit.js` fails if any game is missing one.
 ## Start a new game
 
 ```
-node tools/new-game.js <key> "<Name>" --type cards|money|guess|bluff|know|creative --icon 🎲
+node tools/new-game.js <key> "<Name>" --type cards|guess|create|friends|action --icon 🎲
 ```
 
 This creates the files below with a small working placeholder game, and registers it in the
@@ -28,7 +28,7 @@ Then replace the placeholder with the real game, and restart the server.
 | Styles | `public/box/games/<key>.css` | Scoped to the game (`body.g-<key>` on the TV and phone). |
 | Soundtrack | `public/box/scores/<key>.js` | Music cues for title, lobby, intro, play moods, reveal and finale, plus stingers (see `public/box/scores/README.md`). Real recordings can replace any cue: `public/audio/<key>/<cue>.mp3`. |
 | Tests | `tools/test-box-<key>.js` | Bots play whole games on a virtual clock; inputs are validated; `results()` works. |
-| Main menu tile | `public/hub.html` | Players, time and type chips. |
+| Main menu tile | `public/hub.html` | Players, time and type chips, and its category `data-type="cards|guess|create|friends|action"` (from `public/categories.js`). The category puts it on its main-menu shelf **and** in Party Mode; nothing else to register. |
 | Ideal crowd | `best: [lo, hi]` in the module + `data-best="lo-hi"` on the tile | The player count where the game is at its best. Party Mode builds lineups from games that suit the group, and the menu's "How many of you?" badges them. The kit test checks the two match. |
 
 ## Unlockable games

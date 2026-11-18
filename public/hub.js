@@ -40,40 +40,21 @@
       setTimeout(() => { const o = t.querySelector('.lock-ov'); if (o) o.remove(); t.classList.remove('unlocking'); U.seen(key); }, 3200);
     }
   }
-  // ---- Shelves: small games grouped by type, locked ones together at the end ----
-  // A tile's shelf is its data-type, else a guess from its type chip (the third .meta span).
-  const SHELVES = [
-    { k: 'cards', name: 'Cards & Casino', icon: '🃏', c: '#18b06a' },
-    { k: 'guess', name: 'Guessing', icon: '🎯', c: '#ff4f9a' },
-    { k: 'bluff', name: 'Bluff & Voting', icon: '🗳️', c: '#8b5cff' },
-    { k: 'know', name: 'Get to Know You', icon: '💬', c: '#14b8dc' },
-    { k: 'creative', name: 'Creative', icon: '🎨', c: '#ff7134' },
-    { k: 'story', name: 'Story', icon: '📖', c: '#6bbf3a' },
-    { k: 'battle', name: 'Strategy & Battle', icon: '⚔️', c: '#e0483e' },
-    { k: 'other', name: 'More', icon: '✨', c: '#c9bfe6' },
-    { k: 'locked', name: 'Unlockables', icon: '🔒', c: '#ffd23f' },
-  ];
-  const GUESS_TYPE = [
-    [/battle|strateg|war|tug/, 'battle'], [/story|survival|adventure/, 'story'], [/know|personal|about you/, 'know'],
-    [/bluff|vot|deduc|lie/, 'bluff'], [/guess|trivia|quiz|charade/, 'guess'],
-    [/card|casino|money|auction|bet|poker/, 'cards'], [/draw|creative|watch|meme|word|letter|\bart\b|sketch|writ/, 'creative'],
-  ];
-  const shelfOf = (t) => {
-    if (t.classList.contains('locked')) return 'locked';
-    const d = t.dataset.type; if (d && SHELVES.some((s) => s.k === d)) return d;
-    const spans = t.querySelectorAll('.meta span'), chip = (spans[2] || spans[spans.length - 1] || {}).textContent || '';
-    const hit = GUESS_TYPE.find(([re]) => re.test(chip.toLowerCase()));
-    return hit ? hit[1] : 'other';
-  };
+  // ---- Shelves: small games grouped by category ----
+  // The categories live in public/categories.js (Party Mode uses the same list). Each tile says
+  // its category with data-type; locked games stay on their shelf, after the playable ones.
+  const SHELVES = (window.GAME_CATS || []).concat([{ k: 'other', name: 'More', icon: '✨', c: '#c9bfe6' }]);
+  const shelfOf = (t) => { const d = t.dataset.type; return d && SHELVES.some((s) => s.k === d) ? d : 'other'; };
   const small = document.querySelector('.tiles.small');
   if (small) {
     const smallTiles = [...small.querySelectorAll('.tile')];
     const wrap = document.createElement('div'); wrap.className = 'shelves';
     for (const s of SHELVES) {
-      const mine = smallTiles.filter((t) => shelfOf(t) === s.k); if (!mine.length) continue;
+      const all = smallTiles.filter((t) => shelfOf(t) === s.k); if (!all.length) continue;
+      const mine = [...all.filter((t) => !t.classList.contains('locked')), ...all.filter((t) => t.classList.contains('locked'))];
       const shelf = document.createElement('div');
       shelf.className = 'shelf shelf-' + s.k; shelf.dataset.shelf = s.k; shelf.style.setProperty('--c', s.c);
-      shelf.innerHTML = `<h3 class="shelf-head"><span class="sh-ic" aria-hidden="true">${s.icon}</span>${s.name}<span class="sh-n">${mine.length}</span></h3><div class="shelf-row"></div>`;
+      shelf.innerHTML = `<h3 class="shelf-head"><span class="sh-ic" aria-hidden="true">${s.icon}</span>${s.name}${s.sub ? `<small class="sh-sub">${s.sub}</small>` : ''}<span class="sh-n">${mine.length}</span></h3><div class="shelf-row"></div>`;
       const row = shelf.querySelector('.shelf-row');
       for (const t of mine) { row.appendChild(t); const p = t.querySelector('.info p'); if (p && !t.title) t.title = p.textContent; }
       wrap.appendChild(shelf);

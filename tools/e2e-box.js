@@ -53,7 +53,9 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,JustBlanks,Blackjack Night,JustBid,Price Panic,Emoji Charades,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustSketch Relay,JustFunny,JustSummon,JustDrop,Hot Take Trivia,Color Match,Meme Maker,Letter Rush,Quick Draw,Bomb Squad,Alien Abduction,Tune Buzz,Act It Out,Debate Club,Zombie Survival');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,Alien Abduction,Debate Club,JustSummon,JustMarble,Quick Draw,Bomb Squad,Zombie Survival');
+  // Every small game sits on a category shelf (public/categories.js); there is no catch-all shelf.
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.shelf')].map((x) => x.dataset.shelf).join(',')`), 'cards,guess,create,friends,action');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
   assert.equal(await hub.eval(`document.querySelectorAll('.tile.empty').length`), 0, 'every slot is a game');
   assert(await hub.eval(`document.querySelector('.tile.zombie').classList.contains('locked')`), 'Zombie Survival starts locked');
@@ -350,6 +352,18 @@ async function setup(browser, game, settings = {}) {
     ok('JustRaiseDucks: the race runs on the TV (canvas), then the podium and points');
   }
   PAGES.push(hub);
+  // ---------- JustMarble: line up, ready, the marble rolls on the holder's phone ----------
+  {
+    const { tv, ph } = await setup(browser, 'marble');
+    await tv.click('#start'); await skipShow(tv);
+    await tv.until(`/Put your phones together/.test(document.body.textContent)`, 'marble lineup', 20000);
+    await ph.until(`!!document.querySelector('#mb-ready')`, 'ready button', 8000); await ph.click('#mb-ready');
+    await tv.until(`/has the marble/.test(document.body.textContent)`, 'marble rolling', 20000);
+    await ph.until(`!!document.querySelector('#mb-pad canvas')`, 'phone board');
+    await tv.shot('box-marble-tv'); await ph.shot('box-marble-phone');
+    ok('JustMarble: phones line up, tap ready, the TV maps the boards and the marble starts rolling');
+  }
+
   const pageErrors = PAGES.flatMap((p) => p.errors || []);
   if (pageErrors.length) console.log('PAGE ERRORS:\n' + pageErrors.map((e) => '  ' + String(e && (e.stack || e.message || JSON.stringify(e))).slice(0, 400)).join('\n'));
   assert.deepEqual(pageErrors, [], 'no page errors');

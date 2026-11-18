@@ -93,6 +93,8 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
 .shelf-head { margin: 0; display: flex; align-items: center; gap: 8px; font-size: clamp(14px, 0.95vw, 18px); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .shelf-head::after { content: ''; flex: 1; min-width: 20px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--c), transparent); opacity: 0.6; }
 .shelf-head .sh-ic { font-size: 1.15em; }
+.shelf-head .sh-sub { font-size: 0.78em; font-weight: 400; letter-spacing: 0.01em; text-transform: none; color: var(--dim); }
+@media (max-width: 640px) { .shelf-head .sh-sub { display: none; } }
 .shelf-head .sh-n { font-size: 0.75em; letter-spacing: 0; padding: 1px 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); color: var(--dim); }
 .shelf-row { display: flex; flex-wrap: wrap; gap: var(--gap); }
 @container (max-width: 1540px) { .shelf { --cols: 4; } }
@@ -140,6 +142,7 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
 .tile.live.colormatch .art { background: conic-gradient(from 30deg at 50% 55%, #ff4f9a, #ffd23f, #2ee6a6, #3ee6ff, #8b5cff, #ff4f9a); }
 .tile.live.memes .art { background: radial-gradient(circle at 50% 60%, #ff8c42, #5c240a 75%); }
 .tile.live.letters .art { background: radial-gradient(circle at 50% 60%, #14b8dc, #083a52 75%); }
+.tile.live.marble .art { background: radial-gradient(circle at 40% 40%, #8fc8ff, transparent 30%), repeating-linear-gradient(92deg, rgba(120, 70, 25, 0.18) 0 3px, transparent 3px 14px), radial-gradient(circle at 50% 60%, #e3bb80, #6b3a17 80%); }
 .tile.zombie .art { background: radial-gradient(circle at 50% 70%, #5d8f3a, #1d2b14 75%); }
 .tile.plinko .art { background: radial-gradient(circle at 50% 20%, #ff3d8b, transparent 55%), radial-gradient(circle at 50% 110%, #ffd23f, #3a0d4f 60%), #1a0630; }
 

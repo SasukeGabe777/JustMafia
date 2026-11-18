@@ -1,309 +1,89 @@
 'use strict';
-// Tune Buzz (key `tune`): TV and phone screens, the designed lobby, haptics, and the music the
-// TV plays for every clip. Look: a neon late-night radio studio (see public/box/titles/tune.js):
-// deep violet, hot pink, cyan and gold, Monoton + Bungee, a live equaliser on the big screen.
+// Tune Buzz (key `tune`): TV and phone screens, the designed lobby, haptics, and the clip player.
+// Look: a neon late-night radio studio (see public/box/titles/tune.js): deep violet, hot pink,
+// cyan and gold, Monoton + Bungee, a live equaliser on the big screen.
 //
-// ALL MUSIC IS ORIGINAL AND MADE IN CODE (BOX.audio, public/box/audio.js):
-//   Which game?        a few bars of a JustGameBox soundtrack (public/box/scores/<game>.js, title cue)
-//   Guess the vibe     STYLES below: a generated melody over a style's chords, groove and band
-//   Instrument ID      a generated phrase played solo on one instrument (INSTR below)
-//   Higher or lower    two notes, or two beats
-//   Finish the melody  a phrase, then three endings (one resolves home; one clashes; one hangs)
-//   Rhythm tap         a count-in, then 12 beats of groove to tap along with
-// The server (box/games/tune.js) sends the seed and the timing; the TV plays it on its speakers.
+// The songs are the players' own: phones search (box/songs.js, through ctx.actAsync), hear the
+// 30-second preview and pick which few seconds the room hears. The TV plays each clip with an
+// <audio> element on the server's schedule (listen 1, 2, 3, each longer), then more of the song
+// at the reveal, and ducks the game's soundtrack while it plays.
 (function () {
   const { esc, mmss } = BOX;
   const TAU = Math.PI * 2;
-  const LETTERS = ['A', 'B', 'C', 'D'];
 
-  // =========================================================================== MUSIC
-  const rngOf = (seed) => { let a = seed >>> 0 || 1; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
-  const pickR = (r, a) => a[Math.floor(r() * a.length)];
-  const AI = () => BOX.audio && BOX.audio._internals;
-  const NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-  function chordOf(sym) { try { return AI().parseChord(sym, 0); } catch { return AI().parseChord('C', 0); } }
-  function voicing(sym, center, n, prev) { return AI().voiceChord(chordOf(sym), prev || null, { center, n: n || 3 }); }
-  const MAJ = [0, 2, 4, 5, 7, 9, 11], MIN = [0, 2, 3, 5, 7, 8, 10], HMIN = [0, 2, 3, 5, 7, 8, 11];
-  function scaleIn(root, ivs, lo, hi) { const out = []; for (let m = lo; m <= hi; m++) if (ivs.includes((((m - root) % 12) + 12) % 12)) out.push(m); return out; }
-  const nearest = (list, m) => list.reduce((b, x) => (Math.abs(x - m) < Math.abs(b - m) ? x : b), list[0]);
-
-  // A melody over a chord list: chord tones on the beat, scale steps between, home at the end.
-  // rhythms: strings of note lengths in 8ths ('r2' = a rest); returns [[step16, midi, steps16, vel]].
-  function melody(r, { chords, root, scale, center, rhythms, barSteps, range = [-7, 9], leap = 0.25, end = true }) {
-    const notes = [], sc = scaleIn(root, scale, center + range[0], center + range[1]);
-    let prev = nearest(sc, center + Math.round((r() - 0.5) * 4));
-    chords.forEach((sym, bar) => {
-      const c = chordOf(sym.split(' ')[0]), tones = sc.filter((m) => c.ivs.some((iv) => (((m - c.root - iv) % 12) + 12) % 12 === 0));
-      let pos = 0;
-      const toks = pickR(r, rhythms).split(' ');
-      toks.forEach((tk, i) => {
-        const rest = tk[0] === 'r', len = Number(rest ? tk.slice(1) : tk) * 2;
-        if (!rest) {
-          let m;
-          const lastOne = end && bar === chords.length - 1 && i === toks.length - 1;
-          if (lastOne) m = nearest(sc.filter((x) => (((x - root) % 12) + 12) % 12 === 0), prev);
-          else if (pos % 4 === 0 && tones.length) m = r() < leap ? pickR(r, tones) : nearest(tones.filter((x) => x !== prev).length ? tones.filter((x) => x !== prev) : tones, prev + (r() < 0.5 ? -2 : 2));
-          else { const k = sc.indexOf(nearest(sc, prev)); m = sc[Math.max(0, Math.min(sc.length - 1, k + pickR(r, [-2, -1, -1, 1, 1, 2])))]; }
-          notes.push([bar * barSteps + pos, m, len, pos % 4 === 0 ? 0.82 : 0.68]); prev = m;
-        }
-        pos += len;
-      });
-    });
-    return notes;
-  }
-  const BASS_DEG = { 1: 0, 3: 'third', 5: 7, 6: 9, 7: 10, 8: 12 };
-  // Plays one arrangement into X from time t0 for `secs` seconds (patterns repeat to fill it).
-  // arr: { bpm, beats, chords[], lead{type,center,vel,notes}, comp{type,center,n,pat,vel}, arp{…}, bass{type,pat}, drums{kit,…pieces}, fx(X,t,bar) }
-  function playArr(X, arr, t0, secs) {
-    const st = 60 / arr.bpm / 4, barSteps = (arr.beats || 4) * 4, barDur = barSteps * st;
-    const nBars = Math.max(1, Math.floor((secs + 0.3) / barDur)), loopLen = arr.chords.length;
-    let prevV = null, prevA = null;
-    const swing = (s) => (arr.swing && s % 2 === 1 ? st * arr.swing : 0);
-    for (let b = 0; b < nBars; b++) {
-      const sym = arr.chords[b % loopLen], tb = t0 + b * barDur;
-      if (tb - t0 > secs + 0.05) break;
-      const last = b === nBars - 1;
-      if (arr.comp) {
-        const v = prevV = voicing(sym, arr.comp.center, arr.comp.n || 3, prevV), pat = arr.comp.pat;
-        for (let s = 0; s < barSteps; s++) {
-          const ch = pat[s % pat.length]; if (ch !== 'x' && ch !== 'X') continue;
-          let len = 1; while (s + len < barSteps && pat[(s + len) % pat.length] === '-') len++;
-          X.chord(arr.comp.type, v, tb + s * st + swing(s), len * st * 0.95, (ch === 'X' ? 1 : 0.8) * (arr.comp.vel || 0.45), arr.comp.strum || 0);
-        }
-      }
-      if (arr.arp) {
-        const v = prevA = voicing(sym, arr.arp.center, 4, prevA), pat = arr.arp.pat;
-        for (let s = 0; s < barSteps; s++) { const ch = pat[s % pat.length]; if (!/[1-9]/.test(ch)) continue; X.note(arr.arp.type, v[(Number(ch) - 1) % v.length], tb + s * st + swing(s), st * 2.2, arr.arp.vel || 0.4); }
-      }
-      if (arr.bass) {
-        const c = chordOf(sym.split('/')[0]), base = 36 + ((c.root - 36) % 12 + 12) % 12, toks = arr.bass.pat.split(' ');
-        toks.forEach((tk, i) => {
-          if (tk === '.' || tk === '-') return;
-          let len = 1; while (toks[i + len] === '-') len++;
-          const d = BASS_DEG[tk]; const iv = d === 'third' ? (c.ivs.includes(3) ? 3 : 4) : d || 0;
-          X.note(arr.bass.type, base + iv + (arr.bass.oct || 0) * 12, tb + i * 2 * st, len * 2 * st * 0.9, arr.bass.vel || 0.6);
-        });
-      }
-      if (arr.drums) for (const [pc, pat] of Object.entries(arr.drums)) {
-        if (pc === 'kit') continue;
-        for (let s = 0; s < barSteps; s++) { const ch = pat[s % pat.length]; if (ch === '.') continue; X.drum(pc, tb + s * st + swing(s), ch === 'X' ? 0.95 : ch === 'g' ? 0.32 : 0.62, arr.drums.kit || 'std'); }
-      }
-      if (arr.fx) arr.fx(X, tb, b, barDur);
-      if (last && arr.drums && arr.drums.kit !== 'none') X.drum('y', tb + barDur, 0.5, arr.drums.kit || 'std');
-    }
-    if (arr.lead && arr.lead.notes) {
-      const totalSteps = nBars * barSteps, loopSteps = loopLen * barSteps;
-      for (let off = 0; off < totalSteps; off += loopSteps) for (const [s, m, len, vel] of arr.lead.notes) {
-        if (off + s >= totalSteps) break;
-        X.note(arr.lead.type, m, t0 + (off + s) * st + swing(s), Math.max(0.08, len * st * (arr.lead.legato || 0.92)), vel * (arr.lead.vel || 0.8));
-      }
-    }
-    return nBars * barDur;
-  }
-
-  // "Guess the vibe": every style the server can pick (box/games/tune.js VIBES).
-  const STYLES = {
-    spooky: (r) => ({ bpm: 92, beats: 3, chords: ['Dm', 'Gm', 'A7', 'Dm'], key: [62, HMIN],
-      lead: { type: 'sine', center: 74, rhythms: ['4 2', '2 2 2', '3 1 2', '6'], vel: 0.7, legato: 1 },
-      comp: { type: 'organ', center: 58, n: 3, pat: 'x-----------', vel: 0.35 }, arp: { type: 'harpsi', center: 66, pat: '..1.2.3.2.3.', vel: 0.32 },
-      bass: { type: 'upright', pat: '1 - - . 5 .' }, drums: { kit: 'orch', k: 'x...........' },
-      fx: (X, t, b, bd) => { if (b % 2 === 1) X.note('chime', 'g#6', t + bd * 0.7, 1.2, 0.35); } }),
-    beach: (r) => ({ bpm: 116, chords: ['F', 'Bb', 'C7', 'F'], key: [65, MAJ],
-      lead: { type: 'marimba', center: 77, rhythms: ['1 1 2 1 1 2', '2 1 1 2 2', '1 2 1 2 2', '3 3 2'], vel: 0.85 },
-      comp: { type: 'nylon', center: 62, n: 4, pat: '..x-..x-..x-.x-.', vel: 0.4, strum: 0.012 },
-      bass: { type: 'upright', pat: '1 . 5 . 1 5 8 .' }, drums: { kit: 'world', sh: 'x.x.x.x.x.x.x.x.', cg: '..x...x...x.x.x.', k: 'x.....x.x.......' } }),
-    space: (r) => ({ bpm: 72, chords: ['Cmaj7', 'D/C', 'Cmaj7', 'Bm7'], key: [60, [0, 2, 4, 6, 7, 9, 11]],
-      lead: { type: 'sine', center: 79, rhythms: ['4 4', '6 2', '8', '2 6'], vel: 0.6, legato: 1 },
-      comp: { type: 'pad', center: 64, n: 4, pat: 'x---------------', vel: 0.35 }, arp: { type: 'celesta', center: 84, pat: '1.2.3.4.3.2.1.2.', vel: 0.28 },
-      bass: { type: 'sub808', pat: '1 - - - - - - -', vel: 0.5 },
-      fx: (X, t, b, bd) => X.tone({ at: t + bd * 0.5, dur: 1.4, f0: 300 + b * 120, f1: 1800, wave: 'sine', vol: 0.05 }) }),
-    western: (r) => ({ bpm: 108, chords: ['G', 'C', 'G', 'D7'], key: [67, MAJ],
-      lead: { type: 'whistle', center: 79, rhythms: ['3 1 2 2', '2 2 4', '1 1 2 2 2', '6 2'], vel: 0.75 },
-      comp: { type: 'guitar', center: 59, n: 3, pat: '....x-......x-..', vel: 0.45, strum: 0.015 },
-      bass: { type: 'upright', pat: '1 . . . 5 . . .' }, drums: { kit: 'world', wb: 'x...x...x...x...', wb2: '..x...x...x...x.' } }),
-    royal: (r) => ({ bpm: 104, chords: ['Bb', 'Eb', 'F', 'Bb'], key: [58, MAJ],
-      lead: { type: 'brass', center: 70, rhythms: ['3 1 2 2', '2 1 1 4', '1 1 1 1 2 2', '3 1 4'], vel: 0.8, leap: 0.6 },
-      comp: { type: 'strings', center: 65, n: 4, pat: 'x-------x-------', vel: 0.35 },
-      bass: { type: 'bass', pat: '1 . . . 5 . . .' }, drums: { kit: 'orch', s: 'x.xxx.x.x.xxx.x.', k: 'x.......x.......' } }),
-    circus: (r) => ({ bpm: 150, chords: ['C', 'G7', 'G7', 'C'], key: [60, MAJ],
-      lead: { type: 'organ', center: 76, rhythms: ['1 1 1 1 1 1 2', '2 1 1 2 2', '1 1 2 1 1 2'], vel: 0.6 },
-      comp: { type: 'organ', center: 62, n: 3, pat: '....x.......x...', vel: 0.32 },
-      bass: { type: 'tuba', pat: '1 . . . 5 . . .', vel: 0.75 }, drums: { kit: 'orch', k: 'x.......x.......', s: '....x.......x...' } }),
-    lullaby: (r) => ({ bpm: 76, beats: 3, chords: ['F', 'Bb', 'C', 'F'], key: [65, MAJ],
-      lead: { type: 'musicbox', center: 79, rhythms: ['2 2 2', '4 2', '2 4', '6'], vel: 0.8 },
-      arp: { type: 'harp', center: 60, pat: '1...2...3...', vel: 0.4 } }),
-    chase: (r) => ({ bpm: 160, chords: ['Em', 'Em', 'C', 'D'], key: [64, MIN],
-      lead: { type: 'brass', center: 76, rhythms: ['1 1 1 1 2 2', '2 2 1 1 2', '1 1 2 1 1 2', '4 4'], vel: 0.65 },
-      comp: { type: 'strings', center: 64, n: 3, pat: 'x..x..x.x..x..x.', vel: 0.4 },
-      bass: { type: 'synthbass', pat: '1 1 1 1 1 1 8 1', vel: 0.55 }, drums: { kit: 'std', k: 'x...x...x...x...', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' } }),
-    underwater: (r) => ({ bpm: 84, chords: ['Ebmaj7', 'Cm7', 'Abmaj7', 'Bb7'], key: [63, MAJ],
-      lead: { type: 'vibes', center: 75, rhythms: ['2 2 4', '3 1 4', '2 2 2 2', '4 4'], vel: 0.8 },
-      comp: { type: 'pad', center: 63, n: 4, pat: 'x---------------', vel: 0.28 }, arp: { type: 'harp', center: 72, pat: '1.2.3.4.4.3.2.1.', vel: 0.28 },
-      bass: { type: 'upright', pat: '1 . . 5 . . 1 .' },
-      fx: (X, t, b, bd) => { for (let i = 0; i < 3; i++) X.tone({ at: t + bd * (0.2 + i * 0.27), dur: 0.12, f0: 500 + i * 160, f1: 1300 + i * 200, wave: 'sine', vol: 0.06 }); } }),
-    jungle: (r) => ({ bpm: 112, chords: ['Am', 'G', 'Am', 'Em'], key: [69, [0, 3, 5, 7, 10]],
-      lead: { type: 'flute', center: 76, rhythms: ['1 1 2 1 1 2', '2 1 1 4', '1 1 1 1 4'], vel: 0.75 },
-      comp: { type: 'marimba', center: 64, n: 3, pat: 'x.x...x.x.x...x.', vel: 0.38 },
-      bass: { type: 'upright', pat: '1 . . 1 5 . . .' }, drums: { kit: 'world', k: 'x.....x...x.....', cg: '..x.x...x.x.x...', bg: 'x..x..x...x..x..', sh: 'xgxgxgxgxgxgxgxg' } }),
-    rainy: (r) => ({ bpm: 70, swing: 0.3, chords: ['Cm7', 'Fm7', 'Cm7', 'G7'], key: [60, [0, 3, 5, 6, 7, 10]],
-      lead: { type: 'piano', center: 72, rhythms: ['3 1 2 2', '2 2 4', '4 2 2', '1 1 2 4'], vel: 0.75 },
-      comp: { type: 'epiano', center: 60, n: 4, pat: 'x-----x---------', vel: 0.35 },
-      bass: { type: 'upright', pat: '1 - 5 - 1 - 5 -' }, drums: { kit: 'jazz', k: 'x.......x.......', r: 'x..xx..xx..xx..x' },
-      fx: (X, t, b, bd) => X.noise({ at: t, dur: bd, f0: 5000, type: 'highpass', vol: 0.025 }) }),
-    spy: (r) => ({ bpm: 126, chords: ['Em', 'EmM7', 'Em7', 'C'], key: [64, MIN],
-      lead: { type: 'guitar', center: 64, rhythms: ['1 1 1 1 2 2', '2 1 1 2 2', '3 1 4', 'r2 1 1 2 2'], vel: 0.8 },
-      comp: { type: 'brass', center: 67, n: 3, pat: '..........x.....', vel: 0.4 },
-      bass: { type: 'upright', pat: '1 . 1 . 5 . 7 .' }, drums: { kit: 'jazz', r: 'x.x.x.x.x.x.x.x.', s: '....x.......x...', k: 'x.......x.......' } }),
-    arcade: (r) => ({ bpm: 140, chords: ['C', 'Am', 'F', 'G'], key: [60, MAJ],
-      lead: { type: 'lead', center: 79, rhythms: ['1 1 1 1 1 1 1 1', '2 1 1 2 2', '1 1 2 1 1 2'], vel: 0.5 },
-      arp: { type: 'pluck', center: 72, pat: '1234123412341234', vel: 0.3 },
-      bass: { type: 'synthbass', pat: '1 8 1 8 1 8 1 8', vel: 0.5 }, drums: { kit: '808', k: 'x...x...x...x...', s: '....x.......x...', h: '..x...x...x...x.' } }),
-    fairy: (r) => ({ bpm: 92, beats: 3, chords: ['Dmaj7', 'Gmaj7', 'Em7', 'A'], key: [62, [0, 2, 4, 6, 7, 9, 11]],
-      lead: { type: 'celesta', center: 84, rhythms: ['2 2 2', '1 1 2 2', '4 2', '1 1 1 1 2'], vel: 0.8 },
-      comp: { type: 'strings', center: 62, n: 3, pat: 'x-----------', vel: 0.25 }, arp: { type: 'harp', center: 67, pat: '1.2.3.4.3.2.', vel: 0.32 },
-      drums: { kit: 'world', tri: 'x...........' } }),
-  };
-  function buildStyle(id, seed) {
-    const r = rngOf(seed), f = STYLES[id] || STYLES.beach, a = f(r), barSteps = (a.beats || 4) * 4;
-    a.lead.notes = melody(r, { chords: a.chords, root: a.key[0], scale: a.key[1], center: a.lead.center, rhythms: a.lead.rhythms, barSteps, leap: a.lead.leap || 0.3 });
-    return a;
-  }
-  // "Instrument ID": one phrase, solo. center = where the instrument sounds most like itself.
-  const INSTR = {
-    piano: { type: 'piano', center: 72 }, trumpet: { type: 'brass', center: 70 }, sax: { type: 'sax', center: 65 }, strings: { type: 'strings', center: 74 },
-    guitar: { type: 'nylon', center: 62 }, banjo: { type: 'banjo', center: 67 }, organ: { type: 'organ', center: 70 }, musicbox: { type: 'musicbox', center: 84 },
-    marimba: { type: 'marimba', center: 72 }, flute: { type: 'flute', center: 79 }, choir: { type: 'choir', center: 67 }, harp: { type: 'harp', center: 72 },
-    whistle: { type: 'whistle', center: 81 }, tuba: { type: 'tuba', center: 46 },
-  };
-  function playInstrument(X, id, seed, t0) {
-    const r = rngOf(seed), I = INSTR[id] || INSTR.piano, root = I.center - 2 + Math.floor(r() * 5), keyRoot = root - (((root - 60) % 12) + 12) % 12 + [0, 2, 5, 7][Math.floor(r() * 4)];
-    const kr = NAMES[((keyRoot % 12) + 12) % 12];
-    const chords = [kr, NAMES[(keyRoot + 7) % 12] + '7'];
-    const notes = melody(r, { chords, root: keyRoot, scale: MAJ, center: I.center, rhythms: ['2 1 1 2 2', '3 1 2 2', '1 1 1 1 4', '2 2 2 2'], barSteps: 16, range: [-6, 8] });
-    // one more bar home
-    notes.push([32, nearest(scaleIn(keyRoot, [0], I.center - 7, I.center + 9), notes[notes.length - 1][1]), 8, 0.8]);
-    const st = 60 / 92 / 4;
-    for (const [s, m, len, vel] of notes) X.note(I.type, m, t0 + s * st, len * st * 0.95, vel * 0.85);
-  }
-  // "Higher or lower": two notes, or two beats.
-  function playHL(X, c, t0) {
-    if (c.mode === 'pitch') { X.note('piano', c.a, t0, 1.3, 0.85); X.note('piano', c.b, t0 + 2.0, 1.5, 0.85); return; }
-    const beat = (bpm, from, until) => { const d = 60 / bpm; let i = 0; for (let t = from; t < until - 0.05; t += d, i++) { X.drum('k', t, 0.8, 'std'); X.drum(i % 2 ? 's' : 'h', t, i % 2 ? 0.45 : 0.5, 'std'); X.drum('cb', t, i % 4 ? 0.3 : 0.6, 'std'); } };
-    beat(c.a, t0, t0 + 3.0); beat(c.b, t0 + 3.4, t0 + 6.5);
-  }
-  // "Finish the melody": a 2-bar phrase, then [bar 2 + ending] three times. Ending kinds:
-  // 'home' (resolves to the tonic over I), 'clash' (lands a semitone off, over a far chord),
-  // 'hang' (stops on the leading tone over V: unfinished).
-  const FIN_BPM = 120, FIN_SEG = 4.6, FIN_START = 4.6;
-  function finishPlan(c) {
-    const r = rngOf(c.seed), root = 57 + Math.floor(r() * 8), kn = (n) => NAMES[((n % 12) + 12) % 12];
-    const I = kn(root), IV = kn(root + 5), V7 = kn(root + 7) + '7';
-    const phrase = melody(r, { chords: [I, IV + ' ' + V7].map((x) => x.split(' ')[0]), root, scale: MAJ, center: root + 12, rhythms: ['2 1 1 2 2', '1 1 2 2 2', '3 1 2 2'], barSteps: 16, end: false });
-    const sc = scaleIn(root, MAJ, root + 4, root + 24), home = root + 12, lead7 = root + 11;
-    const kinds = ['clash', 'hang']; if (r() < 0.5) kinds.reverse(); kinds.splice(c.right, 0, 'home');
-    const endings = kinds.map((k) => {
-      if (k === 'home') return { k, chord: I, notes: [[0, nearest(sc, home + 4), 2], [2, nearest(sc, home + 2), 2], [4, home, 4]] };
-      if (k === 'clash') return { k, chord: kn(root + 6), notes: [[0, home + 5, 2], [2, home + 3, 2], [4, home + 1, 4]] };
-      return { k, chord: V7, notes: [[0, nearest(sc, home + 2), 2], [2, nearest(sc, home + 7) - 12 + 12, 2], [4, lead7, 4]] };
-    });
-    return { root, chords: [I, V7], phrase, endings };
-  }
-  function playFinish(X, c, t0) {
-    const P = finishPlan(c), st = 60 / FIN_BPM / 4, bar = 16 * st;
-    const barChords = (sym, t, len) => { X.chord('epiano', voicing(sym, 60, 4), t, len, 0.4); const ch = chordOf(sym); X.note('bass', 36 + ((ch.root - 36) % 12 + 12) % 12, t, len, 0.55); };
-    const lead = (notes, t, off) => { for (const [s, m, len, vel] of notes) X.note('fmkeys', m, t + (s - off) * st, len * st * 0.92, (vel || 0.8) * 0.85, { ratio: 3, index: 1.2 }); };
-    // the phrase
-    barChords(P.chords[0], t0, bar); barChords(P.chords[1], t0 + bar, bar);
-    lead(P.phrase, t0, 0);
-    const bar2 = P.phrase.filter((n) => n[0] >= 16);
-    P.endings.forEach((e, i) => {
-      const ts = t0 + FIN_START + i * FIN_SEG;
-      X.note('glock', [84, 86, 88][i], ts - 0.35, 0.25, 0.35);
-      barChords(P.chords[1], ts, bar); lead(bar2, ts, 16);
-      barChords(e.chord, ts + bar, bar * 0.95);
-      for (const [s, m, len] of e.notes) X.note('fmkeys', m, ts + bar + s * 2 * st, len * 2 * st * 0.95, 0.8, { ratio: 3, index: 1.2 });
-    });
-  }
-  // "Rhythm tap": 4 count-in clicks, then 12 beats of groove (a kick on every beat).
-  function playRhythm(X, c, t0) {
-    const b = 60 / c.bpm, r = rngOf(c.seed);
-    for (let i = 0; i < 4; i++) { X.drum('wb', t0 + i * b, i === 0 ? 0.95 : 0.75, 'std'); X.note('glock', i === 3 ? 'g6' : 'c6', t0 + i * b, 0.15, 0.4); }
-    const s0 = t0 + 4 * b, prog = { funk: ['Em7', 'A7'], rock: ['A', 'G', 'D', 'A'], disco: ['Dm7', 'G7', 'Cmaj7', 'A7'], march: ['C', 'G', 'C', 'G'] }[c.style] || ['C', 'G'];
-    const bassLine = { funk: '1 . 8 . . 1 7 8', rock: '1 1 1 1 1 1 1 1', disco: '1 8 1 8 1 8 1 8', march: '1 . 5 . 1 . 5 .' }[c.style];
-    for (let i = 0; i < 12; i++) {
-      const t = s0 + i * b; X.drum('k', t, 1, 'std'); if (i % 2) X.drum('s', t, 0.7, 'std');
-      X.drum('h', t + b / 2, 0.4, 'std'); X.drum('h', t, 0.3, 'std');
-      if (i % 4 === 0) {
-        const sym = prog[(i / 4) % prog.length], ch = chordOf(sym), base = 36 + ((ch.root - 36) % 12 + 12) % 12;
-        X.chord(c.style === 'rock' ? 'guitar' : 'clav', voicing(sym, 62, 3), t, b * 0.4, 0.4); X.chord('clav', voicing(sym, 62, 3), t + b * 2.5, b * 0.3, 0.3);
-        bassLine.split(' ').forEach((tk, k) => { if (tk === '.') return; X.note('synthbass', base + (BASS_DEG[tk] || 0), t + k * b / 2, b * 0.42, 0.5); });
-      }
-    }
-    X.drum('y', s0 + 12 * b, 0.8, 'std'); X.drum('k', s0 + 12 * b, 1, 'std');
-    void r;
-  }
-  // A few bars of another game's title theme ("Which game?"): played as a one-shot stinger.
-  function gameClip(key, sec, maxSecs) {
-    const sc = BOX.scores[key]; if (!sc || !sc.cues || !sc.cues.title) return null;
-    const cue = sc.cues.title, section = (cue.sections && (cue.sections[sec] || cue.sections.A)) || null; if (!section) return null;
-    const barDur = (cue.beats || 4) * 60 / cue.bpm, bars = Math.max(1, Math.min(section.bars || 8, Math.floor(maxSecs / barDur)));
-    const name = `_g_${key}_${sec}_${bars}`;
-    BOX.scores.tune.stingers[name] = { ...cue, gain: 1, form: ['S'], loop: 0, sections: { S: { ...section, bars } } };
-    return name;
-  }
-  // The TV plays a clip. Every note is first recorded (times in seconds from the clip's start),
-  // then sent to the engine in 4-second chunks as one-shot stingers (a stinger's channel only
-  // lives 8 s). Each chunk re-aims at the clip's start on the page clock, so nothing drifts.
-  function recorder(g = 1) {
-    const evs = [];
-    const X = {
-      t: 0,
-      // the engine caps velocity at 1.2, so louder notes are stacked (they add up in phase)
-      note(type, m, at = 0, dur = 0.3, vel = 0.8, o = {}) { const v = vel * g, k = Math.max(1, Math.ceil(v / 1.2)); evs.push({ at, play: (Y, a) => { for (let i = 0; i < k; i++) Y.note(type, m, a, dur, v / k, o); } }); },
-      chord(type, ms, at = 0, dur = 0.5, vel = 0.8, strum = 0, o = {}) { ms.forEach((m, i) => X.note(type, m, at + i * strum, dur, vel, o)); },
-      drum(p, at = 0, vel = 0.8, kit = 'std') { evs.push({ at, play: (Y, a) => Y.drum(p, a, Math.min(1, vel * g), kit) }); },
-      tone(o) { evs.push({ at: o.at || 0, play: (Y, a) => Y.tone({ ...o, vol: (o.vol || 0.2) * g, at: a }) }); },
-      noise(o) { evs.push({ at: o.at || 0, play: (Y, a) => Y.noise({ ...o, vol: (o.vol || 0.3) * g, at: a }) }); },
+  // =========================================================================== AUDIO
+  // Plays [start, start + secs] of a preview on an <audio> element, then fades it out.
+  function seekPlay(au, start, secs, { fade = 0.25, volume = 1, onBlocked = null, onEnd = null } = {}) {
+    clearTimeout(au.__stopT); clearInterval(au.__fadeT);
+    const go = () => {
+      try { au.currentTime = Math.max(0, start); } catch { /* not seekable yet */ }
+      au.volume = volume;
+      const pr = au.play();
+      if (pr && pr.catch) pr.catch((e) => { if (e && e.name === 'NotAllowedError' && onBlocked) onBlocked(); });
+      au.__stopT = setTimeout(() => fadeOut(au, fade, onEnd), Math.max(0, secs * 1000 - fade * 1000));
     };
-    return { X, evs };
+    if (au.readyState >= 1) go();
+    else { const f = () => { au.removeEventListener('loadedmetadata', f); go(); }; au.addEventListener('loadedmetadata', f); try { au.load(); } catch { /* fine */ } }
   }
-  // Loudness matching (measured with BOX.audio.render): every clip lands near the music level.
-  const STYLE_GAIN = { spooky: 0.8, beach: 0.55, space: 1.9, western: 2.2, royal: 0.6, circus: 0.5, lullaby: 2.5, chase: 0.65, underwater: 1.7, jungle: 0.55, rainy: 1.2, spy: 1.1, arcade: 0.5, fairy: 1.7 };
-  const INST_GAIN = { piano: 2.3, trumpet: 5, sax: 4, strings: 5, guitar: 2.8, banjo: 5, organ: 5, musicbox: 1.6, marimba: 1.4, flute: 2.3, choir: 2.2, harp: 4.5, whistle: 3.2, tuba: 1.8 };
-  const clipGain = (c) => (c.type === 'vibe' ? STYLE_GAIN[c.style] || 1 : c.type === 'inst' ? INST_GAIN[c.inst] || 1.8 : c.type === 'hl' ? (c.mode === 'pitch' ? 3.5 : 0.65) : c.type === 'finish' ? 1.25 : c.type === 'rhythm' ? 0.8 : 1);
-  function renderClip(X, c) {
-    if (c.type === 'vibe') playArr(X, buildStyle(c.style, c.seed), 0, c.dur / 1000 - 0.6);
-    else if (c.type === 'inst') playInstrument(X, c.inst, c.seed, 0);
-    else if (c.type === 'hl') playHL(X, c, 0);
-    else if (c.type === 'finish') playFinish(X, c, 0);
-    else if (c.type === 'rhythm') playRhythm(X, c, 0);
+  function fadeOut(au, secs, onEnd) {
+    clearTimeout(au.__stopT); clearInterval(au.__fadeT);
+    if (au.paused || secs <= 0) { au.pause(); if (onEnd) onEnd(); return; }
+    const v0 = au.volume, steps = Math.max(1, Math.round(secs * 20)); let k = 0;
+    au.__fadeT = setInterval(() => { k++; au.volume = Math.max(0, v0 * (1 - k / steps)); if (k >= steps) { clearInterval(au.__fadeT); au.pause(); au.volume = v0; if (onEnd) onEnd(); } }, 50);
   }
-  let clipTimers = [], played = '';
-  function playClip(c, delay) {
-    const AU = BOX.audio; if (!AU || !BOX.scores.tune) return;
-    for (const h of clipTimers) clearTimeout(h); clipTimers = [];
-    const startPerf = performance.now() + Math.max(0, delay * 1000);
-    if (c.type === 'game') {
-      AU.need(c.key, () => { const name = gameClip(c.key, c.sec, c.dur / 1000 - 0.4); if (name) clipTimers.push(setTimeout(() => AU.stinger(name, 'tune'), Math.max(0, startPerf - performance.now() - 20))); });
+
+  // The TV's clip player. `live` drives the equaliser (local performance.now() times).
+  const live = { start: 0, end: 0, worthAt: 0, t0: 0, tEnd: 0, listens: [] };
+  const TVP = { au: null, src: '', key: '', timers: [], blocked: null, rerender: null };
+  const tvAudio = () => { if (!TVP.au) { TVP.au = new Audio(); TVP.au.preload = 'auto'; } return TVP.au; };
+  const tvVolume = () => { const s = BOX.audio && BOX.audio.settings; return s ? (s.mute ? 0 : Math.max(0, Math.min(1, s.master == null ? 0.9 : s.master))) : 0.9; };
+  const duck = (on) => { try { BOX.audio && BOX.audio.duck(on); } catch { /* no engine */ } };
+  function tvLoad(src) { const au = tvAudio(); if (src && TVP.src !== src) { TVP.src = src; au.src = src; try { au.load(); } catch { /* fine */ } } }
+  function tvClear() { for (const h of TVP.timers) clearTimeout(h); TVP.timers = []; }
+  function tvStop(fade = 0.6) { tvClear(); TVP.blocked = null; if (TVP.au && !TVP.au.paused) fadeOut(TVP.au, fade, () => duck(false)); else duck(false); live.end = 0; }
+  function tvPlay(start, secs, fade) {
+    const au = tvAudio(), now = performance.now();
+    live.start = now; live.end = now + secs * 1000;
+    duck(true);
+    seekPlay(au, start, secs, { fade, volume: tvVolume(), onEnd: () => duck(false),
+      onBlocked: () => { TVP.blocked = { start, secs, fade, until: now + secs * 1000 }; if (TVP.rerender) TVP.rerender(); } });
+  }
+  // A tap on the TV when the browser blocked the sound: play what should be playing now.
+  function tvUnblock() {
+    const b = TVP.blocked; TVP.blocked = null;
+    const au = tvAudio(); try { au.play().then(() => au.pause()).catch(() => {}); } catch { /* fine */ }
+    if (b) { const left = (b.until - performance.now()) / 1000; if (left > 0.5) tvPlay(b.start + (b.secs - left), left, b.fade); }
+    if (TVP.rerender) TVP.rerender();
+  }
+  // Schedules what the TV should play for this state (each step once).
+  function tvSchedule(s) {
+    if (s.phase === 'submit' || s.phase === 'over') { if (TVP.key) { TVP.key = ''; tvStop(); } return; }
+    if (s.preview) tvLoad(s.preview);
+    const ci = s.clipInfo;
+    if (s.phase === 'card') { if (TVP.key !== s.n + 'c') { TVP.key = s.n + 'c'; tvStop(0.4); } return; }
+    if (s.phase === 'guess' && ci && ci.play) {
+      const key = s.n + 'g'; if (TVP.key === key) return;
+      TVP.key = key; tvClear(); tvLoad(ci.play.preview);
+      const now = performance.now();
+      live.t0 = now + ci.t0In; live.tEnd = now + ci.endIn; live.listens = ci.listens.map((l) => ({ at: now + l.atIn, len: l.len }));
+      for (const l of ci.listens) {
+        if (l.atIn + l.len < 300) continue; // already over (the TV reconnected)
+        const late = Math.max(0, -l.atIn);
+        TVP.timers.push(setTimeout(() => tvPlay(ci.play.start + late / 1000, (l.len - late) / 1000, 0.2), Math.max(0, l.atIn)));
+      }
       return;
     }
-    const { X, evs } = recorder(clipGain(c));
-    try { renderClip(X, c); } catch (e) { console.error(e); return; }
-    const total = evs.reduce((m, e) => Math.max(m, e.at), 0), CH = 4;
-    for (let k = 0; k * CH <= total; k++) {
-      const chunk = evs.filter((e) => e.at >= k * CH && e.at < (k + 1) * CH); if (!chunk.length) continue;
-      const fire = () => {
-        BOX.scores.tune.stingers._clip = (Y) => { const base = (startPerf - performance.now() - 20) / 1000; for (const e of chunk) { const a = base + e.at; if (a > -0.03) e.play(Y, Math.max(0, a)); } };
-        AU.stinger('_clip', 'tune');
-      };
-      const wait = startPerf + k * CH * 1000 - 350 - performance.now();
-      if (wait <= 0) fire(); else clipTimers.push(setTimeout(fire, wait));
+    if (s.phase === 'reveal') {
+      const key = s.n + 'r'; if (TVP.key === key) return;
+      TVP.key = key; tvClear(); tvLoad(s.preview);
+      const into = (s.shownFor || 0) / 1000, len = Math.max(0, Math.min(14, 29.5 - s.start) - into);
+      if (len > 1) tvPlay(s.start + into, len, 1.5);
+      return;
     }
+    if (s.phase === 'score') { if (TVP.key !== s.n + 's') { TVP.key = s.n + 's'; tvStop(1.2); } }
   }
 
   // =========================================================================== TV
-  // What the equaliser shows (local performance.now() times).
-  const live = { start: 0, end: 0, bpm: 110, type: '', beat0: 0, beatMs: 0, beats: 0, count: 4, round: 0, phase: '', flash: [], first: '' };
   function eqLoop(cv) {
     if (cv.__run) return; cv.__run = true;
     const bars = 48, hts = new Float32Array(bars), peaks = new Float32Array(bars);
@@ -313,140 +93,139 @@
       if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
       const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
       const now = performance.now(), t = now / 1000;
-      const on = now >= live.start && now <= live.end, beatLen = live.beatMs || 60000 / (live.bpm || 110);
-      const ph = ((now - (live.beat0 || live.start)) / beatLen) % 1, pulse = on ? Math.pow(1 - (ph < 0 ? ph + 1 : ph), 3) : 0;
-      // stage
+      const on = now >= live.start && now <= live.end && !(TVP.au && TVP.au.paused), beat = (t * 2) % 1, pulse = on ? Math.pow(1 - beat, 3) : 0;
       let gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#1a0638'); gr.addColorStop(0.65, '#0c0322'); gr.addColorStop(1, '#05010f'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
       for (const [k, c] of [[0, '255,61,139'], [1, '56,232,255'], [2, '255,210,63']]) {
         const x = W * (0.5 + 0.42 * Math.sin(t * (0.3 + k * 0.07) + k * 2.1)), a = 0.08 + (on ? 0.1 * pulse + 0.05 : 0);
         gr = g.createLinearGradient(x, 0, W / 2, H); gr.addColorStop(0, `rgba(${c},${a})`); gr.addColorStop(1, `rgba(${c},0)`);
         g.fillStyle = gr; g.beginPath(); g.moveTo(x - 30, 0); g.lineTo(x + 30, 0); g.lineTo(W / 2 + W * 0.35, H); g.lineTo(W / 2 - W * 0.35, H); g.closePath(); g.fill();
       }
-      // floor grid
-      g.strokeStyle = 'rgba(255,61,139,0.16)'; g.lineWidth = 1.5; const hz = H * 0.72;
+      g.strokeStyle = 'rgba(255,61,139,0.16)'; g.lineWidth = 1.5; const hz = H * 0.78;
       for (let i = -12; i <= 12; i++) { g.beginPath(); g.moveTo(W / 2 + i * 30, hz); g.lineTo(W / 2 + i * W * 0.12, H); g.stroke(); }
       for (let k = 0; k < 7; k++) { const y = hz + (H - hz) * Math.pow(k / 6, 1.7) + ((t * 30) % 12) * (k / 6); g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
-      // equaliser
       const bw = W * 0.86 / bars, x0 = W * 0.07, base = hz;
       for (let i = 0; i < bars; i++) {
         const f = i / bars, shape = 0.55 + 0.45 * Math.sin(f * 5.3 + 1) * Math.sin(f * 2.1 + t * 0.7);
         const noise = 0.5 + 0.5 * Math.sin(t * (6 + (i % 7)) + i * 1.7) * Math.sin(t * (3.1 + (i % 5) * 0.6) + i);
-        const target = on ? (0.22 + 0.55 * shape * noise + 0.3 * pulse * (1 - Math.abs(f - 0.3))) : 0.04 + 0.03 * (0.5 + 0.5 * Math.sin(t * 1.5 + i * 0.5));
+        const target = on ? (0.2 + 0.5 * shape * noise + 0.25 * pulse * (1 - Math.abs(f - 0.3))) : 0.04 + 0.03 * (0.5 + 0.5 * Math.sin(t * 1.5 + i * 0.5));
         hts[i] += (target - hts[i]) * (target > hts[i] ? 0.45 : 0.12);
         peaks[i] = Math.max(peaks[i] - 0.006, hts[i]);
-        const h = hts[i] * H * 0.6, x = x0 + i * bw, hue = 320 - f * 150;
-        const segs = Math.max(1, Math.floor(h / 10));
-        for (let s = 0; s < segs; s++) { g.fillStyle = `hsla(${hue - s * 1.5},100%,${55 + s * 0.6}%,${0.9})`; g.fillRect(x + 2, base - (s + 1) * 10 + 2, bw - 4, 7); }
-        g.fillStyle = `hsla(${hue},100%,80%,0.95)`; g.fillRect(x + 2, base - peaks[i] * H * 0.6 - 6, bw - 4, 3);
-        // reflection
+        const h = hts[i] * H * 0.5, x = x0 + i * bw, hue = 320 - f * 150, segs = Math.max(1, Math.floor(h / 10));
+        for (let sg = 0; sg < segs; sg++) { g.fillStyle = `hsla(${hue - sg * 1.5},100%,${55 + sg * 0.6}%,0.9)`; g.fillRect(x + 2, base - (sg + 1) * 10 + 2, bw - 4, 7); }
+        g.fillStyle = `hsla(${hue},100%,80%,0.95)`; g.fillRect(x + 2, base - peaks[i] * H * 0.5 - 6, bw - 4, 3);
         g.fillStyle = `hsla(${hue},100%,60%,0.14)`; g.fillRect(x + 2, base + 4, bw - 4, h * 0.35);
       }
-      // rhythm: the big beat ring and the count
-      if (live.type === 'rhythm' && live.beatMs && now > live.beat0 - live.count * live.beatMs - 400 && now < live.beat0 + live.beats * live.beatMs + 1200) {
-        const k = (now - live.beat0) / live.beatMs, idx = Math.floor(k), fr = k - idx;
-        const cx = W / 2, cy = H * 0.38, R = Math.min(W, H) * 0.17, beatPulse = Math.pow(1 - fr, 4);
-        g.save(); g.shadowColor = '#ff3d8b'; g.shadowBlur = 40 * beatPulse;
-        g.strokeStyle = idx < 0 ? '#ffd23f' : '#38e8ff'; g.lineWidth = 10 + 16 * beatPulse; g.beginPath(); g.arc(cx, cy, R * (1 + 0.18 * beatPulse), 0, TAU); g.stroke(); g.restore();
-        g.fillStyle = `rgba(255,61,139,${0.25 * beatPulse})`; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.fill();
-        g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';
-        const label = idx < 0 ? String(live.count + idx + 1) : idx < live.beats ? 'TAP!' : '🎉';
-        g.font = `${Math.round(R * (idx < 0 ? 0.95 : 0.55))}px Bungee, sans-serif`; g.fillText(label, cx, cy + 4);
-        // progress dots
-        for (let i = 0; i < live.beats; i++) { const dx = cx + (i - (live.beats - 1) / 2) * 34; g.fillStyle = i < idx ? '#38e8ff' : i === idx ? '#ffd23f' : 'rgba(255,255,255,0.18)'; g.beginPath(); g.arc(dx, cy + R + 50, i === idx ? 11 : 8, 0, TAU); g.fill(); }
-      }
-      // Finish the melody: light the ending that is playing.
-      if (live.type === 'finish') {
-        const sec = (now - live.start) / 1000, seg = sec >= FIN_START ? Math.floor((sec - FIN_START) / FIN_SEG) : -1, inSeg = seg >= 0 && seg < 3 && sec - FIN_START - seg * FIN_SEG < 4.1;
-        const root = cv.closest('.tb-stage');
-        if (root) for (const el of root.querySelectorAll('[data-seg]')) el.classList.toggle('playing', inSeg && Number(el.dataset.seg) === seg && now <= live.end);
-        const lab = root && root.querySelector('#tb-nowplay');
-        if (lab) { const txt = now < live.start ? '' : sec < FIN_START ? '🎼 The tune…' : inSeg ? `▶ Ending ${seg + 1}` : now <= live.end ? '…' : ''; if (lab.textContent !== txt) lab.textContent = txt; }
-      }
-      // Higher or lower: which sound is on.
-      if (live.type === 'hl') {
-        const sec = (now - live.start) / 1000, mid = live.mode === 'pitch' ? 2.0 : 3.4, lab = cv.closest('.tb-stage') && cv.closest('.tb-stage').querySelector('#tb-nowplay');
-        if (lab) { const txt = now < live.start || now > live.end ? '' : sec < mid ? (live.mode === 'pitch' ? '🎵 Note 1' : '🥁 Beat 1') : (live.mode === 'pitch' ? '🎵 Note 2' : '🥁 Beat 2'); if (lab.textContent !== txt) lab.textContent = txt; }
+      // Guessing: light the listen that's playing and tick the points down.
+      const root = cv.closest('.tb-stage');
+      if (root && live.listens.length) {
+        let cur = -1; live.listens.forEach((l, i) => { if (now >= l.at) cur = i; });
+        for (const el of root.querySelectorAll('[data-ls]')) { const i = Number(el.dataset.ls); el.classList.toggle('on', i === cur && now <= live.listens[i].at + live.listens[i].len); el.classList.toggle('done', i < cur || (i === cur && now > live.listens[i].at + live.listens[i].len)); }
+        const w = root.querySelector('#tb-worth');
+        if (w && live.tEnd > live.t0) { const fr = Math.max(0, Math.min(1, (now - live.t0) / (live.tEnd - live.t0))), v = String(Math.round((300 - 200 * fr) / 10) * 10); if (w.textContent !== v) w.textContent = v; }
       }
       requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
   }
   const ends = {};
-  const timer = (key, endsIn) => { if (!endsIn) return ''; if (!ends[key]) ends[key] = Date.now() + endsIn; return `<span class="timer" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span>`; };
+  const timer = (key, endsIn) => { if (!endsIn) return ''; if (!ends[key] || Math.abs(ends[key] - (Date.now() + endsIn)) > 1500) ends[key] = Date.now() + endsIn; return `<span class="timer" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span>`; };
   const av = (x) => esc((x && x.avatar) || '🙂');
   const chip = (x, extra = '', cls = '') => `<span class="tb-chip ${cls}" style="--c:${esc(x.color || '#ff3d8b')}"><i>${av(x)}</i>${esc(x.name)}${extra}</span>`;
-  function choicesHtml(c, s, opts = {}) {
-    const last = s.last, tot = last ? Object.values(last.tally).reduce((a, b) => a + b, 0) : 0;
-    return `<div class="tb-choices n${c.choices.length} ${last ? 'rev' : ''}">${c.choices.map((ch, i) => {
-      const right = last && ch.id === last.ans, n = last ? last.tally[ch.id] || 0 : 0;
-      return `<div class="tb-choice k${i} ${right ? 'right' : last ? 'wrong' : ''}" ${c.type === 'finish' ? `data-seg="${i}"` : ''} style="animation-delay:${0.08 * i}s"><b class="tb-l">${LETTERS[i]}</b><span class="tb-ic">${esc(ch.icon)}</span><span class="tb-lab">${esc(ch.label)}</span>${last ? `<span class="tb-n">${n}${tot ? `<small>${Math.round((n / tot) * 100)}%</small>` : ''}</span>` : ''}${right ? '<span class="tb-tick">✓</span>' : ''}</div>`;
-    }).join('')}</div>${opts.foot || ''}`;
+  const secs = (ms) => (ms / 1000).toFixed(1) + ' s';
+  const RATES = [{ n: 1, icon: '🍼', label: 'Too easy' }, { n: 2, icon: '🙂', label: 'Easy' }, { n: 3, icon: '🤔', label: 'Tricky' }, { n: 4, icon: '😰', label: 'Hard' }, { n: 5, icon: '🔥', label: 'Impossible' }];
+  const rateOf = (d) => RATES[Math.max(0, Math.min(4, Math.round(d) - 1))];
+  const art = (song, cls = '') => (song && song.art ? `<img class="tb-art ${cls}" src="${esc(song.art)}" alt="" referrerpolicy="no-referrer">` : `<div class="tb-art tb-noart ${cls}">♪</div>`);
+  const VERDICT = {
+    sweet: { icon: '🎯', title: 'SWEET SPOT!', text: 'Some got it, not everyone' },
+    easy: { icon: '🍼', title: 'Too easy', text: 'Everyone got it' },
+    nobody: { icon: '🧱', title: 'Nobody got it', text: 'Too hard pays nothing' },
+  };
+  const SCORING = `<div class="tb-how"><h3>🎚️ How points work</h3>
+    <p><b>Guess fast:</b> 300 points at the first note, down to 100 at the buzzer.</p>
+    <p><b>× Difficulty:</b> after each song everyone rates it 1 🍼 to 5 🔥. Your points are multiplied by the room's average.</p>
+    <p><b>Your songs:</b> some (not all) got it 🎯 150 × difficulty. Everyone got it: 50 ×. Nobody: 0.</p>
+    <p><b>Name the artist too:</b> +50.</p></div>`;
+
+  function tvSubmit(s) {
+    const P = s.players || [];
+    return `<div class="tb-head"><span class="tb-live">☎ REQUEST LINE OPEN</span><h2>Add ${s.quota} song${s.quota === 1 ? '' : 's'} on your phone</h2>
+      <div class="tb-sub">Search for anything. Then pick the ${s.clip} seconds we’ll hear first. Fun-hard wins, impossible doesn’t!</div></div>
+      <div class="tb-reqs">${P.map((p, i) => `<div class="tb-req ${p.n >= s.quota ? 'done' : ''} ${p.online ? '' : 'off'}" style="--c:${esc(p.color)};animation-delay:${(i * 0.04).toFixed(2)}s"><span class="av">${av(p)}</span><span class="nm">${esc(p.name)}</span><span class="recs">${Array.from({ length: s.quota }, (_, k) => `<i class="${k < p.n ? 'on' : ''}"></i>`).join('')}</span></div>`).join('')}</div>
+      <div class="tb-crate">📦 <b>${s.total}</b> song${s.total === 1 ? '' : 's'} in the crate · ${timer('sub', s.endsIn)}</div>`;
   }
-  function tvRhythmReveal(s) {
-    const L = s.last;
-    return `<div class="tb-head in"><span class="tb-badge">🥁 RHYTHM TAP</span><h2>${L.best ? `${av(L.best)} ${esc(L.best.name)} kept the best time!` : 'Nobody found the beat!'}</h2></div>
-      <div class="tb-rrows">${L.rows.map((r, i) => `<div class="tb-rrow" style="animation-delay:${0.1 * i}s;--c:${esc(r.color)}"><span class="nm">${av(r)} ${esc(r.name)}</span><span class="dots">${r.marks.map((m) => `<i class="m${m}"></i>`).join('')}</span><span class="acc"><span style="width:${r.acc}%"></span></span><b>${r.acc}%</b><em>+${r.gain}</em></div>`).join('')}${L.more ? `<div class="muted">+${L.more} more drummers</div>` : ''}</div>`;
+  function tvGuess(s) {
+    const ci = s.clipInfo || { listens: [] };
+    const listens = ci.listens.map((l, i) => `<span class="tb-ls" data-ls="${i}">LISTEN ${i + 1}<small>${Math.round(l.len / 1000)} s</small></span>`).join('');
+    const got = s.got.map((g, i) => chip(g, ` <b>✓ ${secs(g.ms)}</b>`, 'got' + (i === 0 ? ' first' : ''))).join('');
+    const guessing = s.guessing.map((g) => chip(g, `<em class="dots">${'•'.repeat(g.tries)}</em>${g.artist ? ' 🎤' : ''}`, 'wait')).join('');
+    return `<div class="tb-head"><span class="tb-live">● ON AIR</span><h2>Name that tune!</h2><div class="tb-sub">${chip(s.by, '', 'by')} picked this one</div></div>
+      <div class="tb-listens">${listens}</div>
+      <div class="tb-worth"><span>WORTH</span><b id="tb-worth">${ci.worth || 300}</b><span>× difficulty</span></div>
+      <div class="tb-gets">${got || '<span class="tb-none-yet">Nobody’s got it yet…</span>'}</div>
+      ${guessing ? `<div class="tb-guessing"><span class="lab">Still guessing ${timer('g' + s.n, s.endsIn)}</span>${guessing}</div>` : ''}
+      ${TVP.blocked ? '<button class="tb-tap" id="tb-tap">🔈 Tap to play the clip</button>' : ''}`;
+  }
+  function tvSong(s, small) {
+    const so = s.song;
+    return `<div class="tb-song ${small ? 'small' : ''}">${art(so, 'spin')}<div class="tb-meta"><span class="tb-badge">IT WAS…</span><h2 class="tb-title">${esc(so.title)}</h2><div class="tb-artist">${esc(so.artist)}${so.album ? ` <small>· ${esc(so.album)}</small>` : ''}</div><div class="tb-sub">${chip(s.by, '', 'by')}’s pick</div></div></div>`;
+  }
+  function tvReveal(s) {
+    const got = s.got.length ? s.got.map((g) => chip(g, ` <b>+${g.base}</b> <small>${secs(g.ms)}</small>`, 'got')).join('') : '<span class="tb-none">Nobody got it! 😱</span>';
+    return `${tvSong(s)}
+      <div class="tb-gets">${got}</div>
+      ${s.close && s.close.length ? `<div class="tb-close"><span class="lab">Close calls:</span>${s.close.map((c) => `<span class="q">“${esc(c.text)}” <small>${esc(c.name)}</small></span>`).join('')}</div>` : ''}
+      <div class="tb-rate"><div class="q">How hard was it? <b>Rate it on your phone</b> · ${s.rated}/${s.raters}</div><div class="scale">${RATES.map((r) => `<span><i>${r.icon}</i>${r.label}</span>`).join('')}</div></div>
+      ${TVP.blocked ? '<button class="tb-tap" id="tb-tap">🔈 Tap to hear the song</button>' : ''}`;
+  }
+  function tvScore(s) {
+    const R = s.result, r = rateOf(R.d), pct = ((R.d - 1) / 4) * 100, V = VERDICT[R.dj.kind];
+    return `${tvSong(s, true)}
+      <div class="tb-meter"><div class="lab">DIFFICULTY ${R.auto ? '<small>(nobody rated: it follows how many got it)</small>' : `<small>${R.votes} vote${R.votes === 1 ? '' : 's'}</small>`}</div>
+        <div class="bar"><span class="fill" style="width:${pct}%"></span><span class="needle" style="left:${pct}%"><i>${r.icon}</i></span>${RATES.map((x) => `<em style="left:${((x.n - 1) / 4) * 100}%">${x.icon}</em>`).join('')}</div>
+        <div class="val">×${R.d.toFixed(1)} <small>${esc(r.label)}</small></div></div>
+      <div class="tb-tally">${R.rows.length ? R.rows.map((x, i) => `<div class="tb-trow" style="--c:${esc(x.color)};animation-delay:${0.3 + i * 0.12}s"><span class="nm">${av(x)} ${esc(x.name)}</span><span class="calc">${x.base} × ${R.d.toFixed(1)}</span><b>+${x.total}</b></div>`).join('') : ''}
+        <div class="tb-trow dj ${R.dj.kind}" style="--c:${esc(R.dj.color)};animation-delay:${0.4 + R.rows.length * 0.12}s"><span class="nm">${V.icon} ${av(R.dj)} ${esc(R.dj.name)} <small>${V.title} ${V.text}</small></span><span class="calc">${R.dj.mult ? `${R.dj.mult} × ${R.d.toFixed(1)}` : ''}</span><b>+${R.dj.pts}</b></div></div>
+      ${s.n < s.of ? `<div class="tb-next">Up next: song ${s.n + 1} of ${s.of}</div>` : '<div class="tb-next">That was the last one!</div>'}`;
   }
   function tvOver(s) {
-    const f = s.final || { standings: s.standings, awards: {} }, st = f.standings, pod = [st[1], st[0], st[2]];
-    const AW = [['ear', '👂', 'Golden Ear', (a) => `${a.value} right answer${a.value === 1 ? '' : 's'}`], ['finger', '⚡', 'Fastest Finger', (a) => `buzzed right in ${(a.value / 1000).toFixed(1)} s`],
-      ['metronome', '🥁', 'Human Metronome', (a) => `${a.value}% rhythm accuracy`], ['first', '🔔', 'First on the Buzzer', (a) => `${a.value} first buzz${a.value === 1 ? '' : 'es'}`], ['trigger', '💥', 'Trigger Happy', (a) => `${a.value} wrong buzzes`]];
+    const f = s.final || { standings: s.standings, awards: {} }, st = f.standings, pod = [st[1], st[0], st[2]], A = f.awards || {};
+    const aw = [];
+    if (A.ear) aw.push(['👂', 'Golden Ear', A.ear.names.join(', '), `named ${A.ear.value} song${A.ear.value === 1 ? '' : 's'}`]);
+    if (A.fast) aw.push(['⚡', 'Quickest Ear', A.fast.names.join(', '), `named one in ${secs(A.fast.value)}`]);
+    if (A.dj) aw.push(['🎯', 'Sweet Spot DJ', A.dj.names.join(', '), `${A.dj.value} points from their picks`]);
+    if (A.deep) aw.push(['🔥', 'Deepest Cut', A.deep.name, `“${A.deep.title}” · difficulty ${A.deep.d}`]);
+    if (f.empty) return `<div class="tb-over"><h1 class="tb-win">📭 <span>No songs came in tonight!</span></h1><p class="tb-sub">Play again and add a song or two from your phone.</p></div>`;
     return `<div class="tb-over"><h1 class="tb-win">🏆 ${st[0] ? `${av(st[0])} ${esc(st[0].name)}` : ''} <span>tops the charts!</span></h1>
       <div class="tb-podium">${pod.map((r, i) => (r ? `<div class="tb-pod p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="av">${av(r)}</div><div class="nm">${esc(r.name)}</div><div class="pts">${r.points}</div><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div></div>')).join('')}</div>
-      <div class="tb-awards">${AW.filter(([k]) => f.awards[k]).map(([k, ic, lab, txt], i) => `<div class="tb-award" style="animation-delay:${0.5 + i * 0.3}s"><div class="ic">${ic}</div><div class="lb">${lab}</div><div class="nm">${f.awards[k].names.map(esc).join(', ')}</div><div class="muted">${txt(f.awards[k])}</div></div>`).join('')}</div>
+      <div class="tb-awards">${aw.map(([ic, lab, nm, txt], i) => `<div class="tb-award" style="animation-delay:${0.5 + i * 0.3}s"><div class="ic">${ic}</div><div class="lb">${lab}</div><div class="nm">${esc(nm)}</div><div class="muted">${esc(txt)}</div></div>`).join('')}</div>
       <div class="tb-final-board">${BOX.board(st.slice(0, 10).map((r) => ({ ...r, name: (r.avatar ? r.avatar + ' ' : '') + r.name })), (r) => r.points, ' pts')}</div></div>`;
   }
+  let lastTv = null;
   function tv(el, s) {
     if (!s) return;
-    if (s.phase === 'over') { live.end = 0; BOX.morph(el, `<div class="tb-root over" id="tb-over">${tvOver(s)}</div>`); return; }
-    const c = s.clip || {};
-    // Schedule the clip once per round, on the server's clock.
-    if (c.play && c.atIn != null && (s.phase === 'clip' || s.phase === 'tap')) {
-      const k = s.round + ':' + c.type;
-      if (played !== k) {
-        played = k; const now = performance.now();
-        live.start = now + c.atIn; live.end = now + c.endIn; live.type = c.type; live.mode = c.mode; live.round = s.round;
-        live.bpm = c.play.bpm || (c.type === 'game' ? 120 : c.type === 'finish' ? FIN_BPM : 110);
-        if (c.type === 'rhythm') { live.beat0 = now + c.beatIn; live.beatMs = c.beatMs; live.beats = c.beats; live.count = c.count; } else { live.beat0 = live.start; live.beatMs = 0; }
-        playClip(c.play, c.atIn / 1000);
-      }
-    }
-    if (s.phase === 'card' && c.play && c.play.type === 'game' && BOX.audio) BOX.audio.need(c.play.key);
-    const top = `<div class="tb-top"><span class="tb-round">ROUND <b>${s.round}</b> / ${s.of}</span><span class="tb-type">${esc(c.icon || '')} ${esc((c.title || '').toUpperCase())}</span>${s.mult > 1 ? '<span class="tb-x2">🌟 GRAND FINALE · DOUBLE POINTS</span>' : ''}</div>`;
+    lastTv = { el, s }; TVP.rerender = () => lastTv && tv(lastTv.el, lastTv.s);
+    if (!el.__tbTap) { el.__tbTap = true; document.addEventListener('pointerdown', () => { if (TVP.blocked) tvUnblock(); }, true); }
+    tvSchedule(s);
+    if (s.phase === 'over') { BOX.morph(el, `<div class="tb-root over" id="tb-over">${tvOver(s)}</div>`); return; }
+    if (s.phase !== 'guess') live.listens = [];
+    const top = `<div class="tb-top"><span class="tb-round">${s.phase === 'submit' ? 'TAKING REQUESTS' : `SONG <b>${s.n}</b> / ${s.of}`}</span><span class="tb-type">🎵 TUNE BUZZ FM</span></div>`;
     let over = '';
-    if (s.phase === 'card') {
-      over = `<div class="tb-card"><div class="tb-card-ic">${esc(c.icon || '🎵')}</div><div class="tb-card-n">ROUND ${s.round}</div><h1>${esc(c.title || '')}</h1><p>${esc(c.ask || '')}</p>
-        ${c.type === 'rhythm' ? '<p class="tb-hint">Get your thumb on the big pad. Tap on every beat after the count-in!</p>' : '<p class="tb-hint">🔔 Buzz in early for a speed bonus. A wrong buzz locks you out!</p>'}</div>`;
-    } else if (s.phase === 'clip' || s.phase === 'last') {
-      const buzz = s.buzzed.length ? `<div class="tb-buzzes">${s.buzzed.map((b) => chip(b, b.locked ? ' 🔒' : b.answered ? ' ✔' : ' 🔔', b.locked ? 'locked' : 'buzz')).join('')}</div>` : '';
-      const head = s.phase === 'clip'
-        ? `<div class="tb-head"><span class="tb-live">● ON AIR</span><h2>${esc(c.ask)}</h2><div class="tb-now" id="tb-nowplay"></div></div>`
-        : `<div class="tb-head"><span class="tb-last">⏰ LAST CALL ${timer('l' + s.round, s.endsIn)}</span><h2>${esc(c.ask)}</h2><div class="tb-sub">${s.answered} of ${s.players} answered · no speed bonus now</div></div>`;
-      over = `${head}${choicesHtml(c, s)}${buzz}${s.phase === 'last' && s.waiting && s.waiting.length ? `<div class="tb-wait">Still thinking: ${s.waiting.map(esc).join(', ')}</div>` : ''}`;
-    } else if (s.phase === 'tap') {
-      over = `<div class="tb-head"><span class="tb-live">● ON AIR</span><h2>Tap along on your phone!</h2><div class="tb-sub">${c.bpm || ''} BPM · ${c.beats || 12} beats after the count-in</div></div>`;
-    } else if (s.phase === 'reveal' && s.last) {
-      if (s.last.rhythm) over = tvRhythmReveal(s);
-      else {
-        const L = s.last;
-        over = `<div class="tb-head in"><span class="tb-badge">IT WAS…</span><h2 class="tb-ans">${esc(L.answer.icon)} ${esc(L.answer.label)}</h2>
-          ${L.first ? `<div class="tb-first">⚡ First to buzz right: ${chip(L.first)}</div>` : ''}</div>
-          ${choicesHtml(c, s)}
-          <div class="tb-gets">${L.right.length ? L.right.map((r) => chip(r, ` <b>+${r.gain}</b>${r.buzz ? ' ⚡' : ''}`, 'got')).join('') + (L.rightCount > L.right.length ? `<span class="muted">+${L.rightCount - L.right.length} more</span>` : '') : '<span class="tb-none">Nobody got it! 😱</span>'}
-          ${L.lockouts.length ? `<span class="tb-locks">🔒 ${L.lockouts.map((x) => esc(x.name)).join(', ')}</span>` : ''}</div>
-          ${s.next ? `<div class="tb-next">Up next: ${esc(s.next)}</div>` : ''}`;
-      }
-    }
-    const side = `<aside class="tb-side"><h3>📻 The Charts</h3>${s.standings.map((r, i) => `<div class="tb-srow ${i === 0 && r.points ? 'top' : ''}"><span class="n">${i + 1}</span><span class="nm">${av(r)} ${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</aside>`;
-    BOX.morph(el, `<div class="tb-root" id="tb-game">${top}<div class="tb-main"><section class="tb-stage"><canvas class="tb-eq" data-keep></canvas><div class="tb-o ph-${s.phase} t-${esc(c.type || '')}" id="tb-o-${s.round}-${s.phase}">${over}</div></section>${side}</div></div>`);
+    if (s.phase === 'submit') over = tvSubmit(s);
+    else if (s.phase === 'card') over = `<div class="tb-card"><div class="tb-card-ic">💿</div><div class="tb-card-n">SONG ${s.n} OF ${s.of}</div><h1>${av(s.by)} ${esc(s.by.name)}’s pick</h1><p>Type the title on your phone. Fast = more points!</p><p class="tb-hint">🎧 Each listen is longer… and worth a little less.</p></div>`;
+    else if (s.phase === 'guess') over = tvGuess(s);
+    else if (s.phase === 'reveal' && s.song) over = tvReveal(s);
+    else if (s.phase === 'score' && s.result) over = tvScore(s);
+    const side = s.phase === 'submit' ? `<aside class="tb-side">${SCORING}</aside>`
+      : `<aside class="tb-side"><h3>📻 The Charts</h3>${s.standings.map((r, i) => `<div class="tb-srow ${i === 0 && r.points ? 'top' : ''}"><span class="n">${i + 1}</span><span class="nm">${av(r)} ${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</aside>`;
+    BOX.morph(el, `<div class="tb-root" id="tb-game">${top}<div class="tb-main"><section class="tb-stage"><canvas class="tb-eq" data-keep></canvas><div class="tb-o ph-${s.phase}" id="tb-o-${s.n}-${s.phase}">${over}</div></section>${side}</div></div>`);
     const cv = el.querySelector('.tb-eq'); if (cv) eqLoop(cv);
   }
 
   // =========================================================================== LOBBY
   const DESK = {
-    rounds: { lab: 'SET LENGTH', ic: '🎚️', opts: { 12: '12', 16: '16', 20: '20' }, sub: 'rounds' },
-    seconds: { lab: 'LAST CALL', ic: '⏰', opts: { 8: '8s', 10: '10s', 15: '15s' }, sub: 'to answer' },
-    mix: { lab: 'ROUND MIX', ic: '🎛️', opts: { all: 'Everything', quiz: 'No tapping' }, sub: '' },
+    songs: { lab: 'REQUESTS', ic: '💿', opts: { 1: '1', 2: '2', 3: '3' }, sub: 'songs each' },
+    clip: { lab: 'FIRST LISTEN', ic: '⏱️', opts: { 2: '2s', 4: '4s', 6: '6s' }, sub: 'then longer' },
+    time: { lab: 'GUESS TIME', ic: '⏰', opts: { 20: '20s', 30: '30s', 45: '45s' }, sub: 'per song' },
     showIntro: { lab: 'THE OPENING', ic: '🎬', opts: { true: 'Play it', false: 'Skip it' }, sub: 'intro cutscene' },
   };
   function lobbyTv(el, L) {
@@ -455,7 +234,7 @@
       el.__tbl = true;
       el.innerHTML = `<div class="tbl">
         <canvas class="tbl-cv"></canvas>
-        <header class="tbl-head"><div class="tbl-onair">● ON AIR</div><div class="tbl-logo"><span class="a">TUNE</span><span class="b">BUZZ</span></div><div class="tbl-tag">The music quiz where every song is one of ours</div></header>
+        <header class="tbl-head"><div class="tbl-onair">● ON AIR</div><div class="tbl-logo"><span class="a">TUNE</span><span class="b">BUZZ</span></div><div class="tbl-tag">Bring your songs. Name theirs. A few seconds is all you get.</div></header>
         <section class="tbl-desk"><div class="tbl-dh">🎛️ MIXING DESK <small>tap to change</small></div><div id="tbl-faders" class="tbl-faders"></div><div id="settings" class="tbl-sr"></div></section>
         <aside class="tbl-join"><div class="tbl-jt">🎧 CALL IN ON YOUR PHONE</div><img id="qr" alt="QR code to join"><div class="tbl-url" id="tbl-url"></div>
           <div class="tbl-cc">ROOM CODE</div><div class="tbl-code" id="code"></div><div class="tbl-vip" id="tbl-vip"></div><div class="err" id="lobby-err"></div>
@@ -519,162 +298,185 @@
   }
 
   // =========================================================================== PHONE
-  // Clock sync for rhythm rounds: a few round trips, keep the fastest.
-  const clock = { off: null, busy: false, round: -1 };
-  async function syncClock(ctx) {
-    if (clock.busy) return; clock.busy = true;
-    const samples = [];
-    for (let i = 0; i < 6; i++) {
-      const t0 = Date.now(); let r = null; try { r = await ctx.act({ op: 'sync' }); } catch { /* offline */ }
-      const t1 = Date.now(); if (r && r.ok && typeof r.now === 'number') samples.push({ rtt: t1 - t0, off: r.now - (t0 + t1) / 2 });
-    }
-    samples.sort((a, b) => a.rtt - b.rtt);
-    if (samples.length) clock.off = samples[0].off;
-    clock.busy = false;
-  }
-  function haptic(ctx, kind) { try { if (ctx.haptic) ctx.haptic(kind); else if (ctx.vibrate) ctx.vibrate(kind === 'tap' ? 10 : 40); } catch { /* none */ } }
   let felt = {};
-  const feel = (ctx, chan, key, kind) => { if (felt[chan] === key) return; felt[chan] = key; haptic(ctx, kind); };
-  let redrawT = 0;
-  const redrawAt = (ctx, ms) => { clearTimeout(redrawT); if (ms > 0 && ms < 30000) redrawT = setTimeout(() => ctx.redraw && ctx.redraw(), ms + 30); };
-  // The rhythm pad keeps its own beat display (a timer, not the shell's re-renders).
-  const pad = { round: -1, beat0: 0, beatMs: 0, beats: 0, count: 4, hits: [], last: '', raf: 0 };
-  function padLoop(el) {
-    cancelAnimationFrame(pad.raf);
-    const f = () => {
-      const box = el.querySelector('#tb-pad'); if (!box) return;
-      const now = Date.now() + (clock.off || 0), k = (now - pad.beat0) / pad.beatMs, idx = Math.floor(k), fr = k - idx;
-      const big = box.querySelector('.big'), ring = box.querySelector('.ring');
-      const txt = idx < -pad.count ? 'Get ready…' : idx < 0 ? String(pad.count + idx + 1) : idx < pad.beats ? (pad.last || 'TAP!') : 'Done! 🎉';
-      if (big && big.textContent !== txt) big.textContent = txt;
-      if (ring) { const p = idx >= -pad.count && idx < pad.beats ? Math.pow(1 - fr, 3) : 0; ring.style.transform = `scale(${1 + 0.12 * p})`; ring.style.opacity = String(0.35 + 0.65 * p); }
-      if (idx < pad.beats + 2) pad.raf = requestAnimationFrame(f);
-    };
-    pad.raf = requestAnimationFrame(f);
+  const feel = (ctx, key, kind) => { if (felt[key]) return; felt[key] = true; try { ctx.haptic(kind); } catch { /* none */ } };
+  // Song picking (local to this phone until it's added).
+  const SP = { q: '', results: null, busy: false, msg: '', draft: null, start: 8, playing: false, spotify: false };
+  let PV = null; // the phone's preview player
+  const pv = () => { if (!PV) { PV = new Audio(); PV.preload = 'auto'; } return PV; };
+  function stopPreview() { if (PV && !PV.paused) fadeOut(PV, 0.15); SP.playing = false; }
+  function hear(ctx, from, len) {
+    const au = pv(), d = SP.draft; if (!d) return;
+    if (au.src !== d.preview) { au.src = d.preview; }
+    SP.playing = true; ctx.redraw();
+    seekPlay(au, from, len, { fade: 0.15, onEnd: () => { SP.playing = false; ctx.redraw(); }, onBlocked: () => { SP.playing = false; ctx.toast('Tap ▶ again to listen'); ctx.redraw(); } });
   }
-  function choiceBtns(c, cls, pickedId) {
-    return `<div class="tbp-choices ${cls}">${c.choices.map((ch, i) => `<button class="tbp-ch k${i} ${pickedId === ch.id ? 'sel' : ''}" data-id="${esc(ch.id)}"><b>${LETTERS[i]}</b><span class="ic">${esc(ch.icon)}</span><span class="lb">${esc(ch.label)}</span></button>`).join('')}</div>`;
+  // The guess box keeps the last answer's feedback for this song.
+  const GF = { n: 0, text: '', kind: '', t0: 0, end: 0 };
+  // The points on offer tick down on the phone too.
+  setInterval(() => { for (const b of document.querySelectorAll('[data-wt0]')) { const t0 = Number(b.dataset.wt0), end = Number(b.dataset.wend), fr = Math.max(0, Math.min(1, (Date.now() - t0) / Math.max(1, end - t0))), w = String(Math.round((300 - 200 * fr) / 10) * 10); if (b.textContent !== w) b.textContent = w; } }, 250);
+
+  function phSubmit(v, ctx, paint) {
+    const need = v.quota - v.mine.length, d = SP.draft;
+    if (d) {
+      const max = v.maxStart, st = Math.min(SP.start, max), a = (st / 30) * 100, w = (v.clip / 30) * 100;
+      paint(`<div class="tbp-card tbp-draft">${art(d, 'tbp-art')}<h2>${esc(d.title)}</h2><p class="muted">${esc(d.artist)}${d.explicit ? ' 🅴' : ''}</p></div>
+        <div class="tbp-card tbp-pickpart"><div class="tbp-pt">✂️ Pick the ${v.clip} seconds they’ll hear first</div>
+          <div class="tbp-tl"><span class="win ${SP.playing ? 'on' : ''}" style="left:${a}%;width:${w}%"></span></div>
+          <input type="range" id="tbp-start" min="0" max="${max}" step="0.5" value="${st}" aria-label="Clip start">
+          <div class="tbp-tlab"><span>0:00</span><b>starts at 0:${String(Math.floor(st)).padStart(2, '0')}</b><span>0:30</span></div>
+          <div class="tbp-row"><button class="tbp-btn ghost" id="tbp-hear">${SP.playing ? '⏹ Stop' : `▶ Hear the ${v.clip} s`}</button><button class="tbp-btn ghost" id="tbp-more">🎧 Hear more</button></div>
+          <p class="tbp-tip">Make it fun-hard: skip the chorus, start mid-riff. If nobody gets it, you get nothing!</p></div>
+        <div class="tbp-row"><button class="tbp-btn ghost" id="tbp-back">↩ Pick another</button><button class="tbp-btn big" id="tbp-add">✅ Add this song</button></div>`, 'draft');
+      const r = document.getElementById('tbp-start');
+      if (r) { r.oninput = () => { SP.start = Number(r.value); stopPreview(); const win = document.querySelector('.tbp-tl .win'); if (win) win.style.left = (SP.start / 30) * 100 + '%'; const b = document.querySelector('.tbp-tlab b'); if (b) b.textContent = 'starts at 0:' + String(Math.floor(SP.start)).padStart(2, '0'); }; r.onchange = () => { ctx.haptic('select'); hear(ctx, SP.start, v.clip); }; }
+      const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
+      on('tbp-hear', () => { if (SP.playing) { stopPreview(); ctx.redraw(); } else { ctx.haptic('tap'); hear(ctx, SP.start, v.clip); } });
+      on('tbp-more', () => { ctx.haptic('tap'); hear(ctx, SP.start, Math.min(12, 30 - SP.start)); });
+      on('tbp-back', () => { stopPreview(); SP.draft = null; ctx.redraw(); });
+      on('tbp-add', async () => {
+        const r2 = await ctx.act({ op: 'add', id: d.id, start: Math.min(SP.start, max) });
+        if (r2 && r2.ok) { stopPreview(); SP.draft = null; SP.results = null; SP.q = ''; ctx.haptic('success'); ctx.sfx && ctx.sfx('chime'); ctx.redraw(); }
+      });
+      return;
+    }
+    const mine = v.mine.length ? `<div class="tbp-mine">${v.mine.map((m) => `<div class="tbp-ms">${art(m, 'tbp-thumb')}<span class="t"><b>${esc(m.title)}</b><small>${esc(m.artist)} · from 0:${String(Math.floor(m.start)).padStart(2, '0')}</small></span><button class="tbp-x" data-rm="${esc(m.key)}" aria-label="Remove">✕</button></div>`).join('')}</div>` : '';
+    if (need <= 0) {
+      feel(ctx, 'allset', 'success');
+      paint(`<div class="tbp-card tbp-done"><div class="tbp-ic">✅</div><h2>You’re all set!</h2><p class="muted">${v.ready} of ${v.players} ready · ${timer('ps', v.endsIn)}</p></div>${mine}<p class="tbp-hint">Changed your mind? Remove one and pick another.</p>`, 'set');
+    } else {
+      feel(ctx, 'submit', 'turn');
+      const res = SP.results ? (SP.results.length ? SP.results.map((r) => `<button class="tbp-res" data-pick="${esc(r.id)}">${art(r, 'tbp-thumb')}<span class="t"><b>${esc(r.title)}</b><small>${esc(r.artist)}${r.explicit ? ' · 🅴' : ''}</small></span><span class="go">›</span></button>`).join('') : '<p class="tbp-hint">No songs found. Try other words.</p>') : '';
+      paint(`<div class="tbp-card tbp-sub"><div class="tbp-rn">REQUEST LINE · ${timer('ps', v.endsIn)}</div><h2>Add ${need} more song${need === 1 ? '' : 's'}</h2>
+          <p class="muted">Something the room might know… but not instantly.</p></div>
+        <form class="tbp-search" id="tbp-sf"><input id="tbp-q" type="search" maxlength="300" autocomplete="off" enterkeyhint="search" placeholder="Song, artist, or a Spotify link" value="${esc(SP.q)}"><button class="tbp-btn" ${SP.busy ? 'disabled' : ''}>${SP.busy ? '…' : '🔎'}</button></form>
+        <div class="tbp-src">${v.spotify ? 'Search songs (Spotify)' : 'Search songs'} · paste a Spotify link to add it directly</div>
+        ${SP.msg ? `<p class="tbp-msg">${esc(SP.msg)}</p>` : ''}<div class="tbp-results">${res}</div>${mine}`, 'search');
+      const f = document.getElementById('tbp-sf'), q = document.getElementById('tbp-q');
+      if (q) q.oninput = () => { SP.q = q.value; };
+      if (f) f.onsubmit = async (e) => {
+        e.preventDefault(); if (SP.busy) return;
+        SP.q = q.value.trim(); if (SP.q.length < 2) { SP.msg = 'Type a song or an artist.'; ctx.redraw(); return; }
+        q.blur(); SP.busy = true; SP.msg = ''; ctx.redraw();
+        const r = await ctx.actAsync({ op: 'search', q: SP.q });
+        SP.busy = false;
+        if (r && r.ok) { SP.results = r.results; SP.msg = r.note || ''; } else { SP.msg = (r && r.error) || 'Search failed. Try again.'; ctx.haptic('error'); }
+        ctx.redraw();
+      };
+      for (const b of document.querySelectorAll('[data-pick]')) b.onclick = async () => {
+        if (SP.busy) return; ctx.haptic('select'); SP.busy = true; SP.msg = ''; ctx.redraw();
+        const r = await ctx.actAsync({ op: 'pick', id: b.dataset.pick });
+        SP.busy = false;
+        if (r && r.ok) { SP.draft = r.song; SP.start = Math.min(8, v.maxStart); pv().src = r.song.preview; } else { SP.msg = (r && r.error) || 'Couldn’t load that one.'; ctx.haptic('error'); }
+        ctx.redraw();
+      };
+    }
+    for (const b of document.querySelectorAll('[data-rm]')) b.onclick = async () => { const r = await ctx.act({ op: 'remove', key: b.dataset.rm }); if (r && r.ok) { ctx.haptic('tap'); felt.allset = false; } };
   }
-  function bindChoices(el, ctx) {
-    for (const b of el.querySelectorAll('[data-id]')) b.onclick = async () => {
-      haptic(ctx, 'select');
-      const r = await ctx.act({ op: 'pick', id: b.dataset.id });
-      if (r && r.ok) { if (r.right === true) { haptic(ctx, 'success'); ctx.sfx && ctx.sfx('chime'); } else if (r.right === false) haptic(ctx, 'error'); }
+  function phGuess(v, ctx, paint) {
+    const m = v.my, ci = v.clipInfo || { listens: [] };
+    if (GF.n !== v.n || (!GF.t0 && ci.t0In != null)) { GF.n = v.n; GF.text = ''; GF.kind = ''; GF.t0 = ci.t0In != null ? Date.now() + ci.t0In : 0; GF.end = ci.endIn != null ? Date.now() + ci.endIn : 0; }
+    if (v.isMine) {
+      feel(ctx, 'mine' + v.n, 'big');
+      paint(`<div class="tbp-card tbp-minecard">${art(v.song, 'tbp-art')}<h2>Your song is on!</h2><p><b>${esc(v.song.title)}</b><br><span class="muted">${esc(v.song.artist)}</span></p>
+        <p class="tbp-big">${v.gotCount}<small> of ${v.eligible} got it</small></p><p class="muted">Sweet spot = some, not all. Fingers crossed! 🤞</p></div>`, 'mine');
+      return;
+    }
+    if (m.got) {
+      feel(ctx, 'got' + v.n, 'success');
+      paint(`<div class="tbp-card tbp-res good"><div class="tbp-ic">🎉</div><h2>You got it!</h2><p class="tbp-big">+${m.base}</p><p class="muted">× the difficulty, once everyone rates it${m.artist ? ' · 🎤 +50 artist' : ''}</p><p>${m.order === 1 ? '<span class="tbp-gold">⚡ FIRST!</span>' : `#${m.order} to get it`}</p></div>`, 'got');
+      return;
+    }
+    if (m.left <= 0) {
+      feel(ctx, 'out' + v.n, 'warn');
+      paint(`<div class="tbp-card tbp-res bad"><div class="tbp-ic">🙊</div><h2>Out of guesses</h2><p class="muted">Listen for it at the reveal…</p></div>`, 'out');
+      return;
+    }
+    feel(ctx, 'guess' + v.n, 'turn');
+    paint(`<div class="tbp-gh"><span>${chipLite(v.by)}’s pick</span><span>⏰ ${timer('pg' + v.n, v.endsIn)}</span></div>
+      <div class="tbp-worth">Worth <b ${GF.t0 ? `data-wt0="${GF.t0}" data-wend="${GF.end}"` : ''}>${ci.worth || 300}</b> × difficulty</div>
+      <form class="tbp-guess" id="tbp-gf"><input id="tbp-g" type="text" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="Song title (artist = +50)"><button class="tbp-btn big">Guess</button></form>
+      ${GF.text ? `<div class="tbp-fb ${esc(GF.kind)}">${esc(GF.text)}</div>` : ''}
+      <div class="tbp-tries">${'●'.repeat(m.left)}${'○'.repeat(Math.max(0, m.tries))} <small>${m.left} guess${m.left === 1 ? '' : 'es'} left${m.artist ? ' · 🎤 artist ✓' : ''}</small></div>
+      <p class="tbp-hint">Typos are OK. Brackets, “feat.” and “the” don’t matter.</p>`, 'guess');
+    const f = document.getElementById('tbp-gf'), inp = document.getElementById('tbp-g');
+    if (f) f.onsubmit = async (e) => {
+      e.preventDefault(); const text = inp.value.trim(); if (!text) return;
+      const r = await ctx.act({ op: 'guess', text });
+      if (!r || !r.ok) return;
+      inp.value = '';
+      if (r.right) { GF.text = ''; ctx.haptic('success'); ctx.sfx && ctx.sfx('chime'); inp.blur(); }
+      else if (r.artist) { GF.text = `🎤 Right artist! +50. Now the title?`; GF.kind = 'artist'; ctx.haptic('select'); }
+      else { GF.text = `✖ “${text.slice(0, 40)}” isn’t it`; GF.kind = 'no'; ctx.haptic('error'); }
+      ctx.redraw();
     };
+  }
+  const chipLite = (x) => `<span class="tbp-who" style="--c:${esc(x.color || '#ff3d8b')}">${av(x)} ${esc(x.name)}</span>`;
+  function phReveal(v, ctx, paint) {
+    const m = v.my, so = v.song;
+    const head = `<div class="tbp-card tbp-songcard">${art(so, 'tbp-art')}<h2>${esc(so.title)}</h2><p class="muted">${esc(so.artist)} · ${chipLite(v.by)}’s pick</p>
+      ${v.isMine ? `<p>${v.gotCount} of ${v.eligible} got it</p>` : m.got ? `<p class="tbp-gold">✓ You got it: +${m.base} × difficulty</p>` : '<p class="muted">You didn’t get this one.</p>'}</div>`;
+    if (v.isMine) {
+      feel(ctx, 'rv' + v.n, v.gotCount && v.gotCount < v.eligible ? 'success' : 'select');
+      paint(`${head}<div class="tbp-card"><h2>They’re rating your song…</h2><p class="muted">The harder they say it was, the more everyone scores. Nobody got it? Then you get 0.</p></div>`, 'rv-mine');
+      return;
+    }
+    feel(ctx, 'rv' + v.n, m.got ? 'success' : 'error');
+    paint(`${head}<div class="tbp-rq">${m.rating ? 'Thanks! Change your mind?' : 'How hard was it to guess?'}</div>
+      <div class="tbp-rates">${v.rates.map((r) => `<button class="tbp-rate ${m.rating === r.n ? 'sel' : ''}" data-rate="${r.n}"><i>${r.icon}</i><b>${r.n}</b><span>${esc(r.label)}</span></button>`).join('')}</div>`, 'rv');
+    for (const b of document.querySelectorAll('[data-rate]')) b.onclick = async () => { const r = await ctx.act({ op: 'rate', n: Number(b.dataset.rate) }); if (r && r.ok) ctx.haptic('select'); };
+  }
+  function phScore(v, ctx, paint) {
+    const R = v.result, r = rateOf(R.d);
+    let body;
+    if (R.dj) { const V = VERDICT[R.dj.kind]; body = `<div class="tbp-ic">${V.icon}</div><h2>${V.title}</h2><p class="muted">${V.text}</p><p class="tbp-big">+${R.dj.pts}</p>${R.dj.mult ? `<p class="muted">${R.dj.mult} × ${R.d.toFixed(1)} difficulty</p>` : ''}`; feel(ctx, 'sc' + v.n, R.dj.kind === 'sweet' ? 'big' : R.dj.pts ? 'select' : 'error'); }
+    else if (R.mine) { body = `<div class="tbp-ic">🎉</div><h2>+${R.mine}</h2><p class="muted">${R.base} × ${R.d.toFixed(1)} difficulty</p>`; feel(ctx, 'sc' + v.n, 'success'); }
+    else { body = `<div class="tbp-ic">🎧</div><h2>+0 this time</h2><p class="muted">Next song coming up!</p>`; feel(ctx, 'sc' + v.n, 'tap'); }
+    paint(`<div class="tbp-card tbp-res ${R.mine || (R.dj && R.dj.pts) ? 'good' : 'bad'}">${body}</div><div class="tbp-diff">Difficulty <b>${R.d.toFixed(1)}</b> ${r.icon} ${esc(r.label)}</div>`, 'score');
   }
   function phone(el, v, ctx, full) {
     if (!v) return;
-    const at = (full && full._at) || Date.now();
-    const head = `<div class="tbp-head"><span>🎧 <b>${v.points}</b> pts${v.rank ? ` · #${v.rank}` : ''}</span><span>${v.mult > 1 ? '🌟 x2 FINALE' : `Round ${v.round}/${v.of}`}</span></div>`;
+    const head = `<div class="tbp-head"><span>🎧 <b>${v.points}</b> pts${v.rank ? ` · #${v.rank}` : ''}</span><span>${v.phase === 'submit' ? 'Requests' : `Song ${v.n}/${v.of}`}</span></div>`;
     const paint = (html, key) => BOX.morph(el, `<div class="tbp" id="tbp-${esc(key)}">${head}${html}</div>`);
+    if (v.phase !== 'submit' && (SP.draft || SP.playing)) { stopPreview(); SP.draft = null; }
     if (v.phase === 'over') {
-      const f = v.final || { awards: {}, standings: [] };
-      feel(ctx, 'over', 1, v.rank === 1 ? 'win' : 'success');
-      const mine = Object.entries({ ear: '👂 Golden Ear', finger: '⚡ Fastest Finger', metronome: '🥁 Human Metronome', first: '🔔 First on the Buzzer', trigger: '💥 Trigger Happy' }).filter(([k]) => f.awards[k] && full && full.me && f.awards[k].names.includes(full.me.name)).map(([, l]) => l);
+      const f = v.final || { awards: {}, standings: [] }, A = f.awards || {}, me = full && full.me ? full.me.name : '';
+      feel(ctx, 'over', v.rank === 1 ? 'win' : 'success');
+      const mine = [[A.ear, '👂 Golden Ear'], [A.fast, '⚡ Quickest Ear'], [A.dj, '🎯 Sweet Spot DJ']].filter(([a]) => a && a.names.includes(me)).map(([, l]) => l);
+      if (A.deep && A.deep.name === me) mine.push('🔥 Deepest Cut');
       paint(`<div class="tbp-card tbp-end"><div class="tbp-place">${v.rank === 1 ? '🏆' : v.rank === 2 ? '🥈' : v.rank === 3 ? '🥉' : '🎧'}</div><h2>#${v.rank} of ${v.ofPlayers}</h2><p class="tbp-big">${v.points} points</p>${mine.length ? `<div class="tbp-awards">${mine.map((m) => `<span>${m}</span>`).join('')}</div>` : ''}</div>
-        <div class="tbp-card">${BOX.board(f.standings.slice(0, 8), (r) => r.points, ' pts')}</div>`, 'over');
+        <div class="tbp-card">${BOX.board((f.standings || []).slice(0, 8), (r) => r.points, ' pts')}</div>`, 'over');
       return;
     }
     if (felt.over) felt = {};
-    const c = v.clip || {}, key = v.round + '-' + v.phase;
-    if (c.type === 'rhythm' && clock.round !== v.round) { clock.round = v.round; syncClock(ctx); }
+    if (v.phase === 'submit') return phSubmit(v, ctx, paint);
     if (v.phase === 'card') {
-      feel(ctx, 'card', v.round, 'turn');
-      paint(`<div class="tbp-card tbp-intro"><div class="tbp-ic">${esc(c.icon || '🎵')}</div><div class="tbp-rn">ROUND ${v.round}</div><h2>${esc(c.title || '')}</h2><p>${esc(c.ask || '')}</p>
-        <p class="tbp-tip">${c.type === 'rhythm' ? '👆 Tap the big pad on every beat. Steady wins!' : '🔔 Buzz early for a speed bonus. Wrong buzz = locked out!'}</p></div>`, key);
+      feel(ctx, 'card' + v.n, v.isMine ? 'big' : 'turn');
+      paint(`<div class="tbp-card tbp-intro"><div class="tbp-ic">💿</div><div class="tbp-rn">SONG ${v.n} OF ${v.of}</div><h2>${v.isMine ? 'It’s YOUR song!' : `${esc(v.by.name)}’s pick`}</h2>
+        <p class="tbp-tip">${v.isMine ? '🎧 You sit this one out. Watch them squirm!' : '⌨️ Get ready to type the title. Fast = more points!'}</p></div>`, 'card');
       return;
     }
-    if (v.phase === 'tap') {
-      if (pad.round !== v.round) { pad.round = v.round; pad.hits = []; pad.last = ''; }
-      const off = clock.off != null ? clock.off : (v.now - at);
-      pad.beatMs = c.beatMs; pad.beats = c.beats; pad.count = c.count || 4;
-      // beat0 above is in server time: (local receive time + ms until the first beat) + offset
-      pad.beat0 = (at + off) + (c.beatIn || 0);
-      feel(ctx, 'tap', v.round, 'turn');
-      paint(`<div class="tbp-sync">${clock.off == null ? '⏱️ syncing…' : '⏱️ clock synced'}</div><div class="tbp-pad" id="tb-pad" data-keep><div class="ring"></div><div class="big">Get ready…</div><div class="small">Tap on every beat</div></div>`, key);
-      const p = el.querySelector('#tb-pad');
-      if (p && !p.__bound) {
-        p.__bound = true; p.innerHTML = '<div class="ring"></div><div class="big">Get ready…</div><div class="small">Tap on every beat</div>';
-        p.addEventListener('pointerdown', (e) => {
-          e.preventDefault();
-          const t = Date.now() + (clock.off != null ? clock.off : 0), k = (t - pad.beat0) / pad.beatMs, i = Math.round(k);
-          if (i >= 0 && i < pad.beats) { const d = Math.abs(k - i) * pad.beatMs; pad.last = d <= 50 ? 'PERFECT!' : d <= 100 ? 'GREAT' : d <= 170 ? 'OK' : 'MISS'; }
-          p.classList.remove('hit'); void p.offsetWidth; p.classList.add('hit');
-          haptic(ctx, 'tap');
-          ctx.act({ op: 'tap', t: Math.round(t) });
-        });
-      }
-      padLoop(el);
-      return;
-    }
-    if (v.phase === 'clip' || v.phase === 'last') {
-      const b = v.buzz, m = v.mine;
-      if (m) {
-        if (v.phase === 'clip' && m.buzz) feel(ctx, 'res' + v.round, 1, m.right ? 'success' : 'error');
-        const ch = c.choices.find((x) => x.id === m.id) || {};
-        paint(`<div class="tbp-card tbp-locked ${m.buzz ? (m.right ? 'good' : 'bad') : ''}"><div class="tbp-ic">${m.buzz ? (m.right ? '⚡' : '🔒') : '📨'}</div>
-          <h2>${m.buzz ? (m.right ? `Right! +${m.gain}` : 'Wrong buzz!') : 'Answer locked in'}</h2><p>You said <b>${esc(ch.icon || '')} ${esc(ch.label || '')}</b></p>${m.buzz && !m.right ? `<p class="muted">−${-m.gain} and you’re out for this clip.</p>` : m.first ? '<p class="tbp-gold">🔔 FIRST RIGHT BUZZ!</p>' : '<p class="muted">Eyes on the big screen…</p>'}</div>`, key + '-m');
-        return;
-      }
-      if (b && b.locked) {
-        feel(ctx, 'lock' + v.round, 1, 'warn');
-        paint(`<div class="tbp-card tbp-locked bad"><div class="tbp-ic">🔒</div><h2>${b.timeout ? 'Too slow!' : 'Locked out'}</h2><p class="muted">You buzzed but didn’t answer in time. Back next clip!</p></div>`, key + '-lk');
-        return;
-      }
-      if (b && b.open) {
-        feel(ctx, 'buzz' + v.round, 1, 'buzz');
-        paint(`<div class="tbp-buzzed"><div class="tbp-bt">🔔 YOU BUZZED! Pick fast:</div><div class="tbp-bar"><span style="animation-duration:${Math.max(200, b.pickIn)}ms"></span></div></div>${choiceBtns(c, 'quick')}`, key + '-b');
-        bindChoices(el, ctx); return;
-      }
-      if (v.phase === 'last') {
-        feel(ctx, 'last' + v.round, 1, 'select');
-        paint(`<div class="tbp-lc">⏰ LAST CALL · ${timer('pl' + v.round, v.endsIn)}<small>No speed bonus now. Wrong answers cost nothing.</small></div><div class="tbp-ask">${esc(c.ask)}</div>${choiceBtns(c, '')}`, key);
-        bindChoices(el, ctx); return;
-      }
-      // the clip is playing: the BUZZER
-      const openAt = at + (c.buzzIn || 0), wait = openAt - Date.now(), open = wait <= 0;
-      if (!open) redrawAt(ctx, wait);
-      paint(`<div class="tbp-ask">${esc(c.ask)}</div><div class="tbp-hint">${open ? 'Know it? BUZZ!' : c.type === 'finish' ? '🎧 Listen to the endings…' : c.type === 'hl' ? '🎧 Wait for the second sound…' : '🎧 Listen…'}</div>
-        <button class="tbp-buzz ${open ? 'open' : ''}" id="tbp-buzz" ${open ? '' : 'disabled'}><span>BUZZ</span></button>
-        <div class="tbp-legend">${c.choices.map((ch, i) => `<span class="k${i}"><b>${LETTERS[i]}</b> ${esc(ch.icon)} ${esc(ch.label)}</span>`).join('')}</div>`, key + (open ? '-o' : '-w'));
-      const bb = el.querySelector('#tbp-buzz');
-      if (bb) bb.onclick = async () => { haptic(ctx, 'buzz'); const r = await ctx.act({ op: 'buzz' }); if (r && r.ok) ctx.sfx && ctx.sfx('pop'); };
-      return;
-    }
-    if (v.phase === 'reveal' && v.last) {
-      const L = v.last, m = v.mine;
-      if (L.rhythm) {
-        const g = m ? m.gain : 0;
-        feel(ctx, 'rev' + v.round, 1, g >= 300 ? 'success' : g > 0 ? 'select' : 'error');
-        paint(`<div class="tbp-card tbp-res ${g > 0 ? 'good' : 'bad'}"><div class="tbp-ic">🥁</div><h2>${m && m.acc != null ? `${m.acc}% on the beat` : 'You sat this one out'}</h2>
-          ${m && m.marks ? `<div class="tbp-dots">${m.marks.map((x) => `<i class="m${x}"></i>`).join('')}</div>` : ''}<p class="tbp-big">+${g}</p>${m && m.perfect ? `<p class="muted">${m.perfect} perfect hit${m.perfect === 1 ? '' : 's'}</p>` : ''}</div>`, key);
-        return;
-      }
-      const right = m && m.right, gain = m ? m.gain : 0;
-      feel(ctx, 'rev' + v.round, 1, right ? 'success' : m ? 'error' : 'warn');
-      paint(`<div class="tbp-card tbp-res ${right ? 'good' : 'bad'}"><div class="tbp-ic">${right ? '🎉' : m ? '😬' : '🤐'}</div><h2>${right ? 'You got it!' : m ? 'Not this time' : 'No answer'}</h2>
-        <p>It was <b>${esc(L.answer.icon)} ${esc(L.answer.label)}</b></p><p class="tbp-big ${gain < 0 ? 'neg' : ''}">${gain > 0 ? '+' + gain : gain < 0 ? '−' + -gain : '+0'}</p>${m && m.first ? '<p class="tbp-gold">🔔 First right buzz!</p>' : ''}</div>`, key);
-      return;
-    }
-    paint('<div class="tbp-card"><h2>Next track coming up…</h2></div>', key);
+    if (v.phase === 'guess') return phGuess(v, ctx, paint);
+    if (v.phase === 'reveal' && v.song) return phReveal(v, ctx, paint);
+    if (v.phase === 'score' && v.result) return phScore(v, ctx, paint);
+    paint('<div class="tbp-card"><h2>Next track coming up…</h2></div>', 'wait');
   }
 
   BOX.games.tune = {
     name: 'Tune Buzz', icon: '🎵', lobbyTv,
-    // Music: silence while a clip or the beat plays (the clip IS the music); a soft groove otherwise.
-    music: (s) => { const m = { card: null, clip: null, tap: null, last: 'think', reveal: 'reveal', over: 'finale' }; return s.phase in m ? m[s.phase] : 'play'; },
-    about: 'A music quiz on the big screen: name the game from its soundtrack, guess the vibe, spot the instrument, finish the melody and tap the beat. Buzz in first!',
+    // Music: a soft groove while songs come in; silence while a song plays (it IS the music).
+    music: (s) => { const m = { submit: 'think', card: null, guess: null, reveal: null, score: 'reveal', over: 'finale' }; return s.phase in m ? m[s.phase] : 'play'; },
+    about: 'Name that tune, with songs you bring! Everyone adds songs from their phone and picks a few tricky seconds. Guess fast, then rate how hard it was: harder songs pay more.',
     how: [
-      'Music plays on the TV. Every clip is original: JustGameBox soundtracks and tunes made on the spot.',
-      'Rounds: Which game?, Guess the vibe, Instrument ID, Higher or lower, Finish the melody and Rhythm tap.',
-      'Know it? Hit BUZZ, then pick within 5 seconds: +100, up to +200 for speed, +100 if you’re the first right buzz.',
-      'A wrong buzz costs 50 and locks you out for that clip. Not sure? Wait for LAST CALL: +100, no risk.',
-      'Rhythm tap: tap the big pad on every beat after the count-in. Up to +400 for steady timing.',
-      'The last round is the Grand Finale: double points. Top of the charts wins!',
+      'Add songs from your phone: search for anything (or paste a Spotify link), then pick the few seconds everyone hears first.',
+      'Each song: the TV plays your clip. Each listen is a bit longer. Type the title on your phone: typos are fine.',
+      'Fast is worth more: 300 points at the first note, down to 100 at the buzzer. Naming the artist too is +50.',
+      'Then everyone rates how hard it was: 1 🍼 Too easy to 5 🔥 Impossible. Guessers’ points are multiplied by the average.',
+      'Your own songs: you sit out. If some (not all) got it you score 150 × difficulty. Everyone got it: 50 ×. Nobody: 0.',
+      'Pick songs that are fun-hard, not impossible. Top of the charts wins!',
     ],
-    fx: { round: 'pop', finale: 'sting', buzz: 'buzz', right: 'chime', wrong: 'buzzer', lockout: 'buzzer', last: 'tick', reveal: 'reveal', nobody: 'shrug', win: 'win' },
-    onFx(f) { if (f.kind === 'buzz') live.flash.push(performance.now()); },
+    fx: { round: 'pop', clip: 'tick', right: 'chime', artist: 'pop', reveal: 'reveal', nobody: 'shrug', score: 'pop', sweet: 'win', added: 'pop', win: 'win' },
     tv, phone,
-    _test: { STYLES, INSTR, buildStyle, finishPlan, melody, rngOf, recorder, renderClip, clipGain },
+    _test: { seekPlay, rateOf },
   };
 })();
