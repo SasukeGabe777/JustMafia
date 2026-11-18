@@ -124,12 +124,12 @@
     title: 'Tune Buzz',
     // How to play (box/howto.js): 6 steps (module howSteps: 6).
     tutorial: [
-      { icon: '📻', title: 'Listen up', text: 'Music plays on the TV. Every clip is original: JustGameBox’s own soundtracks and tunes made on the spot.', phone: 'Your phone is your buzzer.' },
-      { icon: '🎮', title: 'Six kinds of round', text: 'Which game?, Guess the vibe, Instrument ID, Higher or lower, Finish the melody and Rhythm tap.' },
-      { icon: '🔔', title: 'Buzz in', text: 'Know it? BUZZ, then pick within 5 seconds. +100, up to +200 more for speed, and +100 for the first right buzz.', phone: 'Tap the big pink BUZZ, then tap A, B, C or D.' },
-      { icon: '🔒', title: 'Careful!', text: 'A wrong buzz costs 50 points and locks you out for that clip. Not sure? Wait for LAST CALL: +100, no risk.', phone: 'Last call: just tap your answer.' },
-      { icon: '🥁', title: 'Rhythm tap', text: 'After the count-in, tap on every beat. Steady timing earns up to +400. Drumrolls don’t help!', phone: 'Tap the big pad on each beat.' },
-      { icon: '🌟', title: 'The Grand Finale', text: 'The last round counts double. Top of the charts wins, plus awards for the Golden Ear and the Fastest Finger.' },
+      { icon: '📻', title: 'Bring your songs', text: 'Everyone adds songs from their phone. Search for anything, or paste a Spotify link.', phone: 'Search, tap a song, done.' },
+      { icon: '✂️', title: 'Pick the tricky bit', text: 'You hear the preview and choose which few seconds the room hears first. Skip the obvious part!', phone: 'Slide to pick where the clip starts.' },
+      { icon: '🎧', title: 'Name that tune', text: 'The TV plays the clip. Each listen is longer. Type the title: typos are fine. You sit out your own songs.', phone: 'Type the title. The artist too = +50.' },
+      { icon: '⚡', title: 'Fast pays', text: '300 points at the first note, ticking down to 100 at the buzzer.' },
+      { icon: '🔥', title: 'Rate it', text: 'After each song, rate how hard it was: 1 🍼 Too easy to 5 🔥 Impossible. Guessers’ points are multiplied by the average.', phone: 'Tap 1 to 5.' },
+      { icon: '🎯', title: 'The sweet spot', text: 'Your song: some (not all) got it = 150 × difficulty. Everyone got it = 50 ×. Nobody = 0. Pick fun-hard, not impossible!' },
     ],
     theme: { accent: PINK, accent2: CYAN, accent3: GOLD, ink: '#fbf3ff', fade: '#06010f', rim: CYAN,
       floor1: '#2a0b5c', floor2: '#0d0326', disc1: '#3a0b5e', disc2: '#150437', pod1: '#231d36', pod2: '#17132a', podTop: PINK, seat: '#231d36', audWall1: '#150437', audWall2: '#06010f',
@@ -142,7 +142,7 @@
     lines: {
       welcome: 'Good evening, night owls! You’re tuned to Tune Buzz FM, and I’m DJ Wavelength!',
       roll: 'Tonight’s callers are on the line!', more: '…and {n} more on the line!',
-      play: 'Fingers on your buzzers. Let’s drop the first track!',
+      play: 'The request line is open. Send me your songs!',
     },
     stage, logo, podium, roll, podiumGlyph: '♪',
     hostCam: { x: 960, y: 560, z: 1.6 },

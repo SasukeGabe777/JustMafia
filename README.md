@@ -135,6 +135,17 @@ YouTube, TikTok or Instagram search and paste the link back. The server checks Y
 their public oEmbed endpoints; Instagram shares no details without a Facebook app token, so Reels get a
 styled card instead of a thumbnail, and Instagram may ask for a tap to play on the TV.
 
+Tune Buzz songs (`box/songs.js`): players search for real songs on their phones and the TV plays each
+song's free 30-second preview (iTunes, or Deezer as a fallback; no keys needed). Optional: to search
+**Spotify** instead (better results, and Spotify links read with full details), make a free app at
+https://developer.spotify.com/dashboard (Create app → any name, redirect URI `http://localhost`, tick
+"Web API"), open its Settings, and set `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` on the server
+(Render → Environment → Add variable; locally, set them before `npm start`). Never commit them. Spotify
+no longer gives new apps playable previews, so the clip itself always comes from iTunes/Deezer, matched
+by title and artist. Only the typed search text is sent to these services; lookups are cached,
+time out after 5 s, and have a global budget (about 18 iTunes calls a minute) plus the phone's own
+search throttle. Songs with no playable preview can't be added.
+
 Code: `box/` (rooms and rules: `room.js`, `games/*.js`) and `public/box/` (TV and phone shells, per-game screens).
 Tests: `node tools/test-box.js` (rules, 100-player bot games) and `npm run e2e-box` (real pages in headless Chrome).
 

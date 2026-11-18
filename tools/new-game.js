@@ -1,6 +1,6 @@
 'use strict';
 // Start a new JustGameBox game with every piece the other games have (docs/game-kit.md):
-//   node tools/new-game.js <key> "<Name>" [--type cards|money|guess|bluff|know|creative] [--icon 🎲]
+//   node tools/new-game.js <key> "<Name>" [--type cards|guess|create|friends|action] [--icon 🎲]
 // Creates the rules module, TV + phone screens with a designed lobby, its stylesheet, a title
 // screen, an intro cutscene, a soundtrack (from scores/_template.js), a test file; and registers
 // it in box/index.js, tv.html, play.html, the main menu, the "next game" lists and Party Mode.
@@ -12,9 +12,14 @@ const ROOT = path.join(__dirname, '..');
 const args = process.argv.slice(2);
 const key = args[0], name = args[1];
 const opt = (k, d) => { const i = args.indexOf('--' + k); return i >= 0 ? args[i + 1] : d; };
-const type = opt('type', 'creative'), icon = opt('icon', '🎲');
+const icon = opt('icon', '🎲');
+// The category (public/categories.js): its main-menu shelf and its Party Mode group.
+const CAT_ALIASES = { money: 'cards', casino: 'cards', bluff: 'friends', know: 'friends', vote: 'friends', creative: 'create', draw: 'create', battle: 'action', coop: 'action', story: 'action' };
+const type = CAT_ALIASES[opt('type', 'create')] || opt('type', 'create');
+const CAT_NAME = { cards: 'Cards', guess: 'Guessing', create: 'Creative', friends: 'Party', action: 'Action' }[type];
+if (!CAT_NAME) { console.log('--type must be one of cards, guess, create, friends, action'); process.exit(1); }
 if (!key || !/^[a-z][a-z0-9]{2,15}$/.test(key) || !name) {
-  console.log('Usage: node tools/new-game.js <key> "<Name>" [--type cards|money|guess|bluff|know|creative] [--icon 🎲]\n  key: 3–16 lowercase letters/digits, e.g. trivia');
+  console.log('Usage: node tools/new-game.js <key> "<Name>" [--type cards|guess|create|friends|action] [--icon 🎲]\n  key: 3–16 lowercase letters/digits, e.g. trivia');
   process.exit(1);
 }
 const P = (p) => path.join(ROOT, p);
@@ -220,13 +225,12 @@ insert('public/box/play.html', '  <script src="/box/games/zombie.js"></script>',
 insert('public/box/play.html', '  <link rel="stylesheet" href="/box/games/zombie.css">', `\n  <link rel="stylesheet" href="/box/games/${key}.css">`);
 insert('public/box/tv.js', "'funny', 'zombie',", ` '${key}',`);
 insert('public/box/play.js', "'funny', 'zombie',", ` '${key}',`);
-insert('public/hub.html', '      <a class="tile live zombie"', `      <a class="tile live ${key}" href="/box/tv?game=${key}" data-game="${key}" data-best="3-10">
+insert('public/hub.html', '      <a class="tile live zombie"', `      <a class="tile live ${key}" href="/box/tv?game=${key}" data-game="${key}" data-best="3-10" data-type="${type}">
         <div class="art" aria-hidden="true"><span class="icon">${icon}</span></div>
         <div class="info"><h2>${name}</h2><p>One line that sells the game.</p>
-          <div class="meta"><span>👥 2–100 · best 3–10</span><span>⏱ 10–20 min</span><span>${icon} ${type}</span></div></div>
+          <div class="meta"><span>👥 2–100 · best 3–10</span><span>⏱ 10–20 min</span><span>${icon} ${CAT_NAME}</span></div></div>
       </a>\n`, { before: true });
-const TYPE_ANCHOR = { cards: "games: ['president', 'blanks'", money: "games: ['blackjack', 'bid'", guess: "games: ['price', 'emoji'", bluff: "games: ['truths', 'likely'", know: "games: ['whosaid', 'spectrum'", creative: "games: ['sketch', 'funny'" }[type] || "games: ['sketch', 'funny'";
-insert('public/party/party.js', TYPE_ANCHOR, `, '${key}'`);
+// Party Mode picks the game up from its tile (data-type); FALLBACK below is only its name card.
 insert('public/party/party.js', "    zombie: ['🧟', 'Zombie Survival', 2, 100, 20],", ` ${key}: [${js(icon)}, ${js(name)}, 2, 100, 15],`);
 const pkg = JSON.parse(fs.readFileSync(P('package.json'), 'utf8'));
 pkg.scripts.test = pkg.scripts.test.replace('node tools/test-box-party.js', `node tools/test-box-${key}.js && node tools/test-box-party.js`);

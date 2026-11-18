@@ -14,18 +14,15 @@
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---- The games (JustMafia joins as a big game: the party hands over to /mafia and comes back) ----
-  const TYPES = [
-    { k: 'cards', name: 'Cards', icon: '🃏', games: ['president', 'blanks'], c: '#18b06a' },
-    { k: 'money', name: 'Money', icon: '🪙', games: ['blackjack', 'bid', 'plinko'], c: '#ef9d10' },
-    { k: 'guess', name: 'Guessing', icon: '🎯', games: ['price', 'emoji', 'tune', 'quickdraw', 'colormatch', 'trivia'], c: '#ff4f9a' },
-    { k: 'bluff', name: 'Bluff & voting', icon: '🗳️', games: ['truths', 'likely', 'debate', 'alien', 'bomb'], c: '#8b5cff' },
-    { k: 'know', name: 'Get to know you', icon: '💬', games: ['whosaid', 'spectrum'], c: '#14b8dc' },
-    { k: 'creative', name: 'Creative', icon: '🎨', games: ['sketch', 'funny', 'actout', 'letters', 'memes'], c: '#ff7134' },
-    // Unlockable games join Party Mode once this TV has unlocked them (public/unlocks.js).
-    ...(window.UNLOCKS && window.UNLOCKS.has('zombie') ? [{ k: 'story', name: 'Survival story', icon: '🧟', games: ['zombie'], c: '#6bbf3a' }] : []),
-    { k: 'battle', name: 'Strategy & Battle', icon: '⚔️', games: ['summon'], c: '#e0483e' },
-    { k: 'big', name: 'Big games', icon: '🏰', games: ['ducks', 'kingdoms', 'mafia'], c: '#f5b400', big: true },
-  ];
+  // Categories come from public/categories.js and each small game joins the one its main-menu tile
+  // names (data-type), so every game with a tile is in Party Mode automatically.
+  const CATS = window.GAME_CATS || [{ k: 'create', name: 'Games', icon: '🎲', c: '#ff7134' }];
+  const TYPES = CATS.map((c) => ({ ...c, games: [] }));
+  for (const tile of document.querySelectorAll('.tiles.small .tile[data-game]')) {
+    const t = TYPES.find((x) => x.k === tile.dataset.type) || TYPES[TYPES.length - 1];
+    t.games.push(tile.dataset.game);
+  }
+  TYPES.push({ k: 'big', name: 'Big games', icon: '🏰', games: ['ducks', 'kingdoms', 'mafia'], c: '#f5b400', big: true });
   // Locked games (public/unlocks.js) join the shuffle once this TV has unlocked them.
   for (const t of TYPES) t.games = t.games.filter((k) => !window.UNLOCKS || window.UNLOCKS.has(k));
   for (let i = TYPES.length - 1; i >= 0; i--) if (!TYPES[i].games.length) TYPES.splice(i, 1);
@@ -35,13 +32,13 @@
     bid: ['📦', 'JustBid', 1, 100, 22], price: ['💸', 'Price Panic', 1, 100, 15], emoji: ['😜', 'Emoji Charades', 3, 100, 17],
     truths: ['🤥', 'Two Truths & a Lie', 3, 100, 17], likely: ['👑', 'Most Likely To…', 3, 100, 10], whosaid: ['🕵️', 'Who Said It?', 3, 100, 15],
     spectrum: ['🧭', 'Where Do You Stand?', 3, 100, 15], sketch: ['✏️', 'JustSketch Relay', 3, 100, 15], funny: ['😂', 'JustFunny', 2, 100, 30],
-    zombie: ['🧟', 'Zombie Survival', 2, 100, 20], debate: ["🗣️", "Debate Club", 2, 100, 15], actout: ["🎭", "Act It Out", 2, 100, 15], tune: ["🎵", "Tune Buzz", 2, 100, 15], alien: ["🛸", "Alien Abduction", 2, 100, 15], bomb: ["💣", "Bomb Squad", 2, 100, 15], quickdraw: ["⚡", "Quick Draw", 2, 100, 15], summon: ["⚔️", "JustSummon", 2, 100, 15], letters: ["🔤", "Letter Rush", 2, 100, 15], memes: ["🖼️", "Meme Maker", 2, 100, 15], colormatch: ["🎨", "Color Match", 2, 100, 15], trivia: ["🧠", "Hot Take Trivia", 2, 16, 8], plinko: ["🎯", "JustDrop", 1, 100, 12], ducks: ['🦆', 'JustRaiseDucks', 1, 100, 27], kingdoms: ['🏰', 'JustKingdoms', 2, 100, 40],
+    zombie: ['🧟', 'Zombie Survival', 2, 100, 20], marble: ["🔮", "JustMarble", 1, 12, 12], debate: ["🗣️", "Debate Club", 2, 100, 15], actout: ["🎭", "Act It Out", 2, 100, 15], tune: ["🎵", "Tune Buzz", 2, 100, 15], alien: ["🛸", "Alien Abduction", 2, 100, 15], bomb: ["💣", "Bomb Squad", 2, 100, 15], quickdraw: ["⚡", "Quick Draw", 2, 100, 15], summon: ["⚔️", "JustSummon", 2, 100, 15], letters: ["🔤", "Letter Rush", 2, 100, 15], memes: ["🖼️", "Meme Maker", 2, 100, 15], colormatch: ["🎨", "Color Match", 2, 100, 15], trivia: ["🧠", "Hot Take Trivia", 2, 16, 8], plinko: ["🎯", "JustDrop", 1, 100, 12], ducks: ['🦆', 'JustRaiseDucks', 1, 100, 27], kingdoms: ['🏰', 'JustKingdoms', 2, 100, 40],
     mafia: ['🔪', 'JustMafia', 5, 100, 40],
   };
   const range = (txt) => { const m = txt && txt.match(/(\d+)\s*[–-]\s*(\d+)/); return m ? [Number(m[1]), Number(m[2])] : null; };
   const GAMES = {};
   for (const t of TYPES) for (const k of t.games) {
-    const f = FALLBACK[k], tile = document.querySelector(`.tile[data-game="${k}"]`);
+    const f = FALLBACK[k] || ['🎲', k, 2, 100, 15], tile = document.querySelector(`.tile[data-game="${k}"]`);
     const g = { key: k, type: t.k, big: !!t.big, color: t.c, icon: f[0], name: f[1], min: f[2], max: f[3], avg: f[4] };
     if (tile) {
       const ic = tile.querySelector('.icon'), h = tile.querySelector('h2'), meta = [...tile.querySelectorAll('.meta span')].map((s) => s.textContent);

@@ -20,8 +20,8 @@
   }
   BOX.titles.tune = {
     logo: '<span class="a">TUNE</span><span class="b">BUZZ</span>',
-    tagline: 'Hear it. Know it. BUZZ it! The music quiz where every song is one of ours.',
-    start: '🔴 Go on air', meta: '2–100 players · best 2–16 · 8–12 min',
+    tagline: 'Bring your songs. Name theirs. A few seconds is all you get!',
+    start: '🔴 Go on air', meta: '2–100 players · best 3–12 · 8–15 min',
     font: "'Monoton', 'Bungee', sans-serif",
     theme: { card: 'rgba(16, 4, 40, 0.86)', ink: '#fbf3ff', muted: '#c9b6ef', accent: '#38e8ff', button: '#ff3d8b', buttonInk: '#fff', border: '#38e8ff' },
     css: `.bt-tune .bt-logo { font-size: clamp(60px, 9vw, 124px); line-height: 1; font-weight: 400; letter-spacing: 0.02em; }

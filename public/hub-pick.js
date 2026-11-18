@@ -12,7 +12,7 @@
     emoji: ['creative', 'loud'], truths: ['chill', 'loud'], likely: ['loud', 'chill'], whosaid: ['chill', 'brainy'], spectrum: ['chill', 'brainy'], sketch: ['creative', 'loud'],
     funny: ['loud', 'chill'], plinko: ['chill', 'loud'], trivia: ['brainy', 'competitive'], colormatch: ['chill', 'brainy'], memes: ['creative', 'loud'], letters: ['brainy', 'competitive'],
     summon: ['competitive', 'brainy'], quickdraw: ['creative', 'competitive'], bomb: ['loud', 'competitive'], alien: ['loud', 'brainy'], tune: ['loud', 'competitive'], actout: ['loud', 'creative'],
-    debate: ['loud', 'creative'], zombie: ['loud', 'chill'], mafia: ['brainy', 'competitive', 'loud'], ducks: ['chill', 'competitive'], kingdoms: ['brainy', 'competitive'],
+    debate: ['loud', 'creative'], marble: ['loud', 'chill'], zombie: ['loud', 'chill'], mafia: ['brainy', 'competitive', 'loud'], ducks: ['chill', 'competitive'], kingdoms: ['brainy', 'competitive'],
   };
   const TYPE_VIBES = [[/card|casino|money|auction/, ['competitive', 'chill']], [/guess|trivia|quiz/, ['brainy', 'competitive']], [/bluff|vot|deduc/, ['loud', 'brainy']], [/draw|creative|meme|word|letter|sketch|act/, ['creative', 'loud']], [/battle|strateg/, ['competitive', 'brainy']], [/story|survival/, ['loud', 'chill']]];
   const VIBE_LIST = [['chill', '😌', 'Chill'], ['loud', '📣', 'Loud'], ['brainy', '🧠', 'Brainy'], ['competitive', '🏆', 'Competitive'], ['creative', '🎨', 'Creative']];

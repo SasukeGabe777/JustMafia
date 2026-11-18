@@ -57,7 +57,11 @@ for (const [key, def] of Object.entries(GAMES)) {
   check(key, 'ideal player count best: [lo, hi] in the module', Array.isArray(def.best) && def.best.length === 2 && def.best[0] >= def.min && def.best[0] <= def.best[1]);
   check(key, 'main menu tile data-best matches the module', Array.isArray(def.best) && hub.includes(`data-game="${key}" data-best="${def.best[0]}-${def.best[1]}"`));
   check(key, 'in the "Pick the next game" lists (TV and phone)', tvJs.includes(`'${key}'`) && playJs.includes(`'${key}'`));
-  check(key, 'in Party Mode (public/party/party.js)', party.includes(`'${key}'`));
+  // The category: its main-menu shelf, and how Party Mode finds it (public/categories.js).
+  const cats = [...(read('public/categories.js') || '').matchAll(/k: '([a-z]+)'/g)].map((m) => m[1]);
+  const tileType = (hub.match(new RegExp('data-game="' + key + '"[^>]*data-type="([a-z]+)"')) || [])[1];
+  check(key, 'main menu tile has a category data-type from public/categories.js (shelf + Party Mode)', !!tileType && cats.includes(tileType));
+  check(key, 'Party Mode reads categories from the tiles (public/party/party.js)', /GAME_CATS/.test(party) && /dataset[.]type/.test(party));
   if (hasScores) check(key, 'soundtrack public/box/scores/<key>.js', read(`public/box/scores/${key}.js`) != null);
   // ---- unlockables ----
   check(key, 'a tile marked data-lock belongs to a locked game (and the other way round)', hub.includes(`data-lock="${key}"`) === !!def.locked);
