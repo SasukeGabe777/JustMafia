@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <!-- JustPizza: Nonna Pina's counter. A pizza on its board under a warm lamp, brick wall, oven glow, toppings dropping in. -->
+  <defs>
+    <linearGradient id="pz-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6492a"/><stop offset="1" stop-color="#5a2010"/></linearGradient>
+    <radialGradient id="pz-glow" cx="88%" cy="62%" r="55%"><stop offset="0" stop-color="#ff8a32" stop-opacity=".75"/><stop offset="1" stop-color="#ff8a32" stop-opacity="0"/></radialGradient>
+    <radialGradient id="pz-lamp" cx="50%" cy="10%" r="70%"><stop offset="0" stop-color="#ffe2a0" stop-opacity=".6"/><stop offset="1" stop-color="#ffe2a0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="pz-crust" cx="50%" cy="50%" r="50%"><stop offset=".78" stop-color="#e9b064"/><stop offset=".94" stop-color="#d48a3a"/><stop offset="1" stop-color="#a95f20"/></radialGradient>
+    <pattern id="pz-brick" width="48" height="22" patternUnits="userSpaceOnUse"><rect width="48" height="22" fill="none"/><path d="M0 0.5H48M0 11.5H48M24 0V11M0 11V22M48 11V22" stroke="#4a180a" stroke-width="2"/></pattern>
+    <pattern id="pz-check" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="#fff4dc"/><rect width="12" height="12" fill="#c8321f"/><rect x="12" y="12" width="12" height="12" fill="#c8321f"/></pattern>
+  </defs>
+  <rect width="400" height="240" fill="url(#pz-wall)"/>
+  <rect width="400" height="170" fill="url(#pz-brick)" opacity=".7"/>
+  <rect width="400" height="240" fill="url(#pz-glow)"/>
+  <rect width="400" height="240" fill="url(#pz-lamp)"/>
+  <!-- the oven mouth on the right -->
+  <path d="M330 170 V120 A55 55 0 0 1 440 120 V170 Z" fill="#8c3b1d" stroke="#2a160c" stroke-width="4"/>
+  <path d="M352 170 V138 A33 33 0 0 1 418 138 V170 Z" fill="#2a0c04"/>
+  <path d="M360 170 Q368 148 374 160 Q380 136 388 158 Q396 142 402 170 Z" fill="#ffb22e"/>
+  <path d="M368 170 Q374 156 380 164 Q386 150 392 170 Z" fill="#fff1a8"/>
+  <!-- the lamp -->
+  <path d="M200 0 V22" stroke="#2a160c" stroke-width="3"/>
+  <path d="M176 40 Q200 10 224 40 Z" fill="#2e5e3f" stroke="#2a160c" stroke-width="3.5"/>
+  <ellipse cx="200" cy="40" rx="11" ry="4" fill="#fff2b8"/>
+  <!-- counter -->
+  <rect y="168" width="400" height="12" fill="#efe8dc" stroke="#2a160c" stroke-width="3"/>
+  <rect y="180" width="400" height="24" fill="url(#pz-check)"/>
+  <rect y="204" width="400" height="36" fill="#5a2f14"/>
+  <!-- the board and the pizza -->
+  <ellipse cx="200" cy="168" rx="112" ry="26" fill="rgba(0,0,0,.35)"/>
+  <ellipse cx="200" cy="160" rx="110" ry="28" fill="#b5773e" stroke="#2a160c" stroke-width="4"/>
+  <rect x="300" y="152" width="52" height="12" rx="6" fill="#b5773e" stroke="#2a160c" stroke-width="3.5"/>
+  <g transform="translate(200 128) scale(1 .55)">
+    <circle r="92" fill="url(#pz-crust)" stroke="#2a160c" stroke-width="5"/>
+    <circle r="80" fill="#c8321f"/>
+    <path d="M74 0 Q72 22 60 42 Q44 66 14 73 Q-14 78 -40 66 Q-66 52 -74 24 Q-80 -4 -68 -30 Q-52 -60 -22 -72 Q8 -80 36 -68 Q62 -54 72 -26Z" fill="#ffd968"/>
+    <g stroke="rgba(110,50,15,.4)" stroke-width="2"><path d="M0 0 L0 -90 M0 0 L64 -64 M0 0 L90 0 M0 0 L64 64 M0 0 L0 90 M0 0 L-64 64 M0 0 L-90 0 M0 0 L-64 -64"/></g>
+    <g fill="#b3261b" stroke="#6e130c" stroke-width="2"><circle cx="-30" cy="-36" r="13"/><circle cx="26" cy="-50" r="13"/><circle cx="-50" cy="12" r="13"/><circle cx="40" cy="18" r="13"/><circle cx="-10" cy="44" r="13"/><circle cx="2" cy="-4" r="13"/></g>
+    <g fill="none" stroke="#1e1e24" stroke-width="5"><circle cx="-22" cy="-6" r="7"/><circle cx="52" cy="-22" r="7"/><circle cx="22" cy="52" r="7"/></g>
+    <g fill="#2d8a3e" stroke="#16521f" stroke-width="2"><path d="M-40 -60 q12 8 0 22 q-12 -8 0 -22z"/><path d="M60 40 q12 8 0 22 q-12 -8 0 -22z"/><path d="M-58 40 q12 8 0 22 q-12 -8 0 -22z"/></g>
+  </g>
+  <!-- toppings dropping in -->
+  <g stroke="#2a160c" stroke-width="2">
+    <circle cx="132" cy="62" r="9" fill="#b3261b"/>
+    <path d="M262 66 q-10 -12 0 -16 q10 4 0 16z" fill="#2d8a3e"/>
+    <path d="M236 40 l12 0 l2 10 l-8 6 l-8 -6z" fill="#ffd23f"/>
+    <path d="M158 92 q0 -12 10 -12 q10 0 10 12z" fill="#d8c1a0"/>
+    <circle cx="290" cy="96" r="6" fill="none" stroke="#1e1e24" stroke-width="4"/>
+  </g>
+  <g fill="#fff4dc" opacity=".6"><circle cx="110" cy="40" r="2"/><circle cx="300" cy="30" r="1.6"/><circle cx="180" cy="20" r="1.4"/><circle cx="250" cy="110" r="1.6"/><circle cx="96" cy="120" r="1.4"/></g>
+</svg>

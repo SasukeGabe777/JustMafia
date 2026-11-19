@@ -53,7 +53,7 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,JustPizza,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
   // Every small game sits on a category shelf (public/categories.js); there is no catch-all shelf.
   assert.equal(await hub.eval(`[...document.querySelectorAll('.shelf')].map((x) => x.dataset.shelf).join(',')`), 'cards,guess,create,friends,action');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
@@ -374,6 +374,32 @@ async function setup(browser, game, settings = {}) {
     await ph.until(`document.querySelectorAll('.es-card').length >= 1`, 'evidence on the phone');
     await tv.shot('box-escape-tv'); await ph.shot('box-escape-phone');
     ok('JustEscape: Hazel briefs the room, phones get their evidence, the TV shows every lock and who holds what');
+  }
+
+  // ---------- JustPizza: a customer shows the order, the phone builds it and serves it, the reveal ----------
+  {
+    const { tv, ph } = await setup(browser, 'pizza', { mode: 'classic', rounds: 3, seconds: 30 });
+    await tv.click('#start'); await skipShow(tv);
+    await tv.until(`!!document.querySelector('.pz-plate .pz-svg') && !!document.querySelector('.pz-cust')`, 'the customer shows the order', 20000);
+    await wait(800); await tv.shot('box-pizza-order');
+    await ph.until(`!!document.querySelector('#pz-serve')`, 'the pizza station', 20000);
+    assert(!(await tv.eval(`!!document.querySelector('.pz-plate')`)), 'the order is hidden while cooking');
+    for (const sel of ['[data-crust="deep"]', '[data-sauce="tomato"]', '[data-cheese="2"]', '[data-top="mushroom"]']) { await ph.click(sel); await wait(150); }
+    await ph.click('#pz-all'); await wait(150); await ph.click('[data-top="olive"]'); await wait(150);
+    // swipe across two slices of the pie (a real pointer drag)
+    await ph.eval(`(() => { const b = document.querySelector('#pz-pie'), r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const ev = (t, x, y) => b.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: 1, clientX: x, clientY: y, buttons: 1 }));
+      ev('pointerdown', cx + r.width * 0.12, cy - r.height * 0.3); ev('pointermove', cx + r.width * 0.3, cy - r.height * 0.12); ev('pointerup', cx + r.width * 0.3, cy - r.height * 0.12); return true; })()`);
+    await wait(300);
+    await tv.shot('box-pizza-tv');
+    await ph.shot('box-pizza-phone');
+    assert(await ph.eval(`document.querySelectorAll('#pz-pie .pz-svg g').length > 20`), 'toppings on the pie');
+    await ph.click('#pz-serve');
+    await ph.until(`/Served!/.test(document.body.textContent)`, 'served', 8000);
+    await tv.until(`!!document.querySelector('.pz-reveal .pz-entry')`, 'the reveal', 45000);
+    await wait(1200); await tv.shot('box-pizza-reveal');
+    await ph.until(`!!document.querySelector('.pz-score')`, 'my score', 8000); await ph.shot('box-pizza-result');
+    ok('JustPizza: the customer shows the order on the TV, it hides, the phone builds (crust, sauce, cheese, toppings swiped onto slices) and serves, the reveal scores every pizza');
   }
 
   const pageErrors = PAGES.flatMap((p) => p.errors || []);

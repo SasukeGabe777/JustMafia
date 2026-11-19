@@ -21,6 +21,7 @@ const GAMES = {
   bid: require('./games/bid'),
   kingdoms: require('./games/kingdoms'),
   zombie: require('./games/zombie'),
+  pizza: require('./games/pizza'),
   escape: require('./games/escape'),
   marble: require('./games/marble'),
   debate: require('./games/debate'),
