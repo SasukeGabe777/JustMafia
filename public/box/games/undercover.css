@@ -1,0 +1,14 @@
+/* JustUndercover: its own look (TV body.g-undercover, phone body.g-undercover). Match its title screen. */
+.ng-lobby { display: grid; gap: 14px; justify-items: center; padding: 24px; text-align: center; }
+.ng-title { font-size: 64px; margin: 0; }
+.ng-join img { width: 220px; background: #fff; padding: 8px; border-radius: 12px; }
+.ng-code { font-size: 64px; font-weight: 700; letter-spacing: 0.15em; color: var(--yellow); }
+.ng-settings { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.ng-settings label { display: flex; flex-direction: column; gap: 4px; }
+.ng-roster { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.ng-tv { text-align: center; padding: 30px; } .ng-tv h2 { font-size: 56px; }
+.ng-round { font-size: 22px; color: var(--muted); }
+.ng-bars { display: flex; gap: 24px; justify-content: center; align-items: flex-end; font-size: 28px; }
+.ng-bars i { display: block; width: 60px; background: var(--yellow); border-radius: 8px 8px 0 0; margin: 6px auto; }
+.ng-ph { text-align: center; } .ng-picks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0; }
+.ng-picks .btn { font-size: 28px; padding: 14px 0; }
