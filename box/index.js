@@ -55,7 +55,7 @@ const defaultProfiles = () => new BoxProfileStore(process.env.MT_PROFILE_STORE =
 
 // JustGold (docs/justgold.md): 'wallets' is JustMafia's ProfileStore (gold, items, the look);
 // walletBusy(walletId) says if that wallet is in a running JustMafia game (no shopping then).
-function installBox(app, io, { takenElsewhere = () => false, external = {}, profiles = defaultProfiles(), wallets = null, walletBusy = () => false } = {}) {
+function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => null, external = {}, profiles = defaultProfiles(), wallets = null, walletBusy = () => false } = {}) {
   const pub = path.join(__dirname, '..', 'public', 'box');
   app.get('/box/tv', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
   app.get('/box/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
@@ -119,9 +119,11 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
   // Wire a room to the games outside the box.
   const wire = (room) => { room.onExternal = (def, r) => (typeof external[def.key] === 'function' ? external[def.key](r, def) : { ok: false, error: `${def.name} can't be reached from here.` }); return room; };
   // A room made from outside the box (JustMafia's "Play another game"): same as host:create.
-  function createRoom(gameKey, { unlocks } = {}) {
+  // `code`: keep a code the group already uses (JustMafia's town code), when no box room has it.
+  function createRoom(gameKey, { unlocks, code } = {}) {
     const def = GAMES[gameKey]; if (!def) return { ok: false, error: 'Unknown game.' };
-    const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true, profiles, wallets }));
+    const keep = typeof code === 'string' && /^[A-Z]{4}$/.test(code) && !rooms.has(code) ? code : null;
+    const room = wire(new BoxRoom(keep || newCode(), def, { nsp, shows: true, profiles, wallets }));
     room.setUnlocks(unlocks);
     if (room.isLocked(def)) return { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim(), locked: true };
     rooms.set(room.code, room);
@@ -194,14 +196,15 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
 
     socket.on('room:check', (msg, cb) => {
       const room = find(msg.code);
-      reply(cb, room ? { ok: true, code: room.code, game: room.def.key, title: room.def.name, busy: room.busy(), players: room.players.size, audience: room.audienceCount() } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
+      if (!room) { const url = elsewhere(String(msg.code || '').trim().toUpperCase()); return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.', ...(url ? { url, elsewhere: true } : {}) }); }
+      reply(cb, { ok: true, code: room.code, game: room.def.key, title: room.def.name, busy: room.busy(), players: room.players.size, audience: room.audienceCount(), away: room.away ? { game: room.away.game, title: room.away.title } : null });
     });
     // Join as a player, or as the audience: msg.mode = 'watch' (just watch) | 'next' (watch now,
     // play from the next game's lobby). Without a mode, a busy room (game running, full or
     // locked) answers { busy } so the phone can ask which one.
     socket.on('player:join', (msg, cb) => {
       const room = find(msg.code);
-      if (!room) return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.' });
+      if (!room) { const url = elsewhere(String(msg.code || '').trim().toUpperCase()); return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.', ...(url ? { url, elsewhere: true } : {}) }); }
       const token = typeof msg.token === 'string' ? msg.token : null, avatar = typeof msg.avatar === 'string' ? msg.avatar : null;
       const prof = profileOf(msg.profile);
       const back = token && room.list().find((p) => p.token === token);

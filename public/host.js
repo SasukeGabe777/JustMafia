@@ -446,9 +446,14 @@
   setInterval(updateTimer, 200);
 
   // ---------- lobby ----------
+  // One code for the night: a town reached from a JustGameBox room shows that room's code (the
+  // one everybody already scanned); /j/CODE sends a phone to wherever the group is playing now.
+  let boxCode = null;
+  socket.on('host:boxLink', (info) => { const c = (info && info.box) || null; if (c !== boxCode) { boxCode = c; renderLobby(); } });
+  const joinCode = () => boxCode || (state ? state.code : '');
   function joinUrl() {
     const base = (state && state.joinBase) || baseUrl;
-    return `${base}/play?room=${state ? state.code : ''}`;
+    return `${base}/j/${joinCode()}`;
   }
 
   function renderLobby() {
@@ -463,7 +468,7 @@
     if (hof.length) $('#hof').innerHTML = `<h3>🏛 Hall of Fame</h3><ol>${hof.map((h, i) => `<li><span>${['🥇', '🥈', '🥉'][i] || '·'} <b>${h.name.replace(/[<>&]/g, '')}</b>${h.title ? ` <small>${h.title}</small>` : ''}</span><span>${h.wins}W · ${h.games}G${h.mvps ? ` · 🏆${h.mvps}` : ''}</span></li>`).join('')}</ol>`;
     const url = joinUrl();
     if (qrFor !== url) { qrFor = url; $('#qr').src = `/api/qr?text=${encodeURIComponent(url)}`; }
-    $('#room-code').textContent = state.code;
+    $('#room-code').textContent = joinCode();
     $('#join-url').textContent = url.replace(/^https?:\/\//, '');
     const n = state.players.filter((p) => !p.spectator && !p.left).length;
     const need = state.minPlayers - n;

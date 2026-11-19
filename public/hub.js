@@ -95,9 +95,72 @@
     if (t.classList.contains('live')) {
       sfx('start');
       try { localStorage.setItem('box.recent', t.dataset.game); } catch { /* private */ }
+      // This TV's room is still open: switch it to this game (same code, every phone follows).
+      if (ROOM.live) return void pickLive(t.dataset.game);
       setTimeout(() => { location.href = t.getAttribute('href'); }, 250);
     } else sfx('shrug');
   }
+
+  // ---- One code for the night ----
+  // The room this TV opened (box.host, or JustMafia's mt.host) is checked on the server with its
+  // host key. While it is open, picking any game (a tile, Party Mode, the game finder) switches
+  // that room: the code and QR stay the same and every phone follows. "New room" forgets it.
+  const ROOM = { live: null, busy: false };
+  const store = {
+    get: (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },
+    set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private */ } },
+    del: (k) => { try { localStorage.removeItem(k); } catch { /* private */ } },
+  };
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json());
+  const creds = () => ({ box: store.get('box.host'), mafia: store.get('mt.host') });
+  const liveEl = document.getElementById('room-live'), contEl = document.getElementById('continue'), newEl = document.getElementById('new-room');
+  function paintRoom(err) {
+    const L = ROOM.live;
+    if (liveEl) {
+      liveEl.hidden = !L && !err; liveEl.classList.toggle('err', !!err);
+      if (err) liveEl.textContent = err;
+      else if (L) liveEl.innerHTML = `📺 Room <b>${esc(L.code)}</b> is open${L.players ? ` · ${L.players} player${L.players === 1 ? '' : 's'}` : ''} · now in ${esc(L.away ? L.away.title : L.title)}. Pick any game and everyone comes along with the same code.`;
+    }
+    if (contEl) { contEl.hidden = !L; if (L) { contEl.href = L.tv; contEl.textContent = `▶ Back to room ${L.code} (${L.away ? L.away.title : L.title})`; } }
+    if (newEl) newEl.hidden = !L;
+  }
+  // Remember the room's keys so the game's TV page picks it straight back up.
+  function remember(r) {
+    if (r.box) store.set('box.host', r.box);
+    if (r.mafia) store.set('mt.host', r.mafia);
+  }
+  if (contEl) contEl.addEventListener('click', (e) => { if (ROOM.live) { e.preventDefault(); remember(ROOM.live); sfx('start'); setTimeout(() => { location.href = ROOM.live.tv; }, 200); } });
+  if (newEl) newEl.addEventListener('click', () => { store.del('box.host'); store.del('mt.host'); ROOM.live = null; paintRoom(); sfx('pop'); });
+  function checkRoom() {
+    const c = creds();
+    if (!(c.box && c.box.code) && !(c.mafia && c.mafia.code)) return Promise.resolve(null);
+    return post('/api/host/room', c).then((r) => {
+      ROOM.live = r && r.ok ? r : null;
+      if (r && !r.ok && r.gone && c.box) store.del('box.host'); // closed: the next pick makes a new room
+      paintRoom(); return ROOM.live;
+    }).catch(() => null);
+  }
+  // key: the game; party: { games, minutes, flow } to start a Party Mode in this room.
+  function pickLive(key, party) {
+    if (ROOM.busy) return Promise.resolve(false);
+    ROOM.busy = true;
+    const unlocks = window.UNLOCKS ? window.UNLOCKS.all() : [];
+    return post('/api/host/pick', { ...creds(), game: key, party: party || null, unlocks }).then((r) => {
+      ROOM.busy = false;
+      if (!r || !r.ok) {
+        if (r && r.gone) { ROOM.live = null; store.del('box.host'); paintRoom('That room has closed. Pick the game again for a new room.'); }
+        else paintRoom((r && r.error) || 'Could not switch the room.');
+        sfx('shrug'); return false;
+      }
+      remember(r);
+      setTimeout(() => { location.href = r.tv; }, 250);
+      return true;
+    }).catch(() => { ROOM.busy = false; paintRoom('Could not reach the server.'); return false; });
+  }
+  // For Party Mode (party/party.js) and the game finder (hub-pick.js).
+  window.HUB_ROOM = { live: () => ROOM.live, pick: pickLive, check: checkRoom };
+  checkRoom();
 
   // ---- Find a game: how many of you are there? ----
   // Each tile's "👥 3–100" chip gives the player range.
@@ -126,15 +189,11 @@
     sfx('shuffle');
     setTimeout(() => open(t), 1600);
   });
-  // The last game opened gets a badge; a room that may still be running gets a Continue button.
+  // The last game opened gets a badge. (A room that is still open gets "Back to room": below.)
   try {
     const recent = localStorage.getItem('box.recent');
     const rt = tiles.find((t) => t.dataset.game === recent);
     if (rt) { const b = document.createElement('span'); b.className = 'recent'; b.textContent = '↺ Last played'; rt.appendChild(b); }
-    const h = JSON.parse(localStorage.getItem('box.host') || 'null');
-    const ct = h && h.code && tiles.find((t) => t.dataset.game === h.game);
-    const c = document.getElementById('continue');
-    if (ct && c) { c.hidden = false; c.href = ct.getAttribute('href') + (ct.getAttribute('href').includes('?') ? '&' : '?') + 'resume=1'; c.textContent = `▶ Continue room ${h.code} (${ct.querySelector('h2').textContent})`; }
   } catch { /* private mode */ }
   function nearest(dx, dy) {
     const a = tiles[sel].getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2;
@@ -162,5 +221,5 @@
   select(0, false);
 
   // Show the real join address (the LAN or public URL), so players know where to go.
-  fetch('/api/info').then((r) => r.json()).then((i) => { if (i.baseUrl) document.getElementById('join-url').textContent = i.baseUrl.replace(/^https?:\/\//, '') + '/play'; }).catch(() => {});
+  fetch('/api/info').then((r) => r.json()).then((i) => { if (i.baseUrl) document.getElementById('join-url').textContent = i.baseUrl.replace(/^https?:\/\//, '') + '/join'; }).catch(() => {});
 })();

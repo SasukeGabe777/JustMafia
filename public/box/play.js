@@ -78,7 +78,12 @@
     avatarPicker();
     shopButtons();
     busyChoice(null);
-    if ($('#j-code').value.length === 4) socket.emit('room:check', { code: $('#j-code').value }, (r) => { $('#j-game').textContent = r && r.ok ? 'Joining ' + r.title : ''; if (r && r.ok) { theme(r.game); busyChoice(r.busy, r); } });
+    if ($('#j-code').value.length === 4) socket.emit('room:check', { code: $('#j-code').value }, (r) => { if (goElsewhere(r)) return; $('#j-game').textContent = r && r.ok ? 'Joining ' + (r.away ? r.away.title : r.title) : ''; if (r && r.ok) { theme(r.game); busyChoice(r.busy, r); } });
+  }
+  // One code for every game: a JustMafia town's code opens JustMafia's own join page.
+  function goElsewhere(r) {
+    if (!r || r.ok || !r.url || typeof r.url !== 'string' || !/^\/[a-z]/.test(r.url) || socket.leaving) return false;
+    socket.leaving = true; location.replace(r.url); return true;
   }
   // A game is running (or the room is full / locked): play next game, or watch as audience.
   function busyChoice(busy, info) {
@@ -97,6 +102,7 @@
   }
   function join(code, name, token, mode) {
     socket.emit('player:join', { code, name, token, avatar, mode, profile: getProf() }, (r) => {
+      if (!token && goElsewhere(r)) return;
       if (r && !r.ok && r.busy && !token) { showJoin(); busyChoice(r.busy, { title: $('#j-game').textContent.replace(/^Joining /, '') }); return; }
       if (!r || !r.ok) { if (token) { try { localStorage.removeItem(tokenKey(code)); } catch { /* */ } return showJoin(); } return showJoin(r && r.error); }
       me = { code: r.code, id: r.id, token: r.token, name: name || (load(r.code) || {}).name };

@@ -3,7 +3,8 @@
 // bridge moves a whole group between the two without anyone typing a code or a name:
 //
 //  - Mafia → box ("🎮 Play another game" on the Mafia TV): a box room is made for the
-//    picked game (or, when this town came from a box room, that room switches game), the TV
+//    picked game, keeping the town's code (or, when this town came from a box room, that room
+//    switches game; a linked town's TV shows the box room's code, see one-code.js), the TV
 //    goes to the box TV and every phone to /box/play?room=CODE&name=NAME&auto=1.
 //  - box → Mafia (JustMafia picked in a box room, or reached in a Party Mode lineup): a Mafia
 //    room is made and linked to the box room (BoxRoom.goExternal). Its TV and phones follow
@@ -90,7 +91,7 @@ function createBridge({ io, rooms, box, createMafiaRoom, returnMs = RETURN_MS })
     links.delete(room.code);
     if (gameKey) { const sw = b.switchGame(box.GAMES[gameKey]); if (!sw.ok) console.warn('[bridge] switch after Mafia failed:', sw.error); }
     move(room, b, b.hostKey);
-    return { ok: true, code: b.code };
+    return { ok: true, code: b.code, hostKey: b.hostKey };
   }
 
   return {
@@ -100,12 +101,26 @@ function createBridge({ io, rooms, box, createMafiaRoom, returnMs = RETURN_MS })
     toBox(room, gameKey, unlocks) {
       if (!gameKey || !box.GAMES[gameKey]) return { ok: false, error: 'Unknown game.' };
       if (links.has(room.code)) return back(room, gameKey);
-      const r = box.createRoom(gameKey, { unlocks });
+      // One code for the night: the new box room keeps this town's code (and its QR).
+      const r = box.createRoom(gameKey, { unlocks, code: room.code });
       if (!r.ok) return r;
       move(room, r.room, r.hostKey);
-      return { ok: true, code: r.code };
+      return { ok: true, code: r.code, hostKey: r.hostKey };
     },
     back: (room) => back(room),
+    // The box room is wanted back (the title screen picked another game while the group is in
+    // JustMafia): everyone returns with the results so far, unless a Mafia game is running.
+    recall(b) {
+      for (const [code, L] of links) {
+        if (L.box !== b.code) continue;
+        const room = rooms.get(code);
+        if (!room) { links.delete(code); continue; }
+        if (!['lobby', 'gameover'].includes(room.phase)) return { ok: false, error: 'A JustMafia game is running. Finish it first (or go back to its lobby).' };
+        return back(room);
+      }
+      if (b.away) b.externalBack();
+      return { ok: true, code: b.code, hostKey: b.hostKey };
+    },
     // A box room hands over to JustMafia: a fresh town, linked to it.
     fromBox(b) {
       const room = createMafiaRoom();

@@ -213,7 +213,9 @@
     if (list.length) lastFx = Math.max(lastFx, list[list.length - 1].id);
   }
 
-  const joinUrl = () => (STAND ? `${baseUrl}/${gameKey}/play?room=${state.code}` : `${baseUrl}/box/play?room=${state.code}`);
+  // One QR for the whole night: /j/CODE sends each phone to wherever this room is playing now
+  // (this game, the next one, or JustMafia), so the code never changes between games.
+  const joinUrl = () => `${baseUrl}/j/${state.code}`;
   const qr = () => `/api/qr?text=${encodeURIComponent(joinUrl())}`;
 
   // Big games: a small corner badge (code + QR for late joiners) and a ⚙ host menu.

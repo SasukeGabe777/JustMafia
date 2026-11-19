@@ -34,8 +34,9 @@ async function setup(browser, game, settings = {}) {
   for (const [k, v] of Object.entries(settings)) await tv.eval(`(() => { const s = document.querySelector('[data-set="${k}"]'); s.value = '${v}'; s.onchange(); return true; })()`);
   const ph = await browser.page();
   await ph.send('Emulation.setDeviceMetricsOverride', { width: 400, height: 820, deviceScaleFactor: 1, mobile: true });
-  // Phones scan the QR code: it opens /box/play?room=CODE.
-  await ph.go(`${URL}/box/play?room=${code}`);
+  // One QR for the night: it encodes /j/CODE, which opens this game's phone page.
+  assert(await tv.eval(`decodeURIComponent(document.querySelector('#qr').src).endsWith('/j/${code}')`), 'the QR address is /j/CODE');
+  await ph.go(`${URL}/j/${code}`);
   await ph.until(`!document.querySelector('#join').hidden && document.querySelector('#j-code').value === '${code}'`, 'join screen prefilled');
   await ph.eval(`document.querySelector('#j-name').value = 'Tess'`); await ph.click('#j-go');
   await ph.until(`!document.querySelector('#game').hidden && /You’re in/.test(document.body.textContent)`, 'phone in lobby');
@@ -374,6 +375,37 @@ async function setup(browser, game, settings = {}) {
     await ph.until(`document.querySelectorAll('.es-card').length >= 1`, 'evidence on the phone');
     await tv.shot('box-escape-tv'); await ph.shot('box-escape-phone');
     ok('JustEscape: Hazel briefs the room, phones get their evidence, the TV shows every lock and who holds what');
+  }
+
+  // ---------- One code for the night: the title screen switches the live room ----------
+  {
+    // The TV goes back to the title screen (each test page has its own storage, so the TV page is the hub).
+    const { tv: hub2, ph, code } = await setup(browser, 'likely');
+    await hub2.go(`${URL}/`);
+    await hub2.until(`!document.querySelector('#room-live').hidden && document.querySelector('#room-live').textContent.includes('${code}') && !document.querySelector('#new-room').hidden`, 'the live room on the title screen');
+    await hub2.shot('box-hub-live-room');
+    await hub2.eval(`document.querySelector('.tile.president').click(); true`);
+    await hub2.until(`location.pathname === '/box/tv' && /game=president/.test(location.search) && (document.querySelector('#code') || {}).textContent === '${code}'`, 'same room, now President', 10000);
+    await ph.until(`document.querySelector('#h-game').title === 'President' && !document.querySelector('#game').hidden`, 'the phone followed', 8000);
+    // JustMafia from the title screen: its TV shows the same code; the phone follows by name.
+    await hub2.go(`${URL}/`);
+    await hub2.until(`!document.querySelector('#room-live').hidden`, 'live room again');
+    await hub2.eval(`document.querySelector('.tile.mafia').click(); true`);
+    await hub2.until(`location.pathname === '/mafia' && document.querySelector('#room-code').textContent === '${code}'`, 'Mafia TV shows the box code', 15000);
+    assert(await hub2.eval(`document.querySelector('#join-url').textContent.endsWith('/j/${code}')`), 'Mafia QR is /j/CODE');
+    await ph.until(`location.pathname === '/play'`, 'phone in JustMafia', 10000);
+    await hub2.shot('box-mafia-same-code');
+    // Back on the title screen: a box game brings everyone back; "New room" forgets the room.
+    await hub2.go(`${URL}/`);
+    await hub2.until(`!document.querySelector('#room-live').hidden && /JustMafia/.test(document.querySelector('#room-live').textContent)`, 'live room (in JustMafia)');
+    await hub2.eval(`document.querySelector('.tile.blackjack').click(); true`);
+    await hub2.until(`location.pathname === '/box/tv' && (document.querySelector('#code') || {}).textContent === '${code}'`, 'back in the box room', 10000);
+    await ph.until(`location.pathname === '/box/play' && document.querySelector('#h-game').title === 'Blackjack Night'`, 'phone back, no retyping', 15000);
+    await hub2.go(`${URL}/`);
+    await hub2.until(`!document.querySelector('#new-room').hidden`, 'new room button');
+    await hub2.click('#new-room');
+    assert(await hub2.eval(`document.querySelector('#room-live').hidden && localStorage.getItem('box.host') === null`), 'forgotten');
+    ok('One code: the title screen switches the live room (President, JustMafia with the same code on its TV, back to Blackjack), phones follow; New room starts fresh');
   }
 
   const pageErrors = PAGES.flatMap((p) => p.errors || []);
