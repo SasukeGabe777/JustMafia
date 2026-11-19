@@ -55,9 +55,13 @@
       </div>
       <div class="head-actions">
         <a class="continue" id="continue" hidden></a>
+        <button class="new-room" id="new-room" hidden title="Forget this room: the next game gets a new code">✨ New room</button>
         <button class="party-btn" id="party-open"><span class="pb-ic" aria-hidden="true">🎉</span><span class="pb-txt"><b>Party Mode</b><small>A whole night of games, picked for you</small></span></button>
       </div>
     </header>
+    <!-- One code for the night (hub.js): this TV's room is still open, so a game picked here
+         switches that room and every phone follows. -->
+    <p class="room-live" id="room-live" hidden></p>
 
     <a class="phone-join" href="/box/play">📱 On your phone? <b>Tap here to join a game</b></a>
     <a class="phone-join shop-join" href="/shop?back=/">🛍️ <b>Your character &amp; the JustGold shop</b></a>
@@ -239,7 +243,7 @@
     </section>
 
     <footer class="hub-foot">
-      <p>Players join on their phones at <b id="join-url">/play</b> with the room code.</p>
+      <p>Players join on their phones at <b id="join-url">/join</b> with the room code.</p>
       <p class="keys">Arrow keys to choose · Enter to play</p>
     </footer>
   </main>

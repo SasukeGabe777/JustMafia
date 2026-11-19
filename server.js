@@ -46,9 +46,13 @@ const rooms = new Map();
 // JustMafia can be picked from a box room (and Party Mode): the bridge opens a town for it.
 let bridge = null;
 // JustGold: the box shares JustMafia's profile store as the wallet (gold, items, the look; docs/justgold.md).
-const box = require('./box').installBox(app, io, { takenElsewhere: (c) => rooms.has(c), external: { mafia: (b) => bridge.fromBox(b) }, wallets: profiles, walletBusy: (id) => profileInGame(id) });
+const box = require('./box').installBox(app, io, { takenElsewhere: (c) => rooms.has(c), elsewhere: (c) => (rooms.has(c) ? '/play?room=' + c : null), external: { mafia: (b) => bridge.fromBox(b) }, wallets: profiles, walletBusy: (id) => profileInGame(id) });
 
 // JustGameBox: the title screen picks a game; JustMafia's big screen lives at /mafia.
+// One code for the night (one-code.js): every QR is /j/CODE and the server sends the phone to
+// wherever that code's group is now; the title screen switches a live room instead of a new one.
+const oneCode = require('./one-code').installOneCode(app, { box, rooms, bridge: () => bridge });
+
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'hub.html')));
 app.get('/mafia', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -346,7 +350,9 @@ io.on('connection', (socket) => {
   });
   socket.on('room:check', (msg = {}, cb) => {
     // A JustGameBox code (another game): send the phone to that game's join page.
-    if (box.has(String(msg.code || '').trim().toUpperCase())) return reply(cb, { ok: false, box: true, url: '/box/play?room=' + encodeURIComponent(String(msg.code).trim().toUpperCase()) });
+    // (A box room wins over a town with the same code: the box room is where that group is now.)
+    const w = oneCode.where(msg.code);
+    if (w && w.kind === 'box') return reply(cb, { ok: false, box: true, url: w.phone });
     const room = findRoom(msg.code);
     reply(cb, room ? { ok: true, code: room.code, lobby: room.phase === 'lobby', help: room.settings.newPlayerHelp !== false, party: !!room.settings.partyMode } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
   });

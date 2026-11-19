@@ -459,6 +459,13 @@
       // A party needs a box game to start in; a lone JustMafia is just a game of JustMafia.
       const url = lineup.length === 1 && lineup[0] === 'mafia' ? '/mafia' : `/box/tv?game=${encodeURIComponent(lineup[0])}&party=${lineup.map(encodeURIComponent).join(',')}&minutes=${TIMES[opt.t].m}${opt.flow === 'lobby' ? '&flow=lobby' : ''}`;
       try { localStorage.setItem('box.recent', lineup[0]); } catch { /* private */ }
+      // This TV's room is still open (hub.js): the party starts in it, same code, everyone along.
+      const H = window.HUB_ROOM;
+      if (H && H.live()) {
+        const one = lineup.length === 1 && lineup[0] === 'mafia';
+        setTimeout(() => { H.pick(one ? 'mafia' : lineup[0], one ? null : { games: lineup.slice(), minutes: TIMES[opt.t].m, flow: opt.flow === 'lobby' ? 'lobby' : 'auto' }).then((ok) => { if (!ok) close(); }); }, 600);
+        return;
+      }
       setTimeout(() => { location.href = url; }, 600);
     }
   }
