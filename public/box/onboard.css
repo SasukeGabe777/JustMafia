@@ -1,0 +1,78 @@
+/* JustGameBox onboarding on the box pages: the practice round (TV badge + "Now for real!" card,
+   phone tips and end card) and the phone's first-join tour of the header buttons. */
+
+/* ---------- TV: PRACTICE badge ---------- */
+.pr-badge { position: fixed; top: 74px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 14px;
+  padding: 8px 10px 8px 8px; border-radius: 999px; background: rgba(20, 10, 46, 0.92); border: 3px solid #ffd23f; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45), 0 0 26px rgba(255, 210, 63, 0.35);
+  font-family: 'Fredoka', system-ui, sans-serif; color: #fff8ef; animation: prBadgeIn 0.5s cubic-bezier(.2, 1.5, .4, 1) both; max-width: calc(100vw - 40px); }
+.pr-badge.in-show { top: auto; bottom: 26px; }
+.pr-b-tag { background: #ffd23f; color: #2a1650; font-weight: 800; letter-spacing: 0.12em; border-radius: 999px; padding: 6px 16px; font-size: 20px; white-space: nowrap; animation: prPulse 2.4s ease-in-out infinite; }
+.pr-b-txt { font-size: 19px; font-weight: 500; }
+.pr-b-skip { font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; border-radius: 999px; padding: 6px 14px; color: #fff; background: rgba(255, 255, 255, 0.12); border: 2px solid rgba(255, 255, 255, 0.35); white-space: nowrap; }
+.pr-b-skip:hover { background: rgba(255, 255, 255, 0.24); }
+.pr-b-skip[hidden] { display: none; }
+@keyframes prBadgeIn { from { opacity: 0; transform: translate(-50%, -30px) scale(0.8); } }
+@keyframes prPulse { 50% { box-shadow: 0 0 0 6px rgba(255, 210, 63, 0.25); } }
+
+/* ---------- TV: "Practice over, now for real!" ---------- */
+.pr-over { position: fixed; inset: 0; z-index: 115; display: grid; place-items: center; background: radial-gradient(circle at 50% 45%, rgba(58, 20, 102, 0.75), rgba(5, 2, 20, 0.88)); animation: prFade 0.4s ease-out both; font-family: 'Fredoka', system-ui, sans-serif; }
+.pr-over.out { animation: prFadeOut 0.4s ease-in forwards; }
+.pr-card { position: relative; text-align: center; padding: 34px 80px 36px; border-radius: 34px; color: #fff8ef; background: linear-gradient(160deg, #3a1466, #1b1240); border: 5px solid #ffd23f; box-shadow: 0 0 90px rgba(255, 210, 63, 0.45); animation: prCard 0.7s cubic-bezier(.2, 1.5, .4, 1) both; overflow: hidden; }
+.pr-burst { position: absolute; inset: -60%; background: repeating-conic-gradient(rgba(255, 210, 63, 0.12) 0 10deg, transparent 10deg 20deg); animation: prSpin 18s linear infinite; z-index: 0; }
+.pr-card > * { position: relative; z-index: 1; }
+.pr-cast { display: flex; justify-content: center; align-items: flex-end; gap: 4px; height: 130px; margin-bottom: 6px; }
+.pr-cast > span { display: inline-block; font-size: 64px; line-height: 1; animation: prHop 0.9s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.17s); }
+.pr-cast img { height: 120px; width: auto; display: block; }
+.pr-card small { display: block; letter-spacing: 0.24em; font-weight: 700; color: #ffd23f; font-size: 20px; }
+.pr-card h2 { margin: 2px 0 6px; font-size: 84px; line-height: 1; text-shadow: 0 6px 0 rgba(0, 0, 0, 0.35); animation: prStamp 0.6s 0.25s cubic-bezier(.2, 1.8, .4, 1) both; }
+.pr-card p { margin: 0 0 16px; font-size: 24px; color: #d9cff7; }
+.pr-bar { height: 10px; border-radius: 99px; background: rgba(255, 255, 255, 0.14); overflow: hidden; margin: 0 auto 18px; max-width: 420px; }
+.pr-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #ffd23f, #ff4f9a); transform-origin: left; animation: prDrain linear forwards; }
+@keyframes prFade { from { opacity: 0; } }
+@keyframes prFadeOut { to { opacity: 0; } }
+@keyframes prCard { from { opacity: 0; transform: scale(0.6) rotate(-4deg); } }
+@keyframes prStamp { from { opacity: 0; transform: scale(2.2); } }
+@keyframes prSpin { to { transform: rotate(360deg); } }
+@keyframes prHop { to { transform: translateY(-14px); } }
+@keyframes prDrain { to { transform: scaleX(0); } }
+
+/* ---------- Phone: practice strip, tips, end card ---------- */
+.vip-bar .pr-strip { font-weight: 600; }
+.pr-hint { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(420px, calc(100% - 20px)); z-index: 8500;
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 12px 14px; border-radius: 18px; background: #fff8e1; color: #2a1650; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); border: 3px solid #ffd23f;
+  animation: prHintIn 0.35s cubic-bezier(.2, 1.4, .4, 1) both; font-family: inherit; }
+.pr-hint::after { content: ''; position: absolute; left: 28px; top: -12px; border: 10px solid transparent; border-bottom-color: #ffd23f; border-top: 0; }
+.pr-hint.out { animation: prHintOut 0.25s ease-in forwards; }
+.prh-i { font-size: 32px; line-height: 1; flex: 0 0 auto; margin-top: 2px; }
+.prh-t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 15px; line-height: 1.3; }
+.prh-t small { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; color: #a0742a; }
+.prh-t b { font-size: 17px; }
+.prh-t em { font-style: normal; font-weight: 700; color: #6b2fbf; margin-top: 2px; }
+.prh-x { flex: 0 0 auto; align-self: center; font: inherit; font-weight: 700; border: 0; border-radius: 12px; padding: 9px 12px; background: #2a1650; color: #fff; cursor: pointer; }
+@keyframes prHintIn { from { opacity: 0; transform: translate(-50%, 30px) scale(0.9); } }
+@keyframes prHintOut { to { opacity: 0; transform: translate(-50%, 20px); } }
+.pr-ph-over { text-align: center; padding: 26px 18px; }
+.pr-ph-over .pr-ph-icon { font-size: 64px; animation: prHop 0.8s ease-in-out infinite alternate; }
+.pr-ph-over small { display: block; letter-spacing: 0.2em; font-weight: 800; color: var(--yellow, #ffd23f); }
+.pr-ph-over h3 { font-size: 34px; margin: 4px 0; }
+
+/* ---------- Phone: first-join tour of the header ---------- */
+.ph-tour { position: fixed; inset: 0; z-index: 9500; animation: prFade 0.3s ease-out both; }
+.ph-tour.out { animation: prFadeOut 0.3s ease-in forwards; }
+.pt-ring { position: fixed; border-radius: 14px; box-shadow: 0 0 0 4px #ffd23f, 0 0 0 9999px rgba(8, 4, 24, 0.72); transition: all 0.35s cubic-bezier(.3, 1.2, .4, 1); pointer-events: none; }
+.pt-ring[hidden] { display: block; left: 50% !important; top: 40% !important; width: 0 !important; height: 0 !important; box-shadow: 0 0 0 9999px rgba(8, 4, 24, 0.72); }
+.pt-card { position: fixed; left: 50%; transform: translateX(-50%); width: min(360px, calc(100% - 28px)); padding: 16px 16px 12px; border-radius: 20px; background: #fff8e1; color: #2a1650; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5); text-align: left; transition: top 0.35s ease; }
+.pt-card.mid { top: 34% !important; text-align: center; }
+.pt-card.pop { animation: ptPop 0.4s cubic-bezier(.2, 1.5, .4, 1) both; }
+.pt-i { font-size: 34px; display: block; line-height: 1.1; }
+.pt-h { display: block; font-size: 21px; margin: 4px 0 2px; }
+.pt-p { margin: 0 0 10px; font-size: 16px; line-height: 1.35; }
+.pt-foot { display: flex; align-items: center; gap: 8px; }
+.pt-dots { flex: 1; display: flex; gap: 5px; }
+.pt-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(42, 22, 80, 0.25); }
+.pt-dots i.on { background: #ff4f9a; transform: scale(1.3); }
+.pt-skip, .pt-next { font: inherit; font-weight: 700; border: 0; border-radius: 12px; padding: 9px 14px; cursor: pointer; }
+.pt-skip { background: none; color: #6b5a92; text-decoration: underline; }
+.pt-next { background: #2a1650; color: #fff; }
+@keyframes ptPop { from { opacity: 0; transform: translateX(-50%) scale(0.85); } }
+@media (prefers-reduced-motion: reduce) { .pr-cast > span, .pr-burst, .pr-b-tag, .pr-ph-over .pr-ph-icon { animation: none; } }

@@ -25,7 +25,7 @@ module.exports = function install(Room) {
       const paid = blocker ? null : this.profiles.award(p.profileId, this.gameId, { won: p.won, alive: p.alive, role: p.originalRole, team: this.team(p), metrics: p.metrics, event: this.settings.event, theme: this.settings.theme });
       const balance = (this.profiles.view(p.profileId) || {}).coins || 0;
       this.rewardResults[p.id] = paid
-        ? { gameId: this.gameId, eligible: true, coins: paid.coins, before: paid.before, after: paid.after, lines: paid.lines, capped: paid.capped, world: paid.world || null, stock: paid.stock || [] }
+        ? { gameId: this.gameId, eligible: true, coins: paid.coins, before: paid.before, after: paid.after, lines: paid.lines, capped: paid.capped, world: paid.world || null, stock: paid.stock || [], progress: paid.progress || null }
         : { gameId: this.gameId, eligible: false, reason: blocker || 'Already rewarded.', coins: 0, before: balance, after: balance, lines: [] };
     }
     this.sync();
@@ -37,7 +37,7 @@ module.exports = function install(Room) {
     const v = view.call(this, p);
     v.progression = this.profiles && p.profileId ? this.profiles.view(p.profileId) : null;
     // Career history is only shown in the lobby and at game over (My stats); keep in-game updates small.
-    if (v.progression && !['lobby', 'gameover'].includes(this.phase)) { const { career, ...rest } = v.progression; v.progression = rest; }
+    if (v.progression && !['lobby', 'gameover'].includes(this.phase)) { const { career, progress, ...rest } = v.progression; v.progression = rest; } // (and the progress view: Season & unlocks is lobby-only)
     if (this.phase === 'gameover') { v.progressionNotice = this.progressionNotice; v.reward = (this.rewardResults || {})[p.id] || null; }
     return v;
   };

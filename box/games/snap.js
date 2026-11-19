@@ -677,6 +677,8 @@ class Game {
       .sort((a, b) => b.points - a.points || b.covers - a.covers || a.name.localeCompare(b.name));
   }
   results() { return this.phase === 'over' ? this.standings().map((r) => r.id) : []; }
+  // Profile challenges (box/progress.js): photos that made the cover.
+  challengeEvents(id) { const s = this.stats.get(id); return s ? { cover: s.covers || 0 } : {}; }
   next() {
     if (this.phase === 'brief') return this.snapPhase();
     if (this.phase === 'snap') return this.endSnap();

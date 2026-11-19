@@ -76,14 +76,13 @@
 
   // ---------- screen ----------
   const TABS = [
-    { id: 'season', label: 'Season', icon: '🎟' },
-    { id: 'weekly', label: 'Weekly', icon: '📅' },
+    { id: 'progress', label: 'Progress', icon: '⭐' },
     { id: 'unlocked', label: 'Unlocked', icon: '🎁' },
     { id: 'worlds', label: 'Worlds', icon: '🗺' },
     { id: 'fate', label: 'Fate', icon: '✦' },
     { id: 'locked', label: 'Locked', icon: '🔒' },
   ];
-  let state = { tab: 'season' };
+  let state = { tab: 'progress' };
   function render(opts) {
     const { profile } = opts;
     $('#s-pouch-wrap').innerHTML = pouchButton(profile, 's-pouch');
@@ -95,40 +94,24 @@
     tabs.querySelectorAll('[data-season-tab]').forEach((b) => { b.onclick = () => { state.tab = b.dataset.seasonTab; render(opts); }; });
     const grid = $('#s-grid');
     if (!profile) grid.innerHTML = '<p class="muted">Connecting…</p>';
-    else ({ season: renderSeason, weekly: renderWeekly, unlocked: renderUnlocked, worlds: renderWorlds, fate: renderFate, locked: renderLocked })[state.tab](opts, grid);
+    else ({ progress: renderProgress, unlocked: renderUnlocked, worlds: renderWorlds, fate: renderFate, locked: renderLocked })[state.tab](opts, grid);
     paintAll(opts);
     paintPouches();
   }
 
-  // ---------- Season pass (bought here with JustGold: it's a JustMafia mechanic) ----------
-  function renderSeason(opts, grid) {
-    const { profile } = opts, s = profile.season;
-    if (!s) { grid.innerHTML = '<p class="muted">Connecting…</p>'; return; }
-    const pct = Math.min(100, Math.round(((s.xp % s.xpPerTier) / s.xpPerTier) * 100)), gold = profile.coins;
-    const tierCell = (n) => {
-      const r = s.rewards[n] || {}, it = r.item && item(r.item);
-      const st = s.granted.includes(n) ? 'got' : n <= s.tier ? (s.owned ? 'got' : 'ready') : n === s.tier + 1 ? 'next' : 'locked';
-      return `<div class="pass-tier ${st}" data-tier="${n}"><b>${n}</b>${it ? `<canvas data-paint-item="${esc(it.id)}"></canvas><span>${esc(it.name)}</span>` : `<span class="pass-gold">🪙 ${r.gold} JG</span>`}</div>`;
-    };
-    grid.innerHTML = `<div class="pass-head">
-        <h3>🌕 ${esc(s.name)}</h3>
-        <p class="small">Every JustMafia game earns season XP. ${s.owned ? 'Your pass is active: each tier pays out automatically.' : `Get the pass for <b>${s.cost} JG</b> to collect every tier you reach (even ones you already passed).`}</p>
-        <div class="pass-xp"><span>Tier <b>${s.tier}</b> / ${s.tiers}</span><div class="bar"><i style="width:${s.tier >= s.tiers ? 100 : pct}%"></i></div><span class="small muted">${s.tier >= s.tiers ? 'Complete!' : `${s.xp % s.xpPerTier}/${s.xpPerTier} XP to tier ${s.tier + 1}`}</span></div>
-        ${s.owned ? '<p class="pass-owned">✓ Pass active</p>' : `<button class="btn" data-buy-pass ${gold < s.cost ? 'disabled' : ''}>🎟 Get the pass for ${s.cost} JG</button>${gold < s.cost ? `<p class="err small">You need ${s.cost - gold} more JustGold.</p>` : ''}<p class="err" data-pass-err></p>`}
-      </div>
-      <div class="pass-track">${Array.from({ length: s.tiers }, (_, i) => tierCell(i + 1)).join('')}</div>`;
-    const b = grid.querySelector('[data-buy-pass]');
-    if (b) b.onclick = () => opts.buyPass((r) => { if (r && r.ok) render({ ...opts, profile: r.profile }); else grid.querySelector('[data-pass-err]').textContent = (r && r.error) || 'Could not buy the pass.'; });
+  // ---------- ⭐ Progress: level, daily / weekly / event challenges, the box-wide season pass ----------
+  // The same view as the box phone's 🏆 My profile (public/progress-ui.js; box/progress.js on the server).
+  function renderProgress(opts, grid) {
+    const v = opts.profile && opts.profile.progress;
+    if (!v || !window.JGProgress) { grid.innerHTML = '<p class="muted">Connecting…</p>'; return; }
+    grid.innerHTML = '<p class="small season-note">Your level, challenges and season pass are shared by every game in the box: JustMafia, every box game and Party Mode all count.</p><div data-progress-view></div>';
+    const wrap = (fn) => new Promise((res) => fn((r) => res(r && r.ok ? { ok: true, progress: r.profile && r.profile.progress } : { ok: false, error: (r && r.error) || 'Something went wrong.' })));
+    JGProgress.render(grid.querySelector('[data-progress-view]'), v, {
+      toast: (m) => { const el = grid.querySelector('.season-note'); if (el) el.textContent = m; },
+      reroll: opts.reroll ? (period, id) => wrap((cb) => opts.reroll(period, id, cb)) : null,
+      premium: opts.buyPass ? () => wrap((cb) => opts.buyPass(cb)) : null,
+    });
   }
-
-  // ---------- Weekly challenges ----------
-  function renderWeekly(opts, grid) {
-    const s = opts.profile.season;
-    if (!s) { grid.innerHTML = '<p class="muted">Connecting…</p>'; return; }
-    grid.innerHTML = `<h3>📅 Weekly challenges</h3><ul class="challenges">${s.challenges.map((c) => `<li class="${c.done ? 'done' : ''}" data-challenge="${esc(c.id)}"><span>${c.done ? '✅' : '⬜'} ${esc(c.label)}</span><span class="small">${c.progress}/${c.count} · 🪙 ${c.gold} JG</span></li>`).join('')}</ul>
-      <p class="small muted">New challenges every week. Each one pays JustGold, a Fate Token and bonus season XP.</p>`;
-  }
-
   // ---------- Unlocked in JustMafia: what each game unlocked, and everything so far ----------
   function renderUnlocked(opts, grid) {
     const { profile } = opts, owned = (i) => i.free || profile.owned.includes(i.id);
@@ -220,5 +203,5 @@
       }).join('')}</div>`;
   }
 
-  window.MT_SHOP = { render, open(tab) { state.tab = tab || state.tab || 'season'; }, drawPouch, drawCoin, pouchButton, pouchDetails, paintPouches };
+  window.MT_SHOP = { render, open(tab) { state.tab = tab || state.tab || 'progress'; }, drawPouch, drawCoin, pouchButton, pouchDetails, paintPouches };
 })();

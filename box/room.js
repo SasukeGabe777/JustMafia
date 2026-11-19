@@ -28,7 +28,18 @@ const BOARD_DELAY = 12000, BOARD_MS = 15000, MAX_LINEUP = 20;
 //  'skip'  a short title card (CARD_MS) and straight in. The how-to steps stay on the phones' ❓.
 const INTRO_MODES = ['play', 'break', 'skip'], BREAK_STAND_MS = 8000;
 const PF = require('./party-fit');
-const { CAST_OPEN_MS, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX } = require('./show');
+// Practice round (the "Practice round" lobby setting; Party Mode "Practice rounds: on | off | new"):
+// the game runs once in its shortest configuration first (its partyFit for 2 minutes, the fewest
+// rounds) and records nothing (no party points, JustGold, stats, trophies or unlocks). Phones show
+// hints from the how-to steps, the TV a PRACTICE badge. When it ends (or after PRACTICE_MAX_MS):
+// "Practice over, now for real!" for PRACTICE_END_MS, then the real game with the real settings,
+// without the intro. Default: on for a TV that has never finished a game (host:create `onboard`),
+// for games it hasn't played yet. Games that can't do a short practice are left out (no setting).
+const PRACTICE_MODES = ['on', 'off', 'new'], PRACTICE_END_MS = 6000, PRACTICE_MIN_MS = 60 * 1000, PRACTICE_MAX_MS = 3 * 60 * 1000;
+const NO_PRACTICE = new Set(['ducks', 'kingdoms', 'escape', 'marble', 'mafia']);
+const PRACTICE_FIELD = { key: 'practice', label: 'Practice round first', options: [{ value: false, label: 'Off' }, { value: true, label: 'On: a quick warm-up that doesn’t count' }] };
+const COUNT_KEY = /^(rounds|turns|questions|hands|orders|races|debates|bombs|songs|maxRounds|trip|prompts|cases|duels|rooms)$/;
+const { castOpenMs, castMs, CAST_OPEN_MS, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX } = require('./show');
 // Unlockable games (module `locked: { how }`): finishing a whole Party Mode opens every one of
 // them. The TV remembers unlocks (public/unlocks.js) and sends them when it creates a room.
 const partyFinished = (room) => !!(room.partyMode && room.partyMode.phase === 'done' && room.played.length >= 1);
@@ -58,6 +69,7 @@ const MAX_AUDIENCE = 2000, FAV_BONUS = 3, FAV_MS = 20000, RECAP_AFTER_PARTY = 16
 const cleanName = (s) => String(s || '').replace(/[\u0000-\u001f<>&"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 14);
 
 const GOLD = require('./gold');
+const XPX = require('../public/shared/challenges'); // XP for finished games (box/progress.js)
 
 class BoxRoom {
   constructor(code, game, { nsp = null, clock = new RealClock(), seed = null, shows = false, profiles = null, wallets = null } = {}) {
@@ -72,6 +84,8 @@ class BoxRoom {
     this.players = new Map();
     this.phase = 'lobby'; // lobby → game (the game itself tracks rounds and the end)
     this.settings = this.defaultSettings(game);
+    this.practice = null; // the practice round running: { key, game, phase: intro|playing|over, … }
+    this.practiced = new Set(); this.seen = new Set(); this.newTv = false;
     this.game = null;
     this.timers = new Set();
     this.seq = 0;
@@ -109,8 +123,77 @@ class BoxRoom {
   now() { return this.clock.now(); }
   // Games with a game-show opening get an extra lobby setting to turn it off.
   hasShow(def = this.def) { return !!(this.shows && def.show); }
-  fieldsOf() { return this.hasShow() ? [...(this.def.fields || []), this.def.show.facts === false ? CAST_FIELD : SHOW_FIELD] : this.def.fields || []; }
-  defaultSettings(def) { return { ...def.defaults, ...(this.hasShow(def) ? { showIntro: true } : {}) }; }
+  fieldsOf() {
+    const f = this.hasShow() ? [...(this.def.fields || []), this.def.show.facts === false ? CAST_FIELD : SHOW_FIELD] : this.def.fields || [];
+    return this.canPractice() ? [...f, PRACTICE_FIELD] : f;
+  }
+  defaultSettings(def) { return { ...def.defaults, ...(this.hasShow(def) ? { showIntro: true } : {}), ...(this.canPractice(def) && this.practiceAuto(def) ? { practice: true } : {}) }; } // practice off = no key (the select's first option)
+  // ---- practice round ----
+  canPractice(def = this.def) { return !!def && !def.external && !def.liveLobby && def.practice !== false && !NO_PRACTICE.has(def.key); }
+  // Games this group already knows: finished on this TV before (`seen`), played or practised tonight.
+  seenGame(key) { return !!((this.seen && this.seen.has(key)) || (this.practiced && this.practiced.has(key)) || (this.played || []).some((g) => g.game === key)); }
+  setSeen(list) { if (Array.isArray(list)) for (const k of list.slice(0, 80)) if (typeof k === 'string' && /^[a-z]{2,16}$/.test(k)) this.seen.add(k); }
+  // The default for the setting: Party Mode's choice for its games, else on for a new TV's new games.
+  practiceAuto(def) {
+    const pm = this.partyMode, fresh = !this.seenGame(def.key);
+    if (pm && pm.phase !== 'done' && pm.defs.includes(def)) return pm.practice === 'on' || (pm.practice === 'new' && fresh);
+    return !!this.newTv && fresh;
+  }
+  // The TV says whether it's new here (never finished a game) and which games it has finished.
+  setOnboard(o) {
+    if (!o || typeof o !== 'object') return;
+    this.newTv = o.newbie === true; this.setSeen(o.seen);
+    if (this.phase === 'lobby' && this.canPractice()) { if (this.practiceAuto(this.def)) this.settings.practice = true; else delete this.settings.practice; }
+  }
+  // The practice copy of the settings: the game's party fit for 2 minutes, then the fewest rounds.
+  practiceSettings() {
+    const def = this.def, s = { ...this.settings };
+    try { Object.assign(s, PF.fitSettings(def, { players: this.players.size, minutes: 2 }).settings); } catch (e) { /* keep the settings */ }
+    for (const f of def.fields || []) {
+      if (!COUNT_KEY.test(f.key) || !Array.isArray(f.options) || !f.options.every((o) => typeof o.value === 'number')) continue;
+      const vals = f.options.map((o) => o.value).filter((v) => v > 0); if (vals.length) s[f.key] = Math.min(...vals);
+    }
+    if (typeof def.practiceSettings === 'function') { try { Object.assign(s, def.practiceSettings({ players: this.players.size, settings: { ...s } }) || {}); } catch (e) { /* keep */ } }
+    s.practice = true;
+    return s;
+  }
+  // Called on every sync: the practice game reached its end screen.
+  // It ends at the game's end, or at the first new round (round / n in its TV state) once it has
+  // run PRACTICE_MIN_MS: about one round, enough to learn the moves.
+  practiceTick() {
+    const P = this.practice; if (!P || P.phase !== 'playing' || this.phase !== 'game' || this.game !== P.game) return;
+    if (this.game.phase === 'over') return this.practiceOver('done');
+    let t = null; try { t = this.game.tv(); } catch (e) { return; }
+    const k = t && ['round', 'n'].find((x) => typeof t[x] === 'number'); if (!k) return;
+    if (P.r0 == null) P.r0 = t[k];
+    else if (t[k] > P.r0 && this.now() - P.at >= PRACTICE_MIN_MS) this.practiceOver('round');
+  }
+  practiceOver(why = 'done') {
+    const P = this.practice; if (!P || P.phase !== 'playing') return;
+    P.phase = 'over'; P.why = why; P.endsAt = this.now() + PRACTICE_END_MS;
+    this.closePoll(); this.clearTimers(); // the practice game stops where it is (its timers and bots)
+    this.scored = this.game; // nothing from the practice counts
+    this.fx('practiceOver', { game: P.key });
+    P.timer = this.after(PRACTICE_END_MS, () => this.endPractice());
+  }
+  // Now for real: the same game with the real settings, straight in (no intro the second time).
+  endPractice() {
+    const P = this.practice; if (!P) return { ok: false, error: 'No practice round right now.' };
+    this.practice = null; this.practiced.add(P.key);
+    if (this.def.key !== P.key) return { ok: true };
+    if (this.phase === 'show') { this.game = this.def.create(this, { ...this.settings, practice: false }); this.sync(); return { ok: true }; } // skipped during the intro
+    if (this.phase !== 'game') return { ok: true };
+    this.closePoll(); this.clearTimers();
+    this.game = this.def.create(this, { ...this.settings, practice: false });
+    this.fx('practiceDone', { game: P.key });
+    this.beginGame();
+    return { ok: true };
+  }
+  practiceState() {
+    const P = this.practice; if (!P) return null;
+    const now = this.now();
+    return { game: P.key, phase: P.phase, why: P.why || null, endsIn: P.phase === 'over' ? Math.max(0, P.endsAt - now) : null, left: P.phase === 'playing' ? Math.max(0, P.at + PRACTICE_MAX_MS - now) : null };
+  }
   // Jackbox-style host: the first person (not a bot) who joined and is still here.
   vip() { for (const p of this.players.values()) if (!p.bot) return p; return null; }
   // What the host's phone may do: start from the lobby, or play again when the game is over.
@@ -121,6 +204,8 @@ class BoxRoom {
     if (type === 'again' && this.game && this.game.phase === 'over') return this.hostAction({ type: 'again' });
     if (type === 'lobby' && this.phase !== 'lobby') return this.hostAction({ type: 'lobby' });
     if (type === 'next' && this.phase === 'show' && this.show) { this.show.skip(); this.sync(); return { ok: true }; }
+    if (type === 'next' && this.phase === 'game' && this.practice && this.practice.phase === 'over') return this.endPractice();
+    if (type === 'practiceSkip') return this.hostAction({ type });
     if (type === 'next' && this.phase === 'game' && this.game && this.game.phase !== 'over') return this.hostAction({ type: 'next' });
     if (type === 'partyNext' || type === 'partyPause' || type === 'partyAgain' || type === 'partyBoardNow') return this.hostAction({ type });
     if (type === 'bots') return this.hostAction({ type: 'addBots', count: 5 });
@@ -136,7 +221,7 @@ class BoxRoom {
     this.scoreParty();
     this.closePoll();
     this.clearTimers();
-    this.away = null;
+    this.away = null; this.practice = null;
     if (this.partyMode) this.partyMode.ext = false;
     if (this.partyMode && this.partyMode.phase !== 'done') this.partyMode.phase = 'playing';
     this.def = def; this.settings = this.defaultSettings(def); this.phase = 'lobby'; this.show = null;
@@ -157,7 +242,7 @@ class BoxRoom {
     if (!r || !r.ok) return r || { ok: false, error: `Could not open ${def.name}.` };
     this.scoreParty();
     this.closePoll();
-    this.clearTimers();
+    this.clearTimers(); this.practice = null;
     if (this.partyMode) this.partyMode.ext = false;
     if (this.partyMode && this.partyMode.phase !== 'done') this.partyMode.phase = 'playing';
     this.phase = 'lobby'; this.show = null;
@@ -205,6 +290,7 @@ class BoxRoom {
     const g = this.game;
     if (!g || this.phase !== 'game' || g.phase !== 'over' || this.scored === g) return;
     this.scored = g;
+    if (this.practice && this.practice.game === g) return; // a practice round records nothing
     let order = null;
     try { if (typeof g.results === 'function') order = g.results(); } catch (e) { order = null; }
     if (!Array.isArray(order) || !order.length) {
@@ -260,7 +346,7 @@ class BoxRoom {
   }
   // ---- lifetime profiles (box/profiles.js) ----
   recordProfiles(game, order, survivors) {
-    if (game !== 'mafia') this.payGold(game, order);
+    if (game !== 'mafia') { this.payGold(game, order); this.payProgress(game, order, survivors); }
     if (this.nightStart == null) this.nightStart = this.now();
     if (!this.profiles) return;
     const surv = new Set(survivors || []);
@@ -278,11 +364,41 @@ class BoxRoom {
     order.forEach((id, i) => {
       const p = this.players.get(id); if (!p || p.bot || !p.wallet) return;
       if (why) { p.jg = { n: 0, why, at: this.now(), game }; return; }
-      const n = GOLD.goldFor(game, i + 1, order.length, ms);
+      const { n, bonus } = GOLD.withSetBonus(game, GOLD.goldFor(game, i + 1, order.length, ms), p.look); // + a theme-set bonus in its game
       let paid = 0;
-      try { paid = this.wallets.awardBox(p.wallet, this.code + ':' + (this.gameNo || 0) + ':' + game + ':' + this.hostKey, n, (this.def && this.def.key === game ? this.def.name : game) + (i === 0 ? ' · won' : ' · #' + (i + 1))); } catch (e) { console.error('[justgold]', e.message); }
-      if (paid) { p.jg = { n: paid, at: this.now(), game, total: this.wallets.coins(p.wallet) }; this.fx('gold', { name: p.name, n: paid }); }
+      try { paid = this.wallets.awardBox(p.wallet, this.code + ':' + (this.gameNo || 0) + ':' + game + ':' + this.hostKey, n, (this.def && this.def.key === game ? this.def.name : game) + (i === 0 ? ' · won' : ' · #' + (i + 1)) + (bonus ? ' · ' + bonus.icon + ' set +' + bonus.extra : '')); } catch (e) { console.error('[justgold]', e.message); }
+      if (paid) { p.jg = { n: paid, at: this.now(), game, total: this.wallets.coins(p.wallet), set: bonus ? { icon: bonus.icon, name: bonus.name, extra: bonus.extra } : null }; this.fx('gold', { name: p.name, n: paid }); }
     });
+  }
+  // ---- progression (box/progress.js): XP, challenges and the season pass on the wallet ----
+  // Same rules as JustGold (2+ people, 90 s+); otherwise it was a practice game. JustMafia
+  // records its own games (profiles.js award), so 'mafia' never comes through here.
+  payProgress(game, order, survivors) {
+    if (!this.wallets || typeof this.wallets.progressGame !== 'function') return;
+    const humans = this.list().filter((p) => !p.bot).length, ms = this.gameStartAt != null ? this.now() - this.gameStartAt : 0;
+    const eligible = humans >= GOLD.MIN_HUMANS && ms >= GOLD.MIN_MS;
+    const g = this.game && this.def && this.def.key === game ? this.game : null, surv = new Set(survivors || []);
+    order.forEach((id, i) => {
+      const p = this.players.get(id); if (!p || p.bot || !p.wallet) return;
+      if (!eligible) { p.prog = { at: this.now(), practice: true, xp: 0 }; return; }
+      let tags = {};
+      try { if (g && typeof g.challengeEvents === 'function') tags = { ...(g.challengeEvents(id) || {}) }; } catch (e) { tags = {}; }
+      if (game === 'zombie' && surv.has(id)) tags.zsurvive = 1;
+      const place = i + 1, of = order.length;
+      const ev = { id: this.code + ':' + (this.gameNo || 0) + ':' + game + ':' + this.hostKey, game, kind: 'box', xp: XPX.boxXp(game, place, of, ms), place, of, won: place === 1 && of > 1, ms,
+        gold: p.jg && p.jg.game === game && !p.jg.party ? p.jg.n || 0 : 0, tags };
+      let news = null; try { news = this.wallets.progressGame(p.wallet, ev); } catch (e) { console.error('[progress]', e.message); }
+      this.progressNews(p, news);
+    });
+  }
+  // News for that phone (toasts) and the TV (level ups get a small celebration).
+  progressNews(p, news) {
+    if (!news) return;
+    p.level = news.level || p.level || null;
+    p.prog = { at: this.now(), xp: news.xp, level: news.level, levelUps: news.levelUps.map((u) => ({ level: u.level, gold: u.gold, title: u.title || null, item: u.item || null })), completed: news.completed.map((c) => ({ icon: c.icon, label: c.label, period: c.period, gold: c.gold, xp: c.xp })), tiers: news.tiers.length };
+    for (const u of news.levelUps.slice(-1)) this.fx('level', { name: p.name, avatar: p.avatar, level: u.level, title: u.title || null });
+    for (const c of news.completed.filter((x) => x.period !== 'daily').slice(0, 2)) this.fx('challenge', { name: p.name, avatar: p.avatar, icon: c.icon, label: c.label, period: c.period });
+    this._roster = null;
   }
   partyGold() {
     const pm = this.partyMode; if (!this.wallets || !pm || pm.goldPaid) return;
@@ -293,6 +409,10 @@ class BoxRoom {
       const n = GOLD.partyGold(i + 1);
       let paid = 0; try { paid = this.wallets.awardBox(p.wallet, 'party:' + this.code + ':' + this.hostKey + ':' + (pm.no || 0), n, 'Party Mode finale · #' + (i + 1)); } catch (e) { console.error('[justgold]', e.message); }
       if (paid) { p.jg = { n: paid, at: this.now(), party: true, total: this.wallets.coins(p.wallet) }; this.fx('gold', { name: p.name, n: paid, party: true }); }
+      if (typeof this.wallets.progressGame === 'function') {
+        let news = null; try { news = this.wallets.progressGame(p.wallet, { id: 'party:' + this.code + ':' + this.hostKey + ':' + (pm.no || 0), game: 'party', kind: 'party', xp: XPX.partyXp(i + 1), place: i + 1, of: this.partyBoard().length, gold: paid }); } catch (e) { console.error('[progress]', e.message); }
+        this.progressNews(p, news);
+      }
     });
   }
   // New trophies: a cue on the TV and a toast on that phone.
@@ -467,7 +587,9 @@ class BoxRoom {
     }
     this.partyMode = { defs, index: 0, minutes: total, phase: 'playing', at: this.now(), startedAt: null, paused: false, timer: null, flow: flow === 'lobby' ? 'lobby' : 'auto',
       intros: INTRO_MODES.includes(opts.intros) ? opts.intros : 'play', each, plan, players: Math.max(0, Math.min(100, Number(opts.players) || 0)),
+      practice: PRACTICE_MODES.includes(opts.practice) ? opts.practice : 'off',
       fit: null, nextFit: null, preview: null, previewed: null };
+    this.setSeen(opts.seen);
     if (this.def === defs[0]) { this.settings = this.defaultSettings(this.def); this.partyFit(); }
     return { ok: true };
   }
@@ -517,7 +639,7 @@ class BoxRoom {
     this.fx('partyPreview', { game: def.key });
     this.sync();
   }
-  previewMs() { return CAST_OPEN_MS + Math.min(CAST_MAX, this.players.size) * CAST_PER_MS + CAST_OUTRO_MS; }
+  previewMs(def) { return castMs(def || this.def, this.players.size); } // the cutscene, timed to its narration (box/narration.js)
   // What the TV says about a party game: "Game 3 of 6", its settings and its minutes in the plan.
   partyInfo(def, fit) {
     const pm = this.partyMode; if (!pm) return null;
@@ -546,7 +668,7 @@ class BoxRoom {
         pm.nextFit = nd.external ? null : PF.fitSettings(nd, this.partyCtx(nd));
         pm.nextInfo = this.partyInfo(nd, pm.nextFit);
         if (pm.intros === 'break' && !nd.external && this.hasShow(nd)) {
-          boardMs = Math.max(BOARD_MS, BREAK_STAND_MS + this.previewMs() + 1200);
+          boardMs = Math.max(BOARD_MS, BREAK_STAND_MS + this.previewMs(nd) + 1200);
           pm.previewTimer = this.after(BREAK_STAND_MS, () => { pm.previewTimer = null; this.partyPreview(nd); });
         }
       }
@@ -608,14 +730,14 @@ class BoxRoom {
     return { games: pm.defs.map((d) => d.key), titles: pm.defs.map((d) => d.name), index: pm.index, minutes: pm.minutes, phase: pm.phase, paused: pm.paused,
       in: Math.max(0, pm.at - this.now()), elapsed: pm.startedAt == null ? 0 : this.now() - pm.startedAt,
       next: pm.defs[pm.index + 1] ? pm.defs[pm.index + 1].key : null, boardMs: BOARD_MS, ext: !!pm.ext, flow: pm.flow,
-      intros: pm.intros, each: pm.each, plan: pm.defs.map((d) => pm.plan[d.key] || null),
+      intros: pm.intros, each: pm.each, plan: pm.defs.map((d) => pm.plan[d.key] || null), practice: pm.practice,
       // This game's chosen settings ("5 orders · 45 seconds"), and the next game's on the board.
       fit: pm.fit && cur && pm.fit.game === cur.key ? { summary: pm.fit.summary, minutes: pm.fit.minutes, players: pm.fit.players, touched: pm.fit.touched } : null,
       upNext: pm.phase === 'board' ? pm.nextInfo || null : null,
       preview: tv && pm.preview && !pm.preview.over && pm.phase === 'board' ? pm.preview.tv() : null };
   }
   partyBoard() {
-    return [...this.party].filter(([id]) => this.players.has(id)).map(([id, r]) => { const p = this.players.get(id); return { id, name: p.name, avatar: p.avatar, color: p.color, bot: p.bot, pts: r.pts, wins: r.wins, games: r.games, gain: this.lastGain.get(id) || 0, prevRank: this.prevRank.get(id) || null }; })
+    return [...this.party].filter(([id]) => this.players.has(id)).map(([id, r]) => { const p = this.players.get(id); return { id, name: p.name, avatar: p.avatar, color: p.color, bot: p.bot, level: p.level || null, pts: r.pts, wins: r.wins, games: r.games, gain: this.lastGain.get(id) || 0, prevRank: this.prevRank.get(id) || null }; })
       .sort((a, b) => b.pts - a.pts || b.wins - a.wins || a.name.localeCompare(b.name));
   }
   // Timers belong to the room: cleared on restart/destroy; each one re-syncs the screens.
@@ -705,7 +827,9 @@ class BoxRoom {
       case 'kick': return this.kick(String(msg.id || ''));
       case 'start': return this.start();
       case 'again': this.resetLobby(); return this.start(); // every game: back to a fresh lobby, then start
+      case 'practiceSkip': { const r = this.endPractice(); this.sync(); return r; } // "Skip practice" / "Start for real now"
       case 'next': if (this.phase === 'show' && this.show) { this.show.skip(); this.sync(); return { ok: true }; }
+        if (this.practice && this.practice.phase === 'over') { const r = this.endPractice(); this.sync(); return r; }
         if (!this.game || !this.game.next) return { ok: false }; this.game.next(); this.sync(); return { ok: true };
       case 'lobby': this.resetLobby(); this.sync(); return { ok: true };
       case 'partyNext': return this.partyNext();
@@ -725,7 +849,7 @@ class BoxRoom {
   resetLobby() {
     this.scoreParty();
     this.closePoll();
-    this.clearTimers(); this.show = null;
+    this.clearTimers(); this.show = null; this.practice = null;
     if (this.partyMode && this.partyMode.phase !== 'done') this.partyMode.phase = 'playing'; // replaying this game: the board waits for its end
     this.phase = 'lobby';
     this.game = this.def.liveLobby ? this.def.create(this, this.settings) : null;
@@ -739,8 +863,12 @@ class BoxRoom {
     const pm = this.partyMode, inParty = !!(pm && pm.phase !== 'done' && pm.defs[pm.index] === this.def);
     // Party Mode: fit the settings again to the players actually here (unless the host changed them).
     if (inParty) this.partyRefit();
+    // Practice round first (once per game in this room): a short copy of the game that counts for nothing.
+    const practice = this.canPractice() && this.settings.practice === true && !this.practiced.has(this.def.key);
+    this.practice = null;
     if (this.def.liveLobby && this.game) this.game.s = { ...this.settings }; // the lobby world carries on into the game
-    else this.game = this.def.create(this, { ...this.settings });
+    else this.game = this.def.create(this, practice ? this.practiceSettings() : this.settings.practice ? { ...this.settings, practice: false } : { ...this.settings });
+    if (practice) this.practice = { key: this.def.key, game: this.game, phase: 'intro', at: this.now() };
     if (pm && pm.startedAt == null) pm.startedAt = this.now();
     if (this.hasShow() && this.settings.showIntro !== false) {
       const mode = inParty ? pm.intros : 'play';
@@ -759,6 +887,8 @@ class BoxRoom {
   beginGame() {
     this.gameStartAt = this.now(); this.gameNo = (this.gameNo || 0) + 1;
     this.show = null; this.phase = 'game';
+    const P = this.practice;
+    if (P && P.game === this.game && P.phase === 'intro') { P.phase = 'playing'; P.at = this.now(); P.cap = this.after(PRACTICE_MAX_MS, () => this.practiceOver('time')); this.fx('practice', { game: P.key }); }
     this.fx('start');
     this.game.start();
     this.sync();
@@ -771,6 +901,7 @@ class BoxRoom {
       if (msg && msg.op === 'gotit') { const r = this.show.gotit(p); this.sync(); return r; }
       return { ok: false, error: 'The show is about to start!' };
     }
+    if (this.practice && this.practice.phase === 'over') return { ok: false, error: 'Practice is over. The real game starts in a moment!' };
     if (!this.game || !this.game.act) return { ok: false, error: 'The game has not started yet.' };
     const r = this.game.act(p, msg || {}) || { ok: true };
     // A game can answer { quiet: true } when nothing changed (e.g. a rate-limited reaction),
@@ -786,20 +917,20 @@ class BoxRoom {
       fields: this.fieldsOf(), min: this.def.min, max: MAX_PLAYERS, fx: this.fxLog, live: !!this.def.liveLobby,
       vip: this.vip() ? this.vip().name : null, filterOn: this.filterOn, locked: this.locked,
       audience: { count: this.audienceCount(), poll: this.pollView() }, recap: this.recap,
-      players: this.list().map((p) => ({ id: p.id, name: p.name, bot: p.bot, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, online: p.bot || p.sockets > 0, title: p.title || null })),
-      party: this.partyBoard().slice(0, 24), played: this.played.slice(-24), partyMode: this.partyState(true), unlocks: [...this.unlocks], away: this.away,
+      players: this.list().map((p) => ({ id: p.id, name: p.name, bot: p.bot, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, online: p.bot || p.sockets > 0, title: p.title || null, level: p.level || null })),
+      party: this.partyBoard().slice(0, 24), played: this.played.slice(-24), partyMode: this.partyState(true), unlocks: [...this.unlocks], away: this.away, practice: this.practiceState(),
       state: this.game && this.phase !== 'show' ? this.game.tv() : null, show: this.show ? this.show.tv() : null,
     };
   }
   playerState(p) {
     return {
       code: this.code, game: this.def.key, title: this.def.name, phase: this.phase,
-      me: { id: p.id, name: p.name, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, title: p.title || null, profile: !!p.profileId, wallet: !!p.wallet },
-      jg: p.jg || null,
+      me: { id: p.id, name: p.name, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, title: p.title || null, level: p.level || null, profile: !!p.profileId, wallet: !!p.wallet },
+      jg: p.jg || null, prog: p.prog || null,
       roster: this.rosterFor(p),
       audience: this.audienceCount(), recap: this.recap ? personalRecap(this, this.recap, p) : null,
       party: (() => { const b = this.partyBoard(), i = b.findIndex((r) => r.id === p.id); return { played: this.played.length, pts: i >= 0 ? b[i].pts : 0, wins: i >= 0 ? b[i].wins : 0, gain: i >= 0 ? b[i].gain : 0, rank: i + 1, of: b.length, top: b.slice(0, 5) }; })(),
-      partyMode: this.partyState(), unlocks: [...this.unlocks], count: this.players.size,
+      partyMode: this.partyState(), unlocks: [...this.unlocks], count: this.players.size, practice: this.practiceState(),
       away: this.away ? { game: this.away.game, title: this.away.title, code: this.away.code, url: `/play?room=${encodeURIComponent(this.away.code)}&autojoin=1&name=${encodeURIComponent(p.name)}` } : null, min: this.def.min, live: !!this.def.liveLobby,
       vip: !!this.vip() && this.vip().id === p.id, vipName: this.vip() ? this.vip().name : null,
       kickList: this.vip() && this.vip().id === p.id ? this.list().filter((x) => x.id !== p.id).map((x) => ({ id: x.id, name: x.name, avatar: x.avatar, bot: !!x.bot, online: !!x.bot || x.sockets > 0 })) : null,
@@ -809,6 +940,7 @@ class BoxRoom {
 
   // Coalesce: many changes in one tick send one update per screen.
   sync() {
+    this.practiceTick();
     if (!this.nsp || this.pending) return;
     this.pending = true;
     setImmediate(() => { this.pending = false; this.flush(); });
@@ -835,4 +967,4 @@ class BoxRoom {
   destroy() { this.clearTimers(); this.game = null; this.poll = null; }
 }
 
-module.exports = { UNLOCK_RULES, BoxRoom, MAX_PLAYERS, MAX_AUDIENCE, FAV_BONUS, cleanName, cleanText, AVATARS, REACTIONS };
+module.exports = { UNLOCK_RULES, NO_PRACTICE, PRACTICE_END_MS, PRACTICE_MAX_MS, BoxRoom, MAX_PLAYERS, MAX_AUDIENCE, FAV_BONUS, cleanName, cleanText, AVATARS, REACTIONS };

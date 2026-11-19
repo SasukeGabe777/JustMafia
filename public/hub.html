@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/hub.css">
   <link rel="stylesheet" href="/party/party.css">
+  <link rel="stylesheet" href="/hub-onboard.css">
 </head>
 <body>
 <!--
@@ -51,7 +52,7 @@
     <header class="hub-head">
       <div class="brand">
         <h1 class="logo"><span class="just">Just</span><span class="game">Game</span><span class="box">Box</span></h1>
-        <p class="tag">Party games for the big screen. Everyone plays from their phone.</p>
+        <p class="tag">Party games for the big screen. Everyone plays from their phone. <button class="hiw-link" id="hiw-open">▶ How it works <small>1 min</small></button></p>
       </div>
       <div class="head-actions">
         <a class="continue" id="continue" hidden></a>
@@ -59,9 +60,13 @@
         <button class="party-btn" id="party-open"><span class="pb-ic" aria-hidden="true">🎉</span><span class="pb-txt"><b>Party Mode</b><small>A whole night of games, picked for you</small></span></button>
       </div>
     </header>
+    <div class="hub-event" data-season-banner hidden></div> <!-- the seasonal event (public/progress-ui.js, public/shared/seasons.js) -->
     <!-- One code for the night (hub.js): this TV's room is still open, so a game picked here
          switches that room and every phone follows. -->
     <p class="room-live" id="room-live" hidden></p>
+    <!-- New people (public/hub-onboard.js): what's just been unlocked, and "New here? Start with these 5". -->
+    <div class="whats-new" id="whats-new" hidden></div>
+    <section class="new-here" id="new-here" aria-label="New here? Start with these" hidden></section>
 
     <a class="phone-join" href="/box/play">📱 On your phone? <b>Tap here to join a game</b></a>
     <a class="phone-join shop-join" href="/shop?back=/">🛍️ <b>Your character &amp; the JustGold shop</b></a>
@@ -95,6 +100,7 @@
     </section>
 
     <!-- More games: hub.js sorts these onto labelled shelves by type (see the note at the top). -->
+    <div class="unlock-tip" id="unlock-tip" hidden></div>
     <div class="more-head">
       <h2 class="more-title">More games <small id="more-count"></small></h2>
       <nav class="hub-tools" aria-label="Find a game">
@@ -236,9 +242,9 @@
           <div class="meta"><span>👥 1–12 · best 2–6</span><span>⏱ 15–45 min</span><span>🗝️ Co-op mystery</span></div></div>
       </a>
       <a class="tile live pizza" href="/box/tv?game=pizza" data-game="pizza" data-best="3-10" data-type="create">
-        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/pizza.svg" alt="" onerror="this.remove()"><span class="icon">🍕</span></div>
-        <div class="info"><h2>JustPizza</h2><p>A customer shows their pizza for a few seconds. Rebuild it from memory: closest pizza gets the tip.</p>
-          <div class="meta"><span>👥 1–100 · best 3–10</span><span>⏱ 10–15 min</span><span>🍕 Memory & making</span></div></div>
+        <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/pizza.svg" alt="" onerror="this.remove()"><span class="icon">🧑‍🍳</span></div>
+        <div class="info"><h2>YesChef</h2><p>A food court of five kitchens: pizza, tacos, sushi, burgers and sundaes. See the order for a few seconds, rebuild it from memory.</p>
+          <div class="meta"><span>👥 1–100 · best 3–10</span><span>⏱ 10–15 min</span><span>🧑‍🍳 Memory & making</span></div></div>
       </a>
       <a class="tile live undercover" href="/box/tv?game=undercover" data-game="undercover" data-best="4-10" data-type="friends">
         <div class="art" aria-hidden="true"><img class="art-img" src="/art/tiles/undercover.svg" alt="" onerror="this.remove()"><span class="icon">🕵️</span></div>
@@ -268,5 +274,11 @@
   <script src="/hub.js"></script>
   <script src="/party/party.js"></script>
   <script src="/hub-pick.js"></script>
+  <script src="/avatar.js"></script> <!-- the characters in "How it works" -->
+  <script src="/box/portrait.js"></script>
+  <script src="/box/voice.js"></script> <!-- its narrator clips, when there are any -->
+  <script src="/hub-onboard.js"></script>
+  <script src="/shared/seasons.js"></script>
+  <script src="/progress-ui.js"></script>
 </body>
 </html>

@@ -286,8 +286,10 @@
   const TV = { said: null, cv: null, raf: 0, host: null, anim: null, sayUntil: 0, open: false, peek: new Set() };
   function margoSpec() { const I = BOX.intros && BOX.intros.snap; return I && I.host ? I.host : null; }
   function speak(text) {
-    try { if (BOX.voice && BOX.voice.speak) BOX.voice.speak(text, (margoSpec() || {}).voice || {}); } catch (e) { /* no voice */ }
-    const ms = Math.max(1500, text.length * 62); TV.sayUntil = Date.now() + ms; if (TV.anim) TV.anim.talk(performance.now(), ms);
+    // Her lines queue behind one still playing (public/box/voice.js); her mouth moves when it starts.
+    const talk = (ms) => { TV.sayUntil = Date.now() + ms; if (TV.anim) TV.anim.talk(performance.now(), ms); };
+    try { if (BOX.voice && BOX.voice.speak) { BOX.voice.speak(text, (margoSpec() || {}).voice || {}, { onstart: talk }); return; } } catch (e) { /* no voice */ }
+    talk(Math.max(1500, text.length * 62));
   }
   function margoLoop() {
     TV.raf = requestAnimationFrame(margoLoop);

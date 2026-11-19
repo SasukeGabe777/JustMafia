@@ -129,14 +129,14 @@
       { icon: '🎧', title: 'Name that tune', text: 'The TV plays the clip. Each listen is longer. Type the title: typos are fine. You sit out your own songs.', phone: 'Type the title. The artist too = +50.' },
       { icon: '⚡', title: 'Fast pays', text: '300 points at the first note, ticking down to 100 at the buzzer.' },
       { icon: '🔥', title: 'Rate it', text: 'After each song, rate how hard it was: 1 🍼 Too easy to 5 🔥 Impossible. Guessers’ points are multiplied by the average.', phone: 'Tap 1 to 5.' },
-      { icon: '🎯', title: 'The sweet spot', text: 'Your song: some (not all) got it = 150 × difficulty. Everyone got it = 50 ×. Nobody = 0. Pick fun-hard, not impossible!' },
+      { icon: '🎯', title: 'The sweet spot', text: 'Your song: some (not all) got it = 150 × difficulty. Everyone got it = 50 ×. Nobody = 0. Pick fun-hard, not impossible!', say: 'The sweet spot. Your song: if some, but not all, got it, you score 150 times the difficulty. If everyone got it, just 50 times. If nobody did, zero. Pick fun-hard, not impossible!' },
     ],
     theme: { accent: PINK, accent2: CYAN, accent3: GOLD, ink: '#fbf3ff', fade: '#06010f', rim: CYAN,
       floor1: '#2a0b5c', floor2: '#0d0326', disc1: '#3a0b5e', disc2: '#150437', pod1: '#231d36', pod2: '#17132a', podTop: PINK, seat: '#231d36', audWall1: '#150437', audWall2: '#06010f',
       spots: ['255,61,139', '56,232,255', '255,210,63', '255,255,255'], confetti: [PINK, CYAN, GOLD, '#5ff09a', '#ffffff', '#b07cff'] },
     host: {
       name: 'DJ Wavelength',
-      voice: { kokoro: 'af_nova', speed: 1.12, gender: 'f', like: /female|aria|jenny|emma|ava|samantha/i, accent: /en-(US|GB)/i, pitch: 1.1, rate: 1.1 },
+      voice: { kokoro: 'af_nova', speed: 1.0, gender: 'f', like: /female|aria|jenny|emma|ava|samantha/i, accent: /en-(US|GB)/i, pitch: 1.1, rate: 1.04 },
       look: { skin: '#8d5a3b', skinShade: '#6f4329', suit: '#3a0b5e', suit2: '#22073a', lapel: PINK, shirt: '#14052e', tie: 'none', hair: 'curly', hairColor: '#1a0b2a', brow: '#1a0b2a', glasses: CYAN, prop: 'headset', grin: true, sparkle: CYAN },
     },
     lines: {

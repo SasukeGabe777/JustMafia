@@ -152,7 +152,7 @@ class Game {
   pickOf(a) { return a[Math.floor(this.rng() * a.length) % a.length]; }
   shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   setTimer(ms, fn) { this.room.cancel(this.timer); this.endsAt = this.now() + ms; this.timer = this.room.after(Math.max(0, ms), fn); }
-  stat(id) { let s = this.stats.get(id); if (!s) { s = { moleWins: 0, moleCases: 0, rightVotes: 0, votes: 0, survived: 0, cracked: 0, found: 0, agentWins: 0 }; this.stats.set(id, s); } return s; }
+  stat(id) { let s = this.stats.get(id); if (!s) { s = { moleWins: 0, moleCases: 0, rightVotes: 0, votes: 0, survived: 0, cracked: 0, found: 0, agentWins: 0, caught: 0 }; this.stats.set(id, s); } return s; }
   add(id, n) { this.points.set(id, (this.points.get(id) || 0) + n); if (this.c) this.c.gains.set(id, (this.c.gains.get(id) || 0) + n); }
   active(p) { return !!p && (p.bot || p.sockets > 0); }
   pub(id) { const p = this.room.get(id); return p ? { id, name: p.name, avatar: p.avatar, color: p.color, bot: !!p.bot } : { id, name: '—', avatar: '👻', color: '#888' }; }
@@ -329,6 +329,7 @@ class Game {
     const ej = { cycle: c.cycle, id: tie ? null : top.id, tie, tally: rows, mole: null };
     if (!tie) {
       const r = c.roles.get(top.id); ej.mole = !!(r && r.mole);
+      if (ej.mole) for (const v of top.by) { const vr = c.roles.get(v); if (vr && !vr.mole) this.stat(v).caught++; } // their vote unmasked the mole
       if (c.kind === 'words' && r) { r.out = true; r.outCycle = c.cycle; }
     }
     // Moles still hidden after an interrogation (Word Clues) earn points for slipping by.
@@ -441,6 +442,8 @@ class Game {
       .sort((a, b) => b.points - a.points || b.moleWins - a.moleWins || a.name.localeCompare(b.name));
   }
   results() { return this.phase === 'over' ? this.standings().map((r) => r.id) : []; }
+  // Profile challenges (box/progress.js): how often this agent's vote caught the mole.
+  challengeEvents(id) { const s = this.stats.get(id); return s ? { mole: s.caught || 0 } : {}; }
   next() {
     const c = this.c;
     if (this.phase === 'brief') return this.beginCycle();

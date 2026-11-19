@@ -141,11 +141,19 @@ class BoxProfileStore {
   setTitle(id, trophyId) {
     const p = this.get(id); if (!p) return { ok: false, error: 'No profile.' };
     if (trophyId == null || trophyId === '') { p.title = null; this.saveSoon(); return { ok: true, profile: this.view(id) }; }
-    if (!p.trophies.some((t) => t.id === trophyId)) return { ok: false, error: 'Earn that trophy first.' };
+    // Level and season-pass titles (box/progress.js, on the wallet): ids 'p:<title id>'.
+    if (typeof trophyId === 'string' && trophyId.startsWith('p:')) { if (!this.progressTitles(id).some((t) => 'p:' + t.id === trophyId)) return { ok: false, error: 'Earn that title first.' }; }
+    else if (!p.trophies.some((t) => t.id === trophyId)) return { ok: false, error: 'Earn that trophy first.' };
     p.title = trophyId; this.saveSoon();
     return { ok: true, profile: this.view(id) };
   }
-  titleOf(id) { const p = this.get(id); return p && p.title && TROPHY[p.title] ? TROPHY[p.title].title : null; }
+  titleOf(id) {
+    const p = this.get(id); if (!p || !p.title) return null;
+    if (p.title.startsWith('p:')) { const t = this.progressTitles(id).find((x) => 'p:' + x.id === p.title); return t ? t.text : null; }
+    return TROPHY[p.title] ? TROPHY[p.title].title : null;
+  }
+  // Titles earned by levels and season passes: installBox sets `titlesOf(accountId) -> [{ id, text }]`.
+  progressTitles(id) { try { return typeof this.titlesOf === 'function' ? this.titlesOf(id) || [] : []; } catch (e) { return []; } }
   // ---- results ----
   // One night = one box room. The first result in a room counts the night.
   night(p, roomKey, label) {
@@ -207,6 +215,7 @@ class BoxProfileStore {
     return {
       id: p.id, name: p.name, claimed: p.claimed, hasPassword: !!p.password, hasPin: !!p.password, created: p.created, title: p.title, titleText: this.titleOf(id),
       stats: { ...p.stats, byGame: Object.entries(p.stats.byGame).map(([game, g]) => ({ game, ...g })).sort((a, b) => b.played - a.played || b.won - a.won) },
+      levelTitles: this.progressTitles(id).map((t) => ({ id: 'p:' + t.id, text: t.text })),
       trophies: TROPHIES.map((t) => ({ id: t.id, icon: t.icon, name: t.name, title: t.title, how: t.how, earned: got.has(t.id), at: got.get(t.id) || null })),
       nights: p.nights.slice().reverse().map(({ room, ...n }) => n),
       storage: this.filename ? 'Saved on this game server' : 'Session-only storage',

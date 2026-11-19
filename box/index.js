@@ -80,23 +80,28 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
     if (!ph || !ph.body) return res.status(404).type('text/plain').send('Not found');
     res.type(ph.type).send(ph.body);
   });
+  // Level and season-pass titles live on the wallet (box/progress.js); the account can wear them.
+  if (profiles && wallets && typeof wallets.titlesOf === 'function') profiles.titlesOf = (accId) => { const w = profiles.walletOf(accId); return w && wallets.data.profiles[w] ? wallets.titlesOf(w) : []; };
   // ---------- JustGold helpers ----------
   const shared = { cos: require('../public/shared/cosmetics'), gear: (() => { try { return require('../public/shared/gear'); } catch (e) { return { GEAR: [] }; } })() };
   const GEAR_IDS = () => new Set((shared.gear.GEAR || []).map((g) => g.id));
   // Items the shared shop sells: the character (every game), flair, JustMafia's own things. The
   // season pass, Fate and world rewards stay inside JustMafia.
-  const SHOP_FORBIDDEN = (itemId) => { const it = (shared.cos.CATALOG || []).find((i) => i.id === itemId); return it && (it.pass || it.world) ? { ok: false, error: 'That one is earned inside JustMafia (season pass / worlds).' } : null; };
+  const SHOP_FORBIDDEN = (itemId) => { const it = (shared.cos.CATALOG || []).find((i) => i.id === itemId); return it && (it.pass || it.world) ? { ok: false, error: 'That one is earned, not sold: a season pass tier or a JustMafia world.' } : null; };
   const BOX_FIELDS = { character: ['outfit', 'shoeStyle', 'hat', 'accessory', 'hair'], flair: ['nameplate', 'effect'], mafia: ['houseStyle', 'houseDecor', 'deathAnim', 'reactions', 'ghostSkin'] };
   const sectionOf = (field) => Object.keys(BOX_FIELDS).find((k) => BOX_FIELDS[k].includes(field)) || null;
   const STOCKABLE_IDS = new Set((shared.cos.STOCKABLE || []).map((x) => x.id));
   const { earnTable } = require('./gold');
+  const SS = require('../public/shared/shop-season'); // event items, daily deals, theme sets
   function busyNow(accountId, w) {
     for (const r of rooms.values()) if ((r.phase === 'game' || r.phase === 'show') && r.game && r.game.phase !== 'over' && [...r.players.values()].some((p) => p.profileId === accountId && !p.bot)) return true;
     try { return !!walletBusy(w); } catch (e) { return false; }
   }
-  function lockOf(p, i, owned, stock) {
+  function lockOf(p, i, owned, stock, now) {
     if (owned.has(i.id) || i.free) return null;
-    if (i.pass) return 'Season pass reward (in JustMafia)';
+    const limited = SS.limitedLock(i.id, now); if (limited) return limited;
+    if (SS.isDeal(i.id, now) || SS.SET_OF[i.id]) stock = new Set([...stock, i.id]); // deals and set pieces are on sale for everyone
+    if (i.pass) return 'A season pass reward (🏆 My profile → Season)';
     if (i.world) return 'A JustMafia world reward';
     if (i.achievement && !(p.achievements || []).includes(i.achievement)) return ((shared.cos.ACHIEVEMENTS || {})[i.achievement] || {}).label || 'Earn its achievement first';
     if (i.requires && !owned.has(i.requires)) return 'Own the tier below first';
@@ -104,20 +109,25 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
     return null;
   }
   function shopState(prof, w) {
-    const p = wallets.data.profiles[w], owned = new Set(p.owned || []), stock = new Set(p.stock || []);
+    const p = wallets.data.profiles[w], owned = new Set(p.owned || []), stock = new Set(p.stock || []), now = wallets.now();
+    // Seasons, deals and sets: `price` is what it costs today (a deal may be cheaper than `cost`).
+    const sale = (id) => { const pr = SS.priceOf(id, now) || {}; const lim = SS.limitedInfo(id, now); return { price: pr.cost, pct: pr.pct || 0, limited: lim, set: SS.SET_OF[id] || null }; };
     const catalog = (shared.cos.CATALOG || []).filter((i) => sectionOf(i.field)).map((i) => ({
       id: i.id, field: i.field, value: i.value, name: i.name, cost: i.cost, free: !!i.free, section: sectionOf(i.field), category: i.category, description: i.description || '',
-      owned: owned.has(i.id) || !!i.free, lock: lockOf(p, i, owned, stock),
+      owned: owned.has(i.id) || !!i.free, lock: lockOf(p, i, owned, stock, now), ...sale(i.id),
     }));
-    const gearCatalog = (shared.gear.GEAR || []).map((g) => ({ ...g, owned: owned.has(g.id), equipped: !!(p.gear && p.gear[g.game] && p.gear[g.game][g.slot] === g.id) }));
-    return { name: prof.name, claimed: !!prof.claimed, gold: p.coins, earned: p.goldEarned, spent: p.goldSpent, look: wallets.validateAvatar(w, p.avatar || {}), lookSaved: !!p.lookSaved, home: p.home || null, owned: [...owned], gear: p.gear || {}, catalog, gearCatalog, ledger: (p.ledger || []).slice(0, 20), earn: earnTable(), busy: busyNow(prof.id, w) };
+    const gearCatalog = (shared.gear.GEAR || []).map((g) => ({ ...g, owned: owned.has(g.id), equipped: !!(p.gear && p.gear[g.game] && p.gear[g.game][g.slot] === g.id), ...sale(g.id) }));
+    const look = wallets.validateAvatar(w, p.avatar || {});
+    return { name: prof.name, claimed: !!prof.claimed, gold: p.coins, earned: p.goldEarned, spent: p.goldSpent, look, lookSaved: !!p.lookSaved, home: p.home || null, owned: [...owned], gear: p.gear || {}, catalog, gearCatalog, ledger: (p.ledger || []).slice(0, 20), earn: earnTable(), busy: busyNow(prof.id, w),
+      ...SS.shopExtras(now, owned, look) };
   }
   // A room player wears their account's look and gear.
   function dressUp(p) {
     if (!wallets || !p || !p.profileId) return;
     const w = profiles.walletOf(p.profileId);
-    if (!w || !wallets.data.profiles[w]) { p.wallet = null; p.look = null; p.gear = {}; return; }
+    if (!w || !wallets.data.profiles[w]) { p.wallet = null; p.look = null; p.gear = {}; p.level = null; return; }
     p.wallet = w; p.look = wallets.lookOf(w); p.gear = wallets.gearValues(w);
+    try { p.level = typeof wallets.levelOf === 'function' ? wallets.levelOf(w) : null; } catch (e) { p.level = null; }
   }
   // After a purchase or a change: everyone wearing that account, in any room, updates.
   function redress(accountId) { for (const r of rooms.values()) { let hit = false; for (const p of r.players.values()) if (p.profileId === accountId) { dressUp(p); hit = true; } if (hit) r.sync(); } }
@@ -187,6 +197,7 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
       const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true, profiles, wallets }));
       room.setUnlocks(msg.unlocks);
       if (room.isLocked(def)) return reply(cb, { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim(), locked: true });
+      room.setOnboard(msg.onboard); // { newbie, seen }: a new TV gets practice rounds by default
       if (lineup && lineup.length) room.setParty(lineup, msg.party.minutes, msg.party.flow, msg.party);
       rooms.set(room.code, room);
       detach(); socket.data = { code: room.code, host: true }; socket.join('host:' + room.code);
@@ -270,6 +281,9 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
     socket.on('shop:state', (msg, cb) => { const { prof, w } = walletOfAuth(msg.auth); if (!w) return reply(cb, { ok: false, error: prof ? 'No wallet yet.' : 'Make your character first.', noWallet: !!prof }); reply(cb, { ok: true, ...shopState(prof, w) }); });
     socket.on('shop:buy', (msg, cb) => shopDo(msg, cb, (w) => (GEAR_IDS().has(msg.itemId) ? wallets.buyGear(w, msg.itemId) : SHOP_FORBIDDEN(msg.itemId) || wallets.buy(w, msg.itemId))));
     socket.on('shop:equip', (msg, cb) => shopDo(msg, cb, (w) => (GEAR_IDS().has(msg.itemId) ? wallets.equipGear(w, msg.itemId, msg.on !== false) : wallets.equip(w, msg.itemId, msg.on !== false))));
+    // Theme sets: buy the missing pieces as one bundle (and put the set on), or wear an owned set.
+    socket.on('shop:bundle', (msg, cb) => shopDo({ ...msg, itemId: undefined }, cb, (w) => wallets.buySet(w, String((msg && msg.setId) || ''), !!(msg && msg.wear))));
+    socket.on('shop:wearSet', (msg, cb) => shopDo({ ...msg, itemId: undefined }, cb, (w) => wallets.wearSet(w, String((msg && msg.setId) || ''))));
     socket.on('shop:look', (msg, cb) => shopDo(msg, cb, (w) => { wallets.select(w, msg.look && typeof msg.look === 'object' && !Array.isArray(msg.look) ? msg.look : {}); const p = wallets.data.profiles[w]; p.lookSaved = true; wallets.save(); return { ok: true }; }));
     function shopDo(msg, cb, fn) {
       const { prof, w } = walletOfAuth(msg.auth); if (!w) return reply(cb, { ok: false, error: 'Make your character first.' });
@@ -279,6 +293,35 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
       if (r.ok) redress(prof.id);
       reply(cb, { ok: !!r.ok, error: r.error, state: shopState(prof, w) });
     }
+    // ---------- progression (box/progress.js): level, challenges, the season pass ----------
+    const progressReply = (prof, w, extra = {}) => ({ ok: true, ...extra, progress: wallets.progressView(w), gold: wallets.coins(w), name: prof.claimed || prof.name, title: profiles.titleOf(prof.id) });
+    const progressWallet = (msg, cb) => {
+      if (!wallets || typeof wallets.progressView !== 'function') { reply(cb, { ok: false, error: 'Progress is off on this server.' }); return null; }
+      const { prof, w } = walletOfAuth(msg.auth);
+      if (!w) { reply(cb, { ok: false, noWallet: !!prof, error: prof ? 'Open the shop once to start your profile.' : 'Make your character first.' }); return null; }
+      return { prof, w };
+    };
+    socket.on('progress:get', (msg, cb) => { const x = progressWallet(msg, cb); if (x) reply(cb, progressReply(x.prof, x.w)); });
+    // Tests and screenshots only (MT_DEV_GRANTS=1, like JustMafia's dev:grant): XP / JustGold as if a game paid it.
+    if (process.env.MT_DEV_GRANTS === '1') socket.on('dev:progress', (msg, cb) => {
+      const x = progressWallet(msg, cb); if (!x) return;
+      if (msg.gold) wallets.grant(x.w, msg.gold);
+      const news = wallets.progressGame(x.w, { id: 'dev:' + Date.now() + ':' + Math.random(), game: typeof msg.game === 'string' ? msg.game : 'likely', kind: 'box', xp: Math.max(0, Math.min(100000, Number(msg.xp) || 0)), place: 1, of: 4, won: !!msg.won, tags: {} });
+      for (const r of rooms.values()) { let hit = false; for (const p of r.players.values()) if (p.profileId === x.prof.id) { r.progressNews(p, news); hit = true; } if (hit) r.sync(); }
+      reply(cb, progressReply(x.prof, x.w, { news }));
+    });
+    socket.on('progress:reroll', (msg, cb) => {
+      const x = progressWallet(msg, cb); if (!x) return;
+      const r = wallets.rerollChallenge(x.w, msg.period, msg.id);
+      reply(cb, r.ok ? progressReply(x.prof, x.w, { replaced: r.replaced, id: r.id }) : { ok: false, error: r.error });
+    });
+    socket.on('progress:premium', (msg, cb) => {
+      const x = progressWallet(msg, cb); if (!x) return;
+      if (busyNow(x.prof.id, x.w)) return reply(cb, { ok: false, error: 'You can get the pass after this game.', busy: true });
+      const r = wallets.buyPass(x.w);
+      if (r.ok) redress(x.prof.id);
+      reply(cb, r.ok ? progressReply(x.prof, x.w, { rewards: r.rewards }) : { ok: false, error: r.error });
+    });
     socket.on('profile:create', (msg, cb) => {
       if (!profiles) return reply(cb, { ok: false, error: 'Profiles are off on this server.' });
       const now = Date.now(); if (now - (socket.data.lastProfile || 0) < 1500) return reply(cb, { ok: false, error: 'One moment…' });

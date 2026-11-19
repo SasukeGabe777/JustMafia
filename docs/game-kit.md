@@ -34,6 +34,15 @@ Then replace the placeholder with the real game, and restart the server.
 | Party fit | `partyFit({ players, minutes })` in the module | Party Mode picks the game's settings when it starts: the players in the room and this game's minutes in the plan (the setup's "Each game" length). Return only the fields that matter (rounds, timers, mode…), most telling first: the TV shows the first three labels ("5 orders · 45 seconds"). `PF.best(grid, estimate, minutes)` from `box/party-fit.js` picks the options whose estimated minutes come closest. Invalid values are dropped. `node tools/test-party-plan.js` checks every game. |
 | Characters + gear | `BOX.face` / `BOX.body` / `BOX.drawChar` (`public/box/portrait.js`) + `public/shared/gear.js` | Show players as their character, never just their emoji: `BOX.face(p, size)` in lists, `BOX.body(p, h)` or `BOX.drawChar(ctx, x, y, p, o)` where the game stages people (it falls back to the emoji). Gear: 3–12 items in the JustGold shop, with at least one **wearable** slot (`spot`: head/face/hand/chest/back, `paint.shape` from `public/wear-art.js`) that the character wears in your game automatically. Optional object slots (a marble skin, a card back…): copy `gear: gearSet(p, '<key>')` into the per-player data on the server and draw `MT_GEAR.paint('<key>', slot, x.gear)` (null = the normal look). `tools/test-box-gear.js` checks every game. |
 
+## Practice round
+
+Every game gets a "Practice round first" lobby setting for free (`box/room.js`): the game runs once
+with its `partyFit` for 2 minutes and the fewest rounds, records nothing, then the real game starts
+without the intro. The phones' tips are the intro's `tutorial` steps. It ends at the game's end or the
+first new `round` / `n` in `tv()` after a minute. A game can shape it with
+`practiceSettings({ players, settings }) → { … }`, or opt out with `practice: false` (no setting).
+`node tools/test-practice.js` runs every game's practice with bots.
+
 ## Unlockable games
 
 Add `locked: { how: 'Finish a Party Mode to unlock it.' }` to the module, the game to
@@ -41,8 +50,19 @@ Add `locked: { how: 'Finish a Party Mode to unlock it.' }` to the module, the ga
 Party Mode currently unlocks every locked game. The main menu's ⚙ menu can unlock or re-lock
 everything for testing.
 
+## Narrator voice
+
+Every static line the intro speaks (opening `say` lines, `roll`/`play`, each tutorial step, NPC
+`story` lines) is a pre-rendered Kokoro clip: run `npm run voices` after changing any of them.
+Give the host a `voice: { kokoro, speed }` that fits how they are drawn, at a natural speed
+(1.0, at most 1.1). Don't time anything to "fit" a line: the server stretches each shot, the roll
+call, the outro and every how-to step to the clip's length (`box/narration.js`), lines queue on the
+TV instead of cutting each other off (`public/box/voice.js`), and only the host's Skip cuts one.
+If a tutorial step has emoji or symbols in the middle of a sentence, give it a `say:` with the
+words to read out. In-game NPC lines: `BOX.voice.speak(text, host.voice, { onstart })`.
+
 ## Checks before shipping
 
-- `node tools/test-box-<key>.js` and `node tools/test-box-kit.js`
+- `node tools/test-box-<key>.js`, `node tools/test-box-kit.js` and `node tools/test-voice-timing.js`
 - `node tools/shot-titles.js <key>` (title screen plus Start → lobby, screenshots)
 - `node tools/e2e-box.js` (every game on real TV and phone pages, no page errors)

@@ -125,7 +125,7 @@
     tutorial: [
       { icon: '🎯', title: 'Aim', text: 'Pick where to drop your ball along the top of the board.', phone: 'Tap along the top of the board, then tap 🎯 Drop here!', say: 'Step right up! First, pick where to drop your ball along the top of the board.' },
       { icon: '✏️', title: 'Draw one line', text: 'See where everyone is dropping, then draw ONE line to steer balls: yours to the jackpot, a rival’s into a bust.', phone: 'Draw with your finger (2 strokes max), then tap ✅ Done!' },
-      { icon: '⬇️', title: 'Drop!', text: 'Every ball drops at once. Slots pay money, ×2 doubles your round, STEAL robs the leader and BUST costs you.' },
+      { icon: '⬇️', title: 'Drop!', text: 'Every ball drops at once. Slots pay money, ×2 doubles your round, STEAL robs the leader and BUST costs you.', say: 'Drop! Every ball drops at once. Slots pay money, times two doubles your round, steal robs the leader, and bust costs you.' },
       { icon: '💸', title: 'Line bonuses', text: 'Your line pays you too: 20% of any good slot a ball you touched lands in, +50 for every rival you bust.' },
       { icon: '🎁', title: 'Power-ups', text: 'Star pegs and 🎁 slots give power-ups: Sticky Ball, Mega Ball, Twin Drop, Eraser and Ink Refill.', phone: 'Got a power-up? Tap it before you lock in your drop.' },
       { icon: '🏆', title: 'Winning', text: 'Each round the board gets harder, and old lines stay as ghosts. Most money wins!' },
@@ -133,7 +133,7 @@
     theme: { accent: '#ffd23f', accent2: '#ff2f7d', accent3: '#3ee6ff', ink: '#fff4d6', fade: '#0b0216', confetti: ['#ffd23f', '#ff2f7d', '#3ee6ff', '#ffffff', '#8bd346'] },
     host: {
       name: 'Rocco Ricochet',
-      voice: { kokoro: 'am_liam', speed: 1.15, like: /guy|davis|christopher|eric|andrew|brian|male/i, accent: /en-US/i, pitch: 1.05, rate: 1.12 },
+      voice: { kokoro: 'am_liam', speed: 0.95, like: /guy|davis|christopher|eric|andrew|brian|male/i, accent: /en-US/i, pitch: 1.05, rate: 1.05 },
       look,
     },
     lines: {

@@ -14,8 +14,13 @@
      'facts'  step 'facts': opening shots, then the host chats while phones write a fun fact
               (engine: waiting panel + banter + audience cutaways);
               step 'intros': one reveal per featured contestant (perMs each), then the outro.
-     'cast'   step 'intros' only: opening shots (openMs, the intro's shots are squeezed to
-              fit), a quick roll call of `featured` (perMs each, "…and N more!"), the outro.
+     'cast'   step 'intros' only: opening shots (openMs), a quick roll call of `featured`
+              (perMs each, "…and N more!"; rollMs in all), the outro (outroMs).
+   NARRATION TIMING: the server sizes every narrated stretch to its voice clip (box/narration.js):
+     show.openShots = each opening shot's ms (a shot with `say` lasts sayAt + the clip + a margin;
+     `fit` is no longer used: lines are never sped up), rollMs / moreAt, outroMs, slots (facts-mode
+     reveals), wallMs; the how-to gets howStepsMs. Lines queue (public/box/voice.js), so nothing is
+     cut off mid-word; the host's Skip cuts the voice (fx 'voiceCut', public/box/tv.js).
 
    WRITING AN INTRO  ->  public/box/intros/<gameKey>.js  (loaded on demand by the engine)
 
@@ -26,7 +31,7 @@
                 confetti: ['#hex', ...] },
        host: {                                   // or null for no host / narrator only
          name: 'Sterling Sparks',                // subtitle speaker tag
-         voice: { kokoro: 'am_puck', speed: 1.15,  // Kokoro voice + speed for the pre-rendered
+         voice: { kokoro: 'am_puck', speed: 1.05,  // Kokoro voice + speed for the pre-rendered
                   like: /guy|male/i, accent: /en-US/i, pitch: 1.1, rate: 1.1 }, // clips (npm run voices; public/box/voice.js); the rest picks the browser fallback voice
          look: { ... },                          // a BOX.studio.makeHost spec (see below) OR
          draw(g, a) { ... },                     // your own drawing; a = see HOST ANIM below
@@ -49,7 +54,7 @@
        logo(g, s, lit) {},                       // the show logo centred on (0,0), ~700x260
        opening: [                                // the opening shots, in order
          { ms: 4800, draw(g, s) {},              //   s.T ms into the shot, s.k 0..1
-           say: 'welcome', sayAt: 300, fit: 4000,//   a line from `lines` (optional)
+           say: 'welcome', sayAt: 300,           //   a line from `lines` (optional; the shot is stretched to fit it)
            sfx: [[150, 'swell']],                //   BOX.sfx cues [msIntoShot, name]
            pose: [[0, 'wave', 2400]],            //   host pose cues [ms, pose, holdMs]
            crowd: [[500, 'cheer', 3000]] },      //   crowd mood cues [ms, mood, holdMs]
@@ -229,19 +234,21 @@
     B.voice.pick = voiceFor; B.voice.voices = () => voices.slice();
     const clean = (s) => String(s || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}]/gu, '').replace(/["“”]/g, '').replace(/\s+/g, ' ').trim();
     // Returns how long the line takes (ms, estimated), so the mouth and subtitles keep going even with no voice.
-    function say(str, V, fitMs) {
-      V = V || { pitch: 1, rate: 1.05 };
+    // The line is never sped up to fit (fitMs is ignored: the server times the scenes to the voice
+    // clips, box/narration.js); with public/box/voice.js loaded it queues behind a line still playing.
+    // o: speak options for voice.js ({ maxWait, key, onstart }).
+    function say(str, V, fitMs, o) {
+      V = V || { pitch: 1, rate: 1 };
       const t = clean(str); if (!t) return 0;
-      const base = t.length * 60 + 350;
-      let r = V.rate || 1;
-      if (fitMs) r = clamp(base / fitMs, r, r * 1.45);
-      let est = base / r;
-      try { const ms = B.voice.clipMs && B.voice.clipMs(t, { ...V, rate: r }); if (ms) est = ms; } catch { /* estimate */ }
+      const r = V.rate || 1;
+      let est = (t.length * 70 + 500) / r;
+      try { const ms = B.voice.clipMs && B.voice.clipMs(t, V); if (ms) est = ms; } catch { /* estimate */ }
       if (window.SFX && window.SFX.enabled === false) return est;
+      if (B.voice.engine === 'kokoro') { try { B.voice.speak(t, V, o || {}); } catch { /* subtitles only */ } return est; } // it ducks the music itself
       const tok = ++token;
       duck(true); clearTimeout(safety);
       safety = setTimeout(() => { if (tok === token) duck(false); }, est + 2500);
-      let p = null; try { p = B.voice.speak(t, { ...V, rate: r }); } catch { /* subtitles only */ }
+      let p = null; try { p = B.voice.speak(t, V); } catch { /* subtitles only */ }
       Promise.resolve(p).catch(() => {}).then(() => setTimeout(() => { if (tok === token) { clearTimeout(safety); duck(false); } }, 300));
       return est;
     }
@@ -607,7 +614,7 @@
   }
   intros.generic = {
     theme: GEN_THEME,
-    host: { name: 'Vicky Volume', voice: { kokoro: 'af_heart', speed: 1.15, like: /aria|jenny|ava|emma|samantha|zira|female/i, accent: /en-US/i, pitch: 1.2, rate: 1.1 },
+    host: { name: 'Vicky Volume', voice: { kokoro: 'af_heart', speed: 1.0, like: /aria|jenny|ava|emma|samantha|zira|female/i, accent: /en-US/i, pitch: 1.2, rate: 1.04 },
       look: { skin: '#8d5a3b', suit: '#16b8b0', suit2: '#0b6f6a', lapel: '#ff4f9a', shirt: '#1b1240', tie: 'none', hair: 'curly', hairColor: '#7b3fe4', brow: '#2a1240', prop: 'headset', grin: true, sparkle: '#c9fffb' } },
     lines: {
       welcome: 'Welcome, welcome to {title}! I\'m Vicky Volume, and tonight we turn it UP!',
@@ -704,6 +711,7 @@
     setIntro() {
       const I = introFor(this.key);
       if (I === this.I) return;
+      if (I.onShow && this.show) try { I.onShow(this.show); } catch (e) { console.error(e); } // the intro adapts to the game (e.g. YesChef's kitchen)
       this.I = I; this.theme = themeOf(I); this.A = new HostAnim(I.host || {}); this._draw = null;
       this.el.style.setProperty('--si-accent', this.theme.accent); this.el.style.setProperty('--si-accent2', this.theme.accent2);
       this.whoEl.textContent = I.host ? I.host.name : ''; this.whoEl.hidden = !I.host;
@@ -715,6 +723,8 @@
       else if (Math.abs(start - this.stepStart) > 900) this.stepStart = start;
       this.endsAt = now + (Number(show.endsIn) || 0);
       this.show = show; this.mode = show.mode === 'cast' ? 'cast' : 'facts';
+      // An intro with onShow(show) adapts to the game's extra info (show.extra): its host may change.
+      if (this.I.onShow) { try { if (this.I.onShow(show)) { this.theme = themeOf(this.I); this._draw = null; this.A = new HostAnim(this.I.host || {}); } } catch (e) { console.error(e); } this.whoEl.textContent = this.I.host ? this.I.host.name : ''; this.whoEl.hidden = !this.I.host; }
       this.title = show.title || this.I.title || '';
       this.el.querySelector('.si-title').textContent = this.I.title || this.title;
       this.renderFacts(show);
@@ -734,9 +744,9 @@
     alive() { return this.el.isConnected; }
     lines() { return { ...intros.generic.lines, ...(this.I.lines || {}) }; }
     line(k, v = {}) { const L = this.lines()[k]; return fill(Array.isArray(L) ? L[(v.i || 0) % L.length] : L, { title: this.I.title || this.title, ...v }); }
-    say(str, fitMs, now = performance.now()) {
+    say(str, fitMs, now = performance.now(), o) {
       if (!str) return;
-      const est = Speech.say(str, this.I.host && this.I.host.voice, fitMs);
+      const est = Speech.say(str, this.I.host && this.I.host.voice, fitMs, o);
       if (this.I.host) this.A.talk(now, est);
       this.lineEl.textContent = str; this.subEl.classList.add('on'); this.subUntil = now + est + 1200;
     }
@@ -763,8 +773,15 @@
       if (shot.say) this.cue(shot._id + 'say', shot._at + (shot.sayAt || 0) * sc, total, () => { this.say(this.line(shot.say), (shot.fit || 3500) * sc, now); if (shot.say === 'meet') this.saidMeet = true; });
       g0(this.g, s, () => shot.draw(this.g, s));
     }
-    // The opening shots laid out on the step clock (squeezed to `room` ms when given).
+    // The opening shots laid out on the step clock. The server sends each shot's length
+    // (show.openShots: a shot the narrator speaks in is stretched to fit the line, box/narration.js);
+    // without it (another intro still loading, an old server) they are squeezed to `room` ms.
     opening(list, room) {
+      const ms = this.show && this.show.openShots;
+      if (Array.isArray(ms) && ms.length === list.length) {
+        let at = 0;
+        return list.map((x, i) => { const o = Object.assign(Object.create(x), { ms: Math.max(1, ms[i]), _at: at, _scale: 1, _id: 'o' + i }); at += o.ms; return o; });
+      }
       const total = list.reduce((a, x) => a + x.ms, 0), sc = room ? Math.min(1, room / total) : 1; let at = 0;
       return list.map((x, i) => { const o = Object.assign(Object.create(x), { ms: x.ms * sc, _at: at, _scale: sc, _id: 'o' + i }); at += o.ms; return o; });
     }
@@ -816,16 +833,19 @@
     // ---- facts mode, step 'intros': one reveal per featured contestant, then the outro ----
     reveals(T, now) {
       const S = this.show, F = S.featured || [], n = F.length, per = S.perMs || 5200;
+      // Each reveal lasts S.slots[i] (the server sizes it to the host's line), else perMs.
+      const slot = (i) => (Array.isArray(S.slots) && S.slots[i] ? S.slots[i] : per);
+      let at = 0, i = 0; while (i < n && T >= at + slot(i)) { at += slot(i); i++; }
       this.factsEl.hidden = true;
-      if (T < n * per) {
-        const i = Math.floor(T / per), Ti = T - i * per, c = F[i];
-        this.cue('w' + i, i * per, T, () => sfx('whoosh'));
-        this.cue('c' + i, i * per + 320, T, () => { sfx('cheer'); this.setCrowd('cheer', 2600, now); });
-        this.cue('l' + i, i * per + 250, T, () => { this.say(this.factLine(i, c, n), per - 700, now); this.saidMeet = true; this.A.setPose('pointL', 1800, now); });
-        this.contestant(c, i, Ti, per);
+      if (i < n) {
+        const Ti = T - at, c = F[i], len = slot(i);
+        this.cue('w' + i, at, T, () => sfx('whoosh'));
+        this.cue('c' + i, at + 320, T, () => { sfx('cheer'); this.setCrowd('cheer', 2600, now); });
+        this.cue('l' + i, at + 250, T, () => { this.say(this.factLine(i, c, n), 0, now, { maxWait: 9000 }); this.saidMeet = true; this.A.setPose('pointL', 1800, now); });
+        this.contestant(c, i, Ti, len);
         return 'c' + i;
       }
-      return this.outro(T - n * per, now, S.outroMs || 6000);
+      return this.outro(T - at, now, S.outroMs || 6000);
     }
     factLine(i, c, n) {
       const L = this.lines(), v = { name: c.name, n: i + 1 };
@@ -902,16 +922,18 @@
     // ---- cast mode: opening, quick roll call, outro ----
     cast(T, now) {
       const S = this.show, open = S.openMs || 7000, per = S.perMs || 900, F = S.featured || [], n = F.length;
+      const rollMs = S.rollMs || n * per; // the server makes the roll call as long as its lines
       this.factsEl.hidden = true;
       if (T < open) { const list = this.opening(this.I.castOpening || this.I.opening || intros.generic.castOpening, open), sh = list.find((x) => T < x._at + x.ms) || list[list.length - 1]; this.runShot(sh, T - sh._at, now, T); return sh._id; }
-      if (T < open + n * per) { this.roll(T - open, now, F, per); return 'roll'; }
-      return this.outro(T - open - n * per, now, S.outroMs || 3000);
+      if (T < open + rollMs) { this.roll(T - open, now, F, per, rollMs); return 'roll'; }
+      return this.outro(T - open - rollMs, now, S.outroMs || 3000);
     }
-    roll(u, now, F, per) {
+    roll(u, now, F, per, rollMs) {
       const g = this.g, s = this.s, th = this.theme, n = F.length, more = (this.show.others || []).length;
-      this.cue('roll', open0(this) + 0, open0(this) + u, () => { this.say(this.line('roll'), Math.min(2400, n * per), now); this.A.setPose('point', 1600, now); this.setCrowd('cheer', n * per + 800, now); });
-      this.cue('rollmore', open0(this) + Math.max(0, n * per - 1400), open0(this) + u, () => { if (more) this.say(this.line('more', { n: more }), 1400, now); });
-      s.T = u; s.k = u / (n * per);
+      const moreAt = this.show.moreAt != null ? this.show.moreAt : Math.max(0, n * per - 1400);
+      this.cue('roll', open0(this) + 0, open0(this) + u, () => { this.say(this.line('roll'), 0, now); this.A.setPose('point', 1600, now); this.setCrowd('cheer', rollMs + 800, now); });
+      this.cue('rollmore', open0(this) + moreAt, open0(this) + u, () => { if (more) this.say(this.line('more', { n: more }), 0, now); });
+      s.T = u; s.k = u / Math.max(1, rollMs);
       // An intro can draw its own roll call (doodle portraits, the couch, …):
       //   roll(g, s, featured, u, per, { more, title, theme }) in the 1920×1080 world; u = ms into it.
       if (typeof this.I.roll === 'function') {
@@ -934,13 +956,14 @@
           text(g, c.name, 0, 78, 38, '#fff', { stroke: OUT, lw: 7, max: tw * 0.8 });
           g.restore();
         });
-        if (more && u > n * per - 1400) text(g, `…and ${more} more!`, 960, 1000, 54, th.accent3 || '#ffd23f', { stroke: OUT, lw: 10 });
+        if (more && u > moreAt) text(g, `…and ${more} more!`, 960, 1000, 54, th.accent3 || '#ffd23f', { stroke: OUT, lw: 10 });
       });
       g0(g, s, () => s.backs(-60, 980, 2040, 110));
     }
     // ---- the outro (both modes): optional "everyone else" wall, then "Let's play!" ----
     outro(u, now, dur) {
-      const g = this.g, s = this.s, th = this.theme, others = this.show.others || [], wall = this.mode === 'facts' && others.length ? Math.min(2600, dur * 0.45) : 0;
+      const g = this.g, s = this.s, th = this.theme, others = this.show.others || [];
+      const wall = this.mode === 'facts' && others.length ? (this.show.wallMs != null ? this.show.wallMs : Math.min(2600, dur * 0.45)) : 0;
       const base = 'out';
       if (u < wall) {
         this.cue(base + 'wall', 0, u, () => { sfx('chime'); this.say(this.line('others'), wall - 200, now); this.setCrowd('cheer', wall, now); });
@@ -1028,7 +1051,8 @@
       const speak = p.speak !== false && p.prio >= 2 && (p.prio >= 3 || now - this.lastSpoke > 3000);
       if (p.line && (speak || p.prio >= 2 || now > this.A.talkUntil)) {
         if (speak) this.lastSpoke = now;
-        const est = speak ? Speech.say(p.line, this.I.host && this.I.host.voice, p.fit || 3200) : Speech.clean(p.line).length * 60 + 600;
+        // Queued behind a line still playing; a reaction that waited too long is dropped (stale).
+        const est = speak ? Speech.say(p.line, this.I.host && this.I.host.voice, p.fit || 3200, { maxWait: p.prio >= 3 ? 6000 : 3500 }) : Speech.clean(p.line).length * 60 + 600;
         this.A.talk(now, est); this.subSpan.textContent = p.line; this.subEl.classList.add('on'); this.subUntil = now + est + 1800;
       }
     }

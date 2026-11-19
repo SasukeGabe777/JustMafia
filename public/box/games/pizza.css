@@ -1,5 +1,6 @@
-/* JustPizza: Nonna Pina's pizzeria. Warm brick, a marble counter, red-and-cream checks, basil green,
-   neon "JustPizza" in the window. TV and phone: body.g-pizza */
+/* YesChef (key pizza): the YesChef food court. Each kitchen paints its own back wall (the intro's set, on
+   a canvas: .pz-bg), its neon sign, counter and colours (.k-pizza, .k-taco, .k-sushi, .k-burger,
+   .k-sundae, .k-court). TV and phone: body.g-pizza (body[data-kitchen] = the current kitchen). */
 body.g-pizza { --pz-red: #c8321f; --pz-cream: #fff4dc; --pz-gold: #ffb43a; --pz-green: #2f8a3e; --pz-wood: #7a4320; --pz-wood2: #4e2a12; --pz-ink: #2a160c;
   background: radial-gradient(ellipse at 50% 0%, #6b2a14, #3a160b 60%, #1f0b05) fixed; color: var(--pz-cream); }
 body.g-pizza .pz-tv, body.g-pizza .pz-ph, body.g-pizza .pz-lobby { font-family: 'Fredoka', sans-serif; }
@@ -19,18 +20,27 @@ body.g-pizza .pz-tv, body.g-pizza .pz-ph, body.g-pizza .pz-lobby { font-family: 
 /* ---------- TV ---------- */
 .pz-tv { position: relative; height: calc(100vh - 150px); min-height: 520px; overflow: hidden; color: var(--pz-cream); container-type: size; border-radius: 22px; box-shadow: 0 0 0 4px #2a160c, 0 0 0 8px rgba(255, 180, 58, 0.25), 0 18px 50px rgba(0, 0, 0, 0.6); }
 .pz-tv > .pz-neon { position: absolute; top: 2.5cqh; left: 50%; transform: translateX(-50%) scale(0.8); z-index: 1; }
-.pz-oven { position: absolute; right: -4cqw; top: 8cqh; width: 30cqw; height: 48cqh; z-index: 1; border-radius: 50% 50% 0 0 / 70% 70% 0 0;
-  background: radial-gradient(circle at 50% 100%, transparent 0 38%, rgba(0, 0, 0, 0) 38%), repeating-radial-gradient(circle at 50% 100%, #b4552a 0 22px, #8c3b1d 22px 26px, #d9773a 26px 40px, #8c3b1d 40px 44px);
-  border: 5px solid var(--pz-ink); border-bottom: 0; box-shadow: 0 0 120px rgba(255, 120, 40, 0.35); opacity: 0.9; }
-.pz-oven i { position: absolute; left: 50%; bottom: 0; width: 46%; height: 52%; transform: translateX(-50%); border-radius: 50% 50% 0 0 / 80% 80% 0 0; border: 5px solid var(--pz-ink); border-bottom: 0;
-  background: radial-gradient(ellipse at 50% 100%, #fff1a8 0 8%, #ffb22e 18%, #ff5a1a 38%, #3a0c04 70%, #1a0a05); animation: pz-fire 0.9s ease-in-out infinite alternate; }
-@keyframes pz-fire { from { filter: brightness(0.9); } to { filter: brightness(1.25); } }
+.pz-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; } .pz-bg canvas { width: 100%; height: 100%; display: block; }
+.pz-yc { position: absolute; top: 2.6cqh; right: 1.6cqw; z-index: 4; padding: 6px 16px 8px; border-radius: 14px; background: rgba(16, 10, 30, 0.82); border: 3px solid rgba(255, 255, 255, 0.25); font: 400 clamp(18px, 1.6cqw, 28px)/1 'Pacifico', cursive; color: #fff3b0; text-shadow: 0 0 10px #ffd23f; white-space: nowrap; }
+.pz-yc b { font-weight: 400; color: #ffe3ea; text-shadow: 0 0 10px #ff4f6d; margin-left: 0.08em; }
+.ph-reveal > .pz-yc, .ph-over > .pz-yc { display: none; }
+/* each kitchen's neon sign */
+.pz-neon.k-taco { color: #fff8d6; text-shadow: 0 0 6px #ffd23f, 0 0 18px #ffd23f, 0 0 32px #ffd23f; background: rgba(16, 44, 46, 0.9); border-color: #ffd23f; } .pz-neon.k-taco b { color: #ffe3ea; text-shadow: 0 0 6px #ff4f6d, 0 0 18px #ff4f6d, 0 0 34px #ff4f6d; }
+.pz-neon.k-sushi { font-family: 'Lilita One', sans-serif; letter-spacing: 0.04em; color: #ffffff; text-shadow: 0 0 6px #fff, 0 0 16px #ffd9a8; background: rgba(36, 52, 94, 0.92); border-color: #c9a06a; } .pz-neon.k-sushi b { color: #ffe0d8; text-shadow: 0 0 6px #ff6b4a, 0 0 18px #ff6b4a, 0 0 30px #ff6b4a; }
+.pz-neon.k-burger { font-family: 'Lilita One', sans-serif; color: #ffe8e8; text-shadow: 0 0 6px #ff3b3b, 0 0 18px #ff3b3b, 0 0 32px #ff3b3b; background: rgba(20, 20, 26, 0.92); border-color: #c9ccd3; } .pz-neon.k-burger b { color: #e6faff; text-shadow: 0 0 6px #3ad0ff, 0 0 18px #3ad0ff, 0 0 32px #3ad0ff; }
+.pz-neon.k-sundae { color: #fff0f7; text-shadow: 0 0 6px #ff5fa2, 0 0 18px #ff5fa2, 0 0 32px #ff5fa2; background: rgba(70, 24, 60, 0.9); border-color: #ff8fc8; } .pz-neon.k-sundae b { color: #e6faff; text-shadow: 0 0 6px #3ad0ff, 0 0 18px #3ad0ff, 0 0 32px #3ad0ff; }
+.pz-neon.k-court { color: #fff8d6; text-shadow: 0 0 6px #ffd23f, 0 0 18px #ffd23f, 0 0 34px #ffd23f; background: rgba(16, 10, 30, 0.9); border-color: #6a4aa0; } .pz-neon.k-court b { color: #ffe3ea; text-shadow: 0 0 6px #ff4f6d, 0 0 18px #ff4f6d, 0 0 34px #ff4f6d; }
 .pz-counter { position: absolute; left: 0; right: 0; bottom: 0; height: 24cqh; z-index: 3;
   background: linear-gradient(180deg, #f6f1ea 0, #d9d1c4 3.2cqh, #3a2010 3.2cqh, #3a2010 3.6cqh, transparent 3.6cqh),
     repeating-linear-gradient(90deg, var(--pz-red) 0 32px, var(--pz-cream) 32px 64px) 0 3.6cqh / 100% 2.2cqh no-repeat,
     repeating-linear-gradient(90deg, var(--pz-cream) 0 32px, var(--pz-red) 32px 64px) 0 5.8cqh / 100% 2.2cqh no-repeat,
     linear-gradient(180deg, var(--pz-wood), var(--pz-wood2));
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.35); border-top: 4px solid var(--pz-ink); }
+.k-taco .pz-counter { background: linear-gradient(180deg, #eef2f4 0, #a9b4ba 3.2cqh, #3a2010 3.2cqh, #3a2010 3.6cqh, transparent 3.6cqh), linear-gradient(180deg, #ffd23f 0 1.4cqh, transparent 1.4cqh) 0 4.6cqh / 100% 100% no-repeat, linear-gradient(180deg, #22a89a, #0f5f58); }
+.k-sushi .pz-counter { background: linear-gradient(180deg, #f6e2bd 0, #ddc08e 3.2cqh, #2a160c 3.2cqh, #2a160c 3.6cqh, transparent 3.6cqh), repeating-linear-gradient(90deg, #9aa3ab 0 36px, #8a939b 36px 40px) 0 4.4cqh / 100% 5cqh no-repeat, linear-gradient(180deg, #5a3a20, #2e1c0e); }
+.k-burger .pz-counter { background: linear-gradient(180deg, #ffffff 0, #d9dde0 3.2cqh, #2a160c 3.2cqh, #2a160c 3.6cqh, transparent 3.6cqh), linear-gradient(180deg, #ffffff, #9aa3ab 50%, #eef1f3) 0 4.6cqh / 100% 1.8cqh no-repeat, linear-gradient(180deg, #e63946, #8e1b24); }
+.k-sundae .pz-counter { background: linear-gradient(180deg, #ffffff 0, #f1dde8 3.2cqh, #2a160c 3.2cqh, #2a160c 3.6cqh, transparent 3.6cqh), repeating-linear-gradient(90deg, #fff3d6 0 60px, #ff9ab0 60px 120px, #a8ecc8 120px 180px, #6b3a22 180px 240px) 0 5cqh / 100% 3cqh no-repeat, linear-gradient(180deg, #8fe3d0, #3fae96); }
+.k-court .pz-counter { background: linear-gradient(180deg, #f4f1ff 0, #cfc6e8 3.2cqh, #2a160c 3.2cqh, #2a160c 3.6cqh, transparent 3.6cqh), repeating-linear-gradient(90deg, #ffd23f 0 40px, #ff4f6d 40px 80px, #3ad0ff 80px 120px, #7ac943 120px 160px, #ff8fc8 160px 200px) 0 3.6cqh / 100% 2.2cqh no-repeat, linear-gradient(180deg, #4a3a6a, #241a3a); }
 .pz-board { position: absolute; top: 2.5cqh; left: 2cqw; z-index: 4; display: grid; justify-items: center; gap: 2px; padding: 12px 22px 14px; min-width: 150px;
   background: #26302a; border: 8px solid var(--pz-wood2); border-radius: 10px; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4); font-family: 'Caveat Brush', 'Permanent Marker', cursive; transform: rotate(-2deg); }
 .pz-board small { font-size: 20px; letter-spacing: 0.2em; color: #cfd8cf; }
@@ -132,13 +142,14 @@ body.g-pizza .pz-tv, body.g-pizza .pz-ph, body.g-pizza .pz-lobby { font-family: 
 
 /* ---------- lobby ---------- */
 .pz-lobby { position: relative; min-height: calc(100vh - 120px); border-radius: 22px; overflow: hidden; display: grid; grid-template-rows: auto 1fr auto; gap: 14px; padding: 22px 3vw 18px; box-sizing: border-box; }
-.pz-lobby > *:not(.pz-wall) { position: relative; z-index: 1; }
+.pz-lobby > *:not(.pz-wall):not(.pz-bg) { position: relative; z-index: 1; }
 .pz-l-head { display: grid; justify-items: center; gap: 10px; text-align: center; }
 .pz-l-head p { margin: 0; font-size: 22px; color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
 .pz-l-main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 3vw; align-items: center; max-width: 1200px; width: 100%; margin: 0 auto; }
 .pz-l-board { padding: 22px 26px; border-radius: 12px; background: #26302a; border: 12px solid var(--pz-wood2); box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45); color: #f4f1e6; }
 .pz-l-board h2 { margin: 0 0 12px; font: 400 44px/1 'Caveat Brush', cursive; text-align: center; }
 .pz-l-set { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.pz-l-f.wide { grid-column: 1 / -1; }
 .pz-l-f { display: flex; flex-direction: column; gap: 4px; font: 400 24px 'Caveat Brush', cursive; color: #ffd27a; }
 .pz-l-f select { font: 600 17px 'Fredoka', sans-serif; padding: 8px; border-radius: 8px; border: 2px dashed rgba(244, 241, 230, 0.6); background: rgba(255, 255, 255, 0.08); color: #f4f1e6; }
 .pz-l-f select option { color: #222; }
@@ -200,3 +211,20 @@ body.g-pizza .pz-tv, body.g-pizza .pz-ph, body.g-pizza .pz-lobby { font-family: 
 .pz-end { margin-top: 20px; } .pz-big-n { font: 400 30px 'Lilita One', sans-serif; color: var(--pz-green); }
 .pz-stamp { display: inline-block; padding: 4px 16px; border: 4px solid var(--pz-red); color: var(--pz-red); font: 400 22px 'Bungee', 'Lilita One', sans-serif; transform: rotate(-5deg); border-radius: 6px; }
 .pz-aw { padding: 6px 12px; border-radius: 10px; background: #ffe08a; }
+
+/* ---------- the other kitchens on the phone ---------- */
+body.g-pizza[data-kitchen="taco"] { --pz-gold: #ffd23f; --pz-red: #e2453a; --pz-green: #1f9e8f; background: radial-gradient(ellipse at 50% 0%, #a33b5c, #3a1f5c 60%, #140a24) fixed; }
+body.g-pizza[data-kitchen="sushi"] { --pz-gold: #ffd9a8; --pz-red: #ff6b4a; --pz-green: #2f8a6e; background: radial-gradient(ellipse at 50% 0%, #5a4a3a, #24345e 60%, #10162a) fixed; }
+body.g-pizza[data-kitchen="burger"] { --pz-gold: #ffc93c; --pz-red: #d62828; --pz-green: #2a9d5f; background: radial-gradient(ellipse at 50% 0%, #8e1b24, #3a1414 60%, #140808) fixed; }
+body.g-pizza[data-kitchen="sundae"] { --pz-gold: #ff8fc8; --pz-red: #e0307a; --pz-green: #2fae96; background: radial-gradient(ellipse at 50% 0%, #b04a8a, #4a1a48 60%, #1a0a18) fixed; }
+.pz-kit { font: 400 18px 'Lilita One', sans-serif; padding: 2px 14px; border-radius: 99px; background: var(--pz-red); color: #fff; }
+.pz-sub { font: 400 14px 'Lilita One', sans-serif; color: var(--pz-gold); margin-top: 2px; }
+.pz-pie.k-burger, .pz-pie.k-sundae { cursor: default; touch-action: auto; width: min(240px, 62vw); }
+.pz-pie.k-taco { aspect-ratio: 220 / 148; width: min(330px, 84vw); }
+.pz-pie.k-sushi { aspect-ratio: 220 / 174; width: min(320px, 82vw); }
+.k-sundae .pz-tray.stack { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.k-sundae .pz-tray .pz-top { padding: 3px 2px 2px; }
+.pz-tray.stack .pz-top { min-height: 54px; }
+.pz-tray.stack .pz-top:active { transform: translateY(2px); background: var(--pz-cream); color: var(--pz-ink); }
+.pz-tool[disabled] { opacity: 0.4; }
+.ph-over .pz-pav .portrait, .pz-pav img { width: 72px; height: 72px; }

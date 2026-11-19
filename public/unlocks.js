@@ -1,22 +1,23 @@
 'use strict';
 // Unlockable games. A locked game shows on the main menu with its unlock hint. Finishing a whole
 // Party Mode opens every locked game for good on this TV (the server sends an 'unlock' cue).
+// from: the game whose finish unlocks it ('party' = a whole Party Mode).
 // Add more unlockables to LIST and to box/room.js UNLOCK_RULES. The main menu's ⚙ menu can
 // unlock everything for testing.
 (function () {
   const LIST = {
-    zombie: { title: 'Zombie Survival', icon: '🧟', how: 'Finish a Party Mode to unlock it.' },
-    plinko: { title: 'JustDrop', icon: '🎯', how: 'Finish a game of Blackjack Night to unlock it.' },
-    quickdraw: { title: "Quick Draw", icon: "⚡", how: "Finish a game of President to unlock it." },
-    bomb: { title: "Bomb Squad", icon: "💣", how: "Finish a game of Two Truths & a Lie to unlock it." },
-    alien: { title: "Alien Abduction", icon: "🛸", how: "Finish a game of Most Likely To… to unlock it." },
-    tune: { title: "Tune Buzz", icon: "🎵", how: "Finish a game of JustFunny to unlock it." },
-    actout: { title: "Act It Out", icon: "🎭", how: "Finish a game of JustSketch Relay to unlock it." },
-    debate: { title: "Debate Club", icon: "🗣️", how: "Finish a game of Where Do You Stand? to unlock it." },
-    trivia: { title: "Hot Take Trivia", icon: "🧠", how: "Finish a game of Price Panic to unlock it." },
-    colormatch: { title: "Color Match", icon: "🎨", how: "Finish a game of Emoji Charades to unlock it." },
-    memes: { title: "Meme Maker", icon: "🖼️", how: "Finish a game of JustBlanks to unlock it." },
-    letters: { title: "Letter Rush", icon: "🔤", how: "Finish a game of Who Said It? to unlock it." },
+    zombie: { from: 'party', title: 'Zombie Survival', icon: '🧟', how: 'Finish a Party Mode to unlock it.' },
+    plinko: { from: 'blackjack', title: 'JustDrop', icon: '🎯', how: 'Finish a game of Blackjack Night to unlock it.' },
+    quickdraw: { from: 'president', title: "Quick Draw", icon: "⚡", how: "Finish a game of President to unlock it." },
+    bomb: { from: 'truths', title: "Bomb Squad", icon: "💣", how: "Finish a game of Two Truths & a Lie to unlock it." },
+    alien: { from: 'likely', title: "Alien Abduction", icon: "🛸", how: "Finish a game of Most Likely To… to unlock it." },
+    tune: { from: 'funny', title: "Tune Buzz", icon: "🎵", how: "Finish a game of JustFunny to unlock it." },
+    actout: { from: 'sketch', title: "Act It Out", icon: "🎭", how: "Finish a game of JustSketch Relay to unlock it." },
+    debate: { from: 'spectrum', title: "Debate Club", icon: "🗣️", how: "Finish a game of Where Do You Stand? to unlock it." },
+    trivia: { from: 'price', title: "Hot Take Trivia", icon: "🧠", how: "Finish a game of Price Panic to unlock it." },
+    colormatch: { from: 'emoji', title: "Color Match", icon: "🎨", how: "Finish a game of Emoji Charades to unlock it." },
+    memes: { from: 'blanks', title: "Meme Maker", icon: "🖼️", how: "Finish a game of JustBlanks to unlock it." },
+    letters: { from: 'whosaid', title: "Letter Rush", icon: "🔤", how: "Finish a game of Who Said It? to unlock it." },
   };
   const KEY = 'box.unlocks', SEEN = 'box.unlocksSeen';
   const read = (k) => { try { const v = JSON.parse(localStorage.getItem(k) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };

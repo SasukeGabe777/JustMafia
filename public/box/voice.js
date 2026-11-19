@@ -20,11 +20,18 @@
    spec.kokoro picks the Kokoro voice (e.g. 'am_fenrir'), spec.speed its speed (default 1).
    A spec without kokoro (narrators, intros with no host) uses NARRATOR.
 
+   Lines are QUEUED, never cut off: a new line waits until the one playing has finished (stale
+   waiting lines are dropped instead, see speak's options). Clips play at their natural speed; the
+   intro/how-to schedule on the server is built from the clip lengths (box/narration.js). Only
+   stop() (the host's Skip) cuts a line short. Every line is let go after its length + TAIL even if
+   the audio never reports its end, so narration can never block.
+
    API
-     BOX.voice.speak(text, spec) -> Promise (resolves when the line ends)   stop()
+     BOX.voice.speak(text, spec, { maxWait, key, interrupt, onstart }) -> Promise (resolves when the line ends)
+     stop()  cut the current line and clear the queue     pending() -> { busy, waiting }
      BOX.voice.preload(gameKey)   fetch a game's clips ahead of the cutscene
      BOX.voice.prepare(text, spec)  warm the live cache for a dynamic line (if live is on)
-     BOX.voice.clipMs(text, spec) -> how long the clip plays (ms) or 0 if there is none
+     BOX.voice.clipMs(text, spec) -> how long the clip plays (ms) or 0 if there is none; estMs(text, spec) the browser-voice guess
      BOX.voice.live / setLive(on) / liveStatus()   the live-voice setting
      BOX.voice.clean(text), spoken(text), keyOf(text, spec), voiceOf(spec)  (shared with the generator)
      BOX.voice.log   the last lines spoken: { at, path: 'clip'|'live'|'fallback', text, lag }
@@ -37,7 +44,11 @@
   if (B.voice.engine === 'kokoro') return; // loaded twice
   const prev = { speak: B.voice.speak, stop: B.voice.stop };
   const DEADLINE = 1200;
-  const NARRATOR = { kokoro: 'bf_emma', speed: 1.05 };
+  const NARRATOR = { kokoro: 'bf_emma', speed: 1.0 };
+  // The line queue (see speak): a line waits for the one playing instead of cutting it off.
+  const MAX_WAIT = 6000; // a queued line older than this when its turn comes is dropped (stale)
+  const MAX_PENDING = 3; // more waiting than this: the oldest waiting line is dropped
+  const TAIL = 2500; // a line that never reports its end is let go this long after it should have ended
   const ROOT = '/audio/voice/';
   const LIVE_KEY = 'box.voice.live';
   const KOKORO_URL = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
@@ -47,9 +58,14 @@
   // Same cleaning as show.js's Speech.clean (show.js cleans before speaking; howto.js does not).
   const clean = (s) => String(s || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}]/gu, '').replace(/["“”]/g, '').replace(/\s+/g, ' ').trim();
   // What the TTS model reads: symbols spelled out, no emoji, no SHOUTED words read as letters.
-  const KEEP_CAPS = new Set(['TV', 'DJ', 'VIP', 'ID', 'USA', 'UK', 'DNA', 'UFO']);
+  // (Changing spoken() re-voices nothing by itself: clips are keyed by clean(), so re-render with --force.)
+  const KEEP_CAPS = new Set(['TV', 'DJ', 'VIP', 'ID', 'USA', 'UK', 'DNA', 'UFO', 'FM', 'XP']);
   function spoken(s) {
     return clean(s)
+      .replace(/\bJust(?=[A-Z][a-z])/g, 'Just ').replace(/\b([A-Z][a-z]+)([A-Z][a-z]+)\b/g, '$1 $2') // JustBid, TikTok: two words
+      .replace(/(\w)!\s+(?=[a-z])/g, '$1 ') // "snap! magazine": no full stop mid-name
+      .replace(/\s+=\s+/g, ' means ').replace(/\s*·\s*/g, ', ').replace(/\s\+\s/g, ' plus ').replace(/\b0:00\b/g, 'zero').replace(/\bvs\.?(?=\s)/g, 'versus')
+      .replace(/(\d) s\b/g, '$1 seconds').replace(/(^|\s)%(?=[\s.,!?]|$)/g, '$1percent')
       .replace(/\s*↔\s*/g, ' or ').replace(/\p{Extended_Pictographic}/gu, '').replace(/[←-⇿⌀-⏿─-◿│⌫]/g, ' ')
       .replace(/…/g, '...').replace(/(\d)\s*×/g, '$1 times').replace(/×\s*(\d)/g, 'times $1').replace(/×/g, ' times ')
       .replace(/\+\s?(\$?\d)/g, 'plus $1').replace(/[−–]\s?(\$?\d)/g, 'minus $1').replace(/(\d)\s?%/g, '$1 percent').replace(/&/g, ' and ')
@@ -128,22 +144,19 @@
     try { W.dispatchEvent(new CustomEvent('box:voice', { detail: e })); } catch { /* old browser */ }
   }
   const vol = () => { try { const s = B.audio && B.audio.settings; return s ? (s.mute ? 0 : clamp(s.master, 0, 1)) : 1; } catch { return 1; } };
-  // How fast to play a clip so it fits the time the scene gives the line (pitch is preserved).
-  function rateFor(ms, t, V) {
-    const target = V && V.fitMs ? V.fitMs : (t.length * 60 + 350) / clamp((V && V.rate) || 1, 0.5, 2);
-    return clamp(ms / Math.max(400, target), 1, 1.3);
-  }
-  function clipMs(text, V) {
-    const t = clean(text), c = manifest && manifest.clips[keyOf(t, V)];
-    return c ? Math.round(c.ms / rateFor(c.ms, t, V)) : 0;
-  }
+  const duck = (on) => { try { if (B.audio && B.audio.duck) B.audio.duck(on); } catch { /* no music */ } };
+  // Clips play at their natural speed, never sped up to fit a scene: the scenes are timed to the
+  // clips instead (box/narration.js on the server). A line with no clip: an estimate for the browser voice.
+  function clipMs(text, V) { const c = manifest && manifest.clips[keyOf(clean(text), V)]; return c ? c.ms : 0; }
+  const estMs = (t, V) => Math.round((String(t).length * 70 + 500) / clamp((V && V.rate) || 1, 0.5, 2));
+  // A line that never says it ended (a stuck clip, a browser voice that hangs) is let go anyway.
+  const capped = (p, ms) => Promise.race([Promise.resolve(p).catch(() => {}), new Promise((r) => setTimeout(r, ms + TAIL))]);
   let cur = null, tok = 0;
   function halt() { if (!cur) return; const c = cur; cur = null; try { c.a.pause(); c.a.removeAttribute('src'); } catch { /* gone */ } c.done(); }
-  // -> null if it could not start in time (or a newer line took over), else { ended: Promise }.
-  async function play(url, ms, t, V, my, deadline) {
+  // -> null if it could not start in time (or stop() took over), else { ended: Promise }.
+  async function play(url, my, deadline) {
     const a = new Audio(); a.preload = 'auto'; a.src = url;
-    try { a.preservesPitch = true; a.mozPreservesPitch = true; a.webkitPreservesPitch = true; } catch { /* old */ }
-    a.volume = vol(); a.defaultPlaybackRate = a.playbackRate = rateFor(ms, t, V);
+    a.volume = vol(); a.defaultPlaybackRate = a.playbackRate = 1;
     let done; const ended = new Promise((r) => { done = r; });
     a.onended = a.onerror = () => { if (cur && cur.a === a) cur = null; done(); };
     cur = { a, done };
@@ -152,37 +165,77 @@
     if (!started || my !== tok) { if (cur && cur.a === a) halt(); else try { a.pause(); } catch { /* gone */ } return null; }
     return { ended };
   }
-  function speak(text, V = {}) {
-    const t = clean(text), my = ++tok, t0 = now(), deadline = t0 + DEADLINE;
-    halt(); try { if (prev.stop) prev.stop(); } catch { /* none */ }
-    if (!t) return Promise.resolve();
-    return (async () => {
-      const m = await race(ready, deadline);
+  const onstart = (it, ms) => { try { if (it.o.onstart) it.o.onstart(ms); } catch (e) { console.warn(e); } };
+  // Say one line now (its turn in the queue). Resolves when it has ended, failed, or timed out.
+  async function sayNow(it, my) {
+    const t = it.t, V = it.V, t0 = now(), deadline = t0 + DEADLINE;
+    const m = await race(ready, deadline);
+    if (my !== tok) return;
+    const h = keyOf(t, V), c = m && m.clips[h];
+    let url = null, ms = 0, path = 'fallback', why = '';
+    if (c) { url = await race(fetchClip(h), deadline); ms = c.ms; if (url) path = 'clip'; else why = 'clip not ready'; }
+    else if (live && gpu) { const r = await race(liveGen(t, V, h), deadline); if (r) { url = r.url; ms = r.ms; path = 'live'; } else why = wState === 'ready' ? 'live too slow' : 'live ' + wState; }
+    else why = 'no clip';
+    if (my !== tok) return;
+    if (url) {
+      const p = await play(url, my, deadline);
       if (my !== tok) return;
-      const h = keyOf(t, V), c = m && m.clips[h];
-      let url = null, ms = 0, path = 'fallback', why = '';
-      if (c) { url = await race(fetchClip(h), deadline); ms = c.ms; if (url) path = 'clip'; else why = 'clip not ready'; }
-      else if (live && gpu) { const r = await race(liveGen(t, V, h), deadline); if (r) { url = r.url; ms = r.ms; path = 'live'; } else why = wState === 'ready' ? 'live too slow' : 'live ' + wState; }
-      else why = 'no clip';
-      if (my !== tok) return;
-      if (url) {
-        const p = await play(url, ms, t, V, my, deadline);
-        if (my !== tok) return;
-        if (p) { log(path, t, t0); return p.ended; }
-        why = path + ' failed to start';
-      }
-      log('fallback', t, t0, why);
-      if (prev.speak) return prev.speak(t, V);
-    })().catch(() => {});
+      if (p) { log(path, t, t0); onstart(it, ms); return capped(p.ended, ms); }
+      why = path + ' failed to start';
+    }
+    log('fallback', t, t0, why);
+    if (!prev.speak) return;
+    const est = estMs(t, V); onstart(it, est);
+    return capped(prev.speak(t, V), est);
   }
-  function stop() { tok++; halt(); try { if (prev.stop) prev.stop(); } catch { /* none */ } }
+  // ---------- the line queue ----------
+  // One line at a time. A new line waits for the current one to finish instead of cutting it off
+  // mid-word; a line that waited longer than its maxWait is dropped (stale), and if too many pile up
+  // the oldest waiting one goes. Only stop() (the host's Skip) or o.interrupt cuts a line short.
+  const Q = []; let busy = false;
+  function drop(it, why) { log('dropped', it.t, it.at, why); it.resolve(); }
+  function pump() {
+    if (busy) return;
+    let it = null;
+    while (Q.length) { const x = Q.shift(); if (now() - x.at <= x.maxWait) { it = x; break; } drop(x, 'stale'); }
+    if (!it) { duck(false); return; }
+    busy = true; const my = ++tok; duck(true);
+    sayNow(it, my).catch(() => {}).then(() => {
+      if (my !== tok) { it.resolve(); return; } // stop() took over (and reset the queue)
+      halt(); busy = false; it.resolve(); pump();
+    });
+  }
+  // speak(text, spec, o) -> Promise (resolves when the line ends, or is dropped / stopped).
+  //  o.maxWait   ms the line may wait for its turn (default MAX_WAIT)
+  //  o.key       a newer line with the same key replaces a waiting one (e.g. 'hint', 'timer')
+  //  o.interrupt cut whatever is playing and clear the queue first (a hard scene change)
+  //  o.onstart(ms) called when it actually starts, with how long it will take (to sync a mouth)
+  function speak(text, V = {}, o = {}) {
+    const t = clean(text);
+    if (!t) return Promise.resolve();
+    o = o || {};
+    if (o.interrupt) stop();
+    return new Promise((resolve) => {
+      if (o.key) for (let i = Q.length - 1; i >= 0; i--) if (Q[i].o.key === o.key) drop(Q.splice(i, 1)[0], 'replaced');
+      Q.push({ t, V: V || {}, o, at: now(), maxWait: o.maxWait != null ? o.maxWait : MAX_WAIT, resolve });
+      while (Q.length > MAX_PENDING) drop(Q.shift(), 'queue full');
+      pump();
+    });
+  }
+  function stop() {
+    tok++; busy = false;
+    for (const it of Q.splice(0)) it.resolve();
+    halt(); try { if (prev.stop) prev.stop(); } catch { /* none */ }
+    duck(false);
+  }
+  const pending = () => ({ busy, waiting: Q.length });
   function prepare(text, V) {
     const t = clean(text); if (!t || !liveUsable()) return;
     ready.then((m) => { const h = keyOf(t, V); if (!m.clips[h]) liveGen(t, V, h); });
   }
 
   Object.assign(B.voice, {
-    engine: 'kokoro', speak, stop, preload, prepare, clipMs, clean, spoken, keyOf, voiceOf, hash, NARRATOR,
+    engine: 'kokoro', speak, stop, pending, preload, prepare, clipMs, estMs, clean, spoken, keyOf, voiceOf, hash, NARRATOR, MAX_WAIT,
     setLive, liveSupported: gpu, liveStatus: () => (!gpu ? 'unsupported' : !live ? 'off' : wState), log: LOG, ready,
   });
   Object.defineProperty(B.voice, 'live', { get: () => live, configurable: true });

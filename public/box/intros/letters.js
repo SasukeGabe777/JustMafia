@@ -86,7 +86,7 @@
       { icon: '✍️', title: 'Write fast', text: 'Write one answer per category that starts with that letter, before time runs out.', phone: 'Type an answer in each box. Enter jumps to the next one.' },
       { icon: '🎯', title: 'Be unique', text: 'Unique answers score 1. If anyone else wrote the same answer, it scores 0. Think different!' },
       { icon: '🅱️', title: 'Alliteration', text: 'Two or more words starting with the letter score 2, like “Big Blue Banana”. Five scoring answers in a row: 🔥 +1.' },
-      { icon: '👎', title: 'Challenge', text: 'Something fishy? Challenge an answer and the room votes on whether it counts.', phone: 'Tap 👎 to challenge. Then vote ✓ Counts or ✗ Nope.' },
+      { icon: '👎', title: 'Challenge', text: 'Something fishy? Challenge an answer and the room votes on whether it counts.', phone: 'Tap 👎 to challenge. Then vote ✓ Counts or ✗ Nope.', say: 'Challenge. Something fishy? Challenge an answer, and the room votes on whether it counts. Tap thumbs down to challenge, then vote Counts, or Nope.' },
       { icon: '⚡', title: 'Special rounds', text: 'Watch for Speed rounds, Theme rounds and the final Double Letter round: two letters, double points. Most points wins!' },
     ],
     theme: { accent: '#ffd23f', accent2: '#e63946', accent3: '#fff4dc', ink: '#f4f7ff', fade: '#0b1a33', rim: '#ffd23f', floor1: '#16305a', floor2: '#0b1a33', disc1: '#1d4e89', disc2: '#12274a',

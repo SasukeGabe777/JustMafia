@@ -13,11 +13,11 @@
     // How to play (box/howto.js): 6 steps (module howSteps: 6).
     tutorial: [
       { icon: '🔦', title: 'Take the stage', text: 'Each scene, one actor (a pair or a trio in big rooms) gets a SECRET prompt on their phone and acts it out for the room.', phone: 'Actor? Read your prompt, then tap 🎬 I’m ready: ACTION! You get one ⏭ Skip.', say: 'Each scene, one actor gets a secret prompt on their phone, and acts it out for the room.' },
-      { icon: '💬', title: 'Guess it', text: 'Everyone else types guesses on their phone. Typos, plurals and synonyms count, and 🔥 means you’re close! Guesses show blurred on the TV until one is right.', phone: 'Type a guess and tap Guess! as often as you like.' },
+      { icon: '💬', title: 'Guess it', text: 'Everyone else types guesses on their phone. Typos, plurals and synonyms count, and 🔥 means you’re close! Guesses show blurred on the TV until one is right.', phone: 'Type a guess and tap Guess! as often as you like.', say: 'Guess it. Everyone else types guesses on their phone. Typos, plurals and synonyms count, and a flame means you’re close! Guesses stay blurred on the TV until one is right. Type a guess and tap Guess, as often as you like.' },
       { icon: '📣', title: 'Shout it out', text: 'Shouting works too: the actor taps ✅ They got it! and picks who said it first.', phone: 'Actor: tap ✅ They got it! then tap the guesser’s name.' },
       { icon: '⭐', title: 'Scoring', text: 'The first right guess and the actor both score 100 + up to 100 for speed. A twist scene gives the actor +50. The final scene counts double!' },
       { icon: '🌀', title: 'Plot twists', text: '🎞️ Silent movie · 🔊 Sound effects only · 🎨 Act it as… a style · 🧊 Freeze frame (one pose per buzz) · 🏃 Relay · 👯 Two-person scene (two prompts, guess both).' },
-      { icon: '👏', title: 'Bravo!', text: 'After every scene, applaud the best performance: each 👏 is +25 for the actor. The awards night crowns the Oscar-worthy and the Mime Master!', phone: 'Tap 👏 on the actor you loved.' },
+      { icon: '👏', title: 'Bravo!', text: 'After every scene, applaud the best performance: each 👏 is +25 for the actor. The awards night crowns the Oscar-worthy and the Mime Master!', phone: 'Tap 👏 on the actor you loved.', say: 'Bravo! After every scene, applaud the best performance: each clap is worth 25 points to the actor. The awards night crowns the Oscar-worthy and the Mime Master! Tap the clap on the actor you loved.' },
     ],
     theme: { accent: '#ffc93c', accent2: '#ff5d73', accent3: '#ffe6a8', ink: '#fff4dc', panel: 'rgba(42, 13, 38, 0.9)', fade: '#0c0614',
       confetti: ['#ffc93c', '#ff5d73', '#fff4dc', '#35d0c3', '#b05ad0'], spots: ['255,240,190', '255,220,160', '255,240,210', '255,230,180'] },

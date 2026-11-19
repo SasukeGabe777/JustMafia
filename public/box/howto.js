@@ -15,18 +15,25 @@
     if (I && Array.isArray(I.tutorial) && I.tutorial.length) return I.tutorial.slice(0, 8);
     return (G.how || []).slice(0, 8).map((t, i) => ({ icon: ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣'][i], title: `Step ${i + 1}`, text: t, phone: null }));
   }
-  // Which step is showing: the server's steps are evenly timed; extra steps share the time.
+  // Which step is showing. The server times each step to its narrator line (show.howStepsMs, from
+  // box/narration.js); without that, the steps are evenly timed and extra steps share the time.
   function stepAt(show, steps, at) {
-    const n = Math.max(1, steps.length), slot = (show.howStepMs || 7500) * Math.max(1, Math.min(8, show.howSteps || 5)) / n;
-    const t = (show.stepAgo || 0) + (Date.now() - at);
+    const n = Math.max(1, steps.length), t = (show.stepAgo || 0) + (Date.now() - at);
+    const ms = show.howStepsMs;
+    if (Array.isArray(ms) && ms.length === n) {
+      let a = 0;
+      for (let i = 0; i < n; i++) { if (t < a + ms[i]) return { i, done: false, slot: ms[i], t }; a += ms[i]; }
+      return { i: n - 1, done: true, slot: ms[n - 1], t };
+    }
+    const slot = (show.howStepMs || 7500) * Math.max(1, Math.min(8, show.howSteps || 5)) / n;
     return { i: Math.min(n - 1, Math.floor(t / slot)), done: t >= slot * n, slot, t };
   }
   const st = { el: null, key: null, at: 0, show: null, said: -1, raf: 0 };
-  // fitMs: the time the step gives the line (a pre-rendered voice clip plays a little faster to fit).
-  function speak(text, fitMs) {
+  // The step's line plays at its natural speed and queues behind one still playing (voice.js).
+  function speak(text) {
     try {
       const I = BOX.intros && BOX.intros[st.key], spec = I && I.host && I.host.voice;
-      if (BOX.voice && BOX.voice.speak) BOX.voice.speak(text, { ...(spec || {}), fitMs });
+      if (BOX.voice && BOX.voice.speak) BOX.voice.speak(text, { ...(spec || {}) }, { maxWait: 12000 });
       else if (window.speechSynthesis) { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.02; speechSynthesis.speak(u); }
     } catch { /* no voice */ }
   }
@@ -46,13 +53,14 @@
             ${s.phone ? `<div class="ht-phone"><div class="ht-ph"><div class="ht-ph-notch"></div><div class="ht-ph-screen"><span>📱</span><b>${esc(s.phone)}</b></div></div><div class="ht-ph-label">On your phone</div></div>` : ''}
           </div>`);
       st.el.querySelector('.ht-dots').innerHTML = steps.map((_, k) => `<i class="${k < i || done ? 'past' : k === i ? 'on' : ''}"></i>`).join('');
-      if (!done && st.said !== i) { st.said = i; speak(s.say || [s.title, s.text, s.phone].filter(Boolean).join('. '), slot - 400); BOX.sfx('pop'); }
+      if (!done && st.said !== i) { st.said = i; speak(s.say || [s.title, s.text, s.phone].filter(Boolean).join('. ')); BOX.sfx('pop'); }
       if (done && st.said !== 99) { st.said = 99; speak('That’s it. Let’s play!'); }
     }
     st.raf = requestAnimationFrame(frame);
   }
   function showHowto(el, show, ctx) {
     const key = show.game;
+    try { const I = BOX.intros && BOX.intros[key]; if (I && I.onShow) I.onShow(show); } catch { /* the default steps */ } // e.g. YesChef: the kitchen's own steps
     if (st.el !== el || st.key !== key || !el.querySelector('.ht')) {
       el.innerHTML = `<div class="ht"><div class="ht-bg"></div><header class="ht-head"><span class="ht-tag">HOW TO PLAY</span><h1>${esc((BOX.games[key] || {}).icon || '')} ${esc(show.title || '')}</h1></header>
         <div class="ht-body"></div><footer class="ht-foot"><div class="ht-dots"></div><div class="ht-ready" id="ht-ready"></div></footer></div>`;

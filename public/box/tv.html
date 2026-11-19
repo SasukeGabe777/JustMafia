@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/box/howto.css">
   <link rel="stylesheet" href="/box/partyboard.css">
   <link rel="stylesheet" href="/box/platform.css"> <!-- profiles, recap, audience, streamer options, family badge -->
+  <link rel="stylesheet" href="/box/onboard.css"> <!-- practice round, first-join tour -->
   <link rel="stylesheet" href="/box/games.css">
   <link rel="stylesheet" href="/box/ducks-theme.css">
   <link rel="stylesheet" href="/box/kingdoms-theme.css">
@@ -53,6 +54,7 @@
     <header class="tv-bar">
       <a class="btn ghost small" href="/" id="to-hub">◀ Games</a>
       <div class="title" id="tv-title">JustGameBox</div>
+      <span class="tv-event-pill" data-season-banner="pill current" hidden></span> <!-- the seasonal event (public/progress-ui.js) -->
       <div class="code" id="tv-code" hidden></div>
     </header>
     <main class="tv-main" id="tv-main"><p class="muted">Setting up the room…</p></main>
@@ -67,6 +69,8 @@
   <script src="/wear-art.js"></script> <!-- MTArt.WEAR: game wearables on the character -->
   <script src="/box/portrait.js"></script> <!-- BOX.portrait: player faces -->
   <script src="/shared/gear.js"></script> <!-- per-game gear (JustGold shop): MT_GEAR.paint / phoneTheme -->
+  <script src="/shared/seasons.js"></script> <!-- seasonal events: the lobby banner -->
+  <script src="/progress-ui.js"></script> <!-- level badges, level-up toasts -->
   <script src="/box/audio.js"></script>
   <script src="/box/games/president.js"></script>
   <script src="/box/games/blackjack.js"></script>

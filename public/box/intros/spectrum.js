@@ -203,7 +203,7 @@
       spots: ['255,240,200', '255,200,170', '200,190,255', '255,240,200'], confetti: ['#ffc23d', '#ff7a8a', '#5b4fd8', '#7fd862', '#ffffff', '#4cc4ff'] },
     host: {
       name: 'Ollie the Owl',
-      voice: { kokoro: 'bm_lewis', speed: 1.15, like: /guy|davis|eric|andrew|brian|male/i, accent: /en-(GB|US)/i, pitch: 1.25, rate: 1.05 },
+      voice: { kokoro: 'bm_lewis', speed: 1.05, like: /guy|davis|eric|andrew|brian|male/i, accent: /en-(GB|US)/i, pitch: 1.25, rate: 1.05 },
       draw: hostDraw,
     },
     lines: {

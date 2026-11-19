@@ -205,9 +205,11 @@
   function speak(h) {
     if (!h || TV.said === h.at + h.key) return;
     TV.said = h.at + h.key;
-    const H = hazelSpec(), ms = Math.max(1500, h.text.length * 62);
-    TV.sayUntil = Date.now() + ms; if (TV.anim) TV.anim.talk(performance.now(), ms);
-    try { if (BOX.voice && BOX.voice.speak) BOX.voice.speak(h.text, H ? H.voice : {}); } catch (e) { /* no voice */ }
+    const H = hazelSpec();
+    // Her lines queue behind one still playing (public/box/voice.js); her mouth moves when it starts.
+    const talk = (ms) => { TV.sayUntil = Date.now() + ms; if (TV.anim) TV.anim.talk(performance.now(), ms); };
+    try { if (BOX.voice && BOX.voice.speak) { BOX.voice.speak(h.text, H ? H.voice : {}, { onstart: talk }); return; } } catch (e) { /* no voice */ }
+    talk(Math.max(1500, h.text.length * 62));
   }
   // Hazel herself, drawn with the intro's character (her office light behind her).
   function hazelLoop() {

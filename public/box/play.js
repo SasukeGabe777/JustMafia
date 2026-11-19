@@ -205,7 +205,19 @@
     return profBusy;
   }
   const gname = (k) => (BOX.games[k] ? BOX.games[k].icon + ' ' + BOX.games[k].name : k);
-  async function profileSheet(tab = 'stats') {
+  // ⭐ Progress (public/progress-ui.js, box/progress.js): level, today's 3, this week's 5, the event
+  // and its season pass. They live on the account's wallet: linked here the first time.
+  async function progressFill(el) {
+    if (!el || !window.JGProgress) return;
+    JGProgress.render(el, null);
+    const auth = getProf();
+    let r = auth ? await pemit('progress:get', { auth }) : { ok: false };
+    if (!r.ok && r.noWallet && acct) { await acct.linkWallet(); r = await pemit('progress:get', { auth }); }
+    if (!r.ok) { el.innerHTML = `<p class="muted">${esc(r.error || 'Your progress isn’t available here.')}</p>`; return; }
+    const lv = document.querySelector('.pf-head .pf-lv'); if (lv) lv.innerHTML = JGProgress.badge(r.progress.level);
+    JGProgress.render(el, r.progress, { toast, reroll: (period, id) => pemit('progress:reroll', { auth: getProf(), period, id }), premium: () => pemit('progress:premium', { auth: getProf() }).then((x) => { if (x.ok) haptic('win'); return x; }) });
+  }
+  async function profileSheet(tab = 'progress') {
     let auth = getProf();
     if (!auth) { await ensureProfile(); auth = getProf(); }
     let r = auth ? await pemit('profile:get', { auth }) : { ok: false };
@@ -213,24 +225,28 @@
     if (!r.ok) return toast(r.error || 'Profiles are not available here.');
     const P = r.profile, S = P.stats, earned = P.trophies.filter((t) => t.earned);
     const nm = P.name || (view && view.me.name) || (me && me.name) || 'Player';
-    const tabs = `<div class="pf-tabs">${[['stats', '📊 Stats'], ['trophies', `🏆 Trophies ${earned.length}/${P.trophies.length}`], ['account', P.claimed ? '✅ Saved' : '💾 Save']].map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+    const tabs = `<div class="pf-tabs">${[['progress', '⭐ Progress'], ['stats', '📊 Stats'], ['trophies', `🏆 Trophies ${earned.length}/${P.trophies.length}`], ['account', P.claimed ? '✅ Saved' : '💾 Save']].map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`;
     let body = '';
-    if (tab === 'stats') {
+    if (tab === 'progress') {
+      body = '<div id="pf-prog"></div>';
+    } else if (tab === 'stats') {
       body = `<div class="pf-tiles"><div><b>${S.nights}</b><span>nights</span></div><div><b>${S.games}</b><span>games</span></div><div><b>${S.wins}</b><span>wins</span></div><div><b>${S.partyPts}</b><span>party pts</span></div></div>
         <div class="pf-tiles small"><div><b>${S.bestPlace ? '#' + S.bestPlace : '–'}</b><span>best finish</span></div><div><b>${S.podiums}</b><span>top-3s</span></div><div><b>${S.partyWins}</b><span>party wins</span></div><div><b>${S.audienceFavs}</b><span>crowd favs</span></div></div>
         <h3>🎮 By game</h3>${S.byGame.length ? `<div class="pf-games">${S.byGame.map((g) => `<div><span>${esc(gname(g.game))}</span><small>${g.played} played</small><b>${g.won ? '🏆 ' + g.won : '–'}</b></div>`).join('')}</div>` : '<p class="muted">Finish a game and it shows up here.</p>'}
         ${P.nights.length ? `<h3>🌙 Recent nights</h3><div class="pf-nights">${P.nights.slice(0, 5).map((n) => `<div><span>${esc(new Date(n.at).toLocaleDateString())}</span><small>${n.games} game${n.games === 1 ? '' : 's'} · ${n.wins} win${n.wins === 1 ? '' : 's'}${n.place ? ' · party #' + n.place : ''}</small><b>${n.pts} pts</b></div>`).join('')}</div>` : ''}`;
     } else if (tab === 'trophies') {
       body = `<p class="muted small">Tap a trophy you’ve earned to wear its title next to your name.</p><div class="pf-case">${P.trophies.map((t) => `<button class="pf-tro ${t.earned ? 'got' : ''} ${P.title === t.id ? 'worn' : ''}" data-tro="${t.id}" ${t.earned ? '' : 'disabled'}><span class="pf-ti">${t.earned ? esc(t.icon) : '🔒'}</span><b>${esc(t.name)}</b><small>${esc(t.earned ? '“' + t.title + '”' : t.how)}</small>${P.title === t.id ? '<em>WORN</em>' : ''}</button>`).join('')}</div>
+        ${(P.levelTitles || []).length ? `<h3>⭐ Level &amp; season titles</h3><div class="pf-case">${P.levelTitles.map((t) => `<button class="pf-tro got ${P.title === t.id ? 'worn' : ''}" data-tro="${esc(t.id)}"><span class="pf-ti">⭐</span><b>${esc(t.text)}</b><small>“${esc(t.text)}”</small>${P.title === t.id ? '<em>WORN</em>' : ''}</button>`).join('')}</div>` : ''}
         ${P.title ? '<button class="btn ghost small" data-tro="">Take off my title</button>' : ''}`;
     } else {
       // "Save your stuff" (public/account-ui.js): name + password, sign in, change password, sign out.
       body = `<div id="pf-acct"></div><p class="muted small">${esc(P.storage)}. Without a password your stuff lives on this phone only.</p>`;
     }
-    sheet(`<div class="pf-head"><span class="pf-av">${esc((view && view.me.avatar) || avatar)}</span><div><h2>${esc(nm)}</h2>${P.titleText ? `<span class="pf-title">${esc(P.titleText)}</span>` : '<span class="muted small">No title yet: earn trophies!</span>'}</div></div>${tabs}<div class="pf-body">${body}</div>`, (sh, close) => {
+    sheet(`<div class="pf-head"><span class="pf-av">${esc((view && view.me.avatar) || avatar)}</span><div><h2>${esc(nm)}<span class="pf-lv">${view && view.me.level && window.JGProgress ? JGProgress.badge(view.me.level) : ''}</span></h2>${P.titleText ? `<span class="pf-title">${esc(P.titleText)}</span>` : '<span class="muted small">No title yet: earn trophies!</span>'}</div></div>${tabs}<div class="pf-body">${body}</div>`, (sh, close) => {
       for (const b of sh.querySelectorAll('[data-tab]')) b.onclick = () => profileSheet(b.dataset.tab);
       for (const b of sh.querySelectorAll('[data-tro]')) b.onclick = async () => { const x = await pemit('profile:title', { auth: getProf(), title: b.dataset.tro || null }); if (!x.ok) return toast(x.error); haptic('success'); toast(b.dataset.tro ? '🏆 New title on!' : 'Title off'); profileSheet('trophies'); };
-      const pa = sh.querySelector('#pf-acct'); if (pa && acct) acct.panel(pa, 'auto', (kind) => profileSheet(kind === 'signin' ? 'stats' : 'account'));
+      const pa = sh.querySelector('#pf-acct'); if (pa && acct) acct.panel(pa, 'auto', (kind) => profileSheet(kind === 'signin' ? 'progress' : 'account'));
+      progressFill(sh.querySelector('#pf-prog'));
     });
   }
   $('#h-prof').onclick = () => profileSheet();
@@ -322,15 +338,28 @@
     if (view0 && v.unlocks && view0.unlocks && v.unlocks.length > view0.unlocks.length) { const k = v.unlocks.find((x) => !view0.unlocks.includes(x)); const g = BOX.games[k]; toast(`🔓 New game unlocked: ${g ? g.icon + ' ' + g.name : k}!`); haptic('win'); }
     if (v.phase !== (view0 && view0.phase) && v.phase === 'show') haptic('big');
     if (v.game !== gameKey) { setGame(v.game); haptic('success'); toast(`${G ? G.icon + ' ' : ''}Next game: ${v.title}!`); vibrate(80); }
-    $('#h-name').textContent = v.me.name + (v.me.title ? ' · ' + v.me.title : '');
+    const hn = esc(v.me.name) + (v.me.level && window.JGProgress ? JGProgress.badge(v.me.level) : '') + (v.me.title ? ' · ' + esc(v.me.title) : '');
+    if ($('#h-name').dataset.html !== hn) { $('#h-name').innerHTML = hn; $('#h-name').dataset.html = hn; }
     const hav = BOX.portrait ? BOX.portrait.html(v.me, 28) : esc(v.me.avatar || ''); if ($('#h-av').dataset.html !== hav) { $('#h-av').innerHTML = hav; $('#h-av').dataset.html = hav; }
     // JustGold paid at the end of a game (or why it wasn't).
     if (v.jg && v.jg.at && view0 && (!view0.jg || view0.jg.at !== v.jg.at)) {
-      if (v.jg.n > 0) { toast(`🪙 +${v.jg.n} JustGold!${v.jg.total != null ? ` You have ${v.jg.total} JG.` : ''}`); haptic('win'); } else if (v.jg.why) toast(`🪙 ${v.jg.why}`);
+      if (v.jg.n > 0) { toast(`🪙 +${v.jg.n} JustGold!${v.jg.set ? ` (${v.jg.set.icon} ${v.jg.set.name} set +${v.jg.set.extra})` : ''}${v.jg.total != null ? ` You have ${v.jg.total} JG.` : ''}`); haptic('win'); } else if (v.jg.why) toast(`🪙 ${v.jg.why}`);
+    }
+    // Progress from that game: XP, finished challenges, level ups (after the JustGold toast).
+    if (v.prog && v.prog.at && view0 && (!view0.prog || view0.prog.at !== v.prog.at) && window.JGProgress) {
+      const lines = JGProgress.news(v.prog).slice(-4); // (the level up comes last: keep it)
+      lines.forEach((l, i) => setTimeout(() => { toast(l); if (/Level|done/.test(l)) { haptic('win'); BOX.sfx('win'); } }, 2800 * (i + (v.jg && v.jg.n ? 1 : 0))));
     }
     // After a game: once, if this phone has unsaved JustGold or stats, offer "Save your stuff".
+    // Never before this phone has finished a real game (a practice round doesn't count): then on
+    // the game-over screen, with the JustGold just earned.
     const overNow = v.state && v.state.phase === 'over', over0 = view0 && view0.state && view0.state.phase === 'over';
-    if (acct && view0 && overNow && !over0) setTimeout(() => acct.nudge(), 3500);
+    if (acct && view0 && overNow && !over0 && !v.practice && v.phase === 'game') {
+      acct.markPlayed();
+      setTimeout(() => acct.nudge(document.body, { earned: view && view.jg && view.jg.n > 0 && Date.now() - (view._at || 0) < 60000 ? view.jg.n : 0 }), 3500);
+    }
+    practiceNews(view0, v);
+    if (!tourDone() && !$('#game').hidden && (v.phase === 'lobby' || overNow)) setTimeout(tour, 700);
     shopButtons();
     queue();
   });
@@ -345,8 +374,13 @@
     // Jackbox-style host bar: the first player to join starts the game from their phone.
     const vb = $('#vip-bar'), over = view.state && view.state.phase === 'over';
     $('#h-menu').hidden = !view.vip;
-    const PM = view.partyMode;
-    if (view.vip && PM && over && PM.phase !== 'done') {
+    const PM = view.partyMode, PR = view.practice;
+    if (PR && view.phase === 'game') {
+      // Practice round: everyone sees it doesn't count; the host can skip it.
+      const html = `<span class="pr-strip">🎓 <b>Practice round</b> · it doesn’t count</span>${view.vip ? `<button class="btn ${PR.phase === 'over' ? 'green' : 'ghost small'}" data-vip="practiceSkip">${PR.phase === 'over' ? 'Start for real ⏩' : 'Skip practice ⏭'}</button>` : ''}`;
+      if (vb.dataset.html !== html) { vb.innerHTML = html; vb.dataset.html = html; for (const b of vb.querySelectorAll('[data-vip]')) b.onclick = () => hostDo(b.dataset.vip); }
+      vb.hidden = false;
+    } else if (view.vip && PM && over && PM.phase !== 'done') {
       // Party Mode: the lineup carries on by itself; the host can hurry it or hold it. While the
       // game's end screen is up ('ending') the next step is the standings; on the board, the next game.
       const html = PM.phase === 'ending' ? `<span>👑 Party host</span><button class="btn green" data-vip="partyBoardNow">⏩ Standings now</button><button class="btn ghost small" data-vip="partyPause">${PM.paused ? '▶ Resume' : '⏸ Wait'}</button>`
@@ -388,6 +422,7 @@
     bars();
     if (view.recap && BOX.recapCard && !recapSeen[view.recap.id]) { recapPhone(view.recap); return; }
     if (view.phase === 'show' && view.show) { showPhone(view.show); return; }
+    if (view.practice && view.practice.phase === 'over' && view.phase === 'game') { practiceOverPhone(view.practice); return; }
     if (view.partyMode && (view.partyMode.phase === 'board' || view.partyMode.phase === 'done')) { partyPhone(view); return; }
     if (view.phase === 'lobby' && view.live && view.state) { G.phone($('#g-body'), view.state, ctx, view); return; }
     if (view.phase === 'lobby') {
@@ -430,6 +465,7 @@
   function howtoPhone(sh) {
     const body = $('#g-body');
     loadIntro(sh.game);
+    try { const I = BOX.intros && BOX.intros[sh.game]; if (I && I.onShow) I.onShow(sh); } catch { /* the default steps */ } // e.g. YesChef: the kitchen's own steps
     const steps = BOX.howtoSteps ? BOX.howtoSteps(sh.game) : [];
     const { i, done } = BOX.howtoStepAt ? BOX.howtoStepAt(sh, steps, view._at) : { i: 0, done: false };
     const s = steps[i] || {};
@@ -473,6 +509,83 @@
     if (now && !showPhone.buzzed) { showPhone.buzzed = true; vibrate([60, 40, 60]); }
     if (!now) showPhone.buzzed = false;
   }
+  // ---------- practice round: tips from the game's how-to steps at the right moments ----------
+  // A tip pops up when the game moves to a new phase (a new thing to do), or after a quiet spell;
+  // the steps are the intro's tutorial (BOX.howtoSteps), the same ones the how-to showed.
+  const hint = { i: 0, phase: null, at: 0, on: false, timer: 0 };
+  function practiceNews(v0, v) {
+    const P = v.practice;
+    if (!P || v.phase !== 'game' || P.phase !== 'playing') {
+      if (P && P.phase === 'over' && !(v0 && v0.practice && v0.practice.phase === 'over')) { hideHint(); haptic('big'); BOX.sfx('win'); }
+      if (!P) { hideHint(); hint.on = false; }
+      return;
+    }
+    loadIntro(v.game);
+    if (!hint.on) { hint.on = true; hint.i = 0; hint.phase = null; hint.at = 0; }
+    const ph = v.state && typeof v.state.phase === 'string' ? v.state.phase : '';
+    if (ph !== hint.phase && Date.now() - hint.at > 6000) { hint.phase = ph; showHint(); }
+  }
+  setInterval(() => { if (view && view.practice && view.practice.phase === 'playing' && hint.on && Date.now() - hint.at > 16000) showHint(); }, 2000);
+  function hideHint() { const h = $('#pr-hint'); if (h) { h.classList.add('out'); h.id = ''; setTimeout(() => h.remove(), 300); } clearTimeout(hint.timer); }
+  function showHint() {
+    const steps = BOX.howtoSteps && gameKey ? BOX.howtoSteps(gameKey) : [];
+    if (!steps.length || hint.i > steps.length) return;
+    hint.at = Date.now();
+    const last = hint.i === steps.length, s = last ? { icon: '👍', title: 'You’ve got it!', text: 'Keep going: the real game starts after this warm-up.' } : steps[hint.i];
+    hint.i++;
+    hideHint();
+    const h = document.createElement('div'); h.id = 'pr-hint'; h.className = 'pr-hint'; h.setAttribute('role', 'status');
+    h.innerHTML = `<span class="prh-i">${esc(s.icon || '💡')}</span><div class="prh-t"><small>🎓 PRACTICE TIP${last ? '' : ` ${hint.i} of ${steps.length}`}</small><b>${esc(s.title || '')}</b><span>${esc(s.text || '')}</span>${s.phone ? `<em>📱 ${esc(s.phone)}</em>` : ''}</div><button class="prh-x" aria-label="Got it">Got it</button>`;
+    document.body.appendChild(h);
+    h.querySelector('.prh-x').onclick = () => { haptic('select'); hideHint(); };
+    haptic('tap');
+    hint.timer = setTimeout(hideHint, 9000);
+  }
+  function practiceOverPhone(P) {
+    BOX.morph($('#g-body'), `<div class="card-box pr-ph-over"><div class="pr-ph-icon">🎬</div><small>${P.why === 'time' ? 'WARM-UP TIME IS UP' : 'PRACTICE OVER'}</small><h3>Now for real!</h3><p>Same game, fresh scores. This one counts.</p><p class="muted small">Starting in ${BOX.timer(P.endsIn || 0)}</p></div>`);
+  }
+
+  // ---------- the first time a phone joins: what the buttons in the header do (~20 s) ----------
+  const TOUR_KEY = 'box.tour';
+  const tourDone = () => { try { return localStorage.getItem(TOUR_KEY) === '1' || params.has('notour'); } catch { return true; } };
+  let touring = false;
+  function tour() {
+    if (touring || tourDone() || !view || $('#game').hidden) return;
+    touring = true;
+    const steps = [
+      ['#h-me', '👤', 'This is you', 'Tap your name to change your avatar, phone sounds and vibration.'],
+      ['#h-react', '😀', 'React', 'Send an emoji. It floats up on the big screen with your name.'],
+      ['#h-shop', '🛍️', 'Character & shop', 'Dress up your character and spend JustGold between games.'],
+      ['#h-prof', '🏆', 'Your profile', 'Your stats, trophies and titles, across every game.'],
+      ['#h-help', '❓', 'How to play', 'The rules of the game you’re in, any time.'],
+      ['#h-menu', '👑', 'You’re the host', 'You start the game. Skip ahead, add bots or pick the next game here.'],
+      [null, '📺', 'Eyes on the big screen', 'The game happens on the TV. Your phone is your controller. Have fun!'],
+    ].filter((s) => !s[0] || ($(s[0]) && !$(s[0]).hidden));
+    const o = document.createElement('div'); o.className = 'ph-tour'; o.id = 'ph-tour';
+    o.innerHTML = '<div class="pt-ring"></div><div class="pt-card"><span class="pt-i"></span><b class="pt-h"></b><p class="pt-p"></p><div class="pt-foot"><span class="pt-dots"></span><button class="pt-skip">Skip</button><button class="pt-next">Next ▶</button></div></div>';
+    document.body.appendChild(o);
+    let i = -1, t = 0;
+    const end = () => { clearTimeout(t); try { localStorage.setItem(TOUR_KEY, '1'); } catch { /* private */ } o.classList.add('out'); setTimeout(() => o.remove(), 300); touring = false; };
+    const go = () => {
+      clearTimeout(t); i++;
+      if (i >= steps.length || !document.body.contains(o)) return end();
+      const [sel, icon, title, text] = steps[i], el = sel && $(sel), ring = o.querySelector('.pt-ring'), card = o.querySelector('.pt-card');
+      if (el) { const r = el.getBoundingClientRect(), pad = 6; Object.assign(ring.style, { left: r.left - pad + 'px', top: r.top - pad + 'px', width: r.width + pad * 2 + 'px', height: r.height + pad * 2 + 'px' }); ring.hidden = false; card.style.top = Math.min(innerHeight - 220, r.bottom + 18) + 'px'; card.classList.remove('mid'); }
+      else { ring.hidden = true; card.style.top = ''; card.classList.add('mid'); }
+      o.querySelector('.pt-i').textContent = icon; o.querySelector('.pt-h').textContent = title; o.querySelector('.pt-p').textContent = text;
+      o.querySelector('.pt-dots').innerHTML = steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('');
+      o.querySelector('.pt-next').textContent = i === steps.length - 1 ? 'Let’s play!' : 'Next ▶';
+      card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop');
+      haptic('tap');
+      t = setTimeout(go, i === steps.length - 1 ? 3600 : 2900);
+    };
+    o.querySelector('.pt-skip').onclick = (e) => { e.stopPropagation(); end(); };
+    o.querySelector('.pt-next').onclick = (e) => { e.stopPropagation(); go(); };
+    o.onclick = () => go();
+    go();
+  }
+  window.BOX_TOUR = { start: () => { try { localStorage.removeItem(TOUR_KEY); } catch { /* private */ } tour(); } };
+
   setInterval(() => { if (view && view.phase === 'show') queue(); }, 500); // intros run on the clock
   ctx.redraw = () => { lastRender = 0; draw(); };
 })();

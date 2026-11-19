@@ -109,14 +109,18 @@ const PW = 'Sunny Pizza 7!';
   assert(st.ok); assert.equal(st.gold, 120, 'the box phone has the same wallet');
   ok('Box phone: Sign in from the join screen (new password), joins with the account; 🏆 My profile says Saved');
 
-  // ---- Phone D: brand new in the shop: the "Save your stuff" banner is there from the start ----
+  // ---- Phone D: brand new in the shop: no "Save your stuff" before a first finished game ----
   const d = await browser.page();
   await d.go(`${URL}/shop`);
   await d.until(`!document.querySelector('#start').hidden && document.querySelector('#s-go')`, 'shop start (new)');
   await fill(d, '#s-name', 'Dee'); await d.click('#s-go');
-  await d.until(`/Save your stuff/.test(document.querySelector('#acct').textContent)`, 'shop banner for an unsaved account', 10000);
+  await d.until(`/Sign in/.test(document.querySelector('#acct').textContent)`, 'shop: only "Sign in" before a first game', 10000);
+  assert(!(await d.eval(`/Save your stuff/.test(document.querySelector('#acct').textContent)`)), 'no "Save your stuff" before a finished game');
+  // After a finished game (this phone's flag; the box phone sets it at the end of a real game).
+  await d.eval(`localStorage.setItem('jg.played', '1'); true`); await d.go(`${URL}/shop`);
+  await d.until(`/Save your stuff/.test((document.querySelector('#acct') || {}).textContent || '')`, 'shop banner after a finished game', 10000);
   await d.shot('account-shop-unsaved');
-  ok('Shop: a new account shows "Save your stuff" over the character');
+  ok('Shop: a new account shows only "Sign in"; "Save your stuff" over the character once a game is finished');
 
   for (const [n, pg] of [['mafia', a], ['shop', b], ['box', c], ['new shop', d]]) assert.deepEqual(pg.errors, [], `no page errors on the ${n} phone`);
   ok('no page errors');

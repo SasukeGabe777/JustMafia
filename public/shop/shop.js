@@ -5,6 +5,7 @@
 // your character (try-on) and sends your choices. ?mock=1 (or no server) runs an offline preview.
 (function () {
   const O = window.MT_OPTIONS, C = window.MT_COSMETICS, GEAR = window.MT_GEAR || { GEAR: [], GAMES_WITH_GEAR: [] };
+  const SSN = window.MT_SHOP_SEASON || null; // event items, daily deals, theme sets (public/shared/shop-season.js)
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const params = new URLSearchParams(location.search);
@@ -20,7 +21,7 @@
   $('#back').href = safeBack(params.get('back'));
 
   // ---------- the games (names, icons; art in /art/tiles/<key>.svg) ----------
-  const GAMES = { mafia: ['JustMafia', '🔪'], ducks: ['JustRaiseDucks', '🦆'], kingdoms: ['JustKingdoms', '🏰'], president: ['President', '👑'], blanks: ['JustBlanks', '🃏'], blackjack: ['Blackjack Night', '♠️'], bid: ['JustBid', '📦'], price: ['Price Panic', '💸'], emoji: ['Emoji Charades', '😜'], truths: ['Two Truths & a Lie', '🤥'], likely: ['Most Likely To…', '🏆'], whosaid: ['Who Said It?', '🕵️'], spectrum: ['Where Do You Stand?', '🧭'], sketch: ['JustSketch Relay', '✏️'], funny: ['JustFunny', '😂'], plinko: ['JustDrop', '🎯'], trivia: ['Hot Take Trivia', '🧠'], colormatch: ['Color Match', '🎨'], memes: ['Meme Maker', '🖼️'], letters: ['Letter Rush', '🔤'], summon: ['JustSummon', '⚔️'], quickdraw: ['Quick Draw', '⚡'], bomb: ['Bomb Squad', '💣'], alien: ['Alien Abduction', '🛸'], tune: ['Tune Buzz', '🎵'], actout: ['Act It Out', '🎭'], debate: ['Debate Club', '🗣️'], marble: ['JustMarble', '🔮'], escape: ['JustEscape', '🗝️'], zombie: ['Zombie Survival', '🧟'], pizza: ['Pizza', '🍕'], undercover: ['JustUndercover', '🕵️'] };
+  const GAMES = { mafia: ['JustMafia', '🔪'], ducks: ['JustRaiseDucks', '🦆'], kingdoms: ['JustKingdoms', '🏰'], president: ['President', '👑'], blanks: ['JustBlanks', '🃏'], blackjack: ['Blackjack Night', '♠️'], bid: ['JustBid', '📦'], price: ['Price Panic', '💸'], emoji: ['Emoji Charades', '😜'], truths: ['Two Truths & a Lie', '🤥'], likely: ['Most Likely To…', '🏆'], whosaid: ['Who Said It?', '🕵️'], spectrum: ['Where Do You Stand?', '🧭'], sketch: ['JustSketch Relay', '✏️'], funny: ['JustFunny', '😂'], plinko: ['JustDrop', '🎯'], trivia: ['Hot Take Trivia', '🧠'], colormatch: ['Color Match', '🎨'], memes: ['Meme Maker', '🖼️'], letters: ['Letter Rush', '🔤'], summon: ['JustSummon', '⚔️'], quickdraw: ['Quick Draw', '⚡'], bomb: ['Bomb Squad', '💣'], alien: ['Alien Abduction', '🛸'], tune: ['Tune Buzz', '🎵'], actout: ['Act It Out', '🎭'], debate: ['Debate Club', '🗣️'], marble: ['JustMarble', '🔮'], escape: ['JustEscape', '🗝️'], zombie: ['Zombie Survival', '🧟'], pizza: ['YesChef', '🧑‍🍳'], undercover: ['JustUndercover', '🕵️'] };
   const gameName = (k) => (GAMES[k] ? GAMES[k][0] : String(k));
   const gameIcon = (k) => (GAMES[k] ? GAMES[k][1] : '🎮');
 
@@ -37,7 +38,8 @@
   const FREE_FIELDS = ['body', 'skin', 'hairColor', 'color', 'eyes', 'expression', 'pants', 'shoes', 'face', 'features', 'facialHair', 'nameColor'];
   const HOME = { houseStyle: 'style', houseDecor: 'decor' };
   const HEAD_FIELDS = new Set(['hat', 'hair', 'expression', 'face', 'facialHair', 'features']);
-  const BACK_ACC = new Set(['cape', 'wings', 'batWings', 'fairyWings', 'backpack', 'satchel', 'torch', 'rose', 'wristwatch', 'diceBag', 'badge', 'goldChain', 'amulet', 'scarf']);
+  const BACK_ACC = new Set(['cape', 'wings', 'batWings', 'fairyWings', 'backpack', 'satchel', 'torch', 'rose', 'wristwatch', 'diceBag', 'badge', 'goldChain', 'amulet', 'scarf',
+    'autumnScarf', 'ciderMug', 'candyCane', 'loveLetter', 'cupidWings', 'bouquet', 'butterflyWings', 'surfboard', 'icePop', 'treatBucket', 'lasso', 'woodenSpoon', 'magnifier', 'cardFan', 'rayGun', 'camera']);
 
   // ---------- account storage ----------
   const getJSON = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
@@ -67,21 +69,27 @@
       buy: (itemId) => call('shop:buy', { auth: auth(), itemId }),
       equip: (itemId, on) => call('shop:equip', { auth: auth(), itemId, on }),
       look: (look) => call('shop:look', { auth: auth(), look }),
+      bundle: (setId, wear) => call('shop:bundle', { auth: auth(), setId, wear }),
+      wearSet: (setId) => call('shop:wearSet', { auth: auth(), setId }),
     };
   }
   function mockApi() {
     const stock = new Set(C.STARTER_STOCK.concat(C.nextStock(C.STARTER_STOCK, 14)));
-    const m = { name: 'You', gold: 340, earned: 410, spent: 70, owned: new Set(C.CATALOG.filter((i) => i.free).map((i) => i.id).concat(['hat:beret', 'gear:marble:cherry'])), gear: { marble: { skin: 'gear:marble:cherry' } },
+    // ?mock=1&now=2027-02-10 previews another day (another event, other deals).
+    const NOW = params.get('now') && !isNaN(Date.parse(params.get('now') + 'T12:00:00Z')) ? Date.parse(params.get('now') + 'T12:00:00Z') : null, now = () => NOW || Date.now();
+    const sale = (id) => { if (!SSN) return {}; const pr = SSN.priceOf(id, now()) || {}; return { price: pr.cost, pct: pr.pct || 0, limited: SSN.limitedInfo(id, now()), set: SSN.SET_OF[id] || null }; };
+    const onShelf = (i) => stock.has(i.id) || (SSN && (SSN.isDeal(i.id, now()) || SSN.SET_OF[i.id]));
+    const m = { name: 'You', gold: 520, earned: 590, spent: 70, owned: new Set(C.CATALOG.filter((i) => i.free).map((i) => i.id).concat(['hat:beret', 'gear:marble:cherry', 'hat:cowboy', 'outfit:sheriff', 'hat:chef'])), gear: { marble: { skin: 'gear:marble:cherry' } },
       look: { body: 'female', color: '#e84393', skin: '#d9a273', hat: 'beret', hair: 'ponytail', hairColor: '#ba593c', facialHair: 'none', eyes: '#416f91', face: 'round', features: 'rosyCheeks', expression: 'grin', outfit: 'shirt', pants: '#2d2f3a', shoes: '#151821', shoeStyle: 'simple', accessory: 'none', nameColor: '#ffffff', nameplate: 'plain', effect: 'none', deathAnim: 'none', reactions: 'rxClassic', ghostSkin: 'classic' },
       home: { style: 'cottage', decor: 'none' }, lookSaved: true,
       ledger: [{ at: Date.now() - 3.6e6, delta: 14, reason: 'JustMarble: cleared the maze', balance: 340 }, { at: Date.now() - 7.2e6, delta: -70, reason: 'Bought Beret', balance: 326 }, { at: Date.now() - 9e6, delta: 25, reason: 'Party Mode finale', balance: 396 }, { at: Date.now() - 1e7, delta: 9, reason: 'Blackjack Night: top half', balance: 371 }] };
     const section = { outfit: 'character', shoeStyle: 'character', hat: 'character', accessory: 'character', hair: 'character', nameplate: 'flair', effect: 'flair', houseStyle: 'mafia', houseDecor: 'mafia', deathAnim: 'mafia', reactions: 'mafia', ghostSkin: 'mafia' };
-    const lock = (i) => (m.owned.has(i.id) || i.free ? null : i.pass ? 'Season pass reward (in JustMafia)' : i.world ? 'A JustMafia world reward' : i.achievement ? (C.ACHIEVEMENTS[i.achievement] || {}).label || 'Earn its achievement' : i.requires && !m.owned.has(i.requires) ? 'Own the tier below first' : C.STOCKABLE.some((x) => x.id === i.id) && !stock.has(i.id) ? 'Not on the shelf yet: every game you finish reveals more' : null);
+    const lock = (i) => (m.owned.has(i.id) || i.free ? null : i.pass ? 'Season pass reward (in JustMafia)' : i.world ? 'A JustMafia world reward' : i.achievement ? (C.ACHIEVEMENTS[i.achievement] || {}).label || 'Earn its achievement' : i.requires && !m.owned.has(i.requires) ? 'Own the tier below first' : SSN && SSN.limitedLock(i.id, now()) ? SSN.limitedLock(i.id, now()) : C.STOCKABLE.some((x) => x.id === i.id) && !onShelf(i) ? 'Not on the shelf yet: every game you finish reveals more' : null);
     const state = () => ({ ok: true, name: m.name, claimed: false, gold: m.gold, earned: m.earned, spent: m.spent, look: { ...m.look }, lookSaved: m.lookSaved, home: { ...m.home }, owned: [...m.owned], gear: JSON.parse(JSON.stringify(m.gear)),
-      catalog: C.CATALOG.filter((i) => section[i.field]).map((i) => ({ id: i.id, field: i.field, value: i.value, name: i.name, cost: i.cost, free: !!i.free, section: section[i.field], category: i.category, description: i.description, owned: m.owned.has(i.id) || !!i.free, lock: lock(i) })),
-      gearCatalog: GEAR.GEAR.map((g) => ({ ...g, owned: m.owned.has(g.id), equipped: !!(m.gear[g.game] && m.gear[g.game][g.slot] === g.id) })),
-      ledger: m.ledger.slice(0, 20), busy: params.get('mock') === 'busy',
-      earn: { note: 'Every finished game pays JustGold to everyone with an account who played it (2+ people, 90 s+). Longer games pay more.', base: { play: 4, top: 3, win: 5 }, examples: [{ label: 'A 10-minute game, you played', jg: 3 }, { label: 'A 10-minute game, top half', jg: 6 }, { label: 'A 10-minute game, you won', jg: 10 }, { label: 'A 30-minute game, you won', jg: 30 }], party: { label: 'Finish a whole Party Mode: everyone +25, and +40 / +25 / +15 for the top 3. The fastest way to earn.' }, mafia: 'JustMafia: 4–30 JG a game, weekly challenges and the season pass.' } });
+      catalog: C.CATALOG.filter((i) => section[i.field]).map((i) => ({ id: i.id, field: i.field, value: i.value, name: i.name, cost: i.cost, free: !!i.free, section: section[i.field], category: i.category, description: i.description, owned: m.owned.has(i.id) || !!i.free, lock: lock(i), ...sale(i.id) })),
+      gearCatalog: GEAR.GEAR.map((g) => ({ ...g, owned: m.owned.has(g.id), equipped: !!(m.gear[g.game] && m.gear[g.game][g.slot] === g.id), ...sale(g.id) })),
+      ledger: m.ledger.slice(0, 20), busy: params.get('mock') === 'busy', ...(SSN ? SSN.shopExtras(now(), m.owned, m.look) : {}),
+      earn: { note: 'Every finished game pays JustGold to everyone with an account who played it (2+ people, 90 s+). Longer games pay more.', base: { play: 4, top: 3, win: 5 }, examples: [{ label: 'A 10-minute game, you played', jg: 3 }, { label: 'A 10-minute game, top half', jg: 6 }, { label: 'A 10-minute game, you won', jg: 10 }, { label: 'A 30-minute game, you won', jg: 30 }], party: { label: 'Finish a whole Party Mode: everyone +25, and +40 / +25 / +15 for the top 3. The fastest way to earn.' }, mafia: 'JustMafia: 4–30 JG a game, weekly challenges and the season pass.', sets: 'Wear a whole theme set (Shop → Sets) in its own game: +5% JustGold there (at least 1, at most 3 a game).' } });
     const wait = (v) => new Promise((r) => setTimeout(() => r(v), 120));
     const busy = () => params.get('mock') === 'busy';
     return {
@@ -96,8 +104,9 @@
         if (!it) return wait({ ok: false, error: 'Unknown item.' });
         if (m.owned.has(id)) return wait({ ok: false, error: 'You already have it.', state: state() });
         if (it.field && lock(it)) return wait({ ok: false, error: lock(it), state: state() });
-        if (m.gold < it.cost) return wait({ ok: false, error: `Not enough JustGold: ${it.name} costs ${it.cost} JG.`, state: state() });
-        m.gold -= it.cost; m.spent += it.cost; m.owned.add(id); m.ledger.unshift({ at: Date.now(), delta: -it.cost, reason: 'Bought ' + it.name, balance: m.gold });
+        const cost = SSN ? SSN.priceOf(id, now()).cost : it.cost;
+        if (m.gold < cost) return wait({ ok: false, error: `Not enough JustGold: ${it.name} costs ${cost} JG.`, state: state() });
+        m.gold -= cost; m.spent += cost; m.owned.add(id); m.ledger.unshift({ at: Date.now(), delta: -cost, reason: 'Bought ' + it.name, balance: m.gold });
         return wait({ ok: true, state: state() });
       },
       equip: (id, on) => {
@@ -110,6 +119,15 @@
         if (HOME[it.field]) m.home[HOME[it.field]] = on ? it.value : list[0]; else m.look[it.field] = on ? it.value : list[0];
         return wait({ ok: true, state: state() });
       },
+      bundle: (setId, wear) => {
+        if (busy()) return wait({ ok: false, busy: true, error: 'You can shop after this game.', state: state() });
+        const s = SSN && SSN.setById(setId); if (!s) return wait({ ok: false, error: 'Unknown set.' });
+        const b = SSN.bundleOf(setId, m.owned, now());
+        if (b.missing.length) { if (m.gold < b.price) return wait({ ok: false, error: `Not enough JustGold: the rest of the ${s.name} set costs ${b.price} JG.`, state: state() }); m.gold -= b.price; m.spent += b.price; b.missing.forEach((id) => m.owned.add(id)); m.ledger.unshift({ at: Date.now(), delta: -b.price, reason: `${s.icon} ${s.name} set`, balance: m.gold }); }
+        if (wear) for (const id of s.items) { const it = C.CATALOG.find((i) => i.id === id); if (it) m.look[it.field] = it.value; }
+        return wait({ ok: true, items: b.missing, state: state() });
+      },
+      wearSet: (setId) => { const s = SSN && SSN.setById(setId); if (!s) return wait({ ok: false, error: 'Unknown set.' }); if (s.items.some((id) => !m.owned.has(id))) return wait({ ok: false, error: 'Get the whole set first.', state: state() }); for (const id of s.items) { const it = C.CATALOG.find((i) => i.id === id); m.look[it.field] = it.value; } return wait({ ok: true, state: state() }); },
       look: (look) => { if (busy()) return wait({ ok: false, busy: true, error: 'You can shop after this game.', state: state() }); for (const k of FREE_FIELDS) if (look && typeof look[k] === 'string' && (O[O.AVATAR_FIELDS[k]] || []).includes(look[k])) m.look[k] = look[k]; m.lookSaved = true; return wait({ ok: true, state: state() }); },
     };
   }
@@ -118,7 +136,7 @@
 
   // ---------- state ----------
   const START_GAME = (() => { const g = params.get('game'); return g && Object.prototype.hasOwnProperty.call(GAMES, g) ? g : null; })();
-  const S = { st: null, tab: START_GAME ? 'gear' : 'character', sub: { character: 'body', flair: 'nameplate', mafia: 'houseStyle' }, game: START_GAME, sel: null, edits: {}, saving: 0, pending: false, say: '', waiting: false, keeperJump: 0, startLook: null };
+  const S = { st: null, trySet: null, tab: START_GAME ? 'gear' : params.get('tab') || 'auto', sub: { character: 'body', flair: 'nameplate', mafia: 'houseStyle' }, game: START_GAME, sel: null, edits: {}, saving: 0, pending: false, say: '', waiting: false, keeperJump: 0, startLook: null };
   const items = () => {
     const st = S.st; if (!st) return [];
     const cat = (st.catalog || []).map((i) => ({ ...i, kind: 'item' }));
@@ -143,6 +161,7 @@
   function previewLook() {
     const l = look(), i = byId(S.sel);
     if (i && i.kind === 'item' && !HOME[i.field]) l[i.field] = i.value;
+    const ts = !i && S.trySet && setOf(S.trySet); if (ts) for (const id of ts.items) { const p = byId(id); if (p) l[p.field] = p.value; }
     return l;
   }
 
@@ -190,8 +209,9 @@
     if (wearing(i)) return base + ' And you’re wearing it. Looking good!';
     if (i.owned) return base + ' It’s yours already: tap Wear!';
     if (i.lock) return `Ah, the ${i.name}! You can try it on, but it’s not for sale yet. ${i.lock.replace(/^./, (c) => c.toUpperCase())}.`;
-    if (gold < i.cost) return `${base} It’s ${i.cost} JG and you have ${gold}. A few more games and it’s yours!`;
-    return `${base} Only ${i.cost} JG.`;
+    const cost = priceNow(i), lim = i.limited && i.limited.onSale ? ` Limited time: only during ${i.limited.name}, ${i.limited.daysLeft} day${i.limited.daysLeft === 1 ? '' : 's'} left!` : '', deal = i.pct ? ` Today’s deal: ${i.pct}% off!` : '';
+    if (gold < cost) return `${base}${lim}${deal} It’s ${cost} JG and you have ${gold}. A few more games and it’s yours!`;
+    return `${base}${lim}${deal} Only ${cost} JG.`;
   }
   const HELLO = ['Welcome in! Tap anything to try it on.', 'Have a look around! Everything here works in every game.', 'Try anything on. Trying is free!'];
   function say(text) { const b = $('#bubble'); if (b.textContent === text) return; b.innerHTML = '<span>' + esc(text) + '</span>'; b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
@@ -513,12 +533,13 @@
   // ---------- render ----------
   const sectionOf = (i) => (i.kind === 'gear' ? 'gear' : i.section);
   function cardHTML(i) {
-    const own = i.owned, wear = wearing(i), poor = !own && !i.lock && S.st.gold < i.cost;
-    const badge = wear ? '<em class="badge eq">✓ On</em>' : own ? (i.free || i.isDefault ? '<em class="badge own">Free</em>' : '<em class="badge own">Owned</em>') : i.lock ? '<em class="badge lock">🔒</em>' : `<em class="badge${poor ? ' poor' : ''}">${COIN}${i.cost}</em>`;
+    const own = i.owned, wear = wearing(i), cost = priceNow(i), poor = !own && !i.lock && S.st.gold < cost;
+    const badge = wear ? '<em class="badge eq">✓ On</em>' : own ? (i.free || i.isDefault ? '<em class="badge own">Free</em>' : '<em class="badge own">Owned</em>') : i.lock ? '<em class="badge lock">🔒</em>' : `<em class="badge${poor ? ' poor' : ''}${i.pct ? ' deal' : ''}">${COIN}${cost}${i.pct ? `<s>${esc(i.cost)}</s>` : ''}</em>`;
+    const rib = ribbon(i);
     let art = '<canvas aria-hidden="true"></canvas>';
     if (i.field === 'reactions') art = `<div class="emo" aria-hidden="true">${((O.REACTION_PACKS || {})[i.value] || []).map((e) => `<span>${esc(e)}</span>`).join('')}</div>`;
     if (i.field === 'nameplate') art = `<div class="np" aria-hidden="true"><span class="np-${esc(i.value)}" style="color:${esc(look().nameColor || '#fff')}">${esc(S.st.name || 'You')}</span></div>`;
-    return `<button class="card${i.id === S.sel ? ' sel' : ''}${i.lock && !own ? ' locked' : ''}${wear ? ' wearing' : ''}" data-item="${esc(i.id)}" aria-pressed="${i.id === S.sel}" aria-label="${esc(i.name)}">${art}<b>${esc(i.name)}</b>${badge}</button>`;
+    return `<button class="card${i.id === S.sel ? ' sel' : ''}${i.lock && !own ? ' locked' : ''}${wear ? ' wearing' : ''}${i.limited ? ' limited' : ''}" data-item="${esc(i.id)}" aria-pressed="${i.id === S.sel}" aria-label="${esc(i.name)}">${art}<b>${esc(i.name)}</b>${badge}${rib}</button>`;
   }
   // Wearing first, then owned, then what you can buy (cheapest first), then locked.
   const rank = (i) => (wearing(i) ? 0 : i.owned ? 1 : i.lock ? 3 : 2);
@@ -531,8 +552,12 @@
     $('#busy').hidden = !st.busy;
     setGold(st.gold);
     // tabs
-    $('#tabs').innerHTML = SECTIONS.map((s) => `<button class="tab${s.id === S.tab ? ' on' : ''}" role="tab" aria-selected="${s.id === S.tab}" data-tab="${s.id}"><span aria-hidden="true">${s.icon}</span>${esc(s.label)}</button>`).join('');
-    const sec = SECTIONS.find((s) => s.id === S.tab);
+    const TABS = tabsNow();
+    if (S.tab === 'auto') S.tab = st.event && st.lookSaved ? 'event' : 'character';
+    if (!TABS.some((s) => s.id === S.tab)) S.tab = 'character';
+    const ev = st.event, evStyle = ev ? ` style="--ev-a:${esc(ev.theme.a)};--ev-b:${esc(ev.theme.b)};--ev-c:${esc(ev.theme.c)}"` : '';
+    $('#tabs').innerHTML = TABS.map((s) => `<button class="tab${s.id === S.tab ? ' on' : ''}${s.id === 'event' ? ' ev' : ''}" role="tab" aria-selected="${s.id === S.tab}" data-tab="${s.id}"${s.id === 'event' ? evStyle : ''}><span aria-hidden="true">${s.icon}</span>${esc(s.label)}${s.dot ? '<i class="dot"></i>' : ''}</button>`).join('');
+    const sec = TABS.find((s) => s.id === S.tab);
     const subs = sec.subs ? sec.subs : null;
     $('#subs').hidden = !subs && !(S.tab === 'gear' && S.game);
     const mafiaChips = () => MAFIA_SUBS.map(([k, ic, lb]) => { const n = ITEMS.filter((i) => i.field === k && i.owned).length; return `<button class="chip${S.sub.mafia === k ? ' on' : ''}" data-msub="${k}">${ic} ${esc(lb)} <small>${n}</small></button>`; }).join('');
@@ -550,6 +575,9 @@
       if (S.tab === 'flair') html += '<p class="note">✨ Flair shows in <b>every game</b>: your nameplate on the big screen and an effect around your character.</p>';
       html += list.length ? `<div class="grid">${list.map(cardHTML).join('')}</div>` : '<p class="empty">Nothing here yet.</p>';
     } else if (S.tab === 'gear') html = gearHTML();
+    else if (S.tab === 'event') html = eventHTML();
+    else if (S.tab === 'deals') html = dealsHTML();
+    else if (S.tab === 'sets') html = setsHTML();
     else if (S.tab === 'wardrobe') html = wardrobeHTML();
     else if (S.tab === 'earn') html = earnHTML();
     shelf.innerHTML = html;
@@ -559,6 +587,7 @@
   }
   function paintShelf() {
     for (const b of document.querySelectorAll('#shelf [data-item]')) { const cv = b.querySelector('canvas'), i = byId(b.dataset.item); if (cv && i) try { paintCard(cv, i); } catch (e) { /* skip */ } }
+    for (const b of document.querySelectorAll('#shelf [data-setcv]')) { const cv = b.querySelector('canvas') || b, s = setOf(b.dataset.setcv); if (!s) continue; const [g, w, h] = fit(cv), L = { ...look() }; for (const id of s.items) { const p = byId(id); if (p) L[p.field] = p.value; } drawBody(g, w, h, L, 1.2); }
     for (const b of document.querySelectorAll('#shelf [data-opt]')) { const cv = b.querySelector('canvas'); if (!cv) continue; const [g, w, h] = fit(cv), L = { ...look(), [b.dataset.field]: b.dataset.opt }; if (b.dataset.full) { if (b.dataset.field === 'body') Object.assign(L, bodyHair(L, b.dataset.opt)); drawBody(g, w, h, L); } else drawHead(g, w, h, L); }
   }
   // Body type: female or male (free), the first choice for a new character.
@@ -601,42 +630,134 @@
     return `<div class="totals"><div><b>${esc(st.gold)}</b><small>JG now</small></div><div><b>${esc(st.earned || 0)}</b><small>earned</small></div><div><b>${esc(st.spent || 0)}</b><small>spent</small></div></div>
       <p class="note">🪙 ${esc(e.note || 'Every finished game pays JustGold.')}</p>
       <div class="earn">${b.play != null ? `<div class="row"><span>🎮 Play a game</span><b>+${esc(b.play)}</b></div><div class="row"><span>🥈 Finish in the top half</span><b>+${esc(b.top)}</b></div><div class="row"><span>🏆 Win it</span><b>+${esc(b.win)}</b></div>` : ''}${ex}
-      ${e.party ? `<div class="row party"><span>🎉 ${esc(e.party.label)}</span></div>` : ''}${e.mafia ? `<div class="row"><span>🔪 ${esc(e.mafia)}</span></div>` : ''}</div>
+      ${e.party ? `<div class="row party"><span>🎉 ${esc(e.party.label)}</span></div>` : ''}${e.sets ? `<div class="row"><span>🧩 ${esc(e.sets)}</span></div>` : ''}${e.mafia ? `<div class="row"><span>🔪 ${esc(e.mafia)}</span></div>` : ''}</div>
       <h3 class="sec-h">📜 Your ledger <small>where every coin came from</small></h3>${led ? `<ul class="ledger">${led}</ul>` : '<p class="empty">No JustGold yet. Finish a game with friends to earn some!</p>'}`;
   }
   function renderStageText() {
     const st = S.st, i = byId(S.sel), l = look();
     const tag = $('#tag');
     if (i) { tag.hidden = false; tag.innerHTML = `${wearing(i) ? 'Wearing' : i.owned ? 'Yours' : 'Trying on'}<b>${esc(i.name)}</b>`; }
+    else if (S.trySet && setOf(S.trySet)) { const ts = setOf(S.trySet); tag.hidden = false; tag.innerHTML = `${ts.worn ? 'Wearing' : 'Trying on'}<b>${esc(ts.icon)} ${esc(ts.name)}</b>`; }
     else if (!st.lookSaved) { tag.hidden = false; tag.innerHTML = 'This is you!<b>Make it yours</b>'; }
     else tag.hidden = true;
     const plate = $('#plate'), np = i && i.field === 'nameplate' ? i.value : l.nameplate || 'plain';
     plate.className = 'plate np-' + (O.nameplate.includes(np) ? np : 'plain');
     plate.style.color = /^#[0-9a-f]{6}$/i.test(l.nameColor || '') ? l.nameColor : '#fff';
-    plate.textContent = st.name || 'You';
-    say(i ? pitchOf(i) : S.say || (st.busy ? 'Busy playing? Have a look around. I’ll hold everything for you.' : pick(HELLO, String(st.name || 'x'))));
+    const ws = !i && !S.trySet && (st.sets || []).find((x) => x.worn);
+    plate.textContent = (ws ? ws.icon + ' ' : '') + (st.name || 'You');
+    plate.classList.toggle('set-on', !!ws); if (ws) plate.style.setProperty('--set', ws.color || '#ffd23f');
+    say(i ? pitchOf(i) : S.trySet && setOf(S.trySet) ? setPitch(setOf(S.trySet)) : S.say || (st.busy ? 'Busy playing? Have a look around. I’ll hold everything for you.' : pick(HELLO, String(st.name || 'x'))));
   }
   function renderAct() {
     const a = $('#act'), st = S.st, i = byId(S.sel);
     let html = '';
     if (i) {
-      const wear = wearing(i), left = st.gold - i.cost;
+      const wear = wearing(i), cost = priceNow(i), left = st.gold - cost;
       let sub = '', btns = '';
       if (st.busy) { sub = '<small class="warn">You can shop after this game.</small>'; btns = '<button class="btn" disabled>🔒 After this game</button>'; }
       else if (wear) { sub = '<small>You’re wearing it in every game.</small>'; btns = i.isDefault || (i.kind === 'item' && (O[O.AVATAR_FIELDS[i.field]] || O[O.HOME_FIELDS[HOME[i.field]]] || [])[0] === i.value) ? '<button class="btn ghost" data-act="close">Done</button>' : '<button class="btn ghost" data-act="off">Take off</button>'; }
       else if (i.owned) { sub = `<small>${i.free || i.isDefault ? 'Free for everyone.' : 'In your wardrobe.'}</small>`; btns = '<button class="btn" data-act="wear">👕 Wear</button>'; }
       else if (i.lock) { sub = `<small class="warn">🔒 ${esc(i.lock)}</small>`; btns = '<button class="btn ghost" data-act="close">OK</button>'; }
-      else if (left < 0) { sub = `<small class="warn">${COIN} ${esc(i.cost)} JG · you need ${esc(-left)} more</small>`; btns = '<button class="btn gold" data-act="earn">🪙 Earn JG</button>'; }
-      else { sub = `<small>${COIN} ${esc(i.cost)} JG · you’d have <b>${esc(left)}</b> left</small>`; btns = `<button class="btn gold" data-act="buy">Buy ${COIN} ${esc(i.cost)}</button>`; }
+      else if (left < 0) { sub = `<small class="warn">${COIN} ${esc(cost)} JG · you need ${esc(-left)} more</small>`; btns = '<button class="btn gold" data-act="earn">🪙 Earn JG</button>'; }
+      else { sub = `<small>${i.pct ? `<s>${esc(i.cost)}</s> ` : ''}${COIN} ${esc(cost)} JG${i.pct ? ` (−${esc(i.pct)}% today)` : ''}${i.limited ? ` · ⏳ ${esc(i.limited.daysLeft)} day${i.limited.daysLeft === 1 ? '' : 's'} left` : ''} · you’d have <b>${esc(left)}</b> left</small>`; btns = `<button class="btn gold" data-act="buy">Buy ${COIN} ${esc(cost)}</button>`; }
       html = `<div class="what"><b>${esc(i.name)}</b>${sub}</div>${btns}`;
+    } else if (S.trySet && setOf(S.trySet)) {
+      const s = setOf(S.trySet), b = s.bundle || { missing: [], price: 0 }, left = st.gold - b.price;
+      if (st.busy) html = `<div class="what"><b>${esc(s.icon)} ${esc(s.name)}</b><small class="warn">You can shop after this game.</small></div><button class="btn" disabled>🔒 After this game</button>`;
+      else if (s.worn) html = `<div class="what"><b>${esc(s.icon)} ${esc(s.name)} ✓</b><small>Wearing the whole set: +${esc(st.setRules.bonusPct)}% JG in ${esc(gameName(s.game))}.</small></div><button class="btn ghost" data-act="close">Done</button>`;
+      else if (!b.missing.length) html = `<div class="what"><b>${esc(s.icon)} ${esc(s.name)}</b><small>You own every piece.</small></div><button class="btn" data-setwear="${esc(s.id)}">👕 Wear set</button>`;
+      else if (left < 0) html = `<div class="what"><b>${esc(s.icon)} ${esc(s.name)}</b><small class="warn">${COIN} ${esc(b.price)} JG for the rest · you need ${esc(-left)} more</small></div><button class="btn gold" data-act="earn">🪙 Earn JG</button>`;
+      else html = `<div class="what"><b>${esc(s.icon)} ${esc(s.name)}</b><small><s>${esc(b.full)}</s> ${COIN} ${esc(b.price)} JG for ${b.missing.length} piece${b.missing.length > 1 ? 's' : ''} (−${esc(b.pct)}%)</small></div><button class="btn gold" data-setbuy="${esc(s.id)}">Buy set ${COIN} ${esc(b.price)}</button>`;
     } else if (!st.lookSaved && !st.busy) html = '<div class="what"><b>This is you!</b><small>Pick colours, a face and clothes. Then save.</small></div><button class="btn" data-act="save">✓ Save my character</button>';
     else if (S.saving || S.pending) html = '<div class="what"><b>Saving your look…</b><small>It shows in every game.</small></div>';
     a.innerHTML = html; a.classList.toggle('off', !html);
     a.querySelectorAll('button').forEach((b) => { if (S.inflight && b.dataset.act !== 'close') b.disabled = true; });
   }
 
+  // ---------- shop seasons, daily deals and theme sets (public/shared/shop-season.js) ----------
+  // Tabs: the running event first (in its colours), today's deals, then the usual shelves, and Sets.
+  function tabsNow() {
+    const st = S.st, ev = st && st.event, out = [];
+    if (ev) out.push({ id: 'event', icon: ev.icon, label: ev.name, dot: ITEMS.some((i) => i.limited && i.limited.onSale && !i.owned) });
+    if (st && st.deals) out.push({ id: 'deals', icon: '🏷️', label: 'Deals' });
+    out.push(...SECTIONS.slice(0, 3));
+    if (st && st.sets) out.push({ id: 'sets', icon: '🧩', label: 'Sets' });
+    return out.concat(SECTIONS.slice(3));
+  }
+  const priceNow = (i) => (i && i.price != null ? i.price : i ? i.cost : 0);
+  const setOf = (id) => ((S.st && S.st.sets) || []).find((s) => s.id === id) || null;
+  const serverNow = () => Date.now() + (S.clockSkew || 0);
+  function untilText(t) {
+    const ms = Math.max(0, t - serverNow()), h = Math.floor(ms / 3.6e6), m = Math.floor(ms / 6e4) % 60, d = Math.ceil(ms / 864e5); // whole days, like the LIMITED ribbons
+    return d >= 2 ? `${d} days` : h >= 1 ? `${h} h ${m} min` : `${Math.max(1, m)} min`;
+  }
+  const until = (t, pre = '') => `<span data-until="${esc(t)}" data-pre="${esc(pre)}">${esc(pre + untilText(t))}</span>`;
+  setInterval(() => { for (const el of document.querySelectorAll('[data-until]')) el.textContent = el.dataset.pre + untilText(+el.dataset.until); }, 20000);
+  // Little corner ribbons: LIMITED (event), today's discount, the set a piece belongs to.
+  function ribbon(i) {
+    if (i.limited && i.limited.onSale) return `<span class="rib lim">⏳ ${esc(i.limited.daysLeft)}d</span>`;
+    if (i.limited && !i.owned) return `<span class="rib lim off">${esc(i.limited.icon)}</span>`;
+    if (i.pct && !i.owned) return `<span class="rib deal">−${esc(i.pct)}%</span>`;
+    if (i.set && !S.inSetCard) { const s = setOf(i.set); return s ? `<span class="rib rset" title="${esc(s.name)} set">${esc(s.icon)}</span>` : ''; }
+    return '';
+  }
+  const setPitch = (s) => s ? `The ${s.name} set! ${s.blurb} Wear all ${s.total} pieces in ${gameName(s.game)} and earn +${S.st.setRules.bonusPct}% JustGold there.` : '';
+  // Event: the running event's banner, its limited items, and what comes next.
+  function eventHTML() {
+    const ev = S.st.event; if (!ev) return '<p class="empty">No event right now.</p>';
+    const list = sorted(ITEMS.filter((i) => i.limited && i.limited.onSale)), have = list.filter((i) => i.owned).length, nx = S.st.nextEvent;
+    return `<div class="ev-banner" style="--ev-a:${esc(ev.theme.a)};--ev-b:${esc(ev.theme.b)};--ev-c:${esc(ev.theme.c)}"><span class="ev-ic" aria-hidden="true">${esc(ev.icon)}</span><div><h3>${esc(ev.name)}</h3><p>${esc(ev.blurb)}</p>` +
+      `<div class="ev-meta"><em class="pill lim">LIMITED · ${until(ev.endsAt, '')} left</em><em class="pill">${have}/${list.length} collected</em></div></div></div>` +
+      '<p class="note">⏳ <b>Limited time:</b> these are sold only while the event runs. Everything you buy stays yours, and they come back next year.</p>' +
+      (list.length ? `<div class="grid">${list.map(cardHTML).join('')}</div>` : '<p class="empty">Nothing here yet.</p>') +
+      (nx ? `<p class="note soon">${esc(nx.icon)} Next: <b>${esc(nx.name)}</b> in ${esc(nx.daysUntil)} day${nx.daysUntil === 1 ? '' : 's'}, with its own limited items.</p>` : '');
+  }
+  // Deals: six items for everyone today (two of them discounted) and the week's spotlight set.
+  function dealsHTML() {
+    const d = S.st.deals, list = d.items.map((x) => byId(x.id)).filter(Boolean), sp = setOf(d.spotlight.set), ev = S.st.event, nx = S.st.nextEvent;
+    const hot = list.filter((i) => i.pct), rest = list.filter((i) => !i.pct);
+    return `<div class="deal-head"><div><h3>🏷️ Daily deals</h3><p>The same for everyone · new items in ${until(d.endsAt)}</p></div><span class="clock" aria-hidden="true">⏰</span></div>` +
+      (hot.length ? `<h3 class="sec-h">🔥 On sale today <small>these prices end at midnight (UTC)</small></h3><div class="grid deals">${hot.map(cardHTML).join('')}</div>` : '') +
+      `<h3 class="sec-h">✨ Featured <small>for everyone today, shelf or not</small></h3><div class="grid">${rest.map(cardHTML).join('')}</div>` +
+      (sp ? `<h3 class="sec-h">🌟 Weekly spotlight <small>new set in ${until(d.spotlight.endsAt)}</small></h3>${setCardHTML(sp)}` : '') +
+      (ev ? `<button class="ev-mini" data-jump="event" style="--ev-a:${esc(ev.theme.a)};--ev-b:${esc(ev.theme.b)};--ev-c:${esc(ev.theme.c)}">${esc(ev.icon)} <b>${esc(ev.name)}</b> is on: limited items, ${esc(ev.daysLeft)} day${ev.daysLeft === 1 ? '' : 's'} left ›</button>` : nx ? `<p class="note soon">${esc(nx.icon)} Next event: <b>${esc(nx.name)}</b> in ${esc(nx.daysUntil)} days.</p>` : '');
+  }
+  // One theme set: who wears it, progress, the pieces, the bundle and the bonus.
+  function setCardHTML(s) {
+    const b = s.bundle || { missing: [], price: 0, full: 0, pct: 0 }, pieces = s.items.map(byId).filter(Boolean), done = !b.missing.length, R = S.st.setRules;
+    const btn = S.st.busy ? '' : s.worn ? '<em class="pill ok">✓ Wearing</em>' : done ? `<button class="btn sm" data-setwear="${esc(s.id)}">👕 Wear set</button>` : `<button class="btn sm gold" data-setbuy="${esc(s.id)}"${S.st.gold < b.price ? ' disabled' : ''}>Buy the rest ${COIN} ${esc(b.price)}</button>`;
+    return `<section class="set${s.worn ? ' worn' : ''}${s.spotlight ? ' spot' : ''}${S.trySet === s.id ? ' trying' : ''}" style="--set:${esc(s.color || '#ffd23f')}">` +
+      `<button class="set-fig" data-settry="${esc(s.id)}" data-setcv="${esc(s.id)}" aria-label="Try on the ${esc(s.name)} set"><canvas aria-hidden="true"></canvas><small>${S.trySet === s.id ? 'Trying on' : 'Try on'}</small></button>` +
+      `<div class="set-info"><h4>${esc(s.icon)} ${esc(s.name)}${s.spotlight ? ' <em class="pill spot">🌟 Spotlight −' + esc(b.pct || R.spotlightOff) + '%</em>' : ''}</h4><p>${esc(s.blurb)}</p>` +
+      `<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="${s.total}" aria-valuenow="${s.have}"><i style="width:${Math.round(100 * s.have / s.total)}%"></i><span>${s.have}/${s.total} owned</span></div>` +
+      `<p class="bonus">🎁 Full set: +${esc(R.bonusPct)}% JG in ${esc(gameIcon(s.game))} ${esc(gameName(s.game))} and a ${esc(s.icon)} nameplate</p>` +
+      `<div class="set-buy">${done ? '' : `<span class="was"><s>${esc(b.full)}</s> −${esc(b.pct)}%</span>`}${btn}</div></div>` +
+      `<div class="grid set-grid">${pieceCards(pieces)}</div></section>`;
+  }
+  const pieceCards = (list) => { S.inSetCard = true; try { return list.map(cardHTML).join(''); } finally { S.inSetCard = false; } };
+  function setsHTML() {
+    const sets = (S.st.sets || []).slice().sort((a, b) => (b.worn - a.worn) || (b.spotlight - a.spotlight) || (b.have / b.total - a.have / a.total));
+    return `<p class="note">🧩 <b>Theme sets</b>: a whole outfit for a game world. Every piece works in every game. Buy the pieces you’re missing together for ${esc(S.st.setRules.bundleOff)}% off, and wear the full set in its game for <b>+${esc(S.st.setRules.bonusPct)}% JustGold</b> (up to ${esc(S.st.setRules.bonusCap)} a game).</p>` + sets.map(setCardHTML).join('');
+  }
+  async function doBundle(setId) {
+    const s = setOf(setId); if (!s || S.inflight) return; S.inflight = true; renderAct();
+    const r = await API.bundle(setId, true); S.inflight = false;
+    if (r.state) applyState(r.state);
+    if (!r.ok) { hap('error'); toast(r.error || 'Could not buy that set.'); render(); return; }
+    hap('success'); S.keeperJump = performance.now() / 1000 + 1; S.happy = performance.now() / 1000 + 0.9; S.trySet = null; S.sel = null;
+    S.say = `The ${s.name} set is yours, and you’re wearing it! +${S.st.setRules.bonusPct}% JustGold in ${gameName(s.game)}.`;
+    toast(`🎉 ${s.icon} ${s.name} set complete!`); render();
+  }
+  async function doWearSet(setId) {
+    const s = setOf(setId); if (!s || S.inflight) return; S.inflight = true; renderAct();
+    const r = await API.wearSet(setId); S.inflight = false;
+    if (r.state) applyState(r.state);
+    if (!r.ok) { hap('error'); toast(r.error || 'Could not change that.'); render(); return; }
+    hap('success'); S.happy = performance.now() / 1000 + 0.7; S.trySet = null; toast(`👕 Wearing the ${s.name} set`); render();
+  }
+
   // ---------- actions ----------
-  function applyState(st) { if (st && typeof st === 'object' && Array.isArray(st.catalog)) { S.st = st; } }
+  function applyState(st) { if (st && typeof st === 'object' && Array.isArray(st.catalog)) { S.st = st; if (typeof st.now === 'number') S.clockSkew = st.now - Date.now(); } }
   async function refresh() { const r = await API.state(); if (r.ok) { applyState(r); render(); } return r; }
   async function doBuy(i) {
     if (S.inflight) return; S.inflight = true; renderAct();
@@ -685,7 +806,7 @@
     render();
   }
   function select(id) {
-    S.sel = S.sel === id ? null : id; S.say = '';
+    S.sel = S.sel === id ? null : id; S.say = ''; S.trySet = null;
     const i = byId(S.sel); hap('tap');
     if (i && i.kind === 'item' && i.field === 'effect') S.happy = 0;
     render();
@@ -693,14 +814,20 @@
   }
 
   // ---------- events (delegated) ----------
-  $('#tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (!b) return; S.tab = b.dataset.tab; if (S.tab !== 'gear') S.game = null; S.sel = null; hap('tap'); render(); });
+  $('#tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (!b) return; S.tab = b.dataset.tab; S.trySet = null; if (S.tab !== 'gear') S.game = null; S.sel = null; hap('tap'); render(); });
   $('#subs').addEventListener('click', (e) => { const b = e.target.closest('[data-sub],[data-games],[data-msub]'); if (!b) return; if (b.dataset.games) S.game = null; else if (b.dataset.msub) S.sub.mafia = b.dataset.msub; else S.sub[S.tab] = b.dataset.sub; S.sel = null; hap('tap'); render(); });
   $('#shelf').addEventListener('click', (e) => {
+    const sb = e.target.closest('[data-setbuy]'); if (sb) return doBundle(sb.dataset.setbuy);
+    const sw = e.target.closest('[data-setwear]'); if (sw) return doWearSet(sw.dataset.setwear);
+    const tr = e.target.closest('[data-settry]'); if (tr) { S.trySet = S.trySet === tr.dataset.settry ? null : tr.dataset.settry; S.sel = null; S.say = S.trySet ? setPitch(setOf(S.trySet)) : ''; hap('tap'); render(); if (S.trySet && window.innerWidth < 760) window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    const jump = e.target.closest('[data-jump]'); if (jump) { S.tab = jump.dataset.jump; S.sel = null; S.trySet = null; hap('tap'); render(); window.scrollTo({ top: 0 }); return; }
     const it = e.target.closest('[data-item]'); if (it) return select(it.dataset.item);
     const gm = e.target.closest('[data-game]'); if (gm) { S.game = gm.dataset.game; S.sel = null; hap('tap'); render(); window.scrollTo({ top: 0 }); return; }
     const c = e.target.closest('[data-field]'); if (c) editLook(c.dataset.field, c.dataset.val);
   });
   $('#act').addEventListener('click', (e) => {
+    const sb = e.target.closest('[data-setbuy]'); if (sb && !sb.disabled) return doBundle(sb.dataset.setbuy);
+    const sw = e.target.closest('[data-setwear]'); if (sw && !sw.disabled) return doWearSet(sw.dataset.setwear);
     const b = e.target.closest('[data-act]'); if (!b || b.disabled) return; const i = byId(S.sel);
     const a = b.dataset.act;
     if (a === 'buy' && i) doBuy(i);
@@ -708,7 +835,7 @@
     else if (a === 'off' && i) doEquip(i, false);
     else if (a === 'earn') { S.tab = 'earn'; S.sel = null; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     else if (a === 'save') saveLook(true);
-    else if (a === 'close') { S.sel = null; render(); }
+    else if (a === 'close') { S.sel = null; S.trySet = null; render(); }
   });
   window.addEventListener('resize', () => { if (S.st) requestAnimationFrame(paintShelf); });
 

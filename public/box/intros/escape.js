@@ -332,7 +332,7 @@
     theme: { accent: GOLD, accent2: RED, accent3: RAIN, ink: CREAM, panel: 'rgba(14,16,26,0.9)', fade: '#0b0d14', confetti: [GOLD, RED, CREAM, RAIN, '#2d5f8a'] },
     host: {
       name: 'Hazel Finch',
-      voice: { kokoro: 'bf_alice', speed: 1.02, like: /female|libby|sonia|hazel|serena|zira/i, accent: /en-GB|en-US/i, pitch: 1, rate: 1 },
+      voice: { kokoro: 'bf_alice', speed: 1.0, like: /female|libby|sonia|hazel|serena|zira/i, accent: /en-GB|en-US/i, pitch: 1, rate: 1 },
       look,
     },
     lines: {

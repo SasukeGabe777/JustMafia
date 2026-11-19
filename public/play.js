@@ -315,6 +315,7 @@
     const look = seasonLook();
     MT_SHOP.render({ profile, avatar: look.avatar, home: look.home, theme: view && view.theme,
       buyPass: (cb) => socket.emit('profile:buyPass', {}, afterBuy(cb)),
+      reroll: (period, id, cb) => socket.emit('profile:reroll', { period, id }, afterBuy(cb)),
       fateBuy: (card, cb) => socket.emit('profile:fateBuy', { card }, afterBuy(cb)),
       fateExchange: (cb) => socket.emit('profile:fateExchange', {}, afterBuy(cb)) });
     refreshShopLinks();
@@ -370,6 +371,9 @@
     $('#g-pouch').onclick = () => { const pop = $('#g-pouch-pop'); pop.hidden = !pop.hidden; pop.innerHTML = pouchHtml(); };
     if (!$('#g-pouch-pop').hidden) $('#g-pouch-pop').innerHTML = pouchHtml();
     MT_SHOP.paintPouches();
+    // JustGold arrived (a game paid out): the account line may now offer "Save your stuff".
+    const coins = profile ? profile.coins : null;
+    if (coins !== updatePouch.coins) { const first = updatePouch.coins === undefined; updatePouch.coins = coins; if (!first) mountAccount(true); }
   }
 
   // ---------- join ----------

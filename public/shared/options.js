@@ -75,6 +75,26 @@
     rxBloodMoon: ['🩸', '🌕', '🦇', '🗡️', '⚰️', '🌹'], // Season 1 pass reward
     rxCasino: ['🎲', '🃏', '💰', '🎰', '🍀', '💸'], // High Roller tier 1: make your first bet
   };
+  // ----- Shop seasons & theme sets (public/shared/shop-season.js, docs/justgold.md) -----
+  // Limited-time event items (sold only while their event runs, public/shared/seasons.js) and the
+  // new pieces of the themed outfit sets. They are not on the play-to-reveal shelf (cosmetics.js
+  // STOCKABLE skips everything listed in OPTIONS.SPECIAL); the shop sells them in Event and Sets.
+  OPTIONS.SPECIAL = {};
+  const special = (list, values) => { OPTIONS[list].push(...values); (OPTIONS.SPECIAL[list] = OPTIONS.SPECIAL[list] || []).push(...values); };
+  // Harvest Fest · Frostival · Sweetheart Week · Spring Bloom · Summer Splash · Spooky Season
+  special('hats', ['pumpkinCap', 'strawHat', 'snowBeanie', 'reindeerBand', 'heartBoppers', 'bunnyEars', 'gardenHat', 'bucketHat', 'witchHat', 'devilHorns']);
+  special('outfit', ['cosySweater', 'flannel', 'uglySweater', 'cupidCardigan', 'gardener', 'hawaiian', 'lifeguard', 'skeleton', 'mummy']);
+  special('accessory', ['autumnScarf', 'ciderMug', 'candyCane', 'earmuffs', 'loveLetter', 'heartShades', 'cupidWings', 'bouquet', 'butterflyWings', 'snorkel', 'surfboard', 'icePop', 'treatBucket']);
+  special('shoeStyles', ['iceSkates', 'wellies', 'flipFlops']);
+  special('effect', ['fallingLeaves', 'aurora', 'rosePetals', 'butterflies', 'bubbles', 'ghostly', 'batSwarm']);
+  special('nameplate', ['harvestMoon', 'frosted', 'sweetheart', 'blossom', 'surf', 'haunted']);
+  // Theme sets (Wild West, Secret Agent, Head Chef, Great Detective, High Stakes, Last Survivor, Space Cadet, Paparazzi)
+  special('hats', ['trilby', 'deerstalker', 'ufoHat']);
+  special('outfit', ['secretAgent', 'chefCoat', 'inverness', 'dealerVest', 'survivor', 'photoVest']);
+  special('accessory', ['lasso', 'nightShades', 'woodenSpoon', 'magnifier', 'cardFan', 'rayGun', 'camera']);
+  special('shoeStyles', ['spurBoots']);
+  special('effect', ['luckyDice', 'orbit']);
+  Object.assign(OPTIONS.hatLabels, { pumpkinCap: 'Pumpkin Knit Cap', strawHat: 'Harvest Straw Hat', snowBeanie: 'Snowflake Beanie', reindeerBand: 'Reindeer Antlers', heartBoppers: 'Heart Boppers', bunnyEars: 'Bunny Ears', gardenHat: 'Garden Sun Hat', bucketHat: 'Bucket Hat', witchHat: 'Witch Hat', devilHorns: 'Little Horns', trilby: 'Agent Trilby', deerstalker: 'Deerstalker', ufoHat: 'Saucer Hat' });
   // Body type (free): the character is drawn clearly female or male (public/avatar.js drawSmooth).
   OPTIONS.body = ['male', 'female'];
   // Looks saved before body types existed: long hairstyles or a dress read as female.
@@ -109,6 +129,12 @@
     rxClassic:'Classic Reactions', rxSpooky:'Spooky Reactions', rxRoyal:'Royal Reactions', rxParty:'Party Reactions', rxDetective:'Detective Reactions', rxLove:'Sweetheart Reactions', rxBloodMoon:'Blood Moon Reactions', rxCasino:'Casino Reactions',
     classic:'Classic Ghost', sheet:'Bedsheet Ghost', chains:'Chained Spirit', royalGhost:'Royal Phantom', wisp:'Will-o’-Wisp', shadowEyes:'Shadow Wraith', oracle:'The Oracle', ghostSkin:'Ghost',
     dealerVisor:'Dealer’s Visor', highRoller:'High Roller Top Hat', goldRain:'Jackpot Rain', ectoplasm:'Ectoplasm', soulChains:'Breaking Chains',
+    cosySweater:'Cosy Sweater', flannel:'Flannel Shirt', uglySweater:'Ugly Sweater', cupidCardigan:'Cupid’s Cardigan', gardener:'Garden Overalls', hawaiian:'Hawaiian Shirt', lifeguard:'Lifeguard Tee', skeleton:'Skeleton Suit', mummy:'Mummy Wraps',
+    autumnScarf:'Autumn Scarf', ciderMug:'Hot Cider', candyCane:'Candy Cane', earmuffs:'Fluffy Earmuffs', loveLetter:'Love Letter', heartShades:'Heart Shades', cupidWings:'Cupid Wings', bouquet:'Spring Bouquet', butterflyWings:'Butterfly Wings', snorkel:'Snorkel Mask', surfboard:'Surfboard', icePop:'Ice Lolly', treatBucket:'Treat Bucket',
+    iceSkates:'Ice Skates', wellies:'Rain Wellies', flipFlops:'Flip-Flops', fallingLeaves:'Falling Leaves', aurora:'Northern Lights', rosePetals:'Rose Petal Shower', butterflies:'Butterflies', bubbles:'Beach Bubbles', ghostly:'Ghost Friends', batSwarm:'Bat Swarm',
+    harvestMoon:'Harvest Moon', frosted:'Frosted', sweetheart:'Sweetheart', blossom:'Blossom', surf:'Surf’s Up', haunted:'Haunted',
+    secretAgent:'Agent Suit', chefCoat:'Chef’s Whites', inverness:'Inverness Coat', dealerVest:'Dealer’s Vest', survivor:'Survivor Gear', photoVest:'Photographer’s Vest',
+    lasso:'Lasso', nightShades:'Night-Vision Shades', woodenSpoon:'Wooden Spoon', magnifier:'Magnifying Glass', cardFan:'Fan of Aces', rayGun:'Ray Gun', camera:'Camera', spurBoots:'Spur Boots', luckyDice:'Lucky Dice', orbit:'Orbiting Planets',
     deathAnim:'Farewell', petals:'Rose Petals', fireflies:'Fireflies', letter:'A Last Letter', candle:'Candlelight', lantern:'Sky Lantern', starfall:'Falling Stars', ascend:'Spirit Rises' };
   OPTIONS.label = (value) => OPTIONS.labels[value] || OPTIONS.hatLabels[value] || String(value).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   if (typeof module !== 'undefined' && module.exports) module.exports = OPTIONS;

@@ -1,9 +1,10 @@
 'use strict';
-// JustPizza: Nonna Pina's trattoria band. A mandolin (lute) strumming off-beats, an accordion-
+// YesChef (key pizza): the food court's music. Nonna Pina's trattoria band: a mandolin (lute) strumming off-beats, an accordion-
 // like clarinet singing a tarantella-flavoured tune in A minor, upright bass on the downbeats and
 // a tambourine. The building music is a calm lo-fi kitchen groove that turns tense for the last
 // ten seconds; the reveal is a brass fanfare; the finale is the theme, a tone up.
-// Cues: title lobby intro think play tense reveal finale (public/box/scores/README.md).
+// Cues: title lobby intro think play tense reveal finale (public/box/scores/README.md), plus one
+// tune per kitchen for the order phase: taco, sushi, burger, sundae (the pizzeria keeps play).
 (function () {
   const S = (window.BOX.scores = window.BOX.scores || {});
   const tracks = {
@@ -71,6 +72,53 @@
       },
       finale: { from: 'title', bpm: 114, transpose: 2, tracks: { br: { type: 'brass', mode: 'chord', center: 67, n: 3, vol: 0.38 } },
         sections: { A: { br: '....x.x.....x...' }, B: { br: 'x.......x.......' }, A2: { br: '....x.x.....x...' } } },
+      // YesChef's other kitchens: each one's own tune while the customer shows the order.
+      // El Cohete (taco truck): trumpets, a strummed guitar and an oom-pah tuba in D.
+      taco: {
+        bpm: 150,
+        tracks: { gtr: { type: 'nylon', mode: 'chord', center: 62, n: 3, vol: 0.4, pan: -0.25 }, bass: { type: 'tuba', mode: 'bass', oct: 2, vol: 0.55 }, lead: { type: 'brass', vol: 0.42, pan: 0.15 }, lead2: { type: 'brass', vol: 0.22, pan: -0.1 }, dr: { type: 'drums', kit: 'world', vol: 0.65 } },
+        sections: {
+          A: { bars: 8, chords: 'D | A7 | A7 | D | D | G | A7 | D', gtr: '..x...x...x...x.', bass: '1 . 5 . 1 . 5 .',
+            lead: 'a4 d5 f#5 a5 - f#5 d5 . | e5 g5 a5 c#6 - a5 g5 . | c#5 e5 g5 a5 - g5 e5 . | f#5 - d5 - . . a4 . | a4 d5 f#5 a5 - b5 a5 . | b5 - g5 - e5 - d5 . | e5 f#5 g5 e5 c#5 - a4 . | d5 - - - . . . .',
+            lead2: 'f#4 a4 d5 f#5 - d5 a4 . | c#5 e5 f#5 a5 - f#5 e5 . | a4 c#5 e5 f#5 - e5 c#5 . | d5 - a4 - . . f#4 . | f#4 a4 d5 f#5 - g5 f#5 . | g5 - d5 - c#5 - b4 . | c#5 d5 e5 c#5 a4 - e4 . | f#4 - - - . . . .',
+            dr: { k: 'x.......x.......', s: '....x.......x...', sh: 'x.x.x.x.x.x.x.x.' } },
+        },
+        form: ['A'], loop: 0,
+      },
+      // Ren's Sushi Bar: a plucked koto-like harp and a breathy flute on a pentatonic tune.
+      sushi: {
+        bpm: 96,
+        tracks: { harp: { type: 'harp', mode: 'chord', center: 64, n: 3, vol: 0.38, pan: -0.2, dly: 0.25 }, pad: { type: 'pad', mode: 'chord', center: 60, vol: 0.2, cut: 1200 }, bass: { type: 'bass', mode: 'bass', cut: 500, vol: 0.45 }, lead: { type: 'flute', vol: 0.4, pan: 0.15, vib: 5, dly: 0.2 }, dr: { type: 'drums', kit: 'world', vol: 0.45 } },
+        sections: {
+          A: { bars: 8, chords: 'Am | F | G | Em | Am | F | G | Am', harp: 'x.x.x...x.x.x...', pad: true, bass: '1 - - - 5 - - -',
+            lead: 'e5 - g5 a5 - g5 e5 . | d5 - c5 - a4 - . . | c5 d5 e5 - g5 - e5 . | d5 - - - . . . . | e5 - g5 a5 - c6 a5 . | g5 - e5 - d5 - c5 . | d5 e5 c5 - a4 - g4 . | a4 - - - . . . .',
+            dr: { k: 'x.......x.......', s: '............x...', h: '..x...x...x...x.' } },
+        },
+        form: ['A'], loop: 0,
+      },
+      // Buck's Burger Joint: a swinging fifties diner: honky-tonk piano, walking bass, a sax.
+      burger: {
+        bpm: 168, swing: 0.6,
+        tracks: { keys: { type: 'honky', mode: 'chord', center: 62, n: 3, vol: 0.42, pan: -0.2 }, bass: { type: 'upright', mode: 'bass', oct: 2, vol: 0.6 }, lead: { type: 'sax', vol: 0.42, pan: 0.15 }, dr: { type: 'drums', kit: 'std', vol: 0.65 } },
+        sections: {
+          A: { bars: 8, chords: 'C | C | F | C | G7 | F | C | G7', keys: '..x...x...x...x.', bass: '1 3 5 6 8 6 5 3',
+            lead: 'c5 e5 g5 a5 - g5 e5 c5 | . . c5 . e5 - g5 . | f5 a5 c6 d6 - c6 a5 f5 | g5 - e5 - c5 - . . | g5 b5 d6 f6 - d6 b5 g5 | a5 - f5 - c5 - . . | c5 e5 g5 c6 - g5 e5 c5 | d5 - b4 - g4 - . .',
+            dr: { k: 'x.......x.......', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' } },
+        },
+        form: ['A'], loop: 0,
+      },
+      // Coco's Sundae Stand: an ice-cream-truck music box with glockenspiel and pizzicato.
+      sundae: {
+        bpm: 132,
+        tracks: { box: { type: 'musicbox', vol: 0.45, pan: 0.1 }, bell: { type: 'glock', vol: 0.22, pan: -0.2, oct: 1 }, bass: { type: 'pizz', mode: 'bass', oct: 2, vol: 0.5 }, keys: { type: 'celesta', mode: 'chord', center: 67, n: 3, vol: 0.25 }, dr: { type: 'drums', kit: 'lofi', vol: 0.4 } },
+        sections: {
+          A: { bars: 8, chords: 'F | C7 | C7 | F | F | Bb | C7 | F', keys: '..x...x...x...x.', bass: '1 . 5 . 1 . 5 .',
+            box: 'c6 a5 f5 a5 c6 - a5 . | bb5 g5 e5 g5 bb5 - g5 . | c6 bb5 a5 g5 a5 - f5 . | g5 - e5 - c5 - . . | c6 a5 f5 a5 c6 - f6 . | d6 - bb5 - g5 - . . | c6 bb5 a5 g5 e5 - g5 . | f5 - - - . . . .',
+            bell: 'f5 . . . c5 . . . | e5 . . . c5 . . . | e5 . . . g5 . . . | f5 . . . . . . . | f5 . . . a5 . . . | bb5 . . . d5 . . . | c5 . . . e5 . . . | f5 . . . . . . .',
+            dr: { k: 'x.......x.......', s: '....x.......x...' } },
+        },
+        form: ['A'], loop: 0,
+      },
     },
     stingers: {
       win: { bpm: 120, tracks: { b: { type: 'brass', vol: 0.6 }, g: { type: 'glock', vol: 0.4 }, d: { type: 'drums', kit: 'orch' } }, bars: 2, parts: { b: 'c5+e5+g5 . c5+e5+g5 c5+f5+a5 - - c5+e5+g5 - | c5+e5+g5+c6 - - - - - - -', g: 'g5 . g5 a5 - - g5 - | c6 - - - - - - -', d: { s: 'x.x.x.....x.....', y: '................|x...............' } } },

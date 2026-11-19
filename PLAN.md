@@ -1,5 +1,113 @@
 # Mafia Town: expansion plan
 
+## November 19, 2026 - YesChef: JustPizza becomes a food court (branch claude/yeschef)
+
+JustPizza is renamed **YesChef** (the internal key stays `pizza`: routes, gear ids, saved data).
+The YesChef food court has five kitchens on the same engine (box/games/pizza.js `KITCHENS`):
+- 🍕 Pizzeria Pina, Nonna Pina: crust, sauce, cheese, toppings on 8 slices (any turn or flip).
+- 🌮 El Cohete taco truck, Tía Lupe: shell, filling, salsa, toppings on each of 3 tacos (the
+  tacos can be in any order on the plate; which taco gets what counts).
+- 🍣 Ren's Sushi Bar, Chef Ren: wrap, rice, filling, toppings on 8 pieces in two rows (the board
+  can be turned around; rows, pairs and every-other-piece patterns count).
+- 🍔 Buck's Burger Joint, Big Buck: bun, then up to 10 layers stacked bottom to top. Order
+  matters (bag of layers 45% + longest common subsequence 55%).
+- 🍨 Coco's Sundae Stand, Coco Sprinkles: cone/cup/bowl, sauce, up to 4 scoops in order, and a
+  set of toppings.
+Setting **Kitchen**: one kitchen, 🎲 Surprise me (random per game, the default and Party Mode's
+choice) or 🔀 Food court (all five before any repeat, never twice in a row). Every mode works
+in every kitchen; the `halves` twist is named per kitchen (Half & Half, Mix & Match, Rainbow
+Roll, Tower Burger, Mega Sundae) and the rush too. Each kitchen has its own owner (host kit +
+hat, own Kokoro voice, 20 in-game lines), customers, TV back wall (the intro's set painted on a
+canvas), neon sign, counter, phone station and order-phase tune.
+- Engine hooks (small, generic): `game.showExtra()` reaches the intro and how-to as
+  `show.extra` (box/show.js); an intro may define `onShow(show)` (public/box/show.js, howto.js,
+  play.js call it); `show: { openMs }` lets a cast intro ask for a longer opening (YesChef: 14 s;
+  room.js preview timing follows it); tools/voice-gen.js renders an intro's `variants` (one pass
+  per kitchen, each in its owner's voice: 157 YesChef clips, 133 new).
+- Gear: a separate YesChef block (Taco Truck Bandana, Sushi Headband, Diner Paper Hat, Ice Cream
+  Scoop; new shapes hachimaki, paperHat, iceScoop). Pizza gear is now 11 of the 12-item cap.
+- Tests: tools/test-box-pizza.js (every kitchen × every mode with bots, per-kitchen scoring,
+  junk, food court rotation, partyFit); e2e-box plays the pizzeria and the burger joint.
+- Limits: the intro's opening length is fixed per game (the narrator-voice retiming work may
+  replace `openMs`); a Party Mode "play intros in the break" preview shows the food court with
+  Nonna since the next game's kitchen is not chosen yet.
+## November 19, 2026 - Shop seasons, daily deals and theme sets (branch claude/shop-season)
+
+Requested: limited-time shop items, items that swap out every so often, and themed outfit sets per
+game world with a small bonus. Details and the socket API: `docs/justgold.md` ("Seasons, deals and sets").
+
+- **Limited-time event items**: 48 new character items (hats, outfits, extras, shoes, effects,
+  nameplates), 7–9 per event in `public/shared/seasons.js` (`ITEMS[kind]`; Harvest Fest, Frostival,
+  Sweetheart Week, Spring Bloom, Summer Splash, Spooky Season; Harvest/Frostival 2027 added with the
+  same ids). The server sells them only while their event runs; owners keep them.
+- **Daily deals** (6 items a UTC day, the same for everyone, 2 of them 20–30% off at a server-enforced
+  price) and a **weekly spotlight** set (35% off its bundle). Deals are buyable off your shelf that day;
+  the play-to-reveal shelf (`STOCK`/`nextStock`) is unchanged: the new items are `special` and never on it.
+- **Theme sets**: 10 sets (Wild West, Secret Agent, Head Chef, Great Detective, High Stakes, Royal Court,
+  Last Survivor, Space Cadet, Paparazzi, Pirate Crew), 3–4 pieces, 19 new pieces. Bundle = the missing
+  pieces at 20% off; wearing the whole set pays +5% JG (min 1, max 3) in that set's game
+  (`box/gold.js withSetBonus` in `BoxRoom.payGold`) and lights up the shop nameplate.
+- **Art**: every new item drawn in `public/avatar.js` (drawSmooth: hats, outfit details, held props,
+  back/face/chest extras, shoes, effects) for both bodies; nameplate styles in `shop.css` and `town.js`.
+- **Shop UI**: event tab first in the event's colours, Deals (countdown), Sets (progress, try-on,
+  bundle, bonus), LIMITED / deal / set ribbons; `/shop?mock=1&now=YYYY-MM-DD&tab=…` previews any day.
+- Tests: `tools/test-shop-season.js` (9: event items in/out of season with an injected clock, owned
+  after, next year; deals deterministic per day and discount charged; spotlight; sets valid; bundle
+  price and ownership; set bonus applied once and capped through a real BoxRoom payout; every new
+  item changes the drawn character on a stub canvas, male and female; sockets). `test-justgold` now
+  picks a non-discounted item. Ran `npm test` (minus render-smoke), e2e-shop, e2e-account, e2e-box.
+- Limits: the set bonus is not shown on the TV during a game (only the phone toast and the ledger);
+  events beyond 2027 need new `SEASONS` entries (same `kind`, same items).
+## November 19, 2026 - Onboarding: how it works, new-here games, practice rounds (branch claude/onboarding)
+
+Helping first-time groups in, from the title screen to their first finished game.
+
+- **How it works** (`public/hub-onboard.js` + `hub-onboard.css`): a one-minute animated explainer
+  (7 scenes, ~60 s) on the title screen the first time this TV opens it (`box.hiw`); replay from the
+  "▶ How it works · 1 min" link. Phones are the controllers (QR / `<host>/join` + code), the first to
+  join is the host and starts from their phone, everything plays on the TV, your character +
+  JustGold + the shop, Party Mode, "you're ready". Drawn with `BOX.body` characters, progress bar,
+  Skip / any key closes, a click goes on, narrated by a pre-rendered clip if one exists, else the
+  browser voice (never waits for it). Not on narrow screens or Party Mode links.
+- **New here? Start with these 5**: Most Likely To, JustPizza, Emoji Charades, JustSnap, Quick Draw,
+  but only unlocked games (a locked one is replaced by the next beginner game: Price Panic, Blackjack
+  Night…); names, art and player counts come from the tiles (renames follow). Shown while the TV has
+  finished fewer than 3 games; "Got it, hide this". Part of the arrow-key menu (`HUB_NAV`).
+  **Just pick for us**: group size (2–3 / 4–8 / 9+) → a 30-minute Party Mode of 3–4 easy games that
+  suit the group (quick length, intros on, practice rounds for new games).
+- **Locked games**: "Play games to unlock more: N/33 unlocked" with a progress bar and buttons for
+  what to finish next (`UNLOCKS.LIST[k].from`); picking a locked tile opens a card ("Quick Draw is
+  locked. Finish a game of President to unlock it." + ▶ Play President); "What's new" banner with
+  confetti for games unlocked since the last visit (the tile's lock-break animation stays).
+- **Practice rounds** (`box/room.js`): a "Practice round first" setting on every box game except
+  JustRaiseDucks, JustKingdoms, JustEscape, JustMarble (and JustMafia), where it is hidden. On by
+  default for a TV that has never finished a game (`host:create onboard`, the TV's `box.done` list),
+  for games it hasn't played. The practice copy uses the game's `partyFit` for 2 minutes and the
+  fewest rounds (`def.practiceSettings()` can override); it ends at the game's end or the first new
+  round after 60 s (3 minutes at most), records nothing (party points, played list, JustGold,
+  stats/trophies, unlocks, audience favourite), then "Practice over, now for real!" (6 s) and the real
+  game with the real settings, without the intro. TV: a PRACTICE badge (also over the intro), host row
+  "Skip practice"; phones: a practice strip (host: Skip / Start for real), tips from the intro's
+  how-to steps when the game moves to a new phase (or after a quiet 16 s), and the "Now for real!"
+  card. Party Mode setup question 7: "Practice rounds: On / Off / Only for new games" (default: only
+  new games for a new TV, else off; remembered).
+- **Phone tour**: the first time a phone joins (`box.tour`), ~20 s spotlight on the header buttons
+  (you, react, shop, profile, how to play, host menu), skippable.
+- **Account timing** (`public/account-ui.js`): the "Save your stuff" card never shows before the
+  player has finished a game (games on the account, JustGold, or this phone's `jg.played`); until
+  then only "Played before? Sign in". After the first real game it comes up on the game-over screen:
+  "You earned 15 JG! Save it with a name + password" (or "Save your stuff" when no JG was paid).
+  JustMafia's phone refreshes its account line when gold arrives.
+- **Tests**: `tools/test-practice.js` (in `npm test`: every practising game runs a practice with bots
+  and records nothing, then the real game with the real settings and no intro; the intro + skip;
+  the time cap; Party Mode on/off/new); `tools/e2e-onboard.js` (`npm run e2e-onboard`, in
+  `test:e2e`): how it works shows once and skips, the New-here row and lineup, locked games, a
+  practice round on TV + phone, the phone tour, the account card hidden before the first game and
+  shown after. `e2e-box` opens its TVs with `practice=0`.
+- Limits: the practice round of games without a round counter (Two Truths, Debate Club, Tune Buzz)
+  can run to the 3-minute cap; tips follow the game's phases, not its exact moment; the explainer's
+  narration is the browser voice until clips are rendered for it.
+
 ## November 19, 2026 - JustUndercover (branch claude/undercover)
 
 A new box game (key `undercover`, Party shelf, 3–20 players, best 4–10): "a mole has slipped into
@@ -1093,3 +1201,20 @@ Cinematic Chaos 44–50% at 16–20, Big party 44–48% at 30–40. Group size s
 of the same size) is within ±3 points for most roles; Sheriff (+7) and Detective (+5) are the
 strongest Town roles on purpose. Talk-based roles (Conductor, Crier, Ghostwriter, Investigator)
 look slightly weak with bots, which can't use them well; real players should do better.
+
+## Profile progression: levels, challenges, seasonal events (November 19, 2026)
+
+Branch `claude/progress`; design in `docs/progress.md`. JustMafia's season pass and weekly
+challenges moved into a box-wide system on the wallet (`box/progress.js`, `public/shared/challenges.js`):
+a player level (1..∞, XP from every finished box game, Party Mode and JustMafia game), 3 daily and
+5 weekly challenges across all games (deterministic per UTC day / ISO week, 1 free reroll a day),
+2–3 event challenges per seasonal event, and the event's season pass (25 tiers; free track + a
+195 JG premium track with the event's limited items from `seasons.js`). Old 's1' pass owners get a
+free premium pass for the current (or next) event; old pass XP became profile XP. UI: ⭐ Progress in
+the box phone's 🏆 My profile and in JustMafia's Season & unlocks (replacing Season / Weekly), level
+badges on the TV roster, party board and phone header, level-up / challenge toasts on phone and TV,
+event banners on the title screen, TV lobby, join screen and a level + event strip in the shop.
+Validated: `tools/test-progress.js` (14 tests, incl. real bot games of 5 box games, Party Mode,
+JustMafia sims, sockets), updated `test-season.js`, `e2e-shop.js`; screenshots looked at.
+Limits: games with their own TV lobby (e.g. Most Likely To…) don't show the lobby banner; players
+without a linked wallet earn nothing until the phone links it (opening the profile does).

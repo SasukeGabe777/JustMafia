@@ -17,7 +17,8 @@
 // How: a private server (PORT 3948) + headless Chrome (debug port 9348, muted, WebGPU on,
 // a persistent profile so the ~300 MB model downloads once) runs kokoro-js 1.2.1 (MIT) with
 // onnx-community/Kokoro-82M-v1.0-ONNX (Apache-2.0): WebGPU fp32 if there is a GPU, else
-// WASM q8 (about 3x slower than real time). Each clip is trimmed, peak-normalized, encoded
+// WASM q8 (about 3x slower than real time). Each clip is trimmed, loudness-normalized (speech RMS
+// -19 dBFS, stored as `db` in the manifest), encoded
 // to 24 kbps mono Opus with WebCodecs and muxed into WebM here, written to
 // public/audio/voice/<game>/<hash>.webm, and listed in public/audio/voice/manifest.json.
 const fs = require('node:fs');
@@ -101,8 +102,13 @@ const COLLECT = `async (key, gi) => {
   if (key !== 'generic' && !(I.tutorial && I.tutorial.length) && !I.opening && !I.castOpening && !I.host) return { lines: [], note: 'unfinished (template intro), skipped' };
   const fill = (s, v) => String(s || '').replace(/\\{(\\w+)\\}/g, (m, k) => (v[k] != null ? v[k] : ''));
   const title = key === 'generic' ? '' : (I.title || gi.title || '');
-  const L = { ...G.lines, ...(I.lines || {}) }, spec = (I.host && I.host.voice) || null, out = [];
-  const add = (from, text, sp) => { const t = V.clean(text); if (t) out.push({ from, t, say: V.spoken(t), voice: V.voiceOf(sp), h: V.keyOf(t, sp) }); };
+  const out = [];
+  // An intro with variants (YesChef's kitchens, each with its own host and voice) is collected once per variant.
+  const variants = I.onShow && Array.isArray(I.variants) && I.variants.length ? I.variants : [null];
+  for (const vx of variants) {
+  if (vx) I.onShow({ extra: vx, mode: gi.mode || 'cast' });
+  const L = { ...G.lines, ...(I.lines || {}) }, spec = (I.host && I.host.voice) || null;
+  const add =(from, text, sp) => { const t = V.clean(text); if (t) out.push({ from, t, say: V.spoken(t), voice: V.voiceOf(sp), h: V.keyOf(t, sp) }); };
   const modes = key === 'generic' ? ['facts', 'cast'] : [gi.mode || 'cast'];
   const want = new Set();
   for (const mode of modes) {
@@ -121,6 +127,7 @@ const COLLECT = `async (key, gi) => {
     steps.forEach((s, i) => add('step' + (i + 1), s.say || [s.title, s.text, s.phone].filter(Boolean).join('. '), spec));
     if (steps.length) add('done', 'That’s it. Let’s play!', spec);
     for (const t of [].concat(I.story || [])) add('story', t, spec);
+  }
   }
   return { lines: out, note: '' };
 }`;
@@ -144,8 +151,15 @@ const RENDER = `async (say, voice, speed, bitrate) => {
   let s = 0, e = x.length - 1; const th = 0.008;
   while (s < e && Math.abs(x[s]) < th) s++; while (e > s && Math.abs(x[e]) < th) e--;
   x = x.slice(Math.max(0, s - Math.round(sr * 0.03)), Math.min(x.length, e + Math.round(sr * 0.12)));
-  let pk = 0; for (let i = 0; i < x.length; i++) { const v = Math.abs(x[i]); if (v > pk) pk = v; }
-  const g = pk > 0 ? Math.min(4, 0.89 / pk) : 1; for (let i = 0; i < x.length; i++) x[i] *= g;
+  // Loudness: every clip to the same speech level (RMS of the 20 ms windows that have speech in
+  // them, -19 dBFS), so no voice is louder than another; a soft knee above 0.75 rounds off the
+  // rare peaks instead of turning the whole clip down (the peak stays under 0.99).
+  const win = Math.max(1, Math.round(sr * 0.02));
+  const level = () => { let pw = 0, nw = 0; for (let i = 0; i + win <= x.length; i += win) { let e2 = 0; for (let j = i; j < i + win; j++) e2 += x[j] * x[j]; e2 /= win; if (e2 > 1e-5) { pw += e2; nw++; } } return nw ? Math.sqrt(pw / nw) : 0; };
+  const rms = level(), TARGET = 0.112, KNEE = 0.75;
+  const g = rms > 0 ? Math.min(8, TARGET / rms) : 1;
+  for (let i = 0; i < x.length; i++) { let v = x[i] * g; const a = Math.abs(v); if (a > KNEE) v = Math.sign(v) * (KNEE + (0.99 - KNEE) * Math.tanh((a - KNEE) / (0.99 - KNEE))); x[i] = v; }
+  const out = level(), db = out > 0 ? Math.round(20 * Math.log10(out) * 10) / 10 : -99;
   const b64 = (u8) => { let s2 = ''; for (let i = 0; i < u8.length; i += 0x8000) s2 += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s2); };
   const chunks = []; let desc = null, err = null;
   const enc = new AudioEncoder({
@@ -156,7 +170,7 @@ const RENDER = `async (say, voice, speed, bitrate) => {
   enc.encode(new AudioData({ format: 'f32', sampleRate: sr, numberOfFrames: x.length, numberOfChannels: 1, timestamp: 0, data: x }));
   await enc.flush(); enc.close();
   if (err) throw err;
-  return { ms: Math.round((x.length / sr) * 1000), sr, chunks, desc };
+  return { ms: Math.round((x.length / sr) * 1000), sr, chunks, desc, db };
 }`;
 const CHECK = `async (url) => { const b = await (await fetch(url, { cache: 'no-store' })).arrayBuffer(); const c = new OfflineAudioContext(1, 48000, 48000); const d = await c.decodeAudioData(b); return Math.round(d.duration * 1000); }`;
 
@@ -204,7 +218,9 @@ async function main() {
     const todo = [], clips = {};
     for (const j of jobs.values()) {
       const o = old.clips && old.clips[j.h], g = o ? o.g : j.g, file = path.join(OUT, g, j.h + '.webm');
-      if (!FORCE && o && o.ms && fs.existsSync(file)) { clips[j.h] = { g, ms: o.ms, v: o.v, s: o.s, t: o.t || j.t }; continue; }
+      // --force re-renders only the games named (all when none are): the others keep their clips.
+      const forced = FORCE && (!only.length || only.includes(j.g));
+      if (!forced && o && o.ms && fs.existsSync(file)) { clips[j.h] = { g, ms: o.ms, v: o.v, s: o.s, t: o.t || j.t, ...(o.db != null ? { db: o.db } : {}) }; continue; }
       if (j.keep) continue;
       if (only.length && !only.includes(j.g)) continue;
       todo.push(j);
@@ -223,7 +239,7 @@ async function main() {
           const buf = webm({ chunks: r.chunks, sr: r.sr, desc: r.desc ? Buffer.from(r.desc, 'base64') : null, ms: r.ms });
           fs.mkdirSync(path.join(OUT, j.g), { recursive: true });
           fs.writeFileSync(path.join(OUT, j.g, j.h + '.webm'), buf);
-          clips[j.h] = { g: j.g, ms: r.ms, v: j.v, s: j.s, t: j.t };
+          clips[j.h] = { g: j.g, ms: r.ms, v: j.v, s: j.s, t: j.t, db: r.db };
           audioMs += r.ms;
           if (!checked) { checked = true; const d = await page.eval(`(${CHECK})('/audio/voice/${j.g}/${j.h}.webm')`); if (Math.abs(d - r.ms) > 150) console.warn(`  decode check: ${d} ms vs ${r.ms} ms rendered`); else console.log(`  decode check ok (${d} ms)`); }
           if ((i + 1) % 25 === 0 || i === todo.length - 1) console.log(`  ${i + 1}/${todo.length}  ${((Date.now() - tr) / 1000).toFixed(0)} s`);

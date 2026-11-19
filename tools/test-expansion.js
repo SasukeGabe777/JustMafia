@@ -249,7 +249,7 @@ test('End-of-game gold: server-calculated breakdown, winners vs losers, paid onc
   // Farming is capped: lots of repeated actions only count up to each cap and the per-game max.
   const big = new ProfileStore(null), id = big.create().id;
   const res = big.award(id, 'farm', { won: true, alive: true, team: 'neutral', metrics: { abilities: 99, objectives: 99, correctInvestigations: 99, saves: 99 } });
-  const bonus = res.lines.filter((l) => l.key === 'challenge' || l.key === 'pass').reduce((t, l) => t + l.amount, 0); // weekly challenges pay on top of the cap
+  const bonus = res.lines.filter((l) => l.key === 'challenge' || l.key === 'pass' || l.key === 'level').reduce((t, l) => t + l.amount, 0); // challenges, level ups and the season pass pay on top of the cap
   assert.equal(res.coins - bonus, C.REWARDS.maxPerGame); assert.equal(res.capped, C.REWARDS.maxPerGame);
   assert.equal(res.lines.find((l) => l.key === 'abilities').amount, C.REWARDS.abilityCap * C.REWARDS.ability);
 });
