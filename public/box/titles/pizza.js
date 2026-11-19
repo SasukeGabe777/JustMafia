@@ -70,7 +70,7 @@
       // ingredients from every kitchen drifting through the light
       for (const d of S.rain) { const y = ((d.y + t * d.v) % 1.1) * H - H * 0.05; bit(g, d.k, d.x * W, y, Math.min(W, H) / 360 * d.s, d.rot + t * d.spin); }
       // the lazy susan: the five dishes turning past the front
-      const cx = W * 0.5, cy = H * 0.84, R = Math.min(W * 0.36, H * 0.5);
+      const cx = W * 0.5, cy = H * 0.8, R = Math.min(W * 0.36, H * 0.46);
       g.save(); g.translate(cx, cy); g.scale(1, 0.28);
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.arc(8, 30, R * 1.08, 0, TAU); g.fill();
       g.fillStyle = '#b5773e'; g.beginPath(); g.arc(0, 0, R * 1.08, 0, TAU); g.fill(); g.lineWidth = 4; g.strokeStyle = OUT; g.stroke();

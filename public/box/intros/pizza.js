@@ -470,7 +470,7 @@
     if (k === 'sushi') { g.fillStyle = 'rgba(70,40,15,0.35)'; for (let xx = x - w / 2; xx < x + w / 2; xx += 26) g.fillRect(xx, 300, 4, 420); }
     if (k === 'burger') { for (let yy = 560; yy < 720; yy += 32) for (let xx = x - w / 2; xx < x + w / 2; xx += 32) { g.fillStyle = ((xx - x + w / 2 + yy) / 32) % 2 ? '#d62828' : '#fbf7ee'; g.fillRect(xx, yy, 32, 32); } }
     if (k === 'sundae') { for (let xx = x - w / 2; xx < x + w / 2; xx += 40) { g.fillStyle = (xx - x) / 40 % 2 ? '#ffffff' : '#ffc2dc'; g.fillRect(xx, 300, 20, 420); } }
-    if (o.owners !== false) drawOwner(g, k, x, 728, 0.52, now, o.wave && o.wave[KEYS.indexOf(k)] ? 'wave' : null);
+    if (o.owners !== false && o.noOwner !== k) drawOwner(g, k, x, 728, 0.52, now, o.wave && o.wave[KEYS.indexOf(k)] ? 'wave' : null);
     // counter front
     g.fillStyle = K.front; rr(g, x - w / 2 - 10, 700, w + 20, 160, 8); g.fill(); g.lineWidth = 5; g.strokeStyle = OUT; g.stroke();
     g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillRect(x - w / 2 - 14, 694, w + 28, 16); g.strokeRect(x - w / 2 - 14, 694, w + 28, 16);
@@ -491,7 +491,7 @@
   function stage(g, s, o = {}) {
     const k = pick(o.kitchen || cur);
     if (k === 'court') {
-      courtBack(g, s, o);
+      courtBack(g, s, { ...o, noOwner: o.host !== false ? 'pizza' : null }); // Nonna steps out of her stall to talk
       if (o.host !== false) s.host(960, 1010, 0.95);
       return;
     }
@@ -574,7 +574,7 @@
       step('🍣', 'Wrap, rice, filling', 'On your phone: pick the wrap, the rice and the filling inside the roll.', 'Tap a wrap, a rice and a filling.', 'Then roll it from memory. Choose the wrap, the rice and the filling.'),
       step('🥢', 'Toppings on each piece', 'Pick a topping, then tap or swipe across the eight pieces. One row, every other piece, a pair: it matters. The board can be turned around.', 'Pick a topping, then swipe across the pieces.', 'Pick a topping and swipe across the pieces. One row, every other piece, every piece. It matters.'),
       step('🛎️', 'Serve it', 'Tap Serve when it is ready. When the clock runs out, whatever is on your board goes out.', 'Tap 🛎️ Serve when your roll is ready.', 'Tap serve when it is ready. When time is up, your board goes to the guest.'),
-      step('🎲', 'Counter modes', 'Conveyor Rush (speed tips), Rainbow Roll (patterns of toppings), Phone Order (just listen), Flash Order (two seconds!) and Head Chef (one of you reads the ticket).', null, 'Some evenings are different. A conveyor rush, a rainbow roll, phone orders, flash orders, or a head chef.'),
+      step('🎲', 'Counter modes', 'Conveyor Rush (speed tips), Rainbow Roll (patterns of toppings), Phone Order (just listen), Flash Order (two seconds!) and Head Chef (one of you reads the ticket).', null, 'Some evenings differ: a conveyor rush, a rainbow roll, phone or flash orders, or a head chef.'),
       step('💰', 'Tips', 'The closer your roll is to the order, the bigger the tip. The best roll earns a bonus. Most tips at the end wins.', null, 'The closer your roll, the bigger the tip. The best one earns a bonus. Most tips wins.'),
     ],
     burger: [
@@ -684,7 +684,7 @@
       draw(g, s) {
         const k = s.k;
         if (pick(cur) === 'court') s.cam(960, lerp(700, 760, ease(k)), lerp(1.0, 1.35, ease(k)));
-        else s.cam(960, lerp(560, 600, ease(k)), lerp(1.05, 1.4, ease(k)));
+        else s.cam(960, lerp(500, 590, ease(k)), lerp(1.0, 1.38, ease(k))); // the sign first, then in on the owner
         stage(g, s, {});
       } },
   ];

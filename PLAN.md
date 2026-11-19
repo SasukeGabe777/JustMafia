@@ -1,5 +1,37 @@
 # Mafia Town: expansion plan
 
+## November 19, 2026 - YesChef: JustPizza becomes a food court (branch claude/yeschef)
+
+JustPizza is renamed **YesChef** (the internal key stays `pizza`: routes, gear ids, saved data).
+The YesChef food court has five kitchens on the same engine (box/games/pizza.js `KITCHENS`):
+- 🍕 Pizzeria Pina, Nonna Pina: crust, sauce, cheese, toppings on 8 slices (any turn or flip).
+- 🌮 El Cohete taco truck, Tía Lupe: shell, filling, salsa, toppings on each of 3 tacos (the
+  tacos can be in any order on the plate; which taco gets what counts).
+- 🍣 Ren's Sushi Bar, Chef Ren: wrap, rice, filling, toppings on 8 pieces in two rows (the board
+  can be turned around; rows, pairs and every-other-piece patterns count).
+- 🍔 Buck's Burger Joint, Big Buck: bun, then up to 10 layers stacked bottom to top. Order
+  matters (bag of layers 45% + longest common subsequence 55%).
+- 🍨 Coco's Sundae Stand, Coco Sprinkles: cone/cup/bowl, sauce, up to 4 scoops in order, and a
+  set of toppings.
+Setting **Kitchen**: one kitchen, 🎲 Surprise me (random per game, the default and Party Mode's
+choice) or 🔀 Food court (all five before any repeat, never twice in a row). Every mode works
+in every kitchen; the `halves` twist is named per kitchen (Half & Half, Mix & Match, Rainbow
+Roll, Tower Burger, Mega Sundae) and the rush too. Each kitchen has its own owner (host kit +
+hat, own Kokoro voice, 20 in-game lines), customers, TV back wall (the intro's set painted on a
+canvas), neon sign, counter, phone station and order-phase tune.
+- Engine hooks (small, generic): `game.showExtra()` reaches the intro and how-to as
+  `show.extra` (box/show.js); an intro may define `onShow(show)` (public/box/show.js, howto.js,
+  play.js call it); `show: { openMs }` lets a cast intro ask for a longer opening (YesChef: 14 s;
+  room.js preview timing follows it); tools/voice-gen.js renders an intro's `variants` (one pass
+  per kitchen, each in its owner's voice: 157 YesChef clips, 133 new).
+- Gear: a separate YesChef block (Taco Truck Bandana, Sushi Headband, Diner Paper Hat, Ice Cream
+  Scoop; new shapes hachimaki, paperHat, iceScoop). Pizza gear is now 11 of the 12-item cap.
+- Tests: tools/test-box-pizza.js (every kitchen × every mode with bots, per-kitchen scoring,
+  junk, food court rotation, partyFit); e2e-box plays the pizzeria and the burger joint.
+- Limits: the intro's opening length is fixed per game (the narrator-voice retiming work may
+  replace `openMs`); a Party Mode "play intros in the break" preview shows the food court with
+  Nonna since the next game's kitchen is not chosen yet.
+
 ## November 19, 2026 - JustUndercover (branch claude/undercover)
 
 A new box game (key `undercover`, Party shelf, 3–20 players, best 4–10): "a mole has slipped into
