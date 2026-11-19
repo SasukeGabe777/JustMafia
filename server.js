@@ -40,7 +40,9 @@ const app = express();
 const server = http.createServer(app);
 // Compress game-state messages (~15 KB of JSON per phone update shrinks several-fold),
 // which matters with 20+ phones sharing one Wi-Fi network.
-const io = new Server(server, { pingInterval: 10000, pingTimeout: 20000, perMessageDeflate: { threshold: 1024 }, httpCompression: { threshold: 1024 } });
+// maxHttpBufferSize: JustSnap phones send a photo (≤ ~700 KB + thumbnail, binary) in one message;
+// 2 MB leaves room for the base64 of the polling fallback. The game checks sizes itself.
+const io = new Server(server, { pingInterval: 10000, pingTimeout: 20000, perMessageDeflate: { threshold: 1024 }, httpCompression: { threshold: 1024 }, maxHttpBufferSize: 2e6 });
 const rooms = new Map();
 // JustGameBox's other games (President, Blackjack Night, JustRaiseDucks) share the code space.
 // JustMafia can be picked from a box room (and Party Mode): the bridge opens a town for it.
