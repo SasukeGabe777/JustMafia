@@ -81,7 +81,7 @@ test('rate limit: not faster than once a second, at most 24 a minute', () => {
   startGame(room); toPhase(room, clock, 'snap');
   let t = 5e12; room.game.wall = () => t;
   assert.ok(upload(room, a).ok);
-  t += 300; assert.match(upload(room, a).error, /moment/);
+  t += 200; assert.match(upload(room, a).error, /moment/);
   let ok = 1; for (let i = 0; i < 40; i++) { t += 1100; if (upload(room, a).ok) ok++; }
   assert.equal(ok, LIMITS.perMinute, 'capped per minute');
   t += 61000; assert.ok(upload(room, a).ok, 'fine again a minute later');

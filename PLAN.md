@@ -1,5 +1,45 @@
 # Mafia Town: expansion plan
 
+## November 19, 2026 - JustSnap, the phone-camera game (branch claude/snap)
+
+SNAP! magazine needs photos for its next issue. Margo Flash, its editor (an in-world character drawn
+with the shared host kit: silver hair, pink streak, huge red glasses, beret, camera on a strap), hands
+out an assignment; everyone runs around taking photos with their phone; the photos go up on the TV
+(numbered, anonymous) and the room votes or guesses. Key `snap`, category Creative, best 3–10.
+
+- **Photo pipeline:** the phone uses a plain file input (`capture="environment"`, `"user"` for selfies,
+  plus "Choose from gallery"), so it works on plain-http LAN addresses where `getUserMedia` is blocked.
+  Decode with `createImageBitmap(file, { imageOrientation: 'from-image' })` (an `<img>` fallback), draw to a
+  canvas at most 1024 px on the long side, JPEG 0.82 stepping down to 0.42 until ≤ 260 KB (then smaller
+  sizes), a 360 px thumbnail (≤ 60 KB), preview with Retake / Send, 30 s timeout + retry. Sent as binary
+  ArrayBuffers in `player:act { op: 'photo' }`. `server.js` raises socket.io `maxHttpBufferSize` to 2 MB.
+- **Server (box/games/snap.js):** magic bytes (JPEG/PNG/WebP only), ≤ 700 KB photo / 120 KB thumbnail,
+  one photo per player per slot (resending replaces it), 600 ms between uploads and 24 a minute per
+  player, 48 MB per game. Memory only: freed when the round ends (except the round's best photo, kept
+  for the final "best photos of the night" issue, max 12) and with the game. Served by `box/index.js` at
+  `/box/photo/<room>/<random 16-char id>` (`?t=1` thumbnail), `Cache-Control: no-store`, nosniff, CSP;
+  404 once freed, in another room or after the room closes. Bots get generated SVG "photos" (box/games/snap-art.js).
+- **Safety:** host hide (🙈 on the TV gallery/reveal, or the host phone) frees the photo and voids its
+  votes; "Host approves photos" setting (host phone list or the TV's 🛂 panel, blurred until clicked;
+  the host's own photos need no OK; unreviewed photos are dropped after 25 s); anonymous until the
+  reveal; typed text goes through the room's filter.
+- **Modes (10 + Mixed):** Photo Hunt, Scavenger Race (4 items, speed bonus, majority flags reject),
+  Close-Up Mystery (answer + multiple choice from other players' answers; photographer scores the sweet
+  spot), Colour Match (8x8 colour grid scored in Lab on the server + style vote), Selfie Faces (a secret
+  prompt each; guess which), Tiny Giants, Caption This (everyone captions someone else's photo in a
+  ring), Spot the Change (before/after + mark; tap within 14%), Alphabet Hunt (name must start with the
+  letter; flags), Team Recreate (teams of ~3, one photo per team, no voting for your own team).
+- **Settings:** mode, rounds 3/5/7/10, time to shoot 60/90/120 s, host approval. About 7 min (3 × 60 s)
+  to 33 min (10 × 2 min); defaults (5 × 90 s) about 14 min. `partyFit` picks rounds and seconds.
+- **Kit:** title screen, intro (flashes in the dark office, the neon sign, Margo; roll call pins every
+  portrait up as an instant photo), 6-step tutorial, pre-voiced story lines, score, tile art, gear
+  (cameras, beret/paparazzo cap, press passes, shades; new `camera` and `pressPass` shapes in wear-art.js).
+- Tests: `tools/test-box-snap.js` (21, incl. a real socket.io binary upload → URL → 404), a JustSnap
+  block in `tools/e2e-box.js` (a canvas JPEG handed to the phone's file input, shown on the TV gallery).
+- Limits: the colour grid is measured on the phone (the server has no JPEG decoder), so a modified
+  client could fake a Colour Match score. HEIC files that the browser can't decode ask for the
+  gallery / "Most compatible" camera setting. Not tested on a real iPhone/Android camera here.
+
 ## November 19, 2026 - One character in every game (branch claude/characters)
 
 Your JustGameBox character replaces the emoji in the box games, and every game has things your

@@ -61,7 +61,7 @@ const LIMITS = {
   thumb: 120 * 1024, // its thumbnail
   min: 64, // anything smaller is not a photo
   room: 48 * 1024 * 1024, // everything this game holds at once
-  gapMs: 1000, // between two uploads from one player
+  gapMs: 600, // between two uploads from one player
   perMinute: 24, // uploads per player per minute
   keep: 12, // best photos of the night kept for the final gallery
 };

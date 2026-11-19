@@ -123,7 +123,7 @@
     const sway = Math.sin(a.t * 0.9 + a.seed) * 4, bounce = a.talk ? -Math.abs(Math.sin(a.t * 6.2)) * 4 : Math.sin(a.t * 1.6) * 1.5;
     base(g, a);
     g.save(); g.translate(sway * 0.6, bounce * 0.6);
-    g.strokeStyle = PINK; g.lineWidth = 7; g.beginPath(); g.moveTo(-46, -262); g.quadraticCurveTo(-30, -190, -6, -168); g.moveTo(46, -262); g.quadraticCurveTo(30, -190, 6, -168); g.stroke();
+    g.strokeStyle = PINK; g.lineWidth = 7; g.beginPath(); g.moveTo(-40, -226); g.quadraticCurveTo(-28, -186, -6, -168); g.moveTo(40, -226); g.quadraticCurveTo(28, -186, 6, -168); g.stroke();
     g.lineWidth = 4; g.strokeStyle = OUT;
     g.fillStyle = '#2b2b33'; rr(g, -14, -186, 28, 12, 4); g.fill(); g.stroke();
     g.fillStyle = '#f4f1ea'; rr(g, -50, -176, 100, 62, 12); g.fill(); g.stroke();

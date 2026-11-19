@@ -97,7 +97,9 @@
     if (s.text && P.text.trim().length < 2) { PH.err = v.m.key === 'alphabet' ? `Type what it is (it must start with ${v.m.letter}).` : 'Type what it is: only you know!'; ctx.haptic('error'); return redraw(); }
     if (s.mark && !P.mark) { PH.err = 'Tap the photo where you changed something.'; ctx.haptic('error'); return redraw(); }
     PH.busy = `📤 Sending… (${Math.round(P.size / 1024)} KB)`; PH.err = ''; redraw();
-    const r = await Promise.race([ctx.act({ op: 'photo', round: v.round, slot: P.slot, img: P.full, thumb: P.thumb, text: P.text, mark: P.mark, grid: P.grid }), new Promise((res) => setTimeout(() => res({ ok: false, error: 'The photo didn’t arrive. Check the Wi-Fi and try again.', timeout: true }), LIMIT.timeout))]);
+    const once = () => Promise.race([ctx.act({ op: 'photo', round: v.round, slot: P.slot, img: P.full, thumb: P.thumb, text: P.text, mark: P.mark, grid: P.grid }), new Promise((res) => setTimeout(() => res({ ok: false, error: 'The photo didn’t arrive. Check the Wi-Fi and try again.', timeout: true }), LIMIT.timeout))]);
+    let r = await once();
+    if (r && !r.ok && /moment/i.test(r.error || '')) { await new Promise((res) => setTimeout(res, 1200)); r = await once(); } // sent too quickly after the last one
     PH.busy = '';
     if (r && r.ok) { dropPend(); ctx.haptic('success'); try { ctx.sfx('shutter'); } catch (e) { /* fine */ } }
     else { PH.err = (r && r.error) || 'Couldn’t send. Try again.'; ctx.haptic('error'); }
@@ -362,7 +364,7 @@
     const capOf = (r) => (m.key === 'caption' || m.key === 'alphabet' ? r.text : m.key === 'scavenger' ? r.item : '');
     return `<div class="sn-spread"><div class="sn-cover"><div class="sn-cover-h">${top.cover ? 'COVER SHOT' : 'TOP SHOT'}</div><div class="sn-cover-ph">${pic(top, 'big')}${capOf(top) ? `<div class="sn-cover-cap">${esc(BOX.filterText ? BOX.filterText(capOf(top)) : capOf(top))}</div>` : ''}</div>
         <div class="sn-cover-by">${who(top)} <span class="sn-gainb">+${top.gain}</span></div><div class="sn-cover-f">${facts(top)}</div>${top.voters && top.voters.length ? `<div class="sn-voters">${top.voters.map((p) => face(p, 30)).join('')}</div>` : ''}<button class="sn-hide" data-hide="${esc(top.eid)}" title="Hide this photo">🙈</button></div>
-      <div class="sn-rest" style="--n:${Math.min(rest.length, 9)}">${rest.slice(0, 9).map((r, i) => `<figure class="sn-mini-f ${r.rejected ? 'rej' : ''}" style="--d:${300 + i * 110}ms">${pic(r, '')}<figcaption><span>${who(r)}</span><small>${facts(r)}</small><b>+${r.gain}</b></figcaption>${capOf(r) ? `<p>${esc(BOX.filterText ? BOX.filterText(capOf(r)) : capOf(r))}</p>` : ''}</figure>`).join('')}${rest.length > 9 ? `<div class="sn-more">+${rest.length - 9} more</div>` : ''}</div>
+      <div class="sn-rest" style="--cols:${rest.length <= 2 ? 1 : rest.length <= 4 ? 2 : 3};--rows:${Math.max(1, Math.ceil(Math.min(rest.length + (rest.length > 9 ? 1 : 0), 9) / (rest.length <= 2 ? 1 : rest.length <= 4 ? 2 : 3)))}">${rest.slice(0, 9).map((r, i) => `<figure class="sn-mini-f ${r.rejected ? 'rej' : ''}" style="--d:${300 + i * 110}ms">${pic(r, '')}<figcaption><span>${who(r)}</span><small>${facts(r)}</small><b>+${r.gain}</b></figcaption>${capOf(r) ? `<p>${esc(BOX.filterText ? BOX.filterText(capOf(r)) : capOf(r))}</p>` : ''}</figure>`).join('')}${rest.length > 9 ? `<div class="sn-more">+${rest.length - 9} more</div>` : ''}</div>
       <div class="sn-board">${(s.standings || []).slice(0, 6).map((r, i) => `<span>${i + 1}. ${face(r, 26)} ${esc(r.name)} <b>${r.points}</b></span>`).join('')}</div></div>`;
   }
   function overTv(s) {
