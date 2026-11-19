@@ -42,6 +42,41 @@ const MODES = {
 };
 const MODE_KEYS = Object.keys(MODES);
 
+// Difficulty (setting `difficulty`): Hard is every mode's full order above (the game as it was);
+// Medium is one step smaller, Easy is at most three things to remember. Easy and Medium also show
+// the order longer, give more time to build, offer a smaller tray on the phone (what's in the order
+// plus a few decoys), score more kindly (a topping one slice / piece / taco off still counts
+// partly, a wrong base partly, and the total is curved up), and Easy lists the ingredients on the
+// ticket once the order is hidden (no places, no order) and reads phone orders slower.
+const DIFFS = {
+  easy: { name: 'Easy', icon: '🟢', peek: 1.6, build: 1.5, bot: 0.14, decoys: 3, stackDecoys: 2, adj: 0.6, row: 0.3, curve: 0.7, hint: true, slow: true },
+  medium: { name: 'Medium', icon: '🟡', peek: 1.25, build: 1.2, bot: 0.06, decoys: 5, stackDecoys: 3, adj: 0.35, row: 0.12, curve: 0.88, hint: false, slow: false },
+  hard: { name: 'Hard', icon: '🔴', peek: 1, build: 1, bot: 0, decoys: null, stackDecoys: null, adj: 0, row: 0, curve: 1, hint: false, slow: false },
+};
+const DIFF_KEYS = Object.keys(DIFFS);
+// How big an order is: toppings (pizza, taco, sushi), burger layers, sundae scoops and sundae toppings.
+// Hard uses MODES; the special mode (halves) builds its own sections (see makeOrder).
+const SIZES = {
+  easy: {
+    classic: { tops: [1, 2], stack: [2, 3], scoops: [1, 2], sprinkle: [1, 1] },
+    rush: { tops: [1, 1], stack: [2, 2], scoops: [1, 1], sprinkle: [1, 1] },
+    halves: { stack: [3, 3], scoops: [2, 2], sprinkle: [1, 1] },
+    phone: { tops: [1, 2], stack: [2, 3], scoops: [1, 2], sprinkle: [1, 1] },
+    flash: { tops: [2, 2], stack: [3, 3], scoops: [2, 2], sprinkle: [1, 1] },
+    chef: { tops: [1, 2], stack: [2, 3], scoops: [1, 2], sprinkle: [1, 1] },
+  },
+  medium: {
+    classic: { tops: [2, 2], stack: [3, 4], scoops: [2, 2], sprinkle: [1, 2] },
+    rush: { tops: [1, 2], stack: [3, 3], scoops: [1, 2], sprinkle: [1, 1] },
+    halves: { stack: [5, 6], scoops: [3, 3], sprinkle: [2, 2] },
+    phone: { tops: [2, 2], stack: [3, 4], scoops: [2, 2], sprinkle: [1, 2] },
+    flash: { tops: [3, 3], stack: [4, 5], scoops: [2, 3], sprinkle: [2, 2] },
+    chef: { tops: [2, 3], stack: [4, 5], scoops: [2, 3], sprinkle: [2, 2] },
+  },
+};
+const sizeOf = (mode, diff) => (SIZES[diff] ? { ...MODES[mode], ...SIZES[diff][mode], ...(diff === 'easy' && MODES[mode].place ? { place: ['whole', 'whole', 'half'] } : {}) } : MODES[mode]);
+const diffOf = (d) => (DIFFS[d] ? d : 'hard');
+
 // ---------------- the kitchens ----------------
 const list = (a) => (a.length < 2 ? a[0] || '' : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]);
 const W8 = 0xff;
@@ -116,8 +151,9 @@ const fields = [
   { key: 'mode', label: 'Kitchen mode', options: opt([['classic', '🍽️ Classic Order'], ['rush', '⏱️ Lunch Rush'], ['halves', '🌗 Special (Half & Half, Rainbow Roll…)'], ['phone', '☎️ Phone Order'], ['flash', '⚡ Flash Order'], ['chef', '🧑‍🍳 Head Chef'], ['mixed', '🎲 Mixed (a new mode each order)']]) },
   { key: 'rounds', label: 'Orders', options: opt([[3, '3 orders'], [5, '5 orders'], [8, '8 orders']]) },
   { key: 'seconds', label: 'Time to build', options: opt([[30, '30 seconds'], [45, '45 seconds'], [60, '60 seconds']]) },
+  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy (2–3 things to remember, more time)'], ['medium', '🟡 Medium'], ['hard', '🔴 Hard (the full order, strict scoring)']]) },
 ];
-const defaults = { kitchen: 'surprise', mode: 'mixed', rounds: 5, seconds: 45 };
+const defaults = { kitchen: 'surprise', mode: 'mixed', rounds: 5, seconds: 45, difficulty: 'easy' };
 
 // The customers who come to each counter (drawn on the TV from these looks; `hs` hair style).
 const CUSTOMERS = {
@@ -272,14 +308,23 @@ function clean(p, k = 'pizza') {
   if (K.stack) out.stack = (Array.isArray(p.stack) ? p.stack : []).filter((x) => K.stack.includes(x)).slice(0, K.maxStack);
   return out;
 }
+// The slots next to each slot in mask m (for kind scoring on Easy / Medium): pizza slices either
+// side, sushi pieces beside or across the board, any other taco on the plate.
+const ROW4 = (m) => ((m << 1) & 0xee) | ((m >>> 1) & 0x77);
+const ADJ = { ring: (m) => rot(m, 1) | rot(m, 7), line: (m) => ROW4(m) | ((m << 4) & 0xf0) | ((m >>> 4) & 0x0f), perm: (m) => 7 & ~m, one: () => 0 };
 // Toppings: which kinds, how many slots each, and where they sit (best over the symmetries).
-function topScore(K, want, got) {
+// adj (0..1): a topping one slot off counts that much (a near miss is one slot, not two).
+function topScore(K, want, got, adj = 0) {
   const a0 = want.top || {}, b0 = got.top || {}, kinds = K.tops.filter((k) => a0[k] || b0[k]);
   if (!kinds.length) return 1;
   let place = 0;
+  const near = ADJ[K.sym] || ADJ.one;
   for (const p of SYMS[K.sym]) {
     let inter = 0, uni = 0;
-    for (const k of kinds) { const a = a0[k] || 0, b = remap(b0[k] || 0, p); inter += popc(a & b); uni += popc(a | b); }
+    for (const k of kinds) {
+      const a = a0[k] || 0, b = remap(b0[k] || 0, p); inter += popc(a & b); uni += popc(a | b);
+      if (adj > 0) { const miss = a & ~b, extra = b & ~a, n = Math.min(popc(miss & near(extra)), popc(extra & near(miss))); inter += adj * n; uni -= n; }
+    }
     place = Math.max(place, uni ? inter / uni : 1);
   }
   let amt = 0;
@@ -298,20 +343,22 @@ function stackScore(a, b) {
   return 0.45 * (same / n) + 0.55 * (L[a.length][b.length] / n);
 }
 // How close `got` is to `want`, 0..100. An empty (missing) dish scores 0. The kitchen is want.k
-// (or got.k, or pizza).
-function match(want, got, k) {
+// (or got.k, or pizza). diff: 'hard' (default, strict) | 'medium' | 'easy' (kinder, see DIFFS).
+function match(want, got, k, diff = 'hard') {
   if (!want || !got) return 0;
-  const K = kOf(k || want.k || got.k);
+  const K = kOf(k || want.k || got.k), D = DIFFS[diffOf(diff)];
   let s = 0;
   for (const r of K.rows) {
     const a = want[r.key], b = got[r.key];
-    if (r.num) s += r.w * Math.max(0, 1 - Math.abs((a || 0) - (b || 0)) * r.num);
-    else if (a === b) s += r.w;
-    else if (r.near && Math.abs(r.opts.indexOf(a) - r.opts.indexOf(b)) === 1) s += r.w * r.near;
+    let part = 0;
+    if (r.num) part = Math.max(0, 1 - Math.abs((a || 0) - (b || 0)) * r.num);
+    else if (a === b) part = 1;
+    else if (r.near && Math.abs(r.opts.indexOf(a) - r.opts.indexOf(b)) === 1) part = r.near;
+    s += r.w * Math.max(part, D.row);
   }
-  if (K.slots) s += K.wTop * topScore(K, want, got);
+  if (K.slots) s += K.wTop * topScore(K, want, got, D.adj);
   if (K.stack) s += K.wStack * stackScore(want.stack, got.stack);
-  return Math.round(100 * s);
+  return Math.round(100 * Math.pow(Math.max(0, Math.min(1, s)), D.curve));
 }
 
 // ---------------- the order in words (Phone Order, and the head chef's ticket) ----------------
@@ -373,6 +420,7 @@ class Game {
     this.room = room;
     const pick = (f, v) => (f.options.some((o) => String(o.value) === String(v)) ? f.options.find((o) => String(o.value) === String(v)).value : defaults[f.key]);
     this.s = {}; for (const f of fields) this.s[f.key] = pick(f, s ? s[f.key] : undefined);
+    this.diff = diffOf(this.s.difficulty); this.D = DIFFS[this.diff];
     this.phase = 'intro'; this.round = 0; this.total = this.s.mode === 'rush' ? this.s.rounds * 2 : this.s.rounds;
     this.c = null; this.points = new Map(); this.stats = new Map(); this.timer = null; this.endsAt = 0;
     this.nonna = null; this.nonnaSeq = 0; this.history = []; this.lastMode = null; this.chefTurn = 0; this.final = null;
@@ -411,15 +459,24 @@ class Game {
     if (!this.courtBag.length) { this.courtBag = this.shuffle(KITCHEN_KEYS); if (this.courtBag[this.courtBag.length - 1] === this.lastKitchen) this.courtBag.unshift(this.courtBag.pop()); }
     return this.courtBag.pop();
   }
-  makeOrder(mode, kit = this.curKitchen()) {
-    const M = MODES[mode], K = KITCHENS[kit];
+  makeOrder(mode, kit = this.curKitchen(), diff = this.diff) {
+    const M = sizeOf(mode, diff), K = KITCHENS[kit];
     const o = { k: kit, sections: [] };
     for (const r of K.rows) o[r.key] = this.pickOf(r.pick);
     if (K.slots && K.at) {
       o.top = {};
       const kinds = this.shuffle(K.tops);
       const add = (kind, mask, ks, at = 0) => { o.sections.push({ kind, mask, kinds: ks, at }); for (const x of ks) o.top[x] = (o.top[x] || 0) | mask; };
-      if (M.sections) {
+      if (M.sections && diff !== 'hard') {
+        // Easy: two toppings, one on each side (two tacos + the other one; or every other sushi piece).
+        // Medium: one topping per side or per quarter (each taco its own), never an extra one all over.
+        if (kit === 'taco') {
+          if (diff === 'easy') { add('half', K.at.half[0], kinds.splice(0, 1)); add('half', K.at.half[1], kinds.splice(0, 1)); }
+          else K.at.quarter.forEach((m, i) => add('quarter', m, kinds.splice(0, 1), i));
+        } else if (kit === 'sushi' && this.rng() < 0.4) { add('alt', K.at.alt[0], kinds.splice(0, 1)); add('alt', K.at.alt[1], kinds.splice(0, 1)); }
+        else if (diff === 'easy' || this.rng() < 0.5) { add('half', K.at.half[0], kinds.splice(0, 1)); add('half', K.at.half[1], kinds.splice(0, 1)); }
+        else K.at.quarter.forEach((m, i) => add('quarter', m, kinds.splice(0, 1), i));
+      } else if (M.sections) {
         if (kit === 'taco') { // Mix & Match: every taco its own toppings (sometimes one on all three too)
           if (this.rng() < 0.4) add('whole', 7, kinds.splice(0, 1));
           K.at.quarter.forEach((m, i) => add('quarter', m, kinds.splice(0, this.ri(1, 2)), i));
@@ -446,7 +503,7 @@ class Game {
       }
     }
     if (kit === 'burger') {
-      const n = this.ri(...M.stack), patties = Math.min(3, Math.max(1, this.ri(1, n >= 6 ? 3 : 2)));
+      const n = this.ri(...M.stack), patties = diff === 'easy' ? 1 : Math.min(3, Math.max(1, this.ri(1, n >= 6 ? 3 : 2)));
       const st = Array(patties).fill('patty');
       while (st.length < n) st.push(this.pickOf(K.stack.filter((x) => x !== 'patty')));
       o.stack = this.shuffle(st);
@@ -456,8 +513,16 @@ class Game {
       o.top = {}; for (const x of this.shuffle(K.tops).slice(0, this.ri(...M.sprinkle))) o.top[x] = 1;
     }
     o.words = describe(o);
+    // The phone's tray on Easy / Medium: what's in the order plus a few decoys (kitchen order, so it gives nothing away).
+    const D = DIFFS[diffOf(diff)];
+    const tray = (all, used, n) => { if (n == null) return null; const extra = this.shuffle(all.filter((x) => !used.includes(x))).slice(0, n); return all.filter((x) => used.includes(x) || extra.includes(x)); };
+    o.palette = { tops: K.tops ? tray(K.tops, Object.keys(o.top || {}), D.decoys) : null, stack: K.stack ? tray(K.stack, [...new Set(o.stack || [])], D.stackDecoys) : null };
+    // Easy's ticket hint once the order is hidden: what's in it (no places, no order), kitchen order.
+    if (D.hint) o.hint = { tops: K.tops ? K.tops.filter((x) => o.top && o.top[x]) : [], stack: K.stack ? K.stack.filter((x) => (o.stack || []).includes(x)) : [] };
     return o;
   }
+  // How many things an order asks you to remember: toppings (each kind once per section), burger layers, sundae scoops + toppings.
+  static items(o) { return (o.sections || []).reduce((n, s) => n + s.kinds.length, 0) + (o.stack || []).length + (o.k === 'sundae' ? Object.keys(o.top || {}).length : 0); }
   nextCustomer(kit) {
     const bag = this.custBags[kit] || (this.custBags[kit] = []);
     if (!bag.length) bag.push(...this.shuffle(CUSTOMERS[kit].map((c) => c.id)));
@@ -476,7 +541,7 @@ class Game {
       const pool = this.active(); const humans = pool.filter((p) => !p.bot), lst = humans.length >= 2 ? humans : pool;
       chef = lst.length ? lst[this.chefTurn++ % lst.length].id : null;
     }
-    const peek = M.peek;
+    const peek = Math.round(M.peek * this.D.peek); // Easy / Medium show it longer
     this.c = { id: this.round, mode, kitchen: kit, order, customer: this.nextCustomer(kit), chef, peek, showAt: this.now() + WALK_MS, drafts: new Map(), served: new Map(), rows: null, buildMs: 0 };
     this.phase = 'order';
     this.say(this.line(this.round === this.total && this.total > 1 ? 'last' : M.words ? 'phone' : mode === 'flash' ? 'flash' : mode === 'rush' && this.round <= 2 ? 'rush' : M.chef ? 'chef' : this.round === 1 ? 'first' : 'look'));
@@ -488,7 +553,7 @@ class Game {
     const c = this.c; if (!c || this.phase !== 'order') return;
     this.phase = 'build';
     const M = MODES[c.mode];
-    c.buildMs = Math.max(15000, Math.round(this.s.seconds * 1000 * M.build));
+    c.buildMs = Math.max(15000, Math.round(this.s.seconds * 1000 * M.build * this.D.build));
     c.buildAt = this.now(); c.endAt = c.buildAt + c.buildMs;
     this.say(this.line(M.chef ? 'chefBuild' : 'build'));
     this.room.fx('build');
@@ -500,6 +565,7 @@ class Game {
     const c = this.c, cid = c.id;
     let skill = 0.45 + ((String(p.id).length * 7 + String(p.name).length * 13) % 40) / 100; // 0.45–0.84, steady per bot
     if (c.mode === 'flash') skill -= 0.15; if (c.mode === 'chef' || c.mode === 'phone') skill -= 0.05;
+    skill = Math.min(0.97, skill + this.D.bot); // smaller orders, shown longer: bots remember better too
     const pz = this.botMemory(c.order, skill);
     const at = c.buildMs * (0.3 + this.rng() * 0.6);
     this.room.after(at * 0.5, () => { if (this.c && this.c.id === cid && this.phase === 'build' && !c.served.has(p.id)) c.drafts.set(p.id, pz); });
@@ -550,7 +616,7 @@ class Game {
     const M = MODES[c.mode], rows = [];
     for (const [id, pz] of c.drafts) {
       if (id === c.chef || !this.room.get(id)) continue;
-      const score = match(c.order, pz, c.kitchen), at = c.served.get(id);
+      const score = match(c.order, pz, c.kitchen, this.diff), at = c.served.get(id);
       let tip = score * 10, speed = 0;
       if (M.speed && at != null && score >= 50) speed = Math.round(score * 3 * Math.max(0, (c.endAt - at) / c.buildMs));
       rows.push({ id, pizza: pz, score, tip, speed, served: at != null, secs: at != null ? Math.round((at - c.buildAt) / 100) / 10 : null });
@@ -648,6 +714,9 @@ class Game {
     const o = { id: c.id, ...this.modeInfo(c), customer: c.customer, chef: c.chef ? this.pub(c.chef) : null, showIn: Math.max(0, c.showAt - this.now()), peek: c.peek, speed: !!M.speed };
     if (vis.picture) o.order = this.dishOf(c.order);
     if (vis.words) o.words = c.order.words;
+    if (vis.words && this.D.slow) o.slow = true; // Easy: the customer reads it out slower
+    // Easy: once the order is hidden, the ticket lists what was in it (not for the head chef's orders: they describe it).
+    if (this.phase === 'build' && c.order.hint && !M.chef) o.hint = c.order.hint;
     if (this.phase === 'build' || this.phase === 'reveal') {
       const b = this.builders();
       o.cooks = b.slice(0, 40).map((p) => ({ ...this.pub(p.id), served: c.served.has(p.id), busy: c.drafts.has(p.id) }));
@@ -660,7 +729,7 @@ class Game {
     }
     return o;
   }
-  base() { return { phase: this.phase, round: this.round, of: this.total, mode: this.s.mode, kitchen: this.curKitchen(), court: !this.kitchen, endsIn: this.endsAt && this.phase !== 'over' ? Math.max(0, this.endsAt - this.now()) : 0, nonna: this.nonna }; }
+  base() { return { phase: this.phase, round: this.round, of: this.total, mode: this.s.mode, kitchen: this.curKitchen(), court: !this.kitchen, level: { key: this.diff, name: this.D.name, icon: this.D.icon }, endsIn: this.endsAt && this.phase !== 'over' ? Math.max(0, this.endsAt - this.now()) : 0, nonna: this.nonna }; }
   tv() {
     const st = this.standings();
     return { ...this.base(), c: this.cPub(), standings: st.slice(0, 10), players: st.length, final: this.phase === 'over' ? this.final : null };
@@ -674,6 +743,8 @@ class Game {
     if (c.chef === p.id && this.phase !== 'reveal') v.c.ticket = { ...this.dishOf(c.order), words: c.order.words };
     if (this.phase === 'build') {
       v.c.served = c.served.has(p.id); v.c.draft = c.drafts.get(p.id) || null;
+      v.c.palette = c.order.palette; // Easy / Medium: a smaller tray (null = everything)
+      if (c.order.hint && !M.chef) v.c.hint = c.order.hint;
       v.c.waiting = this.builders().filter((x) => !c.served.has(x.id)).length;
     }
     if (this.phase === 'reveal' && c.rows) {
@@ -689,9 +760,11 @@ class Game {
 // Party Mode: settings that fit the players in the room and this game's minutes in the plan
 // (box/party-fit.js). The kitchen is a surprise: a random one for each game.
 const PF = require('../party-fit');
-const partyFit = ({ players: P, minutes: M }) => {
+// The party's "How hard?" sets `difficulty` (box/party-fit.js); Easy orders take longer to build.
+const partyFit = ({ players: P, minutes: M, difficulty }) => {
+  const D = DIFFS[difficulty] || DIFFS[defaults.difficulty];
   const seconds = M <= 7 ? 30 : M >= 16 ? 60 : 45;
-  const { rounds } = PF.best({ rounds: [5, 3, 8] }, (s) => 0.5 + s.rounds * (seconds + 85) / 60, M);
+  const { rounds } = PF.best({ rounds: [5, 3, 8] }, (s) => 0.5 + s.rounds * (seconds * D.build + 8 * D.peek + 77) / 60, M);
   return { rounds, seconds, mode: P <= 1 ? 'classic' : 'mixed', kitchen: 'surprise' };
 };
 
@@ -701,5 +774,5 @@ module.exports = {
   key: 'pizza', name: 'YesChef', min: 1, best: [3, 10], howSteps: 6, fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false, openMs: 14000 }, // intro cutscene (public/box/intros/pizza.js): the YesChef food court, then the kitchen's owner
   create: (room, settings) => new Game(room, settings),
-  _test: { match, clean, describe, rot, flip, popc, stackScore, MODES, KITCHENS, KITCHEN_KEYS, CUSTOMERS, LINES, NONNA: LINES.pizza, TOPPINGS: PIZZA.tops, CRUSTS: PIZZA.rows[0].opts, SAUCES: PIZZA.rows[1].opts, WHOLE: 0xff, HALVES: PIZZA.at.half, QUARTERS: PIZZA.at.quarter, SYMS, modeName },
+  _test: { match, clean, describe, rot, flip, popc, stackScore, MODES, DIFFS, SIZES, sizeOf, items: Game.items, KITCHENS, KITCHEN_KEYS, CUSTOMERS, LINES, NONNA: LINES.pizza, TOPPINGS: PIZZA.tops, CRUSTS: PIZZA.rows[0].opts, SAUCES: PIZZA.rows[1].opts, WHOLE: 0xff, HALVES: PIZZA.at.half, QUARTERS: PIZZA.at.quarter, SYMS, modeName },
 };

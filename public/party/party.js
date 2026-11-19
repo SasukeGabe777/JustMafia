@@ -93,18 +93,29 @@
   ];
 
   // ---- Options ----
-  // Practice rounds (box/room.js): a quick warm-up that doesn't count before each game, or only
-  // before games this TV hasn't finished yet (box.done, kept by the TV page).
+  // Practice rounds (box/room.js): a quick warm-up that doesn't count, before games nobody here has
+  // played yet (not finished on this TV, box.done, nor by most of the players' profiles), before
+  // every game, or never. A game already played never gets one in 'new'.
   const PRACTICE = [
-    { k: 'on', label: 'On', icon: '🎓', sub: 'A quick warm-up before every game' },
-    { k: 'off', label: 'Off', icon: '⏩', sub: 'Straight into every game' },
-    { k: 'new', label: 'Only for new games', icon: '🆕', sub: 'A warm-up before games you haven’t played here' },
+    { k: 'new', label: 'Yes, for new games', icon: '🆕', sub: 'A warm-up only before games nobody here has played' },
+    { k: 'off', label: 'No', icon: '⏩', sub: 'Straight into every game' },
+    { k: 'on', label: 'Every game', icon: '🎓', sub: 'A warm-up before every game, even ones you know' },
   ];
+  // How hard the games are (games with a difficulty setting use it: box/party-fit.js).
+  const LEVELS = [
+    { k: 'easy', label: 'Easy', icon: '🟢', sub: 'Relaxed: simpler orders, more time, kinder scoring' },
+    { k: 'medium', label: 'Medium', icon: '🟡', sub: 'A fair challenge' },
+    { k: 'hard', label: 'Hard', icon: '🔴', sub: 'For pros: the full challenge' },
+    { k: 'mixed', label: 'Mixed', icon: '🎲', sub: 'A different level each game' },
+  ];
+  const levelLabel = (k) => { const L = LEVELS.find((x) => x.k === k); return L ? `${L.icon} ${L.label}` : ''; };
   const doneList = () => { try { const v = JSON.parse(localStorage.getItem('box.done') || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
-  const opt = { flow: 'auto', p: 1, t: 1, mood: 'all', types: new Set(TYPES.filter((t) => !t.big).map((t) => t.k)), big: 'maybe', each: 'auto', intros: 'play', practice: doneList().length ? 'off' : 'new' };
-  const SAVE = 'box.partyOpts'; // how long each game runs, the intros and practice rounds: remembered on this TV
-  try { const s = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (s) { if (LENGTHS.some((x) => x.k === s.each)) opt.each = s.each; if (INTROS.some((x) => x.k === s.intros)) opt.intros = s.intros; if (PRACTICE.some((x) => x.k === s.practice)) opt.practice = s.practice; } } catch { /* private mode */ }
-  const saveOpts = () => { try { localStorage.setItem(SAVE, JSON.stringify({ each: opt.each, intros: opt.intros, practice: opt.practice })); } catch { /* private mode */ } };
+  const opt = { flow: 'auto', p: 1, t: 1, mood: 'all', types: new Set(TYPES.filter((t) => !t.big).map((t) => t.k)), big: 'maybe', each: 'auto', intros: 'play', practice: 'new', difficulty: 'easy' };
+  const SAVE = 'box.partyOpts'; // how long each game runs, the intros, practice rounds and difficulty: remembered on this TV
+  try { const s = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (s) { if (LENGTHS.some((x) => x.k === s.each)) opt.each = s.each; if (INTROS.some((x) => x.k === s.intros)) opt.intros = s.intros; if (PRACTICE.some((x) => x.k === s.practice)) opt.practice = s.practice; if (LEVELS.some((x) => x.k === s.difficulty)) opt.difficulty = s.difficulty;
+    // The old setup's "On" read like "practice rounds on" but practised games you'd already played: back to new games only.
+    if (s.v !== 2 && s.practice === 'on') opt.practice = 'new'; } } catch { /* private mode */ }
+  const saveOpts = () => { try { localStorage.setItem(SAVE, JSON.stringify({ v: 2, each: opt.each, intros: opt.intros, practice: opt.practice, difficulty: opt.difficulty })); } catch { /* private mode */ } };
   try { // start from the main menu's "How many of you?" choice
     const on = document.querySelector('#count .on'), n = on && Number(on.dataset.n);
     if (n) opt.p = n <= 3 ? 0 : n <= 8 ? 1 : n <= 20 ? 2 : 3;
@@ -232,13 +243,15 @@
       <div class="pm-q"><h2><span class="pm-num">3</span> Which games?</h2>
         <div class="pm-opts three">${MOODS.map((m) => `<button class="pm-opt pm-mood pm-f ${opt.mood === m.k ? 'on' : ''}" data-id="o-${m.k}" data-mood="${m.k}" aria-pressed="${opt.mood === m.k}"><span class="pm-oi">${m.icon}</span><b>${m.label}</b><small>${m.sub}</small></button>`).join('')}</div>
         <div class="pm-types">${TYPES.map(typeCard).join('')}</div></div>
-      <div class="pm-q"><h2><span class="pm-num">4</span> How long should each game run?</h2>
+      <div class="pm-q"><h2><span class="pm-num">4</span> How hard?</h2>
+        <div class="pm-opts four">${LEVELS.map((x) => `<button class="pm-opt pm-f ${opt.difficulty === x.k ? 'on' : ''}" data-id="d-${x.k}" data-level="${x.k}" aria-pressed="${opt.difficulty === x.k}"><span class="pm-oi">${x.icon}</span><b>${x.label}</b><small>${x.sub}</small></button>`).join('')}</div></div>
+      <div class="pm-q"><h2><span class="pm-num">5</span> How long should each game run?</h2>
         <div class="pm-opts four">${LENGTHS.map((l) => `<button class="pm-opt pm-f ${opt.each === l.k ? 'on' : ''}" data-id="e-${l.k}" data-each="${l.k}" aria-pressed="${opt.each === l.k}"><span class="pm-oi">${l.icon}</span><b>${l.label}</b><small>${l.m ? `~${l.m} min each · settings fit it` : 'Fit the time: each game its usual length'}</small></button>`).join('')}</div></div>
-      <div class="pm-q"><h2><span class="pm-num">5</span> Between games</h2>
+      <div class="pm-q"><h2><span class="pm-num">6</span> Between games</h2>
         <div class="pm-opts two">${[['auto', '⏩', 'Keep it flowing', 'Each game starts right after the standings'], ['lobby', '⚙️', 'Let the host adjust', 'Stop at each game’s settings first']].map(([k, ic, l, sub]) => `<button class="pm-opt pm-f ${opt.flow === k ? 'on' : ''}" data-id="f-${k}" data-flow="${k}" aria-pressed="${opt.flow === k}"><span class="pm-oi">${ic}</span><b>${l}</b><small>${sub}</small></button>`).join('')}</div></div>
-      <div class="pm-q"><h2><span class="pm-num">6</span> 🎬 Intro cutscenes</h2>
+      <div class="pm-q"><h2><span class="pm-num">7</span> 🎬 Intro cutscenes</h2>
         <div class="pm-opts three">${INTROS.map((x) => `<button class="pm-opt pm-f ${opt.intros === x.k ? 'on' : ''}" data-id="i-${x.k}" data-intros="${x.k}" aria-pressed="${opt.intros === x.k}"><span class="pm-oi">${x.icon}</span><b>${x.label}</b><small>${x.sub}</small></button>`).join('')}</div></div>
-      <div class="pm-q"><h2><span class="pm-num">7</span> 🎓 Practice rounds</h2>
+      <div class="pm-q"><h2><span class="pm-num">8</span> 🎓 Practice rounds before new games?</h2>
         <div class="pm-opts three">${PRACTICE.map((x) => `<button class="pm-opt pm-f ${opt.practice === x.k ? 'on' : ''}" data-id="r-${x.k}" data-practice="${x.k}" aria-pressed="${opt.practice === x.k}"><span class="pm-oi">${x.icon}</span><b>${x.label}</b><small>${x.sub}</small></button>`).join('')}</div></div>
       <footer class="pm-foot">
         <button class="pm-btn ghost pm-f" data-id="back" data-act="close">◀ Back</button>
@@ -256,6 +269,7 @@
     if (el.dataset.each) { opt.each = el.dataset.each; saveOpts(); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.intros) { opt.intros = el.dataset.intros; saveOpts(); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.practice) { opt.practice = el.dataset.practice; saveOpts(); sfx('pop'); return setup(el.dataset.id); }
+    if (el.dataset.level) { opt.difficulty = el.dataset.level; saveOpts(); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.mood) { setMood(el.dataset.mood); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.type) {
       const t = TYPES.find((x) => x.k === el.dataset.type);
@@ -479,7 +493,7 @@
     const sub = body().querySelector('#pm-sub');
     const tot = totalMin(lineup);
     const L = LENGTHS.find((x) => x.k === opt.each), I = INTROS.find((x) => x.k === opt.intros);
-    sub.innerHTML = `<b>${lineup.length}</b> game${lineup.length === 1 ? '' : 's'} · about <b>${fmtMin(tot)}</b> · ${esc(PLAYERS[opt.p].label)} players · ${L && L.m ? `${esc(L.label.toLowerCase())} games (~${L.m} min)` : 'each game its usual length'} · ${esc(I ? I.icon + ' ' + I.label.toLowerCase() : '')}${opt.practice !== 'off' ? ` · 🎓 practice rounds${opt.practice === 'new' ? ' for new games' : ''}` : ''}`;
+    sub.innerHTML = `<b>${lineup.length}</b> game${lineup.length === 1 ? '' : 's'} · about <b>${fmtMin(tot)}</b> · ${esc(PLAYERS[opt.p].label)} players · ${L && L.m ? `${esc(L.label.toLowerCase())} games (~${L.m} min)` : 'each game its usual length'} · ${esc(I ? I.icon + ' ' + I.label.toLowerCase() : '')} · <b>${esc(levelLabel(opt.difficulty))}</b>${opt.practice === 'new' ? ' · 🎓 practice before new games' : opt.practice === 'on' ? ' · 🎓 practice before every game' : ' · no practice rounds'}`;
   }
   async function rerollOne(i) {
     const k = lineup[i], big = GAMES[k].big;
@@ -509,8 +523,8 @@
       root.classList.add('launch');
       // A party needs a box game to start in; a lone JustMafia is just a game of JustMafia.
       const plan = Object.fromEntries(lineup.map((k) => [k, planOf(k)]));
-      const extra = { intros: opt.intros, each: opt.each, plan, players: [3, 6, 12, 24][opt.p], practice: opt.practice, seen: doneList() }; // players: a guess until people join
-      const url = lineup.length === 1 && lineup[0] === 'mafia' ? '/mafia' : `/box/tv?game=${encodeURIComponent(lineup[0])}&party=${lineup.map(encodeURIComponent).join(',')}&minutes=${TIMES[opt.t].m}${opt.flow === 'lobby' ? '&flow=lobby' : ''}&intros=${opt.intros}&each=${opt.each}&plan=${lineup.map((k) => encodeURIComponent(k) + ':' + plan[k]).join(',')}&players=${extra.players}&practice=${opt.practice}`;
+      const extra = { intros: opt.intros, each: opt.each, plan, players: [3, 6, 12, 24][opt.p], practice: opt.practice, difficulty: opt.difficulty, seen: doneList() }; // players: a guess until people join
+      const url = lineup.length === 1 && lineup[0] === 'mafia' ? '/mafia' : `/box/tv?game=${encodeURIComponent(lineup[0])}&party=${lineup.map(encodeURIComponent).join(',')}&minutes=${TIMES[opt.t].m}${opt.flow === 'lobby' ? '&flow=lobby' : ''}&intros=${opt.intros}&each=${opt.each}&plan=${lineup.map((k) => encodeURIComponent(k) + ':' + plan[k]).join(',')}&players=${extra.players}&practice=${opt.practice}&difficulty=${opt.difficulty}`;
       try { localStorage.setItem('box.recent', lineup[0]); } catch { /* private */ }
       // This TV's room is still open (hub.js): the party starts in it, same code, everyone along.
       const H = window.HUB_ROOM;

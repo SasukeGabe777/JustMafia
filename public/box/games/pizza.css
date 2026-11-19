@@ -228,3 +228,22 @@ body.g-pizza[data-kitchen="sundae"] { --pz-gold: #ff8fc8; --pz-red: #e0307a; --p
 .pz-tray.stack .pz-top:active { transform: translateY(2px); background: var(--pz-cream); color: var(--pz-ink); }
 .pz-tool[disabled] { opacity: 0.4; }
 .ph-over .pz-pav .portrait, .pz-pav img { width: 72px; height: 72px; }
+
+/* ---- Difficulty: the level chip (TV order board, lobby, phone) and Easy's ticket hint ---- */
+.pz-lvl { display: inline-flex; align-items: center; gap: 4px; padding: 1px 10px; border-radius: 99px; font: 400 16px/1.4 'Lilita One', sans-serif; color: #fff; background: rgba(0, 0, 0, 0.35); border: 2px solid rgba(255, 255, 255, 0.35); white-space: nowrap; vertical-align: middle; }
+.pz-lvl:empty { display: none; }
+.pz-lvl.l-easy { background: #1f8a4c; border-color: #6fe3a0; }
+.pz-lvl.l-medium { background: #a87a10; border-color: #ffd23f; }
+.pz-lvl.l-hard { background: #a8261b; border-color: #ff8a7a; }
+.pz-board .pz-lvl { font-size: 20px; margin-top: 4px; }
+.pz-l-board h2 .pz-lvl { font-size: 20px; margin-left: 8px; }
+.pz-bar .pz-lvl { padding: 0 4px; font-size: 13px; border-width: 1px; }
+.pz-kit .pz-lvl { font-size: 14px; margin-left: 6px; }
+.pz-hintlist { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; padding: 6px 12px; border-radius: 12px; background: #fff8e6; color: #2a160c; border: 3px dashed #c4904a; font: 500 15px 'Fredoka', sans-serif; }
+.pz-hintlist b { font-weight: 700; }
+.pz-hintlist span { display: inline-flex; align-items: center; gap: 3px; }
+.pz-hintlist small { font-size: 13px; }
+.pz-box .pz-hintlist { font-size: 22px; max-width: min(620px, 46cqw); transform: rotate(-1.5deg); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35); }
+.pz-box .pz-hintlist small { font-size: 20px; }
+.pz-box.has-hint .pz-box-lid { width: min(260px, 28cqh); font-size: min(150px, 16cqh); }
+.pz-ph > .pz-hintlist { margin: 6px 0 2px; }

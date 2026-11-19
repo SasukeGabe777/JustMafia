@@ -431,7 +431,10 @@
   const PH = { endAt: 0, round: null, kit: 'pizza', draft: null, sel: null, sendT: 0, lastPhase: '', paint: null, lastTapAt: 0 };
   function blank(k) { const C = K[k], d = { k }; for (const r of C.rows) d[r.key] = r.opts.find((o) => o[0] === 'none' || o[0] === 0) ? (r.opts.find((o) => o[0] === 'none' || o[0] === 0))[0] : r.opts[k === 'pizza' ? 1 : 0][0]; if (C.slots) d.top = {}; if (C.stack) d.stack = []; return d; }
   const copy = (p, k) => { const d = { ...blank(k), ...p, k }; if (p.top) d.top = { ...p.top }; if (p.stack) d.stack = p.stack.slice(); return d; };
-  const barHtml = (v) => `<div class="pz-bar"><span>${esc(v.c ? v.c.modeIcon : '🧑‍🍳')} Order ${v.round}/${v.of}${v.c ? ` · ${esc(v.c.modeName)}` : ''}</span><span class="pz-t">${(v.phase === 'build' || v.phase === 'order') && PH.endAt > Date.now() ? `<span class="timer" data-ends="${PH.endAt}">${BOX.mmss(PH.endAt - Date.now())}</span>` : ''}</span><b>💰 ${v.points}</b></div>`;
+  const lvlChip = (L, short) => (L ? `<span class="pz-lvl l-${esc(L.key)}" title="${esc(L.name)}">${esc(L.icon)}${short ? '' : ' ' + esc(L.name)}</span>` : '');
+  // Easy: what was on the ticket (no places, no order), as little pictures.
+  const hintHtml = (h, k, size = 30) => { if (!h) return ''; const xs = [...(h.stack || []), ...(h.tops || [])]; return xs.length ? `<div class="pz-hintlist"><b>🧾 On the ticket:</b>${xs.map((x) => `<span>${itemIcon(k, x, size)}<small>${esc((K[k].names || {})[x] || x)}</small></span>`).join('')}</div>` : ''; };
+  const barHtml = (v) => `<div class="pz-bar"><span>${lvlChip(v.level, true)} ${esc(v.c ? v.c.modeIcon : '🧑‍🍳')} Order ${v.round}/${v.of}${v.c ? ` · ${esc(v.c.modeName)}` : ''}</span><span class="pz-t">${(v.phase === 'build' || v.phase === 'order') && PH.endAt > Date.now() ? `<span class="timer" data-ends="${PH.endAt}">${BOX.mmss(PH.endAt - Date.now())}</span>` : ''}</span><b>💰 ${v.points}</b></div>`;
   // Which slot is under the finger: a pizza slice, a taco, a sushi piece (-1: none).
   function slotAt(box, x, y) {
     const sv = box.querySelector('svg'), vb = sv && sv.viewBox && sv.viewBox.baseVal && sv.viewBox.baseVal.width ? sv.viewBox.baseVal : { x: -110, y: -110, width: 220, height: 220 };
@@ -447,7 +450,9 @@
     PH.sendT = setTimeout(() => { if (PH.draft && PH.round != null) ctx.act({ op: 'build', round: PH.round, dish: PH.draft }); }, 350);
   }
   function builderHtml(v) {
-    const C = K[PH.kit], d = PH.draft, sel = PH.sel;
+    const C0 = K[PH.kit], d = PH.draft, sel = PH.sel, pal = (v.c && v.c.palette) || {};
+    // Easy / Medium: the tray holds what's in the order plus a few decoys.
+    const C = { ...C0, tops: pal.tops && pal.tops.length ? pal.tops : C0.tops, stack: pal.stack && pal.stack.length ? pal.stack : C0.stack };
     const row = (lab, items) => `<div class="pz-row"><span class="pz-lab">${lab}</span><div class="pz-chips">${items}</div></div>`;
     const chip = (r, [val, label, col]) => `<button class="pz-chip ${r.cls ? `${r.cls}-${val}` : ''} ${d[r.key] === val ? 'on' : ''}" data-row="${r.key}" data-val="${esc(String(val))}">${col ? `<i class="sw" style="background:${col}"></i>` : r.cls ? '<i></i>' : ''}${esc(label)}</button>`;
     const rows = C.rows.map((r) => row(r.label, r.opts.map((o) => chip(r, o)).join(''))).join('');
@@ -464,7 +469,7 @@
       trays = tray(C.tops, 'paint');
       tools = `<button class="pz-tool" id="pz-all">${m === full ? '✖ Take off' : C.all}</button><button class="pz-tool" id="pz-clear">🧹 Clear toppings</button>`;
     }
-    return `<div class="pz-ph k-${PH.kit}">${barHtml(v)}
+    return `<div class="pz-ph k-${PH.kit}">${barHtml(v)}${hintHtml(v.c && v.c.hint, PH.kit, 26)}
       <div class="pz-stage"><div class="pz-pie k-${PH.kit}" id="pz-pie" data-keep></div><div class="pz-hint">${hint}</div></div>
       ${rows}${trays}<div class="pz-tools">${tools}</div>
       <button class="pz-serve" id="pz-serve">🛎️ Serve it!</button></div>`;
@@ -534,10 +539,12 @@
     }
     if (v.phase === 'order') {
       const msg = c.mode === 'phone' ? '☎️ Listen! The customer is reading the order.' : c.mode === 'chef' ? `👂 Listen to the head chef, ${esc(c.chef ? c.chef.name : '')}!` : `👀 Look at the TV and remember the ${esc(C.dish)}!`;
-      return BOX.morph(el, `<div class="pz-ph">${barHtml(v)}<div class="pz-card pz-look"><div class="pz-kit">${C.icon} ${esc(C.name)}</div><div class="pz-look-i">${c.mode === 'phone' ? '☎️' : c.mode === 'chef' ? '👂' : '👀'}</div><h2>${msg}</h2><p>${esc(c.customer ? c.customer.name : '')} ${esc(c.customer ? c.customer.job : '')} is ordering.</p>${c.speed ? '<p class="pz-rushnote">⏱️ Rush: serve fast for a speed tip!</p>' : ''}</div></div>`);
+      return BOX.morph(el, `<div class="pz-ph">${barHtml(v)}<div class="pz-card pz-look"><div class="pz-kit">${C.icon} ${esc(C.name)} ${lvlChip(v.level)}</div><div class="pz-look-i">${c.mode === 'phone' ? '☎️' : c.mode === 'chef' ? '👂' : '👀'}</div><h2>${msg}</h2><p>${esc(c.customer ? c.customer.name : '')} ${esc(c.customer ? c.customer.job : '')} is ordering.</p>${c.speed ? '<p class="pz-rushnote">⏱️ Rush: serve fast for a speed tip!</p>' : ''}</div></div>`);
     }
     if (v.phase === 'build') {
-      if (PH.round !== v.round || PH.kit !== kit) { PH.round = v.round; PH.kit = kit; PH.draft = c.draft ? copy(c.draft, kit) : blank(kit); PH.sel = C.tops ? C.tops[0] : null; }
+      const tops = (c.palette && c.palette.tops && c.palette.tops.length ? c.palette.tops : C.tops) || null;
+      if (PH.round !== v.round || PH.kit !== kit) { PH.round = v.round; PH.kit = kit; PH.draft = c.draft ? copy(c.draft, kit) : blank(kit); PH.sel = tops ? tops[0] : null; }
+      if (tops && !tops.includes(PH.sel)) PH.sel = tops[0];
       if (c.served) {
         return BOX.morph(el, `<div class="pz-ph">${barHtml(v)}<div class="pz-card pz-served"><h2>🛎️ Served!</h2>${dishSvg(PH.draft, { size: 240, k: kit })}<p>Waiting for ${v.c.waiting} more cook${v.c.waiting === 1 ? '' : 's'}…</p></div></div>`);
       }
@@ -607,7 +614,7 @@
   function scene(inner, s, extraCls = '', kit = 'pizza') {
     const N = s.nonna, C = K[kit] || COURT, who = N && (K[N.who] || C);
     return `<div class="pz-tv k-${kit} ${extraCls}"><div class="pz-wall"></div><div class="pz-bg" id="pz-bg" data-keep></div><div class="pz-neon k-${kit}">${esc(C.sign[0])}<b>${esc(C.sign[1])}</b></div><div class="pz-yc">Yes<b>Chef</b>${s.court ? ' · food court' : ''}</div>
-      <div class="pz-board"><small>ORDER</small><b>${s.round}<span>/${s.of}</span></b>${s.c ? `<em>${esc(s.c.modeIcon)} ${esc(s.c.modeName)}</em>` : ''}</div>
+      <div class="pz-board"><small>ORDER</small><b>${s.round}<span>/${s.of}</span></b>${s.c ? `<em>${esc(s.c.modeIcon)} ${esc(s.c.modeName)}</em>` : ''}${lvlChip(s.level)}</div>
       ${inner}
       <div class="pz-counter"></div>
       <div class="pz-nonnabox"><div class="pz-nonna" id="pz-nonna" data-keep></div></div>${N ? `<div class="pz-nb" id="pz-nb-${N.key}"><b>${esc(who.owner)}</b><p>${esc(N.text)}</p></div>` : ''}</div>`;
@@ -621,7 +628,8 @@
     BOX.morph(el, scene(`<div class="pz-cust-wrap arrive" id="pz-cu-${c.id}">${customerSvg(cu, walking ? 'wait' : 'say', 300)}</div><div class="pz-tag"><b>${esc(cu.name)}</b><small>${esc(cu.job)}</small></div>
       ${walking ? '' : `<div class="pz-bubble" id="pz-bu-${c.id}">${greet}</div>`}${show}`, s, 'ph-order', kit));
     mount(el, kit);
-    if (c.words && TV.custSaid !== c.id + ':w') { TV.custSaid = c.id + ':w'; speak(c.words, CUST_VOICE, false); }
+    // Easy: the customer reads the order out slower (a live clip at 0.8× speed).
+    if (c.words && TV.custSaid !== c.id + ':w') { TV.custSaid = c.id + ':w'; speak(c.words, c.slow ? { ...CUST_VOICE, rate: 0.8, kokoro: 'bf_emma', speed: 0.8 } : CUST_VOICE, false); }
   }
   function cooksHtml(c) {
     return `<div class="pz-cooks">${(c.cooks || []).map((k) => `<span class="pz-cook ${k.served ? 'done' : ''}">${BOX.face ? BOX.face(k, 26) : av(k)} ${esc(k.name)} ${k.served ? '🛎️' : '<i class="pz-dots"><b></b><b></b><b></b></i>'}</span>`).join('')}</div>`;
@@ -629,7 +637,7 @@
   function tvBuild(el, s, kit) {
     const c = s.c, cu = c.customer, C = K[kit];
     const center = c.words ? `<div class="pz-phonecard"><div class="pz-ring">📜</div><p>The head chef stepped out, so here’s the ticket: “${esc(c.words)}”</p></div>`
-      : `<div class="pz-box"><div class="pz-box-lid">?</div><div class="pz-box-txt">${c.mode === 'chef' ? `🧑‍🍳 ${esc(c.chef ? c.chef.name : '')} is describing it` : 'The order is a secret now. Cook from memory!'}</div></div>`;
+      : `<div class="pz-box ${c.hint ? 'has-hint' : ''}"><div class="pz-box-lid">?</div><div class="pz-box-txt">${c.mode === 'chef' ? `🧑‍🍳 ${esc(c.chef ? c.chef.name : '')} is describing it` : c.hint ? 'Hidden! Where did it all go?' : 'The order is a secret now. Cook from memory!'}</div>${hintHtml(c.hint, kit, 46)}</div>`;
     BOX.morph(el, scene(`<div class="pz-cust-wrap wait" id="pz-cu-${c.id}">${customerSvg(cu, 'think', 300)}</div><div class="pz-tag"><b>${esc(cu.name)}</b><small>is waiting…</small></div>
       <div class="pz-clock ${s.endsIn < 10000 ? 'low' : ''}">${timer(s.endsIn)}</div>${center}
       <div class="pz-status"><h3>${C.icon} Cooking! <small>${c.served} of ${c.of} served</small></h3>${cooksHtml(c)}</div>`, s, 'ph-build', kit));
@@ -663,7 +671,7 @@
       el.innerHTML = `<div class="pz-lobby"><div class="pz-wall"></div><div class="pz-bg" id="pz-bg" data-keep></div>
         <div class="pz-l-head"><div class="pz-neon big k-court">Yes<b>Chef</b></div><p>The YesChef food court is hiring! A customer shows their dish for a few seconds: rebuild it from memory.</p></div>
         <div class="pz-l-main">
-          <div class="pz-l-board"><h2>Tonight’s kitchen</h2><div class="pz-l-set" id="settings"></div><div class="pz-l-err" id="lobby-err"></div>
+          <div class="pz-l-board"><h2>Tonight’s kitchen <span class="pz-lvl" id="pz-l-lvl"></span></h2><div class="pz-l-set" id="settings"></div><div class="pz-l-err" id="lobby-err"></div>
             <button class="pz-l-start" id="start">🧑‍🍳 Open the kitchens</button><div class="pz-l-links"><button class="link" id="add-bots">+ 5 test bots</button> <button class="link" id="pick">🎮 Another game</button></div></div>
           <div class="pz-l-box"><div class="pz-l-boxlid">Scan to cook!</div><img id="qr" alt="QR code to join"><div class="pz-l-cl">Room code</div><div class="pz-l-code" id="code"></div></div>
         </div>
@@ -673,6 +681,8 @@
       el.querySelector('#pick').onclick = () => L.pick();
     }
     const kit = K[L.settings.kitchen] ? L.settings.kitchen : 'court';
+    const lv = { easy: '🟢 Easy', medium: '🟡 Medium', hard: '🔴 Hard' }[L.settings.difficulty] || '', lvEl = el.querySelector('#pz-l-lvl');
+    if (lvEl && lvEl.textContent !== lv) { lvEl.textContent = lv; lvEl.className = 'pz-lvl l-' + (L.settings.difficulty || ''); }
     TV.bgKey = TV.lobbyKit === kit ? TV.bgKey : ''; TV.lobbyKit = kit;
     paintBackdrop(el.querySelector('.pz-lobby'), kit);
     el.querySelector('#code').textContent = L.code;

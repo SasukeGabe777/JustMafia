@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const { VirtualClock } = require('../clock');
 const { BoxRoom } = require('../box/room');
 const def = require('../box/games/pizza');
-const { match, clean, describe, rot, flip, MODES, TOPPINGS, WHOLE, HALVES, QUARTERS, KITCHENS, KITCHEN_KEYS, LINES, CUSTOMERS } = def._test;
+const { match, clean, describe, rot, flip, MODES, DIFFS, items, TOPPINGS, WHOLE, HALVES, QUARTERS, KITCHENS, KITCHEN_KEYS, LINES, CUSTOMERS } = def._test;
 let passed = 0;
 const test = (n, fn) => { fn(); passed++; console.log('  ✓ ' + n); };
 const pz = (crust, sauce, cheese, top = {}) => ({ crust, sauce, cheese, top });
@@ -83,9 +83,10 @@ test('describe(): the order in words names everything on it', () => {
 });
 
 // ---------------- whole games ----------------
-for (const kitchen of [...KITCHEN_KEYS, 'surprise', 'court']) for (const mode of [...Object.keys(MODES), 'mixed']) {
-  test(`${kitchen} × ${mode}: bots play every order to the end; results() lists everyone best-first`, () => {
-    const { clock, room } = game({ kitchen, mode, rounds: 3, seconds: 30 }, 5, mode.length + kitchen.length);
+for (const kitchen of [...KITCHEN_KEYS, 'surprise', 'court']) for (const mode of [...Object.keys(MODES), 'mixed']) for (const difficulty of Object.keys(DIFFS)) {
+  test(`${kitchen} × ${mode} × ${difficulty}: bots play every order to the end; results() lists everyone best-first`, () => {
+    const { clock, room } = game({ kitchen, mode, rounds: 3, seconds: 30, difficulty }, 5, mode.length + kitchen.length + difficulty.length);
+    assert.equal(room.settings.difficulty, difficulty);
     startGame(room); run(room, clock);
     const g = room.game, res = g.results();
     assert.equal(res.length, 5);
@@ -97,6 +98,7 @@ for (const kitchen of [...KITCHEN_KEYS, 'surprise', 'court']) for (const mode of
     assert(g.final && g.final.awards.length >= 1);
     if (KITCHENS[kitchen]) assert(g.history.every((h) => h.kitchen === kitchen), 'one kitchen all game');
     for (const h of g.history) assert(KITCHENS[h.kitchen]);
+    assert.equal(g.diff, difficulty); assert.equal(g.tv().level.key, difficulty);
   });
 }
 
@@ -195,12 +197,12 @@ test('host skip moves through order → build → reveal → next', () => {
   g.next(); assert.equal(g.phase, 'build'); g.next(); assert.equal(g.phase, 'reveal'); g.next(); assert.equal(g.phase, 'order'); assert.equal(g.round, 2);
   for (let i = 0; i < 6; i++) g.next(); assert.equal(g.phase, 'over'); assert.equal(g.results().length, 3);
 });
-test('orders: every kitchen × mode makes valid, varied orders with their words', () => {
+test('orders (Hard: the full orders): every kitchen × mode makes valid, varied orders with their words', () => {
   const { room } = game({ mode: 'classic' }, 3); startGame(room); const g = room.game;
   for (const k of KITCHEN_KEYS) for (const mode of Object.keys(MODES)) {
     const seen = new Set(), K = KITCHENS[k];
     for (let i = 0; i < 40; i++) {
-      const o = g.makeOrder(mode, k);
+      const o = g.makeOrder(mode, k, 'hard');
       assert.equal(o.k, k);
       const c = clean(o, k);
       for (const r of K.rows) assert.equal(c[r.key], o[r.key], k + ' row ' + r.key);
@@ -333,6 +335,130 @@ test('Party Mode: partyFit is valid and leaves the kitchen a surprise', () => {
     assert.deepEqual(fit.settings, raw);
   }
   assert.equal(def.name, 'YesChef'); assert.equal(def.key, 'pizza'); assert.equal(def.defaults.kitchen, 'surprise');
+  // The party's "How hard?" sets the difficulty (and Easy's longer build time shortens the game a little).
+  for (const d of ['easy', 'medium', 'hard']) { const fit = PF.fitSettings(def, { players: 6, minutes: 10, difficulty: d }); assert.equal(fit.settings.difficulty, d); assert.equal(fit.difficulty, d); assert.match(fit.summary[0], new RegExp(d, 'i')); }
+  assert(!('difficulty' in PF.fitSettings(def, { players: 6, minutes: 10 }).settings), 'no party difficulty: the lobby default stays');
+});
+
+// ---------------- difficulty ----------------
+test('difficulty: a setting (Easy by default); junk falls back to Easy; shown on the TV and the phones', () => {
+  const f = def.fields.find((x) => x.key === 'difficulty');
+  assert.deepEqual(f.options.map((o) => o.value), ['easy', 'medium', 'hard']);
+  assert.equal(def.defaults.difficulty, 'easy');
+  for (const bad of ['impossible', 3, null, undefined, { a: 1 }]) { const { room } = game({ difficulty: bad, rounds: 1 }, 2); startGame(room); assert.equal(room.game.diff, 'easy', String(bad)); }
+  const { room } = game({ difficulty: 'medium', rounds: 1 }, 2); room.hostAction({ type: 'settings', settings: { difficulty: 'hard' } }); assert.equal(room.settings.difficulty, 'hard');
+  room.hostAction({ type: 'settings', settings: { difficulty: 'nope' } }); assert.equal(room.settings.difficulty, 'hard', 'an unknown value is refused');
+  startGame(room); const g = room.game;
+  assert.deepEqual(g.tv().level, { key: 'hard', name: 'Hard', icon: '🔴' });
+  for (const p of room.list()) assert.equal(g.view(p).level.key, 'hard');
+});
+test('difficulty: Easy orders have at most 3 things; Medium sits between Easy and Hard; all valid in every kitchen × mode', () => {
+  const { room } = game({ mode: 'classic' }, 3); startGame(room); const g = room.game;
+  for (const k of KITCHEN_KEYS) for (const mode of Object.keys(MODES)) {
+    const avg = {}, K = KITCHENS[k];
+    for (const d of ['easy', 'medium', 'hard']) {
+      let sum = 0;
+      for (let i = 0; i < 40; i++) {
+        const o = g.makeOrder(mode, k, d), n = items(o);
+        sum += n;
+        const c = clean(o, k);
+        if (K.slots) assert.deepEqual(c.top, o.top, `${k} ${mode} ${d}: an order is a clean dish`);
+        if (K.stack) assert.deepEqual(c.stack, o.stack);
+        assert(n >= 1, `${k} ${mode} ${d}: something on it`);
+        if (d === 'easy') assert(n <= 3, `${k} ${mode} easy: ${n} things: ${o.words}`);
+        if (k === 'burger') assert(o.stack.includes('patty'), 'a burger has a patty');
+        assert.equal(match(o, o, k, d), 100);
+        assert(o.words.length > 20, o.words);
+        for (const x of [...Object.keys(o.top || {}), ...(o.stack || [])]) assert(o.words.includes(K.names[x].replace(/^a /, '')), k + ' words name ' + x);
+      }
+      avg[d] = sum / 40;
+    }
+    assert(avg.easy <= avg.medium + 0.2 && avg.medium <= avg.hard + 0.2,`${k} ${mode}: easy ${avg.easy} <= medium ${avg.medium} <= hard ${avg.hard}`);
+    assert(avg.easy < avg.hard, `${k} ${mode}: Easy is smaller than Hard`);
+  }
+});
+test('difficulty: Easy shows the order longer and gives more time to build (Medium in between)', () => {
+  const at = {};
+  for (const d of ['easy', 'medium', 'hard']) {
+    const { clock, room } = game({ mode: 'classic', rounds: 1, seconds: 45, difficulty: d }, 2); startGame(room); const g = room.game;
+    const peek = g.c.peek; run(room, clock, () => g.phase === 'build'); at[d] = { peek, build: g.c.buildMs };
+  }
+  assert.equal(at.hard.peek, MODES.classic.peek); assert.equal(at.hard.build, 45000, 'Hard is the game as it was');
+  assert(at.easy.peek > at.medium.peek && at.medium.peek > at.hard.peek, JSON.stringify(at));
+  assert(at.easy.build > at.medium.build && at.medium.build > at.hard.build, JSON.stringify(at));
+  assert(at.easy.build >= 60000, 'Easy: at least 1.5× the build time');
+  // Flash stays a flash, but a fair one.
+  const { room } = game({ mode: 'flash', rounds: 1, difficulty: 'easy' }, 2); startGame(room);
+  assert(room.game.c.peek > MODES.flash.peek && room.game.c.peek < MODES.classic.peek, 'Easy flash: a longer glimpse, still short');
+});
+test('difficulty: Easy scores more kindly (near slots count, a wrong base partly, curved up); identical is 100 everywhere', () => {
+  const W = 0xff;
+  // A topping one slice off: nothing on Hard, something on Medium, more on Easy.
+  const o = pz('classic', 'tomato', 1, { pepperoni: 0x01, mushroom: 0x0f, olive: W }), off = pz('classic', 'tomato', 1, { pepperoni: 0x02, mushroom: 0x0f, olive: W });
+  const h = match(o, off, 'pizza', 'hard'), m = match(o, off, 'pizza', 'medium'), e = match(o, off, 'pizza', 'easy');
+  assert(e > m && m > h, `near miss: easy ${e} > medium ${m} > hard ${h}`);
+  // Opposite slices (not neighbours, and no turn makes them meet... with two kinds): still less than a near miss.
+  const far = pz('classic', 'tomato', 1, { pepperoni: 0x10, mushroom: 0x0f });
+  assert(match(o, far, 'pizza', 'easy') < e);
+  // A wrong sauce still earns a little on Easy.
+  assert(match(o, { ...o, sauce: 'bbq' }, 'pizza', 'easy') > match(o, { ...o, sauce: 'bbq' }, 'pizza', 'hard'));
+  // Over random dishes in every kitchen: easy >= medium >= hard, 0..100, deterministic, symmetric, identical = 100.
+  let sd = 7; const r = () => { sd = (sd * 1103515245 + 12345) % 2147483648; return sd / 2147483648; };
+  const pick = (a) => a[Math.floor(r() * a.length)];
+  for (const k of KITCHEN_KEYS) {
+    const K = KITCHENS[k]; let kinder = 0;
+    const rand = () => { const d = { k }; for (const row of K.rows) d[row.key] = pick(row.opts); if (K.slots) { d.top = {}; for (const x of K.tops) if (r() < 0.3) d.top[x] = 1 + Math.floor(r() * ((1 << K.slots) - 1)); } if (K.stack) d.stack = Array.from({ length: Math.floor(r() * (K.maxStack + 1)) }, () => pick(K.stack)); return d; };
+    for (let i = 0; i < 200; i++) {
+      const a = rand(), b = rand(), [E, M, H] = ['easy', 'medium', 'hard'].map((d) => match(a, b, k, d));
+      assert(E >= M && M >= H, `${k}: ${E} >= ${M} >= ${H}`); if (E > H) kinder++;
+      for (const d of ['easy', 'medium']) { const x = match(a, b, k, d); assert(Number.isInteger(x) && x >= 0 && x <= 100); assert.equal(x, match(b, a, k, d), k + ' symmetric'); assert.equal(match(a, a, k, d), 100); assert.equal(match(a, null, k, d), 0); }
+    }
+    assert(kinder > 150, k + ': Easy is kinder almost always ' + kinder);
+  }
+  assert.equal(match(o, off), h, 'no difficulty = Hard (the old scoring)');
+});
+test('difficulty: Easy and Medium phones get a smaller tray (the order + a few decoys); Hard all of it', () => {
+  for (const k of KITCHEN_KEYS) {
+    for (const d of ['easy', 'medium', 'hard']) {
+      const { clock, room } = game({ kitchen: k, mode: 'classic', rounds: 1, difficulty: d }, 1);
+      const me = room.join('Ana').player; me.sockets = 1; startGame(room); const g = room.game;
+      assert(!g.view(me).c.palette, 'no tray before building');
+      run(room, clock, () => g.phase === 'build');
+      const pal = g.view(me).c.palette, K = KITCHENS[k], o = g.c.order;
+      if (d === 'hard') { assert(!pal.tops && !pal.stack, k + ' hard: the full tray'); continue; }
+      if (K.tops) { const used = Object.keys(o.top || {}); for (const x of used) assert(pal.tops.includes(x), k + ' tray has ' + x); assert(pal.tops.length <= used.length + DIFFS[d].decoys && pal.tops.length < K.tops.length); assert.deepEqual(pal.tops, K.tops.filter((x) => pal.tops.includes(x)), 'kitchen order'); }
+      if (K.stack) { const used = [...new Set(o.stack)]; for (const x of used) assert(pal.stack.includes(x)); assert(pal.stack.length <= used.length + DIFFS[d].stackDecoys); }
+    }
+  }
+});
+test('difficulty: Easy lists the ingredients once the order is hidden (not for the head chef); phone orders read slower', () => {
+  const { clock, room } = game({ kitchen: 'burger', mode: 'classic', rounds: 1, difficulty: 'easy' }, 2); startGame(room); const g = room.game;
+  assert(!g.tv().c.hint, 'not while the order is on show');
+  run(room, clock, () => g.phase === 'build');
+  const hint = g.tv().c.hint; assert(hint && hint.stack.length >= 1, 'the ticket lists the layers');
+  for (const x of hint.stack) assert(g.c.order.stack.includes(x));
+  assert(!g.tv().c.order, 'still no picture');
+  const hard = game({ kitchen: 'burger', mode: 'classic', rounds: 1, difficulty: 'hard' }, 2); startGame(hard.room); run(hard.room, hard.clock, () => hard.room.game.phase === 'build');
+  assert(!hard.room.game.tv().c.hint, 'Hard: no hint');
+  const ph = game({ mode: 'phone', rounds: 1, difficulty: 'easy' }, 2); startGame(ph.room); run(ph.room, ph.clock, () => ph.room.game.tv().c.words);
+  assert.equal(ph.room.game.tv().c.slow, true, 'Easy phone order: read slower');
+  const ch = game({ mode: 'chef', rounds: 1, difficulty: 'easy' }, 0);
+  for (const n of ['Ana', 'Ben', 'Cy']) ch.room.join(n).player.sockets = 1;
+  startGame(ch.room); run(ch.room, ch.clock, () => ch.room.game.phase === 'build');
+  assert(!ch.room.game.tv().c.hint, 'Head Chef: the chef describes it, no ticket hint');
+});
+test('difficulty: bots remember Easy orders better than Hard ones', () => {
+  const avg = {};
+  for (const d of ['easy', 'hard']) {
+    let sum = 0, n = 0;
+    for (let seed = 1; seed <= 6; seed++) for (const kitchen of KITCHEN_KEYS) {
+      const { clock, room } = game({ kitchen, mode: 'classic', rounds: 3, difficulty: d }, 4, seed); startGame(room);
+      const g = room.game, done = new Set();
+      run(room, clock, () => { if (g.phase === 'reveal' && !done.has(g.c.id)) { done.add(g.c.id); for (const r of g.c.rows) { sum += r.score; n++; } } return g.phase === 'over'; });
+    }
+    avg[d] = sum / n;
+  }
+  assert(avg.easy > avg.hard + 8, JSON.stringify(avg));
 });
 
 console.log(`\n${passed} YesChef tests passed.`);
