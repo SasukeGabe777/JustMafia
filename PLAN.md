@@ -1,5 +1,35 @@
 # Mafia Town: expansion plan
 
+## November 19, 2026 - One character in every game (branch claude/characters)
+
+Your JustGameBox character replaces the emoji in the box games, and every game has things your
+character wears in it.
+
+- **One character:** the smooth shop character (`drawSmooth` in `public/avatar.js`) is the character in
+  the shop and in every box game (TV and phone). New free look field `body` (female | male) in
+  `options.js`, validated by `profiles.js` / `game.js`, picked first in the shop and in the JustMafia
+  creator: female = narrower shoulders, waist and hips, softer chin, lashes, coloured lips, thin arched
+  brows; male = broader shoulders, squarer jaw, thick brows. Old looks without `body` are inferred (long
+  hair or a dress → female). drawSmooth now also takes the JustMafia scene options (lean, arms, dragged,
+  expression override, theme equipment) plus `wear` (game wearables).
+- **Faces everywhere:** `public/box/portrait.js` adds `BOX.face`, `BOX.body`, `BOX.drawChar`, `BOX.faceUrl`,
+  `BOX.bodyUrl`, `BOX.setRoster`. The TV roster (tvState players) and a new `roster` field in
+  playerState (sent only when it changed) carry every look and gear by id; bots get a generated
+  character; humans without a saved look keep their emoji. Every box game client, the intro engine
+  (`s.face` / `s.body`), intros, recap cards, party board and lobby rosters use them.
+- **Wearables per game:** `public/shared/gear.js` slots now have a `spot` (head/face/hand/chest/back);
+  ~150 wearables in smooth vector style drawn by `public/wear-art.js` (cowboy hats and badges in Quick
+  Draw, visor/shades/bow tie at Blackjack, crowns and capes in President, hockey mask and bat in Zombie,
+  deerstalker and magnifier in JustEscape, chef hats and aprons for the coming pizza game…). A worn spot
+  replaces your own hat/extra in that game only. Object slots kept: marble skin, drop ball, card back,
+  chips, paddle, buzzer, pen set, banner, meme frame, gallery frame, podium light, crest. Phone themes
+  removed (old ids ignored). Existing quickdraw hats, zombie bandanas, escape magnifiers and letters
+  pencils keep their ids and became wearables.
+- **Shop:** body picker first; per-game gear shows on your character (cards and stage), with the game
+  tile as a backdrop.
+- Limits: JustMafia's town still uses the pixel `character-art.js` (separate follow-up). Pizza items ship
+  before the pizza game. Small faces (24 px) are readable but busy with glowing gear.
+
 ## November 16, 2026 - JustGameBox
 
 JustMafia became one game in a party box. `/` is the JustGameBox title screen (JustMafia,
