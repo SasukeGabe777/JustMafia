@@ -60,7 +60,7 @@
         const list = choices(profile, s.field, s), current = avatar[s.field] == null ? list[0] : avatar[s.field];
         const locked = listOf(s.field, s).length - list.length;
         const head = `<div class="cas-label">${esc(s.label)} <b>${esc(O.label(current))}</b></div>`;
-        const more = locked ? `<p class="small muted">${locked} more in the <a data-jg-shop href="/shop">🛍️ JustGold shop</a>.</p>` : '';
+        const more = locked ? `<p class="small muted">${locked} more in the <a data-jg-shop href="/shop?game=mafia">🛍️ JustGold shop</a>.</p>` : '';
         if (s.kind === 'swatch') return `<section class="cas-section">${head}<div class="swatches">${list.map((v) => `<button class="swatch${v === current ? ' sel' : ''}" style="background:${esc(v)}" title="${esc(O.label(v))}" aria-label="${esc(s.label)}: ${esc(O.label(v))}" aria-pressed="${v === current}" data-field="${s.field}" data-value="${esc(v)}"></button>`).join('')}</div>${more}</section>`;
         return `<section class="cas-section">${head}<div class="cas-tiles${s.focus === 'house' ? ' wide' : ''}">${list.map((v) => `<button class="cas-tile${v === current ? ' sel' : ''}" aria-pressed="${v === current}" data-field="${s.field}" data-value="${esc(v)}" data-focus="${s.focus || 'body'}"><canvas></canvas><span>${esc(O.label(v))}</span></button>`).join('')}</div>${more}</section>`;
       }).join('');

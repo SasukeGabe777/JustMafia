@@ -50,7 +50,7 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   assert(link, 'lobby has the JustGold shop link');
   assert.match(link.text, /🛍️ JustGold shop & character/);
   const u = new globalThis.URL(link.href, URL); assert.equal(u.pathname, '/shop');
-  const back = new globalThis.URL(u.searchParams.get('back'), URL); assert.equal(back.pathname, '/play'); assert.equal(back.searchParams.get('room'), room.code);
+  const back = new globalThis.URL(u.searchParams.get('back'), URL); assert.equal(back.pathname, '/play'); assert.equal(back.searchParams.get('room'), room.code); assert.equal(u.searchParams.get('game'), 'mafia', 'the shop opens on JustMafia');
   assert.match(await a.eval(`document.querySelector('#g-body [data-open-season]').textContent`), /🏆 Season & unlocks/);
   assert.equal(await a.eval(NO_BUY_UI), 0, 'no item-buy UI in the lobby');
   assert(await a.noOverflow()); await a.shot('lobby-justgold');
@@ -122,6 +122,16 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   await a.shot('game-no-shop');
   ok('After the game starts: no shop or Season & unlocks on the phone, and the server refuses buying and look changes');
 
+  // The shop: JustMafia sits under Games; /shop?game=<key> opens that game; object gear is drawn as the object.
+  const sp = await browser.page();
+  await sp.go(URL + '/shop?mock=1&game=mafia'); await sp.until("!!document.querySelector('#shelf .grid')", 'shop shelf');
+  assert(await sp.eval("!document.querySelector('[data-tab=\"mafia\"]') && document.querySelector('.tab.on').dataset.tab === 'gear' && /JustMafia/.test(document.querySelector('#shelf .gear-head').textContent) && !!document.querySelector('#subs [data-msub=\"ghostSkin\"]')"), 'JustMafia under Games');
+  await sp.go(URL + '/shop?mock=1&game=bid'); await sp.until("!!document.querySelector('#shelf .grid')", 'bid shelf');
+  assert(await sp.eval("/JustBid/.test(document.querySelector('#shelf .gear-head').textContent) && /Bidding paddle/.test(document.querySelector('#shelf').textContent)"), 'JustBid section');
+  await sp.go(URL + '/shop?mock=1'); await sp.until("!!document.querySelector('#tabs .on')", 'shop'); await sp.click('[data-tab=\"gear\"]');
+  assert(await sp.eval("document.querySelector('#shelf .games [data-game]').dataset.game === 'mafia'"), 'JustMafia is the first game');
+  assert.deepEqual(sp.errors, [], 'shop page errors');
+  ok('Shop: JustMafia is under Games (first), /shop?game=mafia and ?game=bid open those sections, JustMafia links open it');
   assert.deepEqual(a.errors, [], 'page errors: ' + a.errors.join('\n'));
   ok('No page errors');
   console.log(`All ${passed} JustGold phone end-to-end checks passed. Screenshots: ${SHOTS}`);

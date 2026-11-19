@@ -303,7 +303,7 @@
     const u = new URL(location.href), code = (session && session.code) || ($('#j-code').value || '').trim().toUpperCase();
     for (const k of ['autojoin', 'name']) u.searchParams.delete(k);
     if (/^[A-Z]{4}$/.test(code)) u.searchParams.set('room', code);
-    return '/shop?back=' + encodeURIComponent(u.pathname + u.search);
+    return '/shop?back=' + encodeURIComponent(u.pathname + u.search) + '&game=mafia';
   }
   const shopLinkHtml = (cls = 'btn ghost') => `<a class="${cls}" data-jg-shop href="${esc(shopHref())}">🛍️ JustGold shop &amp; character</a>`;
   function refreshShopLinks() { const href = shopHref(); document.querySelectorAll('a[data-jg-shop]').forEach((a) => { if (a.getAttribute('href') !== href) a.setAttribute('href', href); }); }

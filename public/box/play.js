@@ -51,7 +51,9 @@
   try { window.SFX && SFX.setVolume && SFX.setVolume(phoneVol()); } catch { /* none */ }
 
   // ---------- 🛍️ the JustGold shop (/shop): on the join screen, in the lobby and between games ----------
-  const shopUrl = () => '/shop?back=' + encodeURIComponent(location.pathname + location.search);
+  // The shop opens on this game's section (the game being played, or the one the typed code is for).
+  let checkedGame = null;
+  const shopUrl = () => { const g = gameKey || checkedGame; return '/shop?back=' + encodeURIComponent(location.pathname + location.search) + (g ? '&game=' + encodeURIComponent(g) : ''); };
   function shopButtons() {
     let hb = $('#h-shop');
     if (!hb && $('#h-prof')) { hb = document.createElement('button'); hb.className = 'hbtn'; hb.id = 'h-shop'; hb.title = 'Shop & character'; hb.textContent = '🛍️'; hb.onclick = () => { location.href = shopUrl(); }; $('#h-prof').before(hb); }
@@ -79,7 +81,7 @@
     shopButtons();
     joinAccount();
     busyChoice(null);
-    if ($('#j-code').value.length === 4) socket.emit('room:check', { code: $('#j-code').value }, (r) => { if (goElsewhere(r)) return; $('#j-game').textContent = r && r.ok ? 'Joining ' + (r.away ? r.away.title : r.title) : ''; if (r && r.ok) { theme(r.game); busyChoice(r.busy, r); } });
+    if ($('#j-code').value.length === 4) socket.emit('room:check', { code: $('#j-code').value }, (r) => { if (goElsewhere(r)) return; $('#j-game').textContent = r && r.ok ? 'Joining ' + (r.away ? r.away.title : r.title) : ''; if (r && r.ok) { checkedGame = r.away ? 'mafia' : r.game; const jb = $('#j-shop'); if (jb) jb.href = shopUrl(); theme(r.game); busyChoice(r.busy, r); } });
   }
   // One code for every game: a JustMafia town's code opens JustMafia's own join page.
   function goElsewhere(r) {

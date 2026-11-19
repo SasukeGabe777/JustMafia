@@ -28,11 +28,12 @@
   const SECTIONS = [
     { id: 'character', icon: '👤', label: 'Character', subs: [['body', '🧍', 'Body'], ['outfit', '👕', 'Outfits'], ['hat', '🎩', 'Hats'], ['hair', '💇', 'Hair'], ['accessory', '🕶️', 'Extras'], ['shoeStyle', '👟', 'Shoes'], ['colours', '🎨', 'Colours & face']] },
     { id: 'flair', icon: '✨', label: 'Flair', subs: [['nameplate', '🏷️', 'Nameplates'], ['effect', '🌟', 'Effects']] },
-    { id: 'gear', icon: '🎮', label: 'Game gear' },
-    { id: 'mafia', icon: '🔪', label: 'JustMafia', subs: [['houseStyle', '🏠', 'Houses'], ['houseDecor', '🏮', 'Decor'], ['deathAnim', '🕯️', 'Farewells'], ['reactions', '😱', 'Reactions'], ['ghostSkin', '👻', 'Ghosts']] },
+    { id: 'gear', icon: '🎮', label: 'Games' },
     { id: 'wardrobe', icon: '🎒', label: 'Wardrobe' },
     { id: 'earn', icon: '🪙', label: 'Earn JG' },
   ];
+  // JustMafia is one of the games (Games → JustMafia): its own shelves.
+  const MAFIA_SUBS = [['houseStyle', '🏠', 'Houses'], ['houseDecor', '🏮', 'Decor'], ['deathAnim', '🕯️', 'Farewells'], ['reactions', '😱', 'Reactions'], ['ghostSkin', '👻', 'Ghosts']];
   const FREE_FIELDS = ['body', 'skin', 'hairColor', 'color', 'eyes', 'expression', 'pants', 'shoes', 'face', 'features', 'facialHair', 'nameColor'];
   const HOME = { houseStyle: 'style', houseDecor: 'decor' };
   const HEAD_FIELDS = new Set(['hat', 'hair', 'expression', 'face', 'facialHair', 'features']);
@@ -116,7 +117,8 @@
   let API = wantMock ? mockApi() : socketApi();
 
   // ---------- state ----------
-  const S = { st: null, tab: 'character', sub: { character: 'body', flair: 'nameplate', mafia: 'houseStyle' }, game: null, sel: null, edits: {}, saving: 0, pending: false, say: '', waiting: false, keeperJump: 0, startLook: null };
+  const START_GAME = (() => { const g = params.get('game'); return g && Object.prototype.hasOwnProperty.call(GAMES, g) ? g : null; })();
+  const S = { st: null, tab: START_GAME ? 'gear' : 'character', sub: { character: 'body', flair: 'nameplate', mafia: 'houseStyle' }, game: START_GAME, sel: null, edits: {}, saving: 0, pending: false, say: '', waiting: false, keeperJump: 0, startLook: null };
   const items = () => {
     const st = S.st; if (!st) return [];
     const cat = (st.catalog || []).map((i) => ({ ...i, kind: 'item' }));
@@ -238,6 +240,162 @@
     const icon = p.icon || (it && it.icon); if (icon && !p.pens) { g.font = `${Math.round(r * 0.95)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(icon, x, y + r * 0.06); }
     g.restore();
   }
+  // Game gear that isn't worn: draw the real object (a bidding paddle, a card back, a chip stack…)
+  // in the item's colours, pattern and emblem, so what you tap is what you get in the game.
+  // Balls (marble skins, JustDrop balls) stay balls.
+  function paintFill(g, path, cx, cy, r, p, t) {
+    const a = p.a || '#8a7fb0', b = p.b || '#4a3f70', c = p.c || '#ffffff';
+    g.save();
+    if (p.glow) { g.shadowColor = a; g.shadowBlur = r * 0.5; }
+    const gr = g.createLinearGradient(cx - r, cy - r, cx + r, cy + r); gr.addColorStop(0, c); gr.addColorStop(0.22, a); gr.addColorStop(1, b);
+    g.fillStyle = gr; g.fill(path); g.shadowBlur = 0;
+    g.save(); g.clip(path); g.globalAlpha = 0.5; g.fillStyle = b; g.strokeStyle = c;
+    const pat = p.pattern || 'plain', x = cx, y = cy;
+    if (pat === 'stripes') for (let i = -5; i <= 5; i++) { g.save(); g.translate(x, y); g.rotate(-0.6); g.fillRect(i * r * 0.4, -r * 2, r * 0.18, r * 4); g.restore(); }
+    else if (pat === 'dots') { g.fillStyle = c; for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) { g.beginPath(); g.arc(x + i * r * 0.4 + (j % 2) * r * 0.2, y + j * r * 0.38, r * 0.09, 0, TAU); g.fill(); } }
+    else if (pat === 'swirl') { g.lineWidth = r * 0.12; g.beginPath(); for (let k = 0; k < 70; k++) { const a2 = k * 0.22 + t, rad = k / 70 * r * 1.2; g.lineTo(x + Math.cos(a2) * rad, y + Math.sin(a2) * rad); } g.stroke(); }
+    else if (pat === 'stars') { g.fillStyle = c; for (let k = 0; k < 8; k++) { const sx = x + Math.cos(k * 2.4) * r * 0.6, sy = y + Math.sin(k * 2.4) * r * 0.7; g.beginPath(); for (let q = 0; q < 10; q++) { const an = -Math.PI / 2 + q * Math.PI / 5, rr = q % 2 ? r * 0.05 : r * 0.12; g.lineTo(sx + Math.cos(an) * rr, sy + Math.sin(an) * rr); } g.fill(); } }
+    else if (pat === 'check') for (let i = -4; i < 4; i++) for (let j = -4; j < 4; j++) if ((i + j) & 1) g.fillRect(x + i * r * 0.32, y + j * r * 0.32, r * 0.32, r * 0.32);
+    else if (pat === 'flame') { g.fillStyle = c; for (let k = 0; k < 6; k++) { const fx = x - r * 1.2 + k * r * 0.48; g.beginPath(); g.moveTo(fx, y + r * 1.2); g.quadraticCurveTo(fx - r * 0.2, y + r * 0.2, fx + r * 0.25, y - r * 0.5 - Math.sin(t * 4 + k) * r * 0.1); g.quadraticCurveTo(fx + r * 0.5, y + r * 0.2, fx + r * 0.5, y + r * 1.2); g.fill(); } }
+    else if (pat === 'wave') { g.lineWidth = r * 0.1; for (let k = -3; k <= 3; k++) { g.beginPath(); for (let q = -14; q <= 14; q++) g.lineTo(x + q * r * 0.1, y + k * r * 0.36 + Math.sin(q * 0.8 + t * 2) * r * 0.08); g.stroke(); } }
+    g.restore();
+    g.lineWidth = Math.max(2, r * 0.07); g.strokeStyle = ink; g.stroke(path);
+    g.restore();
+  }
+  const rrect = (x, y, w, h, r) => { const p = new Path2D(); if (p.roundRect) p.roundRect(x, y, w, h, r); else p.rect(x, y, w, h); return p; };
+  function emblem(g, it, x, y, size) {
+    const p = (it && it.paint) || {}, icon = p.icon || (it && it.icon); if (!icon) return;
+    g.save(); g.font = `${Math.round(size)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(icon, x, y); g.restore();
+  }
+  const OBJECTS = {
+    // JustBid: a wooden handle and a round paddle face with a bidder number.
+    paddle(g, x, y, r, it, p, t) {
+      g.save(); g.translate(x, y); g.rotate(-0.18);
+      const hp = rrect(-r * 0.1, r * 0.05, r * 0.2, r * 0.95, r * 0.08);
+      g.fillStyle = '#8a5a2b'; g.fill(hp); g.lineWidth = Math.max(2, r * 0.07); g.strokeStyle = ink; g.stroke(hp);
+      const face = new Path2D(); face.ellipse(0, -r * 0.32, r * 0.62, r * 0.66, 0, 0, TAU);
+      paintFill(g, face, 0, -r * 0.32, r * 0.66, p, t);
+      const disc = new Path2D(); disc.ellipse(0, -r * 0.32, r * 0.34, r * 0.34, 0, 0, TAU);
+      g.fillStyle = 'rgba(255,255,255,0.92)'; g.fill(disc); g.lineWidth = Math.max(1.5, r * 0.04); g.strokeStyle = ink; g.stroke(disc);
+      g.fillStyle = ink; g.font = `900 ${Math.round(r * 0.4)}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('7', 0, -r * 0.3);
+      g.restore();
+    },
+    // President: two card backs, fanned.
+    cardBack(g, x, y, r, it, p, t) {
+      for (const [dx, rot] of [[-r * 0.22, -0.16], [r * 0.2, 0.12]]) {
+        g.save(); g.translate(x + dx, y); g.rotate(rot);
+        const w = r * 1.05, h = r * 1.5, card = rrect(-w / 2, -h / 2, w, h, r * 0.12);
+        g.fillStyle = '#fffaf0'; g.fill(card); g.lineWidth = Math.max(2, r * 0.06); g.strokeStyle = ink; g.stroke(card);
+        const inner = rrect(-w / 2 + r * 0.09, -h / 2 + r * 0.09, w - r * 0.18, h - r * 0.18, r * 0.07);
+        paintFill(g, inner, 0, 0, r * 0.75, p, t);
+        g.restore();
+      }
+      emblem(g, it, x + r * 0.2, y, r * 0.5);
+    },
+    // Blackjack: a stack of casino chips with edge spots.
+    chips(g, x, y, r, it, p, t) {
+      const a = p.a || '#c0392b', c = p.c || '#ffffff';
+      for (let k = 3; k >= 0; k--) {
+        const cy = y + r * 0.45 - k * r * 0.22;
+        const side = rrect(x - r * 0.8, cy - r * 0.02, r * 1.6, r * 0.24, r * 0.1);
+        g.fillStyle = k ? (p.b || '#7a1f16') : a; g.fill(side); g.lineWidth = Math.max(1.5, r * 0.05); g.strokeStyle = ink; g.stroke(side);
+        g.fillStyle = c; for (let s = -2; s <= 2; s++) g.fillRect(x + s * r * 0.32 - r * 0.06, cy + r * 0.03, r * 0.12, r * 0.14);
+      }
+      const top = new Path2D(); top.ellipse(x, y - r * 0.24, r * 0.8, r * 0.34, 0, 0, TAU);
+      paintFill(g, top, x, y - r * 0.24, r * 0.8, p, t);
+      const ring = new Path2D(); ring.ellipse(x, y - r * 0.24, r * 0.5, r * 0.2, 0, 0, TAU);
+      g.lineWidth = Math.max(2, r * 0.08); g.setLineDash([r * 0.16, r * 0.12]); g.strokeStyle = c; g.stroke(ring); g.setLineDash([]);
+      emblem(g, it, x, y - r * 0.25, r * 0.34);
+    },
+    // Tune Buzz: a game-show buzzer (a dome on a base).
+    buzzer(g, x, y, r, it, p, t) {
+      const base = rrect(x - r * 0.85, y + r * 0.1, r * 1.7, r * 0.55, r * 0.16);
+      g.fillStyle = '#2d2f3a'; g.fill(base); g.lineWidth = Math.max(2, r * 0.07); g.strokeStyle = ink; g.stroke(base);
+      g.fillStyle = '#55586a'; g.fillRect(x - r * 0.7, y + r * 0.18, r * 1.4, r * 0.08);
+      const dome = new Path2D(); dome.ellipse(x, y + r * 0.12, r * 0.62, r * 0.6, 0, Math.PI, TAU); dome.closePath();
+      paintFill(g, dome, x, y - r * 0.2, r * 0.62, p, t);
+      g.save(); g.globalAlpha = 0.55; g.fillStyle = '#fff'; g.beginPath(); g.ellipse(x - r * 0.24, y - r * 0.22, r * 0.14, r * 0.08, -0.5, 0, TAU); g.fill(); g.restore();
+      emblem(g, it, x, y - r * 0.12, r * 0.36);
+    },
+    // JustSketch: a box of coloured pencils.
+    pens(g, x, y, r, it, p) {
+      const cols = (p.pens && p.pens.length ? p.pens : [p.a || '#e74c3c', p.b || '#3498db', p.c || '#f1c40f', '#2ecc71']).slice(0, 6), n = cols.length;
+      cols.forEach((col, k) => {
+        const px = x - r * 0.75 + (k + 0.5) * (r * 1.5 / n), top = y - r * 0.75 + (k % 2) * r * 0.12, pw = r * 1.5 / n * 0.7;
+        g.fillStyle = col; g.fillRect(px - pw / 2, top + r * 0.22, pw, r * 0.9);
+        g.fillStyle = '#f3d7a0'; g.beginPath(); g.moveTo(px - pw / 2, top + r * 0.22); g.lineTo(px, top - r * 0.08); g.lineTo(px + pw / 2, top + r * 0.22); g.closePath(); g.fill();
+        g.fillStyle = col; g.beginPath(); g.moveTo(px - pw * 0.18, top + r * 0.02); g.lineTo(px, top - r * 0.08); g.lineTo(px + pw * 0.18, top + r * 0.02); g.closePath(); g.fill();
+        g.lineWidth = Math.max(1, r * 0.03); g.strokeStyle = ink; g.strokeRect(px - pw / 2, top + r * 0.22, pw, r * 0.9);
+      });
+      const box = rrect(x - r * 0.9, y + r * 0.2, r * 1.8, r * 0.6, r * 0.08);
+      paintFill(g, box, x, y + r * 0.5, r * 0.9, { ...p, a: p.a || '#3b5bdb', b: p.b || '#1f2f7a', pattern: p.pattern || 'plain' }, 0);
+      g.fillStyle = '#fff'; g.font = `900 ${Math.round(r * 0.22)}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(cols.length + ' COLOURS', x, y + r * 0.5);
+    },
+    // JustSummon: a flag on a pole.
+    banner(g, x, y, r, it, p, t) {
+      g.fillStyle = '#6b4a2b'; g.fillRect(x - r * 0.72, y - r * 0.95, r * 0.1, r * 1.9); g.lineWidth = Math.max(1.5, r * 0.05); g.strokeStyle = ink; g.strokeRect(x - r * 0.72, y - r * 0.95, r * 0.1, r * 1.9);
+      g.fillStyle = '#e8c35a'; g.beginPath(); g.arc(x - r * 0.67, y - r * 0.98, r * 0.09, 0, TAU); g.fill(); g.stroke();
+      const flag = new Path2D(), w = Math.sin(t * 3) * r * 0.06;
+      flag.moveTo(x - r * 0.62, y - r * 0.88); flag.quadraticCurveTo(x, y - r * 0.98 + w, x + r * 0.8, y - r * 0.84);
+      flag.lineTo(x + r * 0.62, y - r * 0.3); flag.lineTo(x + r * 0.8, y + r * 0.22); flag.quadraticCurveTo(x, y + r * 0.12 - w, x - r * 0.62, y + r * 0.22); flag.closePath();
+      paintFill(g, flag, x + r * 0.08, y - r * 0.33, r * 0.75, p, t);
+      emblem(g, it, x + r * 0.05, y - r * 0.33, r * 0.5);
+    },
+    // Meme Maker: a picture frame around a little meme.
+    frame(g, x, y, r, it, p, t) {
+      const outer = new Path2D(); outer.rect(x - r * 0.9, y - r * 0.75, r * 1.8, r * 1.5); outer.rect(x - r * 0.62, y - r * 0.48, r * 1.24, r * 0.96);
+      const sky = g.createLinearGradient(0, y - r * 0.48, 0, y + r * 0.48); sky.addColorStop(0, '#8fd3ff'); sky.addColorStop(1, '#ffe6a8');
+      g.fillStyle = sky; g.fillRect(x - r * 0.62, y - r * 0.48, r * 1.24, r * 0.96);
+      g.font = `${Math.round(r * 0.5)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('😹', x, y + r * 0.05);
+      g.fillStyle = '#fff'; g.strokeStyle = ink; g.lineWidth = Math.max(1, r * 0.04); g.font = `900 ${Math.round(r * 0.17)}px Impact,system-ui,sans-serif`; g.strokeText('WHEN THE', x, y - r * 0.33); g.fillText('WHEN THE', x, y - r * 0.33);
+      g.save(); g.beginPath(); g.fillStyle = 'transparent'; g.restore();
+      const ring = new Path2D(); ring.rect(x - r * 0.9, y - r * 0.75, r * 1.8, r * 1.5); ring.rect(x - r * 0.62, y - r * 0.48, r * 1.24, r * 0.96);
+      g.save(); g.beginPath(); g.rect(x - r * 0.9, y - r * 0.75, r * 1.8, r * 1.5); g.rect(x + r * 0.62, y - r * 0.48, -r * 1.24, r * 0.96); g.clip();
+      paintFill(g, ring, x, y, r * 0.9, p, t); g.restore();
+      g.lineWidth = Math.max(2, r * 0.06); g.strokeStyle = ink; g.strokeRect(x - r * 0.9, y - r * 0.75, r * 1.8, r * 1.5); g.strokeRect(x - r * 0.62, y - r * 0.48, r * 1.24, r * 0.96);
+      emblem(g, it, x + r * 0.76, y - r * 0.62, r * 0.28);
+    },
+    // Color Match: an easel with a framed canvas.
+    easel(g, x, y, r, it, p, t) {
+      g.strokeStyle = '#7a5230'; g.lineWidth = r * 0.1; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(x - r * 0.55, y + r * 0.95); g.lineTo(x - r * 0.1, y - r * 0.9); g.moveTo(x + r * 0.55, y + r * 0.95); g.lineTo(x + r * 0.1, y - r * 0.9); g.moveTo(x, y - r * 0.9); g.lineTo(x, y + r * 0.95); g.stroke();
+      const ring = new Path2D(); ring.rect(x - r * 0.72, y - r * 0.7, r * 1.44, r * 1.1);
+      paintFill(g, ring, x, y - r * 0.15, r * 0.72, p, t);
+      g.fillStyle = '#fffaf0'; g.fillRect(x - r * 0.54, y - r * 0.52, r * 1.08, r * 0.74);
+      const blob = g.createRadialGradient(x - r * 0.1, y - r * 0.2, r * 0.05, x, y - r * 0.15, r * 0.4); blob.addColorStop(0, '#ff8a5c'); blob.addColorStop(1, '#7a4dff');
+      g.fillStyle = blob; g.beginPath(); g.arc(x, y - r * 0.15, r * 0.28, 0, TAU); g.fill();
+      g.lineWidth = Math.max(1.5, r * 0.04); g.strokeStyle = ink; g.strokeRect(x - r * 0.54, y - r * 0.52, r * 1.08, r * 0.74);
+      g.fillStyle = '#7a5230'; g.fillRect(x - r * 0.8, y + r * 0.4, r * 1.6, r * 0.1);
+    },
+    // Hot Take Trivia: a quiz podium with a light strip.
+    podium(g, x, y, r, it, p, t) {
+      const body = new Path2D(); body.moveTo(x - r * 0.7, y - r * 0.4); body.lineTo(x + r * 0.7, y - r * 0.4); body.lineTo(x + r * 0.55, y + r * 0.95); body.lineTo(x - r * 0.55, y + r * 0.95); body.closePath();
+      g.fillStyle = '#2b2440'; g.fill(body); g.lineWidth = Math.max(2, r * 0.06); g.strokeStyle = ink; g.stroke(body);
+      const top = rrect(x - r * 0.85, y - r * 0.62, r * 1.7, r * 0.28, r * 0.08);
+      paintFill(g, top, x, y - r * 0.48, r * 0.85, p, t);
+      const strip = rrect(x - r * 0.55, y - r * 0.15, r * 1.1, r * 0.5, r * 0.1);
+      paintFill(g, strip, x, y + r * 0.1, r * 0.55, { ...p, glow: true }, t);
+      for (let k = 0; k < 5; k++) { const on = Math.sin(t * 5 + k) > 0; g.fillStyle = on ? (p.c || '#fff') : 'rgba(255,255,255,0.3)'; g.beginPath(); g.arc(x - r * 0.4 + k * r * 0.2, y + r * 0.62, r * 0.06, 0, TAU); g.fill(); }
+      emblem(g, it, x, y + r * 0.1, r * 0.3);
+    },
+    // JustKingdoms: a heraldic shield.
+    crest(g, x, y, r, it, p, t) {
+      const sh = new Path2D(); sh.moveTo(x - r * 0.75, y - r * 0.8); sh.lineTo(x + r * 0.75, y - r * 0.8); sh.lineTo(x + r * 0.75, y - r * 0.05);
+      sh.quadraticCurveTo(x + r * 0.7, y + r * 0.65, x, y + r * 0.95); sh.quadraticCurveTo(x - r * 0.7, y + r * 0.65, x - r * 0.75, y - r * 0.05); sh.closePath();
+      paintFill(g, sh, x, y, r * 0.85, p, t);
+      g.save(); g.clip(sh); g.lineWidth = r * 0.1; g.strokeStyle = 'rgba(255,255,255,0.35)'; g.stroke(sh); g.restore();
+      emblem(g, it, x, y + r * 0.02, r * 0.7);
+    },
+  };
+  function drawObject(g, x, y, r, it, t = 0) {
+    const fn = it && OBJECTS[it.slot];
+    if (!fn) return drawToken(g, x, y, r * 0.95, it, t); // marble skins, JustDrop balls: real balls
+    // The free defaults look like what the game shows without gear; crests get a heraldic shield.
+    const DEF = { paddle: { a: '#d9b27a', b: '#8a5a2b', c: '#f6e2bf' }, cardBack: { a: '#b0243a', b: '#5a0f1e', c: '#e8a0a8', pattern: 'check' }, chips: { a: '#c0392b', b: '#7a1f16' }, buzzer: { a: '#e8323c', b: '#8a1010' }, banner: { a: '#d8d4c8', b: '#8a8578' }, frame: { a: '#f4f4f4', b: '#cfcfcf' }, easel: { a: '#ffffff', b: '#d8d2c4' }, podium: { a: '#ffd23a', b: '#c99a00' }, crest: { a: '#e9dcb8', b: '#a8884f', c: '#fff8e6' } };
+    const base = it.slot === 'crest' ? DEF.crest : {};
+    const p = it.isDefault ? (DEF[it.slot] || {}) : { ...base, ...((it && it.paint) || {}) };
+    g.save(); fn(g, x, y, r, it, p, t); g.restore();
+  }
   // JustMafia houses, in the shop's smooth style (the town itself draws them in JustMafia's own style).
   const HOUSES = {
     cottage: ['#eadcb9', '#c4674f', 'tri'], tavern: ['#d39a55', '#7a3a2a', 'tri', 'sign'], bakery: ['#f3e2c8', '#d06a4a', 'tri', 'awning'], smithy: ['#9c9b95', '#4c5a6e', 'tri', 'chimney'],
@@ -291,7 +449,7 @@
     const [g, w, h] = fit(cv), l = look();
     if (i.kind === 'gear') {
       if (i.spot) { const wear = wearFor(i.game, i); if (i.spot === 'head' || i.spot === 'face') drawHead(g, w, h, l, 0.4, wear); else if (i.spot === 'back') drawBody(g, w, h, l, 0.4, wear); else drawBust(g, w, h, l, 0.4, wear); return; }
-      drawToken(g, w / 2, h / 2 + 2, Math.min(w, h) * 0.38, i, 0.6); return;
+      drawObject(g, w / 2, h / 2 + 2, Math.min(w, h) * 0.4, i, 0.6); return;
     }
     const L = { ...l, [i.field]: i.value };
     switch (i.field) {
@@ -324,7 +482,7 @@
     g.restore();
     const s = Math.max(1.2, Math.min((floorY - 60) / 84, w / 95));
     // Gear for one game: that game's picture behind you, and you wearing its gear.
-    const gearGame = i && i.kind === 'gear' ? i.game : S.tab === 'gear' && S.game ? S.game : null;
+    const gearGame = i && i.kind === 'gear' ? i.game : S.tab === 'gear' && S.game && S.game !== 'mafia' ? S.game : null;
     const wear = gearGame ? wearFor(gearGame, i) : [];
     if (gearGame) { const im = tileImg(gearGame); if (im) { const top = 50, bh = floorY - top - 4, bw = Math.min(w * 0.62, bh * 1.5), bx = Math.max(6, cx - bw / 2), sc = Math.max(bw / 400, bh / 240), iw = 400 * sc, ih = 240 * sc; g.save(); g.beginPath(); if (g.roundRect) g.roundRect(bx, top, bw, bh, 16); else g.rect(bx, top, bw, bh); g.clip(); g.globalAlpha = 0.85; g.drawImage(im, bx + (bw - iw) / 2, top + (bh - ih) / 2, iw, ih); g.restore(); g.save(); g.lineWidth = 3; g.strokeStyle = ink; g.beginPath(); if (g.roundRect) g.roundRect(bx, top, bw, bh, 16); else g.rect(bx, top, bw, bh); g.stroke(); g.restore(); } }
     // a showcase for what you're trying on
@@ -348,7 +506,7 @@
     if (i && i.kind === 'gear' && !i.spot) {
       const gx = w * (wide ? 0.62 : 0.6), gy = floorY - 34 * s * 0.8 + Math.sin(t * 2) * 4;
       g.save(); g.fillStyle = 'rgba(0,0,0,0.2)'; g.beginPath(); g.ellipse(gx, floorY, 18 * s * 0.6, 4 * s * 0.6, 0, 0, TAU); g.fill(); g.restore();
-      drawToken(g, gx, gy, 17 * s * 0.75, i, t);
+      drawObject(g, gx, gy, 22 * s * 0.75, i, t);
     }
   }
 
@@ -377,16 +535,18 @@
     const sec = SECTIONS.find((s) => s.id === S.tab);
     const subs = sec.subs ? sec.subs : null;
     $('#subs').hidden = !subs && !(S.tab === 'gear' && S.game);
+    const mafiaChips = () => MAFIA_SUBS.map(([k, ic, lb]) => { const n = ITEMS.filter((i) => i.field === k && i.owned).length; return `<button class="chip${S.sub.mafia === k ? ' on' : ''}" data-msub="${k}">${ic} ${esc(lb)} <small>${n}</small></button>`; }).join('');
     if (subs) {
       $('#subs').innerHTML = subs.map(([k, ic, lb]) => { const n = k === 'colours' || k === 'body' ? '' : ITEMS.filter((i) => i.field === k && i.owned).length; return `<button class="chip${S.sub[S.tab] === k ? ' on' : ''}" data-sub="${k}">${ic} ${esc(lb)}${n !== '' ? ` <small>${n}</small>` : ''}</button>`; }).join('');
-    } else if (S.tab === 'gear' && S.game) $('#subs').innerHTML = '<button class="chip on" data-games="1">‹ All games</button>';
+    } else if (S.tab === 'gear' && S.game) $('#subs').innerHTML = '<button class="chip" data-games="1">‹ All games</button>' + (S.game === 'mafia' ? mafiaChips() : `<button class="chip on">${esc(gameIcon(S.game))} ${esc(gameName(S.game))}</button>`);
     // shelf
     const shelf = $('#shelf'); let html = '';
     if (S.tab === 'character' && S.sub.character === 'colours') html = coloursHTML();
     else if (S.tab === 'character' && S.sub.character === 'body') html = bodyHTML();
-    else if (S.tab === 'character' || S.tab === 'flair' || S.tab === 'mafia') {
-      const field = S.sub[S.tab], list = sorted(ITEMS.filter((i) => i.kind === 'item' && i.field === field));
-      if (S.tab === 'mafia') html += '<p class="note">🔪 These are for <b>JustMafia</b>: your house, how you go out, your reactions and your ghost. 🎟 <b>Season pass & ✦ Fate live in JustMafia</b> (Season & unlocks).</p>';
+    else if (S.tab === 'character' || S.tab === 'flair' || (S.tab === 'gear' && S.game === 'mafia')) {
+      const key = S.tab === 'gear' ? 'mafia' : S.tab, field = S.sub[key], list = sorted(ITEMS.filter((i) => i.kind === 'item' && i.field === field));
+      if (key === 'mafia') html += `<div class="gear-head"><img src="/art/tiles/mafia.svg" alt="" onerror="this.style.visibility='hidden'"><div><h3>🔪 JustMafia</h3><p>Your house in town, how you go out, your reactions and your ghost.</p></div></div>`;
+      if (key === 'mafia') html += '<p class="note">🔪 These are for <b>JustMafia</b>: your house, how you go out, your reactions and your ghost. 🎟 <b>Season pass & ✦ Fate live in JustMafia</b> (Season & unlocks).</p>';
       if (S.tab === 'flair') html += '<p class="note">✨ Flair shows in <b>every game</b>: your nameplate on the big screen and an effect around your character.</p>';
       html += list.length ? `<div class="grid">${list.map(cardHTML).join('')}</div>` : '<p class="empty">Nothing here yet.</p>';
     } else if (S.tab === 'gear') html = gearHTML();
@@ -415,8 +575,10 @@
   }
   function gearHTML() {
     const games = (GEAR.GAMES_WITH_GEAR || []).map((s) => s.game).filter((g, k, a) => a.indexOf(g) === k);
-    if (!S.game || !games.includes(S.game)) {
-      return '<p class="note">🎮 Gear is <b>per game</b>: your character wears it in that game: a cowboy hat in Quick Draw, a dealer visor at Blackjack, a chef’s hat in the kitchen… plus a few things for the game itself, like marble skins. Pick a game.</p><div class="games">' + games.map((k) => {
+    if (!S.game || !(games.includes(S.game) || S.game === 'mafia')) {
+      const mafiaList = ITEMS.filter((i) => i.kind === 'item' && i.section === 'mafia' && !i.free), mafiaHave = mafiaList.filter((i) => i.owned).length;
+      const mafiaTile = `<button class="game" data-game="mafia"><img src="/art/tiles/mafia.svg" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="gi">🔪 JustMafia<small>Houses · Farewells · Ghosts</small></span><span class="count${mafiaHave ? ' has' : ''}">${mafiaHave}/${mafiaList.length}</span></button>`;
+      return '<p class="note">🎮 Gear is <b>per game</b>: your character wears it in that game: a cowboy hat in Quick Draw, a dealer visor at Blackjack, a chef’s hat in the kitchen… plus a few things for the game itself, like marble skins. Pick a game.</p><div class="games">' + mafiaTile + games.map((k) => {
         const list = ITEMS.filter((i) => i.kind === 'gear' && i.game === k && !i.isDefault), have = list.filter((i) => i.owned).length;
         const slot = GEAR.GAMES_WITH_GEAR.filter((s) => s.game === k).map((s) => s.label).slice(0, 3).join(' · ') || 'Gear';
         return `<button class="game" data-game="${esc(k)}"><img src="/art/tiles/${encodeURIComponent(k)}.svg" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="gi">${esc(gameIcon(k))} ${esc(gameName(k))}<small>${esc(slot)}</small></span><span class="count${have ? ' has' : ''}">${have}/${list.length}</span></button>`;
@@ -532,7 +694,7 @@
 
   // ---------- events (delegated) ----------
   $('#tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (!b) return; S.tab = b.dataset.tab; if (S.tab !== 'gear') S.game = null; S.sel = null; hap('tap'); render(); });
-  $('#subs').addEventListener('click', (e) => { const b = e.target.closest('[data-sub],[data-games]'); if (!b) return; if (b.dataset.games) S.game = null; else S.sub[S.tab] = b.dataset.sub; S.sel = null; hap('tap'); render(); });
+  $('#subs').addEventListener('click', (e) => { const b = e.target.closest('[data-sub],[data-games],[data-msub]'); if (!b) return; if (b.dataset.games) S.game = null; else if (b.dataset.msub) S.sub.mafia = b.dataset.msub; else S.sub[S.tab] = b.dataset.sub; S.sel = null; hap('tap'); render(); });
   $('#shelf').addEventListener('click', (e) => {
     const it = e.target.closest('[data-item]'); if (it) return select(it.dataset.item);
     const gm = e.target.closest('[data-game]'); if (gm) { S.game = gm.dataset.game; S.sel = null; hap('tap'); render(); window.scrollTo({ top: 0 }); return; }
