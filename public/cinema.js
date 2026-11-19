@@ -1234,7 +1234,7 @@
     }
     a_release(a) { const x = this.actors.get(a.id); if (x) { x.follow = null; x.lean = 0; x.dragged = 0; x.arms = null; x.struggle = null; } const L = this.actors.get(a.by || 'exec'); if (L) { L.arms = null; L.lean = 0; } }
     a_follow(a) { this.camFollow = a && a.id ? { id: a.id, zoom: a.zoom, dx: a.dx, dy: a.dy } : null; }
-    // Pose limbs directly (radians from the shoulder; see character-art rig).
+    // Pose limbs directly (radians from the shoulder; see the drawSmooth rig in avatar.js).
     a_arms(a) { const x = this.actors.get(a.id); if (x) { x.arms = a.l == null && a.r == null ? null : { l: a.l || 0, r: a.r || 0 }; if (a.lean != null) x.lean = a.lean; } }
     // The noose goes over the head: a rope now runs from the beam to their neck.
     a_noose(a) { const x = this.actors.get(a.id); if (x) { x.noosed = a.on !== false; x.anchorY = this.anchorY(x); SFX.play('click'); } }

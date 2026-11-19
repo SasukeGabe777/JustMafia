@@ -298,7 +298,7 @@
       case 'houseStyle': drawHouse(g, w / 2, h - 6, h / 95, i.value, (S.st.home || {}).decor, 1); return;
       case 'houseDecor': drawHouse(g, w / 2, h - 6, h / 95, (S.st.home || {}).style || 'cottage', i.value, 1); return;
       case 'deathAnim': g.fillStyle = '#1d2236'; g.fillRect(0, 0, w, h); drawDeath(g, w / 2, h * 0.86, h / 100, l, i.value, 2.2); return;
-      case 'ghostSkin': g.fillStyle = '#1d2236'; g.fillRect(0, 0, w, h); MTArt.drawGhost(g, w / 2, h - 6, { ...l, ghostSkin: i.value }, { scale: h / 80, t: 1.2, glow: true }); return;
+      case 'ghostSkin': g.fillStyle = '#1d2236'; g.fillRect(0, 0, w, h); MTArt.drawGhost(g, w / 2, h - 6, { ...l, ghostSkin: i.value }, { scale: h / 92, t: 1.2, glow: true }); return;
       case 'effect': drawBody(g, w, h, L, 1.7); return;
       default: if (HEAD_FIELDS.has(i.field) || (i.field === 'accessory' && !BACK_ACC.has(i.value))) drawHead(g, w, h, L); else drawBody(g, w, h, L);
     }

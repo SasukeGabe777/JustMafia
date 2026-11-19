@@ -27,7 +27,17 @@ character wears in it.
   pencils keep their ids and became wearables.
 - **Shop:** body picker first; per-game gear shows on your character (cards and stage), with the game
   tile as a backdrop.
-- Limits: JustMafia's town still uses the pixel `character-art.js` (separate follow-up). Pizza items ship
+- **JustMafia on the smooth character** (claude/mafia-art): `character-art.js` is gone; the town, cutscenes,
+  phone, Judge, creator, rewards, farewells and previews all draw `drawSmooth`, so the shop look (incl. body
+  female/male) is exactly the JustMafia character. Classic ghost = your own character, see-through and pale
+  blue with fading legs (costume ghostSkins stay, 1.4x); translucent characters are composited off-screen
+  (no overlap artefacts). Added the NPC `execHood`, a distinct scared face (sweat, trembling mouth), beards
+  keep the mood's mouth, photo faceSprite, `MTArt.EXPRESSIONS`. Cinema: two-layer noose, the bodyguard and
+  detective use real outfits/poses (tuxedo + shades, arms out; trench coat + fedora holding the magnifier).
+  Checked by screenshots of every scene in /preview and a full bot game (TV + 2 phones); e2e creator,
+  execution, rewards, shop, help, draft, judge pass. Retro mode (`?pix=3`) still snaps everything,
+  characters included, through the palette LUT (the default HD mode has no LUT).
+- Limits: Pizza items ship
   before the pizza game. Small faces (24 px) are readable but busy with glowing gear.
 
 ## November 16, 2026 - JustGameBox
@@ -115,7 +125,7 @@ Documentation changes passed `git diff --check`; no game code changed.
 
 This section supersedes older pending markers below. The supplied Gather packs
 were inspected as reference material. No Gather or Darkest Dungeon artwork is
-served by the game. Original art is drawn in `character-art.js` and `world-art.js`.
+served by the game. Original art is drawn in `avatar.js` (characters) and `world-art.js`.
 
 ### Architecture audit before this update
 

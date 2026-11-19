@@ -4,7 +4,7 @@
 // To add a customization option:
 //   1. add its option list in public/shared/options.js and one line in AVATAR_FIELDS
 //      (the server then validates and saves it automatically);
-//   2. draw it in public/character-art.js;
+//   2. draw it in public/avatar.js (drawSmooth);
 //   3. add a section below.
 //
 // Section fields:

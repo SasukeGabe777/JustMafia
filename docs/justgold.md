@@ -17,9 +17,9 @@ Status: built on branch `claude/justgold`. The state before it is tagged `pre-ju
   jaw, brows, lashes and lips; old looks without it are inferred (long hair or a dress → female).
   In the games, players' emoji are replaced by their character (`BOX.face` / `BOX.body` /
   `BOX.drawChar` in `public/box/portrait.js`; the room roster carries every player's look and gear;
-  bots get a generated character). Players without a saved look keep their emoji. JustMafia still
-  draws its town with the pixel `character-art.js` (moving it to drawSmooth is the next step;
-  drawSmooth already takes JustMafia's options: lean, arms, dragged, dead, scared, theme…).
+  bots get a generated character). Players without a saved look keep their emoji. JustMafia draws
+  the same character everywhere (town, cutscenes, phone, Judge), with its scene options: lean, arms,
+  dragged, dead, scared, theme…; the classic ghost is the character, see-through.
 - **One shop** at `/shop` (phone page): character items, flair, gear for each game, JustMafia items.
   Reachable from the box phone (join screen, lobby, between games), the main menu's phone link,
   and the JustMafia lobby. Not during a running game.

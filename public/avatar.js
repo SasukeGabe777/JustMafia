@@ -220,15 +220,15 @@
   function drawGhost(ctx, x, y, av, o = {}) {
     av = av || {};
     if (av.ghostSkin && av.ghostSkin !== 'classic' && GHOST_SKINS[av.ghostSkin]) { costumeGhost(ctx, x, y, av, { ...o, scale: (o.scale || 1) * 1.4 }); return; }
-    const t = o.t || 0, s = o.scale || 1, fl = Math.sin(t * 2.5 + (o.seed || 0)) * 4 * s, alpha = (o.alpha != null ? o.alpha : 0.85) * 0.68;
+    const t = o.t || 0, s = o.scale || 1, fl = Math.sin(t * 2.5 + (o.seed || 0)) * 4 * s, alpha = (o.alpha != null ? o.alpha : 0.85) * 0.78;
     const look = { ...av, effect: 'none' };
     const opts = { t, seed: o.seed, facing: o.facing, theme: o.theme, expression: o.mouth ? 'surprised' : o.expression, spin: o.spin, noShadow: true };
     ctx.save();
     ctx.fillStyle = 'rgba(160,200,255,0.16)'; ctx.beginPath(); ctx.ellipse(x, y, 11 * s, 3.5 * s, 0, 0, TAU); ctx.fill();
-    ctx.shadowColor = '#a8d6ff'; ctx.shadowBlur = o.glow ? 16 : 6;
+    ctx.shadowColor = '#a8d6ff'; ctx.shadowBlur = o.glow ? 12 : 4;
     const tinted = (b, w, h, k) => {
       b.globalCompositeOperation = 'source-atop';
-      const tint = b.createLinearGradient(0, 0, 0, h); tint.addColorStop(0, 'rgba(205,228,255,0.5)'); tint.addColorStop(1, 'rgba(150,190,255,0.65)');
+      const tint = b.createLinearGradient(0, 0, 0, h); tint.addColorStop(0, 'rgba(205,228,255,0.3)'); tint.addColorStop(1, 'rgba(150,190,255,0.5)');
       b.fillStyle = tint; b.fillRect(0, 0, w, h);
       b.globalCompositeOperation = 'destination-out'; // the legs fade away
       const fade = b.createLinearGradient(0, (LAYER.t - 22) * k, 0, (LAYER.t + 1) * k); fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,1)');
