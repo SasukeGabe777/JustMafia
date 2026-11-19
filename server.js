@@ -309,6 +309,8 @@ io.on('connection', (socket) => {
   socket.on('profile:resume', (msg = {}, cb) => { const p = profiles.authenticate(msg); if (!p) return reply(cb, { ok: false }); if (socket.profileId && socket.profileId !== p.id) socket.leave('profile:' + socket.profileId); socket.profileId = p.id; socket.join('profile:' + p.id); reply(cb, { ok: true, profile: profiles.view(p.id) }); });
   socket.on('profile:buy', (msg = {}, cb) => { if (profileInGame(socket.profileId)) return reply(cb, { ok: false, error: CLOSED }); const result = profiles.buy(socket.profileId, msg.itemId); reply(cb, result); if (result.ok) { io.to('profile:' + socket.profileId).emit('profile:state', profiles.view(socket.profileId)); const { room } = ctx(); if (room) room.sync(); } });
   // Season pass: buy it with JustGold (between games, like the shop).
+  // Daily / weekly challenges (box/progress.js): one free reroll a day.
+  socket.on('profile:reroll', (msg = {}, cb) => { if (!socket.profileId) return reply(cb, { ok: false, error: 'No profile.' }); const r = profiles.rerollChallenge(socket.profileId, msg.period, msg.id); if (!r.ok) return reply(cb, r); const view = profiles.view(socket.profileId); io.to('profile:' + socket.profileId).emit('profile:state', view); reply(cb, { ok: true, profile: view }); });
   socket.on('profile:buyPass', (msg = {}, cb) => { if (profileInGame(socket.profileId)) return reply(cb, { ok: false, error: CLOSED }); const result = profiles.buyPass(socket.profileId); reply(cb, result); if (result.ok) io.to('profile:' + socket.profileId).emit('profile:state', profiles.view(socket.profileId)); });
   // Character creator: save a look to the profile without being in a room. The
   // in-room avatar only changes through player:profile (lobby-only).
