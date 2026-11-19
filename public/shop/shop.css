@@ -168,6 +168,11 @@ body.is-busy .card .badge.price-b { opacity: 0.6; }
 .start .link { background: none; border: 0; color: var(--muted); text-decoration: underline; margin-top: 14px; }
 .start .err { color: #ff9aa6; min-height: 1.3em; margin: 8px 0 0; font-weight: 600; }
 .start p { margin: 4px 0; }
+.start .pw-row { display: flex; gap: 8px; align-items: stretch; }
+.start .pw-row input { flex: 1 1 auto; min-width: 0; }
+.start .pw-row .btn { width: auto; margin: 0; flex: 0 0 auto; font-size: 15px; padding: 6px 12px; }
+.acct { margin: 0 14px; }
+.acct:empty { display: none; }
 
 /* ---------- tablet: stage on the left, shelf on the right ---------- */
 @media (min-width: 760px) {

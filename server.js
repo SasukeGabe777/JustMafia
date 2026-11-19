@@ -374,7 +374,10 @@ io.on('connection', (socket) => {
     bridge.playerAttached(socket, room, p); // the group moved on to a box game while this phone was away
   });
 
-  socket.on('player:profile', (msg = {}) => { const { room, p } = ctx(); if (p && room.phase === 'lobby') { room.updateProfile(p, { name: msg.name, avatar: lookFor(room, p.profileId, msg.avatar || p.avatar) }); if (p.profileId) profiles.select(p.profileId, p.avatar); } });
+  socket.on('player:profile', (msg = {}) => { const { room, p } = ctx(); if (p && room.phase === 'lobby') {
+    // Signed in to a saved account in the lobby: the seat follows this phone's wallet now.
+    if (socket.profileId && p.profileId !== socket.profileId && !room.list().some((o) => o !== p && !o.left && o.profileId === socket.profileId)) p.profileId = socket.profileId;
+    room.updateProfile(p, { name: msg.name, avatar: lookFor(room, p.profileId, msg.avatar || p.avatar) }); if (p.profileId) profiles.select(p.profileId, p.avatar); } });
   // Your house: claim a plot / move in with someone, and/or change your house's design (lobby only).
   socket.on('player:home', (msg = {}, cb) => {
     const { room, p } = ctx();

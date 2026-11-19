@@ -3,7 +3,9 @@
 // keeps the stats, trophies and titles. Same storage approach as JustMafia's ProfileStore
 // (../profiles.js): one JSON file under .data/ (git-ignored), written atomically, or memory
 // only when there is no filename (tests, MT_PROFILE_STORE=memory). Tokens are never stored,
-// only a SHA-256 verifier. A name + PIN (optional) lets the same profile move to a new phone.
+// only a SHA-256 verifier. A name + password (optional, "Save your stuff") lets the same profile
+// move to a new phone. Passwords are hashed with scrypt + a salt; the old 4–6 digit PINs are
+// simply numeric passwords and still sign in.
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
@@ -40,8 +42,12 @@ const TROPHY = Object.fromEntries(TROPHIES.map((t) => [t.id, t]));
 
 const freshStats = () => ({ games: 0, wins: 0, podiums: 0, partyPts: 0, nights: 0, partiesPlayed: 0, partyWins: 0, bestParty: null, bestPlace: null, survived: 0, audienceFavs: 0, byGame: {} });
 const cleanName = (s) => String(s || '').replace(/[\u0000-\u001f<>&"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 14);
-const validPin = (pin) => typeof pin === 'string' && /^\d{4,6}$/.test(pin);
-const pinHash = (pin, salt) => crypto.scryptSync(pin, salt, 32).toString('hex');
+const PASSWORD_MIN = 4, PASSWORD_MAX = 64;
+const validPassword = (pw) => typeof pw === 'string' && pw.length >= PASSWORD_MIN && pw.length <= PASSWORD_MAX && !/[\u0000-\u001f]/.test(pw);
+const PASSWORD_RULE = `The password needs ${PASSWORD_MIN} to ${PASSWORD_MAX} characters.`;
+const passHash = (pw, salt) => crypto.scryptSync(pw, salt, 32).toString('hex');
+const newPassword = (pw) => { const salt = crypto.randomBytes(12).toString('hex'); return { salt, hash: passHash(pw, salt) }; };
+const passMatches = (rec, pw) => !!rec && validPassword(pw) && crypto.timingSafeEqual(Buffer.from(rec.hash, 'hex'), Buffer.from(passHash(pw, rec.salt), 'hex'));
 
 class BoxProfileStore {
   constructor(filename = null) {
@@ -49,8 +55,11 @@ class BoxProfileStore {
     this.data = filename && fs.existsSync(filename) ? JSON.parse(fs.readFileSync(filename, 'utf8')) : { version: 1, profiles: {}, names: {} };
     if (this.data.version !== 1 || !this.data.profiles) throw new Error('Unsupported box profile store; preserve the file and migrate it before starting.');
     if (!this.data.names) this.data.names = {};
-    for (const p of Object.values(this.data.profiles)) { p.stats = { ...freshStats(), ...(p.stats || {}) }; if (!Array.isArray(p.trophies)) p.trophies = []; if (!Array.isArray(p.nights)) p.nights = []; if (!Array.isArray(p.rooms)) p.rooms = []; }
-    this.fails = new Map(); // name → { n, until } (PIN guessing slows down)
+    for (const p of Object.values(this.data.profiles)) { p.stats = { ...freshStats(), ...(p.stats || {}) }; if (!Array.isArray(p.trophies)) p.trophies = []; if (!Array.isArray(p.nights)) p.nights = []; if (!Array.isArray(p.rooms)) p.rooms = [];
+      // Older saves called the password a PIN (same scrypt hash): carry it over.
+      if (p.pin && !p.password) p.password = p.pin;
+      delete p.pin; }
+    this.fails = new Map(); // name (or 'id:' + id) → { n, until }: password guessing slows down
     this.dirty = false;
   }
   // ---- storage ----
@@ -65,7 +74,7 @@ class BoxProfileStore {
   // ---- identity ----
   create(name) {
     const id = crypto.randomUUID(), token = crypto.randomBytes(32).toString('hex');
-    this.data.profiles[id] = { id, verifiers: [digest(token)], name: cleanName(name) || null, claimed: null, pin: null, created: Date.now(), stats: freshStats(), trophies: [], title: null, nights: [], rooms: [] };
+    this.data.profiles[id] = { id, verifiers: [digest(token)], name: cleanName(name) || null, claimed: null, password: null, created: Date.now(), stats: freshStats(), trophies: [], title: null, nights: [], rooms: [] };
     this.saveSoon();
     return { id, token };
   }
@@ -77,31 +86,51 @@ class BoxProfileStore {
     const d = Buffer.from(digest(auth.token), 'hex');
     return p.verifiers.some((v) => crypto.timingSafeEqual(Buffer.from(v, 'hex'), d)) ? p : null;
   }
-  // Save the profile under a name + PIN so another phone can sign in to it.
-  claim(id, name, pin) {
+  // Save the profile under a name + password so another phone can sign in to it.
+  // Once saved, the password only changes with changePassword (it needs the old one).
+  claim(id, name, password) {
     const p = this.get(id); if (!p) return { ok: false, error: 'No profile.' };
+    if (p.password) return { ok: false, error: 'Already saved as ' + p.claimed + '. Use “Change password” instead.' };
     name = cleanName(name); if (name.length < 2) return { ok: false, error: 'Pick a name (2+ letters).' };
-    if (!validPin(pin)) return { ok: false, error: 'The PIN is 4 to 6 digits.' };
+    if (!validPassword(password)) return { ok: false, error: PASSWORD_RULE };
     const key = name.toLowerCase(), owner = this.data.names[key];
     if (owner && owner !== id) return { ok: false, error: 'That name is taken. Try another one.' };
     if (p.claimed && p.claimed.toLowerCase() !== key) delete this.data.names[p.claimed.toLowerCase()];
-    const salt = crypto.randomBytes(12).toString('hex');
-    p.pin = { salt, hash: pinHash(pin, salt) }; p.claimed = name; p.name = name; this.data.names[key] = id;
+    p.password = newPassword(password); p.claimed = name; p.name = name; this.data.names[key] = id;
     this.save();
     return { ok: true, profile: this.view(id) };
   }
   // Sign in on a new phone: a fresh device token for the same profile.
-  login(name, pin) {
+  login(name, password) {
     const key = cleanName(name).toLowerCase(), now = Date.now();
     const f = this.fails.get(key); if (f && f.until > now) return { ok: false, error: 'Too many tries. Wait a minute and try again.' };
     const p = this.get(this.data.names[key]);
-    const ok = p && p.pin && validPin(pin) && crypto.timingSafeEqual(Buffer.from(p.pin.hash, 'hex'), Buffer.from(pinHash(pin, p.pin.salt), 'hex'));
-    if (!ok) { const n = ((f && f.n) || 0) + 1; this.fails.set(key, { n, until: n >= 5 ? now + 60000 : 0 }); if (this.fails.size > 5000) this.fails.clear(); return { ok: false, error: 'That name and PIN don’t match.' }; }
+    const ok = p && passMatches(p.password, password);
+    if (!ok) { this.failed(key, f, now); return { ok: false, error: 'That name and password don’t match.' }; }
     this.fails.delete(key);
     const token = crypto.randomBytes(32).toString('hex');
     p.verifiers.push(digest(token)); if (p.verifiers.length > MAX_DEVICES) p.verifiers.splice(0, p.verifiers.length - MAX_DEVICES);
     this.save();
     return { ok: true, id: p.id, token, profile: this.view(p.id) };
+  }
+  failed(key, f, now) { const n = ((f && f.n) || 0) + 1; this.fails.set(key, { n, until: n >= 5 ? now + 60000 : 0 }); if (this.fails.size > 5000) this.fails.clear(); }
+  // A new password for a saved profile: needs the old one (wrong guesses slow down too).
+  changePassword(id, oldPassword, password) {
+    const p = this.get(id); if (!p) return { ok: false, error: 'No profile.' };
+    if (!p.password) return { ok: false, error: 'Save your profile with a name and password first.' };
+    const key = 'id:' + id, now = Date.now(), f = this.fails.get(key);
+    if (f && f.until > now) return { ok: false, error: 'Too many tries. Wait a minute and try again.' };
+    if (!passMatches(p.password, oldPassword)) { this.failed(key, f, now); return { ok: false, error: 'Your current password is not right.' }; }
+    if (!validPassword(password)) return { ok: false, error: PASSWORD_RULE };
+    this.fails.delete(key);
+    p.password = newPassword(password); this.save();
+    return { ok: true, profile: this.view(id) };
+  }
+  // Sign out on this phone: its token stops working (the profile and other phones keep going).
+  forgetDevice(auth) {
+    const p = this.authenticate(auth); if (!p) return false;
+    const d = digest(auth.token); p.verifiers = p.verifiers.filter((v) => v !== d); this.save();
+    return true;
   }
   // ---- JustGold (docs/justgold.md): the account's wallet is a JustMafia profile id ----
   walletOf(id) { const p = this.get(id); return p && typeof p.wallet === 'string' ? p.wallet : null; }
@@ -176,7 +205,7 @@ class BoxProfileStore {
     const p = this.get(id); if (!p) return null;
     const got = new Map(p.trophies.map((t) => [t.id, t.at]));
     return {
-      id: p.id, name: p.name, claimed: p.claimed, hasPin: !!p.pin, created: p.created, title: p.title, titleText: this.titleOf(id),
+      id: p.id, name: p.name, claimed: p.claimed, hasPassword: !!p.password, hasPin: !!p.password, created: p.created, title: p.title, titleText: this.titleOf(id),
       stats: { ...p.stats, byGame: Object.entries(p.stats.byGame).map(([game, g]) => ({ game, ...g })).sort((a, b) => b.played - a.played || b.won - a.won) },
       trophies: TROPHIES.map((t) => ({ id: t.id, icon: t.icon, name: t.name, title: t.title, how: t.how, earned: got.has(t.id), at: got.get(t.id) || null })),
       nights: p.nights.slice().reverse().map(({ room, ...n }) => n),
@@ -185,4 +214,4 @@ class BoxProfileStore {
   }
 }
 
-module.exports = { BoxProfileStore, TROPHIES, GUESSING };
+module.exports = { BoxProfileStore, TROPHIES, GUESSING, PASSWORD_MIN, PASSWORD_MAX };
