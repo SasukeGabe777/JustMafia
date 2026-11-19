@@ -22,6 +22,7 @@ const GAMES = {
   kingdoms: require('./games/kingdoms'),
   zombie: require('./games/zombie'),
   undercover: require('./games/undercover'),
+  snap: require('./games/snap'),
   pizza: require('./games/pizza'),
   escape: require('./games/escape'),
   marble: require('./games/marble'),
@@ -69,6 +70,16 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
 
   const nsp = io.of('/box');
   const rooms = new Map();
+  // Photos taken in a game (JustSnap): kept in the running game's memory only, at an unguessable
+  // per-room address, never cached. Gone (404) once the game frees them or the room closes.
+  app.get('/box/photo/:code/:id', (req, res) => {
+    const room = rooms.get(String(req.params.code || '').toUpperCase()), g = room && room.game;
+    const id = String(req.params.id || '');
+    const ph = /^[A-Za-z0-9_-]{8,40}$/.test(id) && g && typeof g.servePhoto === 'function' ? g.servePhoto(id, req.query.t === '1') : null;
+    res.set({ 'Cache-Control': 'no-store, private', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'", 'Referrer-Policy': 'no-referrer' });
+    if (!ph || !ph.body) return res.status(404).type('text/plain').send('Not found');
+    res.type(ph.type).send(ph.body);
+  });
   // ---------- JustGold helpers ----------
   const shared = { cos: require('../public/shared/cosmetics'), gear: (() => { try { return require('../public/shared/gear'); } catch (e) { return { GEAR: [] }; } })() };
   const GEAR_IDS = () => new Set((shared.gear.GEAR || []).map((g) => g.id));

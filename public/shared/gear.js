@@ -123,6 +123,10 @@
     { game: 'undercover', slot: 'shades', label: 'Disguise', spot: 'face', default: OWN('disguise') },
     { game: 'undercover', slot: 'gadget', label: 'Spy gadget', spot: 'hand', default: OWN('gadget') },
     { game: 'undercover', slot: 'tie', label: 'Agency tie', spot: 'chest', default: OWN('tie') },
+    { game: 'snap', slot: 'camera', label: 'Camera', spot: 'hand', default: OWN('camera') },
+    { game: 'snap', slot: 'hat', label: 'Photographer hat', spot: 'head', default: OWN('hat') },
+    { game: 'snap', slot: 'pass', label: 'Press pass', spot: 'chest', default: OWN('press pass') },
+    { game: 'snap', slot: 'shades', label: 'Shades', spot: 'face', default: OWN('shades') },
   ];
 
   // [game, slot, value, name, cost, icon, paint, desc]
@@ -362,6 +366,15 @@
     ['undercover', 'gadget', 'phone', 'Spy Phone', 150, '📱', { shape: 'phone', a: '#1a1a22', b: '#3aff8a' }, 'Encrypted, scrambled and very shiny.'],
     ['undercover', 'gadget', 'lens', 'Pocket Lens', 90, '🔍', { shape: 'magnifier', a: '#c8a24a', b: '#3a2a14' }, 'For finding the tiny tell in every clue.'],
     ['undercover', 'tie', 'black', 'Agency Tie', 60, '👔', { shape: 'tie', a: '#101014', b: '#3a3a44' }, 'Black tie, black suit, black mood.'],
+    // JustSnap (the photo game): SNAP! magazine's photographers.
+    ['snap', 'camera', 'instant', 'Instant Camera', 70, '📸', { shape: 'camera', a: '#f4f1ea', b: '#ff4f6d', d: 'instant' }, 'Click, whirr, a little square photo. Very retro.'],
+    ['snap', 'camera', 'film', 'Film Camera', 120, '📷', { shape: 'camera', a: '#2b2b33', b: '#9aa3b5', d: 'film' }, 'A proper camera with a proper lens.'],
+    ['snap', 'camera', 'gold', 'Golden Shutter', 220, '🌟', { shape: 'camera', a: '#ffcc33', b: '#7a4a00', d: 'film', glow: true }, 'Its flash goes off all by itself. Cover photos only.'],
+    ['snap', 'hat', 'beret', 'Gallery Beret', 60, '🎨', { shape: 'beret', a: '#1d1d24' }, 'Black beret. Every photo is now art.'],
+    ['snap', 'hat', 'paparazzo', 'Paparazzo Cap', 90, '🧢', { shape: 'newsboy', a: '#6b5a4a', b: '#3a2e24' }, 'For waiting outside fancy restaurants.'],
+    ['snap', 'pass', 'press', 'Press Pass', 50, '🪪', { shape: 'pressPass', a: '#ff4f6d', b: '#1d1d24' }, 'SNAP! magazine, staff photographer.'],
+    ['snap', 'pass', 'vip', 'All-Access Pass', 140, '🎟️', { shape: 'pressPass', a: '#ffcc33', b: '#7b3fb5' }, 'Backstage, front row, the editor’s office.'],
+    ['snap', 'shades', 'star', 'Red-Carpet Shades', 80, '🕶️', { shape: 'shades', a: '#101014', b: '#ffcc33', d: 'aviator' }, 'The flashes are blinding out there.'],
   ];
 
   const slotInfo = (game, slot) => SLOTS.find((s) => s.game === game && s.slot === slot) || null;

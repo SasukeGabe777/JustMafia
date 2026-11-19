@@ -372,6 +372,20 @@
     tilt(g, -0.1); rr(-3.5, -15, 8, 14, 1.6); done(a); rr(-2.4, -13.6, 5.8, 10.6, 0.8); done(b, null);
     circ(0.5, -9, 1.6 + 0.3 * Math.sin(t * 4)); done('#ffd23f', null); line('rgba(255,255,255,0.6)', 0.8, [[-1.6, -12.6], [0, -13.2]]);
   };
+  // JustSnap: a camera held up, ready to shoot (d: 'instant' | 'film'; glow = a flash now and then).
+  W.camera = ({ g, rr, done, circ, rect, lin, line, star, t, a, b, d, glow }) => {
+    tilt(g, -0.14);
+    if (d === 'instant') {
+      rr(-7.5, -16, 15, 12.5, 2.4); done(lin(a, -16, -3.5)); rect(b, -7.5, -12.4, 15, 2.2);
+      circ(0, -9, 3.9); done('#2b2b33'); circ(0, -9, 2.3); done('#6ec6ff', null); circ(-0.8, -9.8, 0.8); done('rgba(255,255,255,0.85)', null);
+      rr(3.4, -15.2, 2.8, 2, 0.6); done('#fff6c8', null); rr(-6, -4.6, 12, 1.6, 0.5); done('#f6f2e6', null);
+    } else {
+      rr(-8, -15, 16, 10.5, 2); done(lin(a, -15, -4.5)); rr(-3.6, -18, 7.2, 3.6, 1); done(a);
+      circ(0, -9.6, 4.4); done(b); circ(0, -9.6, 2.9); done('#1d2230'); circ(-1, -10.6, 0.9); done('rgba(255,255,255,0.8)', null);
+      rr(-7, -14, 3, 1.6, 0.5); done('#d8dbe2', null); line('rgba(255,255,255,0.35)', 0.8, [[-7, -6], [7, -6]]);
+    }
+    if (glow && Math.sin(t * 1.7) > 0.93) star(4.8, -17, 4.2, '#fffbe0');
+  };
   W.popcorn = ({ g, P, done, circ, a, OL }) => {
     g.translate(3, 0);
     for (const [x, y] of [[-4, -13], [-1, -15], [2.5, -14], [5, -12.5], [0.5, -12], [-3, -11]]) { circ(x, y, 2.4); done('#fff6d6', OL, 0.7); }
@@ -434,6 +448,12 @@
     if (c) { line(c, 0.8, [[x0 + 0.6, y0 + 0.8], [x1 - 4.4, y1 + 0.8]]); line(c, 0.8, [[x0 + 4.4, y0 + 0.2], [x1 - 0.6, y1 - 0.6]]); star(0.5, -21.5, 2, c); }
   };
   W.nameTag = ({ rr, done, rect, line, a }) => { rr(1, -28.5, 8.5, 5.6, 1); done('#ffffff', undefined, 0.8); rect(a, 1.5, -28, 7.5, 1.8); line('#2b1f3d', 0.7, [[3, -24.6], [7.5, -24.6]]); };
+  // JustSnap: a press pass on a lanyard.
+  W.pressPass = ({ rr, done, rect, line, a, b }) => {
+    line(b, 1.3, [[-4.5, -31.5], [0, -23.5], [4.5, -31.5]]);
+    rr(-3.8, -24, 7.6, 9.4, 1.1); done('#ffffff', undefined, 0.8); rect(a, -3.8, -23.6, 7.6, 2.4);
+    rect('#c9d8e6', -2.8, -20.4, 2.8, 3); line('#2b1f3d', 0.6, [[0.9, -19.8], [2.9, -19.8]]); line('#2b1f3d', 0.6, [[0.9, -18.4], [2.4, -18.4]]);
+  };
   W.pin = ({ circ, done, star, a, b, d }) => { circ(5, -25, 3.2); done(a, undefined, 1); if (d === 'star') star(5, -25, 1.8, b); else { circ(5, -25, 1.5); done(b, null); } };
   W.vest = ({ g, P, done, lin, rr, line, SW, a, b, bot }) => {
     const yb = Math.max(bot, -9);

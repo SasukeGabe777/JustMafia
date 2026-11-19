@@ -56,7 +56,7 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,JustPizza,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,JustPizza,JustSnap,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
   // Every small game sits on a category shelf (public/categories.js); there is no catch-all shelf.
   assert.equal(await hub.eval(`[...document.querySelectorAll('.shelf')].map((x) => x.dataset.shelf).join(',')`), 'cards,guess,create,friends,action');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
@@ -450,6 +450,37 @@ async function setup(browser, game, settings = {}) {
     await tv.until(`!!document.querySelector('.uc-verdict')`, 'the verdict on the TV', 40000);
     await wait(2200); await tv.shot('box-undercover-verdict');
     ok('JustUndercover: the phone peeks at its password (hidden otherwise, never on the TV), gives a clue the case board shows, votes, and the TV stamps the verdict');
+  }
+
+  // ---------- JustSnap: the phone takes a real photo (a JPEG file), it goes over the socket, the TV shows it ----------
+  {
+    const { tv, ph, code } = await setup(browser, 'snap', { mode: 'hunt', rounds: 3, seconds: 60 });
+    await tv.click('#start'); await skipShow(tv);
+    await ph.until(`!!document.querySelector('[data-file="main"][capture]')`, 'the camera button', 25000);
+    // A real JPEG from a canvas, handed to the file input as if the camera took it.
+    const size = await ph.eval(`(async () => { const c = document.createElement('canvas'); c.width = 1600; c.height = 1200; const g = c.getContext('2d');
+      const gr = g.createLinearGradient(0, 0, 1600, 1200); gr.addColorStop(0, '#ff2e63'); gr.addColorStop(1, '#2ec4d6'); g.fillStyle = gr; g.fillRect(0, 0, 1600, 1200);
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(800, 600, 320, 0, 7); g.fill();
+      const b = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.95)); const dt = new DataTransfer(); dt.items.add(new File([b], 'IMG_0001.jpg', { type: 'image/jpeg' }));
+      const inp = document.querySelector('[data-file="main"]'); inp.files = dt.files; inp.dispatchEvent(new Event('change')); return b.size; })()`);
+    await ph.until(`!!document.querySelector('#sn-send') && document.querySelector('#sn-prev img').naturalWidth > 0`, 'the preview', 15000);
+    assert.equal(await ph.eval(`document.querySelector('#sn-prev img').naturalWidth`), 1024, 'shrunk to 1024 px on the long side');
+    await ph.shot('box-snap-preview');
+    await ph.click('#sn-send');
+    await ph.until(`!!document.querySelector('.sn-sent img') && document.querySelector('.sn-sent img').naturalWidth > 0`, 'sent: the thumbnail comes back from the server', 20000);
+    const thumb = await ph.eval(`document.querySelector('.sn-sent img').src`);
+    assert(new RegExp(`/box/photo/${code}/[A-Za-z0-9_-]{16}\\?t=1$`).test(thumb), 'an unguessable per-room URL: ' + thumb);
+    const id = thumb.split('/').pop().split('?')[0];
+    assert(size > 20000, 'a real camera-sized JPEG went in (' + size + ' bytes)');
+    for (let k = 0; k < 120 && !(await tv.eval(`!!document.querySelector('.sn-gal')`)); k++) { if (k > 4) await tv.eval(`(() => { const b = document.querySelector('[data-h="next"]'); if (b) b.click(); return true; })()`); await wait(500); }
+    await tv.until(`[...document.querySelectorAll('.sn-frame img')].some((i) => i.src.includes('${id}') && i.naturalWidth > 0)`, 'the photo on the TV', 15000);
+    assert(!(await tv.eval(`/Tess/.test(document.querySelector('.sn-gal').textContent)`)), 'no names in the gallery');
+    await wait(600); await tv.shot('box-snap-gallery'); await ph.shot('box-snap-vote');
+    assert(await ph.eval(`!!document.querySelector('.sn-card.mine')`), 'my own photo is marked, no voting for it');
+    await ph.eval(`(() => { const b = [...document.querySelectorAll('[data-pick]')].find((x) => !x.hasAttribute('data-nofav')); if (b) b.click(); return true; })()`);
+    await tv.eval(`(() => { const b = document.querySelector('[data-h="next"]'); if (b) b.click(); return true; })()`);
+    await tv.until(`!!document.querySelector('.sn-cover')`, 'the reveal', 15000); await wait(1200); await tv.shot('box-snap-reveal');
+    ok('JustSnap: a JPEG from the phone page is shrunk, previewed, sent over the socket, served at an unguessable URL and shown on the TV gallery (anonymous), then the reveal');
   }
 
   // ---------- One code for the night: the title screen switches the live room ----------
