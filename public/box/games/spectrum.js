@@ -23,7 +23,7 @@
   const av = (x, n = 28) => (x && (x.avatar || has(x)) ? face(x, n, { cls: 'sp-af' }) + ' ' : '');
   const fboard = (rows, val, label = '') => `<div class="board">${rows.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${av(r, 30)}${esc(r.name)}</span><b>${esc(val(r))}${label}</b></div>`).join('')}</div>`;
   // A head on the hills (lobby and in-game): their face fills the round marker.
-  const hd = (p) => (has(p) ? `<span class="hd has-face">${face(p, 64, { fill: true, cls: 'sp-hf' })}</span>` : `${hd(p)}`);
+  const hd = (p) => (has(p) ? `<span class="hd has-face">${face(p, 64, { fill: true, cls: 'sp-hf' })}</span>` : `<span class="hd">${esc(p.avatar || '🙂')}</span>`);
   const who = (x) => (x && x.name ? `${dot(x.color)}<b>${av(x)}${esc(x.name)}</b>` : `${dot(x && x.color)}<b>someone</b>`);
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const clampPct = (x) => Math.max(0, Math.min(100, x));
