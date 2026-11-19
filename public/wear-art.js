@@ -177,6 +177,20 @@
     P(); g.moveTo(-9, HY - 9); g.lineTo(-8, top - 5); g.quadraticCurveTo(0, top - 1, 8, top - 5); g.lineTo(9, HY - 9); g.closePath(); done(lin(a, top - 6, HY - 9));
     rect(b, -9, HY - 13, 18, 2.8);
   };
+  // YesChef's kitchens: the sushi headband and the diner paper hat (the taco truck uses bandana).
+  W.hachimaki = ({ g, P, done, lin, rr, line, HY, R, a, b, OL }) => {
+    for (const [dy, len] of [[-1.5, 8], [2.5, 7]]) { P(); g.moveTo(R - 1, HY - 8.5); g.quadraticCurveTo(R + len * 0.6, HY - 9 + dy * 2, R + len, HY - 6 + dy * 2.4); g.lineTo(R + len - 2.4, HY - 4.2 + dy * 2.4); g.quadraticCurveTo(R + 2, HY - 6.5 + dy, R - 1, HY - 6); g.closePath(); done(lin(a, HY - 10, HY - 3)); }
+    rr(-R - 0.8, HY - 11, (R + 0.8) * 2, 5.4, 2.4); done(lin(a, HY - 11, HY - 5.6));
+    const pts = []; for (let i = 0; i <= 12; i++) pts.push([-R + 1 + i * ((R * 2 - 2) / 12), HY - 8.3 + (i % 2 ? -1 : 1)]);
+    line(b, 0.9, pts);
+    g.beginPath(); g.arc(R - 0.5, HY - 7.6, 1.9, 0, Math.PI * 2); done(a, OL, 0.8);
+  };
+  W.paperHat = ({ g, P, done, lin, star, HY, R, top, a, b, c }) => {
+    P(); g.moveTo(-R - 1.5, HY - 7); g.lineTo(-R + 2.5, top - 6); g.quadraticCurveTo(0, top - 10, R - 2.5, top - 6); g.lineTo(R + 1.5, HY - 7); g.quadraticCurveTo(0, HY - 10.5, -R - 1.5, HY - 7); g.closePath(); done(lin(a, top - 9, HY - 7, 0.05, -0.1));
+    P(); g.moveTo(-R - 0.8, HY - 9.4); g.quadraticCurveTo(0, HY - 13, R + 0.8, HY - 9.4); g.lineTo(R + 1.2, HY - 7.6); g.quadraticCurveTo(0, HY - 11.2, -R - 1.2, HY - 7.6); g.closePath(); done(b, null);
+    P(); g.moveTo(-2, top - 8.5); g.lineTo(0, HY - 12); done(null, 'rgba(0,0,0,0.12)', 0.8);
+    if (c) star(0, (top + HY) / 2 - 5, 2.6, c);
+  };
   W.sweatband = ({ rr, done, lin, rect, HY, R, a, b }) => {
     rr(-R - 0.5, HY - 10, (R + 0.5) * 2, 5, 2.4); done(lin(a, HY - 10, HY - 5)); rect(b, -R + 0.5, HY - 8.2, (R - 0.5) * 2, 1.4);
   };
@@ -337,6 +351,12 @@
   W.peel = ({ g, rr, ell, circ, done, lin, line, a, c, OL }) => {
     tilt(g, 0.25); line(OL, 3.2, [[0, 8], [0, -16]]); line(a, 1.8, [[0, 8], [0, -16]]);
     ell(0, -24, 8, 9.5); done(lin(a, -33, -15)); if (c) { circ(0, -24, 6); done(c, OL, 0.8); for (const [x, y] of [[-2.5, -26], [2.5, -23], [-1, -21], [2, -28]]) { circ(x, y, 1.1); done('#b8322c', null); } }
+  };
+  W.iceScoop = ({ g, P, done, lin, rr, circ, line, a, b, c, OL }) => { // YesChef's sundae stand
+    tilt(g, 0.3); rr(-1.9, -9, 3.8, 15, 1.6); done(lin('#ff8fc8', -9, 6)); line(OL, 2.4, [[0, -9], [0, -14]]); line(a, 1.2, [[0, -9], [0, -14]]);
+    P(); g.arc(0, -18, 6, 0, Math.PI); g.closePath(); done(lin(a, -18, -12));
+    P(); g.arc(0, -18.5, 5.4, Math.PI, 0); for (let i = 0; i <= 6; i++) g.lineTo(5.4 - (i / 6) * 10.8, -17.6 + (i % 2 ? 1.6 : 0)); g.closePath(); done(lin(b, -24, -17));
+    circ(0.6, -24.6, 2); done(c || '#e0304a', OL, 0.7); P(); g.moveTo(1, -26.4); g.quadraticCurveTo(2, -29, 4, -29.6); done(null, '#3a6a1e', 0.8);
   };
   W.pizzaCutter = ({ g, circ, done, line, rr, a, OL }) => {
     tilt(g, 0.4); rr(-1.8, -6, 3.6, 10, 1.5); done(a); line(OL, 1.6, [[0, -6], [0, -11]]);

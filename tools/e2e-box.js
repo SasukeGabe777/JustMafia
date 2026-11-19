@@ -56,7 +56,7 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,JustPizza,JustSnap,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,YesChef,JustSnap,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
   // Every small game sits on a category shelf (public/categories.js); there is no catch-all shelf.
   assert.equal(await hub.eval(`[...document.querySelectorAll('.shelf')].map((x) => x.dataset.shelf).join(',')`), 'cards,guess,create,friends,action');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
@@ -396,16 +396,18 @@ async function setup(browser, game, settings = {}) {
     ok('JustEscape: Hazel briefs the room, phones get their evidence, the TV shows every lock and who holds what');
   }
 
-  // ---------- JustPizza: a customer shows the order, the phone builds it and serves it, the reveal ----------
+  // ---------- YesChef (pizza): a customer shows the order, the phone builds it and serves it, the reveal ----------
   {
-    const { tv, ph } = await setup(browser, 'pizza', { mode: 'classic', rounds: 3, seconds: 30 });
+    const { tv, ph } = await setup(browser, 'pizza', { kitchen: 'pizza', mode: 'classic', rounds: 3, seconds: 30 });
+    assert(/YesChef/.test(await tv.eval(`document.body.textContent`)), 'the YesChef lobby');
     await tv.click('#start'); await skipShow(tv);
     await tv.until(`!!document.querySelector('.pz-plate .pz-svg') && !!document.querySelector('.pz-cust')`, 'the customer shows the order', 20000);
     await wait(800); await tv.shot('box-pizza-order');
+    assert(await tv.eval(`!!document.querySelector('.pz-tv.k-pizza') && document.querySelector('#pz-bg canvas').width > 100`), 'the pizzeria, its back wall painted');
     await ph.until(`!!document.querySelector('#pz-serve')`, 'the pizza station', 20000);
     assert(!(await tv.eval(`!!document.querySelector('.pz-plate')`)), 'the order is hidden while cooking');
-    for (const sel of ['[data-crust="deep"]', '[data-sauce="tomato"]', '[data-cheese="2"]', '[data-top="mushroom"]']) { await ph.click(sel); await wait(150); }
-    await ph.click('#pz-all'); await wait(150); await ph.click('[data-top="olive"]'); await wait(150);
+    for (const sel of ['[data-row="crust"][data-val="deep"]', '[data-row="sauce"][data-val="tomato"]', '[data-row="cheese"][data-val="2"]', '[data-paint="mushroom"]']) { await ph.click(sel); await wait(150); }
+    await ph.click('#pz-all'); await wait(150); await ph.click('[data-paint="olive"]'); await wait(150);
     // swipe across two slices of the pie (a real pointer drag)
     await ph.eval(`(() => { const b = document.querySelector('#pz-pie'), r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       const ev = (t, x, y) => b.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: 1, clientX: x, clientY: y, buttons: 1 }));
@@ -419,7 +421,24 @@ async function setup(browser, game, settings = {}) {
     await tv.until(`!!document.querySelector('.pz-reveal .pz-entry')`, 'the reveal', 45000);
     await wait(1200); await tv.shot('box-pizza-reveal');
     await ph.until(`!!document.querySelector('.pz-score')`, 'my score', 8000); await ph.shot('box-pizza-result');
-    ok('JustPizza: the customer shows the order on the TV, it hides, the phone builds (crust, sauce, cheese, toppings swiped onto slices) and serves, the reveal scores every pizza');
+    ok('YesChef pizzeria: the customer shows the order on the TV, it hides, the phone builds (crust, sauce, cheese, toppings swiped onto slices) and serves, the reveal scores every pizza');
+  }
+  // ---------- YesChef (burger joint): another kitchen on the same engine, layers stacked in order ----------
+  {
+    const { tv, ph } = await setup(browser, 'pizza', { kitchen: 'burger', mode: 'classic', rounds: 3, seconds: 30 });
+    await tv.click('#start'); await skipShow(tv);
+    await tv.until(`!!document.querySelector('.pz-tv.k-burger .pz-plate .pz-svg')`, 'the burger order', 20000);
+    await wait(800); await tv.shot('box-yeschef-burger-order');
+    await ph.until(`!!document.querySelector('#pz-serve') && !!document.querySelector('[data-stack="patty"]')`, 'the burger station', 20000);
+    for (const sel of ['[data-row="bun"][data-val="brioche"]', '[data-stack="patty"]', '[data-stack="cheese"]', '[data-stack="lettuce"]', '[data-stack="ketchup"]', '#pz-undo']) { await ph.click(sel); await wait(150); }
+    await wait(400);
+    assert(/3\/10 layers/.test(await ph.eval(`document.querySelector('.pz-hint').textContent`)), 'three layers stacked after an undo');
+    await ph.shot('box-yeschef-burger-phone');
+    await ph.click('#pz-serve');
+    await tv.until(`!!document.querySelector('.pz-reveal .pz-entry')`, 'the burger reveal', 45000);
+    await wait(1200); await tv.shot('box-yeschef-burger-reveal');
+    await ph.until(`!!document.querySelector('.pz-score')`, 'my burger score', 8000);
+    ok('YesChef burger joint: Big Buck’s counter, the phone stacks a bun and layers in order (with undo), the reveal scores every burger');
   }
 
   // ---------- JustUndercover: the phone peeks at its password, gives a clue, the TV shows it, the vote ----------

@@ -28,7 +28,7 @@ const BOARD_DELAY = 12000, BOARD_MS = 15000, MAX_LINEUP = 20;
 //  'skip'  a short title card (CARD_MS) and straight in. The how-to steps stay on the phones' ❓.
 const INTRO_MODES = ['play', 'break', 'skip'], BREAK_STAND_MS = 8000;
 const PF = require('./party-fit');
-const { CAST_OPEN_MS, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX } = require('./show');
+const { castOpenMs, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX } = require('./show');
 // Unlockable games (module `locked: { how }`): finishing a whole Party Mode opens every one of
 // them. The TV remembers unlocks (public/unlocks.js) and sends them when it creates a room.
 const partyFinished = (room) => !!(room.partyMode && room.partyMode.phase === 'done' && room.played.length >= 1);
@@ -517,7 +517,7 @@ class BoxRoom {
     this.fx('partyPreview', { game: def.key });
     this.sync();
   }
-  previewMs() { return CAST_OPEN_MS + Math.min(CAST_MAX, this.players.size) * CAST_PER_MS + CAST_OUTRO_MS; }
+  previewMs(def) { return castOpenMs(def) + Math.min(CAST_MAX, this.players.size) * CAST_PER_MS + CAST_OUTRO_MS; }
   // What the TV says about a party game: "Game 3 of 6", its settings and its minutes in the plan.
   partyInfo(def, fit) {
     const pm = this.partyMode; if (!pm) return null;
@@ -546,7 +546,7 @@ class BoxRoom {
         pm.nextFit = nd.external ? null : PF.fitSettings(nd, this.partyCtx(nd));
         pm.nextInfo = this.partyInfo(nd, pm.nextFit);
         if (pm.intros === 'break' && !nd.external && this.hasShow(nd)) {
-          boardMs = Math.max(BOARD_MS, BREAK_STAND_MS + this.previewMs() + 1200);
+          boardMs = Math.max(BOARD_MS, BREAK_STAND_MS + this.previewMs(nd) + 1200);
           pm.previewTimer = this.after(BREAK_STAND_MS, () => { pm.previewTimer = null; this.partyPreview(nd); });
         }
       }

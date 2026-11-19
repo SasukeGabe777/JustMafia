@@ -25,6 +25,8 @@ const HOWTO_STEP_MS = 7500, HOWTO_END_MS = 2500, HOWTO_MIN_MS = 6000;
 //    the break"); it never starts the game: opts.onDone runs when it ends.
 const CARD_MS = 4500;
 const howMs = (def) => Math.max(1, Math.min(8, def.howSteps || 5)) * HOWTO_STEP_MS + HOWTO_END_MS;
+// A cast-mode game may ask for a longer opening (module `show: { facts: false, openMs }`) so its lines fit.
+const castOpenMs = (def) => Math.max(CAST_OPEN_MS, Math.min(20000, Number(def && def.show && def.show.openMs) || 0));
 
 const CAST_FIELD = { key: 'showIntro', label: 'Intro cutscene', options: [{ value: true, label: 'On' }, { value: false, label: 'Off: straight to the game' }] };
 const SHOW_FIELD = { key: 'showIntro', label: 'Game-show opening', options: [{ value: true, label: 'On: meet the contestants' }, { value: false, label: 'Off: straight to the game' }] };
@@ -71,7 +73,7 @@ class Show {
     const people = this.room.list();
     this.featured = [...people.filter((p) => !p.bot), ...people.filter((p) => p.bot)].slice(0, CAST_MAX).map((p) => p.id);
     this.step = 'intros'; this.stepAt = this.room.now();
-    const ms = CAST_OPEN_MS + this.featured.length * CAST_PER_MS + CAST_OUTRO_MS;
+    const ms = castOpenMs(this.def) + this.featured.length * CAST_PER_MS + CAST_OUTRO_MS;
     this.endsAt = this.stepAt + ms;
     this.timer = this.room.after(ms, () => this.afterIntro());
   }
@@ -137,13 +139,16 @@ class Show {
     this.room.beginGame();
   }
   stop() { this.step = 'done'; this.room.cancel(this.timer); this.room.cancel(this.minTimer); }
+  // What the running game wants its intro and how-to to know (e.g. YesChef's kitchen): game.showExtra().
+  extra() { const g = !this.preview && this.room.game; try { return g && g.showExtra ? g.showExtra() : null; } catch { return null; } }
   card(id) { const p = this.room.get(id); return p ? { id, name: p.name, avatar: p.avatar, color: p.color, bot: !!p.bot, fact: this.facts.get(id) || null } : null; }
   tv() {
     const now = this.room.now(), humans = this.humans();
     return {
       mode: this.mode, step: this.step, game: this.def.key, title: this.def.name, info: this.info, preview: this.preview,
       stepAgo: now - this.stepAt, endsIn: Math.max(0, this.endsAt - now),
-      ...(this.mode === 'cast' ? { openMs: CAST_OPEN_MS, perMs: CAST_PER_MS, outroMs: CAST_OUTRO_MS } : { perMs: PER_MS, outroMs: OUTRO_MS, minMs: FACT_MIN_MS }),
+      extra: this.extra(),
+      ...(this.mode === 'cast' ? { openMs: castOpenMs(this.def), perMs: CAST_PER_MS, outroMs: CAST_OUTRO_MS } : { perMs: PER_MS, outroMs: OUTRO_MS, minMs: FACT_MIN_MS }),
       howMs: howMs(this.def), howStepMs: HOWTO_STEP_MS, howSteps: Math.max(1, Math.min(8, this.def.howSteps || 5)), ready: this.ready.size, readyOf: humans.filter((p) => p.sockets > 0).length,
       submitted: humans.filter((p) => this.facts.has(p.id)).length, of: humans.length,
       waiting: humans.filter((p) => !this.facts.has(p.id) && p.sockets > 0).slice(0, 8).map((p) => p.name),
@@ -153,12 +158,12 @@ class Show {
   }
   view(p) {
     const now = this.room.now(), i = this.featured.indexOf(p.id);
-    const per = this.mode === 'cast' ? CAST_PER_MS : PER_MS, open = this.mode === 'cast' ? CAST_OPEN_MS : 0;
+    const per = this.mode === 'cast' ? CAST_PER_MS : PER_MS, open = this.mode === 'cast' ? castOpenMs(this.def) : 0;
     return { mode: this.mode, step: this.step, title: this.def.name, info: this.info, myFact: this.facts.get(p.id) || null, endsIn: Math.max(0, this.endsAt - now), submitted: this.facts.size, of: this.room.list().length,
       // When it's your turn to be introduced, your phone lights up.
       introIn: i >= 0 && this.step === 'intros' ? open + i * per - (now - this.stepAt) : null, perMs: per, featured: i >= 0,
-      game: this.def.key, stepAgo: now - this.stepAt, howStepMs: HOWTO_STEP_MS, howSteps: Math.max(1, Math.min(8, this.def.howSteps || 5)), gotIt: this.ready.has(p.id) };
+      game: this.def.key, extra: this.extra(), stepAgo: now - this.stepAt, howStepMs: HOWTO_STEP_MS, howSteps: Math.max(1, Math.min(8, this.def.howSteps || 5)), gotIt: this.ready.has(p.id) };
   }
 }
 
-module.exports = { CARD_MS, HOWTO_STEP_MS, HOWTO_END_MS, HOWTO_MIN_MS, howMs, CAST_FIELD, CAST_OPEN_MS, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX, Show, SHOW_FIELD, FACT_MS, FACT_MIN_MS, PER_MS, OUTRO_MS, MAX_FEATURED, BOT_FACTS };
+module.exports = { castOpenMs, CARD_MS, HOWTO_STEP_MS, HOWTO_END_MS, HOWTO_MIN_MS, howMs, CAST_FIELD, CAST_OPEN_MS, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX, Show, SHOW_FIELD, FACT_MS, FACT_MIN_MS, PER_MS, OUTRO_MS, MAX_FEATURED, BOT_FACTS };

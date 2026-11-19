@@ -53,6 +53,7 @@
   }
   function showHowto(el, show, ctx) {
     const key = show.game;
+    try { const I = BOX.intros && BOX.intros[key]; if (I && I.onShow) I.onShow(show); } catch { /* the default steps */ } // e.g. YesChef: the kitchen's own steps
     if (st.el !== el || st.key !== key || !el.querySelector('.ht')) {
       el.innerHTML = `<div class="ht"><div class="ht-bg"></div><header class="ht-head"><span class="ht-tag">HOW TO PLAY</span><h1>${esc((BOX.games[key] || {}).icon || '')} ${esc(show.title || '')}</h1></header>
         <div class="ht-body"></div><footer class="ht-foot"><div class="ht-dots"></div><div class="ht-ready" id="ht-ready"></div></footer></div>`;

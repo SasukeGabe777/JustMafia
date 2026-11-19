@@ -704,6 +704,7 @@
     setIntro() {
       const I = introFor(this.key);
       if (I === this.I) return;
+      if (I.onShow && this.show) try { I.onShow(this.show); } catch (e) { console.error(e); } // the intro adapts to the game (e.g. YesChef's kitchen)
       this.I = I; this.theme = themeOf(I); this.A = new HostAnim(I.host || {}); this._draw = null;
       this.el.style.setProperty('--si-accent', this.theme.accent); this.el.style.setProperty('--si-accent2', this.theme.accent2);
       this.whoEl.textContent = I.host ? I.host.name : ''; this.whoEl.hidden = !I.host;
@@ -715,6 +716,8 @@
       else if (Math.abs(start - this.stepStart) > 900) this.stepStart = start;
       this.endsAt = now + (Number(show.endsIn) || 0);
       this.show = show; this.mode = show.mode === 'cast' ? 'cast' : 'facts';
+      // An intro with onShow(show) adapts to the game's extra info (show.extra): its host may change.
+      if (this.I.onShow) { try { if (this.I.onShow(show)) { this.theme = themeOf(this.I); this._draw = null; this.A = new HostAnim(this.I.host || {}); } } catch (e) { console.error(e); } this.whoEl.textContent = this.I.host ? this.I.host.name : ''; this.whoEl.hidden = !this.I.host; }
       this.title = show.title || this.I.title || '';
       this.el.querySelector('.si-title').textContent = this.I.title || this.title;
       this.renderFacts(show);

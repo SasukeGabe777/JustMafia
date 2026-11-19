@@ -430,6 +430,7 @@
   function howtoPhone(sh) {
     const body = $('#g-body');
     loadIntro(sh.game);
+    try { const I = BOX.intros && BOX.intros[sh.game]; if (I && I.onShow) I.onShow(sh); } catch { /* the default steps */ } // e.g. YesChef: the kitchen's own steps
     const steps = BOX.howtoSteps ? BOX.howtoSteps(sh.game) : [];
     const { i, done } = BOX.howtoStepAt ? BOX.howtoStepAt(sh, steps, view._at) : { i: 0, done: false };
     const s = steps[i] || {};

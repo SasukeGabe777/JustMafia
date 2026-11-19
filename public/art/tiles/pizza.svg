@@ -1,50 +1,73 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
-  <!-- JustPizza: Nonna Pina's counter. A pizza on its board under a warm lamp, brick wall, oven glow, toppings dropping in. -->
+  <!-- YesChef: the food court at night. String lights over the stalls; on the counter a burger, a slice of pizza, a taco, sushi and a sundae. -->
   <defs>
-    <linearGradient id="pz-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6492a"/><stop offset="1" stop-color="#5a2010"/></linearGradient>
-    <radialGradient id="pz-glow" cx="88%" cy="62%" r="55%"><stop offset="0" stop-color="#ff8a32" stop-opacity=".75"/><stop offset="1" stop-color="#ff8a32" stop-opacity="0"/></radialGradient>
-    <radialGradient id="pz-lamp" cx="50%" cy="10%" r="70%"><stop offset="0" stop-color="#ffe2a0" stop-opacity=".6"/><stop offset="1" stop-color="#ffe2a0" stop-opacity="0"/></radialGradient>
-    <radialGradient id="pz-crust" cx="50%" cy="50%" r="50%"><stop offset=".78" stop-color="#e9b064"/><stop offset=".94" stop-color="#d48a3a"/><stop offset="1" stop-color="#a95f20"/></radialGradient>
-    <pattern id="pz-brick" width="48" height="22" patternUnits="userSpaceOnUse"><rect width="48" height="22" fill="none"/><path d="M0 0.5H48M0 11.5H48M24 0V11M0 11V22M48 11V22" stroke="#4a180a" stroke-width="2"/></pattern>
-    <pattern id="pz-check" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="#fff4dc"/><rect width="12" height="12" fill="#c8321f"/><rect x="12" y="12" width="12" height="12" fill="#c8321f"/></pattern>
+    <linearGradient id="yc-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14103a"/><stop offset=".6" stop-color="#3a2470"/><stop offset="1" stop-color="#5a3080"/></linearGradient>
+    <radialGradient id="yc-lamp" cx="50%" cy="35%" r="60%"><stop offset="0" stop-color="#ffd9a0" stop-opacity=".55"/><stop offset="1" stop-color="#ffd9a0" stop-opacity="0"/></radialGradient>
+    <linearGradient id="yc-counter" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6f1ea"/><stop offset="1" stop-color="#d4cbe4"/></linearGradient>
+    <linearGradient id="yc-bun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2b25a"/><stop offset="1" stop-color="#d4862e"/></linearGradient>
+    <linearGradient id="yc-cone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0b868"/><stop offset="1" stop-color="#c8843a"/></linearGradient>
+    <pattern id="yc-waffle" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0H10M0 0V10" stroke="#a8642a" stroke-width="1.6"/></pattern>
   </defs>
-  <rect width="400" height="240" fill="url(#pz-wall)"/>
-  <rect width="400" height="170" fill="url(#pz-brick)" opacity=".7"/>
-  <rect width="400" height="240" fill="url(#pz-glow)"/>
-  <rect width="400" height="240" fill="url(#pz-lamp)"/>
-  <!-- the oven mouth on the right -->
-  <path d="M330 170 V120 A55 55 0 0 1 440 120 V170 Z" fill="#8c3b1d" stroke="#2a160c" stroke-width="4"/>
-  <path d="M352 170 V138 A33 33 0 0 1 418 138 V170 Z" fill="#2a0c04"/>
-  <path d="M360 170 Q368 148 374 160 Q380 136 388 158 Q396 142 402 170 Z" fill="#ffb22e"/>
-  <path d="M368 170 Q374 156 380 164 Q386 150 392 170 Z" fill="#fff1a8"/>
-  <!-- the lamp -->
-  <path d="M200 0 V22" stroke="#2a160c" stroke-width="3"/>
-  <path d="M176 40 Q200 10 224 40 Z" fill="#2e5e3f" stroke="#2a160c" stroke-width="3.5"/>
-  <ellipse cx="200" cy="40" rx="11" ry="4" fill="#fff2b8"/>
-  <!-- counter -->
-  <rect y="168" width="400" height="12" fill="#efe8dc" stroke="#2a160c" stroke-width="3"/>
-  <rect y="180" width="400" height="24" fill="url(#pz-check)"/>
-  <rect y="204" width="400" height="36" fill="#5a2f14"/>
-  <!-- the board and the pizza -->
-  <ellipse cx="200" cy="168" rx="112" ry="26" fill="rgba(0,0,0,.35)"/>
-  <ellipse cx="200" cy="160" rx="110" ry="28" fill="#b5773e" stroke="#2a160c" stroke-width="4"/>
-  <rect x="300" y="152" width="52" height="12" rx="6" fill="#b5773e" stroke="#2a160c" stroke-width="3.5"/>
-  <g transform="translate(200 128) scale(1 .55)">
-    <circle r="92" fill="url(#pz-crust)" stroke="#2a160c" stroke-width="5"/>
-    <circle r="80" fill="#c8321f"/>
-    <path d="M74 0 Q72 22 60 42 Q44 66 14 73 Q-14 78 -40 66 Q-66 52 -74 24 Q-80 -4 -68 -30 Q-52 -60 -22 -72 Q8 -80 36 -68 Q62 -54 72 -26Z" fill="#ffd968"/>
-    <g stroke="rgba(110,50,15,.4)" stroke-width="2"><path d="M0 0 L0 -90 M0 0 L64 -64 M0 0 L90 0 M0 0 L64 64 M0 0 L0 90 M0 0 L-64 64 M0 0 L-90 0 M0 0 L-64 -64"/></g>
-    <g fill="#b3261b" stroke="#6e130c" stroke-width="2"><circle cx="-30" cy="-36" r="13"/><circle cx="26" cy="-50" r="13"/><circle cx="-50" cy="12" r="13"/><circle cx="40" cy="18" r="13"/><circle cx="-10" cy="44" r="13"/><circle cx="2" cy="-4" r="13"/></g>
-    <g fill="none" stroke="#1e1e24" stroke-width="5"><circle cx="-22" cy="-6" r="7"/><circle cx="52" cy="-22" r="7"/><circle cx="22" cy="52" r="7"/></g>
-    <g fill="#2d8a3e" stroke="#16521f" stroke-width="2"><path d="M-40 -60 q12 8 0 22 q-12 -8 0 -22z"/><path d="M60 40 q12 8 0 22 q-12 -8 0 -22z"/><path d="M-58 40 q12 8 0 22 q-12 -8 0 -22z"/></g>
+  <rect width="400" height="240" fill="url(#yc-sky)"/>
+  <g fill="#fff8e0" opacity=".7"><circle cx="40" cy="20" r="1.4"/><circle cx="120" cy="12" r="1"/><circle cx="300" cy="18" r="1.3"/><circle cx="360" cy="10" r="1"/><circle cx="250" cy="8" r="1"/></g>
+  <!-- the stalls in the back -->
+  <g stroke="#1a0f30" stroke-width="3">
+    <rect x="-10" y="70" width="110" height="110" fill="#8a3a1f"/><rect x="104" y="70" width="96" height="110" fill="#1fa596"/><rect x="204" y="70" width="96" height="110" fill="#c49a6a"/><rect x="304" y="70" width="110" height="110" fill="#ffd6e7"/>
   </g>
-  <!-- toppings dropping in -->
-  <g stroke="#2a160c" stroke-width="2">
-    <circle cx="132" cy="62" r="9" fill="#b3261b"/>
-    <path d="M262 66 q-10 -12 0 -16 q10 4 0 16z" fill="#2d8a3e"/>
-    <path d="M236 40 l12 0 l2 10 l-8 6 l-8 -6z" fill="#ffd23f"/>
-    <path d="M158 92 q0 -12 10 -12 q10 0 10 12z" fill="#d8c1a0"/>
-    <circle cx="290" cy="96" r="6" fill="none" stroke="#1e1e24" stroke-width="4"/>
+  <g stroke="#1a0f30" stroke-width="2.4">
+    <path d="M-10 62 H100 V78 Q91 88 82 78 Q73 88 64 78 Q55 88 46 78 Q37 88 28 78 Q19 88 10 78 Q1 88 -10 78Z" fill="#c8321f"/>
+    <path d="M104 62 H200 V78 Q192 88 184 78 Q176 88 168 78 Q160 88 152 78 Q144 88 136 78 Q128 88 120 78 Q112 88 104 78Z" fill="#ffd23f"/>
+    <path d="M204 62 H300 V78 Q292 88 284 78 Q276 88 268 78 Q260 88 252 78 Q244 88 236 78 Q228 88 220 78 Q212 88 204 78Z" fill="#24345e"/>
+    <path d="M304 62 H414 V78 Q404 88 394 78 Q384 88 374 78 Q364 88 354 78 Q344 88 334 78 Q324 88 314 78 Q309 84 304 78Z" fill="#ff8fc8"/>
   </g>
-  <g fill="#fff4dc" opacity=".6"><circle cx="110" cy="40" r="2"/><circle cx="300" cy="30" r="1.6"/><circle cx="180" cy="20" r="1.4"/><circle cx="250" cy="110" r="1.6"/><circle cx="96" cy="120" r="1.4"/></g>
+  <rect width="400" height="240" fill="url(#yc-lamp)"/>
+  <!-- string lights -->
+  <path d="M0 30 Q100 58 200 32 Q300 6 400 34" fill="none" stroke="#120a24" stroke-width="2"/>
+  <g stroke="#120a24" stroke-width="1"><circle cx="22" cy="36" r="4" fill="#ffd23f"/><circle cx="62" cy="45" r="4" fill="#ff8fc8"/><circle cx="102" cy="48" r="4" fill="#7ad0ff"/><circle cx="142" cy="44" r="4" fill="#ffd23f"/><circle cx="182" cy="36" r="4" fill="#ff6b4a"/><circle cx="222" cy="27" r="4" fill="#7ac943"/><circle cx="262" cy="20" r="4" fill="#ffd23f"/><circle cx="302" cy="18" r="4" fill="#ff8fc8"/><circle cx="342" cy="22" r="4" fill="#7ad0ff"/><circle cx="382" cy="31" r="4" fill="#ffd23f"/></g>
+  <!-- the counter -->
+  <rect x="-10" y="176" width="420" height="16" fill="url(#yc-counter)" stroke="#1a0f30" stroke-width="3"/>
+  <rect x="-10" y="192" width="420" height="60" fill="#3a2a5a"/>
+  <g opacity=".9"><rect x="0" y="198" width="40" height="8" fill="#ffd23f"/><rect x="40" y="198" width="40" height="8" fill="#ff4f6d"/><rect x="80" y="198" width="40" height="8" fill="#3ad0ff"/><rect x="120" y="198" width="40" height="8" fill="#7ac943"/><rect x="160" y="198" width="40" height="8" fill="#ff8fc8"/><rect x="200" y="198" width="40" height="8" fill="#ffd23f"/><rect x="240" y="198" width="40" height="8" fill="#ff4f6d"/><rect x="280" y="198" width="40" height="8" fill="#3ad0ff"/><rect x="320" y="198" width="40" height="8" fill="#7ac943"/><rect x="360" y="198" width="40" height="8" fill="#ff8fc8"/></g>
+  <!-- the sundae on the right -->
+  <g stroke="#2a160c" stroke-width="3" stroke-linejoin="round">
+    <path d="M262 112 L300 112 L281 178Z" fill="url(#yc-cone)"/>
+    <path d="M262 112 L300 112 L281 178Z" fill="url(#yc-waffle)" stroke="none" opacity=".5"/>
+    <path d="M258 112 A23 23 0 1 1 304 112 L298 118 L292 112 L286 120 L280 112 L272 119 L266 112Z" fill="#ff9ab0"/>
+    <path d="M262 90 A19 19 0 1 1 300 90 L294 96 L288 90 L282 98 L276 90 L270 97Z" fill="#a8ecc8"/>
+    <path d="M268 74 Q262 64 274 62 Q272 52 282 54 Q284 44 290 50 Q298 50 296 60 Q304 64 296 74Z" fill="#ffffff"/>
+    <circle cx="284" cy="46" r="7" fill="#e0304a"/>
+  </g>
+  <path d="M285 39 Q288 30 296 28" fill="none" stroke="#3a6a1e" stroke-width="2.4"/>
+  <!-- the slice of pizza on the left -->
+  <g stroke="#2a160c" stroke-width="3" stroke-linejoin="round">
+    <path d="M92 104 Q126 92 158 106 L128 176Z" fill="#e9b064"/>
+    <path d="M98 112 Q126 102 152 114 L128 166Z" fill="#c8321f" stroke="none"/>
+    <path d="M100 114 Q126 106 150 116 L128 160Z" fill="#ffd968" stroke="none"/>
+    <circle cx="118" cy="124" r="6" fill="#b3261b" stroke-width="1.6"/><circle cx="136" cy="128" r="6" fill="#b3261b" stroke-width="1.6"/><circle cx="127" cy="146" r="5.5" fill="#b3261b" stroke-width="1.6"/>
+  </g>
+  <path d="M114 138 Q118 133 122 138Q118 143 114 138Z" fill="#2d8a3e"/>
+  <!-- the burger in the middle -->
+  <g stroke="#2a160c" stroke-width="3" stroke-linejoin="round">
+    <rect x="160" y="160" width="80" height="16" rx="8" fill="#d9963f"/>
+    <rect x="156" y="146" width="88" height="15" rx="7.5" fill="#6b3a1f"/>
+    <path d="M154 146 L246 146 L240 154 L226 152 L218 162 L210 152 L180 152 L172 164 L164 152 L156 154Z" fill="#ffc93c"/>
+    <path d="M150 140 L158 146 L166 138 L174 146 L182 138 L190 146 L198 138 L206 146 L214 138 L222 146 L230 138 L238 146 L246 138 L250 142 L248 132 L152 132Z" fill="#6fc24a"/>
+    <rect x="160" y="126" width="34" height="9" rx="4.5" fill="#e2453a"/><rect x="206" y="126" width="34" height="9" rx="4.5" fill="#e2453a"/>
+    <path d="M154 128 Q152 86 200 84 Q248 86 246 128Z" fill="url(#yc-bun)"/>
+  </g>
+  <g fill="#fff6dc" stroke="#b8925a" stroke-width=".7"><ellipse cx="180" cy="102" rx="3.4" ry="1.8" transform="rotate(-20 180 102)"/><ellipse cx="200" cy="96" rx="3.4" ry="1.8"/><ellipse cx="220" cy="104" rx="3.4" ry="1.8" transform="rotate(25 220 104)"/><ellipse cx="192" cy="112" rx="3.4" ry="1.8" transform="rotate(40 192 112)"/><ellipse cx="212" cy="114" rx="3.4" ry="1.8" transform="rotate(-35 212 114)"/></g>
+  <path d="M168 110 Q178 94 198 92" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity=".45"/>
+  <!-- the taco in front, left -->
+  <g stroke="#2a160c" stroke-width="2.6" stroke-linejoin="round">
+    <path d="M100 172 Q102 152 122 152 Q132 146 142 152 Q160 152 162 172Z" fill="#d4552a"/>
+    <circle cx="112" cy="160" r="4" fill="#ffffff" stroke-width="1.2"/><circle cx="126" cy="154" r="4" fill="#4cbb5a" stroke-width="1.2"/><circle cx="140" cy="158" r="4" fill="#ffd23f" stroke-width="1.2"/><circle cx="152" cy="163" r="3.6" fill="#7ac943" stroke-width="1.2"/>
+    <path d="M98 170 A33 24 0 0 0 164 170Z" fill="#f2c14e"/>
+  </g>
+  <!-- sushi in front, right -->
+  <g stroke="#2a160c" stroke-width="2.4">
+    <rect x="206" y="174" width="64" height="8" rx="3" fill="#e0b070"/>
+    <circle cx="223" cy="164" r="12" fill="#1f2d1f"/><circle cx="223" cy="164" r="9" fill="#fbfaf5" stroke="none"/><rect x="219" y="160" width="8" height="8" rx="2" fill="#ff8c5a" stroke-width="1.2"/>
+    <circle cx="252" cy="164" r="12" fill="#1f2d1f"/><circle cx="252" cy="164" r="9" fill="#fbfaf5" stroke="none"/><rect x="248" y="160" width="8" height="8" rx="2" fill="#c8243c" stroke-width="1.2"/>
+  </g>
+  <g fill="#ff7a1a" stroke="#8a3a0a" stroke-width=".6"><circle cx="249" cy="152" r="2.4"/><circle cx="254" cy="151" r="2.4"/><circle cx="252" cy="155" r="2.4"/></g>
 </svg>

@@ -101,8 +101,13 @@ const COLLECT = `async (key, gi) => {
   if (key !== 'generic' && !(I.tutorial && I.tutorial.length) && !I.opening && !I.castOpening && !I.host) return { lines: [], note: 'unfinished (template intro), skipped' };
   const fill = (s, v) => String(s || '').replace(/\\{(\\w+)\\}/g, (m, k) => (v[k] != null ? v[k] : ''));
   const title = key === 'generic' ? '' : (I.title || gi.title || '');
-  const L = { ...G.lines, ...(I.lines || {}) }, spec = (I.host && I.host.voice) || null, out = [];
-  const add = (from, text, sp) => { const t = V.clean(text); if (t) out.push({ from, t, say: V.spoken(t), voice: V.voiceOf(sp), h: V.keyOf(t, sp) }); };
+  const out = [];
+  // An intro with variants (YesChef's kitchens, each with its own host and voice) is collected once per variant.
+  const variants = I.onShow && Array.isArray(I.variants) && I.variants.length ? I.variants : [null];
+  for (const vx of variants) {
+  if (vx) I.onShow({ extra: vx, mode: gi.mode || 'cast' });
+  const L = { ...G.lines, ...(I.lines || {}) }, spec = (I.host && I.host.voice) || null;
+  const add =(from, text, sp) => { const t = V.clean(text); if (t) out.push({ from, t, say: V.spoken(t), voice: V.voiceOf(sp), h: V.keyOf(t, sp) }); };
   const modes = key === 'generic' ? ['facts', 'cast'] : [gi.mode || 'cast'];
   const want = new Set();
   for (const mode of modes) {
@@ -121,6 +126,7 @@ const COLLECT = `async (key, gi) => {
     steps.forEach((s, i) => add('step' + (i + 1), s.say || [s.title, s.text, s.phone].filter(Boolean).join('. '), spec));
     if (steps.length) add('done', 'That’s it. Let’s play!', spec);
     for (const t of [].concat(I.story || [])) add('story', t, spec);
+  }
   }
   return { lines: out, note: '' };
 }`;

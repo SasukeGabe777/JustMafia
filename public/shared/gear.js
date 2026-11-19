@@ -357,6 +357,12 @@
     ['pizza', 'tool', 'cutter', 'Pizza Cutter', 70, '🍕', { shape: 'pizzaCutter', a: '#e8323c' }, 'Eight slices, every time.'],
     ['pizza', 'tool', 'pin', 'Rolling Pin', 80, '🥖', { shape: 'rollingPin', a: '#d9b27a' }, 'For the perfect thin crust.'],
     ['pizza', 'tool', 'peel', 'Pizza Peel', 90, '🍕', { shape: 'peel', a: '#c9a36a', c: '#f2c14e' }, 'A wooden peel with a fresh pie on it.'],
+    // YesChef world kitchens (the YesChef team's own block): one wearable per new kitchen, drawn by
+    // public/wear-art.js (bandana, hachimaki, paperHat, iceScoop).
+    ['pizza', 'hat', 'bandana', 'Taco Truck Bandana', 70, '🌮', { shape: 'bandana', a: '#e2453a', b: '#ffffff' }, 'Tía Lupe’s red polka dots. The griddle is hot!'],
+    ['pizza', 'hat', 'hachimaki', 'Sushi Headband', 80, '🍣', { shape: 'hachimaki', a: '#24345e', b: '#ffffff' }, 'Indigo and white, tied tight. Eight perfect pieces.'],
+    ['pizza', 'hat', 'paperhat', 'Diner Paper Hat', 60, '🍔', { shape: 'paperHat', a: '#ffffff', b: '#d62828', c: '#ffd23f' }, 'Big Buck’s grill-side classic. Order up!'],
+    ['pizza', 'tool', 'scoop', 'Ice Cream Scoop', 110, '🍨', { shape: 'iceScoop', a: '#c4ccd2', b: '#ff9ab0', c: '#e0304a' }, 'Coco’s scoop, loaded with strawberry and a cherry.'],
     // JustUndercover: the agency look.
     ['undercover', 'hat', 'fedora', 'Agent Fedora', 60, '🕵️', { shape: 'fedora', a: '#2a2d36', b: '#c8a24a' }, 'Brim down, collar up. Nobody saw you come in.'],
     ['undercover', 'hat', 'trilby', 'Night Trilby', 130, '🎩', { shape: 'fedora', a: '#5a1e2a', b: '#101014' }, 'A deep red trilby for the late-night briefings.'],
