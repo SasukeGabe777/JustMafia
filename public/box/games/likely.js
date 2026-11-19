@@ -14,7 +14,7 @@
   const face = (x, n, o) => (BOX.face ? BOX.face(x, n, o) : esc((x && x.avatar) || '🙂'));
   const av = (x, n = 28) => (x && (x.avatar || has(x)) ? face(x, n, { cls: 'ml-af' }) + ' ' : '');
   // A nominee: their character standing on the carpet, or the old bow-tied blob with their emoji.
-  const nominee = (p) => (has(p) ? `<span class="bd has-fig">${BOX.body(p, 100, { cls: 'ml-fig' })}</span>` : `${nominee(p)}`);
+  const nominee = (p) => (has(p) ? `<span class="bd has-fig">${BOX.body(p, 100, { cls: 'ml-fig' })}</span>` : `<span class="bd"><span class="f">${esc(p.avatar || '🙂')}</span></span>`);
   // The crowned winner(s), full body under the spotlight.
   const winFigs = (list) => { const w = (list || []).filter(has).slice(0, 4); return w.length ? `<div class="ml-wfigs">${w.map((x) => BOX.body(x, w.length > 1 ? 150 : 190, { mood: 'grin' })).join('')}</div>` : ''; };
   const dot = (c) => `<i class="ml-dot" style="background:${esc(c || '#888')}"></i>`;

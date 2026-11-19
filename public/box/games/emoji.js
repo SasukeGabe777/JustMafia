@@ -876,7 +876,7 @@ const KB_CATS = [
       if (v.phase === 'over') {
         phoneMode(p, 'over', v);
         feel(ctx, 'over', 'over', v.rank === 1 && v.points > 0 ? 'win' : 'success');
-        put(p.simple, `<div class="em-overcard"><div class="em-place">${v.rank === 1 && v.points > 0 ? '🏆' : v.rank === 2 ? '🥈' : v.rank === 3 ? '🥉' : '😎'}</div><h3>${v.rank === 1 && v.points > 0 ? 'Emoji Champion!' : `You finished #${v.rank} of ${v.of}`}</h3><p>${v.points} points</p></div>${awardsHtml(v.awards)}<div class="card-box">${BOX.board(withAv(v.final), (r) => r.points, '')}</div>`);
+        put(p.simple, `<div class="em-overcard"><div class="em-place">${v.rank === 1 && v.points > 0 ? '🏆' : v.rank === 2 ? '🥈' : v.rank === 3 ? '🥉' : '😎'}</div><h3>${v.rank === 1 && v.points > 0 ? 'Emoji Champion!' : `You finished #${v.rank} of ${v.of}`}</h3><p>${v.points} points</p></div>${awardsHtml(v.awards)}<div class="card-box">${fboard(v.final, (r) => r.points, '')}</div>`);
         return;
       }
       if (felt.over) felt = {}; // a new game started
