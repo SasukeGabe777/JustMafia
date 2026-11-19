@@ -276,6 +276,8 @@
     },
 
     phone(el, v, ctx) {
+      // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+      if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, arguments[3], 'likely');
       if (!v) return;
       const head = `<div class="ml-me"><span>🏅 ${v.points} pts · #${v.rank || '-'}</span><span>👑 ${v.myTitles.length}</span>${v.last ? `<span class="ml-final">🏁 Final ×${v.mult}</span>` : `<span class="muted">${v.n}/${v.total}</span>`}</div>`;
       if (v.phase === 'over' && v.final) {

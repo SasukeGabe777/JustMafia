@@ -8,6 +8,7 @@
 // category, wager any share of your points (players under 100 can wager up to 100), then answer.
 // Categories rotate. Awards at the end: Big Better, Coward, Comeback, On Fire, Speed Demon…
 const { CATEGORIES, Q, GROWN_UP } = require('./trivia-questions');
+const GEARS = require('../../public/shared/gear'); // per-game shop gear (podium lights)
 
 const CAT = Object.fromEntries(CATEGORIES.map((c) => [c.key, c]));
 const GROUPS = {
@@ -276,7 +277,8 @@ class Trivia {
   }
 
   // ---- public / private state ----
-  pub(id) { const p = this.room.get(id); return p ? { name: p.name, avatar: p.avatar || null, color: p.color || '#ffd23f' } : { name: '—', avatar: null, color: '#888' }; }
+  // gear: the player's JustGold shop gear for this game ({ podium }; 'classic' when none), lights their contestant on the TV.
+  pub(id) { const p = this.room.get(id); return p ? { name: p.name, avatar: p.avatar || null, color: p.color || '#ffd23f', gear: GEARS.gearSet(p, 'trivia') } : { name: '—', avatar: null, color: '#888', gear: null }; }
   standings() {
     return [...this.scores].filter(([id]) => this.room.get(id))
       .map(([id, pts]) => ({ id, ...this.pub(id), points: pts, streak: this.stats.get(id).streak, correct: this.stats.get(id).correct }))

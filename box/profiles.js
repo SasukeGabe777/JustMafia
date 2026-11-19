@@ -103,6 +103,11 @@ class BoxProfileStore {
     this.save();
     return { ok: true, id: p.id, token, profile: this.view(p.id) };
   }
+  // ---- JustGold (docs/justgold.md): the account's wallet is a JustMafia profile id ----
+  walletOf(id) { const p = this.get(id); return p && typeof p.wallet === 'string' ? p.wallet : null; }
+  setWallet(id, walletId) { const p = this.get(id); if (!p || typeof walletId !== 'string') return false; p.wallet = walletId; this.save(); return true; }
+  // The account a wallet belongs to (so one JustMafia profile is never linked twice).
+  ownerOfWallet(walletId) { for (const p of Object.values(this.data.profiles)) if (p.wallet === walletId) return p.id; return null; }
   setName(id, name) { const p = this.get(id); name = cleanName(name); if (p && name && !p.claimed) { p.name = name; this.saveSoon(); } }
   setTitle(id, trophyId) {
     const p = this.get(id); if (!p) return { ok: false, error: 'No profile.' };

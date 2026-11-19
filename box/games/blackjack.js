@@ -5,6 +5,7 @@
 // Table events keep the night lively: some hands get a twist (Happy Hour, Five-Card Charlie,
 // Ties Win, Lucky 21) and the last hand is the High Roller Finale, where every win pays double.
 const C = require('../cards');
+const GEARS = require('../../public/shared/gear'); // JustGold per-game gear (chip sets)
 
 const MIN_BET = 10, BUST_STAKE = 25, BUST_PAYS = 75;
 const value = (card) => { const r = C.rankOf(card); return r === 'A' ? 11 : ['J', 'Q', 'K'].includes(r) ? 10 : Number(r); };
@@ -323,6 +324,7 @@ class Blackjack {
         id, name: this.room.name(id), av: this.room.get(id).avatar || null, color: this.room.get(id).color, chips: s.chips, bet: s.bet, rank: rank.get(id), streak: s.streak,
         hands: s.hands.map((h) => this.handView(h)), net: this.phase === 'results' ? s.net || 0 : null, targeted: bustCount[id] || 0,
         acting: this.phase === 'playing' && s.hands.some((h) => !h.done),
+        gear: GEARS.gearSet(this.room.get(id), 'blackjack'), // { chips } (shop gear; 'classic' = house chips)
       })),
       top: st.slice(0, 10), awards: this.phase === 'over' ? this.awards : null,
     };
@@ -340,6 +342,7 @@ class Blackjack {
       rank: st.findIndex((x) => x.id === p.id) + 1, of: st.length, leader: st[0] ? { name: st[0].name, chips: st[0].chips } : null,
       others: this.phase === 'betting' && on(this.s.bustBets) ? st.filter((x) => x.id !== p.id).map((x) => ({ id: x.id, name: x.name })) : [],
       final: this.phase === 'over' ? st.slice(0, 10) : null, awards: this.phase === 'over' ? this.awards.filter((a) => a.id === p.id) : null,
+      gear: GEARS.gearSet(p, 'blackjack'), // your chip set (shop gear)
     };
   }
 }

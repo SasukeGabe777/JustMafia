@@ -27,7 +27,9 @@
   const stars = (w) => (w ? `<span class="pb-stars">${w > 4 ? '⭐×' + w : '⭐'.repeat(w)}</span>` : '');
   // Board stars: the star won in the last game pops in with the points.
   const starsNew = (r) => { const won = r.gain === 10 && r.wins > 0, old = r.wins - (won ? 1 : 0); if (!r.wins) return ''; return `<span class="pb-stars">${old > 3 ? '⭐×' + old : '⭐'.repeat(old)}${won ? '<span class="pb-nstar">⭐</span>' : ''}</span>`; };
-  const av = (p) => `<span class="pb-av" style="--pc:${esc(p.color || '#7b61ff')}"><span>${esc(p.avatar || '🙂')}</span></span>`;
+  // A JustGold character face when the player has one (standings rows get it from the room's players).
+  let looks = new Map();
+  const av = (p) => { const look = p.look || looks.get(p.id); return `<span class="pb-av" style="--pc:${esc(p.color || '#7b61ff')}">${look && BOX.portrait ? BOX.portrait.html({ ...p, look }, 96, { fill: true }) : `<span>${esc(p.avatar || '🙂')}</span>`}</span>`; };
   function sky(extra) {
     return `<div class="pb-sky" aria-hidden="true"><div class="pb-rays"></div>
       <div class="pb-lights">${Array.from({ length: 22 }, (_, i) => `<i style="--h:${(i * 57) % 360}deg;--d:${(i % 4) * 0.35}s"></i>`).join('')}</div>
@@ -261,6 +263,7 @@
 
   B.partyBoard = function (el, state, ctx) {
     const pm = state && state.partyMode; if (!el || !pm) return;
+    looks = new Map((state.players || []).filter((p) => p && p.look).map((p) => [p.id, p.look]));
     const key = `${pm.phase}:${pm.index}:${(state.played || []).length}`;
     let s = el._pb;
     if (!s || s.key !== key) {

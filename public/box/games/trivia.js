@@ -21,6 +21,10 @@
     return `<div class="tt-clock"><div class="tt-fuse"><i style="${st}"></i><b class="tt-spark" style="${st}">🔥</b></div><span class="timer tt-secs" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span></div>`;
   }
   const av = (x) => esc((x && x.avatar) || '🙂');
+  // Shop gear (public/shared/gear.js): a contestant's podium light. gl(x) gives extra classes +
+  // CSS vars for x's light; '' when nothing is equipped, so the normal look is unchanged.
+  const gp = (x) => (window.MT_GEAR && x ? MT_GEAR.paint('trivia', 'podium', x.gear) : null);
+  const gl = (x) => { const pt = gp(x); return pt ? { cls: ' gear' + (pt.glow ? ' glow' : ''), css: `;--ga:${esc(pt.a)};--gb:${esc(pt.b || pt.a)}`, icon: pt.icon ? `<em class="gi">${esc(pt.icon)}</em>` : '' } : { cls: '', css: '', icon: '' }; };
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const sign = (n) => (n > 0 ? '+' + n : n < 0 ? '−' + Math.abs(n) : '±0');
   const catChip = (c) => (c ? `<span class="tt-cat" style="--c:${esc(c.color)}">${esc(c.icon)} ${esc(c.label)}</span>` : '');
@@ -62,14 +66,14 @@
   }
   function locks(s) {
     if (!s.roster) return `<div class="tt-locks"><span class="tt-lcount">${s.locked} / ${s.of} locked in</span></div>`;
-    return `<div class="tt-locks">${s.roster.map((p) => `<span class="tt-lock ${p.in ? 'in' : ''} ${p.seat ? 'seat' : ''}" style="--c:${esc(p.color)}"><i>${av(p)}</i><b>${esc(p.name)}</b></span>`).join('')}<span class="tt-lcount">${s.locked}/${s.of}</span></div>`;
+    return `<div class="tt-locks">${s.roster.map((p) => { const g = gl(p); return `<span class="tt-lock ${p.in ? 'in' : ''} ${p.seat ? 'seat' : ''}${g.cls}" style="--c:${esc(p.color)}${g.css}"><i>${av(p)}</i><b>${esc(p.name)}</b>${g.icon}</span>`; }).join('')}<span class="tt-lcount">${s.locked}/${s.of}</span></div>`;
   }
   function answersTv(s, res) {
     return `<div class="tt-answers">${(s.answers || []).map((t, i) => {
       const st = s.correct == null ? '' : s.correct === i ? 'right' : 'wrong';
       const who = res ? res.picks[i] || [] : [];
       return `<div class="tt-ans a${i} ${st}" style="animation-delay:${(0.15 + i * 0.12).toFixed(2)}s"><i class="tt-let">${SHAPE[i]}<b>${LET[i]}</b></i><span class="tt-at">${esc(t)}</span>${st === 'right' ? '<span class="tt-tick">✔</span>' : ''}
-        ${res ? `<div class="tt-pickers">${who.map((p, k) => `<span class="tt-picker" style="--c:${esc(p.color)};animation-delay:${(0.9 + k * 0.06).toFixed(2)}s">${av(p)}<b>${esc(p.name)}</b>${p.stake != null ? `<em class="tt-bchip stake">${p.stake}</em>` : betChip(p.bet)}</span>`).join('')}${res.more[i] ? `<span class="tt-picker more">+${res.more[i]}</span>` : ''}</div>` : ''}</div>`;
+        ${res ? `<div class="tt-pickers">${who.map((p, k) => { const g = gl(p); return `<span class="tt-picker${g.cls}" style="--c:${esc(p.color)};animation-delay:${(0.9 + k * 0.06).toFixed(2)}s${g.css}">${av(p)}<b>${esc(p.name)}</b>${p.stake != null ? `<em class="tt-bchip stake">${p.stake}</em>` : betChip(p.bet)}</span>`; }).join('')}${res.more[i] ? `<span class="tt-picker more">+${res.more[i]}</span>` : ''}</div>` : ''}</div>`;
     }).join('')}</div>`;
   }
   function gainsTv(s, res) {
@@ -240,7 +244,7 @@
       if (!s) return;
       if (s.phase === 'over' && s.final) {
         const f = s.final, st = f.standings, w = st[0] || { name: '?' };
-        const pod = [st[1], st[0], st[2]].map((r, i) => (r ? `<div class="tt-pod p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="tt-poda">${av(r)}</div><div class="tt-podn">${esc(r.name)}</div><div class="tt-podp" data-plain="1" data-count="${r.points}" data-delay="${600 + i * 200}">${r.points}</div><div class="tt-podb">${[2, 1, 3][i]}</div></div>` : '<div></div>')).join('');
+        const pod = [st[1], st[0], st[2]].map((r, i) => (r ? `<div class="tt-pod p${[2, 1, 3][i]}${gl(r).cls}" style="--c:${esc(r.color)}${gl(r).css}"><div class="tt-poda">${av(r)}</div><div class="tt-podn">${esc(r.name)}</div><div class="tt-podp" data-plain="1" data-count="${r.points}" data-delay="${600 + i * 200}">${r.points}</div><div class="tt-podb">${[2, 1, 3][i]}</div></div>` : '<div></div>')).join('');
         const fresh = paint(el, `<div class="tt-over"><h1 class="tt-wins">🏆 ${av(w)} ${esc(w.name)} wins!</h1><div class="tt-podium">${pod}</div>
           ${awardsHtml(f.awards.slice(0, 6))}${st.length > 3 ? `<div class="tt-rest">${st.slice(3).map((r, i) => `<span>${i + 4}. ${av(r)} ${esc(r.name)} <b>${r.points}</b></span>`).join('')}</div>` : ''}</div>`, 'over');
         if (fresh) countUp(el);

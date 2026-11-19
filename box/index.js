@@ -53,7 +53,9 @@ const defOf = (k) => (typeof k === 'string' ? (Object.prototype.hasOwnProperty.c
 // profiles.json; MT_PROFILE_STORE=memory keeps them in memory (tests).
 const defaultProfiles = () => new BoxProfileStore(process.env.MT_PROFILE_STORE === 'memory' ? null : path.join(__dirname, '..', '.data', 'box-profiles.json'));
 
-function installBox(app, io, { takenElsewhere = () => false, external = {}, profiles = defaultProfiles() } = {}) {
+// JustGold (docs/justgold.md): 'wallets' is JustMafia's ProfileStore (gold, items, the look);
+// walletBusy(walletId) says if that wallet is in a running JustMafia game (no shopping then).
+function installBox(app, io, { takenElsewhere = () => false, external = {}, profiles = defaultProfiles(), wallets = null, walletBusy = () => false } = {}) {
   const pub = path.join(__dirname, '..', 'public', 'box');
   app.get('/box/tv', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
   app.get('/box/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
@@ -65,6 +67,47 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
 
   const nsp = io.of('/box');
   const rooms = new Map();
+  // ---------- JustGold helpers ----------
+  const shared = { cos: require('../public/shared/cosmetics'), gear: (() => { try { return require('../public/shared/gear'); } catch (e) { return { GEAR: [] }; } })() };
+  const GEAR_IDS = () => new Set((shared.gear.GEAR || []).map((g) => g.id));
+  // Items the shared shop sells: the character (every game), flair, JustMafia's own things. The
+  // season pass, Fate and world rewards stay inside JustMafia.
+  const SHOP_FORBIDDEN = (itemId) => { const it = (shared.cos.CATALOG || []).find((i) => i.id === itemId); return it && (it.pass || it.world) ? { ok: false, error: 'That one is earned inside JustMafia (season pass / worlds).' } : null; };
+  const BOX_FIELDS = { character: ['outfit', 'shoeStyle', 'hat', 'accessory', 'hair'], flair: ['nameplate', 'effect'], mafia: ['houseStyle', 'houseDecor', 'deathAnim', 'reactions', 'ghostSkin'] };
+  const sectionOf = (field) => Object.keys(BOX_FIELDS).find((k) => BOX_FIELDS[k].includes(field)) || null;
+  const STOCKABLE_IDS = new Set((shared.cos.STOCKABLE || []).map((x) => x.id));
+  const { earnTable } = require('./gold');
+  function busyNow(accountId, w) {
+    for (const r of rooms.values()) if ((r.phase === 'game' || r.phase === 'show') && r.game && r.game.phase !== 'over' && [...r.players.values()].some((p) => p.profileId === accountId && !p.bot)) return true;
+    try { return !!walletBusy(w); } catch (e) { return false; }
+  }
+  function lockOf(p, i, owned, stock) {
+    if (owned.has(i.id) || i.free) return null;
+    if (i.pass) return 'Season pass reward (in JustMafia)';
+    if (i.world) return 'A JustMafia world reward';
+    if (i.achievement && !(p.achievements || []).includes(i.achievement)) return ((shared.cos.ACHIEVEMENTS || {})[i.achievement] || {}).label || 'Earn its achievement first';
+    if (i.requires && !owned.has(i.requires)) return 'Own the tier below first';
+    if (STOCKABLE_IDS.has(i.id) && !stock.has(i.id)) return 'Not on the shelf yet: every game you finish reveals more';
+    return null;
+  }
+  function shopState(prof, w) {
+    const p = wallets.data.profiles[w], owned = new Set(p.owned || []), stock = new Set(p.stock || []);
+    const catalog = (shared.cos.CATALOG || []).filter((i) => sectionOf(i.field)).map((i) => ({
+      id: i.id, field: i.field, value: i.value, name: i.name, cost: i.cost, free: !!i.free, section: sectionOf(i.field), category: i.category, description: i.description || '',
+      owned: owned.has(i.id) || !!i.free, lock: lockOf(p, i, owned, stock),
+    }));
+    const gearCatalog = (shared.gear.GEAR || []).map((g) => ({ ...g, owned: owned.has(g.id), equipped: !!(p.gear && p.gear[g.game] && p.gear[g.game][g.slot] === g.id) }));
+    return { name: prof.name, claimed: !!prof.claimed, gold: p.coins, earned: p.goldEarned, spent: p.goldSpent, look: wallets.validateAvatar(w, p.avatar || {}), lookSaved: !!p.lookSaved, home: p.home || null, owned: [...owned], gear: p.gear || {}, catalog, gearCatalog, ledger: (p.ledger || []).slice(0, 20), earn: earnTable(), busy: busyNow(prof.id, w) };
+  }
+  // A room player wears their account's look and gear.
+  function dressUp(p) {
+    if (!wallets || !p || !p.profileId) return;
+    const w = profiles.walletOf(p.profileId);
+    if (!w || !wallets.data.profiles[w]) { p.wallet = null; p.look = null; p.gear = {}; return; }
+    p.wallet = w; p.look = wallets.lookOf(w); p.gear = wallets.gearValues(w);
+  }
+  // After a purchase or a change: everyone wearing that account, in any room, updates.
+  function redress(accountId) { for (const r of rooms.values()) { let hit = false; for (const p of r.players.values()) if (p.profileId === accountId) { dressUp(p); hit = true; } if (hit) r.sync(); } }
   const find = (code) => rooms.get(String(code || '').trim().toUpperCase());
   const newCode = () => {
     const L = 'ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -78,7 +121,7 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
   // A room made from outside the box (JustMafia's "Play another game"): same as host:create.
   function createRoom(gameKey, { unlocks } = {}) {
     const def = GAMES[gameKey]; if (!def) return { ok: false, error: 'Unknown game.' };
-    const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true, profiles }));
+    const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true, profiles, wallets }));
     room.setUnlocks(unlocks);
     if (room.isLocked(def)) return { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim(), locked: true };
     rooms.set(room.code, room);
@@ -110,6 +153,7 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
     const linkProfile = (room, p, prof) => {
       if (!prof || !p) return;
       p.profileId = prof.id; p.title = profiles.titleOf(prof.id);
+      dressUp(p);
       if (!prof.claimed) profiles.setName(prof.id, p.name);
     };
     const audienceReply = (room, a, back) => ({ ok: true, audience: true, code: room.code, id: a.id, token: a.token, name: a.name, avatar: a.avatar, playNext: a.playNext, game: room.def.key, back: !!back, state: room.audienceState() });
@@ -125,7 +169,7 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
       if (lineup) lineup = [...lineup.filter((d) => !d.external), ...lineup.filter((d) => d.external)];
       if (lineup && lineup.length && lineup[0].external) return reply(cb, { ok: false, error: 'Add at least one more game to the party.' });
       const def = lineup && lineup.length ? lineup[0] : GAMES[msg.game]; if (!def) return reply(cb, { ok: false, error: 'Unknown game.' });
-      const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true, profiles }));
+      const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true, profiles, wallets }));
       room.setUnlocks(msg.unlocks);
       if (room.isLocked(def)) return reply(cb, { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim(), locked: true });
       if (lineup && lineup.length) room.setParty(lineup, msg.party.minutes, msg.party.flow);
@@ -192,6 +236,32 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
     // ---- lifetime profiles (box/profiles.js) ----
     // Every call carries the phone's { id, token }; nothing is kept on the socket.
     const profileView = (prof) => profiles.view(prof.id);
+    // ---------- JustGold: account <-> wallet, the shop ----------
+    const walletOfAuth = (auth) => { const prof = profileOf(auth); const w = prof && wallets ? profiles.walletOf(prof.id) : null; return { prof, w: w && wallets.data.profiles[w] ? w : null }; };
+    socket.on('account:wallet', (msg, cb) => {
+      if (!wallets) return reply(cb, { ok: false, error: 'The shop is closed.' });
+      const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: false, error: 'Make your character first.' });
+      let w = profiles.walletOf(prof.id); if (w && !wallets.data.profiles[w]) w = null;
+      const mafia = msg.mafia && typeof msg.mafia === 'object' ? wallets.authenticate(msg.mafia) : null;
+      if (w) return reply(cb, { ok: true, wallet: mafia && mafia.id === w ? { id: w, token: msg.mafia.token } : wallets.addDevice(w) });
+      // First time: this phone's JustMafia profile (gold, items, look) becomes the account's wallet,
+      // unless another account already has it; otherwise a fresh wallet.
+      if (mafia && !profiles.ownerOfWallet(mafia.id)) { profiles.setWallet(prof.id, mafia.id); return reply(cb, { ok: true, wallet: { id: mafia.id, token: msg.mafia.token }, linked: true }); }
+      const made = wallets.create(); profiles.setWallet(prof.id, made.id);
+      reply(cb, { ok: true, wallet: { id: made.id, token: made.token }, created: true });
+    });
+    socket.on('shop:state', (msg, cb) => { const { prof, w } = walletOfAuth(msg.auth); if (!w) return reply(cb, { ok: false, error: prof ? 'No wallet yet.' : 'Make your character first.', noWallet: !!prof }); reply(cb, { ok: true, ...shopState(prof, w) }); });
+    socket.on('shop:buy', (msg, cb) => shopDo(msg, cb, (w) => (GEAR_IDS().has(msg.itemId) ? wallets.buyGear(w, msg.itemId) : SHOP_FORBIDDEN(msg.itemId) || wallets.buy(w, msg.itemId))));
+    socket.on('shop:equip', (msg, cb) => shopDo(msg, cb, (w) => (GEAR_IDS().has(msg.itemId) ? wallets.equipGear(w, msg.itemId, msg.on !== false) : wallets.equip(w, msg.itemId, msg.on !== false))));
+    socket.on('shop:look', (msg, cb) => shopDo(msg, cb, (w) => { wallets.select(w, msg.look && typeof msg.look === 'object' && !Array.isArray(msg.look) ? msg.look : {}); const p = wallets.data.profiles[w]; p.lookSaved = true; wallets.save(); return { ok: true }; }));
+    function shopDo(msg, cb, fn) {
+      const { prof, w } = walletOfAuth(msg.auth); if (!w) return reply(cb, { ok: false, error: 'Make your character first.' });
+      if (typeof msg.itemId !== 'undefined' && typeof msg.itemId !== 'string') return reply(cb, { ok: false, error: 'Unknown item.' });
+      if (busyNow(prof.id, w)) return reply(cb, { ok: false, error: 'You can shop after this game.', busy: true });
+      const r = fn(w) || { ok: false };
+      if (r.ok) redress(prof.id);
+      reply(cb, { ok: !!r.ok, error: r.error, state: shopState(prof, w) });
+    }
     socket.on('profile:create', (msg, cb) => {
       if (!profiles) return reply(cb, { ok: false, error: 'Profiles are off on this server.' });
       const now = Date.now(); if (now - (socket.data.lastProfile || 0) < 1500) return reply(cb, { ok: false, error: 'One moment…' });

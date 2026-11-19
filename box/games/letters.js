@@ -8,6 +8,7 @@
 // (every category from one theme) and the final Double Letter round (two letters, double
 // points). Five scoring answers in a row: a 🔥 streak bonus. All categories are original.
 const { THEMES, CATS } = require('./letters-cats');
+const GEARS = require('../../public/shared/gear'); // JustGold per-game gear (pencils)
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
@@ -451,7 +452,7 @@ class LetterRush {
     const out = { ...this.base(), standings: this.standings().slice(0, this.phase === 'over' ? 12 : 10) };
     if (this.phase === 'write' || this.phase === 'roll') {
       const list = this.room.list();
-      out.progress = list.slice(0, 30).map((p) => { const sh = this.sheets.get(p.id); return { ...this.who(p.id), id: p.id, filled: sh ? sh.a.filter(Boolean).length : 0, done: !!(sh && sh.done) }; });
+      out.progress = list.slice(0, 30).map((p) => { const sh = this.sheets.get(p.id); return { ...this.who(p.id), id: p.id, filled: sh ? sh.a.filter(Boolean).length : 0, done: !!(sh && sh.done), gear: GEARS.gearSet(p, 'letters') }; }); // gear: { pencil } (shop gear)
       out.done = list.filter((p) => (this.sheets.get(p.id) || {}).done).length; out.of = list.length; out.more = Math.max(0, list.length - 30);
       out.first = this.firstDone ? this.who(this.firstDone) : null;
     }
@@ -462,7 +463,7 @@ class LetterRush {
   }
   view(p) {
     const st = this.standings(), me = this.stats.get(p.id) || {}, sh = this.sheets.get(p.id), R = this.rev;
-    const out = { ...this.base(), points: this.scores.get(p.id) || 0, rank: st.findIndex((x) => x.id === p.id) + 1, of: st.length, streak: me.streak || 0, max: ANSWER_MAX, gain: this.roundGain.get(p.id) || 0 };
+    const out = { ...this.base(), points: this.scores.get(p.id) || 0, rank: st.findIndex((x) => x.id === p.id) + 1, of: st.length, streak: me.streak || 0, max: ANSWER_MAX, gain: this.roundGain.get(p.id) || 0, gear: GEARS.gearSet(p, 'letters') }; // gear: your pencil (shop gear)
     if (this.phase === 'write' || this.phase === 'roll') { out.mine = sh ? sh.a : this.cats.map(() => ''); out.done = !!(sh && sh.done); }
     if (R) {
       const x = R.items.find((y) => y.id === p.id);

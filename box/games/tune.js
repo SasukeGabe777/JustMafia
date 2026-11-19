@@ -15,6 +15,8 @@
 // previews from iTunes or Deezer). Bots pick from BOT_SONGS below (no network in tests; on the
 // live server their previews are looked up in the background).
 const LIB = require('../songs');
+// Per-game gear (JustGold shop): each player's buzzer rides along in who() (TV chips) and view().gear (phone).
+const GEARS = require('../../public/shared/gear');
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
@@ -387,7 +389,7 @@ class Game {
     if (this.phase === 'reveal') return this.score();
     if (this.phase === 'score') return this.nextSong();
   }
-  who(id) { const p = this.room.get(id); return { id, name: this.room.name(id), avatar: p ? p.avatar : '🙂', color: p ? p.color : '#888' }; }
+  who(id) { const p = this.room.get(id); return { id, name: this.room.name(id), avatar: p ? p.avatar : '🙂', color: p ? p.color : '#888', gear: GEARS.gearSet(p, 'tune') }; }
   standings() { return [...this.points].filter(([id]) => this.room.get(id)).map(([id, pts]) => ({ ...this.who(id), points: pts })).sort((a, b) => b.points - a.points || a.name.localeCompare(b.name)); }
   results() { return this.phase === 'over' ? this.standings().map((r) => r.id) : []; }
 
@@ -461,7 +463,7 @@ class Game {
   }
   view(p) {
     const base = this.base(), st = this.standings(), rank = st.findIndex((r) => r.id === p.id) + 1;
-    const v = { ...base, me: p.id, points: this.points.get(p.id) || 0, rank, ofPlayers: st.length };
+    const v = { ...base, me: p.id, gear: GEARS.gearSet(p, 'tune'), points: this.points.get(p.id) || 0, rank, ofPlayers: st.length };
     if (this.phase === 'submit') {
       v.mine = this.mine(p.id).map((e) => ({ key: e.key, start: e.start, ...this.songPublic(e.song) }));
       v.ready = this.active().filter((q) => this.mine(q.id).length >= this.s.songs).length; v.players = this.active().length;

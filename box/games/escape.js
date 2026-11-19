@@ -14,6 +14,7 @@
 // (easy → medium → hard). Bots (and players who drop out) work their locks on a timer, and
 // whatever evidence they hold is shown to the others in that lock ("Bo read it out").
 const { ROOMS, LINES, TRAITS, SYMBOLS, COLORS } = require('./escape-rooms');
+const GEARS = require('../../public/shared/gear'); // JustGold gear: each detective's magnifier
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
@@ -387,7 +388,8 @@ class Game {
   }
 
   // ---------------- what the screens see ----------------
-  who(id) { const p = this.room.get(id) || {}; return { id, name: this.room.name(id), avatar: p.avatar || '🙂', color: p.color || '#fff', bot: !!p.bot }; }
+  // gear: the player's magnifier (shown next to their name on the TV case board and phones).
+  who(id) { const p = this.room.get(id) || {}; return { id, name: this.room.name(id), avatar: p.avatar || '🙂', color: p.color || '#fff', bot: !!p.bot, gear: GEARS.gearSet(p, 'escape') }; }
   roleData(L, r) {
     const d = { ...r.data };
     if (L.kind === 'maze') { const M = L.maze; if (r.part === 'map') Object.assign(d, { walls: M.walls, start: M.start, exit: M.exit, pos: M.pos }); else Object.assign(d, { bumps: M.bumps, bumpAt: M.bumpAt || 0, steps: (M.trail || []).length, atStart: M.pos === M.start }); }
@@ -421,7 +423,7 @@ class Game {
     };
   }
   view(p) {
-    const base = { phase: this.phase, room: this.roomTv(), endsIn: this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0, points: this.points.get(p.id) || 0, ready: this.ready.has(p.id), hintsOn: this.s.hints !== 'off', history: this.history };
+    const base = { phase: this.phase, room: this.roomTv(), endsIn: this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0, points: this.points.get(p.id) || 0, ready: this.ready.has(p.id), hintsOn: this.s.hints !== 'off', history: this.history, gear: GEARS.gearSet(p, 'escape') }; // gear: your magnifier
     if (this.phase === 'over') { const st = this.standings(); return { ...base, rank: st.findIndex((r) => r.id === p.id) + 1, of: st.length, stats: this.stat(p.id) }; }
     if (this.phase === 'story' || this.phase === 'outro') return { ...base, story: this.storyText(), outro: this.phase === 'outro' ? this.outro : null };
     const cards = [];

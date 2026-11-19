@@ -474,11 +474,28 @@
       kick: (id) => host('kick', { id }), pick: () => tvPicker(), back: () => { location.href = '/'; },
     };
   }
+  // JustGold faces in the designed lobbies: each game draws its roster with the player's emoji; where
+  // a player has a character, that emoji (in their chip, or a unique emoji in #roster) shows their face.
+  function faceRoster(root) {
+    if (!BOX.portrait || !root) return;
+    const roster = root.querySelector('#roster') || root;
+    const leafOf = (scope, emo) => [...scope.querySelectorAll('span, div, i, b, em')].find((e) => !e.children.length && e.textContent.trim() === emo);
+    for (const p of state.players) {
+      if (!p.look || !p.avatar) continue;
+      const chip = root.querySelector(`[data-kick="${CSS.escape(String(p.id))}"]`);
+      const unique = state.players.filter((q) => q.avatar === p.avatar).length === 1;
+      const leaf = chip ? leafOf(chip, p.avatar) : unique ? leafOf(roster, p.avatar) : null;
+      if (!leaf) continue;
+      const size = Math.max(22, Math.min(120, Math.round(parseFloat(getComputedStyle(leaf).fontSize || '24') * 1.75)));
+      leaf.innerHTML = BOX.portrait.html(p, size);
+    }
+  }
   function lobby() {
     const main = $('#tv-main');
     if (G.lobbyTv && !state.live) {
       if (rendered !== 'custom-lobby') { main.innerHTML = '<div id="lobby-area" class="lobby-area"></div>'; rendered = 'custom-lobby'; }
       try { G.lobbyTv($('#lobby-area'), lobbyApi()); } catch (e) { console.error(e); }
+      try { faceRoster($('#lobby-area')); } catch (e) { /* the emoji stays */ }
       return;
     }
     // Live-lobby games (JustRaiseDucks) show their world right away; the join panel sits beside it.
@@ -518,6 +535,7 @@
     $('#tv-switch').onclick = tvPicker;
     const q = $('#quit-title'); if (q) q.onclick = () => { if (confirm('Close this valley and go back to the title screen?')) quitToTitle(); };
   }
+  const partyFace = (r) => { const p = state.players.find((x) => x.id === r.id); return p && p.look && BOX.portrait ? BOX.portrait.html({ ...r, look: p.look }, 24) : esc(r.avatar || ''); };
   function updateJoin() {
     const url = joinUrl();
     $('#vip').innerHTML = state.vip ? `👑 <b>${esc(state.vip)}</b> is the host and can start from their phone` : 'The first person to join becomes the host 👑';
@@ -528,10 +546,10 @@
     $('#count').textContent = n ? `${n} player${n > 1 ? 's' : ''} in` : 'Waiting for players…';
     $('#roster-title').textContent = `Players (${n}/${state.max})`;
     $('#start').disabled = n < state.min;
-    $('#roster').innerHTML = state.players.map((p) => `<span class="chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove"><i style="background:${esc(p.color)}"></i><span class="av">${esc(p.avatar || '')}</span>${esc(p.name)}${p.title ? `<em class="ptitle">${esc(p.title)}</em>` : ''}</span>`).join('') || '<span class="muted">Scan the QR code to join.</span>';
+    $('#roster').innerHTML = state.players.map((p) => `<span class="chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove"><i style="background:${esc(p.color)}"></i><span class="av">${BOX.portrait ? BOX.portrait.html(p, 30) : esc(p.avatar || '')}</span>${esc(p.name)}${p.title ? `<em class="ptitle">${esc(p.title)}</em>` : ''}</span>`).join('') || '<span class="muted">Scan the QR code to join.</span>';
     const lu = $('#lineup'); if (lu) { const lh = state.partyMode && BOX.partyLineup ? BOX.partyLineup(state) : ''; if (lu.dataset.html !== lh) { lu.innerHTML = lh; lu.dataset.html = lh; } }
     const pp = $('#party');
-    if (pp) { const ph = state.played && state.played.length ? `<h3>🎉 Party points · ${state.played.length} game${state.played.length === 1 ? '' : 's'} tonight</h3><div class="board">${state.party.slice(0, 8).map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span class="av">${esc(r.avatar || '')}</span><span>${esc(r.name)}${r.wins ? ' ' + '🏆'.repeat(Math.min(3, r.wins)) : ''}</span><b>${r.pts}</b></div>`).join('')}</div><div class="played">${state.played.slice(-6).map((g) => `${esc(g.title)}${g.winner ? ': ' + esc(g.winner) : ''}`).join(' · ')}</div>` : ''; if (pp.dataset.html !== ph) { pp.innerHTML = ph; pp.dataset.html = ph; } }
+    if (pp) { const ph = state.played && state.played.length ? `<h3>🎉 Party points · ${state.played.length} game${state.played.length === 1 ? '' : 's'} tonight</h3><div class="board">${state.party.slice(0, 8).map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span class="av">${partyFace(r)}</span><span>${esc(r.name)}${r.wins ? ' ' + '🏆'.repeat(Math.min(3, r.wins)) : ''}</span><b>${r.pts}</b></div>`).join('')}</div><div class="played">${state.played.slice(-6).map((g) => `${esc(g.title)}${g.winner ? ': ' + esc(g.winner) : ''}`).join(' · ')}</div>` : ''; if (pp.dataset.html !== ph) { pp.innerHTML = ph; pp.dataset.html = ph; } }
     for (const c of document.querySelectorAll('[data-kick]')) c.onclick = () => { if (confirm('Remove this player?')) host('kick', { id: c.dataset.kick }); };
     // Settings form (keeps focus while the host is choosing).
     const box = $('#settings');

@@ -8,6 +8,7 @@
 // Special lockers: Sealed Bid (second-price), Mystery (no clues), Premium (better pool,
 // higher opening) and the final Grand Locker (double size). All content is in bid-items.js.
 const { ITEMS, THEMES, SETS, RARITIES, W_DEFAULT, PACKS } = require('./bid-items');
+const GEARS = require('../../public/shared/gear'); // JustGold per-game gear (bidding paddles)
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
@@ -539,8 +540,9 @@ class Bid {
     return {
       phase: this.phase, round: this.round, rounds: this.rounds(), endsIn: this.endsIn(), dur: this.dur, stage: this.stage,
       locker: this.publicLocker(), kind: this.locker ? this.locker.kind : null,
-      high: h ? { name: this.room.name(h.id), color: this.room.get(h.id).color, amount: h.amount } : null,
+      high: h ? { name: this.room.name(h.id), color: this.room.get(h.id).color, amount: h.amount, gear: GEARS.gearSet(this.room.get(h.id), 'bid') } : null,
       bidCount: this.bids.length, sale: this.sale, reveal: this.revealState(),
+      saleGear: this.sale && this.sale.id ? GEARS.gearSet(this.room.get(this.sale.id), 'bid') : null, // the buyer's paddle (shop gear)
       loanAmt: this.loanAmt(), loansOn: this.loansOn(),
     };
   }
@@ -550,9 +552,9 @@ class Bid {
     s.players = stand.length;
     if (this.phase === 'auction') {
       const bs = this.bidders();
-      s.top = bs.slice(0, 3).map((b) => ({ name: this.room.name(b.id), color: this.room.get(b.id).color, amount: b.amount }));
+      s.top = bs.slice(0, 3).map((b) => ({ name: this.room.name(b.id), color: this.room.get(b.id).color, amount: b.amount, gear: GEARS.gearSet(this.room.get(b.id), 'bid') }));
       s.bidders = bs.length;
-      s.ticker = this.bids.slice(-8).reverse().filter((b) => this.room.get(b.id)).map((b) => ({ name: this.room.name(b.id), color: this.room.get(b.id).color, amount: b.amount }));
+      s.ticker = this.bids.slice(-8).reverse().filter((b) => this.room.get(b.id)).map((b) => ({ name: this.room.name(b.id), color: this.room.get(b.id).color, amount: b.amount, gear: GEARS.gearSet(this.room.get(b.id), 'bid') }));
     }
     if (this.phase === 'sealed') {
       const elig = this.room.list().filter((p) => !this.st.get(p.id)?.waiting);
@@ -579,6 +581,7 @@ class Bid {
     }
     if (this.phase === 'sealed') { const b = this.sealed.get(p.id); s.mySealed = b ? b.amount : null; s.minBid = this.locker.opening; }
     s.mine = this.sale && this.sale.id === p.id;
+    s.gear = GEARS.gearSet(p, 'bid'); // your paddle (shop gear)
     // The collection: items you own, and how close each set is to its bonus.
     const count = {};
     for (const it of st.items) if (it.set) count[it.set] = (count[it.set] || 0) + 1;

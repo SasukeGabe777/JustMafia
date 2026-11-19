@@ -34,7 +34,7 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     store.stockItems(g.id, ['houseStyle:darkMansion', 'hat:hood']); // on the shelves for this player
     assert.equal(P().coins, 0); assert.equal(P().goldEarned, 0); assert.equal(P().goldSpent, 0);
     const before = JSON.stringify(P());
-    const poor = store.buy(g.id, 'houseStyle:darkMansion'); assert.equal(poor.ok, false); assert.match(poor.error, /Not enough gold/);
+    const poor = store.buy(g.id, 'houseStyle:darkMansion'); assert.equal(poor.ok, false); assert.match(poor.error, /Not enough JustGold/);
     assert.equal(JSON.stringify(P()), before, 'failed purchase leaves gold and inventory unchanged');
     assert(store.award(g.id, 'g-1', { won: true, alive: true, team: 'town', metrics: { abilities: 1 } }));
     const earned = P().coins; assert(earned > 0); assert.equal(P().goldEarned, earned); assert.equal(P().ledger[0].reason, 'Game reward');

@@ -28,6 +28,13 @@
   const ends = {};
   const timer = (key, endsIn) => { if (!endsIn) return ''; if (!ends[key]) ends[key] = Date.now() + endsIn; return `<span class="timer cm-timer" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span>`; };
   const av = (x) => esc((x && x.avatar) || '🙂');
+  // Shop gear (public/shared/gear.js, slot colormatch/easel): the frame around a player's mix on
+  // the reveal and their gallery frame at the end. fr(x) → { cls, css }; empty with no gear.
+  const GPAT = (p) => ({ stripes: `repeating-linear-gradient(45deg,${p.a} 0 8px,${p.b} 8px 16px)`, dots: `radial-gradient(circle,${p.c || p.b} 22%,transparent 24%) 0 0/9px 9px,radial-gradient(circle,${p.b} 22%,${p.a} 24%) 4px 4px/9px 9px`, swirl: `conic-gradient(from 30deg,${p.a},${p.b},${p.a},${p.b},${p.a})`, check: `repeating-conic-gradient(${p.a} 0 25%,${p.b} 0 50%) 0 0/12px 12px` }[p.pattern] || `linear-gradient(135deg,${p.a},${p.b},${p.a})`);
+  const fr = (x) => {
+    const p = window.MT_GEAR && x ? MT_GEAR.paint('colormatch', 'easel', x.gear) : null;
+    return p ? { cls: ' gear' + (p.glow ? ' glow' : ''), css: `;--ga:${esc(p.a)};--gb:${esc(p.b)};--gpat:${esc(GPAT(p))}` } : { cls: '', css: '' };
+  };
   function haptic(ctx, kind) { try { if (ctx.haptic) ctx.haptic(kind); else if (ctx.vibrate) ctx.vibrate(kind === 'tap' ? 8 : 40); } catch { /* no vibration */ } }
   const felt = {};
   const feel = (ctx, chan, key, kind) => { if (felt[chan] === key) return; felt[chan] = key; haptic(ctx, kind); };
@@ -127,7 +134,7 @@
     }
     const pct = r.kind === 'odd' ? (e.correct ? '✓' : '✗') : `${e.pct}<small>%</small>`;
     return `<div class="cm-card ${i === 0 ? 'top' : ''} ${e.perfect ? 'perfect' : ''}" style="animation-delay:${delay}ms">
-      <span class="cm-rank">${i === 0 ? '👑' : i + 1}</span><div class="cm-sws">${sw}</div>
+      <span class="cm-rank">${i === 0 ? '👑' : i + 1}</span><div class="cm-sws${fr(e).cls}" style="${fr(e).css.slice(1)}">${sw}</div>
       <div class="cm-who"><b>${av(e)} ${esc(e.name)}</b><span>${meta}</span></div>
       <div class="cm-pct" aria-label="${r.kind === 'odd' ? '' : e.pct + ' percent match'}">${pct}${r.kind === 'odd' ? '' : '<em>match</em>'}</div>
       <div class="cm-gain">+${e.pts.toLocaleString('en-US')}${e.perfect ? `<span class="cm-perf">✨ ${r.kind === 'odd' ? 'SPOT ON' : 'PERFECT'}${e.combo > 1 ? ` 🔥×${e.combo}` : ''}</span>` : ''}</div>
@@ -147,7 +154,7 @@
   }
   function tvOver(s) {
     const f = s.final || { awards: [], palette: [] }, st = s.standings, order = [1, 0, 2];
-    const pod = order.filter((i) => st[i]).map((i) => `<div class="cm-frame p${i + 1}" style="--c:${esc(st[i].color || '#888')};animation-delay:${[0.9, 0.3, 1.3][i]}s"><div class="cm-canvas"><span>${av(st[i])}</span></div><div class="cm-plaque"><b>${['🥇', '🥈', '🥉'][i]} ${esc(st[i].name)}</b><span>${st[i].points.toLocaleString('en-US')} pts</span></div></div>`).join('');
+    const pod = order.filter((i) => st[i]).map((i) => `<div class="cm-frame p${i + 1}${fr(st[i]).cls}" style="--c:${esc(st[i].color || '#888')};animation-delay:${[0.9, 0.3, 1.3][i]}s${fr(st[i]).css}"><div class="cm-canvas"><span>${av(st[i])}</span></div><div class="cm-plaque"><b>${['🥇', '🥈', '🥉'][i]} ${esc(st[i].name)}</b><span>${st[i].points.toLocaleString('en-US')} pts</span></div></div>`).join('');
     const aw = f.awards.map((a, i) => `<div class="cm-award" style="animation-delay:${2 + i * 0.3}s"><div class="ic">${a.icon}</div><div class="t">${esc(a.title)}</div><div class="nm">${av(a)} ${esc(a.name)}</div><div class="tx">${esc(a.text)}</div></div>`).join('');
     const pal = f.palette.map((p, i) => `<div class="cm-pchip" style="animation-delay:${0.2 + i * 0.08}s"><i style="background:${bg(p.c)}"></i><span>${i + 1}</span></div>`).join('');
     const rest = st.slice(3, 12).map((r, i) => `<div class="cm-brow"><span class="n">${i + 4}</span><span>${av(r)} ${esc(r.name)}</span><b>${r.points.toLocaleString('en-US')}</b></div>`).join('');

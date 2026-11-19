@@ -288,6 +288,8 @@
     },
 
     phone(el, v, ctx, full) {
+      // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+      if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, full, 'spectrum');
       if (!v || dragging) return; // never repaint under a finger
       const color = (full && full.me && full.me.color) || '#ffd23f', sp = v.spec;
       const head = `<div class="sp-me"><span>🏅 ${v.points} pts · #${v.rank || '-'}</span><span class="muted">Round ${v.n}/${v.total}</span></div>`;

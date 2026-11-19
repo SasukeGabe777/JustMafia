@@ -287,3 +287,14 @@ body.g-trivia #game .tt-awards.mine::before { content: 'Your awards'; grid-colum
   .ttl { grid-template-columns: 1fr; grid-template-areas: 'logo' 'pass' 'desk' 'floor' 'party'; }
   .ttl-line { grid-template-columns: 1fr; }
 }
+
+/* Shop gear: podium lights (public/shared/gear.js, slot trivia/podium). --ga/--gb are the light's
+   colours; only players with gear equipped get the .gear class. */
+.tt-lock.gear { border-color: var(--ga); opacity: 0.8; }
+.tt-lock.gear.in { border-color: var(--ga); background: color-mix(in srgb, var(--ga) 28%, transparent); box-shadow: 0 0 18px var(--ga), inset 0 0 10px var(--gb); }
+.tt-lock.gear.in i { background: radial-gradient(circle, var(--gb), var(--ga)); }
+.tt-lock.gear.glow.in { animation: ttLockIn 0.4s both, ttGearGlow 1.6s ease-in-out 0.4s infinite alternate; }
+.tt-lock .gi, .tt-pod .gi { font-style: normal; font-size: 14px; }
+.tt-picker.gear { border-left-color: var(--ga); box-shadow: 0 0 10px color-mix(in srgb, var(--ga) 70%, transparent); }
+.tt-pod.gear .tt-poda { border-radius: 50%; padding: 4px 10px; box-shadow: 0 0 0 4px var(--ga), 0 0 28px var(--gb); background: color-mix(in srgb, var(--ga) 25%, transparent); }
+@keyframes ttGearGlow { from { box-shadow: 0 0 10px var(--ga); } to { box-shadow: 0 0 26px var(--ga), 0 0 6px var(--gb); } }

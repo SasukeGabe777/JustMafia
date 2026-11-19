@@ -119,11 +119,13 @@
   function namePlate(g, name, P, o = {}) {
     A().plate(g, P.x, P.y + 14 + P.lv * P.step, name, { color: o.color, px: P.px, max: P.pmax, bg: o.bg, icon: o.icon });
   }
+  // JustGold gear: the survivor's bandana paint, or null (no bandana: the default look).
+  const bandanaOf = (p) => (window.MT_GEAR && p ? MT_GEAR.paint('zombie', 'bandana', p.gear) : null);
   function crowd(g, list, t, o = {}) {
     const Z = A(), L = rowLayout(list.length, { max: o.max || 24, scale: o.scale, y: o.y });
     for (const P of L) {
       const p = list[P.i];
-      Z.survivor(g, P.x, P.y, P.s, t, { avatar: p.avatar, color: p.color, pose: o.pose || 'idle', ph: P.i * 1.7, tint: p.status === 'bitten' ? 'sick' : null, dir: P.i % 2 ? -1 : 1 });
+      Z.survivor(g, P.x, P.y, P.s, t, { avatar: p.avatar, color: p.color, pose: o.pose || 'idle', ph: P.i * 1.7, tint: p.status === 'bitten' ? 'sick' : null, dir: P.i % 2 ? -1 : 1, bandana: bandanaOf(p) });
       if (p.status === 'bitten') Z.glow(g, P.x, P.y - 120 * P.s, 90 * P.s, 'rgba(140,255,90,A)', 0.25 + 0.15 * Math.sin(t * 4 + P.i));
       const b = p.status === 'hurt' ? '🩹' : p.status === 'bitten' ? '🦷' : null;
       if (b) Z.emoji(g, b, P.x + 36 * P.s, P.y - 200 * P.s, 30 + 20 * P.s);
@@ -275,7 +277,7 @@
       if (!hidden && alpha > 0) {
         if (lean) { g.save(); g.translate(x, y); g.rotate(lean); g.translate(-x, -y); }
         if (a === 'swim') { Z.emoji(g, p.avatar, x, y - 30 * P.s, 90 * P.s, F === 'bitten' ? 'sick' : null); g.strokeStyle = 'rgba(220,240,255,0.8)'; g.lineWidth = 5; g.beginPath(); g.ellipse(x, y + 8, 60 * P.s, 12, 0, 0, Math.PI * 2); g.stroke(); }
-        else Z.survivor(g, x, y, P.s, t, { avatar: p.avatar, color: p.color, pose, ph: i * 1.3, tint: F === 'bitten' ? 'sick' : null, crouch, alpha, dir, lean: 0, item: a === 'search' && F && p.got && !bad ? null : item });
+        else Z.survivor(g, x, y, P.s, t, { avatar: p.avatar, color: p.color, pose, ph: i * 1.3, tint: F === 'bitten' ? 'sick' : null, crouch, alpha, dir, lean: 0, item: a === 'search' && F && p.got && !bad ? null : item, bandana: bandanaOf(p) });
         if (lean) g.restore();
       }
       if (F === 'bitten') Z.glow(g, x, y - 120 * P.s, 110 * P.s, 'rgba(140,255,90,A)', 0.35);
@@ -330,7 +332,7 @@
         Z.zombie(g, P.x, P.y, P.s * 0.95, t, { seed: P.i + 7, dir: P.i % 2 ? -1 : 1 });
         Z.emoji(g, p.avatar, P.x + 4 * P.s * (P.i % 2 ? -1 : 1), P.y - 188 * P.s, 74 * P.s, 'sick');
       } else {
-        Z.survivor(g, P.x + (done ? 0 : Math.sin(t * 30 + P.i) * 3), P.y, P.s, t, { avatar: p.avatar, color: p.color, pose: done ? 'cheer' : 'idle', ph: P.i, tint: done ? null : 'sick' });
+        Z.survivor(g, P.x + (done ? 0 : Math.sin(t * 30 + P.i) * 3), P.y, P.s, t, { avatar: p.avatar, color: p.color, pose: done ? 'cheer' : 'idle', ph: P.i, tint: done ? null : 'sick', bandana: bandanaOf(p) });
         if (!done) Z.glow(g, P.x, P.y - 130 * P.s, 120 * P.s, 'rgba(140,255,90,A)', 0.3 + 0.2 * Math.sin(t * 6));
         else { const k = clamp(rv / 700); Z.emoji(g, p.how || '🩹', P.x + 50, P.y - 220 * P.s - k * 40, 64); Z.glow(g, P.x, P.y - 120 * P.s, 160, 'rgba(255,255,200,A)', 0.4 * (1 - k)); }
       }
@@ -537,7 +539,10 @@
     const calm = v.phase === 'chapter' || v.phase === 'choose' || v.phase === 'board';
     const hints = me.alive && calm && me.items && me.items.length ? `<div class="zs-hints">${me.items.map((i) => `<span><b>${i.icon} ${esc(i.name)}${i.n != null && i.unit ? ` (${i.n} ${esc(i.unit)})` : ''}</b> ${esc(i.hint || '')}</span>`).join('')}</div>` : '';
     const story = me.flags && me.flags.length ? `<div class="zs-story"><span class="lb">📜</span>${me.flags.map((f) => `<span class="zs-badge ${f.bad ? 'bad' : ''}">${f.icon} ${esc(f.label)}</span>`).join('')}</div>` : '';
-    return `<div class="zs-phead"><span class="zs-stat ${me.alive ? me.status : 'ghost'}">${ic} ${word}</span><span class="zs-pts">⭐ ${me.pts || 0}</span><span class="zs-scn">Day ${v.chapter.day} · ${v.n}/${v.total}</span></div>${me.alive ? `<div class="zs-pack"><span class="lb">🎒</span>${slots}</div>${hints}` : ''}${me.alive && calm ? story : ''}`;
+    // Your gear bandana (JustGold shop), as a little knot next to your status.
+    const bd = me.alive ? bandanaOf(me) : null;
+    const knot = bd ? `<svg class="zs-bandana" width="34" height="22" viewBox="0 0 34 22" aria-hidden="true" style="vertical-align:middle;margin-right:4px${bd.glow ? `;filter:drop-shadow(0 0 4px ${esc(bd.a || '#fff')})` : ''}"><path d="M4 6 Q17 1 30 6 L30 13 Q17 8 4 13 Z" fill="${esc(bd.a || '#d0302a')}" stroke="#1a1a1a" stroke-width="1.6"/><path d="M4 9 L0 18 L5 16 L7 20 L8 11 Z" fill="${esc(bd.a || '#d0302a')}" stroke="#1a1a1a" stroke-width="1.4"/>${bd.pattern === 'dots' ? `<circle cx="11" cy="7.5" r="1.4" fill="${esc(bd.b || '#fff')}"/><circle cx="17" cy="6.5" r="1.4" fill="${esc(bd.b || '#fff')}"/><circle cx="23" cy="7.5" r="1.4" fill="${esc(bd.b || '#fff')}"/>` : bd.pattern === 'stripes' ? `<path d="M10 11 L13 4 M17 10 L20 3.5 M24 11 L27 4.5" stroke="${esc(bd.b || '#fff')}" stroke-width="2.2"/>` : ''}</svg>` : '';
+    return `<div class="zs-phead"><span class="zs-stat ${me.alive ? me.status : 'ghost'}">${knot}${ic} ${word}</span><span class="zs-pts">⭐ ${me.pts || 0}</span><span class="zs-scn">Day ${v.chapter.day} · ${v.n}/${v.total}</span></div>${me.alive ? `<div class="zs-pack"><span class="lb">🎒</span>${slots}</div>${hints}` : ''}${me.alive && calm ? story : ''}`;
   }
   function phone(el, v, ctx, outer) {
     if (!v) return;

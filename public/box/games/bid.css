@@ -270,3 +270,10 @@
 .sl-bid .sl-pn { position: relative; margin-top: 30px; font: 700 15px 'Fredoka', sans-serif; color: #fff; background: rgba(0, 0, 0, 0.6); padding: 1px 8px; border-radius: 8px; max-width: 110px; overflow: visible; white-space: nowrap; }
 .sl-bid .sl-pn::before { content: ''; position: absolute; left: 50%; top: -32px; width: 8px; height: 32px; margin-left: -4px; background: #8a5528; }
 @keyframes slPaddle { 0%, 70%, 100% { transform: translateY(0) rotate(0); } 80% { transform: translateY(-18px) rotate(-6deg); } 90% { transform: translateY(-10px) rotate(4deg); } }
+/* JustGold gear: bidding paddles next to bidders (TV) and on your phone. */
+.jb-paddle { display: inline-block; width: 0.9em; height: 1.35em; vertical-align: -0.3em; margin-right: 0.2em; transform: rotate(-12deg); filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4)); }
+.jb-paddle.big { width: 1.3em; height: 1.95em; vertical-align: -0.55em; animation: jbPaddleUp 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.jb-paddle.glow { filter: drop-shadow(0 0 6px var(--pg)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4)); }
+@keyframes jbPaddleUp { from { transform: translateY(30%) rotate(-12deg); } to { transform: rotate(-12deg); } }
+.jb-mypaddle { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; font-size: 22px; opacity: 0.9; }
+.jb-mypaddle small { font-size: 13px; }

@@ -27,6 +27,9 @@
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const short = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
   const kname = (k) => (k ? String(k.name).replace(/'s Kingdom$/, '') : '');
+  // Shop gear (public/shared/gear.js, slot kingdoms/crest): the emblem on a kingdom's castle flag and
+  // army banners. null (the plain flag) without gear; owner colours stay as they are (identity).
+  const crestOf = (k) => (k && window.MT_GEAR ? MT_GEAR.paint('kingdoms', 'crest', k.gear) : null);
 
   // ---------- TV state kept between updates ----------
   const kv = {
@@ -245,7 +248,7 @@
     const leadId = ks.length ? ks.reduce((a, b) => (b.score > a.score ? b : a)).id : null;
     for (const k of sortedK) {
       const [x, y] = capXY.get(k.id), F = art.castleFlag(x, y, S, Math.max(1, Math.min(5, k.age || 1)));
-      art.flag(g, F.x, F.y, F.h, k.color, t + k.seat * 0.7, F.big);
+      art.flag(g, F.x, F.y, F.h, k.color, t + k.seat * 0.7, F.big, crestOf(k)); // crestOf: the owner's shop-gear emblem (or none)
       const rk = rockets.get(k.id);
       if (k.stage > 0 || k.building || rk) {
         const px = x + S * 0.95, py = y + S * 0.45;
@@ -270,7 +273,7 @@
     }
     live.sort((a, b) => a[1] - b[1]);
     const armyScale = Math.min(48, Math.max(S * 1.05, 18));
-    for (const [x, y, a, col] of live) art.drawArmy(g, x, y, armyScale, col, a.kind, a.n, t + (a.id ? String(a.id).length : 0), !a.o);
+    for (const [x, y, a, col] of live) art.drawArmy(g, x, y, armyScale, col, a.kind, a.n, t + (a.id ? String(a.id).length : 0), !a.o, a.o ? crestOf(kv.kById.get(a.o)) : null);
     // battles: clash bursts (last ~8 s) and local fx bursts
     for (const b of s.battles || []) {
       const age = (now - b.at) / 1000; if (age < 0 || age > 8) continue;
@@ -369,7 +372,7 @@
     const ks = s.kingdoms.slice().sort((a, b) => b.score - a.score), big = ks.length > 12, shown = big ? ks.slice(0, 10) : ks;
     const allies = new Map((s.alliances || []).map((A2) => [A2.id, A2]));
     const atWar = new Set(); for (const w of s.wars || []) if (w.ago < 60000) { atWar.add(w.a); atWar.add(w.b); }
-    const list = `<div class="kt-lh">👑 Kingdoms${big ? ` <small>top 10 of ${ks.length}</small>` : ''}</div>${shown.map((k, i) => `<div class="kt-row${k.gone ? ' gone' : ''}"><span class="n">${i + 1}</span><i class="sw" style="background:${esc(k.color)}"></i><span class="nm">${k.avatar ? esc(k.avatar) + ' ' : ''}${esc(short(kname(k), 15))}</span><span class="tags">${atWar.has(k.id) ? '⚔️' : ''}${k.marked ? '🎯' : ''}${k.bounty ? '💰' : ''}${k.ally && allies.has(k.ally) ? `<em class="al" style="background:${A().allyColor(k.ally)}">🤝</em>` : ''}${k.vassalOf ? '⛓️' : ''}${k.traitor ? '🗡️' : ''}${k.stage ? '🚀' + k.stage : ''}</span><span class="ag" title="${AGE_NAME[k.age]}">${AGE_ICON[k.age] || ''}</span><b>${k.score}</b></div>`).join('')}`;
+    const list = `<div class="kt-lh">👑 Kingdoms${big ? ` <small>top 10 of ${ks.length}</small>` : ''}</div>${shown.map((k, i) => `<div class="kt-row${k.gone ? ' gone' : ''}"><span class="n">${i + 1}</span><i class="sw" style="background:${esc(k.color)}"></i><span class="nm">${k.avatar ? esc(k.avatar) + ' ' : ''}${esc(short(kname(k), 15))}${crestOf(k) ? ' ' + esc(crestOf(k).icon) : ''}</span><span class="tags">${atWar.has(k.id) ? '⚔️' : ''}${k.marked ? '🎯' : ''}${k.bounty ? '💰' : ''}${k.ally && allies.has(k.ally) ? `<em class="al" style="background:${A().allyColor(k.ally)}">🤝</em>` : ''}${k.vassalOf ? '⛓️' : ''}${k.traitor ? '🗡️' : ''}${k.stage ? '🚀' + k.stage : ''}</span><span class="ag" title="${AGE_NAME[k.age]}">${AGE_ICON[k.age] || ''}</span><b>${k.score}</b></div>`).join('')}`;
     const lEl = kv.el.querySelector('#kt-list');
     if (lEl.dataset.html !== list) { lEl.innerHTML = list; lEl.dataset.html = list; }
     sidePanels(s, pr);

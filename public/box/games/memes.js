@@ -674,6 +674,10 @@
   const PINS = ['#ff4f5a', '#ffd23f', '#3fa9ff', '#3ddc84', '#b77bff'];
   const pin = (k) => `<i class="mm-pin" style="--pc:${PINS[hash(k) % PINS.length]}"></i>`;
   const img = (m, scale, cls = '', extra = '') => `<img class="mm-img ${cls}" alt="meme" src="${url(m, { scale })}" ${extra}>`;
+  // Shop gear (public/shared/gear.js, slot memes/frame): the author's frame around a meme. Only used
+  // where the author is already shown (results after the vote, the gallery); voting stays anonymous.
+  const GPAT = (p) => ({ stripes: `repeating-linear-gradient(45deg,${p.a} 0 10px,${p.b} 10px 20px)`, dots: `radial-gradient(circle,${p.b} 28%,${p.a} 31%) 0 0/10px 10px` }[p.pattern] || `linear-gradient(135deg,${p.a},${p.b},${p.a})`);
+  const fimg = (m, scale, cls = '') => { const p = window.MT_GEAR && m.by ? MT_GEAR.paint('memes', 'frame', m.by.gear) : null; return p ? img(m, scale, `${cls} gear${p.glow ? ' glow' : ''}`, `style="--ga:${esc(p.a)};--gb:${esc(p.b)};--gpat:${esc(GPAT(p))}"`) : img(m, scale, cls); };
   const KIND_ICON = { free: '✏️', same: '👯', prompt: '💬', remix: '🔁', final: '👑' };
 
   // ---------- TV lobby: a corkboard; every setting is a meme printout you can tap ----------
@@ -764,12 +768,12 @@
   function tvResult(s) {
     const L = s.last; if (!L) return '';
     if (L.none) return `<div class="mm-result"><div class="mm-callout big">😶 Nobody posted a meme! Next round…</div></div>`;
-    if (!L.winners.length) return `<div class="mm-result"><div class="mm-callout big">🤷 No votes this time!</div><div class="mm-others">${L.all.slice(0, 8).map((a) => `<div class="mm-ocard">${img(a, 0.4)}<div class="mm-by">${nm(a.by)}</div></div>`).join('')}</div></div>`;
-    const wins = L.winners.map((w, i) => `<div class="mm-winner ${L.final ? 'gold' : ''}" style="--d:${i * 0.3}s">${pin(w.id)}${img(w, L.winners.length > 1 ? 0.75 : 1.05)}<div class="mm-stamp">${L.final ? 'MEME OF THE NIGHT' : 'WINNER'}</div>${w.unan ? '<div class="mm-stamp unan">UNANIMOUS!</div>' : ''}
+    if (!L.winners.length) return `<div class="mm-result"><div class="mm-callout big">🤷 No votes this time!</div><div class="mm-others">${L.all.slice(0, 8).map((a) => `<div class="mm-ocard">${fimg(a, 0.4)}<div class="mm-by">${nm(a.by)}</div></div>`).join('')}</div></div>`;
+    const wins = L.winners.map((w, i) => `<div class="mm-winner ${L.final ? 'gold' : ''}" style="--d:${i * 0.3}s">${pin(w.id)}${fimg(w, L.winners.length > 1 ? 0.75 : 1.05)}<div class="mm-stamp">${L.final ? 'MEME OF THE NIGHT' : 'WINNER'}</div>${w.unan ? '<div class="mm-stamp unan">UNANIMOUS!</div>' : ''}
       <div class="mm-credit">${nm(w.by)}${w.co ? ` <small>started by ${nm(w.co)}</small>` : ''}<span>${plural(w.votes, 'vote')}${L.final ? ' · +1000' : w.unan ? ' · +500 bonus' : ''}</span></div></div>`).join('');
     const others = L.all.filter((a) => !a.win);
     return `<div class="mm-result" id="mmr-${s.round}"><div class="mm-wins n${L.winners.length}">${wins}</div>
-      ${others.length ? `<div class="mm-others">${others.slice(0, 6).map((a) => `<div class="mm-ocard" style="--tl:${tilt(a.id, 4).toFixed(1)}deg">${img(a, 0.32)}<div class="mm-by">${nm(a.by)}${a.co ? ' + ' + nm(a.co) : ''}<b>${a.votes} 🗳️</b></div></div>`).join('')}${others.length > 6 || L.more ? `<div class="mm-more">+${others.length - 6 + (L.more || 0)} more</div>` : ''}</div>` : ''}</div>`;
+      ${others.length ? `<div class="mm-others">${others.slice(0, 6).map((a) => `<div class="mm-ocard" style="--tl:${tilt(a.id, 4).toFixed(1)}deg">${fimg(a, 0.32)}<div class="mm-by">${nm(a.by)}${a.co ? ' + ' + nm(a.co) : ''}<b>${a.votes} 🗳️</b></div></div>`).join('')}${others.length > 6 || L.more ? `<div class="mm-more">+${others.length - 6 + (L.more || 0)} more</div>` : ''}</div>` : ''}</div>`;
   }
   let gallery = [];
   function tvOver(el, s) {
@@ -780,7 +784,7 @@
       <div class="mm-champ"><div class="mm-champl">Top meme lord</div><h2>${nm(w)}</h2>${w ? `<div class="mm-pts">${w.points} points</div>` : ''}</div>
       ${awards ? `<div class="mm-awards">${awards}</div>` : ''}
       <div class="mm-galh">🖼️ The gallery <small>click ⬇ to download a meme as a PNG</small></div>
-      <div class="mm-gallery">${gallery.map((m, i) => `<figure class="mm-gal ${m.motn ? 'motn' : ''}" style="--tl:${tilt(m.id, 3).toFixed(1)}deg;--d:${0.2 + i * 0.07}s">${pin(m.id)}${img(m, 0.42)}<figcaption>${m.motn ? '👑 ' : m.win ? '🏆 ' : ''}${nm(m.by)}${m.co ? ' + ' + nm(m.co) : ''}<button class="mm-dl" data-dl="${esc(m.id)}" title="Download PNG">⬇</button></figcaption></figure>`).join('')}</div>
+      <div class="mm-gallery">${gallery.map((m, i) => `<figure class="mm-gal ${m.motn ? 'motn' : ''}" style="--tl:${tilt(m.id, 3).toFixed(1)}deg;--d:${0.2 + i * 0.07}s">${pin(m.id)}${fimg(m, 0.42)}<figcaption>${m.motn ? '👑 ' : m.win ? '🏆 ' : ''}${nm(m.by)}${m.co ? ' + ' + nm(m.co) : ''}<button class="mm-dl" data-dl="${esc(m.id)}" title="Download PNG">⬇</button></figcaption></figure>`).join('')}</div>
     </section>${scoreboard(s.standings)}</div>`);
     for (const b of el.querySelectorAll('[data-dl]')) b.onclick = () => { const m = gallery.find((x) => x.id === b.dataset.dl); if (m) BOX.memes.download(m, `meme-${m.by ? m.by.name : 'night'}`); BOX.sfx('pop'); };
   }

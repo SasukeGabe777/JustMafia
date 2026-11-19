@@ -140,13 +140,35 @@
     if (last) { g.fillStyle = '#fff'; g.beginPath(); g.arc(last[0], last[1], 9, 0, TAU); g.fill(); }
     g.restore();
   }
+  // o.gear: the owner's ball skin (JustGold shop gear). Its paint replaces the plain colour; a ring in
+  // the player's colour keeps the ball recognisable. No gear (or an unknown one): the classic ball.
   function drawBall(g, x, y, r, color, o = {}) {
+    const pt = o.gear && window.MT_GEAR ? window.MT_GEAR.paint('plinko', 'ball', o.gear) : null;
+    if (pt) return drawSkinBall(g, x, y, r, color, o, pt);
     g.save();
     if (o.glow) { g.shadowColor = color; g.shadowBlur = o.glow; }
     const gr = g.createRadialGradient(x - r * 0.4, y - r * 0.45, r * 0.1, x, y, r);
     gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.25, color); gr.addColorStop(1, shade(color, -0.55));
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); g.restore();
     g.lineWidth = Math.max(2, r * 0.14); g.strokeStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.arc(x, y, r, 0, TAU); g.stroke();
+    if (o.sticky) { g.fillStyle = 'rgba(255,190,40,0.75)'; g.beginPath(); g.arc(x + r * 0.3, y + r * 0.4, r * 0.35, 0, TAU); g.fill(); }
+  }
+  function drawSkinBall(g, x, y, r, color, o, pt) {
+    g.save();
+    if (o.glow || pt.glow) { g.shadowColor = pt.glow ? pt.a : color; g.shadowBlur = (o.glow || 10) * (pt.glow ? 1.6 : 1); }
+    const gr = g.createRadialGradient(x - r * 0.4, y - r * 0.45, r * 0.1, x, y, r);
+    gr.addColorStop(0, pt.c || '#ffffff'); gr.addColorStop(0.3, pt.a); gr.addColorStop(1, pt.b || shade(pt.a, -0.55));
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); g.shadowBlur = 0;
+    g.beginPath(); g.arc(x, y, r * 0.96, 0, TAU); g.clip();
+    const p = pt.pattern; g.fillStyle = pt.c || '#ffffff'; g.strokeStyle = pt.c || '#ffffff'; g.globalAlpha = 0.75;
+    if (p === 'stripes') { g.strokeStyle = pt.b; g.lineWidth = r * 0.3; for (const dx of [-0.55, 0.55]) { g.beginPath(); g.moveTo(x + dx * r, y - r); g.lineTo(x + dx * r, y + r); g.stroke(); } g.strokeStyle = pt.c || '#fff'; g.beginPath(); g.moveTo(x, y - r); g.lineTo(x, y + r); g.stroke(); }
+    else if (p === 'dots') { for (let i = 0; i < 5; i++) { const a = i * 1.26; g.beginPath(); g.arc(x + Math.cos(a) * r * 0.55, y + Math.sin(a) * r * 0.55, r * 0.16, 0, TAU); g.fill(); } }
+    else if (p === 'check') { const s = r * 0.42; for (let i = -3; i < 3; i++) for (let j = -3; j < 3; j++) if ((i + j) & 1) g.fillRect(x + i * s, y + j * s, s, s); }
+    else if (p === 'flame') { g.fillStyle = pt.c || '#fff'; g.beginPath(); g.moveTo(x - r * 0.5, y + r * 0.6); g.quadraticCurveTo(x - r * 0.2, y - r * 0.9, x, y - r * 0.2); g.quadraticCurveTo(x + r * 0.2, y - r * 0.9, x + r * 0.5, y + r * 0.6); g.fill(); }
+    else if (p === 'stars' || p === 'swirl' || p === 'wave') { g.lineWidth = r * 0.16; g.beginPath(); g.arc(x, y, r * 0.55, 0.4, 2.8); g.stroke(); }
+    g.restore();
+    g.lineWidth = Math.max(2, r * 0.18); g.strokeStyle = color; g.beginPath(); g.arc(x, y, r, 0, TAU); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.ellipse(x - r * 0.35, y - r * 0.42, r * 0.22, r * 0.13, -0.6, 0, TAU); g.fill();
     if (o.sticky) { g.fillStyle = 'rgba(255,190,40,0.75)'; g.beginPath(); g.arc(x + r * 0.3, y + r * 0.4, r * 0.35, 0, TAU); g.fill(); }
   }
   function shade(hex, k) { const n = parseInt(String(hex).slice(1), 16); if (!Number.isFinite(n)) return hex; const f = (c) => Math.round(k < 0 ? c * (1 + k) : c + (255 - c) * k); return `rgb(${f((n >> 16) & 255)},${f((n >> 8) & 255)},${f(n & 255)})`; }
@@ -228,7 +250,7 @@
       const shown = T.drops.filter((d) => d.x != null);
       for (const d of shown) {
         g.setLineDash([8, 14]); g.strokeStyle = d.c; g.globalAlpha = 0.35; g.lineWidth = 4; g.beginPath(); g.moveTo(d.x, 90); g.lineTo(d.x, SLOT_TOP); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
-        drawBall(g, d.x, 70 + Math.sin(now / 300 + d.x) * 4, 22, d.c, { glow: 14 });
+        drawBall(g, d.x, 70 + Math.sin(now / 300 + d.x) * 4, 22, d.c, { glow: 14, gear: d.gear });
         g.font = '30px "Segoe UI Emoji", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(d.av || '🙂', d.x, 70 + Math.sin(now / 300 + d.x) * 4);
         if (d.power) { g.font = '26px "Segoe UI Emoji", sans-serif'; g.fillText(d.power, d.x + 26, 44); }
       }
@@ -247,18 +269,18 @@
           let x = spot[0], y = spot[1];
           if (s.phase === 'drop') { const k = easeOut((f - b.landF) / 8); const e = posAt(b.path, n - 1); x = lerp(e[0], spot[0], k); y = lerp(e[1], spot[1], k); }
           if (s.phase === 'drop' && !TV.landed.has(key)) { TV.landed.add(key); landFx(s, ti, b, board); }
-          drawBall(g, x, y, b.r * 1.15, b.c, { glow: trick ? 0 : 10, sticky: b.sticky });
+          drawBall(g, x, y, b.r * 1.15, b.c, { glow: trick ? 0 : 10, sticky: b.sticky, gear: b.gear });
           if (trick) { g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.arc(x, y, b.r + 1, 0, TAU); g.fill(); }
           return;
         }
         if (s.phase === 'drop' && f <= 0) { // waiting at the top, wobbling
-          const p0 = posAt(b.path, 0); drawBall(g, p0[0], p0[1] + Math.sin(now / 90 + bi) * 3, b.r * 1.3, b.c, { glow: 14, sticky: b.sticky });
+          const p0 = posAt(b.path, 0); drawBall(g, p0[0], p0[1] + Math.sin(now / 90 + bi) * 3, b.r * 1.3, b.c, { glow: 14, sticky: b.sticky, gear: b.gear });
           return;
         }
         if (s.phase === 'score' && isTrick && f >= b.landF) f = b.landF;
         const p = posAt(b.path, f);
         trail(g, b.path, f, b.c, isTrick ? 26 : 10, b.r * 1.8);
-        drawBall(g, p[0], p[1], b.r * 1.3, b.c, { glow: isTrick ? 40 : 18, sticky: b.sticky });
+        drawBall(g, p[0], p[1], b.r * 1.3, b.c, { glow: isTrick ? 40 : 18, sticky: b.sticky, gear: b.gear });
         if (isTrick) { g.font = '28px "Bungee", sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(trick.name, p[0], p[1] - b.r - 22); }
         // peg flashes + ticks + bumper hits
         if (s.phase === 'drop' || isTrick) {
@@ -513,12 +535,12 @@
     drawLive(g, V.board, style, tt, now, {});
     for (const gh of V.ghosts || []) drawStroke(g, gh.p, gh.c, { ghost: true, alpha: pal(style).ghost, w: 9 });
     if (V.phase === 'draw' || V.phase === 'aim') {
-      for (const d of V.drops || []) if (d.x != null) { g.setLineDash([8, 14]); g.strokeStyle = d.c; g.globalAlpha = d.me ? 0.6 : 0.3; g.lineWidth = 4; g.beginPath(); g.moveTo(d.x, 90); g.lineTo(d.x, SLOT_TOP); g.stroke(); g.setLineDash([]); g.globalAlpha = 1; drawBall(g, d.x, 70, d.me ? 26 : 20, d.c, { glow: d.me ? 20 : 6 }); g.font = `${d.me ? 32 : 26}px "Segoe UI Emoji", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(d.av || '🙂', d.x, 71); }
+      for (const d of V.drops || []) if (d.x != null) { g.setLineDash([8, 14]); g.strokeStyle = d.c; g.globalAlpha = d.me ? 0.6 : 0.3; g.lineWidth = 4; g.beginPath(); g.moveTo(d.x, 90); g.lineTo(d.x, SLOT_TOP); g.stroke(); g.setLineDash([]); g.globalAlpha = 1; drawBall(g, d.x, 70, d.me ? 26 : 20, d.c, { glow: d.me ? 20 : 6, gear: d.gear }); g.font = `${d.me ? 32 : 26}px "Segoe UI Emoji", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(d.av || '🙂', d.x, 71); }
       if (V.phase === 'aim' && PP.x != null) {
         g.setLineDash([10, 12]); g.strokeStyle = PP.color; g.globalAlpha = 0.7; g.lineWidth = 5; g.beginPath(); g.moveTo(PP.x, 100); g.lineTo(PP.x, SLOT_TOP); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
         const big = PP.power === 'big', twin = PP.power === 'twin';
-        if (twin) { drawBall(g, PP.x - 28, 70, 15 * 1.5, PP.color, { glow: 18 }); drawBall(g, PP.x + 28, 70, 15 * 1.5, PP.color, { glow: 18 }); }
-        else drawBall(g, PP.x, 70, (big ? 24 : 15) * 1.6, PP.color, { glow: 24, sticky: PP.power === 'sticky' });
+        if (twin) { drawBall(g, PP.x - 28, 70, 15 * 1.5, PP.color, { glow: 18, gear: V.gear }); drawBall(g, PP.x + 28, 70, 15 * 1.5, PP.color, { glow: 18, gear: V.gear }); }
+        else drawBall(g, PP.x, 70, (big ? 24 : 15) * 1.6, PP.color, { glow: 24, sticky: PP.power === 'sticky', gear: V.gear });
         g.fillStyle = '#fff'; g.font = '44px "Bungee", sans-serif'; g.textAlign = 'center'; g.fillText('▼', PP.x, 140);
       }
       if (V.phase === 'draw') {
@@ -532,10 +554,10 @@
       const fr = V.phase === 'drop' ? tt * (V.board.fps || 30) : 1e9;
       for (const b of V.mine) {
         const n = b.path.length / 2;
-        if (V.phase === 'drop' && now - PP.dropStart < (V.release || 2200)) { drawBall(g, b.path[0], b.path[1], b.r * 1.3, PP.color, { glow: 20 }); continue; }
+        if (V.phase === 'drop' && now - PP.dropStart < (V.release || 2200)) { drawBall(g, b.path[0], b.path[1], b.r * 1.3, PP.color, { glow: 20, gear: V.gear }); continue; }
         const f = Math.min(fr, n - 1), p = posAt(b.path, f);
         trail(g, b.path, f, PP.color, 10, b.r * 1.8);
-        drawBall(g, p[0], f >= n - 1 ? H - b.r * 1.3 - 10 : p[1], b.r * 1.3, PP.color, { glow: 24 });
+        drawBall(g, p[0], f >= n - 1 ? H - b.r * 1.3 - 10 : p[1], b.r * 1.3, PP.color, { glow: 24, gear: V.gear });
       }
     }
   }

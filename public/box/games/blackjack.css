@@ -371,3 +371,10 @@ body.g-blackjack .host-row .btn:not(.ghost) { font-family: 'Righteous', sans-ser
 .bj-myaward span { font-size: 28px; } .bj-myaward small { display: block; color: #c4b2d6; }
 .g-blackjack .board .row { background: rgba(10, 4, 20, 0.5); } .g-blackjack .board .row b { color: var(--bj-gold); }
 @media (max-width: 1100px) { .bj-top, .bjl { grid-template-columns: 1fr; } }
+/* JustGold gear: a player's own chip set (--g-a chip, --g-b edge spots). The house chips are the rules above. */
+.bj-stack.gear .bj-c { --cc: var(--g-a); background: repeating-linear-gradient(90deg, var(--g-a) 0 6px, var(--g-b) 6px 9px); }
+.bj-stack.gear .bj-c:first-child:first-child { background: radial-gradient(closest-side, var(--g-a) 0 50%, var(--g-b) 52% 60%, var(--g-a) 62% 100%); }
+.bj-stack.gear .bj-c.d100, .bj-stack.gear .bj-c.d500 { filter: brightness(0.82); }
+.bj-stack.gear.glow { filter: drop-shadow(0 0 4px var(--g-a)); }
+.bj-gchip { display: inline-block; width: 1em; height: 1em; vertical-align: -0.12em; border-radius: 50%; background: radial-gradient(closest-side, var(--g-a) 0 48%, var(--g-b) 50% 62%, var(--g-a) 64% 100%); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3); }
+.bj-gchip.glow { box-shadow: 0 0 6px var(--g-a), inset 0 -2px 0 rgba(0, 0, 0, 0.3); }

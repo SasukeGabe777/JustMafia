@@ -41,10 +41,10 @@
     renderHome({ look, profile, theme = 'smalltown', tab, setTab, change }) {
       renderTabs({ tabsEl: document.querySelector('#h-tabs'), panelEl: document.querySelector('#h-panel'), tabs: CFG.HOME_TABS, look, profile, theme, tab, setTab, change });
     },
-    render({ avatar, profile, theme = 'smalltown', tab, setTab, change, buy, paint }) {
+    render({ avatar, profile, theme = 'smalltown', tab, setTab, change }) {
       const $ = (s) => document.querySelector(s);
       renderTabs({ tabsEl: $('#c-tabs'), panelEl: $('#c-panel'), tabs: CFG.TABS, look: avatar, profile, theme, tab, setTab, change });
-      // The shop moved to its own screen (shop-ui.js); the creator links to it.
+      // Buying happens in the shared JustGold shop (/shop); the creator links to it.
     },
   };
 
@@ -60,7 +60,7 @@
         const list = choices(profile, s.field, s), current = avatar[s.field] == null ? list[0] : avatar[s.field];
         const locked = listOf(s.field, s).length - list.length;
         const head = `<div class="cas-label">${esc(s.label)} <b>${esc(O.label(current))}</b></div>`;
-        const more = locked ? `<p class="small muted">${locked} more to unlock in the 🛒 shop.</p>` : '';
+        const more = locked ? `<p class="small muted">${locked} more in the <a data-jg-shop href="/shop">🛍️ JustGold shop</a>.</p>` : '';
         if (s.kind === 'swatch') return `<section class="cas-section">${head}<div class="swatches">${list.map((v) => `<button class="swatch${v === current ? ' sel' : ''}" style="background:${esc(v)}" title="${esc(O.label(v))}" aria-label="${esc(s.label)}: ${esc(O.label(v))}" aria-pressed="${v === current}" data-field="${s.field}" data-value="${esc(v)}"></button>`).join('')}</div>${more}</section>`;
         return `<section class="cas-section">${head}<div class="cas-tiles${s.focus === 'house' ? ' wide' : ''}">${list.map((v) => `<button class="cas-tile${v === current ? ' sel' : ''}" aria-pressed="${v === current}" data-field="${s.field}" data-value="${esc(v)}" data-focus="${s.focus || 'body'}"><canvas></canvas><span>${esc(O.label(v))}</span></button>`).join('')}</div>${more}</section>`;
       }).join('');

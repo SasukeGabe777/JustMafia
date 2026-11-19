@@ -186,7 +186,7 @@ module.exports = function install(Room) {
   const describe = (room, w) => w.kind === 'winner' ? `${w.pick === 'town' ? 'the Town' : 'the Mafia'} wins the game` : `${room.nameOf(w.pick)} is voted out on day ${w.day}`;
   Room.prototype.offerWager = function (p, { kind, pick, stake }) {
     if (!isGhost(p) || OVER.includes(this.phase)) return { ok: false, error: 'Ghosts bet during the game.' };
-    if (!this.profiles || !p.profileId || p.isBot) return { ok: false, error: 'Betting needs a saved character with a gold pouch.' };
+    if (!this.profiles || !p.profileId || p.isBot) return { ok: false, error: 'Betting needs a saved character with a JustGold pouch.' };
     stake = Number(stake);
     if (!AFTERLIFE.stakes.includes(stake)) return { ok: false, error: 'Pick a stake.' };
     if ((this.wagers || []).filter((w) => w.fromId === p.id && w.status === 'open').length >= 3) return { ok: false, error: 'You have 3 open bets. Wait for someone to take one, or cancel one.' };
@@ -195,11 +195,11 @@ module.exports = function install(Room) {
       if (!DAY.includes(this.phase)) return { ok: false, error: 'Vote bets are made before today’s votes are counted.' };
       if (!this.alive().some((x) => x.id === pick)) return { ok: false, error: 'Pick a living player.' };
     } else return { ok: false, error: 'Unknown bet.' };
-    if (!this.profiles.escrow(p.profileId, -stake, 'Bet placed')) return { ok: false, error: `Not enough gold: you have ${this.profiles.coins(p.profileId)}.` };
+    if (!this.profiles.escrow(p.profileId, -stake, 'Bet placed')) return { ok: false, error: `Not enough JustGold: you have ${this.profiles.coins(p.profileId)} JG.` };
     const w = { id: ++this.wagerSeq, kind, pick, stake, day: this.day, fromId: p.id, fromName: p.name, fromProfile: p.profileId, takerId: null, takerName: null, takerProfile: null, status: 'open', winnerId: null };
     w.text = describe(this, w);
     this.wagers.push(w); bump(this, p, 'bets');
-    this.addLog(`🎲 ${p.name} bet ${stake} gold that ${w.text}.`, true);
+    this.addLog(`🎲 ${p.name} bet ${stake} JG that ${w.text}.`, true);
     this.sync(); return { ok: true, id: w.id };
   };
   Room.prototype.takeWager = function (p, id) {
@@ -207,10 +207,10 @@ module.exports = function install(Room) {
     if (!w || w.status !== 'open') return { ok: false, error: 'That bet is no longer open.' };
     if (!isGhost(p) || !this.profiles || !p.profileId || p.isBot) return { ok: false, error: 'Taking a bet needs a ghost with a saved character.' };
     if (w.fromProfile === p.profileId) return { ok: false, error: 'You can’t take your own bet.' };
-    if (!this.profiles.escrow(p.profileId, -w.stake, 'Bet taken')) return { ok: false, error: `Not enough gold: this bet is ${w.stake}, you have ${this.profiles.coins(p.profileId)}.` };
+    if (!this.profiles.escrow(p.profileId, -w.stake, 'Bet taken')) return { ok: false, error: `Not enough JustGold: this bet is ${w.stake} JG, you have ${this.profiles.coins(p.profileId)} JG.` };
     Object.assign(w, { takerId: p.id, takerName: p.name, takerProfile: p.profileId, status: 'taken' });
     bump(this, p, 'bets');
-    this.addLog(`🎲 ${p.name} took ${w.fromName}'s bet (${w.stake} gold): ${w.text}.`, true);
+    this.addLog(`🎲 ${p.name} took ${w.fromName}'s bet (${w.stake} JG): ${w.text}.`, true);
     this.sync(); return { ok: true };
   };
   Room.prototype.cancelWager = function (p, id) {
@@ -225,7 +225,7 @@ module.exports = function install(Room) {
     const lose = offererWins ? w.takerName : w.fromName;
     if (this.profiles) this.profiles.escrow(win.profile, w.stake * 2, `Won a bet against ${lose}`);
     w.status = 'settled'; w.winnerId = win.id; w.winnerName = win.name;
-    this.addLog(`🎲 ${win.name} won ${w.stake * 2} gold from a bet against ${lose} (${w.text}).`, true);
+    this.addLog(`🎲 ${win.name} won ${w.stake * 2} JG from a bet against ${lose} (${w.text}).`, true);
   };
   Room.prototype.settleVoteWagers = function (out) {
     for (const w of this.wagers || []) if (w.kind === 'vote' && w.day === this.day && ['open', 'taken'].includes(w.status)) this.settleWager(w, w.pick === out);

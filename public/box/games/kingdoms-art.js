@@ -150,7 +150,9 @@
       g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.moveTo(x, y - h - w * 1.15); g.lineTo(x + w * 0.62, y - h); g.lineTo(x + w * 0.08, y - h); g.closePath(); g.fill();
     } else crenels(g, x, y - h, w * 1.1, w * 0.3, stone);
   }
-  function flag(g, x, y, h, color, t, big = 1) {
+  // `crest` (optional, shop gear: public/shared/gear.js kingdoms/crest paint): an emoji emblem on the
+  // flag, with a gold ring and glow when crest.glow. Without it the flag is drawn exactly as before.
+  function flag(g, x, y, h, color, t, big = 1, crest) {
     g.strokeStyle = '#3a2810'; g.lineWidth = Math.max(1, h * 0.06); g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - h); g.stroke();
     const fw = h * 0.7 * big, fh = h * 0.38 * big, top = y - h;
     g.fillStyle = color; g.beginPath(); g.moveTo(x, top);
@@ -158,6 +160,16 @@
     for (let i = 6; i >= 0; i--) { const u = i / 6; g.lineTo(x + fw * u, top + fh + Math.sin(t * 6 - u * 4) * fh * 0.18 * u); }
     g.closePath(); g.fill();
     g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1; g.stroke();
+    if (crest && crest.icon) emblem(g, x + fw * 0.5, top + fh * 0.5 + Math.sin(t * 6 - 2) * fh * 0.09, fh * 0.95, crest, h);
+  }
+  // A crest emblem: a pale disc with the emoji on it (gold ring and glow for shiny crests).
+  function emblem(g, cx, cy, size, crest, h) {
+    const r = size * 0.55; g.save();
+    if (crest.glow) { g.shadowColor = '#ffd34d'; g.shadowBlur = Math.max(4, h * 0.25); }
+    g.fillStyle = 'rgba(255,248,225,.92)'; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.fill(); g.shadowBlur = 0;
+    g.strokeStyle = crest.glow ? '#e0a400' : 'rgba(40,25,10,.6)'; g.lineWidth = Math.max(1, r * 0.16); g.stroke();
+    g.font = `${Math.max(6, Math.round(r * 1.45))}px serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#000';
+    g.fillText(crest.icon, cx, cy + r * 0.08); g.textBaseline = 'alphabetic'; g.restore();
   }
   // A capital: grows from a hamlet (age 1) to a grand castle (age 5). walls 0-3 draw a ring.
   // Where a capital's banner flies (so the TV can wave it on top of a cached castle).
@@ -230,7 +242,7 @@
   // ---------- armies ----------
   const UNIT_ICON = { militia: '🗡️', spear: '🔱', archer: '🏹', knight: '🐎', catapult: '☄️', guard: '🛡️', scout: '🔭', settlers: '🛻', peasant: '🧑‍🌾', bandits: '☠️' };
   // A marching banner: pole + waving flag in the owner's colour with the head count.
-  function drawArmy(g, x, y, s, color, kind, n, t, bandit) {
+  function drawArmy(g, x, y, s, color, kind, n, t, bandit, crest) { // crest: optional shop-gear emblem (see flag)
     const k = Math.max(10, s * 0.9);
     const bob = Math.abs(Math.sin(t * 7)) * k * 0.05;
     g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + k * 0.08, k * 0.38, k * 0.12, 0, 0, TAU); g.fill();
@@ -254,6 +266,7 @@
     g.fillStyle = bandit ? '#fff' : inkOn(color); g.fillText(bandit ? '☠ ' + n : String(n), px + fw * 0.42, top + fh * 0.52);
     g.textBaseline = 'alphabetic';
     if (!bandit && UNIT_ICON[kind]) { g.font = `${Math.round(k * 0.42)}px serif`; g.fillText(UNIT_ICON[kind], x - k * 0.42, y - k * 0.62); }
+    if (!bandit && crest && crest.icon) emblem(g, px, top - fh * 0.15, fh * 0.6, crest, k);
   }
 
   // ---------- rocket & launch pad ----------

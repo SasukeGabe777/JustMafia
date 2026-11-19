@@ -9,6 +9,8 @@
 // wind, holes, and the lines from earlier rounds stay on the board as ghost obstacles.
 // Big rooms are split into tables (boards) of up to 10 players; every table gets the same board.
 const PH = require('./plinko-physics');
+// Per-game gear (JustGold shop): each player's ball skin rides along with their balls and drop markers.
+const GEARS = require('../../public/shared/gear');
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
@@ -193,6 +195,7 @@ class Drop {
   }
   linesFor(T) { const t = this.tables[T.ti] || { ghosts: [] }; return { ghosts: t.ghosts.map((g) => ({ p: g.pts, c: this.color(g.owner) })), lines: T.lines.filter((l) => !l.erased).map((l) => ({ p: l.strokes, c: this.color(l.id) })) }; }
   color(id) { const p = this.room.get(id); return p ? p.color : '#888'; }
+  gear(id) { return GEARS.gearSet(this.room.get(id), 'plinko'); } // { ball: value } (default 'classic')
   // ---- the end (with a sudden-death drop for a tie at the top) ----
   finish() {
     const st = this.standings();
@@ -313,7 +316,7 @@ class Drop {
       ids: T.ids, erased: T.erased,
       ghosts: (this.sudden ? [] : t.ghosts).filter((g) => g.round < this.round || this.phase !== 'score').map((g) => ({ p: g.pts, c: this.color(g.owner) })),
       lines: T.lines.map((l) => ({ id: l.id, p: l.strokes, c: this.color(l.id), erased: l.erased })),
-      balls: T.sim.balls.map((b) => ({ id: b.owner, c: this.color(b.owner), r: b.r, big: b.big, sticky: b.sticky, slot: b.slot, landF: b.landF, path: full ? b.path : b.path.slice(-2) })),
+      balls: T.sim.balls.map((b) => ({ id: b.owner, c: this.color(b.owner), gear: this.gear(b.owner), r: b.r, big: b.big, sticky: b.sticky, slot: b.slot, landF: b.landF, path: full ? b.path : b.path.slice(-2) })),
       stars: T.sim.stars,
     };
   }
@@ -329,7 +332,7 @@ class Drop {
     const tabs = this.sudden ? [{ ids: this.sudden.ids, ghosts: [] }] : this.tables;
     if (ph === 'intro' || ph === 'aim' || ph === 'draw') {
       out.tables = tabs.map((t) => ({ ids: t.ids, ghosts: this.sudden ? [] : t.ghosts.map((g) => ({ p: g.pts, c: this.color(g.owner) })),
-        drops: t.ids.filter((id) => this.room.get(id)).map((id) => { const i = this.inp.get(id); const p = this.room.get(id); return { id, name: p.name, c: p.color, av: p.avatar, locked: !!(i && i.locked), x: ph === 'draw' && i ? i.x : null, power: ph === 'draw' && i && i.power ? POWERS[i.power].icon : null }; }) }));
+        drops: t.ids.filter((id) => this.room.get(id)).map((id) => { const i = this.inp.get(id); const p = this.room.get(id); return { id, name: p.name, c: p.color, gear: this.gear(id), av: p.avatar, locked: !!(i && i.locked), x: ph === 'draw' && i ? i.x : null, power: ph === 'draw' && i && i.power ? POWERS[i.power].icon : null }; }) }));
     }
     if ((ph === 'drop' || ph === 'score') && this.run) {
       out.t0Ago = now - this.dropAt; out.release = RELEASE_MS;
@@ -345,12 +348,12 @@ class Drop {
     const P = this.ppl.get(p.id), ph = this.phase, i = this.inp.get(p.id), now = this.room.now();
     const st = this.standings(), rank = st.findIndex((r) => r.id === p.id) + 1;
     const base = { phase: ph, style: this.s.style, round: this.round, of: this.s.rounds, level: this.level, endsIn: this.endsAt ? Math.max(0, this.endsAt - now) : 0, total: P ? P.total : 0, rank, count: st.length,
-      powers: P ? P.powers.map((k) => ({ k, ...POWERS[k] })) : [], inRound: this.players().some((q) => q.id === p.id), sudden: !!this.sudden };
+      powers: P ? P.powers.map((k) => ({ k, ...POWERS[k] })) : [], inRound: this.players().some((q) => q.id === p.id), sudden: !!this.sudden, gear: this.gear(p.id) };
     if (!P) return { ...base, spectator: true };
     if (ph === 'over') { const aw = (this.awards || []).filter((a) => a.id === p.id); return { ...base, awards: aw, winner: st[0] ? st[0].name : '', top: st.slice(0, 5).map((r) => ({ name: r.name, avatar: r.avatar, total: r.total })) }; }
     const t = this.sudden ? { ids: this.sudden.ids, ghosts: [] } : this.tableOf(p.id) || { ids: [p.id], ghosts: [] };
     const out = { ...base, board: this.board, ghosts: t.ghosts.filter((g) => !(ph === 'score' && g.round === this.round)).map((g) => ({ p: g.pts, c: this.color(g.owner) })), ink: this.inkFor(p.id), me: { x: i ? i.x : null, locked: !!(i && i.locked), power: i ? i.power : null, strokes: i ? i.strokes : [], done: !!(i && i.done), target: i ? i.target : null, auto: !!(i && i.auto) } };
-    if (ph === 'draw') out.drops = t.ids.filter((id) => this.room.get(id)).map((id) => { const q = this.inp.get(id), pl = this.room.get(id); return { id, name: pl.name, av: pl.avatar, c: pl.color, x: q ? q.x : null, me: id === p.id }; });
+    if (ph === 'draw') out.drops = t.ids.filter((id) => this.room.get(id)).map((id) => { const q = this.inp.get(id), pl = this.room.get(id); return { id, name: pl.name, av: pl.avatar, c: pl.color, gear: this.gear(id), x: q ? q.x : null, me: id === p.id }; });
     if ((ph === 'drop' || ph === 'score') && this.run) {
       const T = this.run.find((r) => r.ids.includes(p.id));
       if (T) {

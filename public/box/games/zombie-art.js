@@ -464,6 +464,27 @@
     if (o.item) { g.save(); g.translate(R[0] + 8, R[1] - 6); g.rotate(pose === 'fight' ? -0.3 : 0); g.scale(o.dir || 1, 1); emoji(g, o.item, 0, 0, 44); g.restore(); }
     // head
     emoji(g, o.avatar || '🙂', 0, top - 36, 78, o.tint);
+    if (o.bandana) bandana(g, top - 36, ph, o.bandana);
+    g.restore();
+  }
+  // JustGold gear: a survivor's bandana tied around the emoji head (head centre at y = hy).
+  // b = paint { a, b, pattern, glow }; two tails flutter out the back.
+  function bandana(g, hy, ph, b) {
+    const a = b.a || '#d0302a', c = b.b || '#ffffff', y = hy - 18;
+    g.save(); g.lineJoin = 'round';
+    if (b.glow) { g.shadowColor = a; g.shadowBlur = 18; }
+    // the tails
+    const fl = Math.sin(ph * 1.6) * 6;
+    g.fillStyle = a; g.strokeStyle = INK; g.lineWidth = 3;
+    for (const [dy, len] of [[-2, 30], [6, 24]]) { g.beginPath(); g.moveTo(-30, y + dy - 4); g.quadraticCurveTo(-30 - len * 0.6, y + dy + fl, -30 - len, y + dy + 8 + fl); g.lineTo(-30 - len + 6, y + dy + 14 + fl); g.quadraticCurveTo(-30 - len * 0.5, y + dy + 8 + fl, -28, y + dy + 6); g.closePath(); g.fill(); g.stroke(); }
+    // the band across the forehead
+    g.beginPath(); g.moveTo(-37, y - 2); g.quadraticCurveTo(0, y - 14, 37, y - 2); g.lineTo(36, y + 10); g.quadraticCurveTo(0, y - 2, -36, y + 10); g.closePath();
+    g.fill(); g.shadowBlur = 0; g.save(); g.clip();
+    g.fillStyle = c;
+    if (b.pattern === 'stripes') for (let x = -44; x < 44; x += 14) { g.beginPath(); g.moveTo(x, y + 14); g.lineTo(x + 7, y + 14); g.lineTo(x + 17, y - 16); g.lineTo(x + 10, y - 16); g.closePath(); g.fill(); }
+    else if (b.pattern === 'dots') for (let x = -32; x <= 32; x += 11) { g.beginPath(); g.arc(x, y - 1 + Math.abs(x) * 0.08, 2.6, 0, TAU); g.fill(); }
+    else { g.globalAlpha *= 0.45; g.fillRect(-40, y - 8, 80, 3); }
+    g.restore(); g.stroke();
     g.restore();
   }
   // A ghost: a pale sheet with the avatar inside, bobbing.

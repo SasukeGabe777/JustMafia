@@ -15,6 +15,8 @@
 //   gem:       +25 to whoever's board it was on
 //   hole:      −15 (the marble goes back to where it came onto your board)
 //   not cleared: everyone gets up to 60 for how close the team got
+// Per-game gear (JustGold shop): the marble wears its current holder's skin.
+const GEARS = require('../../public/shared/gear');
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'rounds', label: 'Rounds', options: opt([[3, '3 mazes'], [5, '5 mazes']]) },
@@ -344,7 +346,7 @@ class Game {
 
   boardTv(reveal) {
     const B = this.board; if (!B) return null;
-    const who = (id) => { const p = this.room.get(id) || {}; return { id, name: this.room.name(id), avatar: p.avatar || '🙂', color: p.color || '#fff', bot: !!p.bot, online: !!p.bot || p.sockets > 0 }; };
+    const who = (id) => { const p = this.room.get(id) || {}; return { id, name: this.room.name(id), avatar: p.avatar || '🙂', color: p.color || '#fff', bot: !!p.bot, online: !!p.bot || p.sockets > 0, gear: GEARS.gearSet(p, 'marble') }; };
     return {
       rows: B.rows, cols: B.cols, cw: B.cw, ch: B.ch, gw: B.gw, gh: B.gh, n: B.n, owners: B.owners.map(who),
       start: B.start, finish: B.finish, cells: B.cells, visited: [...B.visited], reveal: !!reveal,
@@ -352,7 +354,8 @@ class Game {
       gems: B.gems.map((g) => ({ x: g.x, y: g.y, by: g.by })), mirror: reveal ? B.mirror : -1,
     };
   }
-  marbleTv() { const M = this.marble; return M ? { x: M.x, y: M.y, tile: M.tile, holder: M.holder, name: this.room.name(M.holder), seq: M.seq } : null; }
+  // gear: the holder's marble skin (the marble changes skin as it is handed from phone to phone).
+  marbleTv() { const M = this.marble; return M ? { x: M.x, y: M.y, tile: M.tile, holder: M.holder, name: this.room.name(M.holder), seq: M.seq, gear: GEARS.gearSet(this.room.get(M.holder), 'marble') } : null; }
   tv() {
     const done = this.phase === 'result' || this.phase === 'over';
     return {
@@ -365,7 +368,7 @@ class Game {
     };
   }
   view(p) {
-    const B = this.board, M = this.marble, base = { phase: this.phase, round: this.round, of: this.s.rounds, mod: this.tv().mod, endsIn: this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0, points: this.points.get(p.id) || 0, ready: this.ready.has(p.id), last: this.phase === 'result' || this.phase === 'over' ? this.last : null };
+    const B = this.board, M = this.marble, base = { phase: this.phase, round: this.round, of: this.s.rounds, mod: this.tv().mod, endsIn: this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0, points: this.points.get(p.id) || 0, ready: this.ready.has(p.id), gear: GEARS.gearSet(p, 'marble') /* my marble skin */, last: this.phase === 'result' || this.phase === 'over' ? this.last : null };
     if (this.phase === 'over') { const st = this.standings(); return { ...base, rank: st.findIndex((r) => r.id === p.id) + 1, of: st.length, cleared: this.cleared, rounds: this.s.rounds, stats: this.stat(p.id) }; }
     const t = B ? B.owners.indexOf(p.id) : -1;
     if (!B || t < 0) return { ...base, spotter: true, board: B ? { rows: B.rows, cols: B.cols, owners: B.owners.map((id) => this.room.name(id)) } : null, holder: M ? this.room.name(M.holder) : null, holderTile: M ? M.tile : -1 };

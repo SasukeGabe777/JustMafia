@@ -13,11 +13,17 @@
   // ---------- drawn-in-code art ----------
   // A poker-chip stack for an amount (biggest chips first, at most `max` chips tall).
   const DENOM = [500, 100, 25, 10, 5];
-  function stack(amount, max = 7) {
+  // JustGold gear: a player's chip set (x.gear.chips → MT_GEAR paint), or null for house chips.
+  const chipPaint = (x) => (window.MT_GEAR && x ? MT_GEAR.paint('blackjack', 'chips', x.gear) : null);
+  // Inline vars for a gear stack (CSS: .bj-stack.gear in blackjack.css).
+  const gearVars = (pt) => (pt ? ` gear${pt.glow ? ' glow' : ''}" style="--g-a:${pt.a || '#e8323c'};--g-b:${pt.b || '#ffffff'}` : '');
+  // The 🪙 next to a chip count, or one chip of the player's own set.
+  const coin = (x) => { const pt = chipPaint(x); return pt ? `<i class="bj-gchip${pt.glow ? ' glow' : ''}" style="--g-a:${pt.a || '#e8323c'};--g-b:${pt.b || '#ffffff'}"></i>` : '🪙'; };
+  function stack(amount, max = 7, pt = null) {
     const out = []; let left = Math.max(0, Math.floor(amount || 0));
     for (const d of DENOM) while (left >= d && out.length < max) { out.push(d); left -= d; }
     if (left > 0 && out.length < max) out.push(5);
-    return `<span class="bj-stack">${out.reverse().map((d, i) => `<i class="bj-c d${d}" style="--i:${i}"></i>`).join('')}</span>`;
+    return `<span class="bj-stack${gearVars(pt)}">${out.reverse().map((d, i) => `<i class="bj-c d${d}" style="--i:${i}"></i>`).join('')}</span>`;
   }
   const DEALER = `<svg class="bj-dealer-art" viewBox="0 0 200 172" aria-hidden="true">
     <path d="M14 172 Q18 112 70 98 L130 98 Q182 112 186 172 Z" fill="#f5f1e6" stroke="#1a0b2a" stroke-width="4"/>
@@ -181,15 +187,15 @@
       const hands = x.hands.map((h, i) => `<div class="bj-hand"><div class="cards fan" id="bh-${esc(x.id)}-${i}-${h.cards.length}">${h.cards.map((c) => card(c, { size: 'sm' })).join('')}</div><span class="bj-tot ${h.total > 21 ? 'bust' : h.total === 21 ? 'bj' : ''}">${h.total}</span></div>`).join('');
       return `<div class="bj-seat lg ${cls}" id="bs-${esc(x.id)}" style="${pos};--c:${esc(x.color || '#e8323c')}">
         <div class="bj-hands">${hands || (phase === 'betting' ? '' : '<span class="bj-sit">sitting out</span>')}</div>
-        <div class="bj-bspot ${bet ? 'has' : ''}">${bet ? stack(bet, 6) : ''}${bet ? `<b class="bj-amt">${bet}</b>` : ''}</div>
+        <div class="bj-bspot ${bet ? 'has' : ''}">${bet ? stack(bet, 6, chipPaint(x)) : ''}${bet ? `<b class="bj-amt">${bet}</b>` : ''}</div>
         <div class="bj-plate"><span class="bj-pav">${esc(x.av || '🙂')}</span><span class="nm">${esc(x.name)}</span>${fire(x.streak)}${x.targeted ? `<span class="bj-tg" title="Bust Bets on this player">🎯${x.targeted}</span>` : ''}</div>
-        <div class="bj-chips">🪙 ${x.chips}</div>${st}</div>`;
+        <div class="bj-chips">${coin(x)} ${x.chips}</div>${st}</div>`;
     }
     const hands = size === 'xs' || size === 'sm' ? x.hands.map((h) => `<span class="bj-tot">${h.total}</span>`).join(' ')
       : x.hands.map((h, i) => `<div class="bj-hand"><div class="cards fan" id="bh-${esc(x.id)}-${i}-${h.cards.length}">${h.cards.map((c) => card(c, { size: 'xs' })).join('')}</div><span class="bj-tot">${h.total}</span></div>`).join('');
     const status = st || (x.bet && phase === 'betting' ? `<span class="bj-bet">🪙 ${x.bet}</span>` : '');
     return `<div class="bj-seat ${cls}" id="bs-${esc(x.id)}"><div class="bj-name"><i style="background:${esc(x.color)}"></i>${av(x)}<span class="nm">${esc(x.name)}</span>${fire(x.streak)}${x.targeted ? ` <span class="bj-tg">🎯${x.targeted}</span>` : ''}</div>
-      <div class="bj-row">${hands || (phase === 'betting' ? '' : '<span class="muted">sitting out</span>')}${status}</div><div class="bj-chips">🪙 ${x.chips}</div></div>`;
+      <div class="bj-row">${hands || (phase === 'betting' ? '' : '<span class="muted">sitting out</span>')}${status}</div><div class="bj-chips">${coin(x)} ${x.chips}</div></div>`;
   }
   function message(s) {
     if (s.phase === 'betting') return `<div class="bj-big1">Place your bets!</div><div class="bj-sub">${timer(s.endsIn)}</div>`;
@@ -300,7 +306,7 @@
         BOX.morph(el, `<div class="bj-ph"><div class="card-box bj-endbox ${v.rank === 1 ? 'champ' : ''}"><div class="bj-neonline">${v.rank === 1 ? 'HIGH ROLLER' : 'LAST CALL'}</div><div class="bj-endrank">#${v.rank}</div><h3>${v.rank === 1 ? 'High roller of the night!' : 'Last hand played!'}</h3>${stack(v.chips, 8)}<p>${v.chips} chips · of ${v.of} players</p>${me}</div><div class="card-box">${BOX.board(v.final, (r) => r.chips, ' 🪙')}</div></div>`);
         return;
       }
-      const head = `<div class="bj-me"><div class="bj-bank">${stack(v.chips, 6)}<span class="bj-big">${v.chips}</span><small>chips</small></div>${fire(v.streak)}<div class="bj-meinfo"><b>Hand ${v.round}/${v.totalHands}</b><span>#${v.rank} of ${v.of}${v.leader && v.rank !== 1 ? ' · leader ' + esc(v.leader.name) + ' ' + v.leader.chips : v.rank === 1 ? ' · you lead!' : ''}</span></div></div>`;
+      const head = `<div class="bj-me"><div class="bj-bank">${stack(v.chips, 6, chipPaint(v))}<span class="bj-big">${v.chips}</span><small>chips</small></div>${fire(v.streak)}<div class="bj-meinfo"><b>Hand ${v.round}/${v.totalHands}</b><span>#${v.rank} of ${v.of}${v.leader && v.rank !== 1 ? ' · leader ' + esc(v.leader.name) + ' ' + v.leader.chips : v.rank === 1 ? ' · you lead!' : ''}</span></div></div>`;
       const ev = v.event ? `<div class="bj-event ph ${v.event.key}"><span class="ic">${v.event.icon}</span><div><b>${esc(v.event.name)}</b><small>${esc(v.event.text)}</small></div></div>` : '';
       if (v.phase === 'betting') {
         const k = 'b' + v.round;
@@ -312,7 +318,7 @@
         const placed = v.bet && v.bet === pending;
         BOX.morph(el, `<div class="bj-ph">${head}${ev}${v.rebuys && v.round > 1 && v.chips <= v.comeback ? `<p class="bj-note">🎁 Comeback chips! The house spotted you ${v.comeback}.</p>` : ''}
           <div class="card-box bj-betbox ${placed ? 'placed' : ''}"><h3>Place your bet <span class="bj-time">${timer(v.endsIn)}</span></h3>
-          <div class="bj-circle ${pending ? 'has' : ''}"><span class="ring"></span>${pending ? stack(pending, 9) : ''}<div class="bj-pending">${pending ? pending : '<span class="muted">Tap chips to bet</span>'}</div></div>
+          <div class="bj-circle ${pending ? 'has' : ''}"><span class="ring"></span>${pending ? stack(pending, 9, chipPaint(v)) : ''}<div class="bj-pending">${pending ? pending : '<span class="muted">Tap chips to bet</span>'}</div></div>
           ${same}
           <div class="bj-chipbtns">${chips.map((c) => `<button class="chipbtn c${c}" data-add="${c}"><span>${c}</span></button>`).join('')}</div>
           <div class="pr-btns bj-quick"><button class="btn ghost small" id="bj-clear">Clear</button><button class="btn ghost small" id="bj-half">Half</button><button class="btn ghost small" id="bj-all">All in</button></div>
@@ -332,7 +338,7 @@
       const dealer = `<div class="bj-dsmall"><div class="bj-dface">${DEALER}</div><div class="cards">${v.dealer.cards.map((c) => card(c, { size: 'sm' })).join('')}</div><b>${v.dealer.cards.length ? (v.dealer.hidden ? 'shows ' + v.dealer.total : v.dealer.total > 21 ? 'BUST' : v.dealer.total) : ''}</b></div>`;
       if (!v.hands.length) { BOX.morph(el, `<div class="bj-ph">${head}${ev}${dealer}<div class="card-box bj-sitout"><p>You’re sitting this hand out. Bet next hand!</p></div></div>`); return; }
       const hands = v.hands.map((h, i) => `<div class="card-box bj-myhand ${i === v.active && v.phase === 'playing' ? 'active' : ''} ${h.total > 21 ? 'busted' : ''}"><div class="cards" id="mh-${v.round}-${i}-${h.cards.length}">${h.cards.map((c) => card(c)).join('')}</div>
-        <div class="bj-myinfo"><b class="bj-total ${h.total > 21 ? 'bust' : h.total === 21 ? 'bj' : ''}">${h.total}${h.soft ? ' <small>soft</small>' : ''}</b> <span class="bj-betinfo">${stack(h.bet, 4)} bet ${h.bet}${h.doubled ? ' (doubled)' : ''}</span> ${h.result ? `<span class="bj-net ${RESULT[h.result][1]}">${RESULT[h.result][0]}</span>` : h.total > 21 ? '<span class="bj-net bad">BUST</span>' : h.bj ? '<span class="bj-net good">BLACKJACK!</span>' : h.charlie ? '<span class="bj-net good">5-CARD CHARLIE!</span>' : ''}</div></div>`).join('');
+        <div class="bj-myinfo"><b class="bj-total ${h.total > 21 ? 'bust' : h.total === 21 ? 'bj' : ''}">${h.total}${h.soft ? ' <small>soft</small>' : ''}</b> <span class="bj-betinfo">${stack(h.bet, 4, chipPaint(v))} bet ${h.bet}${h.doubled ? ' (doubled)' : ''}</span> ${h.result ? `<span class="bj-net ${RESULT[h.result][1]}">${RESULT[h.result][0]}</span>` : h.total > 21 ? '<span class="bj-net bad">BUST</span>' : h.bj ? '<span class="bj-net good">BLACKJACK!</span>' : h.charlie ? '<span class="bj-net good">5-CARD CHARLIE!</span>' : ''}</div></div>`).join('');
       let btns = '';
       if (v.phase === 'playing' && v.active >= 0) {
         btns = `<div class="bj-turn"><span>Your move</span> ${timer(v.endsIn)}${v.hands.length > 1 ? ` · hand ${v.active + 1}` : ''}</div><div class="bj-moves"><button class="btn big bj-hit" data-op="hit"><i>👆</i>Hit</button><button class="btn big bj-stand" data-op="stand"><i>✋</i>Stand</button>${v.canDouble ? '<button class="btn big bj-dbl" data-op="double"><i>×2</i>Double</button>' : ''}${v.canSplit ? '<button class="btn big bj-split" data-op="split"><i>✂</i>Split</button>' : ''}</div><p class="bj-tip"><span>💡</span>${esc(tip(v))}</p>`;
