@@ -557,6 +557,21 @@ class BoxRoom {
     return added;
   }
 
+  // The host removes someone (TV or host phone). Their phone is told, and the same phone or
+  // account can't come straight back into this room (a fresh name on another phone still can).
+  kick(id) {
+    const p = this.players.get(id); if (!p) return { ok: false, error: 'That player already left.' };
+    if (!p.bot) {
+      this.kicked = this.kicked || { tokens: new Set(), profiles: new Set() };
+      if (p.token) this.kicked.tokens.add(p.token);
+      if (p.profileId) this.kicked.profiles.add(p.profileId);
+      if (this.nsp) this.nsp.to('pl:' + this.code + ':' + p.id).emit('kicked', { room: this.code });
+    }
+    this.remove(id);
+    return { ok: true, name: p.name };
+  }
+  isKicked(token, profileId) { const k = this.kicked; return !!(k && ((token && k.tokens.has(token)) || (profileId && k.profiles.has(profileId)))); }
+
   remove(id) {
     const p = this.players.get(id); if (!p) return;
     this.players.delete(id);
@@ -578,7 +593,7 @@ class BoxRoom {
       }
       case 'addBots': return { ok: true, added: this.addBots(Math.max(1, Math.min(50, Number(msg.count) || 5))) };
       case 'removeBots': for (const p of this.list()) if (p.bot) this.remove(p.id); return { ok: true };
-      case 'kick': this.remove(msg.id); return { ok: true };
+      case 'kick': return this.kick(String(msg.id || ''));
       case 'start': return this.start();
       case 'again': this.resetLobby(); return this.start(); // every game: back to a fresh lobby, then start
       case 'next': if (this.phase === 'show' && this.show) { this.show.skip(); this.sync(); return { ok: true }; }
@@ -668,6 +683,7 @@ class BoxRoom {
       partyMode: this.partyState(), unlocks: [...this.unlocks], count: this.players.size,
       away: this.away ? { game: this.away.game, title: this.away.title, code: this.away.code, url: `/play?room=${encodeURIComponent(this.away.code)}&autojoin=1&name=${encodeURIComponent(p.name)}` } : null, min: this.def.min, live: !!this.def.liveLobby,
       vip: !!this.vip() && this.vip().id === p.id, vipName: this.vip() ? this.vip().name : null,
+      roster: this.vip() && this.vip().id === p.id ? this.list().filter((x) => x.id !== p.id).map((x) => ({ id: x.id, name: x.name, avatar: x.avatar, bot: !!x.bot, online: !!x.bot || x.sockets > 0 })) : null,
       state: this.game && this.phase !== 'show' ? this.game.view(p) : null, show: this.show ? this.show.view(p) : null,
     };
   }

@@ -228,3 +228,8 @@ button { font: inherit; }
 /* The sound hint: bottom-right, away from the host buttons. */
 .sound-hint { left: auto; right: 14px; }
 .ph-vol { display: flex; align-items: center; gap: 10px; } .ph-vol input { flex: 1; accent-color: var(--yellow); } .ph-vol output { width: 44px; text-align: right; color: var(--muted); }
+/* Host menu: remove a player */
+.kick-list { display: grid; gap: 6px; margin-top: 6px; }
+.kick-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; border-radius: 12px; background: rgba(255,255,255,.08); }
+.kick-row.off { opacity: .6; }
+.kick-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

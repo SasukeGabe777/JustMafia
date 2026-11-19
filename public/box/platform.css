@@ -222,3 +222,8 @@
 .pe-bar.paused { border-color: var(--cyan); }
 @keyframes peIn { from { opacity: 0; transform: translate(-50%, 60px) scale(0.95); } }
 .pe-strip { font-weight: 600; }
+/* Host menu: remove a player */
+.hm-kick { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.hm-kick .chip { cursor: pointer; border: 0; font: inherit; }
+.hm-kick .chip b { margin-left: 6px; opacity: .7; }
+.hm-kick .chip:hover { background: rgba(255,80,80,.35); }

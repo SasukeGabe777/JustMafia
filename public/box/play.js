@@ -160,7 +160,12 @@
     sheet(`<h2>👑 Host menu</h2><div class="host-menu">
       ${running ? '<button class="btn ghost" data-do="next">⏩ Skip ahead</button><button class="btn ghost" data-do="lobby">⏹ End this game</button>' : ''}
       ${!running ? '<button class="btn" data-do="pick">🎮 Pick another game</button>' : ''}
-      <button class="btn ghost" data-do="bots">🤖 Add 5 bots</button><button class="btn ghost" data-do="nobots">Remove bots</button></div>`, (s, close) => {
+      <button class="btn ghost" data-do="bots">🤖 Add 5 bots</button><button class="btn ghost" data-do="nobots">Remove bots</button></div>
+      ${(view.roster || []).length ? `<h3>👥 Players</h3><div class="kick-list">${view.roster.map((x) => `<div class="kick-row${x.online ? '' : ' off'}"><span>${esc(x.avatar || '')} ${esc(x.name)}${x.online ? '' : ' <small class="muted">(offline)</small>'}</span><button class="btn ghost small" data-kick="${esc(x.id)}" data-name="${esc(x.name)}">Remove</button></div>`).join('')}</div>` : ''}`, (s, close) => {
+      for (const b of s.querySelectorAll('[data-kick]')) b.onclick = async () => {
+        if (!confirm(`Remove ${b.dataset.name} from the room?`)) return;
+        const r = await hostDo('kick', { id: b.dataset.kick }); if (r.ok) { toast('👋 ' + b.dataset.name + ' was removed.'); b.closest('.kick-row').remove(); }
+      };
       for (const b of s.querySelectorAll('[data-do]')) b.onclick = () => {
         const d = b.dataset.do; close();
         if (d === 'pick') return gamePicker();
@@ -209,6 +214,13 @@
     });
   }
   $('#h-prof').onclick = () => profileSheet();
+  // The host removed this phone from the room.
+  socket.on('kicked', (m) => {
+    const code = (m && m.room) || (me && me.code);
+    try { if (code) localStorage.removeItem(tokenKey(code)); } catch { /* private */ }
+    me = null; audience = null; audState = null; document.body.classList.remove('is-audience');
+    showJoin('👋 The host removed you from this room.'); haptic('error');
+  });
   socket.on('trophy', (list) => {
     for (const t of list || []) { toast(`🏆 Trophy unlocked: ${t.icon} ${t.name}!`); }
     haptic('win'); BOX.sfx('win');
