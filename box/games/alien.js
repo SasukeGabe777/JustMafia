@@ -583,7 +583,15 @@ class Alien {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  const s = PF.best({ trip: [4, 3, 5], talk: P >= 10 ? [60, 45, 90, 30] : [45, 30, 60, 90] }, (x) => 1.5 + x.trip * (x.talk + 70) / 60, M);
+  return { trip: s.trip, talk: s.talk };
+};
+
 module.exports = {
+  partyFit,
   key: 'alien', name: 'Alien Abduction', min: 4, best: [5, 12], howSteps: 6, fields, defaults,
   show: { facts: false }, // intro cutscene before the game (public/box/intros/alien.js)
   locked: { how: 'Finish a game of Most Likely To… to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js

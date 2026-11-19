@@ -392,7 +392,12 @@ class Game {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => ({ rounds: M >= 14 ? 5 : 3, size: M <= 6 ? 'small' : M >= 16 ? 'large' : 'medium', holes: M <= 6 ? 'off' : 'some' });
+
 module.exports = {
+  partyFit,
   key: 'marble', name: 'JustMarble', min: 1, best: [2, 6], howSteps: 6, fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/marble.js)
   create: (room, settings) => new Game(room, settings),

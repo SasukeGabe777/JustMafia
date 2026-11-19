@@ -307,7 +307,18 @@ class Blanks {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  // Rounds the slot allows; points to win so someone gets there about then (bigger groups spread the wins).
+  const pickSeconds = M <= 7 ? 45 : 60, per = (pickSeconds + 50) / 60, R = Math.max(3, M / per);
+  const toWin = PF.near([3, 5, 7, 10], Math.max(3, R / Math.max(2, P * 0.35)));
+  const rounds = PF.near([8, 12, 20, 40], R);
+  return { toWin, rounds, pickSeconds };
+};
+
 module.exports = {
+  partyFit,
   key: 'blanks', name: 'JustBlanks', min: 3, best: [4, 10], fields, defaults,
   create: (room, settings) => new Blanks(room, settings),
 };

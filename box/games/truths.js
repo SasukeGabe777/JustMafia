@@ -305,7 +305,18 @@ class Truths {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  // Everyone writes once, then each player in the hot seat takes (talk + vote + reveal).
+  const writeSeconds = M <= 7 ? 90 : 120, talk = M <= 7 ? 0 : M <= 18 ? 15 : 30, voteSeconds = M <= 7 ? 20 : 30;
+  const per = (talk + voteSeconds + 25) / 60, n = Math.max(2, Math.floor((M - writeSeconds / 60 - 0.5) / per));
+  const featured = P <= 12 && n >= P ? 'auto' : [100, 20, 10, 6].find((x) => x <= n) || 6;
+  return { featured, talk, writeSeconds, voteSeconds };
+};
+
 module.exports = {
+  partyFit,
   key: 'truths', name: 'Two Truths & a Lie', min: 3, best: [4, 10], fields, defaults, IDEAS, FAMILY_IDEAS,
   create: (room, settings) => new Truths(room, settings),
 };

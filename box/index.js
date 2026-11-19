@@ -166,7 +166,7 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
     };
 
     socket.on('host:create', (msg, cb) => {
-      // Party Mode: msg.party = { games: [keys], minutes } plays the lineup back to back.
+      // Party Mode: msg.party = { games: [keys], minutes, flow, intros, each, plan, players } plays the lineup back to back.
       let lineup = msg.party && Array.isArray(msg.party.games) ? msg.party.games.map(defOf).filter(Boolean) : null;
       // The party starts in a box game; games played elsewhere (JustMafia) come later.
       if (lineup) lineup = [...lineup.filter((d) => !d.external), ...lineup.filter((d) => d.external)];
@@ -175,7 +175,7 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
       const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true, profiles, wallets }));
       room.setUnlocks(msg.unlocks);
       if (room.isLocked(def)) return reply(cb, { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim(), locked: true });
-      if (lineup && lineup.length) room.setParty(lineup, msg.party.minutes, msg.party.flow);
+      if (lineup && lineup.length) room.setParty(lineup, msg.party.minutes, msg.party.flow, msg.party);
       rooms.set(room.code, room);
       detach(); socket.data = { code: room.code, host: true }; socket.join('host:' + room.code);
       reply(cb, { ok: true, code: room.code, hostKey: room.hostKey, game: def.key });

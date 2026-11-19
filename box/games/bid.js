@@ -595,7 +595,16 @@ class Bid {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  const countdown = M <= 7 ? 5 : 7;
+  const { rounds } = PF.best({ rounds: [8, 6, 12] }, (s) => 1 + s.rounds * (2.2 + countdown / 15 + Math.min(P, 20) * 0.02), M);
+  return { rounds, countdown };
+};
+
 module.exports = {
+  partyFit,
   key: 'bid', name: 'JustBid', min: 1, best: [3, 10], howSteps: 6, fields, defaults, show: true, // game-show opening (box/show.js)
   create: (room, settings) => new Bid(room, settings),
   sealedPrice, fmt, ADDS, MIN_INC,

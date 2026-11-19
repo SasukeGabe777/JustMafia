@@ -377,7 +377,16 @@ class Game {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => {
+  const seconds = M <= 7 ? 15 : 20;
+  const { rounds } = PF.best({ rounds: [7, 5, 10] }, (s) => 0.5 + s.rounds * (seconds + 40) / 60, M);
+  return { rounds, seconds };
+};
+
 module.exports = {
+  partyFit,
   key: 'colormatch', name: 'Color Match', min: 2, best: [2, 20], fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/colormatch.js)
   locked: { how: 'Finish a game of Emoji Charades to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js

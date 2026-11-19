@@ -580,7 +580,12 @@ class Summon {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => ({ length: PF.near([10, 15, 20], M - 1.5) });
+
 module.exports = {
+  partyFit,
   key: 'summon', name: 'JustSummon', min: 2, best: [2, 8], fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/summon.js)
   howSteps: 6, // the how-to-play step after the intro has six cards (tutorial in the intro file)

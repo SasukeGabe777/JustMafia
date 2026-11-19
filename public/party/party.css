@@ -54,6 +54,8 @@ body.pm-open { overflow: hidden; }
 .pm-opts { display: grid; gap: clamp(8px, calc(var(--u) * 1), 20px); }
 .pm-opts.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .pm-opts.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pm-opts.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pm-osub { font-weight: 700; opacity: .7; font-size: .78em; white-space: nowrap; }
 .pm-opt { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 12px; align-items: center; text-align: left; padding: clamp(8px, calc(var(--u) * 0.9), 18px) clamp(12px, calc(var(--u) * 1.2), 24px); border-radius: 20px; background: rgba(255, 255, 255, 0.08); border: 3px solid rgba(255, 255, 255, 0.16); transition: transform 0.15s ease, background 0.15s, border-color 0.15s, box-shadow 0.15s; }
 .pm-opt .pm-oi { grid-row: span 2; font-size: clamp(28px, calc(var(--u) * 2.8), 60px); line-height: 1; }
 .pm-opt b { font-size: clamp(18px, calc(var(--u) * 1.7), 38px); line-height: 1.1; }

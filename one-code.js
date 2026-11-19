@@ -128,7 +128,7 @@ function createOneCode({ box, rooms, bridge }) {
   }
   function startParty(b, lineup, party) {
     endParty(b);
-    const sp = b.setParty(lineup, party && party.minutes, party && party.flow);
+    const sp = b.setParty(lineup, party && party.minutes, party && party.flow, party);
     if (!sp.ok) return sp;
     return switchTo(b, b.partyMode.defs[0]);
   }

@@ -791,7 +791,16 @@ class Ducks {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => {
+  // A season = races × (time on the farm between races + the race itself).
+  const { races, raceEvery } = PF.best({ races: [5, 3, 8, 10], raceEvery: [120, 60, 180, 300] }, (s) => 2 + s.races * (s.raceEvery / 60 + 3), M);
+  return { races, raceEvery, course: M <= 10 ? 'sprint' : M >= 30 ? 'marathon' : 'classic', energy: M <= 10 ? 'relaxed' : 'normal' };
+};
+
 module.exports = {
+  partyFit,
   key: 'ducks', name: 'JustRaiseDucks', min: 1, best: [2, 12], fields, defaults, liveLobby: true,
   create: (room, settings) => new Ducks(room, settings),
   _test: { level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, DIFF, PERKS, SPIN, HYPE_MS, CHEER_GAP },

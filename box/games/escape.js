@@ -445,7 +445,15 @@ class Game {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => {
+  const rooms = M <= 20 ? 1 : M <= 38 ? 2 : 3;
+  return { rooms, difficulty: M <= 8 ? 'easy' : 'climb' };
+};
+
 module.exports = {
+  partyFit,
   key: 'escape', name: 'JustEscape', min: 1, best: [2, 6], howSteps: 6, fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/escape.js): Detective Hazel Finch
   create: (room, settings) => new Game(room, settings),

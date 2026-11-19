@@ -598,7 +598,20 @@ class Sketch {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  // A small group is one ring (everyone draws in everyone's book); a big group splits into rings that play at once.
+  const fixed = P <= 5 ? [4] : P <= 7 ? [6] : P <= 8 ? [8] : [6, 4, 8];
+  const s = PF.best({ ringSize: fixed, drawSeconds: [60, 45, 90], showBooks: [6, 3] }, (x) => {
+    const ring = P <= 8 ? P : x.ringSize, guess = x.drawSeconds === 45 ? 20 : 30;
+    return 1.5 + (ring - 1) * ((x.drawSeconds + guess) / 2 + 8) / 60 + Math.min(x.showBooks, P) * 0.2 * ring;
+  }, M);
+  return { ringSize: s.ringSize, drawSeconds: s.drawSeconds, guessSeconds: s.drawSeconds === 45 ? 20 : 30, showBooks: s.showBooks };
+};
+
 module.exports = {
+  partyFit,
   key: 'sketch', name: 'JustSketch Relay', min: 3, best: [4, 10], fields, defaults,
   create: (room, settings) => new Sketch(room, settings),
   _test: { pensOf, similarity, matches, cleanStrokes, PROMPTS, PACKS, NOT_FAMILY, MAX_POINTS, MAX_STROKES, MAX_FILLS, REACTS },

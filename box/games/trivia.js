@@ -370,7 +370,16 @@ class Trivia {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => {
+  const seconds = M <= 7 ? 10 : 15;
+  const { questions } = PF.best({ questions: [12, 8, 16] }, (s) => 0.5 + s.questions * (seconds + 22) / 60, M);
+  return { questions, seconds };
+};
+
 module.exports = {
+  partyFit,
   key: 'trivia', name: 'Hot Take Trivia', min: 2, best: [2, 16], howSteps: 6, fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/trivia.js)
   locked: { how: 'Finish a game of Price Panic to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js

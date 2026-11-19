@@ -415,7 +415,7 @@
       <h3>${done ? (P.rank === 1 ? 'You’re the party champion!' : `You finished #${P.rank} of ${P.of}`) : `You’re #${P.rank || '-'} of ${P.of}`}</h3>
       <p class="pp-pts"><b>${P.pts}</b> party points${P.gain && !done ? ` <span class="pp-gain">+${P.gain}</span>` : ''} · ⭐ ${P.wins || 0} win${P.wins === 1 ? '' : 's'}</p>
       <div class="board">${(P.top || []).map((r, i) => `<div class="row ${r.id === v.me.id ? 'me' : ''}"><span class="n">${i + 1}</span><span>${esc(r.avatar || '')} ${esc(r.name)}</span><b>${r.pts}</b></div>`).join('')}</div>
-      <p class="muted">${done ? `${P.played} games played tonight. What a party! 🎉` : nx ? `Up next: <b>${nx.icon} ${esc(nx.name)}</b>${PM.paused ? ' (the host is holding it)' : ` in ${BOX.timer(PM.in)}`}` : ''}</p></div>`);
+      <p class="muted">${done ? `${P.played} games played tonight. What a party! 🎉` : nx ? `Up next: <b>${nx.icon} ${esc(nx.name)}</b>${PM.paused ? ' (the host is holding it)' : ` in ${BOX.timer(PM.in)}`}${PM.upNext && PM.upNext.summary && PM.upNext.summary.length ? `<br><small>${esc(PM.upNext.summary.join(' · '))}</small>` : ''}${PM.intros === 'break' ? '<br><small>🍿 Its intro is on the big screen</small>' : ''}` : ''}</p></div>`);
     if (!partyPhone.seen || partyPhone.seen !== PM.phase + PM.index) { partyPhone.seen = PM.phase + PM.index; haptic(done && P.rank === 1 ? 'win' : 'success'); }
   }
   // ---------- game-show opening: you're a contestant! ----------
@@ -467,9 +467,9 @@
     const left = sh.introIn == null ? null : sh.introIn - (Date.now() - view._at);
     const now = left != null && left <= 0 && left > -(sh.perMs || 5200) * (sh.mode === 'cast' ? 3 : 1);
     BOX.morph(body, `<div class="card-box sh-card ${now ? 'sh-now' : ''}"><div class="sh-mic">${now ? '🌟' : '📺'}</div>
-      <h3>${now ? 'That’s you on the TV! Wave! 👋' : sh.mode === 'cast' ? 'Get ready: ' + esc(sh.title) + ' is starting!' : 'Meet the contestants!'}</h3>
+      <h3>${now ? 'That’s you on the TV! Wave! 👋' : sh.mode !== 'facts' ? 'Get ready: ' + esc(sh.title) + ' is starting!' : 'Meet the contestants!'}</h3>
       ${sh.myFact ? `<p class="sh-fact">“${esc(sh.myFact)}”</p>` : ''}
-      <p class="muted">${sh.mode === 'cast' ? 'Watch the big screen for the intro.' : sh.featured ? (left > 0 ? 'The host will introduce you in a moment…' : 'You’ve been introduced!') : 'Watch the big screen. The game starts in a moment.'}</p></div>`);
+      <p class="muted">${sh.mode === 'card' ? (sh.info && sh.info.summary && sh.info.summary.length ? esc(sh.info.summary.join(' · ')) + '. ' : '') + 'Tap ❓ any time for how to play.' : sh.mode === 'cast' ? 'Watch the big screen for the intro.' : sh.featured ? (left > 0 ? 'The host will introduce you in a moment…' : 'You’ve been introduced!') : 'Watch the big screen. The game starts in a moment.'}</p></div>`);
     if (now && !showPhone.buzzed) { showPhone.buzzed = true; vibrate([60, 40, 60]); }
     if (!now) showPhone.buzzed = false;
   }

@@ -457,7 +457,16 @@ class WhoSaid {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  const answerSeconds = M <= 7 ? 45 : 60;
+  const s = PF.best({ rounds: [4, 3, 6], spots: [6, 4, 10].filter((x) => x <= Math.max(4, P)) }, (x) => x.rounds * (answerSeconds / 60 + 0.5 + x.spots * 22 / 60), M);
+  return { rounds: s.rounds, spots: s.spots, answerSeconds };
+};
+
 module.exports = {
+  partyFit,
   key: 'whosaid', name: 'Who Said It?', min: 3, best: [4, 12], fields, defaults, PACKS, FAMILY_SAFE,
   create: (room, settings) => new WhoSaid(room, settings),
 };

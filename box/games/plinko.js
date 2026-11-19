@@ -367,7 +367,16 @@ class Drop {
     return out;
   }
 }
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => {
+  const timer = M <= 7 ? 'quick' : M >= 16 ? 'relaxed' : 'normal', per = { quick: 2.1, normal: 2.8, relaxed: 3.5 }[timer];
+  const { rounds } = PF.best({ rounds: [4, 3, 5] }, (s) => 0.5 + s.rounds * per, M);
+  return { rounds, timer };
+};
+
 module.exports = {
+  partyFit,
   key: 'plinko', name: 'JustDrop', min: 1, best: [2, 10], howSteps: 6, fields, defaults,
   show: { facts: false }, // intro cutscene before the game (public/box/intros/plinko.js)
   locked: { how: 'Finish a game of Blackjack Night to unlock it.' },

@@ -463,7 +463,16 @@ class ActOut {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => {
+  const seconds = M <= 7 ? 45 : 60;
+  const { turns } = PF.best({ turns: [8, 6, 10, 12] }, (s) => 0.5 + s.turns * (seconds * 0.8 + 35) / 60, M);
+  return { turns, seconds };
+};
+
 module.exports = {
+  partyFit,
   key: 'actout', name: 'Act It Out', min: 3, best: [4, 12], fields, defaults, howSteps: 6, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/actout.js)
   locked: { how: 'Finish a game of JustSketch Relay to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js

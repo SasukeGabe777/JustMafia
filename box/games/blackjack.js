@@ -347,7 +347,16 @@ class Blackjack {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => {
+  const actSeconds = M <= 7 ? 15 : 25;
+  const { hands } = PF.best({ hands: [8, 5, 12, 20] }, (s) => 1 + s.hands * (actSeconds + 85) / 60, M);
+  return { hands, actSeconds };
+};
+
 module.exports = {
+  partyFit,
   key: 'blackjack', name: 'Blackjack Night', min: 1, best: [2, 12], howSteps: 6, fields, defaults,
   create: (room, settings) => new Blackjack(room, settings),
   _test: { total, isBJ, MIN_BET, BUST_STAKE, BUST_PAYS, EVENTS },

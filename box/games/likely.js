@@ -558,7 +558,16 @@ class Likely {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  const voteSeconds = M <= 7 ? 15 : 20;
+  const { rounds } = PF.best({ rounds: [15, 10, 20, 30] }, (s) => 0.5 + s.rounds * (voteSeconds + 18) / 60, M);
+  return { rounds, voteSeconds, reveal: P >= 12 ? 'anon' : 'public' };
+};
+
 module.exports = {
+  partyFit,
   key: 'likely', name: 'Most Likely To…', min: 3, best: [6, 20], fields, defaults,
   create: (room, settings) => new Likely(room, settings),
   _test: { PACKS, FAMILY_SAFE, kindOf, MATCH, PREDICT },

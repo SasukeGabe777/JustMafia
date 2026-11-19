@@ -47,6 +47,14 @@ const fields = [
   { key: 'seconds', label: 'Time to pick', options: opt([[15, '15 seconds'], [20, '20 seconds'], [30, '30 seconds']]) },
 ];
 const defaults = { rounds: 5, seconds: 20 };
+// Party Mode: settings that fit the players here and this game's minutes in the plan (box/party-fit.js).
+// Estimate the minutes for a choice of options; PF.best picks the options closest to the target.
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => {
+  const seconds = M <= 7 ? 15 : 20;
+  const { rounds } = PF.best({ rounds: [5, 3, 8] }, (s) => 0.5 + s.rounds * (seconds + 10) / 60, M);
+  return { rounds, seconds };
+};
 const REVEAL_MS = 6000;
 
 class Game {
@@ -95,6 +103,7 @@ class Game {
 module.exports = {
   key: ${js(key)}, name: ${js(name)}, min: 2, best: [3, 10], fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/${key}.js)
+  partyFit, // Party Mode fits the settings to the crowd and the time
   create: (room, settings) => new Game(room, settings),
 };
 `);

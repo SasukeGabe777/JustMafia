@@ -1273,7 +1273,12 @@ class Kingdoms {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => ({ timeLimit: PF.near([20, 30, 45, 60], M), speed: M <= 20 ? 'fast' : M >= 45 ? 'relaxed' : 'normal' });
+
 module.exports = {
+  partyFit,
   key: 'kingdoms', name: 'JustKingdoms', min: 1, best: [5, 10], liveLobby: true, fields, defaults,
   create: (room, settings) => new Kingdoms(room, settings),
   _test: { Kingdoms, D, M, AI, SPEED, sumU, fightersOf },

@@ -607,7 +607,12 @@ class Game {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => PF.best({ rounds: [7, 5, 10] }, (s) => 0.5 + s.rounds * 0.75, M);
+
 module.exports = {
+  partyFit,
   key: 'quickdraw', name: 'Quick Draw', min: 2, best: [2, 20], howSteps: 6, fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/quickdraw.js)
   locked: { how: 'Finish a game of President to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js

@@ -500,7 +500,17 @@ class DebateClub {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  // More debates for a big group (more people get the floor), shorter speeches for short slots.
+  const per = { short: 2.5, normal: 3.5, long: 4.8 };
+  const s = PF.best({ debates: P >= 8 ? [4, 3, 2] : [3, 2, 4], speech: ['normal', 'short', 'long'] }, (x) => 1 + x.debates * per[x.speech], M);
+  return { debates: s.debates, speech: s.speech };
+};
+
 module.exports = {
+  partyFit,
   key: 'debate', name: 'Debate Club', min: 3, best: [4, 14], howSteps: 6, fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/debate.js)
   locked: { how: 'Finish a game of Where Do You Stand? to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js

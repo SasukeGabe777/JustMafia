@@ -34,7 +34,10 @@
   const hasTitle = () => STAND || !!(BOX.titles && BOX.titles[gameKey] && BOX.titles[gameKey].draw);
   const showBar = () => { if (!STAND) document.querySelector('.tv-bar').hidden = false; };
   // Party Mode from the main menu: /box/tv?game=<first>&party=<k1,k2,…>&minutes=60
-  const partyParam = params.get('party') ? { games: params.get('party').split(',').filter(Boolean).slice(0, 20), minutes: Number(params.get('minutes')) || 60, flow: params.get('flow') === 'lobby' ? 'lobby' : 'auto' } : null;
+  // …&intros=play|break|skip&each=quick|standard|long|auto&plan=pizza:10,trivia:5&players=4 (the server checks them).
+  const planParam = () => { const o = {}; for (const kv of (params.get('plan') || '').split(',')) { const [k, m] = kv.split(':'); if (k && Number(m) > 0) o[k] = Number(m); } return o; };
+  const partyParam = params.get('party') ? { games: params.get('party').split(',').filter(Boolean).slice(0, 20), minutes: Number(params.get('minutes')) || 60, flow: params.get('flow') === 'lobby' ? 'lobby' : 'auto',
+    intros: params.get('intros') || 'play', each: params.get('each') || 'auto', plan: planParam(), players: Number(params.get('players')) || 0 } : null;
   let partyUsed = false;
   const myUnlocks = () => (window.UNLOCKS ? window.UNLOCKS.all() : []);
   // Streamer options (⚙ host menu, remembered on this TV): hide the code, filter player text,
@@ -178,6 +181,7 @@
     if (onTitle) { if (rendered !== 'locked') AU.music('title', gameKey); return; }
     if (!state) return;
     const pm = state.partyMode;
+    if (pm && pm.phase === 'board' && pm.preview) return AU.music('intro', pm.preview.game); // the next game's intro, in the break
     if (pm && (pm.phase === 'board' || pm.phase === 'done')) return AU.music(pm.phase === 'done' ? 'finale' : 'board', 'party');
     if (state.phase === 'lobby') return AU.music('lobby', gameKey);
     if (state.phase === 'show') return AU.music('intro', gameKey);
@@ -231,7 +235,7 @@
     c.querySelector('.cc').textContent = state.code;
     const q = c.querySelector('.cq'); if (q.dataset.u !== joinUrl()) { q.src = qr(); q.dataset.u = joinUrl(); }
     const over = state.state && state.state.phase === 'over', inParty = partyRunning();
-    const html = `${over && inParty ? `<button data-h="partyBoardNow">⏩ Show standings now</button><button data-h="partyPause">${state.partyMode.paused ? '▶ Resume' : '⏸ Wait'}</button>` : over ? '<button data-h="again">▶ Play again</button><button data-h="pick">🎮 Another game</button>' : '<button data-h="next">⏩ Skip ahead</button>'}<button data-h="lobby">↩ Back to the lobby</button><button data-h="bots">🤖 Add 5 bots</button>${AU ? '<button data-h="sound">🔊 Music & sound</button>' : ''}<button data-h="recap">🎬 Night recap</button><button data-h="streamer">🎥 Streamer options</button><button data-h="quit">🚪 Quit to title</button>`;
+    const html = `${over && inParty ? `<button data-h="partyBoardNow">⏩ Show standings now</button><button data-h="partyPause">${state.partyMode.paused ? '▶ Resume' : '⏸ Wait'}</button>` : over ? '<button data-h="again">▶ Play again</button><button data-h="pick">🎮 Another game</button>' : '<button data-h="next">⏩ Skip ahead</button>'}${inParty ? `<button data-h="intros">🎬 Intros: ${esc(INTRO_LABEL[state.partyMode.intros] || 'Play each')}</button>` : ''}<button data-h="lobby">↩ Back to the lobby</button><button data-h="bots">🤖 Add 5 bots</button>${AU ? '<button data-h="sound">🔊 Music & sound</button>' : ''}<button data-h="recap">🎬 Night recap</button><button data-h="streamer">🎥 Streamer options</button><button data-h="quit">🚪 Quit to title</button>`;
     const m = c.querySelector('.cm');
     if (m.dataset.html !== html) {
       m.innerHTML = html; m.dataset.html = html;
@@ -242,6 +246,7 @@
         if (h === 'streamer') return hostMenu(true);
         if (h === 'sound') return AU.panel(c.querySelector('.cg'));
         if (h === 'quit') { if (confirm('Quit this game and go back to the title screen?')) quitToTitle(); return; }
+        if (h === 'intros') { const order = Object.keys(INTRO_LABEL), cur = state.partyMode && state.partyMode.intros; return host('partyIntros', { mode: order[(order.indexOf(cur) + 1) % order.length] }); }
         if (h === 'lobby' && !over && !confirm('End this game and go back to the lobby?')) return;
         host(h === 'bots' ? 'addBots' : h, { count: 5 });
       };
@@ -402,6 +407,35 @@
     setTimeout(tickDelay, 250);
   }
 
+  // ---- Party Mode: what's next, its settings, and the intros ----
+  // The ⚙ menu cycles the party's intros: play each → in the break → skip.
+  const INTRO_LABEL = { play: 'Play each', break: 'In the break', skip: 'Skip' };
+  const fitLine = (info) => (info && info.summary && info.summary.length ? info.summary.map((x) => `<span>${esc(x)}</span>`).join('') : '');
+  // A small "Game 2 of 5 · 5 orders · 45 seconds" tag over an intro played in a party.
+  const partyBadge = (info) => (info ? `<div class="pv-badge">🎉 Game ${info.n} of ${info.of}${info.last ? ' · the finale' : ''}${fitLine(info) ? ` · <span class="pv-fit">${fitLine(info)}</span>` : ''}</div>` : '');
+  // "Skip intros": the game's title card (icon, name, where it is in the lineup, its settings).
+  function titleCard(sh) {
+    const g = BOX.games[sh.game] || {}, info = sh.info || null;
+    return `<div class="pc-card" style="--pc:${esc(g.color || '#ffd23f')}">
+      ${info ? `<div class="pc-kicker">🎉 Game ${info.n} of ${info.of}${info.last ? ' · the finale!' : ''}</div>` : ''}
+      <div class="pc-icon">${esc(g.icon || '🎮')}</div>
+      <h1 class="pc-title">${esc(sh.title)}</h1>
+      ${fitLine(info) ? `<div class="pc-fit">${fitLine(info)}</div>` : ''}
+      <p class="pc-go">Get ready! Look at your phone 📱</p>
+      <div class="pc-bar"><i style="animation-duration:${Math.max(500, sh.endsIn || 4500)}ms"></i></div>
+    </div>`;
+  }
+  // The strip over an intro playing in the standings break.
+  function previewBar(pm) {
+    const bar = $('#pv-bar'); if (!bar) return;
+    const u = pm.upNext || {};
+    const h = `<div class="pv-up"><span class="pv-k">🍿 Up next${u.n ? ` · Game ${u.n} of ${u.of}` : ''}</span><b>${esc(u.title || '')}</b>${fitLine(u) ? `<span class="pv-fit">${fitLine(u)}</span>` : ''}</div>
+      <div class="pv-btns"><button class="pb-btn go" data-pv="partyNext">⏭ Start now</button><button class="pb-btn ghost" data-pv="partyPause">${pm.paused ? '▶ Resume' : '⏸ Wait'}</button></div>`;
+    if (bar.dataset.html === h) return;
+    bar.innerHTML = h; bar.dataset.html = h;
+    for (const b of bar.querySelectorAll('[data-pv]')) b.onclick = () => host(b.dataset.pv);
+  }
+
   function render() {
     if (!state) return;
     if (STAND) corner();
@@ -415,12 +449,28 @@
     const pm = state.partyMode;
     if (state.phase === 'lobby' && !(pm && pm.ext && (pm.phase === 'board' || pm.phase === 'done'))) return lobby();
     if (pm && (pm.phase === 'board' || pm.phase === 'done') && BOX.partyBoard) {
+      // Intros "in the break": the next game's cutscene takes over the standings until it starts.
+      if (pm.phase === 'board' && (pm.preview || rendered === 'preview') && BOX.showIntro) {
+        if (pm.preview) {
+          if (rendered !== 'preview') { main.innerHTML = '<div id="show-area" class="show-area"></div><div class="pv-bar" id="pv-bar"></div>'; rendered = 'preview'; }
+          BOX.showIntro($('#show-area'), pm.preview, { players: state.players, host });
+        }
+        previewBar(pm);
+        return;
+      }
       if (rendered !== 'board') { main.innerHTML = '<div id="pb-area" class="pb-area"></div>'; rendered = 'board'; }
       BOX.partyBoard($('#pb-area'), state, { host });
       return;
     }
     // Game-show opening (studio, audience, host, contestants): full screen, drawn by show.js.
     if (state.phase === 'show' && state.show) {
+      // Party Mode "Skip intros": just the next game's title card for a moment.
+      if (state.show.mode === 'card') {
+        const h = titleCard(state.show);
+        if (rendered !== 'card') { main.innerHTML = '<div id="card-area" class="show-area pc-area"></div><button class="show-skip" id="show-skip" data-h="next">Start now ⏩</button>'; rendered = 'card'; $('#show-skip').onclick = () => host('next'); BOX.sfx('whoosh'); }
+        const ca = $('#card-area'); if (ca.dataset.html !== h) { ca.innerHTML = h; ca.dataset.html = h; }
+        return;
+      }
       // How to play (after the intro): its own full-screen tutorial (howto.js).
       if (state.show.step === 'howto' && BOX.showHowto) {
         if (rendered !== 'howto') {
@@ -432,7 +482,7 @@
         return;
       }
       if (rendered !== 'show') {
-        main.innerHTML = '<div id="show-area" class="show-area"></div><button class="show-skip" id="show-skip" data-h="next">Skip intro ⏩</button>';
+        main.innerHTML = `<div id="show-area" class="show-area"></div>${partyBadge(state.show.info)}<button class="show-skip" id="show-skip" data-h="next">Skip intro ⏩</button>`;
         rendered = 'show';
         $('#show-skip').onclick = () => host('next');
       }
