@@ -53,7 +53,7 @@
 
   // ---------- screens ----------
   function show(id) {
-    for (const s of ['#screen-join', '#screen-creator', '#screen-home', '#screen-shop', '#screen-game', '#screen-msg']) $(s).hidden = s !== id;
+    for (const s of ['#screen-join', '#screen-creator', '#screen-home', '#screen-season', '#screen-game', '#screen-msg']) $(s).hidden = s !== id;
     if (id === '#screen-creator') startStage();
     if (id === '#screen-home') startHouseStage();
     if (id !== '#screen-home') homeMode = null;
@@ -100,7 +100,6 @@
     $('#c-save').hidden = mode === 'edit';
     $('#quick-join').hidden = mode === 'edit' || !roomHelp;
     $('#q-name').value = load('mt.name') || '';
-    $('#c-shop').hidden = mode !== 'edit'; // first join: one clear path; the shop is in the lobby
     $('#c-err').textContent = '';
     avatar = { ...savedAvatar };
     show('#screen-creator');
@@ -160,8 +159,7 @@
   function buildPicker() {
     if (!creatorMode) return;
     MT_CREATOR.render({ avatar, profile, paint, theme: view && view.theme, tab: creatorTab,
-      setTab: (id) => { creatorTab = id; buildPicker(); }, change,
-      buy: (itemId) => socket.emit('profile:buy', { itemId }, (r) => { if (r && r.ok) { profile = r.profile; buildPicker(); } else abilityReply(r); }) });
+      setTab: (id) => { creatorTab = id; buildPicker(); }, change });
     const dirty = !sameLook(avatar, savedAvatar);
     $('#c-dirty').hidden = !dirty; $('#c-revert').disabled = !dirty;
   }
@@ -297,36 +295,40 @@
     });
   });
 
-  // ---------- shop, gold pouch, inventory ----------
-  // The server owns gold and ownership; the shop screen shows them and sends requests.
-  let shopReturn = '#screen-game';
-  function shopLook() { return view && view.you && view.phase === 'lobby' ? { avatar: view.you.avatar, home: view.you.homeLook || savedHome } : { avatar: savedAvatar, home: savedHome }; }
-  function renderShop() {
-    if ($('#screen-shop').hidden) return;
-    const look = shopLook();
+  // ---------- JustGold shop link, pouch, Season & unlocks ----------
+  // Items are bought in the shared JustGold shop (/shop, docs/justgold.md). Its back link
+  // returns to this phone and room. The server owns JustGold, the pass and Fate.
+  function shopHref() {
+    const u = new URL(location.href), code = (session && session.code) || ($('#j-code').value || '').trim().toUpperCase();
+    for (const k of ['autojoin', 'name']) u.searchParams.delete(k);
+    if (/^[A-Z]{4}$/.test(code)) u.searchParams.set('room', code);
+    return '/shop?back=' + encodeURIComponent(u.pathname + u.search);
+  }
+  const shopLinkHtml = (cls = 'btn ghost') => `<a class="${cls}" data-jg-shop href="${esc(shopHref())}">🛍️ JustGold shop &amp; character</a>`;
+  function refreshShopLinks() { const href = shopHref(); document.querySelectorAll('a[data-jg-shop]').forEach((a) => { if (a.getAttribute('href') !== href) a.setAttribute('href', href); }); }
+  let seasonReturn = '#screen-game';
+  function seasonLook() { return view && view.you && view.phase === 'lobby' ? { avatar: view.you.avatar, home: view.you.homeLook || savedHome } : { avatar: savedAvatar, home: savedHome }; }
+  const afterBuy = (cb) => (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); };
+  function renderSeason() {
+    if ($('#screen-season').hidden) return;
+    const look = seasonLook();
     MT_SHOP.render({ profile, avatar: look.avatar, home: look.home, theme: view && view.theme,
-      buy: (itemId, cb) => socket.emit('profile:buy', { itemId }, (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); }),
-      buyPass: (cb) => socket.emit('profile:buyPass', {}, (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); }),
-      fateBuy: (card, cb) => socket.emit('profile:fateBuy', { card }, (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); }),
-      fateExchange: (cb) => socket.emit('profile:fateExchange', {}, (r) => { if (r && r.ok) { profile = r.profile; updatePouch(); } cb(r); }),
-      equip: (itemId, on, cb) => socket.emit('profile:equip', { itemId, on }, (r) => {
-        if (r && r.ok) {
-          profile = r.profile;
-          // Keep this device's saved look in step with what was equipped.
-          if (r.target === 'home') { savedHome = { ...savedHome, [r.key]: r.value }; save('mt.home', savedHome); }
-          else { savedAvatar = { ...savedAvatar, [r.key]: r.value }; save('mt.avatar', savedAvatar); }
-          renderShop(); updatePouch();
-        }
-        cb(r);
-      }) });
+      buyPass: (cb) => socket.emit('profile:buyPass', {}, afterBuy(cb)),
+      fateBuy: (card, cb) => socket.emit('profile:fateBuy', { card }, afterBuy(cb)),
+      fateExchange: (cb) => socket.emit('profile:fateExchange', {}, afterBuy(cb)) });
+    refreshShopLinks();
   }
-  function openShop() {
+  function openSeason() {
     if (!profileReady || !lobbyOpen()) return;
-    shopReturn = ['#screen-creator', '#screen-game'].find((s) => !$(s).hidden) || '#screen-game';
-    MT_SHOP.open(); show('#screen-shop'); $('#s-pouch-pop').hidden = true; renderShop();
+    seasonReturn = ['#screen-creator', '#screen-game'].find((s) => !$(s).hidden) || '#screen-game';
+    MT_SHOP.open(); show('#screen-season'); $('#s-pouch-pop').hidden = true; renderSeason();
   }
-  $('#s-back').addEventListener('click', () => { if (shopReturn === '#screen-creator') { avatar = { ...avatar }; show('#screen-creator'); buildPicker(); } else { lastKey = ''; show('#screen-game'); render(); } });
-  document.addEventListener('click', (e) => { if (e.target.closest('[data-open-shop]')) openShop(); if (e.target.closest('[data-open-stats]')) openStats(); });
+  $('#s-back').addEventListener('click', () => { if (seasonReturn === '#screen-creator') { show('#screen-creator'); buildPicker(); } else { lastKey = ''; show('#screen-game'); render(); } });
+  document.addEventListener('click', (e) => {
+    const shop = e.target.closest('a[data-jg-shop]'); if (shop) shop.setAttribute('href', shopHref()); // always the current room
+    if (e.target.closest('[data-open-season]')) openSeason();
+    if (e.target.closest('[data-open-stats]')) openStats();
+  }, true);
   // ---------- My stats: career, mastery, rivalries, recent games ----------
   function openStats() {
     const c = profile && profile.career;
@@ -348,7 +350,7 @@
       </div>`;
     m.hidden = false;
   }
-  // Gold pouch in the game header: tap for balance, earned, spent and recent entries.
+  // JustGold pouch in the game header: tap for balance, earned, spent and recent entries.
   // Customizing and shopping are lobby-only; during a game the phone is purely the game.
   const lobbyOpen = () => !view || view.phase === 'lobby';
   // While this game's reward is waiting to be shown (or playing), the header pouch keeps
@@ -362,7 +364,7 @@
     const wrap = $('#g-pouch-wrap'); if (!wrap) return;
     const shown = rewardHeld() ? { ...(profile || {}), coins: view.reward.before } : profile;
     wrap.innerHTML = MT_SHOP.pouchButton(shown, 'g-pouch');
-    const pouchHtml = () => MT_SHOP.pouchDetails(shown) +(lobbyOpen() ? '<button class="btn ghost" data-open-shop>🛒 Visit the shop</button>' : '<p class="small muted" data-shop-closed>The shop opens between games, back in the lobby.</p>');
+    const pouchHtml = () => MT_SHOP.pouchDetails(shown) + (lobbyOpen() ? `<div class="pouch-links">${shopLinkHtml()}<button class="btn ghost" data-open-season>🏆 Season &amp; unlocks</button></div>` : '<p class="small muted" data-shop-closed>The JustGold shop opens between games, back in the lobby.</p>');
     $('#g-pouch').onclick = () => { const pop = $('#g-pouch-pop'); pop.hidden = !pop.hidden; pop.innerHTML = pouchHtml(); };
     if (!$('#g-pouch-pop').hidden) $('#g-pouch-pop').innerHTML = pouchHtml();
     MT_SHOP.paintPouches();
@@ -418,21 +420,41 @@
   $('#j-code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); });
 
   // ---------- connection ----------
-  socket.on('profile:state', (p) => { profile = p; if (!$('#screen-creator').hidden) buildPicker(); renderShop(); updatePouch(); });
+  socket.on('profile:state', (p) => { profile = p; if (!$('#screen-creator').hidden) buildPicker(); renderSeason(); updatePouch(); });
+  // The wallet (mt.profile) is shared with the JustGold shop (/shop), which may also replace it
+  // with another device token of the same account; the server accepts any of them.
+  let seatLookPending = false;
   socket.on('connect', () => {
     const creds = load('mt.profile');
     const ready = (r) => {
       if (!r || !r.ok) { $('#j-err').textContent = 'Profile connection failed. Reload to reconnect.'; return; }
       profile = r.profile; profileReady = true; $('#j-go').disabled = false;
       if (r.token) save('mt.profile',{ id:r.id,token:r.token });
-      // No look saved on this device yet, but the profile has one: restore it.
-      if (!load('mt.avatar') && profile && profile.lookSaved && profile.avatar) { savedAvatar = { ...savedAvatar, ...profile.avatar }; if (!creatorMode) avatar = { ...savedAvatar }; }
-      if (!load('mt.home') && profile && profile.home && Object.keys(profile.home).length) { savedHome = { ...savedHome, ...profile.home }; if (!homeMode) home = { ...savedHome }; }
+      // The server profile's saved look wins: it is the same character the JustGold shop edits.
+      if (profile && profile.lookSaved && profile.avatar) {
+        const before = { ...savedAvatar };
+        savedAvatar = { ...savedAvatar, ...profile.avatar }; save('mt.avatar', savedAvatar);
+        if (!creatorMode) avatar = { ...savedAvatar };
+        if (!sameLook(before, savedAvatar)) seatLookPending = true;
+      }
+      if (profile && profile.home && Object.keys(profile.home).length) {
+        const before = { ...savedHome };
+        savedHome = { ...savedHome, ...profile.home }; save('mt.home', savedHome);
+        if (!homeMode) home = { ...savedHome };
+        if (Object.keys(OPT.HOME_FIELDS).some((k) => before[k] !== savedHome[k])) seatLookPending = true;
+      }
       if (!$('#screen-creator').hidden) buildPicker();
-      updatePouch();
+      updatePouch(); syncSeatLook();
       if (!$('#screen-join').hidden) tryAutoJoin();
     };
-    if (creds) socket.emit('profile:resume', creds, (r) => r && r.ok ? ready(r) : socket.emit('profile:create', {}, ready));
+    // Only a definite "no such wallet" ({ ok: false }) makes a new profile; the old
+    // credentials are kept aside so they are never silently lost.
+    if (creds) socket.emit('profile:resume', creds, (r) => {
+      if (r && r.ok) return ready(r);
+      if (!r || r.ok !== false) { $('#j-err').textContent = 'Profile connection failed. Reload to reconnect.'; return; }
+      save('mt.profileLost', creds);
+      socket.emit('profile:create', {}, ready);
+    });
     else socket.emit('profile:create', {}, ready);
     const urlRoom = (params.get('room') || '').toUpperCase();
     if (session && (!urlRoom || urlRoom === session.code)) {
@@ -441,6 +463,14 @@
       });
     } else if (!view) showJoin();
   });
+  // Back from the JustGold shop with a new look: put it on your seat in the lobby too.
+  function syncSeatLook() {
+    if (!seatLookPending || !profileReady || !view || !view.you || view.phase !== 'lobby' || view.party) return;
+    seatLookPending = false;
+    if (!sameLook(view.you.avatar || {}, savedAvatar)) socket.emit('player:profile', { name: view.you.name, avatar: savedAvatar });
+    const seatHome = view.you.homeLook || {};
+    if (Object.keys(OPT.HOME_FIELDS).some((k) => seatHome[k] !== savedHome[k])) socket.emit('player:home', { look: savedHome }, () => {});
+  }
 
   // JustGameBox: the big screen took everyone to another game (joined with this name).
   socket.on('mt:goto', (m) => { if (m && typeof m.url === 'string' && /^\/[a-z]/.test(m.url)) location.href = m.url; });
@@ -475,8 +505,9 @@
     renderMoveAsk(); renderMoveStatus();
     if (v.phase === 'gameover' && v.reward) setTimeout(() => showReward(false), 2500); // after the results settle
     if (v.phase !== 'gameover' && !$('#reward-scene').hidden) $('#reward-scene').hidden = true;
-    // The game started: close the shop and switch to the game, and refresh the pouch menu.
-    if (v.phase !== 'lobby' && !$('#screen-shop').hidden) { lastKey = ''; show('#screen-game'); }
+    // The game started: close Season & unlocks and switch to the game, and refresh the pouch menu.
+    if (v.phase !== 'lobby' && !$('#screen-season').hidden) { lastKey = ''; show('#screen-game'); }
+    syncSeatLook();
     if (phaseChanged) updatePouch();
     if (!$('#screen-game').hidden) render();
   });
@@ -679,8 +710,9 @@
         <p class="muted">${v.lobbyCount} in town${v.lobbyCount < v.minPlayers ? ` · need ${v.minPlayers - v.lobbyCount} more` : ''}. Waiting for the host to start…</p>
         <p data-home-status>🏠 ${esc(homeStatus())}</p>
       </div>
+      <div class="cas-bar lobby-actions jg-shop-row">${shopLinkHtml('btn')}</div>
       <div class="cas-bar lobby-actions"><button class="btn ghost" data-edit>Change my look</button><button class="btn ghost" data-house>Your house</button></div>
-      <div class="cas-bar lobby-actions"><button class="btn" data-open-shop>🛒 Shop</button><button class="btn ghost" data-open-stats>📊 My stats</button></div>`;
+      <div class="cas-bar lobby-actions"><button class="btn ghost" data-open-season>🏆 Season &amp; unlocks</button><button class="btn ghost" data-open-stats>📊 My stats</button></div>`;
     }
     if (v.you.spectator) {
       return `<div class="card center"><div class="big-emoji">🍿</div><h2>Game in progress</h2>
@@ -931,11 +963,11 @@
       <div class="result ${won ? 'win' : 'lose'}">${won ? 'You won!' : 'You lost'}</div>
       <p>${v.winner === 'draw' ? "It's a draw." : `${esc(v.winner === 'mafia' ? MT_THEMES.teamName(v.theme, 'mafia', W.name) : W.name)} wins.`}</p>
       <p class="muted small">Waiting for the host to start another round…</p>
-      ${v.reward ? `<button class="btn" data-reward-replay>🪙 ${v.reward.eligible ? `See my reward (+${v.reward.coins} gold)` : 'Why no gold this time?'}</button>` : ''}
+      ${v.reward ? `<button class="btn" data-reward-replay>🪙 ${v.reward.eligible ? `See my reward (+${v.reward.coins} JG)` : 'Why no JustGold this time?'}</button>` : ''}
     </div>
     ${v.credits && v.credits.awards.some((a) => a.id === v.you.id) ? `<div class="card center unlock-phone"><h3>🏆 Your awards</h3><p class="ul-roles">${v.credits.awards.filter((a) => a.id === v.you.id).map((a, i) => `<span class="ul-role" style="animation-delay:${(0.4 + i * 0.5).toFixed(1)}s">${a.emoji} <b>${esc(a.label)}</b> <small>${esc(a.detail)}</small></span>`).join('')}</p><p class="small muted">Watch the credits on the big screen.</p></div>` : ''}
-    ${v.reward && v.reward.stock && v.reward.stock.length ? `<div class="card center unlock-phone"><h3>🛒 New in the shop!</h3><p class="ul-roles">${v.reward.stock.map((id, i) => `<span class="ul-role" style="animation-delay:${(0.6 + i * 0.5).toFixed(1)}s">${esc((MT_COSMETICS.CATALOG.find((x) => x.id === id) || {}).name || id)}</span>`).join('')}</p><p class="small muted">The shopkeeper just put ${v.reward.stock.length === 1 ? 'it' : 'them'} on the shelves. Spend your gold in the 🛒 shop.</p></div>` : ''}
-    ${v.reward && v.reward.world && v.reward.world.items.length ? `<div class="card center unlock-phone"><h3>🗺 New gear from ${esc(v.reward.world.name)}!</h3><p class="ul-roles">${v.reward.world.items.map((id, i) => `<span class="ul-role" style="animation-delay:${(0.6 + i * 0.5).toFixed(1)}s">${esc((MT_COSMETICS.CATALOG.find((x) => x.id === id) || {}).name || id)}</span>`).join('')}</p><p class="small muted">It’s in your inventory. Open the 🛒 shop → 🗺 Worlds to see what else this world hides.</p></div>` : ''}
+    ${v.reward && v.reward.stock && v.reward.stock.length ? `<div class="card center unlock-phone"><h3>🛍️ New in the JustGold shop!</h3><p class="ul-roles">${v.reward.stock.map((id, i) => `<span class="ul-role" style="animation-delay:${(0.6 + i * 0.5).toFixed(1)}s">${esc((MT_COSMETICS.CATALOG.find((x) => x.id === id) || {}).name || id)}</span>`).join('')}</p><p class="small muted">Unlocked by this game. Buy ${v.reward.stock.length === 1 ? 'it' : 'them'} with JustGold in the 🛍️ JustGold shop, from the lobby.</p></div>` : ''}
+    ${v.reward && v.reward.world && v.reward.world.items.length ? `<div class="card center unlock-phone"><h3>🗺 New gear from ${esc(v.reward.world.name)}!</h3><p class="ul-roles">${v.reward.world.items.map((id, i) => `<span class="ul-role" style="animation-delay:${(0.6 + i * 0.5).toFixed(1)}s">${esc((MT_COSMETICS.CATALOG.find((x) => x.id === id) || {}).name || id)}</span>`).join('')}</p><p class="small muted">It’s in your inventory. Open 🏆 Season &amp; unlocks → 🗺 Worlds in the lobby to see what else this world hides.</p></div>` : ''}
     ${v.unlock ? `<div class="card center unlock-phone"><h3>✨ Just unlocked</h3><p class="ul-roles">${v.unlock.roles.map((k, i) => `<span class="ul-role" style="animation-delay:${(0.6 + i * 0.5).toFixed(1)}s">${(ROLES[k] || {}).emoji || ''} <b>${esc(roleLabel(k))}</b></span>`).join('')}</p><p class="small muted">New roles join the deck next game (tier ${v.unlock.tier} of ${v.unlock.maxTier}).</p></div>` : ''}
     <div class="card"><h3>Everyone's roles</h3><ul class="list">${rows}</ul></div>`;
   }

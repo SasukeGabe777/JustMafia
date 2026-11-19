@@ -13,6 +13,8 @@
 // a duel. Claimed times are clamped to what is physically possible (≤ arrival, ≥ arrival − 800 ms,
 // ≥ 100 ms after a signal). Points by rank each challenge, a podium streak bonus, −50 for every
 // false start, double points in the final showdown, and awards at the end.
+// Per-game gear (JustGold shop): each duellist's hat (pub() carries it to the TV and phones).
+const GEARS = require('../../public/shared/gear');
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'rounds', label: 'Challenges', options: opt([[5, '5 challenges (≈5 min)'], [7, '7 challenges (≈6 min)'], [10, '10 challenges (≈8 min)']]) },
@@ -73,7 +75,7 @@ class Game {
   stat(id) { let s = this.stats.get(id); if (!s) { s = { best: null, falses: 0, wins: 0, streak: 0, bestStreak: 0, countErr: null, copy: null, shake: null, played: 0 }; this.stats.set(id, s); } return s; }
   family() { return this.room.family !== false; } // family-safe unless the room says otherwise
   active() { return this.room.list().filter((p) => p.bot || p.sockets > 0); }
-  pub(id) { const p = this.room.get(id); return p ? { id, name: p.name, avatar: p.avatar, color: p.color } : { id, name: '—', avatar: '👻', color: '#888' }; }
+  pub(id) { const p = this.room.get(id); return p ? { id, name: p.name, avatar: p.avatar, color: p.color, gear: GEARS.gearSet(p, 'quickdraw') } : { id, name: '—', avatar: '👻', color: '#888' }; }
   // A tap time on the server clock: the phone's claim, clamped to what is physically possible.
   claim(t) { const R = this.now(); return fin(t) ? clamp(t, R - MAX_LAG, R) : R; }
 
@@ -575,7 +577,7 @@ class Game {
   }
   view(p) {
     const st = this.standings(), i = st.findIndex((r) => r.id === p.id), c = this.c, b = this.base();
-    const v = { ...b, me: p.id, points: this.points.get(p.id) || 0, rank: i + 1, of: st.length, total: this.lineup.length, streak: this.stat(p.id).streak, final: this.phase === 'over' ? this.final : null };
+    const v = { ...b, me: p.id, gear: GEARS.gearSet(p, 'quickdraw'), points: this.points.get(p.id) || 0, rank: i + 1, of: st.length, total: this.lineup.length, streak: this.stat(p.id).streak, final: this.phase === 'over' ? this.final : null };
     if (!c) return v;
     v.c = { kind: c.kind, id: c.id, mult: c.mult, step: c.step, in: c.roster.includes(p.id) };
     if (this.phase === 'result' && c.res) { v.c.mine = c.res.rows.find((r) => r.id === p.id) || null; v.c.top = c.res.top; v.c.answer = c.res.answer; v.c.jibe = c.res.jibe; }

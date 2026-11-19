@@ -541,6 +541,8 @@
     },
 
     phone(el, v, ctx, full) {
+      // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+      if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, full, 'ducks');
       if (!v) return;
       const put = (html) => BOX.morph(el, html);
       const d = v.duck;

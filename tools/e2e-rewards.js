@@ -50,7 +50,7 @@ const emit = (s, ev, d = {}) => new Promise((r) => s.emit(ev, d, r));
   assert.equal(await a.eval(`Number(document.querySelector('#g-pouch b').textContent)`), startGold, 'header pouch waits for the coins');
   await a.until(`document.querySelector('#reward-scene').dataset.done === '1'`, 'animation finishes', 15000);
   const r = await a.eval(`(() => { const box = document.querySelector('#reward-scene'); return { total: Number(box.dataset.total), shown: Number(box.querySelector('[data-reward-shown]').textContent), lines: [...box.querySelectorAll('[data-line]')].map((li) => [li.querySelector('span').textContent, Number(li.querySelector('b').textContent)]), title: box.querySelector('h2').textContent }; })()`);
-  assert.equal(r.title, 'Gold earned!'); assert(r.total > 0, 'earned gold');
+  assert.equal(r.title, 'JustGold earned!'); assert(r.total > 0, 'earned gold');
   assert.equal(r.shown, startGold + r.total, 'counter lands on the new balance');
   assert(r.lines.some(([label]) => /Finished the game/.test(label)), 'breakdown lists where the gold came from');
   const sum = r.lines.reduce((t, [, n]) => t + n, 0); assert(sum >= r.total);

@@ -50,6 +50,7 @@
 const D = require('./kingdoms-data');
 const M = require('./kingdoms-map');
 const AI = require('./kingdoms-ai');
+const GEARS = require('../../public/shared/gear'); // per-game shop gear (kingdoms/crest)
 
 const { RES, UNITS, BUILDINGS, TECHS, JOBS, JOB_KEYS, FIGHTERS, SOLDIERS } = D;
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
@@ -1143,6 +1144,7 @@ class Kingdoms {
       alive: true, gone: k.gone, bot: !!k.ai, stage: k.stage, building: k.rocket ? k.rocket.stage : null,
       land: k.land, villages: k.villages, army: k.soldiers, capitals: k.capitals,
       avatar: this.avatarOf(k.id), bounty: this.bountyOn(k.id), sanction: Math.max(0, k.sanctionUntil - now), underdog: k.underdog || 0, marked: this.marked === k.id,
+      gear: GEARS.gearSet(this.room.get(k.id), 'kingdoms'), // shop gear: { crest } emblem on this kingdom's flags (bots/left players: 'classic')
     };
   }
   bountyOn(id) { let n = 0; for (const b of this.bounties) if (b.on === id) n += b.gold; return n; }

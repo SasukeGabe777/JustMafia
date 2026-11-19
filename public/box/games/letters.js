@@ -7,6 +7,14 @@
 // answers scored, challenged ones put on trial), the round tally and the awards. Phone: a
 // fast answer sheet (Enter jumps to the next line), challenges, the vote.
 (function () {
+  // JustGold gear: a player's pencil (gear.pencil → MT_GEAR paint) as inline CSS for the race bar,
+  // or null for the default yellow No. 2 (the bar keeps its gold-to-orange look).
+  function pencilGear(gear) {
+    const p = window.MT_GEAR && gear ? MT_GEAR.paint('letters', 'pencil', gear) : null; if (!p) return null;
+    const a = p.a || '#ffd23f', b = p.b || '#f2b705';
+    const bg = p.pattern === 'stripes' ? `linear-gradient(90deg, ${a}, ${p.c || b}, ${b})` : `linear-gradient(90deg, ${b}, ${a})`;
+    return { style: `--pa:${a};--pb:${b};background:${bg}`, glow: !!p.glow };
+  }
   const { esc, timer } = BOX;
   // Phone state that survives re-renders (rendering pauses while an input is focused).
   let drafts = [], sent = [], draftKey = '', saveT = 0, flushT = 0, endT = 0, deadline = 0, lobbyErr = '';
@@ -98,7 +106,8 @@
     const key = `${s.round}-${s.letters.join('')}`, R = rtype(s), rolling = s.phase === 'roll';
     const prog = (s.progress || []).map((p) => {
       const pct = Math.round((p.filled / Math.max(1, s.cats.length)) * 100);
-      return `<div class="lr-pp ${p.done ? 'done' : ''}" id="lrpp-${esc(p.id)}"><span class="lr-ppav">${esc(p.av || '🙂')}</span><span class="lr-ppn">${esc(p.name)}</span><span class="lr-bar"><i style="width:${pct}%"></i></span><span class="lr-ppc">${p.done ? '✓' : `${p.filled}/${s.cats.length}`}</span></div>`;
+      const pen = pencilGear(p.gear); // JustGold gear: the bar is written in this player's pencil colours, with the pencil at its tip
+      return `<div class="lr-pp ${p.done ? 'done' : ''}" id="lrpp-${esc(p.id)}"><span class="lr-ppav">${esc(p.av || '🙂')}</span><span class="lr-ppn">${esc(p.name)}</span><span class="lr-bar${pen ? ' gear' : ''}"><i style="width:${pct}%${pen ? ';' + pen.style : ''}"></i>${pen ? `<em class="lr-gpen${pen.glow ? ' glow' : ''}" style="left:${pct}%;${pen.style}"></em>` : ''}</span><span class="lr-ppc">${p.done ? '✓' : `${p.filled}/${s.cats.length}`}</span></div>`;
     }).join('');
     const left = `<div class="lr-diecol">
         <div class="lr-rtype t-${esc(s.type)}" id="lrt-${key}"><div class="lr-rti">${R.icon}</div><div><div class="lr-rtn">${esc(R.name)}</div><div class="lr-rtb">${esc(R.blurb)}</div></div></div>
@@ -215,7 +224,7 @@
         <div class="lr-sinfo"><b>${esc(rtype(v).icon)} ${esc(rtype(v).name)}</b><small>${v.letters.length > 1 ? `Start with ${v.letters.map(esc).join(' or ')} · ×2 points` : `Everything starts with ${esc(v.letters[0])}`}${v.theme ? ` · ${esc(v.theme.name)}` : ''}</small></div>
         <div class="lr-sclock">${timer(v.endsIn)}</div></div>
       <ol class="lr-sheet" id="lr-sheet-${esc(String(v.round))}">${rows}</ol>
-      <div class="lr-sfoot"><span class="lr-filled" id="lr-filled">${filled}/${v.cats.length}</span>
+      <div class="lr-sfoot">${(() => { const pen = pencilGear(v.gear); return pen ? `<span class="lr-bar gear lr-mypen"><em class="lr-gpen${pen.glow ? ' glow' : ''}" style="left:0;${pen.style}"></em></span>` : ''; })()}<span class="lr-filled" id="lr-filled">${filled}/${v.cats.length}</span>
         <button class="lr-btn ${v.done ? 'ghost' : 'go'}" id="lr-done">${v.done ? '✏️ Still editing' : '✓ I’m done'}</button></div>
       ${v.done ? '<p class="lr-hint">✅ Sent! You can still fix answers until time runs out.</p>' : '<p class="lr-hint">Tip: <b>Enter</b> jumps to the next line. Match someone and you both score 0!</p>'}</div>`);
     const ins = [...el.querySelectorAll('.lr-in')];

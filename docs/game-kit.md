@@ -31,6 +31,7 @@ Then replace the placeholder with the real game, and restart the server.
 | Main menu tile | `public/hub.html` | Players, time and type chips, and its category `data-type="cards|guess|create|friends|action"` (from `public/categories.js`). The category puts it on its main-menu shelf **and** in Party Mode; nothing else to register. |
 | Tile art | `public/art/tiles/<key>.svg` | The main-menu picture: an original 400×240 SVG illustration, no text, the subject inside x 90–310, y 55–185 (small tiles crop to a 3:1 strip, phones to a square). Bold flat vector with dark outlines, gradients and the game's colours. `new-game` writes a starter to replace. |
 | Ideal crowd | `best: [lo, hi]` in the module + `data-best="lo-hi"` on the tile | The player count where the game is at its best. Party Mode builds lineups from games that suit the group, and the menu's "How many of you?" badges them. The kit test checks the two match. |
+| Gear | `public/shared/gear.js` + `gear: gearSet(p, '<key>')` in tv()/view() | 3–5 cosmetic items in the JustGold shop (a marble skin, a card back, a paddle…). Add a SLOTS line and items to gear.js, copy each player's gear into the per-player data on the server, and draw `MT_GEAR.paint('<key>', slot, x.gear)` in the renderer (null = the normal look; never break when gear is missing). Best when everyone sees it on the TV; otherwise use the `theme` slot and call `MT_GEAR.phoneTheme(el, view, '<key>')` in `phone()`. `tools/test-box-gear.js` checks every game has gear. |
 
 ## Unlockable games
 

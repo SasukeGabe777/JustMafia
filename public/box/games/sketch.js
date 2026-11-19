@@ -15,7 +15,8 @@
   const NAMES = ['Black', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Brown', 'Eraser', 'Pink', 'Skin', 'Grey', 'Sky'];
   const SWATCHES = [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12];
   const SIZES = [4, 9, 18, 34, 60], ERASER = 8, MAX_STROKES = 400, MAX_POINTS = 8000, MAX_FILLS = 40;
-  const colorOf = (c) => INK[c] || '#000';
+  // A stroke colour is a palette number, or '#rrggbb' from the drawer's gear pen set (JustGold).
+  const colorOf = (c) => (typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : INK[c] || '#000');
   const TIPS = ['Stick figures are totally fine!', 'Draw the funniest part BIG.', 'No writing words: that’s cheating 😉', 'Colours help: a yellow sun says “day”.', 'Arrows and speech bubbles (no words) are allowed!', 'Use the bucket to colour in big areas fast.', 'Can’t draw it? Draw something that reminds you of it.'];
   const NOTE = ['#fff27a', '#ffc2d6', '#b8f0c8', '#c9dcff', '#ffd59a', '#e6d2ff'];
   const hashStr = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -151,7 +152,7 @@
   }
 
   // ---------- the phone sketchpad (full-screen overlay) ----------
-  const pad = { ov: null, key: null, strokes: [], redo: [], cleared: null, color: 0, size: 1, tool: 'pen', cur: null, deadline: 0, sending: false, tick: 0, ctx: null, warned: false };
+  const pad = { pens: [], ov: null, key: null, strokes: [], redo: [], cleared: null, color: 0, size: 1, tool: 'pen', cur: null, deadline: 0, sending: false, tick: 0, ctx: null, warned: false };
   function closePad() {
     if (pad.ov) { pad.ov.remove(); pad.ov = null; }
     clearInterval(pad.tick); pad.tick = 0; pad.key = null; pad.cur = null; pad.sending = false;
@@ -175,8 +176,10 @@
     clear: '<svg viewBox="0 0 40 40"><path d="M10 12 L30 12 L28 34 L12 34 Z M7 12 L33 12 M16 12 L17 7 L23 7 L24 12 M17 17 L17 29 M23 17 L23 29" fill="#fffdf4" stroke="#2b2a4a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg>',
   };
   function toolsHtml() {
-    const col = pad.tool === 'eraser' ? '#bbb' : INK[pad.color];
-    return `<div class="sk-colors">${SWATCHES.map((i) => `<button class="sk-sw ${pad.tool !== 'eraser' && pad.color === i ? 'on' : ''}" data-col="${i}" style="--sw:${INK[i]}" aria-label="${NAMES[i]}"></button>`).join('')}</div>
+    const col = pad.tool === 'eraser' ? '#bbb' : colorOf(pad.color);
+    // Gear pens (the equipped pen set, JustGold shop) come after the 12 basic colours.
+    const pens = pad.pens.map((c) => `<button class="sk-sw sk-pen ${pad.tool !== 'eraser' && pad.color === c ? 'on' : ''}" data-pen="${c}" style="--sw:${c}" aria-label="Gear pen"></button>`).join('');
+    return `<div class="sk-colors">${SWATCHES.map((i) => `<button class="sk-sw ${pad.tool !== 'eraser' && pad.color === i ? 'on' : ''}" data-col="${i}" style="--sw:${INK[i]}" aria-label="${NAMES[i]}"></button>`).join('')}${pens}</div>
       <div class="sk-tool-row sk-sizes ${pad.tool === 'fill' ? 'off' : ''}">${SIZES.map((s, i) => `<button class="sk-size ${pad.size === i ? 'on' : ''}" data-size="${i}" aria-label="Brush ${i + 1}"><i style="width:${Math.min(30, 4 + i * 6.5)}px;height:${Math.min(30, 4 + i * 6.5)}px;background:${col}"></i></button>`).join('')}</div>
       <div class="sk-tool-row">
         <button class="sk-tool ${pad.tool === 'pen' ? 'on' : ''}" data-tool="pen">${TOOL_ART.pen}<span>Pen</span></button>
@@ -192,6 +195,7 @@
     box.innerHTML = toolsHtml();
     const hap = (k) => { try { pad.ctx && pad.ctx.haptic && pad.ctx.haptic(k); } catch { /* none */ } };
     for (const b of box.querySelectorAll('[data-col]')) b.onclick = () => { pad.color = Number(b.dataset.col); if (pad.tool === 'eraser') pad.tool = 'pen'; hap('select'); bindTools(); };
+    for (const b of box.querySelectorAll('[data-pen]')) b.onclick = () => { pad.color = b.dataset.pen; if (pad.tool === 'eraser') pad.tool = 'pen'; hap('select'); bindTools(); };
     for (const b of box.querySelectorAll('[data-size]')) b.onclick = () => { pad.size = Number(b.dataset.size); if (pad.tool === 'fill') pad.tool = 'pen'; hap('select'); bindTools(); };
     for (const b of box.querySelectorAll('[data-tool]')) b.onclick = () => {
       const t = b.dataset.tool, cv = ov.querySelector('.sk-pad');
@@ -304,6 +308,8 @@
 
   function phone(el, v, ctx) {
     if (!v) return;
+    // Gear: the equipped pen set's extra colours (nothing equipped → the basic 12).
+    { const pt = window.MT_GEAR ? MT_GEAR.paint('sketch', 'pens', v.gear) : null; pad.pens = pt && Array.isArray(pt.pens) ? pt.pens.filter((c) => /^#[0-9a-f]{6}$/i.test(c)).map((c) => c.toLowerCase()) : []; if (typeof pad.color === 'string' && !pad.pens.includes(pad.color)) pad.color = 0; }
     if (lastPhase === 'over' && v.phase !== 'over') epoch++;
     lastPhase = v.phase;
     const t = v.task;

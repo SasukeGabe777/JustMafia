@@ -8,6 +8,7 @@
 // Revolution (ranks flip until the next deal), and the last round scores double.
 // Nobody waits on a player who can't beat the pile: they pass automatically.
 const C = require('../cards');
+const GEARS = require('../../public/shared/gear'); // JustGold per-game gear (card backs)
 
 const power = (card) => (C.rankIndex(card) + 11) % 13; // 3 → 0 … K → 10, A → 11, 2 → 12
 const sortHand = (h) => h.sort((a, b) => power(a) - power(b) || C.SUITS.indexOf(C.suitOf(a)) - C.SUITS.indexOf(C.suitOf(b)));
@@ -343,7 +344,8 @@ class President {
       top: t.top ? { by: t.top.by, name: this.room.name(t.top.by), cards: t.top.cards.map(C.base) } : null,
       // The cards already beaten this trick (just under the top set), so the TV can draw a pile.
       under: t.top ? t.pile.slice(Math.max(0, t.pile.length - t.top.cards.length - 6), t.pile.length - t.top.cards.length).map(C.base) : [],
-      seats: t.seats.map((id) => ({ id, name: this.room.name(id), av: this.avatar(id), color: (this.room.get(id) || {}).color, cards: (t.hands[id] || []).length, passed: t.passed.includes(id), place: t.finish.indexOf(id) + 1 || null, title: this.titles.get(id) || null, gone: !this.room.get(id), idle: (this.idle.get(id) || 0) >= 2 })),
+      seats: t.seats.map((id) => ({ id, name: this.room.name(id), av: this.avatar(id), color: (this.room.get(id) || {}).color, cards: (t.hands[id] || []).length, passed: t.passed.includes(id), place: t.finish.indexOf(id) + 1 || null, title: this.titles.get(id) || null, gone: !this.room.get(id), idle: (this.idle.get(id) || 0) >= 2,
+        gear: GEARS.gearSet(this.room.get(id), 'president') })), // { cardBack } (shop gear; 'classic' = the red velvet back)
       log: t.log.map((l) => ({ name: this.room.name(l.by), cards: l.cards || null, pass: !!l.pass, auto: !!l.auto, burn: !!l.burn })),
       trades: t.trades.map((tr) => ({ from: this.room.name(tr.from), to: this.room.name(tr.to), n: tr.n, done: !!tr.given })),
     };

@@ -12,6 +12,16 @@
   const POW = (c) => (RANKS.indexOf(rankOf(c)) + 11) % 13;
   const EFF = (c, rev) => (rev ? 12 - POW(c) : POW(c));
   const badge = (t, names) => (t ? `<span class="pr-title t-${t}">${TITLE_ICON[t]} ${esc(names[t])}</span>` : '');
+  // JustGold gear: a seat's card back (x.gear.cardBack → MT_GEAR paint). '' keeps the red velvet back.
+  const backPaint = (x) => (window.MT_GEAR && x ? MT_GEAR.paint('president', 'cardBack', x.gear) : null);
+  function backStyle(x) {
+    const p = backPaint(x); if (!p) return '';
+    const a = p.a || '#a3132f', b = p.b || '#ffe7a0';
+    const bg = { stripes: `repeating-linear-gradient(45deg, ${b} 0 2px, ${a} 2px 6px)`, check: `repeating-linear-gradient(45deg, ${b}99 0 1.5px, transparent 1.5px 5px), repeating-linear-gradient(-45deg, ${b}99 0 1.5px, transparent 1.5px 5px), ${a}`,
+      dots: `radial-gradient(circle, ${b} 22%, transparent 26%) 0 0 / 6px 6px, ${a}`, stars: `radial-gradient(circle, ${b} 12%, transparent 16%) 1px 2px / 7px 8px, radial-gradient(circle, ${b}aa 8%, transparent 12%) 4px 6px / 9px 9px, ${a}`,
+      wave: `repeating-radial-gradient(circle at 50% 130%, ${a} 0 3px, ${b} 3px 4.5px, ${a} 4.5px 7px)` }[p.pattern] || `linear-gradient(160deg, ${a}, ${b})`;
+    return `background:${bg};border-color:${b};${p.glow ? `box-shadow:0 0 6px ${b};` : ''}`;
+  }
   const av = (x) => (x && x.av ? `<span class="pr-av">${esc(x.av)}</span>` : '');
   const tname = (id, n) => (id === 0 && n > 1 ? '👑 The Palace' : 'Table ' + (id + 1));
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
@@ -199,7 +209,7 @@
   // ---------- TV game ----------
   function seat(x, t, s, size) {
     const turn = t.turn === x.id;
-    const state = x.place ? `<span class="place">${x.place === 1 ? '🥇' : '#' + x.place}</span>` : x.gone ? '<span class="tag">left</span>' : x.passed ? '<span class="tag">pass</span>' : `<span class="cnt"><i class="mini-back"></i>${x.cards}</span>`;
+    const state = x.place ? `<span class="place">${x.place === 1 ? '🥇' : '#' + x.place}</span>` : x.gone ? '<span class="tag">left</span>' : x.passed ? '<span class="tag">pass</span>' : `<span class="cnt"><i class="mini-back" style="${backStyle(x)}"></i>${x.cards}</span>`;
     const ttl = size === 'xs' || size === 'sm' ? (x.title ? TITLE_ICON[x.title] : '') : badge(x.title, s.titleNames);
     return `<div class="pr-seat ${turn ? 'turn' : ''} ${x.passed ? 'passed' : ''} ${x.place ? 'out' : ''} ${x.idle ? 'idle' : ''}" id="ps-${esc(x.id)}">
       <span class="dot" style="background:${esc(x.color || '#888')}"></span>${av(x)}<span class="nm">${esc(x.name)}</span>${state}${ttl}</div>`;
@@ -210,7 +220,7 @@
     const px = 50 + Math.cos(a) * 44, py = 50 + Math.sin(a) * 36;
     const fan = Math.min(x.cards, 6);
     const held = x.place ? `<span class="pr-place">${x.place === 1 ? CROWN('sm') + ' Out first!' : 'Out · #' + x.place}</span>` : x.gone ? '<span class="pr-tag">left</span>' : x.passed ? '<span class="pr-tag">passed</span>'
-      : `<span class="pr-fan">${Array.from({ length: fan }, (_, k) => `<i style="--k:${k - (fan - 1) / 2}"></i>`).join('')}</span><b class="pr-n">${x.cards}</b>`;
+      : `<span class="pr-fan">${Array.from({ length: fan }, (_, k) => `<i style="--k:${k - (fan - 1) / 2};${backStyle(x)}"></i>`).join('')}</span><b class="pr-n">${x.cards}</b>`;
     return `<div class="pr-seat lg ${turn ? 'turn' : ''} ${x.passed ? 'passed' : ''} ${x.place ? 'out' : ''} ${x.idle ? 'idle' : ''} ${py < 50 ? 'up' : ''}" id="ps-${esc(x.id)}" style="left:${px.toFixed(2)}%;top:${py.toFixed(2)}%;--c:${esc(x.color || '#c8962a')}">
       ${x.title ? `<span class="pr-medal t-${x.title}" title="${esc(s.titleNames[x.title])}">${TITLE_ICON[x.title]}</span>` : ''}
       <div class="pr-port"><span>${esc(x.av || '🙂')}</span></div>
@@ -367,7 +377,7 @@
         <p>Empty your hand first to climb to the top. Last one holding cards is the <b>Scum</b>… and pays tribute next round!</p></div>`;
     },
 
-    phone(el, v, ctx) {
+    phone(el, v, ctx, view) {
       if (!v) return;
       feel(v, ctx);
       if (v.phase === 'over') {
@@ -415,7 +425,7 @@
       }
       if (v.myTurn && !v.stuck && !el.dataset.buzzed) { ctx.sfx('knock'); el.dataset.buzzed = '1'; } else if (!v.myTurn) delete el.dataset.buzzed;
       const canPick = !!v.give || (v.myTurn && !v.stuck);
-      BOX.morph(el, `<div class="pr-ph">${head}${others}${revNote}${topHtml}${action}<div class="pr-handwrap"><div class="pr-hand ${canPick ? 'live' : ''}">${hand.map((c) => card(c, { sel: selected.has(c), attrs: 'data-pick' })).join('')}</div><p class="pr-foot">${hand.length} cards in hand${canPick ? ' · tap cards to pick them' : ''}</p></div></div>`);
+      BOX.morph(el, `<div class="pr-ph">${head}${others}${revNote}${topHtml}${action}<div class="pr-handwrap"><div class="pr-hand ${canPick ? 'live' : ''}">${hand.map((c) => card(c, { sel: selected.has(c), attrs: 'data-pick' })).join('')}</div><p class="pr-foot">${(() => { const mine = t.seats.find((x) => x.id === (view && view.me && view.me.id)); return backPaint(mine) ? `<i class="mini-back" style="${backStyle(mine)};vertical-align:-2px;margin-right:5px"></i>` : ''; })()}${hand.length} cards in hand${canPick ? ' · tap cards to pick them' : ''}</p></div></div>`);
       for (const c of el.querySelectorAll('[data-pick]')) c.onclick = () => {
         const id = c.dataset.card;
         if (selected.has(id)) selected.delete(id);

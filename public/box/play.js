@@ -50,6 +50,19 @@
   const setPhoneVol = (v) => { try { localStorage.setItem('box.phoneVol', String(v)); } catch { /* private */ } try { window.SFX && SFX.setVolume && SFX.setVolume(v); } catch { /* none */ } };
   try { window.SFX && SFX.setVolume && SFX.setVolume(phoneVol()); } catch { /* none */ }
 
+  // ---------- 🛍️ the JustGold shop (/shop): on the join screen, in the lobby and between games ----------
+  const shopUrl = () => '/shop?back=' + encodeURIComponent(location.pathname + location.search);
+  function shopButtons() {
+    let hb = $('#h-shop');
+    if (!hb && $('#h-prof')) { hb = document.createElement('button'); hb.className = 'hbtn'; hb.id = 'h-shop'; hb.title = 'Shop & character'; hb.textContent = '🛍️'; hb.onclick = () => { location.href = shopUrl(); }; $('#h-prof').before(hb); }
+    let jb = $('#j-shop');
+    if (!jb && $('#j-watch2')) { jb = document.createElement('a'); jb.className = 'btn ghost'; jb.id = 'j-shop'; jb.style.cssText = 'display:block;text-align:center;text-decoration:none'; jb.textContent = '🛍️ Shop & character'; $('#j-watch2').after(jb); }
+    if (jb) jb.href = shopUrl();
+    // Never while a game is running: the shop waits for the lobby or the end of the game.
+    const running = !!view && !audience && (view.phase === 'show' || (view.phase === 'game' && !(view.state && view.state.phase === 'over')));
+    if (hb) hb.hidden = running;
+  }
+
   // ---------- join ----------
   function avatarPicker() {
     const box = $('#j-av');
@@ -63,6 +76,7 @@
     try { if (!$('#j-name').value) $('#j-name').value = localStorage.getItem('box.name') || ''; } catch { /* private */ }
     $('#j-err').textContent = err || '';
     avatarPicker();
+    shopButtons();
     busyChoice(null);
     if ($('#j-code').value.length === 4) socket.emit('room:check', { code: $('#j-code').value }, (r) => { $('#j-game').textContent = r && r.ok ? 'Joining ' + r.title : ''; if (r && r.ok) { theme(r.game); busyChoice(r.busy, r); } });
   }
@@ -257,7 +271,7 @@
     const clean = String(name).replace(/[<>&"]/g, '').replace(/\s+/g, ' ').trim().slice(0, tries ? 12 : 14);
     if (!clean) return showJoin();
     const nm = tries ? clean + ' ' + (tries + 1) : clean;
-    socket.emit('player:join', { code, name: nm, avatar }, (r) => {
+    socket.emit('player:join', { code, name: nm, avatar, profile: getProf() }, (r) => { // (with the account, so the character and JustGold follow)
       if (r && r.ok) {
         me = { code: r.code, id: r.id, token: r.token, name: nm }; store(r.code, { token: r.token, name: nm });
         gameKey = null; setGame(r.game); $('#join').hidden = true; $('#game').hidden = false;
@@ -275,7 +289,13 @@
     if (view0 && v.unlocks && view0.unlocks && v.unlocks.length > view0.unlocks.length) { const k = v.unlocks.find((x) => !view0.unlocks.includes(x)); const g = BOX.games[k]; toast(`🔓 New game unlocked: ${g ? g.icon + ' ' + g.name : k}!`); haptic('win'); }
     if (v.phase !== (view0 && view0.phase) && v.phase === 'show') haptic('big');
     if (v.game !== gameKey) { setGame(v.game); haptic('success'); toast(`${G ? G.icon + ' ' : ''}Next game: ${v.title}!`); vibrate(80); }
-    $('#h-name').textContent = v.me.name + (v.me.title ? ' · ' + v.me.title : ''); $('#h-av').textContent = v.me.avatar || '';
+    $('#h-name').textContent = v.me.name + (v.me.title ? ' · ' + v.me.title : '');
+    const hav = BOX.portrait ? BOX.portrait.html(v.me, 28) : esc(v.me.avatar || ''); if ($('#h-av').dataset.html !== hav) { $('#h-av').innerHTML = hav; $('#h-av').dataset.html = hav; }
+    // JustGold paid at the end of a game (or why it wasn't).
+    if (v.jg && v.jg.at && view0 && (!view0.jg || view0.jg.at !== v.jg.at)) {
+      if (v.jg.n > 0) { toast(`🪙 +${v.jg.n} JustGold!${v.jg.total != null ? ` You have ${v.jg.total} JG.` : ''}`); haptic('win'); } else if (v.jg.why) toast(`🪙 ${v.jg.why}`);
+    }
+    shopButtons();
     queue();
   });
 
@@ -335,7 +355,7 @@
     if (view.partyMode && (view.partyMode.phase === 'board' || view.partyMode.phase === 'done')) { partyPhone(view); return; }
     if (view.phase === 'lobby' && view.live && view.state) { G.phone($('#g-body'), view.state, ctx, view); return; }
     if (view.phase === 'lobby') {
-      BOX.morph($('#g-body'), `<div class="card-box ph-lobby"><div class="big-av">${esc(view.me.avatar || '🙂')}</div><h3>You’re in! 🎉</h3><p>${view.vip ? 'You’re the host! Press <b>Start game</b> when everyone is in.' : `Waiting for ${view.vipName ? '<b>' + esc(view.vipName) + '</b> (the host)' : 'the host'} to start <b>${esc(view.title)}</b>.`}</p><p class="muted">${view.count} player${view.count === 1 ? '' : 's'} so far. Watch the big screen.</p><button class="btn ghost small" id="lob-how">❓ How to play ${esc(G.name)}</button></div>${G.lobby ? G.lobby(view, ctx) : ''}`);
+      BOX.morph($('#g-body'), `<div class="card-box ph-lobby"><div class="big-av">${view.me.look && BOX.portrait ? BOX.portrait.html(view.me, 88) : esc(view.me.avatar || '🙂')}</div><h3>You’re in! 🎉</h3><p>${view.vip ? 'You’re the host! Press <b>Start game</b> when everyone is in.' : `Waiting for ${view.vipName ? '<b>' + esc(view.vipName) + '</b> (the host)' : 'the host'} to start <b>${esc(view.title)}</b>.`}</p><p class="muted">${view.count} player${view.count === 1 ? '' : 's'} so far. Watch the big screen.</p><button class="btn ghost small" id="lob-how">❓ How to play ${esc(G.name)}</button> <a class="btn ghost small" id="lob-shop" style="text-decoration:none;display:inline-block" href="${esc(shopUrl())}">🛍️ ${view.me.look ? 'Shop & character' : 'Make your character'}</a></div>${G.lobby ? G.lobby(view, ctx) : ''}`);
       const lh = $('#lob-how'); if (lh) lh.onclick = () => $('#h-help').click();
       if (G.lobbyBind) G.lobbyBind($('#g-body'), view, ctx);
       return;

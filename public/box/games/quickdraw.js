@@ -15,6 +15,10 @@
   const back = (k) => { k = clamp(k); const c = 2.2; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
   const L = () => (performance.timeOrigin || 0) + performance.now(); // local clock (ms since epoch, monotonic)
   const av = (r) => esc((r && r.avatar) || '🙂');
+  // Gear (JustGold shop): a player's duelling hat paint ({ a, b, c, icon, pattern, glow }), or null
+  // for the plain hat. hatTag() is a small hat badge for name cards; the canvas uses ART.cowboy/miniHat.
+  const hatPaint = (x) => (x && x.gear && window.MT_GEAR ? window.MT_GEAR.paint('quickdraw', 'hat', x.gear) : null);
+  const hatTag = (x) => { const pt = hatPaint(x); if (!pt) return ''; return `<svg class="qd-hat" viewBox="0 0 40 26" width="1.4em" height="0.9em" aria-hidden="true" style="vertical-align:-0.1em${pt.glow ? ';filter:drop-shadow(0 0 4px ' + pt.a + ')' : ''}"><ellipse cx="20" cy="21" rx="19" ry="4" fill="${pt.a}" stroke="#1d100a" stroke-width="1.5"/><path d="M11 21 Q10 5 20 4 Q30 5 29 21 Z" fill="${pt.c || pt.a}" stroke="#1d100a" stroke-width="1.5"/><rect x="11" y="15" width="18" height="4" fill="${pt.b}"/></svg>`; };
   const secs = (ms) => (ms / 1000).toFixed(3) + 's';
   const KIND = {
     draw: { icon: '🔫', name: 'DRAW!', rule: 'Wait for the signal, then tap first. Tap early and it’s a false start!', phone: 'Tap the instant it says DRAW!', pal: 'noon' },
@@ -151,7 +155,16 @@
       g.beginPath(); g.moveTo(-34, -70); g.quadraticCurveTo(-30, -120, -24, -148); g.lineTo(24, -148); g.quadraticCurveTo(30, -120, 34, -70); g.closePath(); g.fill(); // duster
       g.fillStyle = o.band || '#c0392b'; g.beginPath(); g.moveTo(-14, -150); g.lineTo(14, -150); g.lineTo(0, -132); g.closePath(); g.fill();
       g.fillStyle = ink; g.beginPath(); g.arc(0, -166, 15, 0, TAU); g.fill();
-      if (o.hat !== false) { rr(g, -16, -200, 32, 24, 8); g.fill(); g.beginPath(); g.ellipse(0, -180, 40, 7, 0, 0, TAU); g.fill(); }
+      const hp = o.hatPaint; // gear: a coloured hat with a band (and an emblem) instead of the ink one
+      if (o.hat !== false && hp) {
+        g.save(); if (hp.glow) { g.shadowColor = hp.a; g.shadowBlur = 24; }
+        g.fillStyle = hp.c || hp.a; rr(g, -16, -200, 32, 24, 8); g.fill(); g.fillStyle = hp.a; g.beginPath(); g.ellipse(0, -180, 40, 7, 0, 0, TAU); g.fill(); g.restore();
+        g.fillStyle = hp.b; g.fillRect(-16, -186, 32, 6);
+        if (hp.pattern === 'stripes') { g.fillStyle = hp.a; for (let i = -14; i < 16; i += 8) g.fillRect(i, -186, 3, 6); }
+        g.strokeStyle = ink; g.lineWidth = 2; g.beginPath(); g.ellipse(0, -180, 40, 7, 0, 0, TAU); g.stroke();
+        if (hp.icon) { g.save(); g.translate(0, -195); g.scale(dir, 1); g.font = '16px "Segoe UI Emoji", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(hp.icon, 0, 0); g.restore(); }
+        g.fillStyle = ink;
+      } else if (o.hat !== false) { rr(g, -16, -200, 32, 24, 8); g.fill(); g.beginPath(); g.ellipse(0, -180, 40, 7, 0, 0, TAU); g.fill(); }
       // gun arm
       const a = lerp(1.4, -0.05, clamp(o.arm || 0)), sx = 12, sy = -138, ex = sx + Math.cos(a) * 58, ey = sy + Math.sin(a) * 58;
       g.strokeStyle = ink; g.lineWidth = 12; g.lineCap = 'round'; g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.stroke();
@@ -159,6 +172,13 @@
       if (o.flash) { g.save(); g.translate(ex + Math.cos(a) * 30, ey + Math.sin(a) * 30); g.fillStyle = `rgba(255,220,90,${o.flash})`; g.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 10 : 30, q = (i / 10) * TAU; g.lineTo(Math.cos(q) * r, Math.sin(q) * r); } g.fill(); g.restore(); }
       // other arm
       g.beginPath(); g.moveTo(-12, -138); g.lineTo(-22, -96); g.stroke();
+      g.restore();
+    }
+    // A small hat in a gear paint (centre x, brim at y, w wide): the horse race's riders.
+    function miniHat(g, x, y, w, pt) {
+      g.save(); g.translate(x, y); g.scale(w / 80, w / 80); if (pt.glow) { g.shadowColor = pt.a; g.shadowBlur = 16; }
+      g.fillStyle = pt.c || pt.a; rr(g, -16, -22, 32, 22, 8); g.fill(); g.fillStyle = pt.a; g.beginPath(); g.ellipse(0, 0, 40, 7, 0, 0, TAU); g.fill();
+      g.shadowBlur = 0; g.fillStyle = pt.b; g.fillRect(-16, -8, 32, 6); g.strokeStyle = '#1d100a'; g.lineWidth = 3; g.beginPath(); g.ellipse(0, 0, 40, 7, 0, 0, TAU); g.stroke();
       g.restore();
     }
     function lantern(g, x, y, R, col, lit, word, t) {
@@ -186,7 +206,7 @@
       for (let i = 0; i < 3; i++) { g.fillStyle = ['#ff5a1f', '#ffae2b', '#fff2a8'][i]; const r = R * (1 - i * 0.3); g.beginPath(); g.moveTo(x - r, y); g.quadraticCurveTo(x - r * 0.6, y - r * (1.5 + 0.2 * Math.sin(t * 9 + i)), x + Math.sin(t * 7 + i) * r * 0.2, y - r * (2.2 + 0.3 * Math.sin(t * 11 + i))); g.quadraticCurveTo(x + r * 0.6, y - r * 1.5, x + r, y); g.closePath(); g.fill(); }
       g.fillStyle = '#4a2a14'; g.fillRect(x - R * 1.3, y - R * 0.1, R * 2.6, R * 0.25);
     }
-    return { emoji, text, rr, scene, cowboy, lantern, drum, fire, tumbleweed, PAL };
+    return { emoji, text, rr, scene, cowboy, miniHat, lantern, drum, fire, tumbleweed, PAL };
   })();
   BOX.qdArt = ART;
 
@@ -227,8 +247,9 @@
     const drawn = now >= go ? clamp((now - go) / 180) : 0;
     const steady = now >= arm && now < go;
     if (steady) { g.fillStyle = `rgba(20,5,0,${0.25 + 0.08 * Math.sin(now / 160)})`; g.fillRect(0, 0, W, H); }
-    ART.cowboy(g, W * (0.5 - gap), H * 0.93, H * 0.5, 1, { arm: drawn, band: '#c0392b', flash: drawn > 0 && now - go < 260 ? 1 - (now - go) / 260 : 0 });
-    ART.cowboy(g, W * (0.5 + gap), H * 0.93, H * 0.5, -1, { arm: drawn, band: '#2f6b8a', flash: drawn > 0 && now - go < 300 && now - go > 60 ? 1 - (now - go - 60) / 240 : 0 });
+    const duo = c.mode === 'duel' && c.pairs && c.pairs[0] ? c.pairs[0] : null; // gear: the first duel's hats on the two silhouettes
+    ART.cowboy(g, W * (0.5 - gap), H * 0.93, H * 0.5, 1, { hatPaint: duo && hatPaint(duo.a), arm: drawn, band: '#c0392b', flash: drawn > 0 && now - go < 260 ? 1 - (now - go) / 260 : 0 });
+    ART.cowboy(g, W * (0.5 + gap), H * 0.93, H * 0.5, -1, { hatPaint: duo && hatPaint(duo.b), arm: drawn, band: '#2f6b8a', flash: drawn > 0 && now - go < 300 && now - go > 60 ? 1 - (now - go - 60) / 240 : 0 });
     if (now < arm) ART.text(g, c.mode === 'duel' ? `ROUND ${c.heat}${c.heat === c.heats ? ' · THE FINAL' : ''}` : `SHOT ${c.shot} OF ${c.shots}`, W / 2, H * 0.22, 64 * S, '#fff4d6', { font: '"Abril Fatface", serif', stroke: '#3a1206', lw: 10 * S });
     if (now < arm) ART.text(g, 'Ten paces…', W / 2, H * 0.33, 44 * S, '#ffe7a8', { font: '"Special Elite", monospace', stroke: '#2a1206', lw: 6 * S });
     if (steady) { const p = 1 + 0.04 * Math.sin(now / 120); g.save(); g.translate(W / 2, H * 0.3); g.scale(p, p); ART.text(g, 'STEADY…', 0, 0, 110 * S, '#ffd2a0', { font: '"Abril Fatface", serif', stroke: '#2a0a04', lw: 14 * S }); g.restore(); ART.text(g, 'don’t touch that pad', W / 2, H * 0.42, 34 * S, '#ffe7c8', { font: '"Special Elite", monospace', stroke: '#2a0a04', lw: 5 * S }); }
@@ -282,6 +303,7 @@
       const x = lerp(x0, x1 - lh * 0.4, k), bob = started && r.fin == null && r.n > 0 ? Math.abs(Math.sin(t * 14 + i)) * lh * 0.08 : 0, sz = Math.min(lh * 0.82, 90 * S);
       ART.emoji(g, '🐎', x, y - bob, sz, true);
       ART.emoji(g, r.avatar || '🤠', x + sz * 0.08, y - bob - sz * 0.42, sz * 0.5);
+      const rh = hatPaint(r); if (rh) ART.miniHat(g, x + sz * 0.08, y - bob - sz * 0.62, sz * 0.5, rh); // gear: the rider's hat
       ART.text(g, r.name, 12 * S, y, Math.min(30 * S, lh * 0.38), '#fff4d6', { align: 'left', stroke: '#2a1206', lw: 5 * S, max: x0 - 30 * S });
       const place = fins.indexOf(r.id); if (place >= 0) ART.text(g, medal(place), x1 + lh * 0.5, y, lh * 0.5, '#fff');
     });
@@ -337,7 +359,7 @@
     if (c.kind === 'draw') {
       if (c.mode === 'duel') {
         const res = (x) => (x.r ? (x.r.false ? '<em class="bad">💥 FALSE START</em>' : `<em>${secs(x.r.ms)}</em>`) : c.step === 'shot' ? '<em class="none">no draw</em>' : x.tapped ? '<em class="in">🔫</em>' : '');
-        const card = (pr, i) => `<div class="qd-duel ${c.step === 'shot' ? 'done' : ''}" style="animation-delay:${i * 0.08}s"><div class="qd-gun ${pr.win === pr.a.id ? 'win' : pr.win ? 'lose' : ''}" style="--c:${esc(pr.a.color)}"><span class="a">${av(pr.a)}</span><b>${esc(pr.a.name)}</b>${res(pr.a)}</div><div class="qd-vs">${pr.coin ? '🪙' : 'VS'}</div><div class="qd-gun ${pr.win === pr.b.id ? 'win' : pr.win ? 'lose' : ''}" style="--c:${esc(pr.b.color)}"><span class="a">${av(pr.b)}</span><b>${esc(pr.b.name)}</b>${res(pr.b)}</div></div>`;
+        const card = (pr, i) => `<div class="qd-duel ${c.step === 'shot' ? 'done' : ''}" style="animation-delay:${i * 0.08}s"><div class="qd-gun ${pr.win === pr.a.id ? 'win' : pr.win ? 'lose' : ''}" style="--c:${esc(pr.a.color)}"><span class="a">${av(pr.a)}</span><b>${hatTag(pr.a)}${esc(pr.a.name)}</b>${res(pr.a)}</div><div class="qd-vs">${pr.coin ? '🪙' : 'VS'}</div><div class="qd-gun ${pr.win === pr.b.id ? 'win' : pr.win ? 'lose' : ''}" style="--c:${esc(pr.b.color)}"><span class="a">${av(pr.b)}</span><b>${hatTag(pr.b)}${esc(pr.b.name)}</b>${res(pr.b)}</div></div>`;
         return `<div class="qd-duels n${c.pairs.length}">${c.pairs.map(card).join('')}${c.bye ? `<div class="qd-bye">🍀 ${av(c.bye)} ${esc(c.bye.name)} gets a bye</div>` : ''}</div>`;
       }
       const sh = c.shotRes;
@@ -586,7 +608,7 @@
     b('#qd-lock', () => sendCount(true));
     b('#qd-perm', async () => { PH.motionAsked = true; try { const r = await DeviceMotionEvent.requestPermission(); PH.motion = r === 'granted'; if (!PH.motion) PH.ctx.toast('No motion? Mash the pad instead!'); } catch { PH.ctx.toast('Mash the pad instead!'); } paintPad(true); });
   }
-  const head = (v) => `<div class="qd-ph-top"><span>⭐ <b>${v.points}</b></span><span>${v.rank ? `#${v.rank} of ${v.of}` : ''}</span><span>${v.n}/${v.total}${v.c && v.c.mult > 1 ? ' <i class="qd-x2">×2</i>' : ''}</span></div>`;
+  const head = (v) => `<div class="qd-ph-top"><span>${hatTag(v)}⭐ <b>${v.points}</b></span><span>${v.rank ? `#${v.rank} of ${v.of}` : ''}</span><span>${v.n}/${v.total}${v.c && v.c.mult > 1 ? ' <i class="qd-x2">×2</i>' : ''}</span></div>`;
   function phone(el, v, ctx) {
     if (!v) return;
     PH.v = v; PH.ctx = ctx; seedClock(v.now);

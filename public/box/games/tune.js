@@ -130,7 +130,12 @@
   const ends = {};
   const timer = (key, endsIn) => { if (!endsIn) return ''; if (!ends[key] || Math.abs(ends[key] - (Date.now() + endsIn)) > 1500) ends[key] = Date.now() + endsIn; return `<span class="timer" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span>`; };
   const av = (x) => esc((x && x.avatar) || '🙂');
-  const chip = (x, extra = '', cls = '') => `<span class="tb-chip ${cls}" style="--c:${esc(x.color || '#ff3d8b')}"><i>${av(x)}</i>${esc(x.name)}${extra}</span>`;
+  // Gear (JustGold shop): a player's buzzer paint ({ a, b, pattern, icon, glow }) or null. On the TV the
+  // avatar dot of their chip becomes their buzzer; on the phone it's the Guess button.
+  const buzzPaint = (x) => (x && x.gear && window.MT_GEAR ? window.MT_GEAR.paint('tune', 'buzzer', x.gear) : null);
+  const buzzBg = (pt) => (pt.pattern === 'swirl' ? `repeating-radial-gradient(circle, ${pt.a} 0 3px, #333 3px 5px), ${pt.a}` : `radial-gradient(circle at 35% 30%, #ffffffaa, ${pt.a} 45%, ${pt.b})`);
+  const buzzDot = (x) => { const pt = buzzPaint(x); return pt ? ` style="background:${buzzBg(pt)};box-shadow:0 0 0 3px ${pt.b}${pt.glow ? ', 0 0 16px ' + pt.a : ''}"` : ''; };
+  const chip = (x, extra = '', cls = '') => `<span class="tb-chip ${cls}" style="--c:${esc(x.color || '#ff3d8b')}"><i${buzzDot(x)}>${av(x)}</i>${esc(x.name)}${extra}</span>`;
   const secs = (ms) => (ms / 1000).toFixed(1) + ' s';
   const RATES = [{ n: 1, icon: '🍼', label: 'Too easy' }, { n: 2, icon: '🙂', label: 'Easy' }, { n: 3, icon: '🤔', label: 'Tricky' }, { n: 4, icon: '😰', label: 'Hard' }, { n: 5, icon: '🔥', label: 'Impossible' }];
   const rateOf = (d) => RATES[Math.max(0, Math.min(4, Math.round(d) - 1))];
@@ -408,7 +413,7 @@
     feel(ctx, 'guess' + v.n, 'turn');
     paint(`<div class="tbp-gh"><span>${chipLite(v.by)}’s pick</span><span>⏰ ${timer('pg' + v.n, v.endsIn)}</span></div>
       <div class="tbp-worth">Worth <b ${GF.t0 ? `data-wt0="${GF.t0}" data-wend="${GF.end}"` : ''}>${ci.worth || 300}</b> × difficulty</div>
-      <form class="tbp-guess" id="tbp-gf"><label class="tbp-tl">🎵 Song title</label><input id="tbp-g" type="text" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="Just the name of the song">${singerRow(false)}<button class="tbp-btn big">Guess</button></form>
+      <form class="tbp-guess" id="tbp-gf"><label class="tbp-tl">🎵 Song title</label><input id="tbp-g" type="text" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="Just the name of the song">${singerRow(false)}<button class="tbp-btn big"${(() => { const pt = buzzPaint(v); return pt ? ` style="background:${buzzBg(pt)};box-shadow:0 4px 0 ${pt.b}${pt.glow ? ', 0 0 18px ' + pt.a : ''};text-shadow:0 2px 3px #000a"` : ''; })()}>${(buzzPaint(v) || {}).icon ? esc(buzzPaint(v).icon) + ' ' : ''}Guess</button></form>
       ${GF.text ? `<div class="tbp-fb ${esc(GF.kind)}">${esc(GF.text)}</div>` : ''}
       <div class="tbp-tries">${'●'.repeat(m.left)}${'○'.repeat(Math.max(0, m.tries))} <small>${m.left} guess${m.left === 1 ? '' : 'es'} left</small></div>
       <p class="tbp-hint">Just the song’s name: typos, capitals, punctuation (’ . ! ?), brackets, “feat.” and “the” don’t matter.</p>`, 'guess');

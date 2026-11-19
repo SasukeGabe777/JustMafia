@@ -241,6 +241,7 @@
     lobbyTv,
     lobby: () => `<div class="wx wx-phlobby"><div class="wx-qph"><div class="wx-ql">psst…</div>Get ready to whisper. Nobody will know it was you ${dots}</div></div>`,
     tv,
-    phone(el, v, ctx, view) { if (view && view.me && v) v.me = view.me; phone(el, v, ctx); },
+    // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+    phone(el, v, ctx, view) { if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, view, 'whosaid'); if (view && view.me && v) v.me = view.me; phone(el, v, ctx); },
   };
 })();

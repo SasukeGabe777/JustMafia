@@ -277,6 +277,24 @@
     g.fillStyle = 'rgba(140,200,90,0.35)'; for (let i = 0; i < 220; i++) { const x = rnd() * W, y = gy + rnd() * H * 0.03; g.fillRect(x, y - 4, 2, 5); }
   }
   // A fortress at the edge: a wall with one tower per keep (up to 8 drawn), banners, damage.
+  // JustGold gear: a player's castle banner (paint { a, b, pattern, icon, glow }), or null for the
+  // team's plain flag. Flown over their keep's tower and shown next to their name on the TV.
+  const gearBanner = (k) => (window.MT_GEAR && k ? MT_GEAR.paint('summon', 'banner', k.gear) : null);
+  function bannerGear(g, b, dir, th, wv, P) {
+    const a = b.a || P.main, c = b.b || '#fff';
+    g.save();
+    if (b.glow) { g.shadowColor = c; g.shadowBlur = 16; }
+    const path = () => { g.beginPath(); g.moveTo(0, -th - 66); g.quadraticCurveTo(dir * 24, -th - 70 + wv, dir * 48, -th - 62 + wv); g.lineTo(dir * 46, -th - 30 + wv); g.quadraticCurveTo(dir * 22, -th - 38 - wv, 0, -th - 34); g.closePath(); };
+    path(); g.fillStyle = a; g.fill(); g.shadowBlur = 0;
+    g.save(); path(); g.clip(); g.fillStyle = c; g.globalAlpha = 0.85;
+    if (b.pattern === 'stripes') for (let s = -10; s < 60; s += 12) g.fillRect(dir > 0 ? s : -s - 5, -th - 74, 5, 50);
+    else if (b.pattern === 'stars') for (let s = 0; s < 5; s++) { circ(g, dir * (8 + s * 9), -th - 60 + (s % 2) * 22 + wv * 0.5, 1.8); g.fill(); }
+    else if (b.pattern === 'flame') { g.fillStyle = c; g.beginPath(); g.moveTo(0, -th - 34); for (let s = 0; s <= 4; s++) g.lineTo(dir * s * 12, -th - 40 - (s % 2 ? 12 : 2) + wv * s / 4); g.lineTo(dir * 48, -th - 30 + wv); g.closePath(); g.fill(); }
+    g.restore();
+    path(); g.lineWidth = 2.5; g.strokeStyle = P.main; g.stroke(); // the team colour edge keeps sides clear
+    if (b.icon) text(g, b.icon, dir * 22, -th - 50 + wv * 0.5, 20, '#fff');
+    g.restore();
+  }
   function fortress(g, team, x, base, keeps, t, o = {}) {
     const P = TEAM[team], dir = team === 0 ? 1 : -1, n = Math.max(1, Math.min(8, keeps.length || 1));
     const hp = keeps.length ? keeps.reduce((a, k) => a + k.hp, 0) / keeps.reduce((a, k) => a + k.max, 0) : 1;
@@ -297,8 +315,12 @@
         g.fillStyle = '#1b1030'; rr(g, -7, -th + 34, 14, 22, 7); g.fill(); g.fillStyle = `rgba(255,${team ? 230 : 200},120,${0.6 + 0.4 * Math.sin(t * 3 + i)})`; rr(g, -4, -th + 38, 8, 16, 4); g.fill();
         // banner
         line(g, 0, -th - 14, 0, -th - 60, 2.5, '#3a2418');
-        const wv = Math.sin(t * 4 + i) * 4; g.fillStyle = P.main; g.beginPath(); g.moveTo(0, -th - 58); g.quadraticCurveTo(dir * 18, -th - 62 + wv, dir * 36, -th - 54 + wv); g.lineTo(dir * 34, -th - 34 + wv); g.quadraticCurveTo(dir * 16, -th - 40 - wv, 0, -th - 36); g.closePath(); fs(g, P.main, 2);
-        emblem(g, team, dir * 16, -th - 47 + wv * 0.5, 7);
+        const wv = Math.sin(t * 4 + i) * 4, gb = gearBanner(k);
+        if (gb) bannerGear(g, gb, dir, th, wv, P); // the keep owner's gear banner (JustGold shop)
+        else {
+          g.fillStyle = P.main; g.beginPath(); g.moveTo(0, -th - 58); g.quadraticCurveTo(dir * 18, -th - 62 + wv, dir * 36, -th - 54 + wv); g.lineTo(dir * 34, -th - 34 + wv); g.quadraticCurveTo(dir * 16, -th - 40 - wv, 0, -th - 36); g.closePath(); fs(g, P.main, 2);
+          emblem(g, team, dir * 16, -th - 47 + wv * 0.5, 7);
+        }
         if (hpk < 0.6) { g.strokeStyle = OUT; g.lineWidth = 2.5; g.beginPath(); g.moveTo(-10, -th * 0.7); g.lineTo(2, -th * 0.55); g.lineTo(-4, -th * 0.45); g.lineTo(8, -th * 0.3); g.stroke(); }
         if (hpk < 0.3) for (let j = 0; j < 4; j++) { const fl = (t * 2 + j * 0.25 + i * 0.3) % 1; g.fillStyle = `rgba(255,${120 + j * 30},40,${1 - fl})`; circ(g, -10 + j * 7, -th - 4 - fl * 30, 6 * (1 - fl) + 2); g.fill(); }
       }
@@ -626,6 +648,7 @@
       const c = Math.floor(i / rows), r = i % rows, kx = x + c * cw, ky = y + r * ch, f = clamp(k.hp / k.max, 0, 1), fs2 = Math.min(22, ch * 0.62);
       text(g, k.ghost ? '👻' : k.avatar || '🙂', kx + 14, ky + ch / 2, fs2, '#fff');
       text(g, k.name, kx + 32, ky + ch / 2 - (ch > 30 ? 6 : 0), Math.min(18, ch * 0.5), k.ghost ? '#8a809a' : '#fff', { align: 'left', font: BODY, weight: 600, max: cw * 0.5 });
+      const gb = gearBanner(k); if (gb && gb.icon) text(g, gb.icon, kx + cw - 18, ky + ch / 2 - (ch > 30 ? 6 : 0), fs2 * 0.85, '#fff'); // gear banner emblem
       const bx = kx + (ch > 30 ? 32 : cw * 0.58), by = ky + (ch > 30 ? ch / 2 + 8 : ch / 2 - 4), bw = ch > 30 ? cw - 50 : cw * 0.36;
       g.fillStyle = '#2a1f3a'; g.fillRect(bx, by, bw, 7);
       g.fillStyle = f < 0.3 ? '#ff5b5b' : P.light; g.fillRect(bx, by, bw * f, 7);
@@ -750,6 +773,12 @@
     PH.tier = v.tier || PH.tier;
     if (v.keep) { if (PH.keepHp != null && v.keep.hp < PH.keepHp && now() - PH.lastBuzz > 2500) { PH.lastBuzz = now(); ctx.haptic('big'); } PH.keepHp = v.keep.hp; }
   }
+  // Your gear banner (JustGold shop) as a little pennant next to your side's name; '' by default.
+  function phoneBanner(v) {
+    const b = gearBanner(v); if (!b) return '';
+    const e = BOX.esc;
+    return `<svg class="sm-gearflag" width="38" height="28" viewBox="0 0 38 28" aria-hidden="true" style="vertical-align:middle;margin-left:6px${b.glow ? `;filter:drop-shadow(0 0 4px ${e(b.b || '#fff')})` : ''}"><path d="M3 2 L3 27" stroke="#3a2418" stroke-width="2.5"/><path d="M4 3 Q18 0 35 5 L34 20 Q18 15 4 19 Z" fill="${e(b.a || '#888')}" stroke="#1a1030" stroke-width="1.8"/>${b.icon ? `<text x="19" y="12.5" font-size="11" text-anchor="middle" dominant-baseline="middle">${e(b.icon)}</text>` : ''}</svg>`;
+  }
   function phone(el, v, ctx) {
     if (!v) return;
     PH.v = v; PH.ctx = ctx; PH.el = el;
@@ -766,7 +795,7 @@
     const P = TEAM[v.team], fort = v.fort || [100, 100], tierProg = v.need ? clamp((v.xp - v.prev) / Math.max(1, v.need - v.prev), 0, 1) : 1;
     const lead = v.team === 0 ? v.front - 500 : 500 - v.front;
     BOX.morph(el, `<div class="sm-ph t${v.team} ${v.phase === 'ready' ? 'waiting' : ''} ${v.ghost ? 'ghost' : ''}">
-      <div class="sm-top"><div class="sm-team"><span>${P.icon}</span><b>${P.name}</b>${v.ghost ? '<em>👻 ghost</em>' : ''}</div>
+      <div class="sm-top"><div class="sm-team"><span>${P.icon}</span><b>${P.name}</b>${phoneBanner(v)}${v.ghost ? '<em>👻 ghost</em>' : ''}</div>
         <div class="sm-gold"><span class="ic">💰</span><b id="sm-gold" data-keep></b><small>+${Math.round(v.income * 10) / 10}/s</small></div></div>
       <div class="sm-stat">
         <div class="sm-bar" title="Your keep"><i style="width:${Math.round(100 * v.keep.hp / v.keep.max)}%"></i><span>🏰 ${v.ghost ? 'Keep fallen' : `Your keep ${Math.round(100 * v.keep.hp / v.keep.max)}%`}</span></div>

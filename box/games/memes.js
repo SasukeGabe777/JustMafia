@@ -6,6 +6,7 @@
 // Remix (start a meme, then finish someone else's half-finished one), and a final
 // Meme of the Night showdown between the night's best. Big rooms (13+ memes) get a phone-only
 // semi-final first, so the TV only parades the finalists. The game ends with a gallery and awards.
+const GEARS = require('../../public/shared/gear'); // shop gear: the frame around your memes (slot memes/frame)
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'rounds', label: 'Rounds', options: opt([[2, '2 rounds (quick)'], [3, '3 rounds'], [4, '4 rounds'], [5, '5 rounds']]) },
@@ -348,7 +349,9 @@ class Memes {
     add(m.by, pts); add(m.co, Math.round(pts / 2));
     if (why === 'vote') for (const id of [m.by, m.co]) { const st = id && this.stats.get(id); if (st) { st.votes += pts / 100; if (m.kind === 'remix') st.remix += pts / 100; } }
   }
-  who(id) { const p = this.room.get(id); return id ? { name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '' } : null; }
+  // who(id) is only sent where the author is already public (results after the vote, gallery, awards,
+  // Meme of the Night, who is still writing), so gear (the author's meme frame) never leaks authorship.
+  who(id) { const p = this.room.get(id); return id ? { name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '', gear: GEARS.gearSet(p, 'memes') } : null; }
   decide() {
     if (this.phase !== 'vote') return;
     const final = this.kind === 'final';

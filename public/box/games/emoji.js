@@ -859,6 +859,8 @@ const KB_CATS = [
     },
 
     phone(el, v, ctx) {
+      // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+      if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, arguments[3], 'emoji');
       if (!v) return;
       const p = phoneRoot(el, ctx); p.v = v;
       put(p.pts, `🏅 ${v.points} pts · #${v.rank || '-'}${v.lastRound ? ` <span class="em-final sm">🏁 Final ×${v.mult}</span>` : v.round ? ` <span class="muted">· round ${v.round}/${v.total}</span>` : ''}`);

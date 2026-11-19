@@ -142,6 +142,8 @@
   // ---------- phone ----------
   let served = null; // the room's idea-starter pack (server sends it while writing)
   function phone(el, v, ctx) {
+    // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+    if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, arguments[3], 'truths');
     if (v && Array.isArray(v.ideas) && v.ideas.length) served = v.ideas;
     if (!v) return;
     const head = `<div class="tx-me"><span>🏅 <b>${v.points}</b> pt${v.points === 1 ? '' : 's'} · #${v.rank || '-'}</span><span>CASE FILE</span></div>`;

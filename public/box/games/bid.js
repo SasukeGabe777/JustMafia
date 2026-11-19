@@ -45,6 +45,16 @@
     const dur = Math.max(1, s.dur || 1), gone = Math.max(0, dur - (s.endsIn || 0));
     return `<div class="jb-ring st${s.stage}"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="54"/><circle class="fg" cx="60" cy="60" r="54" style="animation-duration:${dur}ms;animation-delay:-${gone}ms"/></svg><b data-jb-ends="${endsAt(s.endsIn)}">${Math.ceil((s.endsIn || 0) / 1000)}</b></div>`;
   };
+  // JustGold gear: a bidder's paddle (gear.paddle → MT_GEAR paint), drawn as a small raised paddle.
+  // '' for the plain default paddle, so the screens look exactly as before without gear.
+  function paddle(gear, big) {
+    const p = window.MT_GEAR && gear ? MT_GEAR.paint('bid', 'paddle', gear) : null; if (!p) return '';
+    const a = esc(p.a || '#c8962a'), b = esc(p.b || '#ffffff');
+    const deco = p.pattern === 'dots' ? [[12, 12], [27, 10], [10, 24], [29, 25], [20, 30]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="${b}" opacity=".7"/>`).join('')
+      : p.pattern === 'check' ? '<path d="M8 10 L32 30 M8 26 L32 6 M14 4 L34 20 M6 18 L22 34" stroke="' + b + '" stroke-width="1.4" opacity=".6"/>' : '';
+    return `<svg class="jb-paddle${big ? ' big' : ''}${p.glow ? ' glow' : ''}" viewBox="0 0 40 60" aria-hidden="true" style="--pg:${a}"><rect x="16.5" y="32" width="7" height="26" rx="3" fill="#6b3f1d" stroke="#2a1608" stroke-width="2"/>
+      <circle cx="20" cy="19" r="17" fill="${a}" stroke="#2a1608" stroke-width="2.5"/>${deco}<circle cx="20" cy="19" r="13" fill="none" stroke="${b}" stroke-width="2.5"/>${p.icon ? `<text x="20" y="25" text-anchor="middle" font-size="15">${esc(p.icon)}</text>` : ''}</svg>`;
+  }
   const chip = (name, color) => `<span class="jb-chip" style="--c:${esc(color || '#ffd23f')}">${esc(name)}</span>`;
   const itemCard = (it, fresh, small) => `<div class="jb-item r-${esc(it.r)} ${it.jackpot ? 'jack' : ''} ${fresh ? 'fresh' : ''} ${small ? 'sm' : ''}">
       <div class="jb-ie">${esc(it.emoji)}</div><div class="jb-in">${esc(it.name)}</div>
@@ -61,8 +71,8 @@
 
   function tvAuction(s) {
     const L = s.locker, h = s.high;
-    const top = (s.top || []).map((b, i) => `<div class="jb-top3 p${i}"><span>${['🥇', '🥈', '🥉'][i]}</span>${chip(b.name, b.color)}<b>${money(b.amount)}</b></div>`).join('');
-    const tick = (s.ticker || []).map((b, i) => `<div class="jb-tk ${i === 0 && once('tk:' + s.round + ':' + s.bidCount) ? 'new' : ''}">${chip(b.name, b.color)}<b>${money(b.amount)}</b></div>`).join('');
+    const top = (s.top || []).map((b, i) => `<div class="jb-top3 p${i}"><span>${['🥇', '🥈', '🥉'][i]}</span>${paddle(b.gear)}${chip(b.name, b.color)}<b>${money(b.amount)}</b></div>`).join('');
+    const tick = (s.ticker || []).map((b, i) => `<div class="jb-tk ${i === 0 && once('tk:' + s.round + ':' + s.bidCount) ? 'new' : ''}">${paddle(b.gear)}${chip(b.name, b.color)}<b>${money(b.amount)}</b></div>`).join('');
     const hot = once('hb:' + s.round + ':' + s.bidCount);
     return `<div class="jb-floor">${unit(s, 'part')}
       <div class="jb-desk">
@@ -70,7 +80,7 @@
         <div class="jb-bidbox st${s.stage}">
           ${ring(s)}
           <div class="jb-cur"><small>${h ? 'Current bid' : 'Opening bid'}</small><div class="jb-amt ${hot && h ? 'bump' : ''}">${money(h ? h.amount : L.opening)}</div>
-          <div class="jb-who">${h ? chip(h.name, h.color) : '<span class="muted">No bids yet</span>'}</div></div>
+          <div class="jb-who">${h ? paddle(h.gear, true) + chip(h.name, h.color) : '<span class="muted">No bids yet</span>'}</div></div>
         </div>
         ${s.stage ? `<div class="jb-going st${s.stage}">${STAGE[s.stage]}</div>` : ''}
         <div class="jb-top3s">${top}</div>
@@ -106,7 +116,7 @@
     const sale = s.sale, fresh = once('sold:' + s.round);
     return `<div class="jb-floor">${unit(s, 'part')}
       <div class="jb-desk"><div class="jb-soldbox ${fresh ? 'fresh' : ''}">
-        ${sale ? `<div class="jb-gavel">🔨</div><div class="jb-stamp">SOLD!</div><div class="jb-soldto">to ${chip(sale.name, sale.color)}</div><div class="jb-soldfor">for <b>${money(sale.price)}</b>${sale.sealed ? ' <small>(sealed bid, second price)</small>' : ''}</div>`
+        ${sale ? `<div class="jb-gavel">🔨</div><div class="jb-stamp">SOLD!</div><div class="jb-soldto">to ${paddle(s.saleGear, true)}${chip(sale.name, sale.color)}</div><div class="jb-soldfor">for <b>${money(sale.price)}</b>${sale.sealed ? ' <small>(sealed bid, second price)</small>' : ''}</div>`
     : '<div class="jb-gavel">🦗</div><div class="jb-stamp grey">NO SALE</div><div class="jb-soldfor">Nobody bid! Let’s see what you all missed…</div>'}
       </div></div></div>`;
   }
@@ -173,12 +183,12 @@
   function phoneAuction(v) {
     const h = v.high, me = v.me;
     let status = '<div class="jb-status none">💸 Make a bid!</div>';
-    if (me.high) status = '<div class="jb-status win">✅ You’re winning!</div>';
+    if (me.high) status = `<div class="jb-status win">${paddle(v.gear, true) || '✅'} You’re winning!</div>`;
     else if (me.best != null) status = `<div class="jb-status lose">⚠️ Outbid! <small>You were #${me.pos} of ${me.of}</small></div>`;
     const btns = v.adds.map((a) => `<button class="jb-bidbtn a${a.add}" data-add="${a.add}" ${me.high || a.amount > v.cash ? 'disabled' : ''}>+$${a.add}<small>bid ${money(a.amount)}</small></button>`).join('');
     return `${status}<div class="jb-pcur ${v.stage ? 'st' + v.stage : ''}"><small>${h ? esc(h.name) : 'Opening bid'}</small><b>${money(h ? h.amount : v.locker.opening)}</b>
       <span class="jb-psec">${v.stage ? STAGE[v.stage] : ''} ⏱ <b data-jb-ends="${endsAt(v.endsIn)}">${Math.ceil(v.endsIn / 1000)}</b></span></div>
-      <div class="jb-bids">${btns}</div>
+      <div class="jb-bids">${btns}</div>${!me.high && paddle(v.gear) ? `<div class="jb-mypaddle">${paddle(v.gear, true)}<small>Your paddle</small></div>` : ''}
       <div class="jb-custom"><span>$</span><input id="jb-amt" type="number" inputmode="numeric" min="0" step="10" placeholder="min ${money(v.minBid)}"><button class="btn green" id="jb-go" ${me.high ? 'disabled' : ''}>Bid</button></div>`;
   }
 

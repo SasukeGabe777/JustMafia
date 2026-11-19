@@ -7,6 +7,14 @@
   const { esc, timer } = BOX;
   const av = (r) => esc((r && r.avatar) || '🙂');
   const COAT = { red: '#c0392b', green: '#2e8b57', blue: '#2f5fb3', yellow: '#e1b12c', grey: '#8a8f98' };
+  // JustGold gear: a detective's magnifier (rim colour a, handle b, glow). '' for the default
+  // brass lens, so nothing changes for players without gear.
+  function lens(gear, size = 26) {
+    const pt = window.MT_GEAR ? MT_GEAR.paint('escape', 'magnifier', gear) : null;
+    if (!pt) return '';
+    const a = esc(pt.a || '#c9a14a'), b = esc(pt.b || '#5a3a1a');
+    return `<svg class="es-lens" width="${size}" height="${size}" viewBox="0 0 40 40" aria-hidden="true" style="vertical-align:middle${pt.glow ? `;filter:drop-shadow(0 0 4px ${a})` : ''}"><path d="M25 25 L36 36" stroke="#1a1a1a" stroke-width="8" stroke-linecap="round"/><path d="M25 25 L36 36" stroke="${b}" stroke-width="5" stroke-linecap="round"/><circle cx="16" cy="16" r="12" fill="rgba(200,235,255,.55)" stroke="#1a1a1a" stroke-width="6"/><circle cx="16" cy="16" r="12" fill="none" stroke="${a}" stroke-width="3.5"/><path d="M10 12 Q12 8 16 8" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>`;
+  }
   const PART_ICON = { legend: '📒', engraving: '🔣', keypad: '🔢', photo: '📷', note: '📝', dial: '🕰️', pattern: '🎼', key: '🗝️', panel: '🎚️', tag: '🏷️', letters: '🔤', map: '🗺️', lantern: '🕯️' };
 
   // ---------------- shared drawings ----------------
@@ -52,7 +60,7 @@
   const inp = (id, init) => { if (!(id in PH.input)) PH.input[id] = init; return PH.input[id]; };
   function teamLine(c) {
     if (!c.team.length) return '';
-    return `<div class="es-team">${c.team.map((t) => `<span>${av(t)} <b>${esc(t.name)}</b> ${t.role === 'hands' ? 'has the controls' : `has ${esc(t.label || 'evidence')}`}</span>`).join('')}</div>`;
+    return `<div class="es-team">${c.team.map((t) => `<span>${av(t)} <b>${esc(t.name)}</b>${lens(t.gear, 18)} ${t.role === 'hands' ? 'has the controls' : `has ${esc(t.label || 'evidence')}`}</span>`).join('')}</div>`;
   }
   function evidenceHtml(part, d) {
     switch (part) {
@@ -94,7 +102,7 @@
     return '';
   }
   function cardHtml(c, v) {
-    const head = `<div class="es-ch"><span class="es-ci">${esc(c.icon)}</span><div><b>${esc(c.name)}</b><small>${c.role === 'hands' ? `You have the controls: <b>${esc(c.label)}</b>` : `You have: <b>${PART_ICON[c.part] || ''} ${esc(c.label)}</b>${c.copy ? ' (a copy)' : ''}`}</small></div></div>`;
+    const head = `<div class="es-ch"><span class="es-ci">${esc(c.icon)}</span>${lens(v.gear, 40)}<div><b>${esc(c.name)}</b><small>${c.role === 'hands' ? `You have the controls: <b>${esc(c.label)}</b>` : `You have: <b>${PART_ICON[c.part] || ''} ${esc(c.label)}</b>${c.copy ? ' (a copy)' : ''}`}</small></div></div>`;
     if (c.solved) return `<section class="es-card solved">${head}<div class="es-open">🔓 Open!${c.by ? ` <small>by ${esc(c.by)}</small>` : ''}</div></section>`;
     const body = c.role === 'hands' ? controlsHtml(c) : evidenceHtml(c.part, c.data);
     const shared = c.shared.length ? `<div class="es-shared">${c.shared.map((sh) => `<div class="es-sh"><div class="es-shh">🤖 ${esc(sh.from.name)} reads out <b>${esc(sh.label)}</b>:</div>${evidenceHtml(sh.part, sh.data)}</div>`).join('')}</div>` : '';
@@ -217,7 +225,7 @@
   }
   function lockCard(L) {
     if (L.kind === 'deduce') return '';
-    const team = L.team.map((t) => `<span class="${t.role}">${av(t)} ${esc(t.name)} <small>${t.role === 'hands' ? '🎛️ ' : (PART_ICON[t.label] || '')}${esc(t.label || '')}</small></span>`).join('');
+    const team = L.team.map((t) => `<span class="${t.role}">${av(t)} ${esc(t.name)}${lens(t.gear) ? ' ' + lens(t.gear) : ''} <small>${t.role === 'hands' ? '🎛️ ' : (PART_ICON[t.label] || '')}${esc(t.label || '')}</small></span>`).join('');
     return `<div class="es-lock ${L.solved ? 'open' : ''}"><div class="es-lh"><span class="es-li">${esc(L.icon)}</span><b>${esc(L.name)}</b><span class="es-pad">${L.solved ? '🔓' : '🔒'}</span></div>
       ${L.solved ? `<div class="es-lo">Opened${L.by ? ` by ${esc(L.by)}` : ''}!</div>` : `<div class="es-lt">${team}</div>${L.maze ? `<div class="es-lm">${mazeSvg({ n: L.maze.n, walls: [], pos: L.maze.pos, exit: L.maze.exit, trail: L.maze.trail }, 120)}</div>` : ''}${L.tries ? `<div class="es-ltries">✖ ${L.tries} wrong ${L.tries === 1 ? 'try' : 'tries'}</div>` : ''}${L.hints.length ? `<div class="es-lhint">💡 ${esc(L.hints[L.hints.length - 1])}</div>` : ''}`}</div>`;
   }

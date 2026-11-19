@@ -1,6 +1,8 @@
 'use strict';
-// End-to-end check of the shop, gold pouch and inventory in headless Chrome.
-// Run with `npm run test:e2e`. The private server enables the test-only gold grant.
+// End-to-end check of JustMafia's phone after JustGold (docs/justgold.md): the JustGold pouch,
+// the link to the shared JustGold shop (/shop), the "Season & unlocks" screen (season pass,
+// weekly challenges, unlocks, worlds, Fate, locked + achievements) and no item buying left in
+// JustMafia. The private server enables the test-only JustGold grant.
 const assert = require('node:assert/strict');
 const os = require('node:os');
 const path = require('node:path');
@@ -21,109 +23,107 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   const a = await browser.page();
   const me = () => tv && tv.players.find((p) => p.name === 'Ana');
   const gold = () => a.eval(`Number((document.querySelector('#s-pouch b, #g-pouch b') || {}).textContent)`);
-  // Test-only: grant gold to this phone's own profile through a second socket in the page.
-  const grant = (amount) => a.eval(`new Promise((done) => { const s = io(); const c = JSON.parse(localStorage.getItem('mt.profile')); s.emit('profile:resume', c, () => s.emit('dev:grant', { amount: ${amount} }, (r) => { s.close(); done(r && r.ok); })); })`);
+  // Test-only: run socket calls as this phone's own profile through a second socket in the page.
+  const asMe = (body) => a.eval(`new Promise((done) => { const s = io(); const c = JSON.parse(localStorage.getItem('mt.profile')); s.emit('profile:resume', c, () => { const fin = (r) => { s.close(); done(r); }; ${body} }); })`);
+  const grant = (amount) => asMe(`s.emit('dev:grant', { amount: ${amount} }, (r) => fin(r && r.ok));`);
+  const NO_BUY_UI = `document.querySelectorAll('[data-buy], [data-item], [data-equip], [data-shop-tab], [data-open-shop], #s-scene, #s-say, #screen-shop').length`;
 
   // Join, move in, land in the lobby.
   await a.go(`${URL}/play?room=${room.code}`);
   await a.until(`!document.querySelector('#screen-creator').hidden && !document.querySelector('#j-go').disabled`, 'creator');
+  // The creator links to the JustGold shop (also on the first join), with this room as the way back.
+  const creatorLink = await a.eval(`(() => { const l = document.querySelector('#c-shop'); return { tag: l.tagName, hidden: l.hidden, text: l.textContent }; })()`);
+  assert.equal(creatorLink.tag, 'A'); assert.equal(creatorLink.hidden, false); assert.match(creatorLink.text, /JustGold shop & character/);
   await a.eval(`document.querySelector('#j-name').value = 'Ana'`); await a.click('#j-go');
   await a.until(`!document.querySelector('#screen-home').hidden`, 'claim screen'); await a.click('#h-save');
-  await a.until(`!document.querySelector('#screen-game').hidden && document.querySelector('#g-pouch')`, 'lobby with gold pouch');
+  await a.until(`!document.querySelector('#screen-game').hidden && document.querySelector('#g-pouch')`, 'lobby with the JustGold pouch');
   assert.equal(await gold(), 0);
+  assert.match(await a.eval(`document.querySelector('#g-pouch').textContent`), /JG/);
   await a.click('#g-pouch'); await a.until(`!document.querySelector('#g-pouch-pop').hidden && document.querySelector('[data-gold-balance]').textContent === '0'`, 'pouch details');
-  ok('Every player has a visible gold pouch with balance / earned / spent details');
+  assert.match(await a.eval(`document.querySelector('#g-pouch-pop').textContent`), /JustGold/);
+  assert(await a.eval(`!!document.querySelector('#g-pouch-pop a[data-jg-shop]') && !!document.querySelector('#g-pouch-pop [data-open-season]')`), 'pouch links to the shop and Season & unlocks');
+  await a.click('#g-pouch');
+  ok('Every player has a JustGold pouch (JG) with balance / earned / spent, linking to the shop and Season & unlocks');
 
-  // Open the shop: a counter scene, sections, shelves; no overflow at phone width.
-  await a.click('[data-open-shop]');
-  await a.until(`!document.querySelector('#screen-shop').hidden && document.querySelector('#s-scene').width > 0 && document.querySelectorAll('.shop-tile canvas').length && [...document.querySelectorAll('.shop-tile canvas')].every((c) => c.width > 0)`, 'shop opens');
-  const tabs = await a.eval(`[...document.querySelectorAll('[data-shop-tab]')].map((b) => b.dataset.shopTab)`);
-  for (const t of ['clothing', 'accessories', 'house', 'inventory']) assert(tabs.includes(t), 'tab ' + t);
-  assert(await a.noOverflow()); await a.shot('shop-open');
-  // Close and reopen.
+  // The lobby: a clear link to the shared JustGold shop that comes back to this room.
+  const link = await a.eval(`(() => { const l = document.querySelector('#g-body a[data-jg-shop]'); return l && { text: l.textContent, href: l.getAttribute('href') }; })()`);
+  assert(link, 'lobby has the JustGold shop link');
+  assert.match(link.text, /🛍️ JustGold shop & character/);
+  const u = new globalThis.URL(link.href, URL); assert.equal(u.pathname, '/shop');
+  const back = new globalThis.URL(u.searchParams.get('back'), URL); assert.equal(back.pathname, '/play'); assert.equal(back.searchParams.get('room'), room.code);
+  assert.match(await a.eval(`document.querySelector('#g-body [data-open-season]').textContent`), /🏆 Season & unlocks/);
+  assert.equal(await a.eval(NO_BUY_UI), 0, 'no item-buy UI in the lobby');
+  assert(await a.noOverflow()); await a.shot('lobby-justgold');
+  ok(`Lobby: "🛍️ JustGold shop & character" → ${link.href}; "🏆 Season & unlocks" button`);
+
+  // Season & unlocks: its tabs, each renders; nothing to buy but the pass and Fate.
+  await a.click('#g-body [data-open-season]');
+  await a.until(`!document.querySelector('#screen-season').hidden && document.querySelector('.pass-track')`, 'Season & unlocks opens on the season pass');
+  const tabs = await a.eval(`[...document.querySelectorAll('[data-season-tab]')].map((b) => b.dataset.seasonTab)`);
+  assert.deepEqual(tabs, ['season', 'weekly', 'unlocked', 'worlds', 'fate', 'locked']);
+  assert(await a.eval(`!!document.querySelector('#screen-season a[data-jg-shop]')`), 'the screen links to the JustGold shop');
+  assert(await a.noOverflow()); await a.shot('season-unlocks');
+  const expect = { weekly: '.challenges li', unlocked: '.unlocked-head', worlds: '.world-card', fate: '.fate-card', locked: '.achievements li' };
+  for (const [t, sel] of Object.entries(expect)) {
+    await a.click(`[data-season-tab="${t}"]`);
+    await a.until(`document.querySelector('[data-season-tab="${t}"]').classList.contains('sel') && document.querySelector('#s-grid ${sel}')`, 'tab ' + t);
+    assert.equal(await a.eval(NO_BUY_UI), 0, 'no item-buy UI in ' + t);
+    assert(await a.noOverflow(), 'no overflow in ' + t);
+  }
+  assert.match(await a.eval(`document.querySelector('#s-grid').textContent`), /Achievements \(0\/\d+\)/);
+  await a.click('[data-season-tab="unlocked"]'); await a.until(`document.querySelector('.unlocked-head')`, 'unlocked'); await a.shot('season-unlocked');
+  // Back and reopen.
   await a.click('#s-back'); await a.until(`!document.querySelector('#screen-game').hidden`, 'back to lobby');
-  await a.click('[data-open-shop]'); await a.until(`!document.querySelector('#screen-shop').hidden`, 'shop reopens');
-  ok(`Shop opens and closes; sections: ${tabs.join(', ')}`);
+  await a.click('#g-body [data-open-season]'); await a.until(`!document.querySelector('#screen-season').hidden`, 'reopens');
+  ok(`Season & unlocks: tabs ${tabs.join(', ')}; no item shelves, Buy or Equip anywhere`);
 
-  // The shop reveals items as you play; put the two this test buys on Ana's shelves (test-only).
-  assert(await a.eval(`new Promise((done) => { const s = io(); const c = JSON.parse(localStorage.getItem('mt.profile')); s.emit('profile:resume', c, () => s.emit('dev:stock', { items: ['houseStyle:darkMansion', 'hat:hood'] }, (r) => { s.close(); done(r && r.ok); })); })`));
-  await wait(300);
-  // Preview an item; it is unaffordable, so Buy is disabled and the shopkeeper says so.
-  await a.click('[data-shop-tab="house"]'); await a.click('[data-item="houseStyle:darkMansion"]');
-  await a.until(`document.querySelector('#s-scene').dataset.selected === 'houseStyle:darkMansion'`, 'item on the counter');
-  assert(await a.eval(`document.querySelector('[data-buy]').disabled && /Need 180 more gold/.test(document.querySelector('[data-cant]').textContent)`));
-  assert.match(await a.eval(`document.querySelector('#s-say').textContent`), /let me get it down/, 'he goes to fetch it first');
-  await a.until(`document.querySelector('#s-scene').dataset.placed === 'houseStyle:darkMansion'`, 'he carries it to the pedestal', 6000);
-  await a.until(`/180 gold.*You have 0/.test(document.querySelector('#s-say').textContent)`, 'then the sales pitch', 4000);
-  assert.match(await a.eval(`document.querySelector('#s-say').textContent`), /neighbors|walls|plot|Dark Mansion/, 'he talks about the item');
-  assert.match(await a.eval(`document.querySelector('#s-detail').textContent`), /gloomy mansion/);
-  await a.shot('shop-preview');
-  ok('Picking an item: the shopkeeper fetches it to the pedestal, then pitches it (description, price); unaffordable items cannot be bought');
+  // The season pass is still bought here, with JustGold.
+  await a.click('[data-season-tab="season"]'); await a.until(`document.querySelector('[data-buy-pass]')`, 'pass button');
+  assert(await a.eval(`document.querySelector('[data-buy-pass]').disabled`), 'cannot afford it yet');
+  assert.match(await a.eval(`document.querySelector('[data-buy-pass]').textContent`), /195 JG/);
+  assert.match(await a.eval(`document.querySelector('.pass-head').textContent`), /195 more JustGold/);
+  assert(await grant(300)); await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 300`, 'JustGold arrives');
+  await a.until(`!document.querySelector('[data-buy-pass]').disabled`, 'pass affordable');
+  await a.click('[data-buy-pass]');
+  await a.until(`document.querySelector('.pass-owned') && Number(document.querySelector('#s-pouch b').textContent) === 105`, 'pass bought');
+  await a.click('[data-season-tab="fate"]'); await a.until(`document.querySelector('[data-fate-exchange]')`, 'fate');
+  assert.match(await a.eval(`document.querySelector('[data-fate-exchange]').textContent`), /JG for 1 token/);
+  ok('The season pass costs 195 JG and is bought on Season & unlocks; JustGold is deducted');
 
-  // Earn gold, buy it: gold is deducted, the item is owned and in the inventory.
-  assert(await grant(300)); await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 300`, 'gold arrives');
-  await a.until(`!document.querySelector('[data-buy]').disabled`, 'buy enabled');
-  await a.click('[data-buy]');
-  await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 120 && !document.querySelector('[data-item="houseStyle:darkMansion"]') && document.querySelector('[data-equip]')`, 'purchase completes: it leaves the shelf, Equip appears');
-  assert.match(await a.eval(`document.querySelector('#s-say').textContent`), /Thank you/);
-  await a.click('[data-shop-tab="accessories"]'); await a.click('[data-item="hat:hood"]');
-  const hoodPrice = await a.eval(`MT_COSMETICS.CATALOG.find((i) => i.id === 'hat:hood').cost`);
-  await a.click('[data-buy]'); await a.until(`Number(document.querySelector('#s-pouch b').textContent) === ${120 - hoodPrice}`, 'second purchase');
-  ok(`Buying deducts exactly the price (180 + ${hoodPrice} gold) ; bought items move to the inventory`);
-
-  // Inventory: equip the house and the hat; the TV shows them. Unequip works too.
-  await a.click('[data-shop-tab="inventory"]');
-  await a.until(`[...document.querySelectorAll('.shop-tile')].map((b) => b.dataset.item).sort().join() === 'hat:hood,houseStyle:darkMansion'`, 'inventory lists purchases');
-  await a.click('[data-item="houseStyle:darkMansion"]'); await a.click('[data-equip]');
-  for (let i = 0; i < 100 && me().homeLook.style !== 'darkMansion'; i++) await wait(30);
-  assert.equal(me().homeLook.style, 'darkMansion');
-  await a.click('[data-item="hat:hood"]'); await a.click('[data-equip]');
-  for (let i = 0; i < 100 && me().avatar.hat !== 'hood'; i++) await wait(30);
-  assert.equal(me().avatar.hat, 'hood');
-  await a.until(`document.querySelectorAll('.badge.eq').length === 2`, 'both shown as equipped');
-  await a.shot('shop-inventory');
-  await a.click('[data-item="hat:hood"]'); await a.click('[data-equip]');
-  for (let i = 0; i < 100 && me().avatar.hat === 'hood'; i++) await wait(30);
-  assert.notEqual(me().avatar.hat, 'hood');
-  await a.click('[data-item="hat:hood"]'); await a.click('[data-equip]');
-  for (let i = 0; i < 100 && me().avatar.hat !== 'hood'; i++) await wait(30);
-  ok('Inventory equips/unequips purchases on the character and the house; the TV updates');
-
-  // Refresh: gold, purchases and equipped items persist.
-  const balance = 120 - hoodPrice;
+  // Coming back from the JustGold shop: the look it saved on the wallet shows on the phone and the seat.
+  await a.click('#s-back'); await a.until(`!document.querySelector('#screen-game').hidden`, 'lobby');
+  const newColor = await a.eval(`MT_OPTIONS.colors.find((c) => c !== JSON.parse(localStorage.getItem('mt.avatar')).color)`);
+  const credsBefore = await a.eval(`localStorage.getItem('mt.profile')`);
+  const saved = await asMe(`s.emit('profile:avatar', { avatar: { ...JSON.parse(localStorage.getItem('mt.avatar')), color: ${JSON.stringify(newColor)} } }, (r) => fin(r && r.ok));`);
+  assert(saved, 'the wallet look changed elsewhere');
   await a.send('Page.reload'); await wait(400);
-  await a.until(`!document.querySelector('#screen-game').hidden && document.querySelector('#g-pouch') && Number(document.querySelector('#g-pouch b').textContent) === ${balance}`, 'gold after refresh');
-  await a.click('#g-pouch'); await a.until(`document.querySelector('#g-pouch-pop .pouch-stats')`, 'pouch details');
-  const stats = await a.eval(`[...document.querySelectorAll('#g-pouch-pop .pouch-stats b')].map((b) => Number(b.textContent))`);
-  assert.deepEqual(stats, [balance, 300, 180 + hoodPrice], 'balance / earned / spent');
-  await a.click('[data-open-shop]'); await a.until(`!document.querySelector('#screen-shop').hidden`, 'shop'); await a.click('[data-shop-tab="inventory"]');
-  await a.until(`document.querySelectorAll('.badge.eq').length === 2`, 'equipped after refresh');
-  ok('Refresh keeps gold (balance, earned, spent), inventory and equipped items');
+  await a.until(`!document.querySelector('#screen-game').hidden && document.querySelector('#g-pouch') && JSON.parse(localStorage.getItem('mt.avatar')).color === ${JSON.stringify(newColor)}`, 'phone picks up the saved look');
+  for (let i = 0; i < 100 && me().avatar.color !== newColor; i++) await wait(30);
+  assert.equal(me().avatar.color, newColor, 'the TV seat shows the new look');
+  assert.equal(await a.eval(`localStorage.getItem('mt.profile')`), credsBefore, 'the wallet credentials are kept');
+  assert.equal(await gold(), 105, 'JustGold after refresh');
+  ok('Back from the JustGold shop: the wallet look wins over the phone copy and reaches the lobby seat; mt.profile unchanged');
 
-  // Once the game starts the phone is purely the game: shop, look and house are closed (UI and server).
+  // Once the game starts the phone is purely the game: Season & unlocks closes, the shop link goes.
+  await a.click('#g-body [data-open-season]'); await a.until(`!document.querySelector('#screen-season').hidden`, 'season open');
   await new Promise((r) => host.emit('host:action', { type: 'addBots', count: 5 }, r));
-  await a.until(`!document.querySelector('#screen-shop').hidden`, 'shop still open before start');
   await new Promise((r) => host.emit('host:action', { type: 'start' }, r));
-  await a.until(`!document.querySelector('#screen-game').hidden && document.querySelector('#screen-shop').hidden`, 'shop closes when the game starts');
-  await a.until(`document.querySelector('#g-body .draft-phone')`, 'the role draft opens (Default role selection)');
-  assert.equal(await a.eval(`document.querySelectorAll('#g-body [data-open-shop], #g-body [data-edit], #g-body [data-house]').length`), 0, 'no shop during the draft');
-  // Fast-forward the draft (deck → vote → result → collect → deal) and the reveal, like the host's Next phase.
+  await a.until(`!document.querySelector('#screen-game').hidden && document.querySelector('#screen-season').hidden`, 'Season & unlocks closes when the game starts');
+  await a.until(`document.querySelector('#g-body .draft-phone')`, 'the role draft opens');
   for (let i = 0; i < 5; i++) { await new Promise((r) => host.emit('host:action', { type: 'skip' }, r)); await wait(150); }
   await a.frames();
   await a.until(`document.querySelector('#g-body [data-role]')`, 'the role card renders once the game starts');
-  assert.deepEqual(a.errors, [], 'no errors rendering the game: ' + a.errors.join('\n'));
-  assert.equal(await a.eval(`document.querySelectorAll('#g-body [data-open-shop], #g-body [data-edit], #g-body [data-house]').length`), 0, 'no look/house/shop buttons in the game');
+  assert.equal(await a.eval(`document.querySelectorAll('#g-body [data-jg-shop], #g-body [data-open-season], #g-body [data-edit], #g-body [data-house]').length`), 0, 'no shop/season/look/house in the game');
   await a.eval(`document.querySelector('#g-pouch-pop').hidden && document.querySelector('#g-pouch').click()`);
   await a.until(`!document.querySelector('#g-pouch-pop').hidden && document.querySelector('#g-pouch-pop [data-shop-closed]')`, 'pouch popover shows the shop closed');
-  assert(await a.eval(`!!document.querySelector('#g-pouch-pop [data-shop-closed]') && !document.querySelector('#g-pouch-pop [data-open-shop]')`), 'pouch shows the shop as closed');
-  const refused = await a.eval(`new Promise((done) => { const s = io(); const c = JSON.parse(localStorage.getItem('mt.profile')); s.emit('profile:resume', c, () => s.emit('profile:buy', { itemId: 'hat:helmet' }, (r1) => s.emit('profile:equip', { itemId: 'hat:hood', on: false }, (r2) => s.emit('profile:avatar', { avatar: { hat: 'none' } }, (r3) => { s.close(); done([r1, r2, r3]); })))); })`);
+  assert(await a.eval(`!document.querySelector('#g-pouch-pop [data-jg-shop]') && /JustGold shop opens between games/.test(document.querySelector('#g-pouch-pop').textContent)`));
+  const refused = await asMe(`s.emit('profile:buy', { itemId: 'hat:helmet' }, (r1) => s.emit('profile:buyPass', {}, (r2) => s.emit('profile:avatar', { avatar: { hat: 'none' } }, (r3) => fin([r1, r2, r3]))));`);
   for (const r of refused) { assert.equal(r.ok, false); assert.match(r.error, /reopen after this game/); }
-  assert.equal(me().avatar.hat, 'hood', 'nothing changed mid-game');
   await a.shot('game-no-shop');
-  ok('After the game starts: shop/look/house closed on the phone, and the server refuses buy, equip and look changes');
+  ok('After the game starts: no shop or Season & unlocks on the phone, and the server refuses buying and look changes');
 
   assert.deepEqual(a.errors, [], 'page errors: ' + a.errors.join('\n'));
   ok('No page errors');
-  console.log(`All ${passed} shop end-to-end checks passed. Screenshots: ${SHOTS}`);
+  console.log(`All ${passed} JustGold phone end-to-end checks passed. Screenshots: ${SHOTS}`);
   host.close();
 })().catch((e) => { console.error(e); process.exitCode = 1; }).finally(() => { cleanup(); setTimeout(() => process.exit(), 300).unref(); });

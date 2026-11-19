@@ -49,8 +49,11 @@ const cleanText = (s, strict = false) => TEXT.filter(s, { strict });
 const MAX_AUDIENCE = 2000, FAV_BONUS = 3, FAV_MS = 20000, RECAP_AFTER_PARTY = 16000;
 const cleanName = (s) => String(s || '').replace(/[\u0000-\u001f<>&"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 14);
 
+const GOLD = require('./gold');
+
 class BoxRoom {
-  constructor(code, game, { nsp = null, clock = new RealClock(), seed = null, shows = false, profiles = null } = {}) {
+  constructor(code, game, { nsp = null, clock = new RealClock(), seed = null, shows = false, profiles = null, wallets = null } = {}) {
+    this.wallets = wallets; // JustGold wallets (JustMafia's ProfileStore; docs/justgold.md) or null
     this.shows = shows; // game-show openings (the live server turns them on; rules tests skip them)
     this.show = null;
     this.code = code;
@@ -248,12 +251,39 @@ class BoxRoom {
   }
   // ---- lifetime profiles (box/profiles.js) ----
   recordProfiles(game, order, survivors) {
+    if (game !== 'mafia') this.payGold(game, order);
     if (this.nightStart == null) this.nightStart = this.now();
     if (!this.profiles) return;
     const surv = new Set(survivors || []);
     order.forEach((id, i) => {
       const p = this.players.get(id); if (!p || !p.profileId) return;
       try { this.trophyNews(p, this.profiles.recordGame(p.profileId, { game, place: i + 1, of: order.length, pts: this.lastGain.get(id) || 0, survived: surv.has(id), room: this.nightKey })); } catch (e) { console.error('[box profiles]', e.message); }
+    });
+  }
+  // ---- JustGold (box/gold.js): a finished game pays everyone with an account who played it ----
+  payGold(game, order) {
+    if (!this.wallets) return;
+    const humans = this.list().filter((p) => !p.bot);
+    const ms = this.gameStartAt != null ? this.now() - this.gameStartAt : 0;
+    const why = humans.length < GOLD.MIN_HUMANS ? 'JustGold needs 2 or more people in the room' : ms < GOLD.MIN_MS ? 'That game was too short for JustGold' : null;
+    order.forEach((id, i) => {
+      const p = this.players.get(id); if (!p || p.bot || !p.wallet) return;
+      if (why) { p.jg = { n: 0, why, at: this.now(), game }; return; }
+      const n = GOLD.goldFor(game, i + 1, order.length, ms);
+      let paid = 0;
+      try { paid = this.wallets.awardBox(p.wallet, this.code + ':' + (this.gameNo || 0) + ':' + game + ':' + this.hostKey, n, (this.def && this.def.key === game ? this.def.name : game) + (i === 0 ? ' · won' : ' · #' + (i + 1))); } catch (e) { console.error('[justgold]', e.message); }
+      if (paid) { p.jg = { n: paid, at: this.now(), game, total: this.wallets.coins(p.wallet) }; this.fx('gold', { name: p.name, n: paid }); }
+    });
+  }
+  partyGold() {
+    const pm = this.partyMode; if (!this.wallets || !pm || pm.goldPaid) return;
+    pm.goldPaid = true; pm.no = this.partyNo = (this.partyNo || 0) + 1;
+    if (this.list().filter((p) => !p.bot).length < GOLD.MIN_HUMANS) return;
+    this.partyBoard().forEach((r, i) => {
+      const p = this.players.get(r.id); if (!p || p.bot || !p.wallet) return;
+      const n = GOLD.partyGold(i + 1);
+      let paid = 0; try { paid = this.wallets.awardBox(p.wallet, 'party:' + this.code + ':' + this.hostKey + ':' + (pm.no || 0), n, 'Party Mode finale · #' + (i + 1)); } catch (e) { console.error('[justgold]', e.message); }
+      if (paid) { p.jg = { n: paid, at: this.now(), party: true, total: this.wallets.coins(p.wallet) }; this.fx('gold', { name: p.name, n: paid, party: true }); }
     });
   }
   // New trophies: a cue on the TV and a toast on that phone.
@@ -270,6 +300,7 @@ class BoxRoom {
   }
   // A whole Party Mode just finished: lifetime party results, then the recap reel by itself.
   partyFinished() {
+    this.partyGold();
     this.partyProfiles();
     if (!this.recap) this.after(RECAP_AFTER_PARTY, () => { if (this.partyMode && this.partyMode.phase === 'done' && !this.recap) this.startRecap(); });
   }
@@ -470,7 +501,7 @@ class BoxRoom {
     const pm = this.partyMode; if (!pm) return { ok: false };
     if (this.phase === 'game' && this.game && this.game.phase !== 'over') return { ok: false, error: 'Finish this game first.' };
     this.cancel(pm.timer); this.party = new Map(); this.played = []; this.lastGain = new Map(); this.prevRank = new Map(); this.recap = null;
-    pm.index = 0; pm.phase = 'playing'; pm.at = this.now(); pm.startedAt = null; pm.paused = false;
+    pm.index = 0; pm.phase = 'playing'; pm.at = this.now(); pm.startedAt = null; pm.paused = false; pm.goldPaid = false;
     const sw = this.switchGame(pm.defs[0]); if (!sw.ok) return sw;
     this.sync(); return { ok: true };
   }
@@ -593,6 +624,7 @@ class BoxRoom {
   }
   // After the show opening (or straight from start): the game itself begins.
   beginGame() {
+    this.gameStartAt = this.now(); this.gameNo = (this.gameNo || 0) + 1;
     this.show = null; this.phase = 'game';
     this.fx('start');
     this.game.start();
@@ -621,7 +653,7 @@ class BoxRoom {
       fields: this.fieldsOf(), min: this.def.min, max: MAX_PLAYERS, fx: this.fxLog, live: !!this.def.liveLobby,
       vip: this.vip() ? this.vip().name : null, filterOn: this.filterOn, locked: this.locked,
       audience: { count: this.audienceCount(), poll: this.pollView() }, recap: this.recap,
-      players: this.list().map((p) => ({ id: p.id, name: p.name, bot: p.bot, color: p.color, avatar: p.avatar, online: p.bot || p.sockets > 0, title: p.title || null })),
+      players: this.list().map((p) => ({ id: p.id, name: p.name, bot: p.bot, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, online: p.bot || p.sockets > 0, title: p.title || null })),
       party: this.partyBoard().slice(0, 24), played: this.played.slice(-24), partyMode: this.partyState(), unlocks: [...this.unlocks], away: this.away,
       state: this.game && this.phase !== 'show' ? this.game.tv() : null, show: this.show ? this.show.tv() : null,
     };
@@ -629,7 +661,8 @@ class BoxRoom {
   playerState(p) {
     return {
       code: this.code, game: this.def.key, title: this.def.name, phase: this.phase,
-      me: { id: p.id, name: p.name, color: p.color, avatar: p.avatar, title: p.title || null, profile: !!p.profileId },
+      me: { id: p.id, name: p.name, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, title: p.title || null, profile: !!p.profileId, wallet: !!p.wallet },
+      jg: p.jg || null,
       audience: this.audienceCount(), recap: this.recap ? personalRecap(this, this.recap, p) : null,
       party: (() => { const b = this.partyBoard(), i = b.findIndex((r) => r.id === p.id); return { played: this.played.length, pts: i >= 0 ? b[i].pts : 0, wins: i >= 0 ? b[i].wins : 0, gain: i >= 0 ? b[i].gain : 0, rank: i + 1, of: b.length, top: b.slice(0, 5) }; })(),
       partyMode: this.partyState(), unlocks: [...this.unlocks], count: this.players.size,

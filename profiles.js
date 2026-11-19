@@ -5,6 +5,10 @@ const crypto = require('node:crypto');
 const O = require('./public/shared/options');
 const { CATALOG, ACHIEVEMENTS, REWARDS: R, slotOf, SEASON, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock, FATE } = require('./public/shared/cosmetics');
 const STOCKABLE_IDS = new Set(STOCKABLE.map((i) => i.id));
+// Per-game gear for the JustGold shop (public/shared/gear.js); empty until that file exists.
+let GEAR = []; try { ({ GEAR } = require('./public/shared/gear')); if (!Array.isArray(GEAR)) GEAR = []; } catch (e) { GEAR = []; }
+const gearItem = (id) => GEAR.find((g) => g.id === id) || null;
+const MAX_DEVICES = 8, BOX_PAID_MAX = 300;
 const freshPass = () => ({ season: SEASON.id, owned: false, xp: 0, granted: [] });
 const LEDGER_MAX = 20;
 const digest = (token) => crypto.createHash('sha256').update(token).digest('hex');
@@ -43,7 +47,7 @@ class ProfileStore {
   buyPass(id) {
     const p = this.data.profiles[id]; if (!p) return { ok: false, error: 'No profile.' };
     if (p.pass.owned) return { ok: false, error: 'You already have the season pass.' };
-    if (p.coins < SEASON.cost) return { ok: false, error: `Not enough gold: the pass costs ${SEASON.cost}, you have ${p.coins}.` };
+    if (p.coins < SEASON.cost) return { ok: false, error: `Not enough JustGold: the pass costs ${SEASON.cost} JG, you have ${p.coins} JG.` };
     this.record(p, -SEASON.cost, `${SEASON.name} pass`);
     p.pass.owned = true;
     const rewards = this.grantPass(p); // every tier already reached pays out now
@@ -90,6 +94,53 @@ class ProfileStore {
     else { p.avatar = this.validateAvatar(id, { ...p.avatar, [slot.key]: value }); p.lookSaved = true; }
     this.save(); return { ok: true, target: slot.target, key: slot.key, value, profile: this.view(id) };
   }
+  // ----- JustGold accounts (docs/justgold.md) -----
+  // Another phone for the same wallet (the account signs in there): a fresh device token.
+  addDevice(id) {
+    const p = this.data.profiles[id]; if (!p) return null;
+    const token = crypto.randomBytes(32).toString('hex');
+    p.verifiers = [...(p.verifiers || []), digest(token)].slice(-MAX_DEVICES);
+    this.save(); return { id, token };
+  }
+  // A finished JustGameBox game pays JustGold once (payId = room + game number), and every game
+  // puts something new on the shop shelves, like a JustMafia game does.
+  awardBox(id, payId, amount, reason) {
+    const p = this.data.profiles[id], n = Math.max(0, Math.min(500, Math.floor(Number(amount) || 0)));
+    if (!p || !n || typeof payId !== 'string') return 0;
+    p.boxPaid = p.boxPaid || [];
+    if (p.boxPaid.includes(payId)) return 0;
+    p.boxPaid.push(payId); if (p.boxPaid.length > BOX_PAID_MAX) p.boxPaid.splice(0, p.boxPaid.length - BOX_PAID_MAX);
+    this.record(p, n, reason, { box: true });
+    if (Array.isArray(p.stock)) p.stock.push(...nextStock(p.stock, STOCK.finished));
+    this.save(); return n;
+  }
+  // Per-game gear: buy, equip (one per game slot), and the values games read.
+  buyGear(id, gearId) {
+    const p = this.data.profiles[id], g = gearItem(gearId);
+    if (!p || !g) return { ok: false, error: 'Unknown item.' };
+    if (p.owned.includes(g.id)) return { ok: false, error: 'You already have it.' };
+    if (p.coins < g.cost) return { ok: false, error: `Not enough JustGold: ${g.name} costs ${g.cost} JG, you have ${p.coins} JG.` };
+    this.record(p, -g.cost, 'Bought ' + g.name, { item: g.id });
+    p.owned.push(g.id); this.save(); return { ok: true, profile: this.view(id) };
+  }
+  equipGear(id, gearId, on = true) {
+    const p = this.data.profiles[id], g = gearItem(gearId);
+    if (!p || !g) return { ok: false, error: 'Unknown item.' };
+    if (!p.owned.includes(g.id)) return { ok: false, error: 'Buy this item first.' };
+    p.gear = p.gear || {}; const slots = p.gear[g.game] || (p.gear[g.game] = {});
+    if (on) slots[g.slot] = g.id; else if (slots[g.slot] === g.id) delete slots[g.slot];
+    this.save(); return { ok: true, profile: this.view(id) };
+  }
+  // { gameKey: { slot: value } } for the gear this wallet has equipped (what rooms hand to games).
+  gearValues(id) {
+    const p = this.data.profiles[id], out = {}; if (!p || !p.gear) return out;
+    for (const [game, slots] of Object.entries(p.gear)) for (const [slot, gid] of Object.entries(slots || {})) {
+      const g = gearItem(gid); if (g && p.owned.includes(gid)) (out[game] || (out[game] = {}))[slot] = g.value;
+    }
+    return out;
+  }
+  // The look shown in every game (only once the player has made their character).
+  lookOf(id) { const p = this.data.profiles[id]; return p && p.lookSaved ? this.validateAvatar(id, p.avatar || {}) : null; }
   // Test/dev only (server enables it with MT_DEV_GRANTS=1): add gold.
   grant(id, amount, reason = 'Test grant') {
     const p = this.data.profiles[id], n = Math.max(0, Math.min(100000, Math.floor(Number(amount) || 0)));
@@ -108,11 +159,14 @@ class ProfileStore {
   }
   authenticate(auth) {
     const p = auth && typeof auth.id === 'string' && Object.hasOwn(this.data.profiles, auth.id) && this.data.profiles[auth.id];
-    return p && typeof auth.token === 'string' && /^[a-f0-9]{64}$/.test(auth.token) && crypto.timingSafeEqual(Buffer.from(p.verifier, 'hex'), Buffer.from(digest(auth.token), 'hex')) ? p : null;
+    if (!p || typeof auth.token !== 'string' || !/^[a-f0-9]{64}$/.test(auth.token)) return null;
+    // One wallet, several phones: the first device's verifier plus any added ones (JustGold accounts).
+    const d = Buffer.from(digest(auth.token), 'hex');
+    return [p.verifier, ...(p.verifiers || [])].some((v) => typeof v === 'string' && v.length === 64 && crypto.timingSafeEqual(Buffer.from(v, 'hex'), d)) ? p : null;
   }
   // Worlds explored: games finished in each world and its rewards (owned or how far to go).
   worldsView(p) { return Object.entries(WORLD_REWARDS).map(([id, list]) => ({ id, name: WORLD_NAMES[id], games: (p.worlds || {})[id] || 0, rewards: list.map((r) => ({ ...r, owned: p.owned.includes(r.item) })) })); }
-  view(id) { const p = this.data.profiles[id]; if (!p) return null; const { verifier, rewardedGames, ...view } = p; return { ...view, career: this.careerView(p), season: this.seasonView(p), worlds: this.worldsView(p), inventory: this.inventory(id), storage: this.filename ? 'Saved on this game server’s disk' : 'Session-only development storage' }; }
+  view(id) { const p = this.data.profiles[id]; if (!p) return null; const { verifier, verifiers, rewardedGames, boxPaid, ...view } = p; return { ...view, career: this.careerView(p), season: this.seasonView(p), worlds: this.worldsView(p), inventory: this.inventory(id), storage: this.filename ? 'Saved on this game server’s disk' : 'Session-only development storage' }; }
   validateAvatar(id, input = {}) {
     const p = this.data.profiles[id], result = {};
     // Expression has its own migration rule below.
@@ -183,7 +237,7 @@ class ProfileStore {
   }
   exchangeFate(id) {
     const p = this.data.profiles[id]; if (!p) return { ok: false, error: 'No profile.' };
-    if (p.coins < FATE.exchangeGold) return { ok: false, error: `A Fate Token costs ${FATE.exchangeGold} gold; you have ${p.coins}.` };
+    if (p.coins < FATE.exchangeGold) return { ok: false, error: `A Fate Token costs ${FATE.exchangeGold} JG; you have ${p.coins} JG.` };
     this.record(p, -FATE.exchangeGold, 'Traded for a Fate Token'); p.fate++; this.save();
     return { ok: true, profile: this.view(id) };
   }
@@ -216,7 +270,7 @@ class ProfileStore {
     if (item.achievement && !p.achievements.includes(item.achievement)) return { ok: false, error: ACHIEVEMENTS[item.achievement].label };
     if (item.requires && !p.owned.includes(item.requires)) { const need = CATALOG.find((i) => i.id === item.requires); return { ok: false, error: `High Roller tier ${item.ladderTier}: own the ${need ? need.name : 'tier below'} first.` }; }
     if (STOCKABLE_IDS.has(item.id) && !(p.stock || []).includes(item.id)) return { ok: false, error: `The ${item.name} isn't in the shop yet. Keep playing: every game puts something new on the shelves.` };
-    if (p.coins < item.cost) return { ok: false, error: `Not enough gold: ${item.name} costs ${item.cost}, you have ${p.coins}.` };
+    if (p.coins < item.cost) return { ok: false, error: `Not enough JustGold: ${item.name} costs ${item.cost} JG, you have ${p.coins} JG.` };
     if (item.cost > 0) this.record(p, -item.cost, 'Bought ' + item.name, { item: item.id });
     p.owned.push(item.id); this.save(); return { ok: true, profile: this.view(id) };
   }

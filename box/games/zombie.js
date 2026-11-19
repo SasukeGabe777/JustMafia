@@ -31,6 +31,7 @@
 // hero / helper bonuses, ghost points. results() ranks survivors first, then how far each got.
 // With 1–3 players, AI survivors join the group.
 const STORY = require('./zombie-story');
+const GEARS = require('../../public/shared/gear'); // JustGold gear: each survivor's bandana
 const { ITEMS, FLAGS, CHAPTERS, SCENARIOS } = STORY;
 
 const TIERS = ['safe', 'hurt', 'bitten', 'dead'];
@@ -142,7 +143,8 @@ class Zombie {
   pub(x) {
     if (x.npc) return { id: x.id, name: x.name, avatar: x.avatar, color: x.color, npc: true };
     const p = this.room.get(x.id);
-    return p ? { id: x.id, name: p.name, avatar: p.avatar || '🙂', color: p.color, bot: !!p.bot } : { id: x.id, name: '—', avatar: '🙂', color: '#888' };
+    // gear: the player's bandana, drawn on their survivor on the TV and shown on their phone.
+    return p ? { id: x.id, name: p.name, avatar: p.avatar || '🙂', color: p.color, bot: !!p.bot, gear: GEARS.gearSet(p, 'zombie') } : { id: x.id, name: '—', avatar: '🙂', color: '#888' };
   }
   name(x) { return x.npc ? x.name : this.room.name(x.id); }
   isBot(x) { if (x.npc) return true; const p = this.room.get(x.id); return !!(p && p.bot); }

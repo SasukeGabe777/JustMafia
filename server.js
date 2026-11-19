@@ -45,7 +45,8 @@ const rooms = new Map();
 // JustGameBox's other games (President, Blackjack Night, JustRaiseDucks) share the code space.
 // JustMafia can be picked from a box room (and Party Mode): the bridge opens a town for it.
 let bridge = null;
-const box = require('./box').installBox(app, io, { takenElsewhere: (c) => rooms.has(c), external: { mafia: (b) => bridge.fromBox(b) } });
+// JustGold: the box shares JustMafia's profile store as the wallet (gold, items, the look; docs/justgold.md).
+const box = require('./box').installBox(app, io, { takenElsewhere: (c) => rooms.has(c), external: { mafia: (b) => bridge.fromBox(b) }, wallets: profiles, walletBusy: (id) => profileInGame(id) });
 
 // JustGameBox: the title screen picks a game; JustMafia's big screen lives at /mafia.
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'hub.html')));
@@ -301,7 +302,7 @@ io.on('connection', (socket) => {
   socket.on('profile:create', (_msg, cb) => { if (socket.profileId) return reply(cb, { ok: false, error: 'This connection already has a profile.' }); const p = profiles.create(); socket.profileId = p.id; socket.join('profile:' + p.id); reply(cb, { ok: true, ...p }); });
   socket.on('profile:resume', (msg = {}, cb) => { const p = profiles.authenticate(msg); if (!p) return reply(cb, { ok: false }); if (socket.profileId && socket.profileId !== p.id) socket.leave('profile:' + socket.profileId); socket.profileId = p.id; socket.join('profile:' + p.id); reply(cb, { ok: true, profile: profiles.view(p.id) }); });
   socket.on('profile:buy', (msg = {}, cb) => { if (profileInGame(socket.profileId)) return reply(cb, { ok: false, error: CLOSED }); const result = profiles.buy(socket.profileId, msg.itemId); reply(cb, result); if (result.ok) { io.to('profile:' + socket.profileId).emit('profile:state', profiles.view(socket.profileId)); const { room } = ctx(); if (room) room.sync(); } });
-  // Season pass: buy it with gold (between games, like the shop).
+  // Season pass: buy it with JustGold (between games, like the shop).
   socket.on('profile:buyPass', (msg = {}, cb) => { if (profileInGame(socket.profileId)) return reply(cb, { ok: false, error: CLOSED }); const result = profiles.buyPass(socket.profileId); reply(cb, result); if (result.ok) io.to('profile:' + socket.profileId).emit('profile:state', profiles.view(socket.profileId)); });
   // Character creator: save a look to the profile without being in a room. The
   // in-room avatar only changes through player:profile (lobby-only).

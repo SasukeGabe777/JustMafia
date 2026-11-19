@@ -18,6 +18,11 @@ const defaults = { ringSize: 6, prompts: 'deck', pack: 'mix', drawSeconds: 60, g
 
 // Colours 0–7 and 9–12 (8 is the eraser), 5 brush sizes; a fill is a one-point stroke with f: 1.
 const COLORS = [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12], ERASER = 8, MAX_COLOR = 12, SIZES = 5, MAX_STROKES = 400, MAX_POINTS = 8000, MAX_FILLS = 40;
+// Gear (JustGold shop): a pen set adds a few extra colours to that player's palette. Those
+// strokes carry the colour itself ('#rrggbb') instead of a palette number; only the colours of
+// the pen set the player has equipped are accepted.
+const GEARS = require('../../public/shared/gear');
+const pensOf = (p) => { const pt = GEARS.paint('sketch', 'pens', GEARS.gearOf(p, 'sketch', 'pens')); return pt && Array.isArray(pt.pens) ? pt.pens.map((c) => c.toLowerCase()) : []; };
 const LAST_CALL_DRAW = 20, LAST_CALL_GUESS = 12; // when only a few are left, the rest of the room doesn't wait long
 const REACTS = ['😂', '🤣', '😱', '🔥', '👏', '🤯'], REACT_GAP_MS = 350, FX_PER_SECOND = 8;
 const WRITE_SECONDS = 35, GRACE_MS = 1200, PASS_MS = 2500, ENTRY_DRAW_MS = 3600, ENTRY_TEXT_MS = 2600, FINAL_MS = 5000;
@@ -176,13 +181,14 @@ const matches = (x, y) => similarity(x, y) >= 0.5;
 // ---------- drawings: compact strokes, validated ----------
 // A drawing is [{ c: colour 0–12 (8 = eraser), s: size 0–4, p: [x0, y0, x1, y1, …] }] in a
 // 0–1000 square. A paint-bucket fill is { c, s: 0, f: 1, p: [x, y] }.
-function cleanStrokes(raw) {
+function cleanStrokes(raw, pens = []) {
   if (!Array.isArray(raw)) return { error: 'That drawing didn’t arrive. Press Done again.' };
   if (raw.length > MAX_STROKES) return { error: `Too many strokes (max ${MAX_STROKES}).` };
   const out = []; let pts = 0, fills = 0;
-  for (const s of raw) {
+  for (let s of raw) {
     if (!s || typeof s !== 'object') return { error: 'That drawing is broken.' };
-    if (!Number.isInteger(s.c) || s.c < 0 || s.c > MAX_COLOR) return { error: 'Only the palette colours, please.' };
+    if (typeof s.c === 'string' && pens.includes(s.c.toLowerCase())) s = { ...s, c: s.c.toLowerCase() }; // an equipped gear pen
+    else if (!Number.isInteger(s.c) || s.c < 0 || s.c > MAX_COLOR) return { error: 'Only the palette colours, please.' };
     if (!Number.isInteger(s.s) || s.s < 0 || s.s >= SIZES) return { error: 'Unknown brush size.' };
     if (s.f !== undefined && s.f !== 1) return { error: 'That drawing is broken.' };
     const p = s.p;
@@ -486,7 +492,7 @@ class Sketch {
       if (t.kind !== m.op) return { ok: false, error: t.kind === 'draw' ? 'This step is for drawing.' : 'This step is for guessing.' };
       let entry;
       if (m.op === 'draw') {
-        const r = cleanStrokes(m.strokes); if (r.error) return { ok: false, error: r.error };
+        const r = cleanStrokes(m.strokes, pensOf(p)); if (r.error) return { ok: false, error: r.error };
         entry = { kind: 'draw', by: p.id, strokes: r.strokes };
         if (r.strokes.length) { const st = this.stat(p.id); st.draws++; st.drawMs += this.room.now() - this.stepStart; st.ink += r.strokes.reduce((n, s) => n + s.p.length / 2, 0); }
       }
@@ -565,7 +571,7 @@ class Sketch {
   }
   view(p) {
     const st = this.standings(), rank = st.findIndex((x) => x.id === p.id) + 1;
-    const base = { phase: this.phase, endsIn: this.endsIn(), step: this.step + 1, steps: this.steps, points: this.scores.get(p.id) || 0, rank, players: st.length, inGame: this.books.some((b) => b.owner === p.id) };
+    const base = { phase: this.phase, endsIn: this.endsIn(), step: this.step + 1, steps: this.steps, points: this.scores.get(p.id) || 0, rank, players: st.length, inGame: this.books.some((b) => b.owner === p.id), gear: GEARS.gearSet(p, 'sketch') }; // gear: the pen set for the sketchpad
     if (this.phase === 'write') return { ...base, wrote: this.written.get(p.id) || null };
     if (this.phase === 'step' || this.phase === 'pass') {
       const t = this.tasks.get(p.id), pr = this.progress();
@@ -595,5 +601,5 @@ class Sketch {
 module.exports = {
   key: 'sketch', name: 'JustSketch Relay', min: 3, best: [4, 10], fields, defaults,
   create: (room, settings) => new Sketch(room, settings),
-  _test: { similarity, matches, cleanStrokes, PROMPTS, PACKS, NOT_FAMILY, MAX_POINTS, MAX_STROKES, MAX_FILLS, REACTS },
+  _test: { pensOf, similarity, matches, cleanStrokes, PROMPTS, PACKS, NOT_FAMILY, MAX_POINTS, MAX_STROKES, MAX_FILLS, REACTS },
 };

@@ -9,6 +9,8 @@
 // a combo; the last round is worth double. Awards at the end (Eagle Eye, Colour Blind? ...).
 // Every phone input is validated (colours are clamped numbers). All content is original.
 
+const GEARS = require('../../public/shared/gear'); // shop gear: the frame around your mix (slot colormatch/easel)
+
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'rounds', label: 'Rounds', options: opt([[5, '5 rounds'], [7, '7 rounds'], [10, '10 rounds']]) },
@@ -235,7 +237,7 @@ class Game {
     res.target = target;
     for (const [id, pk] of this.picks) {
       const p = this.room.get(id); if (!p) continue;
-      const e = { id, name: p.name, avatar: p.avatar, color: p.color, ms: pk.ms, late: !!pk.late };
+      const e = { id, name: p.name, avatar: p.avatar, color: p.color, gear: GEARS.gearSet(p, 'colormatch'), ms: pk.ms, late: !!pk.late }; // gear: frames this mix on the reveal
       const st = this.stat(id);
       if (k === 'odd') {
         res.counts[pk.i]++;
@@ -294,7 +296,7 @@ class Game {
   // End-of-game awards, each to a different person where possible.
   awards() {
     const rows = [...this.stats].filter(([id]) => this.room.get(id)).map(([id, st]) => ({ id, st }));
-    const who = (id) => { const p = this.room.get(id); return { id, name: p.name, avatar: p.avatar, color: p.color }; };
+    const who = (id) => { const p = this.room.get(id); return { id, name: p.name, avatar: p.avatar, color: p.color, gear: GEARS.gearSet(p, 'colormatch') }; };
     const defs = [
       { icon: '🦅', title: 'Eagle Eye', list: rows.filter((r) => r.st.n >= 2).sort((a, b) => b.st.sum / b.st.n - a.st.sum / a.st.n), text: (r) => `${Math.round(r.st.sum / r.st.n)}% average match` },
       { icon: '🔥', title: 'On Fire', list: rows.filter((r) => r.st.maxCombo >= 2).sort((a, b) => b.st.maxCombo - a.st.maxCombo), text: (r) => `${r.st.maxCombo} perfect matches in a row` },
@@ -320,7 +322,7 @@ class Game {
     else if (this.phase === 'reveal') this.nextRound();
   }
   standings() {
-    return [...this.points].filter(([id]) => this.room.get(id)).map(([id, pts]) => { const p = this.room.get(id); return { id, name: p.name, avatar: p.avatar, color: p.color, points: pts, combo: this.combo.get(id) || 0 }; }).sort((a, b) => b.points - a.points);
+    return [...this.points].filter(([id]) => this.room.get(id)).map(([id, pts]) => { const p = this.room.get(id); return { id, name: p.name, avatar: p.avatar, color: p.color, gear: GEARS.gearSet(p, 'colormatch'), points: pts, combo: this.combo.get(id) || 0 }; }).sort((a, b) => b.points - a.points);
   }
   // Party points: player ids best-first once the game is over.
   results() { return this.phase === 'over' ? this.standings().map((r) => r.id) : []; }

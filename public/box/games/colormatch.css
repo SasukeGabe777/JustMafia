@@ -312,3 +312,10 @@ body.g-colormatch #g-body { padding-bottom: 20px; }
 .cml-roster.lots { gap: 8px; } .cml-roster.lots .cml-chip.chip { width: 70px; padding: 4px; } .cml-roster.lots .cml-chip.chip i.sw { height: 36px; font-size: 20px; } .cml-roster.lots .cml-chip b { font-size: 12px; } .cml-roster.lots .cml-chip small { display: none; }
 .cml-empty { font-size: 22px; color: var(--muted); padding: 20px; border: 3px dashed rgba(255, 255, 255, .2); border-radius: 16px; }
 .cml-party { grid-column: 1 / -1; }
+
+/* Shop gear: gallery frames (public/shared/gear.js, slot colormatch/easel). --gpat is the frame's
+   pattern, --ga/--gb its colours; only players with gear equipped get the .gear class. */
+.cm-sws.gear { padding: 6px; border-radius: 14px; background: var(--gpat); box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .25), 0 2px 6px rgba(0, 0, 0, .3); }
+.cm-sws.gear.glow { box-shadow: 0 0 14px var(--ga), inset 0 0 0 2px rgba(255, 255, 255, .5); }
+.cm-frame.gear .cm-canvas { border-image: none; border-color: transparent; background: linear-gradient(var(--c), var(--c)) padding-box, var(--gpat) border-box; }
+.cm-frame.gear.glow .cm-canvas { box-shadow: 0 0 30px var(--ga), 0 14px 30px rgba(0, 0, 0, .5); }

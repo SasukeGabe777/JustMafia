@@ -86,9 +86,29 @@
     g.save(); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = Math.max(1, cs * 0.04); g.setLineDash([cs * 0.05, cs * 0.05]);
     g.beginPath(); g.arc(x, y, cs * 0.3, 0, Math.PI * 2); g.stroke(); g.restore();
   }
-  function drawMarble(g, x, y, cs, scale = 1, spin = 0) {
+  // Gear (JustGold shop): the marble skin's paint ({ a, b, c, pattern, glow }) or null = the classic glass.
+  const skinOf = (gear) => (window.MT_GEAR ? window.MT_GEAR.paint('marble', 'skin', gear) : null);
+  function drawSkin(g, x, y, r, pt, spin) {
+    if (pt.glow) { g.save(); g.shadowColor = pt.a; g.shadowBlur = r * 1.4; g.fillStyle = pt.a; g.beginPath(); g.arc(x, y, r * 0.9, 0, Math.PI * 2); g.fill(); g.restore(); }
+    const gr = g.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
+    gr.addColorStop(0, pt.c || '#ffffff'); gr.addColorStop(0.4, pt.a); gr.addColorStop(1, pt.b);
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    g.save(); g.beginPath(); g.arc(x, y, r * 0.92, 0, Math.PI * 2); g.clip();
+    g.translate(x, y); g.rotate(spin); const p = pt.pattern;
+    g.strokeStyle = pt.c || '#ffffff'; g.fillStyle = pt.c || '#ffffff'; g.globalAlpha = 0.7;
+    if (p === 'stripes') { g.strokeStyle = pt.b; g.lineWidth = r * 0.22; for (let i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(i * r * 0.45 - r, -r); g.lineTo(i * r * 0.45 + r * 0.3, r); g.stroke(); } }
+    else if (p === 'stars') { for (let i = 0; i < 7; i++) { const a = i * 2.4, d = r * (0.2 + (i % 3) * 0.25); g.beginPath(); g.arc(Math.cos(a) * d, Math.sin(a) * d, r * 0.07, 0, Math.PI * 2); g.fill(); } }
+    else if (p === 'dots') { for (let i = 0; i < 5; i++) { const a = i * 1.26; g.beginPath(); g.arc(Math.cos(a) * r * 0.55, Math.sin(a) * r * 0.55, r * 0.14, 0, Math.PI * 2); g.fill(); } }
+    else if (p === 'flame') { for (let i = 0; i < 4; i++) { g.rotate(Math.PI / 2); g.beginPath(); g.moveTo(-r * 0.2, r * 0.9); g.quadraticCurveTo(0, r * 0.1, r * 0.2, r * 0.9); g.fill(); } }
+    else if (p === 'wave') { g.lineWidth = r * 0.12; for (let k = -1; k <= 1; k++) { g.beginPath(); for (let i = -10; i <= 10; i++) g.lineTo(i * r / 10, k * r * 0.45 + Math.sin(i * 0.6) * r * 0.12); g.stroke(); } }
+    else if (p !== 'plain') { g.lineWidth = r * 0.28; g.beginPath(); for (let a = 0; a < Math.PI * 1.6; a += 0.2) { const rr = r * (0.15 + a * 0.22); g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.6); } g.stroke(); } // swirl
+    g.restore();
+    g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.ellipse(x - r * 0.35, y - r * 0.42, r * 0.22, r * 0.14, -0.6, 0, Math.PI * 2); g.fill();
+  }
+  function drawMarble(g, x, y, cs, scale = 1, spin = 0, gear = null) {
     const r = cs * R * scale; if (r <= 0.5) return;
     g.fillStyle = 'rgba(30, 12, 2, 0.35)'; g.beginPath(); g.ellipse(x + r * 0.25, y + r * 0.35, r, r * 0.8, 0, 0, Math.PI * 2); g.fill();
+    const pt = skinOf(gear); if (pt) return drawSkin(g, x, y, r, pt, spin);
     const gr = g.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
     gr.addColorStop(0, '#f4fbff'); gr.addColorStop(0.35, '#6fb7ff'); gr.addColorStop(0.8, '#3a3fd6'); gr.addColorStop(1, '#1d1773');
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
@@ -203,7 +223,7 @@
       let sc = 1, x = PH.x, y = PH.y;
       if (PH.fall) { const k = clamp((performance.now() - PH.fall) / 500, 0, 1); sc = 1 - k * 0.85; x = PH.x + (PH.fallAt.x - PH.x) * k; y = PH.y + (PH.fallAt.y - PH.y) * k; }
       if (PH.gone) { const k = clamp((performance.now() - PH.gone.at) / 300, 0, 1); sc = 1 - k; }
-      drawMarble(g, ox + x * cs, oy + y * cs, cs, sc, PH.spin);
+      drawMarble(g, ox + x * cs, oy + y * cs, cs, sc, PH.spin, v.gear);
     }
     if (TILT.drag && PH.active && !PH.gone) { // the joystick under the finger
       const jx = TILT.drag.ox, jy = TILT.drag.oy, rad = Math.max(40, Wd / 7), kx = clamp(TILT.drag.dx, -1, 1), ky = clamp(TILT.drag.dy, -1, 1);
@@ -349,7 +369,7 @@
       const [tx, ty] = toScreen(M.x, M.y, M.tile);
       if (TV.mx == null || M.seq !== TV.seq) { TV.mx = tx; TV.my = ty; TV.seq = M.seq; }
       TV.mx += (tx - TV.mx) * 0.25; TV.my += (ty - TV.my) * 0.25;
-      drawMarble(g, TV.mx, TV.my, cs, 1.15, t * 2);
+      drawMarble(g, TV.mx, TV.my, cs, 1.15, t * 2, M.gear);
     }
   }
   function tvGame(el, s) {

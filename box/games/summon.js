@@ -21,6 +21,7 @@
 // times a second and the TV interpolates). Same-type troops summoned together merge into
 // squads (one entity, several members) and every player has a troop cap, so 30 players stay
 // cheap: one sort per team per step, binary-searched targets, no per-pair loops.
+const GEARS = require('../../public/shared/gear'); // JustGold gear: each player's castle banner
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'length', label: 'Battle length', options: opt([[10, '10 minutes'], [15, '15 minutes'], [20, '20 minutes']]) },
@@ -543,7 +544,8 @@ class Summon {
       cd: { rally: Math.max(0, (T.cd.rally - this.tick) * 100), meteor: Math.max(0, (T.cd.meteor - this.tick) * 100) },
       income: r1(cs.reduce((a, c) => a + this.incomeOf(c), 0)), gold: Math.floor(cs.reduce((a, c) => a + c.gold, 0)),
       troops: this.units.reduce((a, u) => a + (u.t === t ? u.n : 0), 0),
-      keeps: cs.map((c) => ({ id: c.id, name: c.name, avatar: c.avatar, color: c.color, hp: Math.round(c.keep.hp), max: c.keep.max, ghost: c.ghost, ai: c.npc })),
+      // gear: the keep owner's castle banner (JustGold shop), flown over their tower on the TV
+      keeps: cs.map((c) => ({ id: c.id, name: c.name, avatar: c.avatar, color: c.color, hp: Math.round(c.keep.hp), max: c.keep.max, ghost: c.ghost, ai: c.npc, gear: GEARS.gearSet(c.npc ? null : this.room.get(c.id), 'summon') })),
     };
   }
   tv() {
@@ -563,7 +565,7 @@ class Summon {
     const T = this.teams[c.team], need = T.tier < this.maxTier ? this.xpNeed(c.team, T.tier + 1) : 0;
     const prev = T.tier === 1 ? 0 : this.xpNeed(c.team, T.tier);
     const out = {
-      ...base, team: c.team, gold: r1(c.gold), income: r1(this.incomeOf(c)), invest: r1(c.inv), mines: c.mines, mineCost: this.mineCost(c), mineInc: MINE_INC * (this.income ? 1.5 : 1),
+      ...base, team: c.team, gear: GEARS.gearSet(p, 'summon'), gold: r1(c.gold), income: r1(this.incomeOf(c)), invest: r1(c.inv), mines: c.mines, mineCost: this.mineCost(c), mineInc: MINE_INC * (this.income ? 1.5 : 1),
       tier: T.tier, xp: Math.round(T.xp), need, prev, alive: c.alive, cap: this.cap(), ghost: c.ghost, keep: { hp: Math.round(c.keep.hp), max: c.keep.max },
       cds: KEYS.map((k) => Math.max(0, ((c.cds[k] || 0) - this.tick) * 100)),
       ab: Object.keys(ABILITIES).map((a) => Math.max(0, (T.cd[a] - this.tick) * 100)), rally: T.rallyUntil > this.tick,

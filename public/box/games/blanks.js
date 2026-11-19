@@ -134,6 +134,8 @@
   }
 
   function phone(el, v, ctx) {
+    // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+    if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, arguments[3], 'blanks');
     if (!v) return;
     if (v.phase === 'over') return phoneOver(el, v, ctx);
     if (selRound !== v.round) { selRound = v.round; judgeSel = null; swapArm = 0; }

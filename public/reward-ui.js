@@ -1,4 +1,4 @@
-// End-of-game reward scene (phone). The server already paid the gold; this shows
+// End-of-game reward scene (phone). The server already paid the JustGold; this shows
 // it: your character, your pouch, coins flying in for each reason, and the new total.
 (function () {
   const $ = (s) => document.querySelector(s);
@@ -10,12 +10,12 @@
     cancelAnimationFrame(raf);
     const lines = reward.lines || [];
     box.innerHTML = `<div class="reward-card">
-      <h2>${reward.eligible ? 'Gold earned!' : 'Practice game'}</h2>
-      <canvas class="reward-canvas" aria-label="Coins flying into your gold pouch"></canvas>
-      <div class="reward-total"><b data-reward-shown>${reward.before}</b> gold <span data-reward-plus></span></div>
+      <h2>${reward.eligible ? 'JustGold earned!' : 'Practice game'}</h2>
+      <canvas class="reward-canvas" aria-label="Coins flying into your JustGold pouch"></canvas>
+      <div class="reward-total"><b data-reward-shown>${reward.before}</b> JG <span data-reward-plus></span></div>
       ${reward.eligible ? `<ul class="list reward-lines">${lines.map((l, i) => `<li data-line="${i}" hidden><span>${esc(l.label)}</span><b>+${l.amount}</b></li>`).join('')}</ul>
-        ${reward.capped ? `<p class="small muted" data-capped hidden>Capped at ${reward.capped} gold per game.</p>` : ''}`
-        : `<p class="muted">No gold this time. ${esc(reward.reason || '')}</p>`}
+        ${reward.capped ? `<p class="small muted" data-capped hidden>Capped at ${reward.capped} JG per game.</p>` : ''}`
+        : `<p class="muted">No JustGold this time. ${esc(reward.reason || '')}</p>`}
       <button class="btn" data-reward-close>Continue</button></div>`;
     box.hidden = false; box.dataset.total = reward.coins; box.dataset.done = '';
     const cv = box.querySelector('canvas'), shown = box.querySelector('[data-reward-shown]');

@@ -352,3 +352,11 @@ body.g-letters .host-row .btn:not(.ghost) { background: var(--lr-red); color: #f
 @keyframes lr-rain { from { opacity: 0; transform: translateY(-120px) rotate(-30deg); } }
 @media (max-width: 1300px) { .lr-lobby { grid-template-columns: 330px minmax(0, 1fr); gap: 14px 26px; } .lr-rwgrid { grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.3fr); gap: 24px; } }
 @media (prefers-reduced-motion: reduce) { .lr *, .lr-tile { animation-duration: 0.01s !important; animation-iteration-count: 1 !important; } }
+/* JustGold gear: the race bar in a player's own pencil colours, with a little pencil writing at its tip. */
+.lr-bar.gear { position: relative; overflow: visible; }
+.lr-bar.gear i { box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18); }
+.lr-gpen { position: absolute; top: 50%; width: 30px; height: 9px; margin-top: -4.5px; margin-left: -4px; border-radius: 0 2px 2px 0; transform: rotate(-14deg); transform-origin: 0 50%; transition: left 0.4s; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45); }
+.lr-gpen::before { content: ''; position: absolute; left: -9px; top: 0; border: 4.5px solid transparent; border-right: 9px solid #f2d0a4; border-left: 0; }
+.lr-gpen::after { content: ''; position: absolute; right: -6px; top: 0; width: 6px; height: 9px; border-radius: 0 3px 3px 0; background: linear-gradient(90deg, #b9b9b9 0 35%, #ff8fa3 35%); }
+.lr-gpen.glow { box-shadow: 0 0 8px var(--pa), 0 1px 2px rgba(0, 0, 0, 0.45); }
+.lr-mypen { display: inline-block; width: 40px; height: 10px; background: none; vertical-align: middle; margin: 0 10px 0 12px; }

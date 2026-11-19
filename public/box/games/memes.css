@@ -260,3 +260,8 @@ body.g-memes #g-body { background: transparent; }
   .mm-lobby { grid-template-columns: 1fr; overflow: auto; position: static; }
   .mm-writing { grid-template-columns: 1fr; }
 }
+
+/* Shop gear: meme frames (public/shared/gear.js, slot memes/frame), shown only once the author is
+   public. --gpat is the frame's pattern, --ga/--gb its colours. */
+.mm-img.gear { border: 9px solid transparent; background: var(--gpat) border-box; box-sizing: content-box; box-shadow: 0 0 0 2px rgba(0, 0, 0, .55), 0 8px 18px rgba(0, 0, 0, .4); }
+.mm-img.gear.glow { box-shadow: 0 0 0 2px rgba(0, 0, 0, .4), 0 0 22px var(--ga), 0 0 6px var(--gb); }

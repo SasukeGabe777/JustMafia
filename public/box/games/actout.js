@@ -196,6 +196,8 @@
     };
   }
   function phone(el, v, ctx) {
+    // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+    if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, arguments[3], 'actout');
     if (!v) return;
     const turnKey = v.n + ':' + v.phase;
     if (P.turn !== v.n) { P.turn = v.n; P.hidden = false; P.picking = false; P.pose = 0; P.leg = -1; }

@@ -295,6 +295,8 @@
   }
 
   function phone(el, v, ctx) {
+    // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+    if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, arguments[3], 'debate');
     if (!v) return;
     if (v.phase === 'over') {
       feel(ctx, 'over', 1, v.rank === 1 ? 'win' : 'success');

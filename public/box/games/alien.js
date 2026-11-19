@@ -660,6 +660,8 @@
       <div class="aa-rolecard mini ${m.side}">You were <b>${r.i} ${esc(r.t)}</b></div><p>⭐ ${m.pts} · #${v.rank} of ${v.of}</p><div class="aa-stats">${bits}</div></div>`;
   }
   function phone(el, v, ctx) {
+    // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+    if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, arguments[3], 'alien');
     if (!v) return;
     if (!v.me) { paint(el, `<div class="aa-pcard"><div class="big">🧳</div><h3>You’re a stowaway this trip!</h3><p>Watch the big screen. You’ll join the crew next game.</p></div>`, 'stow'); return; }
     if (v.phase === 'roles' && P.ph !== 'roles') { P.felt = {}; P.opened = ''; P.say = null; } // a new game

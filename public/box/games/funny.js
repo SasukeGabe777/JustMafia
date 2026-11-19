@@ -282,6 +282,8 @@
 
   // ---------- phone ----------
   function phoneRender(el, v, ctx, room) {
+    // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+    if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, room, 'funny');
     if (!v) return;
     const isHost = !!(room && room.vip);
     phoneHaptics(v, ctx);

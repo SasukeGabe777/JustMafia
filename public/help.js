@@ -107,7 +107,7 @@
     { id: 'night1', when: (v) => v.phase === 'night' && v.you.alive, text: 'Psst: at night EVERYONE taps someone, even plain Villagers. That way nobody can tell who has a power. Keep your phone hidden!' },
     { id: 'discuss1', when: (v) => v.phase === 'discussion' && v.you.alive, text: 'This is the fun part: talk out loud! Ask people what they did last night and watch for stories that don’t match.' },
     { id: 'vote1', when: (v) => v.phase === 'voting' && v.you.alive, text: 'Most votes is eliminated. A tie usually means nobody goes. You can change your vote until time runs out.' },
-    { id: 'ghost1', when: (v) => v.you && !v.you.alive && !v.you.spectator && v.phase !== 'lobby' && v.phase !== 'gameover', text: 'You’re a ghost now. No hints to the living! Scroll down: predict who goes next, send one Chill, bet gold with other ghosts, and if a Medium calls on you, whisper them a word.' },
+    { id: 'ghost1', when: (v) => v.you && !v.you.alive && !v.you.spectator && v.phase !== 'lobby' && v.phase !== 'gameover', text: 'You’re a ghost now. No hints to the living! Scroll down: predict who goes next, send one Chill, bet JustGold with other ghosts, and if a Medium calls on you, whisper them a word.' },
     { id: 'mafia1', when: (v) => !!v.mafia, text: 'You’re Mafia! Your teammates are listed on your role card. Agree on a target each night, then act innocent by day.' },
   ];
   function nextTip(v, seen) {

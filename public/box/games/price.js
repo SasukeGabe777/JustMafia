@@ -163,6 +163,8 @@
     },
 
     phone(el, v, ctx) {
+      // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
+      if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, arguments[3], 'price');
       if (!v) return;
       lastCtx = ctx;
       if (dragging) return;

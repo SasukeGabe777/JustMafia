@@ -40,7 +40,7 @@
       const el = card('oracle', `<h3>🔮 Ghost predictions <small>${o.correct}/${o.total} right</small></h3>
         ${o.voteOpen ? `<label>Voted out today<select data-predict="vote">${opts(o.vote, true)}</select></label>` : ''}
         ${o.nightOpen ? `<label>Dies tonight<select data-predict="night">${opts(o.night, true)}</select></label>` : ''}
-        ${o.log.length ? `<ul class="oracle-log">${o.log.map((l) => `<li class="${l.ok ? 'ok' : ''}">${esc(l.text)}</li>`).join('')}</ul>` : '<p class="small muted">Right guesses earn gold and maybe the Ghost Oracle award.</p>'}`);
+        ${o.log.length ? `<ul class="oracle-log">${o.log.map((l) => `<li class="${l.ok ? 'ok' : ''}">${esc(l.text)}</li>`).join('')}</ul>` : '<p class="small muted">Right guesses earn JustGold and maybe the Ghost Oracle award.</p>'}`);
       el.querySelectorAll('[data-predict]').forEach((s) => { s.onchange = () => s.value && emit({ op: 'predict', kind: s.dataset.predict, targetId: s.value }); });
 
       // Haunting: a Chill, a whisper to the Medium, and (for the Mafia) the shroud.
@@ -66,14 +66,14 @@
     if (drafts.kind === 'vote' && !a.canVoteBet) drafts.kind = 'winner';
     const picks = drafts.kind === 'winner' ? [['town', 'the Town wins'], ['mafia', 'the Mafia wins']] : alive.map((p) => [p.id, `${p.name} is voted out today`]);
     if (!picks.some(([k]) => k === drafts.pick)) drafts.pick = picks[0] ? picks[0][0] : '';
-    const el3 = card('bets', `<h3>🎲 Ghost bets <small>${a.betting ? `💰 ${a.gold}` : ''}</small></h3>
+    const el3 = card('bets', `<h3>🎲 Ghost bets <small>${a.betting ? `🪙 ${a.gold} JG` : ''}</small></h3>
       ${list ? `<ul class="wagers">${list}</ul>` : '<p class="small muted">No bets yet. Make one, and another ghost can take the other side.</p>'}
-      ${over ? '' : !a.betting ? '<p class="small muted">Betting needs a saved character with a gold pouch.</p>' : `<details class="bet-form"${drafts.open ? ' open' : ''}><summary>Make a bet</summary>
+      ${over ? '' : !a.betting ? '<p class="small muted">Betting needs a saved character with a JustGold pouch.</p>' : `<details class="bet-form"${drafts.open ? ' open' : ''}><summary>Make a bet</summary>
         <label>I bet that<select data-bet-kind><option value="winner"${drafts.kind === 'winner' ? ' selected' : ''}>…who wins the game</option>${a.canVoteBet ? `<option value="vote"${drafts.kind === 'vote' ? ' selected' : ''}>…who is voted out today</option>` : ''}</select></label>
         <select data-bet-pick>${picks.map(([k, t]) => `<option value="${esc(k)}"${k === drafts.pick ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
-        <div class="stakes">${a.stakes.map((s) => `<button class="chip${s === drafts.stake ? ' sel' : ''}" data-stake="${s}" ${s > a.gold ? 'disabled' : ''}>${s}g</button>`).join('')}</div>
+        <div class="stakes">${a.stakes.map((s) => `<button class="chip${s === drafts.stake ? ' sel' : ''}" data-stake="${s}" ${s > a.gold ? 'disabled' : ''}>${s} JG</button>`).join('')}</div>
         <button class="btn small" data-bet-go>Offer the bet</button>
-        <p class="small muted">Your gold is held until it settles. Winner takes both stakes; if nobody takes it, you get it back.</p></details>`}`);
+        <p class="small muted">Your JustGold is held until it settles. Winner takes both stakes; if nobody takes it, you get it back.</p></details>`}`);
     const d = el3.querySelector('details'); if (d) d.addEventListener('toggle', () => { drafts.open = d.open; });
     const pk = el3.querySelector('[data-bet-pick]');
     const k = el3.querySelector('[data-bet-kind]'); if (k) k.onchange = () => {
