@@ -348,7 +348,16 @@ class Price {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => {
+  const seconds = M <= 7 ? 20 : 30;
+  const { rounds } = PF.best({ rounds: [10, 6, 15] }, (s) => 1 + s.rounds * (seconds + 54) / 60, M);
+  return { rounds, seconds };
+};
+
 module.exports = {
+  partyFit,
   key: 'price', name: 'Price Panic', min: 1, best: [2, 20], howSteps: 6, fields, defaults, show: true, // game-show opening (box/show.js)
   create: (room, settings) => new Price(room, settings),
   scoreGuess, niceUp, fmt,

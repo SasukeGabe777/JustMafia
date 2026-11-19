@@ -19,8 +19,15 @@
     const n = pm.games.length, cur = Math.min(pm.index, n - 1);
     const doneUpTo = pm.phase === 'playing' ? cur : cur + 1; // games before this one are finished
     return `<div class="pl-strip"><div class="pl-head">🎉 <b>Party lineup</b><span>Game ${cur + 1} of ${n}${pm.minutes ? ` · ${pm.minutes >= 120 ? '2 h+' : pm.minutes >= 60 ? (pm.minutes / 60) + ' h' : pm.minutes + ' min'} party` : ''}</span></div>
-      <ol class="pl-games">${pm.games.map((k, i) => `<li class="${i < doneUpTo ? 'done' : i === cur ? 'cur' : ''}${i === n - 1 ? ' fin' : ''}"><span class="pl-i">${icon(k)}</span><span class="pl-n">${esc(gname(k, pm.titles && pm.titles[i]))}</span>${i < doneUpTo ? '<span class="pl-ok">✓</span>' : i === cur ? '<span class="pl-now">NOW</span>' : ''}</li>`).join('')}</ol></div>`;
+      ${pm.fit && pm.fit.summary && pm.fit.summary.length ? `<div class="pl-fit">${pm.fit.touched ? '⚙️ The host picked the settings' : `⚙️ Set for ${pm.fit.players} player${pm.fit.players === 1 ? '' : 's'} · ~${pm.fit.minutes} min:`} ${pm.fit.touched ? '' : pm.fit.summary.map((x) => `<b>${esc(x)}</b>`).join(' · ')}</div>` : ''}<ol class="pl-games">${pm.games.map((k, i) => `<li class="${i < doneUpTo ? 'done' : i === cur ? 'cur' : ''}${i === n - 1 ? ' fin' : ''}"><span class="pl-i">${icon(k)}</span><span class="pl-n">${esc(gname(k, pm.titles && pm.titles[i]))}</span>${i < doneUpTo ? '<span class="pl-ok">✓</span>' : i === cur ? '<span class="pl-now">NOW</span>' : ''}</li>`).join('')}</ol></div>`;
   };
+
+  // The next game's settings, fitted to this crowd and its minutes in the plan (box/party-fit.js).
+  function nextFit(pm) {
+    const u = pm.upNext; if (!u) return '';
+    const chips = (u.summary || []).map((x) => `<span>${esc(x)}</span>`).join('');
+    return `<div class="pb-nfit">${chips}${u.minutes ? `<span class="pb-nmin">⏱ ~${u.minutes} min</span>` : ''}</div>${pm.intros === 'break' ? '<div class="pb-nintro">🍿 Its intro plays here in a moment</div>' : ''}`;
+  }
 
   // ---- Shared bits ----
   const ordinal = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
@@ -128,6 +135,7 @@
             <div class="pb-nicon"><span>${pm.next ? icon(pm.next) : '🏁'}</span></div>
             <div class="pb-nname">${pm.next ? esc(gname(pm.next, pm.titles[pm.index + 1])) : 'The finale'}</div>
             ${pm.next && pm.index + 1 === n - 1 ? '<div class="pb-nfin">🏆 The last game!</div>' : ''}
+            ${nextFit(pm)}
             <div class="pb-clock"><svg viewBox="0 0 100 100"><circle class="pb-ring-bg" cx="50" cy="50" r="44"/><circle class="pb-ring" cx="50" cy="50" r="44" pathLength="100"/></svg><span class="pb-secs">–</span></div>
             <div class="pb-wait">Starting soon…</div>
           </div>

@@ -528,7 +528,15 @@ class Memes {
 // Remix: the starter writes the first half of the slots (at least one), the finisher the rest.
 function half(tpl) { const n = TPL.get(tpl).slots.length; return Math.max(1, Math.floor(n / 2)); }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  const s = PF.best({ rounds: [3, 2, 4, 5], seconds: [90, 60, 120] }, (x) => 0.5 + x.rounds * (x.seconds / 60 * 0.85 + 1.5 + 0.06 * Math.min(P, 20)), M);
+  return { rounds: s.rounds, seconds: s.seconds };
+};
+
 module.exports = {
+  partyFit,
   key: 'memes', name: 'Meme Maker', min: 3, best: [3, 12], fields, defaults,
   show: { facts: false }, // intro cutscene before the game (public/box/intros/memes.js)
   locked: { how: 'Finish a game of JustBlanks to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js

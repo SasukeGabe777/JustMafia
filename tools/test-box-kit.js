@@ -54,6 +54,7 @@ for (const [key, def] of Object.entries(GAMES)) {
   check(key, 'phone page loads the game stylesheet', playHtml.includes(`/box/games/${key}.css`));
   check(key, 'main menu tile (data-game)', hub.includes(`data-game="${key}"`));
   check(key, 'main menu art public/art/tiles/<key>.svg, shown on its tile', !!read(`public/art/tiles/${key}.svg`) && hub.includes(`src="/art/tiles/${key}.svg"`));
+  check(key, 'partyFit({ players, minutes }) for Party Mode (box/party-fit.js)', typeof def.partyFit === 'function');
   // The ideal crowd: in the module (best: [lo, hi]) and on the tile (data-best), and they agree.
   check(key, 'ideal player count best: [lo, hi] in the module', Array.isArray(def.best) && def.best.length === 2 && def.best[0] >= def.min && def.best[0] <= def.best[1]);
   check(key, 'main menu tile data-best matches the module', Array.isArray(def.best) && hub.includes(`data-game="${key}" data-best="${def.best[0]}-${def.best[1]}"`));

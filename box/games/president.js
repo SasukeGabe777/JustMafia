@@ -378,7 +378,18 @@ class President {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  // Short slots: quicker turns. Tables: one table for a small group, else the size that leaves the fewest empty seats.
+  const turnSeconds = M <= 7 ? 15 : 25;
+  const tableSize = P <= 8 ? Math.max(4, P) : [6, 7, 5, 8].reduce((b, t) => (Math.ceil(P / t) * t - P < Math.ceil(P / b) * b - P ? t : b));
+  const { rounds } = PF.best({ rounds: [4, 3, 6, 8] }, (s) => 1 + s.rounds * (turnSeconds === 15 ? 4 : 5.2), M);
+  return { rounds, turnSeconds, tableSize };
+};
+
 module.exports = {
+  partyFit,
   key: 'president', name: 'President', min: 3, best: [4, 10], howSteps: 6, fields, defaults,
   create: (room, settings) => new President(room, settings),
   _test: { power, titlesFor, POINTS },

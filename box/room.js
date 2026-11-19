@@ -21,6 +21,14 @@ const PARTY_POINTS = [10, 7, 5, 4, 3, 2];
 // Party Mode: a shuffled lineup of games played back to back. After each game its end screen
 // stays up for BOARD_DELAY, then the standings board (BOARD_MS), then the next game starts.
 const BOARD_DELAY = 12000, BOARD_MS = 15000, MAX_LINEUP = 20;
+// Party Mode intros ("🎬 Intros" in the setup; the host can change it mid-party):
+//  'play'  each game opens with its intro cutscene and how-to steps (as a single game does);
+//  'break' the next game's cutscene plays on the TV during the standings break (after BREAK_STAND_MS
+//          of standings), so the game starts straight away; the first game's plays as the party starts;
+//  'skip'  a short title card (CARD_MS) and straight in. The how-to steps stay on the phones' ❓.
+const INTRO_MODES = ['play', 'break', 'skip'], BREAK_STAND_MS = 8000;
+const PF = require('./party-fit');
+const { CAST_OPEN_MS, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX } = require('./show');
 // Unlockable games (module `locked: { how }`): finishing a whole Party Mode opens every one of
 // them. The TV remembers unlocks (public/unlocks.js) and sends them when it creates a room.
 const partyFinished = (room) => !!(room.partyMode && room.partyMode.phase === 'done' && room.played.length >= 1);
@@ -132,6 +140,7 @@ class BoxRoom {
     if (this.partyMode) this.partyMode.ext = false;
     if (this.partyMode && this.partyMode.phase !== 'done') this.partyMode.phase = 'playing';
     this.def = def; this.settings = this.defaultSettings(def); this.phase = 'lobby'; this.show = null;
+    this.partyFit(); // Party Mode: settings that suit this crowd and this game's slot in the plan
     this.game = def.liveLobby ? def.create(this, this.settings) : null;
     if (this.game && this.game.joined) for (const p of this.players.values()) this.game.joined(p);
     this.promoteAudience();
@@ -443,11 +452,77 @@ class BoxRoom {
 
   // ---- Party Mode ----
   // flow 'auto': each game starts right after the standings; 'lobby': it waits in its lobby so the host can adjust settings.
-  setParty(defs, minutes, flow = 'auto') {
+  // opts (from the setup): intros 'play'|'break'|'skip'; each 'quick'|'standard'|'long'|'auto' (game
+  // length); plan { key: minutes } (each game's minutes in the plan); players (the group size picked).
+  setParty(defs, minutes, flow = 'auto', opts = {}) {
     defs = (defs || []).filter((d) => d && !this.isLocked(d)).slice(0, MAX_LINEUP);
     if (!defs.length) return { ok: false, error: 'Pick some games.' };
-    this.partyMode = { defs, index: 0, minutes: Math.max(10, Math.min(600, Number(minutes) || 60)), phase: 'playing', at: this.now(), startedAt: null, paused: false, timer: null, flow: flow === 'lobby' ? 'lobby' : 'auto' };
+    opts = opts && typeof opts === 'object' ? opts : {};
+    const total = Math.max(10, Math.min(600, Number(minutes) || 60));
+    const each = ['quick', 'standard', 'long', 'auto'].includes(opts.each) ? opts.each : 'auto';
+    const plan = {};
+    for (const d of defs) {
+      const m = Number(opts.plan && typeof opts.plan === 'object' ? opts.plan[d.key] : NaN);
+      plan[d.key] = Number.isFinite(m) && m > 0 ? Math.max(3, Math.min(120, Math.round(m))) : PF.LENGTHS[each] || Math.max(5, Math.min(30, Math.round(total / defs.length)));
+    }
+    this.partyMode = { defs, index: 0, minutes: total, phase: 'playing', at: this.now(), startedAt: null, paused: false, timer: null, flow: flow === 'lobby' ? 'lobby' : 'auto',
+      intros: INTRO_MODES.includes(opts.intros) ? opts.intros : 'play', each, plan, players: Math.max(0, Math.min(100, Number(opts.players) || 0)),
+      fit: null, nextFit: null, preview: null, previewed: null };
+    if (this.def === defs[0]) { this.settings = this.defaultSettings(this.def); this.partyFit(); }
     return { ok: true };
+  }
+  // ---- Party Mode: settings that fit the crowd and the time (box/party-fit.js) ----
+  // The game's minutes in the plan, and how many will play (the room's players; before anyone
+  // has joined, the group size picked in the setup).
+  partyCtx(def) {
+    const pm = this.partyMode;
+    return { players: this.players.size || pm.players || 6, minutes: pm.plan[def.key] || 10 };
+  }
+  // The current party game's settings: fitted when the lineup reaches it (and again at Start with
+  // the players actually here, unless the host changed them in the lobby).
+  partyFit() {
+    const pm = this.partyMode;
+    if (!pm || pm.phase === 'done' || pm.defs[pm.index] !== this.def || this.def.external) return;
+    const ctx = this.partyCtx(this.def), fit = PF.fitSettings(this.def, ctx);
+    Object.assign(this.settings, fit.settings);
+    pm.fit = { game: this.def.key, summary: fit.summary, minutes: ctx.minutes, players: ctx.players, touched: false };
+  }
+  // People joined or left in the lobby: the settings follow the crowd (until the host changes them).
+  partyRefit() {
+    const pm = this.partyMode;
+    if (this.phase !== 'lobby' || !pm || !pm.fit || pm.fit.touched || pm.fit.game !== this.def.key || !this.players.size || pm.fit.players === this.players.size) return;
+    const keep = this.settings.showIntro;
+    this.settings = this.defaultSettings(this.def); if (keep !== undefined) this.settings.showIntro = keep;
+    this.partyFit();
+  }
+  // The game after this one (skipping games that need more players than are here), or -1.
+  partyNextIndex() {
+    const pm = this.partyMode; let i = pm.index + 1;
+    while (i < pm.defs.length && pm.defs[i].min > this.players.size) i++;
+    return i < pm.defs.length ? i : -1;
+  }
+  setIntros(mode) {
+    const pm = this.partyMode; if (!pm || !INTRO_MODES.includes(mode)) return { ok: false, error: 'Not now.' };
+    pm.intros = mode;
+    if (mode !== 'break' && pm.preview) { pm.preview.stop(); pm.preview = null; }
+    this.sync(); return { ok: true, intros: mode };
+  }
+  // "Play them in the break": the next game's cutscene on the TV during the standings.
+  partyPreview(def) {
+    const pm = this.partyMode; if (!pm || pm.phase !== 'board' || pm.intros !== 'break' || pm.preview) return;
+    if (!def || def.external || !this.hasShow(def)) return;
+    pm.preview = new Show(this, { def, mode: 'cast', preview: true, noHowto: true, info: this.partyInfo(def, pm.nextFit), onDone: () => { if (pm.preview) pm.preview.over = true; } });
+    pm.previewed = def.key;
+    pm.preview.begin();
+    this.fx('partyPreview', { game: def.key });
+    this.sync();
+  }
+  previewMs() { return CAST_OPEN_MS + Math.min(CAST_MAX, this.players.size) * CAST_PER_MS + CAST_OUTRO_MS; }
+  // What the TV says about a party game: "Game 3 of 6", its settings and its minutes in the plan.
+  partyInfo(def, fit) {
+    const pm = this.partyMode; if (!pm) return null;
+    const i = pm.defs.indexOf(def);
+    return { game: def.key, title: def.name, n: i + 1, of: pm.defs.length, last: i === pm.defs.length - 1, minutes: pm.plan[def.key] || null, summary: fit ? fit.summary : [] };
   }
   // A game just ended: let its end screen breathe, then the standings board, then the next game.
   partyAfterGame(delay = BOARD_DELAY) {
@@ -462,10 +537,24 @@ class BoxRoom {
     const pm = this.partyMode; if (!pm || pm.phase !== 'ending') return { ok: false, error: 'Not now.' };
     this.cancel(pm.timer); pm.timer = null;
     const last = pm.index >= pm.defs.length - 1;
-    pm.phase = last ? 'done' : 'board'; pm.at = this.now() + (last ? 0 : BOARD_MS);
+    let boardMs = BOARD_MS;
+    pm.nextFit = null; pm.nextInfo = null; pm.preview = null;
+    if (!last) {
+      // Up next: its settings for this crowd (shown on the board), and in "break" mode its intro.
+      const ni = this.partyNextIndex(), nd = ni >= 0 ? pm.defs[ni] : null;
+      if (nd) {
+        pm.nextFit = nd.external ? null : PF.fitSettings(nd, this.partyCtx(nd));
+        pm.nextInfo = this.partyInfo(nd, pm.nextFit);
+        if (pm.intros === 'break' && !nd.external && this.hasShow(nd)) {
+          boardMs = Math.max(BOARD_MS, BREAK_STAND_MS + this.previewMs() + 1200);
+          pm.previewTimer = this.after(BREAK_STAND_MS, () => { pm.previewTimer = null; this.partyPreview(nd); });
+        }
+      }
+    }
+    pm.phase = last ? 'done' : 'board'; pm.at = this.now() + (last ? 0 : boardMs);
     if (last) { this.checkUnlocks(); this.partyFinished(); }
     this.fx(last ? 'partyDone' : 'partyBoard');
-    if (!last && !pm.paused) pm.timer = this.after(BOARD_MS, () => this.partyNext());
+    if (!last && !pm.paused) pm.timer = this.after(boardMs, () => this.partyNext());
     this.sync();
     return { ok: true };
   }
@@ -474,6 +563,9 @@ class BoxRoom {
     const pm = this.partyMode; if (!pm || pm.phase === 'done') return { ok: false, error: 'The party is over!' };
     if (this.phase === 'game' && this.game && this.game.phase !== 'over') return { ok: false, error: 'Finish this game first.' };
     this.cancel(pm.timer); pm.timer = null;
+    // The break's intro is over (or cut short by "Next game now"): it still counts as played.
+    if (pm.previewTimer) { this.cancel(pm.previewTimer); pm.previewTimer = null; }
+    if (pm.preview) { pm.preview.stop(); pm.preview = null; }
     let i = pm.index + 1;
     while (i < pm.defs.length && pm.defs[i].min > this.players.size) i++;
     if (i >= pm.defs.length) { pm.phase = 'done'; pm.at = this.now(); this.checkUnlocks(); this.partyFinished(); this.sync(); return { ok: true, done: true }; }
@@ -492,7 +584,9 @@ class BoxRoom {
       // Holding the countdown (end screen or standings); letting go gives 5 more seconds.
       this.cancel(pm.timer); pm.timer = null;
       const go = pm.phase === 'board' ? () => this.partyNext() : () => this.partyToBoard();
-      if (!pm.paused) { pm.at = this.now() + 5000; pm.timer = this.after(5000, go); }
+      // An intro playing in the break gets to finish first.
+      const ms = pm.phase === 'board' && pm.preview && !pm.preview.over ? Math.max(5000, pm.preview.endsAt - this.now() + 1200) : 5000;
+      if (!pm.paused) { pm.at = this.now() + ms; pm.timer = this.after(ms, go); }
     }
     this.sync(); return { ok: true, paused: pm.paused };
   }
@@ -501,15 +595,24 @@ class BoxRoom {
     const pm = this.partyMode; if (!pm) return { ok: false };
     if (this.phase === 'game' && this.game && this.game.phase !== 'over') return { ok: false, error: 'Finish this game first.' };
     this.cancel(pm.timer); this.party = new Map(); this.played = []; this.lastGain = new Map(); this.prevRank = new Map(); this.recap = null;
-    pm.index = 0; pm.phase = 'playing'; pm.at = this.now(); pm.startedAt = null; pm.paused = false; pm.goldPaid = false;
+    if (pm.previewTimer) { this.cancel(pm.previewTimer); pm.previewTimer = null; }
+    if (pm.preview) { pm.preview.stop(); pm.preview = null; }
+    pm.index = 0; pm.phase = 'playing'; pm.at = this.now(); pm.startedAt = null; pm.paused = false; pm.goldPaid = false; pm.previewed = null; pm.nextFit = null; pm.nextInfo = null;
     const sw = this.switchGame(pm.defs[0]); if (!sw.ok) return sw;
     this.sync(); return { ok: true };
   }
-  partyState() {
+  // tv: the big screen also gets the intro playing in the break (phones don't need it).
+  partyState(tv = false) {
     const pm = this.partyMode; if (!pm) return null;
+    const cur = pm.defs[pm.index];
     return { games: pm.defs.map((d) => d.key), titles: pm.defs.map((d) => d.name), index: pm.index, minutes: pm.minutes, phase: pm.phase, paused: pm.paused,
       in: Math.max(0, pm.at - this.now()), elapsed: pm.startedAt == null ? 0 : this.now() - pm.startedAt,
-      next: pm.defs[pm.index + 1] ? pm.defs[pm.index + 1].key : null, boardMs: BOARD_MS, ext: !!pm.ext, flow: pm.flow };
+      next: pm.defs[pm.index + 1] ? pm.defs[pm.index + 1].key : null, boardMs: BOARD_MS, ext: !!pm.ext, flow: pm.flow,
+      intros: pm.intros, each: pm.each, plan: pm.defs.map((d) => pm.plan[d.key] || null),
+      // This game's chosen settings ("5 orders · 45 seconds"), and the next game's on the board.
+      fit: pm.fit && cur && pm.fit.game === cur.key ? { summary: pm.fit.summary, minutes: pm.fit.minutes, players: pm.fit.players, touched: pm.fit.touched } : null,
+      upNext: pm.phase === 'board' ? pm.nextInfo || null : null,
+      preview: tv && pm.preview && !pm.preview.over && pm.phase === 'board' ? pm.preview.tv() : null };
   }
   partyBoard() {
     return [...this.party].filter(([id]) => this.players.has(id)).map(([id, r]) => { const p = this.players.get(id); return { id, name: p.name, avatar: p.avatar, color: p.color, bot: p.bot, pts: r.pts, wins: r.wins, games: r.games, gain: this.lastGain.get(id) || 0, prevRank: this.prevRank.get(id) || null }; })
@@ -540,6 +643,7 @@ class BoxRoom {
     const p = { id: 'p' + (++this.seq), name, token: crypto.randomBytes(8).toString('hex'), bot: false, sockets: 0, color: COLORS[this.seq % COLORS.length], avatar: AVATARS.includes(avatar) ? avatar : AVATARS[this.seq % AVATARS.length] };
     this.players.set(p.id, p);
     if (this.game && this.game.joined) this.game.joined(p);
+    this.partyRefit();
     this.sync();
     return { ok: true, player: p };
   }
@@ -553,6 +657,7 @@ class BoxRoom {
       this.players.set(p.id, p); added++;
       if (this.game && this.game.joined) this.game.joined(p);
     }
+    this.partyRefit();
     this.sync();
     return added;
   }
@@ -577,6 +682,7 @@ class BoxRoom {
     const p = this.players.get(id); if (!p) return;
     this.players.delete(id);
     if (this.game && this.game.left) this.game.left(p);
+    this.partyRefit();
     this.sync();
   }
 
@@ -590,8 +696,10 @@ class BoxRoom {
           if (f.options) { const o = f.options.find((x) => String(x.value) === String(v)); if (o) this.settings[f.key] = o.value; }
           else if (f.type === 'bool') this.settings[f.key] = v === true || v === 'true';
         }
+        if (this.partyMode && this.partyMode.fit && this.phase === 'lobby') this.partyMode.fit.touched = true; // the host's choice stands
         this.sync(); return { ok: true, settings: this.settings };
       }
+      case 'partyIntros': return this.setIntros(String(msg.mode || ''));
       case 'addBots': return { ok: true, added: this.addBots(Math.max(1, Math.min(50, Number(msg.count) || 5))) };
       case 'removeBots': for (const p of this.list()) if (p.bot) this.remove(p.id); return { ok: true };
       case 'kick': return this.kick(String(msg.id || ''));
@@ -628,12 +736,21 @@ class BoxRoom {
     if (this.phase !== 'lobby') return { ok: false, error: 'The game is already running.' };
     if (this.players.size < this.def.min) return { ok: false, error: `${this.def.name} needs at least ${this.def.min} player${this.def.min === 1 ? '' : 's'} (bots count).` };
     this.clearTimers();
+    const pm = this.partyMode, inParty = !!(pm && pm.phase !== 'done' && pm.defs[pm.index] === this.def);
+    // Party Mode: fit the settings again to the players actually here (unless the host changed them).
+    if (inParty) this.partyRefit();
     if (this.def.liveLobby && this.game) this.game.s = { ...this.settings }; // the lobby world carries on into the game
     else this.game = this.def.create(this, { ...this.settings });
-    if (this.partyMode && this.partyMode.startedAt == null) this.partyMode.startedAt = this.now();
+    if (pm && pm.startedAt == null) pm.startedAt = this.now();
     if (this.hasShow() && this.settings.showIntro !== false) {
-      this.phase = 'show'; this.show = new Show(this); this.fx('show'); this.show.begin(); this.sync();
-      return { ok: true };
+      const mode = inParty ? pm.intros : 'play';
+      // "In the break": this game's intro already played during the standings.
+      if (!(mode === 'break' && pm.previewed === this.def.key)) {
+        const info = inParty ? this.partyInfo(this.def, pm.fit) : null;
+        const opts = mode === 'skip' ? { mode: 'card', info } : mode === 'break' ? { mode: 'cast', noHowto: true, info } : { info };
+        this.phase = 'show'; this.show = new Show(this, opts); this.fx('show'); this.show.begin(); this.sync();
+        return { ok: true };
+      }
     }
     this.beginGame();
     return { ok: true };
@@ -670,7 +787,7 @@ class BoxRoom {
       vip: this.vip() ? this.vip().name : null, filterOn: this.filterOn, locked: this.locked,
       audience: { count: this.audienceCount(), poll: this.pollView() }, recap: this.recap,
       players: this.list().map((p) => ({ id: p.id, name: p.name, bot: p.bot, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, online: p.bot || p.sockets > 0, title: p.title || null })),
-      party: this.partyBoard().slice(0, 24), played: this.played.slice(-24), partyMode: this.partyState(), unlocks: [...this.unlocks], away: this.away,
+      party: this.partyBoard().slice(0, 24), played: this.played.slice(-24), partyMode: this.partyState(true), unlocks: [...this.unlocks], away: this.away,
       state: this.game && this.phase !== 'show' ? this.game.tv() : null, show: this.show ? this.show.tv() : null,
     };
   }

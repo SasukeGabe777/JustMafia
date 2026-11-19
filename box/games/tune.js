@@ -486,7 +486,17 @@ class Game {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  // Everyone brings songs (up to 16 in a game); quick slots and big groups guess faster.
+  const time = M <= 7 || P >= 12 ? 20 : 30, per = (4 * 3 + time * 0.7 + 15) / 60;
+  const { songs } = PF.best({ songs: [2, 1, 3] }, (s) => 1.5 + Math.min(16, s.songs * P) * per, M);
+  return { songs, time };
+};
+
 module.exports = {
+  partyFit,
   key: 'tune', name: 'Tune Buzz', min: 2, best: [3, 12], fields, defaults, howSteps: 6,
   show: { facts: false }, // intro cutscene before the game (public/box/intros/tune.js)
   locked: { how: 'Finish a game of JustFunny to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js

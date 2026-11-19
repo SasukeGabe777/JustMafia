@@ -501,7 +501,16 @@ class Funny {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  const maxSeconds = M <= 7 ? 60 : M >= 18 ? 120 : 90, per = (maxSeconds / 60) * 0.8 + 0.6;
+  const { maxVideos, turns } = PF.best({ maxVideos: [12, 8, 20, 40], turns: [1, 2, 3] }, (s) => 1 + Math.min(s.maxVideos, s.turns * P) * per, M);
+  return { maxVideos, turns, maxSeconds, pickSeconds: M <= 7 ? 45 : 60, reel: M <= 7 ? 0 : 3 };
+};
+
 module.exports = {
+  partyFit,
   key: 'funny', name: 'JustFunny', min: 2, best: [3, 12], fields, defaults,
   create: (room, settings) => new Funny(room, settings),
   _test: { videoId, parseLink, linkProblem, startTime, Funny, thumb, REACTS, CLIP_MS },

@@ -679,7 +679,16 @@ class Spectrum {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  const seconds = M <= 7 ? 15 : 20;
+  const { rounds } = PF.best({ rounds: [12, 8, 16] }, (s) => 0.5 + s.rounds * (seconds + 50) / 60, M);
+  return { rounds, seconds, names: P >= 16 ? 'off' : 'on' };
+};
+
 module.exports = {
+  partyFit,
   key: 'spectrum', name: 'Where Do You Stand?', min: 3, best: [4, 16], fields, defaults,
   create: (room, settings) => new Spectrum(room, settings),
   _test: { PACKS, FAMILY_KEYS, PTS, isRead, specText },

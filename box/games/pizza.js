@@ -401,7 +401,16 @@ class Game {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  const seconds = M <= 7 ? 30 : M >= 16 ? 60 : 45;
+  const { rounds } = PF.best({ rounds: [5, 3, 8] }, (s) => 0.5 + s.rounds * (seconds + 85) / 60, M);
+  return { rounds, seconds, mode: P <= 1 ? 'classic' : 'mixed' };
+};
+
 module.exports = {
+  partyFit,
   key: 'pizza', name: 'JustPizza', min: 1, best: [3, 10], howSteps: 6, fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/pizza.js): Nonna Pina's pizzeria
   create: (room, settings) => new Game(room, settings),

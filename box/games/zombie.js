@@ -789,7 +789,12 @@ class Zombie {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ minutes: M }) => ({ length: M <= 14 ? 'short' : M <= 22 ? 'normal' : 'long', timer: M <= 12 ? 20 : 30 });
+
 module.exports = {
+  partyFit,
   key: 'zombie', name: 'Zombie Survival', min: 1, best: [4, 16], howSteps: 6, fields, defaults,
   locked: { how: 'Finish a Party Mode to unlock it.' },
   create: (room, settings) => new Zombie(room, settings),

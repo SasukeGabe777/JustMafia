@@ -367,7 +367,17 @@ class EmojiCharades {
   }
 }
 
+// Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
+const PF = require('../party-fit');
+const partyFit = ({ players: P, minutes: M }) => {
+  // Every player gives clues (turns each) up to the round cap.
+  const seconds = M <= 7 ? 60 : 90, per = (seconds + 40) / 60;
+  const s = PF.best({ maxRounds: [8, 5, 12, 20], turns: [1, 2, 3] }, (x) => 0.5 + Math.min(x.maxRounds, x.turns * P) * per, M);
+  return { maxRounds: s.maxRounds, turns: s.turns, seconds };
+};
+
 module.exports = {
+  partyFit,
   key: 'emoji', name: 'Emoji Charades', min: 3, best: [4, 16], fields, defaults,
   create: (room, settings) => new EmojiCharades(room, settings),
   _test: { judge, words, lev, pattern },

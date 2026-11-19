@@ -2,7 +2,9 @@
 'use strict';
 // Party Mode on the JustGameBox main menu: pick how many players, how long and what kinds
 // of games, then a deck of game cards is shuffled and dealt into a slot-machine lineup.
-// Start opens /box/tv?game=<first>&party=<k1,k2,…>&minutes=<n>.
+// Start opens /box/tv?game=<first>&party=<k1,k2,…>&minutes=<n>&intros=…&each=…&plan=<k:min,…>&players=<n>
+// (or switches the TV's live room: hub.js HUB_ROOM.pick). Each game's minutes in the plan go to
+// the server, which fits that game's settings to the players and the time (box/party-fit.js).
 // Works with mouse, touch and keyboard / TV remote (arrows + Enter, Esc to go back).
 (function () {
   const openBtn = document.getElementById('party-open');
@@ -39,7 +41,7 @@
   const GAMES = {};
   for (const t of TYPES) for (const k of t.games) {
     const f = FALLBACK[k] || ['🎲', k, 2, 100, 15], tile = document.querySelector(`.tile[data-game="${k}"]`);
-    const g = { key: k, type: t.k, big: !!t.big, color: t.c, icon: f[0], name: f[1], min: f[2], max: f[3], avg: f[4] };
+    const g = { key: k, type: t.k, big: !!t.big, color: t.c, icon: f[0], name: f[1], min: f[2], max: f[3], avg: f[4], lo: Math.round(f[4] * 0.7), hi: Math.round(f[4] * 1.4) };
     if (tile) {
       const ic = tile.querySelector('.icon'), h = tile.querySelector('h2'), meta = [...tile.querySelectorAll('.meta span')].map((s) => s.textContent);
       if (ic) g.icon = ic.textContent.trim();
@@ -49,7 +51,7 @@
       // The ideal crowd for the game (data-best="4-10" on its tile).
       const bs = (tile.dataset.best || '').split('-').map(Number); if (bs.length === 2 && bs.every((x) => x > 0)) g.best = bs;
       const tm = range(meta.find((m) => m.includes('⏱')) || meta[1]);
-      if (tm) g.avg = Math.round((tm[0] + tm[1]) / 2);
+      if (tm) { g.avg = Math.round((tm[0] + tm[1]) / 2); g.lo = tm[0]; g.hi = tm[1]; }
     }
     if (!g.best) g.best = [Math.max(g.min, 2), Math.min(g.max, 12)];
     GAMES[k] = g;
@@ -68,6 +70,22 @@
     { label: '1½ hours', m: 90, sub: 'Settle in' },
     { label: '2 hours+', m: 120, sub: 'All night long' },
   ];
+  // How long each game runs (its settings are fitted to it on the server). Auto: each game's usual length.
+  const LENGTHS = [
+    { k: 'quick', label: 'Quick', m: 5, sub: '~5 min each', icon: '⚡' },
+    { k: 'standard', label: 'Standard', m: 10, sub: '~10 min each', icon: '⏱️' },
+    { k: 'long', label: 'Long', m: 20, sub: '~20 min each', icon: '🐢' },
+    { k: 'auto', label: 'Auto', m: 0, sub: 'Fit the time: each game its usual length', icon: '✨' },
+  ];
+  // The intro cutscenes in a party ("Play them in the break": the next game's intro plays on the TV
+  // while the standings are up, so it costs no extra time).
+  const INTROS = [
+    { k: 'play', label: 'Play each intro', icon: '🎬', sub: 'The cutscene and how to play before every game' },
+    { k: 'break', label: 'Play them in the break', icon: '🍿', sub: 'The next intro plays during the standings, then straight in' },
+    { k: 'skip', label: 'Skip intros', icon: '⏭️', sub: 'A quick title card and go (❓ on phones has the rules)' },
+  ];
+  // Minutes a game costs besides itself: the standings break, plus its intro.
+  const OVERHEAD = { play: 2, break: 0.7, skip: 0.6 };
   const MOODS = [
     { k: 'all', label: 'Everything', icon: '✨', sub: 'Any game, big ones maybe' },
     { k: 'small', label: 'Small games only', icon: '🎈', sub: 'Quick ones, lots of them' },
@@ -75,7 +93,10 @@
   ];
 
   // ---- Options ----
-  const opt = { flow: 'auto', p: 1, t: 1, mood: 'all', types: new Set(TYPES.filter((t) => !t.big).map((t) => t.k)), big: 'maybe' };
+  const opt = { flow: 'auto', p: 1, t: 1, mood: 'all', types: new Set(TYPES.filter((t) => !t.big).map((t) => t.k)), big: 'maybe', each: 'auto', intros: 'play' };
+  const SAVE = 'box.partyOpts'; // how long each game runs and the intros: remembered on this TV
+  try { const s = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (s) { if (LENGTHS.some((x) => x.k === s.each)) opt.each = s.each; if (INTROS.some((x) => x.k === s.intros)) opt.intros = s.intros; } } catch { /* private mode */ }
+  const saveOpts = () => { try { localStorage.setItem(SAVE, JSON.stringify({ each: opt.each, intros: opt.intros })); } catch { /* private mode */ } };
   try { // start from the main menu's "How many of you?" choice
     const on = document.querySelector('#count .on'), n = on && Number(on.dataset.n);
     if (n) opt.p = n <= 3 ? 0 : n <= 8 ? 1 : n <= 20 ? 2 : 3;
@@ -102,6 +123,16 @@
     return out;
   }
 
+  // A game's minutes in the plan: the chosen length, kept within what the game can stretch or
+  // squeeze to (half its shortest to 1½× its longest usual time); Auto = its usual length.
+  // JustMafia plays its own way: always its usual length.
+  const planOf = (k) => {
+    const g = GAMES[k], L = LENGTHS.find((x) => x.k === opt.each);
+    if (!L || !L.m || k === 'mafia') return g.avg;
+    return Math.round(Math.max(Math.max(3, g.lo * 0.5), Math.min(g.hi * 1.5, L.m)));
+  };
+  const costOf = (k) => planOf(k) + (OVERHEAD[opt.intros] || 1);
+
   // ---- Building a lineup: fill the time, big games last, no two of a kind in a row ----
   function arrange(keys) {
     const out = [], rest = [...keys];
@@ -122,18 +153,20 @@
     let budget = minutes;
     const finale = [];
     // Prefer a big game that fits the time; otherwise the shortest one.
-    const bigOrder = [...bigs.filter((k) => GAMES[k].avg <= minutes), ...bigs.filter((k) => GAMES[k].avg > minutes).sort((a, b) => GAMES[a].avg - GAMES[b].avg)];
-    for (const k of bigOrder) if (finale.length < want && (finale.length === 0 || GAMES[k].avg <= budget)) { finale.push(k); budget -= GAMES[k].avg; }
+    const bigOrder = [...bigs.filter((k) => costOf(k) <= minutes), ...bigs.filter((k) => costOf(k) > minutes).sort((a, b) => costOf(a) - costOf(b))];
+    for (const k of bigOrder) if (finale.length < want && (finale.length === 0 || costOf(k) <= budget)) { finale.push(k); budget -= costOf(k); }
     const chosen = [];
     for (const k of small) {
       if (budget <= 3) break;
-      if (chosen.length + finale.length && GAMES[k].avg * 0.6 > budget) continue;
-      chosen.push(k); budget -= GAMES[k].avg;
+      if (chosen.length + finale.length && costOf(k) * 0.6 > budget) continue;
+      chosen.push(k); budget -= costOf(k);
     }
     if (!chosen.length && !finale.length && small.length) chosen.push(small[0]);
-    return [...arrange(chosen), ...finale.sort((a, b) => GAMES[a].avg - GAMES[b].avg)].slice(0, 20);
+    return [...arrange(chosen), ...finale.sort((a, b) => costOf(a) - costOf(b))].slice(0, 20);
   }
-  const totalMin = (l) => l.reduce((s, k) => s + GAMES[k].avg, 0);
+  const totalMin = (l) => l.reduce((s, k) => s + costOf(k), 0);
+  // Before the shuffle: roughly how many games the time holds.
+  const gamesFor = (pool) => { if (!pool.length) return 0; const avg = pool.reduce((s, k) => s + costOf(k), 0) / pool.length; return Math.max(1, Math.min(20, pool.length, Math.round(TIMES[opt.t].m / avg))); };
   const fmtMin = (m) => { m = Math.round(m / 5) * 5; const h = Math.floor(m / 60), r = m % 60; return h ? `${h} h${r ? ' ' + r + ' min' : ''}` : `${r} min`; };
 
   // ---- The overlay ----
@@ -191,11 +224,15 @@
       <div class="pm-q"><h2><span class="pm-num">3</span> Which games?</h2>
         <div class="pm-opts three">${MOODS.map((m) => `<button class="pm-opt pm-mood pm-f ${opt.mood === m.k ? 'on' : ''}" data-id="o-${m.k}" data-mood="${m.k}" aria-pressed="${opt.mood === m.k}"><span class="pm-oi">${m.icon}</span><b>${m.label}</b><small>${m.sub}</small></button>`).join('')}</div>
         <div class="pm-types">${TYPES.map(typeCard).join('')}</div></div>
-      <div class="pm-q"><h2><span class="pm-num">4</span> Between games</h2>
+      <div class="pm-q"><h2><span class="pm-num">4</span> How long should each game run?</h2>
+        <div class="pm-opts four">${LENGTHS.map((l) => `<button class="pm-opt pm-f ${opt.each === l.k ? 'on' : ''}" data-id="e-${l.k}" data-each="${l.k}" aria-pressed="${opt.each === l.k}"><span class="pm-oi">${l.icon}</span><b>${l.label}</b><small>${l.m ? `~${l.m} min each · settings fit it` : 'Fit the time: each game its usual length'}</small></button>`).join('')}</div></div>
+      <div class="pm-q"><h2><span class="pm-num">5</span> Between games</h2>
         <div class="pm-opts two">${[['auto', '⏩', 'Keep it flowing', 'Each game starts right after the standings'], ['lobby', '⚙️', 'Let the host adjust', 'Stop at each game’s settings first']].map(([k, ic, l, sub]) => `<button class="pm-opt pm-f ${opt.flow === k ? 'on' : ''}" data-id="f-${k}" data-flow="${k}" aria-pressed="${opt.flow === k}"><span class="pm-oi">${ic}</span><b>${l}</b><small>${sub}</small></button>`).join('')}</div></div>
+      <div class="pm-q"><h2><span class="pm-num">6</span> 🎬 Intro cutscenes</h2>
+        <div class="pm-opts three">${INTROS.map((x) => `<button class="pm-opt pm-f ${opt.intros === x.k ? 'on' : ''}" data-id="i-${x.k}" data-intros="${x.k}" aria-pressed="${opt.intros === x.k}"><span class="pm-oi">${x.icon}</span><b>${x.label}</b><small>${x.sub}</small></button>`).join('')}</div></div>
       <footer class="pm-foot">
         <button class="pm-btn ghost pm-f" data-id="back" data-act="close">◀ Back</button>
-        <div class="pm-sum">${can ? `<b>${small.length + big.length}</b> games in the hat · about <b>${esc(TIMES[opt.t].label)}</b>` : '<b class="pm-warn">Pick at least one kind of game</b>'}</div>
+        <div class="pm-sum">${can ? `About <b>${gamesFor([...small, ...big])}</b> game${gamesFor([...small, ...big]) === 1 ? '' : 's'} · about <b>${esc(TIMES[opt.t].label)}</b> · <b>${small.length + big.length}</b> in the hat` : '<b class="pm-warn">Pick at least one kind of game</b>'}</div>
         <button class="pm-btn go pm-f" data-id="go" data-act="go" ${can ? '' : 'disabled'}>🎲 Shuffle the games!</button>
       </footer>
       <p class="pm-keys">Arrow keys to move · Enter to choose · Esc to go back</p>
@@ -206,6 +243,8 @@
     if (el.dataset.p != null) { opt.p = Number(el.dataset.p); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.t != null) { opt.t = Number(el.dataset.t); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.flow) { opt.flow = el.dataset.flow === 'lobby' ? 'lobby' : 'auto'; sfx('pop'); return setup(el.dataset.id); }
+    if (el.dataset.each) { opt.each = el.dataset.each; saveOpts(); sfx('pop'); return setup(el.dataset.id); }
+    if (el.dataset.intros) { opt.intros = el.dataset.intros; saveOpts(); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.mood) { setMood(el.dataset.mood); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.type) {
       const t = TYPES.find((x) => x.k === el.dataset.type);
@@ -258,7 +297,7 @@
     slot.classList.toggle('finale', g.big);
     slot.querySelector('.pm-slot-n').textContent = g.big ? '🏆 Grand finale' : 'Game ' + (i + 1);
     slot.querySelector('.pm-slot-name').textContent = g.name;
-    slot.querySelector('.pm-slot-meta').textContent = `⏱ ~${g.avg} min · ${typeOf(k).name}${opt.p === 0 && g.min > 2 ? ' · 3+ players' : ''}`;
+    slot.querySelector('.pm-slot-meta').textContent = `⏱ ~${planOf(k)} min · ${typeOf(k).name}${opt.p === 0 && g.min > 2 ? ' · 3+ players' : ''}`;
   }
 
   // Spin one slot's reel and land it on its game.
@@ -428,7 +467,8 @@
   function sumLine() {
     const sub = body().querySelector('#pm-sub');
     const tot = totalMin(lineup);
-    sub.innerHTML = `<b>${lineup.length}</b> game${lineup.length === 1 ? '' : 's'} · about <b>${fmtMin(tot)}</b> · ${esc(PLAYERS[opt.p].label)} players · party points all the way to the finale`;
+    const L = LENGTHS.find((x) => x.k === opt.each), I = INTROS.find((x) => x.k === opt.intros);
+    sub.innerHTML = `<b>${lineup.length}</b> game${lineup.length === 1 ? '' : 's'} · about <b>${fmtMin(tot)}</b> · ${esc(PLAYERS[opt.p].label)} players · ${L && L.m ? `${esc(L.label.toLowerCase())} games (~${L.m} min)` : 'each game its usual length'} · ${esc(I ? I.icon + ' ' + I.label.toLowerCase() : '')}`;
   }
   async function rerollOne(i) {
     const k = lineup[i], big = GAMES[k].big;
@@ -457,13 +497,15 @@
       sfx('start');
       root.classList.add('launch');
       // A party needs a box game to start in; a lone JustMafia is just a game of JustMafia.
-      const url = lineup.length === 1 && lineup[0] === 'mafia' ? '/mafia' : `/box/tv?game=${encodeURIComponent(lineup[0])}&party=${lineup.map(encodeURIComponent).join(',')}&minutes=${TIMES[opt.t].m}${opt.flow === 'lobby' ? '&flow=lobby' : ''}`;
+      const plan = Object.fromEntries(lineup.map((k) => [k, planOf(k)]));
+      const extra = { intros: opt.intros, each: opt.each, plan, players: [3, 6, 12, 24][opt.p] }; // players: a guess until people join
+      const url = lineup.length === 1 && lineup[0] === 'mafia' ? '/mafia' : `/box/tv?game=${encodeURIComponent(lineup[0])}&party=${lineup.map(encodeURIComponent).join(',')}&minutes=${TIMES[opt.t].m}${opt.flow === 'lobby' ? '&flow=lobby' : ''}&intros=${opt.intros}&each=${opt.each}&plan=${lineup.map((k) => encodeURIComponent(k) + ':' + plan[k]).join(',')}&players=${extra.players}`;
       try { localStorage.setItem('box.recent', lineup[0]); } catch { /* private */ }
       // This TV's room is still open (hub.js): the party starts in it, same code, everyone along.
       const H = window.HUB_ROOM;
       if (H && H.live()) {
         const one = lineup.length === 1 && lineup[0] === 'mafia';
-        setTimeout(() => { H.pick(one ? 'mafia' : lineup[0], one ? null : { games: lineup.slice(), minutes: TIMES[opt.t].m, flow: opt.flow === 'lobby' ? 'lobby' : 'auto' }).then((ok) => { if (!ok) close(); }); }, 600);
+        setTimeout(() => { H.pick(one ? 'mafia' : lineup[0], one ? null : { games: lineup.slice(), minutes: TIMES[opt.t].m, flow: opt.flow === 'lobby' ? 'lobby' : 'auto', ...extra }).then((ok) => { if (!ok) close(); }); }, 600);
         return;
       }
       setTimeout(() => { location.href = url; }, 600);
