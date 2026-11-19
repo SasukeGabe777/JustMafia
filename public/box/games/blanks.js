@@ -18,7 +18,10 @@
   // Fill the prompt's blanks with the chosen answers.
   const fill = (prompt, cards) => { let i = 0; const out = esc(prompt).replace(/___/g, () => `<u>${esc(cards[i++] || '____')}</u>`); return i < cards.length ? out + ' <u>' + cards.slice(i).map(esc).join(' / ') + '</u>' : out; };
   const blank = (t) => esc(t).replace(/___/g, '<span class="bl-gap"></span>');
-  const nm = (o) => (o ? (o.av ? esc(o.av) + ' ' : '') + esc(o.name) : '');
+  // Players show as their JustGameBox character (public/box/portrait.js), or their emoji without one.
+  const face = (o, n, opt) => (BOX.face ? BOX.face(o, n, opt) : esc((o && (o.av || o.avatar)) || '🙂'));
+  const body = (o, h, opt) => (BOX.body ? BOX.body(o, h, opt) : `<span class="bx-bigemo">${esc((o && (o.av || o.avatar)) || '🙂')}</span>`);
+  const nm = (o, n = 30) => (o ? face(o, n, { cls: 'bx-nmf' }) + ' ' + esc(o.name) : '');
   const pickTag = (p) => (p && p.pick > 1 ? `<span class="bl-pick">PICK ${p.pick}</span>` : '');
   const love = (a) => [a.votes ? `${a.votes} vote${a.votes === 1 ? '' : 's'}` : '', a.hearts ? `${a.hearts} ❤️` : ''].filter(Boolean).join(' · ');
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
@@ -26,7 +29,7 @@
   const promptCard = (inner, o = {}) => `<div class="bl-black bx-prompt ${o.cls || ''}" ${o.id ? `id="${esc(o.id)}"` : ''}><span class="bx-tab">${o.tab || 'FILL IT IN!'}</span><div class="bx-ptext">${inner}</div>${o.pick || ''}${o.foot ? `<span class="bx-foot">${o.foot}</span>` : ''}</div>`;
   // A cream answer card with a candy stripe.
   const answerCard = (cards, o = {}) => `<div class="bl-white bx-card ${o.cls || ''}" ${o.id ? `id="${esc(o.id)}"` : ''} style="--st:${stripe(o.key || cards.join('|'))};--tl:${tilt(o.key || cards.join('|'))}deg${o.d != null ? `;--d:${o.d}s` : ''}">${o.n != null ? `<span class="bx-n">${o.n}</span>` : ''}${cards.map((c) => `<div>${esc(c)}</div>`).join('<hr>')}${o.by ? `<small>${o.by}</small>` : ''}</div>`;
-  const scoreboard = (list, s) => `<aside class="bx-score"><h3>Scoreboard</h3><div class="bx-rows">${(list || []).map((r, i) => `<div class="bx-row ${i === 0 && r.points > 0 ? 'lead' : ''}"><span class="bx-rk">${i === 0 && r.points > 0 ? '👑' : i + 1}</span><span class="bx-av">${esc(r.av || '🙂')}</span><span class="bx-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div>${s && s.toWin ? `<div class="bx-goal">First to <b>${s.toWin}</b> wins</div>` : ''}</aside>`;
+  const scoreboard = (list, s) => `<aside class="bx-score"><h3>Scoreboard</h3><div class="bx-rows">${(list || []).map((r, i) => `<div class="bx-row ${i === 0 && r.points > 0 ? 'lead' : ''}"><span class="bx-rk">${i === 0 && r.points > 0 ? '👑' : i + 1}</span><span class="bx-av">${face(r, 34, i === 0 && r.points > 0 ? { mood: 'grin' } : {})}</span><span class="bx-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div>${s && s.toWin ? `<div class="bx-goal">First to <b>${s.toWin}</b> wins</div>` : ''}</aside>`;
 
   // ---------- TV lobby: the house rules as a fanned hand of cards ----------
   function lobbyTv(el, L) {
@@ -58,7 +61,7 @@
           <div class="bx-links"><button class="bx-link" id="add-bots">+ add 5 test bots</button><button class="bx-link" id="rm-bots">remove bots</button><button class="bx-link" id="tv-switch">🎮 other game</button></div></div>
       </section>
       <section class="bx-cast"><div class="bx-casth">Tonight’s players <b>${n}</b>/${L.max || 100}</div>
-        <div class="bx-roster" id="roster">${L.players.map((p, i) => `<span class="chip bx-chip ${p.online ? '' : 'off'}" id="bxc-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--st:${STRIPES[i % STRIPES.length]};--tl:${tilt(p.id, 5)}deg"><span class="bx-cav">${esc(p.avatar || '🙂')}</span><span class="bx-cnm">${esc(p.name)}</span>${p.bot ? '<small>bot</small>' : ''}</span>`).join('') || '<div class="bx-empty">Scan the code and grab a seat!<br>Your phone is your hand of cards.</div>'}</div>
+        <div class="bx-roster" id="roster">${L.players.map((p, i) => `<span class="chip bx-chip ${p.online ? '' : 'off'}" id="bxc-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--st:${STRIPES[i % STRIPES.length]};--tl:${tilt(p.id, 5)}deg"><span class="bx-cav">${face(p, 60)}</span><span class="bx-cnm">${esc(p.name)}</span>${p.bot ? '<small>bot</small>' : ''}</span>`).join('') || '<div class="bx-empty">Scan the code and grab a seat!<br>Your phone is your hand of cards.</div>'}</div>
         ${L.lineupHtml ? `<div class="bx-lineup">${L.lineupHtml}</div>` : ''}
       </section>
     </div><div class="bx-lip"></div>`);
@@ -80,7 +83,7 @@
     const awards = (s.awards || []).map((x, i) => `<div class="bx-award" style="--d:${0.9 + i * 0.25}s;--st:${STRIPES[i % STRIPES.length]};--tl:${tilt(x.title, 3)}deg"><div class="ic">${x.icon}</div><div class="t">${esc(x.title)}</div><div class="n">${nm(x)}</div><div class="v">${esc(x.value)}</div></div>`).join('');
     BOX.morph(el, `<div class="bx bx-tv bx-over" data-phase="over">
       <section class="bx-overmain">
-        <div class="bx-champ"><div class="bx-burst"></div><div class="bx-champl">Funniest person in the room</div><h2>${nm(w)}</h2>${w ? `<div class="bx-pts">${plural(w.points, 'point')}</div>` : ''}</div>
+        <div class="bx-champ"><div class="bx-burst"></div>${w ? `<div class="bx-champfig">${body(w, 190, { mood: 'grin' })}</div>` : ''}<div class="bx-champl">Funniest person in the room</div><h2>${w ? esc(w.name) : ''}</h2>${w ? `<div class="bx-pts">${plural(w.points, 'point')}</div>` : ''}</div>
         ${b ? `<div class="bx-best"><div class="bx-label">🏆 Line of the night</div>${promptCard(fill(b.prompt, b.cards), { cls: 'mid', tab: 'BEST LINE', foot: `${nm(b)}${b.love ? ` · ${b.love} ❤️` : ''}` })}</div>` : ''}
         ${awards ? `<div class="bx-awards">${awards}</div>` : ''}
       </section>${scoreboard(s.standings.slice(0, 10))}</div><div class="bx-lip"></div>`);
@@ -94,7 +97,7 @@
       return `${top}<div class="bx-stage"><div class="bx-pickrow">${P ? promptCard(blank(P.text), { cls: 'big drop', id: `bxp-${s.round}`, pick: pickTag(P), foot: `JUSTBLANKS · ROUND ${s.round}` }) : ''}
         <div class="bx-table"><div class="bx-call">📱 Play your funniest card!</div><div class="bx-count"><b>${s.played}</b> of ${s.of} played</div>
         ${s.hurry ? `<div class="bx-hurry">⏰ Hurry up! Waiting on ${left} more…</div>` : ''}
-        <div class="bx-seats">${s.table.map((p) => `<div class="bx-seat ${p.done ? 'done' : ''}" id="bxt-${esc(p.name)}-${p.done ? 1 : 0}"><div class="bx-sc">${p.done ? '<b>J!</b>' : `<i>${esc(p.av || '🙂')}</i>`}</div><span>${esc(p.name)}</span></div>`).join('')}${s.tableMore ? `<div class="bx-seat more"><div class="bx-sc"><i>+${s.tableMore}</i></div></div>` : ''}</div></div></div></div>`;
+        <div class="bx-seats">${s.table.map((p) => `<div class="bx-seat ${p.done ? 'done' : ''}" id="bxt-${esc(p.name)}-${p.done ? 1 : 0}"><div class="bx-sc">${p.done ? '<b>J!</b>' : `<i>${face(p, 54)}</i>`}</div><span>${esc(p.name)}</span></div>`).join('')}${s.tableMore ? `<div class="bx-seat more"><div class="bx-sc"><i>+${s.tableMore}</i></div></div>` : ''}</div></div></div></div>`;
     }
     if (s.phase === 'reveal') {
       const cur = s.answers[s.answers.length - 1], earlier = s.answers.slice(0, -1);
@@ -113,7 +116,7 @@
       const L = s.last;
       if (L.none) return `${top}<div class="bx-stage"><div class="bx-readwrap">${promptCard(blank(P.text), { cls: 'huge' })}<div class="bx-callout">😶 Nobody played a card. Next round!</div></div></div>`;
       const how = L.how === 'judge' ? `⚖️ ${esc(L.judge || 'The Judge')} picked it` : L.how === 'tie' ? '🤝 A tie! Both get a point' : L.how === 'random' ? '⏰ Time ran out: picked at random' : `🗳️ ${plural(L.winners[0].votes, 'vote')}`;
-      const wins = L.winners.map((w, i) => `<div class="bx-winwrap" style="--d:${i * 0.4}s">${promptCard(fill(P.text, w.cards), { cls: 'huge winner', tab: 'WINNER!' })}<div class="bx-ha">HA!</div></div><div class="bx-stamprow"><div class="bl-by bx-stamp" style="--d:${1.4 + i * 0.4}s">🏆 ${nm(w)}${w.written ? ' <small>✍️ wrote it!</small>' : ''}</div></div>`).join('');
+      const wins = L.winners.map((w, i) => `<div class="bx-winwrap" style="--d:${i * 0.4}s">${promptCard(fill(P.text, w.cards), { cls: 'huge winner', tab: 'WINNER!' })}<div class="bx-ha">HA!</div></div><div class="bx-stamprow"><div class="bl-by bx-stamp" style="--d:${1.4 + i * 0.4}s">🏆 ${nm(w, 46)}${w.written ? ' <small>✍️ wrote it!</small>' : ''}</div></div>`).join('');
       const others = L.all.filter((a) => !a.win);
       return `${top}<div class="bx-stage"><div class="bl-win bx-win" id="blw-${s.round}"><div class="bx-burst"></div>${wins}<div class="bx-how">${how}</div>
         ${L.crowd ? `<div class="bx-crowd">❤️ Crowd favourite: <b>${nm(L.crowd)}</b> with “${L.crowd.cards.map(esc).join(' / ')}” (${L.crowd.hearts} ❤️)</div>` : ''}
@@ -129,7 +132,7 @@
       ${v.stats ? `<div class="bx-stats"><span>🏆 ${plural(v.stats.wins, 'round')} won</span><span>❤️ ${v.stats.love} votes &amp; hearts</span>${v.stats.written ? `<span>✍️ ${v.stats.written} written win${v.stats.written === 1 ? '' : 's'}</span>` : ''}</div>` : ''}
       ${(v.awards || []).map((a) => `<div class="bx-myaward">${a.icon} <b>${esc(a.title)}</b><small>${esc(a.value)}</small></div>`).join('')}</div>
       ${b ? `<div class="bx-label">Your best line</div>${promptCard(fill(b.prompt, b.cards), { cls: 'small', tab: 'YOUR BEST' })}` : ''}
-      <div class="bx-pcard">${(v.final || []).map((r, i) => `<div class="bx-row ${i === 0 ? 'lead' : ''}"><span class="bx-rk">${i === 0 ? '👑' : i + 1}</span><span class="bx-av">${esc(r.av || '🙂')}</span><span class="bx-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
+      <div class="bx-pcard">${(v.final || []).map((r, i) => `<div class="bx-row ${i === 0 ? 'lead' : ''}"><span class="bx-rk">${i === 0 ? '👑' : i + 1}</span><span class="bx-av">${face(r, 30)}</span><span class="bx-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
     if (first('over:' + v.rank + ':' + v.points)) ctx.haptic(v.rank === 1 ? 'win' : 'big');
   }
 

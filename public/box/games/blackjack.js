@@ -7,7 +7,10 @@
   const { esc, card, timer } = BOX;
   const RESULT = { win: ['WIN', 'good'], blackjack: ['BLACKJACK!', 'good'], charlie: ['5-CARD CHARLIE!', 'good'], lucky: ['LUCKY 21!', 'good'], push: ['PUSH', 'meh'], lose: ['LOSE', 'bad'], bust: ['BUST', 'bad'] };
   let pending = 0, pendKey = '', srvBet = 0;
-  const av = (x) => (x && x.av ? `<span class="bj-av">${esc(x.av)}</span>` : '');
+  // Your JustGameBox character (visor, shades, bow tie from the shop) where the emoji was.
+  const face = (x, sz = 28, o) => (x && BOX.face ? BOX.face({ ...x, avatar: x.avatar || x.av }, sz, o) : esc((x && (x.av || x.avatar)) || '🙂'));
+  const body = (x, h = 96, o) => (x && BOX.body ? BOX.body({ ...x, avatar: x.avatar || x.av }, h, o) : `<span class="bj-emo">${esc((x && (x.av || x.avatar)) || '🙂')}</span>`);
+  const av = (x) => (x && (x.av || x.id) ? `<span class="bj-av">${face(x, 28)}</span>` : '');
   const fire = (n) => (n >= 3 ? `<span class="bj-fire" title="${n} wins in a row">🔥${n}</span>` : '');
 
   // ---------- drawn-in-code art ----------
@@ -145,7 +148,7 @@
           <svg class="bj-arc" viewBox="0 0 1000 300" aria-hidden="true"><path id="bjl-arcp" d="M60 40 Q500 330 940 40" fill="none"/><text><textPath href="#bjl-arcp" startOffset="50%" text-anchor="middle">♠ BLACKJACK PAYS 3 TO 2 ♥ DEALER STANDS ON 17 ♣</textPath></text></svg>
           <div class="settings bjl-settings" id="settings">${rest.map((f) => feltSetting(f, L.settings[f.key])).join('')}${bools.map((f) => hidden(f, L.settings[f.key])).join('')}</div>
           <div class="bjl-seated"><div class="bjl-st">${n ? `<b>${n}</b> ${n === 1 ? 'player' : 'players'} at the table` : 'Empty seats, waiting for players…'}</div>
-            <div class="roster bjl-roster ${sz}" id="roster">${L.players.map((p, i) => `<span class="chip bjl-p ${p.online === false ? 'off' : ''} ${L.vip && p.name === L.vip ? 'vip' : ''}" id="bjp-${esc(p.id)}" data-kick="${esc(p.id)}" style="--c:${esc(p.color || '#e8323c')};--d:${(i % 6) * 0.2}s" title="Click to remove"><span class="tok"><span class="av">${esc(p.avatar || '🙂')}</span></span><span class="nm">${esc(p.name)}</span></span>`).join('')}</div></div>
+            <div class="roster bjl-roster ${sz}" id="roster">${L.players.map((p, i) => `<span class="chip bjl-p ${p.online === false ? 'off' : ''} ${L.vip && p.name === L.vip ? 'vip' : ''}" id="bjp-${esc(p.id)}" data-kick="${esc(p.id)}" style="--c:${esc(p.color || '#e8323c')};--d:${(i % 6) * 0.2}s" title="Click to remove"><span class="tok"><span class="av">${face(p, sz === 'tiny' ? 34 : sz === 'small' ? 48 : 62)}</span></span><span class="nm">${esc(p.name)}</span></span>`).join('')}</div></div>
         </div></div></section>
       <aside class="bjl-side">
         <div class="bjl-member"><div class="bjl-mtop"><small>Members only</small><span class="bjl-script">Blackjack Night</span></div>
@@ -180,7 +183,7 @@
   function seat(x, size, phase, pos) {
     const res = x.hands.map((h) => h.result).filter(Boolean);
     const lost = res.length && res.every((r) => r === 'bust' || r === 'lose');
-    const cls = [size, lost ? 'lost' : '', phase === 'results' && x.net > 0 ? 'won' : '', x.acting ? 'acting' : '', phase === 'betting' && x.bet ? 'in' : '', !x.hands.length && phase !== 'betting' ? 'out' : ''].join(' ');
+    const cls = [size, lost ? 'lost' : '', phase === 'results' && x.net > 0 ? 'won' : '', x.acting ? 'acting' : '', phase === 'betting' && x.bet ? 'in' : '', !x.hands.length && phase !== 'betting' ? 'out' : '', /left:(5\d|[6-9]\d)\./.test(pos || '') ? 'rside' : ''].join(' ');
     const st = seatStatus(x, phase);
     const bet = x.bet || x.hands.reduce((a, h) => a + (h.bet || 0), 0);
     if (size === 'lg') {
@@ -188,7 +191,7 @@
       return `<div class="bj-seat lg ${cls}" id="bs-${esc(x.id)}" style="${pos};--c:${esc(x.color || '#e8323c')}">
         <div class="bj-hands">${hands || (phase === 'betting' ? '' : '<span class="bj-sit">sitting out</span>')}</div>
         <div class="bj-bspot ${bet ? 'has' : ''}">${bet ? stack(bet, 6, chipPaint(x)) : ''}${bet ? `<b class="bj-amt">${bet}</b>` : ''}</div>
-        <div class="bj-plate"><span class="bj-pav">${esc(x.av || '🙂')}</span><span class="nm">${esc(x.name)}</span>${fire(x.streak)}${x.targeted ? `<span class="bj-tg" title="Bust Bets on this player">🎯${x.targeted}</span>` : ''}</div>
+        <div class="bj-plate"><span class="bj-who">${body(x, 104, { mood: lost ? 'sad' : phase === 'results' && x.net > 0 ? 'grin' : undefined })}</span><span class="nm">${esc(x.name)}</span>${fire(x.streak)}${x.targeted ? `<span class="bj-tg" title="Bust Bets on this player">🎯${x.targeted}</span>` : ''}</div>
         <div class="bj-chips">${coin(x)} ${x.chips}</div>${st}</div>`;
     }
     const hands = size === 'xs' || size === 'sm' ? x.hands.map((h) => `<span class="bj-tot">${h.total}</span>`).join(' ')
@@ -219,11 +222,11 @@
   const eventBadge = (e, big) => (e ? `<div class="bj-event ${e.key} ${big ? 'big' : ''}"><span class="ic">${e.icon}</span><div><b>${esc(e.name)}</b><small>${esc(e.text)}</small></div></div>` : '');
   function finale(s) {
     const st = s.top, w = st[0];
-    const step = (x, p) => (x ? `<div class="pd p${p}"><div class="who"><span>${esc(x.av || '🙂')}</span></div><div class="nm">${esc(x.name)}</div><div class="blk">${stack(x.chips, p === 1 ? 9 : p === 2 ? 7 : 5)}<b>${p}</b><small>${x.chips} chips</small></div></div>` : '<div class="pd"></div>');
+    const step = (x, p) => (x ? `<div class="pd p${p}"><div class="who bj-podfig">${body(x, p === 1 ? 170 : 136, { mood: p === 1 ? 'grin' : undefined })}</div><div class="nm">${esc(x.name)}</div><div class="blk">${stack(x.chips, p === 1 ? 9 : p === 2 ? 7 : 5)}<b>${p}</b><small>${x.chips} chips</small></div></div>` : '<div class="pd"></div>');
     return `<div class="bj-over"><div class="bj-hr"><small>High roller of the night</small><h1>${w ? esc(w.name) : 'Nobody'}</h1><span>${w ? w.chips + ' chips' : ''}</span></div>
       <div class="bj-podium">${step(st[1], 2)}${step(st[0], 1)}${step(st[2], 3)}</div>
-      ${(s.awards || []).length ? `<div class="bj-awards">${s.awards.map((a, i) => `<div class="bj-award" style="--i:${i}"><div class="ic">${a.icon}</div><b>${esc(a.title)}</b><div class="who2">${esc(a.name)}</div><small>${esc(a.why)}</small></div>`).join('')}</div>` : ''}
-      ${st.length > 3 ? `<div class="bj-rest">${st.slice(3, 10).map((x, i) => `<div class="row"><span class="n">${i + 4}</span><span>${esc(x.av || '')} ${esc(x.name)}</span><b>${x.chips} 🪙</b></div>`).join('')}</div>` : ''}</div>`;
+      ${(s.awards || []).length ? `<div class="bj-awards">${s.awards.map((a, i) => `<div class="bj-award" style="--i:${i}"><div class="ic">${a.icon}</div><b>${esc(a.title)}</b><div class="who2">${a.id ? face(a, 30) + ' ' : ''}${esc(a.name)}</div><small>${esc(a.why)}</small></div>`).join('')}</div>` : ''}
+      ${st.length > 3 ? `<div class="bj-rest">${st.slice(3, 10).map((x, i) => `<div class="row"><span class="n">${i + 4}</span><span>${face(x, 30)} ${esc(x.name)}</span><b>${x.chips} 🪙</b></div>`).join('')}</div>` : ''}</div>`;
   }
 
   // ---------- phone haptics: compare with the last view this phone drew ----------
@@ -324,7 +327,7 @@
           <div class="pr-btns bj-quick"><button class="btn ghost small" id="bj-clear">Clear</button><button class="btn ghost small" id="bj-half">Half</button><button class="btn ghost small" id="bj-all">All in</button></div>
           <button class="btn big bj-go" id="bj-bet" ${pending >= v.minBet && !placed ? '' : 'disabled'}>${placed ? 'Bet placed ✓' : 'Bet ' + (pending || '')}</button></div>
           ${v.bustBets && v.others.length ? `<div class="card-box bj-bustbox"><h3>🎯 Bust Bet <span>${v.bustStake} chips · pays ${v.bustPays}</span></h3><p>Who will go over 21 this hand?</p>
-          <div class="bj-bustlist"><button class="bj-bustbtn ${v.bust ? '' : 'sel'}" data-bust="">Nobody</button>${v.others.map((o) => `<button class="bj-bustbtn ${v.bust === o.id ? 'sel' : ''}" data-bust="${esc(o.id)}">${esc(o.name)}</button>`).join('')}</div></div>` : ''}</div>`);
+          <div class="bj-bustlist"><button class="bj-bustbtn ${v.bust ? '' : 'sel'}" data-bust="">Nobody</button>${v.others.map((o) => `<button class="bj-bustbtn ${v.bust === o.id ? 'sel' : ''}" data-bust="${esc(o.id)}">${BOX.face ? BOX.face(o, 26) + ' ' : ''}${esc(o.name)}</button>`).join('')}</div></div>` : ''}</div>`);
         for (const b of el.querySelectorAll('[data-add]')) b.onclick = () => { pending = Math.min(v.chips, pending + Number(b.dataset.add)); if (v.bet && pending !== v.bet) ctx.act({ op: 'bet', amount: 0 }); ctx.sfx('ballot'); ctx.haptic('select'); ctx.redraw(); };
         el.querySelector('#bj-clear').onclick = () => { pending = 0; if (v.bet) ctx.act({ op: 'bet', amount: 0 }); ctx.redraw(); };
         el.querySelector('#bj-half').onclick = () => { pending = Math.max(v.minBet, Math.floor(v.chips / 2)); if (v.bet) ctx.act({ op: 'bet', amount: 0 }); ctx.redraw(); };

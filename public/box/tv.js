@@ -113,6 +113,7 @@
   });
   socket.on('tv', (s) => {
     if (onTitle) return;
+    if (BOX.setRoster && s && s.players) BOX.setRoster(s.players); // every player's character + gear (BOX.face)
     if (s.away) return goAway(s);
     if (s.game && s.game !== gameKey) return switchTo(s);
     state = s; stateAt = Date.now(); render(); playFx(s.fx || []); music(); platform();
@@ -153,7 +154,7 @@
     o.appendChild(el); setTimeout(() => el.remove(), 3300);
   });
   // Pick the next game from the TV (the host's phone can do the same).
-  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'escape', 'marble', 'debate', 'actout', 'tune', 'alien', 'bomb', 'quickdraw', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
+  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'pizza', 'escape', 'marble', 'debate', 'actout', 'tune', 'alien', 'bomb', 'quickdraw', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
   function tvPicker() {
     let o = $('#tv-pick'); if (o) o.remove();
     o = document.createElement('div'); o.id = 'tv-pick'; o.className = 'tv-pick';
@@ -213,7 +214,9 @@
     if (list.length) lastFx = Math.max(lastFx, list[list.length - 1].id);
   }
 
-  const joinUrl = () => (STAND ? `${baseUrl}/${gameKey}/play?room=${state.code}` : `${baseUrl}/box/play?room=${state.code}`);
+  // One QR for the whole night: /j/CODE sends each phone to wherever this room is playing now
+  // (this game, the next one, or JustMafia), so the code never changes between games.
+  const joinUrl = () => `${baseUrl}/j/${state.code}`;
   const qr = () => `/api/qr?text=${encodeURIComponent(joinUrl())}`;
 
   // Big games: a small corner badge (code + QR for late joiners) and a ⚙ host menu.
@@ -285,12 +288,14 @@
     o.innerHTML = `<div class="panel hm-panel"><h2>⚙ Host menu</h2>
       ${streamOnly ? '' : `<div class="hm-row"><button class="btn" data-hm="recap" ${played ? '' : 'disabled'}>🎬 Night recap</button><button class="btn ghost" data-hm="lock">${state && state.locked ? '🔓 Unlock the room' : '🔒 Lock the room'}</button></div>
       <p class="muted small">${played ? `${played} game${played === 1 ? '' : 's'} played tonight.` : 'The recap is ready after the first game.'} ${state && state.locked ? 'The room is locked: new people can only watch.' : 'Lock the room and new people join the audience.'}</p>`}
+      ${streamOnly || !state || !(state.players || []).length ? '' : `<h3>👥 Players</h3><div class="hm-kick">${state.players.map((p) => `<button class="chip" data-hk="${esc(p.id)}" data-name="${esc(p.name)}" title="Remove ${esc(p.name)}"><span class="av">${BOX.portrait ? BOX.portrait.html(p, 24) : esc(p.avatar || '')}</span>${esc(p.name)} <b>✕</b></button>`).join('')}</div><p class="muted small">Click a player to remove them from the room. They can't rejoin from the same phone.</p>`}
       <h3>🎥 Streamer options</h3>
       <div class="hm-togs">${tog('hide', 'Hide room code', 'Blur the code and QR code. Tap them to peek.')}${tog('filter', 'Filter player text', 'Cover swear words and slurs in names and answers.')}${tog('delay', 'Streamer delay', 'Wait a few seconds before a new room code shows.')}</div>
       <button class="btn ghost small" data-close>Done</button></div>`;
     document.body.appendChild(o);
     o.onclick = (e) => { if (e.target === o || e.target.closest('[data-close]')) o.remove(); };
     for (const b of o.querySelectorAll('[data-st]')) b.onclick = () => { const k = b.dataset.st; streamer[k] = !streamer[k]; saveStreamer(); b.classList.toggle('on', streamer[k]); BOX.sfx('pop'); if (k === 'delay' && streamer.delay) delayCode = ''; platform(); };
+    for (const b of o.querySelectorAll('[data-hk]')) b.onclick = () => { if (!confirm(`Remove ${b.dataset.name} from the room?`)) return; host('kick', { id: b.dataset.hk }).then((r) => { if (r && r.ok) { b.remove(); tvToast(`<span class="tt-i">👋</span><div><b>${esc(b.dataset.name)} was removed</b></div>`); } }); };
     for (const b of o.querySelectorAll('[data-hm]')) b.onclick = () => { o.remove(); if (b.dataset.hm === 'recap') startRecap(); else host('lockRoom', { on: !(state && state.locked) }); };
   }
   function gearButton() {
@@ -535,7 +540,7 @@
     $('#tv-switch').onclick = tvPicker;
     const q = $('#quit-title'); if (q) q.onclick = () => { if (confirm('Close this valley and go back to the title screen?')) quitToTitle(); };
   }
-  const partyFace = (r) => { const p = state.players.find((x) => x.id === r.id); return p && p.look && BOX.portrait ? BOX.portrait.html({ ...r, look: p.look }, 24) : esc(r.avatar || ''); };
+  const partyFace = (r) => (BOX.face && BOX.hasLook(r) ? BOX.face(r, 24, { plain: true }) : esc(r.avatar || ''));
   function updateJoin() {
     const url = joinUrl();
     $('#vip').innerHTML = state.vip ? `👑 <b>${esc(state.vip)}</b> is the host and can start from their phone` : 'The first person to join becomes the host 👑';

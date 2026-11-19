@@ -265,3 +265,10 @@ body.g-tune .tbp { display: flex; flex-direction: column; gap: 12px; padding-bot
 .tbp-guess { flex-direction: column; align-items: stretch; }
 .tbp-singer input { padding: 12px 14px; border-radius: 14px; border: 2px solid #ffd23f; background: rgba(10, 3, 26, 0.9); color: #fff; font-size: 17px; }
 .tbp-singer input:focus { outline: none; box-shadow: 0 0 0 3px rgba(255, 210, 63, 0.4); }
+/* Characters (BOX.face / BOX.body): contestants in their headphones with their mic; the DJ of each song and the podium stand full-size. */
+body.g-tune .tb-chip i { width: 40px; height: 40px; overflow: hidden; }
+body.g-tune .tb-req .av .bx-face, body.g-tune .tb-trow .bx-face, body.g-tune .tb-srow .bx-face, body.g-tune .tb-board .bx-face, body.g-tune .tbp-who .bx-face { margin: -7px 0; }
+body.g-tune .tb-dj { line-height: 0; margin: 2px 0 -6px; filter: drop-shadow(0 0 14px var(--pink, #ff3d8b)); }
+body.g-tune .tb-card h1 .bx-face, body.g-tune .tb-win .bx-face { vertical-align: middle; margin: -0.2em 0; }
+body.g-tune .tb-pod .av { line-height: 0; }
+body.g-tune .tbl-roster .lbl { overflow: hidden; }

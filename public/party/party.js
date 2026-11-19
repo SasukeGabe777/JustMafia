@@ -32,7 +32,7 @@
     bid: ['📦', 'JustBid', 1, 100, 22], price: ['💸', 'Price Panic', 1, 100, 15], emoji: ['😜', 'Emoji Charades', 3, 100, 17],
     truths: ['🤥', 'Two Truths & a Lie', 3, 100, 17], likely: ['👑', 'Most Likely To…', 3, 100, 10], whosaid: ['🕵️', 'Who Said It?', 3, 100, 15],
     spectrum: ['🧭', 'Where Do You Stand?', 3, 100, 15], sketch: ['✏️', 'JustSketch Relay', 3, 100, 15], funny: ['😂', 'JustFunny', 2, 100, 30],
-    zombie: ['🧟', 'Zombie Survival', 2, 100, 20], escape: ['🗝️', 'JustEscape', 1, 12, 30], marble: ["🔮", "JustMarble", 1, 12, 12], debate: ["🗣️", "Debate Club", 2, 100, 15], actout: ["🎭", "Act It Out", 2, 100, 15], tune: ["🎵", "Tune Buzz", 2, 100, 15], alien: ["🛸", "Alien Abduction", 2, 100, 15], bomb: ["💣", "Bomb Squad", 2, 100, 15], quickdraw: ["⚡", "Quick Draw", 2, 100, 15], summon: ["⚔️", "JustSummon", 2, 100, 15], letters: ["🔤", "Letter Rush", 2, 100, 15], memes: ["🖼️", "Meme Maker", 2, 100, 15], colormatch: ["🎨", "Color Match", 2, 100, 15], trivia: ["🧠", "Hot Take Trivia", 2, 16, 8], plinko: ["🎯", "JustDrop", 1, 100, 12], ducks: ['🦆', 'JustRaiseDucks', 1, 100, 27], kingdoms: ['🏰', 'JustKingdoms', 2, 100, 40],
+    zombie: ['🧟', 'Zombie Survival', 2, 100, 20], pizza: ["🍕", "JustPizza", 1, 100, 12], escape: ['🗝️', 'JustEscape', 1, 12, 30], marble: ["🔮", "JustMarble", 1, 12, 12], debate: ["🗣️", "Debate Club", 2, 100, 15], actout: ["🎭", "Act It Out", 2, 100, 15], tune: ["🎵", "Tune Buzz", 2, 100, 15], alien: ["🛸", "Alien Abduction", 2, 100, 15], bomb: ["💣", "Bomb Squad", 2, 100, 15], quickdraw: ["⚡", "Quick Draw", 2, 100, 15], summon: ["⚔️", "JustSummon", 2, 100, 15], letters: ["🔤", "Letter Rush", 2, 100, 15], memes: ["🖼️", "Meme Maker", 2, 100, 15], colormatch: ["🎨", "Color Match", 2, 100, 15], trivia: ["🧠", "Hot Take Trivia", 2, 16, 8], plinko: ["🎯", "JustDrop", 1, 100, 12], ducks: ['🦆', 'JustRaiseDucks', 1, 100, 27], kingdoms: ['🏰', 'JustKingdoms', 2, 100, 40],
     mafia: ['🔪', 'JustMafia', 5, 100, 40],
   };
   const range = (txt) => { const m = txt && txt.match(/(\d+)\s*[–-]\s*(\d+)/); return m ? [Number(m[1]), Number(m[2])] : null; };
@@ -459,6 +459,13 @@
       // A party needs a box game to start in; a lone JustMafia is just a game of JustMafia.
       const url = lineup.length === 1 && lineup[0] === 'mafia' ? '/mafia' : `/box/tv?game=${encodeURIComponent(lineup[0])}&party=${lineup.map(encodeURIComponent).join(',')}&minutes=${TIMES[opt.t].m}${opt.flow === 'lobby' ? '&flow=lobby' : ''}`;
       try { localStorage.setItem('box.recent', lineup[0]); } catch { /* private */ }
+      // This TV's room is still open (hub.js): the party starts in it, same code, everyone along.
+      const H = window.HUB_ROOM;
+      if (H && H.live()) {
+        const one = lineup.length === 1 && lineup[0] === 'mafia';
+        setTimeout(() => { H.pick(one ? 'mafia' : lineup[0], one ? null : { games: lineup.slice(), minutes: TIMES[opt.t].m, flow: opt.flow === 'lobby' ? 'lobby' : 'auto' }).then((ok) => { if (!ok) close(); }); }, 600);
+        return;
+      }
       setTimeout(() => { location.href = url; }, 600);
     }
   }

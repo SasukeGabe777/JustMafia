@@ -11,7 +11,8 @@
   let draft = ['', '', ''], lie = null, editing = false, hintN = -1, lobbyErr = '';
   const once = new Set();
   const first = (k) => { if (once.has(k)) return false; once.add(k); if (once.size > 300) once.clear(); return true; };
-  const nm = (o) => (o ? (o.av ? esc(o.av) + ' ' : '') + esc(o.name) : '');
+  const face = (o, n, opt) => (BOX.face ? BOX.face(o, n, opt) : esc((o && (o.av || o.avatar)) || '🙂'));
+  const nm = (o, n = 28) => (o ? face(o, n, { cls: 'tx-nmf' }) + ' ' + esc(o.name) : '');
   const N = ['A', 'B', 'C'];
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const hash = (s) => { let h = 7; for (const c of String(s)) h = (h * 31 + c.codePointAt(0)) >>> 0; return h; };
@@ -29,11 +30,17 @@
   ];
   const hint = () => (hintN < 0 ? 'Mix the boring-but-true with the wild-but-false. Make your lie believable!' : '💡 ' + (served || HINTS)[hintN % (served || HINTS).length]);
   // A suspect in the lineup: silhouette, their avatar as the face, a numbered placard.
-  const suspect = (p, i, o = {}) => `<div class="tx-sus ${o.cls || ''}" ${o.id ? `id="${esc(o.id)}"` : ''} style="--h:${(0.86 + (hash(p.name) % 22) / 100).toFixed(2)};--d:${(o.d || 0).toFixed(2)}s"><div class="tx-head"><span>${esc(p.av || p.avatar || '🙂')}</span></div><div class="tx-body"></div><div class="tx-plac"><b>${o.num != null ? o.num : i + 1}</b><span>${esc(p.name)}</span></div>${o.stamp ? `<div class="tx-sstamp">${o.stamp}</div>` : ''}</div>`;
+  // With a JustGameBox character (public/box/portrait.js) the suspect is that character, full body,
+  // holding the placard; without one, the old silhouette with their emoji as the face.
+  const suspect = (p, i, o = {}) => {
+    const h = 0.86 + (hash(p.name) % 22) / 100, big = /\bbig\b/.test(o.cls || '');
+    const fig = BOX.body && BOX.hasLook && BOX.hasLook(p) ? BOX.body(p, big ? 300 : Math.round(166 * h), o.mood ? { mood: o.mood } : {}) : '';
+    return `<div class="tx-sus ${fig ? 'has-fig' : ''} ${o.cls || ''}" ${o.id ? `id="${esc(o.id)}"` : ''} style="--h:${h.toFixed(2)};--d:${(o.d || 0).toFixed(2)}s">${fig ? `<div class="tx-fig">${fig}</div>` : `<div class="tx-head"><span>${esc(p.av || p.avatar || '🙂')}</span></div><div class="tx-body"></div>`}<div class="tx-plac"><b>${o.num != null ? o.num : i + 1}</b><span>${esc(p.name)}</span></div>${o.stamp ? `<div class="tx-sstamp">${o.stamp}</div>` : ''}</div>`;
+  };
   const polygraph = (wild) => `<div class="tx-poly ${wild ? 'wild' : ''}"><div class="tx-roll"><svg class="tx-trace" viewBox="0 0 1200 60" preserveAspectRatio="none"><path d="${TRACE}"/></svg></div><div class="tx-mach"><span class="tx-bulb ${wild ? 'on' : ''}">LIE</span><i></i><i></i><i></i></div></div>`;
   // One polygraph trace (two identical halves, so it can scroll forever).
   const TRACE = (() => { let d = 'M0 30'; for (let h = 0; h < 2; h++) for (let x = 0; x <= 600; x += 6) { const X = h * 600 + x, w = Math.sin(x * 0.07) * 9 + Math.sin(x * 0.19 + 1) * 5 + (x > 380 && x < 470 ? Math.sin(x * 0.9) * 18 : 0); d += ` L${X} ${(30 + w).toFixed(1)}`; } return d; })();
-  const scoreboard = (list) => `<aside class="tx-score"><h3>Case board</h3><div class="tx-rows">${(list || []).map((r, i) => `<div class="tx-row ${i === 0 && r.points > 0 ? 'lead' : ''}"><span class="tx-rk">${i + 1}</span><span class="tx-av">${esc(r.av || '🙂')}</span><span class="tx-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></aside>`;
+  const scoreboard = (list) => `<aside class="tx-score"><h3>Case board</h3><div class="tx-rows">${(list || []).map((r, i) => `<div class="tx-row ${i === 0 && r.points > 0 ? 'lead' : ''}"><span class="tx-rk">${i + 1}</span><span class="tx-av">${face(r, 32, i === 0 && r.points > 0 ? { mood: 'smirk' } : {})}</span><span class="tx-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></aside>`;
 
   // ---------- TV lobby: the case file, the evidence board and the lineup ----------
   const PINS = [[22, 18], [318, 40], [612, 12], [64, 200], [360, 218], [652, 192]];
@@ -103,7 +110,7 @@
     const gal = (s.gallery || []).length ? `<div class="tx-label sm">Lies we never got to</div><div class="tx-gallery">${s.gallery.map((g) => `<div class="tx-strip" style="--tl:${tilt(g.lie, 1.5).toFixed(2)}deg"><b>${nm(g)}:</b> “${esc(g.lie)}”</div>`).join('')}</div>` : '';
     BOX.morph(el, `<div class="tx tx-tv tx-over" data-phase="over"><section class="tx-overmain">
       <div class="tx-closed">CASE CLOSED</div>
-      <div class="tx-mug">${w ? `<div class="tx-mugshot">${suspect(w, 0, { num: '#1' })}</div>` : ''}<div><div class="tx-label">Master of deception</div><h2>${nm(w)}</h2>${w ? `<div class="tx-pts">${plural(w.points, 'point')}</div>` : ''}</div></div>
+      <div class="tx-mug">${w ? `<div class="tx-mugshot">${suspect(w, 0, { num: '#1', mood: 'smirk' })}</div>` : ''}<div><div class="tx-label">Master of deception</div><h2>${w ? esc(w.name) : ''}</h2>${w ? `<div class="tx-pts">${plural(w.points, 'point')}</div>` : ''}</div></div>
       ${hl ? `<div class="tx-hls">${hl}</div>` : ''}${awards ? `<div class="tx-awards">${awards}</div>` : ''}${gal}
     </section>${scoreboard(s.standings.slice(0, 10))}</div><div class="tx-lamp"></div>`);
   }
@@ -141,7 +148,8 @@
 
   // ---------- phone ----------
   let served = null; // the room's idea-starter pack (server sends it while writing)
-  function phone(el, v, ctx) {
+  function phone(el, v, ctx, view) {
+    const me = view && view.me;
     // JustGold gear: this game's phone theme, a frame and badge over your screen (public/shared/gear.js).
     if (window.MT_GEAR) window.MT_GEAR.phoneTheme(el, arguments[3], 'truths');
     if (v && Array.isArray(v.ideas) && v.ideas.length) served = v.ideas;
@@ -153,7 +161,7 @@
       BOX.morph(el, `<div class="tx tx-ph" data-phase="over"><div class="tx-paper tx-center tx-endcard"><div class="tx-closed sm">CASE CLOSED</div><div class="tx-rank">#${v.rank}</div><p class="tx-big">Game over! ${plural(v.points, 'point')}</p>
         ${(v.awards || []).map((a) => `<div class="tx-myaward">${a.icon} <b>${esc(a.title)}</b><small>${esc(a.value)}</small></div>`).join('')}
         <div class="tx-stats"><span>🕵️ ${st.right}/${st.guesses} spotted</span><span>😈 fooled ${st.fooled}</span></div></div>
-        <div class="tx-paper">${(v.final || []).map((r, i) => `<div class="tx-row ${i === 0 ? 'lead' : ''}"><span class="tx-rk">${i + 1}</span><span class="tx-av">${esc(r.av || '🙂')}</span><span class="tx-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
+        <div class="tx-paper">${(v.final || []).map((r, i) => `<div class="tx-row ${i === 0 ? 'lead' : ''}"><span class="tx-rk">${i + 1}</span><span class="tx-av">${face(r, 30)}</span><span class="tx-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
       if (first('over:' + v.rank)) ctx.haptic(v.rank === 1 ? 'win' : 'big');
       return;
     }
@@ -192,7 +200,7 @@
     const c = v.seat; if (!c) { BOX.morph(el, wrap('wait', '<div class="tx-paper tx-center"><h3>Bringing in the next suspect…</h3></div>')); return; }
     if (c.mine && v.phase !== 'reveal') {
       if (first('seat:' + c.n)) ctx.haptic('big');
-      BOX.morph(el, wrap('hot', `<div class="tx-hotph tx-center"><div class="tx-cone"></div><div class="tx-face">😐</div><h3>You’re in the hot seat!</h3><p>${v.phase === 'talk' ? 'They’re grilling you. Defend all three!' : 'Keep a straight face. They’re voting…'}</p><p class="tx-muted">${c.voted} / ${c.of} voted ${timer(v.endsIn)}</p></div>`));
+      BOX.morph(el, wrap('hot', `<div class="tx-hotph tx-center"><div class="tx-cone"></div><div class="tx-face">${me && BOX.hasLook && BOX.hasLook(me) ? face(me, 110, { mood: 'serious' }) : '😐'}</div><h3>You’re in the hot seat!</h3><p>${v.phase === 'talk' ? 'They’re grilling you. Defend all three!' : 'Keep a straight face. They’re voting…'}</p><p class="tx-muted">${c.voted} / ${c.of} voted ${timer(v.endsIn)}</p></div>`));
       return;
     }
     if (v.phase === 'talk' || v.phase === 'vote') {

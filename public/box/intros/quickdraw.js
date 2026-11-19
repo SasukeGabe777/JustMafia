@@ -67,7 +67,7 @@
         a.text(g, 'WANTED', 0, -ph / 2 + pw * 0.15, pw * 0.2, '#3a1d0c', { font: POSTER });
         g.fillStyle = c.color || '#b8402a'; g.globalAlpha *= 0.35; g.fillRect(-pw * 0.32, -ph / 2 + pw * 0.28, pw * 0.64, pw * 0.56); g.globalAlpha = clamp(k * 2);
         g.strokeStyle = '#3a1d0c'; g.lineWidth = 4; g.strokeRect(-pw * 0.32, -ph / 2 + pw * 0.28, pw * 0.64, pw * 0.56);
-        s.emoji(c.avatar || '🤠', 0, -ph / 2 + pw * 0.56, pw * 0.42);
+        s.face(c, 0, -ph / 2 + pw * 0.56, pw * 0.42);
         a.text(g, c.name, 0, ph / 2 - pw * 0.36, pw * 0.14, '#3a1d0c', { font: POSTER, max: pw * 0.86 });
         a.text(g, `REWARD $${(((i * 7919 + 13) % 9) + 1) * 500}`, 0, ph / 2 - pw * 0.16, pw * 0.085, '#b8402a', { font: TYPE, max: pw * 0.86 });
       }

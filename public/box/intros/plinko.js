@@ -113,7 +113,7 @@
       // the drop with a bounce on landing
       const fall = Math.min(1, k), y = fall < 1 ? lerp(-150, yEnd, fall * fall) : yEnd - Math.abs(Math.sin(Math.min(1, (u - at - 650) / 500) * Math.PI * 2)) * 40 * Math.max(0, 1 - (u - at - 650) / 500);
       ball(g, x, y, rad, col2, 30);
-      s.emoji(c.avatar || '🙂', x, y, rad * 0.95);
+      s.face(c, x, y, rad * 0.95);
       if (k > 0.7) text(g, c.name, x, yEnd + rad + 39, 32, '#fff4d6', { max: tw * 0.8, font: '"Lilita One", sans-serif' });
     });
     if (o.more && u > n * per - 1200) text(g, '…and ' + o.more + ' more high rollers!', 960, 1010, 50, '#ffe7a8', { font: '"Lilita One", sans-serif' });

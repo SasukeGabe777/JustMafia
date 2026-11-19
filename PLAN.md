@@ -1,5 +1,45 @@
 # Mafia Town: expansion plan
 
+## November 19, 2026 - One character in every game (branch claude/characters)
+
+Your JustGameBox character replaces the emoji in the box games, and every game has things your
+character wears in it.
+
+- **One character:** the smooth shop character (`drawSmooth` in `public/avatar.js`) is the character in
+  the shop and in every box game (TV and phone). New free look field `body` (female | male) in
+  `options.js`, validated by `profiles.js` / `game.js`, picked first in the shop and in the JustMafia
+  creator: female = narrower shoulders, waist and hips, softer chin, lashes, coloured lips, thin arched
+  brows; male = broader shoulders, squarer jaw, thick brows. Old looks without `body` are inferred (long
+  hair or a dress → female). drawSmooth now also takes the JustMafia scene options (lean, arms, dragged,
+  expression override, theme equipment) plus `wear` (game wearables).
+- **Faces everywhere:** `public/box/portrait.js` adds `BOX.face`, `BOX.body`, `BOX.drawChar`, `BOX.faceUrl`,
+  `BOX.bodyUrl`, `BOX.setRoster`. The TV roster (tvState players) and a new `roster` field in
+  playerState (sent only when it changed) carry every look and gear by id; bots get a generated
+  character; humans without a saved look keep their emoji. Every box game client, the intro engine
+  (`s.face` / `s.body`), intros, recap cards, party board and lobby rosters use them.
+- **Wearables per game:** `public/shared/gear.js` slots now have a `spot` (head/face/hand/chest/back);
+  ~150 wearables in smooth vector style drawn by `public/wear-art.js` (cowboy hats and badges in Quick
+  Draw, visor/shades/bow tie at Blackjack, crowns and capes in President, hockey mask and bat in Zombie,
+  deerstalker and magnifier in JustEscape, chef hats and aprons for the coming pizza game…). A worn spot
+  replaces your own hat/extra in that game only. Object slots kept: marble skin, drop ball, card back,
+  chips, paddle, buzzer, pen set, banner, meme frame, gallery frame, podium light, crest. Phone themes
+  removed (old ids ignored). Existing quickdraw hats, zombie bandanas, escape magnifiers and letters
+  pencils keep their ids and became wearables.
+- **Shop:** body picker first; per-game gear shows on your character (cards and stage), with the game
+  tile as a backdrop.
+- **JustMafia on the smooth character** (claude/mafia-art): `character-art.js` is gone; the town, cutscenes,
+  phone, Judge, creator, rewards, farewells and previews all draw `drawSmooth`, so the shop look (incl. body
+  female/male) is exactly the JustMafia character. Classic ghost = your own character, see-through and pale
+  blue with fading legs (costume ghostSkins stay, 1.4x); translucent characters are composited off-screen
+  (no overlap artefacts). Added the NPC `execHood`, a distinct scared face (sweat, trembling mouth), beards
+  keep the mood's mouth, photo faceSprite, `MTArt.EXPRESSIONS`. Cinema: two-layer noose, the bodyguard and
+  detective use real outfits/poses (tuxedo + shades, arms out; trench coat + fedora holding the magnifier).
+  Checked by screenshots of every scene in /preview and a full bot game (TV + 2 phones); e2e creator,
+  execution, rewards, shop, help, draft, judge pass. Retro mode (`?pix=3`) still snaps everything,
+  characters included, through the palette LUT (the default HD mode has no LUT).
+- Limits: Pizza items ship
+  before the pizza game. Small faces (24 px) are readable but busy with glowing gear.
+
 ## November 16, 2026 - JustGameBox
 
 JustMafia became one game in a party box. `/` is the JustGameBox title screen (JustMafia,
@@ -85,7 +125,7 @@ Documentation changes passed `git diff --check`; no game code changed.
 
 This section supersedes older pending markers below. The supplied Gather packs
 were inspected as reference material. No Gather or Darkest Dungeon artwork is
-served by the game. Original art is drawn in `character-art.js` and `world-art.js`.
+served by the game. Original art is drawn in `avatar.js` (characters) and `world-art.js`.
 
 ### Architecture audit before this update
 

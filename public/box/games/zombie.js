@@ -120,12 +120,16 @@
     A().plate(g, P.x, P.y + 14 + P.lv * P.step, name, { color: o.color, px: P.px, max: P.pmax, bg: o.bg, icon: o.icon });
   }
   // JustGold gear: the survivor's bandana paint, or null (no bandana: the default look).
+  // (Only for players drawn with the emoji survivor: a character wears its bandana itself.)
   const bandanaOf = (p) => (window.MT_GEAR && p ? MT_GEAR.paint('zombie', 'bandana', p.gear) : null);
+  // The player as their own character (survivor/ghost/head art): AI survivors (npc) get a made-up one.
+  const whoOf = (p) => (p ? { id: p.id, name: p.name, avatar: p.avatar, bot: !!(p.bot || p.npc) } : null);
+  const fc = (p, n = 32, o) => (BOX.face ? BOX.face(whoOf(p), n, o) : esc((p && p.avatar) || '🙂'));
   function crowd(g, list, t, o = {}) {
     const Z = A(), L = rowLayout(list.length, { max: o.max || 24, scale: o.scale, y: o.y });
     for (const P of L) {
       const p = list[P.i];
-      Z.survivor(g, P.x, P.y, P.s, t, { avatar: p.avatar, color: p.color, pose: o.pose || 'idle', ph: P.i * 1.7, tint: p.status === 'bitten' ? 'sick' : null, dir: P.i % 2 ? -1 : 1, bandana: bandanaOf(p) });
+      Z.survivor(g, P.x, P.y, P.s, t, { who: whoOf(p), avatar: p.avatar, color: p.color, pose: o.pose || 'idle', ph: P.i * 1.7, tint: p.status === 'bitten' ? 'sick' : null, dir: P.i % 2 ? -1 : 1, bandana: bandanaOf(p) });
       if (p.status === 'bitten') Z.glow(g, P.x, P.y - 120 * P.s, 90 * P.s, 'rgba(140,255,90,A)', 0.25 + 0.15 * Math.sin(t * 4 + P.i));
       const b = p.status === 'hurt' ? '🩹' : p.status === 'bitten' ? '🦷' : null;
       if (b) Z.emoji(g, b, P.x + 36 * P.s, P.y - 200 * P.s, 30 + 20 * P.s);
@@ -138,7 +142,7 @@
     const Z = A(), n = Math.min(list.length, 14);
     for (let i = 0; i < n; i++) {
       const p = list[i], span = o.span || 1700, x = (o.x0 || 120) + ((i * 263 + t * 14 * (i % 2 ? 1 : -1)) % span + span) % span, y = (o.y || 170) + (i % 3) * 70;
-      Z.ghost(g, x, y, o.s || 0.75, t, { avatar: p.avatar, ph: i, alpha: 0.6 });
+      Z.ghost(g, x, y, o.s || 0.75, t, { who: whoOf(p), avatar: p.avatar, ph: i, alpha: 0.6 });
       if (o.names) Z.plate(g, x, y + 50 * (o.s || 0.75) + 8 + Math.sin(t * 2 + i) * 10, p.name, { px: 22, max: 200, color: '#c9d4ff', bg: 'rgba(24,28,60,0.85)' });
     }
   }
@@ -276,12 +280,12 @@
       if (rv > -120 && rv < 1400) Z.glow(g, x, y - 140 * P.s, 260 * P.s + 40, 'rgba(255,250,210,A)', 0.3 * (1 - clamp(rv / 1400)));
       if (!hidden && alpha > 0) {
         if (lean) { g.save(); g.translate(x, y); g.rotate(lean); g.translate(-x, -y); }
-        if (a === 'swim') { Z.emoji(g, p.avatar, x, y - 30 * P.s, 90 * P.s, F === 'bitten' ? 'sick' : null); g.strokeStyle = 'rgba(220,240,255,0.8)'; g.lineWidth = 5; g.beginPath(); g.ellipse(x, y + 8, 60 * P.s, 12, 0, 0, Math.PI * 2); g.stroke(); }
-        else Z.survivor(g, x, y, P.s, t, { avatar: p.avatar, color: p.color, pose, ph: i * 1.3, tint: F === 'bitten' ? 'sick' : null, crouch, alpha, dir, lean: 0, item: a === 'search' && F && p.got && !bad ? null : item, bandana: bandanaOf(p) });
+        if (a === 'swim') { Z.head(g, whoOf(p), x, y - 30 * P.s, 90 * P.s, F === 'bitten' ? 'sick' : null); g.strokeStyle = 'rgba(220,240,255,0.8)'; g.lineWidth = 5; g.beginPath(); g.ellipse(x, y + 8, 60 * P.s, 12, 0, 0, Math.PI * 2); g.stroke(); }
+        else Z.survivor(g, x, y, P.s, t, { who: whoOf(p), avatar: p.avatar, color: p.color, pose, ph: i * 1.3, tint: F === 'bitten' ? 'sick' : null, crouch, alpha, dir, lean: 0, item: a === 'search' && F && p.got && !bad ? null : item, bandana: bandanaOf(p) });
         if (lean) g.restore();
       }
       if (F === 'bitten') Z.glow(g, x, y - 120 * P.s, 110 * P.s, 'rgba(140,255,90,A)', 0.35);
-      if (F === 'dead' && rv > 900) { const gk = clamp((rv - 900) / 1500); Z.ghost(g, x, y - 140 - gk * 240, P.s * 0.8, t, { avatar: p.avatar, alpha: 0.85 * (1 - clamp((rv - 2600) / 700)) }); }
+      if (F === 'dead' && rv > 900) { const gk = clamp((rv - 900) / 1500); Z.ghost(g, x, y - 140 - gk * 240, P.s * 0.8, t, { who: whoOf(p), avatar: p.avatar, alpha: 0.85 * (1 - clamp((rv - 2600) / 700)) }); }
       if (a === 'hide' && !(F === 'safe' && rv > 200)) Pr.cover(g, loc, null, P.x, P.y + 2, P.s * 1.05);
       // pick-ups: the item lifts off the shelf into their hands
       const icon = p.got || (a === 'search' ? gains[i % Math.max(1, gains.length)] : null);
@@ -302,9 +306,9 @@
     // the cars over their passengers (heads in the windows)
     const veh = VEHICLES.includes(G.icon) ? G.icon : null;
     carX.forEach((cx, c) => {
-      if (veh) { g.save(); g.translate(cx, G0 - 120); g.scale(-1, 1); Z.emoji(g, veh, 0, 0, 260); g.restore(); ppl.forEach((p, i) => { if (Math.floor(i / 4) !== c || !pos[i] || !pos[i].hidden) return; Z.emoji(g, p.avatar, cx - 70 + (i % 4) * 46, G0 - 280 + Math.sin(t * 8 + i) * 3, 64, p.at <= u && p.fate === 'bitten' ? 'sick' : null); }); return; }
+      if (veh) { g.save(); g.translate(cx, G0 - 120); g.scale(-1, 1); Z.emoji(g, veh, 0, 0, 260); g.restore(); ppl.forEach((p, i) => { if (Math.floor(i / 4) !== c || !pos[i] || !pos[i].hidden) return; Z.head(g, whoOf(p), cx - 70 + (i % 4) * 46, G0 - 280 + Math.sin(t * 8 + i) * 3, 64, p.at <= u && p.fate === 'bitten' ? 'sick' : null); }); return; }
       Z.car(g, cx, G0 - 10, 1.05, ['#c94a4a', '#3d6f8f', '#7a6a2a', '#5a7a4a'][c % 4]);
-      ppl.forEach((p, i) => { if (Math.floor(i / 4) !== c || !pos[i] || !pos[i].hidden) return; Z.emoji(g, p.avatar, cx - 30 + (i % 4) * 42, G0 - 125 + Math.sin(t * 8 + i) * 3, 52, p.at <= u && p.fate === 'bitten' ? 'sick' : null); });
+      ppl.forEach((p, i) => { if (Math.floor(i / 4) !== c || !pos[i] || !pos[i].hidden) return; Z.head(g, whoOf(p), cx - 30 + (i % 4) * 42, G0 - 125 + Math.sin(t * 8 + i) * 3, 52, p.at <= u && p.fate === 'bitten' ? 'sick' : null); });
     });
     // big verdict stamps (the newest one large, the rest as a small icon)
     for (const i of order) {
@@ -330,9 +334,9 @@
       const p = F.people[P.i], rv = u - p.at, done = rv >= 0;
       if (done && p.fate === 'turned') {
         Z.zombie(g, P.x, P.y, P.s * 0.95, t, { seed: P.i + 7, dir: P.i % 2 ? -1 : 1 });
-        Z.emoji(g, p.avatar, P.x + 4 * P.s * (P.i % 2 ? -1 : 1), P.y - 188 * P.s, 74 * P.s, 'sick');
+        Z.head(g, whoOf(p), P.x + 4 * P.s * (P.i % 2 ? -1 : 1), P.y - 188 * P.s, 74 * P.s, 'sick');
       } else {
-        Z.survivor(g, P.x + (done ? 0 : Math.sin(t * 30 + P.i) * 3), P.y, P.s, t, { avatar: p.avatar, color: p.color, pose: done ? 'cheer' : 'idle', ph: P.i, tint: done ? null : 'sick', bandana: bandanaOf(p) });
+        Z.survivor(g, P.x + (done ? 0 : Math.sin(t * 30 + P.i) * 3), P.y, P.s, t, { who: whoOf(p), avatar: p.avatar, color: p.color, pose: done ? 'cheer' : 'idle', ph: P.i, tint: done ? null : 'sick', bandana: bandanaOf(p) });
         if (!done) Z.glow(g, P.x, P.y - 130 * P.s, 120 * P.s, 'rgba(140,255,90,A)', 0.3 + 0.2 * Math.sin(t * 6));
         else { const k = clamp(rv / 700); Z.emoji(g, p.how || '🩹', P.x + 50, P.y - 220 * P.s - k * 40, 64); Z.glow(g, P.x, P.y - 120 * P.s, 160, 'rgba(255,255,200,A)', 0.4 * (1 - k)); }
       }
@@ -383,7 +387,7 @@
     const Z = A(), O = s.outcome, v = u - O.endAt, alive = aliveAfter(O);
     if (O.final) {
       const k = Z.util.clamp(v / 4500), x = 960 + k * 1500 - 200, y = 330 - k * 260;
-      Z.chopper(g, x, y, 0.85, t, { faces: alive.map((p) => p.avatar), ladder: 200 * (1 - k), light: true, lightX: -100 });
+      Z.chopper(g, x, y, 0.85, t, { faces: alive.map(whoOf), ladder: 200 * (1 - k), light: true, lightX: -100 });
       crowd(g, alive.slice(0, Math.max(0, Math.round(alive.length * (1 - k * 1.6)))), t, { pose: 'cheer', names: false });
       return;
     }
@@ -395,14 +399,14 @@
     if (E.wipe) { Z.backdrop(g, 'streets', t, { dark: 0.6 }); shamblers(g, t, 9, 1000, 0.9); Z.fog(g, t, 0.3); return; }
     Z.backdrop(g, 'rescue', t, { dark: 0.15 });
     const k = ((u / 1000) % 14) / 14, x = -400 + k * 2800, y = 260 + Math.sin(t * 0.8) * 20;
-    Z.chopper(g, x, y, 0.7, t, { faces: E.rescued.map((p) => p.avatar), tilt: -0.08 });
+    Z.chopper(g, x, y, 0.7, t, { faces: E.rescued.map(whoOf), tilt: -0.08 });
   }
 
   // ---------- the HUD ----------
   function topBar(s, right = '') {
     return `<div class="zs-top"><span class="zs-day">DAY ${s.chapter.day}</span><span class="zs-loc">${esc(s.chapter.name)}</span><span class="zs-n">Scene ${s.n} of ${s.total}</span><span class="zs-sp"></span>${right}<span class="zs-pop">🧍 ${s.alive}${s.ghosts || s.dead ? ` · 👻 ${s.dead}` : ''}</span></div>`;
   }
-  const chip = (p) => `<span class="zs-nchip" style="--c:${esc(p.color || '#9dff5a')}"><i>${esc(p.avatar || '🙂')}</i>${esc(p.name)}</span>`;
+  const chip = (p) => `<span class="zs-nchip" style="--c:${esc(p.color || '#9dff5a')}"><i>${fc(p, 30)}</i>${esc(p.name)}</span>`;
   const chips = (list, more = 0, cap = 12) => list.slice(0, cap).map(chip).join('') + (list.length > cap || more ? `<span class="zs-nchip more">+${list.length - cap > 0 ? list.length - cap + more : more} more</span>` : '');
   function hud(s, u) {
     if (s.phase === 'chapter') {
@@ -445,15 +449,15 @@
     if (s.phase === 'board') {
       return `${topBar(s, `<span class="zs-clock">Next scene ${timer('b' + s.n, s.endsIn)}</span>`)}
         <div class="zs-board"><h2 id="zsbh-${s.n}">${plural(s.alive, 'survivor')} still standing${s.dead ? ` · ${plural(s.dead, 'ghost')}` : ''}</h2>
-        <aside class="zs-lead"><h3>🏆 Longest survivors</h3>${s.standings.slice(0, 8).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i + 1}</span><span class="av">${r.alive ? esc(r.avatar) : '👻'}</span><span class="nm">${esc(r.name)}${r.alive ? '' : `<small class="zs-rch">${esc(r.reach || '')}</small>`}</span>${r.alive ? `<span class="st">${STATUS[r.status] ? STATUS[r.status][0] : ''}</span>` : ''}<b>${r.pts}</b></div>`).join('')}
+        <aside class="zs-lead"><h3>🏆 Longest survivors</h3>${s.standings.slice(0, 8).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i + 1}</span><span class="av">${r.alive ? fc(r, 36) : BOX.hasLook && BOX.hasLook(whoOf(r)) ? fc(r, 36, { mood: 'sleepy', cls: 'zs-ghostface' }) : '👻'}</span><span class="nm">${esc(r.name)}${r.alive ? '' : `<small class="zs-rch">${esc(r.reach || '')}</small>`}</span>${r.alive ? `<span class="st">${STATUS[r.status] ? STATUS[r.status][0] : ''}</span>` : ''}<b>${r.pts}</b></div>`).join('')}
         ${s.haunts && s.haunts.length ? `<h3>👻 Hauntings</h3>${s.haunts.slice(0, 5).map((h) => `<div class="zs-haunt">${esc(h.from)} ${h.mode === 'bless' ? '🍀 blessed' : '🕯️ cursed'} ${esc(h.to)} ${h.hit ? '<b>✓</b>' : ''}</div>`).join('')}` : ''}</aside></div>`;
     }
     if (s.phase === 'over' && s.epilogue) {
       const E = s.epilogue, st = s.standings;
-      return `<div class="zs-end" id="zse"><div class="zs-endhead">${E.wipe ? '<h1 class="zs-wipe">NOBODY MADE IT</h1><p>The city belongs to the shamblers now… but what a story.</p>' : `<h1>THE END</h1><p>${plural(E.rescued.length, 'survivor')} made it out: ${E.rescued.slice(0, 10).map((p) => `${esc(p.avatar)} ${esc(p.name)}`).join(' · ')}${E.rescued.length > 10 ? ` +${E.rescued.length - 10}` : ''}</p>`}</div>
-        <div class="zs-endgrid"><section class="zs-fates"><h3>📜 What happened to everyone</h3><div class="zs-roll"><div class="zs-rollin" style="--n:${E.fates.length}">${E.fates.map((f) => `<div class="zs-fate ${f.rescued ? 'r' : f.alive ? '' : 'd'}"><span>${f.rescued ? '🚁' : f.alive ? '🧍' : '👻'}</span><span class="av">${esc(f.avatar)}</span><span><b class="zs-reach">${esc(f.reach || '')}</b> ${esc(f.line)}${f.flags && f.flags.length ? ` <i class="zs-fflags">${f.flags.map((x) => x.icon).join('')}</i>` : ''}</span></div>`).join('')}</div></div></section>
+      return `<div class="zs-end" id="zse"><div class="zs-endhead">${E.wipe ? '<h1 class="zs-wipe">NOBODY MADE IT</h1><p>The city belongs to the shamblers now… but what a story.</p>' : `<h1>THE END</h1><p>${plural(E.rescued.length, 'survivor')} made it out: ${E.rescued.slice(0, 10).map((p) => `${fc(p, 34)} ${esc(p.name)}`).join(' · ')}${E.rescued.length > 10 ? ` +${E.rescued.length - 10}` : ''}</p>`}</div>
+        <div class="zs-endgrid"><section class="zs-fates"><h3>📜 What happened to everyone</h3><div class="zs-roll"><div class="zs-rollin" style="--n:${E.fates.length}">${E.fates.map((f) => `<div class="zs-fate ${f.rescued ? 'r' : f.alive ? '' : 'd'}"><span>${f.rescued ? '🚁' : f.alive ? '🧍' : '👻'}</span><span class="av">${fc(f, 34, f.alive || f.rescued ? undefined : { mood: 'sleepy', cls: 'zs-ghostface' })}</span><span><b class="zs-reach">${esc(f.reach || '')}</b> ${esc(f.line)}${f.flags && f.flags.length ? ` <i class="zs-fflags">${f.flags.map((x) => x.icon).join('')}</i>` : ''}</span></div>`).join('')}</div></div></section>
         <section class="zs-awards">${E.awards.map((a, i) => `<div class="zs-award" style="--d:${0.6 + i * 0.25}s"><span class="ic">${a.icon}</span><b>${esc(a.title)}</b><span>${a.names.map(esc).join(', ')}</span><small>${esc(a.text)}</small></div>`).join('')}
-          <div class="zs-final-board"><h3>🏆 Who got furthest</h3>${st.slice(0, 6).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i === 0 ? '👑' : i + 1}</span><span class="av">${esc(r.avatar)}</span><span class="nm">${esc(r.name)}<small class="zs-rch">${esc(r.reach || '')}</small></span><b>${r.pts}</b></div>`).join('')}</div></section></div></div>`;
+          <div class="zs-final-board"><h3>🏆 Who got furthest</h3>${st.slice(0, 6).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i === 0 ? '👑' : i + 1}</span><span class="av">${fc(r, 38, i === 0 ? { mood: 'grin' } : undefined)}</span><span class="nm">${esc(r.name)}<small class="zs-rch">${esc(r.reach || '')}</small></span><b>${r.pts}</b></div>`).join('')}</div></section></div></div>`;
     }
     return '';
   }
@@ -510,7 +514,7 @@
       <section class="zs-table"><h3>🧰 Supplies on the table</h3><div class="zs-sups" id="settings">${items}</div>
         <button class="zs-start" id="start" ${need ? 'disabled' : ''}>🚪 Open the door. Let’s go!</button><div class="zs-err" id="lobby-err">${esc(lobbyErr)}</div>
         <div class="zs-links"><button id="add-bots">+ 5 test bots</button><button id="rm-bots">remove bots</button><button id="zs-pick">🎮 another game</button><button id="zs-back">◀ games</button></div></section>
-      <section class="zs-log"><h3>📋 Survivor log <b>${n}</b>/${L.max || 100} ${n && n < 4 ? '<small>AI survivors will join a small group</small>' : ''}</h3><div class="zs-roster" id="roster">${L.players.map((p, i) => `<span class="chip zs-chip ${p.online ? '' : 'off'}" id="zsl-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ffd23f')};--r:${((i * 7) % 5) - 2}deg"><span class="av">${esc(p.avatar || '🙂')}</span><span class="nm">${esc(p.name)}</span><small>#${String(i + 1).padStart(2, '0')}</small></span>`).join('') || '<div class="zs-empty">The log is empty. Scan the note to sign in!</div>'}</div>${L.lineupHtml ? `<div class="zs-lineup">${L.lineupHtml}</div>` : ''}</section>`);
+      <section class="zs-log"><h3>📋 Survivor log <b>${n}</b>/${L.max || 100} ${n && n < 4 ? '<small>AI survivors will join a small group</small>' : ''}</h3><div class="zs-roster" id="roster">${L.players.map((p, i) => `<span class="chip zs-chip ${p.online ? '' : 'off'}" id="zsl-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ffd23f')};--r:${((i * 7) % 5) - 2}deg"><span class="av">${fc(p, 34)}</span><span class="nm">${esc(p.name)}</span><small>#${String(i + 1).padStart(2, '0')}</small></span>`).join('') || '<div class="zs-empty">The log is empty. Scan the note to sign in!</div>'}</div>${L.lineupHtml ? `<div class="zs-lineup">${L.lineupHtml}</div>` : ''}</section>`);
     const box = el.querySelector('#zs-lui');
     for (const s of box.querySelectorAll('select[data-set]')) { s.onchange = () => { BOX.sfx('click'); L.set(s.dataset.set, s.value); }; s.onclick = (e) => e.stopPropagation(); }
     for (const b of box.querySelectorAll('[data-sup]')) b.onclick = () => { const s = b.querySelector('select'); s.selectedIndex = (s.selectedIndex + 1) % s.options.length; s.onchange(); };
@@ -540,8 +544,10 @@
     const hints = me.alive && calm && me.items && me.items.length ? `<div class="zs-hints">${me.items.map((i) => `<span><b>${i.icon} ${esc(i.name)}${i.n != null && i.unit ? ` (${i.n} ${esc(i.unit)})` : ''}</b> ${esc(i.hint || '')}</span>`).join('')}</div>` : '';
     const story = me.flags && me.flags.length ? `<div class="zs-story"><span class="lb">📜</span>${me.flags.map((f) => `<span class="zs-badge ${f.bad ? 'bad' : ''}">${f.icon} ${esc(f.label)}</span>`).join('')}</div>` : '';
     // Your gear bandana (JustGold shop), as a little knot next to your status.
-    const bd = me.alive ? bandanaOf(me) : null;
-    const knot = bd ? `<svg class="zs-bandana" width="34" height="22" viewBox="0 0 34 22" aria-hidden="true" style="vertical-align:middle;margin-right:4px${bd.glow ? `;filter:drop-shadow(0 0 4px ${esc(bd.a || '#fff')})` : ''}"><path d="M4 6 Q17 1 30 6 L30 13 Q17 8 4 13 Z" fill="${esc(bd.a || '#d0302a')}" stroke="#1a1a1a" stroke-width="1.6"/><path d="M4 9 L0 18 L5 16 L7 20 L8 11 Z" fill="${esc(bd.a || '#d0302a')}" stroke="#1a1a1a" stroke-width="1.4"/>${bd.pattern === 'dots' ? `<circle cx="11" cy="7.5" r="1.4" fill="${esc(bd.b || '#fff')}"/><circle cx="17" cy="6.5" r="1.4" fill="${esc(bd.b || '#fff')}"/><circle cx="23" cy="7.5" r="1.4" fill="${esc(bd.b || '#fff')}"/>` : bd.pattern === 'stripes' ? `<path d="M10 11 L13 4 M17 10 L20 3.5 M24 11 L27 4.5" stroke="${esc(bd.b || '#fff')}" stroke-width="2.2"/>` : ''}</svg>` : '';
+    // With a character: your own face, bandana and all (the knot only for emoji players).
+    const mine = BOX.face && BOX.hasLook && BOX.hasLook(whoOf(me)) ? BOX.face(whoOf(me), 40, { cls: 'zs-meface', mood: me.alive ? (me.status === 'bitten' ? 'sad' : undefined) : 'sleepy' }) : '';
+    const bd = me.alive && !mine ? bandanaOf(me) : null;
+    const knot = mine || (bd ? `<svg class="zs-bandana" width="34" height="22" viewBox="0 0 34 22" aria-hidden="true" style="vertical-align:middle;margin-right:4px${bd.glow ? `;filter:drop-shadow(0 0 4px ${esc(bd.a || '#fff')})` : ''}"><path d="M4 6 Q17 1 30 6 L30 13 Q17 8 4 13 Z" fill="${esc(bd.a || '#d0302a')}" stroke="#1a1a1a" stroke-width="1.6"/><path d="M4 9 L0 18 L5 16 L7 20 L8 11 Z" fill="${esc(bd.a || '#d0302a')}" stroke="#1a1a1a" stroke-width="1.4"/>${bd.pattern === 'dots' ? `<circle cx="11" cy="7.5" r="1.4" fill="${esc(bd.b || '#fff')}"/><circle cx="17" cy="6.5" r="1.4" fill="${esc(bd.b || '#fff')}"/><circle cx="23" cy="7.5" r="1.4" fill="${esc(bd.b || '#fff')}"/>` : bd.pattern === 'stripes' ? `<path d="M10 11 L13 4 M17 10 L20 3.5 M24 11 L27 4.5" stroke="${esc(bd.b || '#fff')}" stroke-width="2.2"/>` : ''}</svg>` : '');
     return `<div class="zs-phead"><span class="zs-stat ${me.alive ? me.status : 'ghost'}">${knot}${ic} ${word}</span><span class="zs-pts">⭐ ${me.pts || 0}</span><span class="zs-scn">Day ${v.chapter.day} · ${v.n}/${v.total}</span></div>${me.alive ? `<div class="zs-pack"><span class="lb">🎒</span>${slots}</div>${hints}` : ''}${me.alive && calm ? story : ''}`;
   }
   function phone(el, v, ctx, outer) {
@@ -570,7 +576,7 @@
       return `<button class="zs-po ${sel ? 'sel' : ''} ${lock ? 'lock' : ''}" data-k="${esc(o.k)}" ${lock ? 'disabled' : ''}><span class="ic">${o.icon}</span><span class="tx"><b>${esc(o.label)}</b><span class="zs-tags">${lock ? `<i class="zs-t need">🔒 needs ${o.need}</i>` : ''}${boost ? '<i class="zs-t boost">⭐ your gear or past could help</i>' : o.help || o.flags ? `<i class="zs-t help">better with ${o.help || ''}${o.flags || ''}</i>` : ''}${danger(o)}${o.gain ? `<i class="zs-t gain">find ${o.gain}</i>` : ''}${o.heal ? '<i class="zs-t heal">heals</i>' : ''}${o.cure ? '<i class="zs-t cure">cures bites</i>' : ''}${o.hero ? '<i class="zs-t hero">🦸 hero</i>' : ''}</span></span>${sel ? '<em>✓</em>' : ''}</button>`;
     }).join('');
     const give = me.items.length && v.others.length ? (v.gave ? `<div class="zs-gave">🎁 You gave ${esc(v.gave.item ? ({ gun: '🔫', medkit: '🩹', rope: '🪢', flashlight: '🔦', bat: '🏏', keys: '🔑', firecrackers: '🧨', radio: '📻' })[v.gave.item] : '')} to ${esc(v.gave.to)}</div>` : !P.give ? '<button class="zs-gbtn" id="zs-give">🎁 Give an item to a survivor</button>' : `<div class="zs-givebox"><div class="zs-gh">🎁 Give what?</div><div class="zs-gitems">${me.items.map((i) => `<button class="${P.item === i.k ? 'sel' : ''}" data-item="${esc(i.k)}">${i.icon}<small>${esc(i.name)}</small></button>`).join('')}</div>
-      ${P.item ? `<div class="zs-gh">…to whom?</div><div class="zs-gto">${v.others.map((o) => `<button data-to="${esc(o.id)}" class="${o.status === 'bitten' ? 'bit' : ''}">${esc(o.avatar)} ${esc(o.name)}${o.status === 'bitten' ? ' <i>🦷 bitten</i>' : o.status === 'hurt' ? ' <i>🤕</i>' : ''}</button>`).join('')}</div>` : ''}<button class="zs-link" id="zs-gx">cancel</button></div>`) : '';
+      ${P.item ? `<div class="zs-gh">…to whom?</div><div class="zs-gto">${v.others.map((o) => `<button data-to="${esc(o.id)}" class="${o.status === 'bitten' ? 'bit' : ''}">${fc(o, 30)} ${esc(o.name)}${o.status === 'bitten' ? ' <i>🦷 bitten</i>' : o.status === 'hurt' ? ' <i>🤕</i>' : ''}</button>`).join('')}</div>` : ''}<button class="zs-link" id="zs-gx">cancel</button></div>`) : '';
     return {
       html: `<div class="zs-pscene ${sc.final ? 'final' : ''}"><h3>${sc.final ? '🚁 ' : ''}${esc(sc.title)}</h3><p>${esc(sc.text)}</p></div>${alert}
         <div class="zs-step">${v.pick ? '✅ Locked in. You can still change.' : '👇 What do you do?'} ${t}</div><div class="zs-pos">${opts}</div>${give}`,
@@ -586,7 +592,7 @@
   function ghostPhone(v, ctx) {
     if (!v.ghosts) return { html: '<div class="zs-pcard ghost"><div class="zs-pbig">👻</div><h3>You’re a ghost</h3><p>Ghosts are off this game. Watch the others try to survive!</p></div>' };
     const t = timer('g' + v.n, v.endsIn), h = v.haunt;
-    const list = (v.others || []).map((o) => `<div class="zs-hrow ${h && h.to === o.id ? 'on ' + h.mode : ''}"><span class="nm">${esc(o.avatar)} ${esc(o.name)}${o.status === 'bitten' ? ' 🦷' : o.status === 'hurt' ? ' 🤕' : ''}</span><button data-h="bless" data-to="${esc(o.id)}">🍀</button><button data-h="curse" data-to="${esc(o.id)}">🕯️</button></div>`).join('');
+    const list = (v.others || []).map((o) => `<div class="zs-hrow ${h && h.to === o.id ? 'on ' + h.mode : ''}"><span class="nm">${fc(o, 28)} ${esc(o.name)}${o.status === 'bitten' ? ' 🦷' : o.status === 'hurt' ? ' 🤕' : ''}</span><button data-h="bless" data-to="${esc(o.id)}">🍀</button><button data-h="curse" data-to="${esc(o.id)}">🕯️</button></div>`).join('');
     return {
       html: `<div class="zs-pcard ghost"><div class="zs-pbig">👻</div><h3>You’re a ghost. Haunt someone!</h3><p>🍀 <b>Bless</b> a survivor: a scrape becomes a clean escape. <b>+30</b> if they make it.<br>🕯️ <b>Curse</b> one: two ghosts cursing the same survivor trip them up. <b>+50</b> if they get hurt, bitten or fall.</p><div class="zs-step">${h ? '✅ Haunting locked in.' : 'Pick one survivor.'} ${t}</div></div><div class="zs-hlist">${list || '<p class="muted">Nobody left to haunt…</p>'}</div>`,
       bind: (el) => { for (const b of el.querySelectorAll('[data-h]')) b.onclick = async () => { const r = await ctx.act({ op: 'haunt', to: b.dataset.to, mode: b.dataset.h }); if (r && r.ok) { ctx.haptic(b.dataset.h === 'curse' ? 'buzz' : 'select'); ctx.sfx(b.dataset.h === 'curse' ? 'wail' : 'chime'); ctx.redraw(); } }; },
@@ -620,7 +626,7 @@
     const E = v.end || {};
     if (P.felt !== 'end') { P.felt = 'end'; ctx.haptic(E.rescued ? 'win' : 'success'); }
     return `<div class="zs-pcard zs-fcard ${E.rescued ? 'safe' : 'dead'}"><div class="zs-pbig">${E.rescued ? '🚁' : '👻'}</div><h2>${E.rescued ? 'RESCUED!' : E.wipe ? 'NOBODY MADE IT' : 'THE END'}</h2>${E.reach ? `<div class="zs-reachbig">${esc(E.reach)}</div>` : ''}<p class="zs-line">${esc(E.line || '')}</p><p>🏆 You finished <b>#${v.rank}</b> of ${v.of} with ⭐ ${v.me.pts} points</p>${(E.awards || []).map((a) => `<div class="zs-got">${a.icon} <b>${esc(a.title)}</b></div>`).join('')}</div>
-      <div class="zs-pcard"><h3>Who got furthest</h3>${(E.standings || []).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i + 1}</span><span class="av">${esc(r.avatar)}</span><span class="nm">${esc(r.name)}<small class="zs-rch">${esc(r.reach || '')}</small></span><b>${r.pts}</b></div>`).join('')}</div>`;
+      <div class="zs-pcard"><h3>Who got furthest</h3>${(E.standings || []).map((r, i) => `<div class="zs-row ${r.alive ? '' : 'ghost'}"><span class="n">${i + 1}</span><span class="av">${fc(r, 32)}</span><span class="nm">${esc(r.name)}<small class="zs-rch">${esc(r.reach || '')}</small></span><b>${r.pts}</b></div>`).join('')}</div>`;
   }
 
   BOX.games.zombie = {

@@ -518,7 +518,7 @@ class Game {
     const sq = this.squadOf(p.id), b = sq && sq.bomb;
     const out = { phase: this.phase, round: this.round, of: this.s.bombs, secs: this.secs, mods: this.nMods, needy: this.needy, team: this.team, me: p.id,
       points: s.points, stats: s, rank, players: rows.length, gained: s.points - (this.roundStart.get(p.id) || 0), endsIn: this.phase === 'brief' && this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0 };
-    if (this.phase === 'over') return { ...out, final: this.final, standings: rows.slice(0, 10).map((r) => ({ name: r.name, avatar: r.avatar, points: r.points })) };
+    if (this.phase === 'over') return { ...out, final: this.final, standings: rows.slice(0, 10).map((r) => ({ id: r.id, name: r.name, avatar: r.avatar, points: r.points })) };
     if (!sq || !b) return { ...out, role: 'none' };
     const defuser = sq.defusers.includes(p.id);
     const bt = this.bombTv(sq);

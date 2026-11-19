@@ -27,6 +27,16 @@ test('a wallet works on several phones; tokens from other wallets do not', () =>
   assert(!('verifiers' in w.view(a.id)), 'device verifiers never leave the server');
 });
 
+test('body type: a free look field, validated; old looks without it are inferred (long hair or a dress → female)', () => {
+  const w = new ProfileStore(null), a = w.create();
+  w.select(a.id, { body: 'female', hair: 'short' }); assert.equal(w.lookOf(a.id).body, 'female');
+  w.select(a.id, { body: 'robot' }); assert.equal(w.lookOf(a.id).body, 'female', 'junk keeps the saved body');
+  const p = w.data.profiles[a.id]; delete p.avatar.body;
+  w.select(a.id, { hair: 'long' }); assert.equal(w.lookOf(a.id).body, 'female', 'long hair reads as female');
+  delete p.avatar.body; w.select(a.id, { hair: 'short', outfit: 'shirt' }); assert.equal(w.lookOf(a.id).body, 'male');
+  w.select(a.id, { body: 'female' }); assert.equal(w.lookOf(a.id).body, 'female');
+});
+
 test('JustGold rates: longer games and better places pay more; co-op pays everyone alike; party is the big one', () => {
   const ten = 10 * 60000;
   assert(GOLD.goldFor('likely', 1, 6, ten) > GOLD.goldFor('likely', 3, 6, ten));
@@ -123,12 +133,36 @@ async function socketTests() {
     for (const bad of [{ auth, itemId: 'nope' }, { auth, itemId: 42 }, { auth: { id: acc.id, token: 'x' }, itemId: item.id }]) assert.equal((await emit(ph, 'shop:buy', bad)).ok, false);
     const pass = st.catalog.find((i) => i.lock && /Season pass/.test(i.lock)); if (pass) assert.equal((await emit(ph, 'shop:buy', { auth, itemId: pass.id })).ok, false, 'pass items stay in JustMafia');
     // Another phone signs in: the same wallet.
-    const cl = await emit(ph, 'profile:claim', { auth, name: 'AnaG', pin: '1357' }); assert(cl.ok);
+    // "Save your stuff": not saved yet, then a name + password.
+    let as = await emit(ph, 'account:status', { auth }); assert(as.ok && as.account && !as.saved); assert.equal(as.gold, 500 - item.cost);
+    assert.equal((await emit(ph, 'profile:logout', { auth })).ok, false, 'no signing out of an unsaved account (it would be lost)');
+    assert.equal((await emit(ph, 'profile:claim', { auth, name: 'AnaG', password: 'abc' })).ok, false, 'too short');
+    const cl = await emit(ph, 'profile:claim', { auth, name: 'AnaG', password: 'Gold & Glory 2!' }); assert(cl.ok, cl.error);
+    as = await emit(ph, 'account:status', { auth }); assert(as.saved); assert.equal(as.name, 'AnaG');
     const ph2 = await connect(); socks.push(ph2);
-    const lg = await emit(ph2, 'profile:login', { name: 'AnaG', pin: '1357' }); assert(lg.ok);
-    const link2 = await emit(ph2, 'account:wallet', { auth: { id: lg.id, token: lg.token } }); assert(link2.ok && link2.wallet.id === mp.id && link2.wallet.token !== mp.token);
+    assert.equal((await emit(ph2, 'profile:login', { name: 'AnaG', password: 'gold & glory 2!' })).ok, false, 'wrong password');
+    const lg = await emit(ph2, 'profile:login', { name: 'anag', password: 'Gold & Glory 2!' }); assert(lg.ok, lg.error);
+    const auth2 = { id: lg.id, token: lg.token };
+    // The second phone brings its own (empty) JustMafia wallet: the account's wallet wins.
     const m2 = await connect('/'); socks.push(m2);
+    const own2 = await emit(m2, 'profile:create', {}); assert(own2.ok);
+    const link2 = await emit(ph2, 'account:wallet', { auth: auth2, mafia: { id: own2.id, token: own2.token } }); assert(link2.ok && link2.wallet.id === mp.id && link2.wallet.token !== mp.token);
     const res2 = await emit(m2, 'profile:resume', link2.wallet); assert(res2.ok, 'the new phone opens the same wallet in JustMafia');
+    assert.equal(res2.profile.coins, 500 - item.cost, 'JustMafia shows the same gold on the new phone');
+    const st2 = await emit(ph2, 'shop:state', { auth: auth2 }); assert(st2.ok); assert.equal(st2.gold, 500 - item.cost, 'the shop shows the same gold on the new phone');
+    assert(st2.owned.includes(item.id), 'and the same items');
+    // Change the password (needs the old one); then sign out on the second phone.
+    assert.equal((await emit(ph2, 'profile:password', { auth: auth2, old: 'nope', password: 'brand new pw' })).ok, false);
+    assert((await emit(ph2, 'profile:password', { auth: auth2, old: 'Gold & Glory 2!', password: 'brand new pw' })).ok);
+    assert.equal((await emit(ph2, 'profile:login', { name: 'AnaG', password: 'Gold & Glory 2!' })).ok, false);
+    assert((await emit(ph2, 'profile:logout', { auth: auth2 })).ok);
+    assert.equal((await emit(ph2, 'shop:state', { auth: auth2 })).ok, false, 'signed out: this phone’s token stops working');
+    assert((await emit(ph, 'shop:state', { auth })).ok, 'the first phone keeps going');
+    const lg3 = await emit(ph2, 'profile:login', { name: 'AnaG', password: 'brand new pw' }); assert(lg3.ok && lg3.id === acc.id);
+    // A phone without an account still sees its JustMafia gold in the status (for the save prompt).
+    const m3 = await connect('/'); socks.push(m3);
+    const mw3 = await emit(m3, 'profile:create', {}); assert((await emit(m3, 'dev:grant', { amount: 42 })).ok);
+    const as3 = await emit(ph2, 'account:status', { mafia: { id: mw3.id, token: mw3.token } }); assert(as3.ok && !as3.account && !as3.saved); assert.equal(as3.gold, 42);
     // In a box room: the look is worn; no shopping mid-game.
     const tv = await connect(); socks.push(tv);
     const made = await emit(tv, 'host:create', { game: 'likely' }); assert(made.ok);

@@ -140,6 +140,24 @@
     if (last) { g.fillStyle = '#fff'; g.beginPath(); g.arc(last[0], last[1], 9, 0, TAU); g.fill(); }
     g.restore();
   }
+  // Players are their characters: a cached face image on the canvas (the emoji without one),
+  // BOX.face / BOX.body in the HTML.
+  const FACES = new Map();
+  function faceImg(p, px) {
+    if (!p || !BOX.faceUrl) return null;
+    const k = (p.id || p.name) + '|' + px; let e = FACES.get(k);
+    if (!e) { const u = BOX.faceUrl(p, px); if (!u) return null; if (FACES.size > 200) FACES.clear(); e = Object.assign(new Image(), { src: u }); FACES.set(k, e); }
+    return e.complete && e.naturalWidth ? e : null;
+  }
+  // The player's face over their ball marker (or their emoji when they have no character).
+  function markFace(g, d, x, y, size) {
+    const im = faceImg({ id: d.id, name: d.name, avatar: d.av }, 64);
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (im) { const s = size * 1.45; g.drawImage(im, x - s / 2, y - s * 0.56, s, s); return; }
+    g.font = `${size}px "Segoe UI Emoji", sans-serif`; g.fillText(d.av || '🙂', x, y);
+  }
+  const face = (p, n = 32, o) => (BOX.face ? BOX.face(p, n, o) : esc((p && p.avatar) || '🙂'));
+  const fig = (p, h = 120, o) => (BOX.body ? BOX.body(p, h, o) : `<span style="font-size:${Math.round(h * 0.4)}px">${esc((p && p.avatar) || '🙂')}</span>`);
   // o.gear: the owner's ball skin (JustGold shop gear). Its paint replaces the plain colour; a ring in
   // the player's colour keeps the ball recognisable. No gear (or an unknown one): the classic ball.
   function drawBall(g, x, y, r, color, o = {}) {
@@ -251,7 +269,7 @@
       for (const d of shown) {
         g.setLineDash([8, 14]); g.strokeStyle = d.c; g.globalAlpha = 0.35; g.lineWidth = 4; g.beginPath(); g.moveTo(d.x, 90); g.lineTo(d.x, SLOT_TOP); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
         drawBall(g, d.x, 70 + Math.sin(now / 300 + d.x) * 4, 22, d.c, { glow: 14, gear: d.gear });
-        g.font = '30px "Segoe UI Emoji", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(d.av || '🙂', d.x, 70 + Math.sin(now / 300 + d.x) * 4);
+        markFace(g, d, d.x, 70 + Math.sin(now / 300 + d.x) * 4, 30);
         if (d.power) { g.font = '26px "Segoe UI Emoji", sans-serif'; g.fillText(d.power, d.x + 26, 44); }
       }
     }
@@ -385,7 +403,7 @@
       for (const b of set.querySelectorAll('[data-k]')) b.onclick = () => { const s = set.querySelector(`[data-set="${b.dataset.k}"]`); if (s) { s.value = b.dataset.v; s.onchange(); } for (const x of set.querySelectorAll(`[data-k="${b.dataset.k}"]`)) x.classList.toggle('on', x === b); BOX.sfx('pop'); };
     }
     el.querySelector('#pkl-n').textContent = L.players.length ? `(${L.players.length})` : '';
-    BOX.morph(el.querySelector('#roster'), L.players.map((p) => `<span class="chip ${p.online ? '' : 'off'}"><i class="pkl-ball" style="--c:${esc(p.color)}"></i><span class="av">${esc(p.avatar || '🙂')}</span>${esc(p.name)}</span>`).join('') || '<span class="pkl-empty">Scan the ticket to join! 🎟️</span>');
+    BOX.morph(el.querySelector('#roster'), L.players.map((p) => `<span class="chip ${p.online ? '' : 'off'}"><i class="pkl-ball" style="--c:${esc(p.color)}"></i><span class="av">${face(p, 32)}</span>${esc(p.name)}</span>`).join('') || '<span class="pkl-empty">Scan the ticket to join! 🎟️</span>');
     const lu = el.querySelector('#pkl-lineup'); if (lu.dataset.h !== (L.lineupHtml || '')) { lu.innerHTML = L.lineupHtml || ''; lu.dataset.h = L.lineupHtml || ''; }
     el.querySelector('#start').disabled = L.players.length < (L.min || 1);
   }
@@ -398,7 +416,7 @@
     const st = s.standings || [];
     return st.map((r) => {
       const mv = r.prevRank && s.phase === 'score' ? r.prevRank - r.rank : 0;
-      return `<div class="pk-row ${r.rank === 1 ? 'top' : ''}" style="--c:${esc(r.color)}"><span class="n">${r.rank}</span><i class="pk-dot"></i><span class="av">${esc(r.avatar || '')}</span><span class="nm">${esc(r.name)}</span>${mv ? `<span class="mv ${mv > 0 ? 'up' : 'dn'}">${mv > 0 ? '▲' : '▼'}${Math.abs(mv)}</span>` : ''}${opts.gain && r.gain ? `<span class="gn ${r.gain < 0 ? 'neg' : ''}">${r.gain > 0 ? '+' : ''}${r.gain}</span>` : ''}<b>${r.total}</b></div>`;
+      return `<div class="pk-row ${r.rank === 1 ? 'top' : ''}" style="--c:${esc(r.color)}"><span class="n">${r.rank}</span><i class="pk-dot"></i><span class="av">${face(r, 34)}</span><span class="nm">${esc(r.name)}</span>${mv ? `<span class="mv ${mv > 0 ? 'up' : 'dn'}">${mv > 0 ? '▲' : '▼'}${Math.abs(mv)}</span>` : ''}${opts.gain && r.gain ? `<span class="gn ${r.gain < 0 ? 'neg' : ''}">${r.gain > 0 ? '+' : ''}${r.gain}</span>` : ''}<b>${r.total}</b></div>`;
     }).join('');
   }
   // Right column: who we're waiting on + the live leaderboard.
@@ -406,7 +424,7 @@
     const lb = `<div class="pk-card pk-lb"><h3>🏆 Leaderboard${s.count > (s.standings || []).length ? ` <small>top ${s.standings.length} of ${s.count}</small>` : ''}</h3>${boardRows(s, { gain: s.phase === 'score' })}</div>`;
     if (s.phase === 'aim' || s.phase === 'draw') {
       const wt = s.waiting || [];
-      return `<div class="pk-card pk-wait"><h3>${wt.length ? `⏳ Waiting on ${s.waitingN}` : '✅ Everyone’s in!'}</h3><div class="pk-wchips">${wt.map((p) => `<span style="--c:${esc(p.color)}">${esc(p.avatar || '')} ${esc(p.name)}</span>`).join('')}${s.waitingN > wt.length ? `<span>+${s.waitingN - wt.length}</span>` : ''}</div></div>${lb}`;
+      return `<div class="pk-card pk-wait"><h3>${wt.length ? `⏳ Waiting on ${s.waitingN}` : '✅ Everyone’s in!'}</h3><div class="pk-wchips">${wt.map((p) => `<span style="--c:${esc(p.color)}">${face(p, 28)} ${esc(p.name)}</span>`).join('')}${s.waitingN > wt.length ? `<span>+${s.waitingN - wt.length}</span>` : ''}</div></div>${lb}`;
     }
     return lb;
   }
@@ -417,7 +435,7 @@
     if (s.phase === 'score' && s.results) {
       const tr = s.results.trick;
       const gains = (s.gains || []).slice().sort((a, b) => b.gain - a.gain).slice(0, 7);
-      return `${tr ? `<div class="pk-card pk-trick"><div class="ic">🎪</div><div><small>CROWD FAVOURITE · TRICK SHOT</small><b>${esc(tr.name)}</b><span>+75 · style ${tr.style} · landed ${esc(tr.slot)}</span></div></div>` : ''}<div class="pk-card pk-gains"><h3>💵 This round</h3>${gains.map((r) => `<div class="pk-gr" style="--c:${esc(r.color)}"><span class="av">${esc(r.avatar || '')}</span><span class="nm">${esc(r.name)}<small>${esc((r.items || []).filter((x) => x.v || /Star|×2|Steal/.test(x.t)).slice(0, 2).map((x) => x.t).join(' · '))}</small></span><b class="${r.gain < 0 ? 'neg' : ''}">${r.gain > 0 ? '+' : ''}${r.gain}</b></div>`).join('')}</div>`;
+      return `${tr ? `<div class="pk-card pk-trick"><div class="ic">🎪</div><div><small>CROWD FAVOURITE · TRICK SHOT</small><b>${esc(tr.name)}</b><span>+75 · style ${tr.style} · landed ${esc(tr.slot)}</span></div></div>` : ''}<div class="pk-card pk-gains"><h3>💵 This round</h3>${gains.map((r) => `<div class="pk-gr" style="--c:${esc(r.color)}"><span class="av">${face(r, 36)}</span><span class="nm">${esc(r.name)}<small>${esc((r.items || []).filter((x) => x.v || /Star|×2|Steal/.test(x.t)).slice(0, 2).map((x) => x.t).join(' · '))}</small></span><b class="${r.gain < 0 ? 'neg' : ''}">${r.gain > 0 ? '+' : ''}${r.gain}</b></div>`).join('')}</div>`;
     }
     const steps = [['aim', '🎯', 'Pick your drop spot', 'Tap along the top of the board on your phone. Got a power-up? Use it!'], ['draw', '✏️', 'Draw ONE line', 'Everyone’s spot is showing now. Help yourself… or wreck a rival.'], ['drop', '⬇️', 'Watch them drop', 'Lines pay their owner: 20% of good slots, +50 per rival busted.']];
     const cur = s.phase === 'intro' ? '' : s.phase;
@@ -434,7 +452,7 @@
   }
   function overlayHtml(s) {
     if (s.phase === 'intro') {
-      if (s.sudden) return `<div class="pk-intro sudden"><small>IT’S A TIE AT THE TOP!</small><h2>⚡ SUDDEN DEATH DROP ⚡</h2><p>${s.sudden.map((p) => `<span style="--c:${esc(p.color)}">${esc(p.avatar || '')} ${esc(p.name)}</span>`).join(' vs ')}</p><p class="pk-news"><span>One ball each · no lines · highest slot wins</span></p></div>`;
+      if (s.sudden) return `<div class="pk-intro sudden"><small>IT’S A TIE AT THE TOP!</small><h2>⚡ SUDDEN DEATH DROP ⚡</h2><p>${s.sudden.map((p) => `<span style="--c:${esc(p.color)}">${fig(p, 150)} ${esc(p.name)}</span>`).join(' vs ')}</p><p class="pk-news"><span>One ball each · no lines · highest slot wins</span></p></div>`;
       return `<div class="pk-intro"><small>ROUND ${s.round} OF ${s.of}</small><h2>${s.round === s.of ? 'FINAL DROP!' : s.round === 1 ? 'FIRST DROP!' : 'NEXT BOARD!'}</h2><div class="pk-lvl">DIFFICULTY <b>${stars5(s.level)}</b></div><p class="pk-news">${(s.board && s.board.news || []).map((n) => `<span>${esc(n)}</span>`).join('')}${s.round > 1 ? '<span>👻 last round’s lines stay as ghosts</span>' : ''}</p></div>`;
     }
     return '';
@@ -460,7 +478,7 @@
   function mountCv(el) { const st = el.querySelector('#pk-stage'); if (st && !st.querySelector('canvas')) st.innerHTML = '<canvas id="pk-cv"></canvas>'; }
   function tvOver(el, s) {
     const st = s.standings || [], w = st[0] || {};
-    const pod = [st[1], st[0], st[2]].map((r, i) => (r ? `<div class="pk-pod p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="av">${esc(r.avatar || '')}</div><div class="nm">${esc(r.name)}</div><div class="pts">${r.total}</div><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div class="pk-pod empty"></div>')).join('');
+    const pod = [st[1], st[0], st[2]].map((r, i) => (r ? `<div class="pk-pod p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="av">${fig(r, [150, 190, 130][i], i === 1 ? { mood: 'grin' } : undefined)}</div><div class="nm">${esc(r.name)}</div><div class="pts">${r.total}</div><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div class="pk-pod empty"></div>')).join('');
     BOX.morph(el, `<div class="pk-tv pk-${esc(s.style || 'classic')} pk-over">
       <div class="pk-win"><small>JACKPOT CHAMPION</small><h2>🏆 ${esc(w.name || '')} wins!</h2>${s.sdWinner ? '<p>…after a sudden-death drop!</p>' : ''}</div>
       <div class="pk-main"><div class="pk-endl"><div class="pk-podium">${pod}</div>
@@ -535,7 +553,7 @@
     drawLive(g, V.board, style, tt, now, {});
     for (const gh of V.ghosts || []) drawStroke(g, gh.p, gh.c, { ghost: true, alpha: pal(style).ghost, w: 9 });
     if (V.phase === 'draw' || V.phase === 'aim') {
-      for (const d of V.drops || []) if (d.x != null) { g.setLineDash([8, 14]); g.strokeStyle = d.c; g.globalAlpha = d.me ? 0.6 : 0.3; g.lineWidth = 4; g.beginPath(); g.moveTo(d.x, 90); g.lineTo(d.x, SLOT_TOP); g.stroke(); g.setLineDash([]); g.globalAlpha = 1; drawBall(g, d.x, 70, d.me ? 26 : 20, d.c, { glow: d.me ? 20 : 6, gear: d.gear }); g.font = `${d.me ? 32 : 26}px "Segoe UI Emoji", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(d.av || '🙂', d.x, 71); }
+      for (const d of V.drops || []) if (d.x != null) { g.setLineDash([8, 14]); g.strokeStyle = d.c; g.globalAlpha = d.me ? 0.6 : 0.3; g.lineWidth = 4; g.beginPath(); g.moveTo(d.x, 90); g.lineTo(d.x, SLOT_TOP); g.stroke(); g.setLineDash([]); g.globalAlpha = 1; drawBall(g, d.x, 70, d.me ? 26 : 20, d.c, { glow: d.me ? 20 : 6, gear: d.gear }); markFace(g, d, d.x, 71, d.me ? 32 : 26); }
       if (V.phase === 'aim' && PP.x != null) {
         g.setLineDash([10, 12]); g.strokeStyle = PP.color; g.globalAlpha = 0.7; g.lineWidth = 5; g.beginPath(); g.moveTo(PP.x, 100); g.lineTo(PP.x, SLOT_TOP); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
         const big = PP.power === 'big', twin = PP.power === 'twin';
@@ -588,7 +606,7 @@
     if (v.phase === 'over') {
       return BOX.morph(el, `<div class="pk-phone pk-end"><div class="pk-place">${v.rank === 1 ? '🏆' : v.rank <= 3 ? ['', '', '🥈', '🥉'][v.rank] : '🎯'}</div><h2>${v.rank === 1 ? 'You win!' : `You finished #${v.rank}`}</h2><p class="pk-big">💰 ${v.total}</p>
         ${(v.awards || []).map((a) => `<div class="pk-aw"><div class="ic">${esc(a.icon)}</div><div><b>${esc(a.title)}</b><small>${esc(a.why)}</small></div></div>`).join('')}
-        <div class="pk-top5">${(v.top || []).map((r, i) => `<div><span>${i + 1}. ${esc(r.avatar || '')} ${esc(r.name)}</span><b>${r.total}</b></div>`).join('')}</div></div>`);
+        <div class="pk-top5">${(v.top || []).map((r, i) => `<div><span>${i + 1}. ${face(r, 30)} ${esc(r.name)}</span><b>${r.total}</b></div>`).join('')}</div></div>`);
     }
     if (!v.inRound) return BOX.morph(el, `<div class="pk-phone">${head}<div class="pk-msg"><h3>⚡ Sudden death!</h3><p>The tied leaders get one ball each. Watch the TV!</p></div></div>`);
     if (v.phase === 'intro') {
@@ -611,7 +629,7 @@
       const others = (v.drops || []).filter((d) => !d.me);
       BOX.morph(el, `<div class="pk-phone">${head}<div class="pk-hint">${done ? '✅ Line locked. Waiting for the drop…' : `✏️ Draw one line (${2 - PP.strokes.length} stroke${PP.strokes.length === 1 ? '' : 's'} left)`}${v.me.power ? ` · ${esc(({ sticky: '🍯', big: '🎳', twin: '👯', eraser: '🧽', ink: '🖋️' })[v.me.power] || '')} on` : ''}</div>
         <div class="pk-inkbar"><span>🖋️ Ink</span><div class="pk-ink" id="pk-ink"><i></i></div><b id="pk-inkt"></b></div>${pad}
-        ${isEr && !done ? `<div class="pk-pows-h">🧽 Erase whose line?</div><div class="pk-targets">${others.map((d) => `<button class="pk-tg ${PP.target === d.id ? 'on' : ''}" data-tg="${esc(d.id)}" style="--c:${esc(d.c)}">${esc(d.av || '')} ${esc(d.name)}</button>`).join('')}</div>` : ''}
+        ${isEr && !done ? `<div class="pk-pows-h">🧽 Erase whose line?</div><div class="pk-targets">${others.map((d) => `<button class="pk-tg ${PP.target === d.id ? 'on' : ''}" data-tg="${esc(d.id)}" style="--c:${esc(d.c)}">${face({ id: d.id, name: d.name, avatar: d.av }, 28)} ${esc(d.name)}</button>`).join('')}</div>` : ''}
         <div class="pk-tools"><button class="btn ghost" id="pk-undo" ${!PP.strokes.length || done ? 'disabled' : ''}>↶ Undo</button><button class="btn ghost" id="pk-redo" ${!PP.redo.length || done ? 'disabled' : ''}>↷ Redo</button><button class="btn ghost" id="pk-clear" ${!PP.strokes.length || done ? 'disabled' : ''}>🗑️</button></div>
         <button class="btn big pk-go ${done ? 'done' : ''}" id="pk-done">${done ? '✏️ Edit my line' : PP.strokes.length ? '✅ Done!' : '✅ No line this time'}</button>
         <div class="pk-time">${BOX.timer(v.endsIn)}</div></div>`);

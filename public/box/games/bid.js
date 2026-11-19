@@ -55,6 +55,9 @@
     return `<svg class="jb-paddle${big ? ' big' : ''}${p.glow ? ' glow' : ''}" viewBox="0 0 40 60" aria-hidden="true" style="--pg:${a}"><rect x="16.5" y="32" width="7" height="26" rx="3" fill="#6b3f1d" stroke="#2a1608" stroke-width="2"/>
       <circle cx="20" cy="19" r="17" fill="${a}" stroke="#2a1608" stroke-width="2.5"/>${deco}<circle cx="20" cy="19" r="13" fill="none" stroke="${b}" stroke-width="2.5"/>${p.icon ? `<text x="20" y="25" text-anchor="middle" font-size="15">${esc(p.icon)}</text>` : ''}</svg>`;
   }
+  // Your JustGameBox character (auction hat, monocle, gavel from the shop) next to your name.
+  const face = (x, sz = 30, o) => (x && (x.id || x.av) && BOX.face ? BOX.face({ ...x, avatar: x.avatar || x.av }, sz, o) : '');
+  const body = (x, h = 110, o) => (x && x.id && BOX.body && BOX.hasLook && BOX.hasLook(x) ? BOX.body(x, h, o) : '');
   const chip = (name, color) => `<span class="jb-chip" style="--c:${esc(color || '#ffd23f')}">${esc(name)}</span>`;
   const itemCard = (it, fresh, small) => `<div class="jb-item r-${esc(it.r)} ${it.jackpot ? 'jack' : ''} ${fresh ? 'fresh' : ''} ${small ? 'sm' : ''}">
       <div class="jb-ie">${esc(it.emoji)}</div><div class="jb-in">${esc(it.name)}</div>
@@ -71,8 +74,8 @@
 
   function tvAuction(s) {
     const L = s.locker, h = s.high;
-    const top = (s.top || []).map((b, i) => `<div class="jb-top3 p${i}"><span>${['🥇', '🥈', '🥉'][i]}</span>${paddle(b.gear)}${chip(b.name, b.color)}<b>${money(b.amount)}</b></div>`).join('');
-    const tick = (s.ticker || []).map((b, i) => `<div class="jb-tk ${i === 0 && once('tk:' + s.round + ':' + s.bidCount) ? 'new' : ''}">${paddle(b.gear)}${chip(b.name, b.color)}<b>${money(b.amount)}</b></div>`).join('');
+    const top = (s.top || []).map((b, i) => `<div class="jb-top3 p${i}"><span>${['🥇', '🥈', '🥉'][i]}</span>${face(b, 40)}${paddle(b.gear)}${chip(b.name, b.color)}<b>${money(b.amount)}</b></div>`).join('');
+    const tick = (s.ticker || []).map((b, i) => `<div class="jb-tk ${i === 0 && once('tk:' + s.round + ':' + s.bidCount) ? 'new' : ''}">${face(b, 34)}${paddle(b.gear)}${chip(b.name, b.color)}<b>${money(b.amount)}</b></div>`).join('');
     const hot = once('hb:' + s.round + ':' + s.bidCount);
     return `<div class="jb-floor">${unit(s, 'part')}
       <div class="jb-desk">
@@ -80,7 +83,7 @@
         <div class="jb-bidbox st${s.stage}">
           ${ring(s)}
           <div class="jb-cur"><small>${h ? 'Current bid' : 'Opening bid'}</small><div class="jb-amt ${hot && h ? 'bump' : ''}">${money(h ? h.amount : L.opening)}</div>
-          <div class="jb-who">${h ? paddle(h.gear, true) + chip(h.name, h.color) : '<span class="muted">No bids yet</span>'}</div></div>
+          <div class="jb-who">${h ? (body(h, 96, { mood: 'grin' }) || face(h, 44)) + paddle(h.gear, true) + chip(h.name, h.color) : '<span class="muted">No bids yet</span>'}</div></div>
         </div>
         ${s.stage ? `<div class="jb-going st${s.stage}">${STAGE[s.stage]}</div>` : ''}
         <div class="jb-top3s">${top}</div>
@@ -116,7 +119,7 @@
     const sale = s.sale, fresh = once('sold:' + s.round);
     return `<div class="jb-floor">${unit(s, 'part')}
       <div class="jb-desk"><div class="jb-soldbox ${fresh ? 'fresh' : ''}">
-        ${sale ? `<div class="jb-gavel">🔨</div><div class="jb-stamp">SOLD!</div><div class="jb-soldto">to ${paddle(s.saleGear, true)}${chip(sale.name, sale.color)}</div><div class="jb-soldfor">for <b>${money(sale.price)}</b>${sale.sealed ? ' <small>(sealed bid, second price)</small>' : ''}</div>`
+        ${sale ? `<div class="jb-gavel">🔨</div><div class="jb-stamp">SOLD!</div><div class="jb-soldto">to ${body(sale, 120, { mood: 'grin' }) || face(sale, 48)}${paddle(s.saleGear, true)}${chip(sale.name, sale.color)}</div><div class="jb-soldfor">for <b>${money(sale.price)}</b>${sale.sealed ? ' <small>(sealed bid, second price)</small>' : ''}</div>`
     : '<div class="jb-gavel">🦗</div><div class="jb-stamp grey">NO SALE</div><div class="jb-soldfor">Nobody bid! Let’s see what you all missed…</div>'}
       </div></div></div>`;
   }
@@ -131,21 +134,21 @@
         : `<div class="jb-result miss ${fresh ? 'fresh' : ''}"><small>Nobody bought it…</small><div class="jb-pl">You all missed ${money(r.total)}!</div></div>`;
       foot += R.news.map((n, i) => `<div class="jb-setnews" style="--d:${0.8 + i * 0.4}s">${esc(n.icon)} <b>${esc(n.name)}</b> completed <b>${esc(n.label)}</b>! <span>+${money(n.amount)}</span></div>`).join('');
     }
-    return `<div class="jb-reveal"><div class="jb-revhead">${sale ? `🔨 ${chip(sale.name, sale.color)}’s locker` : '🦗 The unsold locker'} · ${esc(s.locker.themeIcon)} ${esc(s.locker.theme)}</div>
+    return `<div class="jb-reveal"><div class="jb-revhead">${sale ? `🔨 ${face(sale, 40)}${chip(sale.name, sale.color)}’s locker` : '🦗 The unsold locker'} · ${esc(s.locker.themeIcon)} ${esc(s.locker.theme)}</div>
       <div class="jb-items ${R.size > 8 ? 'many' : ''}">${cards}${hidden}</div>${foot}</div>`;
   }
   function tvOver(s) {
     const w = s.final[0], top = Math.max(1, ...s.final.map((r) => r.net));
-    const bars = s.final.slice(0, 6).map((r, i) => `<div class="jb-bar"><span class="n">${i + 1}</span><span class="nm">${esc(r.name)}${r.loans ? ' 🏦'.repeat(r.loans) : ''}</span>
+    const bars = s.final.slice(0, 6).map((r, i) => `<div class="jb-bar"><span class="n">${i + 1}</span><span class="nm">${face(r, 38)} ${esc(r.name)}${r.loans ? ' 🏦'.repeat(r.loans) : ''}</span>
       <span class="tr"><i style="width:${Math.max(2, (Math.max(0, r.net) / top) * 100)}%;--c:${esc(r.color)}"></i></span><b>${money(r.net)}</b>
       <small>💵${money(r.cash)} · 📦${money(r.itemValue)}${r.bonus ? ` · 🧩${money(r.bonus)}` : ''}${r.debt ? ` · 🏦−${money(r.debt)}` : ''}</small></div>`).join('');
     const pod = [s.final[1], s.final[0], s.final[2]];
-    const podium = `<div class="jb-podium">${pod.map((r, i) => (r ? `<div class="pd p${[2, 1, 3][i]}"><div class="who">${r.av ? esc(r.av) : ['🥈', '🏆', '🥉'][i]}</div><div class="nm">${esc(r.name)}</div><div class="blk"><b>${[2, 1, 3][i]}</b><small>${money(r.net)}</small></div></div>` : '<div class="pd"></div>')).join('')}</div>`;
+    const podium = `<div class="jb-podium">${pod.map((r, i) => (r ? `<div class="pd p${[2, 1, 3][i]}"><div class="who">${body(r, i === 1 ? 150 : 120, { mood: i === 1 ? 'grin' : undefined }) || (r.av ? esc(r.av) : ['🥈', '🏆', '🥉'][i])}</div><div class="nm">${esc(r.name)}</div><div class="blk"><b>${[2, 1, 3][i]}</b><small>${money(r.net)}</small></div></div>` : '<div class="pd"></div>')).join('')}</div>`;
     return `<div class="jb-root jb-over final"><div class="jb-overhost"><div class="st-slot"></div></div><div class="muted">Storage tycoon of the night</div>${podium}<div class="jb-winner">🏆 ${esc(w ? w.name : '')} wins!</div>
-      <div class="jb-awards">${(s.awards || []).slice(0, 6).map((a) => `<div class="jb-award"><div class="ic">${a.icon}</div><b>${esc(a.title)}</b><div>${esc(a.name)}</div><small class="muted">${esc(a.why)}</small></div>`).join('')}</div>
+      <div class="jb-awards">${(s.awards || []).slice(0, 6).map((a) => `<div class="jb-award"><div class="ic">${a.icon}</div><b>${esc(a.title)}</b><div>${face(a, 36)} ${esc(a.name)}</div><small class="muted">${esc(a.why)}</small></div>`).join('')}</div>
       <div class="jb-bars">${bars}</div><p class="muted">Net worth = cash + item values + set bonuses − loans with 20% interest</p></div>`;
   }
-  const side = (s) => `<aside class="jb-side"><div class="st-slot"></div><div class="panel"><h3>💰 Net worth</h3>${s.standings.map((r, i) => `<div class="jb-row"><span class="n">${i + 1}</span><span class="dot" style="background:${esc(r.color)}"></span><span class="nm">${esc(r.name)}${r.loans ? ` <span title="loans">${'🏦'.repeat(r.loans)}</span>` : ''}</span><b>${money(r.net)}</b></div>`).join('')}
+  const side = (s) => `<aside class="jb-side"><div class="st-slot"></div><div class="panel"><h3>💰 Net worth</h3>${s.standings.map((r, i) => `<div class="jb-row"><span class="n">${i + 1}</span><span class="dot" style="background:${esc(r.color)}"></span>${face(r, 36)}<span class="nm">${esc(r.name)}${r.loans ? ` <span title="loans">${'🏦'.repeat(r.loans)}</span>` : ''}</span><b>${money(r.net)}</b></div>`).join('')}
     ${s.players > s.standings.length ? `<div class="muted jb-more">+${s.players - s.standings.length} more bidders</div>` : ''}</div></aside>`;
 
   // Confetti for jackpots and legendary finds (TV only).

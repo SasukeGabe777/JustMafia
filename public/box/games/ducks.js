@@ -20,7 +20,18 @@
   const course = (c) => (c ? `<div class="dk-legs">${c.sections.map((s) => `<span class="leg ${typeOf(s)}">${SEC[typeOf(s)][0]} ${SEC[typeOf(s)][1]}${s.v ? ' ' + (VAR_ICON[s.v] || '') : ''}</span>`).join('<span class="arrow">→</span>')}</div>` : '');
   const weatherChip = (c, W) => (c && W ? `<span class="dk-weather">${W[c.weather].icon} ${W[c.weather].label}${c.wind ? (c.wind > 0 ? ' (tailwind)' : ' (headwind)') : ''}</span>` : '');
   const bar = (v, cls = '') => `<div class="bar ${cls}"><i style="width:${Math.max(0, Math.min(100, v))}%"></i></div>`;
-  const who = (x) => `${x.avatar ? esc(x.avatar) + ' ' : ''}`;
+  // The farmer: the player's own character (BOX.face / BOX.body, cached face images on the
+  // canvases), or their emoji when they have none. Wild ducks have no farmer.
+  const hasChar = (x) => !!(x && x.id && !x.wild && BOX.hasLook && BOX.hasLook(x));
+  const who = (x, n = 28) => (hasChar(x) && BOX.face ? BOX.face(x, n) + ' ' : `${x.avatar ? esc(x.avatar) + ' ' : ''}`);
+  const farmerOf = (id, d) => ({ id, name: (d && d.owner) || undefined, avatar: d && d.avatar, wild: d && d.wild });
+  const FACES = new Map();
+  function faceImg(x, px) {
+    if (!hasChar(x) || !BOX.faceUrl) return null;
+    const k = x.id + '|' + px; let e = FACES.get(k);
+    if (!e) { const u = BOX.faceUrl(x, px); if (!u) return null; if (FACES.size > 200) FACES.clear(); e = Object.assign(new Image(), { src: u }); FACES.set(k, e); }
+    return e.complete && e.naturalWidth ? e : null;
+  }
   const road = (ladder, race) => (ladder ? `<div class="dk-road">${ladder.map((l) => `<span class="${l.done ? 'done' : ''} ${l.n === race + 1 ? 'cur' : ''} ${l.final ? 'fin' : ''}" title="${esc(l.label)}">${l.done ? '✓' : l.icon}</span>`).join('<i></i>')}</div>` : '');
 
   // ---------- TV state kept between updates (canvases keep animating) ----------
@@ -107,9 +118,11 @@
       else if (tired) { g.font = `${14 * sc}px sans-serif`; g.fillText('💦', x - 18 * sc, y - 26 * sc); }
       if (labelled.has(p.id) || (done && race.place[p.id].place <= 3)) {
         g.font = `600 ${Math.min(20, 13 * sc)}px Fredoka, sans-serif`;
-        const label = (done ? MEDAL[race.place[p.id].place - 1] || '#' + race.place[p.id].place : '') + ' ' + (d.avatar ? d.avatar + ' ' : '') + (d.name || '') + (d.wild ? ' 🌿' : '');
-        const fh = Math.min(26, 17 * sc), tw = g.measureText(label).width + 12, ly = y - (52 + (lane % 3) * 18) * sc;
-        g.fillStyle = d.wild ? 'rgba(40,70,30,.75)' : 'rgba(0,0,0,.62)'; rrect(g, x - tw / 2, ly, tw, fh, 6); g.fill(); g.fillStyle = '#fff'; g.fillText(label, x, ly + fh * 0.76);
+        const fim = faceImg(farmerOf(p.id, d), 64);
+        const label = (done ? MEDAL[race.place[p.id].place - 1] || '#' + race.place[p.id].place : '') + ' ' + (d.avatar && !fim ? d.avatar + ' ' : '') + (d.name || '') + (d.wild ? ' 🌿' : '');
+        const fh = Math.min(26, 17 * sc), fw = fim ? fh * 1.5 : 0, tw = g.measureText(label).width + 12 + fw * 0.8, ly = y - (52 + (lane % 3) * 18) * sc;
+        g.fillStyle = d.wild ? 'rgba(40,70,30,.75)' : 'rgba(0,0,0,.62)'; rrect(g, x - tw / 2, ly, tw, fh, 6); g.fill(); g.fillStyle = '#fff'; g.fillText(label, x + fw * 0.4, ly + fh * 0.76);
+        if (fim) g.drawImage(fim, x - tw / 2 + 1, ly + fh - fw * 0.92, fw, fw);
       }
       g.textAlign = 'left';
       for (const c of race.cheers) if (c.id === p.id) { const age = (pnow - c.at) / 1000; if (age < 1.5) { g.globalAlpha = 1 - age / 1.5; g.font = `${18 * sc}px sans-serif`; g.fillText('📣', x + Math.sin(age * 8 + c.at) * 10, y - 60 * sc - age * 40); g.globalAlpha = 1; } }
@@ -156,7 +169,9 @@
       if (i === 0) { g.fillStyle = 'rgba(255,210,63,.18)'; g.fillRect(bx + 4, yy - 19, bw - 8, rh - 2); }
       g.fillStyle = (art.PAL[d.color] || art.PAL.sunny)[0]; g.beginPath(); g.arc(bx + 34, yy - 6, 7, 0, Math.PI * 2); g.fill();
       g.fillStyle = '#fff'; g.font = '700 15px Fredoka, sans-serif'; g.fillText(String(i + 1), bx + 10, yy);
-      g.font = '600 15px Fredoka, sans-serif'; g.fillText(`${d.avatar ? d.avatar + ' ' : ''}${(d.name || '').slice(0, 16)}${d.wild ? ' 🌿' : ''}`, bx + 48, yy, bw - 120);
+      const fim = faceImg(farmerOf(p.id, d), 48);
+      if (fim) g.drawImage(fim, bx + 44, yy - 21, 26, 26);
+      g.font = '600 15px Fredoka, sans-serif'; g.fillText(`${d.avatar && !fim ? d.avatar + ' ' : ''}${(d.name || '').slice(0, 16)}${d.wild ? ' 🌿' : ''}`, bx + (fim ? 74 : 48), yy, bw - (fim ? 146 : 120));
       g.textAlign = 'right'; g.fillStyle = done ? '#ffd23f' : 'rgba(255,255,255,.7)'; g.font = '600 13px Fredoka, sans-serif';
       g.fillText(done ? (MEDAL[race.place[p.id].place - 1] || 'FIN') : e < R.intro ? '' : i === 0 ? 'leader' : lead.x - p.x < 0.05 ? 'level' : '-' + (lead.x - p.x).toFixed(1) + 'm', bx + bw - 26, yy);
       if (mv && pnow - mv.at < 1600) { g.fillStyle = mv.up ? '#5be37a' : '#ff6a5c'; g.fillText(mv.up ? '▲' : '▼', bx + bw - 8, yy); }
@@ -198,7 +213,13 @@
       const fav = (R.favorites || []).filter((id) => race.ducks[id]);
       if (fav.length) {
         g.font = '700 22px Fredoka, sans-serif'; g.fillStyle = '#ffeccd'; g.fillText('THE FAVORITES', W / 2, H * 0.36);
-        fav.forEach((id, i) => { const d = race.ducks[id], cx = W / 2 + (i - (fav.length - 1) / 2) * 220; art.drawDuck(g, cx, H * 0.47, 2.2, d.color, d.hat, now + i, 'stand', false, d.stage == null ? 2 : Math.max(0, d.stage)); g.font = '700 20px Fredoka, sans-serif'; g.fillStyle = '#fff'; g.fillText(`${i + 1}. ${d.avatar ? d.avatar + ' ' : ''}${d.name}`, cx, H * 0.47 + 50); });
+        fav.forEach((id, i) => {
+          const d = race.ducks[id], cx = W / 2 + (i - (fav.length - 1) / 2) * 220, fm = farmerOf(id, d);
+          // the farmer stands behind their duck (their own character)
+          const drew = hasChar(fm) && BOX.drawChar && BOX.drawChar(g, cx + 46, H * 0.47 + 26, fm, { scale: 1.45, t: now + i, facing: -0.6, game: 'ducks' });
+          art.drawDuck(g, drew ? cx - 22 : cx, H * 0.47, 2.2, d.color, d.hat, now + i, 'stand', false, d.stage == null ? 2 : Math.max(0, d.stage));
+          g.font = '700 20px Fredoka, sans-serif'; g.fillStyle = '#fff'; g.fillText(`${i + 1}. ${d.avatar && !drew ? d.avatar + ' ' : ''}${d.name}`, cx, H * 0.47 + 50);
+        });
       }
       const left = Math.ceil((R.intro - e) / 1000);
       if (left <= 3) { g.font = '800 140px Fredoka, sans-serif'; g.fillStyle = '#ffd23f'; g.fillText(String(left), W / 2, H * 0.8); if (race.beep !== left) { race.beep = left; BOX.sfx('tick'); } }
@@ -368,7 +389,7 @@
       <div class="card-box"><h3>Skills</h3>${Object.entries(SK).map(([k, [ic, label, , color]]) => `<div class="dk-statrow"><span>${ic} ${label}</span><div class="bar"><i style="width:${Math.min(100, d.levels[k] * 4)}%;background:${color}"></i></div><b>Lv ${d.levels[k]}</b></div>`).join('')}${v.gene ? `<p class="muted">🧬 ${esc(v.gene.label)}: ${esc(v.gene.about)} (+25% ${SK[v.gene.skill][1]} XP)</p>` : ''}</div>
       <div class="card-box"><label class="muted">Duck name</label><input id="dk-name" class="dk-select" maxlength="18" value="${esc(d.name)}"></div>
       <div class="card-box"><h3>Color</h3><div class="dk-swatches">${v.colors.map((c) => `<button data-color="${c}" class="${d.color === c ? 'on' : ''}"><img src="${A().duckImg(c, 'none', 'stand', Math.max(0, d.stage))}" alt="${c}"></button>`).join('')}</div></div>
-      ${v.neighbors.length ? `<div class="card-box"><h3>🎁 Send a gift</h3><p class="muted">5 coins: their duck gets +15 energy and you both feel good.${v.giftIn ? ' Next gift in ' + timer(v.giftIn) : ''}</p><div class="dk-gifts">${v.neighbors.slice(0, 30).map((n) => `<button data-gift="${esc(n.id)}" ${v.giftIn || d.coins < 5 ? 'disabled' : ''}>🎁 ${esc(n.owner)}</button>`).join('')}</div></div>` : ''}
+      ${v.neighbors.length ? `<div class="card-box"><h3>🎁 Send a gift</h3><p class="muted">5 coins: their duck gets +15 energy and you both feel good.${v.giftIn ? ' Next gift in ' + timer(v.giftIn) : ''}</p><div class="dk-gifts">${v.neighbors.slice(0, 30).map((n) => `<button data-gift="${esc(n.id)}" ${v.giftIn || d.coins < 5 ? 'disabled' : ''}>${hasChar(n) ? who(n, 26) : '🎁 '}${esc(n.owner)}</button>`).join('')}</div></div>` : ''}
       <div class="card-box"><h3>Badges (${d.badges.length}/${Object.keys(v.badges).length})</h3><div class="dk-badges">${Object.entries(v.badges).map(([k, [ic, label, c]]) => `<span class="${d.badges.includes(k) ? 'got' : ''}" title="${esc(label)}">${ic}<small>${esc(label)}${c ? ' · ' + c + '🪙' : ''}</small></span>`).join('')}</div></div>`;
   }
   function eggPicker(v) {
@@ -497,7 +518,7 @@
         const pod = [1, 0, 2].map((i) => st[i]).filter(Boolean);
         el.innerHTML = `<div class="final dk-finale"><div class="dk-confetti">${Array.from({ length: 40 }, (_, i) => `<i style="left:${(i * 37) % 100}%;animation-delay:${(i % 10) * 0.35}s;background:${['#ffd23f', '#ff4f9a', '#3ec1ff', '#2ee6a6', '#fff'][i % 5]}"></i>`).join('')}</div>
           <div class="muted">The season finale</div><h2>🏆 Champion of Duck Valley</h2>
-          <div class="dk-podium season">${pod.map((x) => { const d = F[x.id] || {}, i = st.indexOf(x); return `<div class="pod p${i + 1}">${duckPic(d, i === 0 ? 'crown' : null, i === 0 ? 3 : null)}<b>${esc(x.duck)}</b><span class="muted">${who(x)}${esc(x.owner)}</span><div class="step">${MEDAL[i]} ${x.points} pts${x.wins ? ' · ' + x.wins + ' win' + (x.wins === 1 ? '' : 's') : ''}</div></div>`; }).join('')}</div>
+          <div class="dk-podium season">${pod.map((x) => { const d = F[x.id] || {}, i = st.indexOf(x); return `<div class="pod p${i + 1}"><div class="dk-pair">${hasChar(x) && BOX.body ? BOX.body(x, i === 0 ? 150 : 120, { mood: i === 0 ? 'grin' : undefined, cls: 'dk-farmer' }) : ''}${duckPic(d, i === 0 ? 'crown' : null, i === 0 ? 3 : null)}</div><b>${esc(x.duck)}</b><span class="muted">${who(x)}${esc(x.owner)}</span><div class="step">${MEDAL[i]} ${x.points} pts${x.wins ? ' · ' + x.wins + ' win' + (x.wins === 1 ? '' : 's') : ''}</div></div>`; }).join('')}</div>
           <div class="dk-awards">${(s.awards || []).map((a) => `<div class="panel"><b>${esc(a.title)}</b><div>${esc(a.duck)}</div><div class="muted">${who(a)}${esc(a.owner)}</div></div>`).join('')}</div>
           ${st.length > 3 ? BOX.board(st.slice(3).map((x) => ({ name: x.duck + ' (' + x.owner + ')', points: x.points })), (r) => r.points, ' pts').replace(/<span class="n">(\d+)<\/span>/g, (m, n) => `<span class="n">${Number(n) + 3}</span>`) : ''}</div>`;
         return;

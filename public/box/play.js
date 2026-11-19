@@ -77,8 +77,14 @@
     $('#j-err').textContent = err || '';
     avatarPicker();
     shopButtons();
+    joinAccount();
     busyChoice(null);
-    if ($('#j-code').value.length === 4) socket.emit('room:check', { code: $('#j-code').value }, (r) => { $('#j-game').textContent = r && r.ok ? 'Joining ' + r.title : ''; if (r && r.ok) { theme(r.game); busyChoice(r.busy, r); } });
+    if ($('#j-code').value.length === 4) socket.emit('room:check', { code: $('#j-code').value }, (r) => { if (goElsewhere(r)) return; $('#j-game').textContent = r && r.ok ? 'Joining ' + (r.away ? r.away.title : r.title) : ''; if (r && r.ok) { theme(r.game); busyChoice(r.busy, r); } });
+  }
+  // One code for every game: a JustMafia town's code opens JustMafia's own join page.
+  function goElsewhere(r) {
+    if (!r || r.ok || !r.url || typeof r.url !== 'string' || !/^\/[a-z]/.test(r.url) || socket.leaving) return false;
+    socket.leaving = true; location.replace(r.url); return true;
   }
   // A game is running (or the room is full / locked): play next game, or watch as audience.
   function busyChoice(busy, info) {
@@ -97,6 +103,7 @@
   }
   function join(code, name, token, mode) {
     socket.emit('player:join', { code, name, token, avatar, mode, profile: getProf() }, (r) => {
+      if (!token && goElsewhere(r)) return;
       if (r && !r.ok && r.busy && !token) { showJoin(); busyChoice(r.busy, { title: $('#j-game').textContent.replace(/^Joining /, '') }); return; }
       if (!r || !r.ok) { if (token) { try { localStorage.removeItem(tokenKey(code)); } catch { /* */ } return showJoin(); } return showJoin(r && r.error); }
       me = { code: r.code, id: r.id, token: r.token, name: name || (load(r.code) || {}).name };
@@ -146,7 +153,7 @@
     });
   };
   // Games the room can switch to (the ones this page knows how to draw).
-  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'escape', 'marble', 'debate', 'actout', 'tune', 'alien', 'bomb', 'quickdraw', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
+  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'pizza', 'escape', 'marble', 'debate', 'actout', 'tune', 'alien', 'bomb', 'quickdraw', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
   const LOCKABLE = { zombie: 'Finish a Party Mode to unlock it.' };
   function gamePicker() {
     const list = SWITCHABLE.filter((k) => BOX.games[k] && k !== gameKey);
@@ -160,7 +167,12 @@
     sheet(`<h2>👑 Host menu</h2><div class="host-menu">
       ${running ? '<button class="btn ghost" data-do="next">⏩ Skip ahead</button><button class="btn ghost" data-do="lobby">⏹ End this game</button>' : ''}
       ${!running ? '<button class="btn" data-do="pick">🎮 Pick another game</button>' : ''}
-      <button class="btn ghost" data-do="bots">🤖 Add 5 bots</button><button class="btn ghost" data-do="nobots">Remove bots</button></div>`, (s, close) => {
+      <button class="btn ghost" data-do="bots">🤖 Add 5 bots</button><button class="btn ghost" data-do="nobots">Remove bots</button></div>
+      ${(view.kickList || []).length ? `<h3>👥 Players</h3><div class="kick-list">${view.kickList.map((x) => `<div class="kick-row${x.online ? '' : ' off'}"><span>${esc(x.avatar || '')} ${esc(x.name)}${x.online ? '' : ' <small class="muted">(offline)</small>'}</span><button class="btn ghost small" data-kick="${esc(x.id)}" data-name="${esc(x.name)}">Remove</button></div>`).join('')}</div>` : ''}`, (s, close) => {
+      for (const b of s.querySelectorAll('[data-kick]')) b.onclick = async () => {
+        if (!confirm(`Remove ${b.dataset.name} from the room?`)) return;
+        const r = await hostDo('kick', { id: b.dataset.kick }); if (r.ok) { toast('👋 ' + b.dataset.name + ' was removed.'); b.closest('.kick-row').remove(); }
+      };
       for (const b of s.querySelectorAll('[data-do]')) b.onclick = () => {
         const d = b.dataset.do; close();
         if (d === 'pick') return gamePicker();
@@ -169,13 +181,26 @@
       };
     });
   };
-  // ---------- 🏆 My profile: lifetime stats, trophy case, titles, name + PIN ----------
+  // ---------- 🏆 My profile: lifetime stats, trophy case, titles, "Save your stuff" ----------
   const pemit = (ev, msg) => new Promise((res) => socket.emit(ev, msg, (r) => res(r || { ok: false, error: 'No answer from the server.' })));
-  let profBusy = false;
-  async function ensureProfile() {
-    if (getProf() || profBusy) return; profBusy = true;
-    const r = await pemit('profile:create', { name: me && me.name }); profBusy = false;
-    if (r.ok) setProf(r);
+  // "Save your stuff" (public/account-ui.js): name + password keeps the account (JustGold,
+  // character, items, stats); signing in on this phone switches it to the saved account.
+  const acct = window.JGAccount ? JGAccount.create({ socket, toast, haptic, name: () => (view && view.me && view.me.name) || (me && me.name) || '', onChange: async (kind) => {
+    // (profile:login re-links the room seat itself; after signing out the seat gets a fresh guest account)
+    if (kind === 'signout' && me) await ensureProfile();
+    if (kind === 'signin') { try { $('#j-name').value = localStorage.getItem('box.name') || $('#j-name').value; } catch { /* private */ } }
+    if (!$('#join').hidden) joinAccount();
+  } }) : null;
+  const joinAccount = () => {
+    if (!acct || $('#join').hidden) return;
+    let el = $('#j-acct'); if (!el) { el = document.createElement('div'); el.id = 'j-acct'; $('#j-err').after(el); }
+    acct.banner(el, { join: true });
+  };
+  let profBusy = null; // the profile:create in flight (callers wait for the same one)
+  function ensureProfile() {
+    if (getProf()) return Promise.resolve();
+    if (!profBusy) profBusy = pemit('profile:create', { name: me && me.name }).then((r) => { profBusy = null; if (r.ok) setProf(r); });
+    return profBusy;
   }
   const gname = (k) => (BOX.games[k] ? BOX.games[k].icon + ' ' + BOX.games[k].name : k);
   async function profileSheet(tab = 'stats') {
@@ -186,7 +211,7 @@
     if (!r.ok) return toast(r.error || 'Profiles are not available here.');
     const P = r.profile, S = P.stats, earned = P.trophies.filter((t) => t.earned);
     const nm = P.name || (view && view.me.name) || (me && me.name) || 'Player';
-    const tabs = `<div class="pf-tabs">${[['stats', '📊 Stats'], ['trophies', `🏆 Trophies ${earned.length}/${P.trophies.length}`], ['account', '🔑 Save']].map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+    const tabs = `<div class="pf-tabs">${[['stats', '📊 Stats'], ['trophies', `🏆 Trophies ${earned.length}/${P.trophies.length}`], ['account', P.claimed ? '✅ Saved' : '💾 Save']].map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`;
     let body = '';
     if (tab === 'stats') {
       body = `<div class="pf-tiles"><div><b>${S.nights}</b><span>nights</span></div><div><b>${S.games}</b><span>games</span></div><div><b>${S.wins}</b><span>wins</span></div><div><b>${S.partyPts}</b><span>party pts</span></div></div>
@@ -197,18 +222,23 @@
       body = `<p class="muted small">Tap a trophy you’ve earned to wear its title next to your name.</p><div class="pf-case">${P.trophies.map((t) => `<button class="pf-tro ${t.earned ? 'got' : ''} ${P.title === t.id ? 'worn' : ''}" data-tro="${t.id}" ${t.earned ? '' : 'disabled'}><span class="pf-ti">${t.earned ? esc(t.icon) : '🔒'}</span><b>${esc(t.name)}</b><small>${esc(t.earned ? '“' + t.title + '”' : t.how)}</small>${P.title === t.id ? '<em>WORN</em>' : ''}</button>`).join('')}</div>
         ${P.title ? '<button class="btn ghost small" data-tro="">Take off my title</button>' : ''}`;
     } else {
-      body = P.claimed ? `<p>✅ Saved as <b>${esc(P.claimed)}</b> with a PIN. On another phone, open 🏆 My profile and sign in with that name and PIN.</p>`
-        : `<p>Save your profile with a name and a PIN, so you can use it on another phone too.</p><label>Name<input id="pf-name" maxlength="14" value="${esc(nm)}" autocomplete="off"></label><label>PIN (4 to 6 digits)<input id="pf-pin" inputmode="numeric" maxlength="6" autocomplete="off" type="password"></label><button class="btn green" id="pf-claim">🔑 Save my profile</button>`;
-      body += `<h3>📱 Already have a profile?</h3><label>Name<input id="pf-lname" maxlength="14" autocomplete="off"></label><label>PIN<input id="pf-lpin" inputmode="numeric" maxlength="6" type="password" autocomplete="off"></label><button class="btn ghost" id="pf-login">Sign in on this phone</button><p class="muted small">${esc(P.storage)}. Without a PIN your profile lives on this phone only.</p>`;
+      // "Save your stuff" (public/account-ui.js): name + password, sign in, change password, sign out.
+      body = `<div id="pf-acct"></div><p class="muted small">${esc(P.storage)}. Without a password your stuff lives on this phone only.</p>`;
     }
     sheet(`<div class="pf-head"><span class="pf-av">${esc((view && view.me.avatar) || avatar)}</span><div><h2>${esc(nm)}</h2>${P.titleText ? `<span class="pf-title">${esc(P.titleText)}</span>` : '<span class="muted small">No title yet: earn trophies!</span>'}</div></div>${tabs}<div class="pf-body">${body}</div>`, (sh, close) => {
       for (const b of sh.querySelectorAll('[data-tab]')) b.onclick = () => profileSheet(b.dataset.tab);
       for (const b of sh.querySelectorAll('[data-tro]')) b.onclick = async () => { const x = await pemit('profile:title', { auth: getProf(), title: b.dataset.tro || null }); if (!x.ok) return toast(x.error); haptic('success'); toast(b.dataset.tro ? '🏆 New title on!' : 'Title off'); profileSheet('trophies'); };
-      const cb = sh.querySelector('#pf-claim'); if (cb) cb.onclick = async () => { const x = await pemit('profile:claim', { auth: getProf(), name: sh.querySelector('#pf-name').value, pin: sh.querySelector('#pf-pin').value }); if (!x.ok) return toast(x.error); haptic('success'); toast('🔑 Profile saved!'); profileSheet('account'); };
-      const lb = sh.querySelector('#pf-login'); if (lb) lb.onclick = async () => { const x = await pemit('profile:login', { name: sh.querySelector('#pf-lname').value, pin: sh.querySelector('#pf-lpin').value }); if (!x.ok) return toast(x.error); setProf(x); haptic('success'); toast('📱 Signed in!'); profileSheet('stats'); };
+      const pa = sh.querySelector('#pf-acct'); if (pa && acct) acct.panel(pa, 'auto', (kind) => profileSheet(kind === 'signin' ? 'stats' : 'account'));
     });
   }
   $('#h-prof').onclick = () => profileSheet();
+  // The host removed this phone from the room.
+  socket.on('kicked', (m) => {
+    const code = (m && m.room) || (me && me.code);
+    try { if (code) localStorage.removeItem(tokenKey(code)); } catch { /* private */ }
+    me = null; audience = null; audState = null; document.body.classList.remove('is-audience');
+    showJoin('👋 The host removed you from this room.'); haptic('error');
+  });
   socket.on('trophy', (list) => {
     for (const t of list || []) { toast(`🏆 Trophy unlocked: ${t.icon} ${t.name}!`); }
     haptic('win'); BOX.sfx('win');
@@ -286,6 +316,7 @@
     // The room went to a game outside the box (JustMafia): follow it, joined with my name.
     if (v.away && v.away.url && v.away.url.charAt(0) === '/') { if (!socket.leaving) { socket.leaving = true; toast('🔪 Off to JustMafia!'); setTimeout(() => { location.href = v.away.url; }, 500); } return; }
     const view0 = view; view = v; v._at = Date.now();
+    if (BOX.setRoster) { if (v.roster) BOX.setRoster(v.roster); if (v.me) BOX.setRoster([{ ...v.me, bot: false }]); } // characters for BOX.face
     if (view0 && v.unlocks && view0.unlocks && v.unlocks.length > view0.unlocks.length) { const k = v.unlocks.find((x) => !view0.unlocks.includes(x)); const g = BOX.games[k]; toast(`🔓 New game unlocked: ${g ? g.icon + ' ' + g.name : k}!`); haptic('win'); }
     if (v.phase !== (view0 && view0.phase) && v.phase === 'show') haptic('big');
     if (v.game !== gameKey) { setGame(v.game); haptic('success'); toast(`${G ? G.icon + ' ' : ''}Next game: ${v.title}!`); vibrate(80); }
@@ -295,6 +326,9 @@
     if (v.jg && v.jg.at && view0 && (!view0.jg || view0.jg.at !== v.jg.at)) {
       if (v.jg.n > 0) { toast(`🪙 +${v.jg.n} JustGold!${v.jg.total != null ? ` You have ${v.jg.total} JG.` : ''}`); haptic('win'); } else if (v.jg.why) toast(`🪙 ${v.jg.why}`);
     }
+    // After a game: once, if this phone has unsaved JustGold or stats, offer "Save your stuff".
+    const overNow = v.state && v.state.phase === 'over', over0 = view0 && view0.state && view0.state.phase === 'over';
+    if (acct && view0 && overNow && !over0) setTimeout(() => acct.nudge(), 3500);
     shopButtons();
     queue();
   });

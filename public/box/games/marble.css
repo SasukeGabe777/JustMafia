@@ -90,3 +90,15 @@ body.g-marble .mb-tv, body.g-marble .mb-ph, body.g-marble .mb-lobby { font-famil
 .mb-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; font-size: 15px; }
 .mb-stats span { background: rgba(59, 29, 8, 0.12); padding: 6px; border-radius: 8px; }
 .mb-end { padding: 18px; border-radius: 18px; }
+/* Players are their characters (BOX.face / BOX.body) */
+body.g-marble .mb-row .bx-face, body.g-marble .mb-gains .bx-face, body.g-marble .mb-award .bx-face { margin: -5px 0; background: rgba(255, 230, 190, 0.12); }
+body.g-marble .mb-holder .bx-face { background: rgba(255, 210, 63, 0.25); box-shadow: 0 0 0 2px var(--mb-brass); }
+body.g-marble .mb-chip .av .bx-face { background: rgba(255, 210, 63, 0.22); }
+body.g-marble .mb-mphone { flex-direction: column; gap: 1px; }
+body.g-marble .mb-mphone .bx-face { width: 70% !important; height: auto !important; aspect-ratio: 1; max-width: 30px; }
+body.g-marble .mb-podium { display: flex; justify-content: center; align-items: flex-end; gap: 18px; margin-top: 12px; }
+body.g-marble .mb-pod { display: grid; justify-items: center; gap: 2px; }
+body.g-marble .mb-pod b { font-size: 18px; }
+body.g-marble .mb-pod span { display: grid; place-items: center; width: 110px; border-radius: 10px 10px 0 0; background: linear-gradient(180deg, #ffe58a, #e0b52e); color: #3b1d08; font: 400 30px 'Lilita One', sans-serif; }
+body.g-marble .mb-pod.p1 span { height: 70px; } body.g-marble .mb-pod.p2 span { height: 48px; } body.g-marble .mb-pod.p3 span { height: 34px; }
+body.g-marble .mb-pod.p1 .bx-body { filter: drop-shadow(0 0 14px rgba(255, 210, 63, 0.6)); }

@@ -298,3 +298,13 @@ body.g-trivia #game .tt-awards.mine::before { content: 'Your awards'; grid-colum
 .tt-picker.gear { border-left-color: var(--ga); box-shadow: 0 0 10px color-mix(in srgb, var(--ga) 70%, transparent); }
 .tt-pod.gear .tt-poda { border-radius: 50%; padding: 4px 10px; box-shadow: 0 0 0 4px var(--ga), 0 0 28px var(--gb); background: color-mix(in srgb, var(--ga) 25%, transparent); }
 @keyframes ttGearGlow { from { box-shadow: 0 0 10px var(--ga); } to { box-shadow: 0 0 26px var(--ga), 0 0 6px var(--gb); } }
+/* Characters (BOX.face / BOX.body): contestants in their brainy hat, specs and medal; full figures in the hot seat and on the podium. */
+body.g-trivia .tt-lock i { width: 36px; height: 36px; overflow: hidden; }
+body.g-trivia .tt-lock i .bx-face { width: 36px; height: 36px; }
+body.g-trivia .tt-picker .bx-face, body.g-trivia .tt-pred .bx-face, body.g-trivia .tt-grow .a .bx-face, body.g-trivia .tt-brow .a .bx-face, body.g-trivia .tt-rest .bx-face, body.g-trivia .tt-award .bx-face { margin: -6px 0; }
+body.g-trivia .tt-seatav.bodied { position: relative; overflow: visible; line-height: 0; }
+body.g-trivia .tt-seatav.bodied .bx-body { position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); }
+body.g-trivia .tt-seatline .bx-face, body.g-trivia .tt-seatbar .bx-face { margin: -10px 0; }
+body.g-trivia .tt-poda { line-height: 0; }
+body.g-trivia .ttl-pod .f { overflow: hidden; align-items: end; }
+body.g-trivia .ttl-pod .f .bx-face { margin-bottom: -4px; }

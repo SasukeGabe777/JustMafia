@@ -27,7 +27,10 @@
   // ---------- small shared bits ----------
   const ends = {};
   const timer = (key, endsIn) => { if (!endsIn) return ''; if (!ends[key]) ends[key] = Date.now() + endsIn; return `<span class="timer cm-timer" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span>`; };
-  const av = (x) => esc((x && x.avatar) || '🙂');
+  // A player's own character (BOX.face, in their beret/smock), or their emoji.
+  const av = (x, px = 30) => (x && window.BOX && BOX.face ? BOX.face(x, px, { cls: 'cm-fc' }) : esc((x && x.avatar) || '🙂'));
+  const avF = (x, px = 64, o = {}) => (x && window.BOX && BOX.face ? BOX.face(x, px, { fill: true, ...o }) : esc((x && x.avatar) || '🙂'));
+  const hasLook = (x) => !!(x && window.BOX && BOX.body && BOX.hasLook && BOX.hasLook(x));
   // Shop gear (public/shared/gear.js, slot colormatch/easel): the frame around a player's mix on
   // the reveal and their gallery frame at the end. fr(x) → { cls, css }; empty with no gear.
   const GPAT = (p) => ({ stripes: `repeating-linear-gradient(45deg,${p.a} 0 8px,${p.b} 8px 16px)`, dots: `radial-gradient(circle,${p.c || p.b} 22%,transparent 24%) 0 0/9px 9px,radial-gradient(circle,${p.b} 22%,${p.a} 24%) 4px 4px/9px 9px`, swirl: `conic-gradient(from 30deg,${p.a},${p.b},${p.a},${p.b},${p.a})`, check: `repeating-conic-gradient(${p.a} 0 25%,${p.b} 0 50%) 0 0/12px 12px` }[p.pattern] || `linear-gradient(135deg,${p.a},${p.b},${p.a})`);
@@ -76,7 +79,7 @@
   function locks(s) {
     if (!s.chips || !s.chips.length) return '';
     const many = s.chips.length > 14 ? 'many' : '';
-    return `<div class="cm-locks ${many}">${s.chips.map((p) => `<span class="cm-lk ${p.in ? 'in' : ''}" style="--c:${esc(p.color || '#888')}"><span class="a">${av(p)}</span><b>${esc(p.name)}</b></span>`).join('')}</div>
+    return `<div class="cm-locks ${many}">${s.chips.map((p) => `<span class="cm-lk ${p.in ? 'in' : ''}" style="--c:${esc(p.color || '#888')}"><span class="a">${avF(p, 48)}</span><b>${esc(p.name)}</b></span>`).join('')}</div>
       <div class="cm-lcount">${s.locked} / ${s.players} locked in${s.locked === s.players && s.players ? ' 🎉' : ''}</div>`;
   }
   function tvIntro(s) {
@@ -154,7 +157,7 @@
   }
   function tvOver(s) {
     const f = s.final || { awards: [], palette: [] }, st = s.standings, order = [1, 0, 2];
-    const pod = order.filter((i) => st[i]).map((i) => `<div class="cm-frame p${i + 1}${fr(st[i]).cls}" style="--c:${esc(st[i].color || '#888')};animation-delay:${[0.9, 0.3, 1.3][i]}s${fr(st[i]).css}"><div class="cm-canvas"><span>${av(st[i])}</span></div><div class="cm-plaque"><b>${['🥇', '🥈', '🥉'][i]} ${esc(st[i].name)}</b><span>${st[i].points.toLocaleString('en-US')} pts</span></div></div>`).join('');
+    const pod = order.filter((i) => st[i]).map((i) => `<div class="cm-frame p${i + 1}${fr(st[i]).cls}" style="--c:${esc(st[i].color || '#888')};animation-delay:${[0.9, 0.3, 1.3][i]}s${fr(st[i]).css}"><div class="cm-canvas">${hasLook(st[i]) ? `<span class="cm-fig">${BOX.body(st[i], 260, i === 0 ? { mood: 'grin' } : {})}</span>` : `<span>${esc(st[i].avatar || '🙂')}</span>`}</div><div class="cm-plaque"><b>${['🥇', '🥈', '🥉'][i]} ${esc(st[i].name)}</b><span>${st[i].points.toLocaleString('en-US')} pts</span></div></div>`).join('');
     const aw = f.awards.map((a, i) => `<div class="cm-award" style="animation-delay:${2 + i * 0.3}s"><div class="ic">${a.icon}</div><div class="t">${esc(a.title)}</div><div class="nm">${av(a)} ${esc(a.name)}</div><div class="tx">${esc(a.text)}</div></div>`).join('');
     const pal = f.palette.map((p, i) => `<div class="cm-pchip" style="animation-delay:${0.2 + i * 0.08}s"><i style="background:${bg(p.c)}"></i><span>${i + 1}</span></div>`).join('');
     const rest = st.slice(3, 12).map((r, i) => `<div class="cm-brow"><span class="n">${i + 4}</span><span>${av(r)} ${esc(r.name)}</span><b>${r.points.toLocaleString('en-US')}</b></div>`).join('');
@@ -285,7 +288,7 @@
     }
     const r = $('#roster');
     r.classList.toggle('many', n > 10 && n <= 24); r.classList.toggle('lots', n > 24);
-    const rh = n ? L.players.map((p, i) => `<span class="chip cml-chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ff4f9a')};--r:${((i * 37) % 9) - 4}deg;--d:${((i * 0.29) % 2.2).toFixed(2)}s"><i class="sw"><span>${esc(p.avatar || '🙂')}</span></i><b>${esc(p.name)}</b><small>${esc(String(p.color || '').toUpperCase())}</small></span>`).join('')
+    const rh = n ? L.players.map((p, i) => `<span class="chip cml-chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ff4f9a')};--r:${((i * 37) % 9) - 4}deg;--d:${((i * 0.29) % 2.2).toFixed(2)}s"><i class="sw"><span>${avF(p, 80)}</span></i><b>${esc(p.name)}</b><small>${esc(String(p.color || '').toUpperCase())}</small></span>`).join('')
       : '<div class="cml-empty">Scan the code to hang your paint chip on the wall! 👉</div>';
     if (r.__h !== rh) { r.__h = rh; BOX.morph(r, rh); }
     const lp = $('#cml-party'), lh = L.lineupHtml || ''; if (lp.__h !== lh) { lp.__h = lh; lp.innerHTML = lh; }

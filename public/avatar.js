@@ -188,7 +188,58 @@
     ctx.restore();
   }
 
+  // Off-screen layer for see-through characters: vector art drawn straight at low alpha shows
+  // every overlap (legs through the coat, the far arm through the body), so paint it opaque into
+  // a buffer at the screen's resolution, then lay the buffer down translucent. `paint(b)` draws in
+  // character units with the feet at (0, 0); `post(b, w, h, k)` may tint the buffer. Returns
+  // false without a DOM (stub canvases in tests), and the caller draws straight instead.
+  const LAYER = { l: 48, t: 108, w: 96, h: 122 }, layers = [];
+  let layerDepth = 0;
+  function viaLayer(ctx, x, y, s, alpha, paint, post) {
+    const doc = typeof document !== 'undefined' ? document : null;
+    if (!doc || typeof ctx.getTransform !== 'function' || typeof ctx.drawImage !== 'function' || layerDepth > 2) return false;
+    const m = ctx.getTransform(), k = Math.min(8, Math.max(0.5, Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)))) * Math.abs(s);
+    const bw = Math.max(1, Math.ceil(LAYER.w * k)), bh = Math.max(1, Math.ceil(LAYER.h * k));
+    const c = layers[layerDepth] || (layers[layerDepth] = doc.createElement('canvas'));
+    if (c.width < bw || c.height < bh) { c.width = Math.max(c.width, bw); c.height = Math.max(c.height, bh); }
+    const b = c.getContext('2d');
+    b.setTransform(1, 0, 0, 1, 0, 0); b.globalCompositeOperation = 'source-over'; b.globalAlpha = 1; b.filter = 'none'; b.shadowBlur = 0; b.clearRect(0, 0, bw, bh);
+    b.setTransform(k, 0, 0, k, LAYER.l * k, LAYER.t * k);
+    layerDepth++; try { paint(b); } finally { layerDepth--; }
+    b.setTransform(1, 0, 0, 1, 0, 0);
+    if (post) post(b, bw, bh, k);
+    b.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.globalAlpha *= alpha;
+    ctx.drawImage(c, 0, 0, bw, bh, x - LAYER.l * s, y - LAYER.t * s, LAYER.w * s, LAYER.h * s);
+    ctx.restore();
+    return true;
+  }
+  // Ghosts. Classic (the default ghostSkin) is the player's own character, see-through, pale
+  // blue and floating, its legs fading away; every other ghostSkin is a costume ghost (below),
+  // drawn 1.4x so it stands as tall as a character. The shop and JustMafia share this.
   function drawGhost(ctx, x, y, av, o = {}) {
+    av = av || {};
+    if (av.ghostSkin && av.ghostSkin !== 'classic' && GHOST_SKINS[av.ghostSkin]) { costumeGhost(ctx, x, y, av, { ...o, scale: (o.scale || 1) * 1.4 }); return; }
+    const t = o.t || 0, s = o.scale || 1, fl = Math.sin(t * 2.5 + (o.seed || 0)) * 4 * s, alpha = (o.alpha != null ? o.alpha : 0.85) * 0.78;
+    const look = { ...av, effect: 'none' };
+    const opts = { t, seed: o.seed, facing: o.facing, theme: o.theme, expression: o.mouth ? 'surprised' : o.expression, spin: o.spin, noShadow: true };
+    ctx.save();
+    ctx.fillStyle = 'rgba(160,200,255,0.16)'; ctx.beginPath(); ctx.ellipse(x, y, 11 * s, 3.5 * s, 0, 0, TAU); ctx.fill();
+    ctx.shadowColor = '#a8d6ff'; ctx.shadowBlur = o.glow ? 12 : 4;
+    const tinted = (b, w, h, k) => {
+      b.globalCompositeOperation = 'source-atop';
+      const tint = b.createLinearGradient(0, 0, 0, h); tint.addColorStop(0, 'rgba(205,228,255,0.3)'); tint.addColorStop(1, 'rgba(150,190,255,0.5)');
+      b.fillStyle = tint; b.fillRect(0, 0, w, h);
+      b.globalCompositeOperation = 'destination-out'; // the legs fade away
+      const fade = b.createLinearGradient(0, (LAYER.t - 22) * k, 0, (LAYER.t + 1) * k); fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,1)');
+      b.fillStyle = fade; b.fillRect(0, 0, w, h);
+    };
+    if (!viaLayer(ctx, x, y - 7 * s + fl, s, alpha, (b) => drawSmooth(b, 0, 0, look, opts), tinted)) {
+      ctx.globalAlpha *= alpha; drawSmooth(ctx, x, y - 7 * s + fl, look, { ...opts, scale: s });
+    }
+    ctx.restore();
+  }
+  function costumeGhost(ctx, x, y, av, o = {}) {
     const t = o.t || 0;
     const fl = Math.sin(t * 2.5 + (o.seed || 0)) * 4;
     ctx.save();
@@ -313,17 +364,53 @@
   };
   const LEN = { s: [-10, 0], c: [-4, 2], r: [-1.5, 5], d: [-5, 6] };
   const BACK_HAIR = { long: 1, wavy: 1, braids: 1, bob: 1, medium: 1, ponytail: 1, afro: 1, curly: 1, bun: 1, royalBraids: 1 };
-  const FULL_HEAD = { pumpkin: 1, executionerHood: 1 };
+  const FULL_HEAD = { pumpkin: 1, executionerHood: 1, execHood: 1 }; // execHood: JustMafia's anonymous NPC executioner
   const OPEN_TOP = { none: 1, bow: 1, halo: 1, flowerCrown: 1, elfCirclet: 1, catEars: 1, antlers: 1, dragonHorns: 1, dealerVisor: 1, bandana: 1 };
 
+  // Body type: 'female' | 'male' (avatar field `body`). Old looks without it: long hairstyles or
+  // a dress read as female, everything else as male (MT_OPTIONS.inferBody is the same rule).
+  const LONG_HAIR = { long: 1, wavy: 1, braids: 1, bob: 1, ponytail: 1, bun: 1, royalBraids: 1, medium: 1 };
+  const bodyOf = (av) => (av && (av.body === 'female' || av.body === 'male') ? av.body : av && (LONG_HAIR[av.hair] || av.outfit === 'dress') ? 'female' : 'male');
+  // Which look fields a game wearable replaces while it is worn (see o.wear below).
+  const WEAR_HIDES = {
+    face: { glasses: 1, shades: 1, monocle: 1, eyepatch: 1, mask: 1, pipe: 1 },
+    hand: { torch: 1, rose: 1, wristwatch: 1 },
+    chest: { badge: 1, goldChain: 1, amulet: 1, scarf: 1, diceBag: 1, satchel: 1 },
+    back: { cape: 1, wings: 1, batWings: 1, fairyWings: 1, backpack: 1 },
+  };
+  // drawSmooth options (all optional): t (seconds), walking, facing (-1..1), scale, alpha, jump,
+  // spin, lean (radians, from the feet), arms ({ l, r } radians: 0 hangs down, + swings toward
+  // screen-left), dragged (±1: heels dug in), scared, dead, expression (overrides the look's),
+  // theme (JustMafia world equipment: space, fantasy, rsp, spies, fbi), seed, and
+  // wear: [{ spot: 'head'|'face'|'hand'|'chest'|'back', shape, a, b, c, glow }] game wearables
+  // (public/wear-art.js draws the shapes; a worn spot replaces the look's own hat/extra there).
   function drawSmooth(g, x, y, av, o = {}) {
     av = av || {};
+    // See-through (fading in/out, a dead body paling): draw it opaque off-screen, then fade it.
+    const fadeA = (o.alpha == null ? 1 : o.alpha) * (g.globalAlpha == null ? 1 : g.globalAlpha);
+    if (fadeA <= 0.003) return;
+    if (fadeA < 0.995 && !o._flat) {
+      const s0 = o.scale || 1;
+      if (viaLayer(g, x, y, s0, o.alpha == null ? 1 : o.alpha, (b) => drawSmooth(b, 0, 0, av, { ...o, scale: 1, alpha: null, _flat: true }))) return;
+    }
     const t = o.t || 0, walking = !!o.walking, f = Math.max(-1, Math.min(1, o.facing || 0));
     const color = isHex(av.color) ? av.color : '#3498db', skin = isHex(av.skin) ? av.skin : SKIN0;
     const hairC = isHex(av.hairColor) ? av.hairColor : '#543626', pants = isHex(av.pants) ? av.pants : '#2d2f3a', shoes = isHex(av.shoes) ? av.shoes : '#33251d';
     const outfit = OUTFITS[av.outfit] ? av.outfit : 'shirt', OF = OUTFITS[outfit], cloth = OF.c || color;
-    const hat = av.hat || 'none', acc = av.accessory || 'none', hair = av.hair || 'short';
+    const WEAR = (Array.isArray(o.wear) ? o.wear : []).filter((w) => w && typeof w.shape === 'string');
+    const worn = (spot) => WEAR.filter((w) => w.spot === spot);
+    const wearSpots = new Set(WEAR.map((w) => w.spot));
+    let hat = av.hat || 'none', acc = av.accessory || 'none';
+    const hair = av.hair || 'short';
+    if (wearSpots.has('head')) hat = 'none';
+    for (const s of ['face', 'hand', 'chest', 'back']) if (wearSpots.has(s) && WEAR_HIDES[s][acc]) acc = 'none';
+    const fem = bodyOf(av) === 'female';
+    const SW = fem ? 9.6 : 12.8; // shoulder half-width
     const HY = -44, R = 13, lw = 1.5;
+    const drawWear = (spot, extra) => {
+      const A = root.MTArt && root.MTArt.WEAR; if (!A) return;
+      for (const w of worn(spot)) { const fn = A[w.shape]; if (!fn) continue; g.save(); try { if (w.glow) { g.shadowColor = w.c || w.a || '#fff'; g.shadowBlur = 6; } fn({ g, P, done, circ, ell, rr, poly, lin, rect, line, star, sh, OL, t, HY, R, fem, SW, skin, hairC, color, a: w.a || '#c0392b', b: w.b || '#2b1f3d', c: w.c || '#ffffff', d: w.d || '', glow: !!w.glow, ...extra }); } catch (err) { /* a broken wearable never breaks the character */ } g.restore(); }
+    };
     const bob = walking ? Math.abs(Math.sin(t * 11)) * 2.5 : Math.sin(t * 2.2 + (o.seed || 0)) * 0.7;
     const P = () => g.beginPath();
     const done = (fill, stroke = OL, w = lw) => { if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = w; g.lineJoin = 'round'; g.lineCap = 'round'; g.stroke(); } };
@@ -340,11 +427,13 @@
     g.translate(x, y);
     g.scale(o.scale || 1, o.scale || 1);
     if (o.alpha != null) g.globalAlpha *= o.alpha;
-    g.fillStyle = 'rgba(0,0,0,0.22)'; ell(0, 0, 14, 4.5); g.fill();
+    if (!o.noShadow) { g.fillStyle = 'rgba(0,0,0,0.22)'; ell(0, 0, 14, 4.5); g.fill(); }
+    if (o.lean) g.rotate(o.lean);
     g.translate(0, -bob - (o.jump || 0));
     if (o.spin) g.rotate(o.spin);
 
     effect('back');
+    drawWear('back');
     // ---- behind the body ----
     if (acc === 'cape') { poly([[-10, -31], [10, -31], [17, -1], [-17, -1]]); done(lin('#a3243a', -31, 0)); rect('#d6af53', -10, -32, 20, 2.5); }
     if (acc === 'wings' || acc === 'batWings') {
@@ -368,9 +457,10 @@
     if (hat === 'hood') { ell(0, HY - 1, R + 4, R + 4); done(lin(sh(color, -0.3), HY - 18, HY + 16)); }
 
     // ---- legs and shoes ----
-    const sw = walking ? Math.sin(t * 11) * 3 : 0;
-    for (const [lx, d] of [[-4.6, sw], [4.6, -sw]]) {
-      rr(lx - 3.3 + d, -14, 6.6, 13, 3); done(lin(pants, -14, 0, 0.12, -0.12));
+    const sw = walking ? Math.sin(t * 11) * 3 : 0, heel = o.dragged ? (o.dragged > 0 ? 3 : -3) : 0;
+    const legX = fem ? 3.9 : 4.9, legW = fem ? 5.8 : 7;
+    for (const [lx, d] of [[-legX, sw + heel], [legX, -sw + heel]]) {
+      rr(lx - legW / 2 + d, -14, legW, 13, 3); done(lin(pants, -14, 0, 0.12, -0.12));
       shoe(lx + d);
     }
 
@@ -378,21 +468,25 @@
     const [bot, flare] = LEN[OF.len || 's'];
     if (['traveler', 'noble', 'royalGuard', 'storyteller', 'vampire', 'royalRobe', 'pirateCoat'].includes(outfit)) { // a cloak behind
       const cc = { traveler: '#6b4a33', noble: '#7a1f3a', royalGuard: '#1f2a55', storyteller: '#3a2a5a', vampire: '#8f1a2a', royalRobe: '#b0283c', pirateCoat: '#5a1414' }[outfit];
-      poly([[-11, -31], [11, -31], [16, bot + 3], [-16, bot + 3]]); done(lin(cc, -31, 0));
+      poly([[-SW + 0.5, -31], [SW - 0.5, -31], [SW + 4.5, bot + 3], [-SW - 4.5, bot + 3]]); done(lin(cc, -31, 0));
     }
     bodyPath(bot, flare); done(lin(cloth, -31, bot));
     g.save(); bodyPath(bot, flare); g.clip(); details(OF.d, bot); g.restore();
     bodyPath(bot, flare); done(null);
-    // arms (sleeves + hands)
+    if (fem && !OF.arm) { P(); g.moveTo(-SW + 3.5, -24.5); g.quadraticCurveTo(-SW / 2, -22.2, -1.2, -24.3); g.moveTo(1.2, -24.3); g.quadraticCurveTo(SW / 2, -22.2, SW - 3.5, -24.5); g.strokeStyle = 'rgba(43,31,61,0.35)'; g.lineWidth = 0.9; g.stroke(); }
+    drawWear('chest', { top: -31.5, waist: -20, bot });
+    // arms (sleeves + hands); a game prop (o.wear 'hand') sits in the right hand
     const armC = OF.arm ? '#b4bec9' : outfit === 'jester' ? '#e0b24a' : cloth;
-    const as = walking ? Math.sin(t * 11) * 0.25 : 0;
+    const as = walking ? Math.sin(t * 11) * 0.25 : 0, aw = fem ? 5.8 : 7.4;
     for (const s of [-1, 1]) {
-      g.save(); g.translate(s * 11.5, -28.5); g.rotate(s * 0.18 + (s < 0 ? as : -as));
-      rr(-3.4, -1, 6.8, 13.5, 3.4); done(lin(s < 0 && outfit === 'jester' ? '#83517f' : armC, -1, 13));
-      circ(0, 14, 3); done(skin);
+      const rig = o.arms ? (s < 0 ? o.arms.l : o.arms.r) || 0 : null;
+      g.save(); g.translate(s * (SW - 0.6), -28.5); g.rotate(rig != null ? rig + s * 0.1 : s * (fem ? 0.12 : 0.2) + (s < 0 ? as : -as));
+      rr(-aw / 2, -1, aw, 13.5, aw / 2); done(lin(s < 0 && outfit === 'jester' ? '#83517f' : armC, -1, 13));
+      circ(0, 14, fem ? 2.7 : 3.1); done(skin);
       if (acc === 'wristwatch' && s < 0) { rr(-3.6, 9, 7.2, 3, 1.2); done('#3a3a3a', OL, 0.8); circ(0, 10.5, 1.2); done('#e6e1d8', null); }
       if (acc === 'torch' && s > 0) torch();
       if (acc === 'rose' && s > 0) { line('#3a7a3a', 1.2, [[1, 16], [3, 6]]); circ(3.5, 5, 2.6); done('#d0263c', OL, 0.8); }
+      if (s > 0) { g.translate(0, 14); drawWear('hand'); }
       g.restore();
     }
     // chest + neck accessories
@@ -403,27 +497,61 @@
     if (acc === 'goldChain') { P(); g.ellipse(0, -30, 6.5, 6, 0, 0.2, Math.PI - 0.2); g.strokeStyle = '#e6b83a'; g.lineWidth = 1.6; g.stroke(); circ(0, -23.5, 2.4); done('#ffd96b', OL, 0.8); }
     if (acc === 'badge') { star(5.5, -23, 3.6, '#ffd35c'); }
     if (acc === 'diceBag') { P(); g.moveTo(9, -19); g.quadraticCurveTo(16, -18, 15, -10); g.quadraticCurveTo(12, -7, 9, -10); g.quadraticCurveTo(7, -15, 9, -19); done('#7a3a6a'); rr(10, -12, 3.5, 3.5, 0.8); done('#fff', OL, 0.7); }
+    // JustMafia world equipment over the clothes (o.theme).
+    if (o.theme === 'space') { rr(-SW + 1, -27, 4, 8, 1.5); done('#7ed6cf', OL, 0.8); line('#c4d8da', 1.4, [[SW - 3, -30], [SW - 3, -18]]); }
+    if (o.theme === 'fantasy') { line('#c8b6df', 1, [[-4, -31], [0, -24], [4, -31]]); circ(0, -23, 2.2); done('#7ed6cf', OL, 0.7); }
+    if (o.theme === 'rsp') { line('#1f4fa8', 1.4, [[-4, -31.5], [0, -22]]); line('#1f4fa8', 1.4, [[4, -31.5], [0, -22]]); rr(-3.5, -22.5, 7, 7, 1); done('#ffd21f', OL, 0.7); rect('#1f4fa8', -2.5, -21, 5, 1.6); }
+    if (o.theme === 'spies' || o.theme === 'fbi') { rr(2.5, -27, 5, 4, 1); done('#c4ad73', OL, 0.6); }
 
     // ---- head ----
     const ex = f * 2.2;
     if (!FULL_HEAD[hat]) {
       for (const s of [-1, 1]) { circ(s * (R - 0.5) + ex * 0.3, HY + 1, 3.3); done(skin); }
       if (hat === 'elfCirclet') for (const s of [-1, 1]) { poly([[s * 11, HY - 2], [s * 19, HY - 8], [s * 12, HY + 4]]); done(skin); }
-      P();
-      if (av.face === 'square') rr(-R + 0.5, HY - R, (R - 0.5) * 2, R * 2, 6);
-      else g.ellipse(0, HY, av.face === 'oval' ? R - 1.6 : R, av.face === 'oval' ? R + 0.6 : R, 0, 0, TAU);
+      headPath();
       const sg = g.createRadialGradient(-4, HY - 5, 2, 0, HY, R + 2); sg.addColorStop(0, sh(skin, 0.12)); sg.addColorStop(1, sh(skin, -0.08));
       done(sg);
       face(ex);
+      // A photo face (JustMafia phone only, never uploaded): the 16x16 pixel portrait inside the face.
+      if (av.faceSprite && typeof g.drawImage === 'function') { g.save(); headPath(); g.clip(); g.imageSmoothingEnabled = false; try { g.drawImage(av.faceSprite, -9 + ex * 0.5, HY - 9, 18, 18); } catch (err) { /* not drawable */ } g.restore(); }
       frontHair(ex);
     }
+    drawWear('face', { e: ex, ey: HY + 1 });
     drawHatSmooth(ex);
+    drawWear('head', { e: ex, top: HY - R });
     effect('front');
     g.restore();
 
+    // The head: a soft, narrower jaw and pointed chin (female) or a broader, squarer jaw (male).
+    function headPath() {
+      const sq = av.face === 'square', ov = av.face === 'oval';
+      P();
+      if (fem) {
+        const rw = ov ? R - 2.2 : sq ? R - 0.3 : R - 1, k = sq ? 0.78 : 0.6;
+        g.ellipse(0, HY, rw, R, 0, Math.PI, 0);
+        g.bezierCurveTo(rw, HY + R * k, rw * 0.42, HY + R + 0.6, 0, HY + R + 0.6);
+        g.bezierCurveTo(-rw * 0.42, HY + R + 0.6, -rw, HY + R * k, -rw, HY);
+      } else {
+        const rw = ov ? R - 1 : R + 0.5, jin = sq ? 2.4 : ov ? 5.5 : 4.2;
+        g.ellipse(0, HY, rw, R, 0, Math.PI, 0);
+        g.lineTo(rw, HY + 4); g.quadraticCurveTo(rw - 0.2, HY + R - 0.6, rw - jin, HY + R + 0.4);
+        g.lineTo(-rw + jin, HY + R + 0.4); g.quadraticCurveTo(-rw + 0.2, HY + R - 0.6, -rw, HY + 4);
+      }
+      g.closePath();
+    }
+
     // ===== parts =====
+    // Torso: broad and straight (male) or narrow shoulders, a defined waist and hips (female).
     function bodyPath(b, fl) {
-      const w0 = 11.5, w1 = 11 + fl;
+      if (fem) {
+        const w0 = SW + 0.4, wa = 8.2, wy = -21, w1 = 11.2 + fl;
+        P(); g.moveTo(-w0 + 3.5, -31.5); g.lineTo(w0 - 3.5, -31.5); g.quadraticCurveTo(w0, -31.5, w0, -27.5);
+        g.quadraticCurveTo(w0, -24, wa, wy); g.quadraticCurveTo(w1 - 0.5, b + 6 > wy ? Math.min(-14, b) : -14, w1, b - 2);
+        g.quadraticCurveTo(w1, b, w1 - 2.5, b); g.lineTo(-w1 + 2.5, b); g.quadraticCurveTo(-w1, b, -w1, b - 2);
+        g.quadraticCurveTo(-w1 + 0.5, Math.min(-14, b), -wa, wy); g.quadraticCurveTo(-w0, -24, -w0, -27.5); g.quadraticCurveTo(-w0, -31.5, -w0 + 3.5, -31.5); g.closePath();
+        return;
+      }
+      const w0 = SW, w1 = SW - 0.6 + fl;
       P(); g.moveTo(-w0 + 4, -31.5); g.lineTo(w0 - 4, -31.5); g.quadraticCurveTo(w0, -31.5, w0, -27);
       g.lineTo(w1, b - 2); g.quadraticCurveTo(w1, b, w1 - 2.5, b); g.lineTo(-w1 + 2.5, b); g.quadraticCurveTo(-w1, b, -w1, b - 2);
       g.lineTo(-w0, -27); g.quadraticCurveTo(-w0, -31.5, -w0 + 4, -31.5); g.closePath();
@@ -536,16 +664,30 @@
       }
     }
     function face(e) {
-      const ey = HY + 1, mood = o.dead ? 'dead' : o.scared ? 'scared' : av.expression || (av.features === 'serious' ? 'serious' : 'smile');
+      const ey = HY + 1, mood = o.dead ? 'dead' : o.scared ? 'scared' : (typeof o.expression === 'string' && o.expression) || av.expression || (av.features === 'serious' ? 'serious' : 'smile');
       const iris = isHex(av.eyes) ? av.eyes : '#342b25';
       const blink = !o.dead && Math.sin(t * 1.3 + (o.seed || 0) * 7) > 0.985;
-      const eye = (cx, big = 1) => { if (blink) { line(OL, 1.2, [[cx - 2, ey], [cx + 2, ey]]); return; } ell(cx, ey, 2 * big, 2.6 * big); done(iris, OL, 0.8); circ(cx + 0.7, ey - 0.9, 0.8 * big); done('#fff', null); };
-      const shut = (cx, up = true) => { P(); if (up) g.arc(cx, ey + 1, 2.2, Math.PI * 1.15, Math.PI * 1.85); else g.arc(cx, ey - 1.2, 2.2, Math.PI * 0.15, Math.PI * 0.85); g.strokeStyle = OL; g.lineWidth = 1.2; g.stroke(); };
-      const brow = (cx, a, dy = 0) => { g.save(); g.translate(cx, ey - 4.6 + dy); g.rotate(a); line(sh(hairC, -0.2), 1.3, [[-2, 0], [2, 0]]); g.restore(); };
+      const lashes = (cx, dy = 0) => { if (!fem) return; const s = cx < e ? -1 : 1; line(OL, 1.1, [[cx + s * 0.4, ey - 2.6 + dy], [cx + s * 1.4, ey - 4.3 + dy]]); line(OL, 1.1, [[cx + s * 1.5, ey - 2.2 + dy], [cx + s * 3.3, ey - 3.8 + dy]]); line(OL, 1.1, [[cx + s * 2.2, ey - 1.2 + dy], [cx + s * 4.2, ey - 2.2 + dy]]); };
+      const eye = (cx, big = 1) => { if (blink) { line(OL, 1.2, [[cx - 2, ey], [cx + 2, ey]]); lashes(cx, 2); return; } const bw = fem ? 2.15 : 1.9, bh = fem ? 2.8 : 2.5; ell(cx, ey, bw * big, bh * big); done(iris, OL, 0.8); circ(cx + 0.7, ey - 0.9, 0.8 * big); done('#fff', null); lashes(cx); };
+      const shut = (cx, up = true) => { P(); if (up) g.arc(cx, ey + 1, 2.2, Math.PI * 1.15, Math.PI * 1.85); else g.arc(cx, ey - 1.2, 2.2, Math.PI * 0.15, Math.PI * 0.85); g.strokeStyle = OL; g.lineWidth = 1.2; g.stroke(); if (up) lashes(cx, 1.4); };
+      let browed = false;
+      // Brows: thick and straight (male) or thin and arched (female).
+      const brow = (cx, a, dy = 0) => { browed = true; g.save(); g.translate(cx, ey - (fem ? 5 : 4.6) + dy); g.rotate(a); if (fem) { P(); g.moveTo(-2.3, 0.5); g.quadraticCurveTo(0, -1.1, 2.3, 0.4); g.strokeStyle = sh(hairC, -0.25); g.lineWidth = 0.95; g.lineCap = 'round'; g.stroke(); } else line(sh(hairC, -0.25), 2.2, [[-2.5, 0], [2.5, 0]]); g.restore(); };
       const L = -4.6 + e, Rt = 4.6 + e, my = HY + 7, mx = e;
       g.fillStyle = 'rgba(255,120,130,' + (av.features === 'rosyCheeks' ? 0.55 : 0.25) + ')'; ell(L - 2.8, HY + 4.5, 2.4, 1.5); g.fill(); ell(Rt + 2.8, HY + 4.5, 2.4, 1.5); g.fill();
       if (av.features === 'freckles') for (const [dx, dy] of [[-7, 3], [-5, 4.3], [-8.5, 4.6], [7, 3], [5, 4.3], [8.5, 4.6]]) { circ(dx + e, HY + dy, 0.45); done('#a76c50', null); }
+      const LIP = '#d8576f';
+      let said = 'smile';
       const mouth = (kind) => {
+        said = kind;
+        if (kind === 'tremble') { const j = Math.sin(t * 40) * 0.35; P(); g.moveTo(mx - 3, my + 0.6 + j); g.lineTo(mx - 1.5, my - 0.4 - j); g.lineTo(mx, my + 0.6 + j); g.lineTo(mx + 1.5, my - 0.4 - j); g.lineTo(mx + 3, my + 0.6 + j); g.strokeStyle = OL; g.lineWidth = 1.2; g.stroke(); return; }
+        if (fem) switch (kind) {
+          case 'smile': P(); g.moveTo(mx - 3.4, my - 1.5); g.quadraticCurveTo(mx, my - 0.6, mx + 3.4, my - 1.5); g.quadraticCurveTo(mx + 1.5, my + 2.6, mx, my + 2.5); g.quadraticCurveTo(mx - 1.5, my + 2.6, mx - 3.4, my - 1.5); done(LIP, OL, 0.8); line(sh(LIP, -0.35), 0.8, [[mx - 2.6, my - 0.9], [mx + 2.6, my - 0.9]]); circ(mx - 0.8, my + 1, 0.5); done('rgba(255,255,255,0.6)', null); return;
+          case 'flat': case 'smirk': { const d = kind === 'smirk' ? 0.8 : 0; P(); g.moveTo(mx - 2.8, my); g.quadraticCurveTo(mx - 1, my - 1.6, mx, my - 0.9); g.quadraticCurveTo(mx + 1, my - 1.6, mx + 2.8, my - d); g.quadraticCurveTo(mx, my + 2, mx - 2.8, my); done(LIP, OL, 0.8); line(sh(LIP, -0.35), 0.7, [[mx - 2.2, my - 0.2], [mx + 2.2, my - 0.2 - d]]); return; }
+          case 'frown': P(); g.moveTo(mx - 3, my + 1.2); g.quadraticCurveTo(mx, my - 2, mx + 3, my + 1.2); g.quadraticCurveTo(mx, my + 1.6, mx - 3, my + 1.2); done(LIP, OL, 0.8); return;
+          case 'o': ell(mx, my + 0.5, 1.9, 2.3); done('#7a2a3a', LIP, 1.3); return;
+          default: break;
+        }
         switch (kind) {
           case 'smile': P(); g.arc(mx, my - 2, 3, Math.PI * 0.2, Math.PI * 0.8); g.strokeStyle = OL; g.lineWidth = 1.2; g.stroke(); break;
           case 'grin': P(); g.moveTo(mx - 3.6, my - 1.2); g.quadraticCurveTo(mx, my - 0.6, mx + 3.6, my - 1.2); g.quadraticCurveTo(mx + 3, my + 3.4, mx, my + 3.4); g.quadraticCurveTo(mx - 3, my + 3.4, mx - 3.6, my - 1.2); done('#7a2a3a', OL, 1); rect('#fff', mx - 2.6, my - 0.9, 5.2, 1.2); break;
@@ -558,7 +700,11 @@
       };
       switch (mood) {
         case 'dead': for (const cx of [L, Rt]) { line(OL, 1.2, [[cx - 1.8, ey - 1.8], [cx + 1.8, ey + 1.8]]); line(OL, 1.2, [[cx + 1.8, ey - 1.8], [cx - 1.8, ey + 1.8]]); } mouth('flat'); break;
-        case 'scared': case 'surprised': eye(L, 1.2); eye(Rt, 1.2); brow(L, -0.15, -1.6); brow(Rt, 0.15, -1.6); mouth('o'); break;
+        case 'surprised': eye(L, 1.2); eye(Rt, 1.2); brow(L, -0.15, -1.6); brow(Rt, 0.15, -1.6); mouth('o'); break;
+        case 'scared': { // wide eyes, worried brows, a trembling mouth and a bead of sweat
+          eye(L, 1.25); eye(Rt, 1.25); brow(L, -0.4, -1.4); brow(Rt, 0.4, -1.4);
+          mouth('tremble');
+          P(); g.moveTo(R - 3.5, HY - 6); g.quadraticCurveTo(R - 1.5, HY - 2.5, R - 3.5, HY - 1.5); g.quadraticCurveTo(R - 5.5, HY - 2.5, R - 3.5, HY - 6); done('#a8e0ff', OL, 0.7); break; }
         case 'grin': shut(L); shut(Rt); mouth('grin'); break;
         case 'neutral': eye(L); eye(Rt); mouth('flat'); break;
         case 'serious': eye(L); eye(Rt); brow(L, 0.15, 0.6); brow(Rt, -0.15, 0.6); mouth('flat'); break;
@@ -569,9 +715,10 @@
         case 'smirk': eye(L); eye(Rt); brow(Rt, -0.2, -1.2); mouth('smirk'); break;
         default: eye(L); eye(Rt); mouth('smile');
       }
+      if (!browed && mood !== 'dead' && mood !== 'sleepy') { brow(L, fem ? -0.08 : 0, fem ? -0.2 : 0); brow(Rt, fem ? 0.08 : 0, fem ? -0.2 : 0); }
       // facial hair
       if (av.facialHair === 'moustache') { P(); g.moveTo(mx, my - 2.2); g.quadraticCurveTo(mx - 3, my - 3.6, mx - 5, my - 1.2); g.quadraticCurveTo(mx - 2, my - 1.2, mx, my - 1.6); g.quadraticCurveTo(mx + 2, my - 1.2, mx + 5, my - 1.2); g.quadraticCurveTo(mx + 3, my - 3.6, mx, my - 2.2); done(hairC, OL, 0.8); }
-      if (av.facialHair === 'beard') { P(); g.moveTo(-R + 1, HY + 1); g.quadraticCurveTo(-R + 1, HY + R + 3, 0, HY + R + 3); g.quadraticCurveTo(R - 1, HY + R + 3, R - 1, HY + 1); g.quadraticCurveTo(R - 3, HY + 6, mx + 4, my - 2); g.quadraticCurveTo(mx, my - 3, mx - 4, my - 2); g.quadraticCurveTo(-R + 3, HY + 6, -R + 1, HY + 1); done(lin(hairC, HY, HY + R + 3)); mouth(mood === 'grin' ? 'grin' : 'smile'); }
+      if (av.facialHair === 'beard') { P(); g.moveTo(-R + 1, HY + 1); g.quadraticCurveTo(-R + 1, HY + R + 3, 0, HY + R + 3); g.quadraticCurveTo(R - 1, HY + R + 3, R - 1, HY + 1); g.quadraticCurveTo(R - 3, HY + 6, mx + 4, my - 2); g.quadraticCurveTo(mx, my - 3, mx - 4, my - 2); g.quadraticCurveTo(-R + 3, HY + 6, -R + 1, HY + 1); done(lin(hairC, HY, HY + R + 3)); mouth(said); } // the mood's mouth again, over the beard
       // face accessories
       if (acc === 'glasses') { for (const cx of [L, Rt]) { circ(cx, ey, 3.3); done('rgba(200,230,255,0.25)', '#272933', 1.1); } line('#272933', 1, [[L + 3.3, ey], [Rt - 3.3, ey]]); }
       if (acc === 'shades') { for (const cx of [L, Rt]) { rr(cx - 3.5, ey - 2.4, 7, 4.6, 2); done('#101014', OL, 0.8); } line('#101014', 1.2, [[L + 3, ey - 1], [Rt - 3, ey - 1]]); line('rgba(255,255,255,0.5)', 0.9, [[L - 2, ey - 1.2], [L - 0.5, ey - 1.6]]); }
@@ -603,6 +750,7 @@
         case 'bandana': P(); g.arc(0, HY - 2, R + 1, Math.PI * 1.02, Math.PI * 1.98); g.quadraticCurveTo(0, HY - 7, -R - 1, HY - 3); done(lin('#c0392b', top - 2, HY - 4)); for (const [dx, dy] of [[-6, -9], [0, -11], [6, -9], [-3, -6], [3, -6]]) { circ(dx, HY + dy, 0.8); done('#fff', null); } P(); g.moveTo(R - 1, HY - 5); g.lineTo(R + 6, HY - 1); g.lineTo(R + 3, HY + 1); g.closePath(); done('#c0392b', OL, 1); break;
         case 'jesterHat': for (const [s, c] of [[-1, '#83517f'], [1, '#e0b24a']]) { P(); g.moveTo(0, HY - 9); g.quadraticCurveTo(s * 4, top - 12, s * 18, top - 4); g.quadraticCurveTo(s * 10, top - 2, s * 9, HY - 9); g.closePath(); done(lin(c, top - 12, HY - 9)); circ(s * 18, top - 3, 2.2); done('#ffd35c', OL, 0.8); } rr(-R - 1, HY - 11, (R + 1) * 2, 4, 2); done('#3ab0a0'); break;
         case 'flowerCrown': for (let i = 0; i < 7; i++) { const a = Math.PI * (1.05 + i * 0.15), fx = Math.cos(a) * (R + 0.5), fy = HY - 2 + Math.sin(a) * (R - 3); circ(fx, fy, 2.6); done(['#ff8cc6', '#ffd23f', '#c97991', '#ffffff'][i % 4], OL, 0.8); circ(fx, fy, 0.9); done('#e0a93a', null); } break;
+        case 'execHood': { P(); g.moveTo(-R - 5, HY + 15); g.quadraticCurveTo(-R - 2, HY + 8, -R - 1.5, HY - 2); g.quadraticCurveTo(-R, top - 3, -1, top - 7); g.lineTo(1, top - 7); g.quadraticCurveTo(R, top - 3, R + 1.5, HY - 2); g.quadraticCurveTo(R + 2, HY + 8, R + 5, HY + 15); g.quadraticCurveTo(0, HY + 18, -R - 5, HY + 15); done(lin('#2a2830', top - 7, HY + 16, 0.08, -0.22)); line('rgba(0,0,0,0.35)', 1, [[-R + 1, HY + 12], [-R + 3, HY + 3]]); line('rgba(0,0,0,0.35)', 1, [[R - 1, HY + 12], [R - 3, HY + 3]]); for (const s of [-1, 1]) { ell(s * 4.6 + e, HY + 1, 3, 2.1, s * 0.15); done('#050406', OL, 0.8); circ(s * 4.6 + e, HY + 1, 0.9); done('#c8b9a4', null); } line('rgba(255,255,255,0.12)', 1.4, [[-8, top - 3], [-3, top - 8]]); break; }
         case 'executionerHood': { P(); g.moveTo(-R - 2, HY + 10); g.quadraticCurveTo(-R - 3, top - 4, 0, top - 9); g.quadraticCurveTo(R + 3, top - 4, R + 2, HY + 10); g.quadraticCurveTo(0, HY + 13, -R - 2, HY + 10); done(lin('#8e1f2c', top - 9, HY + 12)); for (const s of [-1, 1]) { ell(s * 4.6 + e, HY + 1, 2.8, 2); done('#050406', OL, 0.8); circ(s * 4.6 + e, HY + 1, 0.9); done('#f3d27a', null); } rect('#d6af53', -1, top - 6, 2, 9); rect('#d6af53', -3.5, top - 3, 7, 2); break; }
         case 'halo': g.save(); g.shadowColor = '#ffe48a'; g.shadowBlur = 6; ell(0, top - 6 + Math.sin(t * 2) * 0.8, 10, 2.8); g.strokeStyle = '#ffe48a'; g.lineWidth = 2.2; g.stroke(); g.restore(); break;
         case 'pirate': P(); g.moveTo(-18, HY - 8); g.quadraticCurveTo(-12, top - 10, 0, top - 6); g.quadraticCurveTo(12, top - 10, 18, HY - 8); g.quadraticCurveTo(0, HY - 13, -18, HY - 8); done(lin('#1e1a20', top - 10, HY - 8)); line('#d6af53', 1.2, [[-16, HY - 9], [0, HY - 12], [16, HY - 9]]); circ(0, top - 1, 2.6); done('#f3ead8', OL, 0.7); line('#f3ead8', 1, [[-3, top + 3], [3, top + 1]]); line('#f3ead8', 1, [[3, top + 3], [-3, top + 1]]); break;
@@ -637,5 +785,7 @@
       g.restore();
     }
   }
-  root.MTArt = { drawCharacter: drawSmooth, drawSmooth, drawClassic, drawGhost, drawShadowFigure, drawHat, roundRect, shade };
+  // The moods a player can pick (MT_OPTIONS.expression); 'scared' and 'dead' are animation states.
+  const EXPRESSIONS = ['smile', 'grin', 'neutral', 'serious', 'surprised', 'sad', 'angry', 'wink', 'sleepy', 'smirk'];
+  root.MTArt = { drawCharacter: drawSmooth, drawSmooth, bodyOf, drawClassic, drawGhost, costumeGhost, drawShadowFigure, drawHat, roundRect, shade, EXPRESSIONS };
 })(window);

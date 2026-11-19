@@ -668,7 +668,9 @@
   const { esc, timer } = BOX;
   const once = new Set();
   const first = (k) => { if (once.has(k)) return false; once.add(k); if (once.size > 400) once.clear(); return true; };
-  const nm = (o) => (o ? (o.av ? esc(o.av) + ' ' : '') + esc(o.name) : '');
+  // A player's own character (BOX.face, in their meme shades/cap), or their emoji. o = { id, name, av }.
+  const fa = (o, px = 32) => (!o ? '' : window.BOX && BOX.face ? BOX.face({ id: o.id, name: o.name, avatar: o.av || o.avatar }, px, { cls: 'mm-fc' }) : esc(o.av || o.avatar || '🙂'));
+  const nm = (o) => (o ? fa(o, 30) + ' ' + esc(o.name) : '');
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const tilt = (k, amp = 3) => (((hash(k) % 100) / 100) * 2 - 1) * amp;
   const PINS = ['#ff4f5a', '#ffd23f', '#3fa9ff', '#3ddc84', '#b77bff'];
@@ -711,7 +713,7 @@
           <div class="mm-links"><button class="mm-link" id="add-bots">+ add 5 test bots</button><button class="mm-link" id="rm-bots">remove bots</button><button class="mm-link" id="tv-switch">🎮 other game</button></div></div>
       </section>
       <section class="mm-cast"><div class="mm-casth">The meme team <b>${n}</b></div>
-        <div class="mm-roster" id="roster">${L.players.map((p) => `<span class="chip mm-chip ${p.online ? '' : 'off'}" id="mmc-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--tl:${tilt(p.id, 5).toFixed(1)}deg">${pin(p.id)}<span class="mm-cav">${esc(p.avatar || '🙂')}</span><span class="mm-cnm">${esc(p.name)}</span>${p.bot ? '<small>bot</small>' : ''}</span>`).join('') || '<div class="mm-empty">Scan the code to join!<br>Your phone is your meme studio.</div>'}</div>
+        <div class="mm-roster" id="roster">${L.players.map((p) => `<span class="chip mm-chip ${p.online ? '' : 'off'}" id="mmc-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--tl:${tilt(p.id, 5).toFixed(1)}deg">${pin(p.id)}<span class="mm-cav">${fa(p, 36)}</span><span class="mm-cnm">${esc(p.name)}</span>${p.bot ? '<small>bot</small>' : ''}</span>`).join('') || '<div class="mm-empty">Scan the code to join!<br>Your phone is your meme studio.</div>'}</div>
         ${L.lineupHtml ? `<div class="mm-lineup">${L.lineupHtml}</div>` : ''}</section>
     </div>`);
     for (const s of el.querySelectorAll('select[data-set]')) { s.onchange = () => L.set(s.dataset.set, s.value); s.onclick = (e) => e.stopPropagation(); }
@@ -725,7 +727,7 @@
 
   // ---------- TV ----------
   function scoreboard(list) {
-    return `<aside class="mm-score">${pin('score')}<h3>Leaderboard</h3><div class="mm-rows">${(list || []).slice(0, 10).map((r, i) => `<div class="mm-row ${i === 0 && r.points > 0 ? 'lead' : ''}"><span class="mm-rk">${i === 0 && r.points > 0 ? '👑' : i + 1}</span><span class="mm-av">${esc(r.av || '🙂')}</span><span class="mm-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></aside>`;
+    return `<aside class="mm-score">${pin('score')}<h3>Leaderboard</h3><div class="mm-rows">${(list || []).slice(0, 10).map((r, i) => `<div class="mm-row ${i === 0 && r.points > 0 ? 'lead' : ''}"><span class="mm-rk">${i === 0 && r.points > 0 ? '👑' : i + 1}</span><span class="mm-av">${fa(r, 34)}</span><span class="mm-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></aside>`;
   }
   const topbar = (s) => `<header class="mm-top"><span class="mm-tag">${KIND_ICON[s.kind] || '🖼️'} ${esc(s.kindName)}</span>${s.final ? '' : `<span class="mm-tag dim">Round <b>${s.round}</b> of ${s.rounds - 1}</span>`}${s.endsIn && (s.phase === 'write' || s.phase === 'vote' || s.phase === 'semi') ? `<span class="mm-clock">⏱ ${timer(s.endsIn)}</span>` : ''}</header>`;
 
@@ -747,7 +749,7 @@
     const left = s.writers - s.posted;
     return `<div class="mm-writing">${hero}<div class="mm-desk"><div class="mm-call">📱 Write your captions!</div><div class="mm-count"><b>${s.posted}</b> of ${s.writers} posted</div>
       ${s.hurry ? `<div class="mm-hurry">⏰ Hurry! Waiting on ${left} more…</div>` : ''}
-      <div class="mm-polas">${s.table.map((p) => `<div class="mm-pola ${p.done ? 'done' : ''}" id="mmw-${esc(p.name)}-${p.done ? 1 : 0}" style="--tl:${tilt(p.name, 5).toFixed(1)}deg"><div class="mm-pface">${esc(p.av || '🙂')}</div><span>${esc(p.name)}</span>${p.done ? '<em>POSTED</em>' : '<i class="mm-dots"><b></b><b></b><b></b></i>'}</div>`).join('')}${s.tableMore ? `<div class="mm-pola more"><div class="mm-pface">+${s.tableMore}</div></div>` : ''}</div></div></div>`;
+      <div class="mm-polas">${s.table.map((p) => `<div class="mm-pola ${p.done ? 'done' : ''}" id="mmw-${esc(p.name)}-${p.done ? 1 : 0}" style="--tl:${tilt(p.name, 5).toFixed(1)}deg"><div class="mm-pface">${window.BOX && BOX.face ? BOX.face({ id: p.id, name: p.name, avatar: p.av }, 96, { fill: true }) : esc(p.av || '🙂')}</div><span>${esc(p.name)}</span>${p.done ? '<em>POSTED</em>' : '<i class="mm-dots"><b></b><b></b><b></b></i>'}</div>`).join('')}${s.tableMore ? `<div class="mm-pola more"><div class="mm-pface">+${s.tableMore}</div></div>` : ''}</div></div></div>`;
   }
   function tvParade(s) {
     const cur = s.memes[s.memes.length - 1], before = s.memes.slice(0, -1);
@@ -781,7 +783,7 @@
     const w = s.standings[0];
     const awards = (s.awards || []).map((x, i) => `<div class="mm-award" style="--d:${0.8 + i * 0.2}s;--tl:${tilt(x.title, 3).toFixed(1)}deg">${pin(x.key)}<div class="ic">${x.icon}</div><div class="t">${esc(x.title)}</div><div class="n">${nm(x)}</div><div class="v">${esc(x.value)}</div>${x.key === 'fried' && x.meme ? `<img class="mm-fried" alt="deep-fried meme" src="${url(x.meme, { scale: 0.32, fried: true })}">` : ''}</div>`).join('');
     BOX.morph(el, `<div class="mm mm-cork mm-tv mm-over" data-phase="over"><section class="mm-overmain">
-      <div class="mm-champ"><div class="mm-champl">Top meme lord</div><h2>${nm(w)}</h2>${w ? `<div class="mm-pts">${w.points} points</div>` : ''}</div>
+      <div class="mm-champ"><div class="mm-champl">Top meme lord</div>${w && window.BOX && BOX.hasLook && BOX.hasLook({ id: w.id, name: w.name }) ? `<div class="mm-champfig">${BOX.body({ id: w.id, name: w.name }, 220, { mood: 'grin' })}</div><h2>${esc(w.name)}</h2>` : `<h2>${nm(w)}</h2>`}${w ? `<div class="mm-pts">${w.points} points</div>` : ''}</div>
       ${awards ? `<div class="mm-awards">${awards}</div>` : ''}
       <div class="mm-galh">🖼️ The gallery <small>click ⬇ to download a meme as a PNG</small></div>
       <div class="mm-gallery">${gallery.map((m, i) => `<figure class="mm-gal ${m.motn ? 'motn' : ''}" style="--tl:${tilt(m.id, 3).toFixed(1)}deg;--d:${0.2 + i * 0.07}s">${pin(m.id)}${fimg(m, 0.42)}<figcaption>${m.motn ? '👑 ' : m.win ? '🏆 ' : ''}${nm(m.by)}${m.co ? ' + ' + nm(m.co) : ''}<button class="mm-dl" data-dl="${esc(m.id)}" title="Download PNG">⬇</button></figcaption></figure>`).join('')}</div>
@@ -874,7 +876,7 @@
       ${v.stats ? `<div class="mm-stats"><span>🖼️ ${plural(v.stats.memes, 'meme')}</span><span>🗳️ ${plural(v.stats.votes, 'vote')}</span><span>🏆 ${plural(v.stats.wins, 'round')} won</span></div>` : ''}
       ${(v.awards || []).map((a) => `<div class="mm-myaward">${a.icon} <b>${esc(a.title)}</b><small>${esc(a.value)}</small></div>`).join('')}</div>
       ${v.myBest ? `<div class="mm-label">Your best meme</div><div class="mm-pinned">${pin('best')}${img(v.myBest, 0.6)}</div>` : ''}
-      <div class="mm-pcard">${(v.final10 || []).map((r, i) => `<div class="mm-row ${i === 0 ? 'lead' : ''}"><span class="mm-rk">${i === 0 ? '👑' : i + 1}</span><span class="mm-av">${esc(r.av || '🙂')}</span><span class="mm-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
+      <div class="mm-pcard">${(v.final10 || []).map((r, i) => `<div class="mm-row ${i === 0 ? 'lead' : ''}"><span class="mm-rk">${i === 0 ? '👑' : i + 1}</span><span class="mm-av">${fa(r, 34)}</span><span class="mm-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
     if (first('over:' + v.rank + ':' + v.points)) ctx.haptic(v.rank === 1 ? 'win' : 'big');
   }
   function phone(el, v, ctx) {

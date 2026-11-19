@@ -110,7 +110,7 @@
         const col = i % cols, row = Math.floor(i / cols), rowN = row === rows - 1 ? n - row * cols : cols;
         const tx = 960 + (col - (rowN - 1) / 2) * gap + (row % 2 ? gap / 2 : 0), y = (rows > 1 ? 850 : 960) + row * 175, sc = rows > 1 ? 0.82 - row * 0.02 : 1.1;
         const x = lerp(-200, tx, easeOut(k));
-        A.survivor(g, x, y, sc, s.t, { avatar: c.avatar, color: c.color, pose: k < 1 ? 'run' : 'cheer', ph: i });
+        A.survivor(g, x, y, sc, s.t, { id: c.id, name: c.name, bot: c.bot, avatar: c.avatar, color: c.color, pose: k < 1 ? 'run' : 'cheer', ph: i });
         if (k >= 1) A.text(g, c.name, tx, y + 40, 38, '#fff', { font: '"Fredoka", sans-serif', stroke: '#120d1c', lw: 7, max: gap * 0.9 });
       });
       // the horde in the distance, getting closer

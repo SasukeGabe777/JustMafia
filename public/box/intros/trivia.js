@@ -124,7 +124,7 @@
       g.save(); g.translate(p.x, baseY + (1 - Math.min(1, k)) * 400); g.scale(sc, sc);
       // the contestant behind the podium
       g.fillStyle = c.color || '#ff8a00'; rr(g, -50, -300, 100, 150, 46); g.fill(); g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,0.3)'; g.stroke();
-      s.emoji(c.avatar || '🙂', 0, -330, 76);
+      s.face(c, 0, -330, 76);
       // buzzer
       g.save(); if (lit > 0) { g.shadowColor = c.color || '#ff8a00'; g.shadowBlur = 40 * lit * buzz; }
       g.fillStyle = lit > 0 ? (c.color || '#ff8a00') : '#4a2a6a'; g.beginPath(); g.ellipse(0, -170, 40, 22, 0, Math.PI, 0); g.fill(); g.restore();

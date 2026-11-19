@@ -98,7 +98,7 @@
       const p = at(i), lit = ss(i * per, i * per + 400, u), sc = Math.min(1, p.tw / 240) * (p.rows > 1 ? 0.95 : 1.25), y = p.rows > 1 ? 560 + p.row * 380 : 820;
       g.save(); g.globalAlpha = 0.35 + 0.65 * Math.min(1, lit * 2);
       silhouette(g, p.x, y, sc, c.color || RIM[i % RIM.length], 0, lit, 0);
-      if (lit > 0) s.emoji(c.avatar || '🙂', p.x, y - 132 * sc, 70 * sc * back(lit));
+      if (lit > 0) s.face(c, p.x, y - 132 * sc, 70 * sc * back(lit));
       g.restore();
       if (lit > 0) bubble(g, p.x, y - 260 * sc, c.name, BUB[i % BUB.length], lit, 0);
     });

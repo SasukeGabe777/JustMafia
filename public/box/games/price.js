@@ -14,8 +14,11 @@
 
   const fmt = (v) => (v == null ? '' : '$' + (v < 100 && Math.round(v * 100) % 100 !== 0 ? Number(v).toFixed(2) : Math.round(v).toLocaleString('en-US')));
   const fmtStep = (s) => (s < 1 ? '$' + s.toFixed(2).replace(/^0/, '') : '$' + s.toLocaleString('en-US'));
-  const who = (x) => (x.avatar ? esc(x.avatar) + ' ' : '') + esc(x.name);
-  const withAv = (rows) => rows.map((r) => ({ ...r, name: (r.avatar ? r.avatar + ' ' : '') + r.name }));
+  // Your JustGameBox character (store hat, name tag, shopping gear from the shop) where the emoji was.
+  const face = (x, sz = 30, o) => (BOX.face ? BOX.face(x, sz, o) : x.avatar ? esc(x.avatar) : '');
+  const who = (x, sz = 30) => (x.avatar || x.id ? face(x, sz) + ' ' : '') + esc(x.name);
+  // BOX.board with faces (BOX.board escapes the name, so it can't take a picture).
+  const board = (rows, val, label = '') => `<div class="board pp-board">${rows.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${who(r, 30)}</span><b>${esc(val(r))}${label}</b></div>`).join('')}</div>`;
   // Slider mapping: wide ranges use a power curve so small prices still get fine control.
   const curve = (max) => (max >= 200 ? 2.5 : 1);
   const toVal = (t, max) => max * Math.pow(Math.max(0, Math.min(1, t)), curve(max));
@@ -85,10 +88,10 @@
   function tvOver(s) {
     const [w, ...rest] = s.standings;
     const podium = s.standings.slice(0, 3);
-    return `<div class="final pp-final"><h2 class="pp-champ">🛍️ Shopping champion: ${w ? who(w) : ''}</h2>
-      ${podium.length > 1 ? `<div class="pp-podium">${[podium[1], podium[0], podium[2]].filter(Boolean).map((p) => `<div class="pp-pod ${p === w ? 'gold' : p === podium[1] ? 'silver' : 'bronze'}"><div class="nm">${who(p)}</div><div class="bar">${p === w ? '🥇' : p === podium[1] ? '🥈' : '🥉'}<b>${p.points.toLocaleString('en-US')}</b></div></div>`).join('')}</div>` : ''}
-      <div class="pp-awards">${(s.awards || []).map((a, i) => `<div class="pp-award" style="animation-delay:${0.8 + i * 0.3}s"><div class="ic">${a.icon}</div><b>${esc(a.title)}</b><div>${esc(a.name)}</div><small class="muted">${esc(a.why)}</small></div>`).join('')}</div>
-      ${rest.length > 2 ? `<div class="pp-finalboard">${BOX.board(withAv(s.standings.slice(0, 8)), (r) => r.points.toLocaleString('en-US'), ' pts')}</div>` : ''}</div>`;
+    return `<div class="final pp-final"><h2 class="pp-champ">🛍️ Shopping champion: ${w ? who(w, 52) : ''}</h2>
+      ${podium.length > 1 ? `<div class="pp-podium">${[podium[1], podium[0], podium[2]].filter(Boolean).map((p) => `<div class="pp-pod ${p === w ? 'gold' : p === podium[1] ? 'silver' : 'bronze'}"><div class="pp-podfig">${BOX.body ? BOX.body(p, p === w ? 132 : 108, { mood: p === w ? 'grin' : undefined }) : ''}</div><div class="nm">${esc(p.name)}</div><div class="bar">${p === w ? '🥇' : p === podium[1] ? '🥈' : '🥉'}<b>${p.points.toLocaleString('en-US')}</b></div></div>`).join('')}</div>` : ''}
+      <div class="pp-awards">${(s.awards || []).map((a, i) => `<div class="pp-award" style="animation-delay:${0.8 + i * 0.3}s"><div class="ic">${a.icon}</div><b>${esc(a.title)}</b><div>${a.id ? face(a, 34) + ' ' : ''}${esc(a.name)}</div><small class="muted">${esc(a.why)}</small></div>`).join('')}</div>
+      ${rest.length > 2 ? `<div class="pp-finalboard">${board((s.standings.slice(0, 8)), (r) => r.points.toLocaleString('en-US'), ' pts')}</div>` : ''}</div>`;
   }
 
   BOX.games.price = {
@@ -139,18 +142,21 @@
         const ask = s.kind === 'hilo' ? `<div class="pp-ask">Is the real price <b>HIGHER</b> or <b>LOWER</b> than<div class="pp-tag big hilo"><span class="pp-hole"></span>${fmt(s.hiloPrice)}</div></div>`
           : s.kind === 'versus' ? '<div class="pp-ask">⚖️ Which one costs <b>MORE</b>? Tap it on your phone!</div>'
             : `<div class="pp-ask">${s.kind === 'spree' ? `🛒 Guess the <b>TOTAL</b> for all three! <span class="pp-x2 inline">×${s.mult} points</span>` : '📱 What does it cost? Guess on your phone!'}</div>`;
-        const chips = s.lockers.map((p) => `<span class="pp-chip ${p.in ? 'in' : ''}" style="--c:${esc(p.color)}">${p.in ? '🔒 ' : ''}${who(p)}</span>`).join('');
+        // Twelve or fewer: the contestants stand in a row (full characters in their gear); more: name chips.
+        const staged = s.lockers.length <= 12 && !!BOX.body;
+        const chips = s.lockers.map((p) => (staged ? `<span class="pp-contestant ${p.in ? 'in' : ''}" style="--c:${esc(p.color)}">${BOX.body(p, 96, { mood: p.in ? 'grin' : undefined })}<span class="pp-chip ${p.in ? 'in' : ''}">${p.in ? '🔒 ' : ''}${esc(p.name)}</span></span>`
+          : `<span class="pp-chip ${p.in ? 'in' : ''}" style="--c:${esc(p.color)}">${p.in ? '🔒 ' : ''}${who(p, 28)}</span>`)).join('');
         const stage = s.kind === 'versus'
           ? `<div class="pp-vs pp-enter">${s.items.map((it, i) => `${i ? '<div class="pp-vs-mid">VS</div>' : ''}<div class="pp-vs-side">${card(it, 'slimv', s.round + '-' + i)}</div>`).join('')}</div>`
           : `<div class="pp-enter">${cards(s, s.items.length > 1 ? '' : 'hero')}</div>`;
         main = `<div id="g-${s.round}">${stage}</div>${ask}
           <div class="pp-status"><span>${s.locked} / ${s.total} locked in</span><span class="pp-clock">⏱ ${timer(s.endsIn)}</span></div>
           ${s.waiting ? `<div class="pp-waiting">⏳ Waiting on ${s.waiting.map(esc).join(', ')}</div>` : ''}
-          <div class="pp-chips">${chips}${s.total > s.lockers.length ? `<span class="pp-chip">+${s.total - s.lockers.length} more</span>` : ''}</div>`;
+          <div class="pp-chips ${staged ? 'staged' : ''}">${chips}${s.total > s.lockers.length ? `<span class="pp-chip">+${s.total - s.lockers.length} more</span>` : ''}</div>`;
       } else if (s.phase === 'reveal') main = `<div id="r-${s.round}">${tvReveal(s)}</div>`;
       const label = s.kind === 'guess' ? `Round ${s.round} of ${s.rounds}` : `${k.icon} ${k.title} · Round ${s.round} of ${s.rounds}`;
       BOX.morph(root, `<div class="pp-wrap"><section class="pp-stage"><div class="pp-top"><span class="pp-logo">🏷️ Price Panic</span><span class="pp-round">${esc(label)}</span>${s.final ? `<span class="pp-x2 inline">🏁 ×${s.mult}</span>` : ''}</div>${main}<div class="pp-note">${esc(s.note)}</div></section>
-        <aside class="pp-side"><div class="st-slot" data-keep></div><div class="panel"><h3 style="margin-top:0">Leaderboard</h3>${BOX.board(withAv(s.standings), (r) => r.points.toLocaleString('en-US'), '')}</div></aside></div>`);
+        <aside class="pp-side"><div class="st-slot" data-keep></div><div class="panel"><h3 style="margin-top:0">Leaderboard</h3>${board((s.standings), (r) => r.points.toLocaleString('en-US'), '')}</div></aside></div>`);
       if (F) F.attach();
     },
 
@@ -171,7 +177,7 @@
       if (v.phase === 'over') {
         BOX.morph(el, `<div class="card-box pp-overme" style="text-align:center"><div class="pp-place">${v.rank === 1 ? '🏆' : v.rank === 2 ? '🥈' : v.rank === 3 ? '🥉' : '🛍️'}</div><h3>You finished #${v.rank} of ${v.of}</h3><p>${v.points.toLocaleString('en-US')} points</p>
           ${v.awards.map((a) => `<div class="pp-myaward">${a.icon} <b>${esc(a.title)}</b><br><small class="muted">${esc(a.why)}</small></div>`).join('')}</div>
-          <div class="card-box">${BOX.board(withAv(v.final), (r) => r.points.toLocaleString('en-US'), '')}</div>`); return;
+          <div class="card-box">${board((v.final), (r) => r.points.toLocaleString('en-US'), '')}</div>`); return;
       }
       const k = KIND[v.kind] || KIND.guess;
       const head = `<div class="bl-me"><span>🏅 ${v.points.toLocaleString('en-US')} pts · #${v.rank || '-'}${v.streak >= 2 ? ` · 🔥${v.streak}` : ''}</span><span class="muted">${v.final ? `🏁 Final ×${v.mult}` : `Round ${v.round}/${v.rounds}`}</span></div>`;

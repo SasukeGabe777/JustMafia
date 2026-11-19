@@ -72,7 +72,7 @@
     const sh = ov.querySelector('[data-show]'); if (sh) sh.onclick = () => { sfx('shuffle'); draw(recommend()); };
     const ag = ov.querySelector('[data-again]'); if (ag) ag.onclick = () => { sfx('shuffle'); draw(recommend()); };
     const rd = ov.querySelector('[data-redo]'); if (rd) rd.onclick = () => draw(null);
-    for (const a of ov.querySelectorAll('[data-play]')) a.onclick = (e) => { e.preventDefault(); sfx('start'); try { localStorage.setItem('box.recent', a.dataset.play); } catch { /* private */ } setTimeout(() => { location.href = a.getAttribute('href'); }, 250); };
+    for (const a of ov.querySelectorAll('[data-play]')) a.onclick = (e) => { e.preventDefault(); sfx('start'); try { localStorage.setItem('box.recent', a.dataset.play); } catch { /* private */ } if (window.HUB_ROOM && window.HUB_ROOM.live()) { close(); window.HUB_ROOM.pick(a.dataset.play); return; } setTimeout(() => { location.href = a.getAttribute('href'); }, 250); };
     const first = ov.querySelector('.pk-chip.on, .pk-play, .pk-go'); if (first) first.focus({ preventScroll: true });
   }
   btn.addEventListener('click', (e) => { e.stopPropagation(); sfx('pop'); draw(null); });

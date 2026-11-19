@@ -75,10 +75,15 @@
     rxBloodMoon: ['🩸', '🌕', '🦇', '🗡️', '⚰️', '🌹'], // Season 1 pass reward
     rxCasino: ['🎲', '🃏', '💰', '🎰', '🍀', '💸'], // High Roller tier 1: make your first bet
   };
+  // Body type (free): the character is drawn clearly female or male (public/avatar.js drawSmooth).
+  OPTIONS.body = ['male', 'female'];
+  // Looks saved before body types existed: long hairstyles or a dress read as female.
+  OPTIONS.inferBody = (av) => (av && OPTIONS.body.includes(av.body) ? av.body : av && (['long', 'wavy', 'braids', 'bob', 'ponytail', 'bun', 'royalBraids', 'medium'].includes(av.hair) || av.outfit === 'dress') ? 'female' : 'male');
   OPTIONS.AVATAR_FIELDS = {
     color: 'colors', skin: 'skins', hat: 'hats', hair: 'hair', hairColor: 'hairColor', facialHair: 'facialHair', eyes: 'eyes', face: 'face',
     features: 'features', expression: 'expression', outfit: 'outfit', pants: 'pants', shoes: 'shoes', shoeStyle: 'shoeStyles', accessory: 'accessory',
     nameColor: 'nameColor', nameplate: 'nameplate', effect: 'effect', deathAnim: 'deathAnim', reactions: 'reactions', ghostSkin: 'ghostSkin',
+    body: 'body',
   };
   // Same idea for a player's house design (player.homeLook / profile.home).
   // Legacy saves kept houseStyle/houseColor/houseDecor on the avatar; see LEGACY_HOME.
@@ -92,7 +97,7 @@
     '#342b25':'Brown', '#416f91':'Blue', '#477849':'Green', '#89817a':'Gray', '#2d2f3a':'Charcoal', '#355879':'Denim', '#765439':'Brown', '#e3d7bb':'Linen', '#33251d':'Leather', '#151821':'Black', '#f3eee0':'Ivory', '#9b4141':'Burgundy', '#ffffff':'White', '#ffe066':'Gold', '#a6e5ff':'Ice Blue', '#ffb9db':'Rose', '#b1f0ba':'Mint',
     '#eadcb9':'Cream', '#c4674f':'Brick', '#d39a55':'Ochre', '#e3c15c':'Mustard', '#9fbe86':'Sage', '#6ea89b':'Seafoam', '#8db2d8':'Cornflower', '#5f7aa6':'Slate Blue', '#a88bc6':'Lavender', '#d996ae':'Blush', '#8b6a50':'Walnut', '#9c9b95':'Fieldstone',
     theme:'Theme default', '#8a3b2f':'Terracotta', '#4c5a6e':'Slate', '#3f6b4a':'Moss', '#6a4a7a':'Plum', '#2f4f80':'Navy', '#7a5a3a':'Thatch', '#b08a3e':'Straw', '#5a7f8f':'Teal Slate', '#3a3a42':'Charcoal Tile' };
-  OPTIONS.labels = { ...colors, buzzCut:'Buzz Cut', sidePart:'Side Part', slickedBack:'Slicked Back', royalGuard:'Royal Guard', plagueDoctor:'Plague Doctor', mafiaSuit:'Mafia Suit', detectiveCoat:'Detective Coat', ghostHunter:'Ghost Hunter', shoeStyle:'Shoes', leatherBoots:'Leather Boots', tallBoots:'Tall Boots', armoredBoots:'Armored Boots', nobleShoes:'Noble Shoes', wizardHat:'Wizard Hat', wideBrim:'Wide-Brim Hat', plagueHat:'Plague Doctor Hat', jesterHat:'Jester Hat', flowerCrown:'Flower Crown', mafiaBoss:'Mafia Champion', houseStyle:'Home', houseColor:'Home color', rosyCheeks:'Rosy Cheeks', houseDecor:'Home decor', executionerHood:'Hood of Mercy', darkMansion:'Dark Mansion', modernHouse:'Modern House', rspOffice:'RSP Supply Office',
+  OPTIONS.labels = { ...colors, male: 'Male', female: 'Female', buzzCut:'Buzz Cut', sidePart:'Side Part', slickedBack:'Slicked Back', royalGuard:'Royal Guard', plagueDoctor:'Plague Doctor', mafiaSuit:'Mafia Suit', detectiveCoat:'Detective Coat', ghostHunter:'Ghost Hunter', shoeStyle:'Shoes', leatherBoots:'Leather Boots', tallBoots:'Tall Boots', armoredBoots:'Armored Boots', nobleShoes:'Noble Shoes', wizardHat:'Wizard Hat', wideBrim:'Wide-Brim Hat', plagueHat:'Plague Doctor Hat', jesterHat:'Jester Hat', flowerCrown:'Flower Crown', mafiaBoss:'Mafia Champion', houseStyle:'Home', houseColor:'Home color', rosyCheeks:'Rosy Cheeks', houseDecor:'Home decor', executionerHood:'Hood of Mercy', darkMansion:'Dark Mansion', modernHouse:'Modern House', rspOffice:'RSP Supply Office',
     halo:'Halo', pirate:'Pirate Hat', samurai:'Samurai Kabuto', antlers:'Antlers', catEars:'Cat Ears', vikingHelm:'Viking Helm', beret:'Beret', pumpkin:'Pumpkin Head', bloodCrown:'Blood Moon Crown',
     cape:'Royal Cape', wings:'Angel Wings', mask:'Masquerade Mask', goldChain:'Gold Chain', pipe:'Pipe', rose:'Rose', batWings:'Bat Wings',
     sparkles:'Sparkles', snow:'Snowfall', hearts:'Hearts', shadow:'Shadow Aura', bloodMist:'Blood Mist', lightning:'Storm',

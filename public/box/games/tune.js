@@ -129,13 +129,17 @@
   }
   const ends = {};
   const timer = (key, endsIn) => { if (!endsIn) return ''; if (!ends[key] || Math.abs(ends[key] - (Date.now() + endsIn)) > 1500) ends[key] = Date.now() + endsIn; return `<span class="timer" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span>`; };
-  const av = (x) => esc((x && x.avatar) || '🙂');
+  // Your JustGameBox character (headphones and microphone from the shop) where the emoji was.
+  const av = (x, sz = 32, o) => (x && (x.id || x.name) && BOX.face ? BOX.face(x, sz, o) : esc((x && x.avatar) || '🙂'));
+  const fig = (x, h, o) => (x && x.id && BOX.body && BOX.hasLook && BOX.hasLook(x) ? BOX.body(x, h, o) : '');
+  // BOX.board with faces (BOX.board escapes the name, so it can't take a picture).
+  const board = (rows, val, label = '') => `<div class="board tb-board">${rows.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${av(r, 30)} ${esc(r.name)}</span><b>${esc(val(r))}${label}</b></div>`).join('')}</div>`;
   // Gear (JustGold shop): a player's buzzer paint ({ a, b, pattern, icon, glow }) or null. On the TV the
   // avatar dot of their chip becomes their buzzer; on the phone it's the Guess button.
   const buzzPaint = (x) => (x && x.gear && window.MT_GEAR ? window.MT_GEAR.paint('tune', 'buzzer', x.gear) : null);
   const buzzBg = (pt) => (pt.pattern === 'swirl' ? `repeating-radial-gradient(circle, ${pt.a} 0 3px, #333 3px 5px), ${pt.a}` : `radial-gradient(circle at 35% 30%, #ffffffaa, ${pt.a} 45%, ${pt.b})`);
   const buzzDot = (x) => { const pt = buzzPaint(x); return pt ? ` style="background:${buzzBg(pt)};box-shadow:0 0 0 3px ${pt.b}${pt.glow ? ', 0 0 16px ' + pt.a : ''}"` : ''; };
-  const chip = (x, extra = '', cls = '') => `<span class="tb-chip ${cls}" style="--c:${esc(x.color || '#ff3d8b')}"><i${buzzDot(x)}>${av(x)}</i>${esc(x.name)}${extra}</span>`;
+  const chip = (x, extra = '', cls = '') => `<span class="tb-chip ${cls}" style="--c:${esc(x.color || '#ff3d8b')}"><i${buzzDot(x)}>${av(x, 40)}</i>${esc(x.name)}${extra}</span>`;
   const secs = (ms) => (ms / 1000).toFixed(1) + ' s';
   const RATES = [{ n: 1, icon: '🍼', label: 'Too easy' }, { n: 2, icon: '🙂', label: 'Easy' }, { n: 3, icon: '🤔', label: 'Tricky' }, { n: 4, icon: '😰', label: 'Hard' }, { n: 5, icon: '🔥', label: 'Impossible' }];
   const rateOf = (d) => RATES[Math.max(0, Math.min(4, Math.round(d) - 1))];
@@ -155,7 +159,7 @@
     const P = s.players || [];
     return `<div class="tb-head"><span class="tb-live">☎ REQUEST LINE OPEN</span><h2>Add ${s.quota} song${s.quota === 1 ? '' : 's'} on your phone</h2>
       <div class="tb-sub">Search for anything. Then pick the ${s.clip} seconds we’ll hear first. Fun-hard wins, impossible doesn’t!</div></div>
-      <div class="tb-reqs">${P.map((p, i) => `<div class="tb-req ${p.n >= s.quota ? 'done' : ''} ${p.online ? '' : 'off'}" style="--c:${esc(p.color)};animation-delay:${(i * 0.04).toFixed(2)}s"><span class="av">${av(p)}</span><span class="nm">${esc(p.name)}</span><span class="recs">${Array.from({ length: s.quota }, (_, k) => `<i class="${k < p.n ? 'on' : ''}"></i>`).join('')}</span></div>`).join('')}</div>
+      <div class="tb-reqs">${P.map((p, i) => `<div class="tb-req ${p.n >= s.quota ? 'done' : ''} ${p.online ? '' : 'off'}" style="--c:${esc(p.color)};animation-delay:${(i * 0.04).toFixed(2)}s"><span class="av">${av(p, 40)}</span><span class="nm">${esc(p.name)}</span><span class="recs">${Array.from({ length: s.quota }, (_, k) => `<i class="${k < p.n ? 'on' : ''}"></i>`).join('')}</span></div>`).join('')}</div>
       <div class="tb-crate">📦 <b>${s.total}</b> song${s.total === 1 ? '' : 's'} in the crate · ${timer('sub', s.endsIn)}</div>`;
   }
   function tvGuess(s) {
@@ -200,10 +204,10 @@
     if (A.dj) aw.push(['🎯', 'Sweet Spot DJ', A.dj.names.join(', '), `${A.dj.value} points from their picks`]);
     if (A.deep) aw.push(['🔥', 'Deepest Cut', A.deep.name, `“${A.deep.title}” · difficulty ${A.deep.d}`]);
     if (f.empty) return `<div class="tb-over"><h1 class="tb-win">📭 <span>No songs came in tonight!</span></h1><p class="tb-sub">Play again and add a song or two from your phone.</p></div>`;
-    return `<div class="tb-over"><h1 class="tb-win">🏆 ${st[0] ? `${av(st[0])} ${esc(st[0].name)}` : ''} <span>tops the charts!</span></h1>
-      <div class="tb-podium">${pod.map((r, i) => (r ? `<div class="tb-pod p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="av">${av(r)}</div><div class="nm">${esc(r.name)}</div><div class="pts">${r.points}</div><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div></div>')).join('')}</div>
+    return `<div class="tb-over"><h1 class="tb-win">🏆 ${st[0] ? `${av(st[0], 64, { mood: 'grin' })} ${esc(st[0].name)}` : ''} <span>tops the charts!</span></h1>
+      <div class="tb-podium">${pod.map((r, i) => (r ? `<div class="tb-pod p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="av">${fig(r, i === 1 ? 160 : 130, { mood: i === 1 ? 'grin' : undefined }) || av(r, 72)}</div><div class="nm">${esc(r.name)}</div><div class="pts">${r.points}</div><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div></div>')).join('')}</div>
       <div class="tb-awards">${aw.map(([ic, lab, nm, txt], i) => `<div class="tb-award" style="animation-delay:${0.5 + i * 0.3}s"><div class="ic">${ic}</div><div class="lb">${lab}</div><div class="nm">${esc(nm)}</div><div class="muted">${esc(txt)}</div></div>`).join('')}</div>
-      <div class="tb-final-board">${BOX.board(st.slice(0, 10).map((r) => ({ ...r, name: (r.avatar ? r.avatar + ' ' : '') + r.name })), (r) => r.points, ' pts')}</div></div>`;
+      <div class="tb-final-board">${board(st.slice(0, 10), (r) => r.points, ' pts')}</div></div>`;
   }
   let lastTv = null;
   function tv(el, s) {
@@ -216,12 +220,12 @@
     const top = `<div class="tb-top"><span class="tb-round">${s.phase === 'submit' ? 'TAKING REQUESTS' : `SONG <b>${s.n}</b> / ${s.of}`}</span><span class="tb-type">🎵 TUNE BUZZ FM</span></div>`;
     let over = '';
     if (s.phase === 'submit') over = tvSubmit(s);
-    else if (s.phase === 'card') over = `<div class="tb-card"><div class="tb-card-ic">💿</div><div class="tb-card-n">SONG ${s.n} OF ${s.of}</div><h1>${av(s.by)} ${esc(s.by.name)}’s pick</h1><p>Type the title on your phone. Fast = more points!</p><p class="tb-hint">🎧 Each listen is longer… and worth a little less.</p></div>`;
+    else if (s.phase === 'card') over = `<div class="tb-card"><div class="tb-card-ic">💿</div><div class="tb-card-n">SONG ${s.n} OF ${s.of}</div>${fig(s.by, 140, { mood: 'grin' }) ? `<div class="tb-dj">${fig(s.by, 140, { mood: 'grin' })}</div>` : ''}<h1>${fig(s.by, 10) ? '' : av(s.by, 90) + ' '}${esc(s.by.name)}’s pick</h1><p>Type the title on your phone. Fast = more points!</p><p class="tb-hint">🎧 Each listen is longer… and worth a little less.</p></div>`;
     else if (s.phase === 'guess') over = tvGuess(s);
     else if (s.phase === 'reveal' && s.song) over = tvReveal(s);
     else if (s.phase === 'score' && s.result) over = tvScore(s);
     const side = s.phase === 'submit' ? `<aside class="tb-side">${SCORING}</aside>`
-      : `<aside class="tb-side"><h3>📻 The Charts</h3>${s.standings.map((r, i) => `<div class="tb-srow ${i === 0 && r.points ? 'top' : ''}"><span class="n">${i + 1}</span><span class="nm">${av(r)} ${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</aside>`;
+      : `<aside class="tb-side"><h3>📻 The Charts</h3>${s.standings.map((r, i) => `<div class="tb-srow ${i === 0 && r.points ? 'top' : ''}"><span class="n">${i + 1}</span><span class="nm">${av(r, 34)} ${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</aside>`;
     BOX.morph(el, `<div class="tb-root" id="tb-game">${top}<div class="tb-main"><section class="tb-stage"><canvas class="tb-eq" data-keep></canvas><div class="tb-o ph-${s.phase}" id="tb-o-${s.n}-${s.phase}">${over}</div></section>${side}</div></div>`);
     const cv = el.querySelector('.tb-eq'); if (cv) eqLoop(cv);
   }
@@ -278,7 +282,7 @@
     const box = $('#settings'), sig = L.fields.map((f) => f.key + ':' + f.options.map((o) => o.value).join('|')).join(';');
     if (box.__sig !== sig) { box.__sig = sig; box.innerHTML = L.fields.map((f) => `<label>${esc(f.label)}<select data-set="${esc(f.key)}">${f.options.map((o) => `<option value="${esc(String(o.value))}">${esc(o.label)}</option>`).join('')}</select></label>`).join(''); }
     for (const s of box.querySelectorAll('select[data-set]')) { if (document.activeElement !== s) s.value = String(L.settings[s.dataset.set]); s.onchange = () => { s.blur(); el.__L.set(s.dataset.set, s.value); }; }
-    const rh = n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ff3d8b')};--d:${((i * 0.17) % 1.6).toFixed(2)}s"><span class="vin"><span class="lbl">${esc(p.avatar || '🙂')}</span></span><b>${esc(p.name)}</b></span>`).join('')
+    const rh = n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ff3d8b')};--d:${((i * 0.17) % 1.6).toFixed(2)}s"><span class="vin"><span class="lbl">${av(p, n > 12 ? 34 : 48)}</span></span><b>${esc(p.name)}</b></span>`).join('')
       : '<div class="tbl-empty">📞 The lines are open… scan the code to call in!</div>';
     const r = $('#roster'); r.classList.toggle('many', n > 12); if (r.__h !== rh) { r.__h = rh; BOX.morph(r, rh); }
     const lp = $('#tbl-party'), lh = L.lineupHtml || ''; if (lp.__h !== lh) { lp.__h = lh; lp.innerHTML = lh; }

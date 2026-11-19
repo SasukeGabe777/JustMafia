@@ -155,6 +155,12 @@
     const sp = f.stage === -1 ? { x: 0.52, y: 0.5, mode: 'stand' } : duckSpot(f, t, k), ds = Math.max(0.25, iw / 220);
     // trophy shelf by the house
     if (f.trophies && f.trophies.length) { const n = Math.min(6, f.trophies.length); g.fillStyle = '#7a4a24'; g.fillRect(ix + iw * 0.6, iy + ih * 0.36, iw * 0.24, ih * 0.025); g.font = `${Math.max(7, iw * 0.05)}px sans-serif`; for (let i = 0; i < n; i++) g.fillText(['🏆', '🥈', '🥉'][f.trophies[i] - 1] || '🏆', ix + iw * (0.6 + i * 0.04), iy + ih * 0.355); }
+    // the farmer: the player's own character (BOX.drawChar), by the coop, watching their duck
+    const BX = window.BOX;
+    if (f.id && BX && BX.drawChar && iw * zoom > 46) {
+      const fx0 = ix + iw * 0.56, fy0 = iy + ih * 0.47, dx = ix + iw * sp.x;
+      BX.drawChar(g, fx0, fy0, { id: f.id, name: f.owner || undefined, avatar: f.avatar }, { scale: (ih * 0.42) / 62, t: t + k, facing: dx < fx0 ? -0.7 : 0.7, scared: f.event === 'fox', game: 'ducks' });
+    }
     if (f.event === 'duckling') drawDuck(g, ix + iw * sp.x - 26 * ds, iy + ih * sp.y + 6 * ds, ds * 0.5, 'sunny', 'none', t + 1, 'run', sp.flip);
     if (f.stage === -1) { g.fillStyle = '#c99a5b'; g.beginPath(); g.ellipse(ix + iw * sp.x, iy + ih * sp.y + 14 * ds, 22 * ds, 8 * ds, 0, 0, TAU); g.fill(); drawEgg(g, ix + iw * sp.x, iy + ih * sp.y, ds * 0.9, f.eggColor, null, t, 1); }
     else drawDuck(g, ix + iw * sp.x, iy + ih * sp.y, ds, f.color, f.hat, t + k, sp.mode, sp.flip, f.stage);
@@ -176,7 +182,7 @@
     // sign: owner, mood, rank (the phone draws its own overlay instead)
     if (!f.owner) return;
     const fs = Math.max(9 / zoom, Math.min(18 / Math.min(1, zoom), w * 0.075)); // readable even when the map is zoomed out
-    g.font = `600 ${fs}px Fredoka, sans-serif`; const label = `${f.rank && f.rank <= 3 ? ['🥇', '🥈', '🥉'][f.rank - 1] + ' ' : ''}${f.avatar ? f.avatar + ' ' : ''}${f.owner}`;
+    g.font = `600 ${fs}px Fredoka, sans-serif`; const label = `${f.rank && f.rank <= 3 ? ['🥇', '🥈', '🥉'][f.rank - 1] + ' ' : ''}${f.avatar && !(BX && BX.hasLook && BX.hasLook({ id: f.id })) ? f.avatar + ' ' : ''}${f.owner}`;
     const tw = Math.min(iw - fs * 2.2 - 6, g.measureText(label).width + 12);
     g.fillStyle = 'rgba(40,24,10,.75)'; g.fillRect(ix + 3, iy + 3, tw, fs + 6);
     g.fillStyle = '#fff'; g.fillText(label, ix + 9, iy + fs + 4, tw - 12);

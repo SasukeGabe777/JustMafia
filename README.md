@@ -404,7 +404,7 @@ artwork or paid photo/narration API is used.
   special roles, Storyteller information, social voting and bot integration.
 - `profiles.js`, `public/shared/cosmetics.js`: replaceable durable profiles,
   cosmetic catalog, achievements and centralized reward configuration.
-- `public/character-art.js`, `public/world-art.js`: original pixel artwork.
+- `public/avatar.js` (the character, shared by every game), `public/world-art.js`: original artwork.
 - `public/creator-ui.js`, `photo-ui.js`, `story-ui.js`, `grimoire.js`: expanded
   phone creator/social actions and the private Judge tools.
 - `public/shared/roles.js`: role registry, setup validation, presets and Telepath messages. Add roles here.

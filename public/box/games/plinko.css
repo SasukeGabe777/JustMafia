@@ -187,3 +187,11 @@ body.g-plinko { background: radial-gradient(circle at 50% 0%, #3a0d4f, #0b0216 7
 .pk-gd.jack b { background: #ffd23f; color: #3a2300; } .pk-gd.bust b { background: #16121a; color: #ff6a7a; } .pk-gd.x2 b { background: #1f9e5c; } .pk-gd.steal b { background: #7b3fd9; } .pk-gd.gift b { background: #2f8bff; }
 .pk-mini .pk-pad { width: min(62%, 240px); min-width: 0; }
 @media (max-width: 1250px) { .pk-main { grid-template-columns: 250px 1fr 290px; } .pk-gd span { display: none; } }
+/* Players are their characters (BOX.face / BOX.body) */
+body.g-plinko .pk-row { grid-template-columns: 26px 12px 36px 1fr auto auto auto; }
+body.g-plinko .pk-row .av .bx-face, body.g-plinko .pk-gr .av .bx-face { display: block; margin: -4px 0; background: color-mix(in srgb, var(--c) 30%, transparent); box-shadow: 0 0 0 2px var(--c); }
+body.g-plinko .pk-gr { grid-template-columns: 38px 1fr auto; }
+body.g-plinko .pk-wchips .bx-face, body.g-plinko .pk-tg .bx-face, body.g-plinko .pk-top5 .bx-face { margin: -5px 0; }
+body.g-plinko .pk-intro.sudden p span { display: inline-flex; flex-direction: column; align-items: center; vertical-align: bottom; }
+body.g-plinko .pk-pod .av { line-height: 1; display: flex; justify-content: center; align-items: flex-end; }
+body.g-plinko .pk-pod.p1 .av .bx-body { filter: drop-shadow(0 0 16px var(--c)); }

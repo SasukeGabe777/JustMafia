@@ -172,6 +172,7 @@ class ProfileStore {
     // Expression has its own migration rule below.
     for (const [key, list] of Object.entries(O.AVATAR_FIELDS)) {
       if (key === 'expression') continue;
+      if (key === 'body') { const saved = p && p.avatar && p.avatar.body; result.body = O.body.includes(input.body) ? input.body : O.body.includes(saved) ? saved : O.inferBody({ ...(p && p.avatar), ...input, body: null }); continue; } // body type: free; old looks are inferred
       const value = input[key] == null ? p && p.avatar[key] : input[key];
       result[key] = O[list].includes(value) ? value : O[list][0];
       const item = CATALOG.find((i) => i.field === key && i.value === result[key]);

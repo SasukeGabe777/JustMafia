@@ -172,7 +172,7 @@
       g.fillStyle = '#fffdf5'; g.beginPath(); g.arc(0, 0, rad * 0.66, 0, TAU); g.fill();
       g.setLineDash([8, 6]); g.lineWidth = 4; g.strokeStyle = c.color || '#e8323c'; g.beginPath(); g.arc(0, 0, rad * 0.58, 0, TAU); g.stroke(); g.setLineDash([]);
       g.restore();
-      if (k > 0.6) { s.emoji(c.avatar || '🙂', x, y, rad * 0.8);
+      if (k > 0.6) { s.face(c, x, y, rad * 0.8);
         rr(g, x - tw * 0.42, y + rad + 18, tw * 0.84, 48, 24); g.fillStyle = 'rgba(12,6,22,0.9)'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#ffd166'; g.stroke();
         text(g, c.name, x, y + rad + 43, 30, '#fdf6e3', { max: tw * 0.78, font: RIGHT }); }
     });

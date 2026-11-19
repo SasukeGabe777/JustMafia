@@ -73,7 +73,9 @@ class Game {
   end() { this.phase = 'over'; this.endsAt = 0; this.room.cancel(this.timer); this.room.fx('win'); }
   next() { if (this.phase === 'pick') this.reveal(); else if (this.phase === 'reveal') this.nextRound(); }
   standings() { return [...this.points].filter(([id]) => this.room.get(id)).map(([id, pts]) => ({ id, name: this.room.name(id), avatar: (this.room.get(id) || {}).avatar, points: pts })).sort((a, b) => b.points - a.points); }
-  // TODO gear (JustGold shop): add this game's slot and 3-5 items to public/shared/gear.js, then copy
+  // TODO gear (JustGold shop): add this game's wearable slots (spot head/face/hand/chest/back, shapes from
+  // public/wear-art.js) and items to public/shared/gear.js: players wear them automatically (BOX.face/body).
+  // For an object slot (a skin, a card back…) copy
   // each player's gear into the per-player data, e.g. gear: require('../../public/shared/gear').gearSet(this.room.get(id), ${js(key)}),
   // and draw it on the TV with MT_GEAR.paint(${js(key)}, '<slot>', x.gear) (docs/game-kit.md, "Gear").
   // Party points: player ids best-first once the game is over.

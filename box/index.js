@@ -21,6 +21,7 @@ const GAMES = {
   bid: require('./games/bid'),
   kingdoms: require('./games/kingdoms'),
   zombie: require('./games/zombie'),
+  pizza: require('./games/pizza'),
   escape: require('./games/escape'),
   marble: require('./games/marble'),
   debate: require('./games/debate'),
@@ -55,7 +56,7 @@ const defaultProfiles = () => new BoxProfileStore(process.env.MT_PROFILE_STORE =
 
 // JustGold (docs/justgold.md): 'wallets' is JustMafia's ProfileStore (gold, items, the look);
 // walletBusy(walletId) says if that wallet is in a running JustMafia game (no shopping then).
-function installBox(app, io, { takenElsewhere = () => false, external = {}, profiles = defaultProfiles(), wallets = null, walletBusy = () => false } = {}) {
+function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => null, external = {}, profiles = defaultProfiles(), wallets = null, walletBusy = () => false } = {}) {
   const pub = path.join(__dirname, '..', 'public', 'box');
   app.get('/box/tv', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
   app.get('/box/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
@@ -119,9 +120,11 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
   // Wire a room to the games outside the box.
   const wire = (room) => { room.onExternal = (def, r) => (typeof external[def.key] === 'function' ? external[def.key](r, def) : { ok: false, error: `${def.name} can't be reached from here.` }); return room; };
   // A room made from outside the box (JustMafia's "Play another game"): same as host:create.
-  function createRoom(gameKey, { unlocks } = {}) {
+  // `code`: keep a code the group already uses (JustMafia's town code), when no box room has it.
+  function createRoom(gameKey, { unlocks, code } = {}) {
     const def = GAMES[gameKey]; if (!def) return { ok: false, error: 'Unknown game.' };
-    const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true, profiles, wallets }));
+    const keep = typeof code === 'string' && /^[A-Z]{4}$/.test(code) && !rooms.has(code) ? code : null;
+    const room = wire(new BoxRoom(keep || newCode(), def, { nsp, shows: true, profiles, wallets }));
     room.setUnlocks(unlocks);
     if (room.isLocked(def)) return { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim(), locked: true };
     rooms.set(room.code, room);
@@ -194,16 +197,18 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
 
     socket.on('room:check', (msg, cb) => {
       const room = find(msg.code);
-      reply(cb, room ? { ok: true, code: room.code, game: room.def.key, title: room.def.name, busy: room.busy(), players: room.players.size, audience: room.audienceCount() } : { ok: false, error: 'Room not found. Check the code on the big screen.' });
+      if (!room) { const url = elsewhere(String(msg.code || '').trim().toUpperCase()); return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.', ...(url ? { url, elsewhere: true } : {}) }); }
+      reply(cb, { ok: true, code: room.code, game: room.def.key, title: room.def.name, busy: room.busy(), players: room.players.size, audience: room.audienceCount(), away: room.away ? { game: room.away.game, title: room.away.title } : null });
     });
     // Join as a player, or as the audience: msg.mode = 'watch' (just watch) | 'next' (watch now,
     // play from the next game's lobby). Without a mode, a busy room (game running, full or
     // locked) answers { busy } so the phone can ask which one.
     socket.on('player:join', (msg, cb) => {
       const room = find(msg.code);
-      if (!room) return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.' });
+      if (!room) { const url = elsewhere(String(msg.code || '').trim().toUpperCase()); return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.', ...(url ? { url, elsewhere: true } : {}) }); }
       const token = typeof msg.token === 'string' ? msg.token : null, avatar = typeof msg.avatar === 'string' ? msg.avatar : null;
       const prof = profileOf(msg.profile);
+      if (room.isKicked(token, prof && prof.id, msg.name)) return reply(cb, { ok: false, kicked: true, error: 'The host removed you from this room.' });
       const back = token && room.list().find((p) => p.token === token);
       const backA = !back && token && [...room.audience.values()].find((a) => a.token === token);
       if (backA) { seatAudience(room, backA); if (prof) backA.profileId = prof.id; return reply(cb, audienceReply(room, backA, true)); }
@@ -219,7 +224,7 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
       const r = room.join(msg.name, token, avatar);
       if (!r.ok) return reply(cb, r);
       detach(); socket.data = { code: room.code, playerId: r.player.id }; socket.join('pl:' + room.code + ':' + r.player.id);
-      r.player.sockets++;
+      r.player.sockets++; r.player.rosterSig = null; // a new socket gets the room's characters again
       if (prof) linkProfile(room, r.player, prof);
       reply(cb, { ok: true, code: room.code, id: r.player.id, token: r.player.token, game: room.def.key, back: !!r.back });
       room.sync();
@@ -246,8 +251,8 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
       if (w) return reply(cb, { ok: true, wallet: mafia && mafia.id === w ? { id: w, token: msg.mafia.token } : wallets.addDevice(w) });
       // First time: this phone's JustMafia profile (gold, items, look) becomes the account's wallet,
       // unless another account already has it; otherwise a fresh wallet.
-      if (mafia && !profiles.ownerOfWallet(mafia.id)) { profiles.setWallet(prof.id, mafia.id); return reply(cb, { ok: true, wallet: { id: mafia.id, token: msg.mafia.token }, linked: true }); }
-      const made = wallets.create(); profiles.setWallet(prof.id, made.id);
+      if (mafia && !profiles.ownerOfWallet(mafia.id)) { profiles.setWallet(prof.id, mafia.id); redress(prof.id); return reply(cb, { ok: true, wallet: { id: mafia.id, token: msg.mafia.token }, linked: true }); }
+      const made = wallets.create(); profiles.setWallet(prof.id, made.id); redress(prof.id);
       reply(cb, { ok: true, wallet: { id: made.id, token: made.token }, created: true });
     });
     socket.on('shop:state', (msg, cb) => { const { prof, w } = walletOfAuth(msg.auth); if (!w) return reply(cb, { ok: false, error: prof ? 'No wallet yet.' : 'Make your character first.', noWallet: !!prof }); reply(cb, { ok: true, ...shopState(prof, w) }); });
@@ -275,15 +280,38 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
       const { room, p } = ctx(); if (p && p.profileId !== prof.id) { linkProfile(room, p, prof); room.sync(); }
       reply(cb, { ok: true, profile: profileView(prof) });
     });
+    // "Save your stuff": a name + password (old clients send it as `pin`, a numeric password).
+    const pwOf = (msg, k = 'password') => { const v = msg[k] != null ? msg[k] : k === 'password' ? msg.pin : null; return typeof v === 'string' || typeof v === 'number' ? String(v) : ''; };
     socket.on('profile:claim', (msg, cb) => {
       const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: false, error: 'Profile not found.' });
-      reply(cb, profiles.claim(prof.id, msg.name, String(msg.pin == null ? '' : msg.pin)));
+      reply(cb, profiles.claim(prof.id, msg.name, pwOf(msg)));
     });
     socket.on('profile:login', (msg, cb) => {
       if (!profiles) return reply(cb, { ok: false, error: 'Profiles are off on this server.' });
-      const r = profiles.login(msg.name, String(msg.pin == null ? '' : msg.pin));
+      const r = profiles.login(msg.name, pwOf(msg));
       if (r.ok) { const { room, p } = ctx(); if (p) { linkProfile(room, p, profiles.get(r.id)); room.sync(); } }
       reply(cb, r);
+    });
+    socket.on('profile:password', (msg, cb) => {
+      const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: false, error: 'Profile not found.' });
+      reply(cb, profiles.changePassword(prof.id, pwOf(msg, 'old'), pwOf(msg)));
+    });
+    // Sign out on this phone: the device token stops working; the saved account stays.
+    socket.on('profile:logout', (msg, cb) => {
+      const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: true });
+      if (!prof.claimed) return reply(cb, { ok: false, error: 'Save your stuff with a name and password first, or it would be lost.' });
+      profiles.forgetDevice(msg.auth);
+      reply(cb, { ok: true });
+    });
+    // A light look at the account for the "Save your stuff" prompts: saved or not, JustGold, games.
+    // Without an account yet, the phone's JustMafia wallet (`mafia`) still shows its gold.
+    socket.on('account:status', (msg, cb) => {
+      const prof = profileOf(msg.auth);
+      let w = prof && wallets ? profiles.walletOf(prof.id) : null; if (w && !wallets.data.profiles[w]) w = null;
+      if (!w && wallets && msg.mafia && typeof msg.mafia === 'object') { const m = wallets.authenticate(msg.mafia); if (m && (!prof || !profiles.ownerOfWallet(m.id))) w = m.id; }
+      const wp = w ? wallets.data.profiles[w] : null;
+      reply(cb, { ok: true, account: !!prof, saved: !!(prof && prof.claimed && prof.password), name: prof ? prof.claimed || prof.name : null,
+        gold: wp ? wp.coins || 0 : 0, games: (prof ? prof.stats.games : 0) + (wp ? (wp.stats && wp.stats.games) || 0 : 0) });
     });
     socket.on('profile:title', (msg, cb) => {
       const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: false, error: 'Profile not found.' });
@@ -302,6 +330,11 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
       if (!room || !p) return reply(cb, { ok: false, error: 'You are not in this room.' });
       const type = String(msg.type || '');
       if (type === 'switch') { const v = room.vip(); if (!v || v.id !== p.id) return reply(cb, { ok: false, error: 'Only the host can pick the next game.' }); return reply(cb, room.switchGame(defOf(msg.game))); }
+      if (type === 'kick') {
+        const v = room.vip(); if (!v || v.id !== p.id) return reply(cb, { ok: false, error: 'Only the host can remove players.' });
+        if (String(msg.id) === p.id) return reply(cb, { ok: false, error: 'You can’t remove yourself. Use Leave instead.' });
+        return reply(cb, room.kick(String(msg.id || '')));
+      }
       reply(cb, room.vipAction(p, type));
     });
     // Emoji reactions float up on the TV (sent straight to the TV, not stored in the game).

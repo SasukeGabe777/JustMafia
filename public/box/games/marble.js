@@ -257,7 +257,7 @@
   }
   function miniMap(rows, cols, owners, me, hold) {
     return `<div class="mb-mini" style="grid-template-columns:repeat(${cols},1fr)">${Array.from({ length: rows * cols }, (_, i) => owners[i] != null
-      ? `<div class="mb-mphone ${i === me ? 'me' : ''} ${i === hold ? 'hold' : ''}"><b>${i === me ? 'YOU' : esc(owners[i])}</b>${i === hold ? '<i>🔮</i>' : ''}</div>` : '<div class="mb-mphone none"></div>').join('')}</div>`;
+      ? `<div class="mb-mphone ${i === me ? 'me' : ''} ${i === hold ? 'hold' : ''}">${BOX.hasLook && BOX.hasLook({ name: owners[i] }) ? face({ name: owners[i] }, 30) : ''}<b>${i === me ? 'YOU' : esc(owners[i])}</b>${i === hold ? '<i>🔮</i>' : ''}</div>` : '<div class="mb-mphone none"></div>').join('')}</div>`;
   }
 
   function phone(el, v, ctx) {
@@ -330,6 +330,16 @@
     const toScreen = (gx, gy, t) => { if (t == null) t = Math.floor(clamp(gy, 0, b.gh - 0.001) / b.ch) * b.cols + Math.floor(clamp(gx, 0, b.gw - 0.001) / b.cw); const o = tile(t), c = t % b.cols, r = Math.floor(t / b.cols); return [o.x + (gx - c * b.cw) * cs, o.y + (gy - r * b.ch) * cs]; };
     return { cs, tile, toScreen };
   }
+  // Players are their characters: faces as cached images on the canvas, BOX.face/BOX.body in HTML.
+  const FACES = new Map();
+  function faceImg(p, px) {
+    if (!p || !BOX.faceUrl) return null;
+    const k = (p.id || p.name) + '|' + px; let e = FACES.get(k);
+    if (!e) { const u = BOX.faceUrl(p, px); if (!u) return null; if (FACES.size > 200) FACES.clear(); e = Object.assign(new Image(), { src: u }); FACES.set(k, e); } // (no character yet: ask again next frame)
+    return e && e.complete && e.naturalWidth ? e : null;
+  }
+  const face = (p, n = 32, o) => (BOX.face ? BOX.face(p, n, o) : esc((p && p.avatar) || '🙂'));
+  const fig = (p, h = 120, o) => (BOX.body ? BOX.body(p, h, o) : `<span style="font-size:${Math.round(h * 0.5)}px">${esc((p && p.avatar) || '🙂')}</span>`);
   function drawTv(tm) {
     TV.raf = requestAnimationFrame(drawTv);
     const s = TV.S, cv = TV.cv; if (!s || !cv || !cv.isConnected || !s.board) return;
@@ -352,8 +362,14 @@
       if (b.mirror === i) { g.font = `${Math.round(cs * 0.8)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🪞', o.x + b.cw * cs / 2, o.y + b.ch * cs / 2); }
       // name
       g.font = `700 ${Math.round(clamp(cs * 0.42, 12, 30))}px Fredoka, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'bottom';
-      const label = `${own.avatar} ${own.name}${lineup && (s.ready || []).includes(own.id) ? ' ✅' : ''}`;
-      g.fillStyle = hold ? '#ffd23f' : own.online ? '#fff2dc' : 'rgba(255,242,220,0.45)'; g.fillText(label, o.px + o.pw / 2, o.py - cs * 0.12);
+      const fsz = Math.round(clamp(cs * 0.42, 12, 30)), fimg = faceImg(own, Math.round(fsz * 1.7));
+      const label = `${fimg ? '' : own.avatar + ' '}${own.name}${lineup && (s.ready || []).includes(own.id) ? ' ✅' : ''}`;
+      g.fillStyle = hold ? '#ffd23f' : own.online ? '#fff2dc' : 'rgba(255,242,220,0.45)';
+      if (fimg) { // the owner's character, left of the name
+        const fw = fsz * 1.7, tw = g.measureText(label).width, lx = o.px + o.pw / 2 + fw / 2 + 2, by = o.py - cs * 0.12;
+        g.save(); if (!own.online && !hold) g.globalAlpha = 0.5; g.drawImage(fimg, lx - tw / 2 - fw - 2, by - fw + fsz * 0.25, fw, fw); g.restore();
+        g.fillText(label, lx, by);
+      } else g.fillText(label, o.px + o.pw / 2, o.py - cs * 0.12);
       if (lineup) { g.font = `800 ${Math.round(cs * 1.6)}px Lilita One, sans-serif`; g.textBaseline = 'middle'; g.fillStyle = 'rgba(255, 210, 63, 0.85)'; g.fillText(String(i + 1), o.x + b.cw * cs / 2, o.y + b.ch * cs / 2); }
     }
     if (lineup) return;
@@ -378,27 +394,28 @@
     const side = `<aside class="mb-side">
       <div class="mb-mod"><span class="mb-mod-ic">${esc(mod.icon || '🪵')}</span><div><b>Maze ${s.round} of ${s.of}: ${esc(mod.name || '')}</b><small>${esc(mod.about || '')}</small></div></div>
       ${s.phase === 'roll' ? `<div class="mb-timer">${timer(s.endsIn)}</div>` : ''}
-      ${s.phase === 'roll' && s.marble ? `<div class="mb-holder">🔮 <b>${esc(s.marble.name)}</b> has the marble</div>` : ''}
+      ${s.phase === 'roll' && s.marble ? `<div class="mb-holder">${s.marble.holder ? face({ id: s.marble.holder, name: s.marble.name, avatar: '🔮' }, 44) : '🔮'} <b>${esc(s.marble.name)}</b> has the marble</div>` : ''}
       ${s.gemsLeft ? `<div class="mb-gems">💎 ${s.gemsLeft} gem${s.gemsLeft === 1 ? '' : 's'} on the boards</div>` : ''}
       <ul class="mb-events">${(s.events || []).slice().reverse().map((e) => `<li>${esc(e.icon)} ${esc(e.t)}</li>`).join('')}</ul>
-      <div class="mb-board">${(s.standings || []).slice(0, 8).map((r, i) => `<div class="mb-row"><span>${i + 1}</span><span>${esc(r.avatar || '')} ${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div>
+      <div class="mb-board">${(s.standings || []).slice(0, 8).map((r, i) => `<div class="mb-row"><span>${i + 1}</span><span>${face(r, 32)} ${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div>
       ${s.spotters && s.spotters.length ? `<p class="mb-spotters">📣 Spotting: ${s.spotters.map(esc).join(', ')}</p>` : ''}
     </aside>`;
     const top = s.phase === 'lineup'
       ? `<div class="mb-banner">📱 Put your phones together like this, screens up! <span>${timer(s.endsIn)}</span></div>`
       : s.phase === 'result' && L ? `<div class="mb-banner ${L.won ? 'won' : 'lost'}">${L.won ? `🏁 Cleared with ${L.left}s to spare!` : `⏱️ Out of time: ${Math.round((L.progress || 0) * 100)}% of the way`}</div>` : '';
-    const res = s.phase === 'result' && L ? `<div class="mb-gains">${L.gains.slice(0, 8).map((x) => `<span>${esc(x.avatar || '')} ${esc(x.name)} <b>${x.n >= 0 ? '+' : ''}${x.n}</b></span>`).join('')}</div>` : '';
+    const res = s.phase === 'result' && L ? `<div class="mb-gains">${L.gains.slice(0, 8).map((x) => `<span>${face(x, 34)} ${esc(x.name)} <b>${x.n >= 0 ? '+' : ''}${x.n}</b></span>`).join('')}</div>` : '';
     BOX.morph(el, `<div class="mb-tv">${top}<div class="mb-main"><div class="mb-map" id="mb-map" data-keep></div>${side}</div>${res}</div>`);
     const map = el.querySelector('#mb-map'); if (!map.querySelector('canvas')) map.innerHTML = '<canvas></canvas>';
     TV.cv = map.querySelector('canvas'); if (!TV.raf) TV.raf = requestAnimationFrame(drawTv);
   }
   function tvOver(el, s) {
     const st = s.standings || [], w = st[0] || {};
-    const award = (k, label, icon, low) => { const r = [...st].sort((a, b) => (low ? a[k] - b[k] : b[k] - a[k]))[0]; return r && (low || r[k] > 0) ? `<div class="mb-award"><i>${icon}</i><b>${esc(label)}</b><span>${esc(r.avatar || '')} ${esc(r.name)}</span></div>` : ''; };
-    BOX.morph(el, `<div class="mb-tv mb-over"><h1>🏆 ${esc(w.avatar || '')} ${esc(w.name || '')} wins!</h1>
+    const award = (k, label, icon, low) => { const r = [...st].sort((a, b) => (low ? a[k] - b[k] : b[k] - a[k]))[0]; return r && (low || r[k] > 0) ? `<div class="mb-award"><i>${icon}</i><b>${esc(label)}</b><span>${face(r, 40)} ${esc(r.name)}</span></div>` : ''; };
+    const pod = [st[1], st[0], st[2]].map((r, i) => (r ? `<div class="mb-pod p${[2, 1, 3][i]}">${fig(r, [130, 170, 115][i], [2, 1, 3][i] === 1 ? { mood: 'grin' } : undefined)}<b>${esc(r.name)}</b><span>${[2, 1, 3][i]}</span></div>` : '')).join('');
+    BOX.morph(el, `<div class="mb-tv mb-over">${pod ? `<div class="mb-podium">${pod}</div>` : ''}<h1>🏆 ${esc(w.name || '')} wins!</h1>
       <p class="mb-team">The team cleared <b>${s.cleared} of ${s.of}</b> mazes</p>
       <div class="mb-awards">${award('gems', 'Gem hunter', '💎')}${award('passes', 'Smooth hands', '➡️')}${award('sinks', 'The closer', '🏁')}${award('drops', 'Steadiest', '🧘', true)}</div>
-      <div class="mb-board big">${st.map((r, i) => `<div class="mb-row"><span>${i + 1}</span><span>${esc(r.avatar || '')} ${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
+      <div class="mb-board big">${st.map((r, i) => `<div class="mb-row"><span>${i + 1}</span><span>${face(r, 36)} ${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
   }
 
   function lobbyTv(el, L) {
@@ -424,7 +441,7 @@
       set.innerHTML = L.fields.map((f) => `<label class="mb-plate"><span>${esc(f.label)}</span><select data-set="${esc(f.key)}">${f.options.map((o) => `<option value="${esc(String(o.value))}" ${String(L.settings[f.key]) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`).join('');
       for (const s of set.querySelectorAll('[data-set]')) s.onchange = () => L.set(s.dataset.set, s.value);
     }
-    BOX.morph(el.querySelector('#roster'), L.players.map((p) => `<span class="chip mb-chip">${esc(p.avatar || '🙂')} ${esc(p.name)}</span>`).join('') || '<span class="muted">Scan the code to join! 2–6 players is perfect.</span>');
+    BOX.morph(el.querySelector('#roster'), L.players.map((p) => `<span class="chip mb-chip"><span class="av">${face(p, 34)}</span> ${esc(p.name)}</span>`).join('') || '<span class="muted">Scan the code to join! 2–6 players is perfect.</span>');
   }
 
   BOX.games.marble = {

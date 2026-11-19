@@ -35,6 +35,16 @@
     if (!c) { c = document.createElement('canvas'); c.width = c.height = Math.ceil(q * 1.3); const x2 = c.getContext('2d'); x2.font = `${q}px ${EMOJI}`; x2.textAlign = 'center'; x2.textBaseline = 'middle'; x2.fillText(e, c.width / 2, c.height / 2 + q * 0.06); emo.set(key, c); if (emo.size > 300) emo.delete(emo.keys().next().value); }
     const s = px / q; g.drawImage(c, x - (c.width * s) / 2, y - (c.height * s) / 2, c.width * s, c.height * s);
   }
+  // The player's own character (BOX.faceUrl, cached as an Image) for inside the helmet; null = use the emoji.
+  const faceIms = new Map();
+  function faceImg(who) {
+    if (!who || !window.BOX || !BOX.faceUrl) return null;
+    let u = ''; try { u = BOX.faceUrl(who, 128); } catch { u = ''; }
+    if (!u) return null;
+    let im = faceIms.get(u);
+    if (!im) { im = new Image(); im.src = u; faceIms.set(u, im); if (faceIms.size > 120) faceIms.delete(faceIms.keys().next().value); }
+    return im.complete && im.naturalWidth ? im : null;
+  }
   function cover(g, w, h, d) { const sc = Math.max(w / 1920, h / 1080); g.setTransform(d * sc, 0, 0, d * sc, d * (w - 1920 * sc) / 2, d * (h - 1080 * sc) / 2); return sc; }
   // seeded stars (x, y, depth, size, phase)
   const srand = (seed) => { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; };
@@ -123,7 +133,8 @@
       for (const s of [-1, 1]) { g.strokeStyle = '#3fbf3a'; g.lineWidth = 7; g.beginPath(); g.moveTo(s * 20, hy - 40); g.quadraticCurveTo(s * 34, hy - 80, s * 28 + Math.sin(t * 4 + s) * 6, hy - 96); g.stroke(); g.fillStyle = '#b6ff5a'; g.beginPath(); g.arc(s * 28 + Math.sin(t * 4 + s) * 6, hy - 98, 10, 0, TAU); g.fill(); }
     }
     g.fillStyle = o.alien ? '#2d6b2a' : '#20134a'; g.beginPath(); g.arc(0, hy, 56, 0, TAU); g.fill();
-    if (o.avatar) emoji(g, o.avatar, 0, hy + 4, 70);
+    const fim = faceImg(o.who);
+    if (fim) { g.save(); g.beginPath(); g.arc(0, hy, 53, 0, TAU); g.clip(); g.drawImage(fim, -68, hy - 76, 136, 136); g.restore(); } else if (o.avatar) emoji(g, o.avatar, 0, hy + 4, 70);
     if (o.alien) { g.fillStyle = 'rgba(120,255,90,0.35)'; g.beginPath(); g.arc(0, hy, 56, 0, TAU); g.fill(); }
     const gl = g.createLinearGradient(-50, hy - 50, 40, hy + 50); gl.addColorStop(0, 'rgba(200,240,255,0.55)'); gl.addColorStop(0.5, 'rgba(200,240,255,0.08)'); gl.addColorStop(1, 'rgba(200,240,255,0.2)');
     g.fillStyle = gl; g.beginPath(); g.arc(0, hy, 56, 0, TAU); g.fill();
@@ -219,7 +230,7 @@
       g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(rx, R.floor, ROOM_W, 30);
       // crew inside this room
       const here = (o.crew || []).filter((c) => c.room === key);
-      here.forEach((c, i) => { const n = here.length, px = R.cx + (n === 1 ? 0 : (i - (n - 1) / 2) * Math.min(80, (ROOM_W - 70) / Math.max(1, n - 1))); astro(g, px, R.floor + 6, n > 4 ? 0.42 : 0.5, t, { color: c.color, avatar: c.avatar, pose: c.pose || (alarm && o.working ? 'work' : 'idle'), ph: i * 1.7 + rx }); });
+      here.forEach((c, i) => { const n = here.length, px = R.cx + (n === 1 ? 0 : (i - (n - 1) / 2) * Math.min(80, (ROOM_W - 70) / Math.max(1, n - 1))); astro(g, px, R.floor + 6, n > 4 ? 0.42 : 0.5, t, { who: c.id ? c : null, color: c.color, avatar: c.avatar, pose: c.pose || (alarm && o.working ? 'work' : 'idle'), ph: i * 1.7 + rx }); });
       if (alarm) { g.fillStyle = `rgba(255,40,70,${0.18 + 0.16 * Math.sin(t * 8)})`; g.fillRect(rx, ROOM_Y, ROOM_W, ROOM_H); }
       if (o.boom && o.boom.room === key) { const k = o.boom.k; if (k > 0 && k < 1) { glow(g, R.cx, R.y + R.h / 2, 260 * easeOut(k * 2), 'rgba(255,170,60,A)', 0.9 * (1 - k)); } }
       if (o.fixed && o.fixed.room === key) { const k = o.fixed.k; if (k > 0 && k < 1) glow(g, R.cx, R.y + R.h / 2, 240, 'rgba(120,255,160,A)', 0.6 * Math.sin(k * Math.PI)); }
@@ -269,7 +280,7 @@
   function bubblePod(g, x, y, sc, t, o = {}) {
     g.save(); g.translate(x, y); g.scale(sc, sc);
     glow(g, 0, -10, 200, o.alien ? 'rgba(130,255,100,A)' : 'rgba(170,220,255,A)', 0.35);
-    if (o.alien) gloop(g, 0, 70, 0.75, t, { wave: true }); else astro(g, 0, 90, 0.65, t, { color: o.color, avatar: o.avatar, pose: o.pose || 'float', ph: 2, ghost: o.ghost });
+    if (o.alien) gloop(g, 0, 70, 0.75, t, { wave: true }); else astro(g, 0, 90, 0.65, t, { who: o.who, color: o.color, avatar: o.avatar, pose: o.pose || 'float', ph: 2, ghost: o.ghost });
     const bg = g.createRadialGradient(-50, -60, 10, 0, 0, 150); bg.addColorStop(0, 'rgba(255,255,255,0.35)'); bg.addColorStop(0.7, 'rgba(170,220,255,0.12)'); bg.addColorStop(1, 'rgba(170,220,255,0.4)');
     g.fillStyle = bg; g.beginPath(); g.arc(0, 0, 145, 0, TAU); g.fill();
     g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 6; g.beginPath(); g.arc(0, 0, 145, 0, TAU); g.stroke();
@@ -285,7 +296,10 @@
   const SYS = { oxygen: { icon: '🫧', name: 'Oxygen', room: 'Air Garden' }, engines: { icon: '🔥', name: 'Engines', room: 'Engine Room' }, shields: { icon: '🛡️', name: 'Shields', room: 'Shield Dome' } };
   const SYS_KEYS = ['oxygen', 'engines', 'shields'];
   const plural = (n, w, ws) => `${n} ${n === 1 ? w : ws || w + 's'}`;
-  const av = (x) => (x && x.avatar ? esc(x.avatar) : '🙂');
+  // A player's face (their character from the shop, wearing this game's gear), or their emoji.
+  // av: inline next to a name; avF: fills a round .h / .aa-cav holder.
+  const av = (x) => (window.BOX && BOX.face && x ? BOX.face(x, 30, { cls: 'aa-face' }) : x && x.avatar ? esc(x.avatar) : '🙂');
+  const avF = (x) => (window.BOX && BOX.face && x ? BOX.face(x, 72, { fill: true }) : x && x.avatar ? esc(x.avatar) : '🙂');
   const ends = {};
   const timer = (key, endsIn) => { if (!endsIn) return ''; if (!ends[key]) ends[key] = Date.now() + endsIn; return `<span class="timer" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span>`; };
   const podWord = (s) => (s.family === false ? 'airlock' : 'bubble pod');
@@ -307,7 +321,7 @@
     const tgt = c.target ? `<b class="aa-tg">${av(c.target)} ${esc(c.target.name)}</b>` : '';
     const st = c.station ? `<b class="aa-st">${esc(c.station.icon)} ${esc(c.station.label)}</b>` : '';
     const line = { where: `I was at ${st}`, sus: `I suspect ${tgt} 🤨`, clear: `I trust ${tgt} 👍`, scan: `I scanned ${tgt}: ${c.alien ? '<b class="aa-al">👽 ALIEN!</b>' : '<b class="aa-cr">🧑‍🚀 crew</b>'}`, sab: `🔧 Sabotage hit ${st}` }[c.kind] || '';
-    return `<div class="aa-claim k-${esc(c.kind)}"><span class="aa-cav" style="--c:${esc(c.color)}">${av(c)}</span><div><small>${esc(c.name)}</small><p>${line}</p></div></div>`;
+    return `<div class="aa-claim k-${esc(c.kind)}"><span class="aa-cav" style="--c:${esc(c.color)}">${avF(c)}</span><div><small>${esc(c.name)}</small><p>${line}</p></div></div>`;
   };
   function haptic(ctx, kind) { try { if (ctx.haptic) ctx.haptic(kind); else ctx.vibrate(kind === 'tap' ? 10 : 40); } catch { /* none */ } }
 
@@ -359,7 +373,7 @@
     const crew = crewRooms(s);
     // ghosts drift around the ship
     const ghosts = (s.crew || []).filter((c) => c.ghost).slice(0, 10);
-    ghosts.forEach((c, i) => { const a = t * 0.18 + (i / Math.max(1, ghosts.length)) * TAU; astro(g, shipX + Math.cos(a) * 860, shipY + 40 + Math.sin(a) * 330, 0.42, t, { color: c.color, avatar: c.avatar, ghost: true, pose: 'float', ph: i }); });
+    ghosts.forEach((c, i) => { const a = t * 0.18 + (i / Math.max(1, ghosts.length)) * TAU; astro(g, shipX + Math.cos(a) * 860, shipY + 40 + Math.sin(a) * 330, 0.42, t, { who: c, color: c.color, avatar: c.avatar, ghost: true, pose: 'float', ph: i }); });
     ship(g, shipX, shipY, sc, t, { hp: s.hp, hpMax: s.hpMax, alarm: (s.phase === 'emergency' || s.phase === 'shift' || (s.phase === 'report' && u < 3000)) ? sysKey : null, working: s.phase === 'shift', crew, shake, boom, fixed, jump });
     // the abduction: a saucer swoops down and beams someone up
     if (s.phase === 'report' && R && R.abducted) {
@@ -368,7 +382,7 @@
         const sx = lerp(2200, 1180, easeOut(k * 2)) + (k > 0.75 ? (k - 0.75) * 4 * -1600 : 0), sy = 220;
         const lift = clamp((k - 0.3) / 0.45);
         saucer(g, sx, sy, 0.75, t, { beam: k > 0.2 && k < 0.8 ? 1 : 0, beamLen: 560 });
-        if (k > 0.25 && k < 0.78) astro(g, sx, lerp(shipY + 40, sy + 80, ease(lift)), 0.5, t, { color: R.abducted.color, avatar: R.abducted.avatar, pose: 'float', ph: 3, alpha: 1 - clamp((lift - 0.85) / 0.15) });
+        if (k > 0.25 && k < 0.78) astro(g, sx, lerp(shipY + 40, sy + 80, ease(lift)), 0.5, t, { who: R.abducted, color: R.abducted.color, avatar: R.abducted.avatar, pose: 'float', ph: 3, alpha: 1 - clamp((lift - 0.85) / 0.15) });
       }
     }
     if (s.phase === 'emergency' || (s.phase === 'report' && R && R.S && u > 1600 && u < 2400)) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(255,30,60,${0.12 + 0.1 * Math.sin(t * 10)})`; g.fillRect(0, 0, z.cv.width, z.cv.height); }
@@ -385,7 +399,7 @@
     // the hatch puff
     if (u < 900) { for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU, r = u / 900 * 120; g.fillStyle = `rgba(220,230,255,${0.5 * (1 - u / 900)})`; g.beginPath(); g.arc(780 + Math.cos(a) * r, 720 + Math.sin(a) * r, 24, 0, TAU); g.fill(); } }
     const reveal = u > 2600;
-    bubblePod(g, x, y, 0.9, t, { alien: reveal && o.alien, color: o.color, avatar: o.avatar, pose: reveal && !o.alien ? 'float' : 'float' });
+    bubblePod(g, x, y, 0.9, t, { who: o, alien: reveal && o.alien, color: o.color, avatar: o.avatar, pose: reveal && !o.alien ? 'float' : 'float' });
     if (reveal && o.alien) for (let i = 0; i < 14; i++) { const a = (i / 14) * TAU + t, r = 190 + ((u - 2600) / 8) % 120; g.fillStyle = `rgba(160,255,110,${0.6})`; g.beginPath(); g.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, 6, 0, TAU); g.fill(); }
   }
   function drawOver(g, s, t, u) {
@@ -419,7 +433,7 @@
     const list = s.crew || [];
     return `<div class="aa-crew ${list.length > 10 ? 'many' : ''}">${list.map((c) => {
       const st = c.alien === true ? '<em class="al">👽</em>' : c.abducted ? '<em>🛸</em>' : c.ghost ? '<em>👻</em>' : c.picked || c.voted ? '<em class="ok">✓</em>' : '';
-      return `<span class="aa-chip ${c.ghost || c.gone ? 'ghost' : ''} ${c.alien ? 'alien' : ''} ${(s.phase === 'shift' && c.picked === false) || (s.phase === 'vote' && c.voted === false) ? 'wait' : ''}" style="--c:${esc(c.color)}"><span class="h">${av(c)}</span><b>${esc(c.name)}</b>${st}</span>`;
+      return `<span class="aa-chip ${c.ghost || c.gone ? 'ghost' : ''} ${c.alien ? 'alien' : ''} ${(s.phase === 'shift' && c.picked === false) || (s.phase === 'vote' && c.voted === false) ? 'wait' : ''}" style="--c:${esc(c.color)}"><span class="h">${avF(c)}</span><b>${esc(c.name)}</b>${st}</span>`;
     }).join('')}</div>`;
   }
   function stationsRow(E) { return `<div class="aa-stations">${E.stations.map((x) => `<span class="aa-stn"><i>${esc(x.icon)}</i>${esc(x.label)}</span>`).join('')}</div>`; }
@@ -473,7 +487,7 @@
       case 'over': {
         const ov = s.over || {}, [ic, title, line] = REASON[ov.reason] || ['🏁', 'Game over', ''];
         const crewWin = ov.winner === 'crew';
-        const rows = (ov.standings || []).slice(0, 12).map((r, i) => `<div class="aa-row ${r.won ? 'won' : ''}" style="--c:${esc(r.color)};animation-delay:${(0.6 + i * 0.08).toFixed(2)}s"><span class="n">${i + 1}</span><span class="h">${av(r)}</span><b>${esc(r.name)}</b><span class="role">${(ROLE_TXT[r.role] || {}).i || ''} ${esc((ROLE_TXT[r.role] || {}).t || '')}</span><span class="pts">⭐ ${r.pts}</span></div>`).join('');
+        const rows = (ov.standings || []).slice(0, 12).map((r, i) => `<div class="aa-row ${r.won ? 'won' : ''}" style="--c:${esc(r.color)};animation-delay:${(0.6 + i * 0.08).toFixed(2)}s"><span class="n">${i + 1}</span><span class="h">${avF(r)}</span><b>${esc(r.name)}</b><span class="role">${(ROLE_TXT[r.role] || {}).i || ''} ${esc((ROLE_TXT[r.role] || {}).t || '')}</span><span class="pts">⭐ ${r.pts}</span></div>`).join('');
         return `<div class="aa-overc"><div class="aa-card aa-win ${crewWin ? 'crew' : 'aliens'}"><div class="aa-big">${crewWin ? '🧑‍🚀 THE CREW WINS!' : '👽 THE ALIENS WIN!'}</div><h2>${ic} ${esc(title)}</h2><p class="aa-sub">${esc(line)}</p>
           <div class="aa-reveal">The aliens were: ${(ov.aliens || []).map((a) => `<b>${av(a)} ${esc(a.name)}${a.role === 'mimic' ? ' 🎭' : ''}</b>`).join(', ')}</div></div>
           <div class="aa-card aa-board"><h3>Crew log · ⭐ contribution</h3>${rows}</div></div>`;
@@ -527,7 +541,7 @@
       <section class="aa-console"><h3>🎛️ Mission console</h3><div id="aa-rows">${rows}</div><div id="settings" class="aa-sr">${sel}</div>
         <button class="aa-start" id="start" ${need ? 'disabled' : ''}>🚀 Launch the Biscuit</button><div class="aa-err" id="lobby-err">${esc(need ? `${plural(need, 'more crew member')} needed (4 minimum, best with 5–12)` : lobbyErr)}</div>
         <div class="aa-links"><button id="add-bots">+ 5 test bots</button><button id="rm-bots">remove bots</button><button id="aa-pick">🎮 another game</button><button id="aa-back">◀ games</button></div></section>
-      <section class="aa-manifest"><h3>🧑‍🚀 Crew manifest <b>${n}</b></h3><div class="aa-roster" id="roster">${L.players.map((p) => `<span class="chip aa-mchip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#7dff6a')}"><span class="h">${esc(p.avatar || '🙂')}</span><b>${esc(p.name)}</b></span>`).join('') || '<div class="aa-empty">Scan the boarding pass to join the crew!</div>'}</div>${L.lineupHtml ? `<div class="aa-lineup">${L.lineupHtml}</div>` : ''}</section>`);
+      <section class="aa-manifest"><h3>🧑‍🚀 Crew manifest <b>${n}</b></h3><div class="aa-roster" id="roster">${L.players.map((p) => `<span class="chip aa-mchip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#7dff6a')}"><span class="h">${avF(p)}</span><b>${esc(p.name)}</b></span>`).join('') || '<div class="aa-empty">Scan the boarding pass to join the crew!</div>'}</div>${L.lineupHtml ? `<div class="aa-lineup">${L.lineupHtml}</div>` : ''}</section>`);
     const box = el.querySelector('#aa-lui');
     for (const s of box.querySelectorAll('select[data-set]')) s.onchange = () => { BOX.sfx('click'); L.set(s.dataset.set, s.value); };
     for (const b of box.querySelectorAll('[data-k]')) b.onclick = () => { const s = box.querySelector(`select[data-set="${b.dataset.k}"]`); if (s) { s.value = b.dataset.v; s.onchange(); } };
@@ -567,7 +581,7 @@
     if (v.scanLog && v.scanLog.length) out.push(`<li>🔬 Scans: ${v.scanLog.map((x) => `${av(x)} ${esc(x.name)} ${x.alien ? '<b class="aa-al">👽</b>' : '<b class="aa-cr">🧑‍🚀</b>'}`).join(' · ')}</li>`);
     return out.length ? `<div class="aa-notes"><div class="aa-nt">🗒️ Your secret notes</div><ul>${out.join('')}</ul></div>` : '';
   }
-  function nameGrid(list, sel, attr, extra = '') { return `<div class="aa-names">${list.map((c) => `<button class="aa-name ${sel === c.id ? 'sel' : ''}" ${attr}="${esc(c.id)}" style="--c:${esc(c.color)}"><span class="h">${av(c)}</span><b>${esc(c.name)}</b>${sel === c.id ? '<em>✓</em>' : ''}</button>`).join('')}${extra}</div>`; }
+  function nameGrid(list, sel, attr, extra = '') { return `<div class="aa-names">${list.map((c) => `<button class="aa-name ${sel === c.id ? 'sel' : ''}" ${attr}="${esc(c.id)}" style="--c:${esc(c.color)}"><span class="h">${avF(c)}</span><b>${esc(c.name)}</b>${sel === c.id ? '<em>✓</em>' : ''}</button>`).join('')}${extra}</div>`; }
   function rolePhone(v) {
     const m = v.me, r = ROLE_TXT[m.role], open = P.opened === v.round + ':' + m.role;
     if (!open) return `<div class="aa-dossier" id="aa-open"><div class="stamp">TOP SECRET</div><div class="big">📁</div><h2>Your role is inside</h2><p>Cover your screen, then tap to open.</p></div>`;

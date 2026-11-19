@@ -74,7 +74,7 @@
       g.fillStyle = '#fff'; g.fillRect(-w / 2 - 10, -h / 2 - 10, w + 20, h + 20);
       g.fillStyle = c.color || '#3fa9ff'; g.fillRect(-w / 2, -h / 2, w, h);
       const sh = g.createRadialGradient(0, 0, 10, 0, 0, w); sh.addColorStop(0, 'rgba(255,255,255,0.35)'); sh.addColorStop(1, 'rgba(0,0,0,0.25)'); g.fillStyle = sh; g.fillRect(-w / 2, -h / 2, w, h);
-      s.emoji(c.avatar || '🙂', 0, -h * 0.02, w * 0.5);
+      s.face(c, 0, -h * 0.02, w * 0.5);
       text(g, String(c.name || '').toUpperCase(), 0, h * 0.38, Math.round(w * 0.17), '#fff', { font: IMP, stroke: '#000', lw: Math.round(w * 0.04), max: w - 20 });
       text(g, 'ME, READY TO MEME', 0, -h * 0.4, Math.round(w * 0.1), '#fff', { font: IMP, stroke: '#000', lw: Math.round(w * 0.03), max: w - 20 });
       g.fillStyle = PINS[i % PINS.length]; g.beginPath(); g.arc(0, -h / 2 - 10, 12, 0, TAU); g.fill();

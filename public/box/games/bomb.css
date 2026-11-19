@@ -427,3 +427,10 @@ body.g-bomb #roster.bsl-roster { display: flex; } /* another game's stylesheet s
   .bsl { grid-template-columns: 1fr; grid-template-areas: 'top' 'badge' 'dossier' 'bench'; height: auto; }
   .bs-bay.one, .bs-over { grid-template-columns: 1fr; }
 }
+
+/* players' characters (BOX.face / BOX.body) */
+body.g-bomb .bs-av { margin: -6px 1px; }
+body.g-bomb .bs-brow .f { width: 1.9em; height: 1.9em; flex: none; display: grid; place-items: center; }
+body.g-bomb .bs-pp .f, body.g-bomb .bsl-roster .chip .f { overflow: hidden; }
+body.g-bomb .bs-fig { display: grid; place-items: end center; height: clamp(120px, 22vh, 260px); }
+body.g-bomb .bs-fig .bx-body { height: 100% !important; width: auto !important; }

@@ -159,7 +159,7 @@
           g.save(); g.translate(x, by - 40 - (1 - k) * 160); g.scale(sc, sc);
           g.fillStyle = c.color || BLUE; rr(g, -58, -150 - hop, 116, 140, 44); g.fill();
           g.fillStyle = '#fff'; g.beginPath(); g.arc(0, -190 - hop, 62, 0, TAU); g.fill(); g.lineWidth = 7; g.strokeStyle = c.color || BLUE; g.stroke();
-          s.emoji(c.avatar || '🙂', 0, -188 - hop, 82);
+          s.face(c, 0, -188 - hop, 82);
           g.restore();
         });
         // the bench in front of this row (its back hides their knees), then the name plates

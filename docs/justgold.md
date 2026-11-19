@@ -5,15 +5,21 @@ Status: built on branch `claude/justgold`. The state before it is tagged `pre-ju
 
 ## The idea
 
-- **One account.** The JustGameBox profile (name + PIN, many devices; `box/profiles.js`) is the
+- **One account.** The JustGameBox profile (name + password, many devices; `box/profiles.js`) is the
   account. It links to one **wallet**: the JustMafia profile (`profiles.js`, `.data/profiles.json`),
   which already has the gold ledger, the owned items and the character look. Existing JustMafia gold
   and items carry over (the phone's `mt.profile` is linked the first time).
 - **JustGold (JG)** is the one currency. It is the old JustMafia gold (`coins`, `ledger`), renamed in
   every UI. Earned in JustMafia (unchanged rules) and now in every box game and Party Mode.
-- **One character.** The look (`OPTIONS.AVATAR_FIELDS`: hair, outfit, hat, colours…) is shown in every
-  game: a smooth portrait drawn with `public/avatar.js` (MTArt, the vector base, *not* the pixel
-  `character-art.js`, which stays JustMafia's own style inside JustMafia).
+- **One character.** The look (`OPTIONS.AVATAR_FIELDS`: body type, hair, outfit, hat, colours…) is the
+  same character in the shop and in every box game: the smooth character `MTArt.drawCharacter`
+  (`drawSmooth` in `public/avatar.js`). Body type (`body`: female | male, free) changes the build,
+  jaw, brows, lashes and lips; old looks without it are inferred (long hair or a dress → female).
+  In the games, players' emoji are replaced by their character (`BOX.face` / `BOX.body` /
+  `BOX.drawChar` in `public/box/portrait.js`; the room roster carries every player's look and gear;
+  bots get a generated character). Players without a saved look keep their emoji. JustMafia draws
+  the same character everywhere (town, cutscenes, phone, Judge), with its scene options: lean, arms,
+  dragged, dead, scared, theme…; the classic ghost is the character, see-through.
 - **One shop** at `/shop` (phone page): character items, flair, gear for each game, JustMafia items.
   Reachable from the box phone (join screen, lobby, between games), the main menu's phone link,
   and the JustMafia lobby. Not during a running game.
@@ -42,8 +48,14 @@ Both are in `tvState().players[i]` and `playerState().me`, and games may read `p
 - **Flair** (every game): nameplate, effect.
 - **JustMafia only**: houseStyle, houseDecor, deathAnim, reactions, ghostSkin.
 
-`public/shared/gear.js` (new, shared by server and pages) `GEAR`: per-game items
-`{ id: 'gear:<game>:<name>', game, slot, name, value, cost, desc }`. The free default is implied.
+`public/shared/gear.js` (shared by server and pages) `GEAR`: per-game items
+`{ id: 'gear:<game>:<name>', game, slot, spot, name, value, cost, desc, paint }`. The free default is implied.
+Every game has **wearables** (`spot`: head, face, hand, chest or back): things your character wears in
+that game (cowboy hats in Quick Draw, a dealer visor at Blackjack, a hockey mask in Zombie Survival, a
+chef's hat for pizza…), drawn on the character by `public/wear-art.js` (`paint.shape`); a worn spot
+replaces your own hat/extra in that game only. A few games keep an object slot too (marble skin, drop
+ball, card back, chips, paddle, buzzer, pen set, banner, meme frame, gallery frame, podium light, crest).
+The old phone-theme slots are gone; their ids no longer exist and are ignored (gearValues skips unknown ids).
 
 ## Earning JustGold
 
@@ -66,3 +78,25 @@ JustMafia keeps its own rules (`REWARDS`, capped at 30 a game). Everything goes 
 
 `busy` is true while the account is in a running game (box or JustMafia): buying and equipping wait
 until the lobby or the end of the game.
+
+### Save your stuff (name + password)
+
+The account starts as a guest on one phone. **Save your stuff** (`public/account-ui.js`, one panel
+shared by the box phone, the shop and JustMafia's phone) saves it under a name + password, so the
+same JustGold, character, items and stats can be used on any phone. Passwords: any characters,
+4–64, scrypt + salt (`box/profiles.js`). Old 4–6 digit PINs are numeric passwords and still sign in
+(old saves keep the hash under `pin`; it is moved to `password` on load). Wrong guesses (sign in or
+change password) lock that name for a minute after 5 tries.
+
+Where: the box phone join screen ("Sign in" link / "Save your stuff" card) and a one-time reminder
+after a game, the 🏆 My profile sheet ("💾 Save" tab), the shop (banner over the character; "Sign in"
+on the start screen), JustMafia's phone (join screen, character creator, lobby).
+
+| event | in | out |
+|---|---|---|
+| `account:status` | `{ auth, mafia? }` | `{ ok, account, saved, name, gold, games }` (no account yet: the gold of `mafia`) |
+| `profile:claim` | `{ auth, name, password }` (`pin` still accepted) | `{ ok, error?, profile }`; once saved, only `profile:password` changes it |
+| `profile:login` | `{ name, password }` | `{ ok, id, token, profile }`: a new device token; then `account:wallet` gives this phone the wallet |
+| `profile:password` | `{ auth, old, password }` | `{ ok, error? }` |
+| `profile:logout` | `{ auth }` | `{ ok }`: this phone's token stops working (refused while not saved) |
+

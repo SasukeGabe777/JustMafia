@@ -92,7 +92,7 @@
     g.save(); g.translate(x, y - bob); g.scale(sc, sc);
     g.fillStyle = p.color || '#3fb6ff'; g.beginPath(); g.ellipse(0, 90, 82, 76, 0, Math.PI, TAU); g.fill(); g.fillRect(-82, 90, 164, 120);
     g.fillStyle = 'rgba(0,0,0,0.15)'; g.fillRect(-82, 150, 164, 60);
-    s.emoji(p.avatar || '🙂', 0, 0, 120);
+    s.face(p, 0, 0, 120);
     g.restore();
     if (p.name) { g.save(); g.translate(x, y + 150 * sc); rr(g, -90 * sc, -22 * sc, 180 * sc, 44 * sc, 22 * sc); g.fillStyle = '#fff4e0'; g.fill(); text(g, p.name, 0, 2 * sc, 30 * sc, DARK, { font: FONT, max: 160 * sc }); g.restore(); }
   }

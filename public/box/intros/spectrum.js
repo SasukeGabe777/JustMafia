@@ -182,7 +182,7 @@
       g.fillStyle = '#fff'; g.beginPath(); g.moveTo(x - 14, y + pr * 0.8); g.lineTo(x, TY - 14); g.lineTo(x + 14, y + pr * 0.8); g.closePath(); g.fill();
       g.beginPath(); g.arc(x, y, pr + 7, 0, TAU); g.fill();
       g.fillStyle = c.color || CORAL; g.beginPath(); g.arc(x, y, pr, 0, TAU); g.fill();
-      s.emoji(c.avatar || '🙂', x, y, pr * 1.3);
+      s.face(c, x, y, pr * 1.3);
       g.font = '700 30px ' + FONT; const w = Math.min(span / n + 40, g.measureText(c.name).width + 30);
       g.fillStyle = '#fff'; rr(g, x - w / 2, y - pr - 56, w, 42, 21); g.fill();
       bold(g, c.name.length > 12 ? c.name.slice(0, 11) + '…' : c.name, x, y - pr - 35, 26, INK);

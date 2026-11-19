@@ -1,6 +1,7 @@
 'use strict';
 // JustGold gear (public/shared/gear.js): the catalog is sane, every game has gear, and a player
-// wearing gear plays every game to the end with the gear reaching the TV / phone data.
+// wearing gear plays every game to the end with the gear reaching the TV / phone data. Every game
+// has at least one wearable slot (drawn on the character by public/wear-art.js).
 //   node tools/test-box-gear.js
 const assert = require('node:assert/strict');
 const { VirtualClock } = require('../clock');
@@ -13,6 +14,10 @@ const test = (name, fn) => { fn(); passed++; console.log(`  ✓ ${name}`); };
 const HEX = /^#[0-9a-f]{6}$/i;
 // Games that never end on their own with bots alone in a short run: played for a while instead.
 const LONG = new Set(['kingdoms', 'ducks', 'funny']);
+// Games whose gear ships before the game itself (built on another branch).
+const FUTURE = new Set(['pizza']);
+// The wearable shapes public/wear-art.js knows (W.<shape> = …).
+const SHAPES = new Set([...require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'public', 'wear-art.js'), 'utf8').matchAll(/\bW\.(\w+) = /g)].map((m) => m[1]));
 
 test('catalog: unique ids, valid fields, prices 40–300', () => {
   const ids = new Set();
@@ -38,7 +43,9 @@ test('catalog: unique ids, valid fields, prices 40–300', () => {
 test('catalog: every paint is data the renderers accept (hex colours, known patterns, emoji, pen lists)', () => {
   for (const g of G.GEAR) {
     const p = g.paint; assert(p && typeof p === 'object', g.id);
-    for (const k of Object.keys(p)) assert(['a', 'b', 'c', 'pattern', 'icon', 'glow', 'pens'].includes(k), g.id + ': unknown paint field ' + k);
+    for (const k of Object.keys(p)) assert(['a', 'b', 'c', 'pattern', 'icon', 'glow', 'pens', 'shape', 'd'].includes(k), g.id + ': unknown paint field ' + k);
+    if (g.spot) { assert(G.SPOTS.includes(g.spot), g.id + ' spot'); assert(SHAPES.has(p.shape), g.id + ': wear-art.js has no shape ' + p.shape); } else assert(!('shape' in p), g.id + ': an object slot item has no shape');
+    if ('d' in p) assert(/^[a-z]+$/.test(p.d), g.id + ' d');
     for (const k of ['a', 'b', 'c']) if (k in p) assert(HEX.test(p[k]), g.id + ' ' + k + ' ' + p[k]);
     if ('pattern' in p) assert(G.PATTERNS.includes(p.pattern), g.id + ' pattern ' + p.pattern);
     if ('icon' in p) assert(typeof p.icon === 'string' && p.icon.length <= 8 && !/[<>&"']/.test(p.icon), g.id + ' icon');
@@ -46,21 +53,23 @@ test('catalog: every paint is data the renderers accept (hex colours, known patt
     if ('pens' in p) { assert(Array.isArray(p.pens) && p.pens.length >= 1 && p.pens.length <= 6); for (const c of p.pens) assert(HEX.test(c), g.id + ' pen ' + c); }
     if (g.slot === 'pens') assert(p.pens, g.id + ' a pen set lists its pens');
     if (g.slot === 'theme') assert(HEX.test(p.a) && HEX.test(p.b), g.id + ' a theme has two colours');
-    if (g.game === 'kingdoms') assert(p.icon, g.id + ' a crest has an emblem');
+    if (g.game === 'kingdoms' && g.slot === 'crest') assert(p.icon, g.id + ' a crest has an emblem');
   }
 });
 
-test('every box game (and Ducks, Kingdoms) has 3–5 items per slot, with a free default', () => {
-  for (const key of Object.keys(GAMES)) {
+test('every box game (and Ducks, Kingdoms) has character wearables, 1–5 items per slot, with a free default', () => {
+  for (const key of [...Object.keys(GAMES), ...FUTURE]) {
     const slots = G.slotsOf(key); assert(slots.length >= 1, key + ' has no gear');
+    assert(G.GAMES_WITH_GEAR.some((s) => s.game === key && s.spot), key + ' has no wearable slot');
+    const total = G.GEAR.filter((g) => g.game === key).length; assert(total >= 3 && total <= 12, `${key}: ${total} items`);
     for (const slot of slots) {
       const n = G.GEAR.filter((g) => g.game === key && g.slot === slot).length;
-      assert(n >= 3 && n <= 5, `${key}.${slot}: ${n} items`);
+      assert(n >= 1 && n <= 5, `${key}.${slot}: ${n} items`);
       const s = G.GAMES_WITH_GEAR.find((x) => x.game === key && x.slot === slot);
       assert(s.label && s.default.name && s.default.value === 'classic', key + ' default');
     }
   }
-  for (const s of G.GAMES_WITH_GEAR) assert(GAMES[s.game], 'gear for an unknown game ' + s.game);
+  for (const s of G.GAMES_WITH_GEAR) assert(GAMES[s.game] || FUTURE.has(s.game), 'gear for an unknown game ' + s.game);
 });
 
 test('gearOf / gearSet / paint read p.gear defensively', () => {
@@ -75,13 +84,24 @@ test('gearOf / gearSet / paint read p.gear defensively', () => {
   assert.equal(G.gearOf({ gear: { marble: { skin: { evil: 1 } } } }, 'marble', 'skin'), 'classic');
   assert.equal(G.gearOf({ gear: { plinko: { ball: 'cherry' } } }, 'plinko', 'ball'), 'classic', 'another game\'s value is not valid here');
   assert.equal(G.gearOf({ gear: { __proto__: { marble: { skin: 'lava' } } } }, 'marble', 'skin'), 'classic', 'no prototype tricks');
-  assert.deepEqual(G.gearSet(null, 'sketch'), { pens: 'classic' });
-  assert.deepEqual(G.gearSet({ gear: { sketch: { pens: 'neon' } } }, 'sketch'), { pens: 'neon' });
+  assert.deepEqual(G.gearSet(null, 'sketch'), { pens: 'classic', beret: 'classic', brush: 'classic' });
+  assert.deepEqual(G.gearSet({ gear: { sketch: { pens: 'neon', beret: 'red' } } }, 'sketch'), { pens: 'neon', beret: 'red', brush: 'classic' });
   assert.equal(G.paint('marble', 'skin', 'classic'), null);
   assert.equal(G.paint('marble', 'skin', undefined), null);
   assert.equal(G.paint('marble', 'skin', { skin: 'lava' }).a, '#ff5a1f');
   assert.equal(G.paint('marble', 'skin', 'gear:marble:lava').pattern, 'flame');
   assert.deepEqual(G.gearSet({ gear: { quickdraw: { hat: 'golden' } } }, 'nosuchgame'), {});
+});
+
+test('wearOf: the wearables to draw, from a gearSet or a whole p.gear; junk gives none', () => {
+  const w = G.wearOf('quickdraw', { quickdraw: { hat: 'golden', badge: 'marshal', hand: 'nope' } });
+  assert.deepEqual(w.map((x) => [x.spot, x.shape]), [['head', 'cowboy'], ['chest', 'starBadge']]);
+  assert.equal(G.wearOf('quickdraw', { hat: 'gear:quickdraw:rose' })[0].d, 'rose', 'a gearSet and item ids work');
+  assert.deepEqual(G.wearOf('marble', { marble: { skin: 'lava' } }), [], 'object slots are not worn');
+  for (const junk of [null, undefined, 'x', 42, [], { quickdraw: 'golden' }, { quickdraw: { hat: { x: 1 } } }, { __proto__: { hat: 'golden' } }]) assert.deepEqual(G.wearOf('quickdraw', junk), [], JSON.stringify(junk));
+  // Old ids that no longer exist (the phone themes) are ignored.
+  assert.deepEqual(G.wearOf('blanks', { blanks: { theme: 'grape' } }), []);
+  assert.equal(G.BY_ID.get('gear:blanks:grape'), undefined);
 });
 
 // The priciest item of each slot, for every game: what our gearhead wears.
@@ -111,12 +131,14 @@ test('every game: a player wearing gear plays to the end with bots; gear reaches
     while (r.game && r.game.phase !== 'over' && clock.step()) { if (++i % 50 === 0 || !(seen.tv || seen.view)) look(); if (i > limit) { if (LONG.has(key)) break; throw new Error(key + ' never ended (' + r.game.phase + ')'); } }
     look();
     if (!LONG.has(key)) assert.equal(r.game.phase, 'over', key + ' finished');
-    // Wired games copy the gear into their own per-player data; phone-theme games use me.gear.
-    const tvSlot = G.GAMES_WITH_GEAR.some((x) => x.game === key && x.where === 'tv');
-    const themed = slots.includes('theme');
-    if (tvSlot) assert(seen.tv, key + ': the gear never reached tv()');
-    if (!tvSlot && !themed) assert(seen.view || seen.tv, key + ': the gear never reached view()');
-    report.push(`${key}${seen.tv ? ' tv' : ''}${seen.view ? ' view' : ''}${themed ? ' theme' : ''}`);
+    // Games with an object slot (a marble skin, chips…) copy the gear into their own TV data;
+    // wearables reach every screen through the room roster (tvState().players[].gear, checked above).
+    const objSlot = G.GAMES_WITH_GEAR.find((x) => x.game === key && !x.spot);
+    if (objSlot && objSlot.where === 'tv') assert(seen.tv, key + ': the gear never reached tv()');
+    if (objSlot && objSlot.where !== 'tv') assert(seen.view || seen.tv, key + ': the gear never reached view()');
+    const tvP = r.tvState().players.find((p) => p.id === ana.id);
+    assert(G.wearOf(key, tvP.gear).length >= 1, key + ': nothing to wear from the roster');
+    report.push(`${key}${seen.tv ? ' tv' : ''}${seen.view ? ' view' : ''} wear:${G.wearOf(key, tvP.gear).length}`);
   }
   console.log('    ' + report.join(', '));
 });

@@ -378,3 +378,17 @@ body.g-blackjack .host-row .btn:not(.ghost) { font-family: 'Righteous', sans-ser
 .bj-stack.gear.glow { filter: drop-shadow(0 0 4px var(--g-a)); }
 .bj-gchip { display: inline-block; width: 1em; height: 1em; vertical-align: -0.12em; border-radius: 50%; background: radial-gradient(closest-side, var(--g-a) 0 48%, var(--g-b) 50% 62%, var(--g-a) 64% 100%); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3); }
 .bj-gchip.glow { box-shadow: 0 0 6px var(--g-a), inset 0 -2px 0 rgba(0, 0, 0, 0.3); }
+/* Characters (BOX.face / BOX.body): each seat's player stands beside their name plate, wearing their Blackjack gear. */
+body.g-blackjack .bj-plate { position: relative; }
+body.g-blackjack .bj-who { position: absolute; right: 100%; bottom: -6px; margin-right: 2px; pointer-events: none; line-height: 0; }
+body.g-blackjack .bj-who .bx-emo-body { font-size: 40px !important; line-height: 1 !important; height: auto !important; width: auto !important; }
+body.g-blackjack .bj-seat.rside .bj-who { right: auto; left: 100%; margin: 0 0 0 10px; }
+body.g-blackjack .bj-seat.lg.acting .bj-who .bx-body { filter: drop-shadow(0 0 8px rgba(255, 209, 102, 0.9)); }
+body.g-blackjack .bj-av .bx-face { margin: -6px 0; background: rgba(255, 255, 255, 0.1); }
+body.g-blackjack .bj-lrow .bj-av .bx-face { box-shadow: 0 0 0 2px rgba(255, 209, 102, 0.35); }
+body.g-blackjack .bjl-p .av .bx-face { margin: 0; border-radius: 50%; }
+body.g-blackjack .bj-podium .who.bj-podfig { width: auto; height: auto; border-radius: 0; background: none; box-shadow: none; font-size: 64px; line-height: 0; }
+body.g-blackjack .bj-podium .p1 .who.bj-podfig .bx-body { filter: drop-shadow(0 0 18px rgba(255, 209, 102, 0.75)); }
+body.g-blackjack .bj-podium .who.bj-podfig .bx-emo-body { height: auto !important; line-height: 1.1 !important; }
+body.g-blackjack .bj-rest .row .bx-face, body.g-blackjack .bj-award .bx-face { margin: -6px 0; background: rgba(255, 255, 255, 0.1); }
+body.g-blackjack .bj-bustbtn .bx-face { margin: -8px 0; vertical-align: middle; }

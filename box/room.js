@@ -557,6 +557,22 @@ class BoxRoom {
     return added;
   }
 
+  // The host removes someone (TV or host phone). Their phone is told, and the same phone or
+  // account can't come straight back into this room (a fresh name on another phone still can).
+  kick(id) {
+    const p = this.players.get(id); if (!p) return { ok: false, error: 'That player already left.' };
+    if (!p.bot) {
+      this.kicked = this.kicked || { tokens: new Set(), profiles: new Set(), names: new Set() };
+      this.kicked.names.add(p.name.toLowerCase());
+      if (p.token) this.kicked.tokens.add(p.token);
+      if (p.profileId) this.kicked.profiles.add(p.profileId);
+      if (this.nsp) this.nsp.to('pl:' + this.code + ':' + p.id).emit('kicked', { room: this.code });
+    }
+    this.remove(id);
+    return { ok: true, name: p.name };
+  }
+  isKicked(token, profileId, name) { const k = this.kicked; return !!(k && ((token && k.tokens.has(token)) || (profileId && k.profiles.has(profileId)) || (name && k.names.has(String(name).trim().toLowerCase())))); }
+
   remove(id) {
     const p = this.players.get(id); if (!p) return;
     this.players.delete(id);
@@ -578,7 +594,7 @@ class BoxRoom {
       }
       case 'addBots': return { ok: true, added: this.addBots(Math.max(1, Math.min(50, Number(msg.count) || 5))) };
       case 'removeBots': for (const p of this.list()) if (p.bot) this.remove(p.id); return { ok: true };
-      case 'kick': this.remove(msg.id); return { ok: true };
+      case 'kick': return this.kick(String(msg.id || ''));
       case 'start': return this.start();
       case 'again': this.resetLobby(); return this.start(); // every game: back to a fresh lobby, then start
       case 'next': if (this.phase === 'show' && this.show) { this.show.skip(); this.sync(); return { ok: true }; }
@@ -663,11 +679,13 @@ class BoxRoom {
       code: this.code, game: this.def.key, title: this.def.name, phase: this.phase,
       me: { id: p.id, name: p.name, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, title: p.title || null, profile: !!p.profileId, wallet: !!p.wallet },
       jg: p.jg || null,
+      roster: this.rosterFor(p),
       audience: this.audienceCount(), recap: this.recap ? personalRecap(this, this.recap, p) : null,
       party: (() => { const b = this.partyBoard(), i = b.findIndex((r) => r.id === p.id); return { played: this.played.length, pts: i >= 0 ? b[i].pts : 0, wins: i >= 0 ? b[i].wins : 0, gain: i >= 0 ? b[i].gain : 0, rank: i + 1, of: b.length, top: b.slice(0, 5) }; })(),
       partyMode: this.partyState(), unlocks: [...this.unlocks], count: this.players.size,
       away: this.away ? { game: this.away.game, title: this.away.title, code: this.away.code, url: `/play?room=${encodeURIComponent(this.away.code)}&autojoin=1&name=${encodeURIComponent(p.name)}` } : null, min: this.def.min, live: !!this.def.liveLobby,
       vip: !!this.vip() && this.vip().id === p.id, vipName: this.vip() ? this.vip().name : null,
+      kickList: this.vip() && this.vip().id === p.id ? this.list().filter((x) => x.id !== p.id).map((x) => ({ id: x.id, name: x.name, avatar: x.avatar, bot: !!x.bot, online: !!x.bot || x.sockets > 0 })) : null,
       state: this.game && this.phase !== 'show' ? this.game.view(p) : null, show: this.show ? this.show.view(p) : null,
     };
   }
@@ -678,7 +696,18 @@ class BoxRoom {
     this.pending = true;
     setImmediate(() => { this.pending = false; this.flush(); });
   }
+  // Everyone's character and this game's gear, for the phones' BOX.face (sent only when it
+  // changed since this player last got it; tvState().players already carries it for the TV).
+  rosterInfo() {
+    if (this._roster) return this._roster;
+    const game = this.def.key;
+    const list = this.list().filter((x) => x.look || x.bot).map((x) => ({ id: x.id, name: x.name, avatar: x.avatar, color: x.color, bot: !!x.bot, look: x.look || null, gear: x.gear && x.gear[game] ? { [game]: x.gear[game] } : null }));
+    return (this._roster = { sig: JSON.stringify(list), list });
+  }
+  rosterFor(p) { const r = this.rosterInfo(); if (p.rosterSig === r.sig) return undefined; p.rosterSig = r.sig; return r.list; }
+
   flush() {
+    this._roster = null;
     this.scoreParty();
     if (!this.nsp) return;
     this.nsp.to('host:' + this.code).emit('tv', this.tvState());

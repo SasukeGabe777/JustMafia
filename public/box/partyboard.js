@@ -29,7 +29,7 @@
   const starsNew = (r) => { const won = r.gain === 10 && r.wins > 0, old = r.wins - (won ? 1 : 0); if (!r.wins) return ''; return `<span class="pb-stars">${old > 3 ? '⭐×' + old : '⭐'.repeat(old)}${won ? '<span class="pb-nstar">⭐</span>' : ''}</span>`; };
   // A JustGold character face when the player has one (standings rows get it from the room's players).
   let looks = new Map();
-  const av = (p) => { const look = p.look || looks.get(p.id); return `<span class="pb-av" style="--pc:${esc(p.color || '#7b61ff')}">${look && BOX.portrait ? BOX.portrait.html({ ...p, look }, 96, { fill: true }) : `<span>${esc(p.avatar || '🙂')}</span>`}</span>`; };
+  const av = (p) => { const look = p.look || looks.get(p.id), who = look ? { ...p, look } : p; return `<span class="pb-av" style="--pc:${esc(p.color || '#7b61ff')}">${BOX.face && BOX.hasLook(who) ? BOX.face(who, 96, { fill: true, plain: true }) : `<span>${esc(p.avatar || '🙂')}</span>`}</span>`; };
   function sky(extra) {
     return `<div class="pb-sky" aria-hidden="true"><div class="pb-rays"></div>
       <div class="pb-lights">${Array.from({ length: 22 }, (_, i) => `<i style="--h:${(i * 57) % 360}deg;--d:${(i % 4) * 0.35}s"></i>`).join('')}</div>

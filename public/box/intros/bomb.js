@@ -144,7 +144,7 @@
         const y = lerp(1300, yEnd, easeOut(k)) - Math.abs(Math.sin(s.t * 3 + i)) * 6;
         g.fillStyle = 'rgba(0,0,0,0.4)'; g.beginPath(); g.ellipse(x, yEnd + R * 1.05, R * 0.9, R * 0.18, 0, 0, TAU); g.fill();
         g.fillStyle = c.color || '#ffcc1a'; g.beginPath(); g.arc(x, y, R, 0, TAU); g.fill(); g.lineWidth = 8; g.strokeStyle = '#0b0b0f'; g.stroke();
-        s.emoji(c.avatar || '🙂', x, y + 6, R * 1.15);
+        s.face(c, x, y + 6, R * 1.15);
         // hard hat
         g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 6; g.beginPath(); g.arc(x, y - R * 0.55, R * 0.78, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
         rr(g, x - R * 1.0, y - R * 0.6, R * 2.0, R * 0.2, R * 0.08); g.fill(); g.stroke();

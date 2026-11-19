@@ -14,11 +14,14 @@
   const easeOut = (k) => 1 - Math.pow(1 - clamp(k), 3);
   const back = (k) => { k = clamp(k); const c = 2.2; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
   const L = () => (performance.timeOrigin || 0) + performance.now(); // local clock (ms since epoch, monotonic)
-  const av = (r) => esc((r && r.avatar) || '🙂');
-  // Gear (JustGold shop): a player's duelling hat paint ({ a, b, c, icon, pattern, glow }), or null
-  // for the plain hat. hatTag() is a small hat badge for name cards; the canvas uses ART.cowboy/miniHat.
+  const emo = (r) => esc((r && r.avatar) || '🙂');
+  // Each player's own character (the shop look, wearing their Quick Draw gear: cowboy hat, badge,
+  // lasso), or their emoji when they have none. av() is the inline face for lists and cards.
+  const face = (r, sz = 30, o) => (r && BOX.face ? BOX.face(r, sz, o) : emo(r));
+  const body = (r, h = 120, o) => (r && BOX.body ? BOX.body(r, h, o) : `<span class="qd-emo" style="font-size:${Math.round(h * 0.5)}px">${emo(r)}</span>`);
+  const av = (r) => face(r, 30);
+  // Gear hat paint: only for a player with no character (their emoji rider gets a little hat).
   const hatPaint = (x) => (x && x.gear && window.MT_GEAR ? window.MT_GEAR.paint('quickdraw', 'hat', x.gear) : null);
-  const hatTag = (x) => { const pt = hatPaint(x); if (!pt) return ''; return `<svg class="qd-hat" viewBox="0 0 40 26" width="1.4em" height="0.9em" aria-hidden="true" style="vertical-align:-0.1em${pt.glow ? ';filter:drop-shadow(0 0 4px ' + pt.a + ')' : ''}"><ellipse cx="20" cy="21" rx="19" ry="4" fill="${pt.a}" stroke="#1d100a" stroke-width="1.5"/><path d="M11 21 Q10 5 20 4 Q30 5 29 21 Z" fill="${pt.c || pt.a}" stroke="#1d100a" stroke-width="1.5"/><rect x="11" y="15" width="18" height="4" fill="${pt.b}"/></svg>`; };
   const secs = (ms) => (ms / 1000).toFixed(3) + 's';
   const KIND = {
     draw: { icon: '🔫', name: 'DRAW!', rule: 'Wait for the signal, then tap first. Tap early and it’s a false start!', phone: 'Tap the instant it says DRAW!', pal: 'noon' },
@@ -155,16 +158,7 @@
       g.beginPath(); g.moveTo(-34, -70); g.quadraticCurveTo(-30, -120, -24, -148); g.lineTo(24, -148); g.quadraticCurveTo(30, -120, 34, -70); g.closePath(); g.fill(); // duster
       g.fillStyle = o.band || '#c0392b'; g.beginPath(); g.moveTo(-14, -150); g.lineTo(14, -150); g.lineTo(0, -132); g.closePath(); g.fill();
       g.fillStyle = ink; g.beginPath(); g.arc(0, -166, 15, 0, TAU); g.fill();
-      const hp = o.hatPaint; // gear: a coloured hat with a band (and an emblem) instead of the ink one
-      if (o.hat !== false && hp) {
-        g.save(); if (hp.glow) { g.shadowColor = hp.a; g.shadowBlur = 24; }
-        g.fillStyle = hp.c || hp.a; rr(g, -16, -200, 32, 24, 8); g.fill(); g.fillStyle = hp.a; g.beginPath(); g.ellipse(0, -180, 40, 7, 0, 0, TAU); g.fill(); g.restore();
-        g.fillStyle = hp.b; g.fillRect(-16, -186, 32, 6);
-        if (hp.pattern === 'stripes') { g.fillStyle = hp.a; for (let i = -14; i < 16; i += 8) g.fillRect(i, -186, 3, 6); }
-        g.strokeStyle = ink; g.lineWidth = 2; g.beginPath(); g.ellipse(0, -180, 40, 7, 0, 0, TAU); g.stroke();
-        if (hp.icon) { g.save(); g.translate(0, -195); g.scale(dir, 1); g.font = '16px "Segoe UI Emoji", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(hp.icon, 0, 0); g.restore(); }
-        g.fillStyle = ink;
-      } else if (o.hat !== false) { rr(g, -16, -200, 32, 24, 8); g.fill(); g.beginPath(); g.ellipse(0, -180, 40, 7, 0, 0, TAU); g.fill(); }
+      if (o.hat !== false) { rr(g, -16, -200, 32, 24, 8); g.fill(); g.beginPath(); g.ellipse(0, -180, 40, 7, 0, 0, TAU); g.fill(); }
       // gun arm
       const a = lerp(1.4, -0.05, clamp(o.arm || 0)), sx = 12, sy = -138, ex = sx + Math.cos(a) * 58, ey = sy + Math.sin(a) * 58;
       g.strokeStyle = ink; g.lineWidth = 12; g.lineCap = 'round'; g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.stroke();
@@ -174,7 +168,26 @@
       g.beginPath(); g.moveTo(-12, -138); g.lineTo(-22, -96); g.stroke();
       g.restore();
     }
-    // A small hat in a gear paint (centre x, brim at y, w wide): the horse race's riders.
+    // A player's own character as a duellist (feet at x,y; about h tall with the hat; dir 1 faces
+    // right), wearing their Quick Draw gear, gun arm 0 holstered -> 1 aimed, a revolver in that hand.
+    // false when the player has no character (draw the silhouette instead).
+    function duellist(g, x, y, h, dir, who, o = {}) {
+      if (!who || !BOX.drawChar) return false;
+      const sc = h / 76, k = clamp(o.arm || 0), up = lerp(0.12, 1.5, easeOut(k));
+      const arms = dir > 0 ? { r: -up, l: 0.08 } : { l: up, r: -0.08 };
+      if (!BOX.drawChar(g, x, y, who, { scale: sc, t: o.t || 0, facing: dir * 0.8, arms, mood: o.mood, lean: o.lean || 0, seed: dir })) return false;
+      // the revolver in the gun hand (same transform as the character: feet, scale, lean)
+      const a = (dir > 0 ? -up : up) + dir * 0.1, sx = dir * 11.4, sy = -28.5, hx = sx - Math.sin(a) * 14, hy = sy + Math.cos(a) * 14;
+      g.save(); g.translate(x, y); g.scale(sc, sc); if (o.lean) g.rotate(o.lean);
+      g.translate(hx, hy); g.rotate(a + Math.PI / 2); g.scale(1, dir);
+      g.fillStyle = '#2a2a30'; g.strokeStyle = '#120a06'; g.lineWidth = 0.8;
+      g.beginPath(); g.rect(-1, -2.6, 11, 3); g.fill(); g.stroke();
+      g.fillStyle = '#6b4226'; g.beginPath(); g.rect(-2.5, -1.2, 3.2, 5); g.fill(); g.stroke();
+      if (o.flash) { g.translate(13, -1.1); g.fillStyle = `rgba(255,220,90,${o.flash})`; g.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 2.2 : 7, q = (i / 10) * TAU; g.lineTo(Math.cos(q) * r, Math.sin(q) * r); } g.fill(); }
+      g.restore();
+      return true;
+    }
+    // A small hat in a gear paint (centre x, brim at y, w wide): an emoji rider's hat.
     function miniHat(g, x, y, w, pt) {
       g.save(); g.translate(x, y); g.scale(w / 80, w / 80); if (pt.glow) { g.shadowColor = pt.a; g.shadowBlur = 16; }
       g.fillStyle = pt.c || pt.a; rr(g, -16, -22, 32, 22, 8); g.fill(); g.fillStyle = pt.a; g.beginPath(); g.ellipse(0, 0, 40, 7, 0, 0, TAU); g.fill();
@@ -206,7 +219,7 @@
       for (let i = 0; i < 3; i++) { g.fillStyle = ['#ff5a1f', '#ffae2b', '#fff2a8'][i]; const r = R * (1 - i * 0.3); g.beginPath(); g.moveTo(x - r, y); g.quadraticCurveTo(x - r * 0.6, y - r * (1.5 + 0.2 * Math.sin(t * 9 + i)), x + Math.sin(t * 7 + i) * r * 0.2, y - r * (2.2 + 0.3 * Math.sin(t * 11 + i))); g.quadraticCurveTo(x + r * 0.6, y - r * 1.5, x + r, y); g.closePath(); g.fill(); }
       g.fillStyle = '#4a2a14'; g.fillRect(x - R * 1.3, y - R * 0.1, R * 2.6, R * 0.25);
     }
-    return { emoji, text, rr, scene, cowboy, miniHat, lantern, drum, fire, tumbleweed, PAL };
+    return { emoji, text, rr, scene, cowboy, duellist, miniHat, lantern, drum, fire, tumbleweed, PAL };
   })();
   BOX.qdArt = ART;
 
@@ -247,9 +260,14 @@
     const drawn = now >= go ? clamp((now - go) / 180) : 0;
     const steady = now >= arm && now < go;
     if (steady) { g.fillStyle = `rgba(20,5,0,${0.25 + 0.08 * Math.sin(now / 160)})`; g.fillRect(0, 0, W, H); }
-    const duo = c.mode === 'duel' && c.pairs && c.pairs[0] ? c.pairs[0] : null; // gear: the first duel's hats on the two silhouettes
-    ART.cowboy(g, W * (0.5 - gap), H * 0.93, H * 0.5, 1, { hatPaint: duo && hatPaint(duo.a), arm: drawn, band: '#c0392b', flash: drawn > 0 && now - go < 260 ? 1 - (now - go) / 260 : 0 });
-    ART.cowboy(g, W * (0.5 + gap), H * 0.93, H * 0.5, -1, { hatPaint: duo && hatPaint(duo.b), arm: drawn, band: '#2f6b8a', flash: drawn > 0 && now - go < 300 && now - go > 60 ? 1 - (now - go - 60) / 240 : 0 });
+    // The first duel's two players stand in the street as themselves (their characters, in their
+    // cowboy hats, badges and lassos); the loser reels back once the shot is called.
+    const duo = c.mode === 'duel' && c.pairs && c.pairs[0] ? c.pairs[0] : null;
+    const fl1 = drawn > 0 && now - go < 260 ? 1 - (now - go) / 260 : 0, fl2 = drawn > 0 && now - go < 300 && now - go > 60 ? 1 - (now - go - 60) / 240 : 0;
+    const pose = (who) => { const won = duo && duo.win && who && duo.win === who.id, lost = duo && duo.win && who && !won; return { mood: won ? 'grin' : lost ? 'surprised' : steady ? 'serious' : undefined, lean: lost ? 0.32 : 0 }; };
+    const pa = pose(duo && duo.a), pb = pose(duo && duo.b);
+    if (!ART.duellist(g, W * (0.5 - gap), H * 0.79, H * 0.44, 1, duo && duo.a, { t, arm: drawn, flash: fl1, mood: pa.mood, lean: -pa.lean })) ART.cowboy(g, W * (0.5 - gap), H * 0.93, H * 0.5, 1, { arm: drawn, band: '#c0392b', flash: fl1 });
+    if (!ART.duellist(g, W * (0.5 + gap), H * 0.79, H * 0.44, -1, duo && duo.b, { t, arm: drawn, flash: fl2, mood: pb.mood, lean: pb.lean })) ART.cowboy(g, W * (0.5 + gap), H * 0.93, H * 0.5, -1, { arm: drawn, band: '#2f6b8a', flash: fl2 });
     if (now < arm) ART.text(g, c.mode === 'duel' ? `ROUND ${c.heat}${c.heat === c.heats ? ' · THE FINAL' : ''}` : `SHOT ${c.shot} OF ${c.shots}`, W / 2, H * 0.22, 64 * S, '#fff4d6', { font: '"Abril Fatface", serif', stroke: '#3a1206', lw: 10 * S });
     if (now < arm) ART.text(g, 'Ten paces…', W / 2, H * 0.33, 44 * S, '#ffe7a8', { font: '"Special Elite", monospace', stroke: '#2a1206', lw: 6 * S });
     if (steady) { const p = 1 + 0.04 * Math.sin(now / 120); g.save(); g.translate(W / 2, H * 0.3); g.scale(p, p); ART.text(g, 'STEADY…', 0, 0, 110 * S, '#ffd2a0', { font: '"Abril Fatface", serif', stroke: '#2a0a04', lw: 14 * S }); g.restore(); ART.text(g, 'don’t touch that pad', W / 2, H * 0.42, 34 * S, '#ffe7c8', { font: '"Special Elite", monospace', stroke: '#2a0a04', lw: 5 * S }); }
@@ -301,9 +319,13 @@
       g.strokeStyle = 'rgba(90,50,20,0.6)'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, y + lh / 2 - 2); g.lineTo(W, y + lh / 2 - 2); g.stroke();
       const want = clamp(r.n / c.target), cur = TV.horse.has(r.id) ? TV.horse.get(r.id) : 0, k = cur + (want - cur) * 0.12; TV.horse.set(r.id, k);
       const x = lerp(x0, x1 - lh * 0.4, k), bob = started && r.fin == null && r.n > 0 ? Math.abs(Math.sin(t * 14 + i)) * lh * 0.08 : 0, sz = Math.min(lh * 0.82, 90 * S);
+      // the rider: their character sits in the saddle (legs hidden behind the horse), or their emoji
+      const rode = BOX.drawChar && BOX.drawChar(g, x + sz * 0.04, y - bob - sz * 0.06, r, { scale: sz / 64, t, facing: 1, arms: { l: -0.5, r: -0.9 }, mood: r.fin != null ? 'grin' : undefined, seed: i });
       ART.emoji(g, '🐎', x, y - bob, sz, true);
-      ART.emoji(g, r.avatar || '🤠', x + sz * 0.08, y - bob - sz * 0.42, sz * 0.5);
-      const rh = hatPaint(r); if (rh) ART.miniHat(g, x + sz * 0.08, y - bob - sz * 0.62, sz * 0.5, rh); // gear: the rider's hat
+      if (!rode) {
+        ART.emoji(g, r.avatar || '🤠', x + sz * 0.08, y - bob - sz * 0.42, sz * 0.5);
+        const rh = hatPaint(r); if (rh) ART.miniHat(g, x + sz * 0.08, y - bob - sz * 0.62, sz * 0.5, rh); // gear: an emoji rider's hat
+      }
       ART.text(g, r.name, 12 * S, y, Math.min(30 * S, lh * 0.38), '#fff4d6', { align: 'left', stroke: '#2a1206', lw: 5 * S, max: x0 - 30 * S });
       const place = fins.indexOf(r.id); if (place >= 0) ART.text(g, medal(place), x1 + lh * 0.5, y, lh * 0.5, '#fff');
     });
@@ -335,8 +357,10 @@
         if (k >= 1 && i === Math.min(N - 1, Math.floor((u - 0.2) / 0.12))) once('cl' + c.id + i, () => BOX.sfx('pop'));
       }
     } else {
-      ART.cowboy(g, W * 0.12, H * 0.95, H * 0.36, 1, { arm: 0.15 });
-      ART.cowboy(g, W * 0.88, H * 0.95, H * 0.36, -1, { arm: 0.15, band: '#2f6b8a' });
+      // the winner of this challenge stands proud on the left (a silhouette when they have no character)
+      if (!ART.duellist(g, W * 0.12, H * 0.95, H * 0.36, 1, res.top, { t, arm: 0.15, mood: 'grin' })) ART.cowboy(g, W * 0.12, H * 0.95, H * 0.36, 1, { arm: 0.15 });
+      const second = res.rows && res.rows[1] && (!res.top || res.rows[1].id !== res.top.id) ? res.rows[1] : null; // the runner-up, a touch glum
+      if (!ART.duellist(g, W * 0.88, H * 0.95, H * 0.36, -1, second, { t, arm: 0.15, mood: 'sad' })) ART.cowboy(g, W * 0.88, H * 0.95, H * 0.36, -1, { arm: 0.15, band: '#2f6b8a' });
     }
   }
 
@@ -351,7 +375,7 @@
     if (s.phase === 'result' && c && c.res) {
       const r = c.res, rows = r.rows.slice(0, 10);
       return `<div class="qd-res" id="qd-res-${c.id}"><div class="qd-res-h">${K.icon} ${esc(K.name)} ${c.mult > 1 ? '<span class="qd-x2">×2</span>' : ''}</div>
-        ${r.top ? `<div class="qd-res-top">🏆 <b>${av(r.top)} ${esc(r.top.name)}</b> ${c.kind === 'count' ? `· there were <b>${r.answer}</b> 🐔` : c.kind === 'draw' ? 'is the fastest gun' : 'takes it'}</div>` : ''}
+        ${r.top ? `<div class="qd-res-top">🏆 <b>${face(r.top, 40, { mood: 'grin' })} ${esc(r.top.name)}</b> ${c.kind === 'count' ? `· there were <b>${r.answer}</b> 🐔` : c.kind === 'draw' ? 'is the fastest gun' : 'takes it'}</div>` : ''}
         <div class="qd-res-rows">${rows.map((x, i) => `<div class="qd-rrow ${x.rank === 0 ? 'win' : ''}" style="animation-delay:${(0.15 + i * 0.08).toFixed(2)}s;--c:${esc(x.color)}"><span class="rk">${medal(x.rank)}</span><span class="nm">${av(x)} ${esc(x.name)}</span><span class="lb">${esc(x.label)}</span><span class="tags">${x.streak >= 2 ? `<i class="st">🔥${x.streak}</i>` : ''}${x.fs ? `<i class="fs">💥×${x.fs}</i>` : ''}</span><b class="gn ${x.gain < 0 ? 'neg' : ''}">${x.gain >= 0 ? '+' : ''}${x.gain}</b></div>`).join('')}${r.rows.length > 10 ? `<div class="qd-more">+${r.rows.length - 10} more</div>` : ''}</div>
         ${r.jibe ? `<div class="qd-jibe">💥 ${esc(r.jibe)}</div>` : ''}</div>`;
     }
@@ -359,7 +383,7 @@
     if (c.kind === 'draw') {
       if (c.mode === 'duel') {
         const res = (x) => (x.r ? (x.r.false ? '<em class="bad">💥 FALSE START</em>' : `<em>${secs(x.r.ms)}</em>`) : c.step === 'shot' ? '<em class="none">no draw</em>' : x.tapped ? '<em class="in">🔫</em>' : '');
-        const card = (pr, i) => `<div class="qd-duel ${c.step === 'shot' ? 'done' : ''}" style="animation-delay:${i * 0.08}s"><div class="qd-gun ${pr.win === pr.a.id ? 'win' : pr.win ? 'lose' : ''}" style="--c:${esc(pr.a.color)}"><span class="a">${av(pr.a)}</span><b>${hatTag(pr.a)}${esc(pr.a.name)}</b>${res(pr.a)}</div><div class="qd-vs">${pr.coin ? '🪙' : 'VS'}</div><div class="qd-gun ${pr.win === pr.b.id ? 'win' : pr.win ? 'lose' : ''}" style="--c:${esc(pr.b.color)}"><span class="a">${av(pr.b)}</span><b>${hatTag(pr.b)}${esc(pr.b.name)}</b>${res(pr.b)}</div></div>`;
+        const card = (pr, i) => `<div class="qd-duel ${c.step === 'shot' ? 'done' : ''}" style="animation-delay:${i * 0.08}s"><div class="qd-gun ${pr.win === pr.a.id ? 'win' : pr.win ? 'lose' : ''}" style="--c:${esc(pr.a.color)}"><span class="a">${face(pr.a, 52)}</span><b>${esc(pr.a.name)}</b>${res(pr.a)}</div><div class="qd-vs">${pr.coin ? '🪙' : 'VS'}</div><div class="qd-gun ${pr.win === pr.b.id ? 'win' : pr.win ? 'lose' : ''}" style="--c:${esc(pr.b.color)}"><span class="a">${face(pr.b, 52)}</span><b>${esc(pr.b.name)}</b>${res(pr.b)}</div></div>`;
         return `<div class="qd-duels n${c.pairs.length}">${c.pairs.map(card).join('')}${c.bye ? `<div class="qd-bye">🍀 ${av(c.bye)} ${esc(c.bye.name)} gets a bye</div>` : ''}</div>`;
       }
       const sh = c.shotRes;
@@ -375,8 +399,8 @@
   }
   function tvOver(el, s) {
     const f = s.final || { standings: [], awards: [] }, st = f.standings, w = st[0];
-    const pod = [st[1], st[0], st[2]].map((r, i) => (r ? `<div class="qd-pod p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="a">${av(r)}</div><b>${esc(r.name)}</b><span>${r.points} pts</span><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div></div>')).join('');
-    BOX.morph(el, `<div class="qd-over"><div class="qd-over-h"><small>THE FASTEST GUN IN THE WEST</small><h1>${w ? `${av(w)} ${esc(w.name)}` : 'Nobody!'}</h1></div>
+    const pod = [st[1], st[0], st[2]].map((r, i) => (r ? `<div class="qd-pod p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="a">${body(r, i === 1 ? 170 : 140, { mood: i === 1 ? 'grin' : undefined })}</div><b>${esc(r.name)}</b><span>${r.points} pts</span><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div></div>')).join('');
+    BOX.morph(el, `<div class="qd-over"><div class="qd-over-h"><small>THE FASTEST GUN IN THE WEST</small><h1>${w ? `${face(w, 64, { mood: 'grin' })} ${esc(w.name)}` : 'Nobody!'}</h1></div>
       <div class="qd-over-main"><div class="qd-podium">${pod}</div>
       <div class="qd-awards">${f.awards.map((a, i) => `<div class="qd-award" style="animation-delay:${0.5 + i * 0.25}s"><div class="ic">${a.icon}</div><div class="tt">${esc(a.title)}</div><div class="nm">${av(a)} ${esc(a.name)}</div><div class="tx">${esc(a.text)}</div></div>`).join('')}</div>
       <div class="qd-final">${st.slice(0, 12).map((r, i) => `<div class="qd-srow" style="--c:${esc(r.color)}"><span class="n">${i + 1}</span><span class="nm">${av(r)} ${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div></div>`);
@@ -446,7 +470,7 @@
       for (const b of set.querySelectorAll('[data-k]')) b.onclick = () => { const s = set.querySelector(`[data-set="${b.dataset.k}"]`); if (s) { s.value = b.dataset.v; s.onchange(); } for (const x of set.querySelectorAll(`[data-k="${b.dataset.k}"]`)) x.classList.toggle('on', x === b); BOX.sfx('click'); };
     }
     el.querySelector('#qdl-n').textContent = Lb.players.length ? `(${Lb.players.length})` : '';
-    BOX.morph(el.querySelector('#roster'), Lb.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === Lb.vip ? 'vip' : ''}" style="--c:${esc(p.color)};--r:${((i * 37) % 7) - 3}deg"><span class="av">${esc(p.avatar || '🙂')}</span>${esc(p.name)}${p.name === Lb.vip ? ' 👑' : ''}</span>`).join('') || '<span class="qdl-empty">The saloon is empty… scan the poster to ride in! 🌵</span>');
+    BOX.morph(el.querySelector('#roster'), Lb.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === Lb.vip ? 'vip' : ''}" style="--c:${esc(p.color)};--r:${((i * 37) % 7) - 3}deg"><span class="av">${face(p, 34)}</span>${esc(p.name)}${p.name === Lb.vip ? ' 👑' : ''}</span>`).join('') || '<span class="qdl-empty">The saloon is empty… scan the poster to ride in! 🌵</span>');
     const lu = el.querySelector('#qdl-lineup'); if (lu.dataset.h !== (Lb.lineupHtml || '')) { lu.innerHTML = Lb.lineupHtml || ''; lu.dataset.h = Lb.lineupHtml || ''; }
     el.querySelector('#start').disabled = Lb.players.length < (Lb.min || 1);
   }
@@ -537,7 +561,7 @@
       if (PL.false) return { cls: 'false', big: '💥 TOO EARLY!', sub: 'False start! −50' };
       if (PL.ms != null) return { cls: 'done', big: secs(PL.ms), sub: V.opp ? `vs ${V.opp.name}…` : 'Nice shootin’!' };
       const arm = toLocal(V.armAt), go = toLocal(V.goAt);
-      const vs = V.mode === 'duel' && V.opp ? `vs ${V.opp.avatar || ''} ${V.opp.name}` : V.mode === 'ffa' ? `Shot ${V.shot} of ${V.shots}` : '';
+      const vs = V.mode === 'duel' && V.opp ? `vs ${V.opp.name}` : V.mode === 'ffa' ? `Shot ${V.shot} of ${V.shots}` : '';
       if (now < arm) return { cls: 'walk', big: 'TEN PACES…', sub: vs };
       if (now < go) return { cls: 'steady', big: 'STEADY…', sub: 'Don’t tap yet!' };
       if (V.step === 'shot' || now > toLocal(V.endAt)) return { cls: 'lost', big: 'TOO SLOW', sub: 'Never drew!' };
@@ -608,7 +632,7 @@
     b('#qd-lock', () => sendCount(true));
     b('#qd-perm', async () => { PH.motionAsked = true; try { const r = await DeviceMotionEvent.requestPermission(); PH.motion = r === 'granted'; if (!PH.motion) PH.ctx.toast('No motion? Mash the pad instead!'); } catch { PH.ctx.toast('Mash the pad instead!'); } paintPad(true); });
   }
-  const head = (v) => `<div class="qd-ph-top"><span>${hatTag(v)}⭐ <b>${v.points}</b></span><span>${v.rank ? `#${v.rank} of ${v.of}` : ''}</span><span>${v.n}/${v.total}${v.c && v.c.mult > 1 ? ' <i class="qd-x2">×2</i>' : ''}</span></div>`;
+  const head = (v) => `<div class="qd-ph-top"><span>${v.me ? face(v.me, 34) : ''}⭐ <b>${v.points}</b></span><span>${v.rank ? `#${v.rank} of ${v.of}` : ''}</span><span>${v.n}/${v.total}${v.c && v.c.mult > 1 ? ' <i class="qd-x2">×2</i>' : ''}</span></div>`;
   function phone(el, v, ctx) {
     if (!v) return;
     PH.v = v; PH.ctx = ctx; seedClock(v.now);

@@ -5,7 +5,11 @@
 // evidence or the controls of a lock.
 (function () {
   const { esc, timer } = BOX;
-  const av = (r) => esc((r && r.avatar) || '🙂');
+  // Players are their own characters (BOX.face / BOX.body), holding their detective's magnifier
+  // (the 'escape' magnifier wearable); the emoji stays for players without a character.
+  const av = (r, n = 30, o) => (BOX.face ? BOX.face(r, n, o) : esc((r && r.avatar) || '🙂'));
+  const fig = (r, h = 120, o) => (BOX.body ? BOX.body(r, h, o) : `<span style="font-size:${Math.round(h * 0.5)}px">${esc((r && r.avatar) || '🙂')}</span>`);
+  const squad = (list, h, win) => (list && list.length ? `<div class="es-squad">${list.map((r, i) => `<figure class="${win && i === 0 ? 'top' : ''}">${fig(r, win && i === 0 ? Math.round(h * 1.25) : h, win && i === 0 ? { mood: 'grin' } : undefined)}<figcaption>${esc(r.name || '')}</figcaption></figure>`).join('')}</div>` : '');
   const COAT = { red: '#c0392b', green: '#2e8b57', blue: '#2f5fb3', yellow: '#e1b12c', grey: '#8a8f98' };
   // JustGold gear: a detective's magnifier (rim colour a, handle b, glow). '' for the default
   // brass lens, so nothing changes for players without gear.
@@ -15,6 +19,8 @@
     const a = esc(pt.a || '#c9a14a'), b = esc(pt.b || '#5a3a1a');
     return `<svg class="es-lens" width="${size}" height="${size}" viewBox="0 0 40 40" aria-hidden="true" style="vertical-align:middle${pt.glow ? `;filter:drop-shadow(0 0 4px ${a})` : ''}"><path d="M25 25 L36 36" stroke="#1a1a1a" stroke-width="8" stroke-linecap="round"/><path d="M25 25 L36 36" stroke="${b}" stroke-width="5" stroke-linecap="round"/><circle cx="16" cy="16" r="12" fill="rgba(200,235,255,.55)" stroke="#1a1a1a" stroke-width="6"/><circle cx="16" cy="16" r="12" fill="none" stroke="${a}" stroke-width="3.5"/><path d="M10 12 Q12 8 16 8" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>`;
   }
+  // The character holds the magnifier now; the separate lens only for players without one.
+  const lensIfNoLook = (t, size) => (BOX.hasLook && BOX.hasLook(t) ? '' : lens(t && t.gear, size));
   const PART_ICON = { legend: '📒', engraving: '🔣', keypad: '🔢', photo: '📷', note: '📝', dial: '🕰️', pattern: '🎼', key: '🗝️', panel: '🎚️', tag: '🏷️', letters: '🔤', map: '🗺️', lantern: '🕯️' };
 
   // ---------------- shared drawings ----------------
@@ -60,7 +66,7 @@
   const inp = (id, init) => { if (!(id in PH.input)) PH.input[id] = init; return PH.input[id]; };
   function teamLine(c) {
     if (!c.team.length) return '';
-    return `<div class="es-team">${c.team.map((t) => `<span>${av(t)} <b>${esc(t.name)}</b>${lens(t.gear, 18)} ${t.role === 'hands' ? 'has the controls' : `has ${esc(t.label || 'evidence')}`}</span>`).join('')}</div>`;
+    return `<div class="es-team">${c.team.map((t) => `<span>${av(t, 26)} <b>${esc(t.name)}</b>${lensIfNoLook(t, 18)} ${t.role === 'hands' ? 'has the controls' : `has ${esc(t.label || 'evidence')}`}</span>`).join('')}</div>`;
   }
   function evidenceHtml(part, d) {
     switch (part) {
@@ -102,7 +108,7 @@
     return '';
   }
   function cardHtml(c, v) {
-    const head = `<div class="es-ch"><span class="es-ci">${esc(c.icon)}</span>${lens(v.gear, 40)}<div><b>${esc(c.name)}</b><small>${c.role === 'hands' ? `You have the controls: <b>${esc(c.label)}</b>` : `You have: <b>${PART_ICON[c.part] || ''} ${esc(c.label)}</b>${c.copy ? ' (a copy)' : ''}`}</small></div></div>`;
+    const head = `<div class="es-ch"><span class="es-ci">${esc(c.icon)}</span>${PH.me && BOX.hasLook && BOX.hasLook(PH.me) ? `<span class="es-me">${fig(PH.me, 64)}</span>` : lens(v.gear, 40)}<div><b>${esc(c.name)}</b><small>${c.role === 'hands' ? `You have the controls: <b>${esc(c.label)}</b>` : `You have: <b>${PART_ICON[c.part] || ''} ${esc(c.label)}</b>${c.copy ? ' (a copy)' : ''}`}</small></div></div>`;
     if (c.solved) return `<section class="es-card solved">${head}<div class="es-open">🔓 Open!${c.by ? ` <small>by ${esc(c.by)}</small>` : ''}</div></section>`;
     const body = c.role === 'hands' ? controlsHtml(c) : evidenceHtml(c.part, c.data);
     const shared = c.shared.length ? `<div class="es-shared">${c.shared.map((sh) => `<div class="es-sh"><div class="es-shh">🤖 ${esc(sh.from.name)} reads out <b>${esc(sh.label)}</b>:</div>${evidenceHtml(sh.part, sh.data)}</div>`).join('')}</div>` : '';
@@ -119,8 +125,9 @@
       ${A.hints.length ? `<div class="es-hints">${A.hints.map((h) => `<p>💡 ${esc(h)}</p>`).join('')}</div>` : ''}${v.hintsOn && A.hintsLeft > 0 ? `<button class="link es-hintbtn" data-hint="${A.id}">💡 Ask Hazel for a hint</button>` : ''}</section>`;
   }
   const stars = (n) => '★'.repeat(n) + '☆'.repeat(3 - n);
-  function phone(el, v, ctx) {
+  function phone(el, v, ctx, full) {
     if (!v) return;
+    PH.me = (full && full.me) || null;
     const key = v.phase + (v.room ? v.room.i : '');
     if (key !== PH.lastPhase) {
       PH.lastPhase = key; PH.fb = {};
@@ -225,14 +232,14 @@
   }
   function lockCard(L) {
     if (L.kind === 'deduce') return '';
-    const team = L.team.map((t) => `<span class="${t.role}">${av(t)} ${esc(t.name)}${lens(t.gear) ? ' ' + lens(t.gear) : ''} <small>${t.role === 'hands' ? '🎛️ ' : (PART_ICON[t.label] || '')}${esc(t.label || '')}</small></span>`).join('');
+    const team = L.team.map((t) => `<span class="${t.role}">${av(t, 34)} ${esc(t.name)}${lensIfNoLook(t, 26) ? ' ' + lensIfNoLook(t, 26) : ''} <small>${t.role === 'hands' ? '🎛️ ' : (PART_ICON[t.label] || '')}${esc(t.label || '')}</small></span>`).join('');
     return `<div class="es-lock ${L.solved ? 'open' : ''}"><div class="es-lh"><span class="es-li">${esc(L.icon)}</span><b>${esc(L.name)}</b><span class="es-pad">${L.solved ? '🔓' : '🔒'}</span></div>
       ${L.solved ? `<div class="es-lo">Opened${L.by ? ` by ${esc(L.by)}` : ''}!</div>` : `<div class="es-lt">${team}</div>${L.maze ? `<div class="es-lm">${mazeSvg({ n: L.maze.n, walls: [], pos: L.maze.pos, exit: L.maze.exit, trail: L.maze.trail }, 120)}</div>` : ''}${L.tries ? `<div class="es-ltries">✖ ${L.tries} wrong ${L.tries === 1 ? 'try' : 'tries'}</div>` : ''}${L.hints.length ? `<div class="es-lhint">💡 ${esc(L.hints[L.hints.length - 1])}</div>` : ''}`}</div>`;
   }
   function tvPlay(el, s) {
     const A = s.accuse, lowTime = s.endsIn < 60000;
     const board = A ? `<div class="es-line"><h2>🔎 Who did it? <small>${A.votes} of ${A.of} voted · read your clues out loud</small></h2><div class="es-sus-row">${A.suspects.map((x) => `<div class="es-tsus ${A.wrong.includes(x.id) ? 'out' : ''}">${suspectSvg(x, 120)}<b>${esc(x.name)}</b><small>${esc(x.job)}</small><em>${esc(x.hat)} · ${esc(x.coat)} coat · ${esc(x.item)}</em></div>`).join('')}</div></div>`
-      : `<div class="es-locks">${s.locks.map(lockCard).join('')}</div>`;
+      : `<div class="es-locks">${s.locks.map(lockCard).join('')}${s.locks.length <= 4 ? squad((s.standings || []).slice(0, 8), 120) : ''}</div>`;
     const side = `<aside class="es-side"><div class="es-hazel" id="es-hazel" data-keep></div><div class="es-bubble"><b>Hazel Finch</b><p>${esc(s.hazel ? s.hazel.text : '')}</p></div>
       <ul class="es-events">${(s.events || []).slice().reverse().map((e) => `<li>${esc(e.icon)} ${esc(e.t)}</li>`).join('')}</ul></aside>`;
     BOX.morph(el, `<div class="es-tv"><header class="es-top"><div class="es-room">${esc(s.room.icon)} <b>${esc(s.room.name)}</b><small>Room ${s.room.i} of ${s.room.of} · ${esc(s.room.diff)}${s.hints ? ` · 💡 ${s.hints} hint${s.hints === 1 ? '' : 's'}` : ''}</small></div><div class="es-clock ${lowTime ? 'low' : ''}">${timer(s.endsIn)}</div></header>
@@ -244,17 +251,17 @@
     const card = s.phase === 'outro' && O ? `<div class="es-result"><div class="es-stamp big ${O.cleared ? '' : 'red'}">${O.cleared ? 'SOLVED' : 'TIME’S UP'}</div>
       ${O.culprit ? `<div class="es-culprit big">${suspectSvg(O.culprit, 130)}<div><small>The culprit</small><b>${esc(O.culprit.name)}</b><span>${esc(O.culprit.job)}</span></div></div>` : ''}
       ${O.cleared ? `<div class="es-stars big">${stars(O.stars)}</div><p>${Math.floor(O.left / 60)}:${String(O.left % 60).padStart(2, '0')} left on the clock</p>` : ''}</div>`
-      : `<div class="es-chapter"><small>Chapter ${s.room.i} of ${s.room.of}</small><h1>${esc(s.room.icon)} ${esc(s.room.name)}</h1><p>${esc(s.room.diff)} · 15 minutes</p><div class="es-readyc">${s.ready} of ${s.readyOf} detectives ready</div></div>`;
+      : `<div class="es-chapter"><small>Chapter ${s.room.i} of ${s.room.of}</small><h1>${esc(s.room.icon)} ${esc(s.room.name)}</h1><p>${esc(s.room.diff)} · 15 minutes</p><div class="es-readyc">${s.ready} of ${s.readyOf} detectives ready</div>${squad((s.standings || []).slice(0, 8), 110)}</div>`;
     BOX.morph(el, `<div class="es-tv es-storyv scene-${esc(s.room.scene)}"><div class="es-storybox"><div class="es-hazel big" id="es-hazel" data-keep></div><div class="es-sub"><b>Hazel Finch</b><p>${esc(s.story || '')}</p></div></div>${card}</div>`);
     mountHazel(el);
   }
   function tvOver(el, s) {
     const st = s.standings || [], w = st[0] || {};
-    const award = (k, label, icon) => { const r = [...st].sort((a, b) => b[k] - a[k])[0]; return r && r[k] > 0 ? `<div class="es-award"><i>${icon}</i><b>${esc(label)}</b><span>${av(r)} ${esc(r.name)}</span></div>` : ''; };
-    BOX.morph(el, `<div class="es-tv es-over"><div class="es-stamp big">CASE CLOSED</div><h1>🏆 ${av(w)} ${esc(w.name || '')}, top detective</h1>
+    const award = (k, label, icon) => { const r = [...st].sort((a, b) => b[k] - a[k])[0]; return r && r[k] > 0 ? `<div class="es-award"><i>${icon}</i><b>${esc(label)}</b><span>${av(r, 40)} ${esc(r.name)}</span></div>` : ''; };
+    BOX.morph(el, `<div class="es-tv es-over"><div class="es-stamp big">CASE CLOSED</div>${squad(st.slice(0, 8), 130, true)}<h1>🏆 ${esc(w.name || '')}, top detective</h1>
       <div class="es-hist big">${s.history.map((h) => `<div><span>${esc(h.icon)} ${esc(h.name)} <small>${esc(h.diff)}</small></span><b>${h.cleared ? stars(h.stars) : 'Hazel finished it'}</b><small>${h.culprit ? 'Culprit: ' + esc(h.culprit) : ''}</small></div>`).join('')}</div>
       <div class="es-awards">${award('opened', 'Master locksmith', '🔓')}${award('caught', 'Sharp eye', '🔎')}${award('locks', 'Team player', '🤝')}</div>
-      <div class="es-board">${st.map((r, i) => `<div class="es-row"><span>${i + 1}</span><span>${av(r)} ${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
+      <div class="es-board">${st.map((r, i) => `<div class="es-row"><span>${i + 1}</span><span>${av(r, 34)} ${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
   }
 
   function lobbyTv(el, L) {
@@ -276,7 +283,7 @@
       set.innerHTML = L.fields.map((f) => `<label class="es-l-f"><span>${esc(f.label)}</span><select data-set="${esc(f.key)}">${f.options.map((o) => `<option value="${esc(String(o.value))}" ${String(L.settings[f.key]) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`).join('');
       for (const s of set.querySelectorAll('[data-set]')) s.onchange = () => L.set(s.dataset.set, s.value);
     }
-    BOX.morph(el.querySelector('#roster'), L.players.map((p) => `<span class="chip es-chip">${av(p)} ${esc(p.name)}</span>`).join('') || '<span class="muted">Scan the code to join the investigation. 2–6 detectives is perfect.</span>');
+    BOX.morph(el.querySelector('#roster'), L.players.map((p) => `<span class="chip es-chip"><span class="av">${av(p, 34)}</span> ${esc(p.name)}</span>`).join('') || '<span class="muted">Scan the code to join the investigation. 2–6 detectives is perfect.</span>');
   }
 
   BOX.games.escape = {

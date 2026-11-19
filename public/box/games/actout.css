@@ -262,3 +262,19 @@ body.g-actout { --ao-bg: #140a24; --ao-plum: #7a2268; --ao-plum2: #3a0b33; --ao-
 .ao-big { font-size: 34px; font-weight: 700; margin: 0; }
 .ao-myaward { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px; border-radius: 16px; background: rgba(20, 6, 22, .75); border: 2px solid var(--ao-gold); } .ao-myaward span { font-size: 40px; } .ao-myaward b { display: block; color: var(--ao-gold); font-size: 20px; } .ao-myaward small { opacity: .8; }
 .ao-top5 { display: flex; flex-direction: column; gap: 6px; } .ao-top5 div { display: flex; justify-content: space-between; padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,.07); } .ao-top5 b { color: var(--ao-gold); }
+/* Players' characters (public/box/portrait.js): the actor(s) full body in the spotlight, the awards
+   podium, faces in the strip, feed, meters and lobby. */
+.ao-fig { position: relative; line-height: 0; animation: aoFigBob 2.2s ease-in-out infinite; transform-origin: 50% 100%; }
+.ao-fig .ao-figimg { display: block; filter: drop-shadow(0 0 22px rgba(255, 220, 140, .55)) drop-shadow(0 6px 4px rgba(0, 0, 0, .4)); }
+.ao-star.done .ao-fig .ao-figimg { filter: drop-shadow(0 0 26px rgba(120, 255, 170, .8)); }
+.ao-stars.n2 .ao-figimg, .ao-stars.n3 .ao-figimg { width: 140px !important; height: 194px !important; }
+.ao-stars.n4 .ao-figimg { width: 112px !important; height: 156px !important; }
+@keyframes aoFigBob { 0%, 100% { transform: none; } 50% { transform: translateY(-4px) rotate(-1deg); } }
+.ao-pod .fig { line-height: 0; margin-bottom: -2px; }
+.ao-over .ao-pod .fig .bx-body { width: 94px !important; height: 130px !important; }
+.ao-over .ao-pod.p1 .fig .bx-body { width: 115px !important; height: 160px !important; }
+.ao-af { margin: -6px 0 -4px; background: rgba(255, 255, 255, .12); }
+.ao-pick span .ao-af { margin: 0; }
+.aol-roster .chip .hd.has-face { overflow: hidden; }
+.aol-roster .chip .hd.has-face .ao-hf { display: block; margin: 0; background: none; }
+@media (prefers-reduced-motion: reduce) { .ao-fig { animation: none; } }

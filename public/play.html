@@ -31,6 +31,7 @@
     </div>
     <button id="j-next" class="btn big">Next: create your character</button>
     <p id="j-err" class="err"></p>
+    <div data-acct="join"></div> <!-- "Save your stuff" / Sign in (account-ui.js) -->
   </section>
 
   <!-- Character creator: big live preview, category tabs, visual choices. Edits
@@ -75,6 +76,7 @@
       </details>
       <a class="btn ghost" id="c-shop" data-jg-shop href="/shop">🛍️ JustGold shop &amp; character</a>
       <button class="btn ghost" data-open-stats>📊 My stats</button>
+      <div data-acct="lobby"></div>
     </div>
     <p id="c-err" class="err" role="alert"></p>
     <div class="cas-bar">
@@ -159,7 +161,6 @@
   <script src="/shared/roles.js"></script>
   <script src="/shared/cosmetics.js"></script>
   <script src="/avatar.js"></script>
-  <script src="/character-art.js"></script>
   <script src="/farewell-art.js"></script>
   <script src="/shared/theme-text.js"></script>
   <script src="/shared/themes.js"></script>
@@ -173,6 +174,7 @@
   <script src="/creator-config.js"></script>
   <script src="/creator-ui.js"></script>
   <script src="/shop-ui.js"></script>
+  <script src="/account-ui.js"></script>
   <script src="/reward-ui.js"></script>
     <script src="/help.js"></script>
   <script src="/draft-ui.js"></script>

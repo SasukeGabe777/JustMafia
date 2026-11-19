@@ -346,3 +346,19 @@ body.g-emoji #game .big-status { color: var(--em-deep); font-weight: 700; }
 /* Luckiest Guy only has capitals that look right */
 .eml-logo, .eml-kbtop span, .eml-jt, .eml-start, .eml-count, .eml-empty, .em-round, .em-status, .em-clock, .em-wn b, .em-answer, .em-flashmsg, .em-side h3, .em-champ h2, .em-champ .cap, .em-award .nm, .em-endgrid h3, .em-you, .em-secretbig, .em-opt .t, .em-send, .em-roundpts, .em-donecard, .em-waitcard h3, .em-overcard h3, .em-final, .em-clk, body.g-emoji .tv-bar .title, body.g-emoji .ph-join h1 { text-transform: uppercase; }
 .em-donecard small { text-transform: none; }
+/* Players' characters (public/box/portrait.js): the Clue Giver full body under their speech bubble,
+   faces in the scores and lobby. */
+.em-face.has-fig { position: relative; display: block; line-height: 0; animation-name: emTalkFig; }
+.em-stage.revealed .em-face.has-fig { animation: emCheer 0.6s ease-in-out infinite; }
+.em-face.has-fig .em-fig { display: block; }
+.em-stages.n2 .em-face.has-fig .em-fig, .em-stages.n3 .em-face.has-fig .em-fig { width: 86px !important; height: 120px !important; }
+.em-figmood { position: absolute; right: -14px; top: 0; font-size: 40px; line-height: 1; font-style: normal; }
+.em-who { min-height: 0; }
+@keyframes emTalkFig { 0%, 100% { transform: none; } 50% { transform: translateY(-3px) rotate(-1.5deg); } }
+.em-champ .f.has-fig { line-height: 0; font-size: 130px; }
+.em-champ .f.has-fig::before { top: -0.3em; z-index: 1; }
+.em-rf { margin: -5px 4px -4px 0; background: rgba(42, 10, 85, 0.08); }
+.em-rn { display: inline-flex; align-items: center; min-width: 0; }
+.eml-roster .chip .f .bx-face { display: block; }
+.eml-roster.many .chip .f .bx-face { width: 50px !important; height: 50px !important; }
+.eml-roster.lots .chip .f .bx-face { width: 36px !important; height: 36px !important; }
