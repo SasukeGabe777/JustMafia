@@ -685,7 +685,7 @@ class BoxRoom {
       partyMode: this.partyState(), unlocks: [...this.unlocks], count: this.players.size,
       away: this.away ? { game: this.away.game, title: this.away.title, code: this.away.code, url: `/play?room=${encodeURIComponent(this.away.code)}&autojoin=1&name=${encodeURIComponent(p.name)}` } : null, min: this.def.min, live: !!this.def.liveLobby,
       vip: !!this.vip() && this.vip().id === p.id, vipName: this.vip() ? this.vip().name : null,
-      roster: this.vip() && this.vip().id === p.id ? this.list().filter((x) => x.id !== p.id).map((x) => ({ id: x.id, name: x.name, avatar: x.avatar, bot: !!x.bot, online: !!x.bot || x.sockets > 0 })) : null,
+      kickList: this.vip() && this.vip().id === p.id ? this.list().filter((x) => x.id !== p.id).map((x) => ({ id: x.id, name: x.name, avatar: x.avatar, bot: !!x.bot, online: !!x.bot || x.sockets > 0 })) : null,
       state: this.game && this.phase !== 'show' ? this.game.view(p) : null, show: this.show ? this.show.view(p) : null,
     };
   }

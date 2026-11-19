@@ -24,7 +24,7 @@ const ok = (name) => { passed++; console.log('  ✓ ' + name); };
   const bot = room.list().find((p) => p.bot); assert(room.kick(bot.id).ok);
   assert(room.start().ok, 'the game still starts');
   const victim = room.list().find((p) => p.bot); assert(room.kick(victim.id).ok, 'kick mid-game');
-  assert.equal(room.playerState(a).roster.length, room.players.size - 1, 'the host phone sees everyone else');
+  assert.equal(room.playerState(a).kickList.length, room.players.size - 1, 'the host phone sees everyone else');
   ok('a kicked player leaves, mid-game too; their phone and account are blocked; the host phone gets a roster');
 }
 
