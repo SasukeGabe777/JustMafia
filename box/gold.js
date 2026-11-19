@@ -21,6 +21,10 @@ function goldFor(game, place, of, ms, coopCleared = true) {
   else { if (place <= Math.ceil(of / 2)) n += BASE.top; if (place === 1 && of > 1) n += BASE.win; }
   return Math.max(1, Math.round(n * scaleOf(ms)));
 }
+// Theme sets (public/shared/shop-season.js): wearing a whole set adds +5% (at least 1, at most 3 JG)
+// to what one game pays, in that set's own game only. Applied once per payout (payouts are once per game).
+const SS = require('../public/shared/shop-season');
+function withSetBonus(game, n, look) { const b = n > 0 ? SS.setBonus(game, look, n) : null; return { n: n + (b ? b.extra : 0), bonus: b }; }
 function partyGold(place) { return PARTY.all + (PARTY.places[place - 1] || 0); }
 
 // The "Earn JG" table the shop shows.
@@ -36,8 +40,9 @@ function earnTable() {
       { label: 'A co-op game cleared (JustEscape, Bomb Squad, JustMarble), 20 minutes', jg: goldFor('escape', 1, 4, 20 * 60000) },
     ],
     party: { all: PARTY.all, places: PARTY.places.slice(), label: 'Finish a whole Party Mode: everyone +' + PARTY.all + ', and +' + PARTY.places.join(' / +') + ' for the top 3 (plus every game along the way). The fastest way to earn.' },
+    sets: 'Wear a whole theme set (Shop → Sets) in its own game: +' + SS.SETS_RULES.bonusPct + '% JustGold there (at least 1, at most ' + SS.SETS_RULES.bonusCap + ' a game).',
     mafia: 'JustMafia: 4–30 JG a game (finishing, winning, your role’s good plays), weekly challenges and the season pass.',
   };
 }
 
-module.exports = { goldFor, partyGold, earnTable, COOP, MIN_HUMANS, MIN_MS, PARTY, BASE };
+module.exports = { goldFor, withSetBonus, partyGold, earnTable, COOP, MIN_HUMANS, MIN_MS, PARTY, BASE };

@@ -326,7 +326,7 @@
     const hav = BOX.portrait ? BOX.portrait.html(v.me, 28) : esc(v.me.avatar || ''); if ($('#h-av').dataset.html !== hav) { $('#h-av').innerHTML = hav; $('#h-av').dataset.html = hav; }
     // JustGold paid at the end of a game (or why it wasn't).
     if (v.jg && v.jg.at && view0 && (!view0.jg || view0.jg.at !== v.jg.at)) {
-      if (v.jg.n > 0) { toast(`🪙 +${v.jg.n} JustGold!${v.jg.total != null ? ` You have ${v.jg.total} JG.` : ''}`); haptic('win'); } else if (v.jg.why) toast(`🪙 ${v.jg.why}`);
+      if (v.jg.n > 0) { toast(`🪙 +${v.jg.n} JustGold!${v.jg.set ? ` (${v.jg.set.icon} ${v.jg.set.name} set +${v.jg.set.extra})` : ''}${v.jg.total != null ? ` You have ${v.jg.total} JG.` : ''}`); haptic('win'); } else if (v.jg.why) toast(`🪙 ${v.jg.why}`);
     }
     // After a game: once, if this phone has unsaved JustGold or stats, offer "Save your stuff".
     const overNow = v.state && v.state.phase === 'over', over0 = view0 && view0.state && view0.state.phase === 'over';
