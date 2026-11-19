@@ -310,6 +310,26 @@ Implementation checklist (updated after verification below):
 - Advanced selfie feature recognition/face integration remains optional future
   work. No paid image, speech or narration API dependency was introduced.
 
+### JustGameBox Party Mode plan: intros, game length, fitted settings (claude/party-plan)
+
+- Party Mode setup has two new questions: **How long should each game run?** (Quick ~5 min /
+  Standard ~10 / Long ~20 / Auto = each game its usual length) and **🎬 Intro cutscenes** (Play each
+  intro / Play them in the break / Skip intros). Lineups are built from each game's planned minutes
+  (kept within what the game can stretch to) plus the break and intro overhead: 1 hour of Long ≈ 3
+  games, of Quick ≈ 9. The choices are remembered on the TV and travel to the server (setParty opts:
+  intros, each, plan {key: minutes}, players).
+- Every box game module has `partyFit({ players, minutes })`; `box/party-fit.js` validates the answer
+  against the fields, has a generic fallback (rounds scaled to the minutes) and makes a short summary.
+  Settings are fitted when the lineup reaches a game, refitted as people join/leave the lobby and at
+  Start, unless the host changed them (lobby flow). The TV shows them on the lobby strip, the standings
+  board ("Up next"), the intro badge and the title card; phones show them too.
+- Intros: "break" plays the next game's cutscene (cast mode, no how-to) on the TV after 8 s of
+  standings (the break stretches to fit it), then the game starts straight away; the first game's
+  plays as the party starts. "skip" shows a 4.5 s title card. The host can switch modes in the ⚙ menu.
+- Tests: `tools/test-party-plan.js` (every game's fit for 2/6/15/40 players × 5/10/20 min, whole bot
+  parties in each intro mode, lobby flow); e2e-box checks lineup sizes respond to the length.
+- Limits: the minutes-per-round figures in each hook are estimates, not measured from real play.
+
 ### Player homes (claude/custom-houses)
 
 - [x] Players pick one of twelve home styles in the lobby: Cottage, Tavern,

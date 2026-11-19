@@ -227,8 +227,8 @@
 .pv-fit span { font-size: calc(var(--u) * 1); font-weight: 600; padding: 0.1em 0.6em; border-radius: 99px; background: rgba(255, 255, 255, 0.12); white-space: nowrap; }
 .pv-btns { display: flex; gap: calc(var(--u) * 0.6); flex: none; }
 .pv-btns .pb-btn { --u: min(1vw, 1.78vh); font-size: calc(var(--u) * 1.1); padding: calc(var(--u) * 0.5) calc(var(--u) * 1.1); }
-/* "Game 2 of 5 · 5 orders · 45 seconds" over an intro in a party. */
-.pv-badge { --u: min(1vw, 1.78vh); position: fixed; left: calc(var(--u) * 1.4); top: calc(var(--u) * 1.4); z-index: 45; display: flex; align-items: center; flex-wrap: wrap; gap: calc(var(--u) * 0.5); max-width: 70vw;
+/* "Game 2 of 5 · 5 orders · 45 seconds" over an intro in a party (top right: intros put their own tag top left). */
+.pv-badge { --u: min(1vw, 1.78vh); position: fixed; right: calc(var(--u) * 1.4); justify-content: flex-end; top: calc(var(--u) * 1.4); z-index: 45; display: flex; align-items: center; flex-wrap: wrap; gap: calc(var(--u) * 0.5); max-width: 70vw;
   padding: calc(var(--u) * 0.45) calc(var(--u) * 1.1); border-radius: 99px; background: rgba(20, 10, 46, 0.7); color: #fff8ef; font: 700 calc(var(--u) * 1.15) 'Fredoka', system-ui, sans-serif; pointer-events: none; }
 .pv-badge .pv-fit span { font-size: calc(var(--u) * 0.95); }
 /* Skip intros: the title card. */

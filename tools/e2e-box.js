@@ -66,6 +66,23 @@ async function setup(browser, game, settings = {}) {
   await hub.shot('box-hub');
   ok('Title screen: JustMafia and JustRaiseDucks big on top (plus a big coming-soon); President, Blackjack Night and four coming-soon slots below');
 
+  // ---------- Party Mode setup: game length and intros ----------
+  {
+    await hub.click('#party-open'); await hub.until(`!!document.querySelector('[data-each="long"]') && !!document.querySelector('[data-intros="break"]')`, 'party setup questions');
+    const lineup = async (each) => {
+      await hub.eval(`document.querySelector('[data-t="1"]').click(); document.querySelector('[data-each="${each}"]').click(); document.querySelector('[data-act="go"]').click(); true`);
+      for (let i = 0; i < 60 && !(await hub.eval(`!!document.querySelector('[data-act="start"]')`)); i++) { await hub.eval(`(document.querySelector('[data-act="skip"]') || { click() {} }).click(); true`); await wait(150); }
+      const n = await hub.eval(`document.querySelectorAll('.pm-slot').length`);
+      await hub.eval(`document.querySelector('[data-act="opts"]').click(); true`); await wait(200);
+      return n;
+    };
+    const long = await lineup('long'), quick = await lineup('quick');
+    assert(long >= 2 && long <= 4, `1 hour of Long games is about 3 (${long})`); assert(quick >= 7, `1 hour of Quick games is about 10 (${quick})`);
+    await hub.eval(`document.querySelector('[data-each="auto"]').click(); document.querySelector('[data-intros="play"]').click(); true`);
+    await hub.eval(`document.querySelector('[data-act="close"]').click(); true`); await wait(400);
+    ok(`Party Mode setup: "Each game" length and "Intro cutscenes"; 1 hour = ${long} long games or ${quick} quick ones`);
+  }
+
   // ---------- President ----------
   {
     const { tv, ph, code } = await setup(browser, 'president', { turnSeconds: 15, rounds: 3 });

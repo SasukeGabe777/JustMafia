@@ -487,6 +487,14 @@ class BoxRoom {
     Object.assign(this.settings, fit.settings);
     pm.fit = { game: this.def.key, summary: fit.summary, minutes: ctx.minutes, players: ctx.players, touched: false };
   }
+  // People joined or left in the lobby: the settings follow the crowd (until the host changes them).
+  partyRefit() {
+    const pm = this.partyMode;
+    if (this.phase !== 'lobby' || !pm || !pm.fit || pm.fit.touched || pm.fit.game !== this.def.key || !this.players.size || pm.fit.players === this.players.size) return;
+    const keep = this.settings.showIntro;
+    this.settings = this.defaultSettings(this.def); if (keep !== undefined) this.settings.showIntro = keep;
+    this.partyFit();
+  }
   // The game after this one (skipping games that need more players than are here), or -1.
   partyNextIndex() {
     const pm = this.partyMode; let i = pm.index + 1;
@@ -635,6 +643,7 @@ class BoxRoom {
     const p = { id: 'p' + (++this.seq), name, token: crypto.randomBytes(8).toString('hex'), bot: false, sockets: 0, color: COLORS[this.seq % COLORS.length], avatar: AVATARS.includes(avatar) ? avatar : AVATARS[this.seq % AVATARS.length] };
     this.players.set(p.id, p);
     if (this.game && this.game.joined) this.game.joined(p);
+    this.partyRefit();
     this.sync();
     return { ok: true, player: p };
   }
@@ -648,6 +657,7 @@ class BoxRoom {
       this.players.set(p.id, p); added++;
       if (this.game && this.game.joined) this.game.joined(p);
     }
+    this.partyRefit();
     this.sync();
     return added;
   }
@@ -672,6 +682,7 @@ class BoxRoom {
     const p = this.players.get(id); if (!p) return;
     this.players.delete(id);
     if (this.game && this.game.left) this.game.left(p);
+    this.partyRefit();
     this.sync();
   }
 
@@ -727,7 +738,7 @@ class BoxRoom {
     this.clearTimers();
     const pm = this.partyMode, inParty = !!(pm && pm.phase !== 'done' && pm.defs[pm.index] === this.def);
     // Party Mode: fit the settings again to the players actually here (unless the host changed them).
-    if (inParty && pm.fit && !pm.fit.touched && pm.fit.players !== this.players.size) { this.settings = this.defaultSettings(this.def); this.partyFit(); }
+    if (inParty) this.partyRefit();
     if (this.def.liveLobby && this.game) this.game.s = { ...this.settings }; // the lobby world carries on into the game
     else this.game = this.def.create(this, { ...this.settings });
     if (pm && pm.startedAt == null) pm.startedAt = this.now();
