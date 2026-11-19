@@ -20,7 +20,9 @@ Status: built on branch `claude/justgold`. The state before it is tagged `pre-ju
   bots get a generated character). Players without a saved look keep their emoji. JustMafia draws
   the same character everywhere (town, cutscenes, phone, Judge), with its scene options: lean, arms,
   dragged, dead, scared, theme…; the classic ghost is the character, see-through.
-- **One shop** at `/shop` (phone page): character items, flair, gear for each game, JustMafia items.
+- **One shop** at `/shop` (phone page): Character, Flair, **Games** (JustMafia first, then every box game), Wardrobe, Earn JG.
+  `/shop?game=<key>` opens that game's section; JustMafia's links and each box game's join screen / lobby use it.
+  Object gear (paddles, card backs, chips, buzzers, banners, frames, easels, podiums, crests, pen sets) is drawn as the object itself (shop.js `drawObject`); balls stay balls.
   Reachable from the box phone (join screen, lobby, between games), the main menu's phone link,
   and the JustMafia lobby. Not during a running game.
 - **JustMafia keeps** its season pass, Fate tokens, worlds and achievements on its own phone screen
