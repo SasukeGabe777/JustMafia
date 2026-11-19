@@ -36,7 +36,7 @@ function earnTable() {
       { label: 'A co-op game cleared (JustEscape, Bomb Squad, JustMarble), 20 minutes', jg: goldFor('escape', 1, 4, 20 * 60000) },
     ],
     party: { all: PARTY.all, places: PARTY.places.slice(), label: 'Finish a whole Party Mode: everyone +' + PARTY.all + ', and +' + PARTY.places.join(' / +') + ' for the top 3 (plus every game along the way). The fastest way to earn.' },
-    mafia: 'JustMafia: 4–30 JG a game (finishing, winning, your role’s good plays), weekly challenges and the season pass.',
+    mafia: 'JustMafia: 4–30 JG a game (finishing, winning, your role’s good plays). Every game (any kind) also earns XP for your level, daily / weekly challenges and the season pass.',
   };
 }
 

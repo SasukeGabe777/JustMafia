@@ -347,7 +347,7 @@
     }
     // Progress from that game: XP, finished challenges, level ups (after the JustGold toast).
     if (v.prog && v.prog.at && view0 && (!view0.prog || view0.prog.at !== v.prog.at) && window.JGProgress) {
-      const lines = JGProgress.news(v.prog);
+      const lines = JGProgress.news(v.prog).slice(-4); // (the level up comes last: keep it)
       lines.forEach((l, i) => setTimeout(() => { toast(l); if (/Level|done/.test(l)) { haptic('win'); BOX.sfx('win'); } }, 2800 * (i + (v.jg && v.jg.n ? 1 : 0))));
     }
     // After a game: once, if this phone has unsaved JustGold or stats, offer "Save your stuff".

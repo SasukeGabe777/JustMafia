@@ -105,6 +105,10 @@
 /* box phone: join screen banner, header badge */
 .j-event { margin: 4px 0 10px; }
 .pf-lv .jgp-badge { font-size: 13px; }
+/* the header badge sits on the avatar's corner: it takes no room in the crowded header */
+.h-me { position: relative; }
+.h-me .jgp-badge, .h-me span.jgp-badge { position: absolute; left: -2px; bottom: -3px; font-size: 9px; padding: 1px 3px 1px 2px; margin: 0; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45); z-index: 1; }
+.h-me #h-name { display: inline-flex; align-items: center; white-space: nowrap; min-width: 0; }
 /* title screen (public/hub.html) */
 .hub-event { max-width: 760px; margin: 4px auto 18px; }
 .hub-event .jgp-banner { padding: 14px 20px; }
@@ -112,3 +116,17 @@
 /* the shop: a slim strip under the header */
 .jgp-shopstrip { display: flex !important; justify-content: center; gap: 6px; padding: 4px 10px 6px; }
 .jgp-shopstrip[hidden] { display: none !important; }
+/* never wider than the screen: the pass track scrolls inside its card */
+.jgp, .jgp > *, .jgp-sec, .jgp-lv-body, .jgp-cb { min-width: 0; max-width: 100%; }
+.jgp-pass { overflow: hidden; }
+/* its own dark card, so it reads on any page (JustMafia's parchment phone, the box phone sheet) */
+.jgp { background: radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--ea) 22%, transparent), transparent 50%), linear-gradient(170deg, #2e1d63, #1b1240); padding: 12px; border-radius: 20px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.jgp b, .jgp h3 { color: var(--jink); }
+/* narrow phones: the banner's "ends in" pill goes under the name */
+.jgp-banner { flex-wrap: wrap; }
+.jgp-banner > div { flex: 1 1 140px; }
+@media (max-width: 420px) { .jgp-banner:not(.compact) .jgp-days { margin-left: 46px; } }
+/* TV header pill (every game, public/box/tv.html) */
+.jgp-pill { --ea: #ffcf3f; --eb: #4a2a8a; --ec: #fff4c8; display: inline-flex; align-items: center; gap: 8px; padding: 5px 6px 5px 12px; border-radius: 99px; color: #fff; font: 600 14px 'Fredoka', system-ui, sans-serif;
+  background: linear-gradient(90deg, var(--ea), var(--eb)); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.25); white-space: nowrap; }
+.jgp-pill em { font-style: normal; font-size: 12px; background: rgba(0, 0, 0, 0.3); padding: 3px 8px; border-radius: 99px; }

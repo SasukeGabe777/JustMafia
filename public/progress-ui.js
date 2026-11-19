@@ -41,6 +41,7 @@
       const inDays = nx.inDays != null ? nx.inDays : Math.max(0, Math.ceil((Date.parse(nx.start + 'T00:00:00Z') - Date.now()) / 86400000));
       return `<div class="jgp-banner soon${opts.compact ? ' compact' : ''}" style="${themeVars(nx)}"><span class="jgp-bi">${esc(nx.icon)}</span><div><small>NEXT EVENT</small><b>${esc(nx.name)}</b><span>Starts in ${inDays} day${inDays === 1 ? '' : 's'}</span></div></div>`;
     }
+    if (opts.pill) return `<span class="jgp-pill" style="${themeVars(season)}" title="${esc(season.blurb || '')}"><b>${esc(season.icon)} ${esc(season.name)}</b><em>${esc(daysText(season.daysLeft))}</em></span>`;
     return `<div class="jgp-banner${opts.compact ? ' compact' : ''}${opts.tv ? ' tv' : ''}" style="${themeVars(season)}"><span class="jgp-bi">${esc(season.icon)}</span><div><small>SEASONAL EVENT</small><b>${esc(season.name)}</b>${opts.compact ? '' : `<span class="jgp-blurb">${esc(season.blurb || '')}</span>`}</div><em class="jgp-days">⏳ ${esc(daysText(season.daysLeft))}</em></div>`;
   }
 
@@ -98,7 +99,12 @@
     if (!p) return [];
     const out = [];
     for (const c of p.completed || []) out.push(`${c.period === 'daily' ? '☀️ Daily' : c.period === 'weekly' ? '📅 Weekly' : '🎪 Event'} challenge done: ${c.icon} ${c.label} · +${c.xp} XP, +${c.gold} JG`);
-    for (const u of p.levelUps || []) out.push(`⭐ Level ${u.level}! +${u.gold} JG${u.item ? ' and a new item' : ''}${u.title ? ` · new title “${u.title}”` : ''}`);
+    // Several level ups at once: one toast for the highest (with everything they paid).
+    const ups = p.levelUps || [];
+    if (ups.length) {
+      const top = ups[ups.length - 1], gold = ups.reduce((n, u) => n + (u.gold || 0), 0), items = ups.filter((u) => u.item).length, title = ups.map((u) => u.title).filter(Boolean).pop();
+      out.push(`⭐ Level ${top.level}!${ups.length > 1 ? ` (+${ups.length} levels)` : ''} +${gold} JG${items ? ` and ${items === 1 ? 'a new item' : items + ' new items'}` : ''}${title ? ` · new title “${title}”` : ''}`);
+    }
     if (!out.length && p.xp) out.push(`⭐ +${p.xp} XP${p.level ? ` · level ${p.level}` : ''}`);
     return out;
   }
@@ -107,7 +113,7 @@
   function mountBanners() {
     for (const el of document.querySelectorAll('[data-season-banner]')) {
       const mode = el.dataset.seasonBanner || '';
-      el.innerHTML = banner(null, { compact: /compact/.test(mode), tv: /tv/.test(mode), currentOnly: /current/.test(mode) });
+      el.innerHTML = banner(null, { compact: /compact/.test(mode), tv: /tv/.test(mode), pill: /pill/.test(mode), currentOnly: /current/.test(mode) });
       el.hidden = !el.innerHTML;
     }
   }

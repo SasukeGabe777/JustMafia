@@ -25,8 +25,10 @@ Status: built on branch `claude/justgold`. The state before it is tagged `pre-ju
   Object gear (paddles, card backs, chips, buzzers, banners, frames, easels, podiums, crests, pen sets) is drawn as the object itself (shop.js `drawObject`); balls stay balls.
   Reachable from the box phone (join screen, lobby, between games), the main menu's phone link,
   and the JustMafia lobby. Not during a running game.
-- **JustMafia keeps** its season pass, Fate tokens, worlds and achievements on its own phone screen
-  ("Season & unlocks"): nothing to buy there except the pass and Fate (game mechanics).
+- **JustMafia keeps** Fate tokens, worlds and achievements on its own phone screen ("Season & unlocks").
+  Its old season pass and weekly challenges became the box-wide **profile progression** (level, daily /
+  weekly / event challenges, the seasonal event's season pass): see `docs/progress.md`. That screen's
+  ⭐ Progress tab shows it, and the premium pass can be bought there or from the box profile.
 
 ## Data
 

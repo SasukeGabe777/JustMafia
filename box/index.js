@@ -291,6 +291,14 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
       return { prof, w };
     };
     socket.on('progress:get', (msg, cb) => { const x = progressWallet(msg, cb); if (x) reply(cb, progressReply(x.prof, x.w)); });
+    // Tests and screenshots only (MT_DEV_GRANTS=1, like JustMafia's dev:grant): XP / JustGold as if a game paid it.
+    if (process.env.MT_DEV_GRANTS === '1') socket.on('dev:progress', (msg, cb) => {
+      const x = progressWallet(msg, cb); if (!x) return;
+      if (msg.gold) wallets.grant(x.w, msg.gold);
+      const news = wallets.progressGame(x.w, { id: 'dev:' + Date.now() + ':' + Math.random(), game: typeof msg.game === 'string' ? msg.game : 'likely', kind: 'box', xp: Math.max(0, Math.min(100000, Number(msg.xp) || 0)), place: 1, of: 4, won: !!msg.won, tags: {} });
+      for (const r of rooms.values()) { let hit = false; for (const p of r.players.values()) if (p.profileId === x.prof.id) { r.progressNews(p, news); hit = true; } if (hit) r.sync(); }
+      reply(cb, progressReply(x.prof, x.w, { news }));
+    });
     socket.on('progress:reroll', (msg, cb) => {
       const x = progressWallet(msg, cb); if (!x) return;
       const r = wallets.rerollChallenge(x.w, msg.period, msg.id);
