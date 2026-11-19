@@ -465,10 +465,20 @@ class Game {
     const go = () => { if (this.c === c && this.phase === 'clue') this.addClue(p, word); };
     if (sim) this.room.after(1500 + this.rng() * 4000, go); else go();
   }
+  // A bot's line: an arc, a straight stroke, a wave, a zigzag or a wandering curve.
   botLine(n = 18) {
-    let x = 250 + this.rng() * 500, y = 250 + this.rng() * 500, a = this.rng() * Math.PI * 2;
-    const p = [];
-    for (let i = 0; i < n; i++) { p.push(Math.round(Math.max(20, Math.min(980, x))), Math.round(Math.max(20, Math.min(980, y)))); a += (this.rng() - 0.5) * 0.9; x += Math.cos(a) * 28; y += Math.sin(a) * 28; }
+    const r = () => this.rng(), cx = 280 + r() * 440, cy = 280 + r() * 440, size = 90 + r() * 170, a0 = r() * Math.PI * 2, p = [];
+    const put = (x, y) => p.push(Math.round(Math.max(20, Math.min(980, x))), Math.round(Math.max(20, Math.min(980, y))));
+    const kind = this.pickOf(['arc', 'arc', 'line', 'wave', 'zig', 'curve']);
+    const dx = Math.cos(a0), dy = Math.sin(a0);
+    for (let i = 0; i < n; i++) {
+      const u = i / (n - 1);
+      if (kind === 'arc') { const a = a0 + u * (2 + (cx % 3)); put(cx + Math.cos(a) * size, cy + Math.sin(a) * size); }
+      else if (kind === 'line') put(cx + dx * size * (u * 2 - 1), cy + dy * size * (u * 2 - 1));
+      else if (kind === 'wave') { const s = Math.sin(u * Math.PI * 3) * size * 0.25; put(cx + dx * size * (u * 2 - 1) - dy * s, cy + dy * size * (u * 2 - 1) + dx * s); }
+      else if (kind === 'zig') { const s = (i % 2 ? 1 : -1) * size * 0.2; put(cx + dx * size * (u * 2 - 1) - dy * s, cy + dy * size * (u * 2 - 1) + dx * s); }
+      else { const a = a0 + Math.sin(u * 5) * 1.2; put(cx + Math.cos(a) * size * u, cy + Math.sin(a) * size * u); }
+    }
     return p;
   }
   // A bot's suspicion of each other player: clues that fit its own word look innocent, clues

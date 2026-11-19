@@ -1,7 +1,62 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
-  <!-- STARTER ART for JustUndercover: replace with an original illustration (no text), subject inside x 90-310, y 55-185. -->
-  <defs><radialGradient id="undercover-bg" cx="50%" cy="55%" r="70%"><stop offset="0" stop-color="#8b5cff"/><stop offset="1" stop-color="#1b1030"/></radialGradient></defs>
-  <rect width="400" height="240" fill="url(#undercover-bg)"/>
-  <circle cx="200" cy="120" r="58" fill="#ffd23f" stroke="#1b1030" stroke-width="5"/>
-  <circle cx="182" cy="104" r="16" fill="#fff" opacity="0.5"/>
+  <!-- JustUndercover: a case file on the agency's desk at night. A polaroid of a suspect in a fedora
+       and dark glasses, a red MOLE stamp, a red pin and string, the glowing world map behind. -->
+  <defs>
+    <radialGradient id="uc-bg" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#22365c"/><stop offset="0.6" stop-color="#111a2e"/><stop offset="1" stop-color="#070b15"/></radialGradient>
+    <linearGradient id="uc-man" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3e2b4"/><stop offset="1" stop-color="#d6bb7a"/></linearGradient>
+    <linearGradient id="uc-ph" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bcd0f0"/><stop offset="1" stop-color="#7f97c4"/></linearGradient>
+    <linearGradient id="uc-suit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f3442"/><stop offset="1" stop-color="#14171f"/></linearGradient>
+    <pattern id="uc-dots" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="5" cy="5" r="1.6" fill="#5ff2ff"/></pattern>
+    <radialGradient id="uc-glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ff4650" stop-opacity="0.8"/><stop offset="1" stop-color="#ff4650" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#uc-bg)"/>
+  <!-- the world map, dot matrix -->
+  <g fill="url(#uc-dots)" opacity="0.35">
+    <ellipse cx="70" cy="80" rx="52" ry="34"/><ellipse cx="95" cy="160" rx="22" ry="40"/><ellipse cx="200" cy="66" rx="58" ry="30"/>
+    <ellipse cx="212" cy="140" rx="24" ry="36"/><ellipse cx="320" cy="84" rx="62" ry="36"/><ellipse cx="345" cy="180" rx="30" ry="20"/>
+  </g>
+  <!-- light through the blinds -->
+  <g fill="#8cb4ff" opacity="0.08" transform="rotate(-18 200 120)"><rect x="-40" y="10" width="480" height="12"/><rect x="-40" y="36" width="480" height="12"/><rect x="-40" y="62" width="480" height="12"/><rect x="-40" y="88" width="480" height="12"/><rect x="-40" y="114" width="480" height="12"/></g>
+  <!-- red string to the blinking light -->
+  <path d="M206 62 Q260 30 318 46" fill="none" stroke="#c8141f" stroke-width="3"/>
+  <circle cx="318" cy="46" r="16" fill="url(#uc-glow)"/><circle cx="318" cy="46" r="5" fill="#ff4650" stroke="#1b0508" stroke-width="2"/>
+  <!-- the case file -->
+  <g transform="rotate(-4 200 125)">
+    <path d="M104 70 L150 70 L158 60 L104 60 Z" fill="#e8d39c" stroke="#2a1d06" stroke-width="3" stroke-linejoin="round"/>
+    <rect x="98" y="66" width="214" height="128" rx="6" fill="url(#uc-man)" stroke="#2a1d06" stroke-width="4"/>
+    <g fill="#8a6f3a" opacity="0.55"><rect x="218" y="94" width="70" height="7" rx="3"/><rect x="218" y="110" width="80" height="7" rx="3"/><rect x="218" y="126" width="56" height="7" rx="3"/><rect x="218" y="142" width="74" height="7" rx="3"/></g>
+    <!-- the polaroid -->
+    <g transform="rotate(-6 165 125)">
+      <rect x="122" y="78" width="86" height="104" rx="3" fill="#fbf7ec" stroke="#2a1d06" stroke-width="3"/>
+      <rect x="130" y="86" width="70" height="72" fill="url(#uc-ph)"/>
+      <!-- the suspect: shoulders, collar, face, dark glasses, fedora -->
+      <path d="M133 158 Q136 132 165 130 Q194 132 197 158 Z" fill="url(#uc-suit)" stroke="#0b0d12" stroke-width="2.5"/>
+      <path d="M158 131 L165 146 L172 131 Z" fill="#f2f2f2" stroke="#0b0d12" stroke-width="1.5"/><path d="M163 136 L165 150 L167 136 Z" fill="#c8141f"/>
+      <ellipse cx="165" cy="116" rx="15" ry="17" fill="#e2ad86" stroke="#0b0d12" stroke-width="2.5"/>
+      <rect x="151" y="110" width="12" height="7" rx="3" fill="#0b0d12"/><rect x="167" y="110" width="12" height="7" rx="3" fill="#0b0d12"/><path d="M163 113 L167 113" stroke="#0b0d12" stroke-width="2"/>
+      <path d="M158 124 Q165 127 172 124" fill="none" stroke="#0b0d12" stroke-width="2" stroke-linecap="round"/>
+      <path d="M142 104 Q165 96 188 104 L184 99 Q165 92 146 99 Z" fill="#2a2d36" stroke="#0b0d12" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M151 101 Q152 84 165 84 Q178 84 179 101 Z" fill="#2a2d36" stroke="#0b0d12" stroke-width="2.5"/>
+      <path d="M152 97 Q165 93 178 97" fill="none" stroke="#c8a24a" stroke-width="3"/>
+      <rect x="130" y="162" width="70" height="12" fill="none"/>
+    </g>
+    <!-- the pin -->
+    <circle cx="206" cy="66" r="7" fill="#e2363f" stroke="#1b0508" stroke-width="2.5"/><circle cx="204" cy="64" r="2" fill="#ffb3b8"/>
+    <!-- the suspect is circled in red marker, with a rubber stamp beside the file -->
+    <g fill="none" stroke="#e2363f" stroke-linecap="round">
+      <ellipse cx="160" cy="114" rx="34" ry="30" stroke-width="4" transform="rotate(-8 160 114)" opacity="0.9"/>
+      <path d="M232 160 L296 160 M232 172 L282 172" stroke-width="5" opacity="0.85"/>
+    </g>
+    <g transform="rotate(12 272 186)">
+      <rect x="252" y="178" width="44" height="12" rx="3" fill="#e2363f" stroke="#1b0508" stroke-width="3"/>
+      <rect x="266" y="160" width="16" height="20" rx="3" fill="#5a3a20" stroke="#1b0508" stroke-width="3"/>
+      <ellipse cx="274" cy="158" rx="13" ry="7" fill="#7a4a26" stroke="#1b0508" stroke-width="3"/>
+    </g>
+  </g>
+  <!-- a magnifying glass on the desk -->
+  <g transform="rotate(28 300 170)">
+    <rect x="296" y="168" width="11" height="40" rx="4" fill="#5a3a20" stroke="#1b1206" stroke-width="3"/>
+    <circle cx="301" cy="150" r="22" fill="#9fe8ff" fill-opacity="0.35" stroke="#c8a24a" stroke-width="7"/><circle cx="301" cy="150" r="22" fill="none" stroke="#1b1206" stroke-width="2"/>
+    <path d="M290 141 Q294 136 300 135" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  </g>
 </svg>

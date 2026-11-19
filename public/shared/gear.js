@@ -119,6 +119,10 @@
     { game: 'pizza', slot: 'hat', label: 'Chef hat', spot: 'head', default: OWN('hat') },
     { game: 'pizza', slot: 'apron', label: 'Apron', spot: 'chest', default: OWN('apron') },
     { game: 'pizza', slot: 'tool', label: 'Kitchen tool', spot: 'hand', default: OWN('tool') },
+    { game: 'undercover', slot: 'hat', label: 'Agent hat', spot: 'head', default: OWN('hat') },
+    { game: 'undercover', slot: 'shades', label: 'Disguise', spot: 'face', default: OWN('disguise') },
+    { game: 'undercover', slot: 'gadget', label: 'Spy gadget', spot: 'hand', default: OWN('gadget') },
+    { game: 'undercover', slot: 'tie', label: 'Agency tie', spot: 'chest', default: OWN('tie') },
   ];
 
   // [game, slot, value, name, cost, icon, paint, desc]
@@ -349,6 +353,15 @@
     ['pizza', 'tool', 'cutter', 'Pizza Cutter', 70, '🍕', { shape: 'pizzaCutter', a: '#e8323c' }, 'Eight slices, every time.'],
     ['pizza', 'tool', 'pin', 'Rolling Pin', 80, '🥖', { shape: 'rollingPin', a: '#d9b27a' }, 'For the perfect thin crust.'],
     ['pizza', 'tool', 'peel', 'Pizza Peel', 90, '🍕', { shape: 'peel', a: '#c9a36a', c: '#f2c14e' }, 'A wooden peel with a fresh pie on it.'],
+    // JustUndercover: the agency look.
+    ['undercover', 'hat', 'fedora', 'Agent Fedora', 60, '🕵️', { shape: 'fedora', a: '#2a2d36', b: '#c8a24a' }, 'Brim down, collar up. Nobody saw you come in.'],
+    ['undercover', 'hat', 'trilby', 'Night Trilby', 130, '🎩', { shape: 'fedora', a: '#5a1e2a', b: '#101014' }, 'A deep red trilby for the late-night briefings.'],
+    ['undercover', 'shades', 'mirror', 'Mirror Shades', 80, '🕶️', { shape: 'shades', a: '#101014', b: '#8fd3ff', d: 'aviator' }, 'They can see themselves. They can’t see you.'],
+    ['undercover', 'shades', 'nose', 'Perfect Disguise', 50, '🥸', { shape: 'groucho' }, 'Glasses, nose and moustache. Totally undetectable.'],
+    ['undercover', 'gadget', 'file', 'Top Secret File', 70, '📁', { shape: 'file', a: '#c8323a', b: '#2b1f3d' }, 'Eyes only. Especially not the mole’s.'],
+    ['undercover', 'gadget', 'phone', 'Spy Phone', 150, '📱', { shape: 'phone', a: '#1a1a22', b: '#3aff8a' }, 'Encrypted, scrambled and very shiny.'],
+    ['undercover', 'gadget', 'lens', 'Pocket Lens', 90, '🔍', { shape: 'magnifier', a: '#c8a24a', b: '#3a2a14' }, 'For finding the tiny tell in every clue.'],
+    ['undercover', 'tie', 'black', 'Agency Tie', 60, '👔', { shape: 'tie', a: '#101014', b: '#3a3a44' }, 'Black tie, black suit, black mood.'],
   ];
 
   const slotInfo = (game, slot) => SLOTS.find((s) => s.game === game && s.slot === slot) || null;
