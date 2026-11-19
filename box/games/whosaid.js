@@ -422,7 +422,7 @@ class WhoSaid {
   // Public spotlight: the answer and the names. Who wrote it only appears in the reveal.
   spotPublic() {
     const c = this.cur; if (!c) return null;
-    return { text: c.text, names: c.names, avs: c.avs || [], ids: c.opts || [], n: c.n, total: this.spotTotal, voted: c.votes.size, of: this.voters().length, result: this.phase === 'reveal' ? c.result : null };
+    return { text: c.text, names: c.names, avs: c.avs || [], ids: this.phase === 'reveal' ? c.opts || [] : [] /* ids only once revealed: names still find faces */, n: c.n, total: this.spotTotal, voted: c.votes.size, of: this.voters().length, result: this.phase === 'reveal' ? c.result : null };
   }
   notGuessed() { return this.phase === 'spot' && this.cur ? this.voters().filter((p) => !this.cur.votes.has(p.id)).slice(0, 20).map((p) => p.name) : [];
   }
