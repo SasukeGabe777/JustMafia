@@ -11,7 +11,7 @@
   const has = (o) => !!(o && BOX.hasLook && BOX.hasLook(o));
   const face = (o, n, opt) => (BOX.face ? BOX.face(o, n, opt) : esc((o && o.avatar) || '🙂'));
   const pic0 = (o, n, opt) => (has(o) ? face(o, n, opt) : '');
-  const board = (rows, val, label = '') => `<div class="board">${rows.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${pic0(r, 30, { cls: 'fn-rf' })} ${esc(r.name)}</span><b>${esc(val(r))}${label}</b></div>`).join('')}</div>`;
+  const fboard = (rows, val, label = '') => `<div class="board">${rows.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${pic0(r, 30, { cls: 'fn-rf' })} ${esc(r.name)}</span><b>${esc(val(r))}${label}</b></div>`).join('')}</div>`;
 
   // ---------- TV: one YouTube player that stays on the page ----------
   // The player is rebuilt whenever the TV page redraws the game area (Play again, Back to
@@ -282,7 +282,7 @@
       ${champ ? `<div class="fn-champ">${pic(champ)}<div><h2>${esc(champ.title)}</h2><p>picked by ${pic0({ name: champ.by }, 40, { cls: 'fn-byf', mood: 'grin' })}<b>${esc(champ.by)}</b> · ${plural(champ.final || 0, 'vote')} · ${emojiFor(champ.avg)} ${champ.avg || '–'}</p></div></div>` : '<p class="muted" style="text-align:center">No videos played tonight.</p>'}
       ${s.awards.length ? `<div class="fn-awards">${s.awards.map((a, i) => `<div class="fn-award" style="--i:${i}"><span>${a.icon}</span>${pic0(a, 56, { cls: 'fn-awf' })}<div><small>${esc(a.title)}</small><b>${esc(a.name)}</b><em>${esc(a.detail)}</em></div></div>`).join('')}</div>` : ''}
       <div class="fn-endgrid"><div class="fn-grid">${s.videos.slice(1).map((v, i) => `<div class="fn-card" style="--i:${i}">${pic(v)}<span class="fn-num">${medal(i + 2)}</span><b>${esc(v.title)}</b><small>${pic0({ name: v.by }, 26, { cls: 'fn-byf' })}${esc(v.by)} ·${plural(v.final || 0, 'vote')} · ${emojiFor(v.avg)} ${v.avg || '–'}</small></div>`).join('')}</div>
-      <div class="panel"><h3 style="margin-top:0">Points</h3>${board(s.standings, (r) => r.points, ' pts')}</div></div>`);
+      <div class="panel"><h3 style="margin-top:0">Points</h3>${fboard(s.standings, (r) => r.points, ' pts')}</div></div>`);
   }
   const confetti = () => `<div class="fn-confetti" aria-hidden="true">${Array.from({ length: 30 }, (_, i) => `<i style="--x:${(i * 37) % 100};--d:${((i % 7) * 0.17).toFixed(2)}s;--c:${['#ffd23f', '#ff4f9a', '#3ee6ff', '#8bd346', '#ff8c42'][i % 5]}"></i>`).join('')}</div>`;
 
