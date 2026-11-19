@@ -247,8 +247,8 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
       if (w) return reply(cb, { ok: true, wallet: mafia && mafia.id === w ? { id: w, token: msg.mafia.token } : wallets.addDevice(w) });
       // First time: this phone's JustMafia profile (gold, items, look) becomes the account's wallet,
       // unless another account already has it; otherwise a fresh wallet.
-      if (mafia && !profiles.ownerOfWallet(mafia.id)) { profiles.setWallet(prof.id, mafia.id); return reply(cb, { ok: true, wallet: { id: mafia.id, token: msg.mafia.token }, linked: true }); }
-      const made = wallets.create(); profiles.setWallet(prof.id, made.id);
+      if (mafia && !profiles.ownerOfWallet(mafia.id)) { profiles.setWallet(prof.id, mafia.id); redress(prof.id); return reply(cb, { ok: true, wallet: { id: mafia.id, token: msg.mafia.token }, linked: true }); }
+      const made = wallets.create(); profiles.setWallet(prof.id, made.id); redress(prof.id);
       reply(cb, { ok: true, wallet: { id: made.id, token: made.token }, created: true });
     });
     socket.on('shop:state', (msg, cb) => { const { prof, w } = walletOfAuth(msg.auth); if (!w) return reply(cb, { ok: false, error: prof ? 'No wallet yet.' : 'Make your character first.', noWallet: !!prof }); reply(cb, { ok: true, ...shopState(prof, w) }); });
@@ -276,15 +276,38 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
       const { room, p } = ctx(); if (p && p.profileId !== prof.id) { linkProfile(room, p, prof); room.sync(); }
       reply(cb, { ok: true, profile: profileView(prof) });
     });
+    // "Save your stuff": a name + password (old clients send it as `pin`, a numeric password).
+    const pwOf = (msg, k = 'password') => { const v = msg[k] != null ? msg[k] : k === 'password' ? msg.pin : null; return typeof v === 'string' || typeof v === 'number' ? String(v) : ''; };
     socket.on('profile:claim', (msg, cb) => {
       const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: false, error: 'Profile not found.' });
-      reply(cb, profiles.claim(prof.id, msg.name, String(msg.pin == null ? '' : msg.pin)));
+      reply(cb, profiles.claim(prof.id, msg.name, pwOf(msg)));
     });
     socket.on('profile:login', (msg, cb) => {
       if (!profiles) return reply(cb, { ok: false, error: 'Profiles are off on this server.' });
-      const r = profiles.login(msg.name, String(msg.pin == null ? '' : msg.pin));
+      const r = profiles.login(msg.name, pwOf(msg));
       if (r.ok) { const { room, p } = ctx(); if (p) { linkProfile(room, p, profiles.get(r.id)); room.sync(); } }
       reply(cb, r);
+    });
+    socket.on('profile:password', (msg, cb) => {
+      const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: false, error: 'Profile not found.' });
+      reply(cb, profiles.changePassword(prof.id, pwOf(msg, 'old'), pwOf(msg)));
+    });
+    // Sign out on this phone: the device token stops working; the saved account stays.
+    socket.on('profile:logout', (msg, cb) => {
+      const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: true });
+      if (!prof.claimed) return reply(cb, { ok: false, error: 'Save your stuff with a name and password first, or it would be lost.' });
+      profiles.forgetDevice(msg.auth);
+      reply(cb, { ok: true });
+    });
+    // A light look at the account for the "Save your stuff" prompts: saved or not, JustGold, games.
+    // Without an account yet, the phone's JustMafia wallet (`mafia`) still shows its gold.
+    socket.on('account:status', (msg, cb) => {
+      const prof = profileOf(msg.auth);
+      let w = prof && wallets ? profiles.walletOf(prof.id) : null; if (w && !wallets.data.profiles[w]) w = null;
+      if (!w && wallets && msg.mafia && typeof msg.mafia === 'object') { const m = wallets.authenticate(msg.mafia); if (m && (!prof || !profiles.ownerOfWallet(m.id))) w = m.id; }
+      const wp = w ? wallets.data.profiles[w] : null;
+      reply(cb, { ok: true, account: !!prof, saved: !!(prof && prof.claimed && prof.password), name: prof ? prof.claimed || prof.name : null,
+        gold: wp ? wp.coins || 0 : 0, games: (prof ? prof.stats.games : 0) + (wp ? (wp.stats && wp.stats.games) || 0 : 0) });
     });
     socket.on('profile:title', (msg, cb) => {
       const prof = profileOf(msg.auth); if (!prof) return reply(cb, { ok: false, error: 'Profile not found.' });

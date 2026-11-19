@@ -58,9 +58,9 @@
     });
     const auth = () => getProf();
     return {
-      live: true, connected: () => up,
+      live: true, connected: () => up, socket,
       create: (name) => call('profile:create', { name }),
-      login: (name, pin) => call('profile:login', { name, pin }),
+      login: (name, password) => call('profile:login', { name, password }),
       wallet: () => call('account:wallet', { auth: auth(), mafia: getMafia() }),
       state: () => call('shop:state', { auth: auth() }),
       buy: (itemId) => call('shop:buy', { auth: auth(), itemId }),
@@ -530,14 +530,14 @@
     if (!S.startLook) S.startLook = randLook();
     let name = ''; try { name = localStorage.getItem('box.name') || ''; } catch (e) { /* private */ }
     box.innerHTML = mode === 'login'
-      ? `<h1>Welcome <span>back!</span></h1><p class="muted">Sign in with the name and PIN you saved in 🏆 My profile.</p>
-         <label for="s-name">Name</label><input id="s-name" maxlength="14" autocomplete="off" value="${esc(name)}">
-         <label for="s-pin">PIN</label><input id="s-pin" inputmode="numeric" maxlength="6" type="password" autocomplete="off">
-         <button class="btn" id="s-go">Sign in</button><p class="err" id="s-err">${esc(err)}</p><button class="link" id="s-swap">New here? Make a character</button>`
+      ? `<h1>Welcome <span>back!</span></h1><p class="muted">Sign in with the name and password you saved. Your JustGold, character, items and stats come with you.</p>
+         <form id="s-form" autocomplete="on"><label for="s-name">Name</label><input id="s-name" maxlength="14" autocomplete="username" autocapitalize="words" spellcheck="false" value="${esc(name)}">
+         <label for="s-pin">Password</label><div class="pw-row"><input id="s-pin" type="password" maxlength="64" autocomplete="current-password" autocapitalize="off" spellcheck="false"><button type="button" class="btn sm ghost" id="s-eye" aria-label="Show password">Show</button></div>
+         <button class="btn" id="s-go" type="submit">Sign in</button></form><p class="err" id="s-err">${esc(err)}</p><button class="link" id="s-swap">New here? Make a character</button>`
       : `<h1>Make your <span>character</span></h1><p class="muted">One character for every JustGameBox game. Earn <b>JustGold</b> by playing, spend it here.</p>
          <div class="hero"><canvas id="s-cv"></canvas><button class="btn sm ghost shuffle" id="s-shuffle">🎲 Shuffle</button></div>
          <label for="s-name">Your name</label><input id="s-name" maxlength="14" autocomplete="nickname" placeholder="Name" value="${esc(name)}">
-         <button class="btn" id="s-go">Let’s go! ✨</button><p class="err" id="s-err">${esc(err)}</p><button class="link" id="s-swap">Already have a profile? Sign in</button>`;
+         <button class="btn" id="s-go">Let’s go! ✨</button><p class="err" id="s-err">${esc(err)}</p><button class="link" id="s-swap">Saved your stuff before? Sign in</button>`;
     cancelAnimationFrame(startRaf);
     const cv = $('#s-cv');
     if (cv) { const frame = (now) => { startRaf = requestAnimationFrame(frame); if (!cv.isConnected) return cancelAnimationFrame(startRaf); const [g, w, h] = fit(cv); const s = (h - 24) / 84; MTArt.drawCharacter(g, w / 2, h - 12, S.startLook, { scale: s, t: now / 1000 }); }; startRaf = requestAnimationFrame(frame); }
@@ -550,17 +550,34 @@
       go.disabled = true; err$.textContent = '';
       let r;
       if (mode === 'login') {
-        const pin = $('#s-pin').value.trim();
-        if (!/^\d{4,6}$/.test(pin)) { go.disabled = false; err$.textContent = 'The PIN is 4 to 6 digits.'; hap('error'); return; }
-        r = await API.login(nm, pin);
+        const pw = $('#s-pin').value;
+        if (pw.length < 4) { go.disabled = false; err$.textContent = 'Type your password (4+ characters).'; hap('error'); return; }
+        r = await API.login(nm, pw);
       } else r = await API.create(nm);
       go.disabled = false;
       if (!r.ok || !r.id || !r.token) { err$.textContent = r.error || 'That didn’t work. Try again.'; hap('error'); return; }
       if (API.live) setProf(r); try { localStorage.setItem('box.name', nm); } catch (e) { /* private */ }
       hap('success'); S.fresh = mode !== 'login'; boot();
     };
-    go.onclick = submit;
-    box.querySelectorAll('input').forEach((inp) => inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); }));
+    const form = $('#s-form');
+    if (form) form.onsubmit = (e) => { e.preventDefault(); submit(); }; // Enter submits too
+    else { go.onclick = submit; box.querySelectorAll('input').forEach((inp) => inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); })); }
+    const eye = $('#s-eye'); if (eye) eye.onclick = () => { const i = $('#s-pin'), show = i.type === 'password'; i.type = show ? 'text' : 'password'; eye.textContent = show ? 'Hide' : 'Show'; eye.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); };
+  }
+
+  // ---------- "Save your stuff": name + password (public/account-ui.js) ----------
+  // A banner over the character while the account is not saved; "Saved as NAME ✓" once it is.
+  let acct = null;
+  function accountBar() {
+    const el = $('#acct'); if (!el) return;
+    if (!API.live || !window.JGAccount) { el.innerHTML = ''; return; }
+    if (!acct) acct = JGAccount.create({ socket: API.socket, haptic: hap, toast, onChange: (kind) => {
+      if (kind === 'signout' || kind === 'signin') { S.edits = {}; S.sel = null; }
+      if (kind === 'signout') { S.st = null; showStart('login'); return; }
+      if (kind === 'signin') { boot(); return; }
+      accountBar();
+    } });
+    acct.banner(el);
   }
 
   // ---------- boot ----------
@@ -586,11 +603,12 @@
     S.fresh = false;
     $('#start').hidden = true; $('#left').hidden = false; $('#right').hidden = false;
     render();
+    accountBar();
     if (!raf) raf = requestAnimationFrame(stageFrame);
     clearInterval(pollT);
     pollT = setInterval(() => { if (S.st && S.st.busy && !S.inflight) refresh(); }, 10000);
   }
   window.addEventListener('pageshow', (e) => { if (e.persisted && S.st) refresh(); });
   if (API.live) { /* boot runs on connect */ S.waiting = true; setTimeout(() => { if (S.waiting) { S.waiting = false; boot(); } }, 50); } else boot();
-  window.JG_SHOP = { state: () => S, select, render };
+  window.JG_SHOP = { state: () => S, select, render, account: () => acct };
 })();

@@ -57,6 +57,7 @@
     if (id === '#screen-creator') startStage();
     if (id === '#screen-home') startHouseStage();
     if (id !== '#screen-home') homeMode = null;
+    if (id === '#screen-join' || id === '#screen-creator') mountAccount();
   }
 
   // Step 1: room code. A QR/link with ?room= skips straight to the creator.
@@ -328,6 +329,7 @@
     const shop = e.target.closest('a[data-jg-shop]'); if (shop) shop.setAttribute('href', shopHref()); // always the current room
     if (e.target.closest('[data-open-season]')) openSeason();
     if (e.target.closest('[data-open-stats]')) openStats();
+    const ab = e.target.closest('[data-acct] [data-jga]'); if (ab && acct) { e.preventDefault(); acct.open(ab.dataset.jga); }
   }, true);
   // ---------- My stats: career, mastery, rivalries, recent games ----------
   function openStats() {
@@ -423,7 +425,35 @@
   socket.on('profile:state', (p) => { profile = p; if (!$('#screen-creator').hidden) buildPicker(); renderSeason(); updatePouch(); });
   // The wallet (mt.profile) is shared with the JustGold shop (/shop), which may also replace it
   // with another device token of the same account; the server accepts any of them.
-  let seatLookPending = false;
+  let seatLookPending = false, profileLoaded = null;
+  // ---------- "Save your stuff": name + password (public/account-ui.js, the /box account) ----------
+  // Saving keeps this wallet (JustGold, items, character) and the stats under a name + password;
+  // signing in switches this phone to the saved account's wallet (resumed below like any wallet).
+  const acct = window.JGAccount ? JGAccount.create({ keys: { account: key('box.profile'), wallet: key('mt.profile'), name: key('box.name') }, name: () => (view && view.you && view.you.name) || ($('#j-name') && $('#j-name').value) || '', onChange: (kind) => {
+    if (kind === 'signout') { location.reload(); return; } // a fresh wallet for this phone
+    if (kind === 'signin') {
+      const creds = load('mt.profile');
+      if (creds) socket.emit('profile:resume', creds, (r) => {
+        if (!r || !r.ok || !profileLoaded) return;
+        profileLoaded(r);
+        // Already seated in the lobby: the seat now belongs to the signed-in wallet.
+        if (view && view.you && view.phase === 'lobby') socket.emit('player:profile', { name: view.you.name, avatar: savedAvatar });
+      });
+    }
+    mountAccount(true);
+  } }) : null;
+  const acctCache = {}; let acctAt = 0;
+  function mountAccount(force) {
+    if (!acct) return;
+    const els = [...document.querySelectorAll('[data-acct]')]; if (!els.length) return;
+    for (const el of els) if (!el.innerHTML && acctCache[el.dataset.acct]) el.innerHTML = acctCache[el.dataset.acct];
+    if (!force && Date.now() - acctAt < 15000) return;
+    acctAt = Date.now();
+    for (const mode of new Set(els.map((el) => el.dataset.acct))) {
+      const tmp = document.createElement('div');
+      acct.banner(tmp, { join: mode === 'join' }).then(() => { acctCache[mode] = tmp.innerHTML; for (const el of document.querySelectorAll(`[data-acct="${mode}"]`)) el.innerHTML = tmp.innerHTML; });
+    }
+  }
   socket.on('connect', () => {
     const creds = load('mt.profile');
     const ready = (r) => {
@@ -446,7 +476,9 @@
       if (!$('#screen-creator').hidden) buildPicker();
       updatePouch(); syncSeatLook();
       if (!$('#screen-join').hidden) tryAutoJoin();
+      mountAccount();
     };
+    profileLoaded = ready; // (signing in to a saved account loads its wallet the same way)
     // Only a definite "no such wallet" ({ ok: false }) makes a new profile; the old
     // credentials are kept aside so they are never silently lost.
     if (creds) socket.emit('profile:resume', creds, (r) => {
@@ -584,6 +616,7 @@
     const caret = focus ? document.activeElement.selectionStart : null;
     body.innerHTML = bodyHtml();
     wire(body);
+    mountAccount();
     renderSettings();
     renderAbility();
     renderPrivateScene();
@@ -711,6 +744,7 @@
         <p data-home-status>🏠 ${esc(homeStatus())}</p>
       </div>
       <div class="cas-bar lobby-actions jg-shop-row">${shopLinkHtml('btn')}</div>
+      <div class="lobby-acct" data-acct="lobby"></div>
       <div class="cas-bar lobby-actions"><button class="btn ghost" data-edit>Change my look</button><button class="btn ghost" data-house>Your house</button></div>
       <div class="cas-bar lobby-actions"><button class="btn ghost" data-open-season>🏆 Season &amp; unlocks</button><button class="btn ghost" data-open-stats>📊 My stats</button></div>`;
     }

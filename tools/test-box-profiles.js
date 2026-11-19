@@ -1,6 +1,6 @@
 'use strict';
 // JustGameBox lifetime profiles: the store (box/profiles.js), results recorded from a room's
-// scoreParty, trophies and titles, name + PIN sign-in, file persistence, and rooms without
+// scoreParty, trophies and titles, name + password sign-in (old PINs too), file persistence, and rooms without
 // profiles working exactly as before. Also the end-of-night recap data (box/recap.js).
 const assert = require('node:assert/strict');
 const fs = require('node:fs'); const path = require('node:path');
@@ -62,6 +62,49 @@ test('Name + PIN: claim a name, sign in on another phone, wrong PINs slow down, 
   assert(st.authenticate({ id: a.id, token: l.token }), 'the new phone has its own token'); assert(st.authenticate(a), 'the old phone still works');
   for (let i = 0; i < 5; i++) st.login('Ana', '9999');
   assert.match(st.login('Ana', '4321').error, /Too many tries/);
+});
+
+test('Passwords: any characters, 4 to 64; hashed; saved once, then only changed with the old one', () => {
+  const st = new BoxProfileStore(null), a = st.create('Cleo'), b = st.create('Dev');
+  for (const bad of ['abc', '', 'x'.repeat(65), 'ab\ncd', null, 1234]) assert.equal(st.claim(a.id, 'Cleo', bad).ok, false, 'rejected: ' + JSON.stringify(bad));
+  const pw = 'Purple Pizza! 🍕';
+  assert(st.claim(a.id, 'Cleo', pw).ok);
+  assert(!JSON.stringify(st.data).includes('Purple'), 'the password is hashed');
+  const v = st.view(a.id); assert.equal(v.hasPassword, true); assert.equal(v.claimed, 'Cleo');
+  assert.equal(st.claim(a.id, 'Cleo2', 'another one').ok, false, 'already saved: no silent password reset');
+  assert(st.claim(b.id, 'Dev', 'x'.repeat(64)).ok, '64 characters is fine');
+  assert.equal(st.login('Cleo', 'purple pizza! 🍕').ok, false, 'case matters');
+  const l = st.login(' cleo ', pw); assert(l.ok); assert.equal(l.id, a.id);
+  // Change the password: needs the old one; wrong guesses slow down.
+  assert.match(st.changePassword(a.id, 'nope', 'new-secret').error, /current password/);
+  assert.equal(st.changePassword(a.id, pw, 'abc').ok, false, 'the new one follows the rules');
+  assert(st.changePassword(a.id, pw, 'new-secret').ok);
+  assert.equal(st.login('Cleo', pw).ok, false, 'the old password stops working');
+  assert(st.login('Cleo', 'new-secret').ok);
+  for (let i = 0; i < 5; i++) st.changePassword(a.id, 'wrong!', 'whatever');
+  assert.match(st.changePassword(a.id, 'new-secret', 'again-new').error, /Too many tries/);
+  assert.equal(st.changePassword(st.create('Eve').id, 'x', 'yyyy').ok, false, 'not saved yet');
+  // Sign out on one phone: that token stops, the other phones keep working.
+  assert(st.forgetDevice({ id: a.id, token: l.token }));
+  assert.equal(st.authenticate({ id: a.id, token: l.token }), null); assert(st.authenticate(a));
+});
+
+test('Old PIN accounts: a saved file with { pin } still signs in (a PIN is a numeric password)', () => {
+  const file = path.join(__dirname, '..', '.data', 'box-profile-pin-' + process.pid + '.json');
+  try {
+    const st = new BoxProfileStore(file), a = st.create('Old');
+    assert(st.claim(a.id, 'Old', '1234').ok);
+    // Rewrite the file the way older versions saved it: the hash under `pin`.
+    const raw = JSON.parse(fs.readFileSync(file, 'utf8')), p = raw.profiles[a.id];
+    p.pin = p.password; delete p.password; fs.writeFileSync(file, JSON.stringify(raw));
+    const again = new BoxProfileStore(file);
+    assert.equal(again.view(a.id).hasPassword, true);
+    assert(again.login('Old', '1234').ok, 'the old PIN signs in');
+    assert.equal(again.login('Old', '4321').ok, false);
+    assert(again.changePassword(a.id, '1234', 'a real password').ok, 'and can become a real password');
+    assert(again.login('Old', 'a real password').ok);
+    assert(!('pin' in again.get(a.id)), 'migrated');
+  } finally { try { fs.unlinkSync(file); } catch { /* gone */ } }
 });
 
 test('Persistence: written to a file and read back (atomic write); memory store writes nothing', () => {

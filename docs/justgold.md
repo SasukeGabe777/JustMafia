@@ -5,7 +5,7 @@ Status: built on branch `claude/justgold`. The state before it is tagged `pre-ju
 
 ## The idea
 
-- **One account.** The JustGameBox profile (name + PIN, many devices; `box/profiles.js`) is the
+- **One account.** The JustGameBox profile (name + password, many devices; `box/profiles.js`) is the
   account. It links to one **wallet**: the JustMafia profile (`profiles.js`, `.data/profiles.json`),
   which already has the gold ledger, the owned items and the character look. Existing JustMafia gold
   and items carry over (the phone's `mt.profile` is linked the first time).
@@ -66,3 +66,25 @@ JustMafia keeps its own rules (`REWARDS`, capped at 30 a game). Everything goes 
 
 `busy` is true while the account is in a running game (box or JustMafia): buying and equipping wait
 until the lobby or the end of the game.
+
+### Save your stuff (name + password)
+
+The account starts as a guest on one phone. **Save your stuff** (`public/account-ui.js`, one panel
+shared by the box phone, the shop and JustMafia's phone) saves it under a name + password, so the
+same JustGold, character, items and stats can be used on any phone. Passwords: any characters,
+4–64, scrypt + salt (`box/profiles.js`). Old 4–6 digit PINs are numeric passwords and still sign in
+(old saves keep the hash under `pin`; it is moved to `password` on load). Wrong guesses (sign in or
+change password) lock that name for a minute after 5 tries.
+
+Where: the box phone join screen ("Sign in" link / "Save your stuff" card) and a one-time reminder
+after a game, the 🏆 My profile sheet ("💾 Save" tab), the shop (banner over the character; "Sign in"
+on the start screen), JustMafia's phone (join screen, character creator, lobby).
+
+| event | in | out |
+|---|---|---|
+| `account:status` | `{ auth, mafia? }` | `{ ok, account, saved, name, gold, games }` (no account yet: the gold of `mafia`) |
+| `profile:claim` | `{ auth, name, password }` (`pin` still accepted) | `{ ok, error?, profile }`; once saved, only `profile:password` changes it |
+| `profile:login` | `{ name, password }` | `{ ok, id, token, profile }`: a new device token; then `account:wallet` gives this phone the wallet |
+| `profile:password` | `{ auth, old, password }` | `{ ok, error? }` |
+| `profile:logout` | `{ auth }` | `{ ok }`: this phone's token stops working (refused while not saved) |
+

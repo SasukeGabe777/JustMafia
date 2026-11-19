@@ -20,6 +20,7 @@
     <div class="left" id="left" hidden>
       <div class="busy" id="busy" hidden><span style="font-size:28px">🎮</span><div><b>You’re in a game right now</b>You can shop after this game. Have a look around!</div></div>
       <div class="offline" id="offline" hidden></div>
+      <div class="acct" id="acct"></div> <!-- "Save your stuff" / "Saved as NAME ✓" (account-ui.js) -->
       <section class="stage" id="stage" aria-label="Your character">
         <div class="wall"></div>
         <canvas id="stage-cv"></canvas>
@@ -38,6 +39,7 @@
   <div class="toast" id="toast" hidden></div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/haptics.js"></script>
+  <script src="/account-ui.js"></script>
   <script src="/shared/options.js"></script>
   <script src="/shared/cosmetics.js"></script>
   <script src="/shared/gear.js"></script>
