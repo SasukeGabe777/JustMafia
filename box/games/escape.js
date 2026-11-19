@@ -19,7 +19,7 @@ const GEARS = require('../../public/shared/gear'); // JustGold gear: each detect
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'rooms', label: 'Case length', options: opt([[1, '1 room · about 15 min'], [2, '2 rooms · about 30 min'], [3, '3 rooms · about 45 min']]) },
-  { key: 'difficulty', label: 'Difficulty', options: opt([['climb', 'Easy → Medium → Hard'], ['easy', 'Easy'], ['medium', 'Medium'], ['hard', 'Hard']]) },
+  { key: 'difficulty', label: 'Difficulty', options: opt([['climb', '📈 Easy → Medium → Hard'], ['easy', '🟢 Easy'], ['medium', '🟡 Medium'], ['hard', '🔴 Hard']]) },
   { key: 'hints', label: 'Hints', options: opt([['on', 'Hazel can give hints'], ['off', 'No hints']]) },
 ];
 const defaults = { rooms: 1, difficulty: 'climb', hints: 'on' };

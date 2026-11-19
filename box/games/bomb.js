@@ -11,8 +11,11 @@ const fields = [
   { key: 'bombs', label: 'Bombs', options: opt([[3, '3 bombs (~10 min)'], [4, '4 bombs (~13 min)'], [5, '5 bombs (~17 min)']]) },
   { key: 'fuse', label: 'Fuse length', options: opt([['long', 'Long fuse (relaxed)'], ['normal', 'Normal fuse'], ['short', 'Short fuse (hard)']]) },
   { key: 'squads', label: 'Squads', options: opt([['auto', 'Auto (big groups split up)'], ['one', 'One big squad']]) },
+  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy (fewer modules, no radio)'], ['medium', '🟡 Medium'], ['hard', '🔴 Hard (more modules, radio from bomb 2)']]) },
 ];
-const defaults = { bombs: 4, fuse: 'normal', squads: 'auto' };
+const defaults = { bombs: 4, fuse: 'normal', squads: 'auto', difficulty: 'medium' };
+// Difficulty: how many modules each bomb has (first bomb, growth per bomb, most) and from which bomb the needy Radio joins.
+const LEVEL = { easy: { first: 2, max: 4, radio: 99 }, medium: { first: 3, max: 6, radio: 2 }, hard: { first: 4, max: 6, radio: 1 } };
 
 const BRIEF_MS = 9000, REVEAL_MS = 11000, BURN_MS = 15000, RADIO_MS = 25000, MAX_STRIKES = 3;
 const FUSE = { long: 1.35, normal: 1, short: 0.75 };
@@ -210,9 +213,10 @@ class Game {
   nextRound() {
     if (this.round >= this.s.bombs || !this.liveSquads().length) return this.end();
     this.round++; const r = this.round - 1;
-    this.nMods = Math.min(6, 3 + r); this.needy = r >= 2;
+    const L = LEVEL[this.s.difficulty] || LEVEL.medium;
+    this.nMods = Math.min(L.max, L.first + r); this.needy = r >= L.radio;
     const order = TYPES.slice(); for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(this.room.rng() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
-    const types = r === 0 ? ['wires', 'plunger', 'glyphs'] : order.slice(0, this.nMods);
+    const types = r === 0 ? ['wires', 'plunger', 'glyphs', ...order.filter((t) => !['wires', 'plunger', 'glyphs'].includes(t))].slice(0, this.nMods) : order.slice(0, this.nMods);
     this.secs = Math.round(((40 + 35 * this.nMods) * (FUSE[this.s.fuse] || 1) * (1 - 0.04 * r)) / 5) * 5;
     this.roundStart = new Map([...this.stats].map(([id, x]) => [id, x.points]));
     for (const sq of this.liveSquads()) {

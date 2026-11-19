@@ -140,4 +140,18 @@ test('next() skips through every phase', () => {
   for (let i = 0; i < 60 && room.game.phase !== 'over'; i++) room.game.next();
   assert.equal(room.game.phase, 'over');
 });
+test('difficulty: Easy scores a near miss higher and shows colours longer; Hard the reverse; Medium is the classic rule', () => {
+  assert.equal(def.defaults.difficulty, 'medium');
+  const C = def._color, dE = C.distHex('#3d7fc1', '#5a9ad8');
+  assert(C.matchPct(dE, 1.0) > C.matchPct(dE) && C.matchPct(dE) > C.matchPct(dE, 1.9));
+  const look = {};
+  for (const d of ['easy', 'medium', 'hard']) {
+    const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed: 12 }); room.addBots(3);
+    Object.assign(room.settings, { difficulty: d, styles: 'memory', rounds: 5 }); room.start();
+    run(room, clock, () => room.game.phase === 'look'); look[d] = room.game.tv().lookMs || room.game.lookMs(room.game.cur.kind);
+    run(room, clock, () => room.game.phase === 'over'); assert.equal(room.game.phase, 'over', d + ' finishes');
+  }
+  assert(look.easy > look.medium && look.medium > look.hard, JSON.stringify(look));
+});
+
 console.log(`\n${passed} Color Match tests passed.`);

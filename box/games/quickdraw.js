@@ -19,7 +19,7 @@ const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'rounds', label: 'Challenges', options: opt([[5, '5 challenges (≈5 min)'], [7, '7 challenges (≈6 min)'], [10, '10 challenges (≈8 min)']]) },
   { key: 'mix', label: 'Challenge mix', options: opt([['all', 'Everything'], ['still', 'No shaking'], ['duel', 'DRAW! duels only']]) },
-  { key: 'pace', label: 'Difficulty', options: opt([['easy', 'Greenhorn (easy)'], ['normal', 'Gunslinger'], ['sharp', 'Sharpshooter (hard)']]) },
+  { key: 'pace', label: 'Difficulty', options: opt([['easy', '🟢 Greenhorn (easy)'], ['normal', '🟡 Gunslinger'], ['sharp', '🔴 Sharpshooter (hard)']]) },
 ];
 const defaults = { rounds: 7, mix: 'all', pace: 'normal' };
 const KINDS = ['draw', 'flash', 'count', 'shake', 'copy'];
@@ -613,6 +613,7 @@ const partyFit = ({ minutes: M }) => PF.best({ rounds: [7, 5, 10] }, (s) => 0.5 
 
 module.exports = {
   partyFit,
+  difficulty: { key: 'pace', values: { easy: 'easy', medium: 'normal', hard: 'sharp' } }, // Party Mode's "How hard?" (box/party-fit.js)
   key: 'quickdraw', name: 'Quick Draw', min: 2, best: [2, 20], howSteps: 6, fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/quickdraw.js)
   locked: { how: 'Finish a game of President to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js

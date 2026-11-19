@@ -102,7 +102,7 @@
     how: [
       'A product appears on the big screen. Slide, tap or type your guess on your phone, then lock it in.',
       'Up to 1000 points for being close. Go OVER the real price and your points are halved: bust!',
-      'Within 5% without going over is a Bullseye (+500). The exact price is a Jackpot (+1000). Three close rounds in a row: Hot Streak (+300).',
+      'Within 5% without going over is a Bullseye (+500; 10% on Easy, 3% on Hard). The exact price is a Jackpot (+1000). Three close rounds in a row: Hot Streak (+300).',
       'Power-ups, once each per game: 🎯 Double Down (×2), 🛡️ Bust Shield, 👀 Peek at the room’s average.',
       'Quick-tap rounds: ⬆️⬇️ Higher or Lower and ⚖️ Which Costs More (be fast!). The last round is a 🛒 Shopping Spree worth DOUBLE points.',
     ],

@@ -48,7 +48,7 @@ test('Short slots get shorter games and long slots longer ones (every game chang
   assert.equal(PF.fitSettings(GAMES.truths, { players: 6, minutes: 10 }).settings.featured, 'auto');
   assert.notEqual(PF.fitSettings(GAMES.truths, { players: 40, minutes: 10 }).settings.featured, 'auto');
   assert.equal(PF.fitSettings(GAMES.spectrum, { players: 40, minutes: 10 }).settings.names, 'off');
-  assert.equal(PF.fitSettings(GAMES.pizza, { players: 6, minutes: 10 }).summary.join(' · '), '5 orders · 45 seconds · 🎲 Mixed');
+  assert.equal(PF.fitSettings(GAMES.pizza, { players: 6, minutes: 10, difficulty: 'hard' }).summary.join(' · '), '🔴 Hard · 5 orders · 45 seconds · 🎲 Mixed');
   // A game without a hook gets its rounds scaled to the time; bad hook answers are dropped.
   const plain = { key: 'plain', fields: [{ key: 'rounds', options: [{ value: 3, label: '3 rounds' }, { value: 6, label: '6 rounds' }, { value: 12, label: '12 rounds' }] }], defaults: { rounds: 6 } };
   assert.equal(PF.fitSettings(plain, { players: 4, minutes: 24 }).settings.rounds, 12);
@@ -65,10 +65,10 @@ const party = (keys, opts = {}, flow = 'auto') => {
 };
 
 test('In a party each game is set up for the players here and its minutes in the plan; the host can still change it in the lobby', () => {
-  const { r, clock } = party(['trivia', 'pizza'], { plan: { trivia: 5, pizza: 20 }, players: 6, intros: 'skip' });
+  const { r, clock } = party(['trivia', 'pizza'], { plan: { trivia: 5, pizza: 20 }, players: 6, intros: 'skip', difficulty: 'hard' });
   // Before anyone joins: fitted for the group size picked in the setup.
-  assert.equal(r.settings.questions, PF.fitSettings(GAMES.trivia, { players: 6, minutes: 5 }).settings.questions);
-  assert.deepEqual(r.tvState().partyMode.fit.summary, PF.fitSettings(GAMES.trivia, { players: 6, minutes: 5 }).summary);
+  assert.equal(r.settings.questions, PF.fitSettings(GAMES.trivia, { players: 6, minutes: 5, difficulty: 'hard' }).settings.questions);
+  assert.deepEqual(r.tvState().partyMode.fit.summary, PF.fitSettings(GAMES.trivia, { players: 6, minutes: 5, difficulty: 'hard' }).summary);
   r.join('Ana'); r.addBots(2);
   assert(r.start().ok);
   assert.equal(r.partyMode.fit.players, 3, 'fitted again at Start for the 3 players actually here');
@@ -78,7 +78,7 @@ test('In a party each game is set up for the players here and its minutes in the
   let i = 0; while (r.partyMode.phase !== 'board' && clock.step()) { r.scoreParty(); if (++i > 500000) throw new Error('stuck'); }
   const up = r.tvState().partyMode.upNext;
   assert.equal(up.game, 'pizza'); assert.equal(up.n, 2); assert.equal(up.minutes, 20);
-  assert.deepEqual(up.summary, PF.fitSettings(GAMES.pizza, { players: 3, minutes: 20 }).summary, 'the board shows the next game’s settings');
+  assert.deepEqual(up.summary, PF.fitSettings(GAMES.pizza, { players: 3, minutes: 20, difficulty: 'hard' }).summary, 'the board shows the next game’s settings');
   assert.equal(r.playerState(r.list()[0]).partyMode.upNext.game, 'pizza', 'phones see it too');
   while (r.partyMode.phase === 'board' && clock.step());
   assert.equal(r.def.key, 'pizza'); assert.equal(r.game.s.rounds, 8); assert.equal(r.game.s.seconds, 60);
@@ -168,6 +168,84 @@ test('The host can change the intros mid-party (⚙ menu); a bad value is refuse
   assert(L.r.start().ok); assert.equal(L.r.phase, 'game', 'its intro already played');
   // Old callers (no options) get the old behaviour.
   const O = party(['likely', 'trivia']); assert.equal(O.r.tvState().partyMode.intros, 'play'); assert.equal(O.r.tvState().partyMode.each, 'auto');
+});
+
+// ---------------- "How hard?" ----------------
+const LEVELED = Object.keys(GAMES).filter((k) => PF.levelOf(GAMES[k]));
+test('Difficulty reaches every game’s partyFit; every game with a difficulty gets the chosen level (and it leads the chips)', () => {
+  // The games that have one (box/party-fit.js levelOf: a `difficulty` field, or the module's own mapping).
+  for (const k of ['pizza', 'trivia', 'colormatch', 'price', 'bomb', 'emoji', 'escape', 'zombie', 'quickdraw', 'marble', 'letters', 'tune']) assert(LEVELED.includes(k), k + ' has a difficulty');
+  for (const k of ['likely', 'truths', 'whosaid', 'blanks', 'memes', 'debate', 'undercover', 'alien', 'spectrum']) assert(!LEVELED.includes(k), k + ' (a social game) has none');
+  for (const [k, def] of Object.entries(GAMES)) {
+    const got = [];
+    const hook = def.partyFit;
+    def.partyFit = (ctx) => { got.push(ctx.difficulty); return hook(ctx); };
+    try {
+      for (const d of ['easy', 'medium', 'hard']) {
+        const fit = PF.fitSettings(def, { players: 6, minutes: 10, difficulty: d });
+        const L = PF.levelOf(def);
+        if (L) {
+          assert.equal(fit.settings[L.key], L.values[d], `${k}: ${d} → ${L.key}=${L.values[d]}`);
+          assert(optionOk(def, L.key, L.values[d]), `${k}: ${L.key}=${L.values[d]} is a real option`);
+          assert.equal(fit.difficulty, d); assert.equal(fit.summary[0], PF.LEVEL_LABEL[d], k + ' chip');
+          assert(fit.summary.length <= 4);
+        } else { assert.equal(fit.difficulty, null); assert(!fit.summary.some((s) => /Easy|Medium|Hard/.test(s) && /🟢|🟡|🔴/.test(s)), k); }
+        // It starts with the fitted settings.
+        const r = new BoxRoom('LVL', def, { clock: new VirtualClock(), seed: 3 }); Object.assign(r.settings, fit.settings); r.addBots(Math.max(def.min, 4));
+        assert(r.start().ok, `${k} starts on ${d}`);
+      }
+      assert.deepEqual(got, ['easy', 'medium', 'hard'], k + ': partyFit is told the difficulty');
+      // No difficulty chosen (old parties): the game's own default stays.
+      const none = PF.fitSettings(def, { players: 6, minutes: 10 }), L = PF.levelOf(def);
+      if (L && !(def.partyFit({ players: 6, minutes: 10 }) || {})[L.key]) assert(!(L.key in none.settings), k + ': untouched without a party difficulty');
+    } finally { def.partyFit = hook; }
+  }
+  // Easy is really easier where it shows in the numbers.
+  assert(PF.fitSettings(GAMES.letters, { players: 6, minutes: 10, difficulty: 'easy' }).settings.seconds >= PF.fitSettings(GAMES.letters, { players: 6, minutes: 10, difficulty: 'hard' }).settings.seconds);
+  assert(PF.fitSettings(GAMES.trivia, { players: 6, minutes: 10, difficulty: 'easy' }).settings.seconds > PF.fitSettings(GAMES.trivia, { players: 6, minutes: 10, difficulty: 'hard' }).settings.seconds);
+});
+
+test('Party Mode: "How hard?" flows into each game; Mixed varies; bad values are ignored; the TV and phones see it', () => {
+  const keys = ['pizza', 'trivia', 'colormatch', 'price', 'emoji', 'likely'];
+  for (const d of ['easy', 'medium', 'hard']) {
+    const { r, clock } = party(keys, { difficulty: d, intros: 'skip', each: 'quick' });
+    assert.equal(r.tvState().partyMode.difficulty, d);
+    r.join('Ana'); r.addBots(3);
+    for (let i = 0; i < keys.length; i++) {
+      const def = r.def, L = PF.levelOf(def);
+      if (L) { assert.equal(r.settings[L.key], L.values[d], `${def.key} on ${d}`); assert.equal(r.tvState().partyMode.fit.difficulty, d); assert.equal(r.tvState().partyMode.fit.summary[0], PF.LEVEL_LABEL[d]); }
+      else assert.equal(r.tvState().partyMode.fit.difficulty, null, def.key + ' has no difficulty');
+      if (i === 0) assert(r.start().ok);
+      let n = 0; while (r.phase !== 'game' && clock.step()) if (++n > 100000) break;
+      if (L) assert.equal(r.game.s[L.key], L.values[d], `${def.key}: the game plays on ${d}`);
+      n = 0; while (r.game.phase !== 'over' && clock.step()) if (++n > 800000) break;
+      r.scoreParty();
+      if (i < keys.length - 1) {
+        while (r.partyMode.phase !== 'board' && clock.step());
+        const up = r.tvState().partyMode.upNext; const nd = GAMES[keys[i + 1]];
+        if (PF.levelOf(nd)) assert.equal(up.summary[0], PF.LEVEL_LABEL[d], 'the "Up next" chips lead with the difficulty');
+        r.partyNext();
+      }
+    }
+    if (d === 'easy') assert.equal(r.def.key, 'likely');
+  }
+  // Mixed: a different level from game to game (shuffled easy / medium / hard cycles), each a real level.
+  const many = ['pizza', 'trivia', 'colormatch', 'price', 'emoji', 'bomb'];
+  const levels = new Set();
+  for (const seed of [1, 2, 3]) {
+    const clock = new VirtualClock(), r = new BoxRoom('MIX', GAMES[many[0]], { clock, seed, shows: false }); r.setUnlocks(Object.keys(GAMES));
+    assert(r.setParty(many.map((k) => GAMES[k]), 60, 'lobby', { difficulty: 'mixed' }).ok);
+    assert.equal(r.tvState().partyMode.difficulty, 'mixed');
+    const per = many.map((k) => r.partyCtx(GAMES[k]).difficulty);
+    assert(per.every((x) => ['easy', 'medium', 'hard'].includes(x)), per.join());
+    assert.equal(new Set(per.slice(0, 3)).size, 3, 'each cycle of three has all three levels: ' + per);
+    per.forEach((x) => levels.add(x));
+    const L = PF.levelOf(GAMES.pizza); assert.equal(r.settings[L.key], per[0], 'the first game is set to its level');
+  }
+  assert.equal(levels.size, 3);
+  // Junk is ignored: each game keeps its own default.
+  const { r } = party(['pizza', 'trivia'], { difficulty: 'nightmare' });
+  assert.equal(r.partyMode.difficulty, null); assert.equal(r.settings.difficulty, GAMES.pizza.defaults.difficulty);
 });
 
 console.log(`\nAll ${passed} party plan tests passed.`);

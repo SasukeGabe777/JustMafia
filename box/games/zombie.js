@@ -91,7 +91,7 @@ const TOLD = [false, true].map((fam) => { const t = prepare(STORY.story(fam)); r
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
   { key: 'length', label: 'Story length', options: opt([['short', 'Short (~12 min)'], ['normal', 'Normal (~20 min)'], ['long', 'Long (~25 min)']]) },
-  { key: 'difficulty', label: 'Difficulty', options: opt([['forgiving', 'Forgiving'], ['normal', 'Normal'], ['brutal', 'Brutal: many won’t make it']]) },
+  { key: 'difficulty', label: 'Difficulty', options: opt([['forgiving', '🟢 Forgiving'], ['normal', '🟡 Normal'], ['brutal', '🔴 Brutal: many won’t make it']]) },
   { key: 'timer', label: 'Time to choose', options: opt([[20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds']]) },
   { key: 'ghosts', label: 'Ghosts', options: opt([[true, 'On: the dead haunt the living'], [false, 'Off: the dead just watch']]) },
   { key: 'narrator', label: 'Narrator voice', options: opt([[true, 'On'], [false, 'Off: subtitles only']]) },
@@ -795,6 +795,7 @@ const partyFit = ({ minutes: M }) => ({ length: M <= 14 ? 'short' : M <= 22 ? 'n
 
 module.exports = {
   partyFit,
+  difficulty: { key: 'difficulty', values: { easy: 'forgiving', medium: 'normal', hard: 'brutal' } }, // Party Mode's "How hard?" (box/party-fit.js)
   key: 'zombie', name: 'Zombie Survival', min: 1, best: [4, 16], howSteps: 6, fields, defaults,
   locked: { how: 'Finish a Party Mode to unlock it.' },
   create: (room, settings) => new Zombie(room, settings),

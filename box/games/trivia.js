@@ -22,8 +22,12 @@ const fields = [
   { key: 'seconds', label: 'Answer timer', options: opt([[10, '10 seconds'], [15, '15 seconds'], [20, '20 seconds']]) },
   { key: 'cats', label: 'Categories', options: opt([['all', 'Everything (rotating)'], ['brainy', 'Brainy (science, history, places…)'], ['fun', 'Fun (food, animals, pop culture…)'], ...CATEGORIES.map((c) => [c.key, `${c.icon} ${c.label} only`])]) },
   { key: 'family', label: 'Family friendly', options: opt([[false, 'Off: full difficulty'], [true, 'On: easier, no point losses']]) },
+  // Question difficulty (each question is rated 1–3): Easy asks 1s (2s when a category runs out), Medium 1–2, Hard 2–3.
+  { key: 'difficulty', label: 'Difficulty', options: opt([['mixed', '🎲 Mixed (every level)'], ['easy', '🟢 Easy questions'], ['medium', '🟡 Medium (easy and medium)'], ['hard', '🔴 Hard (medium and hard)']]) },
 ];
-const defaults = { questions: 12, seconds: 15, cats: 'all', family: false };
+const defaults = { questions: 12, seconds: 15, cats: 'all', family: false, difficulty: 'mixed' };
+// Which question ratings each difficulty asks, best first (the next list when a category has none left).
+const LEVEL_WANT = { easy: [(d) => d <= 1, (d) => d <= 2], medium: [(d) => d <= 2], hard: [(d) => d >= 2] };
 
 const INTRO_MS = 3000, HOT_INTRO_MS = 5000, ALLIN_INTRO_MS = 4500, WAGER_MS = 15000, DRUM_MS = 1800, REVEAL_MS = 8000, FINAL_REVEAL_MS = 9000, END_EARLY_MS = 900;
 const BASE = 100, LOSS = 50, SPEED_MAX = 50, STREAK_AT = 3, STREAK_BONUS = 50, HOT_MULT = 2, PRED_WIN = 50, PRED_LOSS = 25, ALLIN_FLOOR = 100;
@@ -77,7 +81,9 @@ class Trivia {
       this.decks[cat] = this.shuffle(pool);
     }
     const d = this.decks[cat];
-    let i = d.findIndex((x) => want(x.row[0])); if (i < 0) i = d.length - 1;
+    let i = -1;
+    for (const lv of LEVEL_WANT[this.s.difficulty] || []) { i = d.findIndex((x) => want(x.row[0]) && lv(x.row[0])); if (i < 0) i = d.findIndex((x) => lv(x.row[0])); if (i >= 0) break; }
+    if (i < 0) i = d.findIndex((x) => want(x.row[0])); if (i < 0) i = d.length - 1;
     const { row, id } = d.splice(i, 1)[0];
     seen.add(id); if (seen.size > 200) seen.delete(seen.values().next().value);
     const [diff, text, right, ...wrong] = row;
@@ -372,8 +378,8 @@ class Trivia {
 
 // Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
 const PF = require('../party-fit');
-const partyFit = ({ minutes: M }) => {
-  const seconds = M <= 7 ? 10 : 15;
+const partyFit = ({ minutes: M, difficulty }) => {
+  const seconds = difficulty === 'easy' ? (M <= 7 ? 15 : 20) : M <= 7 ? 10 : 15; // Easy: a little longer to answer
   const { questions } = PF.best({ questions: [12, 8, 16] }, (s) => 0.5 + s.questions * (seconds + 22) / 60, M);
   return { questions, seconds };
 };
