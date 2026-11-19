@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/hub.css">
   <link rel="stylesheet" href="/party/party.css">
+  <link rel="stylesheet" href="/hub-onboard.css">
 </head>
 <body>
 <!--
@@ -51,7 +52,7 @@
     <header class="hub-head">
       <div class="brand">
         <h1 class="logo"><span class="just">Just</span><span class="game">Game</span><span class="box">Box</span></h1>
-        <p class="tag">Party games for the big screen. Everyone plays from their phone.</p>
+        <p class="tag">Party games for the big screen. Everyone plays from their phone. <button class="hiw-link" id="hiw-open">▶ How it works <small>1 min</small></button></p>
       </div>
       <div class="head-actions">
         <a class="continue" id="continue" hidden></a>
@@ -62,6 +63,9 @@
     <!-- One code for the night (hub.js): this TV's room is still open, so a game picked here
          switches that room and every phone follows. -->
     <p class="room-live" id="room-live" hidden></p>
+    <!-- New people (public/hub-onboard.js): what's just been unlocked, and "New here? Start with these 5". -->
+    <div class="whats-new" id="whats-new" hidden></div>
+    <section class="new-here" id="new-here" aria-label="New here? Start with these" hidden></section>
 
     <a class="phone-join" href="/box/play">📱 On your phone? <b>Tap here to join a game</b></a>
     <a class="phone-join shop-join" href="/shop?back=/">🛍️ <b>Your character &amp; the JustGold shop</b></a>
@@ -95,6 +99,7 @@
     </section>
 
     <!-- More games: hub.js sorts these onto labelled shelves by type (see the note at the top). -->
+    <div class="unlock-tip" id="unlock-tip" hidden></div>
     <div class="more-head">
       <h2 class="more-title">More games <small id="more-count"></small></h2>
       <nav class="hub-tools" aria-label="Find a game">
@@ -268,5 +273,9 @@
   <script src="/hub.js"></script>
   <script src="/party/party.js"></script>
   <script src="/hub-pick.js"></script>
+  <script src="/avatar.js"></script> <!-- the characters in "How it works" -->
+  <script src="/box/portrait.js"></script>
+  <script src="/box/voice.js"></script> <!-- its narrator clips, when there are any -->
+  <script src="/hub-onboard.js"></script>
 </body>
 </html>

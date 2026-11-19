@@ -28,7 +28,7 @@ async function setup(browser, game, settings = {}) {
   for (const p of PAGES) if (!p.parked) { p.parked = true; try { await p.send('Page.navigate', { url: 'about:blank' }); } catch { /* closed */ } }
   const tv = await browser.page();
   await tv.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
-  await tv.go(`${URL}/box/tv?game=${game}&new=1`);
+  await tv.go(`${URL}/box/tv?game=${game}&new=1&practice=0`); // practice rounds are tested in e2e-onboard
   await tv.until(`/^[A-Z]{4}$/.test((document.querySelector('#code') || {}).textContent || '')`, game + ' lobby');
   const code = await tv.eval(`document.querySelector('#code').textContent`);
   await tv.until(`document.querySelector('#qr').complete && document.querySelector('#qr').naturalWidth > 100`, 'QR image');

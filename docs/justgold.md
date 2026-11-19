@@ -94,6 +94,11 @@ Where: the box phone join screen ("Sign in" link / "Save your stuff" card) and a
 after a game, the 🏆 My profile sheet ("💾 Save" tab), the shop (banner over the character; "Sign in"
 on the start screen), JustMafia's phone (join screen, character creator, lobby).
 
+When: never before the player has finished a game (games on the account, JustGold, or this phone's
+`jg.played` flag, set when a real game ends; a practice round doesn't count). Until then every banner
+is just "Played before? Sign in". The first finished game brings it up on the game-over screen:
+"You earned 15 JG! Save it with a name + password" (`acct.nudge(el, { earned })`).
+
 | event | in | out |
 |---|---|---|
 | `account:status` | `{ auth, mafia? }` | `{ ok, account, saved, name, gold, games }` (no account yet: the gold of `mafia`) |

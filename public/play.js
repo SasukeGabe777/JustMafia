@@ -370,6 +370,9 @@
     $('#g-pouch').onclick = () => { const pop = $('#g-pouch-pop'); pop.hidden = !pop.hidden; pop.innerHTML = pouchHtml(); };
     if (!$('#g-pouch-pop').hidden) $('#g-pouch-pop').innerHTML = pouchHtml();
     MT_SHOP.paintPouches();
+    // JustGold arrived (a game paid out): the account line may now offer "Save your stuff".
+    const coins = profile ? profile.coins : null;
+    if (coins !== updatePouch.coins) { const first = updatePouch.coins === undefined; updatePouch.coins = coins; if (!first) mountAccount(true); }
   }
 
   // ---------- join ----------

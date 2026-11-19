@@ -93,10 +93,18 @@
   ];
 
   // ---- Options ----
-  const opt = { flow: 'auto', p: 1, t: 1, mood: 'all', types: new Set(TYPES.filter((t) => !t.big).map((t) => t.k)), big: 'maybe', each: 'auto', intros: 'play' };
-  const SAVE = 'box.partyOpts'; // how long each game runs and the intros: remembered on this TV
-  try { const s = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (s) { if (LENGTHS.some((x) => x.k === s.each)) opt.each = s.each; if (INTROS.some((x) => x.k === s.intros)) opt.intros = s.intros; } } catch { /* private mode */ }
-  const saveOpts = () => { try { localStorage.setItem(SAVE, JSON.stringify({ each: opt.each, intros: opt.intros })); } catch { /* private mode */ } };
+  // Practice rounds (box/room.js): a quick warm-up that doesn't count before each game, or only
+  // before games this TV hasn't finished yet (box.done, kept by the TV page).
+  const PRACTICE = [
+    { k: 'on', label: 'On', icon: '🎓', sub: 'A quick warm-up before every game' },
+    { k: 'off', label: 'Off', icon: '⏩', sub: 'Straight into every game' },
+    { k: 'new', label: 'Only for new games', icon: '🆕', sub: 'A warm-up before games you haven’t played here' },
+  ];
+  const doneList = () => { try { const v = JSON.parse(localStorage.getItem('box.done') || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+  const opt = { flow: 'auto', p: 1, t: 1, mood: 'all', types: new Set(TYPES.filter((t) => !t.big).map((t) => t.k)), big: 'maybe', each: 'auto', intros: 'play', practice: doneList().length ? 'off' : 'new' };
+  const SAVE = 'box.partyOpts'; // how long each game runs, the intros and practice rounds: remembered on this TV
+  try { const s = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (s) { if (LENGTHS.some((x) => x.k === s.each)) opt.each = s.each; if (INTROS.some((x) => x.k === s.intros)) opt.intros = s.intros; if (PRACTICE.some((x) => x.k === s.practice)) opt.practice = s.practice; } } catch { /* private mode */ }
+  const saveOpts = () => { try { localStorage.setItem(SAVE, JSON.stringify({ each: opt.each, intros: opt.intros, practice: opt.practice })); } catch { /* private mode */ } };
   try { // start from the main menu's "How many of you?" choice
     const on = document.querySelector('#count .on'), n = on && Number(on.dataset.n);
     if (n) opt.p = n <= 3 ? 0 : n <= 8 ? 1 : n <= 20 ? 2 : 3;
@@ -230,6 +238,8 @@
         <div class="pm-opts two">${[['auto', '⏩', 'Keep it flowing', 'Each game starts right after the standings'], ['lobby', '⚙️', 'Let the host adjust', 'Stop at each game’s settings first']].map(([k, ic, l, sub]) => `<button class="pm-opt pm-f ${opt.flow === k ? 'on' : ''}" data-id="f-${k}" data-flow="${k}" aria-pressed="${opt.flow === k}"><span class="pm-oi">${ic}</span><b>${l}</b><small>${sub}</small></button>`).join('')}</div></div>
       <div class="pm-q"><h2><span class="pm-num">6</span> 🎬 Intro cutscenes</h2>
         <div class="pm-opts three">${INTROS.map((x) => `<button class="pm-opt pm-f ${opt.intros === x.k ? 'on' : ''}" data-id="i-${x.k}" data-intros="${x.k}" aria-pressed="${opt.intros === x.k}"><span class="pm-oi">${x.icon}</span><b>${x.label}</b><small>${x.sub}</small></button>`).join('')}</div></div>
+      <div class="pm-q"><h2><span class="pm-num">7</span> 🎓 Practice rounds</h2>
+        <div class="pm-opts three">${PRACTICE.map((x) => `<button class="pm-opt pm-f ${opt.practice === x.k ? 'on' : ''}" data-id="r-${x.k}" data-practice="${x.k}" aria-pressed="${opt.practice === x.k}"><span class="pm-oi">${x.icon}</span><b>${x.label}</b><small>${x.sub}</small></button>`).join('')}</div></div>
       <footer class="pm-foot">
         <button class="pm-btn ghost pm-f" data-id="back" data-act="close">◀ Back</button>
         <div class="pm-sum">${can ? `About <b>${gamesFor([...small, ...big])}</b> game${gamesFor([...small, ...big]) === 1 ? '' : 's'} · about <b>${esc(TIMES[opt.t].label)}</b> · <b>${small.length + big.length}</b> in the hat` : '<b class="pm-warn">Pick at least one kind of game</b>'}</div>
@@ -245,6 +255,7 @@
     if (el.dataset.flow) { opt.flow = el.dataset.flow === 'lobby' ? 'lobby' : 'auto'; sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.each) { opt.each = el.dataset.each; saveOpts(); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.intros) { opt.intros = el.dataset.intros; saveOpts(); sfx('pop'); return setup(el.dataset.id); }
+    if (el.dataset.practice) { opt.practice = el.dataset.practice; saveOpts(); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.mood) { setMood(el.dataset.mood); sfx('pop'); return setup(el.dataset.id); }
     if (el.dataset.type) {
       const t = TYPES.find((x) => x.k === el.dataset.type);
@@ -468,7 +479,7 @@
     const sub = body().querySelector('#pm-sub');
     const tot = totalMin(lineup);
     const L = LENGTHS.find((x) => x.k === opt.each), I = INTROS.find((x) => x.k === opt.intros);
-    sub.innerHTML = `<b>${lineup.length}</b> game${lineup.length === 1 ? '' : 's'} · about <b>${fmtMin(tot)}</b> · ${esc(PLAYERS[opt.p].label)} players · ${L && L.m ? `${esc(L.label.toLowerCase())} games (~${L.m} min)` : 'each game its usual length'} · ${esc(I ? I.icon + ' ' + I.label.toLowerCase() : '')}`;
+    sub.innerHTML = `<b>${lineup.length}</b> game${lineup.length === 1 ? '' : 's'} · about <b>${fmtMin(tot)}</b> · ${esc(PLAYERS[opt.p].label)} players · ${L && L.m ? `${esc(L.label.toLowerCase())} games (~${L.m} min)` : 'each game its usual length'} · ${esc(I ? I.icon + ' ' + I.label.toLowerCase() : '')}${opt.practice !== 'off' ? ` · 🎓 practice rounds${opt.practice === 'new' ? ' for new games' : ''}` : ''}`;
   }
   async function rerollOne(i) {
     const k = lineup[i], big = GAMES[k].big;
@@ -498,8 +509,8 @@
       root.classList.add('launch');
       // A party needs a box game to start in; a lone JustMafia is just a game of JustMafia.
       const plan = Object.fromEntries(lineup.map((k) => [k, planOf(k)]));
-      const extra = { intros: opt.intros, each: opt.each, plan, players: [3, 6, 12, 24][opt.p] }; // players: a guess until people join
-      const url = lineup.length === 1 && lineup[0] === 'mafia' ? '/mafia' : `/box/tv?game=${encodeURIComponent(lineup[0])}&party=${lineup.map(encodeURIComponent).join(',')}&minutes=${TIMES[opt.t].m}${opt.flow === 'lobby' ? '&flow=lobby' : ''}&intros=${opt.intros}&each=${opt.each}&plan=${lineup.map((k) => encodeURIComponent(k) + ':' + plan[k]).join(',')}&players=${extra.players}`;
+      const extra = { intros: opt.intros, each: opt.each, plan, players: [3, 6, 12, 24][opt.p], practice: opt.practice, seen: doneList() }; // players: a guess until people join
+      const url = lineup.length === 1 && lineup[0] === 'mafia' ? '/mafia' : `/box/tv?game=${encodeURIComponent(lineup[0])}&party=${lineup.map(encodeURIComponent).join(',')}&minutes=${TIMES[opt.t].m}${opt.flow === 'lobby' ? '&flow=lobby' : ''}&intros=${opt.intros}&each=${opt.each}&plan=${lineup.map((k) => encodeURIComponent(k) + ':' + plan[k]).join(',')}&players=${extra.players}&practice=${opt.practice}`;
       try { localStorage.setItem('box.recent', lineup[0]); } catch { /* private */ }
       // This TV's room is still open (hub.js): the party starts in it, same code, everyone along.
       const H = window.HUB_ROOM;

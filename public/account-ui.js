@@ -9,6 +9,10 @@
 //   acct.open('save' | 'signin' | 'account')   a sheet over the page
 //   acct.panel(el, mode)                         the same form inside any element
 //   acct.banner(el, { join })                    "Save your stuff" card / "Saved as NAME ✓" line
+//   acct.nudge(where, { earned })                after a finished game: "You earned 15 JG! Save it…"
+//   acct.markPlayed() / played()                 this phone finished a real game (local flag)
+// The "Save your stuff" card never shows before the player has finished a game (games played on
+// the account, JustGold earned, or this phone's flag): until then only a small "Sign in" link.
 //   onChange(kind) with kind = 'saved' | 'signin' | 'signout' | 'password'
 (function () {
   const MIN = 4, MAX = 64;
@@ -63,6 +67,10 @@
     const hap = (k) => { try { if (opts.haptic) opts.haptic(k); else if (window.HAPTIC) window.HAPTIC.play(k); } catch (e) { /* none */ } };
     const getJ = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
     const setJ = (k, v) => { try { if (v) localStorage.setItem(k, JSON.stringify(v)); else localStorage.removeItem(k); } catch (e) { /* private mode */ } };
+    const PLAYED = K.played || 'jg.played';
+    const played = () => { try { return localStorage.getItem(PLAYED) === '1'; } catch (e) { return false; } };
+    const markPlayed = () => { try { localStorage.setItem(PLAYED, '1'); } catch (e) { /* private mode */ } };
+    const hasStuff = (s) => !!(s && (s.gold > 0 || s.games > 0 || played()));
     const pair = (p) => (p && typeof p.id === 'string' && typeof p.token === 'string' ? { id: p.id, token: p.token } : null);
     const auth = () => pair(getJ(K.account));
     const wallet = () => pair(getJ(K.wallet));
@@ -192,28 +200,30 @@
     async function banner(el, o = {}) {
       if (!el) return null; styles();
       const s = await status(); if (!s.ok) { el.innerHTML = ''; return s; }
-      const has = s.gold > 0 || s.games > 0;
+      const has = hasStuff(s);
       if (s.saved) el.innerHTML = `<div class="jga-banner saved"><span class="jga-bi">✅</span><span class="jga-bt">Saved as <b style="display:inline">${esc(s.name)}</b>${s.gold ? ` · ${s.gold} JG` : ''}</span><button data-jga="account">Account</button></div>`;
-      else if (o.join && !has) el.innerHTML = '<div class="jga-banner slim"><span class="jga-bt">Played before? <button data-jga="signin">Sign in</button> to get your JustGold back.</span></div>';
+      else if (!has) el.innerHTML = // nothing to save before the first finished game: just the sign-in link
+ '<div class="jga-banner slim"><span class="jga-bt">Played before? <button data-jga="signin">Sign in</button> to get your JustGold back.</span></div>';
       else el.innerHTML = `<div class="jga-banner"><span class="jga-bi">💾</span><span class="jga-bt"><b>Save your stuff</b>${s.gold ? `Your ${s.gold} JG, ` : 'Your '}character and stats live on this phone only.</span><button data-jga="save">Save</button></div>${o.join ? '<div class="jga-banner slim"><span class="jga-bt">Already saved? <button data-jga="signin">Sign in</button></span></div>' : ''}`;
       for (const b of el.querySelectorAll('[data-jga]')) b.onclick = () => open(b.dataset.jga);
       return s;
     }
     // A one-time reminder after a game, when there is something worth saving.
-    async function nudge(where = document.body) {
+    async function nudge(where = document.body, o = {}) {
       try { if (sessionStorage.getItem('jga.nudged')) return; } catch (e) { /* */ }
-      const s = await status(); if (!s.ok || s.saved || !(s.gold > 0 || s.games > 0)) return;
+      const s = await status(); if (!s.ok || s.saved || !hasStuff(s)) return;
       if (document.getElementById('jga-nudge')) return;
       try { sessionStorage.setItem('jga.nudged', '1'); } catch (e) { /* */ }
       styles();
       const n = document.createElement('div'); n.id = 'jga-nudge'; n.className = 'jga-banner jga-nudge';
-      n.innerHTML = `<span class="jga-bi">💾</span><span class="jga-bt"><b>Save your stuff</b>Keep ${s.gold ? `your ${s.gold} JG` : 'your stats'} with a name and password.</span><button data-jga="save">Save</button><button class="jga-later" data-later aria-label="Later">Later</button>`;
+      const earned = Math.max(0, Math.round(Number(o.earned) || 0));
+      n.innerHTML = `<span class="jga-bi">${earned ? '🪙' : '💾'}</span><span class="jga-bt"><b>${earned ? `You earned ${earned} JG!` : 'Save your stuff'}</b>${earned ? `Save it with a name + password${s.gold > earned ? ` (you have ${s.gold} JG)` : ''} and play on any phone.` : `Keep ${s.gold ? `your ${s.gold} JG` : 'your stats'} with a name and password.`}</span><button data-jga="save">Save</button><button class="jga-later" data-later aria-label="Later">Later</button>`;
       where.appendChild(n);
       n.querySelector('[data-jga]').onclick = () => { n.remove(); open('save'); };
       n.querySelector('[data-later]').onclick = () => n.remove();
       setTimeout(() => n.remove(), 20000);
     }
-    return { status, save, signIn, signOut, changePassword, linkWallet, panel, open, close, banner, nudge, auth, wallet, last: () => last, watch: (fn) => { watchers.add(fn); return () => watchers.delete(fn); } };
+    return { markPlayed, played, status, save, signIn, signOut, changePassword, linkWallet, panel, open, close, banner, nudge, auth, wallet, last: () => last, watch: (fn) => { watchers.add(fn); return () => watchers.delete(fn); } };
   }
   window.JGAccount = { create, MIN, MAX };
 })();
