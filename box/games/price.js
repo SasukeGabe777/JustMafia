@@ -307,7 +307,7 @@ class Price {
       phase: this.phase, kind: this.kind, round: this.round, rounds: this.rounds(), endsIn: this.endsIn(),
       items: this.publicItems(), hiloPrice: this.hiloPrice, sliderMax: this.sliderMax, price: shown ? this.price : null, dropped: shown,
       locked: this.guesses.size, total: players.length, standings: this.standings().slice(0, 12), final: this.round === this.rounds(), mult: FINAL_MULT,
-      lockers: players.slice(0, 40).map((p) => ({ name: p.name, avatar: p.avatar || null, color: p.color, in: this.guesses.has(p.id) })),
+      lockers: players.slice(0, 40).map((p) => ({ id: p.id, name: p.name, avatar: p.avatar || null, color: p.color, in: this.guesses.has(p.id) })),
       // the last few we are waiting on, by name (any room size)
       waiting: this.phase === 'guess' ? this.waitingNames() : null,
       note: 'Prices are rough US averages, 2026',

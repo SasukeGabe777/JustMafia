@@ -278,7 +278,7 @@ class Trivia {
 
   // ---- public / private state ----
   // gear: the player's JustGold shop gear for this game ({ podium }; 'classic' when none), lights their contestant on the TV.
-  pub(id) { const p = this.room.get(id); return p ? { name: p.name, avatar: p.avatar || null, color: p.color || '#ffd23f', gear: GEARS.gearSet(p, 'trivia') } : { name: '—', avatar: null, color: '#888', gear: null }; }
+  pub(id) { const p = this.room.get(id); return p ? { id, name: p.name, avatar: p.avatar || null, color: p.color || '#ffd23f', gear: GEARS.gearSet(p, 'trivia') } : { name: '—', avatar: null, color: '#888', gear: null }; }
   standings() {
     return [...this.scores].filter(([id]) => this.room.get(id))
       .map(([id, pts]) => ({ id, ...this.pub(id), points: pts, streak: this.stats.get(id).streak, correct: this.stats.get(id).correct }))
@@ -345,8 +345,8 @@ class Trivia {
       locked: live ? here.filter(acted).length : 0, of: here.length,
       roster: live && here.length <= 24 ? here.map((id) => ({ ...this.pub(id), in: acted(id), seat: id === r.seat })) : null,
       result: this.publicResult(),
-      standings: this.standings().slice(0, 10).map(({ id, ...x }) => x),
-      final: this.phase === 'over' ? { awards: this.awards(), standings: this.standings().slice(0, 12).map(({ id, ...x }) => x) } : null,
+      standings: this.standings().slice(0, 10),
+      final: this.phase === 'over' ? { awards: this.awards(), standings: this.standings().slice(0, 12) } : null,
     };
   }
   view(p) {
@@ -365,7 +365,7 @@ class Trivia {
       myPred: r && r.preds.has(p.id) ? r.preds.get(p.id) : null,
       myWager: r && r.wagers.has(p.id) ? r.wagers.get(p.id) : null, stakeBase: this.stakeBase(p.id), myStake: r && r.stakes.has(p.id) ? r.stakes.get(p.id) : null,
       mine, points: this.scores.get(p.id) || 0, rank: st.findIndex((x) => x.id === p.id) + 1, of: st.length, streak: s ? s.streak : 0,
-      final: this.phase === 'over' ? { awards: this.awards(), standings: st.slice(0, 10).map(({ id, ...x }) => x) } : null,
+      final: this.phase === 'over' ? { awards: this.awards(), standings: st.slice(0, 10) } : null,
     };
   }
 }

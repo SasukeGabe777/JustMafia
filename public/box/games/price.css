@@ -213,3 +213,15 @@
 .sl-price .sl-pad::before { content: ''; position: absolute; top: -18px; left: 18px; width: 28px; height: 22px; border: 5px solid var(--c); border-bottom: 0; border-radius: 20px 20px 0 0; }
 .sl-price .sl-pn { font: 700 15px 'Fredoka', sans-serif; color: #fff; background: rgba(0, 0, 0, 0.6); padding: 1px 8px; border-radius: 8px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @keyframes slBag { 50% { transform: translateY(-6px) rotate(2deg); } }
+/* Characters (BOX.face / BOX.body): contestants line up in their store hat, name tag and shopping gear. */
+body.g-price .pp-chips.staged { gap: 4px 10px; align-items: flex-end; }
+body.g-price .pp-contestant { display: inline-flex; flex-direction: column; align-items: center; gap: 0; transition: transform 0.3s; }
+body.g-price .pp-contestant .bx-body { margin-bottom: -8px; opacity: 0.6; filter: grayscale(0.35) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35)); transition: opacity 0.3s, filter 0.3s; }
+body.g-price .pp-contestant.in .bx-body { opacity: 1; filter: drop-shadow(0 0 8px var(--c, #2ee6a6)) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35)); }
+body.g-price .pp-contestant.in { transform: translateY(-4px); }
+body.g-price .pp-contestant .pp-chip { position: relative; z-index: 1; font-size: 13px; padding: 1px 8px; }
+body.g-price .pp-chip .bx-face, body.g-price .pp-lab .bx-face, body.g-price .pp-bestcard h4 .bx-face { margin: -8px -2px; }
+body.g-price .pp-board .bx-face, body.g-price .pp-award .bx-face { margin: -7px 0; }
+body.g-price .pp-champ .bx-face { margin: -14px 0; vertical-align: middle; }
+body.g-price .pp-podfig { line-height: 0; margin-bottom: -4px; }
+body.g-price .pp-final .pp-pod.bronze .bar { height: 76px; }

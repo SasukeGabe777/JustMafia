@@ -22,7 +22,11 @@
       wave: `repeating-radial-gradient(circle at 50% 130%, ${a} 0 3px, ${b} 3px 4.5px, ${a} 4.5px 7px)` }[p.pattern] || `linear-gradient(160deg, ${a}, ${b})`;
     return `background:${bg};border-color:${b};${p.glow ? `box-shadow:0 0 6px ${b};` : ''}`;
   }
-  const av = (x) => (x && x.av ? `<span class="pr-av">${esc(x.av)}</span>` : '');
+  // Your JustGameBox character (crown and royal cape from the shop) where the emoji was.
+  const emo = (x) => esc((x && (x.av || x.avatar)) || '🙂');
+  const face = (x, sz = 28, o) => (x && BOX.face ? BOX.face({ ...x, avatar: x.avatar || x.av }, sz, o) : emo(x));
+  const body = (x, h = 110, o) => (x && BOX.body ? BOX.body({ ...x, avatar: x.avatar || x.av }, h, o) : `<span>${emo(x)}</span>`);
+  const av = (x) => (x && (x.av || x.id) ? `<span class="pr-av">${face(x, 28)}</span>` : '');
   const tname = (id, n) => (id === 0 && n > 1 ? '👑 The Palace' : 'Table ' + (id + 1));
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const setName = (n) => ['', 'single', 'pair', 'triple', 'four of a kind'][n] || n + ' cards';
@@ -164,10 +168,10 @@
       <div class="prl-coins">${f.options.map((o) => `<button class="prl-coin ${String(val) === String(o.value) ? 'on' : ''}" data-k="${esc(f.key)}" data-v="${esc(String(o.value))}" title="${esc(o.label)}">${esc(String(lab(o.value)))}</button>`).join('')}</div>${sel}</div>`;
   }
   let lobbyErr = '';
-  function courtier(p, i, vip) {
+  function courtier(p, i, vip, sz) {
     const suit = SUITS[i % 4], red = i % 4 === 1 || i % 4 === 2;
     return `<span class="chip pr-courtier ${p.online === false ? 'off' : ''} ${p.bot ? 'bot' : ''} ${vip ? 'vip' : ''}" id="prc-${esc(p.id)}" data-kick="${esc(p.id)}" style="--c:${esc(p.color || '#c8962a')};--d:${(i % 7) * 0.23}s" title="Click to remove">
-      ${vip ? CROWN('pr-vipcrown') : ''}<span class="pr-cc ${red ? 'red' : ''}"><em>${suit}</em><span class="av">${esc(p.avatar || '🙂')}</span><em class="b">${suit}</em></span><span class="pr-cn">${esc(p.name)}</span></span>`;
+      ${vip ? CROWN('pr-vipcrown') : ''}<span class="pr-cc ${red ? 'red' : ''}"><em>${suit}</em><span class="av">${face(p, sz === 'tiny' ? 30 : sz === 'small' ? 44 : 60)}</span><em class="b">${suit}</em></span><span class="pr-cn">${esc(p.name)}</span></span>`;
   }
   function lobbyTv(el, L) {
     const root = stageIn(el, 'pr-in-lobby'), stage = root.lastElementChild;
@@ -183,7 +187,7 @@
         <div class="prl-plaque"><span class="prl-chain l"></span><span class="prl-chain r"></span><small>Court code</small><div class="prl-code" id="code">${esc(L.code)}</div><span class="prl-url">${esc(L.joinUrl.replace(/^https?:\/\//, '').replace(/\?.*$/, ''))}</span></div>
         <div class="prl-dais">${throneSvg()}<div class="prl-how"><b>Empty your hand first to be crowned.</b><span>3 is lowest · 2 is highest · beat the pile with the same number of cards</span></div></div>
         <div class="prl-carpet"><div class="prl-rostitle">${n ? `The court assembles · <b>${n}</b> ${n === 1 ? 'courtier' : 'courtiers'}` : 'The court awaits its first courtier…'}</div>
-          <div class="roster prl-roster ${sizeCls}" id="roster">${L.players.map((p, i) => courtier(p, i, L.vip && p.name === L.vip)).join('')}</div></div>
+          <div class="roster prl-roster ${sizeCls}" id="roster">${L.players.map((p, i) => courtier(p, i, L.vip && p.name === L.vip, sizeCls)).join('')}</div></div>
       </section>
       <aside class="prl-side">
         <div class="prl-invite"><div class="prl-inv-top"><small>You are cordially invited to</small><h3>The Royal Court</h3></div>
@@ -223,7 +227,7 @@
       : `<span class="pr-fan">${Array.from({ length: fan }, (_, k) => `<i style="--k:${k - (fan - 1) / 2};${backStyle(x)}"></i>`).join('')}</span><b class="pr-n">${x.cards}</b>`;
     return `<div class="pr-seat lg ${turn ? 'turn' : ''} ${x.passed ? 'passed' : ''} ${x.place ? 'out' : ''} ${x.idle ? 'idle' : ''} ${py < 50 ? 'up' : ''}" id="ps-${esc(x.id)}" style="left:${px.toFixed(2)}%;top:${py.toFixed(2)}%;--c:${esc(x.color || '#c8962a')}">
       ${x.title ? `<span class="pr-medal t-${x.title}" title="${esc(s.titleNames[x.title])}">${TITLE_ICON[x.title]}</span>` : ''}
-      <div class="pr-port"><span>${esc(x.av || '🙂')}</span></div>
+      <div class="pr-port${BOX.hasLook && BOX.hasLook({ ...x, avatar: x.av }) ? ' pr-body' : ''}">${BOX.hasLook && BOX.hasLook({ ...x, avatar: x.av }) ? body(x, 136, { mood: x.place === 1 ? 'grin' : undefined }) : `<span>${emo(x)}</span>`}</div>
       <div class="pr-plate"><span class="nm">${esc(x.name)}</span><span class="pr-held">${held}</span></div>
       ${turn ? `<div class="pr-hg">⏳ ${timer(t.endsIn)}</div>` : ''}</div>`;
   }
@@ -288,18 +292,18 @@
     const moves = rc.flatMap((r) => [r.up ? `⬆️ <b>${esc(r.up)}</b> rises to ${tname(r.table - 1, rc.length)}` : null, r.down ? `⬇️ <b>${esc(r.down)}</b> falls to ${tname(r.table + 1, rc.length)}` : null]).filter(Boolean);
     return `<div class="pr-recap"><div class="prl-roll"></div><div class="pr-procl"><small>Royal Proclamation</small><h2>Round ${s.round} results</h2>
       <div class="pr-rgrid n${Math.min(shown.length, 3)}">${shown.map((r) => `<div class="pr-rtable">${rc.length > 1 ? `<h4>${tname(r.table, rc.length)}</h4>` : ''}
-        ${r.finish.map((f, i) => `<div class="pr-rrow t-${f.title}" style="--i:${i}"><span class="ic">${TITLE_ICON[f.title]}</span><span class="nm">${esc(f.name)}</span><span class="tt">${esc(s.titleNames[f.title])}</span><b>+${f.pts}</b></div>`).join('')}</div>`).join('')}</div>
+        ${r.finish.map((f, i) => `<div class="pr-rrow t-${f.title}" style="--i:${i}"><span class="ic">${TITLE_ICON[f.title]}</span><span class="nm">${BOX.face ? face(f, 30) + ' ' : ''}${esc(f.name)}</span><span class="tt">${esc(s.titleNames[f.title])}</span><b>+${f.pts}</b></div>`).join('')}</div>`).join('')}</div>
       ${rc.length > shown.length ? `<p class="pr-more">+${rc.length - shown.length} more tables</p>` : ''}
       ${moves.length ? `<div class="pr-moves">${moves.slice(0, 8).join(' · ')}</div>` : ''}
       <div class="pr-next">${s.rules.trading ? '🧹 The Scum pays tribute to the President… ' : ''}Next round in ${timer(s.endsIn)}${s.round + 1 === s.rounds ? ' · <b>FINAL ROUND</b>' : ''}</div>${WAX('♛', 'big pr-recap-seal')}</div><div class="prl-roll b"></div></div>`;
   }
   function finale(s) {
     const st = s.standings, w = st[0];
-    const step = (x, p) => (x ? `<div class="pd p${p}"><div class="who"><span>${esc(x.av || '🙂')}</span></div><div class="nm">${esc(x.name)}</div><div class="blk"><b>${p}</b><small>${x.points} pts</small></div></div>` : '<div class="pd"></div>');
+    const step = (x, p) => (x ? `<div class="pd p${p}"><div class="who">${body(x, 130)}</div><div class="nm">${esc(x.name)}</div><div class="blk"><b>${p}</b><small>${x.points} pts</small></div></div>` : '<div class="pd"></div>');
     return `<div class="pr-over"><div class="pr-hail"><small>All hail</small><h1>${w ? esc(w.name) : 'the President'}</h1><span>President of Presidents · ${w ? w.points : 0} points</span></div>
-      <div class="pr-podium">${step(st[1], 2)}<div class="pd p1"><div class="pr-throne-wrap">${throneSvg('big')}<div class="who"><span>${esc((w && w.av) || '👑')}</span></div>${CROWN('pr-dropcrown')}</div></div>${step(st[2], 3)}</div>
-      ${(s.awards || []).length ? `<div class="pr-awards">${s.awards.map((a, i) => `<div class="pr-award" style="--i:${i}"><div class="rib"></div><div class="ic">${a.icon}</div><b>${esc(a.title)}</b><div class="who2">${esc(a.name)}</div><small>${esc(a.why)}</small></div>`).join('')}</div>` : ''}
-      ${st.length > 3 ? `<div class="pr-rest">${st.slice(3, 10).map((x, i) => `<div class="row"><span class="n">${i + 4}</span><span>${esc(x.av || '')} ${esc(x.name)}</span><b>${x.points}</b></div>`).join('')}</div>` : ''}</div>`;
+      <div class="pr-podium">${step(st[1], 2)}<div class="pd p1"><div class="pr-throne-wrap">${throneSvg('big')}<div class="who${w && BOX.hasLook && BOX.hasLook({ ...w, avatar: w.av }) ? ' pr-body' : ''}">${w ? body(w, 170, { mood: 'grin' }) : '<span>👑</span>'}</div>${CROWN('pr-dropcrown')}</div></div>${step(st[2], 3)}</div>
+      ${(s.awards || []).length ? `<div class="pr-awards">${s.awards.map((a, i) => `<div class="pr-award" style="--i:${i}"><div class="rib"></div><div class="ic">${a.icon}</div><b>${esc(a.title)}</b><div class="who2">${a.id ? face(a, 30) + ' ' : ''}${esc(a.name)}</div><small>${esc(a.why)}</small></div>`).join('')}</div>` : ''}
+      ${st.length > 3 ? `<div class="pr-rest">${st.slice(3, 10).map((x, i) => `<div class="row"><span class="n">${i + 4}</span><span>${face(x, 30)} ${esc(x.name)}</span><b>${x.points}</b></div>`).join('')}</div>` : ''}</div>`;
   }
 
   // ---------- Phone helpers ----------
@@ -392,7 +396,7 @@
       selected = new Set([...selected].filter((c) => hand.includes(c)));
       const ttl = v.title || 'none';
       const head = `<div class="pr-me"><div class="pr-medallion t-${ttl}"><span>${v.title ? TITLE_ICON[v.title] : '🃏'}</span></div><div class="pr-meinfo"><b>${v.title ? esc(v.titleNames[v.title]) : 'Commoner'}</b><span>Round ${v.round}/${v.rounds}${v.final ? ' · <i class="pr-final sm">×2 points</i>' : ''}</span><span>${v.tables > 1 ? (v.tableNo === 1 ? '👑 Palace' : 'Table ' + v.tableNo) + ' · ' : ''}#${v.rank} of ${v.of} · ${v.points} pts</span></div></div>`;
-      const others = `<div class="pr-others">${t.seats.map((x) => `<span class="${t.turn === x.id ? 'turn' : ''} ${x.passed ? 'passed' : ''} ${x.place ? 'out' : ''}"><em>${esc(x.av || '🙂')}</em>${esc(x.name)} <b>${x.place ? (x.place === 1 ? '🥇' : '#' + x.place) : x.passed ? 'pass' : x.cards}</b></span>`).join('')}</div>`;
+      const others = `<div class="pr-others">${t.seats.map((x) => `<span class="${t.turn === x.id ? 'turn' : ''} ${x.passed ? 'passed' : ''} ${x.place ? 'out' : ''}"><em>${face(x, 26)}</em>${esc(x.name)} <b>${x.place ? (x.place === 1 ? '🥇' : '#' + x.place) : x.passed ? 'pass' : x.cards}</b></span>`).join('')}</div>`;
       const revNote = t.rev ? '<div class="pr-revtag ph">✊ REVOLUTION: low cards beat high!</div>' : '';
       let action = '', topHtml = '', opts = [];
       if (v.give) {
