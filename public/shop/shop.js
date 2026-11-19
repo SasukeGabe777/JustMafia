@@ -89,7 +89,7 @@
       catalog: C.CATALOG.filter((i) => section[i.field]).map((i) => ({ id: i.id, field: i.field, value: i.value, name: i.name, cost: i.cost, free: !!i.free, section: section[i.field], category: i.category, description: i.description, owned: m.owned.has(i.id) || !!i.free, lock: lock(i), ...sale(i.id) })),
       gearCatalog: GEAR.GEAR.map((g) => ({ ...g, owned: m.owned.has(g.id), equipped: !!(m.gear[g.game] && m.gear[g.game][g.slot] === g.id), ...sale(g.id) })),
       ledger: m.ledger.slice(0, 20), busy: params.get('mock') === 'busy', ...(SSN ? SSN.shopExtras(now(), m.owned, m.look) : {}),
-      earn: { note: 'Every finished game pays JustGold to everyone with an account who played it (2+ people, 90 s+). Longer games pay more.', base: { play: 4, top: 3, win: 5 }, examples: [{ label: 'A 10-minute game, you played', jg: 3 }, { label: 'A 10-minute game, top half', jg: 6 }, { label: 'A 10-minute game, you won', jg: 10 }, { label: 'A 30-minute game, you won', jg: 30 }], party: { label: 'Finish a whole Party Mode: everyone +25, and +40 / +25 / +15 for the top 3. The fastest way to earn.' }, mafia: 'JustMafia: 4–30 JG a game, weekly challenges and the season pass.' } });
+      earn: { note: 'Every finished game pays JustGold to everyone with an account who played it (2+ people, 90 s+). Longer games pay more.', base: { play: 4, top: 3, win: 5 }, examples: [{ label: 'A 10-minute game, you played', jg: 3 }, { label: 'A 10-minute game, top half', jg: 6 }, { label: 'A 10-minute game, you won', jg: 10 }, { label: 'A 30-minute game, you won', jg: 30 }], party: { label: 'Finish a whole Party Mode: everyone +25, and +40 / +25 / +15 for the top 3. The fastest way to earn.' }, mafia: 'JustMafia: 4–30 JG a game, weekly challenges and the season pass.', sets: 'Wear a whole theme set (Shop → Sets) in its own game: +5% JustGold there (at least 1, at most 3 a game).' } });
     const wait = (v) => new Promise((r) => setTimeout(() => r(v), 120));
     const busy = () => params.get('mock') === 'busy';
     return {
@@ -630,7 +630,7 @@
     return `<div class="totals"><div><b>${esc(st.gold)}</b><small>JG now</small></div><div><b>${esc(st.earned || 0)}</b><small>earned</small></div><div><b>${esc(st.spent || 0)}</b><small>spent</small></div></div>
       <p class="note">🪙 ${esc(e.note || 'Every finished game pays JustGold.')}</p>
       <div class="earn">${b.play != null ? `<div class="row"><span>🎮 Play a game</span><b>+${esc(b.play)}</b></div><div class="row"><span>🥈 Finish in the top half</span><b>+${esc(b.top)}</b></div><div class="row"><span>🏆 Win it</span><b>+${esc(b.win)}</b></div>` : ''}${ex}
-      ${e.party ? `<div class="row party"><span>🎉 ${esc(e.party.label)}</span></div>` : ''}${e.mafia ? `<div class="row"><span>🔪 ${esc(e.mafia)}</span></div>` : ''}</div>
+      ${e.party ? `<div class="row party"><span>🎉 ${esc(e.party.label)}</span></div>` : ''}${e.sets ? `<div class="row"><span>🧩 ${esc(e.sets)}</span></div>` : ''}${e.mafia ? `<div class="row"><span>🔪 ${esc(e.mafia)}</span></div>` : ''}</div>
       <h3 class="sec-h">📜 Your ledger <small>where every coin came from</small></h3>${led ? `<ul class="ledger">${led}</ul>` : '<p class="empty">No JustGold yet. Finish a game with friends to earn some!</p>'}`;
   }
   function renderStageText() {

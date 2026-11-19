@@ -1,5 +1,33 @@
 # Mafia Town: expansion plan
 
+## November 19, 2026 - Shop seasons, daily deals and theme sets (branch claude/shop-season)
+
+Requested: limited-time shop items, items that swap out every so often, and themed outfit sets per
+game world with a small bonus. Details and the socket API: `docs/justgold.md` ("Seasons, deals and sets").
+
+- **Limited-time event items**: 48 new character items (hats, outfits, extras, shoes, effects,
+  nameplates), 7–9 per event in `public/shared/seasons.js` (`ITEMS[kind]`; Harvest Fest, Frostival,
+  Sweetheart Week, Spring Bloom, Summer Splash, Spooky Season; Harvest/Frostival 2027 added with the
+  same ids). The server sells them only while their event runs; owners keep them.
+- **Daily deals** (6 items a UTC day, the same for everyone, 2 of them 20–30% off at a server-enforced
+  price) and a **weekly spotlight** set (35% off its bundle). Deals are buyable off your shelf that day;
+  the play-to-reveal shelf (`STOCK`/`nextStock`) is unchanged: the new items are `special` and never on it.
+- **Theme sets**: 10 sets (Wild West, Secret Agent, Head Chef, Great Detective, High Stakes, Royal Court,
+  Last Survivor, Space Cadet, Paparazzi, Pirate Crew), 3–4 pieces, 19 new pieces. Bundle = the missing
+  pieces at 20% off; wearing the whole set pays +5% JG (min 1, max 3) in that set's game
+  (`box/gold.js withSetBonus` in `BoxRoom.payGold`) and lights up the shop nameplate.
+- **Art**: every new item drawn in `public/avatar.js` (drawSmooth: hats, outfit details, held props,
+  back/face/chest extras, shoes, effects) for both bodies; nameplate styles in `shop.css` and `town.js`.
+- **Shop UI**: event tab first in the event's colours, Deals (countdown), Sets (progress, try-on,
+  bundle, bonus), LIMITED / deal / set ribbons; `/shop?mock=1&now=YYYY-MM-DD&tab=…` previews any day.
+- Tests: `tools/test-shop-season.js` (9: event items in/out of season with an injected clock, owned
+  after, next year; deals deterministic per day and discount charged; spotlight; sets valid; bundle
+  price and ownership; set bonus applied once and capped through a real BoxRoom payout; every new
+  item changes the drawn character on a stub canvas, male and female; sockets). `test-justgold` now
+  picks a non-discounted item. Ran `npm test` (minus render-smoke), e2e-shop, e2e-account, e2e-box.
+- Limits: the set bonus is not shown on the TV during a game (only the phone toast and the ledger);
+  events beyond 2027 need new `SEASONS` entries (same `kind`, same items).
+
 ## November 19, 2026 - JustUndercover (branch claude/undercover)
 
 A new box game (key `undercover`, Party shelf, 3–20 players, best 4–10): "a mole has slipped into

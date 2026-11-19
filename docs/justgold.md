@@ -102,3 +102,60 @@ on the start screen), JustMafia's phone (join screen, character creator, lobby).
 | `profile:password` | `{ auth, old, password }` | `{ ok, error? }` |
 | `profile:logout` | `{ auth }` | `{ ok }`: this phone's token stops working (refused while not saved) |
 
+## Seasons, deals and sets (branch `claude/shop-season`)
+
+Rules live in `public/shared/shop-season.js` (shared by the server and the shop page) and are
+enforced by the server (`profiles.js` `buy` / `buyGear` / `buySet` / `wearSet`, `box/gold.js`). The
+store's clock is `ProfileStore.now()` (`setClock(fn)` in tests).
+
+**Limited-time event items.** Each event in `public/shared/seasons.js` (Harvest Fest, Frostival,
+Sweetheart Week, Spring Bloom, Summer Splash, Spooky Season) has a `kind` and 7–9 new character items
+(`seasons.js ITEMS[kind]`: hats, outfits, extras, shoes, effects, nameplates; 48 in all). They can be
+bought only while an event of that kind runs; the server refuses them otherwise ("Limited: sold
+during Frostival (back 1 Dec)"). Owned items stay owned and wearable. The same ids come back every
+year: `harvest-2027` and `frost-2027` are already listed with the same items.
+
+**New items are not on the shelf.** Event items and the new theme-set pieces are listed in
+`options.js OPTIONS.SPECIAL` and marked `special` in the catalog, so `STOCKABLE` / `nextStock` (the
+play-to-reveal shelf) are unchanged for every existing and new profile.
+
+**Daily deals.** `dailyDeals(now)`: 6 items picked by the UTC date (the same for everyone; 4 character
+/ flair / JustMafia items and 2 game-gear items from everyday gold items), the first two 20–30% off.
+New deals at UTC midnight. The deal price is what `buy` / `buyGear` charge that day (ledger: "Bought X
+(deal −25%)"). A deal can be bought that day even if it is not on your own shelf yet; your shelf and
+what you own do not change. **Weekly spotlight**: one theme set a week (from Monday 00:00 UTC), its
+bundle 35% off instead of 20%.
+
+**Theme sets** (`SETS`): 10 outfits for game worlds, 3–4 pieces each, one per look field, so the whole
+set can be worn at once, and every piece works in every game:
+
+| set | game | pieces (new ones in bold) |
+|---|---|---|
+| 🤠 Wild West | Quick Draw | Cowboy hat, Sheriff, **Lasso**, **Spur Boots** |
+| 🕵️ Secret Agent | JustUndercover | **Agent Trilby**, **Agent Suit**, **Night-Vision Shades**, Shadow Aura |
+| 👨‍🍳 Head Chef | Pizza (also `yeschef`) | Chef hat, **Chef's Whites**, **Wooden Spoon** |
+| 🔍 Great Detective | JustEscape | **Deerstalker**, **Inverness Coat**, **Magnifying Glass**, Leather Boots |
+| 🎰 High Stakes | Blackjack | **Dealer's Vest**, **Fan of Aces**, **Lucky Dice**, Noble Shoes |
+| 👑 Royal Court | President | Crown, Royal Robe, Royal Cape, Sparkles |
+| 🧟 Last Survivor | Zombie Survival | Bandana, **Survivor Gear**, Backpack, Tall Boots |
+| 🛸 Space Cadet | Alien Abduction | **Saucer Hat**, Cyber Suit, **Ray Gun**, **Orbiting Planets** |
+| 📸 Paparazzi | JustSnap | Beret, **Photographer's Vest**, **Camera** |
+| 🏴‍☠️ Pirate Crew | JustBid | Pirate hat, Pirate Coat, Eyepatch |
+
+Every set piece can be bought on its own from the Sets shelf (even before the shelf reveal), or the
+pieces you're missing together as a **bundle** for 20% off (one ledger line). **Set bonus**: wearing
+the whole set (your saved look) in that set's own game adds +5% to what the game pays you (at least 1,
+at most 3 JG), once per payout (`box/gold.js withSetBonus`, used by `BoxRoom.payGold`; the ledger
+says "· 🤠 set +1" and the phone toast shows it). In the shop your nameplate lights up with the set's
+icon. Party Mode finales and JustMafia rewards are not changed.
+
+**Shop page.** Tabs: the running event first (in its colours, with LIMITED · N days left), Deals
+(countdown to the next swap, the spotlight set), Character, Flair, Games, **Sets** (progress, try-on of
+the whole set, bundle price, bonus), Wardrobe, Earn JG. Cards show ⏳ / −% / set ribbons.
+`/shop?mock=1` computes all of it offline; `&now=2027-02-10` previews another day, `&tab=sets` opens a tab.
+
+| event | in | out |
+|---|---|---|
+| `shop:state` | (as above) | also `event`, `nextEvent`, `deals { day, endsAt, items[{id,pct,price}], spotlight }`, `sets[{ id, name, icon, game, items, have, total, worn, spotlight, bundle{missing,full,pct,price} }]`, `setRules`, `now`; catalog/gear items carry `price` (today), `pct`, `limited`, `set` |
+| `shop:bundle` | `{ auth, setId, wear }` | `{ ok, error?, state }`: buys the missing pieces at the bundle price (`wear`: puts the set on) |
+| `shop:wearSet` | `{ auth, setId }` | `{ ok, error?, state }`: wear an owned set |
