@@ -24,6 +24,8 @@ async function skipShow(tv) {
   }
 }
 async function setup(browser, game, settings = {}) {
+  // Finished sections: park their pages (errors were already collected) so the open tabs don't pile up.
+  for (const p of PAGES) if (!p.parked) { p.parked = true; try { await p.send('Page.navigate', { url: 'about:blank' }); } catch { /* closed */ } }
   const tv = await browser.page();
   await tv.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await tv.go(`${URL}/box/tv?game=${game}&new=1`);
