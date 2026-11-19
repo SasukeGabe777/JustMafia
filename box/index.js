@@ -187,6 +187,7 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
       const room = wire(new BoxRoom(newCode(), def, { nsp, shows: true, profiles, wallets }));
       room.setUnlocks(msg.unlocks);
       if (room.isLocked(def)) return reply(cb, { ok: false, error: `🔒 ${def.name} is locked. ${def.locked.how || ''}`.trim(), locked: true });
+      room.setOnboard(msg.onboard); // { newbie, seen }: a new TV gets practice rounds by default
       if (lineup && lineup.length) room.setParty(lineup, msg.party.minutes, msg.party.flow, msg.party);
       rooms.set(room.code, room);
       detach(); socket.data = { code: room.code, host: true }; socket.join('host:' + room.code);
