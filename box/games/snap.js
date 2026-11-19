@@ -245,7 +245,7 @@ class Game {
     else if (mode === 'recreate') { R.scene = this.fresh('scene', C.SCENES)[0]; R.prompt = R.scene; this.makeTeams(); }
     R.slots = this.slotsOf(R);
     this.phase = 'brief';
-    this.say(this.round === this.total && this.total > 1 ? this.line('last') + ' ' + this.line(mode) : this.line(mode));
+    this.say(this.round === this.total && this.total > 1 ? this.line('last') : this.line(mode));
     this.room.fx('brief', { mode });
     this.setTimer(BRIEF_MS, () => this.snapPhase());
   }

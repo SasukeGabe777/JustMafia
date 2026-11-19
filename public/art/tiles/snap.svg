@@ -1,7 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
-  <!-- STARTER ART for JustSnap: replace with an original illustration (no text), subject inside x 90-310, y 55-185. -->
-  <defs><radialGradient id="snap-bg" cx="50%" cy="55%" r="70%"><stop offset="0" stop-color="#8b5cff"/><stop offset="1" stop-color="#1b1030"/></radialGradient></defs>
+  <!-- JustSnap: an instant camera firing its flash, a fresh photo sliding out, prints flying. -->
+  <defs>
+    <radialGradient id="snap-bg" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#ff5a86"/><stop offset=".55" stop-color="#b3174a"/><stop offset="1" stop-color="#2a1022"/></radialGradient>
+    <radialGradient id="snap-flash" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fffbe6"/><stop offset=".35" stop-color="#ffe98a" stop-opacity=".85"/><stop offset="1" stop-color="#ffcc33" stop-opacity="0"/></radialGradient>
+    <linearGradient id="snap-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf8f1"/><stop offset="1" stop-color="#d6cfc2"/></linearGradient>
+    <radialGradient id="snap-lens" cx="40%" cy="38%" r="65%"><stop offset="0" stop-color="#bff1ff"/><stop offset=".45" stop-color="#2f7fb0"/><stop offset="1" stop-color="#0b1a2a"/></radialGradient>
+    <linearGradient id="snap-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6ec6ff"/><stop offset="1" stop-color="#ffe9a8"/></linearGradient>
+    <linearGradient id="snap-sky2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2d7a"/><stop offset="1" stop-color="#ff7a59"/></linearGradient>
+  </defs>
   <rect width="400" height="240" fill="url(#snap-bg)"/>
-  <circle cx="200" cy="120" r="58" fill="#ffd23f" stroke="#1b1030" stroke-width="5"/>
-  <circle cx="182" cy="104" r="16" fill="#fff" opacity="0.5"/>
+  <g opacity=".18" fill="#fff"><path d="M0 0 L60 0 L-60 240 L-120 240Z"/><path d="M130 0 L170 0 L50 240 L10 240Z"/><path d="M330 0 L380 0 L260 240 L210 240Z"/></g>
+  <!-- prints flying -->
+  <g transform="translate(70 70) rotate(-18)"><rect x="-26" y="-30" width="52" height="62" fill="#fbf8f1" stroke="#16141c" stroke-width="3"/><rect x="-21" y="-25" width="42" height="40" fill="url(#snap-sky2)"/><circle cx="6" cy="-6" r="8" fill="#ffcc33"/></g>
+  <g transform="translate(335 175) rotate(16)"><rect x="-26" y="-30" width="52" height="62" fill="#fbf8f1" stroke="#16141c" stroke-width="3"/><rect x="-21" y="-25" width="42" height="40" fill="#2ec4d6"/><path d="M-21 15 L-6 -4 L4 6 L12 -2 L21 15Z" fill="#1f6b4f"/></g>
+  <!-- the flash -->
+  <circle cx="262" cy="70" r="70" fill="url(#snap-flash)"/>
+  <g stroke="#fffbe6" stroke-width="4" stroke-linecap="round" opacity=".9"><path d="M262 22 V40 M262 100 V118 M214 70 H232 M292 70 H310 M228 36 L240 48 M284 92 L296 104 M296 36 L284 48 M228 104 L240 92"/></g>
+  <!-- the photo sliding out of the top -->
+  <g transform="translate(200 70) rotate(-6)"><rect x="-40" y="-48" width="80" height="92" fill="#fbf8f1" stroke="#16141c" stroke-width="4"/><rect x="-33" y="-41" width="66" height="60" fill="url(#snap-sky)"/><circle cx="14" cy="-22" r="10" fill="#fff6c8"/><path d="M-33 19 L-12 -6 L0 6 L12 -8 L33 19Z" fill="#2d8a3e"/></g>
+  <!-- the camera -->
+  <rect x="112" y="90" width="176" height="96" rx="20" fill="url(#snap-body)" stroke="#16141c" stroke-width="5"/>
+  <rect x="112" y="118" width="176" height="14" fill="#ff2e63" stroke="#16141c" stroke-width="3"/>
+  <rect x="240" y="98" width="32" height="18" rx="5" fill="#fff6c8" stroke="#16141c" stroke-width="3"/>
+  <rect x="124" y="98" width="22" height="14" rx="4" fill="#2b2b33" stroke="#16141c" stroke-width="3"/>
+  <circle cx="200" cy="142" r="36" fill="#16141c" stroke="#16141c" stroke-width="4"/>
+  <circle cx="200" cy="142" r="27" fill="url(#snap-lens)"/>
+  <circle cx="190" cy="132" r="7" fill="#fff" opacity=".85"/>
+  <circle cx="209" cy="152" r="3" fill="#fff" opacity=".5"/>
+  <rect x="150" y="186" width="100" height="8" rx="3" fill="#16141c" opacity=".35"/>
 </svg>

@@ -1,6 +1,6 @@
 'use strict';
-// STARTER SCORE for a new JustGameBox game. tools/new-game.js copies this file to
-// public/box/scores/<key>.js and replaces snap with the game's key.
+// JustSnap's score: a glossy photo-shoot disco. Four-on-the-floor kick, open hats on the off-beat,
+// plucked lead and marimba sparkle for the magazine office; the think cue is the darkroom.
 //
 // REQUIRED CUES (every game score has all of them; each loops seamlessly):
 //   title   the game's title screen (its main theme)
@@ -22,21 +22,21 @@
     keys: { type: 'epiano', mode: 'chord', center: 64, n: 4, vol: 0.5, pan: -0.18, trem: 0.25 },
     pad: { type: 'pad', mode: 'chord', center: 67, n: 4, vol: 0.28, cut: 1800 },
     bass: { type: 'bass', mode: 'bass', oct: 2 },
-    lead: { type: 'fmkeys', ratio: 3, index: 1.4, vol: 0.5, pan: 0.12, dly: 0.16 },
-    bell: { type: 'glock', vol: 0.18, pan: 0.3, oct: 1 },
+    lead: { type: 'pluck', vol: 0.55, pan: 0.12, dly: 0.22 },
+    bell: { type: 'marimba', vol: 0.22, pan: 0.3, oct: 1 },
     dr: { type: 'drums', kit: 'std' },
   };
   const A = 'Fmaj7 | Dm7 | Bbmaj7 | C7sus4 C7 | Fmaj7 | Am7 D7 | Gm7 | C7sus4 C7';
   const B = 'Bbmaj7 | C/Bb | Am7 | Dm7 | Gm7 | Am7 | Bbmaj7 | C7sus4 C7';
   const melA = '. a4 c5 f5 - e5 - c5 | d5 - - - . a4 c5 d5 | f5 - d5 bb4 - . a4 bb4 | c5 - - - - - . . | . a4 c5 f5 - e5 - g5 | a5 - g5 e5 c5 - f#5 - | g5 - f5 d5 - bb4 - d5 | e5 - - - g5 - bb5 -';
   const melB = 'a5 - - - g5 f5 - d5 | e5 - - - - - c5 d5 | e5 - - - d5 c5 - a4 | f5 - - - - - . . | d5 - bb4 - d5 - g5 - | e5 - c5 - e5 - a5 - | g5 - - - f5 - d5 - | e5 - - - - - . .';
-  const groove = { k: 'x.....x...x.....', s: '....x.......x...', h: 'x.x.x.x.x.x.x.xo' };
+  const groove = { k: 'x...x...x...x...', s: '....x.......x...', h: '.o.o.o.o.o.o.o.o' };
   const fill = { k: 'x.....x...x.....|x.....x...x.x...', s: '....x.......x...|....x.....xgx.XX', h: 'x.x.x.x.x.x.x.xo|x.x.x.x.x.......' };
   S.snap = {
     name: 'snap',
     cues: {
       title: {
-        bpm: 108, swing16: 0.54, tracks,
+        bpm: 118, swing16: 0.5, tracks,
         sections: {
           I: { bars: 4, chords: 'Fmaj7 | Dm7 | Bbmaj7 | C7sus4 C7', pad: true, keys: 'x---..x-..x-.x--', bell: 'c5 . a4 . f4 . . . | d5 . a4 . f4 . . . | d5 . bb4 . f4 . . . | e5 . c5 . g4 . bb4 .', dr: { y: 'x...............|................|................|............x.x.' } },
           A: { bars: 8, chords: A, pad: true, keys: '..x-..x-..x-.x-.', bass: '1 - . 1 . 5 8 . | 1 - . 1 5 - 7 5', lead: melA, dr: { ...groove, y: 'x' + '.'.repeat(127) } },
@@ -45,9 +45,9 @@
         },
         form: ['I', 'A', 'B', 'A2'], loop: 1,
       },
-      lobby: { from: 'title', bpm: 100, tracks: { lead: { vol: 0.3 } }, form: ['A', 'B'], loop: 0,
+      lobby: { from: 'title', bpm: 108, tracks: { lead: { vol: 0.3 } }, form: ['A', 'B'], loop: 0,
         sections: { A: { lead: false, bell: '. . . . c5 . . . | . . . . a4 . . .', dr: { k: 'x.......x.......', s: '....g.......x...', h: '..x...x...x...x.' } }, B: { lead: melB, dr: { k: 'x.......x.......', s: '....x.......x...', sh: 'xgxgxgxgxgxgxgxg' } } } },
-      intro: { from: 'title', bpm: 112, form: ['I', 'A', 'B', 'A2'] },
+      intro: { from: 'title', bpm: 120, form: ['I', 'A', 'B', 'A2'] },
       think: {
         bpm: 90, swing16: 0.56,
         tracks: { keys: { type: 'epiano', mode: 'chord', center: 63, n: 4, vol: 0.45, trem: 0.3, pan: -0.2 }, arp: { type: 'marimba', mode: 'chord', center: 72, n: 4, vol: 0.32, pan: 0.25, dly: 0.2 }, bass: { type: 'bass', mode: 'bass', cut: 600 }, pad: { type: 'pad', mode: 'chord', center: 64, vol: 0.25, cut: 1400 }, dr: { type: 'drums', kit: 'lofi', vol: 0.6 } },
@@ -57,7 +57,7 @@
         },
         form: ['A', 'B'], loop: 0,
       },
-      play: { from: 'think', bpm: 102, tracks: { lead: { type: 'fmkeys', ratio: 3, index: 1.2, vol: 0.4, dly: 0.2, pan: 0.1 } },
+      play: { from: 'think', bpm: 112, tracks: { lead: { type: 'fmkeys', ratio: 3, index: 1.2, vol: 0.4, dly: 0.2, pan: 0.1 } },
         sections: {
           A: { lead: 'd5 - f5 a5 - g5 - e5 | d5 - - - . . b4 d5 | e5 - g5 b5 - a5 - g5 | e5 - - - . . . . | d5 - f5 a5 - g5 - e5 | d5 - - - . . f5 g5 | g5 - - - f5 - eb5 - | d5 - - - . . . .', dr: { k: 'x.....x...x.....', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' } },
           B: { dr: { k: 'x.....x...x..x..', s: '....x.......x...', h: 'xxx.xxx.xxx.xxx.' } },
@@ -80,7 +80,7 @@
         },
         form: ['R', 'H'], loop: 1,
       },
-      finale: { from: 'title', bpm: 114, transpose: 2, tracks: { br: { type: 'brass', mode: 'chord', center: 67, n: 3, vol: 0.38 } },
+      finale: { from: 'title', bpm: 122, transpose: 2, tracks: { br: { type: 'brass', mode: 'chord', center: 67, n: 3, vol: 0.38 } },
         sections: { A: { br: '....x.x.....x...' }, B: { br: 'x.......x.......' }, A2: { br: '....x.x.....x...' } } },
     },
     stingers: {
