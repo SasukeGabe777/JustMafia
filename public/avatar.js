@@ -188,7 +188,58 @@
     ctx.restore();
   }
 
+  // Off-screen layer for see-through characters: vector art drawn straight at low alpha shows
+  // every overlap (legs through the coat, the far arm through the body), so paint it opaque into
+  // a buffer at the screen's resolution, then lay the buffer down translucent. `paint(b)` draws in
+  // character units with the feet at (0, 0); `post(b, w, h, k)` may tint the buffer. Returns
+  // false without a DOM (stub canvases in tests), and the caller draws straight instead.
+  const LAYER = { l: 48, t: 108, w: 96, h: 122 }, layers = [];
+  let layerDepth = 0;
+  function viaLayer(ctx, x, y, s, alpha, paint, post) {
+    const doc = typeof document !== 'undefined' ? document : null;
+    if (!doc || typeof ctx.getTransform !== 'function' || typeof ctx.drawImage !== 'function' || layerDepth > 2) return false;
+    const m = ctx.getTransform(), k = Math.min(8, Math.max(0.5, Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)))) * Math.abs(s);
+    const bw = Math.max(1, Math.ceil(LAYER.w * k)), bh = Math.max(1, Math.ceil(LAYER.h * k));
+    const c = layers[layerDepth] || (layers[layerDepth] = doc.createElement('canvas'));
+    if (c.width < bw || c.height < bh) { c.width = Math.max(c.width, bw); c.height = Math.max(c.height, bh); }
+    const b = c.getContext('2d');
+    b.setTransform(1, 0, 0, 1, 0, 0); b.globalCompositeOperation = 'source-over'; b.globalAlpha = 1; b.filter = 'none'; b.shadowBlur = 0; b.clearRect(0, 0, bw, bh);
+    b.setTransform(k, 0, 0, k, LAYER.l * k, LAYER.t * k);
+    layerDepth++; try { paint(b); } finally { layerDepth--; }
+    b.setTransform(1, 0, 0, 1, 0, 0);
+    if (post) post(b, bw, bh, k);
+    b.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.globalAlpha *= alpha;
+    ctx.drawImage(c, 0, 0, bw, bh, x - LAYER.l * s, y - LAYER.t * s, LAYER.w * s, LAYER.h * s);
+    ctx.restore();
+    return true;
+  }
+  // Ghosts. Classic (the default ghostSkin) is the player's own character, see-through, pale
+  // blue and floating, its legs fading away; every other ghostSkin is a costume ghost (below),
+  // drawn 1.4x so it stands as tall as a character. The shop and JustMafia share this.
   function drawGhost(ctx, x, y, av, o = {}) {
+    av = av || {};
+    if (av.ghostSkin && av.ghostSkin !== 'classic' && GHOST_SKINS[av.ghostSkin]) { costumeGhost(ctx, x, y, av, { ...o, scale: (o.scale || 1) * 1.4 }); return; }
+    const t = o.t || 0, s = o.scale || 1, fl = Math.sin(t * 2.5 + (o.seed || 0)) * 4 * s, alpha = (o.alpha != null ? o.alpha : 0.85) * 0.68;
+    const look = { ...av, effect: 'none' };
+    const opts = { t, seed: o.seed, facing: o.facing, theme: o.theme, expression: o.mouth ? 'surprised' : o.expression, spin: o.spin, noShadow: true };
+    ctx.save();
+    ctx.fillStyle = 'rgba(160,200,255,0.16)'; ctx.beginPath(); ctx.ellipse(x, y, 11 * s, 3.5 * s, 0, 0, TAU); ctx.fill();
+    ctx.shadowColor = '#a8d6ff'; ctx.shadowBlur = o.glow ? 16 : 6;
+    const tinted = (b, w, h, k) => {
+      b.globalCompositeOperation = 'source-atop';
+      const tint = b.createLinearGradient(0, 0, 0, h); tint.addColorStop(0, 'rgba(205,228,255,0.5)'); tint.addColorStop(1, 'rgba(150,190,255,0.65)');
+      b.fillStyle = tint; b.fillRect(0, 0, w, h);
+      b.globalCompositeOperation = 'destination-out'; // the legs fade away
+      const fade = b.createLinearGradient(0, (LAYER.t - 22) * k, 0, (LAYER.t + 1) * k); fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,1)');
+      b.fillStyle = fade; b.fillRect(0, 0, w, h);
+    };
+    if (!viaLayer(ctx, x, y - 7 * s + fl, s, alpha, (b) => drawSmooth(b, 0, 0, look, opts), tinted)) {
+      ctx.globalAlpha *= alpha; drawSmooth(ctx, x, y - 7 * s + fl, look, { ...opts, scale: s });
+    }
+    ctx.restore();
+  }
+  function costumeGhost(ctx, x, y, av, o = {}) {
     const t = o.t || 0;
     const fl = Math.sin(t * 2.5 + (o.seed || 0)) * 4;
     ctx.save();
@@ -313,7 +364,7 @@
   };
   const LEN = { s: [-10, 0], c: [-4, 2], r: [-1.5, 5], d: [-5, 6] };
   const BACK_HAIR = { long: 1, wavy: 1, braids: 1, bob: 1, medium: 1, ponytail: 1, afro: 1, curly: 1, bun: 1, royalBraids: 1 };
-  const FULL_HEAD = { pumpkin: 1, executionerHood: 1 };
+  const FULL_HEAD = { pumpkin: 1, executionerHood: 1, execHood: 1 }; // execHood: JustMafia's anonymous NPC executioner
   const OPEN_TOP = { none: 1, bow: 1, halo: 1, flowerCrown: 1, elfCirclet: 1, catEars: 1, antlers: 1, dragonHorns: 1, dealerVisor: 1, bandana: 1 };
 
   // Body type: 'female' | 'male' (avatar field `body`). Old looks without it: long hairstyles or
@@ -335,6 +386,13 @@
   // (public/wear-art.js draws the shapes; a worn spot replaces the look's own hat/extra there).
   function drawSmooth(g, x, y, av, o = {}) {
     av = av || {};
+    // See-through (fading in/out, a dead body paling): draw it opaque off-screen, then fade it.
+    const fadeA = (o.alpha == null ? 1 : o.alpha) * (g.globalAlpha == null ? 1 : g.globalAlpha);
+    if (fadeA <= 0.003) return;
+    if (fadeA < 0.995 && !o._flat) {
+      const s0 = o.scale || 1;
+      if (viaLayer(g, x, y, s0, o.alpha == null ? 1 : o.alpha, (b) => drawSmooth(b, 0, 0, av, { ...o, scale: 1, alpha: null, _flat: true }))) return;
+    }
     const t = o.t || 0, walking = !!o.walking, f = Math.max(-1, Math.min(1, o.facing || 0));
     const color = isHex(av.color) ? av.color : '#3498db', skin = isHex(av.skin) ? av.skin : SKIN0;
     const hairC = isHex(av.hairColor) ? av.hairColor : '#543626', pants = isHex(av.pants) ? av.pants : '#2d2f3a', shoes = isHex(av.shoes) ? av.shoes : '#33251d';
@@ -369,7 +427,7 @@
     g.translate(x, y);
     g.scale(o.scale || 1, o.scale || 1);
     if (o.alpha != null) g.globalAlpha *= o.alpha;
-    g.fillStyle = 'rgba(0,0,0,0.22)'; ell(0, 0, 14, 4.5); g.fill();
+    if (!o.noShadow) { g.fillStyle = 'rgba(0,0,0,0.22)'; ell(0, 0, 14, 4.5); g.fill(); }
     if (o.lean) g.rotate(o.lean);
     g.translate(0, -bob - (o.jump || 0));
     if (o.spin) g.rotate(o.spin);
@@ -454,6 +512,8 @@
       const sg = g.createRadialGradient(-4, HY - 5, 2, 0, HY, R + 2); sg.addColorStop(0, sh(skin, 0.12)); sg.addColorStop(1, sh(skin, -0.08));
       done(sg);
       face(ex);
+      // A photo face (JustMafia phone only, never uploaded): the 16x16 pixel portrait inside the face.
+      if (av.faceSprite && typeof g.drawImage === 'function') { g.save(); headPath(); g.clip(); g.imageSmoothingEnabled = false; try { g.drawImage(av.faceSprite, -9 + ex * 0.5, HY - 9, 18, 18); } catch (err) { /* not drawable */ } g.restore(); }
       frontHair(ex);
     }
     drawWear('face', { e: ex, ey: HY + 1 });
@@ -617,7 +677,10 @@
       g.fillStyle = 'rgba(255,120,130,' + (av.features === 'rosyCheeks' ? 0.55 : 0.25) + ')'; ell(L - 2.8, HY + 4.5, 2.4, 1.5); g.fill(); ell(Rt + 2.8, HY + 4.5, 2.4, 1.5); g.fill();
       if (av.features === 'freckles') for (const [dx, dy] of [[-7, 3], [-5, 4.3], [-8.5, 4.6], [7, 3], [5, 4.3], [8.5, 4.6]]) { circ(dx + e, HY + dy, 0.45); done('#a76c50', null); }
       const LIP = '#d8576f';
+      let said = 'smile';
       const mouth = (kind) => {
+        said = kind;
+        if (kind === 'tremble') { const j = Math.sin(t * 40) * 0.35; P(); g.moveTo(mx - 3, my + 0.6 + j); g.lineTo(mx - 1.5, my - 0.4 - j); g.lineTo(mx, my + 0.6 + j); g.lineTo(mx + 1.5, my - 0.4 - j); g.lineTo(mx + 3, my + 0.6 + j); g.strokeStyle = OL; g.lineWidth = 1.2; g.stroke(); return; }
         if (fem) switch (kind) {
           case 'smile': P(); g.moveTo(mx - 3.4, my - 1.5); g.quadraticCurveTo(mx, my - 0.6, mx + 3.4, my - 1.5); g.quadraticCurveTo(mx + 1.5, my + 2.6, mx, my + 2.5); g.quadraticCurveTo(mx - 1.5, my + 2.6, mx - 3.4, my - 1.5); done(LIP, OL, 0.8); line(sh(LIP, -0.35), 0.8, [[mx - 2.6, my - 0.9], [mx + 2.6, my - 0.9]]); circ(mx - 0.8, my + 1, 0.5); done('rgba(255,255,255,0.6)', null); return;
           case 'flat': case 'smirk': { const d = kind === 'smirk' ? 0.8 : 0; P(); g.moveTo(mx - 2.8, my); g.quadraticCurveTo(mx - 1, my - 1.6, mx, my - 0.9); g.quadraticCurveTo(mx + 1, my - 1.6, mx + 2.8, my - d); g.quadraticCurveTo(mx, my + 2, mx - 2.8, my); done(LIP, OL, 0.8); line(sh(LIP, -0.35), 0.7, [[mx - 2.2, my - 0.2], [mx + 2.2, my - 0.2 - d]]); return; }
@@ -637,7 +700,11 @@
       };
       switch (mood) {
         case 'dead': for (const cx of [L, Rt]) { line(OL, 1.2, [[cx - 1.8, ey - 1.8], [cx + 1.8, ey + 1.8]]); line(OL, 1.2, [[cx + 1.8, ey - 1.8], [cx - 1.8, ey + 1.8]]); } mouth('flat'); break;
-        case 'scared': case 'surprised': eye(L, 1.2); eye(Rt, 1.2); brow(L, -0.15, -1.6); brow(Rt, 0.15, -1.6); mouth('o'); break;
+        case 'surprised': eye(L, 1.2); eye(Rt, 1.2); brow(L, -0.15, -1.6); brow(Rt, 0.15, -1.6); mouth('o'); break;
+        case 'scared': { // wide eyes, worried brows, a trembling mouth and a bead of sweat
+          eye(L, 1.25); eye(Rt, 1.25); brow(L, -0.4, -1.4); brow(Rt, 0.4, -1.4);
+          mouth('tremble');
+          P(); g.moveTo(R - 3.5, HY - 6); g.quadraticCurveTo(R - 1.5, HY - 2.5, R - 3.5, HY - 1.5); g.quadraticCurveTo(R - 5.5, HY - 2.5, R - 3.5, HY - 6); done('#a8e0ff', OL, 0.7); break; }
         case 'grin': shut(L); shut(Rt); mouth('grin'); break;
         case 'neutral': eye(L); eye(Rt); mouth('flat'); break;
         case 'serious': eye(L); eye(Rt); brow(L, 0.15, 0.6); brow(Rt, -0.15, 0.6); mouth('flat'); break;
@@ -651,7 +718,7 @@
       if (!browed && mood !== 'dead' && mood !== 'sleepy') { brow(L, fem ? -0.08 : 0, fem ? -0.2 : 0); brow(Rt, fem ? 0.08 : 0, fem ? -0.2 : 0); }
       // facial hair
       if (av.facialHair === 'moustache') { P(); g.moveTo(mx, my - 2.2); g.quadraticCurveTo(mx - 3, my - 3.6, mx - 5, my - 1.2); g.quadraticCurveTo(mx - 2, my - 1.2, mx, my - 1.6); g.quadraticCurveTo(mx + 2, my - 1.2, mx + 5, my - 1.2); g.quadraticCurveTo(mx + 3, my - 3.6, mx, my - 2.2); done(hairC, OL, 0.8); }
-      if (av.facialHair === 'beard') { P(); g.moveTo(-R + 1, HY + 1); g.quadraticCurveTo(-R + 1, HY + R + 3, 0, HY + R + 3); g.quadraticCurveTo(R - 1, HY + R + 3, R - 1, HY + 1); g.quadraticCurveTo(R - 3, HY + 6, mx + 4, my - 2); g.quadraticCurveTo(mx, my - 3, mx - 4, my - 2); g.quadraticCurveTo(-R + 3, HY + 6, -R + 1, HY + 1); done(lin(hairC, HY, HY + R + 3)); mouth(mood === 'grin' ? 'grin' : 'smile'); }
+      if (av.facialHair === 'beard') { P(); g.moveTo(-R + 1, HY + 1); g.quadraticCurveTo(-R + 1, HY + R + 3, 0, HY + R + 3); g.quadraticCurveTo(R - 1, HY + R + 3, R - 1, HY + 1); g.quadraticCurveTo(R - 3, HY + 6, mx + 4, my - 2); g.quadraticCurveTo(mx, my - 3, mx - 4, my - 2); g.quadraticCurveTo(-R + 3, HY + 6, -R + 1, HY + 1); done(lin(hairC, HY, HY + R + 3)); mouth(said); } // the mood's mouth again, over the beard
       // face accessories
       if (acc === 'glasses') { for (const cx of [L, Rt]) { circ(cx, ey, 3.3); done('rgba(200,230,255,0.25)', '#272933', 1.1); } line('#272933', 1, [[L + 3.3, ey], [Rt - 3.3, ey]]); }
       if (acc === 'shades') { for (const cx of [L, Rt]) { rr(cx - 3.5, ey - 2.4, 7, 4.6, 2); done('#101014', OL, 0.8); } line('#101014', 1.2, [[L + 3, ey - 1], [Rt - 3, ey - 1]]); line('rgba(255,255,255,0.5)', 0.9, [[L - 2, ey - 1.2], [L - 0.5, ey - 1.6]]); }
@@ -683,6 +750,7 @@
         case 'bandana': P(); g.arc(0, HY - 2, R + 1, Math.PI * 1.02, Math.PI * 1.98); g.quadraticCurveTo(0, HY - 7, -R - 1, HY - 3); done(lin('#c0392b', top - 2, HY - 4)); for (const [dx, dy] of [[-6, -9], [0, -11], [6, -9], [-3, -6], [3, -6]]) { circ(dx, HY + dy, 0.8); done('#fff', null); } P(); g.moveTo(R - 1, HY - 5); g.lineTo(R + 6, HY - 1); g.lineTo(R + 3, HY + 1); g.closePath(); done('#c0392b', OL, 1); break;
         case 'jesterHat': for (const [s, c] of [[-1, '#83517f'], [1, '#e0b24a']]) { P(); g.moveTo(0, HY - 9); g.quadraticCurveTo(s * 4, top - 12, s * 18, top - 4); g.quadraticCurveTo(s * 10, top - 2, s * 9, HY - 9); g.closePath(); done(lin(c, top - 12, HY - 9)); circ(s * 18, top - 3, 2.2); done('#ffd35c', OL, 0.8); } rr(-R - 1, HY - 11, (R + 1) * 2, 4, 2); done('#3ab0a0'); break;
         case 'flowerCrown': for (let i = 0; i < 7; i++) { const a = Math.PI * (1.05 + i * 0.15), fx = Math.cos(a) * (R + 0.5), fy = HY - 2 + Math.sin(a) * (R - 3); circ(fx, fy, 2.6); done(['#ff8cc6', '#ffd23f', '#c97991', '#ffffff'][i % 4], OL, 0.8); circ(fx, fy, 0.9); done('#e0a93a', null); } break;
+        case 'execHood': { P(); g.moveTo(-R - 5, HY + 15); g.quadraticCurveTo(-R - 2, HY + 8, -R - 1.5, HY - 2); g.quadraticCurveTo(-R, top - 3, -1, top - 7); g.lineTo(1, top - 7); g.quadraticCurveTo(R, top - 3, R + 1.5, HY - 2); g.quadraticCurveTo(R + 2, HY + 8, R + 5, HY + 15); g.quadraticCurveTo(0, HY + 18, -R - 5, HY + 15); done(lin('#2a2830', top - 7, HY + 16, 0.08, -0.22)); line('rgba(0,0,0,0.35)', 1, [[-R + 1, HY + 12], [-R + 3, HY + 3]]); line('rgba(0,0,0,0.35)', 1, [[R - 1, HY + 12], [R - 3, HY + 3]]); for (const s of [-1, 1]) { ell(s * 4.6 + e, HY + 1, 3, 2.1, s * 0.15); done('#050406', OL, 0.8); circ(s * 4.6 + e, HY + 1, 0.9); done('#c8b9a4', null); } line('rgba(255,255,255,0.12)', 1.4, [[-8, top - 3], [-3, top - 8]]); break; }
         case 'executionerHood': { P(); g.moveTo(-R - 2, HY + 10); g.quadraticCurveTo(-R - 3, top - 4, 0, top - 9); g.quadraticCurveTo(R + 3, top - 4, R + 2, HY + 10); g.quadraticCurveTo(0, HY + 13, -R - 2, HY + 10); done(lin('#8e1f2c', top - 9, HY + 12)); for (const s of [-1, 1]) { ell(s * 4.6 + e, HY + 1, 2.8, 2); done('#050406', OL, 0.8); circ(s * 4.6 + e, HY + 1, 0.9); done('#f3d27a', null); } rect('#d6af53', -1, top - 6, 2, 9); rect('#d6af53', -3.5, top - 3, 7, 2); break; }
         case 'halo': g.save(); g.shadowColor = '#ffe48a'; g.shadowBlur = 6; ell(0, top - 6 + Math.sin(t * 2) * 0.8, 10, 2.8); g.strokeStyle = '#ffe48a'; g.lineWidth = 2.2; g.stroke(); g.restore(); break;
         case 'pirate': P(); g.moveTo(-18, HY - 8); g.quadraticCurveTo(-12, top - 10, 0, top - 6); g.quadraticCurveTo(12, top - 10, 18, HY - 8); g.quadraticCurveTo(0, HY - 13, -18, HY - 8); done(lin('#1e1a20', top - 10, HY - 8)); line('#d6af53', 1.2, [[-16, HY - 9], [0, HY - 12], [16, HY - 9]]); circ(0, top - 1, 2.6); done('#f3ead8', OL, 0.7); line('#f3ead8', 1, [[-3, top + 3], [3, top + 1]]); line('#f3ead8', 1, [[3, top + 3], [-3, top + 1]]); break;
@@ -717,5 +785,7 @@
       g.restore();
     }
   }
-  root.MTArt = { drawCharacter: drawSmooth, drawSmooth, bodyOf, drawClassic, drawGhost, drawShadowFigure, drawHat, roundRect, shade };
+  // The moods a player can pick (MT_OPTIONS.expression); 'scared' and 'dead' are animation states.
+  const EXPRESSIONS = ['smile', 'grin', 'neutral', 'serious', 'surprised', 'sad', 'angry', 'wink', 'sleepy', 'smirk'];
+  root.MTArt = { drawCharacter: drawSmooth, drawSmooth, bodyOf, drawClassic, drawGhost, costumeGhost, drawShadowFigure, drawHat, roundRect, shade, EXPRESSIONS };
 })(window);

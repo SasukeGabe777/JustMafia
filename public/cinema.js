@@ -283,7 +283,7 @@
     ctx.restore();
   }
 
-  const PROTECTOR_AV = { color: '#22252e', skin: '#d9a273', hat: 'none' };
+  const PROTECTOR_AV = { body: 'male', color: '#22252e', skin: '#d9a273', hat: 'none', hair: 'buzzCut', hairColor: '#2a1d16', outfit: 'tuxedo', accessory: 'shades', expression: 'serious', pants: '#1c1e26', shoes: '#111216' };
   // A Zombie: grey-green skin, torn rags, arms reaching forward. It limps: the good leg steps,
   // the bad one drags, and the whole body lurches and sways (never a player's look).
   function drawZombie(ctx, x, y, o) {
@@ -327,35 +327,27 @@
     ctx.translate(x, y);
     const s = o.scale || 1;
     ctx.scale(s, s);
-    drawCharacter(ctx, 0, 0, PROTECTOR_AV, { t: o.t, walking: o.walking, facing: o.facing || 0, alpha: o.alpha });
-    ctx.globalAlpha *= o.alpha == null ? 1 : o.alpha;
-    ctx.fillStyle = '#0a0a0a';
-    roundRect(ctx, -9, -45, 8, 4.5, 2); ctx.fill(); roundRect(ctx, 1, -45, 8, 4.5, 2); ctx.fill();
-    ctx.fillRect(-1, -44, 2, 1.5);
-    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(-3, -31); ctx.lineTo(3, -31); ctx.lineTo(0, -24); ctx.closePath(); ctx.fill();
-    if (o.pose === 'guard') { // arms out
-      ctx.fillStyle = shade(PROTECTOR_AV.color, -0.1);
-      ctx.beginPath(); ctx.ellipse(-20, -25, 9, 3.6, 0.15, 0, TAU); ctx.ellipse(20, -25, 9, 3.6, -0.15, 0, TAU); ctx.fill();
-    }
+    // The bodyguard: black suit and shades; on guard, both arms thrown out to shield.
+    drawCharacter(ctx, 0, 0, PROTECTOR_AV, { t: o.t, walking: o.walking, facing: o.facing || 0, alpha: o.alpha, arms: o.pose === 'guard' ? { l: 1.45, r: -1.45 } : undefined });
     ctx.restore();
   }
 
-  const DETECTIVE_AV = { color: '#a8875a', skin: '#f3c9a0', hat: 'top' };
+  const DETECTIVE_AV = { body: 'male', color: '#a8875a', skin: '#f3c9a0', hat: 'fedora', hair: 'short', hairColor: '#4a3322', outfit: 'detectiveCoat', expression: 'serious', pants: '#3a3226', shoes: '#2a1d14' };
   function drawDetective(ctx, x, y, o) {
     ctx.save();
     ctx.translate(x, y);
     const s = o.scale || 1;
     ctx.scale(s * (o.facing < 0 ? -1 : 1), s);
-    drawCharacter(ctx, 0, 0, DETECTIVE_AV, { t: o.t, walking: o.walking, facing: 1, alpha: o.alpha });
+    // Trench coat and fedora, the right hand holding a magnifying glass up (higher to peek).
+    const arm = o.pose === 'peek' ? -1.9 : -0.9, th = arm + 0.1, hx = 12.2 - 14 * Math.sin(th), hy = -28.5 + 14 * Math.cos(th);
+    drawCharacter(ctx, 0, 0, DETECTIVE_AV, { t: o.t, walking: o.walking, facing: 1, alpha: o.alpha, arms: { l: 0, r: arm } });
     ctx.globalAlpha *= o.alpha == null ? 1 : o.alpha;
-    // collar + magnifier
-    ctx.fillStyle = shade(DETECTIVE_AV.color, -0.25);
-    ctx.beginPath(); ctx.moveTo(-10, -31); ctx.lineTo(0, -22); ctx.lineTo(10, -31); ctx.lineTo(6, -31); ctx.lineTo(0, -26); ctx.lineTo(-6, -31); ctx.closePath(); ctx.fill();
-    const lift = o.pose === 'peek' ? -18 : 0;
-    ctx.strokeStyle = '#5a3a1e'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(13, -20); ctx.lineTo(19, -26 + lift); ctx.stroke();
-    ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 2.5; ctx.fillStyle = 'rgba(190,230,255,0.45)';
-    ctx.beginPath(); ctx.arc(23, -31 + lift, 6, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#2b1f3d'; ctx.lineWidth = 3.6; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + 3, hy - 6); ctx.stroke();
+    ctx.strokeStyle = '#7a4a24'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = 'rgba(190,230,255,0.45)'; ctx.beginPath(); ctx.arc(hx + 5, hy - 12, 6, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#2b1f3d'; ctx.lineWidth = 3.6; ctx.stroke(); ctx.strokeStyle = '#e2b23c'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(hx + 5, hy - 12, 3.6, Math.PI * 1.1, Math.PI * 1.5); ctx.stroke();
     ctx.restore();
   }
 
@@ -364,6 +356,22 @@
   // in a muted color and a face lost in shadow (skin tone hidden).
   const MASK_CLOAKS = ['#4a4a55', '#5a4a3e', '#3e4a52', '#4e4440', '#46503f', '#3d3d48', '#55483a', '#404652', '#2e2e36', '#4a3f4f'];
   function masked(i) { return { color: MASK_CLOAKS[i % MASK_CLOAKS.length], skin: '#2b2a30', hat: 'hood', hair: 'bald', outfit: 'traveler', pants: '#2d2f3a', shoes: '#151821', eyes: '#151418', expression: 'neutral', accessory: 'none', facialHair: 'none', features: 'none' }; }
+
+  // The noose on a character whose feet are at (x, y), in two layers: behind the character, the
+  // rope from the beam (beamDy above the feet) down behind the head; in front, the loop round the
+  // neck and the coiled knot showing below the ear.
+  function drawNoose(ctx, x, y, beamDy, s, front) {
+    const neck = y - 31 * s, kx = x + 10.5 * s, ky = neck - 4 * s;
+    ctx.save(); ctx.lineCap = 'round';
+    for (const [c, w] of [['#3a2a18', 3.4], ['#c9a66b', 2]]) {
+      ctx.strokeStyle = c; ctx.lineWidth = w * s; ctx.beginPath();
+      if (!front) { ctx.moveTo(x + 1 * s, y + beamDy); ctx.quadraticCurveTo(x + 3 * s, neck - 20 * s, kx - 2 * s, ky - 6 * s); }
+      else { ctx.ellipse(x, neck + 0.5 * s, 7.5 * s, 2.4 * s, 0, 0, Math.PI * 2); ctx.moveTo(kx - 1 * s, ky - 3 * s); ctx.lineTo(kx, ky + 6 * s); }
+      ctx.stroke();
+    }
+    if (front) { ctx.fillStyle = '#a8844e'; ctx.strokeStyle = '#3a2a18'; ctx.lineWidth = 1 * s; for (let i = 0; i < 3; i++) { roundRect(ctx, kx - 2.8 * s, ky + i * 2.5 * s - 1.5 * s, 5.6 * s, 2.8 * s, 1.3 * s); ctx.fill(); ctx.stroke(); } }
+    ctx.restore();
+  }
 
   function drawResident(ctx, a, t) {
     const s = a.scale || 1;
@@ -382,9 +390,9 @@
       const sway = Math.sin(since * 3.2) * 0.22 * Math.exp(-since * 0.35) * dp;
       const ropeLen = Math.max(8, feetY - 33 * s - a.anchorY);
       ctx.translate(a.x, a.anchorY); ctx.rotate(sway);
-      ctx.strokeStyle = '#c9a66b'; ctx.lineWidth = 2.2 * s; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, ropeLen + 4 * s); ctx.stroke();
-      ctx.fillStyle = '#8a6a3a'; ctx.fillRect(-5 * s, ropeLen - 1 * s, 10 * s, 3 * s); // noose knot
+      drawNoose(ctx, 0, ropeLen + 33 * s, -ropeLen - 33 * s, s, false);
       drawCharacter(ctx, 0, ropeLen + 33 * s, a.avatar, { theme: a.theme, t: 0, scale: s, scared: !a.dead, dead: a.dead, alpha: a.alpha });
+      drawNoose(ctx, 0, ropeLen + 33 * s, -ropeLen - 33 * s, s, true);
       ctx.restore();
       return;
     }
@@ -400,14 +408,14 @@
     } else if (a.pose === 'dead') {
       const p = clamp((t - (a.fallT || 0)) / 0.45, 0, 1);
       ctx.rotate(EASE.out(p) * (Math.PI / 2) * (a.facing < 0 ? 1 : -1));
-      ctx.globalAlpha *= 1 - p * 0.25;
       drawCharacter(ctx, 0, 0, a.avatar, { theme: a.theme, t: 0, scale: s, scared: !a.dead, dead: a.dead, alpha: a.alpha });
     } else {
       const cower = a.pose === 'cower';
       if (cower) ctx.scale(1, 0.92);
       // Standing with the noose on: the rope runs from the beam down to the neck.
-      if (a.noosed && a.anchorY != null) { ctx.strokeStyle = '#c9a66b'; ctx.lineWidth = 2.2 * s; ctx.beginPath(); ctx.moveTo(0, a.anchorY - a.y); ctx.lineTo(0, -31 * s); ctx.stroke(); ctx.fillStyle = '#8a6a3a'; ctx.fillRect(-5 * s, -34 * s, 10 * s, 3 * s); }
+      if (a.noosed && a.anchorY != null) drawNoose(ctx, 0, 0, a.anchorY - a.y, s, false);
       drawCharacter(ctx, 0, 0, a.avatar, { theme: a.theme, t, scale: s, walking: a.walking, facing: a.facing || 0, scared: a.scared || cower, alpha: a.alpha, jump: a.jump || 0, arms: a.arms, lean: a.lean, dragged: a.dragged, dead: a.dead });
+      if (a.noosed && a.anchorY != null) drawNoose(ctx, 0, 0, a.anchorY - a.y, s, true);
     }
     ctx.restore();
   }
