@@ -204,7 +204,7 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
       if (!room) return reply(cb, { ok: false, error: 'Room not found. Check the code on the big screen.' });
       const token = typeof msg.token === 'string' ? msg.token : null, avatar = typeof msg.avatar === 'string' ? msg.avatar : null;
       const prof = profileOf(msg.profile);
-      if (room.isKicked(token, prof && prof.id)) return reply(cb, { ok: false, kicked: true, error: 'The host removed you from this room.' });
+      if (room.isKicked(token, prof && prof.id, msg.name)) return reply(cb, { ok: false, kicked: true, error: 'The host removed you from this room.' });
       const back = token && room.list().find((p) => p.token === token);
       const backA = !back && token && [...room.audience.values()].find((a) => a.token === token);
       if (backA) { seatAudience(room, backA); if (prof) backA.profileId = prof.id; return reply(cb, audienceReply(room, backA, true)); }

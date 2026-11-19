@@ -53,6 +53,7 @@ const connect = () => new Promise((res, rej) => { const s = io(URL + '/box', { t
     await wait(100); assert(toldC, 'Cal’s phone is told');
     const back = await emit(c, 'player:join', { code: made.code, name: 'Cal', token: jc.token });
     assert.equal(back.ok, false); assert(back.kicked);
+    assert.equal((await emit(c, 'player:join', { code: made.code, name: 'cal' })).ok, false, 'not by just retyping the name either');
     // The TV removes Dee.
     assert((await emit(tv, 'host:action', { type: 'kick', id: jd.id })).ok);
     await wait(100); assert(toldD, 'Dee’s phone is told');

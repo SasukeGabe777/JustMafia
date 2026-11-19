@@ -562,7 +562,8 @@ class BoxRoom {
   kick(id) {
     const p = this.players.get(id); if (!p) return { ok: false, error: 'That player already left.' };
     if (!p.bot) {
-      this.kicked = this.kicked || { tokens: new Set(), profiles: new Set() };
+      this.kicked = this.kicked || { tokens: new Set(), profiles: new Set(), names: new Set() };
+      this.kicked.names.add(p.name.toLowerCase());
       if (p.token) this.kicked.tokens.add(p.token);
       if (p.profileId) this.kicked.profiles.add(p.profileId);
       if (this.nsp) this.nsp.to('pl:' + this.code + ':' + p.id).emit('kicked', { room: this.code });
@@ -570,7 +571,7 @@ class BoxRoom {
     this.remove(id);
     return { ok: true, name: p.name };
   }
-  isKicked(token, profileId) { const k = this.kicked; return !!(k && ((token && k.tokens.has(token)) || (profileId && k.profiles.has(profileId)))); }
+  isKicked(token, profileId, name) { const k = this.kicked; return !!(k && ((token && k.tokens.has(token)) || (profileId && k.profiles.has(profileId)) || (name && k.names.has(String(name).trim().toLowerCase())))); }
 
   remove(id) {
     const p = this.players.get(id); if (!p) return;
