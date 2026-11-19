@@ -209,6 +209,8 @@
       if (f.kind === 'trophy') celebrate(() => tvToast(`<span class="tt-i">${esc(f.icon || '🏆')}</span><div><small>TROPHY UNLOCKED</small><b>${esc(f.avatar || '')} ${esc(BOX.filterText(f.name))}</b><span>${esc(f.trophy)}</span></div>`, 'trophy'), 2600);
       else if (f.kind === 'audFav') { tvToast(`<span class="tt-i">📣</span><div><small>AUDIENCE FAVOURITE</small><b>${esc(f.avatar || '')} ${esc(BOX.filterText(f.name))}</b><span>+${f.bonus} party points</span></div>`, 'fav'); BOX.sfx('cheer'); }
       else if (f.kind === 'audJoin') tvToast(`<span class="tt-i">👀</span><div><small>FROM THE AUDIENCE</small><b>${f.n} new player${f.n === 1 ? '' : 's'}</b><span>joined for this game</span></div>`, 'aud');
+      // The host skipped the intro / how-to: the narrator stops mid-line (the only time a line is cut).
+      else if (f.kind === 'voiceCut') { try { if (BOX.voice && BOX.voice.stop) BOX.voice.stop(); } catch { /* no voice */ } }
     }
     for (const f of list) if (f.id > lastFx) {
       if (lastFx && G.onFx) { try { G.onFx(f); } catch (e) { console.error(e); } }

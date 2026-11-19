@@ -14,7 +14,7 @@
       { icon: '🎤', title: 'Two debaters, one silly topic', text: 'Each debate, two players step up to the podiums with a topic and a side: “Is cereal a soup? You say YES.” Everyone else is the audience.', phone: 'Debaters: your side shows in big letters.' },
       { icon: '🃏', title: 'Prep with argument cards', text: '30 seconds to plan. Your phone deals 3 argument cards (Made-Up Statistic, Dramatic Pause…). Tap one during your speech and it pops up on the TV.', phone: 'Tap “I’m ready ✓”, then tap a card mid-speech.' },
       { icon: '⏱️', title: 'The speeches', text: 'Opening statements (45 s each), rebuttals, one question from the audience, then a typed closing line you read out loud. Done early? Pass the mic.', phone: 'Speaking? Tap “I’m done ✓” to pass the mic.' },
-      { icon: '👏', title: 'Heckle (nicely)', text: 'Audience: react live. 👏 😂 🤔 push the crowd meter toward the speaker, 🍅 pulls it back. Send in a question; the room votes which one gets asked.', phone: 'Tap 👏 😂 🤔 🍅. Type a question and tap Send.' },
+      { icon: '👏', title: 'Heckle (nicely)', text: 'Audience: react live. 👏 😂 🤔 push the crowd meter toward the speaker, 🍅 pulls it back. Send in a question; the room votes which one gets asked.', phone: 'Tap 👏 😂 🤔 🍅. Type a question and tap Send.', say: 'Heckle, nicely. Audience: react live. Claps, laughs and hmms push the crowd meter toward the speaker, and tomatoes pull it back. Send in a question, and the room votes which one gets asked.' },
       { icon: '🗳️', title: 'The crowd decides', text: 'Vote for the winner, then pick the best line. Debaters score their vote share (up to 1000) +200 for the win, up to +300 crowd meter, +250 best line. Back the winner: +100.', phone: 'Tap a side, then tap the speech with the best line.' },
       { icon: '⚡', title: 'Twists', text: '🔄 Swap Sides: mid-debate, argue the opposite! ⚖️ Lawyer Mode: defend an object accused of a crime. 🌶️ Hot Takes: 20 seconds each. 👥 Team Debates in big rooms.' },
     ],
@@ -23,7 +23,7 @@
       spots: ['255,240,200', '255,226,170', '200,220,255', '255,200,200'], confetti: ['#f2b84b', '#ffd77a', '#3f8cff', '#ff4d5e', '#fff3dc', '#ffffff'] },
     host: {
       name: 'Judge Penelope Gavel',
-      voice: { like: /female|zira|aria|jenny|libby|sonia|hazel|susan|samantha|serena|natasha/i, accent: /en-(GB|AU|US)/i, pitch: 1.05, rate: 1.06 },
+      voice: { kokoro: 'af_kore', speed: 1.0, like: /female|zira|aria|jenny|libby|sonia|hazel|susan|samantha|serena|natasha/i, accent: /en-(GB|AU|US)/i, pitch: 1.05, rate: 1.02 },
       look: { skin: '#e8b48f', skinShade: '#c99071', suit: '#5a1e2c', suit2: '#3a0f1a', sleeve: '#5a1e2c', lapel: '#f2b84b', shirt: '#fffdf7', cuff: '#fffdf7', tie: 'bow', tieColor: '#1b4fa8',
         hair: 'bun', hairColor: '#d8d2c8', hairShade: '#b3aba0', brow: '#8a8278', glasses: '#2a1a12', prop: 'gavel', grin: true },
     },

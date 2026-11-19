@@ -80,7 +80,7 @@
       { icon: '📉', title: 'Don’t go over!', text: 'The closer you are, the more points, up to 1000. Go OVER the real price and your points are cut in half!' },
       { icon: '🎯', title: 'Bonuses', text: 'Within 5% without going over: Bullseye, +500. The exact price: Jackpot, +1000! Three close rounds in a row: Hot Streak, +300.' },
       { icon: '⚡', title: 'Power-ups', text: 'Once each per game: 🎯 Double Down (×2), 🛡️ Bust Shield (no halving) and 👀 Peek at the room’s average.', phone: 'Tap a power-up before you lock in.' },
-      { icon: '⬆️', title: 'Quick rounds', text: 'Higher or Lower? and Which Costs More? are fast-tap rounds. Be right AND quick for a speed bonus.', phone: 'Tap ⬆️ or ⬇️, or tap the pricier item.' },
+      { icon: '⬆️', title: 'Quick rounds', text: 'Higher or Lower? and Which Costs More? are fast-tap rounds. Be right AND quick for a speed bonus.', phone: 'Tap ⬆️ or ⬇️, or tap the pricier item.', say: 'Quick rounds. Higher or Lower, and Which Costs More, are fast-tap rounds. Be right and quick for a speed bonus. Tap up or down, or tap the pricier item.' },
       { icon: '🛒', title: 'Shopping Spree', text: 'The last round shows three items. Guess the TOTAL: it’s worth double points. Highest score wins!' },
     ],
     theme: { accent: '#ff4f9a', accent2: '#ffd23f', accent3: '#ffd23f', ink: '#fff8ef', fade: '#0d0322', wall1: '#2b0a4d', wall2: '#0f0424', floor1: '#2a0f4a', floor2: '#0b0318', disc1: '#5a1d7a', disc2: '#2a0b45',
@@ -88,7 +88,7 @@
       spots: ['255,236,190', '255,120,200', '120,230,255', '255,236,190'], confetti: ['#ff4f9a', '#ffd23f', '#3ee6ff', '#2ee6a6', '#ffffff', '#b06cff'] },
     host: {
       name: 'Sterling Sparks',
-      voice: { kokoro: 'am_puck', speed: 1.15, like: /guy|davis|christopher|eric|andrew|brian|google us english|male/i, accent: /en-US/i, pitch: 1.15, rate: 1.12 },
+      voice: { kokoro: 'am_puck', speed: 1.0, like: /guy|davis|christopher|eric|andrew|brian|google us english|male/i, accent: /en-US/i, pitch: 1.15, rate: 1.05 },
       look: { skin: '#f1c19a', skinShade: '#d99e78', suit: '#b0249a', suit2: '#6d0f66', lapel: '#ffd23f', shirt: '#fffdf7', tie: 'bow', tieColor: '#ffd23f', hair: 'pomp', hairColor: '#2a1838', hairShade: '#6a5590', streak: '#e6e2f4', brow: '#7d7a90', prop: 'mic', grin: true, sparkle: '#fff2a8' },
     },
     lines: {

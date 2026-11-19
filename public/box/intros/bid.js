@@ -88,7 +88,7 @@
       spots: ['255,222,170', '255,190,120', '255,222,170', '160,210,255'], confetti: ['#ffd23f', '#ff8a3d', '#2ee68a', '#7fd1ff', '#ffffff', '#ff4f6a'] },
     host: {
       name: 'Rusty Rattlebang',
-      voice: { kokoro: 'am_fenrir', speed: 1.25, like: /guy|davis|eric|christopher|george|male/i, accent: /en-US/i, pitch: 0.8, rate: 1.3 },
+      voice: { kokoro: 'am_fenrir', speed: 1.08, like: /guy|davis|eric|christopher|george|male/i, accent: /en-US/i, pitch: 0.8, rate: 1.08 },
       look: { skin: '#f0b48e', skinShade: '#d38f6a', suit: '#7a2e1d', suit2: '#4a180e', sleeve: '#e9d6b0', cuff: '#e9d6b0', lapel: '#5a1f12', shirt: '#e9d6b0', tie: 'bolo', tieColor: '#3ec6c0', hair: 'short', hairColor: '#c8642c', brow: '#a0461c', hat: '#c48a4a', hatBand: '#4a2410', mustache: '#c8642c', prop: 'gavel', watch: true },
     },
     lines: {
