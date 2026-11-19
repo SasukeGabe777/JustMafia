@@ -1201,3 +1201,20 @@ Cinematic Chaos 44–50% at 16–20, Big party 44–48% at 30–40. Group size s
 of the same size) is within ±3 points for most roles; Sheriff (+7) and Detective (+5) are the
 strongest Town roles on purpose. Talk-based roles (Conductor, Crier, Ghostwriter, Investigator)
 look slightly weak with bots, which can't use them well; real players should do better.
+
+## Profile progression: levels, challenges, seasonal events (November 19, 2026)
+
+Branch `claude/progress`; design in `docs/progress.md`. JustMafia's season pass and weekly
+challenges moved into a box-wide system on the wallet (`box/progress.js`, `public/shared/challenges.js`):
+a player level (1..∞, XP from every finished box game, Party Mode and JustMafia game), 3 daily and
+5 weekly challenges across all games (deterministic per UTC day / ISO week, 1 free reroll a day),
+2–3 event challenges per seasonal event, and the event's season pass (25 tiers; free track + a
+195 JG premium track with the event's limited items from `seasons.js`). Old 's1' pass owners get a
+free premium pass for the current (or next) event; old pass XP became profile XP. UI: ⭐ Progress in
+the box phone's 🏆 My profile and in JustMafia's Season & unlocks (replacing Season / Weekly), level
+badges on the TV roster, party board and phone header, level-up / challenge toasts on phone and TV,
+event banners on the title screen, TV lobby, join screen and a level + event strip in the shop.
+Validated: `tools/test-progress.js` (14 tests, incl. real bot games of 5 box games, Party Mode,
+JustMafia sims, sockets), updated `test-season.js`, `e2e-shop.js`; screenshots looked at.
+Limits: games with their own TV lobby (e.g. Most Likely To…) don't show the lobby banner; players
+without a linked wallet earn nothing until the phone links it (opening the profile does).

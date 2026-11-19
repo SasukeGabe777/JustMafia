@@ -205,7 +205,19 @@
     return profBusy;
   }
   const gname = (k) => (BOX.games[k] ? BOX.games[k].icon + ' ' + BOX.games[k].name : k);
-  async function profileSheet(tab = 'stats') {
+  // ⭐ Progress (public/progress-ui.js, box/progress.js): level, today's 3, this week's 5, the event
+  // and its season pass. They live on the account's wallet: linked here the first time.
+  async function progressFill(el) {
+    if (!el || !window.JGProgress) return;
+    JGProgress.render(el, null);
+    const auth = getProf();
+    let r = auth ? await pemit('progress:get', { auth }) : { ok: false };
+    if (!r.ok && r.noWallet && acct) { await acct.linkWallet(); r = await pemit('progress:get', { auth }); }
+    if (!r.ok) { el.innerHTML = `<p class="muted">${esc(r.error || 'Your progress isn’t available here.')}</p>`; return; }
+    const lv = document.querySelector('.pf-head .pf-lv'); if (lv) lv.innerHTML = JGProgress.badge(r.progress.level);
+    JGProgress.render(el, r.progress, { toast, reroll: (period, id) => pemit('progress:reroll', { auth: getProf(), period, id }), premium: () => pemit('progress:premium', { auth: getProf() }).then((x) => { if (x.ok) haptic('win'); return x; }) });
+  }
+  async function profileSheet(tab = 'progress') {
     let auth = getProf();
     if (!auth) { await ensureProfile(); auth = getProf(); }
     let r = auth ? await pemit('profile:get', { auth }) : { ok: false };
@@ -213,24 +225,28 @@
     if (!r.ok) return toast(r.error || 'Profiles are not available here.');
     const P = r.profile, S = P.stats, earned = P.trophies.filter((t) => t.earned);
     const nm = P.name || (view && view.me.name) || (me && me.name) || 'Player';
-    const tabs = `<div class="pf-tabs">${[['stats', '📊 Stats'], ['trophies', `🏆 Trophies ${earned.length}/${P.trophies.length}`], ['account', P.claimed ? '✅ Saved' : '💾 Save']].map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+    const tabs = `<div class="pf-tabs">${[['progress', '⭐ Progress'], ['stats', '📊 Stats'], ['trophies', `🏆 Trophies ${earned.length}/${P.trophies.length}`], ['account', P.claimed ? '✅ Saved' : '💾 Save']].map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`;
     let body = '';
-    if (tab === 'stats') {
+    if (tab === 'progress') {
+      body = '<div id="pf-prog"></div>';
+    } else if (tab === 'stats') {
       body = `<div class="pf-tiles"><div><b>${S.nights}</b><span>nights</span></div><div><b>${S.games}</b><span>games</span></div><div><b>${S.wins}</b><span>wins</span></div><div><b>${S.partyPts}</b><span>party pts</span></div></div>
         <div class="pf-tiles small"><div><b>${S.bestPlace ? '#' + S.bestPlace : '–'}</b><span>best finish</span></div><div><b>${S.podiums}</b><span>top-3s</span></div><div><b>${S.partyWins}</b><span>party wins</span></div><div><b>${S.audienceFavs}</b><span>crowd favs</span></div></div>
         <h3>🎮 By game</h3>${S.byGame.length ? `<div class="pf-games">${S.byGame.map((g) => `<div><span>${esc(gname(g.game))}</span><small>${g.played} played</small><b>${g.won ? '🏆 ' + g.won : '–'}</b></div>`).join('')}</div>` : '<p class="muted">Finish a game and it shows up here.</p>'}
         ${P.nights.length ? `<h3>🌙 Recent nights</h3><div class="pf-nights">${P.nights.slice(0, 5).map((n) => `<div><span>${esc(new Date(n.at).toLocaleDateString())}</span><small>${n.games} game${n.games === 1 ? '' : 's'} · ${n.wins} win${n.wins === 1 ? '' : 's'}${n.place ? ' · party #' + n.place : ''}</small><b>${n.pts} pts</b></div>`).join('')}</div>` : ''}`;
     } else if (tab === 'trophies') {
       body = `<p class="muted small">Tap a trophy you’ve earned to wear its title next to your name.</p><div class="pf-case">${P.trophies.map((t) => `<button class="pf-tro ${t.earned ? 'got' : ''} ${P.title === t.id ? 'worn' : ''}" data-tro="${t.id}" ${t.earned ? '' : 'disabled'}><span class="pf-ti">${t.earned ? esc(t.icon) : '🔒'}</span><b>${esc(t.name)}</b><small>${esc(t.earned ? '“' + t.title + '”' : t.how)}</small>${P.title === t.id ? '<em>WORN</em>' : ''}</button>`).join('')}</div>
+        ${(P.levelTitles || []).length ? `<h3>⭐ Level &amp; season titles</h3><div class="pf-case">${P.levelTitles.map((t) => `<button class="pf-tro got ${P.title === t.id ? 'worn' : ''}" data-tro="${esc(t.id)}"><span class="pf-ti">⭐</span><b>${esc(t.text)}</b><small>“${esc(t.text)}”</small>${P.title === t.id ? '<em>WORN</em>' : ''}</button>`).join('')}</div>` : ''}
         ${P.title ? '<button class="btn ghost small" data-tro="">Take off my title</button>' : ''}`;
     } else {
       // "Save your stuff" (public/account-ui.js): name + password, sign in, change password, sign out.
       body = `<div id="pf-acct"></div><p class="muted small">${esc(P.storage)}. Without a password your stuff lives on this phone only.</p>`;
     }
-    sheet(`<div class="pf-head"><span class="pf-av">${esc((view && view.me.avatar) || avatar)}</span><div><h2>${esc(nm)}</h2>${P.titleText ? `<span class="pf-title">${esc(P.titleText)}</span>` : '<span class="muted small">No title yet: earn trophies!</span>'}</div></div>${tabs}<div class="pf-body">${body}</div>`, (sh, close) => {
+    sheet(`<div class="pf-head"><span class="pf-av">${esc((view && view.me.avatar) || avatar)}</span><div><h2>${esc(nm)}<span class="pf-lv">${view && view.me.level && window.JGProgress ? JGProgress.badge(view.me.level) : ''}</span></h2>${P.titleText ? `<span class="pf-title">${esc(P.titleText)}</span>` : '<span class="muted small">No title yet: earn trophies!</span>'}</div></div>${tabs}<div class="pf-body">${body}</div>`, (sh, close) => {
       for (const b of sh.querySelectorAll('[data-tab]')) b.onclick = () => profileSheet(b.dataset.tab);
       for (const b of sh.querySelectorAll('[data-tro]')) b.onclick = async () => { const x = await pemit('profile:title', { auth: getProf(), title: b.dataset.tro || null }); if (!x.ok) return toast(x.error); haptic('success'); toast(b.dataset.tro ? '🏆 New title on!' : 'Title off'); profileSheet('trophies'); };
-      const pa = sh.querySelector('#pf-acct'); if (pa && acct) acct.panel(pa, 'auto', (kind) => profileSheet(kind === 'signin' ? 'stats' : 'account'));
+      const pa = sh.querySelector('#pf-acct'); if (pa && acct) acct.panel(pa, 'auto', (kind) => profileSheet(kind === 'signin' ? 'progress' : 'account'));
+      progressFill(sh.querySelector('#pf-prog'));
     });
   }
   $('#h-prof').onclick = () => profileSheet();
@@ -322,11 +338,17 @@
     if (view0 && v.unlocks && view0.unlocks && v.unlocks.length > view0.unlocks.length) { const k = v.unlocks.find((x) => !view0.unlocks.includes(x)); const g = BOX.games[k]; toast(`🔓 New game unlocked: ${g ? g.icon + ' ' + g.name : k}!`); haptic('win'); }
     if (v.phase !== (view0 && view0.phase) && v.phase === 'show') haptic('big');
     if (v.game !== gameKey) { setGame(v.game); haptic('success'); toast(`${G ? G.icon + ' ' : ''}Next game: ${v.title}!`); vibrate(80); }
-    $('#h-name').textContent = v.me.name + (v.me.title ? ' · ' + v.me.title : '');
+    const hn = esc(v.me.name) + (v.me.level && window.JGProgress ? JGProgress.badge(v.me.level) : '') + (v.me.title ? ' · ' + esc(v.me.title) : '');
+    if ($('#h-name').dataset.html !== hn) { $('#h-name').innerHTML = hn; $('#h-name').dataset.html = hn; }
     const hav = BOX.portrait ? BOX.portrait.html(v.me, 28) : esc(v.me.avatar || ''); if ($('#h-av').dataset.html !== hav) { $('#h-av').innerHTML = hav; $('#h-av').dataset.html = hav; }
     // JustGold paid at the end of a game (or why it wasn't).
     if (v.jg && v.jg.at && view0 && (!view0.jg || view0.jg.at !== v.jg.at)) {
       if (v.jg.n > 0) { toast(`🪙 +${v.jg.n} JustGold!${v.jg.set ? ` (${v.jg.set.icon} ${v.jg.set.name} set +${v.jg.set.extra})` : ''}${v.jg.total != null ? ` You have ${v.jg.total} JG.` : ''}`); haptic('win'); } else if (v.jg.why) toast(`🪙 ${v.jg.why}`);
+    }
+    // Progress from that game: XP, finished challenges, level ups (after the JustGold toast).
+    if (v.prog && v.prog.at && view0 && (!view0.prog || view0.prog.at !== v.prog.at) && window.JGProgress) {
+      const lines = JGProgress.news(v.prog).slice(-4); // (the level up comes last: keep it)
+      lines.forEach((l, i) => setTimeout(() => { toast(l); if (/Level|done/.test(l)) { haptic('win'); BOX.sfx('win'); } }, 2800 * (i + (v.jg && v.jg.n ? 1 : 0))));
     }
     // After a game: once, if this phone has unsaved JustGold or stats, offer "Save your stuff".
     // Never before this phone has finished a real game (a practice round doesn't count): then on

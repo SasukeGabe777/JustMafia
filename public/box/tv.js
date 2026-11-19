@@ -216,6 +216,9 @@
     for (const f of list) if (f.id > lastFx && lastFx) {
       if (f.kind === 'trophy') celebrate(() => tvToast(`<span class="tt-i">${esc(f.icon || '🏆')}</span><div><small>TROPHY UNLOCKED</small><b>${esc(f.avatar || '')} ${esc(BOX.filterText(f.name))}</b><span>${esc(f.trophy)}</span></div>`, 'trophy'), 2600);
       else if (f.kind === 'audFav') { tvToast(`<span class="tt-i">📣</span><div><small>AUDIENCE FAVOURITE</small><b>${esc(f.avatar || '')} ${esc(BOX.filterText(f.name))}</b><span>+${f.bonus} party points</span></div>`, 'fav'); BOX.sfx('cheer'); }
+      // Profile progress (box/progress.js): a level up gets a small celebration; weekly / event challenges a toast.
+      else if (f.kind === 'level') celebrate(() => { tvToast(`<span class="tt-i lvl-up">⭐</span><div><small>LEVEL UP!</small><b>${esc(f.avatar || '')} ${esc(BOX.filterText(f.name))} ${window.JGProgress ? JGProgress.badge(f.level) : ''}</b><span>reached level ${Number(f.level) || ''}${f.title ? ` · new title “${esc(f.title)}”` : ''}</span></div>`, 'level'); BOX.sfx('win'); }, 2600);
+      else if (f.kind === 'challenge') celebrate(() => tvToast(`<span class="tt-i">${esc(f.icon || '✅')}</span><div><small>${f.period === 'event' ? 'EVENT' : 'WEEKLY'} CHALLENGE DONE</small><b>${esc(f.avatar || '')} ${esc(BOX.filterText(f.name))}</b><span>${esc(f.label || '')}</span></div>`, 'chal'), 2200);
       else if (f.kind === 'audJoin') tvToast(`<span class="tt-i">👀</span><div><small>FROM THE AUDIENCE</small><b>${f.n} new player${f.n === 1 ? '' : 's'}</b><span>joined for this game</span></div>`, 'aud');
     }
     for (const f of list) if (f.id > lastFx) {
@@ -535,6 +538,7 @@
   }
 
   const joinPanel = () => `
+          ${window.JGProgress ? `<div class="tv-event">${JGProgress.banner(null, { compact: true, currentOnly: true })}</div>` : ''}
           <h2 style="margin:0">Join on your phone!</h2>
           <img id="qr" alt="QR code to join">
           <div class="muted">Room code</div>
@@ -634,7 +638,7 @@
     $('#count').textContent = n ? `${n} player${n > 1 ? 's' : ''} in` : 'Waiting for players…';
     $('#roster-title').textContent = `Players (${n}/${state.max})`;
     $('#start').disabled = n < state.min;
-    $('#roster').innerHTML = state.players.map((p) => `<span class="chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove"><i style="background:${esc(p.color)}"></i><span class="av">${BOX.portrait ? BOX.portrait.html(p, 30) : esc(p.avatar || '')}</span>${esc(p.name)}${p.title ? `<em class="ptitle">${esc(p.title)}</em>` : ''}</span>`).join('') || '<span class="muted">Scan the QR code to join.</span>';
+    $('#roster').innerHTML = state.players.map((p) => `<span class="chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove"><i style="background:${esc(p.color)}"></i><span class="av">${BOX.portrait ? BOX.portrait.html(p, 30) : esc(p.avatar || '')}</span>${esc(p.name)}${p.level && window.JGProgress ? JGProgress.badge(p.level) : ''}${p.title ? `<em class="ptitle">${esc(p.title)}</em>` : ''}</span>`).join('') || '<span class="muted">Scan the QR code to join.</span>';
     const lu = $('#lineup'); if (lu) { const lh = state.partyMode && BOX.partyLineup ? BOX.partyLineup(state) : ''; if (lu.dataset.html !== lh) { lu.innerHTML = lh; lu.dataset.html = lh; } }
     const pp = $('#party');
     if (pp) { const ph = state.played && state.played.length ? `<h3>🎉 Party points · ${state.played.length} game${state.played.length === 1 ? '' : 's'} tonight</h3><div class="board">${state.party.slice(0, 8).map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span class="av">${partyFace(r)}</span><span>${esc(r.name)}${r.wins ? ' ' + '🏆'.repeat(Math.min(3, r.wins)) : ''}</span><b>${r.pts}</b></div>`).join('')}</div><div class="played">${state.played.slice(-6).map((g) => `${esc(g.title)}${g.winner ? ': ' + esc(g.winner) : ''}`).join(' · ')}</div>` : ''; if (pp.dataset.html !== ph) { pp.innerHTML = ph; pp.dataset.html = ph; } }

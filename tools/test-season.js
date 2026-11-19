@@ -1,5 +1,5 @@
 'use strict';
-// Season pass, weekly challenges, the Blood Moon event and party mode.
+// Season pass items, JustMafia games feeding the box-wide season pass, the Blood Moon event and party mode.
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
@@ -13,17 +13,10 @@ const test = async (name, fn) => { await fn(); passed++; console.log(`  ✓ ${na
 const win = { won: true, alive: true, team: 'town', metrics: { abilities: 1 } };
 
 (async () => {
-  await test('Weekly challenges: three distinct, stable per week', () => {
-    for (const week of ['2026-W01', '2026-W02', '2026-W46', '2027-W52']) {
-      const ids = C.weeklyChallenges(week);
-      assert.equal(ids.length, 3); assert.equal(new Set(ids).size, 3);
-      for (const k of ids) assert(C.CHALLENGES[k], k);
-      assert.deepEqual(C.weeklyChallenges(week), ids, 'same week, same challenges');
-    }
-    assert.match(C.weekKey(new Date('2026-11-11')), /^2026-W\d\d$/);
-  });
-
-  await test('Most cosmetics are now earned; pass items cannot be bought', () => {
+  // JustMafia's own season pass and weekly challenges moved to the box-wide system
+  // (box/progress.js, tools/test-progress.js). What stays here: pass items are earned, not sold;
+  // a JustMafia game feeds the season pass and the challenges; the Judge's events multiply XP.
+  await test('Pass cosmetics are earned, not sold (in JustMafia and in the shared shop)', () => {
     const free = C.CATALOG.filter((i) => i.free).length;
     assert(free < C.CATALOG.length / 3, `only ${free} of ${C.CATALOG.length} items are free`);
     const s = new ProfileStore(), a = s.create();
@@ -34,44 +27,26 @@ const win = { won: true, alive: true, team: 'town', metrics: { abilities: 1 } };
     }
   });
 
-  await test('Season pass costs gold and pays every reached tier retroactively', () => {
-    const s = new ProfileStore(), a = s.create(), P = () => s.view(a.id);
+  await test('A JustMafia game feeds the box-wide season pass; its premium track is bought from JustMafia’s phone too', () => {
+    const s = new ProfileStore(); s.now = () => Date.parse('2026-11-19T12:00:00Z'); // during Harvest Fest
+    const a = s.create(), P = () => s.view(a.id);
     assert.equal(s.buyPass(a.id).ok, false, 'too poor');
     for (let i = 0; i < 6; i++) s.award(a.id, 'g' + i, win);
-    const xp = P().season.xp, tier = P().season.tier;
-    assert(tier >= 2, `reached tier ${tier} with ${xp} XP`);
-    assert.equal(P().season.granted.length, 0, 'no rewards without the pass');
-    s.grant(a.id, C.SEASON.cost);
-    const coins = P().coins, r = s.buyPass(a.id);
-    assert(r.ok); assert.equal(r.rewards.map((x) => x.tier).filter((t, i, l) => l.indexOf(t) === i).length, tier);
-    const tierGold = r.rewards.reduce((n, x) => n + (x.gold || 0), 0);
-    assert.equal(P().coins, coins - C.SEASON.cost + tierGold);
+    const season = P().progress.season;
+    assert.equal(season.id, 'harvest-2026'); assert(season.tier >= 2, `tier ${season.tier}`);
+    assert(season.track.filter((t) => t.tier <= season.tier).every((t) => t.freeGot && !t.premGot), 'free track only');
+    s.grant(a.id, 400);
+    const r = s.buyPass(a.id); assert(r.ok, r.error);
+    assert(r.rewards.length >= season.tier && r.rewards.every((x) => x.side === 'premium'), 'premium tiers paid back');
     assert.equal(s.buyPass(a.id).ok, false, 'cannot buy twice');
-    // Playing on keeps unlocking tiers, including pass-exclusive cosmetics.
-    for (let i = 6; i < 60; i++) s.award(a.id, 'g' + i, win);
-    assert.equal(P().season.tier, C.SEASON.tiers);
-    for (const item of C.CATALOG.filter((i) => i.pass)) assert(P().owned.includes(item.id), item.id);
-    assert.equal(s.validateAvatar(a.id, { outfit: 'bloodKnight' }).outfit, 'bloodKnight');
-    assert.equal(P().season.granted.length, C.SEASON.tiers, 'each tier granted once');
+    assert(P().progress.season.track.filter((t) => t.tier <= season.tier).every((t) => t.premGot));
   });
 
-  await test('Challenges progress across games and pay out once', () => {
-    const s = new ProfileStore(), a = s.create(), P = () => s.view(a.id);
-    const play = P().season.challenges.find((c) => /^play/.test(c.id)) || P().season.challenges[0];
-    let paid = 0;
-    for (let i = 0; i < 8; i++) {
-      const r = s.award(a.id, 'c' + i, { won: true, alive: true, team: 'mafia', metrics: { abilities: 3, saves: 1, correctInvestigations: 1 } });
-      paid += r.lines.filter((l) => l.key === 'challenge').length;
-    }
-    for (const c of P().season.challenges) { assert(c.done, c.id); assert.equal(c.progress, c.count); }
-    assert.equal(paid, 3, 'each challenge paid exactly once');
-    assert(P().ledger.some((l) => l.reason === `Weekly challenge: ${play.label}`));
-  });
-
-  await test('Blood Moon event doubles season XP', () => {
+  await test('Blood Moon event doubles the game’s XP (challenge XP is not doubled)', () => {
     const s = new ProfileStore(), a = s.create(), b = s.create();
-    const plain = s.award(a.id, 'x', win).season.xp, moon = s.award(b.id, 'y', { ...win, event: 'bloodMoon' }).season;
-    assert.equal(moon.multiplier, 2); assert.equal(moon.xp, plain * 2);
+    const gameXp = (r) => r.progress.xp - r.progress.completed.reduce((n, c) => n + c.xp, 0);
+    const plain = s.award(a.id, 'x', win), moon = s.award(b.id, 'y', { ...win, event: 'bloodMoon' });
+    assert.equal(moon.progress.multiplier, 2); assert.equal(gameXp(moon), gameXp(plain) * 2);
   });
 
   await test('Blood Moon: every third night the Mafia kill twice', () => {

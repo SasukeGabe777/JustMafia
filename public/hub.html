@@ -60,6 +60,7 @@
         <button class="party-btn" id="party-open"><span class="pb-ic" aria-hidden="true">🎉</span><span class="pb-txt"><b>Party Mode</b><small>A whole night of games, picked for you</small></span></button>
       </div>
     </header>
+    <div class="hub-event" data-season-banner hidden></div> <!-- the seasonal event (public/progress-ui.js, public/shared/seasons.js) -->
     <!-- One code for the night (hub.js): this TV's room is still open, so a game picked here
          switches that room and every phone follows. -->
     <p class="room-live" id="room-live" hidden></p>
@@ -277,5 +278,7 @@
   <script src="/box/portrait.js"></script>
   <script src="/box/voice.js"></script> <!-- its narrator clips, when there are any -->
   <script src="/hub-onboard.js"></script>
+  <script src="/shared/seasons.js"></script>
+  <script src="/progress-ui.js"></script>
 </body>
 </html>

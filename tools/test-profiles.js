@@ -37,7 +37,7 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     const poor = store.buy(g.id, 'houseStyle:darkMansion'); assert.equal(poor.ok, false); assert.match(poor.error, /Not enough JustGold/);
     assert.equal(JSON.stringify(P()), before, 'failed purchase leaves gold and inventory unchanged');
     assert(store.award(g.id, 'g-1', { won: true, alive: true, team: 'town', metrics: { abilities: 1 } }));
-    const earned = P().coins; assert(earned > 0); assert.equal(P().goldEarned, earned); assert.equal(P().ledger[0].reason, 'Game reward');
+    const earned = P().coins; assert(earned > 0); assert.equal(P().goldEarned, earned); assert(P().ledger.some((l) => l.reason === 'Game reward')); // (challenges / level ups may add lines after it)
     assert(store.grant(g.id, 200)); assert.equal(P().coins, earned + 200);
     const price = require('../public/shared/cosmetics').CATALOG.find((i) => i.id === 'houseStyle:darkMansion').cost;
     assert(store.buy(g.id, 'houseStyle:darkMansion').ok);
@@ -45,10 +45,12 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     assert.equal(P().ledger[0].delta, -price); assert.equal(P().ledger[0].item, 'houseStyle:darkMansion');
     assert.equal(store.buy(g.id, 'houseStyle:darkMansion').ok, false, 'cannot buy twice');
     // Inventory + equip/unequip (house item and character item); unowned items cannot be equipped.
-    assert.deepEqual(P().inventory.map((i) => i.id), ['houseStyle:darkMansion']); assert.equal(P().inventory[0].equipped, false);
+    // (level-up rewards from box/progress.js may add an item too: look at the house only)
+    const house = () => P().inventory.find((i) => i.id === 'houseStyle:darkMansion');
+    assert.deepEqual(P().inventory.filter((i) => i.target === 'home').map((i) => i.id), ['houseStyle:darkMansion']); assert.equal(house().equipped, false);
     assert.equal(store.equip(g.id, 'outfit:knight').ok, false);
-    const eq = store.equip(g.id, 'houseStyle:darkMansion'); assert(eq.ok); assert.equal(eq.target, 'home'); assert.equal(P().home.style, 'darkMansion'); assert.equal(P().inventory[0].equipped, true);
-    assert(store.equip(g.id, 'houseStyle:darkMansion', false).ok); assert.equal(P().home.style, 'cottage'); assert.equal(P().inventory[0].equipped, false);
+    const eq = store.equip(g.id, 'houseStyle:darkMansion'); assert(eq.ok); assert.equal(eq.target, 'home'); assert.equal(P().home.style, 'darkMansion'); assert.equal(house().equipped, true);
+    assert(store.equip(g.id, 'houseStyle:darkMansion', false).ok); assert.equal(P().home.style, 'cottage'); assert.equal(house().equipped, false);
     store.grant(g.id, 100); assert(store.buy(g.id, 'hat:hood').ok); assert(store.equip(g.id, 'hat:hood').ok); assert.equal(P().avatar.hat, 'hood');
     assert.equal(new ProfileStore(filename).view(g.id).avatar.hat, 'hood', 'equipped items persist');
     // Older profiles get pouch fields on load (their balance counts as earned).

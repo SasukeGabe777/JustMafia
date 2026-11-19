@@ -41,7 +41,7 @@ function earnTable() {
     ],
     party: { all: PARTY.all, places: PARTY.places.slice(), label: 'Finish a whole Party Mode: everyone +' + PARTY.all + ', and +' + PARTY.places.join(' / +') + ' for the top 3 (plus every game along the way). The fastest way to earn.' },
     sets: 'Wear a whole theme set (Shop → Sets) in its own game: +' + SS.SETS_RULES.bonusPct + '% JustGold there (at least 1, at most ' + SS.SETS_RULES.bonusCap + ' a game).',
-    mafia: 'JustMafia: 4–30 JG a game (finishing, winning, your role’s good plays), weekly challenges and the season pass.',
+    mafia: 'JustMafia: 4–30 JG a game (finishing, winning, your role’s good plays). Every game (any kind) also earns XP for your level, daily / weekly challenges and the season pass.',
   };
 }
 

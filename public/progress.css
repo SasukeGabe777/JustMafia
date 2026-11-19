@@ -1,0 +1,132 @@
+/* Profile progress (public/progress-ui.js): level, challenges, the seasonal event and its pass.
+   Self-contained colours so it reads the same on the box phone, JustMafia's phone and the shop.
+   --ea / --eb / --ec: the running event's theme (public/shared/seasons.js). */
+.jgp { --ea: #ffcf3f; --eb: #4a2a8a; --ec: #fff4c8; --jink: #fff8ef; --jmuted: #c9bfe6; --jpanel: rgba(255, 255, 255, 0.07); --jline: rgba(255, 255, 255, 0.14);
+  color: var(--jink); font-family: 'Fredoka', system-ui, sans-serif; display: grid; gap: 12px; text-align: left; }
+.jgp-muted { color: var(--jmuted); font-size: 12.5px; }
+.jgp h3 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 0 0 8px; font-size: 17px; }
+.jgp h3 small { color: var(--jmuted); font-weight: 400; font-size: 12.5px; }
+.jgp-sec { background: var(--jpanel); border: 1px solid var(--jline); border-radius: 16px; padding: 12px; }
+
+/* level badge (also next to names on the TV, the party board and phone headers) */
+.jgp-badge { --c: #c98b4f; display: inline-flex; align-items: center; gap: 1px; vertical-align: middle; font: 700 11px/1 'Fredoka', system-ui, sans-serif; color: #1d1236;
+  padding: 3px 6px 3px 4px; border-radius: 999px; background: linear-gradient(160deg, #fff 0%, var(--c) 38%, color-mix(in srgb, var(--c) 70%, #000) 100%);
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.35), inset 0 -2px 0 rgba(0, 0, 0, 0.18); white-space: nowrap; margin: 0 4px; letter-spacing: 0.2px; }
+.jgp-badge i { font-style: normal; font-size: 0.85em; margin-right: 1px; opacity: 0.85; }
+.jgp-badge.big { font-size: 26px; padding: 0; width: 64px; height: 64px; justify-content: center; flex-direction: column; border-radius: 18px; transform: rotate(-4deg); margin: 0;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.35), 0 6px 18px color-mix(in srgb, var(--c) 45%, transparent), inset 0 -4px 0 rgba(0, 0, 0, 0.2); }
+.jgp-badge.big i { font-size: 13px; margin: 0 0 1px; }
+
+.jgp-level { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 18px; background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)); border: 1px solid var(--jline); }
+.jgp-lv-body { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.jgp-lv-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.jgp-lv-top b { font-size: 22px; }
+.jgp-lv-top small { color: var(--jmuted); }
+.jgp-bar { height: 12px; border-radius: 99px; background: rgba(0, 0, 0, 0.35); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4); }
+.jgp-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #3ee6ff, #8bff7a); transition: width 0.6s ease; min-width: 6px; }
+.jgp-bar.pass i { background: linear-gradient(90deg, var(--ea), var(--ec)); }
+
+/* the event banner */
+.jgp-banner { --ea: #ffcf3f; --eb: #4a2a8a; --ec: #fff4c8; position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; overflow: hidden;
+  color: #fff; background: radial-gradient(circle at 12% 30%, color-mix(in srgb, var(--ec) 40%, transparent), transparent 45%), linear-gradient(120deg, var(--ea), var(--eb)); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); text-align: left; }
+.jgp-banner::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0 12px, transparent 12px 26px); pointer-events: none; }
+.jgp-banner > div { flex: 1; min-width: 0; display: grid; position: relative; z-index: 1; }
+.jgp-banner small { font-size: 10.5px; letter-spacing: 1.6px; opacity: 0.85; font-weight: 600; }
+.jgp-banner b { font-size: 20px; line-height: 1.1; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
+.jgp-banner .jgp-blurb, .jgp-banner span { font-size: 12.5px; opacity: 0.92; }
+.jgp-bi { font-size: 34px; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.25)); position: relative; z-index: 1; animation: jgpBob 3s ease-in-out infinite; }
+.jgp-days { position: relative; z-index: 1; font-style: normal; font-size: 12px; font-weight: 700; background: rgba(0, 0, 0, 0.3); padding: 5px 9px; border-radius: 99px; white-space: nowrap; }
+.jgp-banner.compact { padding: 8px 12px; border-radius: 14px; }
+.jgp-banner.compact b { font-size: 16px; }
+.jgp-banner.compact .jgp-bi { font-size: 26px; }
+.jgp-banner.soon { filter: saturate(0.75); }
+.jgp-banner.tv { padding: 14px 22px; }
+.jgp-banner.tv b { font-size: 30px; }
+.jgp-banner.tv .jgp-bi { font-size: 48px; }
+.jgp-banner.tv .jgp-days { font-size: 16px; }
+@keyframes jgpBob { 50% { transform: translateY(-3px) rotate(-6deg); } }
+
+/* challenges */
+.jgp-rr { margin-left: auto; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 99px; background: rgba(62, 230, 255, 0.18); color: #9ff3ff; }
+.jgp-rr.used { background: rgba(255, 255, 255, 0.08); color: var(--jmuted); }
+.jgp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.jgp-ch { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 13px; background: rgba(0, 0, 0, 0.2); border: 1px solid transparent; }
+.jgp-ch.done { background: rgba(110, 230, 120, 0.13); border-color: rgba(110, 230, 120, 0.35); }
+.jgp-ch.done b { text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.4); }
+.jgp-ci { font-size: 24px; width: 32px; text-align: center; flex: none; }
+.jgp-cb { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.jgp-cb b { font-size: 14.5px; font-weight: 600; line-height: 1.2; }
+.jgp-cbar { position: relative; height: 16px; border-radius: 99px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.jgp-cbar i { display: block; height: 100%; background: linear-gradient(90deg, #ffcf3f, #ff8a3d); border-radius: inherit; }
+.jgp-ch.done .jgp-cbar i { background: linear-gradient(90deg, #6ee678, #3ec98f); }
+.jgp-list.event .jgp-cbar i { background: linear-gradient(90deg, var(--ea), var(--ec)); }
+.jgp-cbar span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 11px; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.jgp-rw { color: #ffe27a; font-size: 12px; }
+.jgp-reroll { flex: none; width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--jline); background: rgba(255, 255, 255, 0.08); font-size: 18px; cursor: pointer; }
+.jgp-reroll:active { transform: scale(0.92) rotate(-20deg); }
+
+/* season pass track: free on top, premium below, scroll sideways */
+.jgp-track { display: flex; gap: 6px; overflow-x: auto; padding: 8px 2px 6px; margin-top: 8px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.jgp-rowlbl, .jgp-tier { flex: none; display: grid; grid-template-rows: 62px 22px 62px; gap: 4px; }
+.jgp-rowlbl { position: sticky; left: 0; z-index: 2; width: 34px; font-size: 10px; color: var(--jmuted); background: linear-gradient(90deg, #2a1a5a 70%, transparent); }
+.jgp-rowlbl span { display: grid; place-items: center; writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 600; }
+.jgp-tier { width: 74px; scroll-snap-align: center; }
+.jgp-cell { border-radius: 12px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--jline); display: grid; place-items: center; text-align: center; padding: 4px; font-size: 11.5px; position: relative; overflow: hidden; }
+.jgp-cell.prem { background: linear-gradient(160deg, color-mix(in srgb, var(--ea) 30%, transparent), rgba(255, 255, 255, 0.04)); border-color: color-mix(in srgb, var(--ea) 55%, transparent); }
+.jgp-cell.locked::after { content: '🔒'; position: absolute; right: 3px; top: 2px; font-size: 10px; opacity: 0.8; }
+.jgp-cell.got { background: rgba(110, 230, 120, 0.2); border-color: rgba(110, 230, 120, 0.6); }
+.jgp-cell.got::before { content: '✓'; position: absolute; left: 4px; top: 1px; font-size: 11px; color: #8bff9a; font-weight: 700; }
+.jgp-tn { display: grid; place-items: center; font-weight: 700; font-size: 12px; border-radius: 99px; background: rgba(0, 0, 0, 0.3); color: var(--jmuted); }
+.jgp-tier.reached .jgp-tn { background: var(--ea); color: #1d1236; }
+.jgp-tier.next .jgp-tn { background: #fff; color: #1d1236; box-shadow: 0 0 0 2px var(--ea); }
+.jgp-gold { font-weight: 700; color: #ffe27a; font-size: 13px; }
+.jgp-item { display: grid; gap: 1px; line-height: 1.1; font-weight: 600; font-size: 10.5px; }
+.jgp-item i { font-style: normal; font-size: 22px; }
+.jgp-item.title i { font-size: 18px; }
+.jgp-none { opacity: 0.35; }
+.jgp-buy { width: 100%; margin: 8px 0 4px; padding: 12px; border: 0; border-radius: 14px; font: 700 16px 'Fredoka', system-ui, sans-serif; color: #1d1236; cursor: pointer;
+  background: linear-gradient(90deg, var(--ec), var(--ea)); box-shadow: 0 4px 0 color-mix(in srgb, var(--eb) 80%, #000); }
+.jgp-buy:disabled { opacity: 0.6; }
+.jgp-owned { margin: 8px 0 0; font-size: 13px; color: #b6ffbe; }
+
+/* shop header strip */
+[data-progress-strip] { display: inline-flex; align-items: center; gap: 6px; font: 600 12px 'Fredoka', system-ui, sans-serif; }
+.jgp-strip-ev { --ea: #ffcf3f; --eb: #4a2a8a; padding: 3px 9px; border-radius: 99px; color: #fff; background: linear-gradient(90deg, var(--ea), var(--eb)); white-space: nowrap; }
+
+/* TV: lobby event banner, level-up and challenge toasts (public/box/tv.js) */
+.tv-event { margin: 0 0 12px; }
+.tv-event .jgp-banner b { font-size: 22px; }
+.tv-toast.level { border-color: #ffcf3f; background: linear-gradient(135deg, rgba(90, 60, 10, 0.96), rgba(70, 24, 110, 0.96)); box-shadow: 0 0 0 3px rgba(255, 207, 63, 0.25), 0 10px 30px rgba(0, 0, 0, 0.45); }
+.tv-toast.level small { color: #ffe27a; }
+.tv-toast .lvl-up { animation: jgpSpin 1.2s cubic-bezier(0.2, 1.4, 0.4, 1); filter: drop-shadow(0 0 12px rgba(255, 207, 63, 0.8)); }
+.tv-toast.chal { border-color: #6ee678; }
+.tv-toast.chal small { color: #8bff9a; }
+@keyframes jgpSpin { from { transform: scale(0.2) rotate(-200deg); } }
+/* box phone: join screen banner, header badge */
+.j-event { margin: 4px 0 10px; }
+.pf-lv .jgp-badge { font-size: 13px; }
+/* the header badge sits on the avatar's corner: it takes no room in the crowded header */
+.h-me { position: relative; }
+.h-me .jgp-badge, .h-me span.jgp-badge { position: absolute; left: -2px; bottom: -3px; font-size: 9px; padding: 1px 3px 1px 2px; margin: 0; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45); z-index: 1; }
+.h-me #h-name { display: inline-flex; align-items: center; white-space: nowrap; min-width: 0; }
+/* title screen (public/hub.html) */
+.hub-event { max-width: 760px; margin: 4px auto 18px; }
+.hub-event .jgp-banner { padding: 14px 20px; }
+.hub-event .jgp-banner b { font-size: 24px; }
+/* the shop: a slim strip under the header */
+.jgp-shopstrip { display: flex !important; justify-content: center; gap: 6px; padding: 4px 10px 6px; }
+.jgp-shopstrip[hidden] { display: none !important; }
+/* never wider than the screen: the pass track scrolls inside its card */
+.jgp, .jgp > *, .jgp-sec, .jgp-lv-body, .jgp-cb { min-width: 0; max-width: 100%; }
+.jgp-pass { overflow: hidden; }
+/* its own dark card, so it reads on any page (JustMafia's parchment phone, the box phone sheet) */
+.jgp { background: radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--ea) 22%, transparent), transparent 50%), linear-gradient(170deg, #2e1d63, #1b1240); padding: 12px; border-radius: 20px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.jgp b, .jgp h3 { color: var(--jink); }
+/* narrow phones: the banner's "ends in" pill goes under the name */
+.jgp-banner { flex-wrap: wrap; }
+.jgp-banner > div { flex: 1 1 140px; }
+@media (max-width: 420px) { .jgp-banner:not(.compact) .jgp-days { margin-left: 46px; } }
+/* TV header pill (every game, public/box/tv.html) */
+.jgp-pill { --ea: #ffcf3f; --eb: #4a2a8a; --ec: #fff4c8; display: inline-flex; align-items: center; gap: 8px; padding: 5px 6px 5px 12px; border-radius: 99px; color: #fff; font: 600 14px 'Fredoka', system-ui, sans-serif;
+  background: linear-gradient(90deg, var(--ea), var(--eb)); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.25); white-space: nowrap; }
+.jgp-pill em { font-style: normal; font-size: 12px; background: rgba(0, 0, 0, 0.3); padding: 3px 8px; border-radius: 99px; }

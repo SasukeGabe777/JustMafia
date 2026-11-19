@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const O = require('./public/shared/options');
-const { CATALOG, ACHIEVEMENTS, REWARDS: R, slotOf, SEASON, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock, FATE } = require('./public/shared/cosmetics');
+const { CATALOG, ACHIEVEMENTS, REWARDS: R, slotOf, EVENTS, WORLD_REWARDS, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock, FATE } = require('./public/shared/cosmetics');
 const STOCKABLE_IDS = new Set(STOCKABLE.map((i) => i.id));
 // Per-game gear for the JustGold shop (public/shared/gear.js); empty until that file exists.
 let GEAR = []; try { ({ GEAR } = require('./public/shared/gear')); if (!Array.isArray(GEAR)) GEAR = []; } catch (e) { GEAR = []; }
@@ -11,7 +11,11 @@ const gearItem = (id) => GEAR.find((g) => g.id === id) || null;
 // Limited-time event items, daily deals and theme sets (public/shared/shop-season.js).
 const SS = require('./public/shared/shop-season');
 const MAX_DEVICES = 8, BOX_PAID_MAX = 300;
-const freshPass = () => ({ season: SEASON.id, owned: false, xp: 0, granted: [] });
+// Level, daily / weekly / event challenges and the box-wide season pass (box/progress.js): they
+// live on this wallet as `progress`. The old JustMafia season pass ('s1') and weekly challenges
+// moved there (migrated on first use: see box/progress.js).
+const PROGRESS = require('./box/progress');
+const { mafiaXp } = require('./public/shared/challenges');
 const LEDGER_MAX = 20;
 const digest = (token) => crypto.createHash('sha256').update(token).digest('hex');
 class ProfileStore {
@@ -24,52 +28,38 @@ class ProfileStore {
       if (p.goldEarned == null) p.goldEarned = p.coins || 0;
       if (p.goldSpent == null) p.goldSpent = 0;
       if (!Array.isArray(p.ledger)) p.ledger = [];
-      if (!p.pass || p.pass.season !== SEASON.id) p.pass = freshPass(); // a new season starts everyone at tier 0
       if (typeof p.fate !== 'number') { p.fate = FATE.starter; p.fateCards = { wish: 0, team: 0, reroll: 0 }; } // Fate Tokens arrive with a starter gift
       // Shop stock (older profiles): the starter shelf plus what their games so far would have revealed.
       if (!Array.isArray(p.stock)) { p.stock = STARTER_STOCK.slice(); const s = p.stats || {}; p.stock.push(...nextStock(p.stock, (s.games || 0) * STOCK.finished + (s.wins || 0) * STOCK.won)); }
       for (const id of STARTER_STOCK) if (!p.stock.includes(id)) p.stock.push(id); // new kinds of items (ghost looks) start on everyone's shelf
     }
   }
-  // ----- Season pass -----
-  seasonTier(p) { return Math.min(SEASON.tiers, Math.floor((p.pass.xp || 0) / SEASON.xpPerTier)); }
-  // Grant every reached tier's reward that hasn't been granted yet (only with the pass).
-  grantPass(p) {
-    const out = [];
-    if (!p.pass.owned) return out;
-    for (let tier = 1; tier <= this.seasonTier(p); tier++) {
-      if (p.pass.granted.includes(tier)) continue;
-      const r = SEASON.rewards[tier] || {};
-      if (r.gold) { this.record(p, r.gold, `Season pass tier ${tier}`); out.push({ tier, gold: r.gold }); }
-      if (r.item && !p.owned.includes(r.item)) { p.owned.push(r.item); out.push({ tier, item: r.item }); }
-      p.pass.granted.push(tier);
-    }
-    return out;
-  }
+  // The clock for days / weeks / seasons (tests replace it).
+  now() { return Date.now(); }
+  // ----- Progression (box/progress.js): level, challenges, the box-wide season pass -----
+  // The premium track of the running season's pass, bought with JustGold (any phone).
   buyPass(id) {
     const p = this.data.profiles[id]; if (!p) return { ok: false, error: 'No profile.' };
-    if (p.pass.owned) return { ok: false, error: 'You already have the season pass.' };
-    if (p.coins < SEASON.cost) return { ok: false, error: `Not enough JustGold: the pass costs ${SEASON.cost} JG, you have ${p.coins} JG.` };
-    this.record(p, -SEASON.cost, `${SEASON.name} pass`);
-    p.pass.owned = true;
-    const rewards = this.grantPass(p); // every tier already reached pays out now
-    this.save(); return { ok: true, rewards, profile: this.view(id) };
+    const r = PROGRESS.buyPremium(this, p);
+    if (!r.ok) return r;
+    this.save(); return { ok: true, rewards: r.rewards, profile: this.view(id) };
   }
-  // This week's challenges for a profile (a new week starts fresh).
-  weekOf(p) {
-    const week = weekKey();
-    if (!p.challenges || p.challenges.week !== week) p.challenges = { week, ids: weeklyChallenges(week), progress: {}, done: [] };
-    return p.challenges;
+  // A finished game from anywhere in the box (ev: see box/progress.js). Returns the news or null.
+  progressGame(id, ev) {
+    const p = this.data.profiles[id]; if (!p) return null;
+    const news = PROGRESS.recordGame(this, p, ev);
+    if (news) this.save();
+    return news;
   }
-  seasonView(p) {
-    const tier = this.seasonTier(p), w = this.weekOf(p);
-    return {
-      id: SEASON.id, name: SEASON.name, cost: SEASON.cost, tiers: SEASON.tiers, xpPerTier: SEASON.xpPerTier, rewards: SEASON.rewards,
-      owned: p.pass.owned, xp: p.pass.xp, tier, granted: p.pass.granted,
-      challenges: w.ids.map((k) => ({ id: k, label: CHALLENGES[k].label, count: CHALLENGES[k].count, gold: CHALLENGES[k].gold, progress: Math.min(CHALLENGES[k].count, w.progress[k] || 0), done: w.done.includes(k) })),
-      week: w.week,
-    };
+  rerollChallenge(id, period, cid) {
+    const p = this.data.profiles[id]; if (!p) return { ok: false, error: 'No profile.' };
+    const r = PROGRESS.reroll(this, p, String(period || ''), String(cid || ''));
+    if (r.ok) this.save();
+    return r;
   }
+  progressView(id) { const p = this.data.profiles[id]; return p ? PROGRESS.view(this, p) : null; }
+  levelOf(id) { const p = this.data.profiles[id]; return p ? PROGRESS.levelOf(this, p) : null; }
+  titlesOf(id) { const p = this.data.profiles[id]; return p ? PROGRESS.titles(this, p) : []; }
   // Gold pouch: balance (coins), lifetime earned and spent, and recent entries.
   record(p, delta, reason, extra = {}) {
     if (delta > 0) p.goldEarned += delta; else p.goldSpent += -delta;
@@ -156,7 +146,7 @@ class ProfileStore {
   }
   create() {
     const id = crypto.randomUUID(), token = crypto.randomBytes(32).toString('hex');
-    this.data.profiles[id] = { id, verifier: digest(token), coins: 0, goldEarned: 0, goldSpent: 0, ledger: [], owned: CATALOG.filter((i) => i.free).map((i) => i.id), achievements: [], stats: { games: 0, wins: 0, mafiaWins: 0, jesterWins: 0, survived: 0, saves: 0, correctInvestigations: 0, objectives: 0 }, avatar: {}, rewardedGames: [], lastReward: null, pass: freshPass(), stock: STARTER_STOCK.slice(), fate: FATE.starter, fateCards: { wish: 0, team: 0, reroll: 0 } };
+    this.data.profiles[id] = { id, verifier: digest(token), coins: 0, goldEarned: 0, goldSpent: 0, ledger: [], owned: CATALOG.filter((i) => i.free).map((i) => i.id), achievements: [], stats: { games: 0, wins: 0, mafiaWins: 0, jesterWins: 0, survived: 0, saves: 0, correctInvestigations: 0, objectives: 0 }, avatar: {}, rewardedGames: [], lastReward: null, stock: STARTER_STOCK.slice(), fate: FATE.starter, fateCards: { wish: 0, team: 0, reroll: 0 } };
     this.data.profiles[id].avatar = this.validateAvatar(id, { outfit: 'traveler', hair: 'short' });
     this.save(); return { id, token, profile: this.view(id) };
   }
@@ -169,7 +159,7 @@ class ProfileStore {
   }
   // Worlds explored: games finished in each world and its rewards (owned or how far to go).
   worldsView(p) { return Object.entries(WORLD_REWARDS).map(([id, list]) => ({ id, name: WORLD_NAMES[id], games: (p.worlds || {})[id] || 0, rewards: list.map((r) => ({ ...r, owned: p.owned.includes(r.item) })) })); }
-  view(id) { const p = this.data.profiles[id]; if (!p) return null; const { verifier, verifiers, rewardedGames, boxPaid, ...view } = p; return { ...view, career: this.careerView(p), season: this.seasonView(p), worlds: this.worldsView(p), inventory: this.inventory(id), storage: this.filename ? 'Saved on this game server’s disk' : 'Session-only development storage' }; }
+  view(id) { const p = this.data.profiles[id]; if (!p) return null; const progress = PROGRESS.view(this, p); const { verifier, verifiers, rewardedGames, boxPaid, progress: _raw, ...view } = p; return { ...view, career: this.careerView(p), progress, worlds: this.worldsView(p), inventory: this.inventory(id), storage: this.filename ? 'Saved on this game server’s disk' : 'Session-only development storage' }; }
   validateAvatar(id, input = {}) {
     const p = this.data.profiles[id], result = {};
     // Expression has its own migration rule below.
@@ -269,7 +259,7 @@ class ProfileStore {
   buy(id, itemId) {
     const p = this.data.profiles[id], item = CATALOG.find((i) => i.id === itemId);
     if (!p || !item || p.owned.includes(item.id)) return { ok: false, error: 'Choose a locked catalog item.' };
-    if (item.pass) return { ok: false, error: `Season pass reward: reach tier ${item.passTier} of the ${SEASON.name} pass.` };
+    if (item.pass) return { ok: false, error: 'Season pass reward: it comes with a season pass track, not the shop.' };
     if (item.world) return { ok: false, error: `World reward: finish ${item.worldGames === 1 ? 'a game' : item.worldGames + ' games'} in the ${WORLD_NAMES[item.world]} world.` };
     if (item.achievement && !p.achievements.includes(item.achievement)) return { ok: false, error: ACHIEVEMENTS[item.achievement].label };
     if (item.requires && !p.owned.includes(item.requires)) { const need = CATALOG.find((i) => i.id === item.requires); return { ok: false, error: `High Roller tier ${item.ladderTier}: own the ${need ? need.name : 'tier below'} first.` }; }
@@ -335,17 +325,16 @@ class ProfileStore {
     const raw = lines.reduce((t, l) => t + l.amount, 0), capped0 = Math.min(R.maxPerGame, raw);
     const before = p.coins;
     if (capped0) this.record(p, capped0, 'Game reward', { gameId });
-    // Weekly challenges (paid on top of the per-game cap, once each).
-    const w = this.weekOf(p), delta = { games: 1, wins: result.won ? 1 : 0, survived: result.alive ? 1 : 0, saves: m.saves || 0, correctInvestigations: m.correctInvestigations || 0, mafiaWins: result.won && result.team === 'mafia' ? 1 : 0, abilities: m.abilities || 0 };
-    let challengesDone = 0;
-    for (const k of w.ids) {
-      if (w.done.includes(k)) continue;
-      const c = CHALLENGES[k]; w.progress[k] = (w.progress[k] || 0) + (delta[c.stat] || 0);
-      if (w.progress[k] >= c.count) { w.done.push(k); challengesDone++; this.record(p, c.gold, `Weekly challenge: ${c.label}`); lines.push({ key: 'challenge', label: `Weekly challenge: ${c.label}`, amount: c.gold }); }
-    }
-    // Season pass XP (everyone earns it; rewards need the pass). Events can multiply it.
-    const X = SEASON.xp, mult = (EVENTS[result.event] || {}).xpMultiplier || 1;
-    const xp = (X.completed + (result.won ? X.won : 0) + (result.alive ? X.survived : 0) + challengesDone * X.challenge) * mult;
+    // Profile XP, daily / weekly / event challenges and the box-wide season pass (box/progress.js;
+    // paid on top of the per-game cap, once each). The Judge's events multiply the game's XP.
+    const mult = (EVENTS[result.event] || {}).xpMultiplier || 1;
+    const news = PROGRESS.recordGame(this, p, { id: 'mafia:' + gameId, game: 'mafia', kind: 'mafia', xp: mafiaXp(result.won, result.alive, mult), won: !!result.won, alive: !!result.alive, team: result.team, role: result.role, metrics: m, gold: capped0 })
+      || { xp: 0, levelUps: [], completed: [], tiers: [], items: [], fate: 0, level: PROGRESS.levelOf(this, p) };
+    for (const c of news.completed) lines.push({ key: 'challenge', label: `${c.period === 'daily' ? 'Daily' : c.period === 'weekly' ? 'Weekly' : 'Event'} challenge: ${c.label}`, amount: c.gold });
+    for (const u of news.levelUps) lines.push({ key: 'level', label: `Reached level ${u.level}`, amount: u.gold });
+    for (const t of news.tiers) if (t.gold) lines.push({ key: 'pass', label: `Season pass tier ${t.tier}${t.side === 'premium' ? ' (premium)' : ''}`, amount: t.gold });
+    const listed = news.completed.reduce((n, c) => n + c.gold, 0) + news.levelUps.reduce((n, u) => n + u.gold, 0) + news.tiers.reduce((n, t) => n + (t.gold || 0), 0);
+    if ((news.gold || 0) > listed) lines.push({ key: 'pass', label: 'Bonus JustGold (a reward you already owned)', amount: news.gold - listed });
     // Worlds: each finished game in a world counts toward that world's cosmetics.
     const worldItems = [], firstVisit = !!(result.theme && WORLD_REWARDS[result.theme] && !(p.worlds || {})[result.theme]);
     if (result.theme && WORLD_REWARDS[result.theme]) {
@@ -354,16 +343,14 @@ class ProfileStore {
     }
     // New in the shop: every finished game, every win and every new world restock the shelves.
     const newStock = nextStock(p.stock, STOCK.finished + (result.won ? STOCK.won : 0) + (firstVisit ? STOCK.newWorld : 0));
-    const fateGained = (result.won ? FATE.perWin : 0) + challengesDone * FATE.perChallenge + (firstVisit ? FATE.perNewWorld : 0);
+    const fateGained = (result.won ? FATE.perWin : 0) + (firstVisit ? FATE.perNewWorld : 0);
     p.fate += fateGained;
     p.stock.push(...newStock);
-    const tierBefore = this.seasonTier(p); p.pass.xp += xp;
-    const passRewards = this.grantPass(p);
-    for (const r of passRewards) if (r.gold) lines.push({ key: 'pass', label: `Season pass tier ${r.tier}`, amount: r.gold });
     const coins = p.coins - before;
     p.lastReward = { gameId, coins, before, after: p.coins, lines, capped: raw > capped0 ? R.maxPerGame : null, at: Date.now(),
-      season: { xp, multiplier: mult, tierBefore, tierAfter: this.seasonTier(p), owned: p.pass.owned, items: passRewards.filter((r) => r.item).map((r) => r.item) },
-      stock: newStock, fate: fateGained,
+      progress: { xp: news.xp, multiplier: mult, level: news.level, levelBefore: news.levelBefore, levelUps: news.levelUps, completed: news.completed, tiers: news.tiers, items: news.items },
+      season: { xp: news.xp, multiplier: mult, items: news.items },
+      stock: newStock, fate: fateGained + (news.fate || 0),
       world: result.theme && WORLD_REWARDS[result.theme] ? { id: result.theme, name: WORLD_NAMES[result.theme], games: p.worlds[result.theme], items: worldItems } : null };
     p.rewardedGames.push(gameId); this.save();
     return p.lastReward;

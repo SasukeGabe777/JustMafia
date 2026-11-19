@@ -58,12 +58,13 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
 
   // Season & unlocks: its tabs, each renders; nothing to buy but the pass and Fate.
   await a.click('#g-body [data-open-season]');
-  await a.until(`!document.querySelector('#screen-season').hidden && document.querySelector('.pass-track')`, 'Season & unlocks opens on the season pass');
+  await a.until(`!document.querySelector('#screen-season').hidden && document.querySelector('#s-grid .jgp .jgp-level')`, 'Season & unlocks opens on ⭐ Progress (level, challenges, season pass)');
   const tabs = await a.eval(`[...document.querySelectorAll('[data-season-tab]')].map((b) => b.dataset.seasonTab)`);
-  assert.deepEqual(tabs, ['season', 'weekly', 'unlocked', 'worlds', 'fate', 'locked']);
+  assert.deepEqual(tabs, ['progress', 'unlocked', 'worlds', 'fate', 'locked']);
+  assert.equal(await a.eval(`document.querySelectorAll('#s-grid .jgp-list:not(.event) .jgp-ch').length`), 8, "today's 3 and this week's 5");
   assert(await a.eval(`!!document.querySelector('#screen-season a[data-jg-shop]')`), 'the screen links to the JustGold shop');
   assert(await a.noOverflow()); await a.shot('season-unlocks');
-  const expect = { weekly: '.challenges li', unlocked: '.unlocked-head', worlds: '.world-card', fate: '.fate-card', locked: '.achievements li' };
+  const expect = { unlocked: '.unlocked-head', worlds: '.world-card', fate: '.fate-card', locked: '.achievements li' };
   for (const [t, sel] of Object.entries(expect)) {
     await a.click(`[data-season-tab="${t}"]`);
     await a.until(`document.querySelector('[data-season-tab="${t}"]').classList.contains('sel') && document.querySelector('#s-grid ${sel}')`, 'tab ' + t);
@@ -77,18 +78,20 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   await a.click('#g-body [data-open-season]'); await a.until(`!document.querySelector('#screen-season').hidden`, 'reopens');
   ok(`Season & unlocks: tabs ${tabs.join(', ')}; no item shelves, Buy or Equip anywhere`);
 
-  // The season pass is still bought here, with JustGold.
-  await a.click('[data-season-tab="season"]'); await a.until(`document.querySelector('[data-buy-pass]')`, 'pass button');
-  assert(await a.eval(`document.querySelector('[data-buy-pass]').disabled`), 'cannot afford it yet');
-  assert.match(await a.eval(`document.querySelector('[data-buy-pass]').textContent`), /195 JG/);
-  assert.match(await a.eval(`document.querySelector('.pass-head').textContent`), /195 more JustGold/);
-  assert(await grant(300)); await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 300`, 'JustGold arrives');
-  await a.until(`!document.querySelector('[data-buy-pass]').disabled`, 'pass affordable');
-  await a.click('[data-buy-pass]');
-  await a.until(`document.querySelector('.pass-owned') && Number(document.querySelector('#s-pouch b').textContent) === 105`, 'pass bought');
+  // The box-wide season pass's premium track can be bought here too, with JustGold (while an event runs).
+  await a.click('[data-season-tab="progress"]'); await a.until(`document.querySelector('#s-grid .jgp')`, 'progress');
+  const eventOn = await a.eval(`!!document.querySelector('[data-jgp-premium]')`);
+  if (eventOn) {
+    assert.match(await a.eval(`document.querySelector('[data-jgp-premium]').textContent`), /195 JG/);
+    await a.click('[data-jgp-premium]'); await a.until(`/Not enough JustGold/.test(document.querySelector('.season-note').textContent)`, 'cannot afford it yet');
+    assert(await grant(300)); await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 300`, 'JustGold arrives');
+    await a.click('[data-jgp-premium]');
+    await a.until(`document.querySelector('#s-grid .jgp-owned') && Number(document.querySelector('#s-pouch b').textContent) === 105`, 'premium pass bought');
+    await a.shot('season-premium');
+  } else { assert(await grant(105)); await a.until(`Number(document.querySelector('#s-pouch b').textContent) === 105`, 'JustGold arrives'); }
   await a.click('[data-season-tab="fate"]'); await a.until(`document.querySelector('[data-fate-exchange]')`, 'fate');
   assert.match(await a.eval(`document.querySelector('[data-fate-exchange]').textContent`), /JG for 1 token/);
-  ok('The season pass costs 195 JG and is bought on Season & unlocks; JustGold is deducted');
+  ok(eventOn ? 'The premium season pass costs 195 JG and can be bought on Season & unlocks; JustGold is deducted' : 'No seasonal event right now: no premium pass to buy');
 
   // Coming back from the JustGold shop: the look it saved on the wallet shows on the phone and the seat.
   await a.click('#s-back'); await a.until(`!document.querySelector('#screen-game').hidden`, 'lobby');

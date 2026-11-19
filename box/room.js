@@ -69,6 +69,7 @@ const MAX_AUDIENCE = 2000, FAV_BONUS = 3, FAV_MS = 20000, RECAP_AFTER_PARTY = 16
 const cleanName = (s) => String(s || '').replace(/[\u0000-\u001f<>&"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 14);
 
 const GOLD = require('./gold');
+const XPX = require('../public/shared/challenges'); // XP for finished games (box/progress.js)
 
 class BoxRoom {
   constructor(code, game, { nsp = null, clock = new RealClock(), seed = null, shows = false, profiles = null, wallets = null } = {}) {
@@ -345,7 +346,7 @@ class BoxRoom {
   }
   // ---- lifetime profiles (box/profiles.js) ----
   recordProfiles(game, order, survivors) {
-    if (game !== 'mafia') this.payGold(game, order);
+    if (game !== 'mafia') { this.payGold(game, order); this.payProgress(game, order, survivors); }
     if (this.nightStart == null) this.nightStart = this.now();
     if (!this.profiles) return;
     const surv = new Set(survivors || []);
@@ -369,6 +370,36 @@ class BoxRoom {
       if (paid) { p.jg = { n: paid, at: this.now(), game, total: this.wallets.coins(p.wallet), set: bonus ? { icon: bonus.icon, name: bonus.name, extra: bonus.extra } : null }; this.fx('gold', { name: p.name, n: paid }); }
     });
   }
+  // ---- progression (box/progress.js): XP, challenges and the season pass on the wallet ----
+  // Same rules as JustGold (2+ people, 90 s+); otherwise it was a practice game. JustMafia
+  // records its own games (profiles.js award), so 'mafia' never comes through here.
+  payProgress(game, order, survivors) {
+    if (!this.wallets || typeof this.wallets.progressGame !== 'function') return;
+    const humans = this.list().filter((p) => !p.bot).length, ms = this.gameStartAt != null ? this.now() - this.gameStartAt : 0;
+    const eligible = humans >= GOLD.MIN_HUMANS && ms >= GOLD.MIN_MS;
+    const g = this.game && this.def && this.def.key === game ? this.game : null, surv = new Set(survivors || []);
+    order.forEach((id, i) => {
+      const p = this.players.get(id); if (!p || p.bot || !p.wallet) return;
+      if (!eligible) { p.prog = { at: this.now(), practice: true, xp: 0 }; return; }
+      let tags = {};
+      try { if (g && typeof g.challengeEvents === 'function') tags = { ...(g.challengeEvents(id) || {}) }; } catch (e) { tags = {}; }
+      if (game === 'zombie' && surv.has(id)) tags.zsurvive = 1;
+      const place = i + 1, of = order.length;
+      const ev = { id: this.code + ':' + (this.gameNo || 0) + ':' + game + ':' + this.hostKey, game, kind: 'box', xp: XPX.boxXp(game, place, of, ms), place, of, won: place === 1 && of > 1, ms,
+        gold: p.jg && p.jg.game === game && !p.jg.party ? p.jg.n || 0 : 0, tags };
+      let news = null; try { news = this.wallets.progressGame(p.wallet, ev); } catch (e) { console.error('[progress]', e.message); }
+      this.progressNews(p, news);
+    });
+  }
+  // News for that phone (toasts) and the TV (level ups get a small celebration).
+  progressNews(p, news) {
+    if (!news) return;
+    p.level = news.level || p.level || null;
+    p.prog = { at: this.now(), xp: news.xp, level: news.level, levelUps: news.levelUps.map((u) => ({ level: u.level, gold: u.gold, title: u.title || null, item: u.item || null })), completed: news.completed.map((c) => ({ icon: c.icon, label: c.label, period: c.period, gold: c.gold, xp: c.xp })), tiers: news.tiers.length };
+    for (const u of news.levelUps.slice(-1)) this.fx('level', { name: p.name, avatar: p.avatar, level: u.level, title: u.title || null });
+    for (const c of news.completed.filter((x) => x.period !== 'daily').slice(0, 2)) this.fx('challenge', { name: p.name, avatar: p.avatar, icon: c.icon, label: c.label, period: c.period });
+    this._roster = null;
+  }
   partyGold() {
     const pm = this.partyMode; if (!this.wallets || !pm || pm.goldPaid) return;
     pm.goldPaid = true; pm.no = this.partyNo = (this.partyNo || 0) + 1;
@@ -378,6 +409,10 @@ class BoxRoom {
       const n = GOLD.partyGold(i + 1);
       let paid = 0; try { paid = this.wallets.awardBox(p.wallet, 'party:' + this.code + ':' + this.hostKey + ':' + (pm.no || 0), n, 'Party Mode finale · #' + (i + 1)); } catch (e) { console.error('[justgold]', e.message); }
       if (paid) { p.jg = { n: paid, at: this.now(), party: true, total: this.wallets.coins(p.wallet) }; this.fx('gold', { name: p.name, n: paid, party: true }); }
+      if (typeof this.wallets.progressGame === 'function') {
+        let news = null; try { news = this.wallets.progressGame(p.wallet, { id: 'party:' + this.code + ':' + this.hostKey + ':' + (pm.no || 0), game: 'party', kind: 'party', xp: XPX.partyXp(i + 1), place: i + 1, of: this.partyBoard().length, gold: paid }); } catch (e) { console.error('[progress]', e.message); }
+        this.progressNews(p, news);
+      }
     });
   }
   // New trophies: a cue on the TV and a toast on that phone.
@@ -702,7 +737,7 @@ class BoxRoom {
       preview: tv && pm.preview && !pm.preview.over && pm.phase === 'board' ? pm.preview.tv() : null };
   }
   partyBoard() {
-    return [...this.party].filter(([id]) => this.players.has(id)).map(([id, r]) => { const p = this.players.get(id); return { id, name: p.name, avatar: p.avatar, color: p.color, bot: p.bot, pts: r.pts, wins: r.wins, games: r.games, gain: this.lastGain.get(id) || 0, prevRank: this.prevRank.get(id) || null }; })
+    return [...this.party].filter(([id]) => this.players.has(id)).map(([id, r]) => { const p = this.players.get(id); return { id, name: p.name, avatar: p.avatar, color: p.color, bot: p.bot, level: p.level || null, pts: r.pts, wins: r.wins, games: r.games, gain: this.lastGain.get(id) || 0, prevRank: this.prevRank.get(id) || null }; })
       .sort((a, b) => b.pts - a.pts || b.wins - a.wins || a.name.localeCompare(b.name));
   }
   // Timers belong to the room: cleared on restart/destroy; each one re-syncs the screens.
@@ -882,7 +917,7 @@ class BoxRoom {
       fields: this.fieldsOf(), min: this.def.min, max: MAX_PLAYERS, fx: this.fxLog, live: !!this.def.liveLobby,
       vip: this.vip() ? this.vip().name : null, filterOn: this.filterOn, locked: this.locked,
       audience: { count: this.audienceCount(), poll: this.pollView() }, recap: this.recap,
-      players: this.list().map((p) => ({ id: p.id, name: p.name, bot: p.bot, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, online: p.bot || p.sockets > 0, title: p.title || null })),
+      players: this.list().map((p) => ({ id: p.id, name: p.name, bot: p.bot, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, online: p.bot || p.sockets > 0, title: p.title || null, level: p.level || null })),
       party: this.partyBoard().slice(0, 24), played: this.played.slice(-24), partyMode: this.partyState(true), unlocks: [...this.unlocks], away: this.away, practice: this.practiceState(),
       state: this.game && this.phase !== 'show' ? this.game.tv() : null, show: this.show ? this.show.tv() : null,
     };
@@ -890,8 +925,8 @@ class BoxRoom {
   playerState(p) {
     return {
       code: this.code, game: this.def.key, title: this.def.name, phase: this.phase,
-      me: { id: p.id, name: p.name, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, title: p.title || null, profile: !!p.profileId, wallet: !!p.wallet },
-      jg: p.jg || null,
+      me: { id: p.id, name: p.name, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, title: p.title || null, level: p.level || null, profile: !!p.profileId, wallet: !!p.wallet },
+      jg: p.jg || null, prog: p.prog || null,
       roster: this.rosterFor(p),
       audience: this.audienceCount(), recap: this.recap ? personalRecap(this, this.recap, p) : null,
       party: (() => { const b = this.partyBoard(), i = b.findIndex((r) => r.id === p.id); return { played: this.played.length, pts: i >= 0 ? b[i].pts : 0, wins: i >= 0 ? b[i].wins : 0, gain: i >= 0 ? b[i].gain : 0, rank: i + 1, of: b.length, top: b.slice(0, 5) }; })(),

@@ -289,6 +289,8 @@ class Blackjack {
     return out;
   }
   results() { return this.standings().map((r) => r.id); }
+  // Profile challenges (box/progress.js): hands won at this table.
+  challengeEvents(id) { const s = this.seats.get(id); return s ? { hands: s.wins || 0, blackjacks: s.bjs || 0 } : {}; }
 
   // ---- views ----
   standings() {
