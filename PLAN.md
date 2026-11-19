@@ -1,5 +1,36 @@
 # Mafia Town: expansion plan
 
+## November 19, 2026 - Difficulty everywhere, practice rounds only for new games (branch claude/difficulty)
+
+- **YesChef difficulty** (`difficulty`: 🟢 Easy default / 🟡 Medium / 🔴 Hard; Hard = the game as it was).
+  Per order: Easy at most 3 things (1–2 toppings all over or on halves, 2–3 burger layers with one
+  patty, 1–2 scoops + 1 topping; special mode 1 topping per side), Medium one step under Hard
+  (`SIZES` in box/games/pizza.js). Order shown ×1.6 / ×1.25 / ×1, build time ×1.5 / ×1.2 / ×1.
+  Phone tray: the order's items + 3 decoys (Easy) / + 5 (Medium) / everything (Hard). Scoring: a
+  topping one slot off counts 60% / 35% / 0, a wrong base 30% / 12% / 0, the total curved (^0.7 /
+  ^0.88 / ^1). Easy lists the ingredients on the TV ticket and phone once the order hides (not in
+  Head Chef) and reads phone orders at 0.8×. Bots +0.14 / +0.06 memory. Level chip on the TV order
+  board, lobby header and phone bar.
+- **Box difficulty convention** (docs/game-kit.md "Difficulty"): new `difficulty` fields in Hot Take
+  Trivia (question rating; default Mixed), Color Match (ΔE slope 1.0/1.4/1.9 and look time),
+  Price Panic (Bullseye 10/5/3%, bust ¾ or ½, Hard falls off ×2), Bomb Squad (modules 2→4 no radio /
+  as before / 4→6 radio from bomb 2). Mapped existing settings: Quick Draw `pace`, Zombie
+  `difficulty` (forgiving/normal/brutal), JustMarble `holes`, Letter Rush `hard` letters (+ party
+  time/categories), Tune Buzz `clip`; Emoji Charades and JustEscape already use easy/medium/hard.
+  None for social/voting games, card games, Plinko, Ducks, Kingdoms, Summon.
+- **Party Mode "How hard?"** (Easy / Medium / Hard / 🎲 Mixed, remembered per TV, Easy on a new TV):
+  `setParty opts.difficulty`, `partyFit({ players, minutes, difficulty })`, level first in the chips,
+  in the lineup summary. Mixed = shuffled easy/medium/hard cycles across the lineup.
+- **Practice defaults**: on only for a game new here (not in the TV's box.done, not played or
+  practised tonight, not finished by most humans' profiles), re-checked as people join until the host
+  touches it; `?practice=0` none. Party question "🎓 Practice rounds before new games?" (Yes for new
+  games / No / Every game), default Yes for new games. Bug fixed: the old setup's "On" meant every
+  game and was remembered, so already-played games kept getting practice; old saved "On" migrates to
+  "new games". Also, before, a TV that had finished any game got no practice for anything new.
+- Tests: test-box-pizza (kitchen × mode × difficulty), test-practice, test-party-plan, and the four
+  new fields' game tests. Limits: the per-TV memory is still localStorage (a cleared/incognito TV
+  relies on profiles and tonight's room).
+
 ## November 19, 2026 - YesChef: JustPizza becomes a food court (branch claude/yeschef)
 
 JustPizza is renamed **YesChef** (the internal key stays `pizza`: routes, gear ids, saved data).

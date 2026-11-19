@@ -151,7 +151,7 @@ const fields = [
   { key: 'mode', label: 'Kitchen mode', options: opt([['classic', '🍽️ Classic Order'], ['rush', '⏱️ Lunch Rush'], ['halves', '🌗 Special (Half & Half, Rainbow Roll…)'], ['phone', '☎️ Phone Order'], ['flash', '⚡ Flash Order'], ['chef', '🧑‍🍳 Head Chef'], ['mixed', '🎲 Mixed (a new mode each order)']]) },
   { key: 'rounds', label: 'Orders', options: opt([[3, '3 orders'], [5, '5 orders'], [8, '8 orders']]) },
   { key: 'seconds', label: 'Time to build', options: opt([[30, '30 seconds'], [45, '45 seconds'], [60, '60 seconds']]) },
-  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy (2–3 things to remember, more time)'], ['medium', '🟡 Medium'], ['hard', '🔴 Hard (the full order, strict scoring)']]) },
+  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy'], ['medium', '🟡 Medium'], ['hard', '🔴 Hard']]) },
 ];
 const defaults = { kitchen: 'surprise', mode: 'mixed', rounds: 5, seconds: 45, difficulty: 'easy' };
 

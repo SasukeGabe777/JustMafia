@@ -11,7 +11,7 @@ const fields = [
   { key: 'bombs', label: 'Bombs', options: opt([[3, '3 bombs (~10 min)'], [4, '4 bombs (~13 min)'], [5, '5 bombs (~17 min)']]) },
   { key: 'fuse', label: 'Fuse length', options: opt([['long', 'Long fuse (relaxed)'], ['normal', 'Normal fuse'], ['short', 'Short fuse (hard)']]) },
   { key: 'squads', label: 'Squads', options: opt([['auto', 'Auto (big groups split up)'], ['one', 'One big squad']]) },
-  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy (fewer modules, no radio)'], ['medium', '🟡 Medium'], ['hard', '🔴 Hard (more modules, radio from bomb 2)']]) },
+  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy (no radio)'], ['medium', '🟡 Medium'], ['hard', '🔴 Hard']]) },
 ];
 const defaults = { bombs: 4, fuse: 'normal', squads: 'auto', difficulty: 'medium' };
 // Difficulty: how many modules each bomb has (first bomb, growth per bomb, most) and from which bomb the needy Radio joins.

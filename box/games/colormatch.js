@@ -16,7 +16,7 @@ const fields = [
   { key: 'rounds', label: 'Rounds', options: opt([[5, '5 rounds'], [7, '7 rounds'], [10, '10 rounds']]) },
   { key: 'seconds', label: 'Time to mix', options: opt([[15, '15 seconds'], [20, '20 seconds'], [30, '30 seconds']]) },
   { key: 'styles', label: 'Round styles', options: opt([['mix', 'All styles'], ['memory', 'Memory only']]) },
-  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy (kind scoring, longer looks)'], ['medium', '🟡 Medium'], ['hard', '🔴 Hard (strict scoring, quick looks)']]) },
+  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy'], ['medium', '🟡 Medium'], ['hard', '🔴 Hard']]) },
 ];
 const defaults = { rounds: 7, seconds: 20, styles: 'mix', difficulty: 'medium' };
 // Difficulty: how forgiving the score is (match % = 100 − slope·ΔE00) and how long a colour to remember stays up.

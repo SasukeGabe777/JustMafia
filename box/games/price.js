@@ -16,7 +16,7 @@ const fields = [
   { key: 'seconds', label: 'Time to guess', options: opt([[20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds']]) },
   { key: 'category', label: 'Aisles', options: opt([['all', 'Everything'], ['everyday', 'Everything but Big Ticket'], ...CATEGORIES.filter((c) => !c.pack).map((c) => [c.key, `${c.icon} ${c.label} only`]),
     ...CATEGORIES.filter((c) => c.pack).map((c) => [c.key, `${c.icon} ${c.pack} pack`])]) },
-  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy (Bullseye within 10%, going over costs less)'], ['medium', '🟡 Medium (Bullseye within 5%)'], ['hard', '🔴 Hard (Bullseye within 3%, strict)']]) },
+  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy (10% Bullseye)'], ['medium', '🟡 Medium (5%)'], ['hard', '🔴 Hard (3%)']]) },
 ];
 const defaults = { rounds: 10, seconds: 30, category: 'all', difficulty: 'medium' };
 // Difficulty: Easy is a Bullseye within 10% and going over only costs a quarter; Hard a Bullseye
