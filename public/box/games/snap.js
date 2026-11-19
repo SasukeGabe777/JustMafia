@@ -15,6 +15,20 @@
   const face = (p, s = 40) => (p ? (BOX.face ? BOX.face(p, s) : `<span class="sn-emo" style="font-size:${s * 0.8}px">${esc(p.avatar || '🙂')}</span>`) : '');
   const body = (p, h = 120, o) => (p ? (BOX.body ? BOX.body(p, h, o) : `<span class="sn-emo" style="font-size:${h * 0.6}px">${esc(p.avatar || '🙂')}</span>`) : '');
   const img = (url, cls = '', alt = '') => (url ? `<img class="${cls}" src="${esc(url)}" alt="${esc(alt)}" decoding="async" referrerpolicy="no-referrer" draggable="false">` : `<span class="sn-gone ${cls}">🙈</span>`);
+  // The picture's own box inside an <img> with object-fit: contain (letterboxing excluded), in client px.
+  function picRect(im) {
+    const r = im.getBoundingClientRect(), w = im.naturalWidth || r.width, h = im.naturalHeight || r.height, k = Math.min(r.width / w, r.height / h);
+    return { left: r.left + (r.width - w * k) / 2, top: r.top + (r.height - h * k) / 2, width: w * k, height: h * k };
+  }
+  const relPoint = (im, e) => { const p = picRect(im); return { x: Math.max(0, Math.min(1, (e.clientX - p.left) / p.width)), y: Math.max(0, Math.min(1, (e.clientY - p.top) / p.height)) }; };
+  // Marks (data-x/data-y, 0..1 of the picture) placed over the picture itself.
+  function placeMarks(root) {
+    for (const w of root.querySelectorAll('[data-marks]')) {
+      const im = w.querySelector('img'); if (!im) continue;
+      const go = () => { const p = picRect(im), b = w.getBoundingClientRect(); for (const m of w.querySelectorAll('[data-x]')) { m.style.left = (p.left - b.left + Number(m.dataset.x) * p.width) + 'px'; m.style.top = (p.top - b.top + Number(m.dataset.y) * p.height) + 'px'; } };
+      if (im.complete && im.naturalWidth) go(); else im.addEventListener('load', go, { once: true });
+    }
+  }
   const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const LIMIT = { side: 1024, bytes: 260 * 1024, thumbSide: 360, thumbBytes: 60 * 1024, timeout: 30000 };
 
@@ -126,7 +140,7 @@
     const meter = P.match != null ? `<div class="sn-meter"><span>Colour match</span><i style="--w:${P.match}%;--c:${esc(m.colour.hex)}"></i><b>${P.match}%</b></div>` : '';
     const txt = s.text ? `<label class="sn-txt"><span>${m.key === 'alphabet' ? `What is it? (starts with ${esc(m.letter)})` : 'What is it? (the others will guess)'}</span><input id="sn-text" maxlength="${m.key === 'alphabet' ? 30 : 40}" autocomplete="off" value="${esc(P.text)}" placeholder="${m.key === 'alphabet' ? esc(m.letter) + '…' : 'e.g. a toothbrush'}"></label>` : '';
     return `<div class="sn-prev"><div class="sn-prev-h">${esc(s.label || 'Your photo')}${s.mark ? ' · <b>tap what you changed</b>' : ''}</div>
-      <div class="sn-prev-img ${s.mark ? 'markable' : ''}" id="sn-prev">${img(P.url, 'sn-pimg')}${P.mark ? `<i class="sn-mk" style="left:${P.mark.x * 100}%;top:${P.mark.y * 100}%"></i>` : ''}</div>
+      <div class="sn-prev-img ${s.mark ? 'markable' : ''}" id="sn-prev" data-marks>${img(P.url, 'sn-pimg')}${P.mark ? `<i class="sn-mk" data-x="${P.mark.x}" data-y="${P.mark.y}"></i>` : ''}</div>
       ${meter}${txt}
       <div class="sn-prev-b"><button class="btn ghost" id="sn-retake">🔁 Retake</button><button class="btn sn-send" id="sn-send" ${PH.busy ? 'disabled' : ''}>✅ Send</button></div></div>`;
   }
@@ -156,7 +170,7 @@
     if (q('#sn-send')) q('#sn-send').onclick = () => sendPend(ctx, v);
     if (q('#sn-text')) q('#sn-text').oninput = (e) => { if (PH.pend) PH.pend.text = e.target.value; };
     const pv = q('#sn-prev.markable');
-    if (pv) pv.onclick = (e) => { const r = pv.getBoundingClientRect(); PH.pend.mark = { x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) }; ctx.haptic('select'); redraw(); };
+    if (pv) pv.onclick = (e) => { const im = pv.querySelector('img'); if (!im) return; PH.pend.mark = relPoint(im, e); ctx.haptic('select'); redraw(); };
     for (const b of el.querySelectorAll('[data-ok]')) b.onclick = () => ctx.act({ op: 'review', id: b.dataset.ok, ok: true });
     for (const b of el.querySelectorAll('[data-no]')) b.onclick = () => ctx.act({ op: 'review', id: b.dataset.no, ok: false });
     if (q('#sn-okall')) q('#sn-okall').onclick = () => ctx.act({ op: 'reviewAll' });
@@ -210,7 +224,7 @@
   function bindGuess(el, v, ctx) {
     for (const b of el.querySelectorAll('[data-g]')) b.onclick = async () => { const r = await ctx.act({ op: 'guess', entry: b.dataset.g, choice: Number(b.dataset.c) }); if (r.ok) { ctx.haptic('select'); PH.gi = null; } };
     const t = el.querySelector('#sn-tap');
-    if (t) t.onclick = async (e) => { const r = t.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height; const res = await ctx.act({ op: 'guess', entry: t.dataset.e, x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) }); if (res.ok) { ctx.haptic('select'); PH.gi = null; } };
+    if (t) t.onclick = async (e) => { const im = t.querySelector('img'); if (!im) return; const { x, y } = relPoint(im, e); const res = await ctx.act({ op: 'guess', entry: t.dataset.e, x, y }); if (res.ok) { ctx.haptic('select'); PH.gi = null; } };
     const pk = el.querySelector('#sn-peek');
     if (pk) { const on = (x) => (e) => { e.preventDefault(); if (PH.peek !== x) { PH.peek = x; redraw(); } }; pk.onpointerdown = on(true); pk.onpointerup = pk.onpointerleave = pk.onpointercancel = on(false); }
   }
@@ -256,6 +270,7 @@
         <p class="muted">#${v.rank} of ${v.ranked} · ★ ${v.points}</p>${v.canHide && t ? `<button class="link" data-hide="${esc(t.eid)}">🙈 Hide the cover photo</button>` : ''}</div>`;
     }
     BOX.morph(el, `<div class="sn-ph ph-${esc(v.phase)}">${barHtml(v)}${inner}</div>`);
+    placeMarks(el);
     if (v.phase === 'snap' || v.phase === 'review') { bindSnap(el, v, ctx); const rt = el.querySelector('#sn-retry'); if (rt) rt.onclick = () => sendPend(ctx, v); }
     if (v.phase === 'vote') bindVote(el, v, ctx);
     if (v.phase === 'guess') bindGuess(el, v, ctx);
@@ -358,11 +373,11 @@
     const pic = (r, cls) => {
       if (r.hidden || !r.urls.length || !r.urls[r.urls.length - 1]) return `<div class="sn-hidden ${cls}">🙈 hidden</div>`;
       const u = r.urls[r.urls.length - 1];
-      if (m.key === 'change' && r.mark) return `<div class="sn-markwrap ${cls}">${img(u, 'sn-fimg')}<i class="sn-mk big" style="left:${r.mark.x * 100}%;top:${r.mark.y * 100}%"></i>${(r.taps || []).map((t) => `<i class="sn-tapdot ${t.hit ? 'hit' : ''}" style="left:${t.x * 100}%;top:${t.y * 100}%;--c:${esc(t.color || '#fff')}"></i>`).join('')}</div>`;
+      if (m.key === 'change' && r.mark) return `<div class="sn-markwrap ${cls}" data-marks>${img(u, 'sn-fimg')}<i class="sn-mk big" data-x="${r.mark.x}" data-y="${r.mark.y}"></i>${(r.taps || []).map((t) => `<i class="sn-tapdot ${t.hit ? 'hit' : ''}" data-x="${t.x}" data-y="${t.y}" style="--c:${esc(t.color || '#fff')}"></i>`).join('')}</div>`;
       return img(u, 'sn-fimg ' + cls);
     };
-    const capOf = (r) => (m.key === 'caption' || m.key === 'alphabet' ? r.text : m.key === 'scavenger' ? r.item : '');
-    return `<div class="sn-spread"><div class="sn-cover"><div class="sn-cover-h">${top.cover ? 'COVER SHOT' : 'TOP SHOT'}</div><div class="sn-cover-ph">${pic(top, 'big')}${capOf(top) ? `<div class="sn-cover-cap">${esc(BOX.filterText ? BOX.filterText(capOf(top)) : capOf(top))}</div>` : ''}</div>
+    const capOf = (r, big) => (m.key === 'caption' || m.key === 'alphabet' ? r.text : m.key === 'scavenger' && big ? r.item : '');
+    return `<div class="sn-spread"><div class="sn-cover"><div class="sn-cover-h">${top.cover ? 'COVER SHOT' : 'TOP SHOT'}</div><div class="sn-cover-ph">${pic(top, 'big')}${capOf(top, true) ? `<div class="sn-cover-cap">${esc(BOX.filterText ? BOX.filterText(capOf(top, true)) : capOf(top, true))}</div>` : ''}</div>
         <div class="sn-cover-by">${who(top)} <span class="sn-gainb">+${top.gain}</span></div><div class="sn-cover-f">${facts(top)}</div>${top.voters && top.voters.length ? `<div class="sn-voters">${top.voters.map((p) => face(p, 30)).join('')}</div>` : ''}<button class="sn-hide" data-hide="${esc(top.eid)}" title="Hide this photo">🙈</button></div>
       <div class="sn-rest" style="--cols:${rest.length <= 2 ? 1 : rest.length <= 4 ? 2 : 3};--rows:${Math.max(1, Math.ceil(Math.min(rest.length + (rest.length > 9 ? 1 : 0), 9) / (rest.length <= 2 ? 1 : rest.length <= 4 ? 2 : 3)))}">${rest.slice(0, 9).map((r, i) => `<figure class="sn-mini-f ${r.rejected ? 'rej' : ''}" style="--d:${300 + i * 110}ms">${pic(r, '')}<figcaption><span>${who(r)}</span><small>${facts(r)}</small><b>+${r.gain}</b></figcaption>${capOf(r) ? `<p>${esc(BOX.filterText ? BOX.filterText(capOf(r)) : capOf(r))}</p>` : ''}</figure>`).join('')}${rest.length > 9 ? `<div class="sn-more">+${rest.length - 9} more</div>` : ''}</div>
       <div class="sn-board">${(s.standings || []).slice(0, 6).map((r, i) => `<span>${i + 1}. ${face(r, 26)} ${esc(r.name)} <b>${r.points}</b></span>`).join('')}</div></div>`;
@@ -372,7 +387,7 @@
     return `<div class="sn-final"><div class="sn-mag"><div class="sn-mag-logo">SNAP!</div><div class="sn-mag-sub">THE BEST PHOTOS OF THE NIGHT</div>
         <div class="sn-mag-grid n${Math.min(B.length, 6)}">${B.slice(0, 6).map((b, i) => `<figure style="--d:${i * 160}ms">${img(b.url, 'sn-fimg')}<figcaption>${esc(b.icon)} ${esc(b.caption || b.prompt)} <small>📸 ${esc(b.owner.name)}</small></figcaption></figure>`).join('') || '<p>No photos survived the night.</p>'}</div></div>
       <div class="sn-fside"><h2>🏆 ${esc((st[0] || {}).name || '')}<small>Photographer of the night</small></h2>
-        <div class="sn-podium">${order.map((i) => `<div class="sn-pod p${i + 1}"><div class="sn-pav">${body(pod[i], 150)}</div><b>${esc(pod[i].name)}</b><span>★ ${pod[i].points}</span><div class="sn-step">${i + 1}</div></div>`).join('')}</div>
+        <div class="sn-podium">${order.map((i) => `<div class="sn-pod p${i + 1}"><div class="sn-pav">${body(pod[i], 150)}</div><b>${esc(pod[i].name)}</b><span>★ ${pod[i].points}</span><div class="sn-pstep">${i + 1}</div></div>`).join('')}</div>
         <div class="sn-awards">${(s.awards || []).map((a) => `<div class="sn-award"><i>${esc(a.icon)}</i><b>${esc(a.title)}</b><span>${face(a, 26)} ${esc(a.name)}</span><small>${esc(a.text)}</small></div>`).join('')}</div>
         <div class="sn-rest2">${st.slice(3, 10).map((r, i) => `<span>${i + 4}. ${esc(r.name)} <b>${r.points}</b></span>`).join('')}</div></div></div>`;
   }
@@ -447,6 +462,7 @@
       else if (s.phase === 'reveal') inner = revealTv(s);
       BOX.morph(el, scene(s, inner + reviewTv(s), 'ph-' + s.phase));
       mountMargo(el);
+      placeMarks(el);
       bindTv(el, s, ctx);
     },
     phone,

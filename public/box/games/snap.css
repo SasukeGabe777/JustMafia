@@ -146,8 +146,8 @@ body.g-snap .sn-tv, body.g-snap .sn-ph, body.g-snap .sn-lobby { font-family: 'Fr
 .sn-podium { display: flex; justify-content: center; align-items: flex-end; gap: 1cqw; margin: 1cqh 0; }
 .sn-pod { display: grid; justify-items: center; font: 600 2.2cqh 'Fredoka'; } .sn-pod span { color: var(--sn-gold); }
 .sn-pav { height: 17cqh; display: flex; align-items: flex-end; } .sn-pav img { height: 100%; width: auto; }
-.sn-step { width: 10cqw; display: grid; place-items: center; font: 400 5cqh 'Abril Fatface', serif; color: var(--sn-ink); background: var(--sn-paper); border: 3px solid var(--sn-ink); }
-.sn-pod.p1 .sn-step { height: 10cqh; background: var(--sn-gold); } .sn-pod.p2 .sn-step { height: 7cqh; } .sn-pod.p3 .sn-step { height: 5cqh; }
+.sn-pstep { width: 10cqw; display: grid; place-items: center; font: 400 5cqh 'Abril Fatface', serif; color: var(--sn-ink); background: var(--sn-paper); border: 3px solid var(--sn-ink); }
+.sn-pod.p1 .sn-pstep { height: 10cqh; background: var(--sn-gold); } .sn-pod.p2 .sn-pstep { height: 7cqh; } .sn-pod.p3 .sn-pstep { height: 5cqh; }
 .sn-awards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8cqh 0.8cqw; }
 .sn-award { display: grid; grid-template-columns: auto 1fr; gap: 0 0.6cqw; align-items: center; background: rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 0.6cqh 0.8cqw; font: 600 1.8cqh 'Fredoka'; }
 .sn-award i { grid-row: span 3; font-style: normal; font-size: 4cqh; } .sn-award b { color: var(--sn-gold); } .sn-award span { display: flex; align-items: center; gap: 4px; } .sn-award small { color: #c9c2d0; }
