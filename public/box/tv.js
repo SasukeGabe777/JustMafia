@@ -113,6 +113,7 @@
   });
   socket.on('tv', (s) => {
     if (onTitle) return;
+    if (BOX.setRoster && s && s.players) BOX.setRoster(s.players); // every player's character + gear (BOX.face)
     if (s.away) return goAway(s);
     if (s.game && s.game !== gameKey) return switchTo(s);
     state = s; stateAt = Date.now(); render(); playFx(s.fx || []); music(); platform();
@@ -535,7 +536,7 @@
     $('#tv-switch').onclick = tvPicker;
     const q = $('#quit-title'); if (q) q.onclick = () => { if (confirm('Close this valley and go back to the title screen?')) quitToTitle(); };
   }
-  const partyFace = (r) => { const p = state.players.find((x) => x.id === r.id); return p && p.look && BOX.portrait ? BOX.portrait.html({ ...r, look: p.look }, 24) : esc(r.avatar || ''); };
+  const partyFace = (r) => (BOX.face && BOX.hasLook(r) ? BOX.face(r, 24, { plain: true }) : esc(r.avatar || ''));
   function updateJoin() {
     const url = joinUrl();
     $('#vip').innerHTML = state.vip ? `👑 <b>${esc(state.vip)}</b> is the host and can start from their phone` : 'The first person to join becomes the host 👑';

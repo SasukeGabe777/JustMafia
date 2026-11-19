@@ -89,7 +89,7 @@
         const k = clamp((u - at) / 600), col = i % cols, row = Math.floor(i / cols), rowN = row === rows - 1 ? n - row * cols : cols;
         const tx = 960 + (col - (rowN - 1) / 2) * gap, ty = (rows > 1 ? 620 : 780) + row * 280, sc = rows > 1 ? 0.78 : 1;
         const x = lerp(2100, tx, easeOut(k)), y = ty + Math.sin(s.t * 1.5 + i) * 12;
-        Z.astro(g, x, y, sc, s.t, { avatar: c.avatar, color: c.color, pose: k < 1 ? 'float' : i % 3 === 0 ? 'wave' : 'idle', ph: i });
+        Z.astro(g, x, y, sc, s.t, { who: c, avatar: c.avatar, color: c.color, pose: k < 1 ? 'float' : i % 3 === 0 ? 'wave' : 'idle', ph: i });
         if (k >= 1) {
           Z.text(g, c.name, tx, y + 40, 36, '#fff', { font: '"Fredoka", sans-serif', weight: 700, stroke: '#1d1036', lw: 7, max: gap * 0.92 });
           Z.text(g, '???', tx, y - 232 * sc, 34, '#7dff6a', { stroke: '#1d1036', lw: 6 });

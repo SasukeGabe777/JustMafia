@@ -384,3 +384,18 @@ body.g-debate .host-row { margin-top: 6px; }
 .db-ring.sm { width: clamp(110px, 9vw, 150px); height: clamp(110px, 9vw, 150px); }
 .db-ring.sm b { font-size: clamp(40px, 3.4vw, 56px); }
 .db-motion.long .db-mq { font-size: clamp(24px, 2.6vw, 42px); }
+/* Players' characters (public/box/portrait.js): debaters stand behind their lectern (full body,
+   legs hidden by the desk), the closing-ceremony podium, faces everywhere else. */
+.db-pod:has(.db-head.has-fig) .db-heads { z-index: 0; gap: 0; }
+.db-head.has-fig { width: auto; height: auto; border: 0; border-radius: 0; background: none; box-shadow: none; display: block; line-height: 0; font-size: 80px; margin-bottom: -82px; transform-origin: 50% 100%; }
+.db-pod.team .db-head.has-fig { width: auto; height: auto; font-size: 56px; margin-bottom: -50px; margin-left: -16px; margin-right: -16px; }
+.db-head.has-fig .db-fig { display: block; }
+.db-head.has-fig.talk { box-shadow: none; filter: drop-shadow(0 0 18px rgba(255, 215, 122, 0.85)); }
+.db-head.has-fig .db-mic { right: 2px; bottom: 44%; font-size: 0.6em; z-index: 1; }
+.db-head.has-fig.gone .db-fig { opacity: 0.6; }
+.db-p3 .fig { display: flex; justify-content: center; margin-bottom: -4px; }
+.db-p3.p1 .fig .bx-body { filter: drop-shadow(0 0 26px rgba(255, 215, 122, 0.8)); }
+.db-af { margin: -6px 2px -4px 0; background: rgba(255, 255, 255, 0.14); }
+.db-listen .av .db-af, .db-vbtn .av .db-af { margin: 0; background: none; }
+.dbl-benches .chip .hd.has-face { padding: 0; overflow: hidden; }
+.dbl-benches .chip .hd.has-face .db-hf { display: block; border-radius: 50%; margin: 0; background: none; }

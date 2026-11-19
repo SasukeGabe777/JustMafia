@@ -143,7 +143,7 @@
         const x = 960 + (col - (rowN - 1) / 2) * gap, y = rows > 1 ? 430 + row * 340 : 560, size = Math.min(200, gap * 0.72) * (rows > 1 ? 0.9 : 1);
         const q = back(k), L = (String(c.name || '?').match(/[A-Za-z0-9]/) || ['?'])[0].toUpperCase();
         tile(g, x, y - (1 - q) * 600, size, (1 - q) * (i % 2 ? 1 : -1) + Math.sin(s.t * 2 + i) * 0.04, L, { glow: k >= 1 ? '#ffd23f' : null });
-        if (k > 0.5) { s.emoji(c.avatar || '🙂', x + size * 0.42, y - size * 0.42, size * 0.42); text(g, c.name, x, y + size * 0.72, 44, '#fff', { font: BODY, stroke: '#0b1a33', lw: 8, max: gap * 0.95 }); }
+        if (k > 0.5) { s.face(c, x + size * 0.42, y - size * 0.42, size * 0.42); text(g, c.name, x, y + size * 0.72, 44, '#fff', { font: BODY, stroke: '#0b1a33', lw: 8, max: gap * 0.95 }); }
       });
       if (o.more && u > n * per - 1400) text(g, `…and ${o.more} more!`, 960, 1010, 56, '#ffd23f', { font: BUN, stroke: '#0b1a33', lw: 10 });
     },

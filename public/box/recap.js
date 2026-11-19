@@ -12,7 +12,38 @@
   const ordinal = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const dateText = (t) => { try { return new Date(t || Date.now()).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }); } catch { return ''; } };
-  const av = (r, cls = '') => `<span class="rc-av ${cls}" style="--pc:${esc(r.color || '#7b61ff')}">${esc(r.avatar || '🙂')}</span>`;
+  // Faces: each player's own character (portrait.js; plain = no game gear, the recap spans every
+  // game), or their emoji when they have none.
+  const AVPX = { sm: 64, lg: 128, xl: 160 };
+  const face = (r, px, o = {}) => (B.face ? B.face(r, px, { plain: true, fill: true, ...o }) : esc(r.avatar || '🙂'));
+  const hasLook = (r) => !!(r && B.body && B.hasLook && B.hasLook(r));
+  const av = (r, cls = '') => `<span class="rc-av ${cls}" style="--pc:${esc(r.color || '#7b61ff')};overflow:hidden">${face(r, AVPX[cls] || 80, cls === 'xl' ? { mood: 'grin' } : {})}</span>`;
+  // For the canvas pictures (drawn synchronously): a cached Image of BOX.faceUrl when it has loaded,
+  // else the character drawn straight onto the canvas (BOX.drawChar), else the emoji (false).
+  const imgs = new Map();
+  function faceImage(r, px) {
+    if (!r || !B.faceUrl) return null;
+    let u = ''; try { u = B.faceUrl(r, px, { plain: true }); } catch { u = ''; }
+    if (!u) return null;
+    let im = imgs.get(u);
+    if (!im) { im = new Image(); im.src = u; imgs.set(u, im); if (imgs.size > 80) imgs.delete(imgs.keys().next().value); }
+    return im;
+  }
+  const preload = (list, px) => { for (const r of list || []) if (r) faceImage(r, px); };
+  // A round face centred at (x, y), size s; ring = the player's colour ring (optional).
+  function drawFace(cx, r, x, y, s, ring) {
+    if (!r) return false;
+    const im = faceImage(r, s <= 64 ? 64 : s <= 128 ? 128 : 256);
+    let ok = false;
+    cx.save();
+    cx.beginPath(); cx.arc(x, y, s / 2, 0, Math.PI * 2); cx.closePath();
+    if (ring) { cx.fillStyle = 'rgba(255,255,255,0.12)'; cx.fill(); }
+    if (im && im.complete && im.naturalWidth) { cx.clip(); cx.drawImage(im, x - s / 2, y - s / 2, s, s); ok = true; }
+    else if (B.drawChar && hasLook(r)) { cx.clip(); const k = s / 47; try { ok = B.drawChar(cx, x, y - s / 2 + 72 * k, r, { scale: k, t: 0.4, plain: true }); } catch { ok = false; } }
+    cx.restore();
+    if (ok && ring) { cx.save(); cx.beginPath(); cx.arc(x, y, s / 2, 0, Math.PI * 2); cx.lineWidth = Math.max(2, s / 28); cx.strokeStyle = ring; cx.stroke(); cx.restore(); }
+    return ok;
+  }
 
   // ---- the slides ----
   function slides(rc) {
@@ -29,7 +60,8 @@
       out.push({ k: 'awards', ms: 3500 + page.length * 500, html: `<div class="rc-awards"><h2>🏅 Awards${rc.awards.length > per ? ` <small>${i / per + 1}/${Math.ceil(rc.awards.length / per)}</small>` : ''}</h2><div class="rc-agrid">${page.map((a, j) => `<div class="rc-award" style="--j:${j};--pc:${esc(a.color || '#ffd23f')}"><span class="rc-ai">${esc(a.icon)}</span>${av(a, 'sm')}<div><b>${esc(a.title)}</b><span>${esc(ft(a.name))}</span><small>${esc(a.desc || '')}</small></div></div>`).join('')}</div></div>` });
     }
     const [p1, p2, p3] = rc.board;
-    const step = (r, place) => (r ? `<div class="rc-pod p${place}" style="--pc:${esc(r.color || '#7b61ff')}">${place === 1 ? '<span class="rc-crown">👑</span>' : ''}${av(r, place === 1 ? 'xl' : 'lg')}<b>${esc(ft(r.name))}</b><span>${r.pts} pts${r.wins ? ` · ⭐${r.wins}` : ''}</span><div class="rc-block">${place}</div></div>` : '');
+    // On the podium: their whole character standing on the block (the emoji circle without one).
+    const step = (r, place) => (r ? `<div class="rc-pod p${place}" style="--pc:${esc(r.color || '#7b61ff')}">${place === 1 ? '<span class="rc-crown">👑</span>' : ''}${hasLook(r) ? `<span class="rc-fig" style="display:block;line-height:0">${B.body(r, place === 1 ? 230 : 180, { plain: true, mood: place === 1 ? 'grin' : '' })}</span>` : av(r, place === 1 ? 'xl' : 'lg')}<b>${esc(ft(r.name))}</b><span>${r.pts} pts${r.wins ? ` · ⭐${r.wins}` : ''}</span><div class="rc-block">${place}</div></div>` : '');
     if (p1) out.push({ k: 'champ', ms: 7500, html: `<div class="rc-champ"><div class="rc-kicker">${rc.party ? '🎉 Party champion' : '👑 Tonight’s champion'}</div><h1>${esc(ft(p1.name))}!</h1><div class="rc-podium">${step(p2, 2)}${step(p1, 1)}${step(p3, 3)}</div></div>` });
     out.push({ k: 'end', ms: 0, html: `<div class="rc-end"><h2>📸 Save the night</h2><p>Download a picture of tonight to share with everyone.</p><img class="rc-preview" alt="Night summary"><div class="rc-endbtns"><button class="btn big" data-rc="save">📸 Save the night</button><button class="btn ghost" data-rc="again">🔁 Watch again</button><button class="btn ghost" data-rc="close">✕ Close</button></div><p class="muted small">Phones have their own recap card with a save button too.</p></div>` });
     return out;
@@ -41,6 +73,7 @@
     if (!s || s.id !== rc.id) {
       if (s) clearTimeout(s.timer);
       s = el._rc = { id: rc.id, i: 0, paused: false, timer: 0, list: slides(rc), rc };
+      preload(rc.champion ? [rc.champion] : [], 256); preload(rc.board.slice(0, 8), 64); preload(rc.awards.slice(0, 6), 64); // for the picture
       el.innerHTML = `<div class="rc"><div class="rc-sky" aria-hidden="true">${Array.from({ length: 14 }, (_, i) => `<i style="--x:${(i * 37 + 11) % 100}%;--h:${(i * 71) % 360}deg;--d:${9 + (i * 5) % 7}s;--dl:-${(i * 3) % 9}s"></i>`).join('')}</div>
         <div class="rc-stage"></div>
         <div class="rc-bar"><div class="rc-dots"></div><div class="rc-ctl"><button data-rc="prev" title="Back">◀</button><button data-rc="pause" title="Pause">⏸</button><button data-rc="next" title="Next">▶</button><button data-rc="save" title="Save the night">📸</button><button data-rc="close" title="Close the recap">✕</button></div></div></div>`;
@@ -95,7 +128,8 @@
     const c = rc.champion;
     rrect(cx, 60, 156, W - 120, 280, 36, 'rgba(255,255,255,0.10)');
     if (c) {
-      cx.fillStyle = '#ffffff'; cx.font = FONT(400, 54); cx.fillText('👑', W / 2, 212); cx.font = FONT(400, 110); cx.fillText(c.avatar || '🙂', W / 2, 318);
+      cx.fillStyle = '#ffffff'; cx.font = FONT(400, 54); cx.fillText('👑', W / 2, 212);
+      if (!drawFace(cx, c, W / 2, 276, 128, c.color || '#ffd23f')) { cx.fillStyle = '#ffffff'; cx.font = FONT(400, 110); cx.fillText(c.avatar || '🙂', W / 2, 318); }
       cx.font = FONT(700, 54); cx.fillStyle = '#ffd23f'; cx.fillText(fit(cx, `${ft(c.name)} wins the night!`, W - 180), W / 2, 382);
       cx.font = FONT(600, 26); cx.fillStyle = '#fff8ef'; cx.fillText(`${c.pts} party points · ${c.wins} win${c.wins === 1 ? '' : 's'} · ${rc.played.length} game${rc.played.length === 1 ? '' : 's'} · ${rc.players} players`, W / 2, 418);
     }
@@ -106,7 +140,7 @@
     rc.board.slice(0, 8).forEach((r, i) => {
       const y = top + 104 + i * 49;
       cx.fillStyle = i === 0 ? '#ffd23f' : '#c9bfe6'; cx.font = FONT(700, 26); cx.fillText(`${i + 1}.`, 88, y);
-      cx.font = FONT(400, 30); cx.fillText(r.avatar || '🙂', 126, y + 2);
+      if (!drawFace(cx, r, 143, y - 9, 42, r.color || '#7b61ff')) { cx.font = FONT(400, 30); cx.fillText(r.avatar || '🙂', 126, y + 2); }
       cx.fillStyle = '#fff8ef'; cx.font = FONT(600, 28); cx.fillText(fit(cx, ft(r.name), 230), 172, y);
       cx.textAlign = 'right'; cx.fillStyle = '#3ee6ff'; cx.font = FONT(700, 28); cx.fillText(String(r.pts), 500, y); cx.textAlign = 'left';
     });
@@ -123,7 +157,8 @@
       const x = 88 + (i % 2) * 470, y = ay + 104 + Math.floor(i / 2) * 58;
       cx.font = FONT(400, 32); cx.fillStyle = '#fff'; cx.fillText(a.icon || '🏅', x, y + 4);
       cx.font = FONT(700, 24); cx.fillStyle = '#fff8ef'; cx.fillText(fit(cx, a.title, 380), x + 50, y - 6);
-      cx.font = FONT(600, 20); cx.fillStyle = '#c9bfe6'; cx.fillText(fit(cx, `${a.avatar || ''} ${ft(a.name)}`, 380), x + 50, y + 20);
+      const fx = drawFace(cx, a.id ? a : null, x + 62, y + 13, 26, null);
+      cx.font = FONT(600, 20); cx.fillStyle = '#c9bfe6'; cx.fillText(fit(cx, fx ? ft(a.name) : `${a.avatar || ''} ${ft(a.name)}`, fx ? 346 : 380), x + (fx ? 80 : 50), y + 20);
     });
     cx.textAlign = 'center'; cx.fillStyle = 'rgba(255,255,255,0.55)'; cx.font = FONT(600, 22); cx.fillText('Party games for the big screen · everyone plays from their phone', W / 2, H - 30);
     return cv.toDataURL('image/png');
@@ -138,7 +173,7 @@
     const place = c.rank ? (c.rank === 1 ? '👑' : '#' + c.rank) : '–';
     return `<div class="card-box rc-card">
       <div class="rc-ckick">🎬 Your night</div>
-      <div class="rc-cav" style="--pc:${esc(me.color || '#7b61ff')}">${esc(me.avatar || '🙂')}</div>
+      <div class="rc-cav" style="--pc:${esc(me.color || '#7b61ff')};overflow:hidden">${me && me.id ? face(me, 112, c.me ? { mood: 'grin' } : {}) : esc(me.avatar || '🙂')}</div>
       <h3>${c.me ? 'You won the night!' : c.rank ? `You finished ${ordinal(c.rank)} of ${c.of}` : 'Thanks for playing!'}</h3>
       <div class="rc-cstats"><div><b>${place}</b><span>place</span></div><div><b>${c.pts}</b><span>party pts</span></div><div><b>${c.wins}</b><span>win${c.wins === 1 ? '' : 's'}</span></div><div><b>${c.games}</b><span>of ${c.played} games</span></div></div>
       ${c.best ? `<p class="rc-cbest">Best finish: <b>${ordinal(c.best.place)}</b> in ${icon(c.best.game)} ${esc(c.best.title)}</p>` : ''}
@@ -153,7 +188,7 @@
     logo(cx, W, 90);
     cx.textAlign = 'center'; cx.fillStyle = '#c9bfe6'; cx.font = FONT(600, 30); cx.fillText(`My night · ${dateText()}`, W / 2, 138);
     rrect(cx, 90, 180, W - 180, 520, 40, 'rgba(255,255,255,0.10)');
-    cx.font = FONT(400, 170); cx.fillStyle = '#ffffff'; cx.fillText(me.avatar || '🙂', W / 2, 390);
+    if (!drawFace(cx, me && me.id ? me : null, W / 2, 320, 200, me.color || '#7b61ff')) { cx.font = FONT(400, 170); cx.fillStyle = '#ffffff'; cx.fillText(me.avatar || '🙂', W / 2, 390); }
     cx.font = FONT(700, 64); cx.fillStyle = '#fff8ef'; cx.fillText(fit(cx, me.name || '', W - 260), W / 2, 480);
     cx.font = FONT(700, 46); cx.fillStyle = '#ffd23f'; cx.fillText(c.me ? '👑 Won the night!' : c.rank ? `${ordinal(c.rank)} of ${c.of}` : 'Thanks for playing!', W / 2, 560);
     const stats = [[c.pts, 'party points'], [c.wins, c.wins === 1 ? 'win' : 'wins'], [c.games, 'games']];

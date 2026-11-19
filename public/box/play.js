@@ -286,6 +286,7 @@
     // The room went to a game outside the box (JustMafia): follow it, joined with my name.
     if (v.away && v.away.url && v.away.url.charAt(0) === '/') { if (!socket.leaving) { socket.leaving = true; toast('🔪 Off to JustMafia!'); setTimeout(() => { location.href = v.away.url; }, 500); } return; }
     const view0 = view; view = v; v._at = Date.now();
+    if (BOX.setRoster) { if (v.roster) BOX.setRoster(v.roster); if (v.me) BOX.setRoster([{ ...v.me, bot: false }]); } // characters for BOX.face
     if (view0 && v.unlocks && view0.unlocks && v.unlocks.length > view0.unlocks.length) { const k = v.unlocks.find((x) => !view0.unlocks.includes(x)); const g = BOX.games[k]; toast(`🔓 New game unlocked: ${g ? g.icon + ' ' + g.name : k}!`); haptic('win'); }
     if (v.phase !== (view0 && view0.phase) && v.phase === 'show') haptic('big');
     if (v.game !== gameKey) { setGame(v.game); haptic('success'); toast(`${G ? G.icon + ' ' : ''}Next game: ${v.title}!`); vibrate(80); }

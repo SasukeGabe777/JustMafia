@@ -219,7 +219,7 @@ function installBox(app, io, { takenElsewhere = () => false, external = {}, prof
       const r = room.join(msg.name, token, avatar);
       if (!r.ok) return reply(cb, r);
       detach(); socket.data = { code: room.code, playerId: r.player.id }; socket.join('pl:' + room.code + ':' + r.player.id);
-      r.player.sockets++;
+      r.player.sockets++; r.player.rosterSig = null; // a new socket gets the room's characters again
       if (prof) linkProfile(room, r.player, prof);
       reply(cb, { ok: true, code: room.code, id: r.player.id, token: r.player.token, game: room.def.key, back: !!r.back });
       room.sync();

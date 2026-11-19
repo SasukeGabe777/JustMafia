@@ -141,7 +141,7 @@
       g.save(); g.translate(x, feet); g.scale(sc, sc); g.rotate(sway); g.globalAlpha = k;
       g.fillStyle = c.color || '#ff6b8b'; rr(g, -48, -190, 96, 160, 46); g.fill(); g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,0.3)'; g.stroke();
       g.fillStyle = '#1a0610'; g.beginPath(); g.moveTo(0, -95); g.lineTo(-22, -108); g.lineTo(-22, -82); g.closePath(); g.moveTo(0, -95); g.lineTo(22, -108); g.lineTo(22, -82); g.closePath(); g.fill();
-      s.emoji(c.avatar || '🙂', 0, -146, 70);
+      s.face(c, 0, -146, 70);
       g.restore(); g.globalAlpha = k;
       const w = Math.min(p.step * 0.95, 220);
       g.fillStyle = '#fff3d6'; rr(g, x - w / 2, feet - 22, w, 48, 6); g.fill(); g.strokeStyle = GOLD; g.lineWidth = 4; g.stroke();

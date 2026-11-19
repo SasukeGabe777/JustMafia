@@ -346,3 +346,12 @@ body.g-funny #g-body .board .row b { color: var(--fn-yel); }
 .fn-pguide ol { margin: 0 0 8px; padding-left: 22px; line-height: 1.5; }
 .fn-pguide p { margin: 0; font-size: 14px; color: #7a5a6a; }
 @media (prefers-reduced-motion: reduce) { .fnl *, .fn-couch * { animation: none !important; } }
+/* Players' characters (public/box/portrait.js) in place of their emoji. */
+body.g-funny .fn-picker { position: relative; display: inline-block; margin-bottom: 4px; animation: fnl-bob 2.4s ease-in-out infinite; }
+body.g-funny .fn-picker .fn-phone { position: absolute; right: -18px; bottom: 54px; font-size: 54px; transform: rotate(14deg); filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)); }
+body.g-funny .fn-byf, body.g-funny .fn-rf, body.g-funny .fn-qf, body.g-funny .fn-tagf { margin: -4px 4px -4px 0; background: rgba(255, 244, 224, 0.16); }
+body.g-funny .fn-tagf { margin: -3px 2px -3px -6px; }
+body.g-funny .fn-awf { background: rgba(255, 244, 224, 0.16); }
+body.g-funny .fnl-face .bx-face { display: block; }
+body.g-funny .fnl-roster.many .fnl-face .bx-face { width: 52px !important; height: 52px !important; }
+body.g-funny .fnl-roster.lots .fnl-face .bx-face { width: 40px !important; height: 40px !important; }

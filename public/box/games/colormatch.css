@@ -319,3 +319,11 @@ body.g-colormatch #g-body { padding-bottom: 20px; }
 .cm-sws.gear.glow { box-shadow: 0 0 14px var(--ga), inset 0 0 0 2px rgba(255, 255, 255, .5); }
 .cm-frame.gear .cm-canvas { border-image: none; border-color: transparent; background: linear-gradient(var(--c), var(--c)) padding-box, var(--gpat) border-box; }
 .cm-frame.gear.glow .cm-canvas { box-shadow: 0 0 30px var(--ga), 0 14px 30px rgba(0, 0, 0, .5); }
+
+/* players' characters (BOX.face / BOX.body) */
+body.g-colormatch .cm-fc { margin: -7px 0; }
+body.g-colormatch .cm-lk .a { overflow: hidden; }
+body.g-colormatch .cml-chip.chip i.sw > span { height: 100%; aspect-ratio: 1; display: grid; place-items: center; }
+body.g-colormatch .cm-canvas { overflow: hidden; }
+body.g-colormatch .cm-canvas .cm-fig { height: 100%; display: grid; place-items: end center; font-size: 0; }
+body.g-colormatch .cm-canvas .cm-fig .bx-body { height: 96% !important; width: auto !important; }

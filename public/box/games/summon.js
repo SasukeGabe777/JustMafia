@@ -372,11 +372,11 @@
     if (s.phase !== 'over' || !s.result) { BOX.morph(ov, ''); return; }
     const r = s.result, w = r.winner, st = s.standings || [];
     const why = w < 0 ? 'Neither army would give an inch.' : r.reason === 'fortress' ? `${TEAM[1 - w].name}'s fortress has fallen!` : r.reason === 'front' ? `They held the line deep in ${TEAM[1 - w].name} land when time ran out.` : `The front was dead even, but their fortress stood stronger.`;
-    const col = (t) => `<div class="sm-res-col t${t} ${w === t ? 'win' : ''}"><h3>${TEAM[t].icon} ${TEAM[t].name}</h3>${st.filter((x) => x.team === t).slice(0, 8).map((x, i) => `<div class="sm-res-row"><span class="n">${i + 1}</span><span class="av">${esc(x.avatar || '')}</span><span class="nm">${esc(x.name)}${x.ghost ? ' 👻' : ''}</span><span class="st">⚔️ ${x.dmg}  🏚️ ${x.base}</span><b>${x.score}</b></div>`).join('')}</div>`;
+    const col = (t) => `<div class="sm-res-col t${t} ${w === t ? 'win' : ''}"><h3>${TEAM[t].icon} ${TEAM[t].name}</h3>${st.filter((x) => x.team === t).slice(0, 8).map((x, i) => `<div class="sm-res-row"><span class="n">${i + 1}</span><span class="av">${face(x, 34)}</span><span class="nm">${esc(x.name)}${x.ghost ? ' 👻' : ''}</span><span class="st">⚔️ ${x.dmg}  🏚️ ${x.base}</span><b>${x.score}</b></div>`).join('')}</div>`;
     const mvp = st[0];
     BOX.morph(ov, `<div class="sm-end ${w >= 0 ? 't' + w : 'draw'}"><div class="sm-end-top"><small>${w < 0 ? 'STALEMATE' : 'VICTORY'}</small><h2>${w < 0 ? '🤝 A DRAW!' : `${TEAM[w].icon} ${TEAM[w].name.toUpperCase()} WINS!`}</h2><p>${esc(why)}</p></div>
-      <div class="sm-end-mid">${mvp ? `<div class="sm-mvp t${mvp.team}"><small>⭐ MVP</small><div class="av">${esc(mvp.avatar || '')}</div><b>${esc(mvp.name)}</b><span>${mvp.score} pts</span></div>` : ''}
-      <div class="sm-awards">${(r.awards || []).map((a) => `<div class="sm-aw t${a.team}"><i>${esc(a.icon)}</i><div><b>${esc(a.title)}</b><span>${esc(a.name)}</span><small>${esc(a.why)}</small></div></div>`).join('')}</div></div>
+      <div class="sm-end-mid">${mvp ? `<div class="sm-mvp t${mvp.team}"><small>⭐ MVP</small><div class="av">${fig(mvp, 150, { mood: 'grin' })}</div><b>${esc(mvp.name)}</b><span>${mvp.score} pts</span></div>` : ''}
+      <div class="sm-awards">${(r.awards || []).map((a) => `<div class="sm-aw t${a.team}"><i>${esc(a.icon)}</i><div><b>${esc(a.title)}</b><span>${BOX.hasLook && BOX.hasLook(a) ? face(a, 26) + ' ' : ''}${esc(a.name)}</span><small>${esc(a.why)}</small></div></div>`).join('')}</div></div>
       <div class="sm-res">${col(0)}${col(1)}</div></div>`);
   }
 
@@ -642,11 +642,23 @@
     text(g, `⚔️ ${T.troops} troops`, sx, y + 94, 18, '#fff', { align: right ? 'left' : 'right', stroke: OUT, lw: 4 });
     if (T.rally) text(g, '📯 RALLY!', x + w / 2, y + 140, 22, P.glow, { stroke: OUT, lw: 5 });
   }
+  // Players are their characters: cached face images on the canvas, BOX.face / BOX.body in HTML.
+  const FACES = new Map();
+  const face = (p, n = 32, o) => (BOX.face ? BOX.face(p, n, o) : esc((p && p.avatar) || '🙂'));
+  const fig = (p, h = 120, o) => (BOX.body ? BOX.body(p, h, o) : `<span style="font-size:${Math.round(h * 0.4)}px">${esc((p && p.avatar) || '🙂')}</span>`);
+  function faceImg(p, px) {
+    if (!p || !BOX.faceUrl) return null;
+    const k = (p.id || p.name) + '|' + px; let e = FACES.get(k);
+    if (!e) { const u = BOX.faceUrl(p, px); if (!u) return null; if (FACES.size > 200) FACES.clear(); e = Object.assign(new Image(), { src: u }); FACES.set(k, e); }
+    return e.complete && e.naturalWidth ? e : null;
+  }
   function keepList(g, team, keeps, x, y) {
     const P = TEAM[team], n = keeps.length, cols = n > 10 ? 3 : n > 4 ? 2 : 1, rows = Math.ceil(n / cols), cw = 500 / cols, ch = Math.min(38, 150 / Math.max(1, rows));
     keeps.forEach((k, i) => {
       const c = Math.floor(i / rows), r = i % rows, kx = x + c * cw, ky = y + r * ch, f = clamp(k.hp / k.max, 0, 1), fs2 = Math.min(22, ch * 0.62);
-      text(g, k.ghost ? '👻' : k.avatar || '🙂', kx + 14, ky + ch / 2, fs2, '#fff');
+      const fim = k.ghost || k.ai ? null : faceImg(k, 64); // the commander's character (emoji without one)
+      if (fim) { const fz = Math.min(36, ch * 1.05); g.drawImage(fim, kx + 14 - fz / 2, ky + ch / 2 - fz / 2, fz, fz); }
+      else text(g, k.ghost ? '👻' : k.avatar || '🙂', kx + 14, ky + ch / 2, fs2, '#fff');
       text(g, k.name, kx + 32, ky + ch / 2 - (ch > 30 ? 6 : 0), Math.min(18, ch * 0.5), k.ghost ? '#8a809a' : '#fff', { align: 'left', font: BODY, weight: 600, max: cw * 0.5 });
       const gb = gearBanner(k); if (gb && gb.icon) text(g, gb.icon, kx + cw - 18, ky + ch / 2 - (ch > 30 ? 6 : 0), fs2 * 0.85, '#fff'); // gear banner emblem
       const bx = kx + (ch > 30 ? 32 : cw * 0.58), by = ky + (ch > 30 ? ch / 2 + 8 : ch / 2 - 4), bw = ch > 30 ? cw - 50 : cw * 0.36;
@@ -727,7 +739,7 @@
     const ps = [...L.players.filter((p) => !p.bot), ...L.players.filter((p) => p.bot)], sides = [[], []];
     ps.forEach((p, i) => sides[i % 2].push(p));
     if (sides[0].length !== sides[1].length && L.settings.balance === 'ai') sides[sides[0].length < sides[1].length ? 0 : 1].push({ ai: true });
-    const chip = (p, t) => p.ai ? `<span class="chip ai">🤖 AI ally</span>` : `<span class="chip ${p.online ? '' : 'off'}"><span class="av">${esc(p.avatar || '🙂')}</span>${esc(p.name)}</span>`;
+    const chip = (p, t) => p.ai ? `<span class="chip ai">🤖 AI ally</span>` : `<span class="chip ${p.online ? '' : 'off'}"><span class="av">${face(p, 32)}</span>${esc(p.name)}</span>`;
     const side = (t) => `<div class="sml-side t${t}"><div class="sml-banner"><div class="sml-emb">${TEAM[t].icon}</div><b>${TEAM[t].name}</b><small>${sides[t].filter((p) => !p.ai).length} commander${sides[t].filter((p) => !p.ai).length === 1 ? '' : 's'}</small></div><div class="sml-chips">${sides[t].map((p) => chip(p, t)).join('') || '<span class="sml-empty">Scan the scroll to enlist!</span>'}</div></div>`;
     BOX.morph(el.querySelector('#roster'), side(0) + side(1));
     const lu = el.querySelector('#sml-lineup'); if (lu.dataset.h !== (L.lineupHtml || '')) { lu.innerHTML = L.lineupHtml || ''; lu.dataset.h = L.lineupHtml || ''; }

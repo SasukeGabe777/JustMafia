@@ -24,7 +24,9 @@
   const tilt = (k, amp = 2) => (((hash(k) % 100) / 100) * 2 - 1) * amp;
   const TINT = ['#fff3a3', '#ffd6e0', '#c9f2e8', '#d9e8ff', '#ffe2b8', '#e8dcff'];
   const tint = (k) => TINT[hash(k) % TINT.length];
-  const nm = (o) => (o ? (o.av ? esc(o.av) + ' ' : '') + esc(o.name) : '');
+  // A player's own character (BOX.face, holding their pencil), or their emoji. o = { id, name, av }.
+  const fa = (o, px = 32) => (!o ? '' : window.BOX && BOX.face ? BOX.face({ id: o.id, name: o.name, avatar: o.av || o.avatar }, px, { cls: 'lr-fc' }) : esc(o.av || o.avatar || '🙂'));
+  const nm = (o) => (o ? fa(o, 28) + ' ' + esc(o.name) : '');
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const ABC = 'ABCDEFGHIJKLMNOPRSTUVWY';
   const ROUND = {
@@ -82,7 +84,7 @@
           <div class="lr-links"><button class="lr-link" id="add-bots">+ add 5 test bots</button><button class="lr-link" id="rm-bots">remove bots</button><button class="lr-link" id="tv-switch">🎮 other game</button></div></div>
       </section>
       <section class="lr-rackbar"><div class="lr-rackl">Players <b>${n}</b></div>
-        <div class="lr-rack" id="roster">${shown.map((p, i) => `<span class="chip lr-chip ${p.online ? '' : 'off'}" id="lrc-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--tl:${tilt(p.id, 4).toFixed(1)}deg;--d:${(i % 10) * 0.05}s"><b>${esc(p.avatar || '🙂')}</b><span>${esc(p.name)}</span></span>`).join('') || '<div class="lr-empty">The rack is empty… scan the code to grab a tile!</div>'}${n > shown.length ? `<span class="lr-more">+${n - shown.length}</span>` : ''}</div>
+        <div class="lr-rack" id="roster">${shown.map((p, i) => `<span class="chip lr-chip ${p.online ? '' : 'off'}" id="lrc-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--tl:${tilt(p.id, 4).toFixed(1)}deg;--d:${(i % 10) * 0.05}s"><b>${fa(p, 40)}</b><span>${esc(p.name)}</span></span>`).join('') || '<div class="lr-empty">The rack is empty… scan the code to grab a tile!</div>'}${n > shown.length ? `<span class="lr-more">+${n - shown.length}</span>` : ''}</div>
         ${L.lineupHtml ? `<div class="lr-party">${L.lineupHtml}</div>` : ''}</section>
     </div>`);
     for (const s of el.querySelectorAll('select[data-set]')) { s.onchange = () => L.set(s.dataset.set, s.value); s.onclick = (e) => e.stopPropagation(); }
@@ -95,7 +97,7 @@
   }
 
   // ---------- TV ----------
-  const tally = (list, title = 'Tally') => `<aside class="lr-tally"><h3>${esc(title)}</h3><div class="lr-rows">${(list || []).map((r, i) => `<div class="lr-trow ${i === 0 && r.points > 0 ? 'lead' : ''}"><span class="lr-rk">${i + 1}</span><span class="lr-av">${esc(r.av || '🙂')}</span><span class="lr-nm">${esc(r.name)}${r.streak >= 3 ? ` <small class="lr-fire">🔥${r.streak}</small>` : ''}</span><b>${r.points}</b></div>`).join('')}</div></aside>`;
+  const tally = (list, title = 'Tally') => `<aside class="lr-tally"><h3>${esc(title)}</h3><div class="lr-rows">${(list || []).map((r, i) => `<div class="lr-trow ${i === 0 && r.points > 0 ? 'lead' : ''}"><span class="lr-rk">${i + 1}</span><span class="lr-av">${fa(r, 32)}</span><span class="lr-nm">${esc(r.name)}${r.streak >= 3 ? ` <small class="lr-fire">🔥${r.streak}</small>` : ''}</span><b>${r.points}</b></div>`).join('')}</div></aside>`;
   const roundPill = (s) => `<span class="lr-pill t-${esc(s.type)}">${rtype(s).icon} ${esc(rtype(s).name)}${s.theme ? `: ${esc(s.theme.icon)} ${esc(s.theme.name)}` : ''}</span>`;
   const header = (s) => `<header class="lr-top"><span class="lr-pill">Round ${s.round} of ${s.rounds}</span>${roundPill(s)}${s.mult > 1 ? '<span class="lr-pill gold">×2 points</span>' : ''}${s.endsIn ? `<span class="lr-pill clock">⏱ ${timer(s.endsIn)}</span>` : ''}</header>`;
   function pad(s, key, cls = '') {
@@ -107,7 +109,7 @@
     const prog = (s.progress || []).map((p) => {
       const pct = Math.round((p.filled / Math.max(1, s.cats.length)) * 100);
       const pen = pencilGear(p.gear); // JustGold gear: the bar is written in this player's pencil colours, with the pencil at its tip
-      return `<div class="lr-pp ${p.done ? 'done' : ''}" id="lrpp-${esc(p.id)}"><span class="lr-ppav">${esc(p.av || '🙂')}</span><span class="lr-ppn">${esc(p.name)}</span><span class="lr-bar${pen ? ' gear' : ''}"><i style="width:${pct}%${pen ? ';' + pen.style : ''}"></i>${pen ? `<em class="lr-gpen${pen.glow ? ' glow' : ''}" style="left:${pct}%;${pen.style}"></em>` : ''}</span><span class="lr-ppc">${p.done ? '✓' : `${p.filled}/${s.cats.length}`}</span></div>`;
+      return `<div class="lr-pp ${p.done ? 'done' : ''}" id="lrpp-${esc(p.id)}"><span class="lr-ppav">${fa(p, 40)}</span><span class="lr-ppn">${esc(p.name)}</span><span class="lr-bar${pen ? ' gear' : ''}"><i style="width:${pct}%${pen ? ';' + pen.style : ''}"></i>${pen ? `<em class="lr-gpen${pen.glow ? ' glow' : ''}" style="left:${pct}%;${pen.style}"></em>` : ''}</span><span class="lr-ppc">${p.done ? '✓' : `${p.filled}/${s.cats.length}`}</span></div>`;
     }).join('');
     const left = `<div class="lr-diecol">
         <div class="lr-rtype t-${esc(s.type)}" id="lrt-${key}"><div class="lr-rti">${R.icon}</div><div><div class="lr-rtn">${esc(R.name)}</div><div class="lr-rtb">${esc(R.blurb)}</div></div></div>
@@ -132,7 +134,7 @@
   function group(g, s, key, i) {
     if (!g.shared) return card(g.items[0], s, { key, i });
     return `<div class="lr-card lr-meld" id="lrm-${esc(key)}-${i}" style="--tl:${tilt(g.text + i, 2).toFixed(1)}deg;--d:${(i * 0.05).toFixed(2)}s">
-      <div class="lr-ans">${esc(g.text)}</div><div class="lr-meldw">${g.items.map((x) => `<span>${esc(x.av || '🙂')} ${esc(x.name)}</span>`).join('')}${g.more ? `<span>+${g.more}</span>` : ''}</div>
+      <div class="lr-ans">${esc(g.text)}</div><div class="lr-meldw">${g.items.map((x) => `<span>${fa(x, 26)} ${esc(x.name)}</span>`).join('')}${g.more ? `<span>+${g.more}</span>` : ''}</div>
       <span class="lr-stamp meld">🧠 MATCH ×${g.n}</span><span class="lr-pts zero">0</span></div>`;
   }
   function tvReview(s) {
@@ -159,7 +161,7 @@
     const N = nextT ? ROUND[nextT] : null;
     return `<div class="lr lr-tv lr-sc" data-phase="scores"><section class="lr-main">${header(s)}
       <div class="lr-pad lr-scpad" id="lrs-${s.round}"><div class="lr-padtop"><span>Round ${s.round} points</span><i class="lr-pencil"></i></div>
-        <div class="lr-gains">${g.map((r, i) => `<div class="lr-gain" style="--i:${i};--w:${Math.round((r.gain / top) * 100)}%"><span class="lr-av">${esc(r.av || '🙂')}</span><span class="lr-nm">${esc(r.name)}</span><span class="lr-gbar"><i></i></span><b>+${r.gain}</b></div>`).join('') || '<p class="lr-none">A tough round! Nobody scored.</p>'}</div></div>
+        <div class="lr-gains">${g.map((r, i) => `<div class="lr-gain" style="--i:${i};--w:${Math.round((r.gain / top) * 100)}%"><span class="lr-av">${fa(r, 40)}</span><span class="lr-nm">${esc(r.name)}</span><span class="lr-gbar"><i></i></span><b>+${r.gain}</b></div>`).join('') || '<p class="lr-none">A tough round! Nobody scored.</p>'}</div></div>
       ${N ? `<div class="lr-next" id="lrn-${s.round}">Next up: <b>${N.icon} ${esc(N.name)}</b> <small>${esc(N.blurb)}</small></div>` : '<div class="lr-next">Final scores coming up…</div>'}
     </section>${tally(s.standings)}</div>`;
   }
@@ -170,7 +172,7 @@
       .filter(Boolean).map(([t, a, b]) => `<div class="lr-hl"><div class="lr-hlt">${t}</div><div class="lr-hla">“${esc(a)}”</div><div class="lr-hlb">${b}</div></div>`).join('');
     return `<div class="lr lr-tv lr-over" data-phase="over"><section class="lr-main">
       <div class="lr-champ"><div class="lr-champl">Letter Rush champion</div><div class="lr-champn">${w ? tiles(String(w.name).toUpperCase().replace(/[^A-Z0-9 ]/g, '').slice(0, 12) || '?', 'win') : ''}</div>
-        ${w ? `<div class="lr-champp">${esc(w.av || '')} ${esc(w.name)} · <b>${w.points} pts</b></div>` : ''}</div>
+        ${w && window.BOX && BOX.hasLook && BOX.hasLook({ id: w.id, name: w.name }) ? `<div class="lr-champfig">${BOX.body({ id: w.id, name: w.name }, 200, { mood: 'grin' })}</div>` : ''}${w ? `<div class="lr-champp">${fa(w, 36)} ${esc(w.name)} · <b>${w.points} pts</b></div>` : ''}</div>
       ${hl ? `<div class="lr-hls">${hl}</div>` : ''}${awards ? `<div class="lr-awards">${awards}</div>` : ''}
     </section>${tally(s.standings, 'Final tally')}</div>`;
   }
@@ -266,7 +268,7 @@
       BOX.morph(el, `<div class="lr lr-ph" data-phase="over"><div class="lr-pcard lr-c"><div class="lr-rank">${tile('#' + v.rank, 'lg')}</div><h3>${v.rank === 1 ? 'Champion of the alphabet!' : 'Pencils down!'}</h3><p class="lr-big">${v.points} points</p>
         ${(v.awards || []).map((a) => `<div class="lr-myaward">${a.icon} <b>${esc(a.title)}</b><small>${esc(a.value)}</small></div>`).join('')}
         <div class="lr-stats"><span>🦄 ${st.unique} unique</span><span>✨ ${st.allit} alliterations</span><span>🧠 ${st.shared} matched</span><span>🔥 best streak ${st.best}</span></div></div>
-        <div class="lr-pcard">${(v.final || []).map((r, i) => `<div class="lr-trow ${i === 0 ? 'lead' : ''}"><span class="lr-rk">${i + 1}</span><span class="lr-av">${esc(r.av || '🙂')}</span><span class="lr-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
+        <div class="lr-pcard">${(v.final || []).map((r, i) => `<div class="lr-trow ${i === 0 ? 'lead' : ''}"><span class="lr-rk">${i + 1}</span><span class="lr-av">${fa(r, 32)}</span><span class="lr-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
       if (once('over:' + v.rank)) ctx.haptic(v.rank === 1 ? 'win' : 'big');
       return;
     }
@@ -282,7 +284,7 @@
     if (v.rev && v.phase === 'review') {
       const r = v.rev, key = `${v.round}-${r.ci}`, s = statusLine(r.mine, v);
       if (once('rev:' + key) && r.mine) ctx.haptic(r.mine.status === 'ok' ? 'success' : r.mine.status === 'shared' ? 'buzz' : 'error');
-      const list = r.others.map((x) => `<div class="lr-orow ${x.mine ? 'on' : ''}"><div><b>${esc(x.text)}</b><small>${esc(x.av || '')} ${esc(x.name)}${x.bonus ? ' · ✨' : ''}</small></div><button class="lr-chal ${x.mine ? 'on' : ''}" data-ch="${esc(x.id)}" data-on="${x.mine ? '0' : '1'}">👎${x.mine ? ' Challenged' : ''}</button></div>`).join('');
+      const list = r.others.map((x) => `<div class="lr-orow ${x.mine ? 'on' : ''}"><div><b>${esc(x.text)}</b><small>${fa(x, 24)} ${esc(x.name)}${x.bonus ? ' · ✨' : ''}</small></div><button class="lr-chal ${x.mine ? 'on' : ''}" data-ch="${esc(x.id)}" data-on="${x.mine ? '0' : '1'}">👎${x.mine ? ' Challenged' : ''}</button></div>`).join('');
       BOX.morph(el, wrap('review', `<div class="lr-pcat"><span class="lr-num">${r.ci + 1}/${r.of}</span>${esc(r.cat)}</div>
         <div class="lr-mine s-${s.cls}"><div class="lr-ml">your answer</div><div class="lr-mt">${r.mine ? esc(r.mine.text) : '—'}</div><div class="lr-mh">${s.h}</div>${s.p ? `<small>${s.p}</small>` : ''}</div>
         ${list ? `<div class="lr-pcard"><h4>Anything fishy? Tap 👎 to challenge</h4>${list}</div>` : ''}
@@ -295,7 +297,7 @@
       const r = v.rev;
       const items = r.trial.map((x) => x.own
         ? `<div class="lr-vcard own"><div class="lr-vt">“${esc(x.text)}”</div><small>That’s yours! 😬 The room is deciding…</small></div>`
-        : `<div class="lr-vcard"><div class="lr-vt">“${esc(x.text)}”</div><small>${esc(x.av || '')} ${esc(x.name)} · 👎 ${x.ch}</small>
+        : `<div class="lr-vcard"><div class="lr-vt">“${esc(x.text)}”</div><small>${fa(x, 24)} ${esc(x.name)} · 👎 ${x.ch}</small>
           <div class="lr-vbtns"><button class="lr-vb yes ${x.vote === true ? 'on' : ''}" data-v="${esc(x.id)}" data-k="1">✓ Counts</button><button class="lr-vb no ${x.vote === false ? 'on' : ''}" data-v="${esc(x.id)}" data-k="0">✗ Nope</button></div></div>`).join('');
       if (once('vote:' + v.round + ':' + r.ci)) ctx.haptic(r.trial.some((x) => x.own) ? 'warn' : 'turn');
       BOX.morph(el, wrap('vote', `<div class="lr-pcat"><span class="lr-num">${r.ci + 1}/${r.of}</span>${esc(r.cat)}</div><h3 class="lr-c">⚖️ Does it count? ${timer(v.endsIn)}</h3><p class="lr-muted lr-c">Must start with ${v.letters.map(esc).join(' or ')} and fit the category.</p>${items}`));

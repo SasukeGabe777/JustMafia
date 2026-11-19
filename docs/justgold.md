@@ -11,9 +11,15 @@ Status: built on branch `claude/justgold`. The state before it is tagged `pre-ju
   and items carry over (the phone's `mt.profile` is linked the first time).
 - **JustGold (JG)** is the one currency. It is the old JustMafia gold (`coins`, `ledger`), renamed in
   every UI. Earned in JustMafia (unchanged rules) and now in every box game and Party Mode.
-- **One character.** The look (`OPTIONS.AVATAR_FIELDS`: hair, outfit, hat, colours…) is shown in every
-  game: a smooth portrait drawn with `public/avatar.js` (MTArt, the vector base, *not* the pixel
-  `character-art.js`, which stays JustMafia's own style inside JustMafia).
+- **One character.** The look (`OPTIONS.AVATAR_FIELDS`: body type, hair, outfit, hat, colours…) is the
+  same character in the shop and in every box game: the smooth character `MTArt.drawCharacter`
+  (`drawSmooth` in `public/avatar.js`). Body type (`body`: female | male, free) changes the build,
+  jaw, brows, lashes and lips; old looks without it are inferred (long hair or a dress → female).
+  In the games, players' emoji are replaced by their character (`BOX.face` / `BOX.body` /
+  `BOX.drawChar` in `public/box/portrait.js`; the room roster carries every player's look and gear;
+  bots get a generated character). Players without a saved look keep their emoji. JustMafia still
+  draws its town with the pixel `character-art.js` (moving it to drawSmooth is the next step;
+  drawSmooth already takes JustMafia's options: lean, arms, dragged, dead, scared, theme…).
 - **One shop** at `/shop` (phone page): character items, flair, gear for each game, JustMafia items.
   Reachable from the box phone (join screen, lobby, between games), the main menu's phone link,
   and the JustMafia lobby. Not during a running game.
@@ -42,8 +48,14 @@ Both are in `tvState().players[i]` and `playerState().me`, and games may read `p
 - **Flair** (every game): nameplate, effect.
 - **JustMafia only**: houseStyle, houseDecor, deathAnim, reactions, ghostSkin.
 
-`public/shared/gear.js` (new, shared by server and pages) `GEAR`: per-game items
-`{ id: 'gear:<game>:<name>', game, slot, name, value, cost, desc }`. The free default is implied.
+`public/shared/gear.js` (shared by server and pages) `GEAR`: per-game items
+`{ id: 'gear:<game>:<name>', game, slot, spot, name, value, cost, desc, paint }`. The free default is implied.
+Every game has **wearables** (`spot`: head, face, hand, chest or back): things your character wears in
+that game (cowboy hats in Quick Draw, a dealer visor at Blackjack, a hockey mask in Zombie Survival, a
+chef's hat for pizza…), drawn on the character by `public/wear-art.js` (`paint.shape`); a worn spot
+replaces your own hat/extra in that game only. A few games keep an object slot too (marble skin, drop
+ball, card back, chips, paddle, buzzer, pen set, banner, meme frame, gallery frame, podium light, crest).
+The old phone-theme slots are gone; their ids no longer exist and are ignored (gearValues skips unknown ids).
 
 ## Earning JustGold
 

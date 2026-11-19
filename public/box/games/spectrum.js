@@ -17,8 +17,13 @@
   const ends = {};
   const timer = (key, endsIn) => { if (!endsIn) return ''; if (!ends[key]) ends[key] = Date.now() + endsIn; return `<span class="timer sp-timer" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span>`; };
   const dot = (c) => `<i class="sp-cdot" style="background:${esc(c || '#888')}"></i>`;
-  const withAv = (rows) => rows.map((r) => ({ ...r, name: (r.avatar ? r.avatar + ' ' : '') + r.name }));
-  const av = (x) => (x && x.avatar ? esc(x.avatar) + ' ' : '');
+  // Players as their JustGameBox character (public/box/portrait.js), or their emoji without one.
+  const has = (x) => !!(x && BOX.hasLook && BOX.hasLook(x));
+  const face = (x, n, o) => (BOX.face ? BOX.face(x, n, o) : esc((x && x.avatar) || '🙂'));
+  const av = (x, n = 28) => (x && (x.avatar || has(x)) ? face(x, n, { cls: 'sp-af' }) + ' ' : '');
+  const fboard = (rows, val, label = '') => `<div class="board">${rows.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${av(r, 30)}${esc(r.name)}</span><b>${esc(val(r))}${label}</b></div>`).join('')}</div>`;
+  // A head on the hills (lobby and in-game): their face fills the round marker.
+  const hd = (p) => (has(p) ? `<span class="hd has-face">${face(p, 64, { fill: true, cls: 'sp-hf' })}</span>` : `${hd(p)}`);
   const who = (x) => (x && x.name ? `${dot(x.color)}<b>${av(x)}${esc(x.name)}</b>` : `${dot(x && x.color)}<b>someone</b>`);
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const clampPct = (x) => Math.max(0, Math.min(100, x));
@@ -67,7 +72,7 @@
     const rowH = labelled ? 36 : 20, step = dots.length ? Math.min(140, spread / dots.length) : 0;
     const html = st.out.map((d, i) => {
       const delay = Math.round(start + i * step), style = `left:${d.pos}%;bottom:${d.row * rowH + 4}px;--c:${esc(d.color)};animation-delay:${delay}ms`;
-      return labelled ? `<div class="sp-pin" style="${style}"><i></i><span>${esc(d.name)}</span></div>` : `<div class="sp-pip" style="${style}"></div>`;
+      return labelled ? `<div class="sp-pin ${has(d) ? 'has-face' : ''}" style="${style}">${has(d) ? face(d, 28, { cls: 'sp-pf' }) : '<i></i>'}<span>${esc(d.name)}</span></div>` : `<div class="sp-pip" style="${style}"></div>`;
     }).join('');
     return { html, height: Math.max(90, st.rows * rowH + 18), done: start + dots.length * step + 600 };
   }
@@ -101,7 +106,7 @@
     const f = field(res.guesses, { names: s.names, start: 200, spread: 1600 });
     const drop = Math.max(2900, f.done + 200);
     const zone = `<div class="sp-zone" style="left:${clampPct(res.target - 15)}%;width:${clampPct(res.target + 15) - clampPct(res.target - 15)}%;animation-delay:${drop + 400}ms"><span>📖 open-book zone</span></div>`;
-    const target = `<div class="sp-target" style="left:${res.target}%;--c:${esc(spot.color)};animation-delay:${drop}ms"><span>🔦 ${esc(spot.name)} · ${res.target}</span><i></i></div>`;
+    const target = `<div class="sp-target" style="left:${res.target}%;--c:${esc(spot.color)};animation-delay:${drop}ms"><span>🔦 ${esc(spot.name)} · ${res.target}</span>${has(spot) ? `<i class="has-face">${face(spot, 64, { fill: true, cls: 'sp-hf', mood: 'grin' })}</i>` : '<i></i>'}</div>`;
     const medals = ['🥇', '🥈', '🥉', '🏅', '🏅'];
     const podium = res.top.length ? res.top.map((g, i) => `<div class="sp-prow" style="animation-delay:${drop + 900 + i * 250}ms">${medals[i]} ${who(g)} <span class="muted">guessed ${g.pos} · off by ${g.err}</span> <b>+${g.pts}</b>${g.bull ? ' <span class="sp-bull">🎯 BULLSEYE</span>' : ''}</div>`).join('') : '<div class="muted">Nobody guessed! 🤷</div>';
     return `${card(sp, 'small')}
@@ -124,12 +129,12 @@
     if (f.book) awards.push(['📖', 'Open Book', who(f.book), `${f.book.readers} of ${f.book.of} read them right`]);
     if (f.whisper) awards.push(['🔮', 'Crowd Whisperer', who(f.whisper), `guessed the room average ${plural(f.whisper.hits, 'time')}`]);
     return `<div class="sp-over"><h1 class="sp-h">🔗 Tonight’s Twins</h1>
-      ${crown ? `<div class="sp-crown"><div class="sp-crown-ic">👑</div><div class="muted">The most alike pair in the room</div>
+      ${crown ? `<div class="sp-crown"><div class="sp-crown-ic">👑</div><div class="muted">The most alike pair in the room</div>${has(crown.a) || has(crown.b) ? `<div class="sp-twins">${BOX.body(crown.a, 170, { mood: 'grin' })}<span>🔗</span>${BOX.body(crown.b, 170, { mood: 'grin', flip: true })}</div>` : ''}
         <div class="sp-crown-names">${who(crown.a)} <span class="sp-heart">🔗</span> ${who(crown.b)}</div><div class="sp-crown-pct">${crown.pct}% alike</div>
         ${crown.about ? `<div class="muted">They agreed the most on “${esc(crown.about)}”</div>` : ''}</div>` : '<div class="big-status">Play a few rounds to find your twins!</div>'}
       ${rest.length ? `<div class="sp-pairs">${rest.map(pairCard).join('')}</div>` : ''}${f.more ? `<div class="muted sp-more">+${f.more} more twin pairs: check your phones!</div>` : ''}
       ${awards.length ? `<div class="sp-awards">${awards.map(([ic, t, nm, txt], i) => `<div class="sp-award" style="animation-delay:${2.4 + i * 0.35}s"><div class="ic">${ic}</div><div class="t">${t}</div><div class="nm">${nm}</div><div class="muted">${txt}</div></div>`).join('')}</div>` : ''}
-      <div class="sp-final-board"><h3>Points</h3>${BOX.board(withAv(s.standings), (r) => r.points, ' pts')}</div></div>`;
+      <div class="sp-final-board"><h3>Points</h3>${fboard(s.standings, (r) => r.points, ' pts')}</div></div>`;
   }
 
   // Everyone standing on the hills during a round; a check pops up once they lock in.
@@ -137,7 +142,7 @@
     const all = (ctx && ctx.players) || [];
     if (!all.length || s.phase === 'reveal' || s.phase === 'over') return '';
     const n = all.length, wait = s.waiting ? new Set(s.waiting) : null, spot = s.spot && s.spot.name;
-    return `<div class="sp-horizon"><div class="spl-htrack"></div><div class="spl-people ingame ${n > 12 ? (n > 28 ? 'lots' : 'many') : ''}">${all.map((p, i) => `<span class="chip ${wait && !wait.has(p.name) ? 'in' : ''} ${spot === p.name ? 'spot' : ''}" style="left:${(((i + 0.5) / n) * 100).toFixed(2)}%;--c:${esc(p.color || '#ff7a59')};--d:${((i * 0.37) % 2.6).toFixed(2)}s"><span class="hd">${esc(p.avatar || '🙂')}</span><b>${esc(p.name)}</b></span>`).join('')}</div></div>`;
+    return `<div class="sp-horizon"><div class="spl-htrack"></div><div class="spl-people ingame ${n > 12 ? (n > 28 ? 'lots' : 'many') : ''}">${all.map((p, i) => `<span class="chip ${wait && !wait.has(p.name) ? 'in' : ''} ${spot === p.name ? 'spot' : ''}" style="left:${(((i + 0.5) / n) * 100).toFixed(2)}%;--c:${esc(p.color || '#ff7a59')};--d:${((i * 0.37) % 2.6).toFixed(2)}s">${hd(p)}<b>${esc(p.name)}</b></span>`).join('')}</div></div>`;
   }
 
   // ---------- phone ----------
@@ -244,7 +249,7 @@
     // Everyone stands along the horizon, spread evenly; a newcomer makes room by sliding everyone over.
     const r = $('#roster');
     r.classList.toggle('many', n > 12 && n <= 28); r.classList.toggle('lots', n > 28);
-    const rh = n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" id="spl-p-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="left:${(((i + 0.5) / n) * 100).toFixed(2)}%;--c:${esc(p.color || '#ff7a59')};--d:${((i * 0.37) % 2.6).toFixed(2)}s"><span class="hd">${esc(p.avatar || '🙂')}</span><b>${esc(p.name)}</b></span>`).join('')
+    const rh = n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" id="spl-p-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="left:${(((i + 0.5) / n) * 100).toFixed(2)}%;--c:${esc(p.color || '#ff7a59')};--d:${((i * 0.37) % 2.6).toFixed(2)}s">${hd(p)}<b>${esc(p.name)}</b></span>`).join('')
       : '<div class="spl-empty">Scan the code and take your spot on the scale! 👇</div>';
     if (r.__h !== rh) { r.__h = rh; BOX.morph(r, rh); }
     const lp = $('#spl-party'), lh = L.lineupHtml || ''; if (lp.__h !== lh) { lp.__h = lh; lp.innerHTML = lh; }
@@ -277,7 +282,7 @@
       } else if (s.phase === 'place') {
         main = `${card(s.spec)}<div class="sp-status">🎯 Drag your marker on your phone and lock it in! ${t}</div>${progress('locked in')}`;
       } else if (s.phase === 'spot') {
-        main = `${card(s.spec)}<div class="sp-spotlight" style="--c:${esc(s.spot ? s.spot.color : '#fff')}">🔦</div><div class="sp-status">${spot} is secretly placing themselves… everyone else, get ready to guess! ${t}</div>`;
+        main = `${card(s.spec)}<div class="sp-spotlight" style="--c:${esc(s.spot ? s.spot.color : '#fff')}">🔦</div>${has(s.spot) ? `<div class="sp-spotfig">${BOX.body(s.spot, 180, { mood: 'smirk' })}</div>` : ''}<div class="sp-status">${spot} is secretly placing themselves… everyone else, get ready to guess! ${t}</div>`;
       } else if (s.phase === 'guess') {
         main = `${card(s.spec)}<div class="sp-status">🤔 Where did ${spot} put themselves? Guess on your phone! ${t}</div>${progress('guesses in')}`;
       } else if (s.phase === 'reveal' && s.result) {
@@ -301,7 +306,7 @@
             ${tw ? `<div class="sp-tw-name">${av(tw)}${esc(tw.name)}</div><div class="sp-tw-pct">${tw.pct}% alike${tw.mutual ? ' · 💞 and you’re theirs too!' : ''}</div>${aboutTwin}` : '<p>Play a couple of rounds to find your twin!</p>'}</div>
           ${op ? `<div class="sp-opp" style="--c:${esc(op.color)}"><div class="sp-tw-lab">🧲 Your opposite</div><div class="sp-tw-name">${av(op)}${esc(op.name)}</div><div class="sp-tw-pct">only ${op.pct}% alike</div>${aboutOpp}<div class="sp-go">Go find ${esc(op.name)} — your opposite! 👋</div></div>` : ''}
           ${f.awards.length ? `<div class="card-box sp-myaw">${f.awards.map((a) => `<div>${a.icon} <b>${esc(a.title)}</b></div>`).join('')}</div>` : ''}
-          <div class="card-box" style="text-align:center">You finished <b>#${v.rank}</b> with ${v.points} points.</div><div class="card-box">${BOX.board(withAv(f.standings), (r) => r.points, ' pts')}</div>`, 'over');
+          <div class="card-box" style="text-align:center">You finished <b>#${v.rank}</b> with ${v.points} points.</div><div class="card-box">${fboard(f.standings, (r) => r.points, ' pts')}</div>`, 'over');
         if (celebrated !== 'over') { celebrated = 'over'; ctx.sfx('chime'); haptic(ctx, tw ? 'win' : 'success'); }
         return;
       }

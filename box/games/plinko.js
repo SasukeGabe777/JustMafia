@@ -350,7 +350,7 @@ class Drop {
     const base = { phase: ph, style: this.s.style, round: this.round, of: this.s.rounds, level: this.level, endsIn: this.endsAt ? Math.max(0, this.endsAt - now) : 0, total: P ? P.total : 0, rank, count: st.length,
       powers: P ? P.powers.map((k) => ({ k, ...POWERS[k] })) : [], inRound: this.players().some((q) => q.id === p.id), sudden: !!this.sudden, gear: this.gear(p.id) };
     if (!P) return { ...base, spectator: true };
-    if (ph === 'over') { const aw = (this.awards || []).filter((a) => a.id === p.id); return { ...base, awards: aw, winner: st[0] ? st[0].name : '', top: st.slice(0, 5).map((r) => ({ name: r.name, avatar: r.avatar, total: r.total })) }; }
+    if (ph === 'over') { const aw = (this.awards || []).filter((a) => a.id === p.id); return { ...base, awards: aw, winner: st[0] ? st[0].name : '', top: st.slice(0, 5).map((r) => ({ id: r.id, name: r.name, avatar: r.avatar, total: r.total })) }; }
     const t = this.sudden ? { ids: this.sudden.ids, ghosts: [] } : this.tableOf(p.id) || { ids: [p.id], ghosts: [] };
     const out = { ...base, board: this.board, ghosts: t.ghosts.filter((g) => !(ph === 'score' && g.round === this.round)).map((g) => ({ p: g.pts, c: this.color(g.owner) })), ink: this.inkFor(p.id), me: { x: i ? i.x : null, locked: !!(i && i.locked), power: i ? i.power : null, strokes: i ? i.strokes : [], done: !!(i && i.done), target: i ? i.target : null, auto: !!(i && i.auto) } };
     if (ph === 'draw') out.drops = t.ids.filter((id) => this.room.get(id)).map((id) => { const q = this.inp.get(id), pl = this.room.get(id); return { id, name: pl.name, av: pl.avatar, c: pl.color, gear: this.gear(id), x: q ? q.x : null, me: id === p.id }; });

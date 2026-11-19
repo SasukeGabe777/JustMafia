@@ -360,3 +360,10 @@ body.g-letters .host-row .btn:not(.ghost) { background: var(--lr-red); color: #f
 .lr-gpen::after { content: ''; position: absolute; right: -6px; top: 0; width: 6px; height: 9px; border-radius: 0 3px 3px 0; background: linear-gradient(90deg, #b9b9b9 0 35%, #ff8fa3 35%); }
 .lr-gpen.glow { box-shadow: 0 0 8px var(--pa), 0 1px 2px rgba(0, 0, 0, 0.45); }
 .lr-mypen { display: inline-block; width: 40px; height: 10px; background: none; vertical-align: middle; margin: 0 10px 0 12px; }
+
+/* players' characters (BOX.face / BOX.body) */
+body.g-letters .lr-fc { margin: -7px 0; }
+body.g-letters .lr-chip b { overflow: hidden; }
+body.g-letters .lr-chip b .lr-fc { margin: 0; }
+body.g-letters .lr-champfig { display: flex; justify-content: center; margin: 8px 0 -4px; }
+body.g-letters .lr-champfig .bx-body { height: clamp(120px, 20vh, 220px) !important; width: auto !important; }

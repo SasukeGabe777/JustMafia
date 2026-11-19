@@ -9,7 +9,9 @@
   const { esc } = BOX;
   const REACTS = [['clap', '👏', 'Applause'], ['laugh', '😂', 'LOL'], ['think', '🤔', 'Hmm…'], ['tomato', '🍅', 'Tomato!']];
   const SIDE_CLS = ['blue', 'red'];
-  const av = (x) => esc((x && x.avatar) || '🙂');
+  // Players as their JustGameBox character (public/box/portrait.js), or their emoji without one.
+  const has = (x) => !!(x && BOX.hasLook && BOX.hasLook(x));
+  const av = (x, n = 30, o) => (BOX.face ? BOX.face(x, n, { cls: 'db-af', ...(o || {}) }) : esc((x && x.avatar) || '🙂'));
   const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const names = (list) => list.map((m) => esc(m.name)).join(' & ');
 
@@ -68,7 +70,7 @@
     const live = s.speakSide != null;
     return `<div class="db-pod ${SIDE_CLS[k]} ${on ? 'on' : live ? 'dim' : ''} ${many ? 'team' : ''}" id="db-pod-${k}">
       <div class="db-spot"></div>
-      <div class="db-heads">${P.members.map((m) => `<div class="db-head ${m.id === on ? 'talk' : ''} ${m.here ? '' : 'gone'}" style="--c:${esc(m.color)}"><span>${av(m)}</span>${m.id === on ? '<i class="db-mic">🎤</i>' : ''}</div>`).join('')}</div>
+      <div class="db-heads">${P.members.map((m) => `<div class="db-head ${has(m) ? 'has-fig' : ''} ${m.id === on ? 'talk' : ''} ${m.here ? '' : 'gone'}" style="--c:${esc(m.color)}">${has(m) ? BOX.body(m, many ? 180 : 260, { cls: 'db-fig', mood: m.id === on ? 'grin' : undefined }) : `<span>${esc(m.avatar || '🙂')}</span>`}${m.id === on ? '<i class="db-mic">🎤</i>' : ''}</div>`).join('')}</div>
       <div class="db-desk"><div class="db-plate">${names(P.members)}</div><div class="db-side" id="db-side-${k}-${esc(P.label)}">${esc(P.label)}</div>${P.role ? `<div class="db-role">${esc(P.role)}</div>` : ''}<div class="db-tally">${tally}</div></div>
       ${extra || ''}</div>`;
   }
@@ -132,7 +134,7 @@
   function overTv(s) {
     const st = s.standings || [], top = [st[1], st[0], st[2]];
     return `<div class="db-over"><h1 class="db-h">🏆 The Closing Ceremony</h1>
-      <div class="db-podium3">${top.map((r, i) => (r ? `<div class="db-p3 p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="av">${av(r)}</div><div class="nm">${esc(r.name)}</div><div class="pts">${r.points}</div><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div></div>')).join('')}</div>
+      <div class="db-podium3">${top.map((r, i) => (r ? `<div class="db-p3 p${[2, 1, 3][i]}" style="--c:${esc(r.color)}">${has(r) ? `<div class="fig">${BOX.body(r, i === 1 ? 190 : 150, { mood: i === 1 ? 'grin' : 'smile' })}</div>` : `<div class="av">${esc(r.avatar || '🙂')}</div>`}<div class="nm">${esc(r.name)}</div><div class="pts">${r.points}</div><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div></div>')).join('')}</div>
       ${awardsHtml(s.awards)}<div class="db-final-board">${board(st, 12)}</div></div>`;
   }
   // Reactions float up from the speaker's podium (a data-keep layer, fed by new reaction ids).
@@ -229,7 +231,7 @@
     }
     if (v.phase === 'speech' || v.phase === 'closer') {
       const sp = v.speaker || {}, mate = v.team && v.team.some((m) => m.id === sp.id);
-      return { html: `<div class="db-listen"><div class="av">${av(sp)}</div><b>${esc(sp.name)}</b> ${mate ? 'is speaking for your team!' : 'is speaking…'}<div class="st">${esc(v.stageLabel || '')} · ${timerTxt(v)}</div></div>${mySide(v)}<p class="muted center">${mate ? 'Back them up with your best poker face.' : 'Listen closely: your turn is coming.'}</p>${v.cards ? `<div class="db-sub">🃏 Your cards</div>${cards(false)}` : ''}` };
+      return { html: `<div class="db-listen"><div class="av">${av(sp, 76)}</div><b>${esc(sp.name)}</b> ${mate ? 'is speaking for your team!' : 'is speaking…'}<div class="st">${esc(v.stageLabel || '')} · ${timerTxt(v)}</div></div>${mySide(v)}<p class="muted center">${mate ? 'Back them up with your best poker face.' : 'Listen closely: your turn is coming.'}</p>${v.cards ? `<div class="db-sub">🃏 Your cards</div>${cards(false)}` : ''}` };
     }
     if (v.phase === 'ask') return { html: `${mySide(v)}<div class="db-wait">❓ The audience is picking your question…</div>${v.question ? `<div class="db-qcard ph"><small>The question</small>${esc(v.question.text)}</div>` : ''}` };
     if (v.phase === 'write') {
@@ -262,7 +264,7 @@
     }
     if (v.phase === 'write') return { html: `${vsLine}<div class="db-wait">✍️ The debaters are writing their closing lines… get your reactions ready! ${timerTxt(v)}</div>` };
     if (v.phase === 'vote') {
-      const sideBtns = `<div class="db-votes">${[0, 1].map((k) => `<button class="db-vbtn ${SIDE_CLS[k]} ${v.myVote === k ? 'sel' : ''}" data-side="${k}"><span class="av">${av(P[k].members[0])}</span><b>${names(P[k].members)}</b><small>${esc(P[k].label)}</small>${v.myVote === k ? '<em>✓</em>' : ''}</button>`).join('')}</div>`;
+      const sideBtns = `<div class="db-votes">${[0, 1].map((k) => `<button class="db-vbtn ${SIDE_CLS[k]} ${v.myVote === k ? 'sel' : ''}" data-side="${k}"><span class="av">${av(P[k].members[0], 72)}</span><b>${names(P[k].members)}</b><small>${esc(P[k].label)}</small>${v.myVote === k ? '<em>✓</em>' : ''}</button>`).join('')}</div>`;
       const needBest = v.kind !== 'hot' && v.segs && v.segs.length;
       if (v.myVote === null || voteEdit || !needBest) {
         return { html: `<div class="db-sub">🗳️ Who won the debate? ${timerTxt(v)}</div>${sideBtns}${v.myVote !== null && !needBest ? '<div class="db-ready">✓ Vote cast! You can still change it.</div>' : ''}`,
@@ -385,7 +387,7 @@
     }
     const r = $('#roster');
     r.classList.toggle('many', n > 16);
-    const rh = n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#3f8cff')};--d:${((i * 0.29) % 2.6).toFixed(2)}s"><span class="hd">${esc(p.avatar || '🙂')}</span><b>${esc(p.name)}</b></span>`).join('')
+    const rh = n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#3f8cff')};--d:${((i * 0.29) % 2.6).toFixed(2)}s"><span class="hd ${has(p) ? 'has-face' : ''}">${has(p) ? av(p, 64, { fill: true, cls: 'db-hf' }) : esc(p.avatar || '🙂')}</span><b>${esc(p.name)}</b></span>`).join('')
       : '<div class="dbl-empty">The gallery is empty. Scan the code to take a seat! 🪑</div>';
     if (r.__h !== rh) { r.__h = rh; BOX.morph(r, rh); }
     const lp = $('#dbl-party'), lh = L.lineupHtml || ''; if (lp.__h !== lh) { lp.__h = lh; lp.innerHTML = lh; }

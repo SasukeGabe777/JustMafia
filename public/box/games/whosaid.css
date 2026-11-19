@@ -262,3 +262,11 @@ body.g-whosaid .vip-bar .btn.green { background: var(--wx-pink); color: var(--wx
 @keyframes wx-shifty { 0%, 40%, 100% { transform: translateX(0); } 50% { transform: translateX(-8px); } 70% { transform: translateX(8px); } }
 @media (max-width: 1100px) { .wx-tv, .wx-over, .wx-lobby { grid-template-columns: 1fr; } .wx-moon { display: none; } }
 @media (prefers-reduced-motion: reduce) { .wx *, .wx, body.g-whosaid::after { animation: none !important; } }
+/* Silhouettes with a JustGameBox character: their face fills the head (dark until lit). */
+body.g-whosaid .wx-sil.has-face .wx-shead { overflow: hidden; }
+body.g-whosaid .wx-shead .wx-sface { display: block; border-radius: 50%; filter: brightness(0.18) saturate(0); transition: filter 0.4s; transform: scale(1.12); transform-origin: 50% 40%; }
+body.g-whosaid .wx-sil.lit .wx-shead .wx-sface, body.g-whosaid .wx-cand .wx-shead .wx-sface, body.g-whosaid .wx-pick .wx-shead .wx-sface { filter: none; }
+body.g-whosaid .wx-names.done .wx-cand.other .wx-shead .wx-sface { filter: brightness(0.55) saturate(0.6); }
+body.g-whosaid .wx-av { display: inline-flex; align-items: center; }
+body.g-whosaid .wx-av .bx-face { background: rgba(220, 205, 255, 0.16); }
+body.g-whosaid .wx-nmf { margin: -6px 0 -4px; background: rgba(220, 205, 255, 0.2); }

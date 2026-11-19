@@ -180,3 +180,9 @@ body.g-ducks .dk-sheet .dk-diff.hard.on { border-color: #ff7a59; background: rgb
 .dk-confetti { position: absolute; inset: 0; pointer-events: none; }
 .dk-confetti i { position: absolute; top: -20px; width: 10px; height: 14px; border-radius: 2px; animation: dkFall 3.6s linear infinite; opacity: 0.9; }
 @keyframes dkFall { to { transform: translateY(110vh) rotate(540deg); } }
+/* Farmers are the players' characters (BOX.face / BOX.body) */
+body.g-ducks .bx-face { margin: -5px 0; }
+body.g-ducks .dk-pair { display: flex; align-items: flex-end; justify-content: center; gap: 0; }
+body.g-ducks .dk-pair .dk-farmer { margin-right: -18px; position: relative; z-index: 0; }
+body.g-ducks .dk-pair > :not(.dk-farmer) { position: relative; z-index: 1; }
+body.g-ducks .dk-gifts button .bx-face { margin: -6px 4px -6px -2px; }

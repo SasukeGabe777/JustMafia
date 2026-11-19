@@ -265,3 +265,10 @@ body.g-memes #g-body { background: transparent; }
    public. --gpat is the frame's pattern, --ga/--gb its colours. */
 .mm-img.gear { border: 9px solid transparent; background: var(--gpat) border-box; box-sizing: content-box; box-shadow: 0 0 0 2px rgba(0, 0, 0, .55), 0 8px 18px rgba(0, 0, 0, .4); }
 .mm-img.gear.glow { box-shadow: 0 0 0 2px rgba(0, 0, 0, .4), 0 0 22px var(--ga), 0 0 6px var(--gb); }
+
+/* players' characters (BOX.face / BOX.body) */
+body.g-memes .mm-fc { margin: -7px 0; }
+body.g-memes .mm-pface { overflow: hidden; }
+body.g-memes .mm-pface .bx-face { border-radius: 2px; transform: scale(1.1) translateY(5%); }
+body.g-memes .mm-champfig { display: flex; justify-content: center; margin-top: 6px; }
+body.g-memes .mm-champfig .bx-body { height: clamp(110px, 18vh, 220px) !important; width: auto !important; }

@@ -6,7 +6,9 @@
 // The lobby is the theatre's playbill + box office; the end is an awards night.
 (function () {
   const { esc } = BOX;
-  const av = (x) => esc((x && x.avatar) || '🙂');
+  // Players as their JustGameBox character (public/box/portrait.js), or their emoji without one.
+  const has = (x) => !!(x && BOX.hasLook && BOX.hasLook(x));
+  const av = (x, n = 30, o) => (BOX.face ? BOX.face(x, n, { cls: 'ao-af', ...(o || {}) }) : esc((x && x.avatar) || '🙂'));
   const plural = (n, w, ws) => `${n} ${n === 1 ? w : ws || w + 's'}`;
   const secs = (ms) => (ms / 1000).toFixed(1) + 's';
   const TW = {
@@ -42,7 +44,7 @@
     return `<div class="ao-stage ${cls}"><div class="ao-valance"></div><div class="ao-cur l"></div><div class="ao-cur r"></div><div class="ao-masks"><span>🎭</span></div><div class="ao-floor"></div><div class="ao-foot">${'<i></i>'.repeat(14)}</div><div class="ao-in">${inner}</div></div>`;
   }
   function star(c, o = {}) {
-    return `<div class="ao-star ${o.on === false ? 'off' : ''} ${o.cls || ''}" style="--c:${esc(c.color || '#ffc93c')}"><div class="ao-beam"></div><div class="ao-av">${av(c)}</div><div class="ao-nm">${esc(c.name)}</div>${o.sub ? `<div class="ao-sub">${o.sub}</div>` : ''}</div>`;
+    return `<div class="ao-star ${o.on === false ? 'off' : ''} ${o.cls || ''}" style="--c:${esc(c.color || '#ffc93c')}"><div class="ao-beam"></div>${has(c) ? `<div class="ao-fig">${BOX.body(c, 230, { cls: 'ao-figimg', mood: /done/.test(o.cls || '') ? 'grin' : undefined })}</div>` : `<div class="ao-av">${esc(c.avatar || '🙂')}</div>`}<div class="ao-nm">${esc(c.name)}</div>${o.sub ? `<div class="ao-sub">${o.sub}</div>` : ''}</div>`;
   }
   function topBar(s) {
     return `<div class="ao-top"><span class="ao-turn">Turn <b>${s.n}</b> of ${s.of}</span><span class="ao-tw ${esc(s.kind || '')}">${esc(s.twist ? s.twist.icon : '🎭')} ${esc(s.twist ? s.twist.name : '')}</span>${s.last ? `<span class="ao-final">🏁 FINAL SCENE · POINTS ×${s.mult}</span>` : ''}<span class="ao-sp"></span><div class="ao-clock" id="ao-clock" data-keep></div></div>`;
@@ -93,7 +95,7 @@
   }
   function tvOver(el, s) {
     const f = s.final || { standings: [], awards: [] }, st = f.standings;
-    const pod = [st[1], st[0], st[2]].map((r, i) => r ? `<div class="ao-pod p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="statue">${i === 1 ? '🏆' : '🎭'}</div><div class="av">${av(r)}</div><div class="nm">${esc(r.name)}</div><div class="pts">${r.points}</div><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div class="ao-pod empty"></div>').join('');
+    const pod = [st[1], st[0], st[2]].map((r, i) => r ? `<div class="ao-pod p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="statue">${i === 1 ? '🏆' : '🎭'}</div>${has(r) ? `<div class="fig">${BOX.body(r, i === 1 ? 170 : 140, { mood: i === 1 ? 'grin' : 'smile' })}</div>` : `<div class="av">${esc(r.avatar || '🙂')}</div>`}<div class="nm">${esc(r.name)}</div><div class="pts">${r.points}</div><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div class="ao-pod empty"></div>').join('');
     BOX.morph(el, `<div class="ao-tv ao-over">${stage(`<div class="ao-marquee big"><small>TONIGHT’S</small>ACT IT OUT AWARDS</div>
       <div class="ao-endgrid"><div class="ao-podium">${pod}</div>
         <div class="ao-awards">${f.awards.map((a, i) => `<div class="ao-award" style="--c:${esc(a.color)};animation-delay:${0.5 + i * 0.3}s"><div class="ic">${esc(a.icon)}</div><div><small>${esc(a.title)}</small><b>${esc(a.name)}</b><span>${esc(a.why)}</span></div></div>`).join('')}</div></div>
@@ -163,7 +165,7 @@
     const n = L.players.length;
     el.querySelector('#aol-n').textContent = n ? `(${n})` : '';
     el.querySelector('#aol-vip').innerHTML = L.vip ? `👑 <b>${esc(L.vip)}</b> can start from their phone` : n < L.min ? `${L.min - n} more actor${L.min - n === 1 ? '' : 's'} needed…` : 'Ready when you are!';
-    BOX.morph(el.querySelector('#roster'), n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'}" style="--c:${esc(p.color || '#ffc93c')};--d:${((i * 0.37) % 2.6).toFixed(2)}s"><span class="hd">${esc(p.avatar || '🙂')}</span><b>${esc(p.name)}</b></span>`).join('') : '<span class="aol-empty">The stage is empty… scan the ticket to join the cast! 🎟️</span>');
+    BOX.morph(el.querySelector('#roster'), n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'}" style="--c:${esc(p.color || '#ffc93c')};--d:${((i * 0.37) % 2.6).toFixed(2)}s"><span class="hd ${has(p) ? 'has-face' : ''}">${has(p) ? av(p, 66, { fill: true, cls: 'ao-hf' }) : esc(p.avatar || '🙂')}</span><b>${esc(p.name)}</b></span>`).join('') : '<span class="aol-empty">The stage is empty… scan the ticket to join the cast! 🎟️</span>');
     const lu = el.querySelector('#aol-lineup'); if (lu.dataset.h !== (L.lineupHtml || '')) { lu.innerHTML = L.lineupHtml || ''; lu.dataset.h = L.lineupHtml || ''; }
     el.querySelector('#start').disabled = n < (L.min || 1);
   }
@@ -239,7 +241,7 @@
   function actorAct(el, v, ctx, H) {
     const m = v.mine || {};
     if (P.picking && !m.solved) {
-      BOX.morph(el, `<div class="ao-ph actor">${H}<h3 class="ao-pickh">✅ Who got it?</h3><div class="ao-picks">${(v.choices || []).map((c) => `<button class="ao-pick" data-id="${esc(c.id)}" style="--c:${esc(c.color)}"><span>${av(c)}</span>${esc(c.name)}</button>`).join('')}</div><button class="btn ghost ao-skip" id="ao-cancel">◀ Not yet, keep acting</button></div>`);
+      BOX.morph(el, `<div class="ao-ph actor">${H}<h3 class="ao-pickh">✅ Who got it?</h3><div class="ao-picks">${(v.choices || []).map((c) => `<button class="ao-pick" data-id="${esc(c.id)}" style="--c:${esc(c.color)}"><span>${av(c, 44)}</span>${esc(c.name)}</button>`).join('')}</div><button class="btn ghost ao-skip" id="ao-cancel">◀ Not yet, keep acting</button></div>`);
       for (const b of el.querySelectorAll('[data-id]')) b.onclick = async () => { const r = await ctx.act({ op: 'got', id: b.dataset.id }); if (r && r.ok) { P.picking = false; ctx.haptic('win'); ctx.sfx('cheer'); ctx.redraw(); } };
       el.querySelector('#ao-cancel').onclick = () => { P.picking = false; ctx.haptic('tap'); ctx.redraw(); };
       return;

@@ -40,6 +40,62 @@
     return c;
   }
   function emoji(g, e, x, y, px, tint) { const c = emojiImg(e, Math.min(px, 320), tint); const s = px * 1.3; g.drawImage(c, x - s / 2, y - s / 2, s, s); }
+  // ---------- the players' own characters (BOX / MTArt), wearing their zombie gear ----------
+  // who = { id, name, avatar, bot } (NPC survivors pass bot: true so they get a made-up character).
+  // Head pictures (BOX.faceUrl) are cached, tinted like the emoji; null until loaded or without a look.
+  const hcache = new Map();
+  function headImg(who, px, tint) {
+    const B = window.BOX; if (!who || !B || !B.faceUrl) return null;
+    px = Math.max(16, Math.round(Math.min(px, 256) / 16) * 16);
+    const k = (who.id || who.name) + '|' + px + '|' + (tint || ''); let e = hcache.get(k);
+    if (!e) {
+      const u = B.faceUrl(who, px, tint === 'ghost' ? { mood: 'sleepy' } : tint === 'sick' ? { mood: 'sad' } : {}); if (!u) return null;
+      if (hcache.size > 300) hcache.clear();
+      e = { img: Object.assign(new Image(), { src: u }), c: null }; hcache.set(k, e);
+    }
+    if (!e.img.complete || !e.img.naturalWidth) return null;
+    if (!tint) return e.img;
+    if (!e.c) {
+      const c = document.createElement('canvas'); c.width = e.img.naturalWidth; c.height = e.img.naturalHeight;
+      const x = c.getContext('2d'); x.drawImage(e.img, 0, 0); x.globalCompositeOperation = 'source-atop';
+      x.fillStyle = tint === 'sick' ? 'rgba(90,220,90,0.45)' : 'rgba(220,235,255,0.6)'; x.fillRect(0, 0, c.width, c.height); e.c = c;
+    }
+    return e.c;
+  }
+  // A head: the player's character face, or their emoji. Same footprint as emoji().
+  function head(g, who, x, y, px, tint) {
+    const im = headImg(who, px * 1.4, tint);
+    if (im) { const s = px * 1.4; g.drawImage(im, x - s / 2, y - s * 0.56, s, s); return; }
+    emoji(g, (who && who.avatar) || '🙂', x, y, px, tint);
+  }
+  // A survivor as the player's character: feet at x,y, the same height as the emoji survivor.
+  // false without a look (the caller draws the emoji survivor).
+  function person(g, x, y, s, t, o, pose) {
+    const B = window.BOX, M = window.MTArt; if (!o.who || !B || !B.lookOf || !M || !M.drawCharacter) return false;
+    const L = B.lookOf(o.who); if (!L || !L.look) return false;
+    const dir = o.dir || 1, k = s * 3.05, q = Math.sin(t * 7 + (o.ph || 0)), crouch = o.crouch || (pose === 'hide' ? 0.42 : pose === 'sneak' ? 0.18 : 0);
+    let look = L.look;
+    if (o.tint === 'sick') look = { ...look, skin: '#a8c98c', expression: 'sad' };
+    else if (pose === 'rest') look = { ...look, expression: 'sleepy' };
+    else if (pose === 'cheer') look = { ...look, expression: 'grin' };
+    let wear = [];
+    try { wear = window.MT_GEAR && L.gear ? window.MT_GEAR.wearOf('zombie', L.gear) : []; } catch { wear = []; }
+    const run = pose === 'run' || pose === 'decoy', fwd = (a) => -a * dir; // + swings an arm toward screen-left
+    let arms = null;
+    if (pose === 'climb') arms = { l: 2.7 + q * 0.35, r: -2.7 + q * 0.35 };
+    else if (pose === 'fight') { const p = Math.max(0, Math.sin(t * 8 + (o.ph || 0))); arms = { l: fwd(0.5), r: fwd(1.1 + p * 0.9) }; }
+    else if (pose === 'hold') arms = { l: fwd(1.3), r: fwd(1.5) };
+    else if (pose === 'search') arms = { l: fwd(0.5 + q * 0.25), r: fwd(0.6 - q * 0.25) };
+    else if (pose === 'swim') arms = { l: 2 + q * 0.6, r: -2 + q * 0.6 };
+    else if (pose === 'talk') arms = { l: 0.1, r: -(2.2 + q * 0.3) };
+    else if (pose === 'cheer') arms = { l: 2.5 + q * 0.3, r: -2.5 - q * 0.3 };
+    else if (pose === 'hide') arms = { l: 2.9, r: -2.9 };
+    g.save(); g.translate(x, y); if (crouch) g.scale(1, 1 - crouch * 0.38);
+    M.drawCharacter(g, 0, 0, look, { scale: k, t: t + (o.ph || 0), walking: run || pose === 'sneak', facing: 0.65 * dir, lean: (o.lean || 0) + (run ? 0.12 * dir : pose === 'sneak' ? 0.08 * dir : 0), scared: pose === 'hide', arms, alpha: o.alpha, wear, seed: o.ph || 0 });
+    g.restore();
+    if (o.item) { g.save(); if (o.alpha != null) g.globalAlpha *= o.alpha; emoji(g, o.item, x + dir * 24 * k, y - (pose === 'hold' || pose === 'fight' ? 34 : 22) * k * (1 - crouch * 0.38), 40 * s); g.restore(); }
+    return true;
+  }
   function text(g, str, x, y, px, fill, o = {}) {
     const font = o.font || FONT; let p = px; g.font = `${p}px ${font}`;
     while (o.max && p > 10 && g.measureText(str).width > o.max) { p -= 2; g.font = `${p}px ${font}`; }
@@ -428,7 +484,9 @@
   }
   // ---------- a survivor (feet at x,y; emoji head) ----------
   // o: { avatar, color, pose, ph, tint ('sick'|'ghost'), lean, crouch, item (emoji in hand), alpha, name }
+  // o.who: the player ({ id, name, avatar, bot }): drawn as their own character when they have one.
   function survivor(g, x, y, s, t, o = {}) {
+    if (o.who && person(g, x, y, s, t, o, o.pose || 'idle')) return;
     const pose = o.pose || 'idle', ph = t * (pose === 'run' || pose === 'decoy' ? 11 : pose === 'sneak' ? 5 : 2) + (o.ph || 0);
     const col = o.color || '#ffb400', crouch = o.crouch || (pose === 'hide' ? 0.42 : pose === 'sneak' ? 0.18 : 0);
     g.save(); g.translate(x, y); g.scale(s * (o.dir || 1), s); if (o.alpha != null) g.globalAlpha *= o.alpha;
@@ -495,6 +553,8 @@
     g.beginPath(); g.moveTo(-46, 40); g.lineTo(-46, -20); g.arc(0, -20, 46, Math.PI, 0); g.lineTo(46, 40);
     for (let i = 0; i < 4; i++) { const xx = 46 - (i + 0.5) * 23; g.quadraticCurveTo(xx + 6, 54 + Math.sin(ph * 2 + i) * 6, xx - 11.5, 40); }
     g.closePath(); g.fill(); g.stroke();
+    const im = o.who ? headImg(o.who, 96, 'ghost') : null; // the player's own face, pale, inside the sheet
+    if (im) { g.save(); g.clip(); g.globalAlpha *= 0.8; g.drawImage(im, -40, -64, 80, 80); g.restore(); g.restore(); return; }
     emoji(g, o.avatar || '🙂', 0, -14, 52, 'ghost');
     g.fillStyle = '#2a3050'; g.beginPath(); g.ellipse(-14, -18, 5, 7, 0, 0, TAU); g.ellipse(14, -18, 5, 7, 0, 0, TAU); g.fill();
     g.restore();
@@ -513,7 +573,7 @@
     g.fillStyle = '#7ec8ff'; g.beginPath(); g.moveTo(40, -70); g.quadraticCurveTo(150, -60, 150, 10); g.lineTo(60, 10); g.closePath(); g.fill(); g.stroke();
     g.fillStyle = '#d24a4a'; g.fillRect(-60, -40, 50, 16); g.fillRect(-43, -57, 16, 50);
     // passengers in the window
-    if (o.faces && o.faces.length) { g.save(); g.beginPath(); g.moveTo(40, -70); g.quadraticCurveTo(150, -60, 150, 10); g.lineTo(60, 10); g.closePath(); g.clip(); o.faces.slice(0, 3).forEach((e, i) => emoji(g, e, 80 + i * 26, -18, 40)); g.restore(); }
+    if (o.faces && o.faces.length) { g.save(); g.beginPath(); g.moveTo(40, -70); g.quadraticCurveTo(150, -60, 150, 10); g.lineTo(60, 10); g.closePath(); g.clip(); o.faces.slice(0, 3).forEach((e, i) => (e && typeof e === 'object' ? head(g, e, 80 + i * 26, -18, 40) : emoji(g, e, 80 + i * 26, -18, 40))); g.restore(); }
     // skids
     g.strokeStyle = '#4a4e5e'; g.lineWidth = 10; g.beginPath(); g.moveTo(-100, 80); g.lineTo(-90, 120); g.moveTo(80, 80); g.lineTo(70, 120); g.moveTo(-140, 122); g.lineTo(130, 122); g.stroke();
     // rotor
@@ -630,6 +690,6 @@
   BOX.zombieArt = {
     W, H, GROUND, LOCS: Object.keys(LOC), INK, FONT, BODY,
     util: { clamp, lerp, ease, easeOut, back, rng, hash, TAU },
-    rr, emoji, text, cover, backdrop, plate, styleOf, props: { shelf, cover: hideCover, door, wall, campfire, water, exitSign }, fog, vignette, zombie, survivor, ghost, chopper, car, burst, glow,
+    rr, emoji, head, text, cover, backdrop, plate, styleOf, props: { shelf, cover: hideCover, door, wall, campfire, water, exitSign }, fog, vignette, zombie, survivor, ghost, chopper, car, burst, glow,
   };
 })();

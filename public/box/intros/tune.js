@@ -112,7 +112,7 @@
       const x = 960 + (col - (rowN - 1) / 2) * step, y = (rows === 2 ? 470 + row * 330 : 560) + (1 - k) * 400, r = Math.min(100, step * 0.42);
       g.globalAlpha = k;
       g.save(); g.shadowColor = c.color || PINK; g.shadowBlur = 40; vinyl(g, x, y, r, s.t * 4 + i, c.color || PINK); g.restore();
-      s.emoji(c.avatar || '🙂', x, y, r * 0.62);
+      s.face(c, x, y, r * 0.62);
       const w = Math.min(step * 0.95, 230);
       g.fillStyle = 'rgba(12,3,30,0.9)'; s.rr(x - w / 2, y + r + 12, w, 50, 12); g.fill(); g.strokeStyle = c.color || CYAN; g.lineWidth = 3; g.stroke();
       s.text(c.name, x, y + r + 38, 32, '#fff', { max: w - 16 });

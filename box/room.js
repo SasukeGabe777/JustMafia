@@ -663,6 +663,7 @@ class BoxRoom {
       code: this.code, game: this.def.key, title: this.def.name, phase: this.phase,
       me: { id: p.id, name: p.name, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, title: p.title || null, profile: !!p.profileId, wallet: !!p.wallet },
       jg: p.jg || null,
+      roster: this.rosterFor(p),
       audience: this.audienceCount(), recap: this.recap ? personalRecap(this, this.recap, p) : null,
       party: (() => { const b = this.partyBoard(), i = b.findIndex((r) => r.id === p.id); return { played: this.played.length, pts: i >= 0 ? b[i].pts : 0, wins: i >= 0 ? b[i].wins : 0, gain: i >= 0 ? b[i].gain : 0, rank: i + 1, of: b.length, top: b.slice(0, 5) }; })(),
       partyMode: this.partyState(), unlocks: [...this.unlocks], count: this.players.size,
@@ -678,7 +679,18 @@ class BoxRoom {
     this.pending = true;
     setImmediate(() => { this.pending = false; this.flush(); });
   }
+  // Everyone's character and this game's gear, for the phones' BOX.face (sent only when it
+  // changed since this player last got it; tvState().players already carries it for the TV).
+  rosterInfo() {
+    if (this._roster) return this._roster;
+    const game = this.def.key;
+    const list = this.list().filter((x) => x.look || x.bot).map((x) => ({ id: x.id, name: x.name, avatar: x.avatar, color: x.color, bot: !!x.bot, look: x.look || null, gear: x.gear && x.gear[game] ? { [game]: x.gear[game] } : null }));
+    return (this._roster = { sig: JSON.stringify(list), list });
+  }
+  rosterFor(p) { const r = this.rosterInfo(); if (p.rosterSig === r.sig) return undefined; p.rosterSig = r.sig; return r.list; }
+
   flush() {
+    this._roster = null;
     this.scoreParty();
     if (!this.nsp) return;
     this.nsp.to('host:' + this.code).emit('tv', this.tvState());

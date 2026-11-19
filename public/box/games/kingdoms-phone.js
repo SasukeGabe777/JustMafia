@@ -34,6 +34,8 @@
   const kName = (id) => { const k = V && V.kingdoms && V.kingdoms.find((x) => x.id === id); return k ? k.name : '?'; };
   const kOf = (id) => V && V.kingdoms && V.kingdoms.find((x) => x.id === id);
   const dot = (c) => `<i class="kp-dot" style="background:${esc(c || '#888')}"></i>`;
+  // A kingdom's ruler as their character (a kingdom's id is its ruler's player id), else the emoji.
+  const rulerFace = (k, n = 28) => (k && BOX.face && BOX.hasLook && BOX.hasLook({ id: k.id }) ? BOX.face({ id: k.id, avatar: k.avatar }, n) + ' ' : k && k.avatar ? esc(k.avatar) + ' ' : '');
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const fmt = (n) => { n = Math.max(0, Math.floor(n)); return n >= 10000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1) + 'k' : String(n); };
   const rate = (r) => (r >= 0 ? '+' : '−') + Math.abs(r).toFixed(Math.abs(r) >= 10 ? 0 : 1);
@@ -79,7 +81,7 @@
       const a = (-90 + 360 * (i + 0.5) / n) * Math.PI / 180, x = 50 + R * Math.cos(a), y = 50 + R * Math.sin(a), s = bySeat[i];
       const mine = s && s.id === myId;
       chairs.push(`<button class="kp-chair ${s ? 'taken' : 'free'} ${mine ? 'mine' : ''}" style="left:${x}%;top:${y}%;${s ? `--c:${esc(s.color)}` : ''}" data-seat="${i}" ${s && !mine ? 'disabled' : ''}>
-        <span class="kp-chair-seat">${s ? esc((s.name || '?').replace(/ 🤖/, '').slice(0, 2)) : '🪑'}</span><span class="kp-chair-name">${s ? (mine ? 'You' : esc(s.name)) : 'Free'}</span></button>`);
+        <span class="kp-chair-seat">${s ? (BOX.face && BOX.hasLook && BOX.hasLook({ id: s.id }) ? BOX.face({ id: s.id }, 40, { cls: 'kp-chair-face' }) : esc((s.name || '?').replace(/ 🤖/, '').slice(0, 2))) : '🪑'}</span><span class="kp-chair-name">${s ? (mine ? 'You' : esc(s.name)) : 'Free'}</span></button>`);
     }
     const unseated = v.seats.filter((s) => s.seat == null);
     const me = v.seats.find((s) => s.id === myId);
@@ -478,7 +480,7 @@
     const votes = Object.fromEntries((C.tally || []).map((t) => [t.id, t.n]));
     const list = v.kingdoms.filter((k) => k.id !== v.me.id).sort((a, b) => (votes[b.id] || 0) - (votes[a.id] || 0) || b.score - a.score);
     return `<h3>${esc(C.icon)} Royal Council <span class="kp-h-r">${cd('council' + C.id, C.endsIn)}</span></h3><p class="kp-ask"><b>${esc(C.ask)}</b><br><small class="kp-sub">${esc(C.text)} ${C.votes}/${C.of} voted.</small></p>
-      <div class="kp-votes">${list.map((k) => `<button class="kp-vote ${C.mine === k.id ? 'on' : ''}" data-op="${J({ op: 'vote', to: k.id })}" data-ok="🗳️ You voted for ${esc(k.name)}" data-close-after>${dot(k.color)}<span class="kp-kt"><b>${k.avatar ? esc(k.avatar) + ' ' : ''}${esc(k.name)}</b><small>⭐ ${k.score}${k.rel && k.rel !== 'other' ? ' · ' + esc(k.rel) : ''}</small></span><em>${votes[k.id] ? '🗳️'.repeat(Math.min(5, votes[k.id])) + (votes[k.id] > 5 ? '+' : '') : ''}</em>${C.mine === k.id ? '<span class="kp-tick">✓</span>' : ''}</button>`).join('')}</div>`;
+      <div class="kp-votes">${list.map((k) => `<button class="kp-vote ${C.mine === k.id ? 'on' : ''}" data-op="${J({ op: 'vote', to: k.id })}" data-ok="🗳️ You voted for ${esc(k.name)}" data-close-after>${dot(k.color)}<span class="kp-kt"><b>${rulerFace(k)}${esc(k.name)}</b><small>⭐ ${k.score}${k.rel && k.rel !== 'other' ? ' · ' + esc(k.rel) : ''}</small></span><em>${votes[k.id] ? '🗳️'.repeat(Math.min(5, votes[k.id])) + (votes[k.id] > 5 ? '+' : '') : ''}</em>${C.mine === k.id ? '<span class="kp-tick">✓</span>' : ''}</button>`).join('')}</div>`;
   }
   function pageAllies(v) {
     const D = v.diplomacy, me = v.me, out = [];
@@ -513,7 +515,7 @@
     const relTxt = { ally: '🤝 ally', liege: '⛓️ your liege', vassal: '⛓️ your vassal', neighbour: '🏡 neighbour', other: '' };
     out.push(`<div class="kp-card"><h3>👑 Kingdoms <span class="kp-h-r">${others.length}</span></h3>${others.map((k) => {
       const open = kOpen === k.id, canAlly = k.rel !== 'ally' && !me.vassalOf && !k.vassalOf;
-      return `<div class="kp-king ${open ? 'open' : ''}"><button class="kp-krow" data-kopen="${k.id}">${dot(k.color)}<span class="kp-kt"><b>${k.avatar ? esc(k.avatar) + ' ' : ''}${esc(k.name)}</b><small>${esc(k.owner || '')} · ${ageInfo(v, k.age).icon} Age ${k.age} · ⭐ ${k.score} · ${k.dist} hexes</small></span>
+      return `<div class="kp-king ${open ? 'open' : ''}"><button class="kp-krow" data-kopen="${k.id}">${dot(k.color)}<span class="kp-kt"><b>${rulerFace(k)}${esc(k.name)}</b><small>${esc(k.owner || '')} · ${ageInfo(v, k.age).icon} Age ${k.age} · ⭐ ${k.score} · ${k.dist} hexes</small></span>
         <span class="kp-badges">${relTxt[k.rel] ? `<span class="kp-rel ${k.rel}">${relTxt[k.rel]}</span>` : ''}${k.traitor ? '<span class="kp-rel bad">🗡️ traitor</span>' : ''}${k.marked ? '<span class="kp-rel bad">🎯 coalition</span>' : ''}${k.bounty ? `<span class="kp-rel bad">💰 ${k.bounty}</span>` : ''}${k.vassalOf && k.rel !== 'vassal' ? '<span class="kp-rel">⛓️ vassal</span>' : ''}${k.msg ? `<span class="kp-bubble">${esc(k.msg.text)}</span>` : ''}</span></button>
         ${open ? `<div class="kp-kacts"><button class="btn small green" data-op="${J({ op: 'ally', to: k.id })}" data-ok="🤝 Proposal sent to ${esc(k.name)}" ${canAlly ? '' : 'disabled'}>🤝 Ally</button>
           <button class="btn small" data-sheet="${J({ kind: 'gift', to: k.id, res: {} })}" ${D.canGift ? '' : 'disabled'}>🎁 Gift</button>
@@ -571,13 +573,13 @@
   function overHtml(v, view) {
     const myId = view.me.id, W = v.winner || { names: [], ids: [], mode: 'score' }, St = v.standings || [];
     const mine = St.find((s) => s.id === myId), won = W.ids.includes(myId);
-    return `<div class="kp-over"><div class="kp-card kp-center"><div class="kp-crown">${won ? '👑' : '🏰'}</div><h2>${won ? 'You won!' : esc(W.names.join(' & ') || 'Nobody') + ' won'}</h2>
+    return `<div class="kp-over"><div class="kp-card kp-center"><div class="kp-crown">${BOX.body && BOX.hasLook && BOX.hasLook(view.me) ? BOX.body(view.me, 130, { mood: won ? 'grin' : undefined }) : won ? '👑' : '🏰'}</div><h2>${won ? 'You won!' : esc(W.names.join(' & ') || 'Nobody') + ' won'}</h2>
       <p>${esc(W.names.join(' & '))} ${WIN_HOW[W.mode] || ''}${W.reason === 'time' ? ' when time ran out' : ''}.</p>
       ${mine ? `<div class="kp-rank">#${mine.rank} <small>of ${St.length}</small></div><div class="kp-stats big"><span>⭐ ${mine.score}</span><span>${ageInfo(v, mine.age).icon} Age ${mine.age}</span><span>🗺️ ${mine.land} land</span><span>🏠 ${mine.villages}</span><span>🏰 ${mine.capitals}</span>${mine.vassalOf ? '<span>⛓️ vassal</span>' : ''}</div>` : ''}</div>
-      ${(v.awards || []).length ? `<div class="kp-card"><h3>🏅 Awards</h3>${v.awards.map((a) => `<div class="kp-award ${a.id === myId ? 'me' : ''}"><b>${esc(a.title)}</b><span>${esc(a.name)}</span></div>`).join('')}</div>` : ''}
+      ${(v.awards || []).length ? `<div class="kp-card"><h3>🏅 Awards</h3>${v.awards.map((a) => `<div class="kp-award ${a.id === myId ? 'me' : ''}"><b>${esc(a.title)}</b><span>${rulerFace(a, 26)}${esc(a.name)}</span></div>`).join('')}</div>` : ''}
       <div class="kp-card"><h3>📜 Final standings</h3>${standings(St, myId)}</div></div>`;
   }
-  const standings = (rows, myId) => rows.map((s, i) => `<div class="kp-stand ${s.id === myId ? 'me' : ''}"><span class="n">${s.rank || i + 1}</span>${dot(s.color)}<span class="kp-kt"><b>${esc(s.name)}</b><small>${esc(s.owner || '')}${s.vassalOf ? ' · ⛓️ vassal' : ''}</small></span><b>⭐ ${s.score}</b></div>`).join('');
+  const standings = (rows, myId) => rows.map((s, i) => `<div class="kp-stand ${s.id === myId ? 'me' : ''}"><span class="n">${s.rank || i + 1}</span>${dot(s.color)}<span class="kp-kt"><b>${rulerFace(s)}${esc(s.name)}</b><small>${esc(s.owner || '')}${s.vassalOf ? ' · ⛓️ vassal' : ''}</small></span><b>⭐ ${s.score}</b></div>`).join('');
   function spectatorHtml(v) {
     const rows = v.kingdoms.slice().sort((a, b) => b.score - a.score);
     return `<div class="kp-card kp-center"><div class="kp-crown">👀</div><h2>You’re watching</h2><p>This world is full, so you’re a royal spectator. Watch the TV and cheer!</p><p class="kp-sub">⏳ ${cd('time', v.timeLeft)} left</p></div>

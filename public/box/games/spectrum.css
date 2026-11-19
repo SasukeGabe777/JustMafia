@@ -347,3 +347,14 @@ body.g-spectrum #game .ph-head .link { background: #fff; border-radius: 99px; pa
 .sp-over .sp-final-board .board .row { font-size: 15px; padding: 4px 10px; }
 body.g-spectrum .party-strip b { color: var(--sp-coral); }
 @media (max-width: 1100px) { .sp-over { grid-template-columns: 1fr; } }
+/* Players' characters (public/box/portrait.js): faces in the heads on the hills, on the pins along
+   the line and on the spotlight's target; the spotlight and the twins full body. */
+.spl-people .chip .hd.has-face { padding: 0; overflow: visible; }
+.spl-people .chip .hd.has-face .sp-hf { border-radius: 50%; overflow: hidden; background: rgba(255, 255, 255, 0.25); }
+.sp-target i.has-face { display: block; width: 56px; height: 56px; padding: 0; overflow: hidden; background: var(--c); }
+.sp-pin.has-face { padding-left: 2px; }
+.sp-pin .sp-pf { margin: -6px 0 -6px -1px; background: var(--c); }
+.sp-af { margin: -6px 2px -4px 0; background: rgba(255, 255, 255, 0.35); }
+.sp-spotfig { display: flex; justify-content: center; margin: -10px 0 4px; filter: drop-shadow(0 0 24px rgba(255, 243, 196, 0.8)); }
+.sp-twins { display: flex; justify-content: center; align-items: flex-end; gap: 8px; margin: 6px 0 2px; }
+.sp-twins > span { font-size: 40px; margin-bottom: 50px; }

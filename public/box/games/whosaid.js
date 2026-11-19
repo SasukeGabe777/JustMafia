@@ -23,12 +23,18 @@
   const bub = (k) => BUB[hash(k) % BUB.length];
   const rim = (k) => RIM[hash(k) % RIM.length];
   const tilt = (k, amp = 2) => (((hash(k) % 100) / 100) * 2 - 1) * amp;
-  const nm = (o) => (o ? (o.av ? esc(o.av) + ' ' : '') + esc(o.name) : '');
+  const nm = (o, n = 28) => (o ? (BOX.face ? BOX.face(o, n, { cls: 'wx-nmf' }) : o.av ? esc(o.av) : '') + ' ' + esc(o.name) : '');
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const dots = '<span class="wx-dots"><i></i><i></i><i></i></span>';
   // A silhouette in the crowd: rim colour, their avatar as the face (lit = mint glow).
-  const sil = (name, av, o = {}) => `<div class="wx-sil ${o.cls || ''}" ${o.id ? `id="${esc(o.id)}"` : ''} style="--rim:${rim(name)};--s:${(o.s || 1).toFixed(2)};--d:${(o.d || 0).toFixed(2)}s">${o.over ? `<div class="wx-ohead">${o.over}</div>` : ''}<div class="wx-shead"><span>${esc(av || '🙂')}</span></div><div class="wx-sbody"></div>${o.label !== false ? `<div class="wx-sname">${o.label || esc(name)}</div>` : ''}</div>`;
-  const scoreboard = (list) => `<aside class="wx-score"><h3>Who knows who</h3><div class="wx-rows">${(list || []).map((r, i) => `<div class="wx-row ${i === 0 && r.points > 0 ? 'lead' : ''}" style="--rim:${rim(r.name)}"><span class="wx-rk">${i + 1}</span><span class="wx-av">${esc(r.av || '🙂')}</span><span class="wx-nm">${esc(r.name)}${r.fire ? ' 🔥' : ''}</span><b>${r.points}</b></div>`).join('')}</div></aside>`;
+  // With a JustGameBox character (public/box/portrait.js) their face fills the head instead.
+  const face = (o, n, opt) => (BOX.face ? BOX.face(o, n, opt) : esc((o && (o.av || o.avatar)) || '🙂'));
+  const sil = (name, av, o = {}) => {
+    const who = { id: o.pid, name, avatar: av }, big = /\bbig\b/.test(o.cls || '');
+    const f = BOX.face && BOX.hasLook && BOX.hasLook(who) ? BOX.face(who, big ? 128 : 72, { fill: true, cls: 'wx-sface', mood: o.mood }) : '';
+    return `<div class="wx-sil ${f ? 'has-face' : ''} ${o.cls || ''}" ${o.id ? `id="${esc(o.id)}"` : ''} style="--rim:${rim(name)};--s:${(o.s || 1).toFixed(2)};--d:${(o.d || 0).toFixed(2)}s">${o.over ? `<div class="wx-ohead">${o.over}</div>` : ''}<div class="wx-shead">${f || `<span>${esc(av || '🙂')}</span>`}</div><div class="wx-sbody"></div>${o.label !== false ? `<div class="wx-sname">${o.label || esc(name)}</div>` : ''}</div>`;
+  };
+  const scoreboard = (list) => `<aside class="wx-score"><h3>Who knows who</h3><div class="wx-rows">${(list || []).map((r, i) => `<div class="wx-row ${i === 0 && r.points > 0 ? 'lead' : ''}" style="--rim:${rim(r.name)}"><span class="wx-rk">${i + 1}</span><span class="wx-av">${face(r, 32, i === 0 && r.points > 0 ? { mood: 'grin' } : {})}</span><span class="wx-nm">${esc(r.name)}${r.fire ? ' 🔥' : ''}</span><b>${r.points}</b></div>`).join('')}</div></aside>`;
   const mood = (r) => (r.bluff ? `🎭 <b>BLUFF BADGE!</b> Nobody guessed ${esc(r.name)}!` : r.voted === 0 ? `Nobody guessed. It was ${esc(r.name)}!`
     : r.right > r.fooled ? `📖 ${plural(r.right, 'person')} saw right through ${esc(r.name)}!` : `🕵️ ${esc(r.name)} fooled ${r.fooled}!`);
   const moon = '<div class="wx-moon"><i></i><span>shhh…</span></div>';
@@ -61,7 +67,7 @@
           <div class="wx-links"><button class="wx-link" id="add-bots">+ add 5 test bots</button><button class="wx-link" id="rm-bots">remove bots</button><button class="wx-link" id="tv-switch">🎮 other game</button></div></div>
       </section>
       <section class="wx-crowdbar"><div class="wx-crowdl">The crowd <b>${n}</b></div>
-        <div class="wx-roster" id="roster">${shown.map((p, i) => `<span class="chip wx-chip ${p.online ? '' : 'off'}" id="wxc-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove">${sil(p.name, p.avatar, { cls: 'lit join', s: 0.92 + (hash(p.id) % 16) / 100 })}</span>`).join('') || '<div class="wx-empty">It’s quiet… too quiet. Scan the code to join the whispers.</div>'}${n > shown.length ? `<span class="wx-more">+${n - shown.length}</span>` : ''}</div>
+        <div class="wx-roster" id="roster">${shown.map((p, i) => `<span class="chip wx-chip ${p.online ? '' : 'off'}" id="wxc-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove">${sil(p.name, p.avatar, { pid: p.id, cls: 'lit join', s: 0.92 + (hash(p.id) % 16) / 100 })}</span>`).join('') || '<div class="wx-empty">It’s quiet… too quiet. Scan the code to join the whispers.</div>'}${n > shown.length ? `<span class="wx-more">+${n - shown.length}</span>` : ''}</div>
         ${L.lineupHtml ? `<div class="wx-party">${L.lineupHtml}</div>` : ''}</section>
     </div>${moon}`);
     for (const s of el.querySelectorAll('select[data-set]')) { s.onchange = () => L.set(s.dataset.set, s.value); s.onclick = (e) => e.stopPropagation(); }
@@ -79,7 +85,7 @@
     return `<div class="ws-names wx-names n${sp.names.length} ${r ? 'done' : ''}" id="wsn-${key}-${r ? 'r' : 'q'}">${sp.names.map((n, i) => {
       const t = r ? r.tally[i] : 0, au = r && i === r.author;
       const over = r ? (au ? '<b class="wx-bang">!</b>' : `<span class="wx-tally">${t}</span>`) : '<b class="wx-q">?</b>';
-      return `<div class="ws-chip wx-cand ${r ? (au ? 'author' : 'other') : ''}" style="--pct:${r ? Math.round((t / voted) * 100) : 0}%">${sil(n, (sp.avs || [])[i] || '', { cls: au ? 'lit' : '', label: `<span class="wx-k">${'ABCD'[i]}</span>${esc(n)}`, over, s: 1.1 })}${au ? '<span class="ws-stamp wx-wrote">WROTE IT!</span>' : ''}${r && !au ? `<span class="wx-vbar"><i></i></span>` : ''}</div>`;
+      return `<div class="ws-chip wx-cand ${r ? (au ? 'author' : 'other') : ''}" style="--pct:${r ? Math.round((t / voted) * 100) : 0}%">${sil(n, (sp.avs || [])[i] || '', { pid: (sp.ids || [])[i], cls: au ? 'lit' : '', label: `<span class="wx-k">${'ABCD'[i]}</span>${esc(n)}`, over, s: 1.1 })}${au ? '<span class="ws-stamp wx-wrote">WROTE IT!</span>' : ''}${r && !au ? `<span class="wx-vbar"><i></i></span>` : ''}</div>`;
     }).join('')}</div>`;
   }
 
@@ -89,7 +95,7 @@
     const hl = [h.bluff ? ['🎭 Best bluff', h.bluff, `fooled ${h.bluff.fooled} of ${h.bluff.voted}`] : null, h.easy ? ['📖 Dead giveaway', h.easy, `${h.easy.right} of ${h.easy.voted} knew it`] : null].filter(Boolean)
       .map(([t, x, v], i) => `<div class="wx-hl" style="--bg:${BUB[(i + 2) % BUB.length]}"><div class="wx-hlt">${t}</div><div class="wx-hlq">“${esc(x.text)}”</div><div class="wx-hln">${nm(x)} · ${v}</div></div>`).join('');
     BOX.morph(el, `<div class="wx wx-tv wx-over" data-phase="over"><section class="wx-overmain">
-      <div class="wx-champ">${w ? sil(w.name, w.av, { cls: 'lit big', over: '<b class="wx-bang">!</b>', label: false }) : ''}<div><div class="wx-champl">They know you best…</div><h2>${nm(w)}</h2>${w ? `<div class="wx-pts">${w.points} pts</div>` : ''}</div></div>
+      <div class="wx-champ">${w ? sil(w.name, w.av, { pid: w.id, cls: 'lit big', over: '<b class="wx-bang">!</b>', label: false, mood: 'grin' }) : ''}<div><div class="wx-champl">They know you best…</div><h2>${w ? esc(w.name) : ''}</h2>${w ? `<div class="wx-pts">${w.points} pts</div>` : ''}</div></div>
       ${hl ? `<div class="wx-hls">${hl}</div>` : ''}${awards ? `<div class="wx-awards">${awards}</div>` : ''}
     </section>${scoreboard(s.standings)}</div>${moon}`);
   }
@@ -117,7 +123,7 @@
         <div class="ws-answer wx-answer ${r ? 'shown' : ''}" id="wsa-${key}" style="--bg:${bub(sp.text)}">${esc(sp.text)}</div>
         ${suspects(sp, key)}${status}</div>`;
     } else if (s.phase === 'wall') {
-      const notes = s.wall.map((w, i) => `<div class="wx-note" style="--bg:${bub(w.text + i)};--tl:${tilt(w.text + i, 3).toFixed(1)}deg;--d:${(Math.min(i, 30) * 0.07).toFixed(2)}s"><div class="wx-nt">${esc(w.text)}</div><div class="wx-nn">— ${esc(w.name)}</div></div>`).join('');
+      const notes = s.wall.map((w, i) => `<div class="wx-note" style="--bg:${bub(w.text + i)};--tl:${tilt(w.text + i, 3).toFixed(1)}deg;--d:${(Math.min(i, 30) * 0.07).toFixed(2)}s"><div class="wx-nt">${esc(w.text)}</div><div class="wx-nn">— ${nm(w, 26)}</div></div>`).join('');
       main = `<div class="wx-center"><div class="wx-qsmall">${esc(s.question)}</div>
         ${s.wall.length ? `<h2 class="wx-wallh">Everything else that was whispered…</h2><div class="wx-wall" id="wsw-${s.round}">${notes}</div>${s.wallMore ? `<p class="wx-muted">…and ${s.wallMore} more whispers</p>` : ''}`
           : `<div class="wx-bigq wx-in"><div class="wx-ql">Round ${s.round} complete!</div><div class="wx-qt">${s.round >= s.rounds ? 'Final results coming up…' : 'Next question coming up…'}</div></div>`}</div>`;
@@ -133,7 +139,7 @@
       BOX.morph(el, `<div class="wx wx-ph" data-phase="over"><div class="wx-pcard wx-centered"><div class="wx-rank">#${v.rank}</div><h3>${v.rank === 1 ? 'You know them best!' : 'Game over!'}</h3><p class="wx-big">${v.points} points</p>
         ${(v.awards || []).map((a) => `<div class="wx-myaward">${a.icon} <b>${esc(a.title)}</b><small>${esc(a.value)}</small></div>`).join('')}
         <div class="wx-stats"><span>✅ ${st.correct}/${st.guesses} right</span><span>🕵️ fooled ${st.fooled}</span><span>🎭 ${plural(st.bluffs, 'bluff')}</span><span>🔥 best streak ${st.best}</span></div></div>
-        <div class="wx-pcard">${(v.final || []).map((r, i) => `<div class="wx-row ${i === 0 ? 'lead' : ''}" style="--rim:${rim(r.name)}"><span class="wx-rk">${i + 1}</span><span class="wx-av">${esc(r.av || '🙂')}</span><span class="wx-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
+        <div class="wx-pcard">${(v.final || []).map((r, i) => `<div class="wx-row ${i === 0 ? 'lead' : ''}" style="--rim:${rim(r.name)}"><span class="wx-rk">${i + 1}</span><span class="wx-av">${face(r, 30)}</span><span class="wx-nm">${esc(r.name)}</span><b>${r.points}</b></div>`).join('')}</div></div>`);
       if (once('over:' + v.rank)) ctx.haptic(v.rank === 1 ? 'win' : 'big');
       return;
     }
@@ -200,13 +206,13 @@
         return;
       }
       if (sp.myPick != null) {
-        BOX.morph(el, wrap('guessed', `${ans}<div class="wx-pcard wx-centered"><div class="wx-picked">${sil(sp.names[sp.myPick], (sp.avs || [])[sp.myPick] || '', { cls: 'lit', label: false, over: '<b class="wx-q">?</b>' })}</div><h3>You think: ${esc(sp.names[sp.myPick])}</h3>${sp.myDd ? '<p class="wx-dd-on">🎲 Doubled down!</p>' : ''}<p class="wx-muted">${sp.voted}/${sp.of} guessed ${timer(v.endsIn)}</p></div>`));
+        BOX.morph(el, wrap('guessed', `${ans}<div class="wx-pcard wx-centered"><div class="wx-picked">${sil(sp.names[sp.myPick], (sp.avs || [])[sp.myPick] || '', { pid: (sp.ids || [])[sp.myPick], cls: 'lit', label: false, over: '<b class="wx-q">?</b>' })}</div><h3>You think: ${esc(sp.names[sp.myPick])}</h3>${sp.myDd ? '<p class="wx-dd-on">🎲 Doubled down!</p>' : ''}<p class="wx-muted">${sp.voted}/${sp.of} guessed ${timer(v.endsIn)}</p></div>`));
         return;
       }
       if (once('spot:' + key)) ctx.haptic('tap');
       BOX.morph(el, wrap('guess', `${ans}<div class="wx-row2 wx-who"><b>Who said it?</b>${timer(v.endsIn)}</div>
         ${v.canDd ? `<button class="wx-dd ${ddOn ? 'on' : ''}" id="ws-dd">🎲 Double Down ${ddOn ? 'ON: 2× points, −50 if wrong' : '(once per game)'}</button>` : ''}
-        <div class="wx-picks n${sp.names.length}">${sp.names.map((n, i) => `<button class="wx-pick" data-k="${i}" style="--rim:${rim(n)}">${sil(n, (sp.avs || [])[i] || '', { label: false })}<span class="wx-pn"><span class="wx-k">${'ABCD'[i]}</span>${esc(n)}</span></button>`).join('')}</div>`));
+        <div class="wx-picks n${sp.names.length}">${sp.names.map((n, i) => `<button class="wx-pick" data-k="${i}" style="--rim:${rim(n)}">${sil(n, (sp.avs || [])[i] || '', { pid: (sp.ids || [])[i], label: false })}<span class="wx-pn"><span class="wx-k">${'ABCD'[i]}</span>${esc(n)}</span></button>`).join('')}</div>`));
       const dd = el.querySelector('#ws-dd'); if (dd) dd.onclick = () => { ddOn = !ddOn; ctx.haptic(ddOn ? 'warn' : 'tap'); ctx.redraw(); };
       for (const b of el.querySelectorAll('[data-k]')) b.onclick = async () => {
         for (const x of el.querySelectorAll('[data-k]')) x.disabled = true;

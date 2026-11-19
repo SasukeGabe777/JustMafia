@@ -574,7 +574,10 @@ const KB_CATS = [
   // under fingers and animations already running are never restarted.
   const put = (node, html) => { if (node && node.__h !== html) { BOX.morph(node, html); node.__h = html; } };
   const av = (x) => (x && x.avatar ? esc(x.avatar) + ' ' : '');
-  const withAv = (rows) => rows.map((r) => ({ ...r, name: (r.avatar ? r.avatar + ' ' : '') + r.name }));
+  // Players as their JustGameBox character (public/box/portrait.js), or their emoji without one.
+  const face = (o, n, opt) => (BOX.face ? BOX.face(o, n, opt) : esc((o && o.avatar) || '🙂'));
+  const pic0 = (o, n, opt) => (BOX.hasLook && BOX.hasLook(o) ? face(o, n, opt) : '');
+  const fboard = (rows, val, label = '') => `<div class="board">${rows.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span class="em-rn">${face(r, 30, { cls: 'em-rf' })} ${esc(r.name)}</span><b>${esc(val(r))}${label}</b></div>`).join('')}</div>`;
   const clock = (node, endsIn) => {
     if (!endsIn) { if (node.__e) { node.innerHTML = ''; node.__e = 0; } return; }
     const ends = Date.now() + endsIn;
@@ -621,18 +624,21 @@ const KB_CATS = [
     n.root.classList.toggle('revealed', phase === 'reveal');
     n.root.classList.toggle('left', !!st.left);
     put(n.sh, st.cat ? `<span class="em-cat">${st.cat.icon} ${esc(st.cat.label)}</span>${stars(st.diff)}` : '');
-    const face = phase === 'reveal' ? (st.result && st.result.first ? '🥳' : '🙈') : '';
-    put(n.who, `<span class="em-face">${esc(face || st.avatar || '😜')}</span><span class="em-wn"><b>${esc(st.giver)}</b><small>${phase === 'pick' ? 'is picking a secret… 🤫' : phase === 'clue' ? 'is the Clue Giver 🎨' : 'gave the clue'}</small></span>`);
+    const mood = phase === 'reveal' ? (st.result && st.result.first ? '🥳' : '🙈') : '';
+    // The Clue Giver on stage: their character, full body (cheering or sheepish at the reveal).
+    const giver = { name: st.giver, avatar: st.avatar }, fig = BOX.body && BOX.hasLook && BOX.hasLook(giver)
+      ? BOX.body(giver, 150, { mood: phase === 'reveal' ? (st.result && st.result.first ? 'grin' : 'surprised') : phase === 'clue' ? 'smile' : 'smirk', cls: 'em-fig' }) + (mood ? `<i class="em-figmood">${mood}</i>` : '') : '';
+    put(n.who, `<span class="em-face ${fig ? 'has-fig' : ''}">${fig || esc(mood || st.avatar || '😜')}</span><span class="em-wn"><b>${esc(st.giver)}</b><small>${phase === 'pick' ? 'is picking a secret… 🤫' : phase === 'clue' ? 'is the Clue Giver 🎨' : 'gave the clue'}</small></span>`);
     clueRow(n.clue, st.clue);
     n.clue.dataset.wait = phase === 'pick' ? (st.picked ? '🔒 Secret locked in…' : '🤫 Choosing a secret…') : st.left ? '😢 The Clue Giver left' : '🤔 Thinking of emojis…';
     put(n.hint, phase === 'clue' ? hintHtml(st.hint) : '');
     let sf = '';
     if (phase === 'reveal' && st.answer) {
       const r = st.result;
-      sf = `<div class="em-drumline">🥁</div><div class="em-answer">${esc(st.answer)}</div><div class="em-res">${r.first ? `⚡ <b>${esc(r.first.name)}</b> got it first (${r.first.s}s) · ${st.solved}/${st.of} solved` : '😶 Nobody got it!'}${r.giverPts ? ` · 🎨 ${esc(st.giver)} +${r.giverPts}` : ''}</div>`;
+      sf = `<div class="em-drumline">🥁</div><div class="em-answer">${esc(st.answer)}</div><div class="em-res">${r.first ? `⚡ ${pic0(r.first, 30, { cls: 'em-rf', mood: 'grin' })}<b>${esc(r.first.name)}</b> got it first (${r.first.s}s) · ${st.solved}/${st.of} solved` : '😶 Nobody got it!'}${r.giverPts ? ` · 🎨 ${esc(st.giver)} +${r.giverPts}` : ''}</div>`;
     } else if (phase === 'clue') {
       const pct = st.of ? Math.round(100 * st.solved / st.of) : 0;
-      sf = `<div class="em-progress"><div class="em-bar"><i style="width:${pct}%"></i></div><span><b>${st.solved}</b>/${st.of} solved</span></div>${st.firsts.length ? `<div class="em-firsts">${st.firsts.map((nm, i) => `<span>${medal[i]} ${esc(nm)}</span>`).join('')}</div>` : ''}`;
+      sf = `<div class="em-progress"><div class="em-bar"><i style="width:${pct}%"></i></div><span><b>${st.solved}</b>/${st.of} solved</span></div>${st.firsts.length ? `<div class="em-firsts">${st.firsts.map((nm, i) => `<span>${medal[i]} ${pic0({ name: nm }, 26, { cls: 'em-rf', mood: 'grin' })}${esc(nm)}</span>`).join('')}</div>` : ''}`;
     }
     put(n.sf, sf);
     return n.root;
@@ -808,7 +814,7 @@ const KB_CATS = [
     // Players pop in as bouncing emoji faces on the candy hill
     const r = $('#roster');
     r.classList.toggle('many', n > 14 && n <= 30); r.classList.toggle('lots', n > 30);
-    put(r, n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" id="eml-p-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#2a0a55')};--d:${((i * 0.17) % 1.3).toFixed(2)}s"><span class="f">${esc(p.avatar || '🙂')}</span><b>${esc(p.name)}</b></span>`).join('')
+    put(r, n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" id="eml-p-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#2a0a55')};--d:${((i * 0.17) % 1.3).toFixed(2)}s"><span class="f">${face(p, 74)}</span><b>${esc(p.name)}</b></span>`).join('')
       : '<div class="eml-empty">Scan the code and pop in! <span>👇</span><span>😜</span><span>🤩</span></div>');
     put($('#eml-party'), L.lineupHtml || '');
   }
@@ -840,8 +846,8 @@ const KB_CATS = [
         const w = s.standings[0];
         put(t.round, ''); put(t.status, ''); clock(t.clock, 0);
         const won = w && w.points;
-        put(t.over, `<div class="em-end"><div class="em-champ"><div class="f">${esc(won ? w.avatar || '😎' : '🤷')}</div><div class="cap">${won ? 'EMOJI CHAMPION' : 'NOBODY CRACKED A CLUE'}</div><h2>${won ? esc(w.name) : 'Tough crowd!'}</h2>${won ? `<div class="pts">${w.points} points</div>` : ''}</div>${awardsHtml(s.awards)}
-          <div class="em-endgrid"><div><h3>🏆 Final scores</h3>${BOX.board(withAv(s.standings), (r) => r.points, ' pts')}</div>${s.history && s.history.some((x) => x.clue) ? `<div class="em-hist"><h3>🔁 Clue replay</h3>${s.history.filter((x) => x.clue).slice(-7).map((x) => `<div class="row"><span class="c">${esc(x.clue || '…')}</span><span>= <b>${esc(x.answer)}</b> <span class="muted">by ${esc(x.giver)}</span></span></div>`).join('')}</div>` : ''}</div></div>`);
+        put(t.over, `<div class="em-end"><div class="em-champ"><div class="f ${won && BOX.hasLook && BOX.hasLook(w) ? 'has-fig' : ''}">${won ? (BOX.hasLook && BOX.hasLook(w) ? BOX.body(w, 230, { mood: 'grin' }) : esc(w.avatar || '😎')) : '🤷'}</div><div class="cap">${won ? 'EMOJI CHAMPION' : 'NOBODY CRACKED A CLUE'}</div><h2>${won ? esc(w.name) : 'Tough crowd!'}</h2>${won ? `<div class="pts">${w.points} points</div>` : ''}</div>${awardsHtml(s.awards)}
+          <div class="em-endgrid"><div><h3>🏆 Final scores</h3>${fboard(s.standings, (r) => r.points, ' pts')}</div>${s.history && s.history.some((x) => x.clue) ? `<div class="em-hist"><h3>🔁 Clue replay</h3>${s.history.filter((x) => x.clue).slice(-7).map((x) => `<div class="row"><span class="c">${esc(x.clue || '…')}</span><span>= <b>${esc(x.answer)}</b> <span class="muted">by ${esc(x.giver)}</span></span></div>`).join('')}</div>` : ''}</div></div>`);
         return;
       }
       put(t.round, s.lastRound ? `<span class="em-final">🏁 FINAL ROUND · ×${s.mult} points</span>` : `Round <b>${s.round}</b>/${s.total}`);
@@ -853,7 +859,7 @@ const KB_CATS = [
       const keep = new Set(s.stages.map((x) => x.id));
       for (const [id, n] of t.nodes) if (!keep.has(id)) { n.root.remove(); t.nodes.delete(id); }
       s.stages.forEach((st, i) => { const node = tvStage(t, st, s.phase); if (t.stages.children[i] !== node) t.stages.insertBefore(node, t.stages.children[i] || null); });
-      put(t.board, BOX.board(withAv(s.standings), (r) => r.points, ''));
+      put(t.board, fboard(s.standings, (r) => r.points, ''));
       const fresh = (k) => { const f = !t.seenTick.has(k); t.seenTick.add(k); return f; };
       put(t.ticker, s.phase === 'clue' && s.ticker.length ? `<h3>Not quite…</h3>${s.ticker.slice().reverse().map((x) => `<div class="em-tk ${fresh(x.k) ? 'in' : ''}">❌ ${esc(x.text)}</div>`).join('')}` : '');
     },
