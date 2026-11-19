@@ -207,8 +207,10 @@
   const TV = { said: null, cv: null, raf: 0, host: null, anim: null, sayUntil: 0, sk: { key: '', n: 0 } };
   const greySpec = () => { const I = BOX.intros && BOX.intros.undercover; return I && I.host ? I.host : null; };
   function speak(text, spec) {
-    try { if (BOX.voice && BOX.voice.speak) BOX.voice.speak(text, spec || {}); } catch { /* no voice */ }
-    const ms = Math.max(1500, text.length * 62); TV.sayUntil = Date.now() + ms; if (TV.anim) TV.anim.talk(performance.now(), ms);
+    // His lines queue behind one still playing (public/box/voice.js); his mouth moves when it starts.
+    const talk = (ms) => { TV.sayUntil = Date.now() + ms; if (TV.anim) TV.anim.talk(performance.now(), ms); };
+    try { if (BOX.voice && BOX.voice.speak) { BOX.voice.speak(text, spec || {}, { onstart: talk }); return; } } catch { /* no voice */ }
+    talk(Math.max(1500, text.length * 62));
   }
   // Director Grey at his desk, drawn with the intro's character.
   function greyLoop() {

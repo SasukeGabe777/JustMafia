@@ -144,7 +144,7 @@
     // How to play (box/howto.js): one card per step, 6 steps (module howSteps).
     tutorial: [
       { icon: '❓', title: 'The question', text: 'A question and four answers go up on the TV. Be quick: the clock is ticking!' },
-      { icon: '🔥', title: 'Bet on it', text: 'How sure are you? 🧊 1× Hunch, 🌶️ 2× Sure or 🔥 3× HOT TAKE.', phone: 'Tap 1×, 2× or 3×, then tap your answer.' },
+      { icon: '🔥', title: 'Bet on it', text: 'How sure are you? 🧊 1× Hunch, 🌶️ 2× Sure or 🔥 3× HOT TAKE.', phone: 'Tap 1×, 2× or 3×, then tap your answer.', say: 'Bet on it. How sure are you? Bet once for a hunch, double if you’re sure, or triple for a hot take. Pick your bet, then tap your answer.' },
       { icon: '✅', title: 'Scoring', text: 'Right: 100 × your bet, plus up to 50 for speed. Wrong: lose 50 × your bet. Three right in a row: streak bonus!' },
       { icon: '💺', title: 'Hot Seat', text: 'Midway, one player answers for double points while everyone else bets on whether they’ll get it right.', phone: 'Not in the seat? Tap ✅ RIGHT or ❌ WRONG.' },
       { icon: '💰', title: 'All In', text: 'The final question: see the category, bet any share of your points, then answer.', phone: 'Tap how much to bet (up to 🔥 ALL IN), then your answer.' },
@@ -155,7 +155,7 @@
       spots: ['255,170,80', '62,230,255', '255,210,63', '255,77,94'], confetti: ['#ff4d5e', '#3e8bff', '#ffb52e', '#22c97a', '#ffd23f', '#ff8a00'] },
     host: {
       name: 'Blaze Bixby',
-      voice: { kokoro: 'am_eric', speed: 1.15, like: /guy|davis|christopher|eric|andrew|brian|george|male/i, accent: /en-(US|GB)/i, pitch: 1.1, rate: 1.12 },
+      voice: { kokoro: 'am_eric', speed: 0.9, like: /guy|davis|christopher|eric|andrew|brian|george|male/i, accent: /en-(US|GB)/i, pitch: 1.1, rate: 1.05 },
       look: { skin: '#e0a77a', skinShade: '#c4875c', suit: '#2a0d55', suit2: '#160630', lapel: '#ff8a00', shirt: '#fff4e6', tie: 'long', tieColor: '#ff3d2e', hair: 'pomp', hairColor: '#ff5a1a', hairShade: '#c2410c', streak: '#ffd23f', brow: '#a8360a', prop: 'cards', grin: true },
     },
     lines: {

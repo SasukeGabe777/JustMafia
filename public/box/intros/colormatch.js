@@ -187,7 +187,7 @@
       spots: ['255,240,200', '255,200,220', '200,240,255', '255,255,255'], confetti: PAINT },
     host: {
       name: 'Hugo Hue',
-      voice: { kokoro: 'bm_fable', speed: 1.05, like: /guy|thomas|henri|paul|male|daniel/i, accent: /en-(GB|US)|fr/i, pitch: 1.05, rate: 1.06 },
+      voice: { kokoro: 'bm_fable', speed: 1.0, like: /guy|thomas|henri|paul|male|daniel/i, accent: /en-(GB|US)|fr/i, pitch: 1.05, rate: 1.0 },
       draw: hostDraw,
     },
     lines: {

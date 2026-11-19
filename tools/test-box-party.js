@@ -129,7 +129,7 @@ test('Intro cutscene (cast mode) for the other small games: no phone step, a rol
   assert(r.start().ok); assert.equal(r.phase, 'show');
   const tv = r.tvState().show;
   assert.equal(tv.mode, 'cast'); assert.equal(tv.step, 'intros'); assert.equal(tv.featured[0].name, 'Ana');
-  assert.equal(tv.endsIn, tv.openMs + 4 * tv.perMs + tv.outroMs);
+  assert.equal(tv.endsIn, tv.openMs + tv.rollMs + tv.outroMs); assert(tv.rollMs >= 4 * tv.perMs, 'the roll call: every card, and its narration (box/narration.js)');
   assert.equal(r.act(ana, { op: 'fact', text: 'hello there' }).ok, false, 'no facts in cast mode');
   assert.equal(r.playerState(ana).show.mode, 'cast');
   while (r.phase === 'show' && clock.step());
@@ -306,14 +306,14 @@ test('How to play: after the intro every game teaches its rules; "Got it" from e
   assert(r.start().ok);
   while (r.phase === 'show' && r.show.step === 'intros' && clock.step());
   assert.equal(r.show.step, 'howto');
-  const tv = r.tvState().show; assert(tv.howMs >= 5 * tv.howStepMs, 'about 7–8 s a step'); assert.equal(tv.ready, 0); assert.equal(tv.readyOf, 2);
+  const tv = r.tvState().show; assert(tv.howStepsMs.length >= 5 && tv.howStepsMs.every((ms) => ms >= 5000), 'each step stays up for its narration'); assert.equal(tv.howMs, tv.howStepsMs.reduce((a, x) => a + x, 0) + tv.howEndMs); assert.equal(tv.ready, 0); assert.equal(tv.readyOf, 2);
   assert.equal(r.playerState(ana).show.step, 'howto');
   assert.equal(r.act(ana, { op: 'guess' }).ok, false, 'no game moves yet');
-  r.show.stepAt -= 7000; // as if the first step has played
+  r.show.stepAt -= tv.howStepsMs[0] - 100; // as if the first step has (nearly) played
   assert(r.act(ana, { op: 'gotit' }).ok); assert.equal(r.playerState(ana).show.gotIt, true); assert.equal(r.phase, 'show', 'still waiting for Ben');
   assert(r.act(ben, { op: 'gotit' }).ok);
   const t0 = r.now(); while (r.phase === 'show' && clock.step());
-  assert.equal(r.phase, 'game'); assert(r.now() - t0 <= 2000, 'starts right after everyone has it');
+  assert.equal(r.phase, 'game'); assert(r.now() - t0 <= 2000, 'starts right after everyone has it (once the step on screen has been read out)');
 });
 
 test('Party Mode ending: the end screen stays 12 s; the host can show the standings now or hold the countdown', () => {

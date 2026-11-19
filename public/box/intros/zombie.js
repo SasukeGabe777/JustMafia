@@ -64,7 +64,7 @@
     tutorial: [
       { icon: '🧟', title: 'Survive', text: 'Survive six days of a zombie outbreak until the rescue arrives. Every scene, you make a choice.', say: 'This is an emergency broadcast. Survive six days until the rescue arrives. Every scene, you make a choice.' },
       { icon: '📱', title: 'Choose', text: 'Pick an option, then watch the TV. No dice: your choices and what you carry decide your fate.', phone: 'Tap one of the options before time runs out. Freezing is risky!' },
-      { icon: '🎒', title: 'Your gear', text: 'A 🔦 gets you through the dark, a 🪢 up the wall, a 🩹 cures a bite. Bullets run out!', phone: 'Your backpack says what each thing is good for. Tap 🎁 to give one to a friend.' },
+      { icon: '🎒', title: 'Your gear', text: 'A 🔦 gets you through the dark, a 🪢 up the wall, a 🩹 cures a bite. Bullets run out!', phone: 'Your backpack says what each thing is good for. Tap 🎁 to give one to a friend.', say: 'Your gear. A flashlight gets you through the dark, a rope gets you up the wall, and a bandage cures a bite. Bullets run out! Your backpack says what each thing is good for. Tap the gift to give one to a friend.' },
       { icon: '📜', title: 'The story remembers', text: 'What you do early on comes back later. Something from day one can save you on the last night.', phone: 'Your 📜 badges show what the story remembers about you.' },
       { icon: '👻', title: 'Bitten? Fallen?', text: 'Bitten? Find a 🩹 medkit by the end of the next scene or you turn. Fall and you become a ghost.', phone: 'Ghost? Bless 🍀 or curse 🕯️ a survivor each scene.' },
       { icon: '🚁', title: 'Scoring', text: 'Points for every scene and every day you survive, and +500 for the rescue. Not everyone makes it: whoever gets furthest wins!' },

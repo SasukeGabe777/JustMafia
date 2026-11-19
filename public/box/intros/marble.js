@@ -137,12 +137,12 @@
       { icon: '➡️', title: 'Pass it on', text: 'Roll it through a gap at the edge (the little yellow arrows) and it lands on your neighbour’s phone.', phone: 'Yellow arrows at the edge of your board are gaps to your neighbours.' },
       { icon: '🗣️', title: 'Work it out together', text: 'Nobody can see the whole maze alone. Talk! The TV only uncovers the maze where the marble has been.' },
       { icon: '🕳️', title: 'Holes and twists', text: 'Holes send the marble back to where it came onto your board. Each maze has a twist: ice, a backwards board, gems everywhere…' },
-      { icon: '🏁', title: 'Scoring', text: 'Clear the maze and everyone scores, more with time to spare. +30 for a pass that gets closer, +25 per 💎, +50 for sinking it, −15 per hole.' },
+      { icon: '🏁', title: 'Scoring', text: 'Clear the maze and everyone scores, more with time to spare. +30 for a pass that gets closer, +25 per 💎, +50 for sinking it, −15 per hole.', say: 'Scoring. Clear the maze and everyone scores, more with time to spare. 30 points for a pass that gets closer, 25 for every gem, and 50 for sinking it. Each hole costs 15.' },
     ],
     theme: { accent: '#ffd23f', accent2: '#2f47d6', accent3: '#e3bb80', ink: '#fff2dc', fade: '#170b04', confetti: ['#ffd23f', '#6fb7ff', '#ff7ac6', '#e3bb80', '#ffffff'] },
     host: {
       name: 'Tilly Burl',
-      voice: { kokoro: 'bf_isabella', speed: 1.08, like: /female|libby|sonia|hazel|samantha|zira/i, accent: /en-GB|en-US/i, pitch: 1.05, rate: 1.05 },
+      voice: { kokoro: 'bf_isabella', speed: 0.93, like: /female|libby|sonia|hazel|samantha|zira/i, accent: /en-GB|en-US/i, pitch: 1.05, rate: 1.0 },
       look,
     },
     lines: {

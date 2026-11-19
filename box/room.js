@@ -39,7 +39,7 @@ const PRACTICE_MODES = ['on', 'off', 'new'], PRACTICE_END_MS = 6000, PRACTICE_MI
 const NO_PRACTICE = new Set(['ducks', 'kingdoms', 'escape', 'marble', 'mafia']);
 const PRACTICE_FIELD = { key: 'practice', label: 'Practice round first', options: [{ value: false, label: 'Off' }, { value: true, label: 'On: a quick warm-up that doesn’t count' }] };
 const COUNT_KEY = /^(rounds|turns|questions|hands|orders|races|debates|bombs|songs|maxRounds|trip|prompts|cases|duels|rooms)$/;
-const { castOpenMs, CAST_OPEN_MS, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX } = require('./show');
+const { castOpenMs, castMs, CAST_OPEN_MS, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX } = require('./show');
 // Unlockable games (module `locked: { how }`): finishing a whole Party Mode opens every one of
 // them. The TV remembers unlocks (public/unlocks.js) and sends them when it creates a room.
 const partyFinished = (room) => !!(room.partyMode && room.partyMode.phase === 'done' && room.played.length >= 1);
@@ -639,7 +639,7 @@ class BoxRoom {
     this.fx('partyPreview', { game: def.key });
     this.sync();
   }
-  previewMs(def) { return castOpenMs(def) + Math.min(CAST_MAX, this.players.size) * CAST_PER_MS + CAST_OUTRO_MS; }
+  previewMs(def) { return castMs(def || this.def, this.players.size); } // the cutscene, timed to its narration (box/narration.js)
   // What the TV says about a party game: "Game 3 of 6", its settings and its minutes in the plan.
   partyInfo(def, fit) {
     const pm = this.partyMode; if (!pm) return null;

@@ -220,6 +220,8 @@
       else if (f.kind === 'level') celebrate(() => { tvToast(`<span class="tt-i lvl-up">⭐</span><div><small>LEVEL UP!</small><b>${esc(f.avatar || '')} ${esc(BOX.filterText(f.name))} ${window.JGProgress ? JGProgress.badge(f.level) : ''}</b><span>reached level ${Number(f.level) || ''}${f.title ? ` · new title “${esc(f.title)}”` : ''}</span></div>`, 'level'); BOX.sfx('win'); }, 2600);
       else if (f.kind === 'challenge') celebrate(() => tvToast(`<span class="tt-i">${esc(f.icon || '✅')}</span><div><small>${f.period === 'event' ? 'EVENT' : 'WEEKLY'} CHALLENGE DONE</small><b>${esc(f.avatar || '')} ${esc(BOX.filterText(f.name))}</b><span>${esc(f.label || '')}</span></div>`, 'chal'), 2200);
       else if (f.kind === 'audJoin') tvToast(`<span class="tt-i">👀</span><div><small>FROM THE AUDIENCE</small><b>${f.n} new player${f.n === 1 ? '' : 's'}</b><span>joined for this game</span></div>`, 'aud');
+      // The host skipped the intro / how-to: the narrator stops mid-line (the only time a line is cut).
+      else if (f.kind === 'voiceCut') { try { if (BOX.voice && BOX.voice.stop) BOX.voice.stop(); } catch { /* no voice */ } }
     }
     for (const f of list) if (f.id > lastFx) {
       if (lastFx && G.onFx) { try { G.onFx(f); } catch (e) { console.error(e); } }

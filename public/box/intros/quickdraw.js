@@ -96,7 +96,7 @@
     tutorial: [
       { icon: '🔫', title: 'DRAW!', text: 'Wait for the signal, then tap first. Tap early and it’s a FALSE START: you lose the duel and 50 points.', phone: 'Tap the big pad the instant it says DRAW!', say: 'Howdy, partners! First up, the duel. Wait for the signal, then tap first. Tap too early, and that is a false start!' },
       { icon: '🏮', title: 'The Lantern', text: 'Tap ONLY when the lantern on the TV turns GREEN. Every decoy colour you tap is a false start.', phone: 'Eyes on the TV, thumb on the pad.' },
-      { icon: '🐔', title: 'Chicken Run', text: 'Count the 🐔 chickens crossing Main Street. Ducks, turkeys and rabbits don’t count!', phone: 'Tap +1 for every 🐔, fix it with −1, then 🔒 Lock in.' },
+      { icon: '🐔', title: 'Chicken Run', text: 'Count the 🐔 chickens crossing Main Street. Ducks, turkeys and rabbits don’t count!', phone: 'Tap +1 for every 🐔, fix it with −1, then 🔒 Lock in.', say: 'Chicken Run. Count the chickens crossing Main Street. Ducks, turkeys and rabbits don’t count! Tap plus one for every chicken, fix it with minus one, then lock in.' },
       { icon: '🐎', title: 'Stampede', text: 'Shake your phone to gallop your horse to the finish line. No motion sensor? Mash the pad instead.', phone: 'Tap 📳 Allow shaking if asked, then SHAKE!' },
       { icon: '🥁', title: 'Copycat', text: 'Listen to the drum on the TV, then tap the same rhythm back. Two rhythms, each one longer.', phone: 'Tap the pad in time when it says YOUR TURN.' },
       { icon: '🏆', title: 'Winning', text: 'Every challenge pays by rank: 500 for 1st, down to 100. Podium streaks add a bonus, and the Final Showdown pays double!' },
@@ -104,7 +104,7 @@
     theme: { accent: '#f2b632', accent2: '#b8402a', accent3: '#3ec1ff', ink: '#fff4d6', fade: '#2a160a', confetti: ['#f2b632', '#b8402a', '#fff4d6', '#2f6b8a', '#8bd346'] },
     host: {
       name: 'Sheriff Sundown',
-      voice: { like: /guy|davis|christopher|eric|andrew|brian|guy|male/i, accent: /en-US/i, pitch: 0.92, rate: 1.06 },
+      voice: { kokoro: 'am_michael', speed: 1.0, like: /guy|davis|christopher|eric|andrew|brian|guy|male/i, accent: /en-US/i, pitch: 0.92, rate: 1.0 },
       look,
     },
     lines: {

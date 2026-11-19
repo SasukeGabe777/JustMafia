@@ -50,8 +50,19 @@ Add `locked: { how: 'Finish a Party Mode to unlock it.' }` to the module, the ga
 Party Mode currently unlocks every locked game. The main menu's ⚙ menu can unlock or re-lock
 everything for testing.
 
+## Narrator voice
+
+Every static line the intro speaks (opening `say` lines, `roll`/`play`, each tutorial step, NPC
+`story` lines) is a pre-rendered Kokoro clip: run `npm run voices` after changing any of them.
+Give the host a `voice: { kokoro, speed }` that fits how they are drawn, at a natural speed
+(1.0, at most 1.1). Don't time anything to "fit" a line: the server stretches each shot, the roll
+call, the outro and every how-to step to the clip's length (`box/narration.js`), lines queue on the
+TV instead of cutting each other off (`public/box/voice.js`), and only the host's Skip cuts one.
+If a tutorial step has emoji or symbols in the middle of a sentence, give it a `say:` with the
+words to read out. In-game NPC lines: `BOX.voice.speak(text, host.voice, { onstart })`.
+
 ## Checks before shipping
 
-- `node tools/test-box-<key>.js` and `node tools/test-box-kit.js`
+- `node tools/test-box-<key>.js`, `node tools/test-box-kit.js` and `node tools/test-voice-timing.js`
 - `node tools/shot-titles.js <key>` (title screen plus Start → lobby, screenshots)
 - `node tools/e2e-box.js` (every game on real TV and phone pages, no page errors)
