@@ -65,9 +65,10 @@ test('a finished box game pays JustGold once, through the ledger, and reveals a 
   const before = ps.map((p) => wallets.coins(p.wallet)), shelf = ps.map((p) => wallets.data.profiles[p.wallet].stock.length);
   assert(room.start().ok); runOut(room, clock);
   ps.forEach((p, i) => {
+    // (the game's JustGold; finished challenges and level ups may add their own ledger lines: box/progress.js)
     const got = wallets.coins(p.wallet) - before[i];
-    assert(got > 0, 'paid'); assert.equal(p.jg.n, got, 'the phone is told how much');
-    const led = wallets.data.profiles[p.wallet].ledger[0]; assert.equal(led.delta, got); assert(/Most Likely/.test(led.reason));
+    assert(got > 0, 'paid'); assert(got >= p.jg.n, 'the phone is told how much');
+    const led = wallets.data.profiles[p.wallet].ledger.find((l) => /Most Likely/.test(l.reason)); assert.equal(led.delta, p.jg.n);
     assert(wallets.data.profiles[p.wallet].stock.length > shelf[i], 'something new on the shelf');
   });
   const again = ps.map((p) => wallets.coins(p.wallet));
@@ -90,7 +91,7 @@ test('Party Mode finale pays everyone once, the winner most', () => {
   room.partyMode = { defs: [], index: 0, phase: 'done', at: 0 };
   room.party = new Map(ps.map((p, i) => [p.id, { pts: 30 - i * 10, wins: 0, games: 1 }]));
   room.partyFinished(); room.partyFinished();
-  const got = ps.map((p) => wallets.coins(p.wallet));
+  const got = ps.map((p) => wallets.data.profiles[p.wallet].ledger.filter((l) => /Party Mode finale/.test(l.reason)).reduce((n, l) => n + l.delta, 0)); // (challenges may pay too)
   assert.deepEqual(got, [GOLD.partyGold(1), GOLD.partyGold(2), GOLD.partyGold(3)]);
 });
 

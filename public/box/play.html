@@ -53,6 +53,7 @@
   <section class="ph ph-join" id="join" hidden>
     <h1>Just<span style="color:var(--pink)">Game</span><span style="color:var(--yellow)">Box</span></h1>
     <div class="game" id="j-game"></div>
+    <div class="j-event" data-season-banner="compact" hidden></div> <!-- the seasonal event (public/progress-ui.js) -->
     <label for="j-code">Room code</label>
     <input id="j-code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
     <label for="j-name">Your name</label>
@@ -76,6 +77,8 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/sfx.js"></script>
   <script src="/haptics.js"></script>
+  <script src="/shared/seasons.js"></script> <!-- seasonal events -->
+  <script src="/progress-ui.js"></script> <!-- level, challenges, season pass (🏆 My profile → ⭐ Progress) -->
   <script src="/account-ui.js"></script> <!-- "Save your stuff": name + password, sign in on any phone -->
   <script src="/box/filter.js"></script>
   <script src="/box/box.js"></script>

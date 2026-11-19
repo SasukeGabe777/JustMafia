@@ -37,7 +37,7 @@ test('Server profiles persist rewards, verify identity and validate purchases', 
     const poor = store.buy(g.id, 'houseStyle:darkMansion'); assert.equal(poor.ok, false); assert.match(poor.error, /Not enough JustGold/);
     assert.equal(JSON.stringify(P()), before, 'failed purchase leaves gold and inventory unchanged');
     assert(store.award(g.id, 'g-1', { won: true, alive: true, team: 'town', metrics: { abilities: 1 } }));
-    const earned = P().coins; assert(earned > 0); assert.equal(P().goldEarned, earned); assert.equal(P().ledger[0].reason, 'Game reward');
+    const earned = P().coins; assert(earned > 0); assert.equal(P().goldEarned, earned); assert(P().ledger.some((l) => l.reason === 'Game reward')); // (challenges / level ups may add lines after it)
     assert(store.grant(g.id, 200)); assert.equal(P().coins, earned + 200);
     const price = require('../public/shared/cosmetics').CATALOG.find((i) => i.id === 'houseStyle:darkMansion').cost;
     assert(store.buy(g.id, 'houseStyle:darkMansion').ok);

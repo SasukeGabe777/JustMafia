@@ -298,6 +298,8 @@ class ProfileStore {
     for (const c of news.completed) lines.push({ key: 'challenge', label: `${c.period === 'daily' ? 'Daily' : c.period === 'weekly' ? 'Weekly' : 'Event'} challenge: ${c.label}`, amount: c.gold });
     for (const u of news.levelUps) lines.push({ key: 'level', label: `Reached level ${u.level}`, amount: u.gold });
     for (const t of news.tiers) if (t.gold) lines.push({ key: 'pass', label: `Season pass tier ${t.tier}${t.side === 'premium' ? ' (premium)' : ''}`, amount: t.gold });
+    const listed = news.completed.reduce((n, c) => n + c.gold, 0) + news.levelUps.reduce((n, u) => n + u.gold, 0) + news.tiers.reduce((n, t) => n + (t.gold || 0), 0);
+    if ((news.gold || 0) > listed) lines.push({ key: 'pass', label: 'Bonus JustGold (a reward you already owned)', amount: news.gold - listed });
     // Worlds: each finished game in a world counts toward that world's cosmetics.
     const worldItems = [], firstVisit = !!(result.theme && WORLD_REWARDS[result.theme] && !(p.worlds || {})[result.theme]);
     if (result.theme && WORLD_REWARDS[result.theme]) {

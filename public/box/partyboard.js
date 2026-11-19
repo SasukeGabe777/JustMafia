@@ -101,7 +101,7 @@
         <div class="pb-who">
           <span class="pb-crown" aria-hidden="true">👑</span>
           ${av(r)}
-          <span class="pb-name">${esc(r.name)}</span>
+          <span class="pb-name">${esc(r.name)}${r.level && window.JGProgress ? JGProgress.badge(r.level) : ''}</span>
           ${starsNew(r)}
         </div>
         <div class="pb-bar" style="height:${14 + 70 * (old / max)}%" data-h="${14 + 70 * (r.pts / max)}">
@@ -114,7 +114,7 @@
     }).join('');
     const restHtml = rest.map((r, j) => {
       const i = TOP + j + 1, climb = r.prevRank ? r.prevRank - i : 0;
-      return `<div class="pb-row" style="--pc:${esc(r.color || '#7b61ff')};--j:${j}"><span class="pb-rn">${i}</span><span class="pb-ra">${esc(r.avatar || '🙂')}</span><span class="pb-rname">${esc(r.name)}</span>${r.wins ? `<span class="pb-rs">⭐${r.wins > 1 ? r.wins : ''}</span>` : ''}<b>${r.pts}</b>${r.gain ? `<span class="pb-rg">+${r.gain}</span>` : ''}${climb ? `<span class="pb-arrow sm ${climb > 0 ? 'up' : 'down'}">${climb > 0 ? '▲' : '▼'}${Math.abs(climb)}</span>` : ''}</div>`;
+      return `<div class="pb-row" style="--pc:${esc(r.color || '#7b61ff')};--j:${j}"><span class="pb-rn">${i}</span><span class="pb-ra">${esc(r.avatar || '🙂')}</span><span class="pb-rname">${esc(r.name)}${r.level && window.JGProgress ? JGProgress.badge(r.level) : ''}</span>${r.wins ? `<span class="pb-rs">⭐${r.wins > 1 ? r.wins : ''}</span>` : ''}<b>${r.pts}</b>${r.gain ? `<span class="pb-rg">+${r.gain}</span>` : ''}${climb ? `<span class="pb-arrow sm ${climb > 0 ? 'up' : 'down'}">${climb > 0 ? '▲' : '▼'}${Math.abs(climb)}</span>` : ''}</div>`;
     }).join('');
     el.innerHTML = `<div class="pb pb-board ${rest.length ? 'many' : ''} ${k <= 3 ? 'few' : ''}">
       ${sky()}

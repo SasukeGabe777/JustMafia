@@ -37,7 +37,7 @@ module.exports = function install(Room) {
     const v = view.call(this, p);
     v.progression = this.profiles && p.profileId ? this.profiles.view(p.profileId) : null;
     // Career history is only shown in the lobby and at game over (My stats); keep in-game updates small.
-    if (v.progression && !['lobby', 'gameover'].includes(this.phase)) { const { career, ...rest } = v.progression; v.progression = rest; }
+    if (v.progression && !['lobby', 'gameover'].includes(this.phase)) { const { career, progress, ...rest } = v.progression; v.progression = rest; } // (and the progress view: Season & unlocks is lobby-only)
     if (this.phase === 'gameover') { v.progressionNotice = this.progressionNotice; v.reward = (this.rewardResults || {})[p.id] || null; }
     return v;
   };
