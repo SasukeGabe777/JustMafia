@@ -56,7 +56,7 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,JustPizza,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,JustPizza,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
   // Every small game sits on a category shelf (public/categories.js); there is no catch-all shelf.
   assert.equal(await hub.eval(`[...document.querySelectorAll('.shelf')].map((x) => x.dataset.shelf).join(',')`), 'cards,guess,create,friends,action');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
@@ -420,6 +420,36 @@ async function setup(browser, game, settings = {}) {
     await wait(1200); await tv.shot('box-pizza-reveal');
     await ph.until(`!!document.querySelector('.pz-score')`, 'my score', 8000); await ph.shot('box-pizza-result');
     ok('JustPizza: the customer shows the order on the TV, it hides, the phone builds (crust, sauce, cheese, toppings swiped onto slices) and serves, the reveal scores every pizza');
+  }
+
+  // ---------- JustUndercover: the phone peeks at its password, gives a clue, the TV shows it, the vote ----------
+  {
+    const { tv, ph } = await setup(browser, 'undercover', { mode: 'words', rounds: 1, clue: 40, talk: 30 });
+    await tv.click('#start'); await skipShow(tv);
+    await tv.until(`!!document.querySelector('.uc-folder')`, 'the case file on the TV', 20000);
+    await ph.until(`!!document.querySelector('#uc-peek')`, 'the agency ID card', 8000);
+    assert(!(await ph.eval(`!!document.querySelector('.uc-pw')`)), 'the password is hidden until you hold the card');
+    await ph.eval(`document.querySelector('#uc-peek').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 })); true`);
+    await ph.until(`!!document.querySelector('.uc-pw') && document.querySelector('.uc-pw').textContent.trim().length > 1`, 'the password while held');
+    const word = await ph.eval(`document.querySelector('.uc-pw').textContent.trim()`);
+    await ph.shot('box-undercover-peek');
+    await ph.eval(`document.querySelector('#uc-peek').dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 })); true`);
+    await ph.until(`!document.querySelector('.uc-pw')`, 'hidden again when let go');
+    // (the case file, the top bar and Director Grey's bubble: player names and clues aside)
+    assert(!(await tv.eval(`new RegExp('\\\\b' + ${JSON.stringify(word.toLowerCase())} + '\\\\b').test([...document.querySelectorAll('.uc-folder, .uc-top, .uc-bub, .uc-head')].map((e) => e.textContent).join(' ').toLowerCase())`)), 'the TV never shows the password');
+    await ph.until(`!!document.querySelector('#uc-clue')`, 'my turn to give a clue', 90000);
+    await ph.eval(`document.querySelector('#uc-clue').value = 'Zigzag'; document.querySelector('#uc-csend').click(); true`);
+    await tv.until(`[...document.querySelectorAll('.uc-clue')].some((e) => e.textContent === 'Zigzag')`, 'the clue on the case board', 8000);
+    await tv.shot('box-undercover-tv');
+    await ph.until(`!!document.querySelector('#uc-ready') || !!document.querySelector('[data-pick]')`, 'discussion', 90000);
+    if (await ph.eval(`!!document.querySelector('#uc-ready')`)) await ph.click('#uc-ready');
+    await ph.until(`!!document.querySelector('[data-pick]')`, 'the vote', 40000);
+    await ph.click('[data-pick]');
+    await ph.until(`!!document.querySelector('.uc-crow.sel')`, 'my vote is marked', 8000);
+    await ph.shot('box-undercover-vote');
+    await tv.until(`!!document.querySelector('.uc-verdict')`, 'the verdict on the TV', 40000);
+    await wait(2200); await tv.shot('box-undercover-verdict');
+    ok('JustUndercover: the phone peeks at its password (hidden otherwise, never on the TV), gives a clue the case board shows, votes, and the TV stamps the verdict');
   }
 
   // ---------- One code for the night: the title screen switches the live room ----------

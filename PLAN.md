@@ -1,5 +1,49 @@
 # Mafia Town: expansion plan
 
+## November 19, 2026 - JustUndercover (branch claude/undercover)
+
+A new box game (key `undercover`, Party shelf, 3–20 players, best 4–10): "a mole has slipped into
+the agency". Two requested ideas in one game with modes: Undercover-style word clues and a
+fake-artist shared drawing.
+
+- **Rules** (`box/games/undercover.js`): cases of brief → clues → talk → vote → verdict (→ the
+  caught mole's last guess) → reveal. Modes: Mixed (Sketch Line every other case, the word modes in
+  between), Word Clues (the mole has a similar word and nobody knows their side; one-word clues in
+  turns; vote someone out; repeat until the moles are out, match the agents left, or 2–3
+  interrogations run out), Sketch Line (the faker only knows the file; one line each on a shared
+  drawing, two laps; one vote; a caught faker who names the word still wins), Blank Agent (the mole
+  has no word; a caught blank agent who names it wins), Double Agents (2+ moles), Rival Words (no
+  mole: half have each word; pick your teammates), Speed Round (8 s clues), Picture Clue (everyone
+  doodles their clue at once). Settings: cases 1–6, clue time 15/25/40 s, talk 30–120 s, moles
+  auto/1/2/3 (auto by players, always fewer than the agents), word file (every file or one of 12).
+  Over 10 players the clues are given all at once; Sketch Line goes one lap. Scoring: +50 a vote on
+  a mole, +150 agents' win (+75 if already ejected), +75 per interrogation a mole survives, +300 a
+  moles' win, +150 bonus for a caught Word Clues mole naming the password; Rival Words +60 per
+  teammate found, −30 per rival picked, +20 for being found. The mole's guess is forgiving like
+  Tune Buzz (case, spaces, "the", plurals, small typos); clues that contain or nearly are your own
+  password are refused, as are repeats. `partyFit` picks cases/talk/clue time for 5–30 minutes.
+- **Words** (`box/games/undercover-words.js`): 12 original family-friendly files × 40–42 similar
+  pairs (484 pairs), each word with two one-word hints the bots use.
+- **Secrecy:** the TV state never carries a password or a role before the case reveal (only the
+  ejected player's MOLE/AGENT stamp, and a caught faker's guess when it decides the case); each phone
+  gets only its own card; the phone shows the password only while you hold the ID card.
+- **Screens:** Director Grey (intro + in-game NPC at his desk, eye patch, voiced with bm_daniel, 40
+  clips), the agency briefing room, TOP SECRET case file brief, cork case board with BOX.face photos
+  and clue tags, the shared Sketch Line paper drawn stroke by stroke in each agent's colour, the
+  dossier verdict with the MOLE/AGENT stamp, the reveal folders, the debrief podium (BOX.body).
+  Phones: hold-to-peek ID card, clue box, line/doodle pad, vote/teammate lists, the last guess.
+  Designed lobby (mission setup folder + visitor pass QR), title screen, tile art, spy-jazz score,
+  gear (Agent Fedora, Night Trilby, Mirror Shades, Perfect Disguise, Top Secret File, Spy Phone,
+  Pocket Lens, Agency Tie).
+- **Tests:** `tools/test-box-undercover.js` (16 tests: word lists, every mode with bots at 3/6/12,
+  roles and impostor counts, secrecy of TV and phones through whole games, clue/stroke/vote/pick
+  validation, forgiving guesses, scoring per mode, disconnects/reconnects, late joiners and kicks,
+  host Next, partyFit) in `npm test`; an undercover block in `tools/e2e-box.js` (peek, clue on the
+  board, vote, verdict). Screens checked by screenshots of Word Clues, Sketch Line, Picture Clue,
+  Rival Words and Blank Agent (TV + phone).
+- Limits: bots' Sketch Line strokes are random squiggles, and their clues come from the hint lists
+  (two per word, then generic file words), so bot-only games are easier on the agents than people.
+
 ## November 19, 2026 - One character in every game (branch claude/characters)
 
 Your JustGameBox character replaces the emoji in the box games, and every game has things your
