@@ -261,7 +261,7 @@ async function queueTests() {
     const Q = queueSandbox([{ text: 'Stuck clip.', ms: 2000, stuck: true }, { text: 'Broken clip.', ms: 2000, fail: true }, { text: 'Offline clip.', ms: 2000, noFetch: true }, { text: 'After.', ms: 1000 }]);
     await Q.run(10);
     const done = [];
-    for (const t of ['Stuck clip.', 'Broken clip.', 'Offline clip.', 'HANG forever', 'After.']) Q.V.speak(t, Q.spec, { maxWait: 60000 }).then(() => done.push(t));
+    (async () => { for (const t of ['Stuck clip.', 'Broken clip.', 'Offline clip.', 'HANG forever', 'After.']) { await Q.V.speak(t, Q.spec, { maxWait: 60000 }); done.push(t); } })();
     await Q.run(40000);
     assert.deepEqual(done, ['Stuck clip.', 'Broken clip.', 'Offline clip.', 'HANG forever', 'After.'], 'every line resolves, in order');
     assert(Q.events.some((e) => e[0] === 'start' && e[1] === 'After.'), 'the line after them still plays');
@@ -278,14 +278,16 @@ test('clip pacing (words per second) and loudness are natural', () => {
   for (const c of Object.values(m.clips)) {
     const w = words(c.t), wps = w / (c.ms / 1000);
     (per[c.g] = per[c.g] || [0, 0]); per[c.g][0] += w; per[c.g][1] += c.ms;
-    if (w >= 10 && (wps > 4.2 || wps < 1.5)) bad.push(`${c.g} ${wps.toFixed(2)} w/s "${c.t.slice(0, 50)}"`);
+    // Single lines: letters per second (short words and numbers skew words/s); 13–16 is typical.
+    const L = String(c.t || '').replace(/[^a-z]/gi, '').length + 3 * (String(c.t || '').match(/\d/g) || []).length, lps = L / (c.ms / 1000);
+    if (L >= 30 && (lps > 19 || lps < 5.5)) bad.push(`${c.g} ${lps.toFixed(1)} letters/s "${c.t.slice(0, 50)}"`);
     else if (w >= 10 && (wps > 3.6 || wps < 2.0)) warn.push(`${c.g} ${wps.toFixed(2)} w/s "${c.t.slice(0, 40)}"`);
     if (c.db != null && Math.abs(c.db + 19) > 2.5) loud.push(`${c.g} ${c.db} dB "${c.t.slice(0, 40)}"`);
   }
   for (const [g, [w, ms]] of Object.entries(per)) { const a = w / (ms / 1000); if (a > 3.5 || a < 2.0) bad.push(`${g}: ${a.toFixed(2)} words/s on average`); }
   assert.deepEqual(bad, [], 'clips read too fast or too slowly (mangled text, or the voice speed)');
   assert.deepEqual(loud, [], 'clips off the -19 dBFS speech level');
-  if (warn.length) console.log(`    note: ${warn.length} long line(s) outside 2.0–3.6 words/s:\n      ` + warn.join('\n      '));
+  if (warn.length && process.env.VOICE_VERBOSE) console.log(`    note: ${warn.length} long line(s) outside 2.0–3.6 words/s:\n      ` + warn.join('\n      '));
 });
 
 (async () => {

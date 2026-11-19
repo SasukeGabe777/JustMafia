@@ -90,7 +90,21 @@
       name: 'Sterling Sparks',
       voice: { kokoro: 'am_puck', speed: 1.0, like: /guy|davis|christopher|eric|andrew|brian|google us english|male/i, accent: /en-US/i, pitch: 1.15, rate: 1.05 },
       look: { skin: '#f1c19a', skinShade: '#d99e78', suit: '#b0249a', suit2: '#6d0f66', lapel: '#ffd23f', shirt: '#fffdf7', tie: 'bow', tieColor: '#ffd23f', hair: 'pomp', hairColor: '#2a1838', hairShade: '#6a5590', streak: '#e6e2f4', brow: '#7d7a90', prop: 'mic', grin: true, sparkle: '#fff2a8' },
-    },
+    },
+    // Sterling's static in-game lines (public/box/games/price.js), so tools/voice-gen.js pre-voices them.
+    story: [
+      "Here comes our next item!",
+      "Feast your eyes on this beauty!",
+      "What do you think this one costs?",
+      "Ooh, look at this, folks! Lock in your guesses!",
+      "Higher or lower? Make it snappy!",
+      "Two items enter. Which one costs more?",
+      "Final round! A shopping spree, and the points are doubled!",
+      "And the actual retail price is…",
+      "Look at those lightning-fast fingers!",
+      "Ooh! Somebody went over! Bust!",
+      "Too high, too high! That’s a bust!",
+    ],
     lines: {
       welcome: 'Good evening, and welcome to Price Panic! I\'m your host, Sterling Sparks!',
       joke: 'Prices are so high tonight, my suit had to take out a loan!',
