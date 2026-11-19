@@ -90,6 +90,7 @@
   function open(t) {
     if (t.classList.contains('locked')) {
       sfx('shrug'); t.classList.remove('shake'); void t.offsetWidth; t.classList.add('shake');
+      if (window.HUB_ONBOARD) window.HUB_ONBOARD.locked(t); // what unlocks it, with a button to go play that
       return;
     }
     if (t.classList.contains('live')) {
@@ -209,10 +210,18 @@
     return best;
   }
 
-  tiles.forEach((t, i) => {
-    t.addEventListener('mouseenter', () => { if (sel !== i) select(i, true, false); });
-    t.addEventListener('click', (e) => { e.preventDefault(); select(i, false, false); open(t); });
-  });
+  // Every tile (and the "New here?" cards, public/hub-onboard.js) takes the mouse and the remote.
+  function bindTile(t) {
+    if (t.dataset.nav) return; t.dataset.nav = '1';
+    t.addEventListener('mouseenter', () => { const i = tiles.indexOf(t); if (i >= 0 && sel !== i) select(i, true, false); });
+    t.addEventListener('click', (e) => { e.preventDefault(); const i = tiles.indexOf(t); if (i >= 0) select(i, false, false); open(t); });
+  }
+  tiles.forEach(bindTile);
+  window.HUB_NAV = {
+    refresh() { const cur = tiles[sel]; tiles = [...document.querySelectorAll('.nh-card, .tile')]; tiles.forEach(bindTile); sel = Math.max(0, tiles.indexOf(cur)); },
+    select: (t) => { const i = tiles.indexOf(t); if (i >= 0) select(i, false); },
+    open: (t) => open(t),
+  };
   document.addEventListener('keydown', (e) => {
     const dir = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] }[e.key];
     if (dir) { e.preventDefault(); const n = nearest(dir[0], dir[1]); if (n >= 0) select(n); }

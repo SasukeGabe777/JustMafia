@@ -38,6 +38,13 @@
   const planParam = () => { const o = {}; for (const kv of (params.get('plan') || '').split(',')) { const [k, m] = kv.split(':'); if (k && Number(m) > 0) o[k] = Number(m); } return o; };
   const partyParam = params.get('party') ? { games: params.get('party').split(',').filter(Boolean).slice(0, 20), minutes: Number(params.get('minutes')) || 60, flow: params.get('flow') === 'lobby' ? 'lobby' : 'auto',
     intros: params.get('intros') || 'play', each: params.get('each') || 'auto', plan: planParam(), players: Number(params.get('players')) || 0 } : null;
+  // Practice rounds: this TV's finished games (box.done). A TV that has never finished a game is new
+  // here, so its rooms start with the practice round on (?practice=0 / 1 overrides it).
+  const DONE_KEY = 'box.done';
+  const doneList = () => { try { const v = JSON.parse(localStorage.getItem(DONE_KEY) || '[]'); return Array.isArray(v) ? v.filter((k) => typeof k === 'string') : []; } catch { return []; } };
+  const markDone = (key) => { const d = doneList(); if (key && !d.includes(key)) { d.push(key); try { localStorage.setItem(DONE_KEY, JSON.stringify(d.slice(-80))); } catch { /* private mode */ } } };
+  const onboard = () => { const q = params.get('practice'), d = doneList(); return { newbie: q === '1' || q === 'on' || (q !== '0' && q !== 'off' && !d.length), seen: d }; };
+  if (partyParam) { const q = params.get('practice'); partyParam.practice = ['on', 'off', 'new'].includes(q) ? q : 'off'; partyParam.seen = doneList(); }
   let partyUsed = false;
   const myUnlocks = () => (window.UNLOCKS ? window.UNLOCKS.all() : []);
   // Streamer options (⚙ host menu, remembered on this TV): hide the code, filter player text,
@@ -66,7 +73,7 @@
   function create() {
     onTitle = false; showBar();
     const party = partyParam && !partyUsed ? partyParam : null; partyUsed = true;
-    socket.emit('host:create', { game: gameKey, party, unlocks: myUnlocks() }, (r) => {
+    socket.emit('host:create', { game: gameKey, party, unlocks: myUnlocks(), onboard: onboard() }, (r) => {
       if (r && r.locked) return lockedScreen();
       if (!r || !r.ok) { $('#tv-main').innerHTML = `<p class="err">${esc((r && r.error) || 'Could not create a room.')}</p>`; return; }
       save({ code: r.code, hostKey: r.hostKey, game: gameKey });
@@ -120,6 +127,7 @@
     if (s.away) return goAway(s);
     if (s.game && s.game !== gameKey) return switchTo(s);
     state = s; stateAt = Date.now(); render(); playFx(s.fx || []); music(); platform();
+    if (s.phase === 'game' && s.state && s.state.phase === 'over' && !s.practice) markDone(s.game); // a real game finished on this TV
   });
   socket.on('aud', (a) => { if (!state || !a) return; state.audience = { count: a.audience, poll: a.poll }; lastPoll = a.lastPoll || null; audienceUi(); });
   // The host picked another game: same room, same players. Small games swap in place (the
@@ -262,7 +270,7 @@
   const celebQ = []; let celebNext = 0, overSince = 0;
   function celebQuiet() {
     if (!state) return false;
-    if (state.phase === 'show') return true;
+    if (state.phase === 'show' || (state.practice && state.practice.phase === 'over')) return true;
     const pm = state.partyMode; if (pm && (pm.phase === 'ending' || (pm.phase === 'board' && pm.preview))) return true; // nor over an intro in the break
     const over = state.state && state.state.phase === 'over';
     if (over && !overSince) overSince = Date.now(); if (!over) overSince = 0;
@@ -394,7 +402,29 @@
     document.body.classList.toggle('st-hide', !!streamer.hide || waiting);
     document.body.classList.toggle('st-waiting', waiting);
     for (const el of codeEls()) if (!el.classList.contains('st-code')) { el.classList.add('st-code'); el.addEventListener('click', peek); }
-    audienceUi(); recapUi();
+    audienceUi(); recapUi(); practiceUi();
+  }
+  // ---- Practice round: a PRACTICE badge while it runs, then "Practice over, now for real!" ----
+  function practiceUi() {
+    const P = state && state.practice, onGame = P && state.phase === 'game';
+    let b = $('#pr-badge');
+    const inShow = P && state.phase === 'show' && state.show && state.show.step !== 'howto';
+    if ((onGame && P.phase === 'playing') || inShow) {
+      if (!b) { b = document.createElement('div'); b.id = 'pr-badge'; b.className = 'pr-badge'; b.innerHTML = '<span class="pr-b-tag">🎓 PRACTICE</span><span class="pr-b-txt"></span><button class="pr-b-skip" data-pr="skip">Skip practice ⏭</button>'; document.body.appendChild(b); b.querySelector('[data-pr]').onclick = () => host('practiceSkip'); }
+      const txt = inShow ? 'A practice round comes first: a quick warm-up that doesn’t count.' : 'A warm-up round: it doesn’t count. Look at your phone for tips!';
+      const t = b.querySelector('.pr-b-txt'); if (t.textContent !== txt) t.textContent = txt;
+      b.classList.toggle('in-show', !!inShow);
+      b.querySelector('.pr-b-skip').hidden = !inShow; // in the game the host row has "Skip practice"
+    } else if (b) b.remove();
+    let o = $('#pr-over');
+    if (onGame && P.phase === 'over') {
+      if (!o) {
+        o = document.createElement('div'); o.id = 'pr-over'; o.className = 'pr-over';
+        o.innerHTML = `<div class="pr-card"><div class="pr-burst"></div><div class="pr-cast">${(state.players || []).slice(0, 6).map((p, i) => `<span style="--i:${i}">${BOX.body ? BOX.body(p, 120, { mood: 'grin' }) : esc(p.avatar || '')}</span>`).join('')}</div><small>${P.why === 'time' ? 'TIME’S UP ON THE WARM-UP' : 'PRACTICE OVER'}</small><h2>Now for real!</h2><p>Same game, fresh scores. This one counts.</p><div class="pr-bar"><i style="animation-duration:${Math.max(500, P.endsIn || 6000)}ms"></i></div><button class="btn big" data-pr="go">Start now ⏩</button></div>`;
+        document.body.appendChild(o); o.querySelector('[data-pr]').onclick = () => host('practiceSkip');
+        BOX.sfx('win');
+      }
+    } else if (o) { o.classList.add('out'); o.id = ''; setTimeout(() => o.remove(), 400); }
   }
   function peek(e) {
     if (!document.body.classList.contains('st-hide') || document.body.classList.contains('st-waiting')) return;
@@ -497,7 +527,8 @@
     if (STAND) { $('#host-row').hidden = true; return; }
     const over = state.state && state.state.phase === 'over';
     const inParty = partyRunning();
-    const hr = `${over && inParty ? `<button class="btn" data-h="partyBoardNow">⏩ Show standings now</button> <button class="btn ghost" data-h="partyPause">${state.partyMode.paused ? '▶ Resume' : '⏸ Wait'}</button>` : over ? '<button class="btn" data-h="again">▶ Play again</button> <button class="btn cyan" data-h="pick">🎮 Another game</button>' : '<button class="btn ghost small" data-h="next">Skip ahead ▶</button>'} <button class="btn ghost small" data-h="lobby">Back to lobby</button> <button class="btn ghost small" data-h="bots">+ 5 bots</button>${over ? ' <button class="btn ghost small" data-h="recap">🎬 Night recap</button>' + partyHtml() : ''}`;
+    const PR = state.practice;
+    const hr = PR ? `<button class="btn ${PR.phase === 'over' ? '' : 'ghost small'}" data-h="practiceSkip">${PR.phase === 'over' ? 'Start for real now ⏩' : 'Skip practice ⏭'}</button> <button class="btn ghost small" data-h="lobby">Back to lobby</button>` : `${over && inParty ? `<button class="btn" data-h="partyBoardNow">⏩ Show standings now</button> <button class="btn ghost" data-h="partyPause">${state.partyMode.paused ? '▶ Resume' : '⏸ Wait'}</button>` : over ? '<button class="btn" data-h="again">▶ Play again</button> <button class="btn cyan" data-h="pick">🎮 Another game</button>' : '<button class="btn ghost small" data-h="next">Skip ahead ▶</button>'} <button class="btn ghost small" data-h="lobby">Back to lobby</button> <button class="btn ghost small" data-h="bots">+ 5 bots</button>${over ? ' <button class="btn ghost small" data-h="recap">🎬 Night recap</button>' + partyHtml() : ''}`;
     if ($('#host-row').dataset.html === hr) return;
     $('#host-row').innerHTML = hr; $('#host-row').dataset.html = hr;
     for (const b of document.querySelectorAll('#host-row [data-h]')) b.onclick = () => { const h = b.dataset.h; if (h === 'pick') return tvPicker(); if (h === 'recap') return startRecap(); if (h === 'lobby' && !over && !confirm('End this game and go back to the lobby?')) return; host(h === 'bots' ? 'addBots' : h, { count: 5 }); };
