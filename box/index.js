@@ -90,12 +90,15 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
   const sectionOf = (field) => Object.keys(BOX_FIELDS).find((k) => BOX_FIELDS[k].includes(field)) || null;
   const STOCKABLE_IDS = new Set((shared.cos.STOCKABLE || []).map((x) => x.id));
   const { earnTable } = require('./gold');
+  const SS = require('../public/shared/shop-season'); // event items, daily deals, theme sets
   function busyNow(accountId, w) {
     for (const r of rooms.values()) if ((r.phase === 'game' || r.phase === 'show') && r.game && r.game.phase !== 'over' && [...r.players.values()].some((p) => p.profileId === accountId && !p.bot)) return true;
     try { return !!walletBusy(w); } catch (e) { return false; }
   }
-  function lockOf(p, i, owned, stock) {
+  function lockOf(p, i, owned, stock, now) {
     if (owned.has(i.id) || i.free) return null;
+    const limited = SS.limitedLock(i.id, now); if (limited) return limited;
+    if (SS.isDeal(i.id, now) || SS.SET_OF[i.id]) stock = new Set([...stock, i.id]); // deals and set pieces are on sale for everyone
     if (i.pass) return 'Season pass reward (in JustMafia)';
     if (i.world) return 'A JustMafia world reward';
     if (i.achievement && !(p.achievements || []).includes(i.achievement)) return ((shared.cos.ACHIEVEMENTS || {})[i.achievement] || {}).label || 'Earn its achievement first';
@@ -104,13 +107,17 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
     return null;
   }
   function shopState(prof, w) {
-    const p = wallets.data.profiles[w], owned = new Set(p.owned || []), stock = new Set(p.stock || []);
+    const p = wallets.data.profiles[w], owned = new Set(p.owned || []), stock = new Set(p.stock || []), now = wallets.now();
+    // Seasons, deals and sets: `price` is what it costs today (a deal may be cheaper than `cost`).
+    const sale = (id) => { const pr = SS.priceOf(id, now) || {}; const lim = SS.limitedInfo(id, now); return { price: pr.cost, pct: pr.pct || 0, limited: lim, set: SS.SET_OF[id] || null }; };
     const catalog = (shared.cos.CATALOG || []).filter((i) => sectionOf(i.field)).map((i) => ({
       id: i.id, field: i.field, value: i.value, name: i.name, cost: i.cost, free: !!i.free, section: sectionOf(i.field), category: i.category, description: i.description || '',
-      owned: owned.has(i.id) || !!i.free, lock: lockOf(p, i, owned, stock),
+      owned: owned.has(i.id) || !!i.free, lock: lockOf(p, i, owned, stock, now), ...sale(i.id),
     }));
-    const gearCatalog = (shared.gear.GEAR || []).map((g) => ({ ...g, owned: owned.has(g.id), equipped: !!(p.gear && p.gear[g.game] && p.gear[g.game][g.slot] === g.id) }));
-    return { name: prof.name, claimed: !!prof.claimed, gold: p.coins, earned: p.goldEarned, spent: p.goldSpent, look: wallets.validateAvatar(w, p.avatar || {}), lookSaved: !!p.lookSaved, home: p.home || null, owned: [...owned], gear: p.gear || {}, catalog, gearCatalog, ledger: (p.ledger || []).slice(0, 20), earn: earnTable(), busy: busyNow(prof.id, w) };
+    const gearCatalog = (shared.gear.GEAR || []).map((g) => ({ ...g, owned: owned.has(g.id), equipped: !!(p.gear && p.gear[g.game] && p.gear[g.game][g.slot] === g.id), ...sale(g.id) }));
+    const look = wallets.validateAvatar(w, p.avatar || {});
+    return { name: prof.name, claimed: !!prof.claimed, gold: p.coins, earned: p.goldEarned, spent: p.goldSpent, look, lookSaved: !!p.lookSaved, home: p.home || null, owned: [...owned], gear: p.gear || {}, catalog, gearCatalog, ledger: (p.ledger || []).slice(0, 20), earn: earnTable(), busy: busyNow(prof.id, w),
+      ...SS.shopExtras(now, owned, look) };
   }
   // A room player wears their account's look and gear.
   function dressUp(p) {
@@ -270,6 +277,9 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
     socket.on('shop:state', (msg, cb) => { const { prof, w } = walletOfAuth(msg.auth); if (!w) return reply(cb, { ok: false, error: prof ? 'No wallet yet.' : 'Make your character first.', noWallet: !!prof }); reply(cb, { ok: true, ...shopState(prof, w) }); });
     socket.on('shop:buy', (msg, cb) => shopDo(msg, cb, (w) => (GEAR_IDS().has(msg.itemId) ? wallets.buyGear(w, msg.itemId) : SHOP_FORBIDDEN(msg.itemId) || wallets.buy(w, msg.itemId))));
     socket.on('shop:equip', (msg, cb) => shopDo(msg, cb, (w) => (GEAR_IDS().has(msg.itemId) ? wallets.equipGear(w, msg.itemId, msg.on !== false) : wallets.equip(w, msg.itemId, msg.on !== false))));
+    // Theme sets: buy the missing pieces as one bundle (and put the set on), or wear an owned set.
+    socket.on('shop:bundle', (msg, cb) => shopDo({ ...msg, itemId: undefined }, cb, (w) => wallets.buySet(w, String((msg && msg.setId) || ''), !!(msg && msg.wear))));
+    socket.on('shop:wearSet', (msg, cb) => shopDo({ ...msg, itemId: undefined }, cb, (w) => wallets.wearSet(w, String((msg && msg.setId) || ''))));
     socket.on('shop:look', (msg, cb) => shopDo(msg, cb, (w) => { wallets.select(w, msg.look && typeof msg.look === 'object' && !Array.isArray(msg.look) ? msg.look : {}); const p = wallets.data.profiles[w]; p.lookSaved = true; wallets.save(); return { ok: true }; }));
     function shopDo(msg, cb, fn) {
       const { prof, w } = walletOfAuth(msg.auth); if (!w) return reply(cb, { ok: false, error: 'Make your character first.' });

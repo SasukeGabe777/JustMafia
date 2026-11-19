@@ -88,6 +88,90 @@
     'effect:goldRain': 'High Roller tier 4: gold coins rain around you wherever you go. Own the High Roller Top Hat first.',
     'deathAnim:ascend': 'Your spirit rises from your body, glowing, and fades into the light.',
   };
+  // ----- Shop seasons & theme sets (public/shared/shop-season.js) -----
+  // Event items (sold only while their event runs) and theme-set pieces: base prices and words.
+  // They are `special`: never on the play-to-reveal shelf (see STOCKABLE below).
+  Object.assign(PRICES, {
+    'hat:pumpkinCap': 60, 'hat:strawHat': 70, 'outfit:cosySweater': 90, 'outfit:flannel': 80, 'accessory:autumnScarf': 50, 'accessory:ciderMug': 45, 'effect:fallingLeaves': 110, 'nameplate:harvestMoon': 60,
+    'hat:snowBeanie': 60, 'hat:reindeerBand': 80, 'outfit:uglySweater': 90, 'accessory:candyCane': 45, 'accessory:earmuffs': 50, 'shoeStyle:iceSkates': 80, 'effect:aurora': 120, 'nameplate:frosted': 60,
+    'hat:heartBoppers': 55, 'outfit:cupidCardigan': 85, 'accessory:loveLetter': 40, 'accessory:heartShades': 55, 'accessory:cupidWings': 100, 'effect:rosePetals': 100, 'nameplate:sweetheart': 60,
+    'hat:bunnyEars': 55, 'hat:gardenHat': 70, 'outfit:gardener': 85, 'accessory:bouquet': 45, 'accessory:butterflyWings': 100, 'shoeStyle:wellies': 60, 'effect:butterflies': 110, 'nameplate:blossom': 60,
+    'hat:bucketHat': 55, 'outfit:hawaiian': 80, 'outfit:lifeguard': 75, 'accessory:snorkel': 60, 'accessory:surfboard': 110, 'accessory:icePop': 40, 'shoeStyle:flipFlops': 40, 'effect:bubbles': 100, 'nameplate:surf': 60,
+    'hat:witchHat': 75, 'hat:devilHorns': 55, 'outfit:skeleton': 90, 'outfit:mummy': 90, 'accessory:treatBucket': 45, 'effect:ghostly': 120, 'effect:batSwarm': 110, 'nameplate:haunted': 60,
+    'accessory:lasso': 50, 'shoeStyle:spurBoots': 70, 'hat:trilby': 70, 'outfit:secretAgent': 100, 'accessory:nightShades': 70, 'outfit:chefCoat': 80, 'accessory:woodenSpoon': 35,
+    'hat:deerstalker': 70, 'outfit:inverness': 100, 'accessory:magnifier': 50, 'outfit:dealerVest': 90, 'accessory:cardFan': 50, 'effect:luckyDice': 100, 'outfit:survivor': 90,
+    'hat:ufoHat': 70, 'accessory:rayGun': 60, 'effect:orbit': 110, 'outfit:photoVest': 85, 'accessory:camera': 60,
+  });
+  Object.assign(DESCRIPTIONS, {
+    'hat:pumpkinCap': 'A chunky orange knit cap with a curly green stem. Harvest Fest only.',
+    'hat:strawHat': 'A wide straw hat with an autumn-leaf band, for long afternoons at the cider press.',
+    'outfit:cosySweater': 'A thick cable-knit sweater with a maple leaf on the front. Smells like cinnamon.',
+    'outfit:flannel': 'Red check flannel, sleeves rolled up. Ready to carve pumpkins.',
+    'accessory:autumnScarf': 'A long striped scarf in rust, mustard and cream, wrapped twice.',
+    'accessory:ciderMug': 'A steaming mug of hot apple cider. Careful, it’s hot.',
+    'effect:fallingLeaves': 'Red and golden leaves drift down around you.',
+    'nameplate:harvestMoon': 'Your name under a big orange harvest moon.',
+    'hat:snowBeanie': 'A white-and-blue beanie with a snowflake and a giant pom-pom. Frostival only.',
+    'hat:reindeerBand': 'A headband with fuzzy antlers, holly and two jingling bells.',
+    'outfit:uglySweater': 'Zigzags, snowflakes and a reindeer. Proudly, gloriously ugly.',
+    'accessory:candyCane': 'A giant peppermint candy cane. Do not lick it in front of the others.',
+    'accessory:earmuffs': 'Big fluffy earmuffs. You can still hear the votes. Sadly.',
+    'shoeStyle:iceSkates': 'White skates with silver blades. Glide into every lobby.',
+    'effect:aurora': 'Green and violet northern lights ripple behind you.',
+    'nameplate:frosted': 'An icy nameplate with frost creeping in at the corners.',
+    'hat:heartBoppers': 'A headband with two springy hearts that bob when you move. Sweetheart Week only.',
+    'outfit:cupidCardigan': 'A soft pink cardigan with heart buttons and a heart on the pocket.',
+    'accessory:loveLetter': 'A pink envelope sealed with a heart. Who is it for?',
+    'accessory:heartShades': 'Heart-shaped sunglasses with red lenses. Love is blind.',
+    'accessory:cupidWings': 'Little pink-tipped wings. You still can’t fly, but you look like you could.',
+    'effect:rosePetals': 'Red rose petals swirl down around you.',
+    'nameplate:sweetheart': 'Your name in pink, with a little heart.',
+    'hat:bunnyEars': 'Soft white bunny ears with pink insides. Spring Bloom only.',
+    'hat:gardenHat': 'A wide sun hat with a band of fresh flowers.',
+    'outfit:gardener': 'Pastel garden overalls with a trowel in the pocket and a flower on the bib.',
+    'accessory:bouquet': 'A bunch of tulips and daisies, freshly picked.',
+    'accessory:butterflyWings': 'Bright orange-and-blue butterfly wings that flutter as you walk.',
+    'shoeStyle:wellies': 'Yellow rain wellies for jumping in puddles.',
+    'effect:butterflies': 'Little butterflies flutter in loops around you.',
+    'nameplate:blossom': 'A nameplate covered in cherry blossom.',
+    'hat:bucketHat': 'A floppy bucket hat with a palm-leaf print. Summer Splash only.',
+    'outfit:hawaiian': 'A loud Hawaiian shirt with hibiscus flowers. Very loud.',
+    'outfit:lifeguard': 'A red lifeguard tee with a white cross. Everyone feels safer.',
+    'accessory:snorkel': 'A diving mask with a snorkel. For deep, deep strategies.',
+    'accessory:surfboard': 'A striped surfboard on your back. Hang ten.',
+    'accessory:icePop': 'A dripping rainbow ice lolly. Eat it quick.',
+    'shoeStyle:flipFlops': 'Bright flip-flops. Flip. Flop.',
+    'effect:bubbles': 'Shiny soap bubbles float up around you.',
+    'nameplate:surf': 'An ocean-wave nameplate with a little sun.',
+    'hat:witchHat': 'A tall crooked witch hat with a purple band and a buckle. Spooky Season only.',
+    'hat:devilHorns': 'Two little red horns. Mischief guaranteed.',
+    'outfit:skeleton': 'A black suit with glow-in-the-dark bones. Spine-chilling.',
+    'outfit:mummy': 'Wrapped from head to toe (well, neck to toe) in old bandages.',
+    'accessory:treatBucket': 'A jack-o’-lantern bucket full of sweets.',
+    'effect:ghostly': 'Two friendly little ghosts float around you.',
+    'effect:batSwarm': 'A swarm of tiny bats circles over your head.',
+    'nameplate:haunted': 'A dark purple nameplate with drips of green goo.',
+    'accessory:lasso': 'A coiled rope, ready to twirl. Part of the Wild West set.',
+    'shoeStyle:spurBoots': 'Brown boots with silver spurs that jingle. Part of the Wild West set.',
+    'hat:trilby': 'A short-brimmed black trilby with a thin band. Part of the Secret Agent set.',
+    'outfit:secretAgent': 'A black suit, white shirt and a skinny tie. Part of the Secret Agent set.',
+    'accessory:nightShades': 'Shades that glow green in the dark. Part of the Secret Agent set.',
+    'outfit:chefCoat': 'Double-breasted chef’s whites with a red neckerchief. Part of the Head Chef set.',
+    'accessory:woodenSpoon': 'A trusty wooden spoon for tasting (and pointing). Part of the Head Chef set.',
+    'hat:deerstalker': 'A tweed cap with flaps front and back. Part of the Great Detective set.',
+    'outfit:inverness': 'A check coat with a short cape over the shoulders. Part of the Great Detective set.',
+    'accessory:magnifier': 'A brass magnifying glass. Part of the Great Detective set.',
+    'outfit:dealerVest': 'White shirt, red waistcoat and a black bow tie. Part of the High Stakes set.',
+    'accessory:cardFan': 'Four aces, fanned out. Part of the High Stakes set.',
+    'effect:luckyDice': 'A pair of dice tumble around you, always landing on sixes. Part of the High Stakes set.',
+    'outfit:survivor': 'A khaki vest full of pockets, straps and a torch. Part of the Last Survivor set.',
+    'hat:ufoHat': 'A tiny flying saucer with blinking lights. Part of the Space Cadet set.',
+    'accessory:rayGun': 'A chunky toy ray gun with a glowing tip. Part of the Space Cadet set.',
+    'effect:orbit': 'Little planets orbit around you. Part of the Space Cadet set.',
+    'outfit:photoVest': 'A sand-coloured vest with a pocket for every lens. Part of the Paparazzi set.',
+    'accessory:camera': 'A big camera, held up and ready to snap. Part of the Paparazzi set.',
+  });
+  const SPECIAL_IDS = new Set(Object.entries(FIELDS).flatMap(([f, [list]]) => ((O.SPECIAL || {})[list] || []).map((v) => f + ':' + v)));
   const KIND = { ghostSkin: 'ghost look', hair: 'hairstyle', outfit: 'outfit', hat: 'hat', shoeStyle: 'pair of shoes', accessory: 'accessory', nameplate: 'nameplate', houseDecor: 'house decoration', effect: 'cosmetic effect', houseStyle: 'house design', deathAnim: 'farewell animation' };
   const ACHIEVEMENTS = { mafiaWins5: { label: 'Win five Mafia games', stat: 'mafiaWins', count: 5 }, saves10: { label: 'Save ten players', stat: 'saves', count: 10 }, jesterWin: { label: 'Win as Jester', stat: 'jesterWins', count: 1 }, investigations5: { label: 'Identify five Mafia', stat: 'correctInvestigations', count: 5 }, survive10: { label: 'Survive ten games', stat: 'survived', count: 10 }, executionerSave: { label: 'Save someone as the Executioner', stat: 'executionerSaves', count: 1 },
     // The afterlife and betting (counted as they happen, in any game).
@@ -156,7 +240,7 @@
     const id = field + ':' + value, gated = GATES[id] || null, passTier = PASS[id] || null, earned = WORLD_ITEM[id] || null;
     const cost = index < free || gated || passTier || earned ? 0 : PRICES[id] != null ? PRICES[id] : field === 'outfit' ? 70 + (index - free) * 8 : 25 + (index - free) * 10;
     const ladder = LADDER[id] || null, category = (CATEGORIES.find((c) => c.fields.includes(field)) || {}).id || 'flair';
-    return { id, field, value, name: O.label(value), cost, achievement: gated, pass: passTier ? SEASON.id : null, passTier, free: index < free, category, requires: ladder && ladder.requires || null, ladderTier: ladder ? ladder.tier : null,
+    return { id, field, value, name: O.label(value), cost, special: SPECIAL_IDS.has(id), achievement: gated, pass: passTier ? SEASON.id : null, passTier, free: index < free, category, requires: ladder && ladder.requires || null, ladderTier: ladder ? ladder.tier : null,
       world: earned ? earned.world : null, worldGames: earned ? earned.games : null,
       description: earned ? `Earned by finishing ${earned.games === 1 ? 'a game' : earned.games + ' games'} in the ${WORLD_NAMES[earned.world]} world.` : DESCRIPTIONS[id] || `A ${O.label(value).toLowerCase()} ${KIND[field] || 'item'}${index < free ? ' (free for everyone).' : ' for your ' + (slotOf(field).target === 'home' ? 'house.' : 'townsfolk.')}` };
   }));
@@ -166,7 +250,7 @@
   // a small starter stock; finishing games, winning and visiting new worlds put more on the
   // shelves (cheapest first, a mix of kinds). Hidden items cannot be bought.
   const STOCK = { starterPerField: 2, finished: 1, won: 1, newWorld: 2 };
-  const STOCKABLE = CATALOG.filter((i) => !i.free && !i.pass && !i.world && !i.achievement && !i.requires && i.cost > 0);
+  const STOCKABLE = CATALOG.filter((i) => !i.special && !i.free && !i.pass && !i.world && !i.achievement && !i.requires && i.cost > 0);
   const stockOrder = (a, b) => a.cost - b.cost || CATALOG.indexOf(a) - CATALOG.indexOf(b);
   const STARTER_STOCK = Object.keys(FIELDS).flatMap((f) => STOCKABLE.filter((i) => i.field === f).sort(stockOrder).slice(0, STOCK.starterPerField).map((i) => i.id));
   // The next n hidden items to reveal: the cheapest of each kind in turn, so a reveal mixes

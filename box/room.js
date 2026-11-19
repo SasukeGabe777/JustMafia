@@ -278,10 +278,10 @@ class BoxRoom {
     order.forEach((id, i) => {
       const p = this.players.get(id); if (!p || p.bot || !p.wallet) return;
       if (why) { p.jg = { n: 0, why, at: this.now(), game }; return; }
-      const n = GOLD.goldFor(game, i + 1, order.length, ms);
+      const { n, bonus } = GOLD.withSetBonus(game, GOLD.goldFor(game, i + 1, order.length, ms), p.look); // + a theme-set bonus in its game
       let paid = 0;
-      try { paid = this.wallets.awardBox(p.wallet, this.code + ':' + (this.gameNo || 0) + ':' + game + ':' + this.hostKey, n, (this.def && this.def.key === game ? this.def.name : game) + (i === 0 ? ' · won' : ' · #' + (i + 1))); } catch (e) { console.error('[justgold]', e.message); }
-      if (paid) { p.jg = { n: paid, at: this.now(), game, total: this.wallets.coins(p.wallet) }; this.fx('gold', { name: p.name, n: paid }); }
+      try { paid = this.wallets.awardBox(p.wallet, this.code + ':' + (this.gameNo || 0) + ':' + game + ':' + this.hostKey, n, (this.def && this.def.key === game ? this.def.name : game) + (i === 0 ? ' · won' : ' · #' + (i + 1)) + (bonus ? ' · ' + bonus.icon + ' set +' + bonus.extra : '')); } catch (e) { console.error('[justgold]', e.message); }
+      if (paid) { p.jg = { n: paid, at: this.now(), game, total: this.wallets.coins(p.wallet), set: bonus ? { icon: bonus.icon, name: bonus.name, extra: bonus.extra } : null }; this.fx('gold', { name: p.name, n: paid }); }
     });
   }
   partyGold() {

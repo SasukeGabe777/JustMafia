@@ -126,7 +126,7 @@ async function socketTests() {
     assert(st.catalog.some((i) => i.section === 'character') && st.catalog.some((i) => i.section === 'mafia'));
     assert(!st.catalog.some((i) => i.field === 'deathAnim' && i.section !== 'mafia'));
     // Buy something on the shelf, equip it, set colours.
-    const item = st.catalog.find((i) => i.section === 'character' && !i.owned && !i.lock && i.cost <= 500); assert(item, 'something to buy');
+    const item = st.catalog.find((i) => i.section === 'character' && !i.owned && !i.lock && !i.pct && i.cost <= 500); assert(item, 'something to buy'); // (not today's discounted deal)
     let r = await emit(ph, 'shop:buy', { auth, itemId: item.id }); assert(r.ok, r.error); assert.equal(r.state.gold, 500 - item.cost);
     r = await emit(ph, 'shop:equip', { auth, itemId: item.id, on: true }); assert(r.ok, r.error); assert.equal(r.state.look[item.field], item.value);
     r = await emit(ph, 'shop:look', { auth, look: { skin: r.state.look.skin, hairColor: '#ff0000ff' } }); assert(r.ok);

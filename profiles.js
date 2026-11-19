@@ -8,6 +8,8 @@ const STOCKABLE_IDS = new Set(STOCKABLE.map((i) => i.id));
 // Per-game gear for the JustGold shop (public/shared/gear.js); empty until that file exists.
 let GEAR = []; try { ({ GEAR } = require('./public/shared/gear')); if (!Array.isArray(GEAR)) GEAR = []; } catch (e) { GEAR = []; }
 const gearItem = (id) => GEAR.find((g) => g.id === id) || null;
+// Limited-time event items, daily deals and theme sets (public/shared/shop-season.js).
+const SS = require('./public/shared/shop-season');
 const MAX_DEVICES = 8, BOX_PAID_MAX = 300;
 const freshPass = () => ({ season: SEASON.id, owned: false, xp: 0, granted: [] });
 const LEDGER_MAX = 20;
@@ -119,8 +121,9 @@ class ProfileStore {
     const p = this.data.profiles[id], g = gearItem(gearId);
     if (!p || !g) return { ok: false, error: 'Unknown item.' };
     if (p.owned.includes(g.id)) return { ok: false, error: 'You already have it.' };
-    if (p.coins < g.cost) return { ok: false, error: `Not enough JustGold: ${g.name} costs ${g.cost} JG, you have ${p.coins} JG.` };
-    this.record(p, -g.cost, 'Bought ' + g.name, { item: g.id });
+    const pr = SS.priceOf(g.id, this.now()) || { cost: g.cost, pct: 0 }; // today's deal price, if it is one
+    if (p.coins < pr.cost) return { ok: false, error: `Not enough JustGold: ${g.name} costs ${pr.cost} JG, you have ${p.coins} JG.` };
+    this.record(p, -pr.cost, 'Bought ' + g.name + (pr.pct ? ` (deal −${pr.pct}%)` : ''), { item: g.id });
     p.owned.push(g.id); this.save(); return { ok: true, profile: this.view(id) };
   }
   equipGear(id, gearId, on = true) {
@@ -270,10 +273,42 @@ class ProfileStore {
     if (item.world) return { ok: false, error: `World reward: finish ${item.worldGames === 1 ? 'a game' : item.worldGames + ' games'} in the ${WORLD_NAMES[item.world]} world.` };
     if (item.achievement && !p.achievements.includes(item.achievement)) return { ok: false, error: ACHIEVEMENTS[item.achievement].label };
     if (item.requires && !p.owned.includes(item.requires)) { const need = CATALOG.find((i) => i.id === item.requires); return { ok: false, error: `High Roller tier ${item.ladderTier}: own the ${need ? need.name : 'tier below'} first.` }; }
-    if (STOCKABLE_IDS.has(item.id) && !(p.stock || []).includes(item.id)) return { ok: false, error: `The ${item.name} isn't in the shop yet. Keep playing: every game puts something new on the shelves.` };
-    if (p.coins < item.cost) return { ok: false, error: `Not enough JustGold: ${item.name} costs ${item.cost} JG, you have ${p.coins} JG.` };
-    if (item.cost > 0) this.record(p, -item.cost, 'Bought ' + item.name, { item: item.id });
+    const now = this.now(), limited = SS.limitedLock(item.id, now);
+    if (limited) return { ok: false, error: limited + '.', limited: true };
+    // Today's deals and theme-set pieces are on sale for everyone, shelf or not.
+    if (STOCKABLE_IDS.has(item.id) && !(p.stock || []).includes(item.id) && !SS.isDeal(item.id, now) && !SS.SET_OF[item.id]) return { ok: false, error: `The ${item.name} isn't in the shop yet. Keep playing: every game puts something new on the shelves.` };
+    const pr = SS.priceOf(item.id, now) || { cost: item.cost, pct: 0 };
+    if (p.coins < pr.cost) return { ok: false, error: `Not enough JustGold: ${item.name} costs ${pr.cost} JG, you have ${p.coins} JG.` };
+    if (pr.cost > 0) this.record(p, -pr.cost, 'Bought ' + item.name + (pr.pct ? ` (deal −${pr.pct}%)` : ''), { item: item.id });
     p.owned.push(item.id); this.save(); return { ok: true, profile: this.view(id) };
+  }
+  // ----- Shop seasons & theme sets (public/shared/shop-season.js) -----
+  // The clock the shop rules use (tests replace it with setClock).
+  now() { return this._clock ? this._clock() : Date.now(); }
+  setClock(fn) { this._clock = typeof fn === 'function' ? fn : null; }
+  // A theme set's bundle: every piece you don't own yet, in one purchase at the bundle price.
+  // `wear` also puts the whole set on.
+  buySet(id, setId, wear = false) {
+    const p = this.data.profiles[id], s = SS.setById(setId);
+    if (!p || !s) return { ok: false, error: 'Unknown set.' };
+    const b = SS.bundleOf(s.id, p.owned, this.now());
+    if (!b.missing.length) return wear ? this.wearSet(id, s.id) : { ok: false, error: `You already have the whole ${s.name} set.` };
+    for (const iid of b.missing) { const i = CATALOG.find((x) => x.id === iid); if (!i || i.pass || i.world || i.achievement || i.requires || SS.limitedLock(iid, this.now())) return { ok: false, error: 'That set can’t be bought right now.' }; }
+    if (p.coins < b.price) return { ok: false, error: `Not enough JustGold: the rest of the ${s.name} set costs ${b.price} JG, you have ${p.coins} JG.` };
+    this.record(p, -b.price, `${s.icon} ${s.name} set (${b.missing.length} item${b.missing.length > 1 ? 's' : ''}, −${b.pct}%)`, { set: s.id });
+    p.owned.push(...b.missing);
+    if (wear) return this.wearSet(id, s.id, b.missing);
+    this.save(); return { ok: true, items: b.missing, price: b.price, profile: this.view(id) };
+  }
+  // Put on every piece of an owned set.
+  wearSet(id, setId, bought = []) {
+    const p = this.data.profiles[id], s = SS.setById(setId);
+    if (!p || !s) return { ok: false, error: 'Unknown set.' };
+    const pieces = s.items.map((iid) => CATALOG.find((x) => x.id === iid)).filter(Boolean);
+    if (pieces.some((i) => !i.free && !p.owned.includes(i.id))) return { ok: false, error: `Get the whole ${s.name} set first.` };
+    const next = { ...p.avatar }; for (const i of pieces) next[i.field] = i.value;
+    p.avatar = this.validateAvatar(id, next); p.lookSaved = true;
+    this.save(); return { ok: true, items: bought, profile: this.view(id) };
   }
   // Pays one completed game's gold, once per game id, and returns the breakdown
   // (each line: what it was for and how much). Values and caps live in REWARDS.
