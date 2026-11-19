@@ -126,7 +126,7 @@
       g.save(); g.shadowColor = 'rgba(255,220,140,0.8)'; g.shadowBlur = 40;
       g.fillStyle = '#fff4dc'; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); g.restore();
       g.lineWidth = 10; g.strokeStyle = c.color || '#ffc93c'; g.beginPath(); g.arc(x, y, r, 0, TAU); g.stroke();
-      s.emoji(c.avatar || '🙂', x, y + 4, r * 1.15);
+      s.face(c, x, y + 4, r * 1.15);
       if (k >= 1) { rr(g, x - gap * 0.44, y + r + 14, gap * 0.88, 56, 14); g.fillStyle = '#2a0d26'; g.fill(); g.lineWidth = 4; g.strokeStyle = '#ffc93c'; g.stroke(); text(g, c.name, x, y + r + 43, 34, '#fff4dc', { font: LIL, max: gap * 0.8 }); }
     });
     if (o.more && u > n * per - 1200) text(g, `…and ${o.more} more stars!`, 960, 1020, 52, '#ffe6a8', { font: LIL, stroke: '#2a0d26', lw: 8 });

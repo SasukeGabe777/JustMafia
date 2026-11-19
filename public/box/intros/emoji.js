@@ -162,7 +162,7 @@
       const k = back((u - i * per) / 420); if (k <= 0) return;
       const p = P[i], baseY = p.row ? 820 : (F.length > 8 ? 560 : 640), sz = Math.min(170, p.step * 0.72);
       const hop = Math.abs(Math.sin(s.t * 4 + i)) * 18;
-      g.save(); g.translate(p.x, baseY - hop); g.scale(k, k); s.emoji(c.avatar || '🙂', 0, -sz * 0.45, sz); g.restore();
+      g.save(); g.translate(p.x, baseY - hop); g.scale(k, k); s.face(c, 0, -sz * 0.45, sz); g.restore();
       g.font = '44px ' + FONT; const w = Math.min(p.step * 0.95, g.measureText(c.name).width * Math.min(1, 34 / 44) + 40);
       g.globalAlpha = Math.min(1, k); g.fillStyle = '#fff'; g.strokeStyle = c.color || DEEP; g.lineWidth = 6; rr(g, p.x - w / 2, baseY + 20, w, 54, 27); g.fill(); g.stroke();
       text(g, c.name, p.x, baseY + 49, 34, DEEP, { font: FONT, max: w - 20 }); g.globalAlpha = 1;

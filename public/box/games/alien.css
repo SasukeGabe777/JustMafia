@@ -246,3 +246,8 @@ body.g-alien .card-box { background: rgba(18, 10, 44, 0.9); border-color: rgba(1
   .aa-manifest { grid-column: 1 / -1; }
   .aa-talk, .aa-overc { grid-template-columns: 1fr; }
 }
+
+/* players' characters (BOX.face) */
+body.g-alien .aa-face { margin: -6px 1px; }
+body.g-alien .h, body.g-alien .aa-cav { overflow: hidden; }
+body.g-alien .aa-cav .bx-face, body.g-alien .h .bx-face { transform: scale(1.12) translateY(4%); }

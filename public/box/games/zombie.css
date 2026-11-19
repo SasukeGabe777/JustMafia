@@ -274,3 +274,10 @@ body.g-zombie .ph-head, body.g-zombie .vip-bar { background: #151a10; border-col
 .zs-pwhy.good { background: rgba(125, 255, 138, 0.14); border: 2px solid rgba(125, 255, 138, 0.6); }
 .zs-pwhy.bad { background: rgba(255, 122, 107, 0.14); border: 2px solid rgba(255, 122, 107, 0.6); }
 .zs-reachbig { font-family: var(--zs-stencil); font-size: 22px; color: var(--yellow); margin: 2px 0 6px; }
+/* Survivors are the players' characters (BOX.face; the canvas draws them full-body) */
+body.g-zombie .bx-face { margin: -5px 0; }
+body.g-zombie .zs-row .av .bx-face, body.g-zombie .zs-fate .av .bx-face { background: rgba(157, 255, 90, 0.12); }
+body.g-zombie .zs-nchip i .bx-face { margin: -6px 2px -6px -4px; }
+body.g-zombie .bx-face.zs-ghostface { filter: grayscale(0.7) brightness(1.15) opacity(0.75); background: rgba(201, 212, 255, 0.18); }
+body.g-zombie .zs-meface { margin: -8px 4px -8px -2px; background: rgba(255, 255, 255, 0.12); }
+body.g-zombie .zs-gto button .bx-face, body.g-zombie .zs-hrow .bx-face { margin: -6px 2px -6px 0; }

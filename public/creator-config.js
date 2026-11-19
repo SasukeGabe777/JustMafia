@@ -16,6 +16,7 @@
 (function (root) {
   const TABS = [
     { id: 'body', label: 'Body', icon: '🧍', sections: [
+      { field: 'body', label: 'Body type', kind: 'tile', focus: 'body', random: true },
       { field: 'skin', label: 'Skin tone', kind: 'swatch', random: true },
       { field: 'face', label: 'Face shape', kind: 'tile', focus: 'head', random: true },
     ] },

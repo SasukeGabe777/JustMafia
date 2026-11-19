@@ -221,6 +221,7 @@ class Room {
     for (const [key, list] of Object.entries(OPTIONS.AVATAR_FIELDS)) {
       const choices = OPTIONS[list];
       avatar[key] = choices.includes(a[key]) ? a[key]
+        : key === 'body' ? OPTIONS.inferBody(a)
         : key === 'expression' && a.features === 'serious' ? 'serious'
         : RANDOM.includes(key) ? this.pick(choices) : choices[0];
     }

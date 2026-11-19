@@ -101,7 +101,7 @@
           const x = lerp(team ? 2200 : -280, tx, easeOut(k)), k2 = TROOPS[(i + team) % TROOPS.length];
           a.drawUnit(g, k2, team, x - (team ? -1 : 1) * 70, ty + 40, 0.9, team ? -1 : 1, { ph: k < 1 ? s.t * 10 : s.t * 2 });
           a.circ(g, x + (team ? -1 : 1) * 30, ty - 30, 42); g.fillStyle = 'rgba(15,8,30,0.85)'; g.fill(); g.lineWidth = 5; g.strokeStyle = c.color || P.main; g.stroke();
-          a.text(g, c.avatar || '🙂', x + (team ? -1 : 1) * 30, ty - 28, 48, '#fff');
+          s.face(c, x + (team ? -1 : 1) * 30, ty - 30, 56);
           if (k >= 1) a.text(g, c.name, tx, ty + 72, 34, '#fff', { font: a.BODY, weight: 700, stroke: a.OUT, lw: 7, max: 230 });
         });
       }

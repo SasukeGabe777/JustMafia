@@ -8,7 +8,10 @@
   const COL = { red: '#ff4a3d', blue: '#3a8bff', yellow: '#ffd23f', green: '#3ccf6e', white: '#f4f1e8', black: '#2a2a32', purple: '#9b5cff', orange: '#ff8a2a', teal: '#19c3b3', pink: '#ff6fb5' };
   const SHAPE = { triangle: '▲', circle: '●', square: '■', diamond: '◆' };
   const cap = (s) => String(s).charAt(0).toUpperCase() + String(s).slice(1);
-  const av = (x) => esc((x && x.avatar) || '🙂');
+  // The player's own character (BOX.face, wearing this game's gear), or their emoji.
+  const has = (x) => !!(x && window.BOX && BOX.face && (!BOX.hasLook || BOX.hasLook(x)));
+  const av = (x, px = 30) => (x && BOX.face ? BOX.face(x, px, { cls: 'bs-av' }) : esc((x && x.avatar) || '🙂'));
+  const avF = (x) => (x && BOX.face ? BOX.face(x, 80, { fill: true }) : esc((x && x.avatar) || '🙂'));
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const haptic = (ctx, kind) => { try { if (ctx && ctx.haptic) ctx.haptic(kind); } catch { /* none */ } };
   let felt = {};
@@ -82,7 +85,7 @@
     </div>`;
   }
   const modRow = (b) => `<div class="bs-modrow">${b.mods.map((m) => `<div class="bs-mod ${m.solved ? 'ok' : ''}"><span class="ic">${esc(m.icon)}</span><span class="nm">${esc(m.name)}</span><i class="lamp"></i></div>`).join('')}${b.needy ? `<div class="bs-mod needy ${b.radio ? 'ping' : ''}"><span class="ic">📻</span><span class="nm">Radio</span><i class="lamp"></i></div>` : ''}</div>`;
-  const people = (list, cls) => list.map((p) => `<span class="bs-pp ${cls || ''}" style="--c:${esc(p.color || '#888')}"><span class="f">${av(p)}</span><b>${esc(p.name)}</b></span>`).join('');
+  const people = (list, cls) => list.map((p) => `<span class="bs-pp ${cls || ''}" style="--c:${esc(p.color || '#888')}"><span class="f">${avF(p)}</span><b>${esc(p.name)}</b></span>`).join('');
   const logLine = (b) => (b.log ? `<div class="bs-log k-${esc(b.log.kind)}" id="bl-${b.log.n}">${b.log.kind === 'strike' ? '✖ ' : b.log.kind === 'solve' ? '✔ ' : b.log.kind === 'radio' ? '📻 ' : ''}${esc(b.log.text)}</div>` : '<div class="bs-log quiet">Talk it out…</div>');
 
   function tvBrief(s) {
@@ -94,7 +97,7 @@
       <div class="bs-preview">${mods.map((m) => `<div class="bs-crate"><span>${esc(m.icon)}</span><b>${esc(m.name)}</b></div>`).join('')}${s.needy ? '<div class="bs-crate needy"><span>📻</span><b>Radio Check</b></div>' : ''}</div>
       <div class="bs-teams n${sq.length}">${sq.map((q) => `<div class="bs-team" style="--sq:${esc(q.color)}">
         ${sq.length > 1 ? `<div class="bs-tname">${esc(q.name)} squad</div>` : ''}
-        <div class="bs-defs">${q.defusers.map((d) => `<div class="bs-def"><div class="bs-hat">⛑️</div><div class="bs-face">${av(d)}</div><b>${esc(d.name)}</b><small>DEFUSER</small></div>`).join('')}</div>
+        <div class="bs-defs">${q.defusers.map((d) => `<div class="bs-def">${has(d) ? `<div class="bs-fig">${BOX.body(d, 260)}</div>` : `<div class="bs-hat">⛑️</div><div class="bs-face">${av(d)}</div>`}<b>${esc(d.name)}</b><small>DEFUSER</small></div>`).join('')}</div>
         <div class="bs-exps"><small>📖 Experts with the manual</small><div>${people(q.experts) || '<span class="muted">None: the defuser gets the manual!</span>'}</div></div></div>`).join('')}</div>
       <div class="bs-tip">${s.round === 1 ? 'Defusers: describe your bomb out loud. Experts: read your pages and ask questions!' : s.needy ? 'The radio will crackle for a callsign. Whoever holds the Radio page: be ready!' : 'New defusers this round. Swap seats if you need to!'}</div>
     </div>`;
@@ -154,7 +157,7 @@
         <div class="bs-big"><div><small>TEAM SCORE</small><b>${f.team || 0}</b></div><div><small>BOMBS DEFUSED</small><b>${f.defused || 0}<span>/${f.played || 0}</span></b></div></div>
         ${f.squads && f.squads.length > 1 ? `<div class="bs-sqs">${f.squads.map((q) => `<span style="--sq:${esc(q.color)}"><b>${esc(q.name)}</b> ${q.defused} defused · ${q.total} pts</span>`).join('')}</div>` : ''}
         ${awardsHtml(f.awards)}</div>
-      <div class="bs-board"><h3>Who held it together</h3>${rows.map((r, i) => `<div class="bs-brow" style="--c:${esc(r.color || '#888')};animation-delay:${(0.2 + i * 0.08).toFixed(2)}s"><span class="n">${i === 0 ? '🏆' : i + 1}</span><span class="f">${av(r)}</span><span class="nm">${esc(r.name)}</span><small>🧤${r.solves} 📖${r.assists}</small><b>${r.points}</b></div>`).join('')}</div>
+      <div class="bs-board"><h3>Who held it together</h3>${rows.map((r, i) => `<div class="bs-brow" style="--c:${esc(r.color || '#888')};animation-delay:${(0.2 + i * 0.08).toFixed(2)}s"><span class="n">${i === 0 ? '🏆' : i + 1}</span><span class="f">${avF(r)}</span><span class="nm">${esc(r.name)}</span><small>🧤${r.solves} 📖${r.assists}</small><b>${r.points}</b></div>`).join('')}</div>
     </div>`;
   }
 
@@ -324,7 +327,7 @@
     if (box.__sig !== sig) { box.__sig = sig; box.innerHTML = L.fields.map((f) => `<label>${esc(f.label)}<select data-set="${esc(f.key)}">${f.options.map((o) => `<option value="${esc(String(o.value))}">${esc(o.label)}</option>`).join('')}</select></label>`).join(''); }
     for (const s of box.querySelectorAll('select[data-set]')) { if (document.activeElement !== s) s.value = String(L.settings[s.dataset.set]); s.onchange = () => { s.blur(); el.__L.set(s.dataset.set, s.value); }; }
     const r = $('#roster'); r.classList.toggle('many', n > 12);
-    const rh = n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ffd23f')};--d:${((i * 0.37) % 2.2).toFixed(2)}s"><span class="hat">⛑️</span><span class="f">${esc(p.avatar || '🙂')}</span><b>${esc(p.name)}</b></span>`).join('') : '<div class="bsl-empty">The bench is empty. Scan the badge to join the squad!</div>';
+    const rh = n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ffd23f')};--d:${((i * 0.37) % 2.2).toFixed(2)}s">${has(p) ? '' : '<span class="hat">⛑️</span>'}<span class="f">${avF(p)}</span><b>${esc(p.name)}</b></span>`).join('') : '<div class="bsl-empty">The bench is empty. Scan the badge to join the squad!</div>';
     if (r.__h !== rh) { r.__h = rh; BOX.morph(r, rh); }
     const lp = $('#bsl-party'), lh = L.lineupHtml || ''; if (lp.__h !== lh) { lp.__h = lh; lp.innerHTML = lh; }
   }

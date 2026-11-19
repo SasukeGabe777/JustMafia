@@ -72,6 +72,8 @@
      s.audience(panX, mood)    the engine's live studio audience, full frame (pan 0..1)
      s.backs(x, y, w, h, mood) foreground audience silhouettes (backs of heads)
      s.spots(k, speed)         sweeping spotlights; s.sign(x,y,w,h,text,on,'r,g,b')
+     s.face(c, x, y, px, o)    a player's character head (centred, sized like an emoji of px), emoji fallback
+     s.body(c, x, y, h, o)     a player's animated full figure, feet at (x,y), ~h tall (o: BOX.drawChar opts)
      s.emoji(e, x, y, px)      cached emoji; s.text(str, x, y, px, fill, {font,align,stroke,max})
      s.rr(x,y,w,h,r)           rounded-rect path; s.ease/s.ss/s.back/s.clamp/s.lerp
    HOST ANIM (`a` passed to host.draw): { t, now, talk (bool), mouth 0..1, blink 0..1,
@@ -134,6 +136,29 @@
     return c;
   }
   function drawEmoji(g, e, x, y, px) { const c = emojiImg(e, Math.min(px, 320)); const s = px * 1.3; g.drawImage(c, x - s / 2, y - s / 2, s, s); }
+  // ---------- the contestants' own characters (portrait.js), the emoji as the fallback ----------
+  // drawFace: a head-and-shoulders picture centred at (x, y) where an emoji of size px would sit
+  // (the picture is a little bigger: it has a transparent margin). Cached Images from BOX.faceUrl.
+  // drawBody: the animated full figure (BOX.drawChar), FEET at (x, y), about h tall (with the hat).
+  // Both return true when they drew the character, false when they drew the emoji instead.
+  const picCache = new Map();
+  function picImg(url) {
+    if (!url) return null;
+    let im = picCache.get(url);
+    if (!im) { im = new Image(); im.src = url; if (picCache.size > 160) picCache.clear(); picCache.set(url, im); }
+    return im.complete && im.naturalWidth ? im : null;
+  }
+  const picSize = (n) => Math.max(32, Math.min(640, Math.ceil(n / 32) * 32));
+  function drawFace(g, c, x, y, px, o) {
+    const sz = px * 1.45; let im = null;
+    try { if (c && B.faceUrl) im = picImg(B.faceUrl(c, picSize(sz), o || {})); } catch { im = null; }
+    if (im) { g.drawImage(im, x - sz / 2, y - sz / 2, sz, sz); return true; }
+    drawEmoji(g, (c && c.avatar) || '🙂', x, y, px); return false;
+  }
+  function drawBody(g, c, x, y, h, o = {}) {
+    try { if (c && B.drawChar && B.drawChar(g, x, y, c, { t: performance.now() / 1000, seed: hash(c.id || c.name || '') % 7, ...o, scale: h / 85 })) return true; } catch { /* the emoji below */ }
+    drawEmoji(g, (c && c.avatar) || '🙂', x, y - h * 0.42, h * 0.5); return false;
+  }
   function fitFont(g, str, px, max, font) { let p = px; g.font = `${p}px ${font}`; while (max && p > 10 && g.measureText(str).width > max) { p -= 2; g.font = `${p}px ${font}`; } return p; }
   function text(g, str, x, y, px, fill, o = {}) {
     const font = o.font || FONT; fitFont(g, String(str), px, o.max, font);
@@ -645,6 +670,9 @@
       spots(k, speed, xs) { spots(g, s.theme, s.t, k, speed, xs); },
       sign(x, y, w, h, str, on, rgb) { sign(g, x, y, w, h, str, on, rgb); },
       emoji(e, x, y, px) { drawEmoji(g, e, x, y, px); },
+      // c = a player ({ id, name, avatar, color }): their character, or their emoji without one
+      face(c, x, y, px, o) { return drawFace(g, c, x, y, px, o); },
+      body(c, x, y, h, o) { return drawBody(g, c, x, y, h, { t: s.t, ...o }); },
       text(str, x, y, px, f, o) { text(g, str, x, y, px, f, o); },
       floor() { floor(g, s.theme, s.t); },
       rr(x, y, w, h, r) { rr(g, x, y, w, h, r); },
@@ -827,7 +855,12 @@
         for (let k = 0; k < 12; k++) { g.rotate(TAU / 12); g.beginPath(); g.moveTo(0, 0); g.lineTo(-30, -420); g.lineTo(30, -420); g.fill(); } g.restore();
         // the contestant: a body in their colour, waving arms and their avatar as a face
         const pop = back((Ti - 150) / 520), bob = Math.sin(t * 3) * 8;
-        if (pop > 0) {
+        if (pop > 0 && B.hasLook && B.hasLook(c)) {
+          // their own character (wearing this game's gear), waving from behind the podium
+          g.save(); g.translate(720, 760 + bob * 0.3); g.scale(pop, pop);
+          drawBody(g, c, 0, 0, 560, { t, mood: 'grin', arms: { l: 0.25, r: -2.5 + Math.sin(t * 9) * 0.35 } });
+          g.restore();
+        } else if (pop > 0) {
           g.save(); g.translate(720, 610 + bob * 0.3); g.scale(pop, pop);
           g.lineCap = 'round'; g.strokeStyle = OUT; g.lineWidth = 34;
           const wv = Math.sin(t * 9) * 22;
@@ -897,7 +930,7 @@
           const x = 960 + (col - (rowN - 1) / 2) * tw, y = (rows > 1 ? 420 : 560) + row * th2;
           g.save(); g.translate(x, y); g.scale(k, k);
           rr(g, -tw * 0.44, -110, tw * 0.88, 230, 26); g.fillStyle = 'rgba(14,8,32,0.85)'; g.fill(); g.lineWidth = 7; g.strokeStyle = c.color || th.accent; g.stroke();
-          drawEmoji(g, c.avatar || '🙂', 0, -30 + Math.sin(s.t * 4 + i) * 5, Math.min(130, tw * 0.55));
+          drawFace(g, c, 0, -30 + Math.sin(s.t * 4 + i) * 5, Math.min(130, tw * 0.55));
           text(g, c.name, 0, 78, 38, '#fff', { stroke: OUT, lw: 7, max: tw * 0.8 });
           g.restore();
         });
@@ -941,7 +974,7 @@
         const x = 960 + ((i % cols) - (cols - 1) / 2) * tile, y = 270 + tile / 2 + Math.floor(i / cols) * tile;
         g.save(); g.translate(x, y); g.scale(k, k);
         rr(g, -tile * 0.45, -tile * 0.45, tile * 0.9, tile * 0.9, tile * 0.12); g.fillStyle = 'rgba(14,8,32,0.9)'; g.fill(); g.lineWidth = Math.max(3, tile * 0.04); g.strokeStyle = p.color || th.accent; g.stroke();
-        drawEmoji(g, p.avatar || '🙂', 0, -tile * 0.09, tile * 0.46);
+        drawFace(g, p, 0, -tile * 0.09, tile * 0.46);
         text(g, p.name, 0, tile * 0.28, Math.max(12, tile * 0.16), '#fff', { max: tile * 0.82 });
         g.restore();
       });
@@ -1113,7 +1146,7 @@
     if (psig !== st.psig) {
       const fresh = new Set(L.players.map((p) => p.id)); const old = st.ids || new Set();
       st.psig = psig; st.ids = fresh;
-      $('#roster').innerHTML = L.players.map((p, i) => `<span class="chip sl-p ${p.online ? '' : 'off'} ${old.has(p.id) ? '' : 'new'}" style="--c:${esc(p.color || '#ffd23f')};--d:${(i % 7) * 0.13}s" data-kick="${esc(p.id)}" title="Click to remove"><i class="sl-pad">${esc(p.avatar || '🙂')}</i><span class="sl-pn">${esc(p.name)}</span></span>`).join('') || `<span class="sl-empty">${esc(o.emptyCrowd || 'Nobody here yet. Scan the code!')}</span>`;
+      $('#roster').innerHTML = L.players.map((p, i) => `<span class="chip sl-p ${p.online ? '' : 'off'} ${old.has(p.id) ? '' : 'new'}" style="--c:${esc(p.color || '#ffd23f')};--d:${(i % 7) * 0.13}s" data-kick="${esc(p.id)}" title="Click to remove"><i class="sl-pad">${B.face ? B.face(p, 80, { fill: true }) : esc(p.avatar || '🙂')}</i><span class="sl-pn">${esc(p.name)}</span></span>`).join('') || `<span class="sl-empty">${esc(o.emptyCrowd || 'Nobody here yet. Scan the code!')}</span>`;
       for (const c of $('#roster').querySelectorAll('[data-kick]')) c.onclick = () => { if (confirm('Remove this player?')) st.L.kick(c.dataset.kick); };
     }
   }
@@ -1128,7 +1161,7 @@
   B.studio = {
     intro: (key) => { need(key); return introFor(key); }, need, makeHost, HostAnim, Confetti, frame, lobby,
     say: Speech.say, stop: Speech.stop,
-    draw: { podium, spots, sign, audience, backs, floor, emoji: drawEmoji, text, rr, wrap },
+    draw: { podium, spots, sign, audience, backs, floor, emoji: drawEmoji, face: drawFace, body: drawBody, text, rr, wrap },
     util: { clamp, lerp, ss, ease, easeOut, back, rng, hash, shade, hexA, OUT, FONT, BODY, TAU },
   };
 })();

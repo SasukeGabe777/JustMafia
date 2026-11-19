@@ -311,3 +311,11 @@ body.g-blanks .big-status { font-family: 'Luckiest Guy', sans-serif; text-shadow
 @keyframes bx-slot { 0%, 6% { transform: translateY(-1.1em) rotate(-25deg); opacity: 0; } 20% { transform: none; opacity: 1; } 84% { transform: none; opacity: 1; } 96%, 100% { transform: translateY(-0.4em) rotate(18deg); opacity: 0; } }
 @media (max-width: 1100px) { .bx-tv, .bx-over { grid-template-columns: 1fr; } .bx-pickrow { grid-template-columns: 1fr; } .bx-lobby { grid-template-columns: 1fr; } .bx-joincard { grid-row: auto; } .bx-cast { grid-column: auto; } }
 @media (prefers-reduced-motion: reduce) { .bx *, body.g-blanks::before { animation: none !important; } }
+/* Players' characters (BOX.face / BOX.body) in place of their emoji. */
+body.g-blanks .bx-av { display: inline-flex; align-items: center; }
+body.g-blanks .bx-av .bx-face { background: var(--bx-cr); box-shadow: 0 0 0 2px var(--bx-ye); }
+body.g-blanks .bx-nmf { margin: -6px 0 -4px; background: rgba(255, 244, 220, 0.85); }
+body.g-blanks .bx-cav .bx-face { margin-top: -2px; }
+body.g-blanks .bx-sc i .bx-face { display: block; }
+body.g-blanks .bx-champfig { display: flex; justify-content: center; margin: -6px 0 -2px; animation: bx-win 0.8s cubic-bezier(0.2, 1.3, 0.4, 1) 0.1s both; }
+body.g-blanks .bx-champfig .bx-body { filter: drop-shadow(0 8px 0 rgba(80, 0, 40, 0.3)); }

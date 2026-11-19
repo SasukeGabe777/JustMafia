@@ -163,7 +163,7 @@
       g.fillStyle = 'rgba(0,0,0,0.4)'; rr(g, -cw / 2 + 8, 12, cw, ch, 12); g.fill();
       g.fillStyle = '#fff'; rr(g, -cw / 2, 0, cw, ch, 12); g.fill();
       g.fillStyle = c.color || PAINT[i % PAINT.length]; rr(g, -cw / 2 + 12, 12, cw - 24, ch * 0.66, 8); g.fill();
-      s.emoji(c.avatar || '🙂', 0, 12 + ch * 0.33, cw * 0.42);
+      s.face(c, 0, 12 + ch * 0.33, cw * 0.42);
       const nm = c.name.length > 12 ? c.name.slice(0, 11) + '…' : c.name;
       g.font = `${Math.round(cw * 0.16)}px ${FONT}`; let px = Math.round(cw * 0.16); while (g.measureText(nm).width > cw - 24 && px > 16) { px -= 2; g.font = `${px}px ${FONT}`; }
       txt(g, nm, 0, 12 + ch * 0.66 + ch * 0.14, px, INK, FONT);

@@ -360,7 +360,7 @@ class Game {
     return {
       phase: ph, round: this.round, of: this.total, endsIn: this.endsAt && ph !== 'over' ? Math.max(0, this.endsAt - this.room.now()) : 0,
       cur: pub, locked: act.filter((p) => this.picks.has(p.id)).length, players: act.length,
-      chips: act.slice(0, 40).map((p) => ({ name: p.name, avatar: p.avatar, color: p.color, in: this.picks.has(p.id) })),
+      chips: act.slice(0, 40).map((p) => ({ id: p.id, name: p.name, avatar: p.avatar, color: p.color, in: this.picks.has(p.id) })),
       result: ph === 'reveal' ? this.result : null, final: ph === 'over' ? this.final : null,
       palette: this.history.map((h) => h.target), standings: this.standings().slice(0, 20),
     };

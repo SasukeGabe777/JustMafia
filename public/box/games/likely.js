@@ -9,13 +9,22 @@
   // A countdown whose end time stays fixed for one phase, so identical renders can be skipped.
   const ends = {};
   const timer = (key, endsIn) => { if (!endsIn) return ''; if (!ends[key]) ends[key] = Date.now() + endsIn; return `<span class="timer" data-ends="${ends[key]}">${mmss(ends[key] - Date.now())}</span>`; };
-  const av = (x) => (x && x.avatar ? esc(x.avatar) + ' ' : '');
+  // Players as their JustGameBox character (public/box/portrait.js), or their emoji without one.
+  const has = (x) => !!(x && BOX.hasLook && BOX.hasLook(x));
+  const face = (x, n, o) => (BOX.face ? BOX.face(x, n, o) : esc((x && x.avatar) || '🙂'));
+  const av = (x, n = 28) => (x && (x.avatar || has(x)) ? face(x, n, { cls: 'ml-af' }) + ' ' : '');
+  // A nominee: their character standing on the carpet, or the old bow-tied blob with their emoji.
+  const nominee = (p) => (has(p) ? `<span class="bd has-fig">${BOX.body(p, 100, { cls: 'ml-fig' })}</span>` : `<span class="bd"><span class="f">${esc(p.avatar || '🙂')}</span></span>`);
+  // The crowned winner(s), full body under the spotlight.
+  const winFigs = (list) => { const w = (list || []).filter(has).slice(0, 4); return w.length ? `<div class="ml-wfigs">${w.map((x) => BOX.body(x, w.length > 1 ? 150 : 190, { mood: 'grin' })).join('')}</div>` : ''; };
   const dot = (c) => `<i class="ml-dot" style="background:${esc(c || '#888')}"></i>`;
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const lead = (s) => (s.kind === 'pair' ? 'Which <b>two</b> are most likely to…' : s.kind === 'hot' ? `Would ${dot(s.seat && s.seat.color)}<b>${av(s.seat)}${esc(s.seat ? s.seat.name : '?')}</b> actually…` : 'Who’s most likely to…');
   const badge = (s) => (s.kind === 'pair' ? '<div class="ml-badge pair">👯 DOUBLE TROUBLE</div>' : s.kind === 'hot' ? '<div class="ml-badge hot">🔥 HOT SEAT</div>' : '');
   const promptCard = (s, cls = '') => `<div class="ml-card ${s.kind} ${cls}">${badge(s)}<div class="ml-lead">${lead(s)}</div><div class="ml-text">${esc(s.text)}?</div></div>`;
-  const names = (list) => list.map((w) => `${dot(w.color)}${av(w)}${esc(w.name)}`).join(' <span class="muted">&amp;</span> ');
+  // Hot Seat: the person in the seat stands beside the prompt.
+  const seated = (s, card) => (s.kind === 'hot' && has(s.seat) ? `<div class="ml-hotrow"><div class="ml-hotfig">${BOX.body(s.seat, 200, { mood: s.phase === 'drum' ? 'surprised' : 'smirk' })}<span>🔥</span></div>${card}</div>` : card);
+  const names = (list) => list.map((w) => `${dot(w.color)}${has(w) ? '' : av(w)}${esc(w.name)}`).join(' <span class="muted">&amp;</span> ');
   // Update in place (BOX.morph). Each phase of each prompt gets its own root id, so a new phase
   // starts fresh (its entrance animations play once) while re-renders within it never restart them.
   // Returns true the first time a given key is painted.
@@ -53,7 +62,7 @@
       return `<div class="ml-mini">${badge(s)}<span>Would ${dot(seat.color)}<b>${esc(seat.name)}</b> actually ${esc(s.text)}?</span></div>
         <div class="ml-hot">${col('yes', res.yes, res.yesBy)}${col('no', res.no, res.noBy)}</div>
         <div class="ml-verdict">${verdict}</div><div class="ml-said">${said}</div>
-        ${res.verdict ? `<div class="ml-spot"><div class="ml-crown">👑</div><div class="ml-wname">${dot(seat.color)}${esc(seat.name)}</div><div class="ml-title">${esc(res.title)}</div></div>` : res.verdict === false ? `<div class="ml-said">${esc(seat.name)} keeps a clean record… for now.</div>` : ''}`;
+        ${res.verdict ? `<div class="ml-spot"><div class="ml-crown">👑</div>${winFigs([seat])}<div class="ml-wname">${dot(seat.color)}${esc(seat.name)}</div><div class="ml-title">${esc(res.title)}</div></div>` : res.verdict === false ? `<div class="ml-said">${esc(seat.name)} keeps a clean record… for now.</div>` : ''}`;
     }
     if (!res.winners.length) return `${promptCard(s, 'small')}<div class="ml-verdict">🤷 Nobody voted! The mystery remains.</div>`;
     const top = res.top, max = Math.max(1, ...top.map((t) => t.votes)), rows = top.length;
@@ -66,7 +75,7 @@
     const tie = res.winners.length > (res.kind === 'pair' ? 2 : 1);
     return `${promptCard(s, 'small')}
       <div class="ml-reveal"><div class="ml-bars">${bars}${res.more ? `<div class="muted ml-more">+${res.more} more got votes</div>` : ''}<div class="muted ml-more">${plural(res.total, 'vote')} in${s.anon ? ' · anonymous' : ''}</div></div>
-      <div class="ml-spot ${tie ? 'tie' : ''}" style="--d:2.2s"><div class="ml-crown">👑</div>${tie ? '<div class="ml-tie">IT’S A TIE! Shared title:</div>' : ''}<div class="ml-wname">${names(res.winners)}</div><div class="ml-title">${esc(res.title)}</div></div></div>`;
+      <div class="ml-spot ${tie ? 'tie' : ''}" style="--d:2.2s"><div class="ml-crown">👑</div>${winFigs(res.winners)}${tie ? '<div class="ml-tie">IT’S A TIE! Shared title:</div>' : ''}<div class="ml-wname">${names(res.winners)}</div><div class="ml-title">${esc(res.title)}</div></div></div>`;
   }
   function hall(f) {
     // Most-titled player in the middle, the rest fanning out to both sides.
@@ -87,7 +96,7 @@
     const res = s.phase === 'reveal' && s.result, win = new Set(res ? (res.kind === 'hot' ? (res.verdict && s.seat ? [s.seat.name] : []) : (res.winners || []).map((w) => w.name)) : []);
     return `<div class="ml-carpet ${s.phase}"><div class="mll-noms ingame ${show.length > 12 ? 'many' : ''}">${show.map((p, i) => {
       const voted = s.phase === 'vote' && wait && !wait.has(p.name), w = win.has(p.name);
-      return `<span class="chip ${voted ? 'voted' : ''} ${w ? 'vip win' : ''} ${res && !w ? 'look' : ''}" style="--c:${esc(p.color || '#ff6b8b')};--d:${((i * 0.23) % 2.4).toFixed(2)}s"><span class="bd"><span class="f">${esc(p.avatar || '🙂')}</span></span><b>${esc(p.name)}</b></span>`;
+      return `<span class="chip ${voted ? 'voted' : ''} ${w ? 'vip win' : ''} ${res && !w ? 'look' : ''}" style="--c:${esc(p.color || '#ff6b8b')};--d:${((i * 0.23) % 2.4).toFixed(2)}s">${nominee(p)}<b>${esc(p.name)}</b></span>`;
     }).join('')}${all.length > show.length ? `<span class="ml-cmore">+${all.length - show.length}</span>` : ''}</div></div>`;
   }
 
@@ -227,7 +236,7 @@
     }
     const r = $('#roster');
     r.classList.toggle('many', n > 14 && n <= 30); r.classList.toggle('lots', n > 30);
-    const rh = n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" id="mll-p-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ff6b8b')};--d:${((i * 0.23) % 2.4).toFixed(2)}s"><span class="bd"><span class="f">${esc(p.avatar || '🙂')}</span></span><b>${esc(p.name)}</b></span>`).join('')
+    const rh = n ? L.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === L.vip ? 'vip' : ''}" id="mll-p-${esc(p.id)}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ff6b8b')};--d:${((i * 0.23) % 2.4).toFixed(2)}s">${nominee(p)}<b>${esc(p.name)}</b></span>`).join('')
       : '<div class="mll-empty">The red carpet awaits its nominees… ✨</div>';
     if (r.__h !== rh) { r.__h = rh; BOX.morph(r, rh); }
     const lp = $('#mll-party'), lh = L.lineupHtml || ''; if (lp.__h !== lh) { lp.__h = lh; lp.innerHTML = lh; }
@@ -253,21 +262,21 @@
       if (s.phase === 'over' && s.final) {
         const f = s.final;
         paint(el, `<div class="ml-over"><h1 class="ml-h">🏛️ Hall of Titles</h1>${hall(f)}${awardsHtml(f.awards)}
-          <div class="ml-final-board"><h3>Best room readers</h3>${BOX.board(f.standings.map((r) => ({ ...r, name: (r.avatar ? r.avatar + ' ' : '') + r.name })), (r) => r.points, ' pts')}</div></div>`, 'over');
+          <div class="ml-final-board"><h3>Best room readers</h3>${`<div class="board">${f.standings.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${av(r, 30)}${esc(r.name)}</span><b>${esc(r.points)} pts</b></div>`).join('')}</div>`}</div></div>`, 'over');
         return;
       }
       const key = s.n + ':' + s.phase, t = timer('t' + key, s.endsIn);
       let main = '';
       if (s.phase === 'intro') {
-        main = `<div class="ml-intro">${s.last ? `<div class="ml-sweep final">🏁 FINAL PROMPT · POINTS ×${s.mult} 🏁</div>` : ''}${s.kind === 'classic' ? '' : `<div class="ml-sweep ${s.kind}">${s.kind === 'hot' ? '🔥 HOT SEAT 🔥' : '👯 DOUBLE TROUBLE 👯'}</div>`}${promptCard(s, 'in')}
+        main = `<div class="ml-intro">${s.last ? `<div class="ml-sweep final">🏁 FINAL PROMPT · POINTS ×${s.mult} 🏁</div>` : ''}${s.kind === 'classic' ? '' : `<div class="ml-sweep ${s.kind}">${s.kind === 'hot' ? '🔥 HOT SEAT 🔥' : '👯 DOUBLE TROUBLE 👯'}</div>`}${seated(s, promptCard(s, 'in'))}
           <div class="ml-status">${s.kind === 'hot' ? `Everyone answers YES or NO about ${esc(s.seat ? s.seat.name : '')}…` : s.kind === 'pair' ? 'Pick TWO people this time!' : 'Get your phones ready…'} ${t}</div></div>`;
       } else if (s.phase === 'vote') {
         const pct = s.of ? Math.round((s.voted / s.of) * 100) : 0;
-        main = `${promptCard(s)}<div class="ml-status">🗳️ Vote on your phone! ${t}</div>
+        main = `${seated(s, promptCard(s))}<div class="ml-status">🗳️ Vote on your phone! ${t}</div>
           <div class="ml-progress"><div class="fill" style="width:${pct}%"></div><span>${s.voted} / ${s.of} votes in · 🔮 ${s.predicted} predictions</span></div>
           ${s.waiting && s.waiting.length ? `<div class="ml-waiting">Still deciding: ${s.waiting.map(esc).join(', ')}</div>` : s.waiting ? '<div class="ml-waiting">Everyone’s in! 🎉</div>' : ''}`;
       } else if (s.phase === 'drum') {
-        main = `${promptCard(s, 'shake')}<div class="ml-drum"><span>🥁</span></div><div class="ml-status">${plural(s.voted, 'vote')} in… the room has spoken.</div>`;
+        main = `${seated(s, promptCard(s, 'shake'))}<div class="ml-drum"><span>🥁</span></div><div class="ml-status">${plural(s.voted, 'vote')} in… the room has spoken.</div>`;
       } else if (s.phase === 'reveal' && s.result) main = tvReveal(s);
       const bonus = (s.kind === 'hot' ? ' · 🔥 Hot Seat' : s.kind === 'pair' ? ' · 👯 Double Trouble' : '') + (s.last ? ` · <span class="ml-final">🏁 FINAL ×${s.mult}</span>` : '');
       const fresh = paint(el, `<div class="ml-wrap"><section class="ml-main"><div class="ml-top"><span>Prompt <b>${s.n}</b> of ${s.total}${bonus}</span><span class="muted">${s.anon ? '🙈 Anonymous votes' : '👀 Public votes'}</span></div>${main}</section>

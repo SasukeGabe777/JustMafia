@@ -30,6 +30,23 @@
   // Shop gear (public/shared/gear.js, slot kingdoms/crest): the emblem on a kingdom's castle flag and
   // army banners. null (the plain flag) without gear; owner colours stay as they are (identity).
   const crestOf = (k) => (k && window.MT_GEAR ? MT_GEAR.paint('kingdoms', 'crest', k.gear) : null);
+  // Rulers are the players' characters (a kingdom's id is its ruler's player id): BOX.face /
+  // BOX.body in the HTML, cached face images on the canvas; the emoji for players without one.
+  const ruler = (k) => (k ? { id: k.id, avatar: k.avatar || '👑', name: k.owner || undefined } : null);
+  const face = (k, n = 30, o) => (BOX.face ? BOX.face(ruler(k), n, o) : esc((k && k.avatar) || '👑'));
+  const hasFace = (k) => !!(k && BOX.hasLook && BOX.hasLook({ id: k.id }));
+  if (typeof document !== 'undefined' && !document.getElementById('kt-face-css')) { // (the TV's own stylesheet is kingdoms-theme.css)
+    const st = document.createElement('style'); st.id = 'kt-face-css';
+    st.textContent = '.kt-row .nm .bx-face,.kt-vrow .nm .bx-face,.kt-award .bx-face{margin:-6px 0;background:rgba(255,236,190,.18)}.kt-champs{position:relative;display:flex;justify-content:center;align-items:flex-end;gap:10px;margin:-6px 0 2px}.kt-champs .bx-body{filter:drop-shadow(0 0 14px rgba(255,211,77,.6))}.kp-kt b .bx-face{margin:-6px 2px -6px 0;background:rgba(255,236,190,.2)}';
+    (document.head || document.documentElement).appendChild(st);
+  }
+  const FACES = new Map();
+  function faceImg(k, px) {
+    if (!k || !BOX.faceUrl) return null;
+    const key = k.id + '|' + px; let e = FACES.get(key);
+    if (!e) { const u = BOX.faceUrl({ id: k.id }, px); if (!u) return null; if (FACES.size > 300) FACES.clear(); e = Object.assign(new Image(), { src: u }); FACES.set(key, e); }
+    return e.complete && e.naturalWidth ? e : null;
+  }
 
   // ---------- TV state kept between updates ----------
   const kv = {
@@ -121,6 +138,12 @@
     const pos = A().tableChairs(g, cx, cy, rad, seats, t, kv.pops);
     g.drawImage(kv.top, 0, 0, W, H);
     A().tableCandles(g, cx, cy, rad, t);
+    // each seated ruler's character, upright over their chair
+    pos.forEach((P) => {
+      const p = seats[P.i], im = p && faceImg(p, 96); if (!im) return;
+      const sz = P.cw * 1.15, bob = Math.sin(t * 2 + P.i) * P.cw * 0.03;
+      g.drawImage(im, P.x - sz / 2, P.y - sz * 0.62 + bob, sz, sz);
+    });
     // name plates outside the chairs
     const many = N > 20;
     g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -305,12 +328,14 @@
       const [x, y] = capXY.get(k.id);
       const T0 = kv.tileAt.get(k.home.q + ',' + k.home.r);
       if (labelAll || top.has(k.id) || k.msg) {
-        const label = `${k.avatar ? k.avatar + ' ' : ''}${AGE_ICON[k.age] || ''} ${short(kname(k), labelAll ? 16 : 10)}${k.vassalOf ? ' ⛓️' : ''}`;
+        const fim = faceImg(k, 64), fw = fim ? fs * 1.9 : 0; // the ruler's face at the start of the label
+        const label = `${!fim && k.avatar ? k.avatar + ' ' : ''}${AGE_ICON[k.age] || ''} ${short(kname(k), labelAll ? 16 : 10)}${k.vassalOf ? ' ⛓️' : ''}`;
         g.font = `700 ${fs}px 'Cinzel', Fredoka, serif`;
-        const w = g.measureText(label).width + fs * 0.9, ly = y + S * 0.82;
+        const w = g.measureText(label).width + fs * 0.9 + (fim ? fw * 0.8 : 0), ly = y + S * 0.82;
         g.fillStyle = 'rgba(28,16,6,.82)'; art.roundRect(g, x - w / 2, ly - fs * 0.72, w, fs * 1.44, fs * 0.3); g.fill();
         g.fillStyle = k.color; g.fillRect(x - w / 2 + 3, ly - fs * 0.72 + 2, 3, fs * 1.44 - 4);
-        g.fillStyle = k.gone ? '#bba98a' : '#fff3d6'; g.fillText(label, x + 2, ly + 1);
+        if (fim) { g.save(); if (k.gone) g.globalAlpha = 0.55; g.drawImage(fim, x - w / 2 + 3, ly - fw * 0.62, fw, fw); g.restore(); }
+        g.fillStyle = k.gone ? '#bba98a' : '#fff3d6'; g.fillText(label, x + 2 + (fim ? fw * 0.4 : 0), ly + 1);
       }
       if (T0 && T0.g > 0 && S >= 22) art.badge(g, x + S * 0.62, y - S * 0.05, String(T0.g), clamp(S * 0.26, 9, 14), 'rgba(28,16,6,.82)');
       if (k.traitor) { g.font = `${Math.round(S * 0.6)}px serif`; g.fillText('🗡️', x - S * 0.7, y - S * 0.6 + Math.sin(t * 4) * 3); }
@@ -372,7 +397,7 @@
     const ks = s.kingdoms.slice().sort((a, b) => b.score - a.score), big = ks.length > 12, shown = big ? ks.slice(0, 10) : ks;
     const allies = new Map((s.alliances || []).map((A2) => [A2.id, A2]));
     const atWar = new Set(); for (const w of s.wars || []) if (w.ago < 60000) { atWar.add(w.a); atWar.add(w.b); }
-    const list = `<div class="kt-lh">👑 Kingdoms${big ? ` <small>top 10 of ${ks.length}</small>` : ''}</div>${shown.map((k, i) => `<div class="kt-row${k.gone ? ' gone' : ''}"><span class="n">${i + 1}</span><i class="sw" style="background:${esc(k.color)}"></i><span class="nm">${k.avatar ? esc(k.avatar) + ' ' : ''}${esc(short(kname(k), 15))}${crestOf(k) ? ' ' + esc(crestOf(k).icon) : ''}</span><span class="tags">${atWar.has(k.id) ? '⚔️' : ''}${k.marked ? '🎯' : ''}${k.bounty ? '💰' : ''}${k.ally && allies.has(k.ally) ? `<em class="al" style="background:${A().allyColor(k.ally)}">🤝</em>` : ''}${k.vassalOf ? '⛓️' : ''}${k.traitor ? '🗡️' : ''}${k.stage ? '🚀' + k.stage : ''}</span><span class="ag" title="${AGE_NAME[k.age]}">${AGE_ICON[k.age] || ''}</span><b>${k.score}</b></div>`).join('')}`;
+    const list = `<div class="kt-lh">👑 Kingdoms${big ? ` <small>top 10 of ${ks.length}</small>` : ''}</div>${shown.map((k, i) => `<div class="kt-row${k.gone ? ' gone' : ''}"><span class="n">${i + 1}</span><i class="sw" style="background:${esc(k.color)}"></i><span class="nm">${hasFace(k) ? face(k, 30) + ' ' : k.avatar ? esc(k.avatar) + ' ' : ''}${esc(short(kname(k), 15))}${crestOf(k) ? ' ' + esc(crestOf(k).icon) : ''}</span><span class="tags">${atWar.has(k.id) ? '⚔️' : ''}${k.marked ? '🎯' : ''}${k.bounty ? '💰' : ''}${k.ally && allies.has(k.ally) ? `<em class="al" style="background:${A().allyColor(k.ally)}">🤝</em>` : ''}${k.vassalOf ? '⛓️' : ''}${k.traitor ? '🗡️' : ''}${k.stage ? '🚀' + k.stage : ''}</span><span class="ag" title="${AGE_NAME[k.age]}">${AGE_ICON[k.age] || ''}</span><b>${k.score}</b></div>`).join('')}`;
     const lEl = kv.el.querySelector('#kt-list');
     if (lEl.dataset.html !== list) { lEl.innerHTML = list; lEl.dataset.html = list; }
     sidePanels(s, pr);
@@ -395,7 +420,7 @@
     if (C) {
       const max = Math.max(1, ...(C.tally || []).map((t) => t.n));
       setHtml(cEl, `<div class="kt-ch">🗳️ Royal Council <b class="kt-cd" data-left="${C.endsIn}">${mmss(C.endsIn)}</b></div><div class="kt-ask">${esc(C.icon)} ${esc(C.ask)}</div><div class="kt-csub">${esc(C.text)} Vote on your phone!</div>
-        ${(C.tally || []).slice(0, 4).map((t) => { const k = kv.kById.get(t.id); return k ? `<div class="kt-vrow"><i class="sw" style="background:${esc(k.color)}"></i><span class="nm">${esc(short(kname(k), 14))}</span><span class="kt-vbar"><i style="width:${Math.round(100 * t.n / max)}%"></i></span><b>${t.n}</b></div>` : ''; }).join('')}<div class="kt-csub">${C.votes} of ${C.of} have voted</div>`);
+        ${(C.tally || []).slice(0, 4).map((t) => { const k = kv.kById.get(t.id); return k ? `<div class="kt-vrow"><i class="sw" style="background:${esc(k.color)}"></i><span class="nm">${hasFace(k) ? face(k, 26) + ' ' : ''}${esc(short(kname(k), 14))}</span><span class="kt-vbar"><i style="width:${Math.round(100 * t.n / max)}%"></i></span><b>${t.n}</b></div>` : ''; }).join('')}<div class="kt-csub">${C.votes} of ${C.of} have voted</div>`);
     }
     // threats: attacks on capitals and villages, soonest first
     const now = gameNow(), th = [];
@@ -451,14 +476,18 @@
     const names = (w.names || []).map((n) => esc(many ? String(n).replace(/'s Kingdom$/, '') : String(n)));
     const who = names.length > 4 ? `${names.slice(0, 4).join(', ')} and ${names.length - 4} more` : names.length > 1 ? `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}` : names.join('');
     const st = (s.standings || []).slice(0, 10);
+    // the winning ruler(s), full figure, grinning
+    const champs = (w.ids || []).slice(0, 5).map((id) => kv.kById.get(id) || (s.standings || []).find((r) => r.id === id)).filter((k) => k && hasFace(k));
+    const big = champs.length > 2 ? 120 : 160;
     hud.innerHTML = `<div class="kt-over"><div class="kt-over-card">
       <canvas class="kt-over-cv" id="kt-over-cv"></canvas>
+      ${champs.length && BOX.body ? `<div class="kt-champs">${champs.map((k) => BOX.body(ruler(k), big, { mood: 'grin' })).join('')}</div>` : ''}
       <div class="kt-over-mode">${wi} ${esc(wt)}</div>
       <h2 class="kt-over-who${many ? ' many' : ''}">${who || 'Nobody'}</h2>
       <p class="kt-over-why">${w.ids && w.ids.length > 1 && w.mode !== 'diplomacy' ? 'together ' : ''}${esc(wd)}${w.reason === 'time' ? ' when time ran out' : '!'}</p>
       <div class="kt-over-grid">
-        <div class="kt-stand"><div class="kt-lh">Final standings</div>${st.map((r) => `<div class="kt-row ${w.ids && w.ids.includes(r.id) ? 'win' : ''}"><span class="n">${r.rank}</span><i class="sw" style="background:${esc(r.color)}"></i><span class="nm">${esc(short(kname(r), 20))}</span><span class="tags">${r.vassalOf ? '⛓️' : ''}${r.stage ? '🚀' + r.stage : ''}${r.capitals > 1 ? '🏰' + r.capitals : ''}</span><span class="ag">${AGE_ICON[r.age] || ''}</span><b>${r.score}</b></div>`).join('')}</div>
-        <div class="kt-awards">${(s.awards || []).slice(0, 6).map((a) => `<div class="kt-award"><div class="t">${esc(a.title)}</div><div class="w">${esc(kname(a))}</div>${a.value != null ? `<div class="v">${esc(String(a.value))}</div>` : ''}</div>`).join('')}</div>
+        <div class="kt-stand"><div class="kt-lh">Final standings</div>${st.map((r) => `<div class="kt-row ${w.ids && w.ids.includes(r.id) ? 'win' : ''}"><span class="n">${r.rank}</span><i class="sw" style="background:${esc(r.color)}"></i><span class="nm">${hasFace(r) ? face(r, 30) + ' ' : ''}${esc(short(kname(r), 20))}</span><span class="tags">${r.vassalOf ? '⛓️' : ''}${r.stage ? '🚀' + r.stage : ''}${r.capitals > 1 ? '🏰' + r.capitals : ''}</span><span class="ag">${AGE_ICON[r.age] || ''}</span><b>${r.score}</b></div>`).join('')}</div>
+        <div class="kt-awards">${(s.awards || []).slice(0, 6).map((a) => `<div class="kt-award"><div class="t">${esc(a.title)}</div><div class="w">${hasFace(a) ? face(a, 34) + ' ' : ''}${esc(kname(a))}</div>${a.value != null ? `<div class="v">${esc(String(a.value))}</div>` : ''}</div>`).join('')}</div>
       </div></div></div>`;
     kv.overAt = tnow();
     const cv = hud.querySelector('#kt-over-cv'), ids = w.ids || [];

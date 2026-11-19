@@ -294,3 +294,13 @@ body.g-truths .vip-bar .btn.green { background: #9c1f17; color: var(--tx-cream);
 @keyframes tx-flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0.35; } }
 @media (max-width: 1100px) { .tx-tv, .tx-over, .tx-lobby { grid-template-columns: 1fr; } .tx-folder { grid-row: auto; } .tx-lineup { grid-column: auto; } .tx-seat { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .tx *, .tx-lamp { animation: none !important; } }
+/* Suspects as their JustGameBox character (full body, holding the placard). */
+body.g-truths .tx-sus.has-fig .tx-fig { position: absolute; left: -60px; right: -60px; bottom: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; }
+body.g-truths .tx-sus.has-fig .tx-fig .bx-body { display: block; filter: brightness(0.42) saturate(0.5) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4)); transition: filter 0.4s; }
+body.g-truths .tx-sus.has-fig.lit .tx-fig .bx-body, body.g-truths .tx-mugshot .tx-fig .bx-body, body.g-truths .chip.tx-chip .tx-fig .bx-body { filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45)); }
+body.g-truths .tx-sus.has-fig.dim .tx-fig { animation: tx-shifty 2.6s ease-in-out infinite; }
+body.g-truths .tx-sus.has-fig .tx-plac { z-index: 1; }
+body.g-truths .tx-sus.has-fig.big { margin-bottom: 18px; }
+body.g-truths .tx-av { display: inline-flex; align-items: center; }
+body.g-truths .tx-av .bx-face { background: rgba(200, 214, 240, 0.14); }
+body.g-truths .tx-nmf { margin: -6px 0 -4px; }

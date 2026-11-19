@@ -254,3 +254,8 @@
 .kp-tick { font-size: 20px; color: #6a3fc0; font-weight: 900; }
 .kp-sheet .kp-votes { max-height: 55vh; overflow-y: auto; }
 .kp-root .btn.ghost { color: var(--kp-ink); border-color: var(--kp-line); background: #fff7e3; }
+/* Rulers are the players' characters (BOX.face / BOX.body) */
+.kp-chair-seat { overflow: hidden; }
+.kp-chair-seat .bx-face { width: 46px !important; height: 46px !important; margin-top: 4px; }
+.kp-crown .bx-body { font-size: 0; }
+.kp-kt b .bx-face, .kp-award .bx-face { margin: -6px 2px -6px 0; background: rgba(120, 80, 30, 0.12); }

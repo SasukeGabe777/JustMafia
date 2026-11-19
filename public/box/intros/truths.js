@@ -130,7 +130,7 @@
       g.save(); g.translate(x, fy); g.scale(sc, sc);
       g.fillStyle = '#3a4766'; g.beginPath(); g.moveTo(-86, 0); g.lineTo(-80, -190); g.quadraticCurveTo(0, -236, 80, -190); g.lineTo(86, 0); g.closePath(); g.fill();
       g.beginPath(); g.arc(0, -272, 58, 0, TAU); g.fill();
-      s.emoji(c.avatar || '🙂', 0, -272, 84);
+      s.face(c, 0, -272, 84);
       g.fillStyle = CREAM; g.fillRect(-90, -110, 180, 76); text(g, String(i + 1), 0, -90, 30, INK, { font: BO }); text(g, c.name, 0, -54, 30, INK, { font: TW, max: 168 });
       g.restore();
     });

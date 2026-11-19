@@ -226,9 +226,9 @@ class Truths {
     const rated = this.history.filter((h) => h.of > 0);
     const lie = rated.slice().sort((a, b) => b.fooled / b.of - a.fooled / a.of || b.fooled - a.fooled)[0];
     let truth = null;
-    for (const h of rated) for (let i = 0; i < 3; i++) if (i !== h.lie && h.tally[i] > 0 && (!truth || h.tally[i] / h.of > truth.share)) truth = { name: h.name, av: h.av, text: h.items[i], votes: h.tally[i], of: h.of, share: h.tally[i] / h.of };
+    for (const h of rated) for (let i = 0; i < 3; i++) if (i !== h.lie && h.tally[i] > 0 && (!truth || h.tally[i] / h.of > truth.share)) truth = { id: h.id, name: h.name, av: h.av, text: h.items[i], votes: h.tally[i], of: h.of, share: h.tally[i] / h.of };
     this.highlights = {
-      lie: lie && lie.fooled ? { name: lie.name, av: lie.av, text: lie.items[lie.lie], fooled: lie.fooled, of: lie.of } : null,
+      lie: lie && lie.fooled ? { id: lie.id, name: lie.name, av: lie.av, text: lie.items[lie.lie], fooled: lie.fooled, of: lie.of } : null,
       truth: truth && truth.share >= 0.34 ? truth : null,
     };
     // Everyone who wrote a set but never got the hot seat: their lie is revealed on the way out.
@@ -267,7 +267,7 @@ class Truths {
     return { ok: false, error: 'Unknown move.' };
   }
 
-  who(id) { const p = this.room.get(id); return { name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '' }; }
+  who(id) { const p = this.room.get(id); return { id, name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '' }; }
   standings() { return [...this.scores].filter(([id]) => this.room.get(id)).map(([id, pts]) => ({ id, ...this.who(id), points: pts, right: (this.stats.get(id) || {}).right || 0 })).sort((a, b) => b.points - a.points || b.right - a.right); }
   // Best first, once the game is over (for the party scoreboard across games).
   results() { return this.standings().map((r) => r.id); }

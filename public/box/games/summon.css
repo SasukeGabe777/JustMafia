@@ -137,3 +137,8 @@ html:has(body.g-summon) { background: #120a28; }
 .sm-stats div { background: rgba(15, 8, 30, 0.8); border-radius: 12px; padding: 6px 2px; } .sm-stats b { display: block; font-size: 20px; } .sm-stats span { font-size: 12px; color: #cfc6e6; }
 .sm-aw-ph { display: flex; gap: 10px; align-items: center; text-align: left; width: 100%; background: rgba(15, 8, 30, 0.8); border-radius: 12px; padding: 6px 10px; }
 .sm-aw-ph i { font-style: normal; font-size: 30px; } .sm-aw-ph b { display: block; color: #ffd23f; } .sm-aw-ph small { color: #cfc6e6; }
+/* Players are their characters (BOX.face / BOX.body) */
+body.g-summon .sm-res-row .av .bx-face { display: block; background: rgba(255, 255, 255, 0.1); }
+body.g-summon .sm-mvp .av { line-height: 1; margin: 4px 0; }
+body.g-summon .sm-mvp .av .bx-body { filter: drop-shadow(0 0 14px rgba(255, 210, 63, 0.55)); }
+body.g-summon .sm-aw span .bx-face { margin: -4px 0; }

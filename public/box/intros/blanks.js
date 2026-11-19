@@ -129,7 +129,7 @@
       g.fillStyle = 'rgba(80,0,40,0.4)'; rr(g, -96, -126, 210, 270, 20); g.fill();
       g.fillStyle = '#fff4dc'; rr(g, -106, -136, 210, 270, 20); g.fill();
       g.fillStyle = c.color || STRIPES[i % 5]; rr(g, -106, -136, 210, 40, 20); g.fill(); g.fillRect(-106, -116, 210, 20);
-      s.emoji(c.avatar || '🙂', -1, -10, 100);
+      s.face(c, -1, -10, 100);
       text(g, c.name, -1, 96, 38, '#2a0b4f', { font: LG, max: 180 });
       g.restore();
     });

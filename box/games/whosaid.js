@@ -350,7 +350,7 @@ class WhoSaid {
       easy: easy && easy !== bluff && easy.right / easy.voted >= 0.6 ? out(easy, 'easy') : null,
     };
   }
-  who(id) { const p = this.room.get(id); return { name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '' }; }
+  who(id) { const p = this.room.get(id); return { id, name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '' }; }
   // Best first, once the game is over (for the party scoreboard across games).
   results() { return this.standings().map((r) => r.id); }
   makeAwards() {
@@ -422,7 +422,7 @@ class WhoSaid {
   // Public spotlight: the answer and the names. Who wrote it only appears in the reveal.
   spotPublic() {
     const c = this.cur; if (!c) return null;
-    return { text: c.text, names: c.names, avs: c.avs || [], n: c.n, total: this.spotTotal, voted: c.votes.size, of: this.voters().length, result: this.phase === 'reveal' ? c.result : null };
+    return { text: c.text, names: c.names, avs: c.avs || [], ids: this.phase === 'reveal' ? c.opts || [] : [] /* ids only once revealed: names still find faces */, n: c.n, total: this.spotTotal, voted: c.votes.size, of: this.voters().length, result: this.phase === 'reveal' ? c.result : null };
   }
   notGuessed() { return this.phase === 'spot' && this.cur ? this.voters().filter((p) => !this.cur.votes.has(p.id)).slice(0, 20).map((p) => p.name) : [];
   }

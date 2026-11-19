@@ -20,20 +20,20 @@
   $('#back').href = safeBack(params.get('back'));
 
   // ---------- the games (names, icons; art in /art/tiles/<key>.svg) ----------
-  const GAMES = { mafia: ['JustMafia', '🔪'], ducks: ['JustRaiseDucks', '🦆'], kingdoms: ['JustKingdoms', '🏰'], president: ['President', '👑'], blanks: ['JustBlanks', '🃏'], blackjack: ['Blackjack Night', '♠️'], bid: ['JustBid', '📦'], price: ['Price Panic', '💸'], emoji: ['Emoji Charades', '😜'], truths: ['Two Truths & a Lie', '🤥'], likely: ['Most Likely To…', '🏆'], whosaid: ['Who Said It?', '🕵️'], spectrum: ['Where Do You Stand?', '🧭'], sketch: ['JustSketch Relay', '✏️'], funny: ['JustFunny', '😂'], plinko: ['JustDrop', '🎯'], trivia: ['Hot Take Trivia', '🧠'], colormatch: ['Color Match', '🎨'], memes: ['Meme Maker', '🖼️'], letters: ['Letter Rush', '🔤'], summon: ['JustSummon', '⚔️'], quickdraw: ['Quick Draw', '⚡'], bomb: ['Bomb Squad', '💣'], alien: ['Alien Abduction', '🛸'], tune: ['Tune Buzz', '🎵'], actout: ['Act It Out', '🎭'], debate: ['Debate Club', '🗣️'], marble: ['JustMarble', '🔮'], escape: ['JustEscape', '🗝️'], zombie: ['Zombie Survival', '🧟'] };
+  const GAMES = { mafia: ['JustMafia', '🔪'], ducks: ['JustRaiseDucks', '🦆'], kingdoms: ['JustKingdoms', '🏰'], president: ['President', '👑'], blanks: ['JustBlanks', '🃏'], blackjack: ['Blackjack Night', '♠️'], bid: ['JustBid', '📦'], price: ['Price Panic', '💸'], emoji: ['Emoji Charades', '😜'], truths: ['Two Truths & a Lie', '🤥'], likely: ['Most Likely To…', '🏆'], whosaid: ['Who Said It?', '🕵️'], spectrum: ['Where Do You Stand?', '🧭'], sketch: ['JustSketch Relay', '✏️'], funny: ['JustFunny', '😂'], plinko: ['JustDrop', '🎯'], trivia: ['Hot Take Trivia', '🧠'], colormatch: ['Color Match', '🎨'], memes: ['Meme Maker', '🖼️'], letters: ['Letter Rush', '🔤'], summon: ['JustSummon', '⚔️'], quickdraw: ['Quick Draw', '⚡'], bomb: ['Bomb Squad', '💣'], alien: ['Alien Abduction', '🛸'], tune: ['Tune Buzz', '🎵'], actout: ['Act It Out', '🎭'], debate: ['Debate Club', '🗣️'], marble: ['JustMarble', '🔮'], escape: ['JustEscape', '🗝️'], zombie: ['Zombie Survival', '🧟'], pizza: ['Pizza', '🍕'] };
   const gameName = (k) => (GAMES[k] ? GAMES[k][0] : String(k));
   const gameIcon = (k) => (GAMES[k] ? GAMES[k][1] : '🎮');
 
   // ---------- sections ----------
   const SECTIONS = [
-    { id: 'character', icon: '👤', label: 'Character', subs: [['outfit', '👕', 'Outfits'], ['hat', '🎩', 'Hats'], ['hair', '💇', 'Hair'], ['accessory', '🕶️', 'Extras'], ['shoeStyle', '👟', 'Shoes'], ['colours', '🎨', 'Colours & face']] },
+    { id: 'character', icon: '👤', label: 'Character', subs: [['body', '🧍', 'Body'], ['outfit', '👕', 'Outfits'], ['hat', '🎩', 'Hats'], ['hair', '💇', 'Hair'], ['accessory', '🕶️', 'Extras'], ['shoeStyle', '👟', 'Shoes'], ['colours', '🎨', 'Colours & face']] },
     { id: 'flair', icon: '✨', label: 'Flair', subs: [['nameplate', '🏷️', 'Nameplates'], ['effect', '🌟', 'Effects']] },
     { id: 'gear', icon: '🎮', label: 'Game gear' },
     { id: 'mafia', icon: '🔪', label: 'JustMafia', subs: [['houseStyle', '🏠', 'Houses'], ['houseDecor', '🏮', 'Decor'], ['deathAnim', '🕯️', 'Farewells'], ['reactions', '😱', 'Reactions'], ['ghostSkin', '👻', 'Ghosts']] },
     { id: 'wardrobe', icon: '🎒', label: 'Wardrobe' },
     { id: 'earn', icon: '🪙', label: 'Earn JG' },
   ];
-  const FREE_FIELDS = ['skin', 'hairColor', 'color', 'eyes', 'expression', 'pants', 'shoes', 'face', 'features', 'facialHair', 'nameColor'];
+  const FREE_FIELDS = ['body', 'skin', 'hairColor', 'color', 'eyes', 'expression', 'pants', 'shoes', 'face', 'features', 'facialHair', 'nameColor'];
   const HOME = { houseStyle: 'style', houseDecor: 'decor' };
   const HEAD_FIELDS = new Set(['hat', 'hair', 'expression', 'face', 'facialHair', 'features']);
   const BACK_ACC = new Set(['cape', 'wings', 'batWings', 'fairyWings', 'backpack', 'satchel', 'torch', 'rose', 'wristwatch', 'diceBag', 'badge', 'goldChain', 'amulet', 'scarf']);
@@ -71,7 +71,7 @@
   function mockApi() {
     const stock = new Set(C.STARTER_STOCK.concat(C.nextStock(C.STARTER_STOCK, 14)));
     const m = { name: 'You', gold: 340, earned: 410, spent: 70, owned: new Set(C.CATALOG.filter((i) => i.free).map((i) => i.id).concat(['hat:beret', 'gear:marble:cherry'])), gear: { marble: { skin: 'gear:marble:cherry' } },
-      look: { color: '#e84393', skin: '#d9a273', hat: 'beret', hair: 'ponytail', hairColor: '#ba593c', facialHair: 'none', eyes: '#416f91', face: 'round', features: 'rosyCheeks', expression: 'grin', outfit: 'shirt', pants: '#2d2f3a', shoes: '#151821', shoeStyle: 'simple', accessory: 'none', nameColor: '#ffffff', nameplate: 'plain', effect: 'none', deathAnim: 'none', reactions: 'rxClassic', ghostSkin: 'classic' },
+      look: { body: 'female', color: '#e84393', skin: '#d9a273', hat: 'beret', hair: 'ponytail', hairColor: '#ba593c', facialHair: 'none', eyes: '#416f91', face: 'round', features: 'rosyCheeks', expression: 'grin', outfit: 'shirt', pants: '#2d2f3a', shoes: '#151821', shoeStyle: 'simple', accessory: 'none', nameColor: '#ffffff', nameplate: 'plain', effect: 'none', deathAnim: 'none', reactions: 'rxClassic', ghostSkin: 'classic' },
       home: { style: 'cottage', decor: 'none' }, lookSaved: true,
       ledger: [{ at: Date.now() - 3.6e6, delta: 14, reason: 'JustMarble: cleared the maze', balance: 340 }, { at: Date.now() - 7.2e6, delta: -70, reason: 'Bought Beret', balance: 326 }, { at: Date.now() - 9e6, delta: 25, reason: 'Party Mode finale', balance: 396 }, { at: Date.now() - 1e7, delta: 9, reason: 'Blackjack Night: top half', balance: 371 }] };
     const section = { outfit: 'character', shoeStyle: 'character', hat: 'character', accessory: 'character', hair: 'character', nameplate: 'flair', effect: 'flair', houseStyle: 'mafia', houseDecor: 'mafia', deathAnim: 'mafia', reactions: 'mafia', ghostSkin: 'mafia' };
@@ -116,7 +116,7 @@
   let API = wantMock ? mockApi() : socketApi();
 
   // ---------- state ----------
-  const S = { st: null, tab: 'character', sub: { character: 'outfit', flair: 'nameplate', mafia: 'houseStyle' }, game: null, sel: null, edits: {}, saving: 0, pending: false, say: '', waiting: false, keeperJump: 0, startLook: null };
+  const S = { st: null, tab: 'character', sub: { character: 'body', flair: 'nameplate', mafia: 'houseStyle' }, game: null, sel: null, edits: {}, saving: 0, pending: false, say: '', waiting: false, keeperJump: 0, startLook: null };
   const items = () => {
     const st = S.st; if (!st) return [];
     const cat = (st.catalog || []).map((i) => ({ ...i, kind: 'item' }));
@@ -125,7 +125,7 @@
   };
   function gearDefaults() {
     const st = S.st; if (!st) return [];
-    return (GEAR.GAMES_WITH_GEAR || []).map((s) => ({ id: `gear-default:${s.game}:${s.slot}`, kind: 'gear', isDefault: true, game: s.game, slot: s.slot, name: s.default.name, icon: s.default.icon, desc: s.default.desc, cost: 0, owned: true, value: 'classic', where: s.where,
+    return (GEAR.GAMES_WITH_GEAR || []).map((s) => ({ id: `gear-default:${s.game}:${s.slot}`, kind: 'gear', isDefault: true, game: s.game, slot: s.slot, spot: s.spot || null, name: s.default.name, icon: s.default.icon, desc: s.default.desc, cost: 0, owned: true, value: 'classic', where: s.where,
       equipped: !(st.gear && st.gear[s.game] && st.gear[s.game][s.slot]) }));
   }
   let ITEMS = [];
@@ -201,8 +201,20 @@
     const g = cv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, w, h); return [g, w, h];
   }
   const ink = '#2b1f3d';
-  function drawHead(g, w, h, l, t = 0.4) { const s = Math.min(h / 58, w / 46); MTArt.drawCharacter(g, w / 2, h + 22 * s, l, { scale: s, t }); }
-  function drawBody(g, w, h, l, t = 0.4) { const s = Math.min((h - 6) / 84, w / 40); MTArt.drawCharacter(g, w / 2, h - 3, l, { scale: s, t }); }
+  function drawHead(g, w, h, l, t = 0.4, wear) { const s = Math.min(h / 50, w / 46); MTArt.drawCharacter(g, w / 2, h + 24 * s, l, { scale: s, t, wear }); }
+  function drawBody(g, w, h, l, t = 0.4, wear) { const s = Math.min((h - 6) / 84, w / 44); MTArt.drawCharacter(g, w / 2, h - 3, l, { scale: s, t, wear }); }
+  function drawBust(g, w, h, l, t = 0.4, wear) { const s = Math.min(h / 56, w / 48); MTArt.drawCharacter(g, w / 2, h + 10 * s, l, { scale: s, t, wear }); }
+  // Game gear worn on the character: the game's equipped wearables, with `tryId` swapped in.
+  function wearFor(game, tryItem) {
+    if (!game || !GEAR.wearOf) return [];
+    const set = {}; const eq = (S.st && S.st.gear && S.st.gear[game]) || {};
+    for (const [slot, id] of Object.entries(eq)) { const it = (GEAR.BY_ID && GEAR.BY_ID.get(id)) || null; if (it) set[slot] = it.value; }
+    if (tryItem && tryItem.kind === 'gear' && tryItem.game === game) set[tryItem.slot] = tryItem.isDefault ? 'classic' : tryItem.value;
+    return GEAR.wearOf(game, set);
+  }
+  // The game's tile art as a backdrop when you try on gear for it.
+  const tileImgs = new Map();
+  function tileImg(game) { if (!tileImgs.has(game)) { const im = new Image(); im.src = '/art/tiles/' + encodeURIComponent(game) + '.svg'; tileImgs.set(game, im); } const im = tileImgs.get(game); return im.complete && im.naturalWidth ? im : null; }
   // Game gear: a round token painted with the item's colours, pattern and emblem.
   function drawToken(g, x, y, r, it, t = 0) {
     const p = (it && it.paint) || {}, a = p.a || '#8a7fb0', b = p.b || '#4a3f70', c = p.c || '#ffffff';
@@ -277,7 +289,10 @@
   // Paint one item card's picture.
   function paintCard(cv, i) {
     const [g, w, h] = fit(cv), l = look();
-    if (i.kind === 'gear') { drawToken(g, w / 2, h / 2 + 2, Math.min(w, h) * 0.38, i, 0.6); return; }
+    if (i.kind === 'gear') {
+      if (i.spot) { const wear = wearFor(i.game, i); if (i.spot === 'head' || i.spot === 'face') drawHead(g, w, h, l, 0.4, wear); else if (i.spot === 'back') drawBody(g, w, h, l, 0.4, wear); else drawBust(g, w, h, l, 0.4, wear); return; }
+      drawToken(g, w / 2, h / 2 + 2, Math.min(w, h) * 0.38, i, 0.6); return;
+    }
     const L = { ...l, [i.field]: i.value };
     switch (i.field) {
       case 'houseStyle': drawHouse(g, w / 2, h - 6, h / 95, i.value, (S.st.home || {}).decor, 1); return;
@@ -307,7 +322,11 @@
     g.beginPath(); g.rect(cl, counterTop, w - cl + 4, h - counterTop + 4); g.fillStyle = cg; g.fill(); g.stroke();
     g.beginPath(); g.rect(cl - 6, counterTop - 9, w - cl + 12, 11); const gg = g.createLinearGradient(0, counterTop - 9, 0, counterTop + 2); gg.addColorStop(0, '#ffe37a'); gg.addColorStop(1, '#e0a400'); g.fillStyle = gg; g.fill(); g.stroke();
     g.restore();
-    const s = Math.max(1.2, Math.min((floorY - 48) / 76, w / 95));
+    const s = Math.max(1.2, Math.min((floorY - 60) / 84, w / 95));
+    // Gear for one game: that game's picture behind you, and you wearing its gear.
+    const gearGame = i && i.kind === 'gear' ? i.game : S.tab === 'gear' && S.game ? S.game : null;
+    const wear = gearGame ? wearFor(gearGame, i) : [];
+    if (gearGame) { const im = tileImg(gearGame); if (im) { const top = 50, bh = floorY - top - 4, bw = Math.min(w * 0.62, bh * 1.5), bx = Math.max(6, cx - bw / 2), sc = Math.max(bw / 400, bh / 240), iw = 400 * sc, ih = 240 * sc; g.save(); g.beginPath(); if (g.roundRect) g.roundRect(bx, top, bw, bh, 16); else g.rect(bx, top, bw, bh); g.clip(); g.globalAlpha = 0.85; g.drawImage(im, bx + (bw - iw) / 2, top + (bh - ih) / 2, iw, ih); g.restore(); g.save(); g.lineWidth = 3; g.strokeStyle = ink; g.beginPath(); if (g.roundRect) g.roundRect(bx, top, bw, bh, 16); else g.rect(bx, top, bw, bh); g.stroke(); g.restore(); } }
     // a showcase for what you're trying on
     if (i && i.kind === 'item' && HOME[i.field]) {
       const home = { ...(S.st.home || {}) }; home[HOME[i.field]] = i.value;
@@ -318,7 +337,7 @@
     const pg = g.createRadialGradient(cx, floorY - 4, 2, cx, floorY, 30 * s); pg.addColorStop(0, '#fff2a8'); pg.addColorStop(1, '#e0a400'); g.fillStyle = pg; g.fill(); g.stroke(); g.restore();
     if (i && i.kind === 'item' && i.field === 'deathAnim') drawDeath(g, cx, floorY - 2, s, l, i.value, t);
     else if (i && i.kind === 'item' && HOME[i.field]) MTArt.drawCharacter(g, cx + 34 * s * 0.5, floorY + 2, l, { scale: s * 0.6, t });
-    else MTArt.drawCharacter(g, cx, floorY - 2, l, { scale: s, t, seed: 1, jump: S.happy && S.happy > t ? Math.abs(Math.sin((S.happy - t) * 8)) * 8 * s : 0 });
+    else MTArt.drawCharacter(g, cx, floorY - 2, l, { scale: s, t, seed: 1, wear, jump: S.happy && S.happy > t ? Math.abs(Math.sin((S.happy - t) * 8)) * 8 * s : 0 });
     if (i && i.kind === 'item' && i.field === 'ghostSkin') MTArt.drawGhost(g, w * (wide ? 0.6 : 0.6), floorY - 6, { ...l, ghostSkin: i.value }, { scale: s * 0.62, t, glow: true });
     if (i && i.kind === 'item' && i.field === 'reactions') {
       const pack = (O.REACTION_PACKS || {})[i.value] || [];
@@ -326,7 +345,7 @@
       pack.forEach((e, k) => { const p = (t * 0.35 + k / pack.length) % 1; g.globalAlpha = p < 0.8 ? 1 : (1 - p) * 5; g.font = `${Math.round(16 * s * 0.7 * (0.8 + p * 0.4))}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`; g.fillText(e, cx + Math.sin(k * 2.1 + t) * 26 * s * 0.6, floorY - 70 * s - p * 40); });
       g.restore();
     }
-    if (i && i.kind === 'gear') {
+    if (i && i.kind === 'gear' && !i.spot) {
       const gx = w * (wide ? 0.62 : 0.6), gy = floorY - 34 * s * 0.8 + Math.sin(t * 2) * 4;
       g.save(); g.fillStyle = 'rgba(0,0,0,0.2)'; g.beginPath(); g.ellipse(gx, floorY, 18 * s * 0.6, 4 * s * 0.6, 0, 0, TAU); g.fill(); g.restore();
       drawToken(g, gx, gy, 17 * s * 0.75, i, t);
@@ -359,11 +378,12 @@
     const subs = sec.subs ? sec.subs : null;
     $('#subs').hidden = !subs && !(S.tab === 'gear' && S.game);
     if (subs) {
-      $('#subs').innerHTML = subs.map(([k, ic, lb]) => { const n = k === 'colours' ? '' : ITEMS.filter((i) => i.field === k && i.owned).length; return `<button class="chip${S.sub[S.tab] === k ? ' on' : ''}" data-sub="${k}">${ic} ${esc(lb)}${n !== '' ? ` <small>${n}</small>` : ''}</button>`; }).join('');
+      $('#subs').innerHTML = subs.map(([k, ic, lb]) => { const n = k === 'colours' || k === 'body' ? '' : ITEMS.filter((i) => i.field === k && i.owned).length; return `<button class="chip${S.sub[S.tab] === k ? ' on' : ''}" data-sub="${k}">${ic} ${esc(lb)}${n !== '' ? ` <small>${n}</small>` : ''}</button>`; }).join('');
     } else if (S.tab === 'gear' && S.game) $('#subs').innerHTML = '<button class="chip on" data-games="1">‹ All games</button>';
     // shelf
     const shelf = $('#shelf'); let html = '';
     if (S.tab === 'character' && S.sub.character === 'colours') html = coloursHTML();
+    else if (S.tab === 'character' && S.sub.character === 'body') html = bodyHTML();
     else if (S.tab === 'character' || S.tab === 'flair' || S.tab === 'mafia') {
       const field = S.sub[S.tab], list = sorted(ITEMS.filter((i) => i.kind === 'item' && i.field === field));
       if (S.tab === 'mafia') html += '<p class="note">🔪 These are for <b>JustMafia</b>: your house, how you go out, your reactions and your ghost. 🎟 <b>Season pass & ✦ Fate live in JustMafia</b> (Season & unlocks).</p>';
@@ -379,7 +399,13 @@
   }
   function paintShelf() {
     for (const b of document.querySelectorAll('#shelf [data-item]')) { const cv = b.querySelector('canvas'), i = byId(b.dataset.item); if (cv && i) try { paintCard(cv, i); } catch (e) { /* skip */ } }
-    for (const b of document.querySelectorAll('#shelf [data-opt]')) { const cv = b.querySelector('canvas'); if (!cv) continue; const [g, w, h] = fit(cv); drawHead(g, w, h, { ...look(), [b.dataset.field]: b.dataset.opt }); }
+    for (const b of document.querySelectorAll('#shelf [data-opt]')) { const cv = b.querySelector('canvas'); if (!cv) continue; const [g, w, h] = fit(cv), L = { ...look(), [b.dataset.field]: b.dataset.opt }; if (b.dataset.full) { if (b.dataset.field === 'body') Object.assign(L, bodyHair(L, b.dataset.opt)); drawBody(g, w, h, L); } else drawHead(g, w, h, L); }
+  }
+  // Body type: female or male (free), the first choice for a new character.
+  function bodyHTML() {
+    const l = look(), cur = l.body || (O.inferBody ? O.inferBody(l) : 'male');
+    return '<p class="note">🧍 Pick your body. It shows in <b>every game</b>, and everything you wear fits it. Free to change.</p><div class="bodies">' +
+      (O.body || ['male', 'female']).slice().reverse().map((v) => `<button class="opt body-opt${cur === v ? ' on' : ''}" data-field="body" data-val="${esc(v)}" data-opt="${esc(v)}" data-full="1" aria-pressed="${cur === v}"><canvas aria-hidden="true"></canvas>${esc(O.label(v))}</button>`).join('') + '</div>';
   }
   function coloursHTML() {
     const l = look();
@@ -390,15 +416,15 @@
   function gearHTML() {
     const games = (GEAR.GAMES_WITH_GEAR || []).map((s) => s.game).filter((g, k, a) => a.indexOf(g) === k);
     if (!S.game || !games.includes(S.game)) {
-      return '<p class="note">🎮 Gear is <b>per game</b>: a marble skin in JustMarble, a card back in President, a phone theme in the party games… Pick a game.</p><div class="games">' + games.map((k) => {
+      return '<p class="note">🎮 Gear is <b>per game</b>: your character wears it in that game: a cowboy hat in Quick Draw, a dealer visor at Blackjack, a chef’s hat in the kitchen… plus a few things for the game itself, like marble skins. Pick a game.</p><div class="games">' + games.map((k) => {
         const list = ITEMS.filter((i) => i.kind === 'gear' && i.game === k && !i.isDefault), have = list.filter((i) => i.owned).length;
-        const slot = (GEAR.GAMES_WITH_GEAR.find((s) => s.game === k) || {}).label || 'Gear';
-        return `<button class="game" data-game="${esc(k)}"><img src="/art/tiles/${encodeURIComponent(k)}.svg" alt="" loading="lazy"><span class="gi">${esc(gameIcon(k))} ${esc(gameName(k))}<small>${esc(slot)}</small></span><span class="count${have ? ' has' : ''}">${have}/${list.length}</span></button>`;
+        const slot = GEAR.GAMES_WITH_GEAR.filter((s) => s.game === k).map((s) => s.label).slice(0, 3).join(' · ') || 'Gear';
+        return `<button class="game" data-game="${esc(k)}"><img src="/art/tiles/${encodeURIComponent(k)}.svg" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="gi">${esc(gameIcon(k))} ${esc(gameName(k))}<small>${esc(slot)}</small></span><span class="count${have ? ' has' : ''}">${have}/${list.length}</span></button>`;
       }).join('') + '</div>';
     }
     const k = S.game, slots = GEAR.GAMES_WITH_GEAR.filter((s) => s.game === k);
-    return `<div class="gear-head"><img src="/art/tiles/${encodeURIComponent(k)}.svg" alt=""><div><h3>${esc(gameIcon(k))} ${esc(gameName(k))}</h3><p>${slots.map((s) => esc(s.label) + (s.where === 'phone' ? ' · on your phone' : ' · on the big screen')).join(' · ')}</p></div></div>` +
-      slots.map((s) => `<div class="grid">${sorted(ITEMS.filter((i) => i.kind === 'gear' && i.game === k && i.slot === s.slot)).map(cardHTML).join('')}</div>`).join('');
+    return `<div class="gear-head"><img src="/art/tiles/${encodeURIComponent(k)}.svg" alt="" onerror="this.style.visibility='hidden'"><div><h3>${esc(gameIcon(k))} ${esc(gameName(k))}</h3><p>Your character wears these in ${esc(gameName(k))}.</p></div></div>` +
+      slots.map((s) => `<h3 class="sec-h">${esc(s.label)} <small>${s.spot ? 'worn by you' : 'in the game'}</small></h3><div class="grid">${sorted(ITEMS.filter((i) => i.kind === 'gear' && i.game === k && i.slot === s.slot)).map(cardHTML).join('')}</div>`).join('');
   }
   function wardrobeHTML() {
     const mine = ITEMS.filter((i) => i.owned && !i.free && !i.isDefault);
@@ -478,9 +504,12 @@
     if (!S.st || S.st.busy) { toast('You can change your look after this game.'); return; }
     if (!FREE_FIELDS.includes(field) || !(O[O.AVATAR_FIELDS[field]] || []).includes(val)) return;
     S.edits[field] = val; S.sel = null; S.pending = true; hap('select');
+    if (field === 'body') { const swap = bodyHair(look(), val); if (swap.hair) { const it = ITEMS.find((x) => x.kind === 'item' && x.field === 'hair' && x.value === swap.hair); if (it && (it.owned || it.free)) setTimeout(() => doEquip(it, true), 750); } }
     render();
     clearTimeout(saveT); saveT = setTimeout(saveLook, 700);
   }
+  // A new body type starts with that body's usual hair (only between the free short and long styles).
+  function bodyHair(l, body) { return body === 'female' && ['short', 'buzzCut'].includes(l.hair || 'short') ? { hair: 'long' } : body === 'male' && l.hair === 'long' ? { hair: 'short' } : {}; }
   async function saveLook(force) {
     if (!S.st) return;
     if (!Object.keys(S.edits).length && !force) { S.pending = false; renderAct(); return; }
@@ -522,7 +551,7 @@
   window.addEventListener('resize', () => { if (S.st) requestAnimationFrame(paintShelf); });
 
   // ---------- start: make your character (or sign in) ----------
-  const randLook = () => { const r = (a) => a[Math.floor(Math.random() * a.length)]; return { color: r(O.colors.slice(0, 11)), skin: r(O.skins), hair: r(O.hair.slice(0, 5)), hairColor: r(O.hairColor.slice(0, 7)), eyes: r(O.eyes), expression: r(['smile', 'grin', 'wink', 'smirk']), outfit: r(O.outfit.slice(0, 4)), hat: r(['none', 'cap', 'top']), pants: r(O.pants), shoes: r(O.shoes), face: 'round', features: r(['none', 'freckles', 'rosyCheeks']), facialHair: 'none', accessory: 'none' }; };
+  const randLook = () => { const r = (a) => a[Math.floor(Math.random() * a.length)], body = r(['female', 'male']); return { body, color: r(O.colors.slice(0, 11)), skin: r(O.skins), hair: body === 'female' ? r(['long', 'bob', 'curly']) : r(['short', 'curly', 'mohawk']), hairColor: r(O.hairColor.slice(0, 7)), eyes: r(O.eyes), expression: r(['smile', 'grin', 'wink', 'smirk']), outfit: r(O.outfit.slice(0, 4)), hat: r(['none', 'cap', 'top']), pants: r(O.pants), shoes: r(O.shoes), face: 'round', features: r(['none', 'freckles', 'rosyCheeks']), facialHair: 'none', accessory: 'none' }; };
   let startRaf = 0;
   function showStart(mode = 'new', err = '') {
     $('#left').hidden = true; $('#right').hidden = true; $('#act').classList.add('off'); $('#jg').hidden = true;

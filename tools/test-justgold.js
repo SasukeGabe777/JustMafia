@@ -27,6 +27,16 @@ test('a wallet works on several phones; tokens from other wallets do not', () =>
   assert(!('verifiers' in w.view(a.id)), 'device verifiers never leave the server');
 });
 
+test('body type: a free look field, validated; old looks without it are inferred (long hair or a dress → female)', () => {
+  const w = new ProfileStore(null), a = w.create();
+  w.select(a.id, { body: 'female', hair: 'short' }); assert.equal(w.lookOf(a.id).body, 'female');
+  w.select(a.id, { body: 'robot' }); assert.equal(w.lookOf(a.id).body, 'female', 'junk keeps the saved body');
+  const p = w.data.profiles[a.id]; delete p.avatar.body;
+  w.select(a.id, { hair: 'long' }); assert.equal(w.lookOf(a.id).body, 'female', 'long hair reads as female');
+  delete p.avatar.body; w.select(a.id, { hair: 'short', outfit: 'shirt' }); assert.equal(w.lookOf(a.id).body, 'male');
+  w.select(a.id, { body: 'female' }); assert.equal(w.lookOf(a.id).body, 'female');
+});
+
 test('JustGold rates: longer games and better places pay more; co-op pays everyone alike; party is the big one', () => {
   const ten = 10 * 60000;
   assert(GOLD.goldFor('likely', 1, 6, ten) > GOLD.goldFor('likely', 3, 6, ten));

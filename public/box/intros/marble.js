@@ -122,7 +122,7 @@
       g.fillStyle = '#2b170a'; g.beginPath(); g.ellipse(x, y + rad * 0.85, rad * 1.15, rad * 0.4, 0, 0, TAU); g.fill();
       const roll2 = Math.min(1, k), xx = roll2 < 1 ? lerp(-200, x, ease(roll2)) : x, settle = roll2 < 1 ? 0 : Math.sin(Math.min(1, (u - at - 700) / 500) * Math.PI * 3) * 8 * Math.max(0, 1 - (u - at - 700) / 500);
       marble(g, xx + settle, y, rad, (u - at) / 90, c.color || TINTS[i % TINTS.length]);
-      s.emoji(c.avatar || '🙂', xx + settle, y, rad * 0.9);
+      s.face(c, xx + settle, y, rad * 0.9);
       if (k > 0.7) text(g, c.name, x, y + rad + 50, 32, '#fff2dc', { max: tw * 0.85, font: LOGO });
     });
     if (o.more && u > n * per - 1200) text(g, '…and ' + o.more + ' more marble masters!', 960, 1010, 50, '#ffe7a8', { font: LOGO });

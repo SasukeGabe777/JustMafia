@@ -6,6 +6,12 @@
 (function () {
   const { esc, timer } = BOX;
   const morph = (el, html) => { if (el) BOX.morph(el, html); };
+  // Players as their JustGameBox character (public/box/portrait.js). face(): in place of an emoji
+  // (falls back to it); pic0(): only when they have a character (nothing otherwise).
+  const has = (o) => !!(o && BOX.hasLook && BOX.hasLook(o));
+  const face = (o, n, opt) => (BOX.face ? BOX.face(o, n, opt) : esc((o && o.avatar) || '🙂'));
+  const pic0 = (o, n, opt) => (has(o) ? face(o, n, opt) : '');
+  const fboard = (rows, val, label = '') => `<div class="board">${rows.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${pic0(r, 30, { cls: 'fn-rf' })} ${esc(r.name)}</span><b>${esc(val(r))}${label}</b></div>`).join('')}</div>`;
 
   // ---------- TV: one YouTube player that stays on the page ----------
   // The player is rebuilt whenever the TV page redraws the game area (Play again, Back to
@@ -191,7 +197,7 @@
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const WHY = { skipped: '⏭ Skipped!', ended: '🎉 Watched to the end!', time: '⏱ Time’s up!' };
   const medal = (r) => ['🥇', '🥈', '🥉'][r - 1] || '#' + r;
-  const queueHtml = (q, title = 'Up next') => (q && q.list.length ? `<div class="fn-queue"><h4>${title}</h4>${q.list.map((u) => `<div class="fn-q ${u.ready ? 'ready' : ''} ${u.now ? 'now' : ''}"><span>${u.now ? '📱' : u.ready ? '✅' : '⏳'}</span><b>${esc(u.name)}</b><small>${u.now ? 'picking' : u.ready ? 'ready' : 'still looking'}</small></div>`).join('')}${q.more ? `<div class="fn-q more">+${q.more} more</div>` : ''}</div>` : '');
+  const queueHtml = (q, title = 'Up next') => (q && q.list.length ? `<div class="fn-queue"><h4>${title}</h4>${q.list.map((u) => `<div class="fn-q ${u.ready ? 'ready' : ''} ${u.now ? 'now' : ''}"><span>${u.now ? '📱' : u.ready ? '✅' : '⏳'}</span>${pic0(u, 30, { cls: 'fn-qf' })}<b>${esc(u.name)}</b><small>${u.now ? 'picking' : u.ready ? 'ready' : 'still looking'}</small></div>`).join('')}${q.more ? `<div class="fn-q more">+${q.more} more</div>` : ''}</div>` : '');
 
   // ---------- phone state ----------
   let q = '', results = null, paste = '', busy = false, msg = '', shortsOnly = false;
@@ -232,8 +238,8 @@
       const loading = c.src === 'youtube' && !watch.started && !offline && !c.playing;
       cover.hidden = !(offline || loading);
       morph(cover, offline ? `<div class="fn-wait">${pic(c, 'fn-thumb')}<h2>Can’t play this one on the TV</h2><p class="muted">Moving on…</p></div>`
-        : loading ? `<div class="fn-wait fn-intro"><div class="fn-chan">NOW SHOWING</div>${pic(c, 'fn-thumb')}<div class="fn-intro-by">🎬 <b>${esc(c.by)}</b>’s pick</div><h2>${esc(c.title)}</h2><p class="muted">Loading…</p></div>` : '');
-      morph(top, `<div class="fn-pill">${SRC_ICON[c.src] || '🎬'} <b>${esc(c.by)}</b>’s pick · ${esc(c.title)}</div><div class="fn-pill small">Video ${s.n} of ${s.of}</div>`);
+        : loading ? `<div class="fn-wait fn-intro"><div class="fn-chan">NOW SHOWING</div>${pic(c, 'fn-thumb')}<div class="fn-intro-by">${pic0({ name: c.by }, 44, { cls: 'fn-byf', mood: 'grin' }) || '🎬'} <b>${esc(c.by)}</b>’s pick</div><h2>${esc(c.title)}</h2><p class="muted">Loading…</p></div>` : '');
+      morph(top, `<div class="fn-pill">${SRC_ICON[c.src] || '🎬'} ${pic0({ name: c.by }, 30, { cls: 'fn-byf' })}<b>${esc(c.by)}</b>’s pick · ${esc(c.title)}</div><div class="fn-pill small">Video ${s.n} of ${s.of}</div>`);
       morph(bottom, `<div class="fn-meter"><span class="big">${emojiFor(c.avg)}</span><div><b>Funny ${c.avg ? c.avg.toFixed(1) : '–'}</b> <span class="muted">(${plural(c.votes, 'rating')})</span>${meter((c.avg / 5) * 100, 'funny')}</div></div>
           <div class="fn-meter"><span class="big">⏭</span><div><b>Skip ${c.skips}/${c.need}</b>${meter((c.skips / c.need) * 100, 'skip')}</div></div>
           <div class="fn-meter time"><span class="big">⏱</span><div>${timer(s.endsIn)}${meter((c.elapsed / c.max) * 100, 'time')}</div></div>`);
@@ -250,13 +256,13 @@
       cover.hidden = !card;
       morph(cover, card ? `<div class="fn-wait">${pic(k, 'fn-thumb')}<h2>${esc(k.title)}</h2></div>` : '');
       morph(top, `<div class="fn-pill">🎞️ Best of tonight</div><div class="fn-pill small">${r.at + 1} / ${r.of}</div>`);
-      morph(bottom, `<div class="fn-reelcap ${k.rank === 1 ? 'win' : ''}"><span class="fn-rank">${medal(k.rank)}</span><div><b>${esc(k.title)}</b><small>picked by ${esc(k.by)} · ${plural(k.final || 0, 'vote')} · ${emojiFor(k.avg)} ${k.avg || '–'}${k.peakN > 1 ? ' · from the biggest laugh' : ''}</small></div></div>${k.rank === 1 ? confetti() : ''}`);
+      morph(bottom, `<div class="fn-reelcap ${k.rank === 1 ? 'win' : ''}"><span class="fn-rank">${medal(k.rank)}</span><div><b>${esc(k.title)}</b><small>picked by ${pic0({ name: k.by }, 26, { cls: 'fn-byf' })}${esc(k.by)} ·${plural(k.final || 0, 'vote')} · ${emojiFor(k.avg)} ${k.avg || '–'}${k.peakN > 1 ? ' · from the biggest laugh' : ''}</small></div></div>${k.rank === 1 ? confetti() : ''}`);
       return;
     }
     if (!showBoard) {
       cover.hidden = false; morph(top, ''); morph(bottom, '');
       if (s.phase === 'pick') {
-        morph(cover, `<div class="fn-wait fn-picking"><div class="fn-chan">CH ${s.n}</div><div class="fn-big">📱</div><h2><b>${esc(s.picker || '')}</b> is picking a video…</h2>${s.cantPlay ? `<p class="fn-cant">That last one couldn’t play: ${esc(s.cantPlay.why)}. ${esc(s.cantPlay.name)} is picking another.</p>` : ''}<p class="muted">${timer(s.endsIn)} · video ${s.n} of ${s.of}</p><p class="fn-tip">Everyone else: line up your video now and it plays the moment your turn comes.</p></div>`);
+        morph(cover, `<div class="fn-wait fn-picking"><div class="fn-chan">CH ${s.n}</div>${has({ name: s.picker }) ? `<div class="fn-picker">${BOX.body({ name: s.picker }, 200)}<span class="fn-phone">📱</span></div>` : '<div class="fn-big">📱</div>'}<h2><b>${esc(s.picker || '')}</b> is picking a video…</h2>${s.cantPlay ? `<p class="fn-cant">That last one couldn’t play: ${esc(s.cantPlay.why)}. ${esc(s.cantPlay.name)} is picking another.</p>` : ''}<p class="muted">${timer(s.endsIn)} · video ${s.n} of ${s.of}</p><p class="fn-tip">Everyone else: line up your video now and it plays the moment your turn comes.</p></div>`);
       } else if (s.phase === 'score' && s.last) {
         const l = s.last, nx = s.queue && s.queue.list[0];
         morph(cover, `<div class="fn-wait fn-result"><div class="fn-chan">CH ${l.n}</div>${pic(l, 'fn-thumb')}<h2>${WHY[l.why] || '🎉 Done!'}</h2><p class="fn-score">${emojiFor(l.avg)} ${l.avg ? l.avg.toFixed(1) : '–'} funny · ${plural(l.reacts || 0, 'reaction')} · ${esc(l.by)} +${l.pts} pts</p>${nx ? `<p class="fn-next">Up next: <b>${esc(nx.name)}</b> ${nx.ready ? '✅ ready' : '📱 picking'}</p>` : '<p class="fn-next">Last one! Final vote coming up…</p>'}</div>`);
@@ -267,16 +273,16 @@
     const over = s.phase === 'over';
     if (!over) {
       morph(board, `<div class="banner">🗳️ Vote for the funniest video on your phone! ${timer(s.endsIn)}</div>
-        <div class="fn-grid">${s.videos.map((v) => `<div class="fn-card">${pic(v)}<span class="fn-num">${v.n}</span><b>${esc(v.title)}</b><small>${esc(v.by)} · ${emojiFor(v.avg)} ${v.avg || '–'} · ${plural(v.reacts || 0, 'reaction')}</small></div>`).join('')}</div>
+        <div class="fn-grid">${s.videos.map((v) => `<div class="fn-card">${pic(v)}<span class="fn-num">${v.n}</span><b>${esc(v.title)}</b><small>${pic0({ name: v.by }, 26, { cls: 'fn-byf' })}${esc(v.by)} ·${emojiFor(v.avg)} ${v.avg || '–'} · ${plural(v.reacts || 0, 'reaction')}</small></div>`).join('')}</div>
         <div class="fn-voted"><b>${s.finalVoted}</b> of ${s.voters} voted${s.waiting.length ? ` · waiting for ${s.waiting.map((n) => `<span class="fn-chip">${esc(n)}</span>`).join(' ')}` : ''}</div>`);
       return;
     }
     const champ = s.videos[0];
     morph(board, `<div class="banner">🏆 Funniest video of the night</div>
-      ${champ ? `<div class="fn-champ">${pic(champ)}<div><h2>${esc(champ.title)}</h2><p>picked by <b>${esc(champ.by)}</b> · ${plural(champ.final || 0, 'vote')} · ${emojiFor(champ.avg)} ${champ.avg || '–'}</p></div></div>` : '<p class="muted" style="text-align:center">No videos played tonight.</p>'}
-      ${s.awards.length ? `<div class="fn-awards">${s.awards.map((a, i) => `<div class="fn-award" style="--i:${i}"><span>${a.icon}</span><div><small>${esc(a.title)}</small><b>${esc(a.name)}</b><em>${esc(a.detail)}</em></div></div>`).join('')}</div>` : ''}
-      <div class="fn-endgrid"><div class="fn-grid">${s.videos.slice(1).map((v, i) => `<div class="fn-card" style="--i:${i}">${pic(v)}<span class="fn-num">${medal(i + 2)}</span><b>${esc(v.title)}</b><small>${esc(v.by)} · ${plural(v.final || 0, 'vote')} · ${emojiFor(v.avg)} ${v.avg || '–'}</small></div>`).join('')}</div>
-      <div class="panel"><h3 style="margin-top:0">Points</h3>${BOX.board(s.standings, (r) => r.points, ' pts')}</div></div>`);
+      ${champ ? `<div class="fn-champ">${pic(champ)}<div><h2>${esc(champ.title)}</h2><p>picked by ${pic0({ name: champ.by }, 40, { cls: 'fn-byf', mood: 'grin' })}<b>${esc(champ.by)}</b> · ${plural(champ.final || 0, 'vote')} · ${emojiFor(champ.avg)} ${champ.avg || '–'}</p></div></div>` : '<p class="muted" style="text-align:center">No videos played tonight.</p>'}
+      ${s.awards.length ? `<div class="fn-awards">${s.awards.map((a, i) => `<div class="fn-award" style="--i:${i}"><span>${a.icon}</span>${pic0(a, 56, { cls: 'fn-awf' })}<div><small>${esc(a.title)}</small><b>${esc(a.name)}</b><em>${esc(a.detail)}</em></div></div>`).join('')}</div>` : ''}
+      <div class="fn-endgrid"><div class="fn-grid">${s.videos.slice(1).map((v, i) => `<div class="fn-card" style="--i:${i}">${pic(v)}<span class="fn-num">${medal(i + 2)}</span><b>${esc(v.title)}</b><small>${pic0({ name: v.by }, 26, { cls: 'fn-byf' })}${esc(v.by)} ·${plural(v.final || 0, 'vote')} · ${emojiFor(v.avg)} ${v.avg || '–'}</small></div>`).join('')}</div>
+      <div class="panel"><h3 style="margin-top:0">Points</h3>${fboard(s.standings, (r) => r.points, ' pts')}</div></div>`);
   }
   const confetti = () => `<div class="fn-confetti" aria-hidden="true">${Array.from({ length: 30 }, (_, i) => `<i style="--x:${(i * 37) % 100};--d:${((i % 7) * 0.17).toFixed(2)}s;--c:${['#ffd23f', '#ff4f9a', '#3ee6ff', '#8bd346', '#ff8c42'][i % 5]}"></i>`).join('')}</div>`;
 
@@ -401,7 +407,11 @@
     el.hidden = !!hide; if (hide) return;
     const all = players || [], list = all.slice(0, 14), more = all.length - list.length;
     const up = s.phase === 'play' && s.cur ? s.cur.by : s.phase === 'pick' ? s.picker : null;
-    const html = `<div class="fn-sofa"><div class="fn-sofa-back"></div><div class="fn-pals">${list.map((p) => { const h = hashStr(p.id); return `<div class="fn-pal ${up && p.name === up ? 'up' : ''}" data-pid="${esc(p.id)}" style="--c:${esc(p.color || '#ff6b8b')};--h:${HAIRS[h % HAIRS.length]};--d:${((h % 7) * 0.13).toFixed(2)}s"><span class="fn-bub"></span><i class="fn-head s${h % 4}"></i><i class="fn-body"></i><b>${esc(p.avatar || '')} ${esc(p.name)}</b></div>`; }).join('')}${more > 0 ? `<div class="fn-pal more"><b>+${more} more</b></div>` : ''}</div><div class="fn-sofa-arm l"></div><div class="fn-sofa-arm r"></div></div>`;
+    const html = `<div class="fn-sofa"><div class="fn-sofa-back"></div><div class="fn-pals">${list.map((p) => {
+      // Seen from behind: their character's hair and shirt colours, their face on the name tag.
+      const h = hashStr(p.id), lk = BOX.lookOf ? BOX.lookOf(p) : null, L = lk && lk.look, okc = (c) => typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c);
+      const hair = L && okc(L.hairColor) && L.hair !== 'bald' ? L.hairColor : L && okc(L.skin) ? L.skin : HAIRS[h % HAIRS.length], shirt = L && okc(L.color) ? L.color : p.color || '#ff6b8b';
+      return `<div class="fn-pal ${up && p.name === up ? 'up' : ''}" data-pid="${esc(p.id)}" style="--c:${esc(shirt)};--h:${esc(hair)};--d:${((h % 7) * 0.13).toFixed(2)}s"><span class="fn-bub"></span><i class="fn-head s${h % 4}"></i><i class="fn-body"></i><b>${face(p, 24, { cls: 'fn-tagf' })} ${esc(p.name)}</b></div>`; }).join('')}${more > 0 ? `<div class="fn-pal more"><b>+${more} more</b></div>` : ''}</div><div class="fn-sofa-arm l"></div><div class="fn-sofa-arm r"></div></div>`;
     if (el.dataset.h !== html) { el.dataset.h = html; BOX.morph(el, html); }
   }
   function palPop(pid, e) {
@@ -526,7 +536,7 @@
     }
     // The friends take their seats on the couch (click one to remove them).
     const ro = el.querySelector('#roster');
-    BOX.morph(ro, L.players.map((p) => `<div class="chip fnl-pal ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ff6b8b')};--d:${((hashStr(p.id) % 9) * 0.21).toFixed(2)}s"><span class="fnl-face">${esc(p.avatar || '🙂')}</span><i class="fnl-body"></i><b>${esc(p.name)}</b></div>`).join('') || '<div class="fnl-empty">Saving these seats for you…</div>');
+    BOX.morph(ro, L.players.map((p) => `<div class="chip fnl-pal ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#ff6b8b')};--d:${((hashStr(p.id) % 9) * 0.21).toFixed(2)}s"><span class="fnl-face">${face(p, 68)}</span><i class="fnl-body"></i><b>${esc(p.name)}</b></div>`).join('') || '<div class="fnl-empty">Saving these seats for you…</div>');
     ro.classList.toggle('many', n > 10); ro.classList.toggle('lots', n > 20);
     for (const c of ro.querySelectorAll('[data-kick]')) c.onclick = () => { if (confirm('Remove this player?')) lob.kick(c.dataset.kick); };
   }

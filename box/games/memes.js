@@ -351,7 +351,7 @@ class Memes {
   }
   // who(id) is only sent where the author is already public (results after the vote, gallery, awards,
   // Meme of the Night, who is still writing), so gear (the author's meme frame) never leaks authorship.
-  who(id) { const p = this.room.get(id); return id ? { name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '', gear: GEARS.gearSet(p, 'memes') } : null; }
+  who(id) { const p = this.room.get(id); return id ? { id, name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '', gear: GEARS.gearSet(p, 'memes') } : null; }
   decide() {
     if (this.phase !== 'vote') return;
     const final = this.kind === 'final';

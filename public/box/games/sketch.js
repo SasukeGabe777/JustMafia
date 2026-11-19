@@ -47,7 +47,10 @@
   const PENCIL = '<svg class="sk-pencil" viewBox="0 0 150 24" aria-hidden="true"><path d="M2 12 L24 2 L24 22 Z" fill="#f2c99a" stroke="#2b2a4a" stroke-width="2" stroke-linejoin="round"/><path d="M2 12 L10 8.4 L10 15.6 Z" fill="#2b2a4a"/><rect x="24" y="2" width="94" height="20" fill="#ffc93c" stroke="#2b2a4a" stroke-width="2"/><rect x="25" y="15" width="92" height="6" fill="#e8a91c"/><rect x="118" y="2" width="14" height="20" fill="#b9bcc8" stroke="#2b2a4a" stroke-width="2"/><rect x="132" y="2" width="16" height="20" rx="5" fill="#ff8fa8" stroke="#2b2a4a" stroke-width="2"/></svg>';
   const ARROW = '<svg class="sk-harrow" viewBox="0 0 100 50" aria-hidden="true"><path d="M6 32 Q48 6 90 26 M74 14 L91 27 L72 38" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   // A player as a little doodle portrait: a scribbled head (their avatar is the face) and shoulders in their colour.
-  const portrait = (p, seed) => `<svg class="sk-face" viewBox="0 0 100 110" aria-hidden="true"><path d="M14 110 Q16 74 50 72 Q84 74 86 110 Z" fill="${esc(p.color || '#ff8fa8')}" stroke="#2b2a4a" stroke-width="3" stroke-linejoin="round"/><path d="${blob(seed, 50, 42, 31)}" fill="#fffdf4" stroke="#2b2a4a" stroke-width="3.2"/><path d="${blob(seed + 7, 51, 41, 33, 8, 0.08)}" fill="none" stroke="#2b2a4a" stroke-width="1.2" opacity="0.45"/></svg><span class="sk-av">${esc(p.avatar || '🙂')}</span>`;
+  // A player's own character (BOX.face, wearing their sketch gear); '' when the box has no portraits.
+  const fc = (who, px = 32) => (who && window.BOX && BOX.face ? BOX.face(who, px, { cls: 'sk-fc' }) : '');
+  const hasLook = (p) => !!(p && window.BOX && BOX.face && BOX.hasLook && BOX.hasLook(p));
+  const portrait = (p, seed) => `<svg class="sk-face" viewBox="0 0 100 110" aria-hidden="true"><path d="M14 110 Q16 74 50 72 Q84 74 86 110 Z" fill="${esc(p.color || '#ff8fa8')}" stroke="#2b2a4a" stroke-width="3" stroke-linejoin="round"/><path d="${blob(seed, 50, 42, 31)}" fill="#fffdf4" stroke="#2b2a4a" stroke-width="3.2"/><path d="${blob(seed + 7, 51, 41, 33, 8, 0.08)}" fill="none" stroke="#2b2a4a" stroke-width="1.2" opacity="0.45"/></svg>${hasLook(p) ? `<span class="sk-av has">${BOX.face(p, 64, { fill: true })}</span>` : `<span class="sk-av">${esc(p.avatar || '🙂')}</span>`}`;
 
   // ---------- drawing helpers (phones and TV) ----------
   const countPts = (strokes) => strokes.reduce((n, s) => n + s.p.length / 2, 0);
@@ -300,7 +303,7 @@
   const head = (v) => `<div class="sk-me"><span class="sk-pts"><b>${v.points}</b> pts${v.rank ? ` · #${v.rank} of ${v.players}` : ''}</span>${v.phase === 'step' || v.phase === 'pass' ? `<span class="sk-stepchip">step ${Math.min(v.step, v.steps)}/${v.steps}</span>` : v.n ? `<span class="sk-stepchip">book ${v.n}/${v.of}</span>` : ''}</div>`;
   const entryCard = (e, i, pk, opts = {}) => {
     const body = e.kind === 'draw' ? `<canvas class="sk-thumb" data-d="${i}" data-pk="${esc(pk)}"></canvas>${e.auto ? '<div class="sk-ink">(ran out of ink)</div>' : ''}` : `<div class="sk-say ${e.kind === 'prompt' ? 'prompt' : ''}">${esc(e.text)}</div>`;
-    return `<button class="sk-entry ${e.kind} ${opts.cls || ''}" ${opts.attrs || ''} style="--r:${tilt(pk, 2).toFixed(1)}deg"><span class="sk-num">${i}</span>${body}<div class="sk-by">${e.kind === 'draw' ? 'drawn by ' : 'guessed by '}${esc(e.by)}${opts.extra || ''}</div></button>`;
+    return `<button class="sk-entry ${e.kind} ${opts.cls || ''}" ${opts.attrs || ''} style="--r:${tilt(pk, 2).toFixed(1)}deg"><span class="sk-num">${i}</span>${body}<div class="sk-by">${fc(e.byId ? { id: e.byId, name: e.by } : null, 24)}${e.kind === 'draw' ? 'drawn by ' : 'guessed by '}${esc(e.by)}${opts.extra || ''}</div></button>`;
   };
   const reactBar = (v) => (v.reacts ? `<div class="sk-reacts">${v.reacts.map((e, i) => `<button data-rx="${i}" aria-label="React ${e}">${e}</button>`).join('')}</div>` : '');
   // A sticky note card on the phone (the main thing on each screen).
@@ -421,8 +424,8 @@
   const doodles = () => `<div class="sk-doodles" aria-hidden="true">${DD_SPOTS.map(([x, y, d], i) => `<span style="left:${x}%;top:${y}%;--i:${i}">${doodleSvg(d, '', i % 3 === 0 ? '#ff5a5f' : i % 3 === 1 ? '#3d7bd9' : '#2b2a4a')}</span>`).join('')}</div>`;
   const stageEntry = (e) => {
     if (e.kind === 'prompt') return `<div class="sk-stage-card prompt"><div class="sk-tag">The prompt</div><div class="sk-stage-text">${esc(e.text)}</div></div>`;
-    if (e.kind === 'guess') return `<div class="sk-stage-card guess"><div class="sk-tag"><b>${esc(e.by)}</b> guessed…</div><div class="sk-stage-text ${e.auto ? 'auto' : ''}">${esc(e.text)}</div></div>`;
-    return `<div class="sk-stage-card draw"><div class="sk-tag"><b>${esc(e.by)}</b> drew…</div><div class="sk-paper"><canvas class="sk-stagecv"></canvas>${e.auto ? '<div class="sk-ink big">(ran out of ink)</div>' : ''}</div></div>`;
+    if (e.kind === 'guess') return `<div class="sk-stage-card guess"><div class="sk-tag">${fc({ id: e.byId, name: e.by }, 56)}<b>${esc(e.by)}</b> guessed…</div><div class="sk-stage-text ${e.auto ? 'auto' : ''}">${esc(e.text)}</div></div>`;
+    return `<div class="sk-stage-card draw"><div class="sk-tag">${fc({ id: e.byId, name: e.by }, 56)}<b>${esc(e.by)}</b> drew…</div><div class="sk-paper"><canvas class="sk-stagecv"></canvas>${e.auto ? '<div class="sk-ink big">(ran out of ink)</div>' : ''}</div></div>`;
   };
   const mini = (e, i, cls = '') => `<div class="sk-mini ${e.kind} ${cls}" style="--r:${tilt(i + e.kind, 4).toFixed(1)}deg">${e.kind === 'draw' ? `<canvas data-d="${i}"></canvas>` : `<span>${esc(e.text)}</span>`}</div>`;
   const chainRow = (b) => `<div class="sk-chainrow">${b.entries.map((e, i) => `${i ? `<span class="sk-arrow">${ARROW}</span>` : ''}<div class="sk-cell ${e.kind}" style="--r:${tilt(b.id + ':' + i, 2.5).toFixed(1)}deg">${e.kind === 'draw' ? `<div class="sk-paper"><canvas data-d="${i}"></canvas></div>` : `<div class="sk-cell-text">${esc(e.text)}</div>`}<div class="sk-by">${i ? esc(e.by) : 'the prompt'}</div></div>`).join('')}</div>`;
@@ -457,7 +460,7 @@
       return;
     }
     const b = s.book; if (!b) return;
-    const title = `<div class="sk-bookhead"><span class="sk-bookno">Book ${s.n} of ${s.of}</span><b>${esc(b.owner)}’s book</b></div>`;
+    const title = `<div class="sk-bookhead"><span class="sk-bookno">Book ${s.n} of ${s.of}</span>${fc({ id: b.ownerId, name: b.owner }, 64)}<b>${esc(b.owner)}’s book</b></div>`;
     if (s.phase === 'show') {
       const e = b.entries[s.entry];
       if (put(el, `show:${b.id}:${s.entry}`, `<div class="sk-reveal">${title}<div class="sk-strip">${b.entries.slice(0, s.entry).map((x, i) => mini(x, i)).join('')}</div><div class="sk-stage">${stageEntry(e)}</div><div class="sk-dots">${Array.from({ length: b.total }, (_, i) => `<i class="${i <= s.entry ? 'on' : ''}"></i>`).join('')}</div><div class="sk-reacthint">React on your phone!</div></div>`)) {
@@ -483,20 +486,20 @@
         <div class="sk-resrow"><div class="sk-grid" style="--cols:${Math.ceil(b.entries.length / 2)};max-width:${Math.ceil(b.entries.length / 2) * 23}vh">${b.entries.map((e, i) => {
           const top = res && s.top && s.top.includes(i), n = res && s.tally ? s.tally[i] : 0;
           return `<div class="sk-cell ${e.kind} ${top ? 'top' : ''} ${res && !top ? 'dim' : ''}" style="--i:${i};--r:${tilt(b.id + ':' + i, 2.5).toFixed(1)}deg"><span class="sk-num">${i || '★'}</span>${e.kind === 'draw' ? `<div class="sk-paper"><canvas data-d="${i}"></canvas>${e.auto ? '<div class="sk-ink">(ran out of ink)</div>' : ''}</div>` : `<div class="sk-cell-text">${esc(e.text)}</div>`}
-            <div class="sk-by">${i ? esc(e.by) : esc(b.owner) + '’s prompt'}</div>${res && i ? `<div class="sk-votes ${n ? '' : 'zero'}">${n ? `${n} vote${n === 1 ? '' : 's'}` : 'no votes'}</div>` : ''}${top ? '<div class="sk-crown">★</div>' : ''}</div>`;
+            <div class="sk-by">${fc(i ? { id: e.byId, name: e.by } : { id: b.ownerId, name: b.owner }, 30)}${i ? esc(e.by) : esc(b.owner) + '’s prompt'}</div>${res && i ? `<div class="sk-votes ${n ? '' : 'zero'}">${n ? `${n} vote${n === 1 ? '' : 's'}` : 'no votes'}</div>` : ''}${top ? '<div class="sk-crown">★</div>' : ''}</div>`;
         }).join('')}</div>${res ? `<div class="sk-side-row sk-index"><h3>Scores</h3>${BOX.board(s.standings.slice(0, 6), (r) => r.points, '')}</div>` : ''}</div></div>`)) paintAll(el, b.entries.map((x) => x && x.strokes));
     const vt = el.querySelector('.sk-voted'); if (vt) vt.textContent = `${s.voted}${s.voters ? ' / ' + s.voters : ''} voted`;
   }
   function waitHtml(s) {
     if (!s.waiting || !s.waiting.length) return '<div class="sk-waitlist all">Everyone’s done!</div>';
-    return `<div class="sk-waitlist"><span class="sk-waitlab">Still going:</span> ${s.waiting.map((n, i) => `<span class="sk-chip" style="--c:${NOTE[i % NOTE.length]};--r:${tilt(n, 4).toFixed(1)}deg">${esc(n)}</span>`).join('')}${s.more ? `<span class="sk-chip" style="--c:#fff">+${s.more}</span>` : ''}</div>`;
+    return `<div class="sk-waitlist"><span class="sk-waitlab">Still going:</span> ${s.waiting.map((n, i) => `<span class="sk-chip" style="--c:${NOTE[i % NOTE.length]};--r:${tilt(n, 4).toFixed(1)}deg">${fc({ name: n }, 34)}${esc(n)}</span>`).join('')}${s.more ? `<span class="sk-chip" style="--c:#fff">+${s.more}</span>` : ''}</div>`;
   }
   const confetti = () => `<div class="sk-confetti" aria-hidden="true">${Array.from({ length: 28 }, (_, i) => `<i style="--x:${(i * 37) % 100};--d:${(i % 7) * 0.15}s;--c:${INK[SWATCHES[i % 12]]}"></i>`).join('')}</div>`;
 
   function tvOver(el, s, ctx) {
     const w = s.standings[0];
     const sig = 'over:' + s.standings.map((r) => r.id + r.points).join(',') + ':' + (s.best ? s.best.id : '');
-    if (put(el, sig, `<div class="sk-over-tv"><div class="sk-champ"><div class="sk-starburst" aria-hidden="true"></div><div class="sk-champ-lab">Relay champion</div><h2><span>${esc(w ? w.name : '')}</span></h2></div>
+    if (put(el, sig, `<div class="sk-over-tv"><div class="sk-champ"><div class="sk-starburst" aria-hidden="true"></div><div class="sk-champ-lab">Relay champion</div><h2>${w && hasLook(w) ? `<span class="sk-champfig">${BOX.body(w, 240, { mood: 'grin' })}</span>` : ''}<span>${esc(w ? w.name : '')}</span></h2></div>
         <div class="sk-awards">${s.awards.map((a, i) => `<div class="sk-award" style="--i:${i};--c:${NOTE[i % NOTE.length]};--r:${tilt(a.title, 3).toFixed(1)}deg"><span class="ic">${a.icon}</span><div><small>${esc(a.title)}</small><b>${esc(a.name)}</b><em>${esc(a.detail)}</em></div></div>`).join('') || '<p class="muted">No awards this time.</p>'}</div>
         ${s.best ? `<div class="sk-best"><h3>Book of the night: <mark>${esc(s.best.owner)}’s book</mark> <span class="muted">(${s.best.votes} vote${s.best.votes === 1 ? '' : 's'})</span></h3>${chainRow(s.best)}</div>` : ''}
         <div class="sk-endgrid"><div class="sk-index"><h3>Final scores</h3>${BOX.board(s.standings, (r) => r.points, ' pts')}</div>

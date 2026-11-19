@@ -174,7 +174,7 @@
       g.fillStyle = '#fffaf0'; rr(g, -w / 2, -h / 2, w, h, 14); g.fill(); g.lineWidth = 6; g.strokeStyle = '#d9a32b'; g.stroke();
       g.lineWidth = 5; g.strokeStyle = c.color || '#c11a3a'; rr(g, -w / 2 + 9, -h / 2 + 9, w - 18, h - 18, 9); g.stroke();
       const suit = ['♠', '♥', '♦', '♣'][i % 4]; text(g, suit, -w / 2 + 22, -h / 2 + 26, 26, i % 4 === 1 || i % 4 === 2 ? '#c8102e' : '#1d1230', { font: 'Georgia, serif' });
-      s.emoji(c.avatar || '🙂', 0, -6, w * 0.55);
+      s.face(c, 0, -6, w * 0.55);
       if (i === 0) crown(g, 0, -h / 2 - 2, 26);
       g.restore();
       rr(g, -tw * 0.42, h / 2 + 16, tw * 0.84, 48, 10); g.fillStyle = '#8c0f29'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#d9a32b'; g.stroke();

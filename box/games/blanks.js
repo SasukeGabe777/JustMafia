@@ -153,7 +153,7 @@ class Blanks {
     this.award(winners, winners.length > 1 ? 'tie' : 'vote');
   }
   tally(map) { const count = new Map(); for (const sid of map.values()) count.set(sid, (count.get(sid) || 0) + 1); return count; }
-  who(id) { const p = this.room.get(id); return { name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '' }; }
+  who(id) { const p = this.room.get(id); return { id, name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '' }; }
   award(wins, how) {
     if (this.phase !== 'choose') return;
     const votes = this.tally(this.votes), hearts = this.tally(this.hearts), winSet = new Set(wins.map((w) => w.sid));
@@ -169,7 +169,7 @@ class Blanks {
     let crowd = null;
     if (how === 'judge' || (this.judge && how === 'random')) { const fav = all.filter((a) => !a.win && a.hearts > 0).sort((a, b) => b.hearts - a.hearts)[0]; if (fav) crowd = fav; }
     this.last = { winners: all.filter((a) => a.win), how, random: how === 'random', judge: this.judge ? this.room.name(this.judge) : null, votes: this.judge ? null : Object.fromEntries(votes), all: all.slice(0, 30), more: Math.max(0, all.length - 30), crowd };
-    for (const w of this.last.winners) this.reel.push({ prompt: this.prompt.text, cards: w.cards, name: w.name, av: w.av, love: w.votes + w.hearts, how, round: this.round });
+    for (const w of this.last.winners) this.reel.push({ prompt: this.prompt.text, cards: w.cards, id: w.id, name: w.name, av: w.av, love: w.votes + w.hearts, how, round: this.round });
     this.phase = 'win'; this.room.fx('reveal', { how });
     const champ = [...this.scores].some(([id, v]) => v >= this.s.toWin && this.room.get(id));
     this.ending = champ || this.round >= this.limit();

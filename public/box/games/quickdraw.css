@@ -236,3 +236,13 @@ body.g-quickdraw { --qd-wood: #5a3418; --qd-wood2: #3b2010; --qd-paper: #f3dfb3;
 .qd-ph-board { display: grid; gap: 4px; }
 .qd-ph-board div { display: grid; grid-template-columns: 26px 1fr auto; gap: 6px; padding: 6px 10px; background: rgba(20, 10, 3, 0.75); border-radius: 8px; font-size: 18px; }
 .qd-ph-board div.me { background: rgba(242, 182, 50, 0.35); }
+/* players' characters (BOX.face / BOX.body): a paper ring in their colour on cards, full figures on the podium */
+body.g-quickdraw .qd-gun .a .bx-face { background: radial-gradient(circle at 50% 40%, #fff6dc, #e8cf98); box-shadow: 0 0 0 3px var(--c), 0 3px 0 3px #2a160a; }
+body.g-quickdraw .qd-srow .bx-face, body.g-quickdraw .qd-rrow .bx-face, body.g-quickdraw .qd-shot .bx-face, body.g-quickdraw .qd-bye .bx-face { margin: -6px 0; background: rgba(255, 230, 190, 0.16); }
+body.g-quickdraw .qd-srow .bx-face, body.g-quickdraw .qd-rrow .bx-face { box-shadow: 0 0 0 2px var(--c); }
+body.g-quickdraw .qd-pod .a { line-height: 0; margin-bottom: -6px; }
+body.g-quickdraw .qd-over-h h1 .bx-face { vertical-align: -0.12em; background: rgba(255, 230, 190, 0.18); box-shadow: 0 0 0 3px var(--qd-gold); }
+body.g-quickdraw .qd-res-top .bx-face { margin: -8px 2px; background: rgba(255, 230, 190, 0.16); }
+body.g-quickdraw .qdl-roster .chip .bx-face, body.g-quickdraw .qdl #roster .chip .bx-face { margin: -6px 0; background: rgba(58, 29, 12, 0.12); box-shadow: 0 0 0 2px var(--c); }
+body.g-quickdraw .qd-ph-top .bx-face { margin: -6px 6px -6px 0; background: rgba(255, 230, 190, 0.16); }
+body.g-quickdraw .qd-ph-board .bx-face { margin: -5px 0; }

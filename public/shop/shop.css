@@ -187,3 +187,8 @@ body.is-busy .card .badge.price-b { opacity: 0.6; }
   .act.off { transform: translate(-50%, 110%); }
 }
 @media (max-height: 640px) and (max-width: 759px) { :root { --stage-h: 190px; } }
+
+/* ---------- body type picker (character section) ---------- */
+.bodies { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 4px 14px 14px; }
+.bodies .body-opt { width: auto; height: auto; padding-bottom: 8px; font-family: 'Lilita One'; font-size: 20px; }
+.bodies .body-opt canvas { width: 100%; height: 190px; }

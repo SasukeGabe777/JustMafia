@@ -122,7 +122,7 @@ class LetterRush {
     this.stats.set(p.id, { unique: 0, allit: 0, shared: 0, challenged: 0, struck: 0, sharp: 0, streak: 0, best: 0, first: 0, filled: 0, wrong: 0 });
   }
   active() { return this.room.list().filter((p) => p.bot || p.sockets > 0); }
-  who(id) { const p = this.room.get(id); return { name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '' }; }
+  who(id) { const p = this.room.get(id); return { id, name: this.room.name(id), av: p && p.avatar ? String(p.avatar).slice(0, 8) : '' }; }
   add(id, pts) { this.scores.set(id, (this.scores.get(id) || 0) + pts); this.roundGain.set(id, (this.roundGain.get(id) || 0) + pts); }
 
   start() { for (const p of this.room.list()) this.seat(p); this.plan = this.makePlan(); this.nextRound(); }

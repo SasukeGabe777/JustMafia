@@ -157,3 +157,12 @@ body.g-escape .es-tv, body.g-escape .es-ph, body.g-escape .es-lobby { font-famil
 .es-end { text-align: center; } .es-end h2 { font: 400 32px 'Lilita One', sans-serif; margin: 10px 0 4px; }
 .es-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; font-size: 14px; } .es-stats span { padding: 6px; border-radius: 8px; background: rgba(90, 58, 26, 0.12); }
 .es-hist div { padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.5); margin-top: 4px; font-size: 15px; display: flex; justify-content: space-between; gap: 6px; }
+
+/* Players as their characters (BOX.face / BOX.body): the detective squad and your phone card. */
+body.g-escape .es-squad { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 6px 14px; margin: 14px auto 6px; }
+body.g-escape .es-squad figure { margin: 0; display: flex; flex-direction: column; align-items: center; }
+body.g-escape .es-squad figure.top .bx-body { filter: drop-shadow(0 0 14px rgba(255, 210, 63, .7)); }
+body.g-escape .es-squad figcaption { font-weight: 700; font-size: 15px; color: #f4ead6; text-shadow: 0 2px 0 rgba(0, 0, 0, .5); }
+body.g-escape .es-locks .es-squad { grid-column: 1 / -1; }
+body.g-escape .es-me { display: inline-flex; align-items: flex-end; height: 64px; margin-right: 4px; }
+body.g-escape .es-team .bx-face, body.g-escape .es-lt .bx-face, body.g-escape .es-row .bx-face, body.g-escape .es-award .bx-face { background: rgba(255, 255, 255, .12); }

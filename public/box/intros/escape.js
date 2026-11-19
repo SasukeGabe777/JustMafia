@@ -271,7 +271,7 @@
       g.save(); g.globalAlpha = Math.min(1, k * 2.5);
       polaroid(g, x, y, pw, rot, (g2, w, h) => {
         const gr = g2.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, c.color || '#3a4a66'); gr.addColorStop(1, '#141824'); g2.fillStyle = gr; g2.fillRect(0, 0, w, h);
-        s.emoji(c.avatar || '🙂', w / 2, h * 0.52, h * 0.62);
+        s.face(c, w / 2, h * 0.52, h * 0.62);
         g2.fillStyle = 'rgba(255,240,210,0.12)'; g2.fillRect(0, 0, w, h);
       }, sc);
       g.restore();
