@@ -1249,3 +1249,19 @@ Validated: `tools/test-progress.js` (14 tests, incl. real bot games of 5 box gam
 JustMafia sims, sockets), updated `test-season.js`, `e2e-shop.js`; screenshots looked at.
 Limits: games with their own TV lobby (e.g. Most Likely To…) don't show the lobby banner; players
 without a linked wallet earn nothing until the phone links it (opening the profile does).
+
+## Pets: a little animated friend on your shoulder (November 20, 2026)
+
+Branch `claude/pets`; details in `docs/justgold.md` ("Pets"). New look field `pet` (one or none) with
+16 original pets in 4 rarities (80–495 JG), drawn in the smooth style by `MTArt.drawPet` (own block at
+the end of `public/avatar.js`) on the screen-left shoulder for both body types and every size. Idle
+loop (breathing, blink, flick, look-around, hop) driven by time, repeating every 4 s; reduced motion
+gives a still pose. Cached box pictures with a pet animate through one throttled rAF frame loop in
+`portrait.js`. Shop: new 🐾 Pets tab with animated cards, buy / wear / take off, wardrobe group;
+JustMafia's creator lists owned pets. Pets are `special` (not on the shelf or in daily deals).
+Validated: `tools/test-pets.js` (5 tests), `tools/e2e-pets.js` (6 checks, screenshots looked at),
+`test-box-kit`, `test-expressions`, `test-box-gear`, `test-shop-stock`, `test-shop-season`, `test-story`,
+`test-profiles`, `test-box-profiles`, `e2e-shop`, `e2e-account`. `test-justgold`'s "a finished box game pays
+JustGold once" fails the same way on the commit before this branch (ledger delta 10 vs 3 with
+today's date); its other tests pass. Limits: JustMafia's join creator still starts from the phone's
+stored draft (existing behaviour); the server keeps the account's pet when the phone doesn't send one.

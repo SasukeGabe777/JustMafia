@@ -33,6 +33,7 @@
     { id: 'wardrobe', icon: '🎒', label: 'Wardrobe' },
     { id: 'earn', icon: '🪙', label: 'Earn JG' },
   ];
+  SECTIONS.splice(3, 0, { id: 'pets', icon: '🐾', label: 'Pets' }); // Pets (see "Pets" below)
   // JustMafia is one of the games (Games → JustMafia): its own shelves.
   const MAFIA_SUBS = [['houseStyle', '🏠', 'Houses'], ['houseDecor', '🏮', 'Decor'], ['deathAnim', '🕯️', 'Farewells'], ['reactions', '😱', 'Reactions'], ['ghostSkin', '👻', 'Ghosts']];
   const FREE_FIELDS = ['body', 'skin', 'hairColor', 'color', 'eyes', 'expression', 'pants', 'shoes', 'face', 'features', 'facialHair', 'nameColor'];
@@ -84,6 +85,7 @@
       home: { style: 'cottage', decor: 'none' }, lookSaved: true,
       ledger: [{ at: Date.now() - 3.6e6, delta: 14, reason: 'JustMarble: cleared the maze', balance: 340 }, { at: Date.now() - 7.2e6, delta: -70, reason: 'Bought Beret', balance: 326 }, { at: Date.now() - 9e6, delta: 25, reason: 'Party Mode finale', balance: 396 }, { at: Date.now() - 1e7, delta: 9, reason: 'Blackjack Night: top half', balance: 371 }] };
     const section = { outfit: 'character', shoeStyle: 'character', hat: 'character', accessory: 'character', hair: 'character', nameplate: 'flair', effect: 'flair', houseStyle: 'mafia', houseDecor: 'mafia', deathAnim: 'mafia', reactions: 'mafia', ghostSkin: 'mafia' };
+    section.pet = 'pets';
     const lock = (i) => (m.owned.has(i.id) || i.free ? null : i.pass ? 'Season pass reward (in JustMafia)' : i.world ? 'A JustMafia world reward' : i.achievement ? (C.ACHIEVEMENTS[i.achievement] || {}).label || 'Earn its achievement' : i.requires && !m.owned.has(i.requires) ? 'Own the tier below first' : SSN && SSN.limitedLock(i.id, now()) ? SSN.limitedLock(i.id, now()) : C.STOCKABLE.some((x) => x.id === i.id) && !onShelf(i) ? 'Not on the shelf yet: every game you finish reveals more' : null);
     const state = () => ({ ok: true, name: m.name, claimed: false, gold: m.gold, earned: m.earned, spent: m.spent, look: { ...m.look }, lookSaved: m.lookSaved, home: { ...m.home }, owned: [...m.owned], gear: JSON.parse(JSON.stringify(m.gear)),
       catalog: C.CATALOG.filter((i) => section[i.field]).map((i) => ({ id: i.id, field: i.field, value: i.value, name: i.name, cost: i.cost, free: !!i.free, section: section[i.field], category: i.category, description: i.description, owned: m.owned.has(i.id) || !!i.free, lock: lock(i), ...sale(i.id) })),
@@ -477,9 +479,56 @@
       case 'houseDecor': drawHouse(g, w / 2, h - 6, h / 95, (S.st.home || {}).style || 'cottage', i.value, 1); return;
       case 'deathAnim': g.fillStyle = '#1d2236'; g.fillRect(0, 0, w, h); drawDeath(g, w / 2, h * 0.86, h / 100, l, i.value, 2.2); return;
       case 'ghostSkin': g.fillStyle = '#1d2236'; g.fillRect(0, 0, w, h); MTArt.drawGhost(g, w / 2, h - 6, { ...l, ghostSkin: i.value }, { scale: h / 92, t: 1.2, glow: true }); return;
+      case 'pet': drawPetCard(g, w, h, i); return;
       case 'effect': drawBody(g, w, h, L, 1.7); return;
       default: if (HEAD_FIELDS.has(i.field) || (i.field === 'accessory' && !BACK_ACC.has(i.value))) drawHead(g, w, h, L); else drawBody(g, w, h, L);
     }
+  }
+
+  // ---------- Pets: a little animated friend on your shoulder (docs/justgold.md "Pets") ----------
+  // One pet at a time (avatar field `pet`), worn in every game. Cards and the stage animate with
+  // MTArt.drawPet (one requestAnimationFrame loop for the cards; still under prefers-reduced-motion).
+  PITCH.pet = ['The {name}! It rides on your shoulder in every game.', 'Meet the {name}. Ever so friendly, and it never misses a game.', 'The {name} would love a shoulder to sit on. Yours, maybe?'];
+  const PET_INFO = (C && C.PETS) || {}, PET_RAR = (C && C.PET_RARITY) || {};
+  const PET_ORDER = ['common', 'rare', 'epic', 'legendary'];
+  const petSeed = (v) => { let h = 0; for (const ch of String(v)) h = (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0; return (h % 97) / 97 * 4; };
+  function petsHTML() {
+    const list = ITEMS.filter((i) => i.kind === 'item' && i.field === 'pet' && i.value !== 'none'), have = list.filter((i) => i.owned).length, cur = look().pet;
+    let html = `<div class="pet-banner"><span class="pet-ic" aria-hidden="true">🐾</span><div><h3>Pets</h3><p>A little friend that sits on your shoulder in <b>every game</b>. One at a time.</p><div class="ev-meta"><em class="pill">${have}/${list.length} adopted</em>${cur && cur !== 'none' ? `<em class="pill ok">On your shoulder: ${esc(O.label(cur))}</em>` : ''}</div></div></div>`;
+    for (const r of PET_ORDER) {
+      const l = list.filter((i) => (PET_INFO[i.value] || {}).rarity === r).sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name)); if (!l.length) continue;
+      const rr = PET_RAR[r] || { label: r, color: '#ccc' };
+      html += `<h3 class="sec-h pet-rar" style="--pr:${esc(rr.color)}"><i aria-hidden="true"></i>${esc(rr.label)} <small>${l.filter((i) => i.owned).length}/${l.length}</small></h3><div class="grid pets r-${esc(r)}" style="--pr:${esc(rr.color)}">${l.map(cardHTML).join('')}</div>`;
+    }
+    return html + (list.length ? '' : '<p class="empty">No pets yet.</p>');
+  }
+  // A pet card: the pet on a little cushion, in its rarity's glow.
+  function drawPetCard(g, w, h, i) {
+    const rr = PET_RAR[(PET_INFO[i.value] || {}).rarity] || { color: '#ffd23f' }, t = performance.now() / 1000;
+    const gl = g.createRadialGradient(w / 2, h * 0.55, 2, w / 2, h * 0.55, Math.max(w, h) * 0.6); gl.addColorStop(0, rr.color + '66'); gl.addColorStop(1, rr.color + '00');
+    g.fillStyle = gl; g.fillRect(0, 0, w, h);
+    const sc = Math.min((h - 14) / 15, w / 16), cy = h - 9;
+    g.save(); g.beginPath(); g.ellipse(w / 2, cy, 7.5 * sc, 1.9 * sc, 0, 0, TAU); g.fillStyle = '#e8486e'; g.fill(); g.lineWidth = 2; g.strokeStyle = ink; g.stroke();
+    g.beginPath(); g.ellipse(w / 2, cy - 1.2, 6 * sc, 1.1 * sc, 0, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.25)'; g.fill(); g.restore();
+    MTArt.drawPet(g, w / 2, cy - 0.6 * sc, i.value, { t, seed: petSeed(i.value), scale: sc });
+  }
+  function drawPetShowcase(g, x, floorY, s, i, t) {
+    if (!MTArt.drawPet) return;
+    const sc = s * 2.3;
+    g.save(); g.fillStyle = 'rgba(0,0,0,0.2)'; g.beginPath(); g.ellipse(x, floorY, 7 * sc, 1.8 * sc, 0, 0, TAU); g.fill(); g.restore();
+    MTArt.drawPet(g, x, floorY - 2, i.value, { t: t + 1.3, scale: sc, facing: -0.4 });
+  }
+  let petRaf = 0;
+  function petCards() {
+    if (petRaf || !MTArt.drawPet || (MTArt.petsReduced && MTArt.petsReduced())) return;
+    const tick = () => {
+      const cards = document.querySelectorAll('#shelf .card[data-item^="pet:"]');
+      if (!cards.length) { petRaf = 0; return; }
+      petRaf = requestAnimationFrame(tick);
+      if (document.hidden) return;
+      for (const b of cards) { const cv = b.querySelector('canvas'), i = byId(b.dataset.item); if (cv && i) try { paintCard(cv, i); } catch (e) { /* skip */ } }
+    };
+    petRaf = requestAnimationFrame(tick);
   }
 
   // ---------- the stage (animated) ----------
@@ -523,6 +572,7 @@
       pack.forEach((e, k) => { const p = (t * 0.35 + k / pack.length) % 1; g.globalAlpha = p < 0.8 ? 1 : (1 - p) * 5; g.font = `${Math.round(16 * s * 0.7 * (0.8 + p * 0.4))}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`; g.fillText(e, cx + Math.sin(k * 2.1 + t) * 26 * s * 0.6, floorY - 70 * s - p * 40); });
       g.restore();
     }
+    if (i && i.kind === 'item' && i.field === 'pet') drawPetShowcase(g, w * (wide ? 0.6 : 0.6), floorY, s, i, t);
     if (i && i.kind === 'gear' && !i.spot) {
       const gx = w * (wide ? 0.62 : 0.6), gy = floorY - 34 * s * 0.8 + Math.sin(t * 2) * 4;
       g.save(); g.fillStyle = 'rgba(0,0,0,0.2)'; g.beginPath(); g.ellipse(gx, floorY, 18 * s * 0.6, 4 * s * 0.6, 0, 0, TAU); g.fill(); g.restore();
@@ -574,14 +624,15 @@
       if (key === 'mafia') html += '<p class="note">🔪 These are for <b>JustMafia</b>: your house, how you go out, your reactions and your ghost. 🎟 <b>Season pass & ✦ Fate live in JustMafia</b> (Season & unlocks).</p>';
       if (S.tab === 'flair') html += '<p class="note">✨ Flair shows in <b>every game</b>: your nameplate on the big screen and an effect around your character.</p>';
       html += list.length ? `<div class="grid">${list.map(cardHTML).join('')}</div>` : '<p class="empty">Nothing here yet.</p>';
-    } else if (S.tab === 'gear') html = gearHTML();
+    } else if (S.tab === 'pets') html = petsHTML();
+    else if (S.tab === 'gear') html = gearHTML();
     else if (S.tab === 'event') html = eventHTML();
     else if (S.tab === 'deals') html = dealsHTML();
     else if (S.tab === 'sets') html = setsHTML();
     else if (S.tab === 'wardrobe') html = wardrobeHTML();
     else if (S.tab === 'earn') html = earnHTML();
     shelf.innerHTML = html;
-    requestAnimationFrame(paintShelf);
+    requestAnimationFrame(paintShelf); petCards();
     for (const nav of [$('#tabs'), $('#subs')]) { const on = nav.querySelector('.on'); if (!on) continue; const nr = nav.getBoundingClientRect(), r = on.getBoundingClientRect(); if (r.left < nr.left || r.right > nr.right) nav.scrollLeft += r.left - nr.left - 14; }
     renderStageText(); renderAct();
   }
@@ -620,7 +671,7 @@
   function wardrobeHTML() {
     const mine = ITEMS.filter((i) => i.owned && !i.free && !i.isDefault);
     if (!mine.length) return '<p class="empty">🎒 Your wardrobe is empty.<br>Buy something and it lives here, ready to wear in any game.</p>';
-    const groups = [['character', '👤 Character'], ['flair', '✨ Flair'], ['gear', '🎮 Game gear'], ['mafia', '🔪 JustMafia']];
+    const groups = [['character', '👤 Character'], ['flair', '✨ Flair'], ['pets', '🐾 Pets'], ['gear', '🎮 Game gear'], ['mafia', '🔪 JustMafia']];
     return '<p class="note">🎒 Everything you own. Tap to try it on, then <b>Wear</b>.</p>' + groups.map(([k, lb]) => { const l = mine.filter((i) => sectionOf(i) === k); return l.length ? `<h3 class="sec-h">${lb} <small>${l.length}</small></h3><div class="grid">${sorted(l).map(cardHTML).join('')}</div>` : ''; }).join('');
   }
   function earnHTML() {

@@ -43,6 +43,7 @@
       { field: 'nameColor', label: 'Name color', kind: 'swatch', random: true },
       { field: 'nameplate', label: 'Nameplate', kind: 'tile', focus: 'body' },
       { field: 'effect', label: 'Cosmetic effect', kind: 'tile', focus: 'body' },
+      { field: 'pet', label: 'Pet', kind: 'tile', focus: 'hat' }, // Pets: bought in the JustGold shop
     ] },
   ];
   // House designer (separate screen). Fields are MT_OPTIONS.HOME_FIELDS keys;
