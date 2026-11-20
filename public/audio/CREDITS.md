@@ -12,6 +12,8 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | blackjack | Music | `games/blackjack/think-buy-something.ogg` | Buy Something! (Shop Theme) | Cleyton Kauffman | CC0 1.0 | https://opengameart.org/content/shop-theme |
 | blackjack | Music | `games/blackjack/play-blue-intermission.ogg` | Blue Intermission | congusbongus | CC0 1.0 | https://opengameart.org/content/blue-intermission |
 | blackjack | Music | `games/blackjack/finale-catchy-swing.ogg` | Catchy Swing | Doge | CC0 1.0 | https://opengameart.org/content/catchy-swing |
+| president | Music | `games/president/title-kings-feast.mp3` | Medieval: King's Feast | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-kings-feast |
+| president | Music | `games/president/play-harpsichord-flurry.ogg` | Harpsichord Flurry | Spring Spring (Julie Damsgaard) | CC0 1.0 | https://opengameart.org/content/harpsichord-flurry |
 | price | Music | `games/price/title-urban-theme.ogg` | Urban Theme | MintoDog | CC0 1.0 | https://opengameart.org/content/urban-theme |
 | price | Music | `games/price/think-urban-shop.ogg` | Urban Shop | MintoDog | CC0 1.0 | https://opengameart.org/content/urban-shop |
 | price | Music | `games/price/finale-funky-disco-beats.ogg` | Funky Disco Beats to Boogie/Woogie To | Fupi | CC0 1.0 | https://opengameart.org/content/funky-disco-beats-to-boogiewoogie-to |

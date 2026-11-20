@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { CHROME, Browser, startServer, cleanup, wait } = require('./cdp');
 
-const PORT = 3984, URL = `http://localhost:${PORT}`;
+const PORT = Number(process.env.PORT) || 3984, URL = `http://localhost:${PORT}`;
 const SHOTS = process.env.SHOTS || path.join(os.tmpdir(), 'mt-e2e');
 if (!CHROME) { console.log('SKIP e2e-box: Chrome not found (set CHROME=path).'); process.exit(0); }
 let passed = 0; const PAGES = [];
@@ -51,7 +51,7 @@ async function setup(browser, game, settings = {}) {
 
 (async () => {
   await startServer(PORT);
-  const browser = new Browser({ shots: SHOTS, debugPort: 9342 }); await browser.launch();
+  const browser = new Browser({ shots: SHOTS, debugPort: Number(process.env.DEBUG_PORT) || 9342 }); await browser.launch();
 
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });

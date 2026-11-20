@@ -55,6 +55,31 @@
     "file": "games/blackjack/finale-catchy-swing.ogg"
    }
   },
+  "president": {
+   "title": {
+    "file": "games/president/title-kings-feast.mp3",
+    "gain": 0.88,
+    "loopEnd": 122
+   },
+   "intro": {
+    "file": "games/president/title-kings-feast.mp3",
+    "gain": 0.88,
+    "loopEnd": 122
+   },
+   "lobby": {
+    "file": "games/president/title-kings-feast.mp3",
+    "gain": 0.88,
+    "loopEnd": 122
+   },
+   "think": {
+    "file": "games/president/play-harpsichord-flurry.ogg",
+    "gain": 1.3
+   },
+   "play": {
+    "file": "games/president/play-harpsichord-flurry.ogg",
+    "gain": 1.3
+   }
+  },
   "price": {
    "title": {
     "file": "games/price/title-urban-theme.ogg",
