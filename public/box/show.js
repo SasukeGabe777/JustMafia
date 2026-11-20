@@ -615,7 +615,7 @@
   }
   intros.generic = {
     theme: GEN_THEME,
-    host: { name: 'Vicky Volume', voice: { kokoro: 'af_heart', cb: 'hype', speed: 1.0, like: /aria|jenny|ava|emma|samantha|zira|female/i, accent: /en-US/i, pitch: 1.2, rate: 1.04 },
+    host: { name: 'Vicky Volume', voice: { kokoro: 'af_heart', cb: 'hype', orpheus: 'jess', speed: 1.0, like: /aria|jenny|ava|emma|samantha|zira|female/i, accent: /en-US/i, pitch: 1.2, rate: 1.04 },
       look: { skin: '#8d5a3b', suit: '#16b8b0', suit2: '#0b6f6a', lapel: '#ff4f9a', shirt: '#1b1240', tie: 'none', hair: 'curly', hairColor: '#7b3fe4', brow: '#2a1240', prop: 'headset', grin: true, sparkle: '#c9fffb' } },
     lines: {
       welcome: 'Welcome, welcome to {title}! I\'m Vicky Volume, and tonight we turn it UP!',

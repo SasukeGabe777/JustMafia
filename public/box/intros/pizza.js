@@ -419,11 +419,11 @@
   };
   const owner = (k, name, voice) => ({ name, voice, look: LOOKS[k], draw: withHat(LOOKS[k], HATS[k]) });
   const OWNERS = {
-    pizza: owner('pizza', 'Nonna Pina', { kokoro: 'bf_lily', cb: 'warm', speed: 1.0, like: /female|sonia|libby|emma|serena|zira|elsa/i, accent: /en-GB|en-US|it-IT/i, pitch: 1.05, rate: 1 }),
-    taco: owner('taco', 'Tía Lupe', { kokoro: 'af_bella', cb: 'hype', speed: 1.05, like: /female|aria|jenny|zira|paulina|sabina/i, accent: /en-US|es-MX|es-US/i, pitch: 1.08, rate: 1.05 }),
-    sushi: owner('sushi', 'Chef Ren', { kokoro: 'am_michael', cb: 'calm', speed: 0.95, like: /male|guy|david|mark|ryan/i, accent: /en-US|en-GB/i, pitch: 0.95, rate: 0.95 }),
-    burger: owner('burger', 'Big Buck', { kokoro: 'am_fenrir', cb: 'hype', speed: 0.98, like: /male|guy|david|mark|george/i, accent: /en-US/i, pitch: 0.85, rate: 1 }),
-    sundae: owner('sundae', 'Coco Sprinkles', { kokoro: 'af_heart', cb: 'hype', speed: 1.1, like: /female|aria|jenny|zira|ana/i, accent: /en-US/i, pitch: 1.2, rate: 1.1 }),
+    pizza: owner('pizza', 'Nonna Pina', { kokoro: 'bf_lily', cb: 'warm', orpheus: 'leah', speed: 1.0, like: /female|sonia|libby|emma|serena|zira|elsa/i, accent: /en-GB|en-US|it-IT/i, pitch: 1.05, rate: 1 }),
+    taco: owner('taco', 'Tía Lupe', { kokoro: 'af_bella', cb: 'hype', orpheus: 'jess', speed: 1.05, like: /female|aria|jenny|zira|paulina|sabina/i, accent: /en-US|es-MX|es-US/i, pitch: 1.08, rate: 1.05 }),
+    sushi: owner('sushi', 'Chef Ren', { kokoro: 'am_michael', cb: 'calm', orpheus: 'dan', speed: 0.95, like: /male|guy|david|mark|ryan/i, accent: /en-US|en-GB/i, pitch: 0.95, rate: 0.95 }),
+    burger: owner('burger', 'Big Buck', { kokoro: 'am_fenrir', cb: 'hype', orpheus: 'leo', speed: 0.98, like: /male|guy|david|mark|george/i, accent: /en-US/i, pitch: 0.85, rate: 1 }),
+    sundae: owner('sundae', 'Coco Sprinkles', { kokoro: 'af_heart', cb: 'hype', orpheus: 'zoe', speed: 1.1, like: /female|aria|jenny|zira|ana/i, accent: /en-US/i, pitch: 1.2, rate: 1.1 }),
   };
   const anims = {};
   function drawOwner(g, k, x, y, sc, now, pose) {

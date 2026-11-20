@@ -164,7 +164,7 @@
       spots: ['255,236,190', '255,214,150', '255,236,190', '255,200,210'], confetti: ['#ffd54a', '#fff3d6', '#ff6b8b', '#e9b53c', '#ffffff', '#ffb43c'] },
     host: {
       name: 'Velvet Vance',
-      voice: { kokoro: 'am_echo', cb: 'warm', speed: 1.0, like: /guy|davis|christopher|eric|andrew|brian|george|male/i, accent: /en-(US|GB)/i, pitch: 1.0, rate: 1.02 },
+      voice: { kokoro: 'am_echo', cb: 'warm', orpheus: 'zac', speed: 1.0, like: /guy|davis|christopher|eric|andrew|brian|george|male/i, accent: /en-(US|GB)/i, pitch: 1.0, rate: 1.02 },
       look: { skin: '#c98d62', skinShade: '#a87048', suit: '#1c1024', suit2: '#0c0610', lapel: '#e9b53c', shirt: '#fffdf7', tie: 'bow', tieColor: '#a3163c', hair: 'pomp', hairColor: '#2a1a12', brow: '#2a1a12', prop: 'mic', grin: true, sparkle: '#ffd54a' },
     },
     lines: {

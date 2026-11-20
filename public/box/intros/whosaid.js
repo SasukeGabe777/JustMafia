@@ -118,7 +118,7 @@
       spots: ['200,180,255', '126,243,208', '255,122,200', '200,180,255'], confetti: ['#fff3b0', '#c8f7e8', '#ffd6ec', '#e3d6ff', '#7ef3d0', '#ff7ac8'] },
     host: {
       name: 'The Moon',
-      voice: { kokoro: 'af_nicole', cb: 'calm', speed: 1.1, like: /female|zira|aria|jenny|samantha|hazel|libby|sonia/i, accent: /en-(GB|US)/i, pitch: 1.05, rate: 0.95 },
+      voice: { kokoro: 'af_nicole', cb: 'calm', orpheus: 'leah', speed: 1.1, like: /female|zira|aria|jenny|samantha|hazel|libby|sonia/i, accent: /en-(GB|US)/i, pitch: 1.05, rate: 0.95 },
       // The moon is drawn by the set; the host figure itself stays out of frame.
       draw(g, a) { BOX.intros.whosaid._anim = a; },
     },

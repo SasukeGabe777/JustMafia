@@ -63,8 +63,9 @@ const only = args.filter((a, i) => !a.startsWith('--') && !['--engine', '--sheet
 const FORCE = args.includes('--force'), LIST = args.includes('--list'), ENCODE_ONLY = args.includes('--encode-only');
 // Render order (Chatterbox): what players hear most first, the short role reveals last.
 const PRI = { caption: 1, game: 1, lead: 1, surprise: 1, extra: 1, role: 2 };
-const ENGINE = opt('--engine') || (fs.existsSync(PY) ? 'chatterbox' : 'kokoro');
-const E_TAG = ENGINE === 'chatterbox' ? 'cb' : 'kokoro';
+const ENGINE = opt('--engine') || (fs.existsSync(PY) ? 'orpheus' : 'kokoro');
+const E_TAG = { orpheus: 'or', chatterbox: 'cb', kokoro: 'kokoro' }[ENGINE];
+if (!E_TAG) throw new Error('--engine orpheus | chatterbox | kokoro');
 const SHEET = opt('--sheet'), RECS = opt('--recordings');
 // <line id>.<ext> files in the recordings folder -> { id: path }
 const recordings = () => { const r = {}; if (RECS) for (const f of fs.readdirSync(RECS)) { const m = /^([0-9a-f]{16})\.(wav|webm|mp3|m4a|ogg|flac)$/i.exec(f); if (m) r[m[1]] = path.join(RECS, f); } return r; };
@@ -243,12 +244,12 @@ const RENDER_PCM = `async (b64, sr, bitrate, norm) => { const bin = atob(b64), u
 const CHECK = `async (url) => { const b = await (await fetch(url, { cache: 'no-store' })).arrayBuffer(); const c = new OfflineAudioContext(1, 48000, 48000); const d = await c.decodeAudioData(b); return Math.round(d.duration * 1000); }`;
 
 // ---------------------------------------------------------------- Chatterbox (Python)
-function runPython(jobsFile) {
+function runPython(jobsFile, script) {
   return new Promise((resolve, reject) => {
-    const p = spawn(PY, ['-I', path.join(__dirname, 'voice-chatterbox.py'), jobsFile, CACHE], { env: { ...process.env, PYTHONIOENCODING: 'utf-8', HF_HUB_DISABLE_SYMLINKS_WARNING: '1', TRANSFORMERS_VERBOSITY: 'error' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const p = spawn(PY, ['-I', path.join(__dirname, script), jobsFile, CACHE], { env: { ...process.env, PYTHONIOENCODING: 'utf-8', HF_HUB_DISABLE_SYMLINKS_WARNING: '1', TRANSFORMERS_VERBOSITY: 'error' }, stdio: ['ignore', 'pipe', 'pipe'] });
     const show = (b) => { for (const ln of String(b).split(/\r?\n|\r/)) if (ln.trim() && !/it\/s\]|s\/it\]|Sampling|FutureWarning|deprecate\(|unauthenticated|LoRACompatible|^\s*\d+%\|/.test(ln)) console.log('  ' + ln.trim()); };
     p.stdout.on('data', show); p.stderr.on('data', show);
-    p.on('exit', (c) => (c === 0 ? resolve() : reject(new Error('voice-chatterbox.py exited with ' + c))));
+    p.on('exit', (c) => (c === 0 ? resolve() : reject(new Error(script + ' exited with ' + c))));
   });
 }
 function readResults() {
@@ -294,7 +295,7 @@ async function main() {
   const mfPath = path.join(OUT, 'manifest.json');
   let old = { clips: {}, games: {} };
   try { old = JSON.parse(fs.readFileSync(mfPath, 'utf8')); } catch { /* first run */ }
-  if (ENGINE === 'chatterbox' && !fs.existsSync(PY)) throw new Error('No Python venv at ' + PY + ' (set VOICE_PY, or use --engine kokoro). See PLAN.md "Voices".');
+  if (ENGINE !== 'kokoro' && !fs.existsSync(PY)) throw new Error('No Python venv at ' + PY + ' (set VOICE_PY, or use --engine kokoro). See PLAN.md "Voices".');
 
   await startServer(PORT);
   const { page, close } = await launch();
@@ -309,7 +310,7 @@ async function main() {
     const jobs = new Map(), games = {}, notes = [];
     const addJob = (key, L) => {
       if (!games[key].includes(L.h)) games[key].push(L.h);
-      if (!jobs.has(L.h)) jobs.set(L.h, { h: L.h, g: key, t: L.t, say: L.say, v: L.voice.kokoro, s: L.voice.speed, cb: L.voice.cb || null, from: L.from });
+      if (!jobs.has(L.h)) jobs.set(L.h, { h: L.h, g: key, t: L.t, say: L.say, v: L.voice.kokoro, s: L.voice.speed, cb: L.voice.cb || null, o: L.voice.orpheus || null, from: L.from });
     };
     for (const key of keys) {
       let r;
@@ -354,8 +355,8 @@ async function main() {
     console.log(`${jobs.size} lines in ${Object.keys(games).length} games; ${jobs.size - todo.length} up to date, ${todo.length} to render with ${ENGINE}.`);
 
     // 3. render
-    const write = (j, r, extra) => { clips[j.h] = { g: j.g, ms: r.ms, v: j.v, s: j.s, ...(j.cb ? { cb: j.cb } : {}), t: j.t, db: r.db, e: REC[j.h] && RECS ? 'rec' : E_TAG, ...extra }; };
-    if (RECS && ENGINE !== 'chatterbox') throw new Error('--recordings needs the Chatterbox venv');
+    const write = (j, r, extra) => { clips[j.h] = { g: j.g, ms: r.ms, v: j.v, s: j.s, ...(j.cb ? { cb: j.cb } : {}), ...(j.o ? { o: j.o } : {}), t: j.t, db: r.db, e: REC[j.h] && RECS ? 'rec' : E_TAG, ...extra }; };
+    if (RECS && ENGINE === 'kokoro') throw new Error('--recordings needs the Python venv');
     if (todo.length && ENGINE === 'kokoro') {
       const dev = await page.eval(INIT);
       console.log('Kokoro on ' + dev + ` (model load ${((Date.now() - t0) / 1000).toFixed(1)} s in)`);
@@ -372,23 +373,29 @@ async function main() {
       }
       console.log(`Rendered ${(audioMs / 1000).toFixed(0)} s of speech in ${((Date.now() - tr) / 1000).toFixed(0)} s.`);
     }
-    if (todo.length && ENGINE === 'chatterbox') {
+    if (todo.length && ENGINE !== 'kokoro') {
       fs.mkdirSync(CACHE, { recursive: true });
       if (FORCE && !ENCODE_ONLY) forget(new Set(todo.map((j) => j.h)));
-      // Reference prompts: the repo copy (tools/voice-refs) or, the first time, the voice's own Kokoro clips.
-      const voices = [...new Set(todo.map((j) => j.v))], ref_files = {}, ref_sources = {};
-      for (const v of voices) {
+      // Chatterbox (TTS, or voice conversion of your recordings) needs a reference clip per voice: the
+      // repo copy (tools/voice-refs/<voice>.webm) or, the first time, the voice's own existing clips.
+      // With Orpheus the character's voice is the Orpheus voice (j.o), so its references are Orpheus clips.
+      const useCB = ENGINE === 'chatterbox' || RECS, vkey = (j) => (ENGINE === 'orpheus' && j.o ? 'orpheus-' + j.o : j.v);
+      const ref_files = {}, ref_sources = {};
+      if (useCB) for (const v of new Set(todo.map(vkey))) {
         const repo = path.join(REFS, v + '.webm');
         if (fs.existsSync(repo)) { ref_files[v] = repo; continue; }
-        ref_sources[v] = Object.entries(old.clips).filter(([h, c]) => c.v === v && (c.e || 'kokoro') === 'kokoro').map(([h, c]) => path.join(OUT, c.g, h + '.webm')).filter((f) => fs.existsSync(f));
-        if (!ref_sources[v].length) throw new Error('No reference for voice ' + v + ': add tools/voice-refs/' + v + '.webm or render it once with --engine kokoro.');
+        const mine = v.startsWith('orpheus-') ? (c) => c.o === v.slice(8) && c.e === 'or' : (c) => c.v === v && (c.e || 'kokoro') === 'kokoro';
+        ref_sources[v] = Object.entries(old.clips).filter(([h, c]) => mine(c)).map(([h, c]) => path.join(OUT, c.g, h + '.webm')).filter((x) => fs.existsSync(x));
+        if (!ref_sources[v].length) throw new Error('No reference for voice ' + v + ': render its lines first (npm run voices), or add tools/voice-refs/' + v + '.webm.');
       }
-      const spec = { ref_files, ref_sources, jobs: todo.map((j) => ({ id: j.h, text: j.say || j.t, voice: j.v, pri: PRI[j.from] || 0, ...(RECS && REC[j.h] ? { source: REC[j.h] } : {}), ...(PRESETS[j.cb] || PRESETS.warm) })) };
+      const spec = useCB
+        ? { ref_files, ref_sources, jobs: todo.map((j) => ({ id: j.h, text: j.say || j.t, voice: vkey(j), pri: PRI[j.from] || 0, ...(RECS && REC[j.h] ? { source: REC[j.h] } : {}), ...(PRESETS[j.cb] || PRESETS.warm) })) }
+        : { jobs: todo.map((j) => ({ id: j.h, text: j.say || j.t, voice: j.o || 'leah', energetic: ['hype', 'warm'].includes(j.cb), pause: ['hype', 'warm'].includes(j.cb) ? 260 : 450, pri: PRI[j.from] || 0 })) };
       if (RECS) forget(new Set(todo.map((j) => j.h))); // a new take replaces any cached render
       const jf = path.join(CACHE, 'jobs.json');
       fs.writeFileSync(jf, JSON.stringify(spec));
-      console.log(`Chatterbox: ${todo.length} clips (${PY})`);
-      if (ENCODE_ONLY) console.log('  --encode-only: using what is already rendered in ' + CACHE); else await runPython(jf);
+      console.log(`${RECS ? 'Voice conversion of your recordings' : ENGINE}: ${todo.length} clips (${PY})`);
+      if (ENCODE_ONLY) console.log('  --encode-only: using what is already rendered in ' + CACHE); else await runPython(jf, useCB ? 'voice-chatterbox.py' : 'voice-orpheus.py');
       // Keep the references in the repo (Opus 48 kbps), so every checkout clones the same voices.
       for (const v of Object.keys(ref_sources)) { const w = path.join(CACHE, 'refs', v + '.wav'); if (fs.existsSync(w)) { await encodeTo(page, path.join(REFS, v + '.webm'), readWav(w), false, 48000); console.log('  saved reference tools/voice-refs/' + v + '.webm'); } }
       const res = readResults(); let audioMs = 0, bad = 0, checked = false;

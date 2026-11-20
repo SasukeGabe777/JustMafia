@@ -183,7 +183,7 @@
       confetti: ['#ffe14d', '#ff4f9a', '#3ee0ff', '#7dff6b', '#ffffff', '#a46bff'], spots: ['255,250,210', '255,200,240', '200,240,255', '255,250,210'] },
     host: {
       name: 'Winky',
-      voice: { kokoro: 'af_sky', cb: 'hype', speed: 1.05, like: /aria|jenny|ava|emma|samantha|zira|female/i, accent: /en-US/i, pitch: 1.45, rate: 1.06 },
+      voice: { kokoro: 'af_sky', cb: 'hype', orpheus: 'zoe', speed: 1.05, like: /aria|jenny|ava|emma|samantha|zira|female/i, accent: /en-US/i, pitch: 1.45, rate: 1.06 },
       draw: hostDraw,
     },
     lines: {

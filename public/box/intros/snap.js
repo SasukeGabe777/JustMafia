@@ -186,7 +186,7 @@
     theme: { accent: GOLD, accent2: PINK, accent3: CYAN, ink: PAPER, panel: 'rgba(22,20,28,0.92)', fade: '#0e0c12', confetti: [PINK, GOLD, CYAN, PAPER, '#7b3fb5'] },
     host: {
       name: 'Margo Flash',
-      voice: { kokoro: 'af_sarah', cb: 'warm', speed: 1.0, like: /female|zira|aria|jenny|samantha|sonia|libby/i, accent: /en-US|en-GB/i, pitch: 1.0, rate: 1.0 },
+      voice: { kokoro: 'af_sarah', cb: 'warm', orpheus: 'jess', speed: 1.0, like: /female|zira|aria|jenny|samantha|sonia|libby/i, accent: /en-US|en-GB/i, pitch: 1.0, rate: 1.0 },
       look,
       draw: margoDraw,
     },

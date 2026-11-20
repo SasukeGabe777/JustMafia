@@ -151,7 +151,7 @@
       spots: ['255,226,150', '255,226,150', '255,226,150', '255,226,150'], confetti: ['#f3ead2', '#c9a24a', '#ff4b3e', '#ffffff', '#56d98a'] },
     host: {
       name: 'Inspector Gray',
-      voice: { kokoro: 'am_onyx', cb: 'dry', speed: 0.93, like: /guy|george|ryan|brian|daniel|male/i, accent: /en-(GB|US)/i, pitch: 0.75, rate: 0.98 },
+      voice: { kokoro: 'am_onyx', cb: 'dry', orpheus: 'dan', speed: 0.93, like: /guy|george|ryan|brian|daniel|male/i, accent: /en-(GB|US)/i, pitch: 0.75, rate: 0.98 },
       // A trench-coated silhouette in a fedora, holding a magnifying glass.
       draw(g, a) {
         const blink = 1 - a.blink * 0.9, point = a.pose === 'point' || a.pose === 'pointL' || a.pose === 'wave' || a.pose === 'cheer';

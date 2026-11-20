@@ -128,7 +128,9 @@
     noir: 'am_onyx', fbi: 'am_onyx', spies: 'am_onyx', realistic: 'am_onyx',
     space: 'af_nova', blocky: 'af_nova',
   };
-  const voiceFor = (theme) => ({ kokoro: NARRATOR_VOICE[theme] || NARRATOR_VOICE.smalltown, speed: 1, cb: 'narrator' });
+  // The Orpheus voice each narrator is rendered in (dan was the owner's pick for the narrator).
+  const ORPHEUS = { bm_george: 'zac', am_onyx: 'dan', bf_emma: 'leah', af_nova: 'jess' };
+  const voiceFor = (theme) => { const k = NARRATOR_VOICE[theme] || NARRATOR_VOICE.smalltown; return { kokoro: k, speed: 1, cb: 'narrator', orpheus: ORPHEUS[k] }; };
   // Copies of public/box/voice.js clean() / hash() / keyOf() (tools/test-voice-timing.js checks they match).
   const clean = (s) => String(s || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}]/gu, '').replace(/["“”]/g, '').replace(/\s+/g, ' ').trim();
   function hash(str) {
@@ -136,7 +138,7 @@
     for (const ch of String(str)) { const c = ch.codePointAt(0); a = Math.imul(a ^ c, 0x01000193); b = Math.imul(b ^ c, 0x01000193); b ^= b >>> 13; }
     return (a >>> 0).toString(16).padStart(8, '0') + (b >>> 0).toString(16).padStart(8, '0');
   }
-  const keyOf = (text, V) => hash(V.kokoro + '|' + (Number(V.speed) || 1).toFixed(2) + (V.cb ? '|' + V.cb : '') + '|' + clean(text));
+  const keyOf = (text, V) => hash(V.kokoro + '|' + (Number(V.speed) || 1).toFixed(2) + (V.cb ? '|' + V.cb : '') + (V.orpheus ? '|o:' + V.orpheus : '') + '|' + clean(text));
 
   const API = { SAY, sayOf, roleSay, NARRATOR_VOICE, voiceFor, clean, hash, keyOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

@@ -136,7 +136,7 @@
       spots: ['255,61,139', '56,232,255', '255,210,63', '255,255,255'], confetti: [PINK, CYAN, GOLD, '#5ff09a', '#ffffff', '#b07cff'] },
     host: {
       name: 'DJ Wavelength',
-      voice: { kokoro: 'af_nova', cb: 'hype', speed: 1.0, gender: 'f', like: /female|aria|jenny|emma|ava|samantha/i, accent: /en-(US|GB)/i, pitch: 1.1, rate: 1.04 },
+      voice: { kokoro: 'af_nova', cb: 'hype', orpheus: 'jess', speed: 1.0, gender: 'f', like: /female|aria|jenny|emma|ava|samantha/i, accent: /en-(US|GB)/i, pitch: 1.1, rate: 1.04 },
       look: { skin: '#8d5a3b', skinShade: '#6f4329', suit: '#3a0b5e', suit2: '#22073a', lapel: PINK, shirt: '#14052e', tie: 'none', hair: 'curly', hairColor: '#1a0b2a', brow: '#1a0b2a', glasses: CYAN, prop: 'headset', grin: true, sparkle: CYAN },
     },
     lines: {
