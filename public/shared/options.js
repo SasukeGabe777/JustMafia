@@ -136,6 +136,14 @@
     secretAgent:'Agent Suit', chefCoat:'Chef’s Whites', inverness:'Inverness Coat', dealerVest:'Dealer’s Vest', survivor:'Survivor Gear', photoVest:'Photographer’s Vest',
     lasso:'Lasso', nightShades:'Night-Vision Shades', woodenSpoon:'Wooden Spoon', magnifier:'Magnifying Glass', cardFan:'Fan of Aces', rayGun:'Ray Gun', camera:'Camera', spurBoots:'Spur Boots', luckyDice:'Lucky Dice', orbit:'Orbiting Planets',
     deathAnim:'Farewell', petals:'Rose Petals', fireflies:'Fireflies', letter:'A Last Letter', candle:'Candlelight', lantern:'Sky Lantern', starfall:'Falling Stars', ascend:'Spirit Rises' };
+  // ----- Pets (docs/justgold.md "Pets") -----
+  // A little animated friend on your shoulder, in every game (drawn by MTArt.drawPet, public/avatar.js).
+  // One at a time; 'none' is free. Sold in the shop's Pets section (never on the play-to-reveal shelf).
+  OPTIONS.pets = ['none'];
+  special('pets', ['chick', 'snail', 'hamster', 'frog', 'bunny', 'kitten', 'puppy', 'bat', 'parrot', 'owl', 'fox', 'octopus', 'axolotl', 'wispling', 'droneBot', 'dragonling']);
+  OPTIONS.AVATAR_FIELDS.pet = 'pets';
+  Object.assign(OPTIONS.labels, { chick: 'Fluffy Chick', snail: 'Shelly Snail', hamster: 'Pocket Hamster', frog: 'Lily-Pad Frog', bunny: 'Cotton Bunny', kitten: 'Tabby Kitten', puppy: 'Floppy Puppy', bat: 'Pocket Bat',
+    parrot: 'Chatty Parrot', owl: 'Night Owl', fox: 'Ember Fox', octopus: 'Inky Octopus', axolotl: 'Bubble Axolotl', wispling: 'Wispling', droneBot: 'Buzz Drone', dragonling: 'Baby Dragon', pet: 'Pet' });
   OPTIONS.label = (value) => OPTIONS.labels[value] || OPTIONS.hatLabels[value] || String(value).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   if (typeof module !== 'undefined' && module.exports) module.exports = OPTIONS;
   else root.MT_OPTIONS = OPTIONS;

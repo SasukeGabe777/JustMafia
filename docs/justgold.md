@@ -166,3 +166,44 @@ the whole set, bundle price, bonus), Wardrobe, Earn JG. Cards show ⏳ / −% / 
 | `shop:state` | (as above) | also `event`, `nextEvent`, `deals { day, endsAt, items[{id,pct,price}], spotlight }`, `sets[{ id, name, icon, game, items, have, total, worn, spotlight, bundle{missing,full,pct,price} }]`, `setRules`, `now`; catalog/gear items carry `price` (today), `pct`, `limited`, `set` |
 | `shop:bundle` | `{ auth, setId, wear }` | `{ ok, error?, state }`: buys the missing pieces at the bundle price (`wear`: puts the set on) |
 | `shop:wearSet` | `{ auth, setId }` | `{ ok, error?, state }`: wear an owned set |
+
+## Pets (branch `claude/pets`)
+
+A little animated friend that sits on your character's shoulder (screen-left) in **every game**.
+One at a time, or none. It is a look field like the others: `pet` (`OPTIONS.pets`, 'none' free),
+saved on the wallet's avatar, validated and ownership-checked by `validateAvatar` (an unowned pet
+falls back to 'none', like hats), carried into box rooms (`p.look`) and JustMafia (`sanitizeAvatar`).
+
+| pet | rarity | JG | | pet | rarity | JG |
+|---|---|---|---|---|---|---|
+| 🐤 Fluffy Chick | Common | 80 | | 🦜 Chatty Parrot | Rare | 170 |
+| 🐌 Shelly Snail | Common | 80 | | 🦉 Night Owl | Rare | 180 |
+| 🐹 Pocket Hamster | Common | 90 | | 🦊 Ember Fox | Epic | 220 |
+| 🐸 Lily-Pad Frog | Common | 100 | | 🐙 Inky Octopus | Epic | 245 |
+| 🐰 Cotton Bunny | Rare | 130 | | 🦎 Bubble Axolotl | Epic | 260 |
+| 🐱 Tabby Kitten | Rare | 145 | | 👻 Wispling | Epic | 310 |
+| 🐶 Floppy Puppy | Rare | 145 | | 🤖 Buzz Drone | Legendary | 390 |
+| 🦇 Pocket Bat | Rare | 155 | | 🐲 Baby Dragon | Legendary | 495 |
+
+- **Catalog**: `cosmetics.js` `PETS` (rarity, base price, icon, words), `PET_RARITY`, `FIELDS.pet`,
+  category `pets`. Pets are `special` (`OPTIONS.SPECIAL.pets`): always for sale, never on the
+  play-to-reveal shelf and not in the daily deals (so existing shelves and deals are unchanged).
+  The server's shop section is `pets` (`box/index.js BOX_FIELDS`); buy / equip use the usual
+  `shop:buy` / `shop:equip` (taking it off sets 'none').
+- **Art**: `MTArt.drawPet(g, x, y, kind, { t, scale, facing, seed, flip, still, shadow })` in its own
+  block at the end of `public/avatar.js`; `drawSmooth` calls it after the hat (not on a dead body;
+  `o.noPet` skips it, `o.petT` gives the pet its own clock). The idle loop (breathing, a blink, a
+  tail / ear / wing flick, a look-around, a little hop; wings, rotor, smoke puffs…) is a function of
+  time that repeats every `MTArt.PET_LOOP` (4 s). prefers-reduced-motion: one still pose.
+- **Animated pictures**: `BOX.face` / `BOX.body` images of a look with a pet carry `data-pet`; one
+  requestAnimationFrame loop in `public/box/portrait.js` (about 6 fps, only while such images exist
+  and the page is visible) swaps them through 24 cached frames of the loop, drawn lazily (≤ 6 new
+  frames a tick, ≤ 40 images, images ≥ 28 px). So the TV lobby roster, the phone lobby and header
+  animate. Canvas scenes that already pass `t` (shop stage, JustMafia town, creator, games) animate
+  for free; static draws (`t: 0`) show a still frame.
+- **Shop**: a 🐾 **Pets** tab (after Sets): a banner (adopted count, the pet you wear), cards grouped by
+  rarity, each pet animated on a cushion in its rarity's glow (one rAF loop for the cards); trying
+  one on shows it on your shoulder and big beside the pedestal. Buy wears it at once; Take off /
+  Wear as usual. The wardrobe has a 🐾 Pets group. JustMafia's creator lists owned pets (Extras → Pet).
+- Tests: `tools/test-pets.js` (catalog, buy / wear / ownership, JustMafia, art and loop),
+  `tools/e2e-pets.js` (shop at 390 / 360 / 1366, box TV + phone, JustMafia; screenshots).

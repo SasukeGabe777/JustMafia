@@ -272,3 +272,19 @@ button, a, canvas { touch-action: manipulation; }
 @media (min-width: 760px) { .tabs, .subs { flex-wrap: wrap; overflow: visible; -webkit-mask-image: none; mask-image: none; } .tabs::after, .subs::after { display: none; } }
 /* Wide screens: the action bar sits under the shelf it belongs to, not across the character. */
 @media (min-width: 760px) { .act { left: calc(max(0px, (100% - 1100px) / 2) + max(340px, 0.42 * min(1100px, 100%)) + 20px); right: calc(max(0px, (100% - 1100px) / 2) + 14px); width: auto; margin: 0; transform: none; } .act.off { transform: translateY(110%); } }
+
+/* ---------- Pets (docs/justgold.md "Pets"): a little animated friend on your shoulder ---------- */
+.pet-banner { position: relative; display: flex; gap: 12px; align-items: center; margin: 2px 0 12px; padding: 14px; border-radius: 22px; border: 3px solid var(--ol); box-shadow: 0 5px 0 var(--ol); overflow: hidden; background: radial-gradient(circle at 88% 18%, rgba(255, 236, 140, 0.55), transparent 45%), linear-gradient(135deg, #3fbf8f, #2a7fd4); }
+.pet-banner .pet-ic { font-size: 44px; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35)); animation: evBob 2.4s ease-in-out infinite; }
+.pet-banner h3 { margin: 0; font-size: 26px; color: #fff; text-shadow: 0 3px 0 var(--ol); }
+.pet-banner p { margin: 2px 0 8px; font-size: 13px; color: #fff; font-weight: 600; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4); }
+.pet-banner .ev-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.sec-h.pet-rar { color: #fff; text-shadow: 0 2px 0 var(--ol); }
+.sec-h.pet-rar small { text-shadow: none; }
+.sec-h.pet-rar i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--pr); border: 2px solid var(--ol); align-self: center; }
+.grid.pets .card { border-color: color-mix(in srgb, var(--pr) 45%, var(--ol)); box-shadow: 0 4px 0 var(--ol), inset 0 0 0 2px color-mix(in srgb, var(--pr) 55%, transparent); }
+.grid.pets .card canvas { height: 92px; }
+.grid.pets.r-legendary .card:not(.sel):not(.wearing) { background: linear-gradient(#fffbe8, #fff0c2); }
+.grid.pets.r-epic .card:not(.sel):not(.wearing) { background: linear-gradient(#fdf6ff, #f1e0ff); }
+@media (max-width: 380px) { .grid.pets .card canvas { height: 80px; } .pet-banner .pet-ic { font-size: 36px; } .pet-banner h3 { font-size: 22px; } }
+@media (prefers-reduced-motion: reduce) { .pet-banner .pet-ic { animation: none; } }
