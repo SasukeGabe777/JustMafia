@@ -1,8 +1,8 @@
 {
-  "name": "mafia-town",
+  "name": "justgamebox",
   "version": "0.1.0",
   "private": true,
-  "description": "Mafia Town — a big-screen, phone-controlled social deduction party game",
+  "description": "JustGameBox: big-screen party games played from phones (JustMafia, box games, the JustGold shop)",
   "main": "server.js",
   "engines": {
     "node": ">=20"
@@ -20,6 +20,9 @@
     "e2e-account": "node tools/e2e-account.js",
     "e2e-onboard": "node tools/e2e-onboard.js",
     "new-game": "node tools/new-game.js",
+    "desktop": "node desktop/scripts/ensure-deps.js && npm --prefix desktop start",
+    "desktop:build": "node desktop/scripts/ensure-deps.js && npm --prefix desktop run build",
+    "vendor-fonts": "node tools/vendor-fonts.js",
     "voices": "node tools/voice-gen.js"
   },
   "dependencies": {

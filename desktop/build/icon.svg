@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- JustGameBox app icon (placeholder, original art): the title screen's colours, a party box
+       with its lid popping open and a phone + game pieces jumping out. Rendered to icon.png by
+       scripts/make-icon.js. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#2e1258"/>
+      <stop offset="1" stop-color="#170f38"/>
+    </linearGradient>
+    <linearGradient id="box" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffde5c"/>
+      <stop offset="1" stop-color="#f5b70f"/>
+    </linearGradient>
+    <linearGradient id="lid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff7ab3"/>
+      <stop offset="1" stop-color="#ff4f9a"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="496" height="496" rx="108" fill="url(#bg)"/>
+  <circle cx="120" cy="120" r="10" fill="#3ee6ff" opacity="0.8"/>
+  <circle cx="400" cy="96" r="8" fill="#2ee6a6" opacity="0.8"/>
+  <circle cx="430" cy="210" r="6" fill="#ffd23f" opacity="0.8"/>
+  <circle cx="86" cy="236" r="7" fill="#ff4f9a" opacity="0.8"/>
+  <!-- things popping out -->
+  <g transform="rotate(-14 200 170)">
+    <rect x="160" y="86" width="84" height="146" rx="16" fill="#fff8ef"/>
+    <rect x="170" y="102" width="64" height="104" rx="6" fill="#3ee6ff"/>
+    <circle cx="202" cy="219" r="6" fill="#c9bfe6"/>
+  </g>
+  <g transform="rotate(18 330 160)">
+    <rect x="292" y="120" width="78" height="78" rx="16" fill="#fff8ef"/>
+    <circle cx="312" cy="140" r="8" fill="#170f38"/><circle cx="350" cy="140" r="8" fill="#170f38"/>
+    <circle cx="331" cy="159" r="8" fill="#170f38"/>
+    <circle cx="312" cy="178" r="8" fill="#170f38"/><circle cx="350" cy="178" r="8" fill="#170f38"/>
+  </g>
+  <!-- the box -->
+  <path d="M104 262 L408 262 L388 452 Q386 466 372 466 L140 466 Q126 466 124 452 Z" fill="url(#box)"/>
+  <rect x="232" y="262" width="48" height="204" fill="#ff4f9a"/>
+  <path d="M104 262 L408 262 L404 296 L108 296 Z" fill="#000" opacity="0.12"/>
+  <!-- the lid, tipped open -->
+  <g transform="rotate(-9 110 250)">
+    <rect x="84" y="214" width="344" height="54" rx="14" fill="url(#lid)"/>
+    <rect x="232" y="214" width="48" height="54" fill="#ffd23f"/>
+  </g>
+</svg>

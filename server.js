@@ -1,6 +1,5 @@
 'use strict';
 const path = require('path');
-const os = require('os');
 const http = require('http');
 const express = require('express');
 const QRCode = require('qrcode');
@@ -9,32 +8,23 @@ const { Worker } = require('worker_threads');
 const { Room } = require('./game');
 const { ProfileStore } = require('./profiles');
 const OPTIONS = require('./public/shared/options');
-const profiles = new ProfileStore(process.env.MT_PROFILE_STORE === 'memory' ? null : path.join(__dirname, '.data', 'profiles.json'));
+const { DATA_DIR } = require('./data-dir');
+const profiles = new ProfileStore(process.env.MT_PROFILE_STORE === 'memory' ? null : path.join(DATA_DIR, 'profiles.json'));
 
 const PORT = Number(process.env.PORT) || 3000;
-
-// Pick the address phones on the same Wi-Fi can reach.
-function lanAddress() {
-  const candidates = [];
-  for (const [name, addrs] of Object.entries(os.networkInterfaces())) {
-    for (const a of addrs || []) {
-      if (a.family !== 'IPv4' || a.internal) continue;
-      let score = 0;
-      if (a.address.startsWith('192.168.')) score += 3;
-      else if (a.address.startsWith('10.')) score += 2;
-      else if (/^172\.(1[6-9]|2\d|3[01])\./.test(a.address)) score += 1;
-      if (/wi-?fi|wlan|ethernet|en\d/i.test(name)) score += 2;
-      if (/vEthernet|virtual|vmware|vbox|hyper-v|wsl|docker|loopback|tailscale|zerotier|bluetooth/i.test(name)) score -= 10;
-      candidates.push({ address: a.address, score });
-    }
-  }
-  candidates.sort((a, b) => b.score - a.score);
-  return candidates.length ? candidates[0].address : 'localhost';
-}
+// HOST: the address to listen on. Unset = every interface (Node's default); the desktop app
+// sets 0.0.0.0 so phones on the Wi-Fi reach it over IPv4.
+const HOST = process.env.HOST || undefined;
 
 // Join links and QR codes: PUBLIC_URL if set, else the host's public address (Render sets
-// RENDER_EXTERNAL_URL), else this machine's LAN address.
-const BASE_URL = (process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || `http://${lanAddress()}:${PORT}`).replace(/\/+$/, '');
+// RENDER_EXTERNAL_URL), else this machine's LAN address (lan.js picks the best adapter).
+let BASE_URL = (process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || `http://${require('./lan').bestLanAddress()}:${PORT}`).replace(/\/+$/, '');
+// The desktop app (desktop/main.js) runs this server as its child and can change the join link
+// at runtime (the player picked another network adapter in the app's settings).
+if (process.parentPort) process.parentPort.on('message', (e) => {
+  const m = e && e.data;
+  if (m && m.type === 'setBaseUrl' && /^https?:\/\/[^\s/]+$/i.test(String(m.url || '').replace(/\/+$/, ''))) BASE_URL = String(m.url).replace(/\/+$/, '');
+});
 
 const app = express();
 const server = http.createServer(app);
@@ -67,7 +57,7 @@ app.get('/api/info', (req, res) => res.json({ baseUrl: BASE_URL }));
 // Your own music (my-music/README.md): audio files sorted into folders by moment
 // (my-music/day, my-music/night, ...) or by world and moment (my-music/noir/night).
 // The TV mixes them in with the composed soundtrack.
-const MY_MUSIC = path.join(__dirname, 'my-music');
+const MY_MUSIC = process.env.MUSIC_DIR ? path.resolve(process.env.MUSIC_DIR) : path.join(__dirname, 'my-music'); // the desktop app points MUSIC_DIR at its user folder
 const MUSIC_FOLDERS = { lobby: 'lobby', day: 'day', night: 'night', dawn: 'dawn', reveal: 'reveal', vote: 'vote', voting: 'vote', gallows: 'trial', execution: 'trial', murder: 'suspense', suspense: 'suspense', ghosts: 'eerie', ghost: 'eerie', victory: 'triumph', win: 'triumph' };
 const AUDIO_FILE = /\.(mp3|m4a|aac|ogg|oga|wav|webm|flac)$/i;
 app.use('/my-music', express.static(MY_MUSIC, { maxAge: '1h' }));
@@ -478,7 +468,9 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000).unref();
 
-server.listen(PORT, () => {
+// A taken port is fatal (instead of a server that never listens); the desktop app then picks another.
+server.on('error', (e) => { console.error(`\n  Could not listen on port ${PORT}: ${e.code || e.message}\n`); process.exit(1); });
+server.listen(PORT, HOST, () => {
   console.log('\n  Mafia Town is running!\n');
   console.log(`  Big screen (open on the TV/computer):  http://localhost:${PORT}`);
   console.log(`  Phones join at:                        ${BASE_URL}/play`);
@@ -486,4 +478,6 @@ server.listen(PORT, () => {
   console.log(`  All-in-one test page (share on LAN):   ${BASE_URL}/test`);
   console.log('\n  Phones must be on the same Wi-Fi as this computer.');
   console.log('  Set PUBLIC_URL to override the join link (e.g. when using a tunnel).\n');
+  // The desktop app waits for this before it opens the title screen.
+  if (process.parentPort) process.parentPort.postMessage({ type: 'listening', port: server.address().port });
 });

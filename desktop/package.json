@@ -1,0 +1,23 @@
+{
+  "name": "justgamebox-desktop",
+  "productName": "JustGameBox",
+  "version": "0.1.0",
+  "private": true,
+  "description": "JustGameBox desktop (Steam) app: runs the party-game server on this PC and shows the big screen",
+  "author": "JustGameBox",
+  "license": "UNLICENSED",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "stage": "node scripts/stage-server.js",
+    "icon": "node scripts/make-icon.js",
+    "build": "node scripts/stage-server.js && electron-builder --win dir --x64"
+  },
+  "dependencies": {
+    "steamworks.js": "0.4.0"
+  },
+  "devDependencies": {
+    "electron": "45.3.4",
+    "electron-builder": "26.18.1"
+  }
+}

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; font-src 'self'; script-src 'self'">
+  <title>JustGameBox — App settings</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body class="settings">
+  <div class="wrap">
+    <h1>App settings</h1>
+    <p class="sub">These belong to the JustGameBox app on this PC. Volume and game options are in the title screen's ⚙ menu.</p>
+    <div class="tabs" role="tablist">
+      <button data-tab="phones">📱 Phones can't join?</button>
+      <button data-tab="mode">🌐 Local / Online</button>
+      <button data-tab="display">🖥️ Display</button>
+      <button data-tab="about">ℹ️ About &amp; files</button>
+    </div>
+    <div class="status" id="status" hidden></div>
+
+    <!-- Phones: the join address + the firewall checklist -->
+    <section class="card" data-panel="phones">
+      <h2>Where phones join</h2>
+      <div id="local-join">
+        <p class="hint">Phones on the <b>same Wi-Fi</b> as this PC scan the QR code on the TV, or type this address:</p>
+        <div class="join" id="join-url">…</div>
+        <div class="field">
+          <span>Network adapter (the address the QR codes use)</span>
+          <select id="adapter"></select>
+          <small class="hint">Pick another one if the address above isn't your home Wi-Fi/Ethernet (for example a VPN or virtual adapter got picked).</small>
+        </div>
+      </div>
+      <div id="online-join" hidden>
+        <p class="hint">Online mode: phones join through the online server, from anywhere. The QR codes on the TV show its address.</p>
+        <div class="join" id="online-join-url">…</div>
+      </div>
+    </section>
+    <section class="card" data-panel="phones" id="firewall-card">
+      <h2>Phone says "can't connect"? Check these</h2>
+      <ol class="steps">
+        <li><b>Same Wi-Fi.</b> The phone must be on the same network as this PC: not mobile data, not a "Guest" network (guest Wi-Fi usually blocks devices from seeing each other).</li>
+        <li><b>Windows Firewall.</b> The first time JustGameBox starts, Windows asks whether to allow it. It needs <b>Private networks</b> ticked. If you pressed Cancel: open the firewall page below → <i>Change settings</i> → find <b>JustGameBox</b> → tick <b>Private</b> → OK. JustGameBox never changes your firewall by itself.
+          <div class="btns"><button class="btn" id="open-firewall">Open "Allow an app through Windows Firewall"</button></div></li>
+        <li><b>Network type is Private.</b> If Windows thinks your home Wi-Fi is <i>Public</i>, it blocks phones. Settings → Network &amp; internet → your Wi-Fi → <i>Network profile type</i> → <b>Private network</b>.
+          <div class="btns"><button class="btn" id="open-network">Open network settings</button></div></li>
+        <li><b>VPN or other security software.</b> Pause a VPN, or allow JustGameBox in a third-party firewall/antivirus.</li>
+        <li><b>Type the address.</b> On the phone's browser, type the address above exactly (it starts with <code>http://</code>, not https). If that page opens, scanning works too.</li>
+        <li>Still stuck? Try another <b>network adapter</b> above, or use <b>Online mode</b>.</li>
+      </ol>
+    </section>
+
+    <!-- Local / Online -->
+    <section class="card" data-panel="mode">
+      <h2>How do phones connect?</h2>
+      <label class="row"><input type="radio" name="mode" value="local"><span><b>Local (recommended)</b><small>This PC runs the games. Phones on the same Wi-Fi join. Works without internet.</small></span></label>
+      <label class="row"><input type="radio" name="mode" value="online"><span><b>Online server</b><small>Use a JustGameBox server on the internet, so friends anywhere can join with their phones. You need the address of a server you (or a friend) host.</small></span></label>
+      <div class="field" id="url-field">
+        <span>Online server address</span>
+        <input type="text" id="online-url" placeholder="https://your-server.example.com" spellcheck="false" autocomplete="off">
+        <div class="btns"><button class="btn" id="test-url">Test connection</button></div>
+        <small class="hint">If the server can't be reached when the app starts, JustGameBox plays locally instead and tells you.</small>
+      </div>
+      <div class="field" id="port-field">
+        <span>Local port (advanced)</span>
+        <input type="number" id="port" min="1024" max="65535">
+        <small class="hint">Change only if another program uses it. Changing it restarts the server and resets the title screen's own settings (volume, unlocked games).</small>
+      </div>
+    </section>
+
+    <!-- Display -->
+    <section class="card" data-panel="display">
+      <h2>Display</h2>
+      <label class="row"><input type="checkbox" id="fullscreen"><span><b>Fullscreen</b><small>F11 or Alt+Enter switches any time.</small></span></label>
+      <label class="row"><input type="checkbox" id="overlay"><span><b>Steam overlay</b><small>Shift+Tab while Steam is running. Turn off if the picture stutters. Applies after a restart.</small></span></label>
+      <p class="hint">Shortcuts: F11 / Alt+Enter fullscreen · F10 / Ctrl+, these settings · Alt+F4 quit.</p>
+    </section>
+
+    <!-- About -->
+    <section class="card" data-panel="about">
+      <h2>About</h2>
+      <dl class="kv" id="about"></dl>
+      <div class="btns">
+        <button class="btn" id="open-saves">Open saves folder</button>
+        <button class="btn" id="open-music">Open my music folder</button>
+        <button class="btn" id="open-logs">Open logs</button>
+      </div>
+      <p class="hint">Saves (characters, JustGold, items, stats) are kept in the saves folder and survive updates. Put your own songs in the music folder (see its README).</p>
+    </section>
+  </div>
+  <footer class="bar">
+    <button class="btn left" id="quit">Quit JustGameBox</button>
+    <button class="btn" id="close">Close</button>
+    <button class="btn primary" id="save">Save</button>
+  </footer>
+  <script src="settings.js"></script>
+</body>
+</html>

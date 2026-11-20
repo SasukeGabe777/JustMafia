@@ -52,9 +52,9 @@ const EXTERNAL = {
 };
 const defOf = (k) => (typeof k === 'string' ? (Object.prototype.hasOwnProperty.call(GAMES, k) ? GAMES[k] : Object.prototype.hasOwnProperty.call(EXTERNAL, k) ? EXTERNAL[k] : null) : null);
 
-// Lifetime profiles for box games: .data/box-profiles.json (git-ignored), like JustMafia's
-// profiles.json; MT_PROFILE_STORE=memory keeps them in memory (tests).
-const defaultProfiles = () => new BoxProfileStore(process.env.MT_PROFILE_STORE === 'memory' ? null : path.join(__dirname, '..', '.data', 'box-profiles.json'));
+// Lifetime profiles for box games: .data/box-profiles.json (git-ignored; DATA_DIR moves it, see
+// data-dir.js), like JustMafia's profiles.json; MT_PROFILE_STORE=memory keeps them in memory (tests).
+const defaultProfiles = () => new BoxProfileStore(process.env.MT_PROFILE_STORE === 'memory' ? null : path.join(require('../data-dir').DATA_DIR, 'box-profiles.json'));
 
 // JustGold (docs/justgold.md): 'wallets' is JustMafia's ProfileStore (gold, items, the look);
 // walletBusy(walletId) says if that wallet is in a running JustMafia game (no shopping then).

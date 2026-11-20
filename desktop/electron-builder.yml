@@ -1,0 +1,44 @@
+# electron-builder config for the Steam build (npm run desktop:build from the repo root).
+# Output: desktop/dist/win-unpacked/ — upload that folder with SteamPipe (docs/steam-release.md).
+# No installer: Steam installs and updates the files itself.
+appId: com.justgamebox.desktop
+productName: JustGameBox
+executableName: JustGameBox
+copyright: Copyright © 2026 the JustGameBox developers
+directories:
+  output: dist
+  buildResources: build
+files:
+  - main.js
+  - settings-store.js
+  - steam.js
+  - preload-settings.js
+  - ui/**/*
+  - build/icon.png
+  - package.json
+  - "!**/*.map"
+  - "!node_modules/@types/**"
+  - "!node_modules/steamworks.js/dist/linux64/**"
+  - "!node_modules/steamworks.js/dist/osx/**"
+  - "!node_modules/steamworks.js/dist/win64/*.lib"
+# The Steamworks native module and steam_api64.dll must be real files on disk.
+asarUnpack:
+  - node_modules/steamworks.js/**
+# The game server (staged by scripts/stage-server.js) runs from real files, not the asar.
+extraResources:
+  - from: .stage/server
+    to: server
+    filter:
+      - "**/*"
+extraFiles:
+  - from: ../THIRD_PARTY_NOTICES.md
+    to: THIRD_PARTY_NOTICES.md
+electronLanguages:
+  - en-US
+npmRebuild: false
+win:
+  target:
+    - target: dir
+      arch:
+        - x64
+  icon: build/icon.png
