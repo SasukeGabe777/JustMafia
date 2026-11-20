@@ -12,6 +12,11 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | alien | Music | `games/alien/hello-from-the-children.ogg` | Hello from the children of planet Earth | hatmix | CC0 1.0 | https://opengameart.org/content/hello-from-the-children-of-planet-earth |
 | alien | Music | `games/alien/somethings-out-there.ogg` | Somethings Out There | HoliznaCC0 | CC0 1.0 | https://freemusicarchive.org/music/holiznacc0/stranger-than-fiction-halloween-sci-fi/somethings-out-there/ |
 | bid | Music | `games/bid/title-confusement-rag.mp3` | Confusement Rag | Skrjablin | CC0 1.0 | https://opengameart.org/node/25403 |
+| bid | Music | `games/bid/play-the-adventurers-rag.mp3` | The Adventurer's Rag | Skrjablin | CC0 1.0 | https://opengameart.org/node/25403 |
+| blackjack | Music | `games/blackjack/title-once-in-a-while.mp3` | Once In A While | Pro Sensory (Alex McCulloch) | CC0 1.0 | https://opengameart.org/content/once-in-a-while |
+| blackjack | Music | `games/blackjack/think-buy-something.ogg` | Buy Something! (Shop Theme) | Cleyton Kauffman | CC0 1.0 | https://opengameart.org/content/shop-theme |
+| blackjack | Music | `games/blackjack/play-blue-intermission.ogg` | Blue Intermission | congusbongus | CC0 1.0 | https://opengameart.org/content/blue-intermission |
+| blackjack | Music | `games/blackjack/finale-catchy-swing.ogg` | Catchy Swing | Doge | CC0 1.0 | https://opengameart.org/content/catchy-swing |
 | bomb | Music | `games/bomb/secret-agent-rock.ogg` | Secret Agent Rock | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Public_Domain_Soundtrack_Music_Album_One/secret-agent-rock/ |
 | bomb | Music | `games/bomb/ghost-surf-rock.ogg` | Ghost Surf Rock | Loyalty Freak Music | CC0 1.0 | https://freemusicarchive.org/music/Loyalty_Freak_Music/WITCHY_BATTY_SPOOKY_HALLOWEEN_IN_SEPTEMBER_/Ghost_Surf_Rock/ |
 | bomb | Music | `games/bomb/shooter-on-the-roof.ogg` | Shooter On The Roof | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/shooter-on-the-roof/ |
@@ -21,6 +26,11 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | escape | Music | `games/escape/gentle-rain.ogg` | Gentle Rain | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/gentle-rain/ |
 | escape | Music | `games/escape/hong-kong-noir.ogg` | Hong Kong Noir | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/hong-kong-noir/ |
 | escape | Music | `games/escape/photos-of-murder.ogg` | Photos Of Murder | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/photos-of-murder/ |
+| president | Music | `games/president/title-kings-feast.mp3` | Medieval: King's Feast | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-kings-feast |
+| president | Music | `games/president/play-harpsichord-flurry.ogg` | Harpsichord Flurry | Spring Spring (Julie Damsgaard) | CC0 1.0 | https://opengameart.org/content/harpsichord-flurry |
+| price | Music | `games/price/title-urban-theme.ogg` | Urban Theme | MintoDog | CC0 1.0 | https://opengameart.org/content/urban-theme |
+| price | Music | `games/price/think-urban-shop.ogg` | Urban Shop | MintoDog | CC0 1.0 | https://opengameart.org/content/urban-shop |
+| price | Music | `games/price/finale-funky-disco-beats.ogg` | Funky Disco Beats to Boogie/Woogie To | Fupi | CC0 1.0 | https://opengameart.org/content/funky-disco-beats-to-boogiewoogie-to |
 | sketch | Music | `games/sketch/childrens-march.ogg` | Children's March Theme | CleytonKauffman | CC0 1.0 | https://opengameart.org/content/childrens-march-theme |
 | sketch | Music | `games/sketch/recorder-jam.ogg` | Recorder Jam | Of Far Different Nature | CC0 1.0 | https://opengameart.org/content/recorder-jam |
 | snap | Music | `games/snap/funky-disco-beats.ogg` | Funky Disco Beats to Boogie/Woogie to | Fupi | CC0 1.0 | https://opengameart.org/content/funky-disco-beats-to-boogiewoogie-to |
@@ -49,6 +59,38 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | alien | Sound effect | `alien/hyperspace.ogg` | Sci-fi Sounds: spaceEngineLarge_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/sci-fi-sounds |
 | alien | Sound effect | `alien/tractor-beam.ogg` | Sci-fi Sounds: forceField_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/sci-fi-sounds |
 | alien | Sound effect | `alien/switch.ogg` | UI Audio: switch7 | Kenney | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| bid | Sound effect | `bid/garage-lift.webm` | sliding large metal garage door - 3 (roll-up door, trimmed) | FOSSarts (freesound.org) | CC0 1.0 | https://freesound.org/people/FOSSarts/sounds/761945/ |
+| bid | Sound effect | `bid/garage-rollup.webm` | sliding large metal garage door - 3 (roll-up door, longer cut) | FOSSarts (freesound.org) | CC0 1.0 | https://freesound.org/people/FOSSarts/sounds/761945/ |
+| bid | Sound effect | `bid/gavel.webm` | Gavel on wooden desk (one slam) | Aerny (freesound.org) | CC0 1.0 | https://freesound.org/people/Aerny/sounds/618138/ |
+| bid | Sound effect | `bid/aww.webm` | aww.wav (small audience pity moan) | phmiller42 (freesound.org) | CC0 1.0 | https://freesound.org/people/phmiller42/sounds/124996/ |
+| bid | Sound effect | `bid/applause.webm` | Small applause | Breviceps (freesound.org) | CC0 1.0 | https://freesound.org/people/Breviceps/sounds/462362/ |
+| bid | Sound effect | `bid/shout-100.webm` | Audience bid shout "100" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-200.webm` | Audience bid shout "200" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-300.webm` | Audience bid shout "300" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-400.webm` | Audience bid shout "400" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-500.webm` | Audience bid shout "500" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-600.webm` | Audience bid shout "600" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-700.webm` | Audience bid shout "700" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-800.webm` | Audience bid shout "800" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-900.webm` | Audience bid shout "900" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-1000.webm` | Audience bid shout "1000" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-1500.webm` | Audience bid shout "1500" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-2000.webm` | Audience bid shout "2000" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-yep.webm` | Audience bid shout "yep" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-here.webm` | Audience bid shout "here" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-hup.webm` | Audience bid shout "hup" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| bid | Sound effect | `bid/shout-yeah.webm` | Audience bid shout "yeah" (Kokoro TTS line over "Small Crowd Walla" by IENBA, CC0, https://freesound.org/people/IENBA/sounds/653920/) | JustGameBox (Kokoro-82M voice, Apache-2.0 model; our own output) | Original | Rendered for this game (scratch tools, kokoro-js 1.2.1) |
+| blackjack | Sound effect | `blackjack/shuffle.webm` | card-shuffle.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blackjack | Sound effect | `blackjack/deal-1.webm` | card-slide-1.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blackjack | Sound effect | `blackjack/deal-2.webm` | card-slide-2.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blackjack | Sound effect | `blackjack/deal-3.webm` | card-slide-3.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blackjack | Sound effect | `blackjack/deal-4.webm` | card-slide-4.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blackjack | Sound effect | `blackjack/flip.webm` | card-place-1.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blackjack | Sound effect | `blackjack/chips-1.webm` | chips-stack-1.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blackjack | Sound effect | `blackjack/chips-2.webm` | chips-stack-2.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blackjack | Sound effect | `blackjack/chips-3.webm` | chips-stack-3.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blackjack | Sound effect | `blackjack/payout.webm` | chips-collide-1.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blackjack | Sound effect | `blackjack/chip-lay.webm` | chip-lay-1.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
 | bomb | Sound effect | `bomb/fuse-light.ogg` | Match - Strike and Light 02 | JarredGibb | CC0 1.0 | https://freesound.org/people/JarredGibb/sounds/248236/ |
 | bomb | Sound effect | `bomb/radio-static.ogg` | Static.wav | Jace | CC0 1.0 | https://freesound.org/people/Jace/sounds/17804/ |
 | bomb | Sound effect | `bomb/explosion.ogg` | Muffled Distant Explosion | NenadSimic | CC0 1.0 | https://freesound.org/people/NenadSimic/sounds/149966/ |
@@ -64,6 +106,18 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | escape | Sound effect | `escape/stamp.ogg` | es-stamp.wav | eddies2000 | CC0 1.0 | https://freesound.org/people/eddies2000/sounds/448474/ |
 | escape | Sound effect | `escape/handcuffs.ogg` | cuffs locking.mp3 | Mbytemama93 | CC0 1.0 | https://freesound.org/people/Mbytemama93/sounds/666604/ |
 | escape | Sound effect | `escape/typewriter.ogg` | Typewriter - single key - type 1.wav | yottasounds | CC0 1.0 | https://freesound.org/people/yottasounds/sounds/380138/ |
+| president | Sound effect | `president/shuffle.webm` | card-shuffle.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| president | Sound effect | `president/play-1.webm` | card-place-2.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| president | Sound effect | `president/play-2.webm` | card-place-3.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| president | Sound effect | `president/play-3.webm` | card-place-4.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| president | Sound effect | `president/slap.webm` | card-shove-1.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| president | Sound effect | `president/deal.webm` | card-fan-1.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| president | Sound effect | `president/tribute.webm` | card-slide-5.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| president | Sound effect | `president/sweep.webm` | card-shove-3.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| price | Sound effect | `price/tag-gun.webm` | metalClick.ogg (Kenney RPG Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/rpg-audio |
+| price | Sound effect | `price/register.webm` | Cash Register Purchase | Zott820 (freesound.org) | CC0 1.0 | https://freesound.org/people/Zott820/sounds/209578/ |
+| price | Sound effect | `price/applause.webm` | Small applause | Breviceps (freesound.org) | CC0 1.0 | https://freesound.org/people/Breviceps/sounds/462362/ |
+| price | Sound effect | `price/aww.webm` | aww.wav (small audience pity moan) | phmiller42 (freesound.org) | CC0 1.0 | https://freesound.org/people/phmiller42/sounds/124996/ |
 | sketch | Sound effect | `sketch/pages.ogg` | Paper Sketchbook Page Flips 1 | OwlStorm | CC0 1.0 | https://freesound.org/people/OwlStorm/sounds/320148/ |
 | sketch | Sound effect | `sketch/page.ogg` | Book Turn Page 2 | esperri | CC0 1.0 | https://freesound.org/people/esperri/sounds/119127/ |
 | sketch | Sound effect | `sketch/scribble.ogg` | Scribble_short | waldram | CC0 1.0 | https://freesound.org/people/waldram/sounds/257518/ |
@@ -81,6 +135,12 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | summon | Sound effect | `summon/crumble.ogg` | Stone Crumble 2 | Kastenfrosch | CC0 1.0 | https://freesound.org/people/Kastenfrosch/sounds/521956/ |
 | tune | Sound effect | `tune/needle.ogg` | Record Player Needle is dropped & Vinyl crackling | Breviceps | CC0 1.0 | https://freesound.org/people/Breviceps/sounds/556722/ |
 | tune | Sound effect | `tune/static.ogg` | AM Tuning | NobodyYouKnowOf | CC0 1.0 | https://freesound.org/people/NobodyYouKnowOf/sounds/261873/ |
+| ui | Sound effect | `ui/click.ogg` | select_001.ogg (Kenney Interface Sounds) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
+| ui | Sound effect | `ui/toggle.ogg` | toggle_002.ogg (Kenney Interface Sounds) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
+| ui | Sound effect | `ui/open.ogg` | open_001.ogg (Kenney Interface Sounds) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
+| ui | Sound effect | `ui/close.ogg` | close_001.ogg (Kenney Interface Sounds) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
+| ui | Sound effect | `ui/tick.ogg` | tick_002.ogg (Kenney Interface Sounds) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
+| ui | Sound effect | `ui/join.ogg` | pluck_001.ogg (Kenney Interface Sounds) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
 | undercover | Sound effect | `undercover/folder.ogg` | document folder open-close #2.wav | Timbre | CC0 1.0 | https://freesound.org/people/Timbre/sounds/511699/ |
 | undercover | Sound effect | `undercover/stamp.ogg` | traditional stamp.wav | I.fekry | CC0 1.0 | https://freesound.org/people/I.fekry/sounds/470710/ |
 | undercover | Sound effect | `undercover/shutter.ogg` | Camera Shutter | roachpowder | CC0 1.0 | https://freesound.org/people/roachpowder/sounds/170229/ |

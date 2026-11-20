@@ -32,7 +32,7 @@ ok(entries.length + ' manifest entries point at real files with sane loops');
 if (!CHROME) { console.log('SKIP browser part: Chrome not found (set CHROME=path).'); process.exit(0); }
 (async () => {
   await startServer(PORT);
-  const browser = new Browser({ debugPort: 9343 }); await browser.launch(); // --mute-audio
+  const browser = new Browser({ debugPort: Number(process.env.DEBUG_PORT) || 9343 }); await browser.launch(); // --mute-audio
   const gesture = async (p) => { for (const type of ['mousePressed', 'mouseReleased']) await p.send('Input.dispatchMouseEvent', { type, x: 5, y: 5, button: 'left', clickCount: 1 }); };
 
   // 2. Every file decodes in Chrome (Opus in Ogg), and its loop end is inside the file.
@@ -68,7 +68,7 @@ if (!CHROME) { console.log('SKIP browser part: Chrome not found (set CHROME=path
   await tv.until(`(BOX.audio.source || '').startsWith('synth:')`, 'synth fallback for a cue with no track', 10000);
   ok('a cue with no track falls back to the synth score');
   // A track that cannot load: the synth plays instead.
-  await tv.send('Fetch.enable', { patterns: [{ urlPattern: '*/audio/music/sets/*/finale.ogg' }] });
+  await tv.send('Fetch.enable', { patterns: [{ urlPattern: '*/audio/music/*/finale*' }] });
   const fail = (m) => { if (m.method === 'Fetch.requestPaused' && m.sessionId === tv.s) tv.send('Fetch.failRequest', { requestId: m.params.requestId, errorReason: 'Failed' }).catch(() => {}); };
   browser.listeners.push(fail);
   await tv.eval(`BOX.audio.music('finale', 'price'); true`);

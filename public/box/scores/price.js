@@ -3,6 +3,8 @@
 // Clavinet + slap synth bass + funk kit + cowbell; a brass riff hook in unison octaves.
 (function () {
   const S = (window.BOX.scores = window.BOX.scores || {});
+  // Recorded sound effects (public/audio/sfx/price/, credits.json there), quiet, on the SFX bus.
+  const clip = (f, o) => BOX.audio.clip('price/' + f, o);
   const tracks = {
     clav: { type: 'clav', mode: 'chord', center: 66, n: 3, vol: 0.42, pan: -0.25 },
     keys: { type: 'epiano', mode: 'chord', center: 62, n: 4, vol: 0.32, pan: 0.2, trem: 0.2 },
@@ -71,11 +73,14 @@
       reveal: { bpm: 120, gain: 1.4, tracks: { b: { type: 'brass', mode: 'chord', center: 67, n: 4 }, d: { type: 'drums', kit: 'orch' } }, chords: 'Bb7', parts: { b: 'X-------........', d: { y: 'x' } } },
       bust: { bpm: 90, tracks: { m: { type: 'mute' } }, parts: { m: 'd5 - c#5 - c5 - b4 - - - - - . . . .' }, bars: 1 },
       item: { bpm: 120, tracks: { b: { type: 'brass' } }, parts: { b: 'f4 bb4 d5 f5 - - . .' } },
-      lock: (X) => { X.drum('rim', 0, 0.9); X.note('fmkeys', 'f6', 0.04, 0.12, 0.6, { ratio: 3, index: 1 }); },
+      // A guess locked in: the clack of a price-tag gun.
+      lock: (X) => { if (!clip('tag-gun.webm', { vol: 0.3 })) { X.drum('rim', 0, 0.9); X.note('fmkeys', 'f6', 0.04, 0.12, 0.6, { ratio: 3, index: 1 }); } },
+      // Bullseye: the cash register rings (the built-in synth one if the clip can't play).
+      bull: () => { if (!clip('register.webm', { vol: 0.24 })) BOX.audio.stinger('cash', 'price'); },
       sting: { bpm: 120, gain: 1.6, tracks: { b: { type: 'brass', mode: 'chord', center: 64, n: 4 } }, chords: 'D7#9', parts: { b: 'X---............' } },
       round: { bpm: 112, tracks: { c: { type: 'clav', mode: 'chord', center: 66, n: 3 }, b: { type: 'brass' } }, chords: 'Bb7', parts: { c: 'x.xgx.x.........', b: '. . . . f5 bb5 - -' } },
     },
-    fx: { drop: 'reveal', jackpot: 'jackpot', bull: 'cash', bust: 'bust', item: 'item', lock: 'lock', hilo: 'sting', versus: 'sting', spree: 'riser', over: 'win' },
+    fx: { drop: 'reveal', jackpot: 'jackpot', bull: 'bull', bust: 'bust', item: 'item', lock: 'lock', hilo: 'sting', versus: 'sting', spree: 'riser', over: 'win' },
     sfx: { win: 'win', drum: 'roll', reveal: 'reveal', start: 'round', click: 'lock' },
   };
 })();

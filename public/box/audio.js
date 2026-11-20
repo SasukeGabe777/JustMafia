@@ -36,6 +36,8 @@
      BOX.audio.clip(path, o)         a small RECORDED sound effect: public/audio/sfx/<path> (e.g. 'bid/garage.ogg')
                                      on the SFX bus, quiet by default (o.vol 0.3; o.rate, o.pan, o.delay s, o.jitter).
                                      Same path at most once per o.gap ms (150). Silent if missing. -> bool
+     BOX.audio.ui(kind, o)           a quiet recorded UI sound (public/audio/sfx/ui/<kind>.ogg): click, toggle, open,
+                                     close, tick (sliders), join (a player joins the lobby). -> bool (false: play your own)
      BOX.audio.duck(on)              lower the music under the narrator
      BOX.audio.stop(fade)            stop the music
      BOX.audio.need(key, cb)         load a score file
@@ -911,6 +913,7 @@
   }
   const bufs = new Map(); // url -> 'loading' | 'failed' | AudioBuffer
   const clipLast = new Map(); // sfx clip path -> last start (ms), so a clip never machine-guns
+  const UI_VOL = { click: 0.16, toggle: 0.14, open: 0.13, close: 0.12, tick: 0.1, join: 0.16 }; // api.ui: quiet, tasteful
   function loadBuf(url, cb) {
     const b = bufs.get(url);
     if (b && b !== 'loading') { cb(); return; }
@@ -1045,18 +1048,19 @@
   }
   function panel(anchor) {
     css();
-    if (panelEl) { panelEl.remove(); panelEl = null; return; }
+    if (panelEl) { panelEl.remove(); panelEl = null; api.ui('close'); return; }
+    api.ui('open');
     const p = panelEl = document.createElement('div'); p.className = 'ba-panel';
     const row = (k, label) => `<label><span>${label}</span><input type="range" min="0" max="100" value="${Math.round(settings[k] * 100)}" data-k="${k}"></label>`;
     p.innerHTML = `<h4>🔊 Sound</h4>${row('music', '🎵 Music')}${row('sfx', '✨ Effects')}${row('master', '🔈 Master')}<button data-mute class="${settings.mute ? 'on' : ''}">${settings.mute ? '🔇 Muted (tap to unmute)' : '🔇 Mute everything'}</button>${liveRow()}`;
     document.body.appendChild(p);
     const r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : null;
     if (r) { p.style.top = Math.min(innerHeight - p.offsetHeight - 8, r.bottom + 8) + 'px'; p.style.left = clamp(r.right - 260, 8, innerWidth - 268) + 'px'; } else { p.style.right = '16px'; p.style.bottom = '16px'; }
-    for (const i of p.querySelectorAll('input')) i.oninput = () => api.set(i.dataset.k, i.value / 100);
-    const bindLive = () => { const lv = p.querySelector('[data-live]'); if (lv) lv.onclick = () => { BOX.voice.setLive(!BOX.voice.live); lv.outerHTML = liveRow(); bindLive(); }; };
+    for (const i of p.querySelectorAll('input')) i.oninput = () => { api.set(i.dataset.k, i.value / 100); api.ui('tick', { gap: 90 }); };
+    const bindLive = () => { const lv = p.querySelector('[data-live]'); if (lv) lv.onclick = () => { api.ui('toggle'); BOX.voice.setLive(!BOX.voice.live); lv.outerHTML = liveRow(); bindLive(); }; };
     bindLive();
-    p.querySelector('[data-mute]').onclick = (e) => { api.mute(!settings.mute); e.target.className = settings.mute ? 'on' : ''; e.target.textContent = settings.mute ? '🔇 Muted (tap to unmute)' : '🔇 Mute everything'; };
-    setTimeout(() => { const off = (e) => { if (!panelEl) return document.removeEventListener('pointerdown', off, true); if (!p.contains(e.target) && e.target !== anchor) { p.remove(); panelEl = null; document.removeEventListener('pointerdown', off, true); } }; document.addEventListener('pointerdown', off, true); }, 0);
+    p.querySelector('[data-mute]').onclick = (e) => { const was = settings.mute; if (!was) api.ui('toggle'); api.mute(!was); if (was) api.ui('toggle'); e.target.className = settings.mute ? 'on' : ''; e.target.textContent = settings.mute ? '🔇 Muted (tap to unmute)' : '🔇 Mute everything'; };
+    setTimeout(() => { const off = (e) => { if (!panelEl) return document.removeEventListener('pointerdown', off, true); if (!p.contains(e.target) && e.target !== anchor) { p.remove(); panelEl = null; api.ui('close'); document.removeEventListener('pointerdown', off, true); } }; document.addEventListener('pointerdown', off, true); }, 0);
   }
 
   // ---------------------------------------------------------------- offline render check
@@ -1116,6 +1120,7 @@
       });
       return true;
     },
+    ui(kind, o = {}) { return api.clip('ui/' + kind + '.ogg', { vol: UI_VOL[kind] || 0.14, jitter: 0.03, ...o }); },
     duck(on) { if (duckOn === !!on) return; duckOn = !!on; applyLevels(); },
     set(kind, v) { if (!(kind in settings)) return; settings[kind] = kind === 'mute' ? !!v : clamp(Number(v) || 0, 0, 1); saveSettings(); applyLevels(); },
     mute(on) { api.set('mute', on); },

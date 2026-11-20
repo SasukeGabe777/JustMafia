@@ -175,9 +175,9 @@
     let o = $('#tv-pick'); if (o) o.remove();
     o = document.createElement('div'); o.id = 'tv-pick'; o.className = 'tv-pick';
     o.innerHTML = `<div class="panel"><h2>🎮 Pick the next game</h2><p class="muted">Everyone stays in with the same code. Party points carry on.</p><div class="pick-games">${SWITCHABLE.filter((k) => BOX.games[k] && k !== gameKey).map((k) => { const lk = state && state.unlocks ? window.UNLOCKS && window.UNLOCKS.isLockable(k) && !state.unlocks.includes(k) : isLockedHere(k); return `<button data-game="${k}" ${lk ? 'disabled class="locked" title="Locked"' : ''}><span>${lk ? '🔒' : BOX.games[k].icon}</span><b>${esc(BOX.games[k].name)}</b></button>`; }).join('')}</div><button class="btn ghost small" data-close>Cancel</button></div>`;
-    document.body.appendChild(o);
-    o.onclick = (e) => { if (e.target === o || e.target.closest('[data-close]')) o.remove(); };
-    for (const b of o.querySelectorAll('[data-game]')) b.onclick = async () => { o.remove(); const r = await host('switch', { game: b.dataset.game }); if (!r.ok && r.error) alert(r.error); };
+    document.body.appendChild(o); ui('open');
+    o.onclick = (e) => { if (e.target === o || e.target.closest('[data-close]')) { o.remove(); ui('close'); } };
+    for (const b of o.querySelectorAll('[data-game]')) b.onclick = async () => { o.remove(); ui('click'); const r = await host('switch', { game: b.dataset.game }); if (!r.ok && r.error) alert(r.error); };
   }
   const partyHtml = () => (state && state.played && state.played.length ? `<div class="party-strip">🎉 <b>Party points</b> ${state.party.slice(0, 5).map((r, i) => `<span>${['👑', '2.', '3.', '4.', '5.'][i]} ${esc(r.avatar || '')} ${esc(r.name)} <b>${r.pts}</b></span>`).join('')}<span class="muted">${state.played.length} game${state.played.length === 1 ? '' : 's'} tonight</span></div>` : '');
 
@@ -187,6 +187,8 @@
   // score's phaseCue(s)), default 'play', game over 'finale'. The last 10 s of a timed
   // 'think' phase (or a cue in the score's tenseFrom list) turn 'tense'.
   const AU = BOX.audio;
+  // Quiet recorded UI sounds (public/audio/sfx/ui/) for the menus; the old synth sound if they can't play.
+  const ui = (kind, fb) => { let ok = false; try { ok = !!(AU && AU.ui && AU.ui(kind)); } catch { /* none */ } if (!ok && fb) BOX.sfx(fb); };
   let tenseTimer = 0;
   function music() {
     if (!AU) return;
@@ -248,7 +250,7 @@
       c = document.createElement('div'); c.id = 'corner'; c.className = 'corner';
       c.innerHTML = '<div class="cj"><span class="cl">Join</span><b class="cc"></b></div><img class="cq" alt="QR code to join"><button class="cg" title="Host menu">⚙</button><div class="cm" hidden></div>';
       document.body.appendChild(c);
-      c.querySelector('.cg').onclick = () => { const m = c.querySelector('.cm'); m.hidden = !m.hidden; };
+      c.querySelector('.cg').onclick = () => { const m = c.querySelector('.cm'); m.hidden = !m.hidden; ui(m.hidden ? 'close' : 'open'); };
     }
     c.querySelector('.cc').textContent = state.code;
     const q = c.querySelector('.cq'); if (q.dataset.u !== joinUrl()) { q.src = qr(); q.dataset.u = joinUrl(); }
@@ -259,6 +261,7 @@
       m.innerHTML = html; m.dataset.html = html;
       for (const b of m.querySelectorAll('[data-h]')) b.onclick = () => {
         const h = b.dataset.h; m.hidden = true;
+        if (h !== 'sound') ui('click');
         if (h === 'pick') return tvPicker();
         if (h === 'recap') return startRecap();
         if (h === 'streamer') return hostMenu(true);
@@ -316,12 +319,12 @@
       <h3>🎥 Streamer options</h3>
       <div class="hm-togs">${tog('hide', 'Hide room code', 'Blur the code and QR code. Tap them to peek.')}${tog('filter', 'Filter player text', 'Cover swear words and slurs in names and answers.')}${tog('delay', 'Streamer delay', 'Wait a few seconds before a new room code shows.')}</div>
       <button class="btn ghost small" data-close>Done</button></div>`;
-    document.body.appendChild(o);
-    o.onclick = (e) => { if (e.target === o || e.target.closest('[data-close]')) o.remove(); };
-    for (const b of o.querySelectorAll('[data-st]')) b.onclick = () => { const k = b.dataset.st; streamer[k] = !streamer[k]; saveStreamer(); b.classList.toggle('on', streamer[k]); BOX.sfx('pop'); if (k === 'delay' && streamer.delay) delayCode = ''; platform(); };
+    document.body.appendChild(o); ui('open');
+    o.onclick = (e) => { if (e.target === o || e.target.closest('[data-close]')) { o.remove(); ui('close'); } };
+    for (const b of o.querySelectorAll('[data-st]')) b.onclick = () => { const k = b.dataset.st; streamer[k] = !streamer[k]; saveStreamer(); b.classList.toggle('on', streamer[k]); ui('toggle', 'pop'); if (k === 'delay' && streamer.delay) delayCode = ''; platform(); };
     for (const b of o.querySelectorAll('[data-hk]')) b.onclick = () => { if (!confirm(`Remove ${b.dataset.name} from the room?`)) return; host('kick', { id: b.dataset.hk }).then((r) => { if (r && r.ok) { b.remove(); tvToast(`<span class="tt-i">👋</span><div><b>${esc(b.dataset.name)} was removed</b></div>`); } }); };
-    for (const b of o.querySelectorAll('[data-hi]')) b.onclick = () => host('partyIntros', { mode: b.dataset.hi }).then((r) => { if (r && r.ok) { for (const x of o.querySelectorAll('[data-hi]')) x.classList.toggle('ghost', x !== b); BOX.sfx('pop'); } });
-    for (const b of o.querySelectorAll('[data-hm]')) b.onclick = () => { o.remove(); if (b.dataset.hm === 'recap') startRecap(); else host('lockRoom', { on: !(state && state.locked) }); };
+    for (const b of o.querySelectorAll('[data-hi]')) b.onclick = () => host('partyIntros', { mode: b.dataset.hi }).then((r) => { if (r && r.ok) { for (const x of o.querySelectorAll('[data-hi]')) x.classList.toggle('ghost', x !== b); ui('click', 'pop'); } });
+    for (const b of o.querySelectorAll('[data-hm]')) b.onclick = () => { o.remove(); ui('click'); if (b.dataset.hm === 'recap') startRecap(); else host('lockRoom', { on: !(state && state.locked) }); };
   }
   function gearButton() {
     if (STAND || $('#tv-gear')) return;
@@ -478,6 +481,14 @@
     for (const b of bar.querySelectorAll('[data-pv]')) b.onclick = () => host(b.dataset.pv);
   }
 
+  // A soft pluck when someone new joins the lobby (one per update, however many came in).
+  let lobbyIds = null;
+  function joinSound() {
+    if (state.phase !== 'lobby') { lobbyIds = null; return; }
+    const ids = new Set((state.players || []).map((p) => p.id));
+    if (lobbyIds && [...ids].some((id) => !lobbyIds.has(id))) ui('join');
+    lobbyIds = ids;
+  }
   function render() {
     if (!state) return;
     if (STAND) corner();
@@ -489,6 +500,7 @@
     // Party Mode: the standings board between games, and the finale (drawn by partyboard.js).
     // After a game played elsewhere (pm.ext) the room sits in a lobby, but the board shows.
     const pm = state.partyMode;
+    joinSound();
     if (state.phase === 'lobby' && !(pm && pm.ext && (pm.phase === 'board' || pm.phase === 'done'))) return lobby();
     if (pm && (pm.phase === 'board' || pm.phase === 'done') && BOX.partyBoard) {
       // Intros "in the break": the next game's cutscene takes over the standings until it starts.
@@ -656,7 +668,7 @@
     if (box.dataset.sig !== sig && !box.contains(document.activeElement)) {
       box.dataset.sig = sig;
       box.innerHTML = state.fields.map((f) => `<label>${esc(f.label)}<select data-set="${esc(f.key)}">${f.options.map((o) => `<option value="${esc(String(o.value))}" ${String(state.settings[f.key]) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`).join('');
-      for (const s of box.querySelectorAll('[data-set]')) s.onchange = () => { s.blur(); host('settings', { settings: { [s.dataset.set]: s.value } }); };
+      for (const s of box.querySelectorAll('[data-set]')) s.onchange = () => { s.blur(); ui('click'); host('settings', { settings: { [s.dataset.set]: s.value } }); };
     }
   }
 })();
