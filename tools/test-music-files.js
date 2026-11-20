@@ -32,7 +32,7 @@ ok(entries.length + ' manifest entries point at real files with sane loops');
 if (!CHROME) { console.log('SKIP browser part: Chrome not found (set CHROME=path).'); process.exit(0); }
 (async () => {
   await startServer(PORT);
-  const browser = new Browser({ debugPort: 9343 }); await browser.launch(); // --mute-audio
+  const browser = new Browser({ debugPort: Number(process.env.DEBUG_PORT) || 9343 }); await browser.launch(); // --mute-audio
   const gesture = async (p) => { for (const type of ['mousePressed', 'mouseReleased']) await p.send('Input.dispatchMouseEvent', { type, x: 5, y: 5, button: 'left', clickCount: 1 }); };
 
   // 2. Every file decodes in Chrome (Opus in Ogg), and its loop end is inside the file.
