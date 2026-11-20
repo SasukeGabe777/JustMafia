@@ -435,6 +435,13 @@
     BOX.morph(el.querySelector('#roster'), L.players.map((p, i) => `<span class="chip sn-l-frame" style="--r:${((i * 37) % 7) - 3}deg">${face(p, 72)}<small>${esc(p.name)}</small><i>${String(i + 1).padStart(2, '0')}A</i></span>`).join('') || '<span class="sn-l-empty">Scan the code to join the shoot. 3–10 photographers is perfect.</span>');
   }
 
+  // Recorded sound effects (public/audio/sfx/snap/, CC0, see credits.json there): quiet camera foley on
+  // the TV. warm() decodes them once (silently) as soon as audio is unlocked so the first is on time.
+  const REC = ['flash', 'shutter', 'projector'];
+  let recWarm = false;
+  const rec = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('snap/' + f + '.ogg', o));
+  const warm = () => { if (!recWarm && rec(REC[0], { vol: 0, gap: 0 })) { recWarm = true; for (const f of REC.slice(1)) rec(f, { vol: 0, gap: 0 }); } };
+
   BOX.games.snap = {
     name: 'JustSnap', icon: '📸',
     about: 'Margo Flash needs photos for SNAP! magazine. Everyone runs around taking photos on their phone; they pop up on the TV and the room votes or guesses.',
@@ -446,12 +453,19 @@
       'The host can hide any photo (🙈), and can turn on “Host approves photos” to check every photo first.',
       'Votes, right guesses and speed earn stars; the best photo of each round goes in the final issue. Most stars wins.',
     ],
-    fx: { start: 'start', brief: 'whoosh', snap: 'shutter', warn: 'tick', sent: 'shutter', review: 'chime', write: 'pop', gallery: 'reveal', hidden: 'poof', reveal: 'drum', win: 'win' },
+    // snap / sent / gallery play recorded camera sounds instead (onFx below).
+    fx: { start: 'start', brief: 'whoosh', warn: 'tick', review: 'chime', write: 'pop', hidden: 'poof', reveal: 'drum', win: 'win' },
+    onFx(f) {
+      if (f.kind === 'snap') rec('flash', { vol: 0.14 }); // "Go! Grab your phone and shoot!": a flash charges and fires
+      if (f.kind === 'sent') rec('shutter', { vol: 0.2, pan: Math.random() * 0.8 - 0.4, gap: 120 }); // a print is pinned to the darkroom line
+      if (f.kind === 'gallery') rec('projector', { vol: 0.22 }); // the photos go up on the wall: a slide-projector click
+    },
     music: (s) => (s.phase === 'brief' || s.phase === 'snap' ? 'play' : s.phase === 'vote' || s.phase === 'guess' || s.phase === 'write' || s.phase === 'review' ? 'think' : s.phase === 'reveal' ? 'reveal' : s.phase === 'over' ? 'finale' : undefined),
     lobbyTv,
     _test: { colourScore, encode, develop },
     tv(el, s, ctx) {
       if (!s) return;
+      warm();
       if (BOX.voice && BOX.voice.preload && !TV.pre) { TV.pre = true; try { BOX.voice.preload('snap'); } catch (e) { /* no */ } }
       if (s.margo && TV.said !== s.margo.key) { TV.said = s.margo.key; speak(s.margo.text); }
       if (!(s.review && s.review.length)) { TV.open = false; }

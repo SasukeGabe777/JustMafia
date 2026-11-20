@@ -158,11 +158,28 @@
       layer.appendChild(f); setTimeout(() => f.remove(), 2600);
     }
     const now = Date.now();
-    if (now - lastBoo > 4500) { const big = Object.entries(count).find(([, n]) => n >= 4); if (big) { lastBoo = now; BOX.sfx(big[0] === '🍅' ? 'boo' : big[0] === '😂' ? 'laugh' : 'cheer'); } }
+    if (now - lastBoo > 4500) {
+      const big = Object.entries(count).find(([, n]) => n >= 4);
+      if (big) {
+        lastBoo = now;
+        // A small recorded crowd from the side being heckled (a 🤔 wave keeps the old synth murmur).
+        const side = (fresh.filter((r) => r.e === big[0]).pop() || {}).s, clip = { '🍅': 'boo', '😂': 'laugh', '👏': 'applause' }[big[0]];
+        if (!(clip && rec(clip, { vol: clip === 'boo' ? 0.13 : 0.17, pan: side === 0 ? -0.35 : side === 1 ? 0.35 : 0 }))) BOX.sfx(big[0] === '🍅' ? 'boo' : big[0] === '😂' ? 'laugh' : 'cheer');
+      }
+    }
   }
+
+  // Recorded sound effects (public/audio/sfx/debate/, CC0, see credits.json there): a real gavel, a
+  // microphone tap and a small heckling crowd on the TV. warm() decodes them once (silently) as soon
+  // as audio is unlocked so the first one is on time.
+  const REC = ['gavel', 'mic', 'boo', 'laugh', 'applause'];
+  let recWarm = false;
+  const rec = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('debate/' + f + '.ogg', o));
+  const warm = () => { if (!recWarm && rec(REC[0], { vol: 0, gap: 0 })) { recWarm = true; for (const f of REC.slice(1)) rec(f, { vol: 0, gap: 0 }); } };
 
   function tv(el, s) {
     if (!s) return;
+    warm();
     if (s.phase === 'over') { paint(el, overTv(s), 'over'); return; }
     if (!s.podiums) return;
     const status0 = s.phase === 'prep' ? [0, 1].map((k) => (s.podiums[k].ready ? '<div class="db-tag ok">✓ Ready</div>' : '<div class="db-tag">📝 Preparing…</div>')) : ['', ''];
@@ -359,7 +376,7 @@
         if (k) {
           for (const b of k.parentNode.querySelectorAll('.dbl-opt')) b.classList.toggle('on', b === k);
           const s = el.querySelector(`select[data-set="${k.dataset.k}"]`); if (s) s.value = k.dataset.v;
-          el.__L.set(k.dataset.k, k.dataset.v); BOX.sfx('gavel'); return;
+          el.__L.set(k.dataset.k, k.dataset.v); if (!rec('gavel', { vol: 0.2, rate: 1.1 })) BOX.sfx('gavel'); return;
         }
         const c = e.target.closest('[data-kick]');
         if (c && confirm('Remove this member?')) el.__L.kick(c.dataset.kick);
@@ -405,7 +422,12 @@
     ],
     // Soundtrack cue per phase (public/box/scores/debate.js). Speeches get a quiet bed so voices win.
     music: (s) => ({ intro: 'think', prep: 'think', speech: 'speech', closer: 'speech', swap: 'action', ask: 'think', write: 'think', vote: 'think', result: 'reveal', over: 'finale' }[s.phase] || 'play'),
-    fx: { debate: 'gavel', court: 'gavel', team: 'swell', hot: 'sting', round: 'whoosh', mic: 'click', closer: 'swell', pass: 'pop', card: 'flip', swap: 'whoosh', ask: 'chime', write: 'ballot', vote: 'ballot', gavel: 'gavel', tie: 'shrug', win: 'win' },
+    // mic plays a recorded microphone tap instead (onFx below).
+    fx: { debate: 'gavel', court: 'gavel', team: 'swell', hot: 'sting', round: 'whoosh', closer: 'swell', pass: 'pop', card: 'flip', swap: 'whoosh', ask: 'chime', write: 'ballot', vote: 'ballot', gavel: 'gavel', tie: 'shrug', win: 'win' },
+    onFx(f) {
+      if (f.kind === 'mic') rec('mic', { vol: 0.22, pan: f.side === 0 ? -0.3 : f.side === 1 ? 0.3 : 0 }); // the next speaker taps the mic
+      if (f.kind === 'gavel') rec('gavel', { vol: 0.32, delay: 0.56 }); // the 🔨 slams down (dbGavel, 65% of 0.9 s)
+    },
     tv,
     phone,
   };

@@ -101,8 +101,16 @@
         <div class="ao-awards">${f.awards.map((a, i) => `<div class="ao-award" style="--c:${esc(a.color)};animation-delay:${0.5 + i * 0.3}s"><div class="ic">${esc(a.icon)}</div><div><small>${esc(a.title)}</small><b>${esc(a.name)}</b><span>${esc(a.why)}</span></div></div>`).join('')}</div></div>
       <div class="ao-rest">${st.slice(3).map((r, i) => `<span>${i + 4}. ${av(r)} ${esc(r.name)} <b>${r.points}</b></span>`).join('')}</div>`, 'over')}</div>`);
   }
+  // Recorded sound effects (public/audio/sfx/actout/, CC0, see credits.json there): a quiet theatre
+  // audience and a clapperboard on the TV. warm() decodes them once (silently) as soon as audio is
+  // unlocked so the first one is on time.
+  const REC = ['clapper', 'cheer', 'applause'];
+  let recWarm = false;
+  const rec = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('actout/' + f + '.ogg', o));
+  const warm = () => { if (!recWarm && rec(REC[0], { vol: 0, gap: 0 })) { recWarm = true; for (const f of REC.slice(1)) rec(f, { vol: 0, gap: 0 }); } };
   function tv(el, s) {
     if (!s) return;
+    warm();
     if (!TV.raf) TV.raf = requestAnimationFrame(tick);
     const key = s.phase + ':' + s.n;
     if (TV.key !== key) { TV.key = key; TV.total = Math.max(1, s.phaseMs || s.endsIn || 1); }
@@ -308,7 +316,14 @@
       'After each scene, applaud the best performance: every 👏 is +25 for the actor. The final scene counts double.',
       'Most points wins, and the awards night hands out the Oscar-worthy, Mime Master and more.',
     ],
-    fx: { start: 'start', cast: 'whoosh', final: 'sting', cue: 'drum', action: 'bell', got: 'cheer', reveal: 'reveal', nobody: 'shrug', clap: 'pop', skip: 'whoosh', pose: 'freeze', baton: 'whoosh', win: 'win' },
+    // got / clap play a recorded audience instead, and the cue gets a real clapperboard (onFx below).
+    fx: { start: 'start', cast: 'whoosh', final: 'sting', cue: 'drum', action: 'bell', reveal: 'reveal', nobody: 'shrug', skip: 'whoosh', pose: 'freeze', baton: 'whoosh', win: 'win' },
+    onFx(f) {
+      // LIGHTS… CAMERA… ACTION!: the 🎬 snaps shut (aoSnap, 60-66% of 2.6 s) as ACTION! lands (1.7 s).
+      if (f.kind === 'cue') rec('clapper', { vol: 0.3, delay: 1.6 });
+      if (f.kind === 'got') rec('cheer', { vol: 0.16 }); // someone guessed it: the house cheers
+      if (f.kind === 'clap') rec('applause', { vol: 0.16, pan: Math.random() * 0.6 - 0.3, gap: 900 }); // 👏 for the actor
+    },
     // Soundtrack cue per phase (public/box/scores/actout.js); the TV turns the last 10 s of 'think' tense.
     music(s) { if (!s) return 'play'; return { cast: 'play', cue: 'tense', act: 'think', bravo: 'reveal', over: 'finale' }[s.phase] || 'play'; },
     tv, phone,

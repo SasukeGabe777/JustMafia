@@ -6,6 +6,8 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 
 | Game | Kind | File | Title | Author | License | Source |
 |---|---|---|---|---|---|---|
+| actout | Music | `games/actout/catchy-swing.ogg` | Catchy Swing | Doge | CC0 1.0 | https://opengameart.org/content/catchy-swing |
+| actout | Music | `games/actout/the-fridge-is-hungry.ogg` | The Fridge is Hungry | congusbongus | CC0 1.0 | https://opengameart.org/content/the-fridge-is-hungry |
 | alien | Music | `games/alien/little-green-men.ogg` | Little Green Men | HoliznaCC0 | CC0 1.0 | https://freemusicarchive.org/music/holiznacc0/stranger-than-fiction-halloween-sci-fi/little-green-men/ |
 | alien | Music | `games/alien/hello-from-the-children.ogg` | Hello from the children of planet Earth | hatmix | CC0 1.0 | https://opengameart.org/content/hello-from-the-children-of-planet-earth |
 | alien | Music | `games/alien/somethings-out-there.ogg` | Somethings Out There | HoliznaCC0 | CC0 1.0 | https://freemusicarchive.org/music/holiznacc0/stranger-than-fiction-halloween-sci-fi/somethings-out-there/ |
@@ -13,14 +15,24 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | bomb | Music | `games/bomb/secret-agent-rock.ogg` | Secret Agent Rock | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Public_Domain_Soundtrack_Music_Album_One/secret-agent-rock/ |
 | bomb | Music | `games/bomb/ghost-surf-rock.ogg` | Ghost Surf Rock | Loyalty Freak Music | CC0 1.0 | https://freemusicarchive.org/music/Loyalty_Freak_Music/WITCHY_BATTY_SPOOKY_HALLOWEEN_IN_SEPTEMBER_/Ghost_Surf_Rock/ |
 | bomb | Music | `games/bomb/shooter-on-the-roof.ogg` | Shooter On The Roof | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/shooter-on-the-roof/ |
+| debate | Music | `games/debate/the-diplomat.ogg` | The Diplomat (John Philip Sousa, 1904) | United States Marine Band (performance); John Philip Sousa (composition) | Public domain | https://archive.org/details/InternetJukebox.JPS.63 |
+| debate | Music | `games/debate/the-liberty-bell.ogg` | The Liberty Bell (John Philip Sousa, 1893) | United States Marine Band (performance); John Philip Sousa (composition) | Public domain | https://archive.org/details/InternetJukebox.JPS.48 |
 | escape | Music | `games/escape/jazzy-detective.ogg` | Jazzy Detective | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/jazzy-detective/ |
 | escape | Music | `games/escape/gentle-rain.ogg` | Gentle Rain | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/gentle-rain/ |
 | escape | Music | `games/escape/hong-kong-noir.ogg` | Hong Kong Noir | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/hong-kong-noir/ |
 | escape | Music | `games/escape/photos-of-murder.ogg` | Photos Of Murder | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/photos-of-murder/ |
+| sketch | Music | `games/sketch/childrens-march.ogg` | Children's March Theme | CleytonKauffman | CC0 1.0 | https://opengameart.org/content/childrens-march-theme |
+| sketch | Music | `games/sketch/recorder-jam.ogg` | Recorder Jam | Of Far Different Nature | CC0 1.0 | https://opengameart.org/content/recorder-jam |
+| snap | Music | `games/snap/funky-disco-beats.ogg` | Funky Disco Beats to Boogie/Woogie to | Fupi | CC0 1.0 | https://opengameart.org/content/funky-disco-beats-to-boogiewoogie-to |
+| snap | Music | `games/snap/remembering-the-disco.ogg` | (Loop) Remembering the Time at the Disco | Pro Sensory | CC0 1.0 | https://opengameart.org/content/loop-remembering-the-time-at-the-disco |
+| spectrum | Music | `games/spectrum/down-the-river.ogg` | Down the River | Komiku (Loyalty Freak Music) | CC0 1.0 | https://opengameart.org/content/down-the-river |
+| spectrum | Music | `games/spectrum/apple-cider.ogg` | Apple Cider | Zane Little Music | CC0 1.0 | https://opengameart.org/content/apple-cider |
 | summon | Music | `games/summon/war-theme.ogg` | War Theme (ver 2) | Spring Spring | CC0 1.0 | https://opengameart.org/content/war-theme |
 | summon | Music | `games/summon/militaristic-tune.ogg` | Some Militaristic Tune | Spring Spring | CC0 1.0 | https://opengameart.org/content/some-militaristic-tune |
 | summon | Music | `games/summon/final-stand.ogg` | Final Stand | iamoneabe | CC0 1.0 | https://opengameart.org/content/final-stand |
 | summon | Music | `games/summon/a-legend-will-rise.ogg` | A Legend Will Rise | CodeManu | CC0 1.0 | https://opengameart.org/content/a-legend-will-rise-orchestral |
+| tune | Music | `games/tune/midnight-cruiser.ogg` | Midnight Cruiser | Zane Little Music | CC0 1.0 | https://opengameart.org/content/midnight-cruiser |
+| tune | Music | `games/tune/wednesday-night.ogg` | Wednesday Night [Funk Fusion] | Zane Little Music | CC0 1.0 | https://opengameart.org/content/wednesday-night-funk-fusion |
 | undercover | Music | `games/undercover/smooth-criminal.ogg` | Smooth Criminal | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/hide-and-sneak/smooth-criminal/ |
 | undercover | Music | `games/undercover/sneaky-detective.ogg` | Sneaky Detective | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/hide-and-sneak/sneaky-detective/ |
 | undercover | Music | `games/undercover/covert-operations.ogg` | Covert Operations | artisticdude | CC0 1.0 | https://opengameart.org/content/covert-operations |
@@ -29,6 +41,9 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | zombie | Music | `games/zombie/when-the-shadows-gather.ogg` | When the Shadows Gather | Tsorthan Grove | CC0 1.0 | https://opengameart.org/content/when-the-shadows-gather |
 | zombie | Music | `games/zombie/zombies-are-coming.ogg` | Zombies March | yd | CC0 1.0 | https://opengameart.org/content/zombies-march |
 | zombie | Music | `games/zombie/music-box-sad-tune.ogg` | Sad Tune (4 Music Box Tracks) | Aureolus_Omicron | CC0 1.0 | https://opengameart.org/content/4-music-box-tracks |
+| actout | Sound effect | `actout/clapper.ogg` | Clapboard sound | uEffects | CC0 1.0 | https://freesound.org/people/uEffects/sounds/207867/ |
+| actout | Sound effect | `actout/applause.ogg` | small group applauding (48/24) | neilraouf | CC0 1.0 | https://freesound.org/people/neilraouf/sounds/484513/ |
+| actout | Sound effect | `actout/cheer.ogg` | Short Crowd Cheer | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182571/ |
 | alien | Sound effect | `alien/airlock.ogg` | Sci-fi Sounds: doorOpen_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/sci-fi-sounds |
 | alien | Sound effect | `alien/sabotage-boom.ogg` | Sci-fi Sounds: lowFrequency_explosion_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/sci-fi-sounds |
 | alien | Sound effect | `alien/hyperspace.ogg` | Sci-fi Sounds: spaceEngineLarge_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/sci-fi-sounds |
@@ -39,15 +54,33 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | bomb | Sound effect | `bomb/explosion.ogg` | Muffled Distant Explosion | NenadSimic | CC0 1.0 | https://freesound.org/people/NenadSimic/sounds/149966/ |
 | bomb | Sound effect | `bomb/stamp.ogg` | traditional stamp.wav | I.fekry | CC0 1.0 | https://freesound.org/people/I.fekry/sounds/470710/ |
 | bomb | Sound effect | `bomb/switch.ogg` | UI Audio: switch2 | Kenney | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| debate | Sound effect | `debate/gavel.ogg` | Gavel on wooden desk | Aerny | CC0 1.0 | https://freesound.org/people/Aerny/sounds/618138/ |
+| debate | Sound effect | `debate/mic.ogg` | tappingMic | susychristiansen | CC0 1.0 | https://freesound.org/people/susychristiansen/sounds/149034/ |
+| debate | Sound effect | `debate/applause.ogg` | Small applause | Breviceps | CC0 1.0 | https://freesound.org/people/Breviceps/sounds/462362/ |
+| debate | Sound effect | `debate/laugh.ogg` | Small Crowd Laughing | snakebarney | CC0 1.0 | https://freesound.org/people/snakebarney/sounds/138112/ |
+| debate | Sound effect | `debate/boo.ogg` | Voice_Crowd_Small_Expression_Boo_Stereo | Nox_Sound | CC0 1.0 | https://freesound.org/people/Nox_Sound/sounds/752707/ |
 | escape | Sound effect | `escape/lock-open.ogg` | RPG Audio: metalLatch | Kenney | CC0 1.0 | https://kenney.nl/assets/rpg-audio |
 | escape | Sound effect | `escape/thunder.ogg` | thunder | netaj | CC0 1.0 | https://freesound.org/people/netaj/sounds/193170/ |
 | escape | Sound effect | `escape/stamp.ogg` | es-stamp.wav | eddies2000 | CC0 1.0 | https://freesound.org/people/eddies2000/sounds/448474/ |
 | escape | Sound effect | `escape/handcuffs.ogg` | cuffs locking.mp3 | Mbytemama93 | CC0 1.0 | https://freesound.org/people/Mbytemama93/sounds/666604/ |
 | escape | Sound effect | `escape/typewriter.ogg` | Typewriter - single key - type 1.wav | yottasounds | CC0 1.0 | https://freesound.org/people/yottasounds/sounds/380138/ |
+| sketch | Sound effect | `sketch/pages.ogg` | Paper Sketchbook Page Flips 1 | OwlStorm | CC0 1.0 | https://freesound.org/people/OwlStorm/sounds/320148/ |
+| sketch | Sound effect | `sketch/page.ogg` | Book Turn Page 2 | esperri | CC0 1.0 | https://freesound.org/people/esperri/sounds/119127/ |
+| sketch | Sound effect | `sketch/scribble.ogg` | Scribble_short | waldram | CC0 1.0 | https://freesound.org/people/waldram/sounds/257518/ |
+| sketch | Sound effect | `sketch/pen.ogg` | Pen sign writing 1 sec | aleKfx | CC0 1.0 | https://freesound.org/people/aleKfx/sounds/562153/ |
+| sketch | Sound effect | `sketch/pencil-tick.ogg` | Pencil Stroke | sokworks | CC0 1.0 | https://freesound.org/people/sokworks/sounds/860362/ |
+| snap | Sound effect | `snap/flash.ogg` | Camera shutter and flash combined | montclairguy | CC0 1.0 | https://freesound.org/people/montclairguy/sounds/353044/ |
+| snap | Sound effect | `snap/shutter.ogg` | 350d shutter | xef6 | CC0 1.0 | https://freesound.org/people/xef6/sounds/61059/ |
+| snap | Sound effect | `snap/projector.ogg` | Projector Button Push | GreekIrish | CC0 1.0 | https://freesound.org/people/GreekIrish/sounds/254713/ |
+| spectrum | Sound effect | `spectrum/tock.ogg` | Woodblock-soft | hollandm | CC0 1.0 | https://freesound.org/people/hollandm/sounds/692828/ |
+| spectrum | Sound effect | `spectrum/drumroll.ogg` | drumroll | adriann | CC0 1.0 | https://freesound.org/people/adriann/sounds/191718/ |
+| spectrum | Sound effect | `spectrum/cheer.ogg` | Small crowd cheering | misjoc | CC0 1.0 | https://freesound.org/people/misjoc/sounds/400590/ |
 | summon | Sound effect | `summon/war-horn.ogg` | war horn.wav | adharca | CC0 1.0 | https://freesound.org/people/adharca/sounds/539956/ |
 | summon | Sound effect | `summon/sword-clash.ogg` | Sword clash 1.wav | spycrah | CC0 1.0 | https://freesound.org/people/spycrah/sounds/471095/ |
 | summon | Sound effect | `summon/siege-thud.ogg` | Impact Sounds: impactWood_heavy_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/impact-sounds |
 | summon | Sound effect | `summon/crumble.ogg` | Stone Crumble 2 | Kastenfrosch | CC0 1.0 | https://freesound.org/people/Kastenfrosch/sounds/521956/ |
+| tune | Sound effect | `tune/needle.ogg` | Record Player Needle is dropped & Vinyl crackling | Breviceps | CC0 1.0 | https://freesound.org/people/Breviceps/sounds/556722/ |
+| tune | Sound effect | `tune/static.ogg` | AM Tuning | NobodyYouKnowOf | CC0 1.0 | https://freesound.org/people/NobodyYouKnowOf/sounds/261873/ |
 | undercover | Sound effect | `undercover/folder.ogg` | document folder open-close #2.wav | Timbre | CC0 1.0 | https://freesound.org/people/Timbre/sounds/511699/ |
 | undercover | Sound effect | `undercover/stamp.ogg` | traditional stamp.wav | I.fekry | CC0 1.0 | https://freesound.org/people/I.fekry/sounds/470710/ |
 | undercover | Sound effect | `undercover/shutter.ogg` | Camera Shutter | roachpowder | CC0 1.0 | https://freesound.org/people/roachpowder/sounds/170229/ |

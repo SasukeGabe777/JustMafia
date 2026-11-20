@@ -80,7 +80,8 @@
       action: { bpm: 140, tracks: { d: { type: 'drums', kit: 'orch' }, b: { type: 'brass', vol: 0.5 } }, bars: 1, parts: { d: { s: 'xxxxxxxxxxxxx...', y: '............x...' }, b: '. . . . . . bb4+f5+bb5 -' } },
       freeze: { bpm: 120, tracks: { g: { type: 'chime', vol: 0.5 } }, bars: 1, parts: { g: 'f6 . c6 . . . . .' } },
     },
-    fx: { cast: 'round', final: 'win', action: 'action', got: 'good', nobody: 'bad', reveal: 'reveal', pose: 'freeze', win: 'win' },
+    // 'got' plays a recorded audience cheer (public/box/games/actout.js onFx), not a stinger.
+    fx: { cast: 'round', final: 'win', action: 'action', nobody: 'bad', reveal: 'reveal', pose: 'freeze', win: 'win' },
     sfx: {},
   };
 })();
