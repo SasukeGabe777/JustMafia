@@ -233,3 +233,39 @@ button { font: inherit; }
 .kick-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; border-radius: 12px; background: rgba(255,255,255,.08); }
 .kick-row.off { opacity: .6; }
 .kick-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ---- Phone polish: one-line header with even 42px buttons, roomy tap targets, tidy host bar ---- */
+#game > .ph-head { gap: 6px; min-height: 54px; }
+#game > .ph-head #h-game { flex: none; width: 26px; text-align: center; }
+.h-me { flex: 0 1 auto; min-width: 42px; min-height: 42px; justify-content: center; padding: 2px 6px 2px 2px; border-radius: 12px; }
+.h-me span { flex: none; }
+#game .h-me #h-name { display: block; overflow: hidden; text-overflow: ellipsis; max-width: 9em; }
+.ph-head .right { flex: none; gap: 5px; }
+.hbtn { width: 42px; height: 42px; padding: 0; display: inline-grid; place-items: center; font-size: 19px; border-radius: 12px; }
+.hbtn:active, .h-me:active { transform: scale(0.94); }
+/* Small phones: just the avatar (the level badge stays on it); the name is in the lobby and the sheets. */
+@media (max-width: 374px) { #game .h-me #h-name { max-width: 0; font-size: 0; margin-left: -6px; } #game .h-me #h-name .jgp-badge { font-size: 9px; } }
+/* Join: six avatars a row (always fits), the audience link is a real tap target. */
+.j-av { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.j-av button { min-height: 46px; padding: 6px 0; }
+.ph-join .game:empty { min-height: 0; margin-bottom: 10px; }
+.j-watch-link { display: block; width: 100%; min-height: 44px; margin-top: 6px; padding: 10px; }
+#j-shop { min-height: 50px; display: flex !important; align-items: center; justify-content: center; }
+/* Host bar: a caption, then the buttons share one row. */
+.vip-bar { gap: 8px; padding: 10px 12px; }
+.vip-bar > span { flex: 1 0 100%; font-size: 15px; }
+.vip-bar .btn { flex: 1 1 0; margin-left: 0; min-height: 44px; padding: 8px 10px; white-space: nowrap; font-size: 16px; }
+.vip-bar .btn.small { font-size: 15px; padding: 8px 10px; border-radius: 14px; }
+/* Sheets: a proper close button that never sits on top of the first row. */
+.sheet-x { top: 8px; right: 8px; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border-radius: 50%; }
+.sheet-x:active { background: rgba(255, 255, 255, 0.1); }
+.ph-sheet .prof-link { width: calc(100% - 50px); }
+.ph-sheet h3 { margin: 16px 0 8px; }
+.host-menu .btn, .ph-sheet > .btn { min-height: 48px; }
+.ph-sheet #hz { width: 100%; }
+.btn.sheet-leave { display: block; width: 100%; margin-top: 18px; color: #ffb3b8; border-color: rgba(255, 90, 95, 0.45); }
+.kick-row .btn { min-height: 40px; }
+/* Lobby card: its two actions stack as equal, full-width buttons. */
+.lob-acts { display: grid; gap: 8px; margin-top: 12px; }
+.lob-acts .btn { display: flex; align-items: center; justify-content: center; min-height: 46px; font-size: 15px; text-decoration: none; color: var(--ink); }
+.ph-lobby h3 { font-size: 22px; margin-top: 6px; }
+.ph-lobby p { margin: 6px 0; }

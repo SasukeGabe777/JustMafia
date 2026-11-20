@@ -1249,3 +1249,21 @@ Validated: `tools/test-progress.js` (14 tests, incl. real bot games of 5 box gam
 JustMafia sims, sockets), updated `test-season.js`, `e2e-shop.js`; screenshots looked at.
 Limits: games with their own TV lobby (e.g. Most Likely To…) don't show the lobby banner; players
 without a linked wallet earn nothing until the phone links it (opening the profile does).
+
+## UI polish: shop and phone screens (November 20, 2026)
+
+Audited /shop (390x844, 360x740, 1366x768), the box phone (/box/play: join, lobby, host menu, How
+to play, profile, avatar sheet, a Price Panic round, results) and JustMafia's phone (/play: creator,
+claim a house, lobby, Season & unlocks, draft, role card) with headless screenshots.
+- Box phone header no longer runs off the screen: Leave moved into the avatar sheet (tap yourself),
+  header buttons are even 42px squares; on phones under 375px the name hides (avatar + level stay).
+- Join avatar picker is 6 per row (it was clipped at 360px); bigger tap targets for the audience link,
+  sheet close button, tour buttons, lobby actions, host bar and the account banner.
+- Host bar: caption on top, buttons share one row; profile tabs are equal icon-over-label tiles.
+- Shop: compact header on phones (no truncated subtitle), 44px tabs / 40px chips, faded edges on the
+  sideways tab rows (wrapping on desktop), action bar under the shelf on desktop, no long-press text
+  selection, consistent earn rows (coin + amount), short ledger dates, no duplicated JustMafia blurb.
+- JustMafia phone: Pixelify Sans had no fi ligature ("Mafia" showed a broken glyph): ligatures off;
+  sticky header no longer lets cards peek above it; deck news readable on parchment; room under the
+  react button; "Played before? Sign in" framed like the cards.
+Validated: test-box-kit, e2e-shop, e2e-account, e2e-box; no page errors in the screenshot runs.

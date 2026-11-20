@@ -130,7 +130,7 @@
   $('#j-watch2').onclick = () => joinWith('watch');
   $('#j-code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); if (e.target.value.length === 4) showJoin(); });
   $('#j-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#j-go').click(); });
-  $('#h-leave').onclick = () => { if (!confirm('Leave this game?')) return; socket.emit('player:leave', {}, () => { try { localStorage.removeItem(tokenKey(me.code)); } catch { /* */ } me = null; audience = null; audState = null; document.body.classList.remove('is-audience'); showJoin(); }); };
+  const leaveGame = () => { if (!confirm('Leave this game?')) return; socket.emit('player:leave', {}, () => { try { localStorage.removeItem(tokenKey(me.code)); } catch { /* */ } me = null; audience = null; audState = null; document.body.classList.remove('is-audience'); showJoin(); }); };
 
   // ---------- sheets: How to play, host menu, avatar, next game ----------
   function sheet(html, bind) {
@@ -147,7 +147,8 @@
   $('#h-me').onclick = () => {
     const pv = Math.round(phoneVol() * 100), snd = `<h3>🔈 Phone sounds</h3><label class="ph-vol"><input type="range" id="pvol" min="0" max="100" value="${pv}"><output id="pvol-o">${pv}%</output></label>`;
     const hz = window.HAPTIC && window.HAPTIC.supported ? `<h3>📳 Vibration</h3><button class="btn ${window.HAPTIC.enabled ? 'green' : 'ghost'}" id="hz">${window.HAPTIC.enabled ? 'On: tap to turn off' : 'Off: tap to turn on'}</button>` : '';
-    sheet(`<button class="btn ghost prof-link" id="to-prof">🏆 My profile</button><h2>Pick your avatar</h2><div class="j-av big">${AVATARS.map((a) => `<button class="${view && view.me.avatar === a ? 'on' : ''}" data-av="${a}">${a}</button>`).join('')}</div>${snd}${hz}`, (s, close) => {
+    sheet(`<button class="btn ghost prof-link" id="to-prof">🏆 My profile</button><h2>Pick your avatar</h2><div class="j-av big">${AVATARS.map((a) => `<button class="${view && view.me.avatar === a ? 'on' : ''}" data-av="${a}">${a}</button>`).join('')}</div>${snd}${hz}<button class="btn ghost sheet-leave" id="h-leave">🚪 Leave this game</button>`, (s, close) => {
+      s.querySelector('#h-leave').onclick = () => { close(); leaveGame(); };
       s.querySelector('#to-prof').onclick = () => { close(); profileSheet(); };
       const pr = s.querySelector('#pvol'); if (pr) pr.oninput = () => { setPhoneVol(pr.value / 100); s.querySelector('#pvol-o').textContent = pr.value + '%'; BOX.sfx('pop'); };
       const hb = s.querySelector('#hz'); if (hb) hb.onclick = () => { window.HAPTIC.set(!window.HAPTIC.enabled); close(); toast(window.HAPTIC.enabled ? '📳 Vibration on' : 'Vibration off'); };
@@ -225,7 +226,7 @@
     if (!r.ok) return toast(r.error || 'Profiles are not available here.');
     const P = r.profile, S = P.stats, earned = P.trophies.filter((t) => t.earned);
     const nm = P.name || (view && view.me.name) || (me && me.name) || 'Player';
-    const tabs = `<div class="pf-tabs">${[['progress', '⭐ Progress'], ['stats', '📊 Stats'], ['trophies', `🏆 Trophies ${earned.length}/${P.trophies.length}`], ['account', P.claimed ? '✅ Saved' : '💾 Save']].map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+    const tabs = `<div class="pf-tabs">${[['progress', '⭐', 'Progress'], ['stats', '📊', 'Stats'], ['trophies', `🏆 <small>${earned.length}/${P.trophies.length}</small>`, 'Trophies'], ['account', P.claimed ? '✅' : '💾', P.claimed ? 'Saved' : 'Save']].map(([k, i, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}"><span>${i}</span>${l}</button>`).join('')}</div>`;
     let body = '';
     if (tab === 'progress') {
       body = '<div id="pf-prog"></div>';
@@ -426,7 +427,7 @@
     if (view.partyMode && (view.partyMode.phase === 'board' || view.partyMode.phase === 'done')) { partyPhone(view); return; }
     if (view.phase === 'lobby' && view.live && view.state) { G.phone($('#g-body'), view.state, ctx, view); return; }
     if (view.phase === 'lobby') {
-      BOX.morph($('#g-body'), `<div class="card-box ph-lobby"><div class="big-av">${view.me.look && BOX.portrait ? BOX.portrait.html(view.me, 88) : esc(view.me.avatar || '🙂')}</div><h3>You’re in! 🎉</h3><p>${view.vip ? 'You’re the host! Press <b>Start game</b> when everyone is in.' : `Waiting for ${view.vipName ? '<b>' + esc(view.vipName) + '</b> (the host)' : 'the host'} to start <b>${esc(view.title)}</b>.`}</p><p class="muted">${view.count} player${view.count === 1 ? '' : 's'} so far. Watch the big screen.</p><button class="btn ghost small" id="lob-how">❓ How to play ${esc(G.name)}</button> <a class="btn ghost small" id="lob-shop" style="text-decoration:none;display:inline-block" href="${esc(shopUrl())}">🛍️ ${view.me.look ? 'Shop & character' : 'Make your character'}</a></div>${G.lobby ? G.lobby(view, ctx) : ''}`);
+      BOX.morph($('#g-body'), `<div class="card-box ph-lobby"><div class="big-av">${view.me.look && BOX.portrait ? BOX.portrait.html(view.me, 88) : esc(view.me.avatar || '🙂')}</div><h3>You’re in! 🎉</h3><p>${view.vip ? 'You’re the host! Press <b>Start game</b> when everyone is in.' : `Waiting for ${view.vipName ? '<b>' + esc(view.vipName) + '</b> (the host)' : 'the host'} to start <b>${esc(view.title)}</b>.`}</p><p class="muted">${view.count} player${view.count === 1 ? '' : 's'} so far. Watch the big screen.</p><div class="lob-acts"><button class="btn ghost small" id="lob-how">❓ How to play ${esc(G.name)}</button><a class="btn ghost small" id="lob-shop" href="${esc(shopUrl())}">🛍️ ${view.me.look ? 'Shop & character' : 'Make your character'}</a></div></div>${G.lobby ? G.lobby(view, ctx) : ''}`);
       const lh = $('#lob-how'); if (lh) lh.onclick = () => $('#h-help').click();
       if (G.lobbyBind) G.lobbyBind($('#g-body'), view, ctx);
       return;
@@ -553,7 +554,7 @@
     if (touring || tourDone() || !view || $('#game').hidden) return;
     touring = true;
     const steps = [
-      ['#h-me', '👤', 'This is you', 'Tap your name to change your avatar, phone sounds and vibration.'],
+      ['#h-me', '👤', 'This is you', 'Tap here to change your avatar, phone sounds and vibration, or to leave the game.'],
       ['#h-react', '😀', 'React', 'Send an emoji. It floats up on the big screen with your name.'],
       ['#h-shop', '🛍️', 'Character & shop', 'Dress up your character and spend JustGold between games.'],
       ['#h-prof', '🏆', 'Your profile', 'Your stats, trophies and titles, across every game.'],

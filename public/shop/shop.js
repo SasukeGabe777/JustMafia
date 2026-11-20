@@ -571,7 +571,7 @@
     else if (S.tab === 'character' || S.tab === 'flair' || (S.tab === 'gear' && S.game === 'mafia')) {
       const key = S.tab === 'gear' ? 'mafia' : S.tab, field = S.sub[key], list = sorted(ITEMS.filter((i) => i.kind === 'item' && i.field === field));
       if (key === 'mafia') html += `<div class="gear-head"><img src="/art/tiles/mafia.svg" alt="" onerror="this.style.visibility='hidden'"><div><h3>🔪 JustMafia</h3><p>Your house in town, how you go out, your reactions and your ghost.</p></div></div>`;
-      if (key === 'mafia') html += '<p class="note">🔪 These are for <b>JustMafia</b>: your house, how you go out, your reactions and your ghost. 🎟 <b>Season pass & ✦ Fate live in JustMafia</b> (Season & unlocks).</p>';
+      if (key === 'mafia') html += '<p class="note">🎟 The <b>season pass</b> and <b>✦ Fate</b> live in JustMafia, under <b>Season & unlocks</b>.</p>';
       if (S.tab === 'flair') html += '<p class="note">✨ Flair shows in <b>every game</b>: your nameplate on the big screen and an effect around your character.</p>';
       html += list.length ? `<div class="grid">${list.map(cardHTML).join('')}</div>` : '<p class="empty">Nothing here yet.</p>';
     } else if (S.tab === 'gear') html = gearHTML();
@@ -625,11 +625,11 @@
   }
   function earnHTML() {
     const e = S.st.earn || {}, st = S.st, b = e.base || {};
-    const ex = (e.examples || []).map((x) => `<div class="row"><span>${esc(x.label)}</span><b>${COIN} ${esc(x.jg)}</b></div>`).join('');
-    const led = (st.ledger || []).map((x) => `<li><span>${esc(x.reason)}</span><small>${esc(new Date(x.at).toLocaleDateString())}</small><b class="${x.delta < 0 ? 'minus' : ''}">${x.delta > 0 ? '+' : ''}${esc(x.delta)}</b></li>`).join('');
+    const ex = (e.examples || []).map((x) => `<div class="row"><span>${esc(x.label)}</span><b>${COIN} +${esc(x.jg)}</b></div>`).join('');
+    const led = (st.ledger || []).map((x) => `<li><span>${esc(x.reason)}</span><small>${esc(new Date(x.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }))}</small><b class="${x.delta < 0 ? 'minus' : ''}">${x.delta > 0 ? '+' : ''}${esc(x.delta)}</b></li>`).join('');
     return `<div class="totals"><div><b>${esc(st.gold)}</b><small>JG now</small></div><div><b>${esc(st.earned || 0)}</b><small>earned</small></div><div><b>${esc(st.spent || 0)}</b><small>spent</small></div></div>
       <p class="note">🪙 ${esc(e.note || 'Every finished game pays JustGold.')}</p>
-      <div class="earn">${b.play != null ? `<div class="row"><span>🎮 Play a game</span><b>+${esc(b.play)}</b></div><div class="row"><span>🥈 Finish in the top half</span><b>+${esc(b.top)}</b></div><div class="row"><span>🏆 Win it</span><b>+${esc(b.win)}</b></div>` : ''}${ex}
+      <div class="earn">${b.play != null ? `<div class="row"><span>🎮 Play a game</span><b>${COIN} +${esc(b.play)}</b></div><div class="row"><span>🥈 Finish in the top half</span><b>${COIN} +${esc(b.top)}</b></div><div class="row"><span>🏆 Win it</span><b>${COIN} +${esc(b.win)}</b></div>` : ''}${ex}
       ${e.party ? `<div class="row party"><span>🎉 ${esc(e.party.label)}</span></div>` : ''}${e.sets ? `<div class="row"><span>🧩 ${esc(e.sets)}</span></div>` : ''}${e.mafia ? `<div class="row"><span>🔪 ${esc(e.mafia)}</span></div>` : ''}</div>
       <h3 class="sec-h">📜 Your ledger <small>where every coin came from</small></h3>${led ? `<ul class="ledger">${led}</ul>` : '<p class="empty">No JustGold yet. Finish a game with friends to earn some!</p>'}`;
   }
