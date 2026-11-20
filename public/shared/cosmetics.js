@@ -309,6 +309,34 @@
   };
   const WORLD_ITEM = Object.fromEntries(Object.entries(WORLD_REWARDS).flatMap(([world, list]) => list.map((r) => [r.item, { world, games: r.games }])));
 
+  // ----- Pets (docs/justgold.md "Pets") -----
+  // One little animated friend on your shoulder (avatar field `pet`, MTArt.drawPet). Pets are
+  // `special` (OPTIONS.SPECIAL.pets): always for sale in the shop's Pets section, never on the shelf.
+  const PETS = {
+    chick: { rarity: 'common', price: 60, icon: '🐤', desc: 'A round little chick that peeps, hops and flaps its tiny wings.' },
+    snail: { rarity: 'common', price: 60, icon: '🐌', desc: 'Slow, steady and very shiny. Its eyestalks wiggle when it thinks.' },
+    hamster: { rarity: 'common', price: 70, icon: '🐹', desc: 'Cheeks full of snacks, always. Twitches its nose at every vote.' },
+    frog: { rarity: 'common', price: 75, icon: '🐸', desc: 'A happy green frog with a puffy throat and a big grin. Ribbit.' },
+    bunny: { rarity: 'rare', price: 100, icon: '🐰', desc: 'A soft white bunny whose long ears flick at every sound.' },
+    kitten: { rarity: 'rare', price: 110, icon: '🐱', desc: 'A striped tabby kitten with a curly tail. Purrs on your shoulder.' },
+    puppy: { rarity: 'rare', price: 110, icon: '🐶', desc: 'Floppy ears, a waggy tail and the tip of a pink tongue.' },
+    bat: { rarity: 'rare', price: 120, icon: '🦇', desc: 'A fuzzy pocket bat with huge ears. It stretches its wings now and then.' },
+    parrot: { rarity: 'rare', price: 130, icon: '🦜', desc: 'A bright parrot that bobs its head and ruffles its feathers. Says nothing. Knows everything.' },
+    owl: { rarity: 'rare', price: 140, icon: '🦉', desc: 'A wise little owl with big round eyes. It turns its head to see everyone.' },
+    fox: { rarity: 'epic', price: 170, icon: '🦊', desc: 'A tiny fire-orange fox curled on your shoulder, swishing its bushy tail.' },
+    octopus: { rarity: 'epic', price: 190, icon: '🐙', desc: 'A purple octopus hugging your shoulder with six wiggly arms.' },
+    axolotl: { rarity: 'epic', price: 200, icon: '🦎', desc: 'A pink axolotl with frilly gills that wave like it’s underwater.' },
+    wispling: { rarity: 'epic', price: 240, icon: '👻', desc: 'A friendly little glowing spirit that floats beside you and never stops smiling.' },
+    droneBot: { rarity: 'legendary', price: 300, icon: '🤖', desc: 'A hovering robot buddy with a spinning rotor, a blinking antenna and a screen face.' },
+    dragonling: { rarity: 'legendary', price: 380, icon: '🐲', desc: 'A baby dragon with little wings and a spiky tail. Sometimes it puffs a tiny cloud of smoke.' },
+  };
+  const PET_RARITY = { common: { label: 'Common', color: '#9ad17a' }, rare: { label: 'Rare', color: '#5ab8ff' }, epic: { label: 'Epic', color: '#c77dff' }, legendary: { label: 'Legendary', color: '#ffc83d' } };
+  FIELDS.pet = ['pets', 1];
+  for (const v of (O.SPECIAL || {}).pets || []) SPECIAL_IDS.add('pet:' + v);
+  CATEGORIES.push({ id: 'pets', label: 'Pets', icon: '🐾', fields: ['pet'], target: 'avatar' });
+  KIND.pet = 'pet';
+  for (const [v, p] of Object.entries(PETS)) { PRICES['pet:' + v] = p.price; DESCRIPTIONS['pet:' + v] = p.desc; }
+  DESCRIPTIONS['pet:none'] = 'No pet: your shoulders are free.';
   const CATALOG = Object.entries(FIELDS).flatMap(([field, [list, free]]) => (O[list] || []).map((value, index) => {
     const id = field + ':' + value, gated = GATES[id] || null, passTier = PASS[id] || null, earned = WORLD_ITEM[id] || null;
     const cost = index < free || gated || passTier || earned ? 0 : PRICES[id] != null ? PRICES[id] : field === 'outfit' ? 70 + (index - free) * 8 : 25 + (index - free) * 10;
@@ -378,6 +406,6 @@
   for (const c of Object.values(CHALLENGES)) c.gold = pay(c.gold);
   FATE.exchangeGold = price(FATE.exchangeGold);
   for (const k of ['completed', 'victory', 'neutralVictory', 'survived', 'ability', 'objective', 'investigation', 'save', 'achievement', 'oracle', 'spiritBonus', 'maxPerGame']) REWARDS[k] = pay(REWARDS[k]);
-  const API = { ECONOMY, AFTERLIFE, LADDER, FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS, SEASON, PASS, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_ITEM, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock, FATE };
+  const API = { PETS, PET_RARITY, ECONOMY, AFTERLIFE, LADDER, FIELDS, CATEGORIES, CATALOG, ACHIEVEMENTS, REWARDS, slotOf, PRICES, DESCRIPTIONS, SEASON, PASS, CHALLENGES, weekKey, weeklyChallenges, EVENTS, WORLD_REWARDS, WORLD_ITEM, WORLD_NAMES, STOCK, STOCKABLE, STARTER_STOCK, nextStock, FATE };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.MT_COSMETICS = API;
 })(typeof window !== 'undefined' ? window : globalThis);

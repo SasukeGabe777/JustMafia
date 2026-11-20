@@ -89,6 +89,7 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
   // season pass, Fate and world rewards stay inside JustMafia.
   const SHOP_FORBIDDEN = (itemId) => { const it = (shared.cos.CATALOG || []).find((i) => i.id === itemId); return it && (it.pass || it.world) ? { ok: false, error: 'That one is earned, not sold: a season pass tier or a JustMafia world.' } : null; };
   const BOX_FIELDS = { character: ['outfit', 'shoeStyle', 'hat', 'accessory', 'hair'], flair: ['nameplate', 'effect'], mafia: ['houseStyle', 'houseDecor', 'deathAnim', 'reactions', 'ghostSkin'] };
+  BOX_FIELDS.pets = ['pet']; // Pets: one animated friend on your shoulder, every game (docs/justgold.md)
   const sectionOf = (field) => Object.keys(BOX_FIELDS).find((k) => BOX_FIELDS[k].includes(field)) || null;
   const STOCKABLE_IDS = new Set((shared.cos.STOCKABLE || []).map((x) => x.id));
   const { earnTable } = require('./gold');

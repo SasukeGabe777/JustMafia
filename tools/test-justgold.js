@@ -68,7 +68,7 @@ test('a finished box game pays JustGold once, through the ledger, and reveals a 
     // (the game's JustGold; finished challenges and level ups may add their own ledger lines: box/progress.js)
     const got = wallets.coins(p.wallet) - before[i];
     assert(got > 0, 'paid'); assert(got >= p.jg.n, 'the phone is told how much');
-    const led = wallets.data.profiles[p.wallet].ledger.find((l) => /Most Likely/.test(l.reason)); assert.equal(led.delta, p.jg.n);
+    const led = wallets.data.profiles[p.wallet].ledger.find((l) => /Most Likely/.test(l.reason) && !/challenge/i.test(l.reason)); assert.equal(led.delta, p.jg.n);
     assert(wallets.data.profiles[p.wallet].stock.length > shelf[i], 'something new on the shelf');
   });
   const again = ps.map((p) => wallets.coins(p.wallet));

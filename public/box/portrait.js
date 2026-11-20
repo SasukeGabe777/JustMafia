@@ -23,7 +23,7 @@
 (function () {
   const root = window.BOX = window.BOX || {};
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const KEYS = ['body', 'color', 'skin', 'hat', 'hair', 'hairColor', 'facialHair', 'eyes', 'face', 'features', 'expression', 'outfit', 'accessory', 'pants', 'shoes', 'shoeStyle', 'effect'];
+  const KEYS = ['body', 'color', 'skin', 'hat', 'hair', 'hairColor', 'facialHair', 'eyes', 'face', 'features', 'expression', 'outfit', 'accessory', 'pants', 'shoes', 'shoeStyle', 'effect', 'pet'];
   const hasLookObj = (look) => !!(look && typeof look === 'object' && !Array.isArray(look) && (look.skin || look.outfit || look.hair || look.color));
 
   // ---- the room roster (id -> { look, gear, name, avatar, bot }) ----
@@ -75,25 +75,66 @@
   const dpr = () => Math.min(2, Math.max(1, window.devicePixelRatio || 1));
   function cleanLook(look) { const c = {}; for (const k of KEYS) if (typeof look[k] === 'string') c[k] = look[k].slice(0, 40); return c; }
   // frame 'face': head and shoulders (y -72…-25); 'body': the whole figure (y -82…+3, x ±30).
-  function picture(look, wear, frame, size, o) {
+  function picture(look, wear, frame, size, o, fi) { // fi: a pet animation frame (see Pets below)
     if (!window.MTArt || typeof document === 'undefined') return '';
     const clean = cleanLook(look); if (o.mood) clean.expression = String(o.mood).slice(0, 20);
     if (frame === 'face') delete clean.effect;
     const w = frame === 'face' ? size : Math.round(size * 0.72), h = size;
-    const key = frame + '|' + size + '|' + JSON.stringify(clean) + '|' + wear.map((x) => x.id || x.shape).join(',') + (o.flip ? '|f' : '');
-    if (cache.has(key)) return cache.get(key);
+    const key = frame + '|' + size + '|' + JSON.stringify(clean) + '|' + wear.map((x) => x.id || x.shape).join(',') + (o.flip ? '|f' : '') + (fi != null ? '|p' + fi : '');
+    const store = fi != null ? petFrames : cache;
+    if (store.has(key)) return store.get(key);
     let out = '';
     try {
       const k = dpr(), cv = document.createElement('canvas'); cv.width = Math.round(w * k); cv.height = Math.round(h * k);
       const g = cv.getContext('2d'); g.scale(k, k);
       if (o.flip) { g.translate(w, 0); g.scale(-1, 1); }
-      if (frame === 'face') { const s = h / 47; window.MTArt.drawCharacter(g, w / 2, 72 * s, clean, { scale: s, t: 0.4, wear }); }
-      else { const s = h / 85; window.MTArt.drawCharacter(g, w / 2, 82 * s, clean, { scale: s, t: 0.4, wear }); }
+      if (frame === 'face') { const s = h / 47; window.MTArt.drawCharacter(g, w / 2, 72 * s, clean, { scale: s, t: 0.4, wear, petT: petTime(fi) }); }
+      else { const s = h / 85; window.MTArt.drawCharacter(g, w / 2, 82 * s, clean, { scale: s, t: 0.4, wear, petT: petTime(fi) }); }
       out = cv.toDataURL('image/png');
     } catch (e) { out = ''; }
-    if (cache.size >= MAX) cache.delete(cache.keys().next().value);
-    cache.set(key, out);
+    if (store.size >= (fi != null ? PET_MAX : MAX)) store.delete(store.keys().next().value);
+    store.set(key, out);
     return out;
+  }
+  // ---- Pets (docs/justgold.md "Pets"): animated pictures ----
+  // A pet's idle loop repeats every MTArt.PET_LOOP seconds. Pictures of a look with a pet carry
+  // data-pet; one requestAnimationFrame loop (about 6 fps) swaps their src through PET_FRAMES
+  // cached frames of that loop, drawn lazily a few per tick. Only the pet moves (the character
+  // keeps its still pose). Off when prefers-reduced-motion is set, the page is hidden, or the
+  // picture is tiny; at most PET_LIVE pictures at once.
+  const PET_FRAMES = 24, PET_FPS = 6, PET_MAX = 1200, PET_MIN = 28, PET_LIVE = 40, PET_NEW = 6;
+  const petFrames = new Map(), petJobs = new Map(), petList = [];
+  const petLoop = () => (window.MTArt && window.MTArt.PET_LOOP) || 4;
+  const petTime = (fi) => (fi == null ? 1.9 : fi * petLoop() / PET_FRAMES); // 1.9 s: a calm still pose
+  const petOff = () => !window.MTArt || !window.MTArt.drawPet || (window.MTArt.petsReduced && window.MTArt.petsReduced());
+  function petAttr(r, o, frame, size) {
+    const pet = r && r.look && r.look.pet;
+    if (!pet || pet === 'none' || size < PET_MIN || petOff()) return '';
+    const wear = wearFor(r, o), key = frame + '|' + size + '|' + JSON.stringify(cleanLook(r.look)) + '|' + (o.mood || '') + '|' + wear.map((x) => x.id || x.shape).join(',') + (o.flip ? '|f' : '');
+    let id = petJobs.get(key);
+    if (id == null) { id = petList.length; petList.push({ look: r.look, wear, frame, size, o: { mood: o.mood, flip: o.flip } }); petJobs.set(key, id); }
+    petStart();
+    return ' data-pet="' + id + '"';
+  }
+  let petRaf = 0, petLast = 0, petIdle = 0;
+  function petStart() { if (!petRaf && typeof requestAnimationFrame === 'function') { petIdle = 0; petRaf = requestAnimationFrame(petTick); } }
+  function petTick(now) {
+    petRaf = requestAnimationFrame(petTick);
+    if (now - petLast < 1000 / PET_FPS || document.hidden) return;
+    petLast = now;
+    const imgs = document.querySelectorAll('img[data-pet]');
+    if (!imgs.length) { if (++petIdle > PET_FPS * 3) { cancelAnimationFrame(petRaf); petRaf = 0; } return; }
+    petIdle = 0;
+    const base = Math.floor(now / 1000 * PET_FRAMES / petLoop());
+    let fresh = 0;
+    for (let i = 0; i < imgs.length && i < PET_LIVE; i++) {
+      const im = imgs[i], id = +im.dataset.pet, job = petList[id]; if (!job) continue;
+      const fi = (base + id * 7) % PET_FRAMES;
+      const key = 'ready|' + id + '|' + fi;
+      let url = petFrames.get(key);
+      if (url == null) { if (fresh >= PET_NEW) continue; fresh++; url = picture(job.look, job.wear, job.frame, job.size, job.o, fi); petFrames.set(key, url); }
+      if (url && im.getAttribute('src') !== url) im.setAttribute('src', url);
+    }
   }
   const clampSize = (n, d) => Math.max(12, Math.min(640, Math.round(Number(n) || d)));
   root.faceUrl = (who, size = 64, o = {}) => { const r = resolve(who); return r && r.look ? picture(r.look, wearFor(r, o), 'face', clampSize(size, 64), o) : ''; };
@@ -102,13 +143,13 @@
     size = clampSize(size, 32);
     const r = resolve(who), src = r && r.look ? picture(r.look, wearFor(r, o), 'face', size, o) : '';
     const dim = o.fill ? 'width:100%;height:100%' : `width:${size}px;height:${size}px`;
-    if (src) return `<img class="bx-face${o.cls ? ' ' + esc(o.cls) : ''}" src="${src}" alt="${esc(r.name)}" draggable="false" style="${dim}">`;
+    if (src) return `<img class="bx-face${o.cls ? ' ' + esc(o.cls) : ''}"${petAttr(r, o, 'face', size)} src="${src}" alt="${esc(r.name)}" draggable="false" style="${dim}">`;
     return `<span class="bx-emo${o.cls ? ' ' + esc(o.cls) : ''}" style="${o.fill ? '' : `width:${size}px;height:${size}px;font-size:${Math.round(size * 0.78)}px;line-height:${size}px`}">${esc((r && r.avatar) || (who && who.avatar) || '🙂')}</span>`;
   };
   root.body = function (who, h = 96, o = {}) {
     h = clampSize(h, 96);
     const r = resolve(who), src = r && r.look ? picture(r.look, wearFor(r, o), 'body', h, o) : '';
-    if (src) return `<img class="bx-body${o.cls ? ' ' + esc(o.cls) : ''}" src="${src}" alt="${esc(r.name)}" draggable="false" style="width:${Math.round(h * 0.72)}px;height:${h}px">`;
+    if (src) return `<img class="bx-body${o.cls ? ' ' + esc(o.cls) : ''}"${petAttr(r, o, 'body', h)} src="${src}" alt="${esc(r.name)}" draggable="false" style="width:${Math.round(h * 0.72)}px;height:${h}px">`;
     return `<span class="bx-emo bx-emo-body${o.cls ? ' ' + esc(o.cls) : ''}" style="width:${Math.round(h * 0.72)}px;height:${h}px;font-size:${Math.round(h * 0.55)}px;line-height:${h}px">${esc((r && r.avatar) || (who && who.avatar) || '🙂')}</span>`;
   };
   root.drawChar = function (ctx, x, y, who, o = {}) {

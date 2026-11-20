@@ -549,6 +549,8 @@
     drawWear('face', { e: ex, ey: HY + 1 });
     drawHatSmooth(ex);
     drawWear('head', { e: ex, top: HY - R });
+    // Pets: a little animated friend on the screen-left shoulder (MTArt.drawPet, below). o.petT: the pet's own clock.
+    if (av.pet && av.pet !== 'none' && !o.dead && !o.noPet && root.MTArt && root.MTArt.drawPet) root.MTArt.drawPet(g, -(SW + (fem ? 1.6 : 1.2)), -29.6, av.pet, { t: o.petT != null ? o.petT : t, seed: o.seed, scale: 1.15, facing: f });
     effect('front');
     g.restore();
 
@@ -933,4 +935,333 @@
   // The moods a player can pick (MT_OPTIONS.expression); 'scared' and 'dead' are animation states.
   const EXPRESSIONS = ['smile', 'grin', 'neutral', 'serious', 'surprised', 'sad', 'angry', 'wink', 'sleepy', 'smirk'];
   root.MTArt = { drawCharacter: drawSmooth, drawSmooth, bodyOf, drawClassic, drawGhost, costumeGhost, drawShadowFigure, drawHat, roundRect, shade, EXPRESSIONS };
+})(window);
+// ---------- Pets (docs/justgold.md "Pets") ----------
+// A little animated friend that sits on the character's shoulder (avatar field `pet`, one at a
+// time). drawSmooth calls MTArt.drawPet on the screen-left shoulder; the shop also draws pets on
+// their own. MTArt.drawPet(g, x, y, kind, o): feet at (x, y), about 12 units tall at scale 1
+// (the character's units). o: t (seconds), scale, facing (-1..1), seed, flip, still, shadow.
+// The idle loop (breathing, a blink, a tail/wing flick, a look-around, a little hop) repeats
+// every MTArt.PET_LOOP seconds, so a cached picture can loop it with a few frames
+// (public/box/portrait.js). prefers-reduced-motion: a still pose.
+(function (root) {
+  const M = root.MTArt; if (!M) return;
+  const TAU = Math.PI * 2, OL = '#2b1f3d', LOOP = 4;
+  let mq = null;
+  const reduced = () => { if (mq === null) { try { mq = root.matchMedia ? root.matchMedia('(prefers-reduced-motion: reduce)') : false; } catch (e) { mq = false; } } return !!(mq && mq.matches); };
+  // Every motion is a function of the loop time T (0..LOOP), with frequencies that fit the loop.
+  function anim(t) {
+    const T = ((t % LOOP) + LOOP) % LOOP;
+    const win = (a, b) => (T >= a && T < b ? (T - a) / (b - a) : -1);
+    const hu = win(0.3, 0.8), sq1 = win(0.12, 0.3), sq2 = win(0.8, 0.98);
+    const lu = win(2.0, 3.2), fu = win(1.0, 1.6);
+    return {
+      T, win,
+      hop: hu >= 0 ? Math.sin(Math.PI * hu) * 2.4 : 0,
+      squash: sq1 >= 0 ? Math.sin(Math.PI * sq1) * 0.09 : sq2 >= 0 ? Math.sin(Math.PI * sq2) * 0.07 : 0,
+      look: lu >= 0 ? Math.sin(TAU * lu) * Math.sin(Math.PI * lu) * 1.3 : 0,
+      blink: win(1.6, 1.74) >= 0 || win(3.5, 3.62) >= 0,
+      breathe: Math.sin(T * Math.PI),      // 2 s
+      sway: Math.sin(T * Math.PI + 0.6),   // 2 s
+      wag: Math.sin(T * TAU * 2),          // 2 per second
+      flick: fu >= 0 ? Math.sin(TAU * fu) * Math.sin(Math.PI * fu) : 0,
+      flap: Math.sin(T * TAU * 1.5),       // 1.5 per second
+    };
+  }
+  // The pets. k: drawing toolkit + A (the animation) + lx (where the eyes look, -1..1).
+  const PETS = {
+    chick(k) {
+      const { g, A, lx } = k;
+      k.line('#e8891c', 1, [[-1.5, 0.2], [-1.5, -1.6]]); k.line('#e8891c', 1, [[1.5, 0.2], [1.5, -1.6]]);
+      const fl = A.hop ? A.flap * 0.6 : A.flick * 0.5;
+      for (const s of [-1, 1]) { g.save(); g.translate(s * 3.9, -4.6); g.rotate(s * (0.55 + fl)); k.ell(s * 1.1, 0, 2, 1.25); k.done('#f5c518'); g.restore(); }
+      k.ell(0, -4.6, 4.6, 4.4 + A.breathe * 0.15); k.done(k.lin('#ffe766', -9, 0));
+      k.line('#f0b400', 0.9, [[-0.3, -8.8], [-1, -10.6]]); k.line('#f0b400', 0.9, [[0.3, -8.9], [1.3, -10.3]]);
+      k.cheeks(-2.9 + lx, 2.9 + lx, -4.1, 0.9);
+      k.eye(-1.6 + lx, -5.7, 0.85); k.eye(1.6 + lx, -5.7, 0.85);
+      k.poly([[-1.1 + lx, -4.5], [1.1 + lx, -4.5], [lx, -3.1]]); k.done('#ff9a2a', OL, 0.7);
+    },
+    snail(k) {
+      const { g, A, lx } = k;
+      const st = A.blink ? 0.45 : 1; // eyestalks pull in for a blink
+      k.rr(-6.6, -2.3, 12.4, 2.3, 1.15); k.done(k.lin('#d6e79a', -2.3, 0));
+      k.ell(-5, -4.2, 1.9, 2.6); k.done(k.lin('#d6e79a', -7, -1.6));
+      for (const [bx, tx] of [[-5.8, -7.1], [-4.3, -3.6]]) {
+        const ex = tx + A.sway * 0.5 + lx * 0.4, ey = -6.2 - 3.6 * st;
+        k.line(OL, 1.6, [[bx, -6.1], [ex, ey]]); k.line('#d6e79a', 0.7, [[bx, -6.1], [ex, ey]]);
+        k.circ(ex, ey, 0.85); k.done('#2b1f3d', null); k.circ(ex + 0.25, ey - 0.3, 0.3); k.done('#fff', null);
+      }
+      k.arcLine(-5 + lx * 0.3, -3.9, 0.8, 0.15, 0.85, 0.6);
+      g.save(); g.translate(1.4, -5.4 - A.breathe * 0.15); g.rotate(A.sway * 0.04);
+      k.circ(0, 0, 4.3); k.done(k.lin('#f0a070', -4.3, 4.3, 0.15, -0.25));
+      k.P(); for (let a = 0, r = 0.3; a < TAU * 2.1; a += 0.3, r += 0.075) g.lineTo(Math.cos(a) * r, Math.sin(a) * r); g.strokeStyle = '#a0522d'; g.lineWidth = 0.75; g.stroke();
+      k.ell(-1.5, -2.2, 1.1, 0.5, -0.6); k.done('rgba(255,255,255,0.55)', null);
+      g.restore();
+    },
+    hamster(k) {
+      const { g, A, lx } = k;
+      for (const s of [-1, 1]) { k.circ(s * 3.2, -7.7, 1.5); k.done('#e8a35a'); k.circ(s * 3.2, -7.7, 0.8); k.done('#f7a6b8', null); }
+      k.ell(0, -4.1, 5.1, 4.3 + A.breathe * 0.12); k.done(k.lin('#f0b56c', -8.4, 0));
+      k.ell(0, -2.9, 3.3, 2.6); k.done('#fff2dc', null);
+      k.ell(-3.2 + lx * 0.3, -4.1, 1.4, 1.1); k.done('rgba(255,150,150,0.45)', null); k.ell(3.2 + lx * 0.3, -4.1, 1.4, 1.1); k.done('rgba(255,150,150,0.45)', null);
+      k.eye(-1.7 + lx, -5.3, 0.8); k.eye(1.7 + lx, -5.3, 0.8);
+      const ny = -4.3 + A.wag * 0.12;
+      k.circ(lx * 0.8, ny, 0.55); k.done('#f07a96', OL, 0.5);
+      for (const s of [-1, 1]) { k.line('rgba(43,31,61,0.55)', 0.4, [[lx * 0.8 + s * 0.8, ny + 0.2], [lx * 0.8 + s * 3.2, ny - 0.4]]); k.line('rgba(43,31,61,0.55)', 0.4, [[lx * 0.8 + s * 0.8, ny + 0.5], [lx * 0.8 + s * 3.1, ny + 0.7]]); }
+      const nib = Math.max(0, A.wag) * 0.35; // nibbling a seed
+      k.ell(0, -1.9 - nib, 0.8, 1.3); k.done('#4a3a2a', OL, 0.5); k.line('#e9e0c6', 0.4, [[0, -2.9 - nib], [0, -0.9 - nib]]);
+      k.circ(-1.1, -1.8 - nib, 0.7); k.done('#f7c9a0', OL, 0.5); k.circ(1.1, -1.8 - nib, 0.7); k.done('#f7c9a0', OL, 0.5);
+    },
+    frog(k) {
+      const { g, A, lx } = k;
+      for (const s of [-1, 1]) { k.ell(s * 4, -0.6, 1.8, 0.8); k.done('#47a857'); }
+      k.ell(0, -3.5, 5.6, 3.6); k.done(k.lin('#62c870', -7, 0));
+      const puff = 1 + Math.max(0, A.breathe) * 0.3;
+      k.ell(0, -1.9, 2.6 * puff, 1.3 * puff); k.done('#d4f5b8', OL, 0.6);
+      for (const s of [-1, 1]) { k.circ(s * 2.7, -6.7, 2); k.done('#62c870'); }
+      k.eye(-2.7 + lx * 0.6, -6.8, 1.05); k.eye(2.7 + lx * 0.6, -6.8, 1.05);
+      k.arcLine(lx * 0.3, -5.8, 3, 0.18, 0.82, 0.8);
+      k.cheeks(-3.8, 3.8, -4.3, 0.9);
+    },
+    bunny(k) {
+      const { g, A, lx } = k;
+      k.circ(3.9, -2.3, 1.6); k.done('#ffffff');
+      for (const s of [-1, 1]) {
+        g.save(); g.translate(s * 1.4, -10.4); g.rotate(s * 0.2 + A.sway * 0.05 + (s < 0 ? -A.flick * 0.45 : 0));
+        k.ell(0, -3.4, 1.25, 3.7); k.done('#fbfbfb'); k.ell(0, -3.2, 0.6, 2.7); k.done('#ffc2d1', null); g.restore();
+      }
+      k.ell(0, -3.5, 4.1, 3.5 + A.breathe * 0.12); k.done(k.lin('#ffffff', -7, 0, 0.0, -0.08));
+      k.circ(0, -8.1, 3.4); k.done(k.lin('#ffffff', -11.5, -4.7, 0, -0.07));
+      k.cheeks(-2.2 + lx, 2.2 + lx, -7.3, 0.75);
+      k.eye(-1.3 + lx, -8.5, 0.75); k.eye(1.3 + lx, -8.5, 0.75);
+      const ny = -7.3 + A.wag * 0.1;
+      k.ell(lx, ny, 0.55, 0.4); k.done('#f07a96', null);
+      k.P(); g.moveTo(lx - 0.8, ny + 0.6); g.quadraticCurveTo(lx - 0.4, ny + 1.1, lx, ny + 0.4); g.quadraticCurveTo(lx + 0.4, ny + 1.1, lx + 0.8, ny + 0.6); g.strokeStyle = OL; g.lineWidth = 0.5; g.stroke();
+      for (const s of [-1, 1]) { k.ell(s * 1.4, -0.6, 1.2, 0.8); k.done('#fbfbfb', OL, 0.7); }
+    },
+    kitten(k) {
+      const { g, A, lx } = k;
+      k.P(); g.moveTo(2.6, -1.4); g.bezierCurveTo(7.2, -1.6, 6.2 + A.sway * 1.2, -6.5, 4.4 + A.sway * 1.6 + A.flick * 1.2, -8.4);
+      g.lineCap = 'round'; g.strokeStyle = OL; g.lineWidth = 2.6; g.stroke(); g.strokeStyle = '#f0a04b'; g.lineWidth = 1.4; g.stroke();
+      k.ell(0, -3.4, 3.8, 3.4 + A.breathe * 0.12); k.done(k.lin('#f4ab55', -6.8, 0));
+      g.save(); k.ell(0, -3.4, 3.8, 3.4); g.clip(); for (const yy of [-5.6, -3.8]) k.line('#c9742a', 0.7, [[2.2, yy], [3.9, yy + 0.4]]); g.restore();
+      for (const s of [-1, 1]) { k.ell(s * 1.4, -0.6, 1.1, 0.8); k.done('#fff6ea', OL, 0.7); }
+      g.save(); g.translate(0, -8.3); g.rotate(A.look * 0.1);
+      for (const s of [-1, 1]) { g.save(); g.translate(s * 2.3, -2.4); g.rotate(s > 0 ? A.flick * 0.3 : 0); k.poly([[s * -1.4, 0.6], [s * 0.9, -2.6], [s * 1.5, 0.9]]); k.done('#f4ab55'); k.poly([[s * -0.6, 0.4], [s * 0.7, -1.6], [s * 0.9, 0.6]]); k.done('#ffb7c5', null); g.restore(); }
+      k.circ(0, 0, 3.8); k.done(k.lin('#f4ab55', -3.8, 3.8));
+      k.line('#c9742a', 0.7, [[0, -3.7], [0, -2.5]]); k.line('#c9742a', 0.7, [[-1, -3.5], [-0.8, -2.6]]); k.line('#c9742a', 0.7, [[1, -3.5], [0.8, -2.6]]);
+      k.ell(0, 1.4, 1.9, 1.4); k.done('#fff6ea', null);
+      k.eye(-1.45 + lx * 0.6, -0.2, 0.85); k.eye(1.45 + lx * 0.6, -0.2, 0.85);
+      k.poly([[-0.5 + lx * 0.4, 0.9], [0.5 + lx * 0.4, 0.9], [lx * 0.4, 1.5]]); k.done('#f07a96', null);
+      for (const s of [-1, 1]) { k.line('rgba(43,31,61,0.5)', 0.4, [[s * 1.2, 1.3], [s * 4.4, 0.8]]); k.line('rgba(43,31,61,0.5)', 0.4, [[s * 1.2, 1.6], [s * 4.2, 2]]); }
+      g.restore();
+    },
+    puppy(k) {
+      const { g, A, lx } = k;
+      g.save(); g.translate(3, -2.4); g.rotate(-0.7 + A.wag * 0.45); k.rr(-0.6, -3.6, 1.6, 3.8, 0.8); k.done('#d9a86a'); g.restore();
+      k.ell(0, -3.4, 4, 3.4 + A.breathe * 0.12); k.done(k.lin('#e2b57a', -6.8, 0));
+      k.ell(0, -3.2, 1.9, 2.3); k.done('#fff4e4', null);
+      for (const s of [-1, 1]) { k.ell(s * 1.4, -0.6, 1.2, 0.8); k.done('#fff4e4', OL, 0.7); }
+      g.save(); g.translate(0, -8.4); g.rotate(A.look * 0.08);
+      k.ell(0, 0, 4, 3.6); k.done(k.lin('#e2b57a', -3.6, 3.6));
+      for (const s of [-1, 1]) { g.save(); g.translate(s * 3.4, -1.8); g.rotate(s * 0.35 + A.sway * 0.12 * s + (s < 0 ? A.flick * 0.4 : 0)); k.ell(s * 0.6, 2.2, 1.4, 2.8); k.done('#8a5a34'); g.restore(); }
+      k.ell(lx * 0.5, 1.4, 2.1, 1.5); k.done('#fff4e4', OL, 0.6);
+      k.ell(lx * 0.5, 0.7, 0.85, 0.6); k.done('#2b1f3d', null);
+      const tg = 0.8 + Math.max(0, A.breathe) * 0.4;
+      k.ell(lx * 0.5 + 0.3, 2.7 + tg * 0.3, 0.6, tg * 0.7); k.done('#ff7a96', OL, 0.5);
+      k.eye(-1.5 + lx * 0.6, -0.8, 0.8); k.eye(1.5 + lx * 0.6, -0.8, 0.8);
+      g.restore();
+    },
+    bat(k) {
+      const { g, A, lx } = k;
+      const su = A.win(1.0, 1.9), op = 0.12 + (su >= 0 ? Math.sin(Math.PI * su) : 0) * 0.88 + A.flap * 0.04;
+      for (const s of [-1, 1]) {
+        g.save(); g.translate(s * 2.4, -5.6);
+        k.poly([[0, -1.2], [s * (1.6 + 6 * op), -2.6 - 2.4 * op], [s * (1.8 + 5.4 * op), 0.6], [s * (1.2 + 3.6 * op), -0.2], [s * (0.9 + 2 * op), 1.6], [0, 1.8]]);
+        k.done('#3e2c52'); g.restore();
+      }
+      for (const s of [-1, 1]) { k.poly([[s * 0.6, -7.6], [s * 3.4, -11.4], [s * 3, -6.6]]); k.done('#5a4470'); k.poly([[s * 1.4, -7.6], [s * 3.0, -10.2], [s * 2.6, -7]]); k.done('#ff9ab6', null); }
+      k.ell(0, -4.3, 3.3, 4.1 + A.breathe * 0.12); k.done(k.lin('#6a5284', -8.4, 0));
+      k.ell(0, -3, 2, 2.4); k.done('#8a74a6', null);
+      k.eye(-1.2 + lx * 0.6, -5.6, 0.85); k.eye(1.2 + lx * 0.6, -5.6, 0.85);
+      k.ell(lx * 0.4, -4.4, 0.45, 0.3); k.done('#ff9ab6', null);
+      k.poly([[-0.7 + lx * 0.4, -3.8], [-0.3 + lx * 0.4, -3.8], [-0.5 + lx * 0.4, -3.1]]); k.done('#fff', null);
+      k.poly([[0.3 + lx * 0.4, -3.8], [0.7 + lx * 0.4, -3.8], [0.5 + lx * 0.4, -3.1]]); k.done('#fff', null);
+      k.line(OL, 0.7, [[-0.8, -0.2], [-0.8, 0.4]]); k.line(OL, 0.7, [[0.8, -0.2], [0.8, 0.4]]);
+    },
+    parrot(k) {
+      const { g, A, lx } = k;
+      k.poly([[-0.4, -3.2], [1.8, -3], [3 + A.sway * 0.35, 4.2], [0.8 + A.sway * 0.35, 4.6]]); k.done(k.lin('#2a7de1', -3, 4.6));
+      k.poly([[0.4, -2.6], [1.4, -2.5], [2 + A.sway * 0.35, 4.4], [1.4 + A.sway * 0.35, 4.5]]); k.done('#e23b3b', null);
+      k.ell(0, -5.4, 3.2, 4.6 + A.breathe * 0.12, -0.08); k.done(k.lin('#ef4a4a', -10, -1));
+      g.save(); g.translate(1.5, -5.8); g.rotate(0.2 + A.flick * 0.35); k.ell(0, 0.6, 1.8, 3.4); k.done(k.lin('#2fae5a', -3, 4)); k.ell(0.2, 3, 1.2, 1.1); k.done('#ffd23f', null); k.ell(0, 0.6, 1.8, 3.4); k.done(null, OL, 0.8); g.restore();
+      const bu = A.win(2.6, 3.4), bob = bu >= 0 ? Math.sin(TAU * 2 * bu) * 0.7 : 0;
+      g.save(); g.translate(-0.3 + bob, -10 + Math.abs(bob) * 0.4); g.rotate(A.look * 0.12);
+      k.circ(0, 0, 3); k.done(k.lin('#ef4a4a', -3, 3));
+      k.ell(-0.6, 0.1, 1.5, 1.4); k.done('#fff', OL, 0.5);
+      if (A.blink) k.line(OL, 0.7, [[-1.6, 0.1], [0.4, 0.1]]); else { k.circ(-0.8 + lx * 0.3, 0.1, 0.65); k.done('#1d1630', null); k.circ(-0.6 + lx * 0.3, -0.2, 0.22); k.done('#fff', null); }
+      k.P(); g.moveTo(-2.4, -1.2); g.quadraticCurveTo(-5.4, -1.4, -4.8, 1.9); g.quadraticCurveTo(-3.8, 1.1, -2.4, 1.4); g.closePath(); k.done('#ffcf4a', OL, 0.7);
+      k.line('#e0a800', 0.5, [[-3.4, 0.4], [-2.6, 0.3]]);
+      g.restore();
+      for (const s of [-1, 1]) k.line('#7a7f8a', 0.9, [[s * 1.1, -1.2], [s * 1.1, 0.2], [s * 1.9, 0.4]]);
+    },
+    owl(k) {
+      const { g, A, lx } = k;
+      const turn = A.look * 1.5 + lx * 0.4; // owls turn their whole face
+      for (const s of [-1, 1]) { k.ell(s * 4, -4.6, 1.6, 3.4, s * 0.15); k.done('#7a4e2e'); }
+      k.ell(0, -5, 4.6, 5.1 + A.breathe * 0.12); k.done(k.lin('#a97248', -10, 0));
+      k.ell(0, -3.2, 2.9, 2.9); k.done('#ecd6ac', null);
+      for (const [vx, vy] of [[-1, -3.6], [1, -3.6], [0, -2.3], [-1.2, -1.6], [1.2, -1.6]]) k.arcLine(vx, vy - 0.6, 0.6, 0.2, 0.8, 0.5, '#a97248');
+      for (const s of [-1, 1]) { k.poly([[s * 1.6 + turn * 0.4, -8.6], [s * 3.6 + turn * 0.4, -11], [s * 3.6 + turn * 0.4, -7.8]]); k.done('#a97248'); }
+      for (const s of [-1, 1]) { k.circ(s * 1.9 + turn, -6.6, 1.95); k.done('#f6e6c4', OL, 0.7); }
+      for (const s of [-1, 1]) {
+        const cx = s * 1.9 + turn;
+        if (A.blink) { k.circ(cx, -6.6, 1.25); k.done('#a97248', OL, 0.6); k.line(OL, 0.6, [[cx - 1.1, -6.4], [cx + 1.1, -6.4]]); continue; }
+        k.circ(cx, -6.6, 1.25); k.done('#ffb83a', OL, 0.6); k.circ(cx + lx * 0.3, -6.6, 0.7); k.done('#1d1630', null); k.circ(cx + 0.3, -7, 0.25); k.done('#fff', null);
+      }
+      k.poly([[-0.6 + turn, -5.5], [0.6 + turn, -5.5], [turn, -4.2]]); k.done('#e09a2a', OL, 0.6);
+      for (const s of [-1, 1]) { k.line('#e09a2a', 0.8, [[s * 1.5, -0.4], [s * 1.5, 0.3]]); k.line('#e09a2a', 0.8, [[s * 1.5 - 0.6, 0.3], [s * 1.5 + 0.6, 0.3]]); }
+    },
+    fox(k) {
+      const { g, A, lx } = k;
+      g.save(); g.translate(2.6, -1.6); g.rotate(-0.75 + A.sway * 0.18 + A.flick * 0.35);
+      k.ell(3, -0.4, 3.9, 1.9); k.done(k.lin('#f08a3a', -2.3, 1.5));
+      g.save(); k.ell(3, -0.4, 3.9, 1.9); g.clip(); k.circ(6.6, -0.4, 1.9); k.done('#fff8ee', null); g.restore(); k.ell(3, -0.4, 3.9, 1.9); k.done(null, OL, 0.9);
+      g.restore();
+      k.ell(0, -3.4, 3.7, 3.4 + A.breathe * 0.12); k.done(k.lin('#f07a2a', -6.8, 0));
+      k.ell(0, -3, 1.9, 2.4); k.done('#fff8ee', null);
+      for (const s of [-1, 1]) { k.ell(s * 1.4, -0.6, 1.1, 0.8); k.done('#3a2418', OL, 0.6); }
+      g.save(); g.translate(0, -8.1); g.rotate(A.look * 0.1);
+      for (const s of [-1, 1]) { g.save(); g.translate(s * 2.1, -2); g.rotate(s * 0.15 + (s > 0 ? A.flick * 0.25 : 0)); k.poly([[s * -1.2, 0.5], [s * 0.6, -3.6], [s * 1.6, 0.8]]); k.done('#f07a2a'); k.poly([[s * 0.05, -1.9], [s * 0.6, -3.6], [s * 1.0, -1.7]]); k.done('#3a2418', null); g.restore(); }
+      k.P(); g.moveTo(-3.7, -0.6); g.quadraticCurveTo(-3.4, -3.1, 0, -3.2); g.quadraticCurveTo(3.4, -3.1, 3.7, -0.6); g.quadraticCurveTo(2.6, 2.4, 0, 3.2); g.quadraticCurveTo(-2.6, 2.4, -3.7, -0.6); g.closePath(); k.done(k.lin('#f07a2a', -3.2, 3.2));
+      k.P(); g.moveTo(-3.6, 0); g.quadraticCurveTo(-1.6, 0.4, 0, 1); g.quadraticCurveTo(1.6, 0.4, 3.6, 0); g.quadraticCurveTo(2.4, 2.4, 0, 3.2); g.quadraticCurveTo(-2.4, 2.4, -3.6, 0); g.closePath(); k.done('#fff8ee', null);
+      k.ell(lx * 0.5, 2.6, 0.7, 0.5); k.done('#2b1f3d', null);
+      for (const s of [-1, 1]) { const cx = s * 1.4 + lx * 0.6; if (A.blink) k.line(OL, 0.6, [[cx - 0.7, -0.6], [cx + 0.7, -0.6]]); else { k.ell(cx, -0.6, 0.6, 0.85); k.done('#1d1630', null); k.circ(cx + 0.2, -0.9, 0.22); k.done('#fff', null); } }
+      g.restore();
+    },
+    octopus(k) {
+      const { g, A, lx } = k;
+      for (let i = 0; i < 6; i++) {
+        const bx = -3.6 + i * 1.45, side = bx < 0 ? -1 : 1, w = Math.sin(A.T * Math.PI * 2 + i * 1.1) * 0.8;
+        const ex = bx + side * (1.4 + (i === 0 || i === 5 ? 1.2 : 0)) + w, ey = (i === 0 || i === 5 ? 1.6 : 0.4);
+        k.P(); g.moveTo(bx, -3.2); g.quadraticCurveTo(bx + w * 0.6, -0.6, ex, ey); g.quadraticCurveTo(ex + side * 0.9, ey - 0.2, ex + side * 0.7, ey - 1.1);
+        g.lineCap = 'round'; g.strokeStyle = OL; g.lineWidth = 2.2; g.stroke(); g.strokeStyle = '#b46ae0'; g.lineWidth = 1.1; g.stroke();
+      }
+      const b = 1 + A.breathe * 0.03;
+      k.ell(0, -6.7, 4.6 * b, 4.8 * b); k.done(k.lin('#b86ce6', -11.5, -2));
+      for (const [sx, sy, r] of [[-2.2, -9.2, 0.6], [1.9, -9.8, 0.5], [2.8, -7.6, 0.45], [-3, -6.8, 0.4]]) { k.circ(sx, sy, r); k.done('#d7a6f5', null); }
+      k.eye(-1.6 + lx * 0.6, -5.7, 1); k.eye(1.6 + lx * 0.6, -5.7, 1);
+      k.arcLine(lx * 0.4, -4.9, 1.2, 0.2, 0.8, 0.6);
+      k.cheeks(-2.9, 2.9, -4.6, 0.8);
+    },
+    axolotl(k) {
+      const { g, A, lx } = k;
+      g.save(); g.translate(3, -2); g.rotate(-0.25 + A.sway * 0.2); k.ell(2.2, 0, 2.8, 1.15); k.done(k.lin('#ffc2d2', -1.2, 1.2)); g.restore();
+      for (const s of [-1, 1]) { k.ell(s * 2.2, -0.4, 1, 0.7); k.done('#ffb3c7', OL, 0.6); }
+      k.ell(0, -2.8, 3.5, 2.7 + A.breathe * 0.1); k.done(k.lin('#ffbccd', -5.5, 0));
+      for (const s of [-1, 1]) for (let i = 0; i < 3; i++) {
+        g.save(); g.translate(s * 3.5, -8.4 + i * 1.25); g.rotate(s * (-0.55 + i * 0.5) + (A.sway * 0.18 + A.flick * 0.25) * s);
+        k.ell(s * 1.4, 0, 1.6, 0.6); k.done('#ff5c8a', OL, 0.6); g.restore();
+      }
+      k.ell(0, -7, 4.3, 3.1); k.done(k.lin('#ffc2d2', -10, -4));
+      k.eye(-2 + lx * 0.6, -7.4, 0.62); k.eye(2 + lx * 0.6, -7.4, 0.62);
+      k.arcLine(lx * 0.4, -7.6, 2.2, 0.25, 0.75, 0.6);
+      k.cheeks(-2.9, 2.9, -6.2, 0.7);
+    },
+    wispling(k) {
+      const { g, A, lx } = k;
+      g.translate(0, -1.6 - (A.breathe + 1) * 0.7); // it floats
+      const gl = g.createRadialGradient(0, -6, 0.5, 0, -6, 8.5); gl.addColorStop(0, 'rgba(160,225,255,0.55)'); gl.addColorStop(1, 'rgba(160,225,255,0)');
+      g.fillStyle = gl; g.fillRect(-9, -15, 18, 18);
+      g.save(); g.globalAlpha *= 0.94;
+      const w = A.sway * 0.8;
+      k.P(); g.arc(0, -7, 3.9, Math.PI, 0); g.quadraticCurveTo(4.1, -3, 2.6 + w, -1.6); g.quadraticCurveTo(1.6 + w, -0.6, 1.2 + w * 0.6, -1.8); g.quadraticCurveTo(0.3, -0.4, -0.8 + w * 0.4, -1.6);
+      g.quadraticCurveTo(-1.9, -0.6, -2.6, -2.2); g.quadraticCurveTo(-4.1, -3.4, -3.9, -7); g.closePath();
+      k.done(k.lin('#f4fbff', -11, -1, 0, -0.1), '#5a9ccc', 1);
+      g.restore();
+      for (const s of [-1, 1]) { k.ell(s * 4.1, -4.9 + (s < 0 ? A.flick * 0.6 : 0), 0.9, 0.6, s * 0.5); k.done('#eaf6ff', '#5a9ccc', 0.7); }
+      for (const s of [-1, 1]) { const cx = s * 1.4 + lx * 0.7; if (A.blink) k.line('#24405a', 0.6, [[cx - 0.6, -7.2], [cx + 0.6, -7.2]]); else { k.ell(cx, -7.2, 0.62, 0.95); k.done('#24405a', null); k.circ(cx + 0.2, -7.6, 0.22); k.done('#fff', null); } }
+      k.arcLine(lx * 0.5, -6.6, 0.9, 0.15, 0.85, 0.6, '#24405a');
+      k.cheeks(-2.5, 2.5, -5.9, 0.6);
+      const su = A.win(0.5, 1.5); if (su >= 0) k.star(-4.6, -10.5 + su * -1.5, 1.1 * Math.sin(Math.PI * su), '#fff6c0');
+    },
+    droneBot(k) {
+      const { g, A, lx } = k;
+      const hov = -2.4 - (A.breathe + 1) * 0.6;
+      g.fillStyle = 'rgba(0,0,0,0.18)'; k.ell(0, 0, 3.4, 0.8); g.fill();
+      g.translate(0, hov); g.rotate(A.look * 0.08);
+      for (const s of [-1, 1]) { k.rr(s * 2.4 - 0.7, -2.2, 1.4, 1.8, 0.5); k.done('#8a96a6', OL, 0.6); const fl = 0.5 + 0.5 * Math.abs(Math.sin(A.T * TAU * 3 + s)); k.ell(s * 2.4, 0.2, 0.5, 0.7 * fl + 0.3); k.done('rgba(110,230,255,0.8)', null); }
+      k.line(OL, 1.4, [[0, -8.4], [0, -10.2]]);
+      const bw = 0.6 + 4.4 * Math.abs(Math.cos(A.T * TAU * 3));
+      k.ell(0, -10.4, bw, 0.6); k.done('rgba(200,210,222,0.85)', OL, 0.6); k.circ(0, -10.4, 0.6); k.done('#5a6a7a', OL, 0.5);
+      k.line(OL, 0.8, [[3, -7.6], [4.2, -10.4]]); k.circ(4.2, -10.6, 0.7); k.done(Math.sin(A.T * TAU) > 0 ? '#ff5a5a' : '#7aff8a', OL, 0.5);
+      k.rr(-4.5, -8.6, 9, 6.6, 2.6); k.done(k.lin('#e1e8f0', -8.6, -2));
+      k.rr(-3.4, -7.6, 6.8, 4.4, 1.4); k.done('#14303f', OL, 0.6);
+      const ex = lx * 0.8, eh = A.blink ? 0.25 : 1.6;
+      for (const s of [-1, 1]) { k.rr(s * 1.3 - 0.45 + ex, -6.2 - eh / 2 + 0.3, 0.9, eh, 0.4); k.done('#6ee6ff', null); }
+      k.arcLine(ex, -5.2, 0.9, 0.15, 0.85, 0.5, '#6ee6ff');
+      k.line('rgba(255,255,255,0.7)', 0.6, [[-3.6, -7.2], [-2.6, -8.1]]);
+    },
+    dragonling(k) {
+      const { g, A, lx } = k;
+      const wu = A.win(1.0, 1.9), op = (wu >= 0 ? Math.sin(Math.PI * wu) : 0) * (0.7 + 0.3 * A.flap);
+      for (const s of [-1, 1]) {
+        g.save(); g.translate(s * 2, -5.8); g.rotate(s * (0.15 - op * 0.6));
+        k.poly([[0, 0], [s * 2.2, -4.6], [s * 5.4, -3.6], [s * 4.4, -1.8], [s * 5, 0], [s * 3.2, -0.4], [s * 2.6, 1.2]]); k.done('#8a5cd6');
+        k.line('#6a3cb0', 0.5, [[0, 0], [s * 4.4, -1.8]]); g.restore();
+      }
+      k.P(); g.moveTo(2.4, -1.4); g.quadraticCurveTo(6, -0.6, 6.6 + A.sway * 0.6, -3.4 + A.flick);
+      g.lineCap = 'round'; g.strokeStyle = OL; g.lineWidth = 2.2; g.stroke(); g.strokeStyle = '#4cbf8a'; g.lineWidth = 1.1; g.stroke();
+      const tx = 6.6 + A.sway * 0.6, ty = -3.4 + A.flick; k.poly([[tx - 0.9, ty + 0.4], [tx + 0.2, ty - 1.6], [tx + 1.1, ty + 0.5]]); k.done('#8a5cd6', OL, 0.7);
+      k.ell(0, -3.5, 3.7, 3.5 + A.breathe * 0.12); k.done(k.lin('#58cc95', -7, 0));
+      k.ell(0, -3, 2, 2.4); k.done('#f3e2a8', null); for (const yy of [-4.2, -3, -1.8]) k.line('#d6bd72', 0.5, [[-1.4, yy], [1.4, yy]]);
+      for (const s of [-1, 1]) { k.ell(s * 1.5, -0.6, 1.1, 0.8); k.done('#3e9e70', OL, 0.6); }
+      g.save(); g.translate(0, -8.4); g.rotate(A.look * 0.1);
+      for (const s of [-1, 1]) { k.poly([[s * 1.2, -2.4], [s * 2.4, -5], [s * 2.5, -2]]); k.done('#fff1c4', OL, 0.6); }
+      for (let i = 0; i < 3; i++) { k.poly([[3 - i * 0.2, -1.2 + i * 1.2], [4.4 - i * 0.2, -0.6 + i * 1.2], [3.1 - i * 0.2, 0 + i * 1.2]]); k.done('#8a5cd6', OL, 0.5); }
+      k.ell(0, 0, 3.7, 3.2); k.done(k.lin('#58cc95', -3.2, 3.2));
+      k.ell(lx * 0.4, 1.6, 2.3, 1.4); k.done('#7ad8a8', OL, 0.6);
+      k.circ(-0.7 + lx * 0.4, 1.3, 0.25); k.done(OL, null); k.circ(0.7 + lx * 0.4, 1.3, 0.25); k.done(OL, null);
+      k.eye(-1.5 + lx * 0.6, -0.6, 0.95); k.eye(1.5 + lx * 0.6, -0.6, 0.95);
+      const pu = A.win(2.6, 3.5);
+      if (pu >= 0) for (let i = 0; i < 2; i++) { const p = Math.min(1, pu * 1.3 - i * 0.3); if (p <= 0) continue; g.save(); g.globalAlpha *= 0.8 * (1 - p); k.circ(lx * 0.4 - 1 - p * 2.4, 0.8 - p * 4.5, 0.6 + p * 1.4); k.done('#d8d4e0', 'rgba(43,31,61,0.4)', 0.4); g.restore(); }
+      g.restore();
+    },
+  };
+  function drawPet(g, x, y, kind, o = {}) {
+    const fn = PETS[kind]; if (!fn || !g) return false;
+    const still = o.still || reduced();
+    const A = anim(still ? 0.95 : (Number(o.t) || 0) + (Number(o.seed) || 0));
+    const lx = Math.max(-1, Math.min(1, A.look + (Number(o.facing) || 0) * 0.5));
+    const lw = 1.05, P = () => g.beginPath();
+    const done = (fill, stroke = OL, w = lw) => { if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = w; g.lineJoin = 'round'; g.lineCap = 'round'; g.stroke(); } };
+    const circ = (cx, cy, r) => { P(); g.arc(cx, cy, Math.max(0.01, r), 0, TAU); };
+    const ell = (cx, cy, rx, ry, rot = 0) => { P(); g.ellipse(cx, cy, Math.max(0.01, rx), Math.max(0.01, ry), rot, 0, TAU); };
+    const rr = (rx, ry, w, h, r) => M.roundRect(g, rx, ry, w, h, Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2));
+    const poly = (pts) => { P(); pts.forEach(([px, py], i) => (i ? g.lineTo(px, py) : g.moveTo(px, py))); g.closePath(); };
+    const line = (c, w, pts) => { P(); pts.forEach(([px, py], i) => (i ? g.lineTo(px, py) : g.moveTo(px, py))); g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); };
+    const lin = (c, y0, y1, a = 0.16, b = -0.14) => { const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, M.shade(c, a)); gr.addColorStop(1, M.shade(c, b)); return gr; };
+    const arcLine = (cx, cy, r, a0, a1, w, c = OL) => { P(); g.arc(cx, cy, r, Math.PI * a0, Math.PI * a1); g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round'; g.stroke(); };
+    const cheeks = (x1, x2, cy, r) => { g.fillStyle = 'rgba(255,120,140,0.4)'; ell(x1, cy, r, r * 0.6); g.fill(); ell(x2, cy, r, r * 0.6); g.fill(); };
+    const eye = (cx, cy, r) => {
+      if (A.blink) { P(); g.moveTo(cx - r, cy); g.quadraticCurveTo(cx, cy + r * 0.7, cx + r, cy); g.strokeStyle = OL; g.lineWidth = Math.max(0.5, r * 0.6); g.lineCap = 'round'; g.stroke(); return; }
+      ell(cx, cy, r * 0.82, r); done('#1d1630', null); circ(cx + r * 0.28, cy - r * 0.36, r * 0.36); done('#ffffff', null);
+    };
+    const star = (cx, cy, r, c) => { if (r <= 0.05) return; P(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r * 0.45 : r; g.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); } g.closePath(); done(c, OL, 0.5); };
+    const s = Number(o.scale) || 1;
+    g.save();
+    try {
+      g.translate(x, y); g.scale(o.flip ? -s : s, s);
+      if (o.shadow) { g.fillStyle = 'rgba(0,0,0,0.2)'; ell(0, 0.2, 5.5 - A.hop * 0.5, 1.4); g.fill(); }
+      const float = kind === 'wispling' || kind === 'droneBot';
+      if (!float) { g.translate(0, -A.hop); g.scale(1 + A.squash, 1 - A.squash); }
+      fn({ g, A, lx, P, done, circ, ell, rr, poly, line, lin, arcLine, cheeks, eye, star });
+    } catch (err) { /* a broken pet never breaks the character */ }
+    g.restore();
+    return true;
+  }
+  M.drawPet = drawPet;
+  M.PET_KINDS = Object.keys(PETS);
+  M.PET_LOOP = LOOP;
+  M.petsReduced = reduced;
 })(window);
