@@ -666,6 +666,9 @@
   //  Part 2: the game screens
   // =====================================================================================
   const { esc, timer } = BOX;
+  // Recorded sound effects (public/audio/sfx/memes/, credits.json there): quiet touches on the TV,
+  // timed to what is on screen. false when they can't play (no audio engine yet, locked, muted file).
+  const clip = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('memes/' + f, o));
   const once = new Set();
   const first = (k) => { if (once.has(k)) return false; once.add(k); if (once.size > 400) once.clear(); return true; };
   // A player's own character (BOX.face, in their meme shades/cap), or their emoji. o = { id, name, av }.
@@ -717,7 +720,7 @@
         ${L.lineupHtml ? `<div class="mm-lineup">${L.lineupHtml}</div>` : ''}</section>
     </div>`);
     for (const s of el.querySelectorAll('select[data-set]')) { s.onchange = () => L.set(s.dataset.set, s.value); s.onclick = (e) => e.stopPropagation(); }
-    for (const b of el.querySelectorAll('[data-rule]')) b.onclick = () => { const s = b.querySelector('select'); s.selectedIndex = (s.selectedIndex + 1) % s.options.length; BOX.sfx('flip'); s.onchange(); };
+    for (const b of el.querySelectorAll('[data-rule]')) b.onclick = () => { const s = b.querySelector('select'); s.selectedIndex = (s.selectedIndex + 1) % s.options.length; clip('click.ogg', { vol: 0.25 }) || BOX.sfx('flip'); s.onchange(); };
     el.querySelector('#start').onclick = async () => { const r = await L.start(); lobbyErr = r && !r.ok ? r.error || 'Could not start.' : ''; const e = el.querySelector('#lobby-err'); if (e) e.textContent = lobbyErr; };
     el.querySelector('#add-bots').onclick = () => L.bots(5);
     el.querySelector('#rm-bots').onclick = () => L.removeBots();
@@ -912,8 +915,14 @@
       'The night ends with a Meme of the Night showdown, awards and a gallery you can download.',
     ],
     music: (s) => ({ intro: 'play', write: 'think', pass: 'play', semi: 'think', parade: 'play', vote: 'think', result: 'reveal', over: 'finale' }[s.phase] || 'play'),
-    fx: { round: 'swell', write: 'pop', hurry: 'heartbeat', post: 'pop', pass: 'whoosh', semi: 'ballot', meme: 'flip', vote: 'gavel', ballot: 'ballot', reveal: 'drum', motn: 'drum', none: 'shrug', win: 'win' },
-    onFx(f) { if (f.kind === 'reveal' || f.kind === 'motn') setTimeout(() => BOX.sfx(f.unan || f.kind === 'motn' ? 'swell' : 'cheer'), 1400); },
+    // 'clip' = no synth sound: onFx plays a recorded one (and falls back to the old sound).
+    fx: { round: 'swell', write: 'pop', hurry: 'heartbeat', post: 'clip', pass: 'whoosh', semi: 'ballot', meme: 'flip', vote: 'gavel', ballot: 'ballot', reveal: 'drum', motn: 'drum', none: 'shrug', win: 'win' },
+    onFx(f) {
+      if (f.kind === 'post') clip('shutter.ogg', { vol: 0.16, gap: 250 }) || BOX.sfx('pop'); // a meme is snapped and posted
+      // the parade: once a meme has been read, a small laugh from the room (about every other one)
+      if (f.kind === 'meme' && Math.random() < 0.55) clip(Math.random() < 0.5 ? 'laugh-1.ogg' : 'laugh-2.ogg', { vol: 0.13, delay: 1.6 });
+      if (f.kind === 'reveal' || f.kind === 'motn') setTimeout(() => (f.unan || f.kind === 'motn' ? BOX.sfx('swell') : clip('applause.ogg', { vol: 0.17 }) || BOX.sfx('cheer')), 1400);
+    },
     lobbyTv,
     lobby: () => `<div class="mm mm-phlobby"><div class="mm-pinned">${pin('lob')}${img({ tpl: 'fine', caps: ['ME WAITING FOR', 'THE GAME TO START'] }, 0.55)}</div><p>Get your funniest thoughts ready…</p></div>`,
     tv, phone,

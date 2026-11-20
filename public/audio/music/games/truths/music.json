@@ -1,0 +1,14 @@
+{
+ "cues": {
+  "title": { "file": "games/truths/title-investigation.ogg" },
+  "intro": { "file": "games/truths/title-investigation.ogg" },
+  "lobby": { "file": "games/truths/title-investigation.ogg" },
+  "finale": { "file": "games/truths/title-investigation.ogg" },
+  "think": { "file": "games/truths/think-jazz-saxophone.mp3", "gain": 0.71, "loopEnd": 127 },
+  "play": { "file": "games/truths/think-jazz-saxophone.mp3", "gain": 0.71, "loopEnd": 127 }
+ },
+ "credits": [
+  { "file": "games/truths/title-investigation.ogg", "title": "Investigation", "author": "Umplix", "source": "https://opengameart.org/node/136389", "license": "CC0 1.0" },
+  { "file": "games/truths/think-jazz-saxophone.mp3", "title": "Jazz Saxaphone", "author": "Pro Sensory", "source": "https://opengameart.org/node/85233", "license": "CC0 1.0" }
+ ]
+}

@@ -8,6 +8,9 @@
 // Everything updates in place (BOX.morph), so taps land and animations play once.
 (function () {
   const { esc, timer } = BOX;
+  // Recorded sound effects (public/audio/sfx/blanks/, credits.json there): quiet touches on the TV,
+  // timed to what is on screen. false when they can't play (no audio engine yet, locked, muted file).
+  const clip = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('blanks/' + f, o));
   let picked = [], writing = false, draft = '', swapArm = 0, judgeSel = null, selRound = 0, lobbyErr = '';
   const once = new Set();
   const first = (k) => { if (once.has(k)) return false; once.add(k); if (once.size > 300) once.clear(); return true; };
@@ -68,7 +71,7 @@
     for (const s of el.querySelectorAll('select[data-set]')) { s.onchange = () => L.set(s.dataset.set, s.value); s.onclick = (e) => e.stopPropagation(); }
     for (const b of el.querySelectorAll('[data-rule]')) b.onclick = () => {
       const s = b.querySelector('select'), k = s.selectedIndex;
-      s.selectedIndex = (k + 1) % s.options.length; BOX.sfx('flip'); s.onchange();
+      s.selectedIndex = (k + 1) % s.options.length; clip('slide.ogg', { vol: 0.22 }) || BOX.sfx('flip'); s.onchange();
     };
     el.querySelector('#start').onclick = async () => { const r = await L.start(); lobbyErr = r && !r.ok ? r.error || 'Could not start.' : ''; const e = el.querySelector('#lobby-err'); if (e) e.textContent = lobbyErr; };
     el.querySelector('#add-bots').onclick = () => L.bots(5);
@@ -232,8 +235,17 @@
       'Answers are read out with no names. The Judge picks the funniest (or everybody votes, in big groups). Not judging? Send a ❤️.',
       'The winning card gets a point. First to the target wins, with awards at the end!',
     ],
-    fx: { deal: 'shuffle', card: 'deal', flip: 'flip', gavel: 'gavel', hurry: 'heartbeat', reveal: 'drum', win: 'win' },
-    onFx(f) { if (f.kind === 'reveal') setTimeout(() => BOX.sfx(f.how === 'random' ? 'shrug' : 'cheer'), 1500); },
+    // 'clip' = no synth sound: onFx plays a recorded one (and falls back to the old synth sound).
+    fx: { deal: 'clip', card: 'clip', flip: 'clip', gavel: 'gavel', hurry: 'heartbeat', reveal: 'drum', win: 'win' },
+    onFx(f) {
+      const k = f.kind;
+      if (k === 'deal') clip('shuffle.ogg', { vol: 0.2 }) || BOX.sfx('shuffle'); // new hands are shuffled and dealt
+      else if (k === 'card') clip(Math.random() < 0.5 ? 'card-1.ogg' : 'card-2.ogg', { vol: 0.16, gap: 120 }) || BOX.sfx('deal'); // someone plays a card
+      else if (k === 'flip') clip('slide.ogg', { vol: 0.2 }) || BOX.sfx('flip'); // the next answer card slides up to be read
+      // the winning card's HA! stamp: a comedy-club laugh from the room
+      else if (k === 'reveal') setTimeout(() => (f.how === 'random' ? BOX.sfx('shrug') : clip('laugh.ogg', { vol: 0.24 }) || BOX.sfx('cheer')), 1500);
+      else if (k === 'win') clip('applause.ogg', { vol: 0.15, delay: 0.9 }); // the champion takes a bow
+    },
     lobbyTv,
     // Phone lobby: a face-down hand waiting to be dealt.
     lobby: () => '<div class="bx bx-phlobby"><div class="bx-fan">' + [0, 1, 2, 3, 4].map((i) => '<span class="bx-back" style="--i:' + i + '"><b>J!</b></span>').join('') + '</div><p>Your hand of 7 cards is being shuffled…</p></div>',

@@ -17,6 +17,8 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | blackjack | Music | `games/blackjack/think-buy-something.ogg` | Buy Something! (Shop Theme) | Cleyton Kauffman | CC0 1.0 | https://opengameart.org/content/shop-theme |
 | blackjack | Music | `games/blackjack/play-blue-intermission.ogg` | Blue Intermission | congusbongus | CC0 1.0 | https://opengameart.org/content/blue-intermission |
 | blackjack | Music | `games/blackjack/finale-catchy-swing.ogg` | Catchy Swing | Doge | CC0 1.0 | https://opengameart.org/content/catchy-swing |
+| blanks | Music | `games/blanks/title-catchy-swing.ogg` | Catchy Swing | Doge | CC0 1.0 | https://opengameart.org/node/114712 |
+| blanks | Music | `games/blanks/play-jazzy-blues.mp3` | Jazzy blues | LushoGames | CC0 1.0 | https://opengameart.org/node/15278 |
 | bomb | Music | `games/bomb/secret-agent-rock.ogg` | Secret Agent Rock | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Public_Domain_Soundtrack_Music_Album_One/secret-agent-rock/ |
 | bomb | Music | `games/bomb/ghost-surf-rock.ogg` | Ghost Surf Rock | Loyalty Freak Music | CC0 1.0 | https://freemusicarchive.org/music/Loyalty_Freak_Music/WITCHY_BATTY_SPOOKY_HALLOWEEN_IN_SEPTEMBER_/Ghost_Surf_Rock/ |
 | bomb | Music | `games/bomb/shooter-on-the-roof.ogg` | Shooter On The Roof | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/shooter-on-the-roof/ |
@@ -26,6 +28,12 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | escape | Music | `games/escape/gentle-rain.ogg` | Gentle Rain | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/gentle-rain/ |
 | escape | Music | `games/escape/hong-kong-noir.ogg` | Hong Kong Noir | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/hong-kong-noir/ |
 | escape | Music | `games/escape/photos-of-murder.ogg` | Photos Of Murder | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/photos-of-murder/ |
+| funny | Music | `games/funny/title-blue-intermission.ogg` | Blue Intermission | congusbongus | CC0 1.0 | https://opengameart.org/node/130655 |
+| funny | Music | `games/funny/think-taken-lightly.mp3` | Taken Lightly | Pro Sensory | CC0 1.0 | https://opengameart.org/node/80007 |
+| likely | Music | `games/likely/title-pomp-and-circumstance.ogg` | Pomp and Circumstance, Op. 39 No. 1 (Edward Elgar) | United States Army Band | Public domain | https://commons.wikimedia.org/wiki/File:Pomp_and_Circumstance,_Op._39_-_No._1_-_United_States_Army_Band.mp3 |
+| likely | Music | `games/likely/play-high-school-cadets.ogg` | The High School Cadets (John Philip Sousa) | United States Marine Band | Public domain | https://commons.wikimedia.org/wiki/File:Sousa_The_High_School_Cadets_United_States_Marine_Band.ogg |
+| memes | Music | `games/memes/title-goofy-attitude.ogg` | Goofy Attitude! | SkyleTheFrench | CC0 1.0 | https://opengameart.org/node/165451 |
+| memes | Music | `games/memes/think-respectable-amount-of-bounce.ogg` | A respectable amount of Bounce | Some Weirdo | CC0 1.0 | https://opengameart.org/node/180401 |
 | president | Music | `games/president/title-kings-feast.mp3` | Medieval: King's Feast | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-kings-feast |
 | president | Music | `games/president/play-harpsichord-flurry.ogg` | Harpsichord Flurry | Spring Spring (Julie Damsgaard) | CC0 1.0 | https://opengameart.org/content/harpsichord-flurry |
 | price | Music | `games/price/title-urban-theme.ogg` | Urban Theme | MintoDog | CC0 1.0 | https://opengameart.org/content/urban-theme |
@@ -41,11 +49,15 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | summon | Music | `games/summon/militaristic-tune.ogg` | Some Militaristic Tune | Spring Spring | CC0 1.0 | https://opengameart.org/content/some-militaristic-tune |
 | summon | Music | `games/summon/final-stand.ogg` | Final Stand | iamoneabe | CC0 1.0 | https://opengameart.org/content/final-stand |
 | summon | Music | `games/summon/a-legend-will-rise.ogg` | A Legend Will Rise | CodeManu | CC0 1.0 | https://opengameart.org/content/a-legend-will-rise-orchestral |
+| truths | Music | `games/truths/title-investigation.ogg` | Investigation | Umplix | CC0 1.0 | https://opengameart.org/node/136389 |
+| truths | Music | `games/truths/think-jazz-saxophone.mp3` | Jazz Saxaphone | Pro Sensory | CC0 1.0 | https://opengameart.org/node/85233 |
 | tune | Music | `games/tune/midnight-cruiser.ogg` | Midnight Cruiser | Zane Little Music | CC0 1.0 | https://opengameart.org/content/midnight-cruiser |
 | tune | Music | `games/tune/wednesday-night.ogg` | Wednesday Night [Funk Fusion] | Zane Little Music | CC0 1.0 | https://opengameart.org/content/wednesday-night-funk-fusion |
 | undercover | Music | `games/undercover/smooth-criminal.ogg` | Smooth Criminal | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/hide-and-sneak/smooth-criminal/ |
 | undercover | Music | `games/undercover/sneaky-detective.ogg` | Sneaky Detective | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/hide-and-sneak/sneaky-detective/ |
 | undercover | Music | `games/undercover/covert-operations.ogg` | Covert Operations | artisticdude | CC0 1.0 | https://opengameart.org/content/covert-operations |
+| whosaid | Music | `games/whosaid/title-chills.ogg` | Chills | Holizna | CC0 1.0 | https://opengameart.org/node/161825 |
+| whosaid | Music | `games/whosaid/think-something-in-the-air.ogg` | Something In the Air | Holizna | CC0 1.0 | https://opengameart.org/node/161819 |
 | zombie | Music | `games/zombie/music-box-spooky-waltz.ogg` | Spooky Waltz (4 Music Box Tracks) | Aureolus_Omicron | CC0 1.0 | https://opengameart.org/content/4-music-box-tracks |
 | zombie | Music | `games/zombie/night-of-the-streets.ogg` | Night of the Streets | nene | CC0 1.0 | https://opengameart.org/content/night-of-the-streets-horrorsuspense |
 | zombie | Music | `games/zombie/when-the-shadows-gather.ogg` | When the Shadows Gather | Tsorthan Grove | CC0 1.0 | https://opengameart.org/content/when-the-shadows-gather |
@@ -91,6 +103,12 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | blackjack | Sound effect | `blackjack/chips-3.webm` | chips-stack-3.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
 | blackjack | Sound effect | `blackjack/payout.webm` | chips-collide-1.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
 | blackjack | Sound effect | `blackjack/chip-lay.webm` | chip-lay-1.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blanks | Sound effect | `blanks/shuffle.ogg` | Casino Audio (card-shuffle.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blanks | Sound effect | `blanks/card-1.ogg` | Casino Audio (card-place-1.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blanks | Sound effect | `blanks/card-2.ogg` | Casino Audio (card-place-3.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blanks | Sound effect | `blanks/slide.ogg` | Casino Audio (card-slide-1.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blanks | Sound effect | `blanks/laugh.ogg` | live audience comedy show genuine laughter_moderate (excerpt) | HowardV | CC0 1.0 | https://freesound.org/people/HowardV/sounds/581528/ |
+| blanks | Sound effect | `blanks/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
 | bomb | Sound effect | `bomb/fuse-light.ogg` | Match - Strike and Light 02 | JarredGibb | CC0 1.0 | https://freesound.org/people/JarredGibb/sounds/248236/ |
 | bomb | Sound effect | `bomb/radio-static.ogg` | Static.wav | Jace | CC0 1.0 | https://freesound.org/people/Jace/sounds/17804/ |
 | bomb | Sound effect | `bomb/explosion.ogg` | Muffled Distant Explosion | NenadSimic | CC0 1.0 | https://freesound.org/people/NenadSimic/sounds/149966/ |
@@ -106,6 +124,21 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | escape | Sound effect | `escape/stamp.ogg` | es-stamp.wav | eddies2000 | CC0 1.0 | https://freesound.org/people/eddies2000/sounds/448474/ |
 | escape | Sound effect | `escape/handcuffs.ogg` | cuffs locking.mp3 | Mbytemama93 | CC0 1.0 | https://freesound.org/people/Mbytemama93/sounds/666604/ |
 | escape | Sound effect | `escape/typewriter.ogg` | Typewriter - single key - type 1.wav | yottasounds | CC0 1.0 | https://freesound.org/people/yottasounds/sounds/380138/ |
+| funny | Sound effect | `funny/projector.ogg` | Film Projector - Long Run with Finish (start-up excerpt) | Stefan021 | CC0 1.0 | https://freesound.org/people/Stefan021/sounds/412145/ |
+| funny | Sound effect | `funny/laugh.ogg` | Sitcom Laughter 9x, Small Audience (excerpt) | Kinoton | CC0 1.0 | https://freesound.org/people/Kinoton/sounds/383207/ |
+| funny | Sound effect | `funny/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
+| funny | Sound effect | `funny/boo.ogg` | crowd booing (excerpt) | HowardV | CC0 1.0 | https://freesound.org/people/HowardV/sounds/264378/ |
+| funny | Sound effect | `funny/click.ogg` | UI Audio (switch3.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| likely | Sound effect | `likely/envelope.ogg` | Tearing Open An Envelope (excerpt) | 21100375 | CC0 1.0 | https://freesound.org/people/21100375/sounds/593146/ |
+| likely | Sound effect | `likely/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
+| likely | Sound effect | `likely/flash.ogg` | Camera shutter and flash combined (excerpt) | montclairguy | CC0 1.0 | https://freesound.org/people/montclairguy/sounds/353044/ |
+| likely | Sound effect | `likely/ooh.ogg` | Crowd Ooohs and Ahhhs in Excitement (excerpt) | noah0189 | CC0 1.0 | https://freesound.org/people/noah0189/sounds/264499/ |
+| likely | Sound effect | `likely/click.ogg` | UI Audio (click3.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| memes | Sound effect | `memes/shutter.ogg` | DSLR Camera Click (excerpt) | akonze | CC0 1.0 | https://freesound.org/people/akonze/sounds/157812/ |
+| memes | Sound effect | `memes/laugh-1.ogg` | Sitcom Laughter 9x, Small Audience (excerpt) | Kinoton | CC0 1.0 | https://freesound.org/people/Kinoton/sounds/383207/ |
+| memes | Sound effect | `memes/laugh-2.ogg` | Sitcom Laughter 9x, Small Audience (excerpt) | Kinoton | CC0 1.0 | https://freesound.org/people/Kinoton/sounds/383207/ |
+| memes | Sound effect | `memes/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
+| memes | Sound effect | `memes/click.ogg` | Interface Sounds (click_002.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
 | president | Sound effect | `president/shuffle.webm` | card-shuffle.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
 | president | Sound effect | `president/play-1.webm` | card-place-2.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
 | president | Sound effect | `president/play-2.webm` | card-place-3.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
@@ -133,6 +166,11 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | summon | Sound effect | `summon/sword-clash.ogg` | Sword clash 1.wav | spycrah | CC0 1.0 | https://freesound.org/people/spycrah/sounds/471095/ |
 | summon | Sound effect | `summon/siege-thud.ogg` | Impact Sounds: impactWood_heavy_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/impact-sounds |
 | summon | Sound effect | `summon/crumble.ogg` | Stone Crumble 2 | Kastenfrosch | CC0 1.0 | https://freesound.org/people/Kastenfrosch/sounds/521956/ |
+| truths | Sound effect | `truths/typewriter.ogg` | typewriter22 (excerpt) | tams_kp | CC0 1.0 | https://freesound.org/people/tams_kp/sounds/43560/ |
+| truths | Sound effect | `truths/stamp.ogg` | RPG Audio (bookPlace1.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/rpg-audio |
+| truths | Sound effect | `truths/gavel.ogg` | Wooden Gavel Hits (excerpt) | Stefan021 | CC0 1.0 | https://freesound.org/people/Stefan021/sounds/798872/ |
+| truths | Sound effect | `truths/flash.ogg` | Vintage Camera Flash Powder and Shutter (excerpt) | Werra | CC0 1.0 | https://freesound.org/people/Werra/sounds/232130/ |
+| truths | Sound effect | `truths/click.ogg` | Interface Sounds (click_003.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
 | tune | Sound effect | `tune/needle.ogg` | Record Player Needle is dropped & Vinyl crackling | Breviceps | CC0 1.0 | https://freesound.org/people/Breviceps/sounds/556722/ |
 | tune | Sound effect | `tune/static.ogg` | AM Tuning | NobodyYouKnowOf | CC0 1.0 | https://freesound.org/people/NobodyYouKnowOf/sounds/261873/ |
 | ui | Sound effect | `ui/click.ogg` | select_001.ogg (Kenney Interface Sounds) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
@@ -145,6 +183,11 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | undercover | Sound effect | `undercover/stamp.ogg` | traditional stamp.wav | I.fekry | CC0 1.0 | https://freesound.org/people/I.fekry/sounds/470710/ |
 | undercover | Sound effect | `undercover/shutter.ogg` | Camera Shutter | roachpowder | CC0 1.0 | https://freesound.org/people/roachpowder/sounds/170229/ |
 | undercover | Sound effect | `undercover/ballot.ogg` | Casino Audio: card-place-1 | Kenney | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| whosaid | Sound effect | `whosaid/spotlight.ogg` | Spotlight on (excerpt) | Kagateni | CC0 1.0 | https://freesound.org/people/Kagateni/sounds/518587/ |
+| whosaid | Sound effect | `whosaid/gasp.ogg` | small crowd gasp shock surprise (excerpt) | HowardV | CC0 1.0 | https://freesound.org/people/HowardV/sounds/264376/ |
+| whosaid | Sound effect | `whosaid/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
+| whosaid | Sound effect | `whosaid/laugh.ogg` | Sitcom Laughter 9x, Small Audience (excerpt) | Kinoton | CC0 1.0 | https://freesound.org/people/Kinoton/sounds/383207/ |
+| whosaid | Sound effect | `whosaid/click.ogg` | Interface Sounds (tick_002.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
 | zombie | Sound effect | `zombie/groan-1.ogg` | Burp Monster Zombie groan moan | EricsSoundschmiede | CC0 1.0 | https://freesound.org/people/EricsSoundschmiede/sounds/463721/ |
 | zombie | Sound effect | `zombie/groan-2.ogg` | SZ_Zombies_06.wav | PaulMorek | CC0 1.0 | https://freesound.org/people/PaulMorek/sounds/196722/ |
 | zombie | Sound effect | `zombie/groan-3.ogg` | Zombie | nanity05 | CC0 1.0 | https://freesound.org/people/nanity05/sounds/193759/ |

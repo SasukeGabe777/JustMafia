@@ -1,0 +1,14 @@
+{
+ "cues": {
+  "title": { "file": "games/funny/title-blue-intermission.ogg" },
+  "intro": { "file": "games/funny/title-blue-intermission.ogg" },
+  "lobby": { "file": "games/funny/title-blue-intermission.ogg" },
+  "finale": { "file": "games/funny/title-blue-intermission.ogg" },
+  "think": { "file": "games/funny/think-taken-lightly.mp3" },
+  "tense": { "file": "games/funny/think-taken-lightly.mp3" }
+ },
+ "credits": [
+  { "file": "games/funny/title-blue-intermission.ogg", "title": "Blue Intermission", "author": "congusbongus", "source": "https://opengameart.org/node/130655", "license": "CC0 1.0" },
+  { "file": "games/funny/think-taken-lightly.mp3", "title": "Taken Lightly", "author": "Pro Sensory", "source": "https://opengameart.org/node/80007", "license": "CC0 1.0" }
+ ]
+}

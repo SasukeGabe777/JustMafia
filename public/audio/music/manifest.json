@@ -104,6 +104,29 @@
     "file": "games/blackjack/finale-catchy-swing.ogg"
    }
   },
+  "blanks": {
+   "title": {
+    "file": "games/blanks/title-catchy-swing.ogg"
+   },
+   "intro": {
+    "file": "games/blanks/title-catchy-swing.ogg"
+   },
+   "lobby": {
+    "file": "games/blanks/title-catchy-swing.ogg"
+   },
+   "finale": {
+    "file": "games/blanks/title-catchy-swing.ogg"
+   },
+   "think": {
+    "file": "games/blanks/play-jazzy-blues.mp3"
+   },
+   "play": {
+    "file": "games/blanks/play-jazzy-blues.mp3"
+   },
+   "tense": {
+    "file": "games/blanks/play-jazzy-blues.mp3"
+   }
+  },
   "bomb": {
    "title": {
     "file": "games/bomb/secret-agent-rock.ogg",
@@ -190,6 +213,69 @@
     "file": "games/escape/photos-of-murder.ogg",
     "loopStart": 2,
     "loopEnd": 51.99
+   }
+  },
+  "funny": {
+   "title": {
+    "file": "games/funny/title-blue-intermission.ogg"
+   },
+   "intro": {
+    "file": "games/funny/title-blue-intermission.ogg"
+   },
+   "lobby": {
+    "file": "games/funny/title-blue-intermission.ogg"
+   },
+   "finale": {
+    "file": "games/funny/title-blue-intermission.ogg"
+   },
+   "think": {
+    "file": "games/funny/think-taken-lightly.mp3"
+   },
+   "tense": {
+    "file": "games/funny/think-taken-lightly.mp3"
+   }
+  },
+  "likely": {
+   "title": {
+    "file": "games/likely/title-pomp-and-circumstance.ogg"
+   },
+   "intro": {
+    "file": "games/likely/title-pomp-and-circumstance.ogg"
+   },
+   "lobby": {
+    "file": "games/likely/title-pomp-and-circumstance.ogg"
+   },
+   "finale": {
+    "file": "games/likely/title-pomp-and-circumstance.ogg"
+   },
+   "think": {
+    "file": "games/likely/play-high-school-cadets.ogg"
+   },
+   "play": {
+    "file": "games/likely/play-high-school-cadets.ogg"
+   }
+  },
+  "memes": {
+   "title": {
+    "file": "games/memes/title-goofy-attitude.ogg"
+   },
+   "intro": {
+    "file": "games/memes/title-goofy-attitude.ogg"
+   },
+   "lobby": {
+    "file": "games/memes/title-goofy-attitude.ogg"
+   },
+   "finale": {
+    "file": "games/memes/title-goofy-attitude.ogg"
+   },
+   "think": {
+    "file": "games/memes/think-respectable-amount-of-bounce.ogg"
+   },
+   "play": {
+    "file": "games/memes/think-respectable-amount-of-bounce.ogg"
+   },
+   "tense": {
+    "file": "games/memes/think-respectable-amount-of-bounce.ogg"
    }
   },
   "president": {
@@ -350,6 +436,30 @@
     "loopEnd": 57.19
    }
   },
+  "truths": {
+   "title": {
+    "file": "games/truths/title-investigation.ogg"
+   },
+   "intro": {
+    "file": "games/truths/title-investigation.ogg"
+   },
+   "lobby": {
+    "file": "games/truths/title-investigation.ogg"
+   },
+   "finale": {
+    "file": "games/truths/title-investigation.ogg"
+   },
+   "think": {
+    "file": "games/truths/think-jazz-saxophone.mp3",
+    "gain": 0.71,
+    "loopEnd": 127
+   },
+   "play": {
+    "file": "games/truths/think-jazz-saxophone.mp3",
+    "gain": 0.71,
+    "loopEnd": 127
+   }
+  },
   "tune": {
    "title": {
     "file": "games/tune/midnight-cruiser.ogg"
@@ -403,6 +513,29 @@
     "file": "games/undercover/covert-operations.ogg",
     "loopStart": 2,
     "loopEnd": 90.13
+   }
+  },
+  "whosaid": {
+   "title": {
+    "file": "games/whosaid/title-chills.ogg"
+   },
+   "intro": {
+    "file": "games/whosaid/title-chills.ogg"
+   },
+   "lobby": {
+    "file": "games/whosaid/title-chills.ogg"
+   },
+   "finale": {
+    "file": "games/whosaid/title-chills.ogg"
+   },
+   "think": {
+    "file": "games/whosaid/think-something-in-the-air.ogg"
+   },
+   "play": {
+    "file": "games/whosaid/think-something-in-the-air.ogg"
+   },
+   "tense": {
+    "file": "games/whosaid/think-something-in-the-air.ogg"
    }
   },
   "zombie": {
