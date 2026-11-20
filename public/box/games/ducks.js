@@ -12,7 +12,7 @@
   const SK = { run: ['🏃', 'Run', 'Hurdle Dash', '#ff8c42'], swim: ['🌊', 'Swim', 'Paddle Power', '#3ec1ff'], fly: ['🪽', 'Fly', 'Sky Rings', '#b388ff'], climb: ['🧗', 'Climb', 'Cliff Climb', '#c49a6c'], stamina: ['💪', 'Stamina', 'Bug Snack', '#2ee6a6'] };
   const GAME = { run: 'hurdles', swim: 'paddle', fly: 'rings', climb: 'climb', stamina: 'bugs' };
   const SEC = { track: ['🏃', 'Track', 'run'], pond: ['🌊', 'Pond', 'swim'], cliff: ['🧗', 'Cliff', 'climb'], gap: ['🪽', 'Ravine', 'fly'] };
-  const SEC_LEN = { track: 80, pond: 60, cliff: 40, gap: 50 };
+  const SEC_LEN = { track: 48, pond: 36, cliff: 26, gap: 32 }; // fallback; the server sends its own (secLen / sections)
   const VAR_ICON = { hurdles: '🚧', logs: '🪵', mud: '🟤', sand: '🏖️', ice: '🧊', calm: '💧', lily: '🪷', waves: '🌊', rapids: '💨', icy: '🧊', rock: '🪨', clouds: '☁️', canyon: '🏜️' };
   const HAT_NAME = { none: 'No hat', cap: 'Cap', tophat: 'Top hat', crown: 'Crown', flower: 'Flower', shades: 'Shades', bow: 'Bow', viking: 'Viking', pirate: 'Pirate', party: 'Party', chef: 'Chef', headband: 'Headband' };
   const typeOf = (s) => s.type || s;
@@ -45,98 +45,378 @@
   }
 
   // ---------- the race on the TV ----------
+  // The server simulates the race (box/games/ducks.js simulate): each duck's position every 0.5 s,
+  // its moments (hurdle crashes and clipped bars, cliff slips, ice skids, boosts, running out of
+  // steam) and its levels. The TV plays it back at about real speed (R.pace) and animates the body
+  // from that: a waddle whose feet stay planted (the gait moves with the distance covered, so
+  // nothing slides), a jump over the hurdle in the duck's own lane (or a crash into it), steps up
+  // the cliff ledges, a dive or a belly flop into the pond and paddling feet under the water, and
+  // wingbeats across the ravine at a height set by the duck's Fly level. Training shows: a better
+  // runner takes longer strides and jumps higher, a swimmer dives clean, a flyer glides high.
   const race = { R: null };
+  const SK_I = { run: 0, swim: 1, fly: 2, climb: 3, stamina: 4 };
+  const TAU = Math.PI * 2;
+  const sm = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
+  // Particles (dust, mud, sand, snow, splashes, pebbles, sweat): one fixed pool, reused.
+  const PN = 420, PRT = { x: new Float32Array(PN), y: new Float32Array(PN), vx: new Float32Array(PN), vy: new Float32Array(PN), life: new Float32Array(PN), max: new Float32Array(PN), r: new Float32Array(PN), c: new Uint8Array(PN), grav: new Float32Array(PN), i: 0 };
+  const PCOL = ['rgba(214,190,150,', 'rgba(110,74,40,', 'rgba(238,214,160,', 'rgba(255,255,255,', 'rgba(190,230,255,', 'rgba(120,110,100,', 'rgba(150,210,255,'];
+  const DUST = 0, MUD = 1, SAND = 2, SNOW = 3, SPLASH = 4, PEBBLE = 5, SWEAT = 6;
+  function puff(x, y, vx, vy, life, r, c, grav) { const i = (PRT.i = (PRT.i + 1) % PN); PRT.x[i] = x; PRT.y[i] = y; PRT.vx[i] = vx; PRT.vy[i] = vy; PRT.life[i] = life; PRT.max[i] = life; PRT.r[i] = r; PRT.c[i] = c; PRT.grav[i] = grav; }
+  function burst(x, y, n, c, spread, up, r, grav, life = 0.6) { for (let k = 0; k < n; k++) puff(x + (Math.random() - 0.5) * 0.4, y, (Math.random() - 0.5) * spread, -up * (0.4 + Math.random() * 0.8), life * (0.6 + Math.random() * 0.6), r * (0.6 + Math.random() * 0.8), c, grav); }
+  function drawParticles(g, dt, cam, PX) {
+    for (let i = 0; i < PN; i++) {
+      if (PRT.life[i] <= 0) continue;
+      PRT.life[i] -= dt; PRT.vy[i] += PRT.grav[i] * dt; PRT.x[i] += PRT.vx[i] * dt; PRT.y[i] += PRT.vy[i] * dt;
+      const a = Math.max(0, PRT.life[i] / PRT.max[i]), c = PRT.c[i];
+      g.fillStyle = PCOL[c] + (c === SPLASH || c === SWEAT ? 0.85 * a : 0.55 * a).toFixed(2) + ')';
+      const r = c === DUST || c === SAND || c === SNOW ? PRT.r[i] * (1.6 - a * 0.6) : PRT.r[i];
+      g.beginPath(); g.arc((PRT.x[i] - cam) * PX, PRT.y[i], r, 0, TAU); g.fill();
+    }
+  }
   function setupRace(s, canvas) {
-    const R = s.lastRace;
-    race.R = R; race.G = A().raceGeometry(R);
+    const R = s.lastRace, art = A();
+    race.R = R; race.G = art.raceGeometry(R);
     race.start = Date.now() + s.endsIn - (R.intro + R.run + 6000);
-    const times = R.results.map((r) => r.time);
-    race.k = Math.max(times[0] / ((R.run / 1000) * 0.78), times[times.length - 1] / ((R.run / 1000) * 0.97));
-    race.simT = Math.max(0, (Date.now() - race.start - R.intro) / 1000) * race.k; race.last = performance.now(); race.slowUsed = 0; race.rate = 1;
+    race.pace = R.pace || { k: 1, tw: 1e9, k2: 1, tail: 0 };
+    race.stop = R.tripStop || 1.2;
+    race.simT = wallSim(Math.max(0, (Date.now() - race.start - R.intro) / 1000)); race.last = performance.now(); race.slowUsed = 0; race.rate = 1;
     race.photo = R.margin != null && R.margin < 0.6 && R.results.length > 1;
-    race.cam = -6; race.span = 60; race.leader = null; race.msgs = []; race.cheers = []; race.cheerSaid = 0; race.seenEv = new Set(); race.finished = new Set(); race.beep = 0; race.go = false;
-    race.flags = {}; race.leaderSec = -1; race.leadAt = 0; race.neckAt = 0; race.rank = {}; race.moved = {}; race.banner = null; race.confetti = []; race.firstDoneAt = 0;
+    race.cam = -6; race.span = 60; race.leader = null; race.msgs = []; race.cheers = []; race.cheerSaid = 0; race.finished = new Set(); race.beep = 0; race.go = false;
+    race.flags = {}; race.leaderSec = -1; race.leadAt = 0; race.neckAt = 0; race.rank = {}; race.moved = {}; race.banner = null; race.confetti = []; race.firstDoneAt = 0; race.clipSaid = 0; race.splashAt = 0;
     race.ducks = { ...(R.wild || {}), ...Object.fromEntries(s.farms.map((f) => [f.id, f])) };
     race.place = Object.fromEntries(R.results.map((r) => [r.id, r]));
-    race.lanes = Object.fromEntries(R.tracks.map((tr, i) => [tr.id, i]));
+    race.hurdles = (R.hurdles || []).map((h) => ({ x: h.x != null ? h.x : h, log: !!h.log }));
+    race.LANES = Math.min(10, R.tracks.length);
+    race.knock = new Float64Array(race.LANES * Math.max(1, race.hurdles.length)).fill(-1);
+    race.runners = R.tracks.map((tr, i) => runner(R, tr, i));
+    race.byX = race.runners.slice();
+    race.byLane = Array.from({ length: race.LANES }, () => []); for (const r of race.runners) race.byLane[r.lane].push(r);
+    race.P = art.racePose(); race.TH = art.THEME[R.theme] || art.THEME.meadow;
+    PRT.life.fill(0);
     if (Date.now() - race.start < 2500) clip('crowd', { vol: 0.16 }); // the crowd settles in as the race intro starts
     loop(canvas, drawRace);
   }
+  // One duck's playback: its path as time/position knots (the samples, plus the exact moment it hits
+  // a fence and the exact moment it crosses the line), its jump outcomes and its animation state.
+  function runner(R, tr, i) {
+    const T = [], X = [], stop = race.stop, nh = race.hurdles.length;
+    const hout = new Int8Array(nh), reach = new Float32Array(nh);
+    for (let j = 0; j < tr.s.length; j++) { T.push(j * R.sample); X.push(tr.s[j] / 10); }
+    const fin = race.place[tr.id] && race.place[tr.id].time;
+    if (fin && T.length > 1) T[T.length - 1] = Math.max(T[T.length - 2] + 0.01, fin);
+    for (const e of tr.ev) {
+      if ((e[1] !== 'trip' && e[1] !== 'clip') || e[2] == null || !race.hurdles[e[2]]) continue;
+      hout[e[2]] = e[1] === 'trip' ? 2 : 1;
+      if (e[1] === 'trip') { // the duck reaches the fence at e[0] and stays there until it gets up
+        const hx = race.hurdles[e[2]].x;
+        let k = 0; while (k < T.length && T[k] < e[0]) k++;
+        T.splice(k, 0, e[0]); X.splice(k, 0, hx);
+        for (let m = k + 1; m < T.length && T[m] < e[0] + stop; m++) X[m] = hx;
+      }
+    }
+    const tiredEv = tr.ev.find((e) => e[1] === 'tired');
+    return {
+      id: tr.id, tr, i, lane: i % race.LANES, lv: tr.lv || [3, 3, 3, 3, 3], T: Float64Array.from(T), X: Float64Array.from(X), ki: 0,
+      hout, reach, tiredAt: tiredEv ? tiredEv[0] : Infinity, x: 0, px: null, vx: 0, gait: (i * 0.37) % 1, paddle: 0, flap: (i * 0.21) % 1,
+      q: [0, 0.5], evi: 0, wet: false, landed: -1, sx: -999, by: 0, lab: false, done: false, sec: null, hi: 0,
+    };
+  }
   const say = (text, big) => { race.msgs.push({ text, at: performance.now(), big }); if (race.msgs.length > 5) race.msgs.shift(); };
   const nm = (id) => (race.ducks[id] || {}).name || '?';
-  function posAt(tr, simT) { const i = simT / race.R.sample, a = Math.floor(i); if (a >= tr.s.length - 1) return tr.s[tr.s.length - 1] / 10; return (tr.s[a] + (tr.s[a + 1] - tr.s[a]) * (i - a)) / 10; }
+  // Race clock: simulated seconds at e real seconds after GO (the winner crosses at pace.tw).
+  function wallSim(e) { const P = race.pace; return e <= P.tw ? e * P.k : P.tw * P.k + (e - P.tw) * P.k2; }
+  function posAt(r, simT) {
+    const T = r.T, X = r.X;
+    if (simT < T[r.ki]) r.ki = 0;
+    while (r.ki < T.length - 2 && T[r.ki + 1] <= simT) r.ki++;
+    const a = r.ki; if (simT >= T[T.length - 1]) { r.vx = 0; return X[X.length - 1]; }
+    const dt = T[a + 1] - T[a]; r.vx = dt > 0 ? (X[a + 1] - X[a]) / dt : 0;
+    return X[a] + (X[a + 1] - X[a]) * Math.min(1, Math.max(0, (simT - T[a]) / (dt || 1)));
+  }
   const EV_ICON = { trip: 'dizzy', slip: 'alert', skid: 'swirl', boost: 'bolt' }; // drawn art (DUCK_ART.drawIcon), not emoji
-  const EV_TEXT = { trip: 'trips over a jump!', slip: 'slips down the cliff!', skid: 'skids on the ice!', boost: 'catches a boost! ⚡', tired: 'is running out of steam…' };
-  const SEC_SAY = { track: '🏃 {n} is back on the track!', pond: '🌊 {n} splashes into the pond first!', cliff: '🧗 {n} starts up the cliff!', gap: '🪽 {n} leaps over the ravine!' };
+  const EV_TEXT = { trip: 'crashes into the fence! 💥', clip: 'clips the bar and stumbles!', slip: 'slips back down the cliff!', skid: 'spins out on the ice!', boost: 'catches a boost! ⚡', tired: 'is running out of steam…' };
+  const SEC_SAY = { track: '🏃 {n} is back on the track!', pond: '🌊 {n} hits the water first!', cliff: '🧗 {n} starts up the cliff!', gap: '🪽 {n} leaps over the ravine!' };
   function rrect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+  // Where a duck is and how it moves this frame: sets the pose (race.P) and returns nothing; the
+  // body's screen position goes into r.sx / r.by, its height above the ground into r.air.
+  function poseRunner(r, F) {
+    const art = F.art, G = F.G, P = race.P, R = race.R, lv = r.lv, U = F.U, hs = F.hs, YK = F.YK, PX = F.PX, simT = F.simT;
+    const run = Math.min(14, lv[0]), swim = Math.min(14, lv[1]), fly = Math.min(14, lv[2]), climb = Math.min(14, lv[3]);
+    const ground = (m) => F.feet - art.groundH(G, m) * YK; // ground (px) under x = m in this duck's lane
+    let x = r.x;
+    const s = art.secAt(G, Math.min(x, G.L - 0.001)), tired = simT >= r.tiredAt && !r.done;
+    P.lean = 0; P.rot = 0; P.sx = 1; P.sy = 1; P.legs = true; P.wing = 0; P.flap = 0; P.farWing = false; P.eyes = tired ? 'tired' : ''; P.beak = tired ? 0.5 + 0.5 * Math.sin(F.now * 9) : 0; P.hx = 0; P.hy = tired ? 2 : 0;
+    P.t1 = 0; P.t2 = 0;
+    const dm = r.px == null ? 0 : x - r.px; // metres moved since the last frame
+    let lift = 0, mode = 'walk', xv = x; // xv: where the body is drawn (a crash pushes it back from the fence)
+    r.air = 0;
+    // ---- finished: a little celebration (top 3) or a rest
+    if (r.done) {
+      mode = 'stand';
+      const pl = race.place[r.id] ? race.place[r.id].place : 9;
+      if (pl <= 3) { P.wing = 0.7; P.flap = Math.sin(F.now * 12 + r.i); P.beak = 0.6; lift = Math.max(0, Math.sin(F.now * 6 + r.i)) * 5; }
+      else { P.eyes = 'tired'; P.beak = 0.3 + 0.3 * Math.sin(F.now * 7); }
+    }
+    // ---- a moment in progress: an ice skid or a slip down the cliff
+    let evNow = null, evAge = 0;
+    for (const e of r.tr.ev) { if (e[0] > simT) break; const age = simT - e[0]; if ((e[1] === 'skid' && age < 0.8) || (e[1] === 'slip' && age < 0.9)) { evNow = e[1]; evAge = age; } }
+    // ---- hurdles in this duck's lane
+    let jumpH = -1, crash = -1;
+    if (!r.done && s.type === 'track' && race.hurdles.length) {
+      while (r.hi < race.hurdles.length - 1 && race.hurdles[r.hi].x + 3 < x) r.hi++;
+      const H = race.hurdles[r.hi];
+      if (H && x > H.x - 4 && x < H.x + 3) {
+        const out = r.hout[r.hi];
+        if (!r.reach[r.hi]) r.reach[r.hi] = Math.max(1.1, Math.min(2.3, Math.max(2.6, r.vx) * 0.3)) + 0.03 * run;
+        const reach = r.reach[r.hi], t0 = H.x - reach, t1 = H.x + reach, kn = r.lane * race.hurdles.length + r.hi;
+        if (out === 2) { // a crash: up too low, into the fence, flat on its back, dazed, then over
+          const te = trip(r, r.hi);
+          if (te != null && simT >= te && simT < te + race.stop) { crash = (simT - te) / race.stop; if (race.knock[kn] < 0) race.knock[kn] = simT; }
+          else if (x >= t0 - 0.7 && x < t0) { mode = 'crouch'; P.sy = 1 - 0.12 * sm((x - t0 + 0.7) / 0.7); P.sx = 2 - P.sy; lift = -(1 - P.sy) * 25; }
+          else if (x >= t0 && x <= H.x && (te == null || simT < te)) { const u = (x - t0) / reach; lift = 12 * Math.sin(u * Math.PI * 0.5); mode = 'air'; xv = x - sm(u) * (13 * U) / PX; P.lean = -0.25; P.wing = 0.4; }
+        } else {
+          if (x >= t0 - 0.7 && x < t0) { mode = 'crouch'; P.sy = 1 - 0.14 * sm((x - t0 + 0.7) / 0.7); P.sx = 2 - P.sy; lift = -(1 - P.sy) * 25; }
+          else if (x >= t0 && x <= t1) {
+            const u = (x - t0) / (t1 - t0), peak = out === 1 ? 19 : 25 + 1.05 * run;
+            lift = peak * 4 * u * (1 - u); mode = 'air'; jumpH = r.hi; P.lean = (u - 0.5) * (out === 1 ? 0.9 : 0.6); P.wing = 0.55 + 0.25 * Math.sin(u * 6);
+            if (out === 1 && u > 0.45 && race.knock[kn] < 0) { race.knock[kn] = simT; if (r.lab) clip('trip', { vol: 0.07, gap: 300 }); }
+          } else if (x > t1 && x < t1 + (out === 1 ? 1.8 : 0.6)) {
+            const u = (x - t1) / (out === 1 ? 1.8 : 0.6);
+            if (r.landed !== r.hi) { r.landed = r.hi; burst(x, F.feet, 5, s.v === 'mud' ? MUD : s.v === 'sand' ? SAND : DUST, 2.5, 50, 4 * F.zoom, 30); }
+            if (out === 1) { P.lean = 0.45 * (1 - u); P.wing = 0.8 * (1 - u); P.flap = Math.sin(F.now * 22) * (1 - u); P.beak = 0.8 * (1 - u); P.sy = 1 - 0.1 * (1 - u); P.sx = 2 - P.sy; }
+            else { P.sy = 1 - 0.13 * Math.sin(u * Math.PI); P.sx = 2 - P.sy; }
+          }
+        }
+      }
+    }
+    const feetSink = s.type === 'track' && s.v === 'mud' ? 3 : 0;
+    // ---- the crash itself
+    if (crash >= 0) {
+      const H = race.hurdles[r.hi], back = (13 * U) / PX;
+      mode = 'crash'; P.legs = true;
+      if (crash < 0.12) { const u = crash / 0.12; xv = H.x - back - (5 * U / PX) * Math.sin(u * Math.PI * 0.5); P.lean = -0.5 * u; P.sx = 1 - 0.15 * Math.sin(u * Math.PI); P.sy = 2 - P.sx; P.wing = 0.9; P.eyes = 'shut'; lift = 6 * (1 - u); }
+      else if (crash < 0.42) { const u = sm((crash - 0.12) / 0.3); xv = H.x - back - 5 * U / PX - (4 * U / PX) * u; P.rot = -1.75 * u; lift = 4 * Math.sin(u * Math.PI) - 4 * u; P.eyes = 'dizzy'; P.wing = 0.6; P.flap = Math.sin(F.now * 24) * 0.6; P.f1x = -6 + Math.sin(F.now * 26) * 3; P.f1y = 16 - 4 * u; P.f2x = 4 + Math.cos(F.now * 26) * 3; P.f2y = 16 - 4 * u; P.t1 = -0.6; P.t2 = 0.4; }
+      else if (crash < 0.75) { const u = sm((crash - 0.42) / 0.33); xv = H.x - back - 9 * U / PX; P.rot = -1.75 + 1.5 * u; lift = -4 + 4 * u; P.eyes = 'dizzy'; P.hx = Math.sin(F.now * 7) * 1.5; if (u > 0.4) { P.f1x = -6; P.f2x = 4; P.f1y = 17; P.f2y = 17; } }
+      else { const u = (crash - 0.75) / 0.25; xv = H.x - back - 9 * U / PX + (back + 9 * U / PX) * sm(u); P.rot = -0.25 * (1 - u); lift = 13 * Math.sin(u * Math.PI); P.wing = 0.7; P.flap = Math.sin(F.now * 20); P.f1x = -3; P.f1y = 13; P.f2x = 4; P.f2y = 12; P.t1 = 0.7; P.t2 = 0.7; }
+      if (P.rot < -0.3 && !(P.f1y === 17)) { P.f1x = -7 + Math.sin(F.now * 26) * 3; P.f2x = 3 + Math.cos(F.now * 26) * 3; P.f1y = 15; P.f2y = 15; }
+      const gy = ground(xv);
+      r.sx = (xv - F.cam) * PX; r.by = gy - 18 * U - lift * hs - (P.rot < -0.6 ? 6 * U * Math.min(1, -P.rot) : 0); r.gy = gy; r.air = lift;
+      r.px = x; return;
+    }
+    // ---- the pond: dive (good swimmers) or belly flop, paddle, hop out
+    if (!r.done && s.type === 'pond' && mode === 'walk') {
+      const wy = F.feet + 0.6 * YK, ent = x - s.a, ex = s.b - x, diver = swim >= 5;
+      let sink = 3 + (swim < 3 ? 2 : 0), bodyLift = 0;
+      r.paddle += Math.max(0, dm) * PX / U / (9 + 0.5 * swim);
+      const pa = r.paddle * TAU;
+      P.f1x = -4 + 6 * Math.cos(pa); P.f1y = 15 + 3 * Math.sin(pa); P.f2x = 3 + 6 * Math.cos(pa + Math.PI); P.f2y = 15 + 3 * Math.sin(pa + Math.PI); P.t1 = 0.6 * Math.cos(pa); P.t2 = 0.6 * Math.cos(pa + Math.PI);
+      P.lean = -0.06 + Math.sin(F.now * 3 + r.i) * 0.03; mode = 'swim';
+      if (ent < 2.4) {
+        const e2 = ent / 2.4;
+        if (diver) {
+          if (e2 < 0.35) { const u = e2 / 0.35; bodyLift = 16 * Math.sin(u * Math.PI * 0.85); P.lean = 1.1 * u; P.wing = 0.7; P.f1x = -10; P.f1y = 12; P.f2x = -8; P.f2y = 13; P.t1 = 1.2; P.t2 = 1.2; }
+          else if (e2 < 0.7) { const u = (e2 - 0.35) / 0.35; sink = 3 + 20 * Math.sin(u * Math.PI); P.lean = 1.1 - 1.4 * u; }
+          else { const u = (e2 - 0.7) / 0.3; P.lean = -0.3 * (1 - u); sink = 3 - 4 * Math.sin(u * Math.PI); }
+        } else {
+          if (e2 < 0.4) { const u = e2 / 0.4; bodyLift = 11 * Math.sin(u * Math.PI); P.lean = -0.25 + 0.35 * u; P.wing = 0.9; P.flap = Math.sin(F.now * 18); P.f1x = -6; P.f1y = 16; P.f2x = 5; P.f2y = 17; }
+          else if (e2 < 0.6) { const u = (e2 - 0.4) / 0.2; P.sy = 1 - 0.25 * Math.sin(u * Math.PI); P.sx = 1 + 0.18 * Math.sin(u * Math.PI); P.eyes = 'shut'; P.wing = 0.5; }
+        }
+        if (!r.wet && e2 >= (diver ? 0.36 : 0.42)) {
+          r.wet = true; const big = diver ? 9 : 18;
+          burst(x, wy - 2, big, SPLASH, diver ? 2.5 : 5, diver ? 260 : 340, (diver ? 3 : 4) * F.zoom, 700, 0.9);
+          if (r.lab || r === race.byX[0]) { if (performance.now() - race.splashAt > 350) { race.splashAt = performance.now(); clip('splash', { vol: diver ? 0.14 : 0.22, pan: Math.max(-0.6, Math.min(0.6, r.sx / F.W - 0.5)) }); } }
+          if (r === race.byX[0] && !race.flags['pond' + s.a]) { race.flags['pond' + s.a] = true; say(diver ? `🌊 ${nm(r.id)} dives into the pond!` : `🌊 ${nm(r.id)} belly-flops into the pond! SPLASH!`); }
+        }
+      } else r.wet = true;
+      if (ex < 1.3) { // hop out onto the bank
+        const u = 1 - ex / 1.3; bodyLift = 14 * Math.sin(u * Math.PI); sink = 3 * (1 - u); P.lean = -0.3 + 0.5 * u; P.f1x = -7; P.f1y = 14; P.f2x = -3; P.f2y = 15; P.t1 = 1; P.t2 = 1; mode = 'hop';
+        if (u > 0.2 && Math.random() < 0.3) puff(x - 0.3, wy - 12 * U, (Math.random() - 0.5) * 0.4, 10, 0.5, 2 * F.zoom, SPLASH, 400);
+      }
+      if (swim < 4 && ent >= 2.4 && ex >= 1.3) { P.wing = 0.35; P.flap = Math.sin(F.now * 15 + r.i); if (Math.random() < 0.25) puff(x - 0.2, wy - 4, -0.8, 60, 0.4, 2.5 * F.zoom, SPLASH, 500); } // a weak swimmer flaps and splashes
+      if (dm > 0 && ent >= 2.4 && Math.random() < 0.15) puff(x - (16 * U) / PX, wy, -0.3, 30, 0.45, 2 * F.zoom, SPLASH, 300);
+      const bob = (s.v === 'waves' ? 2.5 : 1) * Math.sin(F.now * 3.2 + r.i);
+      r.sx = (x - F.cam) * PX; r.wy = wy; r.gy = wy; r.by = wy - 12 * U + sink * U + bob - bodyLift * hs; r.air = bodyLift; r.swim = ent >= 0.84 && ex >= 0.4 && bodyLift < 6;
+      r.px = x; return;
+    }
+    r.swim = false; r.wet = false;
+    // ---- the ravine: take off from the rim, flap (or glide) across at a height set by Fly, land
+    if (!r.done && s.type === 'gap' && mode === 'walk') {
+      const RIM = 1.3, a0 = s.a + RIM - 0.4, a1 = s.b - RIM + 0.4;
+      if (x > a0 && x < a1) {
+        const u = (x - a0) / (a1 - a0), su = Math.sin(Math.PI * u), A2 = -2.4 + 0.6 * fly;
+        const alt = A2 * su + 1.3 * Math.pow(su, 0.45);
+        const dAlt = (A2 * Math.PI * Math.cos(Math.PI * u)) / (a1 - a0);
+        const hz = 2 + 0.32 * Math.max(0, 10 - fly) + (tired ? 0.6 : 0);
+        r.flap += F.simDt * hz;
+        const glide = fly >= 6 && u > 0.3 && u < 0.72;
+        P.wing = glide ? 0.55 : 0.4; P.flap = glide ? 0.12 * Math.sin(F.now * 3) : Math.sin(r.flap * TAU); P.farWing = true;
+        P.lean = Math.max(-0.5, Math.min(0.5, -Math.atan((dAlt * YK * 1.5) / PX) * 0.8)); P.legs = true;
+        P.f1x = -10; P.f1y = 12; P.f2x = -7; P.f2y = 13; P.t1 = 1.3; P.t2 = 1.15;
+        if (fly < 3) { P.beak = 0.7; P.eyes = 'shut'; } // working hard
+        mode = 'fly';
+        const gy = F.feet; // the rim height
+        r.sx = (x - F.cam) * PX; r.by = gy - 18 * U - alt * YK * 1.5; r.gy = null; r.air = 30;
+        r.landed = -2; r.px = x; return;
+      }
+      if (x >= a1 && r.landed === -2) { r.landed = -3; burst(x, F.feet, 6, DUST, 2.5, 60, 4 * F.zoom, 30); }
+    }
+    // ---- walking, running, climbing: planted feet on the real ground
+    const climbing = s.type === 'cliff';
+    let A2 = climbing ? 5 + 0.4 * climb : 7 + 0.5 * run;
+    if (s.type === 'track' && s.v === 'mud') A2 *= 0.62; else if (s.type === 'track' && s.v === 'sand') A2 *= 0.85; else if (s.type === 'track' && s.v === 'ice') A2 *= 1.1;
+    if (tired) A2 *= 0.8;
+    const beta = 0.55, D = A2 / beta;
+    const moving = dm > 1e-4 && mode !== 'stand';
+    if (moving && mode !== 'air') r.gait = (r.gait + (dm * PX) / U / D) % 1;
+    const gB = ground(xv), gF = ground(xv + (7 * U) / PX), gR = ground(xv - (7 * U) / PX);
+    const slope = Math.atan2(gR - gF, 14 * U); // + uphill
+    const bodyG = Math.min(gB, (gB * 2 + gF + gR) / 4);
+    const bob = moving && mode === 'walk' ? -(1.1 + 0.07 * run) * (0.5 - 0.5 * Math.cos(r.gait * 2 * TAU)) : 0;
+    if (mode === 'walk' || mode === 'crouch' || mode === 'stand') {
+      if (mode === 'walk' && moving) {
+        P.lean += 0.1 + 0.06 * Math.sin(r.gait * TAU) - slope * 0.85;
+        const contact = 0.5 + 0.5 * Math.cos(r.gait * 2 * TAU);
+        P.sy *= 1 - 0.05 * contact; P.sx *= 1 + 0.035 * contact;
+        P.wing = climbing && slope > 0.4 ? (climb < 5 ? 0.6 : 0.3) : 0.12; P.flap = climbing && slope > 0.4 ? Math.sin(F.now * (climb < 5 ? 18 : 9)) : Math.sin(r.gait * 2 * TAU) * 0.2;
+      } else if (mode !== 'crouch') P.lean += -slope * 0.5;
+      for (let k = 0; k < 2; k++) {
+        const hip = k ? 3 : -4;
+        let fx, lf = 0, toe = 0;
+        if (moving && mode === 'walk') {
+          const q = (r.gait + k * 0.5) % 1;
+          if (q < beta) fx = hip + A2 / 2 - (A2 * q) / beta;
+          else { const u = (q - beta) / (1 - beta); fx = hip - A2 / 2 + A2 * sm(u); lf = (climbing ? 6 : 3.5 + 0.3 * run) * Math.sin(Math.PI * u); toe = 0.7 * Math.sin(Math.PI * u); }
+          if (q < r.q[k] && !climbing && F.particles) { // a footfall: a little dust (or mud, sand, snow)
+            const c = s.v === 'mud' ? MUD : s.v === 'sand' ? SAND : s.v === 'ice' || R.theme === 'snow' ? SNOW : DUST;
+            if (c === MUD || Math.random() < 0.6) puff(x + (fx * U) / PX, F.feet - 2, -0.4 - Math.random() * 0.6, -(c === MUD ? 70 : 25) - Math.random() * 25, c === MUD ? 0.5 : 0.55, (c === MUD ? 2.6 : 3.2) * F.zoom, c, c === MUD ? 500 : -10);
+          }
+          r.q[k] = q;
+        } else fx = mode === 'crouch' ? hip * 0.6 : hip;
+        const gy = ground(xv + (fx * U) / PX);
+        const fy = (gy - (bodyG - 18 * U)) / U - lf + feetSink;
+        if (k) { P.f2x = fx; P.f2y = fy; P.t2 = toe - (gR - gF) / (14 * U) * 0.6; } else { P.f1x = fx; P.f1y = fy; P.t1 = toe - (gR - gF) / (14 * U) * 0.6; }
+      }
+      if (evNow === 'slip') { // sliding back down the rock: belly to the wall, feet scrabbling
+        P.lean = -0.9; P.wing = 0.9; P.flap = Math.sin(F.now * 26); P.eyes = 'shut'; P.beak = 1;
+        P.f1x = 4 + Math.sin(F.now * 30) * 4; P.f2x = 8 + Math.cos(F.now * 30) * 4; P.f1y = 12; P.f2y = 10;
+        if (Math.random() < 0.4) puff(xv + 0.3, gB - 4, (Math.random() - 0.5) * 2, 30, 0.6, 2.5 * F.zoom, PEBBLE, 600);
+        if (evAge < 0.03) clip('trip', { vol: 0.12, gap: 500 });
+      }
+      if (evNow === 'skid') { P.rot = sm(evAge / 0.8) * TAU; P.f1x = -10; P.f2x = 10; P.f1y = 16; P.f2y = 16; P.wing = 0.8; P.flap = Math.sin(F.now * 20); if (Math.random() < 0.5) puff(xv, F.feet - 2, (Math.random() - 0.5) * 3, -20, 0.5, 3 * F.zoom, SNOW, 0); }
+    } else if (mode === 'air') {
+      P.f1x = -3; P.f1y = 13; P.f2x = 3; P.f2y = 12.5; P.t1 = 0.9; P.t2 = 0.8; P.farWing = P.wing > 0.3;
+    }
+    if (tired && moving && Math.random() < 0.04) puff(xv - 0.2, bodyG - 34 * U, -0.4, -40, 0.6, 2 * F.zoom, SWEAT, 300);
+    r.sx = (xv - F.cam) * PX; r.gy = bodyG; r.by = bodyG - 18 * U + bob * U - lift * hs; r.air = lift;
+    r.px = x;
+  }
+  function trip(r, h) { for (const e of r.tr.ev) if (e[1] === 'trip' && e[2] === h) return e[0]; return null; }
+
   function drawRace(g, W, H, now) {
     const R = race.R, G = race.G, art = A(), pnow = performance.now();
     const e = Date.now() - race.start;
-    // The race clock: real time, slowed down near a photo finish (and never far behind the wall clock).
+    // The race clock: about real time, slowed down near a photo finish (and never far behind the wall clock).
     const dt = Math.min(0.1, (pnow - race.last) / 1000); race.last = pnow;
+    const prevSim = race.simT;
     if (e < R.intro) race.simT = 0;
     else {
-      const wall = ((e - R.intro) / 1000) * race.k;
+      const es = (e - R.intro) / 1000, wall = wallSim(es), kNow = es <= race.pace.tw ? race.pace.k : race.pace.k2;
       const slow = race.photo && race.leadX > G.L - 7 && !race.finished.size && race.slowUsed < 2.6;
       race.rate += ((slow ? 0.3 : 1) - race.rate) * 0.15;
       race.slowUsed += dt * (1 - race.rate);
-      race.simT = Math.min(wall, Math.max(wall - 3 * race.k, race.simT + dt * race.k * race.rate));
+      race.simT = Math.min(wall, Math.max(wall - 3 * kNow, race.simT + dt * kNow * race.rate));
     }
-    const simT = race.simT;
-    const pos = R.tracks.map((tr) => ({ id: tr.id, x: posAt(tr, simT), tr }));
-    const byX = pos.slice().sort((a, b) => b.x - a.x || race.place[a.id].time - race.place[b.id].time);
+    const simT = race.simT, simDt = Math.max(0, simT - prevSim);
+    for (const r of race.runners) { r.x = posAt(r, simT); r.done = r.x >= G.L; }
+    const byX = race.byX;
+    byX.sort((a, b) => b.x - a.x || race.place[a.id].time - race.place[b.id].time);
     const lead = byX[0]; race.leadX = lead.x;
-    const unfinished = byX.filter((p) => p.x < G.L);
+    let unfinished = 0; for (const r of byX) if (!r.done) unfinished++;
+    for (let i = 0; i < byX.length; i++) byX[i].lab = i < 6;
     // Camera: frame the leading pack, zoom in when it's tight, hold on the line for the podium.
     let span, target;
-    if (race.finished.size && (race.finished.size < 3 || pnow - race.firstDoneAt < 2500) && unfinished.length) { span = 42; target = G.L - span * 0.72; }
+    if (race.finished.size && (race.finished.size < 3 || pnow - race.firstDoneAt < 2500) && unfinished) { span = 40; target = G.L - span * 0.72; }
     else {
-      const pack = (unfinished.length ? unfinished : byX).slice(0, 4), hi = pack[0].x, lo = pack[pack.length - 1].x;
-      span = Math.max(44, Math.min(74, hi - lo + 28));
-      if (race.rate < 0.9) span = 34;
-      target = hi - span * 0.7;
+      let n = 0, hi = null, lo = 0;
+      for (const r of byX) { if (unfinished && r.done) continue; if (hi == null) hi = r.x; lo = r.x; if (++n >= 4) break; }
+      span = Math.max(30, Math.min(54, hi - lo + 22));
+      if (race.rate < 0.9) span = 26;
+      target = hi - span * 0.68;
     }
     race.span += (span - race.span) * 0.03;
     const PX = W / race.span;
-    target = Math.max(-6, Math.min(G.L - race.span * 0.82, target));
+    target = Math.max(-5, Math.min(G.L - race.span * 0.8, target));
     race.cam += (target - race.cam) * 0.08;
-    const VPX = W / 66, base = art.drawRaceWorld(g, W, H, R, G, race.cam, PX, now, VPX);
-    const LANES = Math.min(10, R.tracks.length), order = pos.slice().sort((a, b) => (race.lanes[b.id] % LANES) - (race.lanes[a.id] % LANES));
-    const labelled = new Set(byX.slice(0, 6).map((p) => p.id));
-    const zoom = Math.max(0.9, Math.min(1.35, PX / (W / 60)));
-    for (const p of order) {
-      const d = race.ducks[p.id] || {}, lane = race.lanes[p.id] % LANES, done = p.x >= G.L;
-      const x = (Math.min(p.x, G.L) + (done ? Math.min(6, (race.place[p.id].place - 1) * 0.5) : 0) - race.cam) * PX;
-      if (x < -80 || x > W + 80) continue;
-      const gr = art.groundAt(G, Math.min(p.x, G.L - 0.01));
-      const ev = p.tr.ev.filter(([t]) => t <= simT && simT - t < 1.2).map(([, k]) => k);
-      const tired = p.tr.ev.some(([t, k]) => k === 'tired' && t <= simT) && !done;
-      const y = base - gr.h * VPX * 0.9 - lane * 7 * zoom + (gr.type === 'pond' ? 8 : -18) * zoom;
-      const sc = Math.max(0.6, 1.25 - lane * 0.04) * Math.min(1.3, W / 1400) * zoom;
-      const mode = done ? 'stand' : ev.includes('trip') || ev.includes('skid') ? 'stand' : gr.mode;
-      art.drawDuck(g, x, y, sc, d.color, d.hat, (now + lane * 0.37) * (race.rate < 0.9 ? 0.35 : 1), mode, false, d.stage == null ? 2 : Math.max(0, d.stage));
-      g.textAlign = 'center';
-      const evk = ev.find((k) => k !== 'tired');
-      if (evk && EV_ICON[evk]) art.drawIcon(g, EV_ICON[evk], x, y - 42 * sc, 26 * sc, now);
-      else if (tired) art.drawIcon(g, 'sweat', x - 20 * sc, y - 30 * sc, 18 * sc, now);
-      if (labelled.has(p.id) || (done && race.place[p.id].place <= 3)) {
-        g.font = `600 ${Math.min(20, 13 * sc)}px Fredoka, sans-serif`;
-        const fim = faceImg(farmerOf(p.id, d), 64);
-        const label = (done ? MEDAL[race.place[p.id].place - 1] || '#' + race.place[p.id].place : '') + ' ' + (d.avatar && !fim ? d.avatar + ' ' : '') + (d.name || '') + (d.wild ? ' 🌿' : '');
-        const fh = Math.min(26, 17 * sc), fw = fim ? fh * 1.5 : 0, tw = g.measureText(label).width + 12 + fw * 0.8, ly = y - (52 + (lane % 3) * 18) * sc;
-        g.fillStyle = d.wild ? 'rgba(40,70,30,.75)' : 'rgba(0,0,0,.62)'; rrect(g, x - tw / 2, ly, tw, fh, 6); g.fill(); g.fillStyle = '#fff'; g.fillText(label, x + fw * 0.4, ly + fh * 0.76);
-        if (fim) g.drawImage(fim, x - tw / 2 + 1, ly + fh - fw * 0.92, fw, fw);
+    const LANES = race.LANES, dz = (LANES <= 6 ? 12 : 9) * Math.min(1.3, W / 1600), band = dz * LANES;
+    const VPX = W / 66, YK = VPX * 0.9, base = art.drawRaceWorld(g, W, H, R, G, race.cam, PX, now, VPX, band, LANES);
+    const zoom = Math.max(0.9, Math.min(1.35, PX / (W / 44)));
+    const F = { art, G, simT, simDt, now, PX, YK, cam: race.cam, W, zoom, U: 1, hs: 1, feet: 0, particles: true };
+    const nh = race.hurdles.length, TH = race.TH;
+    // lanes from the back to the front: the lane's hurdles, then its ducks
+    for (let lane = LANES - 1; lane >= 0; lane--) {
+      const feet = base + 8 - (lane + 0.5) * dz, hs = Math.max(0.7, 1.8 - lane * 0.04) * Math.min(1.3, W / 1600) * zoom;
+      for (let h = 0; h < nh; h++) {
+        const Hd = race.hurdles[h], x = (Hd.x - race.cam) * PX; if (x < -60 || x > W + 60) continue;
+        const kt = race.knock[lane * nh + h];
+        art.drawHurdle(g, x, feet + dz * 0.4, hs, dz * 0.8, Hd.log, kt < 0 ? 0 : Math.min(1, (simT - kt) / 0.28), now);
       }
-      g.textAlign = 'left';
-      for (const c of race.cheers) if (c.id === p.id) { const age = (pnow - c.at) / 1000; if (age < 1.5) { g.globalAlpha = 1 - age / 1.5; art.drawIcon(g, 'megaphone', x + Math.sin(age * 8 + c.at) * 10, y - 66 * sc - age * 40, 24 * sc, age); g.globalAlpha = 1; } }
-      for (const [t, k] of p.tr.ev) {
-        const key = p.id + t + k; if (t > simT || race.seenEv.has(key)) continue;
-        race.seenEv.add(key);
-        const show = k === 'boost' ? labelled.has(p.id) && Math.random() < 0.5 : k === 'tired' ? p.id === race.leader : labelled.has(p.id) || R.tracks.length <= 12;
-        if (show) { say(`${d.name} ${EV_TEXT[k]}`); if (k === 'trip' || k === 'slip') clip('trip', { vol: 0.16, gap: 700, pan: Math.max(-0.6, Math.min(0.6, x / W - 0.5)) }); }
+      for (const r of race.byLane[lane]) {
+        const d = race.ducks[r.id] || {}, stage = d.stage == null ? 2 : Math.max(0, d.stage);
+        F.hs = hs; F.U = hs * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : 1); F.feet = feet;
+        const sx0 = (Math.min(r.x, G.L) - race.cam) * PX;
+        if (sx0 < -120 || sx0 > W + 120) { r.px = r.x; r.sx = -999; continue; }
+        if (r.done) r.x = Math.min(r.x, G.L) + Math.min(5, (race.place[r.id].place - 1) * 0.6) + 1.2;
+        poseRunner(r, F);
+        const U = F.U, x = r.sx, y = r.by;
+        // shadow on the ground (none over the ravine; ripples on the water)
+        if (r.gy != null && !r.swim) { const k = Math.max(0.35, 1 - r.air / 45); g.fillStyle = 'rgba(0,0,0,' + (0.22 * k).toFixed(2) + ')'; g.beginPath(); g.ellipse(x, r.gy + 1, 15 * U * k, 3.6 * U * k, 0, 0, TAU); g.fill(); }
+        if (r.swim) { // the wake behind and rings around the duck
+          const wy = r.wy, rip = (now * 1.6 + r.i * 0.3) % 1;
+          g.strokeStyle = 'rgba(255,255,255,' + (0.5 * (1 - rip)).toFixed(2) + ')'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, wy + 2, (22 + rip * 16) * U, (3 + rip * 2) * U, 0, 0, TAU); g.stroke();
+          if (r.vx > 0.3) { g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x - 16 * U, wy); g.lineTo(x - 52 * U, wy - 5 * U); g.moveTo(x - 16 * U, wy + 1); g.lineTo(x - 52 * U, wy + 6 * U); g.stroke(); }
+        }
+        art.drawRacer(g, x, y, F.hs, d.color, d.hat, stage, race.P);
+        if (r.swim) { // the water in front of the body: the paddling feet show through it
+          g.fillStyle = TH.water; g.globalAlpha = 0.62; g.fillRect(x - 30 * U, r.wy + 1, 60 * U, Math.min(24 * U, 44)); g.globalAlpha = 1;
+          g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(x - 26 * U, r.wy, 52 * U, 1.6);
+        }
+        const sec = art.secAt(G, Math.min(r.x, G.L - 0.01));
+        if (sec.type === 'track' && sec.v === 'mud' && r.air < 2 && !r.done) { g.fillStyle = '#6b4a2b'; g.beginPath(); g.ellipse(x, r.gy + 1, 15 * U, 3.4 * U, 0, 0, TAU); g.fill(); }
+        // the moment's icon over the head, the cheer megaphones, the name tag
+        let evk = null; for (const ev of r.tr.ev) { if (ev[0] > simT) break; if (simT - ev[0] < 1.2 && ev[1] !== 'tired' && ev[1] !== 'clip') evk = ev[1]; }
+        const sc = F.hs;
+        if (evk && EV_ICON[evk]) art.drawIcon(g, EV_ICON[evk], x, y - 38 * sc, 26 * sc, now);
+        else if (simT >= r.tiredAt && !r.done) art.drawIcon(g, 'sweat', x - 20 * sc, y - 30 * sc, 18 * sc, now);
+        if (r.lab || (r.done && race.place[r.id].place <= 3)) {
+          g.textAlign = 'center'; g.font = `600 ${Math.min(20, 12 * sc)}px Fredoka, sans-serif`;
+          const fim = faceImg(farmerOf(r.id, d), 64);
+          const label = (r.done ? MEDAL[race.place[r.id].place - 1] || '#' + race.place[r.id].place : '') + ' ' + (d.avatar && !fim ? d.avatar + ' ' : '') + (d.name || '') + (d.wild ? ' 🌿' : '');
+          const fh = Math.min(26, 16 * sc), fw = fim ? fh * 1.5 : 0, tw = g.measureText(label).width + 12 + fw * 0.8, ly = y - (50 + (lane % 3) * 16) * sc - r.air * 0;
+          g.fillStyle = d.wild ? 'rgba(40,70,30,.75)' : 'rgba(0,0,0,.62)'; rrect(g, x - tw / 2, ly, tw, fh, 6); g.fill(); g.fillStyle = '#fff'; g.fillText(label, x + fw * 0.4, ly + fh * 0.76);
+          if (fim) g.drawImage(fim, x - tw / 2 + 1, ly + fh - fw * 0.92, fw, fw);
+          g.textAlign = 'left';
+        }
+        for (const c of race.cheers) if (c.id === r.id) { const age = (pnow - c.at) / 1000; if (age < 1.5) { g.globalAlpha = 1 - age / 1.5; art.drawIcon(g, 'megaphone', x + Math.sin(age * 8 + c.at) * 10, y - 64 * sc - age * 40, 24 * sc, age); g.globalAlpha = 1; } }
       }
-      if (done && !race.finished.has(p.id)) {
-        race.finished.add(p.id); const pl = race.place[p.id].place;
+    }
+    drawParticles(g, dt * (race.rate < 0.9 ? 0.4 : 1), race.cam, PX);
+    art.drawRaceWeather(g, W, H, R, now);
+    // the race's moments as they happen: commentary and the sounds, in sync with the animation
+    for (const r of race.runners) {
+      const ev = r.tr.ev, d = race.ducks[r.id] || {};
+      while (r.evi < ev.length && ev[r.evi][0] <= simT) {
+        const [, k] = ev[r.evi++]; if (simT - ev[r.evi - 1][0] > 2) continue; // skipped ahead: stay quiet
+        const pan = Math.max(-0.6, Math.min(0.6, r.sx / W - 0.5));
+        if (k === 'trip') { clip('trip', { vol: r.lab ? 0.2 : 0.1, gap: 250, pan }); if (r.lab || R.tracks.length <= 12) say(`${d.name} ${EV_TEXT.trip}`); burst(r.x, r.gy || base, 8, DUST, 3, 80, 4.5 * zoom, 40); }
+        else if (k === 'clip') { if (r.lab && pnow - race.clipSaid > 2500) { race.clipSaid = pnow; say(`${d.name} ${EV_TEXT.clip}`); } }
+        else if (k === 'slip') { if (r.lab || R.tracks.length <= 12) say(`${d.name} ${EV_TEXT.slip}`); }
+        else if (k === 'skid') { clip('trip', { vol: 0.1, gap: 500, pan }); if (r.lab || R.tracks.length <= 12) say(`${d.name} ${EV_TEXT.skid}`); }
+        else if (k === 'boost') { if (r.lab && Math.random() < 0.5) say(`${d.name} ${EV_TEXT.boost}`); }
+        else if (k === 'tired') { if (r === race.byX[0] || (r.lab && pnow - (race.tiredSaid || 0) > 6000)) { race.tiredSaid = pnow; say(`${d.name} ${EV_TEXT.tired}`); } }
+      }
+      if (r.done && !race.finished.has(r.id)) {
+        race.finished.add(r.id); const pl = race.place[r.id].place;
         if (pl === 1) {
           race.firstDoneAt = pnow; BOX.sfx('cheer'); BOX.sfx('win');
           if (race.photo) clip('camera', { vol: 0.28, jitter: 0 }); // the photo-finish camera
@@ -147,53 +427,56 @@
         } else if (pl <= 3) say(`${['', '🥈', '🥉'][pl - 1]} ${d.name} takes ${pl === 2 ? 'second' : 'third'}!`);
       }
     }
-    // Commentary from the race state: lead changes, sections, neck and neck, halfway, final stretch.
-    if (e > R.intro && lead.x < G.L) {
+    // Commentary from the race state: lead changes, sections, the first hurdle, neck and neck, halfway, final stretch.
+    const b = byX[1] && !byX[1].done ? byX[1] : null;
+    if (e > R.intro && !lead.done) {
       if (race.leader !== lead.id) {
         if (race.leader && pnow - race.leadAt > 900) say(`${(race.ducks[lead.id] || {}).wild ? '🌿 Wild duck ' : ''}${nm(lead.id)} takes the lead!`);
         race.leader = lead.id; race.leadAt = pnow;
       }
-      const si = G.secs.findIndex((q) => lead.x >= q.a && lead.x < q.b);
-      if (si > 0 && si !== race.leaderSec) { say(SEC_SAY[G.secs[si].type].replace('{n}', nm(lead.id))); if (G.secs[si].type === 'pond') clip('splash', { vol: 0.22 }); }
+      const si = G.secs.indexOf(art.secAt(G, lead.x));
+      if (si > 0 && si !== race.leaderSec && G.secs[si].type !== 'pond') say(SEC_SAY[G.secs[si].type].replace('{n}', nm(lead.id)));
       race.leaderSec = si;
-      const b = unfinished[1];
+      if (!race.flags.hurdle && race.hurdles.length && lead.x > race.hurdles[0].x + 1) { race.flags.hurdle = true; if (!lead.hout[0]) say(`🚧 ${nm(lead.id)} sails over the first hurdle!`); }
       if (b && lead.x - b.x < 0.8 && pnow - race.neckAt > 6000 && pnow - race.leadAt > 1500) { race.neckAt = pnow; say(`⚔️ ${nm(lead.id)} and ${nm(b.id)} are neck and neck!`); }
       if (!race.flags.half && lead.x > G.L / 2) { race.flags.half = true; say(`Halfway! ${nm(lead.id)} leads${b ? ' by ' + Math.max(0.1, lead.x - b.x).toFixed(1) + ' m' : ''}.`); }
-      if (!race.flags.stretch && lead.x > G.L - 18) { race.flags.stretch = true; say(race.photo ? '🏁 Final stretch… this is going to be CLOSE!' : '🏁 Final stretch!', true); if (race.photo) BOX.sfx('drum'); }
+      if (!race.flags.stretch && lead.x > G.L - 14) { race.flags.stretch = true; say(race.photo ? '🏁 Final stretch… this is going to be CLOSE!' : '🏁 Final stretch!', true); if (race.photo) BOX.sfx('drum'); }
     }
     // Live standings with ▲ ▼ when ducks pass each other.
-    const top = byX.slice(0, 8);
-    top.forEach((p, i) => { const was = race.rank[p.id]; if (was != null && was !== i && e > R.intro + 1500) race.moved[p.id] = { up: was > i, at: pnow }; });
-    byX.forEach((p, i) => { race.rank[p.id] = i; });
+    const nTop = Math.min(8, byX.length);
+    for (let i = 0; i < nTop; i++) { const p = byX[i], was = race.rank[p.id]; if (was != null && was !== i && e > R.intro + 1500) race.moved[p.id] = { up: was > i, at: pnow }; }
+    for (let i = 0; i < byX.length; i++) race.rank[byX[i].id] = i;
     const bw = 270, bx = W - bw - 16, by = 52, rh = 28;
-    g.fillStyle = 'rgba(15,8,35,.72)'; rrect(g, bx, by, bw, 34 + top.length * rh, 12); g.fill();
+    g.fillStyle = 'rgba(15,8,35,.72)'; rrect(g, bx, by, bw, 34 + nTop * rh, 12); g.fill();
     g.font = '700 15px Fredoka, sans-serif'; g.fillStyle = '#ffd23f'; g.fillText(R.final ? 'GRAND FINAL · LIVE' : 'LIVE STANDINGS', bx + 12, by + 22);
-    top.forEach((p, i) => {
-      const d = race.ducks[p.id] || {}, yy = by + 48 + i * rh, done = p.x >= G.L, mv = race.moved[p.id];
+    for (let i = 0; i < nTop; i++) {
+      const p = byX[i], d = race.ducks[p.id] || {}, yy = by + 48 + i * rh, mv = race.moved[p.id];
       if (i === 0) { g.fillStyle = 'rgba(255,210,63,.18)'; g.fillRect(bx + 4, yy - 19, bw - 8, rh - 2); }
       g.fillStyle = (art.PAL[d.color] || art.PAL.sunny)[0]; g.beginPath(); g.arc(bx + 34, yy - 6, 7, 0, Math.PI * 2); g.fill();
       g.fillStyle = '#fff'; g.font = '700 15px Fredoka, sans-serif'; g.fillText(String(i + 1), bx + 10, yy);
       const fim = faceImg(farmerOf(p.id, d), 48);
       if (fim) g.drawImage(fim, bx + 44, yy - 21, 26, 26);
       g.font = '600 15px Fredoka, sans-serif'; g.fillText(`${d.avatar && !fim ? d.avatar + ' ' : ''}${(d.name || '').slice(0, 16)}${d.wild ? ' 🌿' : ''}`, bx + (fim ? 74 : 48), yy, bw - (fim ? 146 : 120));
-      g.textAlign = 'right'; g.fillStyle = done ? '#ffd23f' : 'rgba(255,255,255,.7)'; g.font = '600 13px Fredoka, sans-serif';
-      g.fillText(done ? (MEDAL[race.place[p.id].place - 1] || 'FIN') : e < R.intro ? '' : i === 0 ? 'leader' : lead.x - p.x < 0.05 ? 'level' : '-' + (lead.x - p.x).toFixed(1) + 'm', bx + bw - 26, yy);
+      g.textAlign = 'right'; g.fillStyle = p.done ? '#ffd23f' : 'rgba(255,255,255,.7)'; g.font = '600 13px Fredoka, sans-serif';
+      g.fillText(p.done ? (MEDAL[race.place[p.id].place - 1] || 'FIN') : e < R.intro ? '' : i === 0 ? 'leader' : lead.x - p.x < 0.05 ? 'level' : '-' + (lead.x - p.x).toFixed(1) + 'm', bx + bw - 26, yy);
       if (mv && pnow - mv.at < 1600) { g.fillStyle = mv.up ? '#5be37a' : '#ff6a5c'; g.fillText(mv.up ? '▲' : '▼', bx + bw - 8, yy); }
       g.textAlign = 'left';
-    });
+    }
     // minimap with every duck
     const mx = 20, mw = W - bw - 70, my = 14;
     g.fillStyle = 'rgba(0,0,0,.45)'; rrect(g, mx - 6, my - 6, mw + 12, 30, 8); g.fill();
     for (const s of G.secs) { g.fillStyle = art.SEC_COLORS[s.type]; g.fillRect(mx + (s.a / G.L) * mw, my, ((s.b - s.a) / G.L) * mw, 18); }
     g.fillStyle = '#fff'; g.fillRect(mx + mw - 3, my - 3, 3, 24);
-    for (const p of byX.slice().reverse()) { const d = race.ducks[p.id] || {}; g.fillStyle = (art.PAL[d.color] || art.PAL.sunny)[0]; g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1.5; g.beginPath(); g.arc(mx + Math.min(1, p.x / G.L) * mw, my + 9, p.id === lead.id ? 7 : 5, 0, Math.PI * 2); g.fill(); g.stroke(); }
+    for (let i = byX.length - 1; i >= 0; i--) { const p = byX[i], d = race.ducks[p.id] || {}; g.fillStyle = (art.PAL[d.color] || art.PAL.sunny)[0]; g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1.5; g.beginPath(); g.arc(mx + Math.min(1, p.x / G.L) * mw, my + 9, p === lead ? 7 : 5, 0, Math.PI * 2); g.fill(); g.stroke(); }
+    // the rest of the field, sped up once the winner is home
+    if (e > R.intro && (e - R.intro) / 1000 > race.pace.tw + 0.3 && race.pace.k2 > race.pace.k * 1.6 && unfinished) { g.font = '700 20px Fredoka, sans-serif'; g.fillStyle = 'rgba(255,255,255,.85)'; g.textAlign = 'center'; g.fillText('⏩ the rest of the field comes home…', W / 2, 70); g.textAlign = 'left'; }
     // cinematic bars in slow motion
     if (race.rate < 0.9) { const k = (1 - race.rate) / 0.7, hb = H * 0.08 * k; g.fillStyle = '#000'; g.fillRect(0, 0, W, hb); g.fillRect(0, H - hb, W, hb); g.globalAlpha = k; g.fillStyle = '#ffd23f'; g.font = '800 28px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('📸 PHOTO FINISH', W / 2, hb - 14 > 20 ? hb - 14 : 40); g.textAlign = 'left'; g.globalAlpha = 1; if (!race.flags.whoosh) { race.flags.whoosh = true; BOX.sfx('whoosh'); } }
     // commentary: the newest line big, two older ones above it
     const live = race.msgs.filter((m) => pnow - m.at < 5500).slice(-3);
     g.textAlign = 'center';
     live.forEach((m, i) => {
-      const newest = i === live.length - 1, size = newest ? (m.big ? 34 : 28) : 20, yy = H - 64 - (live.length - 1 - i) * 40 - (newest ? 0 : 10);
+      const newest = i === live.length - 1, size = newest ? (m.big ? 34 : 28) : 20, yy = H - 40 - (live.length - 1 - i) * 40 - (newest ? 0 : 10);
       g.font = `700 ${size}px Fredoka, sans-serif`; const tw = g.measureText(m.text).width + 36;
       const fade = Math.min(1, (5500 - (pnow - m.at)) / 600); g.globalAlpha = (newest ? 1 : 0.7) * fade;
       g.fillStyle = newest ? 'rgba(20,10,40,.86)' : 'rgba(20,10,40,.6)'; rrect(g, W / 2 - tw / 2, yy - size - 8, tw, size + 18, 12); g.fill();
@@ -287,10 +570,50 @@
       ${petted ? '' : '<div class="dk-tap">👆 tap to pet</div>'}
       <div class="dk-hero-meters"><div title="Energy">⚡${bar(d.energy, d.energy < 20 ? 'low' : '')}</div><div title="Mood">${A().MOOD(d.mood)}${bar(d.mood, 'mood')}</div></div></div>`;
   }
+  // The phone's live race card: your duck's own run, in step with the TV (the same playback
+  // numbers), with what it is doing right now: jumping, crashing, swimming, climbing, flying.
+  const liveRace = { key: null, start: 0, raf: 0, buzzed: -1 };
+  const LIVE_EV = { trip: '💥 Crashed into a fence!', clip: '😬 Clipped a hurdle!', slip: '🪨 Slipped down the cliff!', skid: '🧊 Spun out on the ice!', boost: '⚡ Caught a boost!' };
+  function liveHtml(L) {
+    let acc = 0; const segs = L.sections.map((s) => { const t = typeOf(s), len = (L.secLen || SEC_LEN)[t]; const h = `<span class="leg ${t}" style="left:${(acc / L.length) * 100}%;width:${(len / L.length) * 100}%">${SEC[t][0]}</span>`; acc += len; return h; }).join('');
+    return `<div class="dk-live" id="dk-live"><div class="dk-livebar">${segs}<i class="dk-livedot" id="dk-livedot"></i></div><div class="dk-livetxt" id="dk-livetxt">Lining up…</div></div>`;
+  }
+  function startLive(L, endsIn, key, ctx) {
+    if (liveRace.key !== key) { liveRace.key = key; liveRace.start = Date.now() + endsIn - (L.intro + L.run + L.outro); liveRace.buzzed = -1; }
+    cancelAnimationFrame(liveRace.raf);
+    const P = L.pace || { k: 1, tw: 1e9, k2: 1 }, secLen = L.secLen || SEC_LEN;
+    let acc = 0; const bounds = L.sections.map((s) => { const t = typeOf(s), a = acc; acc += secLen[t]; return { t, v: s.v, a, b: acc }; });
+    const tick = () => {
+      const dot = document.getElementById('dk-livedot'), txt = document.getElementById('dk-livetxt');
+      if (!dot || !txt) return;
+      const e = (Date.now() - liveRace.start - L.intro) / 1000;
+      const t = e <= 0 ? 0 : e <= P.tw ? e * P.k : P.tw * P.k + (e - P.tw) * P.k2;
+      const i = t / L.sample, a = Math.floor(i), s = L.s;
+      const x = a >= s.length - 1 ? s[s.length - 1] / 10 : (s[a] + (s[a + 1] - s[a]) * (i - a)) / 10;
+      dot.style.left = Math.min(100, (x / L.length) * 100) + '%';
+      let msg;
+      if (e <= 0) msg = `Lining up… ${Math.max(1, Math.ceil(-e))}`;
+      else if (t >= L.time) msg = `🏁 Finished! ${ord(L.place)} of ${L.of}`;
+      else {
+        let ev = null, evI = -1; L.ev.forEach((q, j) => { if (q[0] <= t && t - q[0] < 1.4 && LIVE_EV[q[1]]) { ev = q[1]; evI = j; } });
+        if (ev) { msg = LIVE_EV[ev]; if ((ev === 'trip' || ev === 'slip') && liveRace.buzzed !== evI) { liveRace.buzzed = evI; ctx.vibrate(120); } }
+        else {
+          const B = bounds.find((q) => x < q.b) || bounds[bounds.length - 1];
+          const hurdle = (L.hurdles || []).some((h) => Math.abs((h.x != null ? h.x : h) - x) < 2.5);
+          msg = B.t === 'pond' ? '🌊 Swimming' : B.t === 'cliff' ? '🧗 Climbing the cliff' : B.t === 'gap' ? '🪽 Flying over the ravine' : hurdle ? '🚧 Jumping the hurdles' : B.v === 'mud' ? '🟤 Slogging through the mud' : B.v === 'ice' ? '🧊 Running on ice' : '🏃 Running';
+          if (L.ev.some((q) => q[1] === 'tired' && q[0] <= t)) msg += ' · 😮‍💨 tired';
+        }
+      }
+      if (txt.textContent !== msg) txt.textContent = msg;
+      liveRace.raf = requestAnimationFrame(tick);
+    };
+    tick();
+  }
   // Which skill helps most for the next race: the course's biggest share against your level.
   function coachSkill(v, d) {
     const share = { run: 0, swim: 0, fly: 0, climb: 0, stamina: 0 }; let tot = 0;
-    for (const s of v.course.sections) { const t = typeOf(s); share[SEC[t][2]] += SEC_LEN[t]; tot += SEC_LEN[t]; }
+    const LEN = v.sections ? (t) => v.sections[t].len : (t) => SEC_LEN[t];
+    for (const s of v.course.sections) { const t = typeOf(s); share[SEC[t][2]] += LEN(t); tot += LEN(t); }
     for (const k in share) share[k] /= tot || 1;
     share.stamina = 0.1 + 0.025 * v.course.sections.length;
     let best = 'run', bs = -1;
@@ -618,8 +941,9 @@
         return;
       }
       if (v.phase === 'race') {
-        put(`${heroHtml(v)}<div class="card-box dk-racenow"><div class="muted">${v.course.leagueIcon || '🏁'} ${esc(v.course.name)}</div><h3>🏁 They’re racing! Watch the big screen</h3><p class="muted">${v.tactics[d.tactic][0]} ${v.tactics[d.tactic][1]}${d.gear.length && v.gear ? ' · ' + d.gear.map((g) => v.gear[g].icon).join(' ') : ''}</p><button class="btn big pink dk-cheer" id="dk-cheer">📣 CHEER!</button><p class="muted">Every tap shows above your duck on the big screen.</p></div>`);
+        put(`${heroHtml(v)}<div class="card-box dk-racenow"><div class="muted">${v.course.leagueIcon || '🏁'} ${esc(v.course.name)}</div><h3>🏁 They’re racing! Watch the big screen</h3>${v.live ? liveHtml(v.live) : ''}<p class="muted">${v.tactics[d.tactic][0]} ${v.tactics[d.tactic][1]}${d.gear.length && v.gear ? ' · ' + d.gear.map((g) => v.gear[g].icon).join(' ') : ''}</p><button class="btn big pink dk-cheer" id="dk-cheer">📣 CHEER!</button><p class="muted">Every tap shows above your duck on the big screen.</p></div>`);
         mount();
+        if (v.live) startLive(v.live, v.endsIn, v.race, ctx);
         const ch = el.querySelector('#dk-cheer'); ch.onclick = () => { ctx.act({ op: 'cheer' }); ctx.vibrate(25); ch.classList.remove('bump'); void ch.offsetWidth; ch.classList.add('bump'); };
         return;
       }

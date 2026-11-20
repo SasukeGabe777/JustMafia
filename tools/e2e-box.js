@@ -366,8 +366,8 @@ async function setup(browser, game, settings = {}) {
     await tv.eval(`document.querySelector('[data-h="next"]').click(); true`); // start the race now
     await tv.until(`!!document.querySelector('#dk-race')`, 'race canvas');
     await wait(4000); await tv.shot('box-ducks-race-intro'); await wait(9000); await tv.shot('box-ducks-race');
-    await ph.until(`!!document.querySelector('#dk-cheer')`, 'phone cheer button'); await ph.click('#dk-cheer'); await ph.shot('box-ducks-cheer');
-    await tv.until(`!!document.querySelector('.dk-podium')`, 'podium', 40000);
+    await ph.until(`!!document.querySelector('#dk-cheer')`, 'phone cheer button'); await ph.until(`/Running|Jumping|Crashed|Clipped|Swimming|Climbing|Flying|Slogging|ice|boost|Finished|Slipped|Spun/.test((document.querySelector('#dk-livetxt') || {}).textContent || '')`, 'phone follows its duck live', 8000); await ph.click('#dk-cheer'); await ph.shot('box-ducks-cheer');
+    await tv.until(`!!document.querySelector('.dk-podium')`, 'podium', 75000); // races play at about real speed (30-60 s)
     await tv.shot('box-ducks-results');
     ok('JustRaiseDucks: the race runs on the TV (canvas), then the podium and points');
   }

@@ -93,6 +93,13 @@ body.g-ducks .dk-sheet .dk-diff.hard.on { border-color: #ff7a59; background: rgb
 
 /* ---------- race / results / season on the phone ---------- */
 .dk-racenow { text-align: center; }
+/* the live race on the phone: your duck along the course, and what it is doing */
+.dk-live { margin: 10px 0 4px; }
+.dk-livebar { position: relative; height: 30px; border-radius: 15px; overflow: hidden; background: rgba(0,0,0,.25); }
+.dk-livebar .leg { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; border-right: 2px solid rgba(255,255,255,.5); }
+.dk-livebar .leg.track { background: #7bc96f; } .dk-livebar .leg.pond { background: #4fb3ff; } .dk-livebar .leg.cliff { background: #9a8f86; } .dk-livebar .leg.gap { background: #c7b9a6; }
+.dk-livedot { position: absolute; top: 3px; width: 24px; height: 24px; margin-left: -12px; border-radius: 50%; background: #ffd23f; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.dk-livetxt { margin-top: 8px; font-size: 22px; font-weight: 700; min-height: 30px; }
 .dk-cheer.bump { animation: dkBump 0.18s ease-out; }
 @keyframes dkBump { 50% { transform: scale(1.05); } }
 .dk-myres { text-align: center; }

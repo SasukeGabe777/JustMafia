@@ -126,4 +126,71 @@ test('A mini-game started before a race still pays out when it ends during the r
   assert.equal(room.act(a, { op: 'train', stat: 'run', diff: 'easy' }).ok, false, 'but no new training during the race');
 });
 
+// ---- the race the TV animates: per-hurdle outcomes, pacing, levels, the phone's live view ----
+const trackRace = (seed, lvRun, settings = {}) => {
+  const { room } = setup(0, { terrain: 'track', races: 3, raceEvery: 60, weather: false, ...settings }, seed);
+  const a = human(room, 'Ann'); go(room);
+  for (const k of D.SKILLS) room.game.ducks.get(a.id).xp[k] = D.xpFor(lvRun);
+  room.game.next();
+  return { room, a, R: room.game.lastRace };
+};
+test('Race events: crashes and clipped bars name their hurdle; a crashed duck waits at the fence; tracks carry levels', () => {
+  let crashes = 0, clips = 0;
+  for (let seed = 1; seed <= 12; seed++) {
+    const { R } = trackRace(seed, 0);
+    assert(R.hurdles.length >= 3, 'hurdles on a track course');
+    for (const tr of R.tracks) {
+      assert(Array.isArray(tr.lv) && tr.lv.length === 5 && tr.lv.every((x) => Number.isInteger(x)), 'levels for the TV');
+      for (const [t, k, h] of tr.ev) {
+        if (k !== 'trip' && k !== 'clip') continue;
+        assert(Number.isInteger(h) && R.hurdles[h], 'the event names a real hurdle');
+        if (k === 'clip') { clips++; continue; }
+        crashes++;
+        // the samples around the crash: the duck sits at that hurdle for the dazed stop
+        const i0 = Math.ceil(t / R.sample + 1e-9), i1 = Math.floor((t + R.tripStop - 0.11) / R.sample);
+        for (let i = i0; i <= i1; i++) assert.equal(tr.s[i], Math.round(R.hurdles[h].x * 10), 'waits at the fence');
+      }
+    }
+  }
+  assert(crashes > 0 && clips > 0, `crashes ${crashes}, clips ${clips}`);
+});
+test('Training shows on the track: a trained runner clears more hurdles cleanly than an untrained one', () => {
+  let bad0 = 0, bad12 = 0, n0 = 0, n12 = 0;
+  for (let seed = 1; seed <= 20; seed++) {
+    for (const [lv, add] of [[0, (b, n) => { bad0 += b; n0 += n; }], [12, (b, n) => { bad12 += b; n12 += n; }]]) {
+      const { R, a } = trackRace(seed, lv);
+      const tr = R.tracks.find((x) => x.id === a.id);
+      add(tr.ev.filter(([, k]) => k === 'trip' || k === 'clip').length, R.hurdles.length);
+    }
+  }
+  assert(bad12 / n12 < (bad0 / n0) * 0.6, `trained ${bad12}/${n12} vs untrained ${bad0}/${n0}`);
+});
+test('Race pacing: the winner crosses about 34 s in; the whole race (intro + run + outro) fits 30-60 s on the TV (a marathon up to 75 s)', () => {
+  for (const [seed, lv, course] of [[2, 0, 'sprint'], [3, 6, 'classic'], [4, 15, 'classic'], [5, 3, 'marathon']]) {
+    const { room } = setup(5, { races: 3, raceEvery: 60, course, weather: false }, seed);
+    const a = human(room, 'Ann'); go(room);
+    for (const k of D.SKILLS) room.game.ducks.get(a.id).xp[k] = D.xpFor(lv);
+    room.game.next();
+    const R = room.game.lastRace, P = R.pace, win = R.results[0].time, last = R.results[R.results.length - 1].time;
+    assert(P.k >= 0.85 && P.k <= 2.2, 'plays at about real speed: ' + P.k);
+    assert(Math.abs(win / P.k - P.tw) < 0.01, 'tw is when the winner crosses');
+    assert(Math.abs(P.tw * P.k + P.tail * P.k2 - last) < 0.05 || last - win < 0.01, 'the last duck is home by tw + tail');
+    const total = (R.intro + R.run + 6000) / 1000;
+    assert(total >= 25 && total <= (course === 'marathon' ? 75 : 60), `${course} lv${lv}: ${total}s`);
+    assert.equal(room.game.endsAt - room.now(), R.intro + R.run + 6000, 'the server waits exactly as long as the TV plays');
+  }
+});
+test("The phone's live race: during the race your own duck's path and moments, nothing in training", () => {
+  const { room, a, R } = trackRace(3, 5);
+  const v = room.playerState(a).state;
+  assert(v.live, 'live race on the phone');
+  const mine = R.tracks.find((x) => x.id === a.id);
+  assert.deepEqual(v.live.s, mine.s); assert.deepEqual(v.live.ev, mine.ev);
+  assert.deepEqual(v.live.pace, R.pace); assert.equal(v.live.run, R.run);
+  assert(v.live.place >= 1 && v.live.of === R.results.length);
+  assert(!('tracks' in v.live), 'only your own duck');
+  const t = setup(0, {}, 3); const b = human(t.room, 'Bo'); go(t.room);
+  assert.equal(t.room.playerState(b).state.live, null);
+});
+
 console.log(`\nAll ${passed} JustRaiseDucks tests passed.`);
