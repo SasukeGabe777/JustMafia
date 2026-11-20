@@ -1,5 +1,7 @@
 // The soundtrack: original chiptune for every world, played by a small synthesizer (lead,
-// counter-melody, bass, arpeggio, pad and drums) with a look-ahead step sequencer. No audio files.
+// counter-melody, bass, arpeggio, pad and drums) with a look-ahead step sequencer. Where the
+// shipped soundtrack (public/audio/music/manifest.json, docs/music.md) has a recording for a
+// world and moment, that recording plays instead and the composer is the fallback.
 //
 // Every world has its own theme, key, instruments and character (playful, dreamy, cool, epic,
 // dark or grim). Every moment of the game (lobby, day, night, voting, a murder, the gallows,
@@ -399,8 +401,67 @@ window.MT_MUSIC = (function () {
       for (const part of ['kick', 'snare', 'hat', 'tom']) { const pat = b.pat[part]; if (pat && pat[s] === 'x') DRUM[part](t, m.drums, sg); }
     }
   }
+  // ----- The shipped soundtrack (public/audio/music/manifest.json, its "mafia" section) -----
+  // A recorded track for the piece (world + moment, else the world's tone set, else the shared
+  // moment track) replaces the composed music and loops between its loop points. Your own
+  // songs (my-music/) still take turns with it: in "mix" mode one of yours after each pass.
+  let shipped = null, pending = null;
+  const fileBufs = new Map(); // url -> 'loading' | 'failed' | { buf, gain }
+  function loadShipped() {
+    if (!shipped) shipped = fetch('/audio/music/manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
+      .then((m) => (shipped = (m && m.mafia) || {}, shipped));
+    return shipped instanceof Promise ? shipped : Promise.resolve(shipped);
+  }
+  function shippedFor(world, moodName) {
+    const m = shipped && !(shipped instanceof Promise) ? shipped : null; if (!m) return null;
+    const w = (m.worlds || {})[world] || {}, tone = (m.tones || {})[w.tone || m.defaultTone] || {};
+    let f = w[moodName] || tone[moodName] || (m.moods || {})[moodName];
+    if (!f) return null; if (typeof f === 'string') f = { file: f };
+    if (!f.file) return null;
+    return { url: '/audio/music/' + f.file.split('/').map(encodeURIComponent).join('/'), name: f.file.split('/').pop(), gain: f.gain != null ? f.gain : 1, loopStart: f.loopStart || 0, loopEnd: f.loopEnd || 0 };
+  }
+  function loadFile(url, cb) {
+    if (fileBufs.has(url)) { if (fileBufs.get(url) !== 'loading') cb(); return; }
+    fileBufs.set(url, 'loading');
+    fetch(url).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status))))
+      .then((b) => new Promise((ok, no) => ac.decodeAudioData(b, ok, no)))
+      .then((buf) => fileBufs.set(url, { buf, gain: fit(buf).gain }))
+      .catch(() => fileBufs.set(url, 'failed'))
+      .then(cb);
+  }
+  function startFile(sg, t, fadeIn) {
+    const f = sg.file, L = fileBufs.get(f.url), src = ac.createBufferSource(), g = ac.createGain(), buf = L.buf;
+    const le = f.loopEnd > 0 ? Math.min(f.loopEnd, buf.duration) : buf.duration, ls = Math.max(0, Math.min(f.loopStart, le - 1));
+    src.buffer = buf; src.loop = true; src.loopStart = ls; src.loopEnd = le;
+    const v = L.gain * f.gain;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + fadeIn);
+    src.connect(g); g.connect(bus); src.start(t);
+    sg.fsrc = { src, g, v, t0: t, first: le, len: le - ls };
+  }
+  function stopFile(sg, t, fade) {
+    const p = sg.fsrc; if (!p) return; sg.fsrc = null;
+    p.g.gain.cancelScheduledValues(t); p.g.gain.setValueAtTime(p.v, t); p.g.linearRampToValueAtTime(0.0001, t + fade);
+    try { p.src.stop(t + fade + 0.05); } catch { /* done */ }
+  }
+  function tickFile(sg) {
+    const now = ac.currentTime;
+    if (sg.custom) {
+      if (now + 0.25 < sg.custom.resumeAt) return;
+      const at = sg.custom.resumeAt; sg.custom = null;
+      if (mixMode === 'mine' && startCustom(sg, at)) return;
+      startFile(sg, Math.max(at, now + 0.05), XFADE);
+      return;
+    }
+    const p = sg.fsrc; if (!p || offline || mixMode === 'game' || !customFor(sg).length) return;
+    // the end of the current pass through the loop
+    const k = Math.max(0, Math.ceil((now - p.t0 - p.first) / p.len)), end = p.t0 + p.first + k * p.len;
+    if (end - now > XFADE + 0.4) { prefetch(nextCustom(sg)); return; }
+    if (end - XFADE < now + 0.05) return;
+    if (startCustom(sg, end - XFADE)) stopFile(sg, end - XFADE, XFADE);
+  }
   function tick() {
     if (!song || !ac) return;
+    if (song.file) return tickFile(song);
     if (song.custom) { // one of your songs is playing: the composed music waits, then comes back in on its fade
       if (ac.currentTime + 0.25 < song.custom.resumeAt) return;
       const at = song.custom.resumeAt; song.custom = null; song.justResumed = true;
@@ -418,6 +479,7 @@ window.MT_MUSIC = (function () {
     if (!bus || !ac) { song = null; mood = null; return; }
     const old = bus, t = ac.currentTime;
     if (song && song.custom) { try { song.custom.src.stop(t + fade + 0.1); } catch { /* done */ } }
+    if (song && song.fsrc) { try { song.fsrc.src.stop(t + fade + 0.1); } catch { /* done */ } }
     old.gain.cancelScheduledValues(t); old.gain.setValueAtTime(old.gain.value, t); old.gain.linearRampToValueAtTime(0.0001, t + fade);
     setTimeout(() => { try { old.disconnect(); } catch { /* gone */ } }, fade * 1000 + 600);
     bus = null; song = null; mood = null; theme = null;
@@ -432,15 +494,30 @@ window.MT_MUSIC = (function () {
   // Start (or switch) the soundtrack: a new mood or world crossfades into its own piece.
   function play(newMood, newTheme, audio) {
     newMood = ALIAS[newMood] || newMood;
-    if (!newMood || !TEMPLATES[newMood]) return stop();
+    if (!newMood || !TEMPLATES[newMood]) { pending = null; return stop(); }
     if (!audio) return;
     const key = SONGS[newTheme] ? newTheme : 'medieval';
-    if (song && theme === key && mood === newMood && bus) return;
+    if (song && theme === key && mood === newMood && bus) { pending = null; return; }
     ac = audio.ctx; out = audio.master;
+    // A shipped recording for this piece? (Wait for the manifest and the decoded file; the old piece plays on meanwhile.)
+    let file = null;
+    if (!offline) {
+      const again = () => { const p = pending; pending = null; if (p) play(...p); };
+      if (!shipped || shipped instanceof Promise) { pending = [newMood, newTheme, audio]; loadShipped().then(again); return; }
+      file = shippedFor(key, newMood);
+      if (file) {
+        const L = fileBufs.get(file.url);
+        if (!L || L === 'loading') { pending = [newMood, newTheme, audio]; loadFile(file.url, again); return; }
+        if (L === 'failed') file = null;
+      }
+      pending = null;
+      if (file && song && song.file && song.file.url === file.url && bus) { theme = key; mood = newMood; return; } // the same recording: keep it going
+    }
     stop(0.9);
     bus = ac.createGain(); bus.gain.setValueAtTime(0.0001, ac.currentTime); bus.gain.linearRampToValueAtTime(ducked ? level * 0.35 : level, ac.currentTime + 1.2); bus.connect(out);
     const id = key + ':' + newMood; plays[id] = (plays[id] || 0) + 1;
     song = prepare(key, newMood, plays[id] - 1); theme = key; mood = newMood; step = 0; nextAt = ac.currentTime + 0.15;
+    if (file) { song.file = file; startFile(song, ac.currentTime + 0.05, 0.3); }
     timer = setInterval(tick, 25);
     if (mixMode !== 'game') prefetch(nextCustom(song));
   }
@@ -464,7 +541,7 @@ window.MT_MUSIC = (function () {
   // The form of a piece's tracks (for tests and the curious).
   function describe(key, moodName, trackNo = 0) { const sg = prepare(key, ALIAS[moodName] || moodName, trackNo); return { bpm: Math.round(sg.bpm), flavor: (SONGS[key] || SONGS.medieval).flavor, plan: sg.track.plan, bars: sg.track.bars.length, seconds: Math.round(sg.track.seconds) }; }
   // What is playing right now (for the TV's music panel).
-  const nowPlaying = () => (song && song.custom ? { mine: true, name: song.custom.name } : song ? { mine: false, name: 'Composed: ' + song.world + ' ' + song.mood } : null);
+  const nowPlaying = () => (song && song.custom ? { mine: true, name: song.custom.name } : song && song.file ? { mine: false, name: 'Soundtrack: ' + song.file.name } : song ? { mine: false, name: 'Composed: ' + song.world + ' ' + song.mood } : null);
   const customSummary = () => { const by = {}; for (const c of custom) by[c.mood] = (by[c.mood] || 0) + 1; return { total: custom.length, by, failed: [...loaded.entries()].filter(([, v]) => v === 'failed').map(([u]) => decodeURIComponent(u.split('/').pop())) }; };
-  return { setCustom, nowPlaying, customSummary, get mix() { return mixMode; }, play, stop, duck, volume, renderTo, describe, SONGS, MOODS, FLAVORS, get mood() { return mood; }, get theme() { return theme; }, get level() { return level; } };
+  return { setCustom, nowPlaying, customSummary, get mix() { return mixMode; }, play, stop(fade) { pending = null; stop(fade); }, duck, volume, renderTo, describe, SONGS, MOODS, FLAVORS, get mood() { return mood; }, get theme() { return theme; }, get level() { return level; } };
 })();
