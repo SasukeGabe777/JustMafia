@@ -9,3 +9,6 @@ node_modules/
 !.env.example
 *.pem
 *.key
+# Desktop (Steam) app build output and staging
+desktop/dist/
+desktop/.stage/

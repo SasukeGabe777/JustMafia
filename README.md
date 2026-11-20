@@ -34,7 +34,25 @@ npm start
 
 `render.yaml` deploys the game to [Render](https://render.com) on the free plan: render.com → **New → Blueprint** → pick this repository → **Apply**. Every push to `main` redeploys it. Join links and QR codes use the site's address automatically (`RENDER_EXTERNAL_URL`; `PUBLIC_URL` overrides it). Open the site on the TV computer, create a town, and players join from any network.
 
-Free-plan limits: the server sleeps after 15 minutes without visitors, and the next visit takes about a minute to wake it. Saved characters, gold and unlocks are wiped whenever it restarts or redeploys (its disk isn't kept), and running rooms end. A paid instance with a disk mounted at `.data` keeps profiles.
+Free-plan limits: the server sleeps after 15 minutes without visitors, and the next visit takes about a minute to wake it. Saved characters, gold and unlocks are wiped whenever it restarts or redeploys (its disk isn't kept), and running rooms end. A paid instance with a disk mounted at `.data` keeps profiles. (`DATA_DIR` moves the save folder anywhere.)
+
+### Desktop app (Steam build)
+
+`desktop/` wraps the same server in an Electron app for Steam (its own package.json, so the web
+deploy never installs Electron). Needs Node.js 22.12+ for Electron's installer.
+
+- `npm run desktop` runs it from the source; `npm run desktop:build` makes
+  `desktop/dist/win-unpacked/` (the folder to upload with SteamPipe); `node tools/e2e-desktop.js`
+  tests the built exe without showing any window.
+- Local mode (default): the server runs on this PC on port 47800 (0.0.0.0), phones on the same
+  Wi-Fi join through the PC's LAN address. Online mode: App settings (F10, or ⚙ → App settings)
+  takes a hosted server's address and the window opens that instead; unreachable → local.
+- Saves go to `%APPDATA%\JustGameBox\saves` (`DATA_DIR`), the app's own music folder is
+  `%APPDATA%\JustGameBox\my-music` (the repo's songs are not shipped), logs in `logs\app.log`.
+- Fonts are self-hosted in `public/fonts/` (`npm run vendor-fonts`); licences are in
+  `THIRD_PARTY_NOTICES.md` (`node tools/third-party-notices.js`).
+- Release checklist (Steamworks, store assets, AI disclosure, legal, SteamPipe):
+  [docs/steam-release.md](docs/steam-release.md).
 
 ## How a round plays
 

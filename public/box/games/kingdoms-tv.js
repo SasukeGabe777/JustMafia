@@ -8,10 +8,10 @@
   const { esc, mmss } = BOX;
   const A = () => window.KINGDOM_ART;
 
-  // Fonts for the medieval look (loaded once, from Google Fonts like the shell's own fonts).
+  // Fonts for the medieval look (loaded once; self-hosted /fonts/fonts.css, which the shell already links).
   if (!document.getElementById('kt-fonts')) {
     const l = document.createElement('link'); l.id = 'kt-fonts'; l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700;800&family=MedievalSharp&display=swap';
+    l.href = '/fonts/fonts.css';
     document.head.appendChild(l);
   }
 

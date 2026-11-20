@@ -1,0 +1,52 @@
+/* The desktop app's own pages (loading screen, App settings). Colours match the title screen. */
+:root { --bg1: #170f38; --bg2: #2e1258; --ink: #fff8ef; --muted: #c9bfe6; --dim: #9b90c2; --pink: #ff4f9a; --yellow: #ffd23f; --cyan: #3ee6ff; --green: #2ee6a6; --red: #ff6b6b; --card: rgba(255, 255, 255, 0.07); --line: rgba(255, 255, 255, 0.12); }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: linear-gradient(165deg, var(--bg1), var(--bg2) 70%, #1d0f44) fixed; color: var(--ink); font: 16px/1.45 'Fredoka', 'Segoe UI', system-ui, sans-serif; }
+.logo { margin: 0; font-size: 64px; font-weight: 800; letter-spacing: -0.02em; text-shadow: 0 5px 0 rgba(0, 0, 0, 0.32); }
+.logo .game { color: var(--pink); }
+.logo .box { color: var(--yellow); display: inline-block; transform: rotate(-4deg); }
+
+body.loading { display: grid; place-items: center; text-align: center; overflow: hidden; }
+body.loading #msg { color: var(--muted); font-size: 20px; max-width: 760px; margin: 18px auto; }
+.spinner { width: 42px; height: 42px; margin: 10px auto; border-radius: 50%; border: 5px solid rgba(255, 255, 255, 0.15); border-top-color: var(--yellow); animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- App settings ---------- */
+body.settings { padding: 0; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 22px 22px 90px; }
+h1 { font-size: 28px; margin: 0 0 4px; }
+h2 { font-size: 19px; margin: 0 0 10px; color: var(--yellow); }
+.sub { color: var(--dim); margin: 0 0 16px; font-size: 14px; }
+.tabs { display: flex; gap: 6px; margin: 14px 0; flex-wrap: wrap; }
+.tabs button { background: var(--card); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font: inherit; cursor: pointer; }
+.tabs button.on { background: var(--pink); color: #fff; border-color: transparent; }
+section.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin: 0 0 14px; }
+section[hidden] { display: none; }
+label.row { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; cursor: pointer; }
+label.row input[type=radio], label.row input[type=checkbox] { margin-top: 5px; accent-color: var(--pink); }
+label.row b { display: block; }
+label.row small, .hint { color: var(--dim); font-size: 13.5px; }
+input[type=text], input[type=number], select { width: 100%; background: rgba(0, 0, 0, 0.28); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font: inherit; }
+select option { background: #241552; }
+.field { margin: 10px 0; }
+.field > span { display: block; font-size: 13.5px; color: var(--muted); margin-bottom: 4px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+button.btn { background: rgba(255, 255, 255, 0.1); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; font: inherit; cursor: pointer; }
+button.btn:hover { background: rgba(255, 255, 255, 0.16); }
+button.btn.primary { background: var(--pink); border-color: transparent; font-weight: 700; }
+button.btn:disabled { opacity: 0.5; cursor: default; }
+.join { font: 700 26px/1.2 'Consolas', ui-monospace, monospace; color: var(--cyan); word-break: break-all; margin: 4px 0 6px; }
+.status { padding: 10px 12px; border-radius: 10px; margin: 10px 0; font-size: 14.5px; }
+.status.ok { background: rgba(46, 230, 166, 0.13); border: 1px solid rgba(46, 230, 166, 0.4); }
+.status.err { background: rgba(255, 107, 107, 0.13); border: 1px solid rgba(255, 107, 107, 0.45); }
+.status.info { background: rgba(62, 230, 255, 0.1); border: 1px solid rgba(62, 230, 255, 0.35); }
+.status[hidden] { display: none; }
+ol.steps { padding-left: 22px; margin: 6px 0; }
+ol.steps li { margin: 7px 0; }
+code { background: rgba(0, 0, 0, 0.3); padding: 1px 6px; border-radius: 6px; font-size: 0.92em; }
+dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
+dl.kv dt { color: var(--dim); }
+dl.kv dd { margin: 0; word-break: break-all; }
+footer.bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: flex-end; gap: 8px; padding: 12px 22px; background: rgba(16, 10, 40, 0.92); border-top: 1px solid var(--line); }
+footer.bar .left { margin-right: auto; }
