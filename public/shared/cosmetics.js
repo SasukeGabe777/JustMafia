@@ -171,6 +171,79 @@
     'outfit:photoVest': 'A sand-coloured vest with a pocket for every lens. Part of the Paparazzi set.',
     'accessory:camera': 'A big camera, held up and ready to snap. Part of the Paparazzi set.',
   });
+  // ----- Events v2: the half-month event calendar (public/shared/seasons.js ITEMS) -----
+  // Base prices (before ECONOMY.priceRate) and words for every other kind of event's limited items.
+  const EVENT_PRICE = { hat: 65, outfit: 90, accessory: 55, shoeStyle: 60, effect: 110, nameplate: 60 };
+  const EVENT_WORDS = {
+    // New Year Countdown
+    'hat:starTiara': 'A silver tiara of little gold stars that twinkle at midnight.', 'outfit:sequinSuit': 'A gold sequin party suit with a black bow tie. Catches every light in the room.',
+    'accessory:partyHorn': 'A curly party blower. Toot it when the clock strikes twelve.', 'accessory:starGlasses': 'Big gold star-shaped party glasses.', 'shoeStyle:glitterShoes': 'Shoes covered in gold glitter. They leave a sparkle.',
+    'effect:confetti': 'Gold, pink and silver confetti pops over your head.', 'nameplate:midnight': 'A midnight-blue nameplate with a gold glitter edge.',
+    // Lantern Festival
+    'hat:tasselCap': 'A round red silk cap with gold trim and a swinging lucky tassel.', 'outfit:silkJacket': 'A red silk jacket with gold knot buttons and cloud trim.',
+    'accessory:paperLantern': 'A glowing red paper lantern on a little stick.', 'accessory:paperFan': 'A folding paper fan painted with blossom.', 'shoeStyle:silkSlippers': 'Soft embroidered silk slippers.',
+    'effect:skyLanterns': 'Little glowing lanterns float up around you.', 'nameplate:lanternGlow': 'A warm red nameplate lit like a paper lantern.',
+    // Carnival
+    'hat:plumeHeaddress': 'A towering fan of purple, green and gold feathers. Parade-ready.', 'outfit:harlequin': 'A diamond-patterned harlequin suit with a ruffled collar.',
+    'accessory:carnivalMask': 'A glittering half mask with a feather on the side. Who is that?', 'accessory:beads': 'Strings of bright parade beads.', 'effect:streamers': 'Curly streamers twirl around you.',
+    'nameplate:carnival': 'A purple, green and gold nameplate for the parade.',
+    // Neon Nights
+    'hat:neonVisor': 'A glowing pink-and-cyan visor for the night shift.', 'outfit:glowJacket': 'A dark jacket with glowing neon piping.', 'accessory:glowSticks': 'Two glow sticks. Wave them about.',
+    'accessory:shutterShades': 'Slatted party shades in hot pink.', 'shoeStyle:lightUpKicks': 'Sneakers that flash with every step.', 'effect:neonRings': 'Glowing neon rings pulse around you.',
+    'nameplate:synthwave': 'A synthwave sunset with a neon grid.',
+    // Lucky Clover
+    'hat:cloverHat': 'A small green top hat with a buckle and a four-leaf clover.', 'outfit:luckyVest': 'A green waistcoat with gold buttons and a clover pin.', 'accessory:potOfGold': 'A little black pot overflowing with gold coins.',
+    'accessory:rainbowScarf': 'A long scarf in every colour of the rainbow.', 'shoeStyle:buckleShoes': 'Shiny black shoes with big gold buckles.', 'effect:luckyClovers': 'Four-leaf clovers drift down around you. Lucky!',
+    'nameplate:shamrock': 'A green nameplate with a gold clover.',
+    // Green Earth
+    'hat:leafCrown': 'A crown of fresh green leaves.', 'outfit:planterApron': 'A canvas planter’s apron with a seedling on the pocket.', 'accessory:seedling': 'A tiny seedling in a clay pot. Look after it.',
+    'accessory:wateringCan': 'A little green watering can, always dripping.', 'shoeStyle:gardenClogs': 'Muddy green garden clogs.', 'effect:seedPuffs': 'Dandelion seeds float past on the breeze.',
+    'nameplate:evergreen': 'A deep green nameplate with a pine tree.',
+    // Fiesta Flowers
+    'hat:paperFlower': 'A giant tissue-paper flower clipped on the side of your head.', 'outfit:fiestaShirt': 'A white shirt with bright embroidered flowers.', 'accessory:maracas': 'A pair of painted maracas. Shake shake.',
+    'accessory:pinata': 'A little star-shaped piñata on a string.', 'effect:paperFlags': 'A string of cut-paper flags flutters over your head.', 'nameplate:fiesta': 'A bright striped nameplate for the party.',
+    // Dino Days
+    'hat:dinoHood': 'A green dinosaur hood with soft spikes and big eyes.', 'outfit:dinoOnesie': 'A cosy dino onesie with a cream belly.', 'accessory:dinoTail': 'A swishing dinosaur tail.',
+    'accessory:fossilBone': 'A big fossil bone, freshly dug up.', 'shoeStyle:dinoFeet': 'Three-toed dino slippers. Stomp stomp.', 'effect:pterodactyls': 'Two tiny pterodactyls circle over your head.',
+    'nameplate:fossil': 'A sandstone nameplate with a fossil print.',
+    // Deep Sea
+    'hat:octopusHat': 'A friendly purple octopus sitting on your head.', 'outfit:wetsuit': 'A black and teal wetsuit, zipped up.', 'accessory:airTank': 'A yellow diving air tank on your back.',
+    'accessory:trident': 'A golden sea trident.', 'shoeStyle:flippers': 'Long blue flippers. Walking is hard.', 'effect:jellyfish': 'Glowing jellyfish drift around you.', 'nameplate:abyss': 'A deep blue nameplate with glowing bubbles.',
+    // Firework Fest
+    'hat:sparklerCrown': 'A crown of crackling sparklers.', 'outfit:bandJacket': 'A red marching band jacket with gold braid.', 'accessory:sparkler': 'A fizzing sparkler. Write your name in the air.',
+    'accessory:snareDrum': 'A marching snare drum with two sticks.', 'shoeStyle:bandBoots': 'Tall white band boots with gold tassels.', 'effect:fireworkBursts': 'Little fireworks burst over your head.',
+    'nameplate:skyburst': 'A night-sky nameplate with a firework burst.',
+    // Space Week
+    'hat:alienBoppers': 'A headband with two glowing antenna balls.', 'outfit:flightSuit': 'An orange mission flight suit covered in patches.', 'accessory:jetpack': 'A jetpack with two little flames. It doesn’t fly.',
+    'accessory:pocketPlanet': 'A tiny ringed planet that floats over your hand.', 'shoeStyle:moonBoots': 'Big puffy white moon boots.', 'effect:miniRockets': 'Two mini rockets loop around you.',
+    'nameplate:galaxy': 'A swirling purple galaxy nameplate.',
+    // Meteor Shower
+    'hat:starCirclet': 'A silver circlet with a glowing star.', 'outfit:stargazerCloak': 'A long midnight cloak stitched with constellations.', 'accessory:telescope': 'A brass telescope for spotting shooting stars.',
+    'accessory:starPendant': 'A glowing star on a silver chain.', 'effect:shootingStars': 'Shooting stars streak past behind you.', 'nameplate:stardust': 'A dark nameplate dusted with stars.',
+    // Back to School
+    'hat:propellerCap': 'A bright cap with a spinning propeller on top.', 'outfit:varsityJacket': 'A varsity jacket with a big letter patch and striped cuffs.', 'accessory:giantPencil': 'A giant yellow pencil. Sharp!',
+    'accessory:shinyApple': 'A shiny red apple for the teacher (or for you).', 'shoeStyle:sneakers': 'Fresh white sneakers with coloured laces.', 'effect:paperPlanes': 'Paper planes loop around your head.',
+    'nameplate:chalkboard': 'A chalkboard nameplate with a wooden frame.',
+    // Robot Rumble
+    'hat:robotHelm': 'A shiny robot helmet with bolts and a blinking antenna.', 'outfit:roboSuit': 'A metal robot suit with a panel of blinking buttons.', 'accessory:bigWrench': 'A huge silver wrench. Fixes anything.',
+    'accessory:laserVisor': 'A red scanning visor. Beep.', 'shoeStyle:mechBoots': 'Heavy metal mech boots.', 'effect:gears': 'Golden gears spin around you.', 'nameplate:circuit': 'A green circuit-board nameplate.',
+    // Pirate Week
+    'hat:captainHat': 'A black captain’s bicorne with gold trim and a white feather.', 'outfit:deckhand': 'A striped deckhand shirt with a red sash.', 'accessory:cutlass': 'A curved toy cutlass. En garde!',
+    'accessory:spyglass': 'A brass spyglass for spotting treasure islands.', 'shoeStyle:buccaneerBoots': 'Tall black boots with folded cuffs.', 'effect:seagulls': 'Two seagulls circle over your head.',
+    'nameplate:treasure': 'An old treasure map nameplate. X marks the spot.',
+    // Blood Moon
+    'hat:wolfEars': 'Furry werewolf ears. Is that a howl?', 'outfit:hunterCoat': 'A long dark red hunter’s coat with silver buckles.', 'accessory:crimsonCape': 'A tall-collared crimson cape that sweeps behind you.',
+    'accessory:moonLantern': 'An iron lantern with a red moon glowing inside.', 'effect:redMoon': 'A blood-red moon rises behind you, with bats.', 'nameplate:crimson': 'A crimson nameplate under a red moon.',
+    // Campfire Nights
+    'hat:rangerHat': 'A wide ranger hat with a leather band.', 'outfit:campVest': 'A puffy camp vest covered in badges.', 'accessory:marshmallow': 'A marshmallow on a stick, toasted golden.',
+    'accessory:campLantern': 'A camping lantern with a warm glow.', 'shoeStyle:hikingBoots': 'Sturdy hiking boots with red laces.', 'effect:campSparks': 'Campfire sparks float up around you.',
+    'nameplate:campfire': 'A dark wooden nameplate with a little campfire.',
+    // Gingerbread Town
+    'hat:gumdropCrown': 'A crown made of gumdrops and icing.', 'outfit:gingerbreadSuit': 'A gingerbread suit with icing squiggles and gumdrop buttons.', 'accessory:lollipop': 'A giant swirly lollipop.',
+    'accessory:peppermintScarf': 'A red-and-white peppermint striped scarf.', 'effect:sprinkles': 'Rainbow sprinkles shower down around you.', 'nameplate:icing': 'A pink iced-cookie nameplate with sprinkles.',
+  };
+  for (const [id, words] of Object.entries(EVENT_WORDS)) { if (PRICES[id] == null) PRICES[id] = EVENT_PRICE[id.split(':')[0]] || 60; DESCRIPTIONS[id] = words; }
+  Object.assign(PRICES, { 'effect:fireworkBursts': 120, 'effect:redMoon': 120, 'accessory:jetpack': 100, 'accessory:crimsonCape': 95, 'accessory:dinoTail': 80, 'accessory:airTank': 75, 'hat:plumeHeaddress': 80, 'hat:octopusHat': 80, 'outfit:stargazerCloak': 100 });
   const SPECIAL_IDS = new Set(Object.entries(FIELDS).flatMap(([f, [list]]) => ((O.SPECIAL || {})[list] || []).map((v) => f + ':' + v)));
   const KIND = { ghostSkin: 'ghost look', hair: 'hairstyle', outfit: 'outfit', hat: 'hat', shoeStyle: 'pair of shoes', accessory: 'accessory', nameplate: 'nameplate', houseDecor: 'house decoration', effect: 'cosmetic effect', houseStyle: 'house design', deathAnim: 'farewell animation' };
   const ACHIEVEMENTS = { mafiaWins5: { label: 'Win five Mafia games', stat: 'mafiaWins', count: 5 }, saves10: { label: 'Save ten players', stat: 'saves', count: 10 }, jesterWin: { label: 'Win as Jester', stat: 'jesterWins', count: 1 }, investigations5: { label: 'Identify five Mafia', stat: 'correctInvestigations', count: 5 }, survive10: { label: 'Survive ten games', stat: 'survived', count: 10 }, executionerSave: { label: 'Save someone as the Executioner', stat: 'executionerSaves', count: 1 },

@@ -184,13 +184,14 @@ test('season pass: tiers from XP in any game; free track for everyone, premium b
   for (const t of track.filter((x) => x.premium.item)) assert(p().owned.includes(t.premium.item));
   // Pass-exclusive items still cannot be bought.
   assert.equal(s.buy(a.id, 'outfit:vampire').ok === true && false, false);
-  // A new event: a fresh pass, tiers start at 0; XP outside an event goes to the level only.
+  // A new event (every half month, no gaps): a fresh pass, tiers start at 0, its own challenges.
   s.at('2026-12-02T12:00:00Z');
-  v = s.progressView(a.id).season; assert.equal(v.id, 'frost-2026'); assert.equal(v.tier, 0); assert.equal(v.premium, false);
+  v = s.progressView(a.id).season; assert.equal(v.id, 'gingerbread-2026'); assert.equal(v.tier, 0); assert.equal(v.premium, false);
+  assert(v.challenges.length === 3 && v.challenges.every((c) => c.id.startsWith('ev:gingerbread:')), 'the new event’s own challenges');
+  s.at('2026-12-20T12:00:00Z'); v = s.progressView(a.id).season; assert.equal(v.id, 'frost-2026'); assert.equal(v.tier, 0);
   s.at('2027-01-20T12:00:00Z');
-  const off = s.progressView(a.id); assert.equal(off.season, null); assert.equal(off.next.id, 'hearts-2027');
-  assert.match(s.buyPass(a.id).error, /No seasonal event/);
-  const lv = off.xp; s.progressGame(a.id, ev('x3', { xp: 50 })); assert.equal(s.progressView(a.id).xp, lv + 50);
+  const nx = s.progressView(a.id); assert.equal(nx.season.id, 'lantern-2027'); assert.equal(nx.next.id, 'hearts-2027'); assert.equal(nx.next.inDays, 12);
+  const lv = nx.xp; s.progressGame(a.id, ev('x3', { xp: 50 })); assert.equal(s.progressView(a.id).xp, lv + 50); assert.equal(s.progressView(a.id).season.xp, 50);
 });
 
 test('season items come from seasons.js; reward ids missing from the catalog are skipped safely', () => {
@@ -230,10 +231,10 @@ test('migration: the old JustMafia season pass turns into XP and a premium pass;
   assert.deepEqual(v.legacy, { season: 's1', owned: true, xp: 750, granted: 3 });
   assert(!('pass' in p) && !('challenges' in p)); assert(p.owned.includes('effect:bloodMist'));
   assert(s.titlesOf(a.id).some((t) => t.text === 'Rookie'), 'titles of the migrated levels');
-  // Between events, an owned old pass waits as a credit for the next one.
+  // The credit unlocks the running event's premium track (there is always one now) and is used up.
   const t = store('2027-01-20T12:00:00Z'), b = t.create(); delete t.data.profiles[b.id].progress; t.data.profiles[b.id].pass = { season: 's1', owned: true, xp: 0, granted: [] };
-  assert.equal(t.progressView(b.id).credit, 1);
-  t.at('2027-02-08T12:00:00Z'); const w = t.progressView(b.id); assert.equal(w.season.id, 'hearts-2027'); assert.equal(w.season.premium, true); assert.equal(w.credit, 0);
+  let w = t.progressView(b.id); assert.equal(w.season.id, 'lantern-2027'); assert.equal(w.season.premium, true); assert.equal(w.credit, 0);
+  t.at('2027-02-08T12:00:00Z'); w = t.progressView(b.id); assert.equal(w.season.id, 'hearts-2027'); assert.equal(w.season.premium, false, 'one event only');
   // Without the old pass: nothing to credit.
   const u = store(), c = u.create(); delete u.data.profiles[c.id].progress; u.data.profiles[c.id].pass = { season: 's1', owned: false, xp: 120, granted: [] };
   assert.equal(u.progressView(c.id).season.premium, false); assert.equal(u.progressView(c.id).xp, 120);

@@ -664,7 +664,7 @@
     } else if (S.trySet && setOf(S.trySet)) {
       const s = setOf(S.trySet), b = s.bundle || { missing: [], price: 0 }, left = st.gold - b.price;
       if (st.busy) html = `<div class="what"><b>${esc(s.icon)} ${esc(s.name)}</b><small class="warn">You can shop after this game.</small></div><button class="btn" disabled>🔒 After this game</button>`;
-      else if (s.worn) html = `<div class="what"><b>${esc(s.icon)} ${esc(s.name)} ✓</b><small>Wearing the whole set: +${esc(st.setRules.bonusPct)}% JG in ${esc(gameName(s.game))}.</small></div><button class="btn ghost" data-act="close">Done</button>`;
+      else if (s.worn) html = `<div class="what"><b>${esc(s.icon)} ${esc(s.name)} ✓</b><small>Wearing the whole set: +${esc(st.setRules.bonusPct)}% JG in ${esc(setWhere(s))}.</small></div><button class="btn ghost" data-act="close">Done</button>`;
       else if (!b.missing.length) html = `<div class="what"><b>${esc(s.icon)} ${esc(s.name)}</b><small>You own every piece.</small></div><button class="btn" data-setwear="${esc(s.id)}">👕 Wear set</button>`;
       else if (left < 0) html = `<div class="what"><b>${esc(s.icon)} ${esc(s.name)}</b><small class="warn">${COIN} ${esc(b.price)} JG for the rest · you need ${esc(-left)} more</small></div><button class="btn gold" data-act="earn">🪙 Earn JG</button>`;
       else html = `<div class="what"><b>${esc(s.icon)} ${esc(s.name)}</b><small><s>${esc(b.full)}</s> ${COIN} ${esc(b.price)} JG for ${b.missing.length} piece${b.missing.length > 1 ? 's' : ''} (−${esc(b.pct)}%)</small></div><button class="btn gold" data-setbuy="${esc(s.id)}">Buy set ${COIN} ${esc(b.price)}</button>`;
@@ -701,7 +701,9 @@
     if (i.set && !S.inSetCard) { const s = setOf(i.set); return s ? `<span class="rib rset" title="${esc(s.name)} set">${esc(s.icon)}</span>` : ''; }
     return '';
   }
-  const setPitch = (s) => s ? `The ${s.name} set! ${s.blurb} Wear all ${s.total} pieces in ${gameName(s.game)} and earn +${S.st.setRules.bonusPct}% JustGold there.` : '';
+  // Events v2: an event's full set pays in every game while its event runs (public/shared/shop-season.js EVENT_SETS).
+  const setWhere = (s) => (s && s.event ? `every game during ${s.eventName}` : gameName(s && s.game));
+  const setPitch = (s) => s ? (s.event ? `The ${s.name} set! ${s.blurb}` : `The ${s.name} set! ${s.blurb} Wear all ${s.total} pieces in ${gameName(s.game)} and earn +${S.st.setRules.bonusPct}% JustGold there.`) : '';
   // Event: the running event's banner, its limited items, and what comes next.
   function eventHTML() {
     const ev = S.st.event; if (!ev) return '<p class="empty">No event right now.</p>';
@@ -709,6 +711,7 @@
     return `<div class="ev-banner" style="--ev-a:${esc(ev.theme.a)};--ev-b:${esc(ev.theme.b)};--ev-c:${esc(ev.theme.c)}"><span class="ev-ic" aria-hidden="true">${esc(ev.icon)}</span><div><h3>${esc(ev.name)}</h3><p>${esc(ev.blurb)}</p>` +
       `<div class="ev-meta"><em class="pill lim">LIMITED · ${until(ev.endsAt, '')} left</em><em class="pill">${have}/${list.length} collected</em></div></div></div>` +
       '<p class="note">⏳ <b>Limited time:</b> these are sold only while the event runs. Everything you buy stays yours, and they come back next year.</p>' +
+      (setOf(S.st.eventSet) ? `<h3 class="sec-h">🧩 The full ${esc(ev.name)} set <small>every piece at once, ${esc(S.st.setRules.bundleOff)}% off</small></h3>${setCardHTML(setOf(S.st.eventSet))}<h3 class="sec-h">🛍️ Every ${esc(ev.name)} item</h3>` : '') +
       (list.length ? `<div class="grid">${list.map(cardHTML).join('')}</div>` : '<p class="empty">Nothing here yet.</p>') +
       (nx ? `<p class="note soon">${esc(nx.icon)} Next: <b>${esc(nx.name)}</b> in ${esc(nx.daysUntil)} day${nx.daysUntil === 1 ? '' : 's'}, with its own limited items.</p>` : '');
   }
@@ -725,13 +728,13 @@
   // One theme set: who wears it, progress, the pieces, the bundle and the bonus.
   function setCardHTML(s) {
     const b = s.bundle || { missing: [], price: 0, full: 0, pct: 0 }, pieces = s.items.map(byId).filter(Boolean), done = !b.missing.length, R = S.st.setRules;
-    const btn = S.st.busy ? '' : s.worn ? '<em class="pill ok">✓ Wearing</em>' : done ? `<button class="btn sm" data-setwear="${esc(s.id)}">👕 Wear set</button>` : `<button class="btn sm gold" data-setbuy="${esc(s.id)}"${S.st.gold < b.price ? ' disabled' : ''}>Buy the rest ${COIN} ${esc(b.price)}</button>`;
-    return `<section class="set${s.worn ? ' worn' : ''}${s.spotlight ? ' spot' : ''}${S.trySet === s.id ? ' trying' : ''}" style="--set:${esc(s.color || '#ffd23f')}">` +
+    const btn = S.st.busy ? '' : s.worn ? '<em class="pill ok">✓ Wearing</em>' : !done && b.locked ? `<em class="pill">${esc(b.locked)}</em>` : done ? `<button class="btn sm" data-setwear="${esc(s.id)}">👕 Wear set</button>` : `<button class="btn sm gold" data-setbuy="${esc(s.id)}"${S.st.gold < b.price ? ' disabled' : ''}>Buy the rest ${COIN} ${esc(b.price)}</button>`;
+    return `<section class="set${s.event ? ' ev-set' : ''}${s.worn ? ' worn' : ''}${s.spotlight ? ' spot' : ''}${S.trySet === s.id ? ' trying' : ''}" style="--set:${esc(s.color || '#ffd23f')}">` +
       `<button class="set-fig" data-settry="${esc(s.id)}" data-setcv="${esc(s.id)}" aria-label="Try on the ${esc(s.name)} set"><canvas aria-hidden="true"></canvas><small>${S.trySet === s.id ? 'Trying on' : 'Try on'}</small></button>` +
       `<div class="set-info"><h4>${esc(s.icon)} ${esc(s.name)}${s.spotlight ? ' <em class="pill spot">🌟 Spotlight −' + esc(b.pct || R.spotlightOff) + '%</em>' : ''}</h4><p>${esc(s.blurb)}</p>` +
       `<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="${s.total}" aria-valuenow="${s.have}"><i style="width:${Math.round(100 * s.have / s.total)}%"></i><span>${s.have}/${s.total} owned</span></div>` +
-      `<p class="bonus">🎁 Full set: +${esc(R.bonusPct)}% JG in ${esc(gameIcon(s.game))} ${esc(gameName(s.game))} and a ${esc(s.icon)} nameplate</p>` +
-      `<div class="set-buy">${done ? '' : `<span class="was"><s>${esc(b.full)}</s> −${esc(b.pct)}%</span>`}${btn}</div></div>` +
+      (s.event ? `<p class="bonus">🎁 Full set: +${esc(R.bonusPct)}% JG in every game during ${esc(s.eventName)} and a ${esc(s.icon)} nameplate</p>` : `<p class="bonus">🎁 Full set: +${esc(R.bonusPct)}% JG in ${esc(gameIcon(s.game))} ${esc(gameName(s.game))} and a ${esc(s.icon)} nameplate</p>`) +
+      `<div class="set-buy">${done || b.locked ? '' : `<span class="was"><s>${esc(b.full)}</s> −${esc(b.pct)}%</span>`}${btn}</div></div>` +
       `<div class="grid set-grid">${pieceCards(pieces)}</div></section>`;
   }
   const pieceCards = (list) => { S.inSetCard = true; try { return list.map(cardHTML).join(''); } finally { S.inSetCard = false; } };
@@ -745,7 +748,7 @@
     if (r.state) applyState(r.state);
     if (!r.ok) { hap('error'); toast(r.error || 'Could not buy that set.'); render(); return; }
     hap('success'); S.keeperJump = performance.now() / 1000 + 1; S.happy = performance.now() / 1000 + 0.9; S.trySet = null; S.sel = null;
-    S.say = `The ${s.name} set is yours, and you’re wearing it! +${S.st.setRules.bonusPct}% JustGold in ${gameName(s.game)}.`;
+    S.say = `The ${s.name} set is yours, and you’re wearing it! +${S.st.setRules.bonusPct}% JustGold in ${setWhere(s)}.`;
     toast(`🎉 ${s.icon} ${s.name} set complete!`); render();
   }
   async function doWearSet(setId) {

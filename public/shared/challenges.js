@@ -10,8 +10,8 @@
 //   dailyIds(day, rerolls)      -> 3 challenge ids (deterministic per day)
 //   weeklyIds(week)             -> 5 challenge ids (deterministic per week)
 //   challenge(id, period)       -> { id, icon, label, count, xp, gold, stat, arg }
-//   eventChallenges(seasonId)   -> 3 event challenges for that season
-//   passTrack(season, catalogHas) -> [{ tier, free, premium }] (season items on the premium track)
+//   eventChallenges(seasonId)   -> 3 event challenges for that season (by its kind: 'harvest-2026' -> harvest)
+//   passTrack(season, catalogHas) -> [{ tier, free, premium }] (season items on the premium track, its nameplate free)
 (function (root) {
   const DAY = 86400000;
   // ---------- levels ----------
@@ -162,40 +162,38 @@
   const REROLLS_PER_DAY = 1;
 
   // ---------- event (season) challenges: 2–3 special ones per season ----------
+  // Event challenges by kind of event (public/shared/seasons.js): each event runs for half a month,
+  // so the counts fit about two weeks of play. Ids are `ev:<kind>:<what>` (stable every year).
+  const EV = (kind, list) => list.map(([what, icon, label, stat, count, xp, gold, arg]) => ({ id: `ev:${kind}:${what}`, icon, label, stat, count, xp, gold, arg: arg || null }));
   const EVENT_CHALLENGES = {
-    'harvest-2026': [
-      { id: 'ev:harvest:games', icon: '🍂', label: 'Play 12 games during Harvest Fest', stat: 'games', count: 12, xp: 500, gold: 80 },
-      { id: 'ev:harvest:distinct', icon: '🥧', label: 'Try 6 different games', stat: 'distinct', count: 6, xp: 400, gold: 60 },
-      { id: 'ev:harvest:party', icon: '🎃', label: 'Finish 2 Party Modes', stat: 'party', count: 2, xp: 500, gold: 80 },
-    ],
-    'frost-2026': [
-      { id: 'ev:frost:games', icon: '❄️', label: 'Play 15 games during Frostival', stat: 'games', count: 15, xp: 500, gold: 80 },
-      { id: 'ev:frost:wins', icon: '🎁', label: 'Win 5 games', stat: 'wins', count: 5, xp: 500, gold: 80 },
-      { id: 'ev:frost:coop', icon: '⛄', label: 'Play 4 team-up games', stat: 'group', arg: 'coop', count: 4, xp: 400, gold: 60 },
-    ],
-    'hearts-2027': [
-      { id: 'ev:hearts:games', icon: '💘', label: 'Play 10 games during Sweetheart Week', stat: 'games', count: 10, xp: 450, gold: 70 },
-      { id: 'ev:hearts:bluff', icon: '💌', label: 'Play 5 bluffing or voting games', stat: 'group', arg: 'bluff', count: 5, xp: 400, gold: 60 },
-    ],
-    'bloom-2027': [
-      { id: 'ev:bloom:games', icon: '🌸', label: 'Play 15 games during Spring Bloom', stat: 'games', count: 15, xp: 500, gold: 80 },
-      { id: 'ev:bloom:create', icon: '🌷', label: 'Play 6 drawing or creative games', stat: 'group', arg: 'create', count: 6, xp: 450, gold: 70 },
-      { id: 'ev:bloom:top3', icon: '🐝', label: 'Finish in the top 3 eight times', stat: 'top3', count: 8, xp: 450, gold: 70 },
-    ],
-    'summer-2027': [
-      { id: 'ev:summer:games', icon: '🏖️', label: 'Play 20 games during Summer Splash', stat: 'games', count: 20, xp: 600, gold: 100 },
-      { id: 'ev:summer:distinct', icon: '🌊', label: 'Try 10 different games', stat: 'distinct', count: 10, xp: 500, gold: 80 },
-      { id: 'ev:summer:party', icon: '🍹', label: 'Finish 3 Party Modes', stat: 'party', count: 3, xp: 600, gold: 100 },
-    ],
-    'spooky-2027': [
-      { id: 'ev:spooky:games', icon: '🎃', label: 'Play 15 games during Spooky Season', stat: 'games', count: 15, xp: 500, gold: 80 },
-      { id: 'ev:spooky:mafia', icon: '🔪', label: 'Play 3 games of JustMafia', stat: 'play', arg: 'mafia', count: 3, xp: 450, gold: 70 },
-      { id: 'ev:spooky:zombie', icon: '🧟', label: 'Survive Zombie Survival', stat: 'tag', arg: 'zsurvive', count: 1, xp: 450, gold: 70 },
-    ],
+    newyear: EV('newyear', [['games', '🎊', 'Play 10 games during the New Year Countdown', 'games', 10, 500, 80], ['party', '🥳', 'Finish 2 Party Modes', 'party', 2, 500, 80], ['wins', '🏆', 'Win 4 games', 'wins', 4, 450, 70]]),
+    lantern: EV('lantern', [['games', '🏮', 'Play 10 games during the Lantern Festival', 'games', 10, 500, 80], ['distinct', '🧧', 'Try 6 different games', 'distinct', 6, 400, 60], ['top3', '🐉', 'Finish in the top 3 six times', 'top3', 6, 450, 70]]),
+    hearts: EV('hearts', [['games', '💘', 'Play 10 games during Sweetheart Week', 'games', 10, 450, 70], ['bluff', '💌', 'Play 5 bluffing or voting games', 'group', 5, 400, 60, 'bluff'], ['coop', '💞', 'Play 3 team-up games', 'group', 3, 400, 60, 'coop']]),
+    carnival: EV('carnival', [['games', '🎭', 'Play 10 games during Carnival', 'games', 10, 500, 80], ['create', '🎨', 'Play 5 drawing or creative games', 'group', 5, 450, 70, 'create'], ['party', '🎉', 'Finish 2 Party Modes', 'party', 2, 500, 80]]),
+    neon: EV('neon', [['games', '🌃', 'Play 10 games during Neon Nights', 'games', 10, 500, 80], ['guess', '⚡', 'Play 5 quick guessing games', 'group', 5, 400, 60, 'guess'], ['wins', '🏆', 'Win 4 games', 'wins', 4, 450, 70]]),
+    clover: EV('clover', [['games', '☘️', 'Play 10 games during Lucky Clover', 'games', 10, 500, 80], ['cards', '🍀', 'Play 5 card or luck games', 'group', 5, 400, 60, 'cards'], ['gold', '🪙', 'Earn 150 JustGold', 'gold', 150, 450, 70]]),
+    bloom: EV('bloom', [['games', '🌸', 'Play 10 games during Spring Bloom', 'games', 10, 500, 80], ['create', '🌷', 'Play 5 drawing or creative games', 'group', 5, 450, 70, 'create'], ['top3', '🐝', 'Finish in the top 3 six times', 'top3', 6, 450, 70]]),
+    earth: EV('earth', [['games', '🌍', 'Play 10 games during Green Earth', 'games', 10, 500, 80], ['coop', '🌱', 'Play 4 team-up games', 'group', 4, 450, 70, 'coop'], ['distinct', '🧭', 'Try 6 different games', 'distinct', 6, 400, 60]]),
+    fiesta: EV('fiesta', [['games', '🪅', 'Play 10 games during Fiesta Flowers', 'games', 10, 500, 80], ['party', '💃', 'Finish 2 Party Modes', 'party', 2, 500, 80], ['create', '🌺', 'Play 4 drawing or creative games', 'group', 4, 400, 60, 'create']]),
+    dino: EV('dino', [['games', '🦖', 'Play 10 games during Dino Days', 'games', 10, 500, 80], ['wins', '🦕', 'Win 4 games', 'wins', 4, 450, 70], ['zombie', '🦴', 'Survive Zombie Survival', 'tag', 1, 450, 70, 'zsurvive']]),
+    deepsea: EV('deepsea', [['games', '🐙', 'Play 10 games during Deep Sea', 'games', 10, 500, 80], ['distinct', '🐠', 'Try 6 different games', 'distinct', 6, 400, 60], ['coop', '🤿', 'Play 4 team-up games', 'group', 4, 450, 70, 'coop']]),
+    summer: EV('summer', [['games', '🏖️', 'Play 12 games during Summer Splash', 'games', 12, 600, 100], ['distinct', '🌊', 'Try 8 different games', 'distinct', 8, 500, 80], ['party', '🍹', 'Finish 2 Party Modes', 'party', 2, 500, 80]]),
+    fireworks: EV('fireworks', [['games', '🎇', 'Play 10 games during Firework Fest', 'games', 10, 500, 80], ['top3', '🎆', 'Finish in the top 3 six times', 'top3', 6, 450, 70], ['party', '🥁', 'Finish 2 Party Modes', 'party', 2, 500, 80]]),
+    space: EV('space', [['games', '🚀', 'Play 10 games during Space Week', 'games', 10, 500, 80], ['alien', '🛸', 'Play 2 games of Alien Abduction', 'play', 2, 450, 70, 'alien'], ['distinct', '🪐', 'Try 6 different games', 'distinct', 6, 400, 60]]),
+    meteor: EV('meteor', [['games', '☄️', 'Play 10 games during the Meteor Shower', 'games', 10, 500, 80], ['wins', '🌠', 'Win 4 games', 'wins', 4, 450, 70], ['guess', '🔭', 'Play 5 quick guessing games', 'group', 5, 400, 60, 'guess']]),
+    school: EV('school', [['games', '🎒', 'Play 10 games during Back to School', 'games', 10, 500, 80], ['trivia', '🧠', 'Play 2 games of Hot Take Trivia', 'play', 2, 450, 70, 'trivia'], ['top3', '📚', 'Finish in the top 3 six times', 'top3', 6, 450, 70]]),
+    robot: EV('robot', [['games', '🤖', 'Play 10 games during Robot Rumble', 'games', 10, 500, 80], ['coop', '🔧', 'Play 4 team-up games', 'group', 4, 450, 70, 'coop'], ['gold', '⚙️', 'Earn 150 JustGold', 'gold', 150, 450, 70]]),
+    pirate: EV('pirate', [['games', '🏴‍☠️', 'Play 10 games during Pirate Week', 'games', 10, 500, 80], ['bid', '💰', 'Play 2 games of JustBid', 'play', 2, 450, 70, 'bid'], ['cards', '🃏', 'Play 5 card or luck games', 'group', 5, 400, 60, 'cards']]),
+    bloodmoon: EV('bloodmoon', [['games', '🌕', 'Play 10 games during the Blood Moon', 'games', 10, 500, 80], ['mafia', '🔪', 'Play 2 games of JustMafia', 'play', 2, 450, 70, 'mafia'], ['bluff', '🐺', 'Play 5 bluffing or voting games', 'group', 5, 400, 60, 'bluff']]),
+    spooky: EV('spooky', [['games', '🎃', 'Play 12 games during Spooky Season', 'games', 12, 500, 80], ['mafia', '🔪', 'Play 3 games of JustMafia', 'play', 3, 450, 70, 'mafia'], ['zombie', '🧟', 'Survive Zombie Survival', 'tag', 1, 450, 70, 'zsurvive']]),
+    campfire: EV('campfire', [['games', '🏕️', 'Play 10 games during Campfire Nights', 'games', 10, 500, 80], ['bluff', '🔥', 'Play 5 bluffing or story games', 'group', 5, 400, 60, 'bluff'], ['party', '🌙', 'Finish 2 Party Modes', 'party', 2, 500, 80]]),
+    harvest: EV('harvest', [['games', '🍂', 'Play 12 games during Harvest Fest', 'games', 12, 500, 80], ['distinct', '🥧', 'Try 6 different games', 'distinct', 6, 400, 60], ['party', '🎃', 'Finish 2 Party Modes', 'party', 2, 500, 80]]),
+    gingerbread: EV('gingerbread', [['games', '🍪', 'Play 10 games during Gingerbread Town', 'games', 10, 500, 80], ['pizza', '🧁', 'Play 2 kitchen games (JustPizza)', 'play', 2, 450, 70, 'pizza'], ['wins', '🍭', 'Win 4 games', 'wins', 4, 450, 70]]),
+    frost: EV('frost', [['games', '❄️', 'Play 12 games during Frostival', 'games', 12, 500, 80], ['wins', '🎁', 'Win 5 games', 'wins', 5, 500, 80], ['coop', '⛄', 'Play 4 team-up games', 'group', 4, 400, 60, 'coop']]),
   };
-  // Any season without its own list gets these three.
-  const eventChallenges = (seasonId) => (EVENT_CHALLENGES[seasonId] || [
-    { id: `ev:${seasonId}:games`, icon: '🎪', label: 'Play 12 games during the event', stat: 'games', count: 12, xp: 500, gold: 80 },
+  // A season id is `<kind>-<year>`: its kind's list. Anything else gets three generic ones.
+  const eventChallenges = (seasonId) => (EVENT_CHALLENGES[seasonId] || EVENT_CHALLENGES[String(seasonId || '').split('-')[0]] || [
+    { id: `ev:${seasonId}:games`, icon: '🎪', label: 'Play 10 games during the event', stat: 'games', count: 10, xp: 500, gold: 80 },
     { id: `ev:${seasonId}:wins`, icon: '🏆', label: 'Win 4 games', stat: 'wins', count: 4, xp: 450, gold: 70 },
     { id: `ev:${seasonId}:distinct`, icon: '🧭', label: 'Try 6 different games', stat: 'distinct', count: 6, xp: 400, gold: 60 },
   ]).map((c) => ({ ...c, arg: c.arg || null }));
@@ -205,10 +203,14 @@
   // tier and a title at the end. Premium track (bought with JustGold): JustGold on every tier and
   // the event's limited items (season.items; until the shop fills them, a few existing items).
   const PASS = { tiers: 25, xpPerTier: 120, cost: 195 };
+  const FREE_ITEM_TIER = 10; // the event's nameplate, free for everyone who gets that far
   const FALLBACK_ITEMS = ['effect:bloodMist', 'hat:bloodCrown', 'nameplate:bloodMoon', 'accessory:batWings', 'reactions:rxBloodMoon', 'outfit:vampire', 'effect:lightning', 'outfit:bloodKnight'];
   // catalogHas(id) -> is that item real? Missing ids are skipped (the tier pays JustGold instead).
   function passTrack(season, catalogHas = () => true) {
-    const items = ((season && Array.isArray(season.items) && season.items.length ? season.items : FALLBACK_ITEMS) || []).filter((id) => typeof id === 'string' && catalogHas(id)).slice(0, 12);
+    const all = ((season && Array.isArray(season.items) && season.items.length ? season.items : FALLBACK_ITEMS) || []).filter((id) => typeof id === 'string' && catalogHas(id));
+    // The event's nameplate is on the free track (tier FREE_ITEM_TIER), everything else on premium.
+    const freeItem = season && Array.isArray(season.items) && season.items.length ? all.find((id) => id.startsWith('nameplate:')) || null : null;
+    const items = all.filter((id) => id !== freeItem).slice(0, 12);
     // Spread the items over the premium track, the best (last) one at the final tier.
     const at = {};
     items.forEach((id, i) => {
@@ -217,7 +219,7 @@
     });
     const out = [];
     for (let t = 1; t <= PASS.tiers; t++) {
-      const free = t === PASS.tiers ? { title: (season ? season.name : 'Season') + ' Hero' } : t % 2 === 0 ? { gold: 10 + Math.floor(t / 5) * 5 } : t % 5 === 0 ? { gold: 20 } : null;
+      const free = t === PASS.tiers ? { title: (season ? season.name : 'Season') + ' Hero' } : freeItem && t === FREE_ITEM_TIER ? { item: freeItem } : t % 2 === 0 ? { gold: 10 + Math.floor(t / 5) * 5 } : t % 5 === 0 ? { gold: 20 } : null;
       const premium = at[t] ? { item: at[t] } : { gold: 15 + Math.floor(t / 5) * 5 };
       out.push({ tier: t, free, premium });
     }
@@ -225,7 +227,7 @@
   }
 
   const API = { LEVEL, needFor, levelOf, BADGES, badgeOf, LEVEL_TITLES, LEVEL_ITEMS, levelReward, XP, scaleOf, boxXp, partyXp, mafiaXp, GAMES, gameName, GROUPS, SPOTLIGHT, POOL, BY_ID, REWARD, challenge,
-    dayKey, weekKey, dailyIds, weeklyIds, rerollId, REROLLS_PER_DAY, EVENT_CHALLENGES, eventChallenges, PASS, FALLBACK_ITEMS, passTrack, hash };
+    dayKey, weekKey, dailyIds, weeklyIds, rerollId, REROLLS_PER_DAY, EVENT_CHALLENGES, eventChallenges, PASS, FREE_ITEM_TIER, FALLBACK_ITEMS, passTrack, hash };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   if (root) root.MT_CHALLENGES = API;
 })(typeof window !== 'undefined' ? window : null);

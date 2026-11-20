@@ -1263,7 +1263,7 @@
         const w = ctx.measureText(name).width + 12;
         const ly = c.y + 13;
         ctx.globalAlpha = a;
-        ctx.fillStyle = ghost ? 'rgba(60,70,110,0.55)' : c.avatar.nameplate === 'scroll' ? '#695741' : c.avatar.nameplate === 'veteran' ? '#505d62' : c.avatar.nameplate === 'mafiaBoss' ? '#673143' : ({ neon: '#0f3a4e', royal: '#4a2a6a', bloodMoon: '#5a0a14', gilded: '#7a5a1a', harvestMoon: '#7a2e12', frosted: '#2a5a8a', sweetheart: '#a3244a', blossom: '#a3507a', surf: '#1b6f9f', haunted: '#3a1a5a' })[c.avatar.nameplate] || 'rgba(20,22,35,0.72)';
+        ctx.fillStyle = ghost ? 'rgba(60,70,110,0.55)' : c.avatar.nameplate === 'scroll' ? '#695741' : c.avatar.nameplate === 'veteran' ? '#505d62' : c.avatar.nameplate === 'mafiaBoss' ? '#673143' : ({ neon: '#0f3a4e', royal: '#4a2a6a', bloodMoon: '#5a0a14', gilded: '#7a5a1a', harvestMoon: '#7a2e12', frosted: '#2a5a8a', sweetheart: '#a3244a', blossom: '#a3507a', surf: '#1b6f9f', haunted: '#3a1a5a', /* events v2 */ midnight: '#1f1a5a', lanternGlow: '#a8101e', carnival: '#5a2a8a', synthwave: '#4a0a5a', shamrock: '#0f6a3a', evergreen: '#1f4a2a', fiesta: '#c83a7a', fossil: '#8a6a3a', abyss: '#0a2a5a', skyburst: '#1a2a6a', galaxy: '#3a1a7a', stardust: '#1a1a4a', chalkboard: '#2f4a3a', circuit: '#0f5a2a', treasure: '#8a5a2a', crimson: '#5a0a14', campfire: '#4a2e1a', icing: '#c85a8a' })[c.avatar.nameplate] || 'rgba(20,22,35,0.72)';
         roundRect(ctx, c.x - w / 2, ly - 9, w, 18, 9); ctx.fill();
         ctx.fillStyle = c.connected === false ? '#ff9b9b' : (c.avatar.nameColor || '#ffffff');
         ctx.fillText(name, c.x, ly + 0.5);

@@ -67,6 +67,26 @@ button:disabled { cursor: default; }
 .np-blossom { background: radial-gradient(circle at 12% 40%, #fff 0 8%, transparent 9%), radial-gradient(circle at 90% 60%, #fff 0 7%, transparent 8%), linear-gradient(#ffc2e0, #ff8fc6); color: #5a1a3a !important; box-shadow: inset 0 0 0 2px #fff4b0; }
 .np-surf { background: linear-gradient(#2ec4ff 0 60%, #1b7fbf 60%); box-shadow: inset 0 0 0 2px #fff6c8; }
 .np-haunted { background: linear-gradient(#3a1a5a, #1a0a2a); color: #d8ffb0 !important; box-shadow: inset 0 0 0 2px #b6ff5c, 0 0 10px rgba(182,255,92,0.5); }
+/* Events v2: the half-month event calendar's nameplates (public/shared/seasons.js) */
+.np-midnight { background: radial-gradient(circle at 15% 30%, #ffd25a 0 4%, transparent 5%), radial-gradient(circle at 85% 65%, #fff 0 3%, transparent 4%), linear-gradient(#1f1a5a, #0c0a2a); box-shadow: inset 0 0 0 2px #ffd25a, 0 0 10px rgba(255,210,90,0.45); }
+.np-lanternGlow { background: radial-gradient(ellipse at 50% 40%, #ff6a4a, #a8101e 70%); box-shadow: inset 0 0 0 2px #ffd27a, 0 0 12px rgba(255,90,60,0.6); }
+.np-carnival { background: linear-gradient(100deg, #7a3ab0 0 33%, #2f8a4a 33% 66%, #c89a1a 66%); box-shadow: inset 0 0 0 2px #ffd23f; }
+.np-synthwave { background: radial-gradient(circle at 50% 120%, #ffb04a 0 30%, transparent 31%), repeating-linear-gradient(90deg, transparent 0 9px, rgba(58,232,255,0.45) 9px 10px), linear-gradient(#2a0a4a, #ff3ad1); box-shadow: 0 0 10px #ff3ad1; text-shadow: 0 0 6px #3ae8ff; }
+.np-shamrock { background: radial-gradient(circle at 90% 50%, #7aff7a 0 10%, transparent 11%), linear-gradient(#2ecc71, #0f6a3a); box-shadow: inset 0 0 0 2px #ffd25a; }
+.np-evergreen { background: linear-gradient(135deg, transparent 0 80%, #7ad04a 80%), linear-gradient(#2a6a3a, #123a20); box-shadow: inset 0 0 0 2px #a8e07a; }
+.np-fiesta { background: repeating-linear-gradient(90deg, #ff5a9a 0 12px, #ffe14a 12px 24px, #3ad0c0 24px 36px, #ff7a1a 36px 48px); color: #2b1f3d !important; box-shadow: inset 0 0 0 2px #fff; }
+.np-fossil { background: radial-gradient(circle at 85% 50%, rgba(120,80,40,0.5) 0 12%, transparent 13%), linear-gradient(#d9b47a, #a8804a); color: #3a2410 !important; box-shadow: inset 0 0 0 2px #f2dcae; }
+.np-abyss { background: radial-gradient(circle at 12% 70%, rgba(150,255,240,0.8) 0 4%, transparent 5%), radial-gradient(circle at 88% 30%, rgba(150,255,240,0.7) 0 3%, transparent 4%), linear-gradient(#0f3a6a, #050f2a); box-shadow: inset 0 0 0 2px #3ae8d0, 0 0 10px rgba(58,232,208,0.45); }
+.np-skyburst { background: radial-gradient(circle at 85% 40%, #ffe680 0 6%, #ff4a5a 7% 14%, transparent 15%), linear-gradient(#1a2a6a, #0a0f2a); box-shadow: inset 0 0 0 2px #ff4a5a; }
+.np-galaxy { background: radial-gradient(ellipse at 40% 50%, #b45cff, transparent 60%), radial-gradient(circle at 80% 30%, #fff 0 2%, transparent 3%), linear-gradient(#2a1a6a, #0c0f2e); box-shadow: inset 0 0 0 2px #8a7aff, 0 0 10px rgba(138,122,255,0.5); }
+.np-stardust { background: radial-gradient(circle at 10% 30%, #fff 0 3%, transparent 4%), radial-gradient(circle at 40% 75%, #bfe4ff 0 2%, transparent 3%), radial-gradient(circle at 80% 35%, #fff 0 3%, transparent 4%), linear-gradient(#1a1a4a, #0d0a30); box-shadow: inset 0 0 0 2px #7ab8ff; }
+.np-chalkboard { background: linear-gradient(#2f4a3a, #23382c); color: #f4f4ea !important; box-shadow: inset 0 0 0 3px #a8804a; font-family: 'Comic Sans MS', 'Fredoka', cursive; }
+.np-circuit { background: repeating-linear-gradient(90deg, transparent 0 10px, rgba(160,255,160,0.35) 10px 11px), repeating-linear-gradient(0deg, transparent 0 8px, rgba(160,255,160,0.25) 8px 9px), linear-gradient(#0f5a2a, #0a3a1a); box-shadow: inset 0 0 0 2px #e0b24a; }
+.np-treasure { background: radial-gradient(circle at 88% 50%, transparent 0 8%, transparent 9%), linear-gradient(#f2dcae, #d9b47a); color: #5a2a0a !important; box-shadow: inset 0 0 0 2px #8a5a2a; }
+.np-treasure::after { content: " \2716"; color: #c8202a; }
+.np-crimson { background: radial-gradient(circle at 88% 35%, #ff3a4a 0 12%, transparent 13%), linear-gradient(#5a0a14, #1a0408); box-shadow: 0 0 12px rgba(255,58,74,0.55), inset 0 0 0 2px #a3101e; }
+.np-campfire { background: radial-gradient(ellipse at 50% 130%, #ff9a3a 0 25%, transparent 50%), linear-gradient(#4a2e1a, #2a1a0e); box-shadow: inset 0 0 0 2px #ffb04a; }
+.np-icing { background: radial-gradient(circle at 15% 30%, #3ad04a 0 3%, transparent 4%), radial-gradient(circle at 80% 70%, #ffd23f 0 3%, transparent 4%), radial-gradient(circle at 60% 25%, #3a8aff 0 3%, transparent 4%), linear-gradient(#ffb0d0, #ff7aa8); color: #5a1a2a !important; box-shadow: inset 0 0 0 3px #b8732e; }
 
 /* ---------- tabs and sub-tabs ---------- */
 .tabs { display: flex; gap: 8px; padding: 14px 14px 6px; overflow-x: auto; scrollbar-width: none; }

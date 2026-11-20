@@ -18,6 +18,12 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
   linear-gradient(165deg, var(--bg1), var(--bg2) 70%, #1d0f44);
   animation: drift 30s ease-in-out infinite alternate; }
 @keyframes drift { to { transform: translate(3%, -2%) rotate(3deg) scale(1.04); } }
+/* Events v2: the running event's animated scene (public/hub-events.js paints .ev-bg). .ev-shade darkens
+   the middle a little so the tiles and text stay easy to read over snow, leaves or fireworks. */
+.ev-bg, .ev-shade { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.ev-shade { background: radial-gradient(ellipse 70% 62% at 50% 46%, rgba(8, 6, 24, 0.5), rgba(8, 6, 24, 0.2) 68%, rgba(8, 6, 24, 0) 100%); }
+body.ev-on:not(.ev-default) .bg { opacity: 0; }
+body.ev-default .ev-shade { display: none; }
 
 .hub { position: relative; z-index: 1; max-width: 1800px; margin: 0 auto; padding: clamp(16px, 2.2vw, 44px) clamp(16px, 3.2vw, 64px) clamp(20px, 2vw, 36px); display: flex; flex-direction: column; gap: clamp(16px, 2vw, 34px); }
 

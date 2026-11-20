@@ -43,7 +43,7 @@ function ensure(store, p) {
   if (!pr.migrated) {
     pr.migrated = true;
     const old = p.pass;
-    if (old && typeof old === 'object' && !SZ.SEASONS.some((s) => s.id === old.season)) {
+    if (old && typeof old === 'object' && !(SZ.isSeasonId ? SZ.isSeasonId(old.season) : SZ.SEASONS.some((s) => s.id === old.season))) {
       pr.legacy = { season: old.season, owned: !!old.owned, xp: old.xp || 0, granted: (old.granted || []).length };
       pr.xp += Math.max(0, Math.floor(old.xp || 0));
       if (old.owned) pr.premiumCredit = (pr.premiumCredit || 0) + 1;

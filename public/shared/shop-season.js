@@ -33,9 +33,8 @@
   function limitedInfo(id, now = Date.now()) {
     const kind = LIMITED[id]; if (!kind) return null;
     const cur = SEA.currentSeason(now), onSale = !!(cur && (cur.items || []).includes(id));
-    const same = (SEA.SEASONS || []).filter((s) => s.kind === kind);
-    const next = same.filter((s) => t0(s.start) > now).sort((a, b) => t0(a.start) - t0(b.start))[0] || null;
-    const any = (onSale ? cur : next) || same[0] || {};
+    const next = SEA.nextOfKind ? SEA.nextOfKind(kind, now) : ((SEA.SEASONS || []).filter((s) => s.kind === kind && t0(s.start) > now).sort((a, b) => t0(a.start) - t0(b.start))[0] || null);
+    const any = (onSale ? cur : next) || ((SEA.KINDS || {})[kind]) || {};
     return { kind, name: any.name || kind, icon: any.icon || '🎉', onSale, daysLeft: onSale ? Math.max(0, Math.ceil((t1(cur.end) - now) / DAY)) : 0,
       endsAt: onSale ? t1(cur.end) : null, next: next ? { id: next.id, start: next.start, daysUntil: Math.max(0, Math.ceil((t0(next.start) - now) / DAY)) } : null };
   }
@@ -60,16 +59,30 @@
   ];
   const SETS_RULES = { bundleOff: 20, spotlightOff: 35, bonusPct: 5, bonusCap: 3 };
   const SET_OF = {}; for (const s of SETS) for (const id of s.items) SET_OF[id] = s.id;
-  const setById = (id) => SETS.find((s) => s.id === id) || null;
-  const gamesOf = (s) => s.games || [s.game];
+  // ----- Events v2: every event's full themed set (public/shared/seasons.js SET_ITEMS) -----
+  // One complete look per kind of event (hat, outfit, accessory, shoes when it has some, effect). The
+  // bundle is sold only while that event runs (its pieces are limited items); owners keep the pieces
+  // and can wear the set all year. Wearing all of it during its event: +bonusPct% JustGold in every game.
+  const EVENT_SET_NAMES = { newyear: 'Midnight Sparkle', lantern: 'Lantern Light', hearts: 'Cupid’s Arrow', carnival: 'Parade Star', neon: 'Glow Up', clover: 'Pot of Luck', bloom: 'Garden Party',
+    earth: 'Green Thumb', fiesta: 'Fiesta Time', dino: 'Dino Stomp', deepsea: 'Deep Diver', summer: 'Beach Day', fireworks: 'Big Bang Band', space: 'Mission Control', meteor: 'Stargazer',
+    school: 'Class Act', robot: 'Mecha Mode', pirate: 'Captain’s Crew', bloodmoon: 'Moon Hunter', spooky: 'Trick or Treat', campfire: 'Happy Camper', harvest: 'Cosy Harvest', gingerbread: 'Sweet Tooth', frost: 'Snow Day' };
+  const EVENT_SETS = Object.entries(SEA.SET_ITEMS || {}).map(([kind, items]) => {
+    const K = (SEA.KINDS || {})[kind] || {};
+    return { id: 'ev-' + kind, event: kind, name: EVENT_SET_NAMES[kind] || K.name || kind, icon: K.icon || '🎉', eventName: K.name || kind, color: (K.theme || {}).a || '#ffd23f', items: items.slice(),
+      blurb: `The full ${K.name || kind} look, ${items.length} pieces. Wear it all during ${K.name || 'the event'} for bonus JustGold in every game.` };
+  });
+  const EVENT_SET_OF = {}; for (const s of EVENT_SETS) for (const id of s.items) EVENT_SET_OF[id] = s.id;
+  const setById = (id) => SETS.find((s) => s.id === id) || EVENT_SETS.find((s) => s.id === id) || null;
+  const gamesOf = (s) => s.games || (s.game ? [s.game] : []);
   // Is every piece of this set on the look? (look = the avatar object: { hat, outfit, … }).
   const wearsSet = (s, look) => !!look && s.items.every((id) => { const i = CAT.get(id); return i && look[i.field] === i.value; });
   const wornSets = (look) => SETS.filter((s) => wearsSet(s, look));
   // The set bonus for one game's payout: { set, extra } or null. Applied once per payout (the
   // payout itself is paid once per game), +bonusPct% rounded, at least 1 and at most bonusCap.
-  function setBonus(game, look, amount) {
+  function setBonus(game, look, amount, now = Date.now()) {
     const n = Math.floor(Number(amount) || 0); if (n <= 0 || !look) return null;
-    const s = wornSets(look).find((x) => gamesOf(x).includes(game)); if (!s) return null;
+    const cur = SEA.currentSeason ? SEA.currentSeason(now) : null; // events v2: the running event's set pays in every game
+    const s = wornSets(look).find((x) => gamesOf(x).includes(game)) || (cur ? EVENT_SETS.find((x) => x.event === cur.kind && wearsSet(x, look)) : null); if (!s) return null;
     return { set: s.id, icon: s.icon, name: s.name, extra: Math.min(SETS_RULES.bonusCap, Math.max(1, Math.round(n * SETS_RULES.bonusPct / 100))) };
   }
 
@@ -116,7 +129,8 @@
     const missing = s.items.filter((id) => { const i = CAT.get(id); return i && !i.free && !have.has(id); });
     const pct = spotlight(now).set === s.id ? SETS_RULES.spotlightOff : SETS_RULES.bundleOff;
     const full = missing.reduce((t, id) => t + CAT.get(id).cost, 0);
-    return { set: s.id, missing, full, pct, price: missing.length ? round5(full * (1 - pct / 100)) : 0 };
+    const locked = s.event ? missing.map((id) => limitedLock(id, now)).find(Boolean) || null : null; // events v2: only while its event runs
+    return { set: s.id, missing, full, pct, price: missing.length ? round5(full * (1 - pct / 100)) : 0, locked };
   }
 
   // Everything the shop page shows for these features (server: shopState; page: ?mock=1).
@@ -127,12 +141,14 @@
     return {
       now, event: seasonView(cur, now), nextEvent: seasonView(next, now),
       deals: { day: deals.day, endsAt: deals.endsAt, items: deals.items.map((d) => ({ ...d, price: priceOf(d.id, now).cost })), spotlight: spot },
-      sets: SETS.map((s) => ({ id: s.id, name: s.name, icon: s.icon, game: s.game, games: gamesOf(s), color: s.color, blurb: s.blurb, items: s.items.slice(),
+      sets: SETS.concat(EVENT_SETS.filter((s) => (cur && s.event === cur.kind) || s.items.some((id) => have.has(id)))).map((s) => ({ id: s.id, name: s.name, icon: s.icon, game: s.game || null, games: gamesOf(s), color: s.color, blurb: s.blurb, items: s.items.slice(),
+        event: s.event || null, eventName: s.eventName || null, eventOn: !!(s.event && cur && cur.kind === s.event),
         have: s.items.filter((id) => have.has(id) || (CAT.get(id) || {}).free).length, total: s.items.length, worn: wearsSet(s, look), spotlight: spot.set === s.id, bundle: bundleOf(s.id, have, now) })),
+      eventSet: cur ? 'ev-' + cur.kind : null,
       setRules: { ...SETS_RULES },
     };
   }
 
-  const API = { LIMITED, SETS, SETS_RULES, SET_OF, DEALS, limitedInfo, limitedLock, setById, wornSets, wearsSet, setBonus, dayKey, weekNo, dailyDeals, isDeal, dealOf, spotlight, priceOf, bundleOf, shopExtras, POOL_ITEMS, POOL_GEAR };
+  const API = { LIMITED, SETS, SETS_RULES, SET_OF, EVENT_SETS, EVENT_SET_OF, EVENT_SET_NAMES, DEALS, limitedInfo, limitedLock, setById, wornSets, wearsSet, setBonus, dayKey, weekNo, dailyDeals, isDeal, dealOf, spotlight, priceOf, bundleOf, shopExtras, POOL_ITEMS, POOL_GEAR };
   if (node) module.exports = API; else root.MT_SHOP_SEASON = API;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -95,6 +95,32 @@
   special('shoeStyles', ['spurBoots']);
   special('effect', ['luckyDice', 'orbit']);
   Object.assign(OPTIONS.hatLabels, { pumpkinCap: 'Pumpkin Knit Cap', strawHat: 'Harvest Straw Hat', snowBeanie: 'Snowflake Beanie', reindeerBand: 'Reindeer Antlers', heartBoppers: 'Heart Boppers', bunnyEars: 'Bunny Ears', gardenHat: 'Garden Sun Hat', bucketHat: 'Bucket Hat', witchHat: 'Witch Hat', devilHorns: 'Little Horns', trilby: 'Agent Trilby', deerstalker: 'Deerstalker', ufoHat: 'Saucer Hat' });
+  // ----- Events v2: the half-month event calendar (public/shared/seasons.js) -----
+  // Limited-time items for every other kind of event (drawn in public/avatar-events.js; nameplates in
+  // public/shop/shop.css and public/town.js). Labels: EVENT_LABELS below.
+  special('hats', ['starTiara', 'tasselCap', 'plumeHeaddress', 'neonVisor', 'cloverHat', 'leafCrown', 'paperFlower', 'dinoHood', 'octopusHat', 'sparklerCrown', 'alienBoppers', 'starCirclet', 'propellerCap', 'robotHelm', 'captainHat', 'wolfEars', 'rangerHat', 'gumdropCrown']);
+  special('outfit', ['sequinSuit', 'silkJacket', 'harlequin', 'glowJacket', 'luckyVest', 'planterApron', 'fiestaShirt', 'dinoOnesie', 'wetsuit', 'bandJacket', 'flightSuit', 'stargazerCloak', 'varsityJacket', 'roboSuit', 'deckhand', 'hunterCoat', 'campVest', 'gingerbreadSuit']);
+  special('accessory', ['partyHorn', 'starGlasses', 'paperLantern', 'paperFan', 'carnivalMask', 'beads', 'glowSticks', 'shutterShades', 'potOfGold', 'rainbowScarf', 'seedling', 'wateringCan', 'maracas', 'pinata', 'dinoTail', 'fossilBone', 'airTank', 'trident',
+    'sparkler', 'snareDrum', 'jetpack', 'pocketPlanet', 'telescope', 'starPendant', 'giantPencil', 'shinyApple', 'bigWrench', 'laserVisor', 'cutlass', 'spyglass', 'crimsonCape', 'moonLantern', 'marshmallow', 'campLantern', 'lollipop', 'peppermintScarf']);
+  special('shoeStyles', ['glitterShoes', 'silkSlippers', 'lightUpKicks', 'buckleShoes', 'gardenClogs', 'dinoFeet', 'flippers', 'bandBoots', 'moonBoots', 'sneakers', 'mechBoots', 'buccaneerBoots', 'hikingBoots']);
+  special('effect', ['confetti', 'skyLanterns', 'streamers', 'neonRings', 'luckyClovers', 'seedPuffs', 'paperFlags', 'pterodactyls', 'jellyfish', 'fireworkBursts', 'miniRockets', 'shootingStars', 'paperPlanes', 'gears', 'seagulls', 'redMoon', 'campSparks', 'sprinkles']);
+  special('nameplate', ['midnight', 'lanternGlow', 'carnival', 'synthwave', 'shamrock', 'evergreen', 'fiesta', 'fossil', 'abyss', 'skyburst', 'galaxy', 'stardust', 'chalkboard', 'circuit', 'treasure', 'crimson', 'campfire', 'icing']);
+  const EVENT_LABELS = {
+    starTiara: 'Countdown Tiara', tasselCap: 'Lucky Tassel Cap', plumeHeaddress: 'Carnival Plumes', neonVisor: 'Neon Visor', cloverHat: 'Clover Top Hat', leafCrown: 'Leafy Crown', paperFlower: 'Giant Paper Flower', dinoHood: 'Dino Hood', octopusHat: 'Octopus Hat',
+    sparklerCrown: 'Sparkler Crown', alienBoppers: 'Alien Boppers', starCirclet: 'Star Circlet', propellerCap: 'Propeller Cap', robotHelm: 'Robot Helm', captainHat: 'Captain’s Bicorne', wolfEars: 'Werewolf Ears', rangerHat: 'Ranger Hat', gumdropCrown: 'Gumdrop Crown',
+    sequinSuit: 'Sequin Party Suit', silkJacket: 'Silk Lantern Jacket', harlequin: 'Harlequin Suit', glowJacket: 'Glow Jacket', luckyVest: 'Lucky Green Vest', planterApron: 'Planter’s Apron', fiestaShirt: 'Embroidered Fiesta Shirt', dinoOnesie: 'Dino Onesie', wetsuit: 'Deep Dive Wetsuit',
+    bandJacket: 'Marching Band Jacket', flightSuit: 'Mission Flight Suit', stargazerCloak: 'Stargazer Cloak', varsityJacket: 'Varsity Jacket', roboSuit: 'Robo Suit', deckhand: 'Deckhand Stripes', hunterCoat: 'Moon Hunter Coat', campVest: 'Camp Vest', gingerbreadSuit: 'Gingerbread Suit',
+    partyHorn: 'Party Horn', starGlasses: 'Star Glasses', paperLantern: 'Paper Lantern', paperFan: 'Paper Fan', carnivalMask: 'Feathered Mask', beads: 'Parade Beads', glowSticks: 'Glow Sticks', shutterShades: 'Shutter Shades', potOfGold: 'Pot of Gold', rainbowScarf: 'Rainbow Scarf',
+    seedling: 'Potted Seedling', wateringCan: 'Watering Can', maracas: 'Maracas', pinata: 'Mini Piñata', dinoTail: 'Dino Tail', fossilBone: 'Fossil Bone', airTank: 'Air Tank', trident: 'Sea Trident', sparkler: 'Sparkler', snareDrum: 'Snare Drum', jetpack: 'Jetpack', pocketPlanet: 'Pocket Planet',
+    telescope: 'Telescope', starPendant: 'Star Pendant', giantPencil: 'Giant Pencil', shinyApple: 'Shiny Apple', bigWrench: 'Big Wrench', laserVisor: 'Laser Visor', cutlass: 'Toy Cutlass', spyglass: 'Spyglass', crimsonCape: 'Crimson Cape', moonLantern: 'Moon Lantern', marshmallow: 'Toasted Marshmallow',
+    campLantern: 'Camp Lantern', lollipop: 'Giant Lollipop', peppermintScarf: 'Peppermint Scarf',
+    glitterShoes: 'Glitter Shoes', silkSlippers: 'Silk Slippers', lightUpKicks: 'Light-Up Kicks', buckleShoes: 'Buckle Shoes', gardenClogs: 'Garden Clogs', dinoFeet: 'Dino Feet', flippers: 'Flippers', bandBoots: 'Band Boots', moonBoots: 'Moon Boots', sneakers: 'Fresh Sneakers',
+    mechBoots: 'Mech Boots', buccaneerBoots: 'Buccaneer Boots', hikingBoots: 'Hiking Boots',
+    confetti: 'Confetti Pop', skyLanterns: 'Sky Lanterns', streamers: 'Parade Streamers', neonRings: 'Neon Rings', luckyClovers: 'Lucky Clovers', seedPuffs: 'Dandelion Seeds', paperFlags: 'Paper Flags', pterodactyls: 'Tiny Pterodactyls', jellyfish: 'Glow Jellies',
+    fireworkBursts: 'Fireworks', miniRockets: 'Mini Rockets', shootingStars: 'Shooting Stars', paperPlanes: 'Paper Planes', gears: 'Spinning Gears', seagulls: 'Seagulls', redMoon: 'Red Moon Rising', campSparks: 'Campfire Sparks', sprinkles: 'Sprinkle Shower',
+    midnight: 'Midnight', lanternGlow: 'Lantern Glow', carnival: 'Carnival', synthwave: 'Synthwave', shamrock: 'Shamrock', evergreen: 'Evergreen', fiesta: 'Fiesta', fossil: 'Fossil', abyss: 'The Abyss', skyburst: 'Skyburst', galaxy: 'Galaxy', stardust: 'Stardust',
+    chalkboard: 'Chalkboard', circuit: 'Circuit Board', treasure: 'Treasure Map', crimson: 'Crimson Moon', campfire: 'Campfire', icing: 'Sugar Icing',
+  };
   // Body type (free): the character is drawn clearly female or male (public/avatar.js drawSmooth).
   OPTIONS.body = ['male', 'female'];
   // Looks saved before body types existed: long hairstyles or a dress read as female.
@@ -136,6 +162,7 @@
     secretAgent:'Agent Suit', chefCoat:'Chef’s Whites', inverness:'Inverness Coat', dealerVest:'Dealer’s Vest', survivor:'Survivor Gear', photoVest:'Photographer’s Vest',
     lasso:'Lasso', nightShades:'Night-Vision Shades', woodenSpoon:'Wooden Spoon', magnifier:'Magnifying Glass', cardFan:'Fan of Aces', rayGun:'Ray Gun', camera:'Camera', spurBoots:'Spur Boots', luckyDice:'Lucky Dice', orbit:'Orbiting Planets',
     deathAnim:'Farewell', petals:'Rose Petals', fireflies:'Fireflies', letter:'A Last Letter', candle:'Candlelight', lantern:'Sky Lantern', starfall:'Falling Stars', ascend:'Spirit Rises' };
+  Object.assign(OPTIONS.labels, EVENT_LABELS); // events v2 (above)
   OPTIONS.label = (value) => OPTIONS.labels[value] || OPTIONS.hatLabels[value] || String(value).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   if (typeof module !== 'undefined' && module.exports) module.exports = OPTIONS;
   else root.MT_OPTIONS = OPTIONS;

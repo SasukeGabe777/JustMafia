@@ -23,9 +23,31 @@ const at = (d, h = 12) => Date.parse(d + 'T00:00:00Z') + h * 3600000;
 const item = (id) => C.CATALOG.find((i) => i.id === id);
 const store = (gold = 5000) => { const s = new ProfileStore(null), a = s.create(); s.grant(a.id, gold); return { s, id: a.id, p: s.data.profiles[a.id] }; };
 
+test('the calendar: a new event every half month, all year, any year, with stable ids and the real holidays', () => {
+  assert.equal(SEA.CALENDAR.length, 24); assert.equal(new Set(SEA.CALENDAR).size, 24, 'each kind once a year');
+  assert.deepEqual(Object.keys(SEA.KINDS).sort(), SEA.CALENDAR.slice().sort());
+  // Every day of several years (leap years too) has exactly one event, the windows touch with no gaps.
+  let prev = null;
+  for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2029, 0, 1); t += 86400000) {
+    const e = SEA.currentSeason(t + 43200000); assert(e, 'an event on ' + new Date(t).toISOString().slice(0, 10));
+    assert(Date.parse(e.start) <= t && t < Date.parse(e.end) + 86400000);
+    assert.equal(e.id, e.kind + '-' + e.start.slice(0, 4)); assert.equal(SEA.seasonById(e.id).start, e.start, 'ids round-trip');
+    if (prev && prev.id !== e.id) { assert.equal(Date.parse(prev.end) + 86400000, Date.parse(e.start), 'no gap after ' + prev.id); assert.equal(SEA.nextSeason(Date.parse(prev.end)).id, e.id); }
+    const d = new Date(t).getUTCDate(); assert.equal(e.start.slice(8), d > 15 ? '16' : '01');
+    prev = e;
+  }
+  const on = (d) => SEA.currentSeason(at(d)).kind;
+  assert.equal(on('2026-11-20'), 'harvest', 'today: Harvest Fest (Thanksgiving)'); assert.equal(SEA.currentSeason(at('2026-11-20')).id, 'harvest-2026');
+  for (const [d, k] of [['2027-01-01', 'newyear'], ['2027-02-14', 'hearts'], ['2027-03-17', 'clover'], ['2027-04-22', 'earth'], ['2027-07-04', 'fireworks'], ['2027-07-20', 'space'], ['2027-08-12', 'meteor'], ['2027-09-19', 'pirate'], ['2027-10-31', 'spooky'], ['2027-12-25', 'frost'], ['2031-10-05', 'bloodmoon']]) assert.equal(on(d), k, d);
+  assert(SEA.CALENDAR.filter((k) => !SEA.KINDS[k].holiday).length >= 4, 'original events fill the gaps');
+  assert.equal(SEA.nextOfKind('harvest', at('2026-11-20')).id, 'harvest-2027'); assert.equal(SEA.nextOfKind('frost', at('2026-11-20')).start, '2026-12-16');
+  assert.equal(SEA.isSeasonId('s1'), false); assert.equal(SEA.isSeasonId('nope-2026'), false); assert.equal(SEA.seasonById('__proto__-2026'), null);
+  assert.equal(SEA.daysLeft(SEA.currentSeason(at('2026-11-20')), at('2026-11-20')), 11);
+});
+
 test('every event has 6–10 new items, each a real catalog item, sold by one kind of event only', () => {
   const kinds = new Set(SEA.SEASONS.map((s) => s.kind));
-  assert.deepEqual([...kinds].sort(), ['bloom', 'frost', 'harvest', 'hearts', 'spooky', 'summer']);
+  assert.deepEqual([...kinds].sort(), SEA.CALENDAR.slice().sort());
   const owner = {};
   for (const s of SEA.SEASONS) {
     assert(s.items.length >= 6 && s.items.length <= 10, s.id + ' has ' + s.items.length + ' items');
@@ -42,19 +64,19 @@ test('every event has 6–10 new items, each a real catalog item, sold by one ki
 
 test('event items can only be bought while their event runs, stay owned afterwards, and return next year', () => {
   const { s, id, p } = store(); const pumpkin = 'hat:pumpkinCap', beanie = 'hat:snowBeanie';
-  s.setClock(() => at('2026-10-20')); // before Harvest Fest
+  s.setClock(() => at('2026-11-10')); // before Harvest Fest (Campfire Nights)
   let r = s.buy(id, pumpkin); assert.equal(r.ok, false); assert.match(r.error, /Limited: sold during Harvest Fest/);
-  s.setClock(() => at('2026-11-15')); // during
-  assert.equal(SS.limitedInfo(pumpkin, at('2026-11-15')).daysLeft, 16);
+  s.setClock(() => at('2026-11-20')); // during
+  assert.equal(SS.limitedInfo(pumpkin, at('2026-11-20')).daysLeft, 11);
   assert.match(s.buy(id, beanie).error, /Frostival/, 'another event’s item is not on sale');
   const before = p.coins; r = s.buy(id, pumpkin); assert(r.ok, r.error); assert.equal(before - p.coins, item(pumpkin).cost);
-  s.setClock(() => at('2026-12-10')); // Frostival now: Harvest is over
+  s.setClock(() => at('2026-12-20')); // Frostival now: Harvest is over
   assert(p.owned.includes(pumpkin)); assert(s.equip(id, pumpkin, true).ok, 'still wearable after the event'); assert.equal(s.lookOf(id) ? s.lookOf(id).hat : p.avatar.hat, 'pumpkinCap');
   assert.equal(s.validateAvatar(id, { hat: 'pumpkinCap' }).hat, 'pumpkinCap');
   assert(s.buy(id, beanie).ok, 'Frostival items on sale in December');
-  const other = store().s, oid = other.create().id; other.grant(oid, 500); other.setClock(() => at('2026-12-10'));
-  assert.match(other.buy(oid, pumpkin).error, /back 1 Nov/, 'says when it comes back');
-  other.setClock(() => at('2027-11-03')); assert(other.buy(oid, pumpkin).ok, 'Harvest Fest 2027 sells the same item');
+  const other = store().s, oid = other.create().id; other.grant(oid, 500); other.setClock(() => at('2026-12-20'));
+  assert.match(other.buy(oid, pumpkin).error, /back 16 Nov/, 'says when it comes back');
+  other.setClock(() => at('2027-11-20')); assert(other.buy(oid, pumpkin).ok, 'Harvest Fest 2027 sells the same item');
   assert.equal(s.validateAvatar(oid, { hat: 'witchHat' }).hat, O.hats[0], 'not owned: cannot be worn');
 });
 
@@ -105,6 +127,37 @@ test('theme sets: 3–4 buyable pieces each in different look fields, no piece i
   }
 });
 
+test('event sets: one full look per event (one piece per field), bundle only while it runs, bonus in every game during it', () => {
+  assert.equal(SS.EVENT_SETS.length, 24);
+  for (const s of SS.EVENT_SETS) {
+    assert(s.items.length >= 4 && s.items.length <= 5, s.id); assert(s.name && s.icon && s.blurb && s.event);
+    const fields = s.items.map((id) => { const i = item(id); assert(i, id); assert.equal(SS.LIMITED[id], s.event, id + ' is that event’s limited item'); return i.field; });
+    assert.equal(new Set(fields).size, fields.length, s.id + ': wearable all at once'); assert(fields.includes('hat') && fields.includes('outfit') && fields.includes('effect'), s.id + ' is a full look');
+  }
+  const { s, id, p } = store(); const harvest = SS.setById('ev-harvest');
+  s.setClock(() => at('2026-12-20')); assert(SS.bundleOf('ev-harvest', p.owned, at('2026-12-20')).locked); assert.equal(s.buySet(id, 'ev-harvest').ok, false, 'not out of season');
+  s.setClock(() => at('2026-11-20')); const b = SS.bundleOf('ev-harvest', p.owned, at('2026-11-20')); assert.equal(b.locked, null);
+  const before = p.coins; const r = s.buySet(id, 'ev-harvest', true); assert(r.ok, r.error); assert.equal(before - p.coins, b.price);
+  const look = s.lookOf(id); assert(SS.wearsSet(harvest, look));
+  assert.equal(SS.setBonus('trivia', look, 40, at('2026-11-20')).set, 'ev-harvest', 'any game, during Harvest Fest');
+  assert.equal(SS.setBonus('trivia', look, 40, at('2026-12-20')), null, 'no bonus after the event');
+  s.setClock(() => at('2027-03-01')); assert(s.wearSet(id, 'ev-harvest').ok, 'still owned and wearable all year');
+  const ex = SS.shopExtras(at('2026-11-20'), p.owned, look); assert.equal(ex.eventSet, 'ev-harvest'); assert(ex.sets.some((x) => x.id === 'ev-harvest' && x.worn && x.eventOn));
+  assert(SS.shopExtras(at('2027-07-20'), [], null).sets.some((x) => x.id === 'ev-space'), 'the running event’s set is on the shelf');
+});
+
+test('every event’s pass: its own challenges and a 25-tier track with its items (nameplate free, the rest premium)', () => {
+  const X = require('../public/shared/challenges'), PR = require('../box/progress');
+  for (const k of SEA.CALENDAR) {
+    const e = SEA.seasonById(k + '-2027'), ch = X.eventChallenges(e.id);
+    assert.equal(ch.length, 3, k); assert(ch.every((c) => c.id.startsWith('ev:' + k + ':') && c.count > 0), k);
+    const track = X.passTrack(e, PR.catalogHas), items = track.flatMap((t) => [t.free && t.free.item, t.premium.item]).filter(Boolean);
+    assert.equal(track.length, X.PASS.tiers); assert.deepEqual(items.slice().sort(), e.items.slice().sort(), k + ': every event item is on the pass');
+    assert(track.some((t) => t.free && t.free.item && t.free.item.startsWith('nameplate:')), k + ': a free item');
+    assert.equal(track[X.PASS.tiers - 1].free.title, e.name + ' Hero');
+  }
+});
+
 test('set bundle: the missing pieces at 20% off in one purchase (shelf or not), then wear the whole set', () => {
   const { s, id, p } = store(); const t = at('2026-11-19'); s.setClock(() => t);
   const set = SS.SETS.find((x) => SS.spotlight(t).set !== x.id && x.items.length === 4);
@@ -150,6 +203,7 @@ test('every new item is drawn: hats, outfits, extras, shoes and effects change t
   const ctx = new Proxy({}, { get(t, k) { if (k in t) return t[k]; if (['createLinearGradient', 'createRadialGradient'].includes(k)) return () => grad; return () => { calls++; }; }, set(t, k, v) { t[k] = v; return true; } });
   const win = {}; win.window = win; vm.createContext(win);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'avatar.js'), 'utf8'), win);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'avatar-events.js'), 'utf8'), win); // events v2 items
   const base = { body: 'male', hat: 'none', outfit: 'shirt', accessory: 'none', effect: 'none', shoeStyle: 'simple', hair: 'short' };
   const count = (look, t = 1.3) => { calls = 0; win.MTArt.drawCharacter(ctx, 0, 0, look, { t }); return calls; };
   const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'shop', 'shop.css'), 'utf8'), town = fs.readFileSync(path.join(__dirname, '..', 'public', 'town.js'), 'utf8');
@@ -180,7 +234,7 @@ async function socketTests() {
     assert((await emit(ph, 'account:wallet', { auth, mafia: { id: mp.id, token: mp.token } })).ok);
     const st = await emit(ph, 'shop:state', { auth }); assert(st.ok);
     assert.equal(st.deals.items.length, SS.DEALS.count); assert(st.deals.endsAt > Date.now() && st.deals.spotlight.set);
-    assert.equal(st.sets.length, SS.SETS.length); assert(st.setRules.bonusPct === 5);
+    assert.equal(st.sets.filter((x) => !x.event).length, SS.SETS.length); assert.equal(st.eventSet, 'ev-' + SEA.currentSeason().kind); assert(st.sets.some((x) => x.id === st.eventSet)); assert(st.setRules.bonusPct === 5);
     const cur = SEA.currentSeason();
     if (cur) {
       assert.equal(st.event.id, cur.id); const lim = st.catalog.find((i) => i.id === cur.items[0]);

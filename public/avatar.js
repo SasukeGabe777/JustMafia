@@ -401,14 +401,15 @@
     const t = o.t || 0, walking = !!o.walking, f = Math.max(-1, Math.min(1, o.facing || 0));
     const color = isHex(av.color) ? av.color : '#3498db', skin = isHex(av.skin) ? av.skin : SKIN0;
     const hairC = isHex(av.hairColor) ? av.hairColor : '#543626', pants = isHex(av.pants) ? av.pants : '#2d2f3a', shoes = isHex(av.shoes) ? av.shoes : '#33251d';
-    const outfit = OUTFITS[av.outfit] ? av.outfit : 'shirt', OF = OUTFITS[outfit], cloth = OF.c || color;
+    const EVA = root.MT_EVENT_ART || null; // events v2: the event items' art (public/avatar-events.js)
+    const outfit = OUTFITS[av.outfit] || (EVA && EVA.OUTFITS[av.outfit]) ? av.outfit : 'shirt', OF = OUTFITS[outfit] || EVA.OUTFITS[outfit], cloth = OF.c || color;
     const WEAR = (Array.isArray(o.wear) ? o.wear : []).filter((w) => w && typeof w.shape === 'string');
     const worn = (spot) => WEAR.filter((w) => w.spot === spot);
     const wearSpots = new Set(WEAR.map((w) => w.spot));
     let hat = av.hat || 'none', acc = av.accessory || 'none';
     const hair = av.hair || 'short';
     if (wearSpots.has('head')) hat = 'none';
-    for (const s of ['face', 'hand', 'chest', 'back']) if (wearSpots.has(s) && WEAR_HIDES[s][acc]) acc = 'none';
+    for (const s of ['face', 'hand', 'chest', 'back']) if (wearSpots.has(s) && (WEAR_HIDES[s][acc] || (EVA && EVA.SPOT[acc] === s))) acc = 'none';
     const fem = bodyOf(av) === 'female';
     const SW = fem ? 9.6 : 12.8; // shoulder half-width
     const HY = -44, R = 13, lw = 1.5;
@@ -428,6 +429,10 @@
     const line = (c, w, pts) => { P(); pts.forEach(([px, py], i) => (i ? g.lineTo(px, py) : g.moveTo(px, py))); g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); };
     const star = (cx, cy, r, c) => { P(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r * 0.45 : r; g.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); } g.closePath(); done(c, OL, 0.8); };
     const heart = (cx, cy, r, c, w = 0.7) => { P(); g.moveTo(cx, cy + r * 0.95); g.bezierCurveTo(cx - r * 1.7, cy - r * 0.2, cx - r * 0.75, cy - r * 1.45, cx, cy - r * 0.5); g.bezierCurveTo(cx + r * 0.75, cy - r * 1.45, cx + r * 1.7, cy - r * 0.2, cx, cy + r * 0.95); g.closePath(); done(c, OL, w); };
+    // Events v2: event items are drawn by public/avatar-events.js (window.MT_EVENT_ART), one function per
+    // item and part: evDraw(part, name, ...args) -> true if it drew. A broken drawing never breaks the character.
+    const EK = EVA ? { g, P, done, circ, ell, rr, poly, lin, rect, line, star, heart, sh, shade, OL, TAU, t, f, HY, R, fem, SW, skin, hairC, color, pants, shoes, cloth, outfit } : null;
+    const evDraw = (part, name, ...a) => { const fn = EVA && EVA[part] && EVA[part][name]; if (!fn) return false; g.save(); try { fn(EK, ...a); } catch (err) { /* skip */ } g.restore(); return true; };
 
     g.save();
     g.translate(x, y);
@@ -440,6 +445,7 @@
 
     effect('back');
     drawWear('back');
+    evDraw('back', acc); // events v2: tails, tanks, jetpacks, capes
     // ---- behind the body ----
     if (acc === 'cape') { poly([[-10, -31], [10, -31], [17, -1], [-17, -1]]); done(lin('#a3243a', -31, 0)); rect('#d6af53', -10, -32, 20, 2.5); }
     if (acc === 'wings' || acc === 'batWings') {
@@ -470,8 +476,9 @@
         line(OL, 1.2, [[2, -2], [19, -15]]); circ(15, -12, 2); done('#fff6d6', OL, 0.6); circ(9, -8, 1.5); done('#fff6d6', OL, 0.6); circ(10, 7, 1.6); done('#ffffff', OL, 0.6); g.restore(); }
     }
     if (acc === 'surfboard') { g.save(); g.translate(4, -30); g.rotate(0.62); ell(0, -2, 8, 33); done(lin('#ffe9a8', -35, 31)); g.save(); ell(0, -2, 8, 33); g.clip(); rect('#ff5c8a', -9, -27, 18, 5); rect('#22a9c4', -9, -21, 18, 3.5); g.restore(); line(sh('#ffe9a8', -0.3), 0.8, [[0, -33], [0, 28]]); g.restore(); }
-    if (BACK_HAIR[hair] && !FULL_HEAD[hat] && !((hair === 'bun' || hair === 'afro') && !OPEN_TOP[hat])) backHair();
+    if (BACK_HAIR[hair] && !FULL_HEAD[hat] && !((hair === 'bun' || hair === 'afro') && !(OPEN_TOP[hat] || (EVA && EVA.OPEN_TOP[hat])))) backHair();
     if (hat === 'hood') { ell(0, HY - 1, R + 4, R + 4); done(lin(sh(color, -0.3), HY - 18, HY + 16)); }
+    evDraw('hatBack', hat); // events v2: the back of a hood or hat
 
     // ---- legs and shoes ----
     const sw = walking ? Math.sin(t * 11) * 3 : 0, heel = o.dragged ? (o.dragged > 0 ? 3 : -3) : 0;
@@ -487,13 +494,14 @@
       const cc = { traveler: '#6b4a33', noble: '#7a1f3a', royalGuard: '#1f2a55', storyteller: '#3a2a5a', vampire: '#8f1a2a', royalRobe: '#b0283c', pirateCoat: '#5a1414' }[outfit];
       poly([[-SW + 0.5, -31], [SW - 0.5, -31], [SW + 4.5, bot + 3], [-SW - 4.5, bot + 3]]); done(lin(cc, -31, 0));
     }
+    evDraw('behind', outfit, bot); // events v2: an event outfit's cloak or coat tails
     bodyPath(bot, flare); done(lin(cloth, -31, bot));
     g.save(); bodyPath(bot, flare); g.clip(); details(OF.d, bot); g.restore();
     bodyPath(bot, flare); done(null);
     if (fem && !OF.arm) { P(); g.moveTo(-SW + 3.5, -24.5); g.quadraticCurveTo(-SW / 2, -22.2, -1.2, -24.3); g.moveTo(1.2, -24.3); g.quadraticCurveTo(SW / 2, -22.2, SW - 3.5, -24.5); g.strokeStyle = 'rgba(43,31,61,0.35)'; g.lineWidth = 0.9; g.stroke(); }
     drawWear('chest', { top: -31.5, waist: -20, bot });
     // arms (sleeves + hands); a game prop (o.wear 'hand') sits in the right hand
-    const armC = OF.arm ? '#b4bec9' : outfit === 'jester' ? '#e0b24a' : cloth;
+    const armC = OF.arm ? '#b4bec9' : OF.sleeve ? OF.sleeve : outfit === 'jester' ? '#e0b24a' : cloth;
     const as = walking ? Math.sin(t * 11) * 0.25 : 0, aw = fem ? 5.8 : 7.4;
     for (const s of [-1, 1]) {
       const rig = o.arms ? (s < 0 ? o.arms.l : o.arms.r) || 0 : null;
@@ -518,6 +526,7 @@
     if (acc === 'goldChain') { P(); g.ellipse(0, -30, 6.5, 6, 0, 0.2, Math.PI - 0.2); g.strokeStyle = '#e6b83a'; g.lineWidth = 1.6; g.stroke(); circ(0, -23.5, 2.4); done('#ffd96b', OL, 0.8); }
     if (acc === 'badge') { star(5.5, -23, 3.6, '#ffd35c'); }
     if (acc === 'diceBag') { P(); g.moveTo(9, -19); g.quadraticCurveTo(16, -18, 15, -10); g.quadraticCurveTo(12, -7, 9, -10); g.quadraticCurveTo(7, -15, 9, -19); done('#7a3a6a'); rr(10, -12, 3.5, 3.5, 0.8); done('#fff', OL, 0.7); }
+    evDraw('chest', acc); // events v2: scarves, beads, pendants, drums
     // JustMafia world equipment over the clothes (o.theme).
     if (o.theme === 'space') { rr(-SW + 1, -27, 4, 8, 1.5); done('#7ed6cf', OL, 0.8); line('#c4d8da', 1.4, [[SW - 3, -30], [SW - 3, -18]]); }
     if (o.theme === 'fantasy') { line('#c8b6df', 1, [[-4, -31], [0, -24], [4, -31]]); circ(0, -23, 2.2); done('#7ed6cf', OL, 0.7); }
@@ -579,6 +588,7 @@
     }
     function shoe(lx) {
       const st = av.shoeStyle || 'simple';
+      if (evDraw('shoe', st, lx)) return; // events v2
       if (st === 'sandals') { rr(lx - 3.5, -3, 8, 3, 1.5); done(skin); line('#8a5a34', 1.4, [[lx - 3, -2.5], [lx + 4, -2.5]]); return; }
       if (st === 'flipFlops') { rr(lx - 3.6, -0.6, 10.4, 1.8, 0.9); done('#ff5c8a', OL, 0.8); rr(lx - 3.2, -3, 8, 2.8, 1.4); done(skin, OL, 0.8); line('#22a9c4', 1.2, [[lx - 2.5, -2], [lx + 1, -0.4], [lx + 4.4, -2]]); return; }
       if (st === 'iceSkates') { P(); g.moveTo(lx - 3.6, -7); g.lineTo(lx + 3.4, -7); g.lineTo(lx + 3.4, -4); g.quadraticCurveTo(lx + 6.5, -4, lx + 6.5, -2); g.lineTo(lx + 6.5, -0.6); g.lineTo(lx - 3.8, -0.6); g.closePath(); done(lin('#ffffff', -7, 0));
@@ -596,6 +606,7 @@
     }
     function details(d, b) {
       const dark = sh(cloth, -0.3), light = sh(cloth, 0.25);
+      if (evDraw('details', d, b, dark, light)) return; // events v2: an event outfit's details
       const vee = (c) => { poly([[-4.5, -32], [4.5, -32], [0, -22]]); done(c, null); };
       const btns = (bx, c, n = 3, y0 = -27, dy = 4.5) => { for (let i = 0; i < n; i++) { circ(bx, y0 + i * dy, 0.9); done(c, null); } };
       const belt = (by, c = '#4c3529', buck = '#d6af53') => { rect(c, -20, by, 40, 3); rr(-2, by - 0.4, 4, 3.8, 0.8); done(buck, OL, 0.6); };
@@ -707,7 +718,7 @@
           const p = (t * 0.7) % 1; circ(-2.6, -4 + p * 6, 0.8); done('#3aa0ff', null); break; }
         case 'treatBucket': { line(OL, 2, [[-5, -10], [0, -16], [5, -10]]); line('#3a3a44', 1, [[-5, -10], [0, -16], [5, -10]]); P(); g.ellipse(0, -5, 6.4, 5.6, 0, 0, TAU); done(lin('#f28c2c', -11, 1)); for (const sx of [-1, 1]) { poly([[sx * 2.6 - 1.3, -6.4], [sx * 2.6 + 1.3, -6.4], [sx * 2.6, -8.4]]); done('#3a1a04', null); }
           P(); g.moveTo(-3, -3.2); for (let i = 0; i < 5; i++) g.lineTo(-3 + i * 1.5, -3.2 + (i % 2 ? 1.3 : 0)); g.lineTo(3, -3.2); g.quadraticCurveTo(0, 0, -3, -3.2); done('#3a1a04', null); for (const [cx, cc] of [[-2.5, '#ff5a7a'], [0.5, '#7aff3a'], [3, '#3aa0ff']]) { circ(cx, -10.4, 1.4); done(cc, OL, 0.5); } break; }
-        default: break;
+        default: evDraw('hand', acc); break; // events v2
       }
       g.restore();
     }
@@ -726,7 +737,7 @@
       }
     }
     function frontHair(e) {
-      if (hat === 'hood' || hat === 'spaceHelmet' && false) return;
+      if (hat === 'hood' || hat === 'spaceHelmet' && false || (EVA && EVA.HIDE_HAIR[hat])) return;
       const c = lin(hairC, HY - R - 4, HY, 0.2, -0.08), hl = sh(hairC, 0.3);
       const top = (hairline, lean = 0) => { // a cap of hair over the top of the head with a fringe edge
         P(); g.moveTo(-R - 0.8, HY + 2); g.arc(0, HY - 1, R + 1, Math.PI * 0.98, Math.PI * 2.02); g.lineTo(R + 0.8, HY + 2); hairline(); g.closePath(); done(c);
@@ -818,6 +829,7 @@
       if (acc === 'snorkel') { rr(L - 4.6, ey - 4, Rt - L + 9.2, 7.4, 3); done('rgba(170,230,255,0.45)', '#ff7a1a', 1.6); line('#ff7a1a', 1.2, [[-R, ey - 1], [L - 4.5, ey - 1]]); line('#ff7a1a', 1.2, [[Rt + 4.5, ey - 1], [R, ey - 1]]); line('rgba(255,255,255,0.7)', 0.9, [[L - 2.5, ey - 2.5], [L - 0.5, ey - 3]]);
         line(OL, 3.6, [[R + 1, ey + 3], [R + 2, HY - 16]]); line('#ffd23f', 2.2, [[R + 1, ey + 3], [R + 2, HY - 16]]); rr(R - 0.5, HY - 18, 5, 2.6, 1); done('#ff7a1a', OL, 0.7); line('#ffd23f', 1.6, [[R + 1, ey + 3], [mx + 3, my + 1]]); }
       if (acc === 'earmuffs') { P(); g.arc(0, HY - 1, R + 2.5, Math.PI * 1.05, Math.PI * 1.95); g.strokeStyle = OL; g.lineWidth = 3; g.stroke(); g.strokeStyle = '#c0283c'; g.lineWidth = 1.6; g.stroke(); for (const sx of [-1, 1]) { for (let k = 0; k < 7; k++) { circ(sx * (R + 1) + Math.cos(k * 0.9) * 2.4, HY + 1 + Math.sin(k * 0.9) * 2.8, 2.2); done('#ffffff', null); } ell(sx * (R + 1), HY + 1, 4.2, 4.8); done(null, OL, 1); ell(sx * (R + 1), HY + 1, 2.2, 2.6); done('#f4f0ff', null); } }
+      evDraw('face', acc, e, ey, L, Rt, mx, my); // events v2: glasses, masks, visors
       if (hat === 'plagueHat') { P(); g.moveTo(-3 + e, ey + 1); g.quadraticCurveTo(10 + e, ey + 1, 15 + e, ey + 10); g.quadraticCurveTo(6 + e, ey + 8, -3 + e, ey + 6); g.closePath(); done(lin('#e2dcc4', ey, ey + 10)); for (const cx of [L, Rt]) { circ(cx, ey, 2.4); done('#2a2a30', OL, 0.8); } }
     }
     function drawHatSmooth(e) {
@@ -889,7 +901,7 @@
           P(); g.arc(0, HY - 4, R + 1.5, Math.PI, 0); g.closePath(); done(null); ell(0, HY - 5, 9, 2.4); done(lin(sh(a, -0.1), HY - 7, HY - 3)); line(b2, 1, [[-3, top - 1], [0, top - 2.5], [3, top - 1]]); circ(0, top - 2, 1.2); done(b2, OL, 0.6); break; }
         case 'ufoHat': { const fy = top - 4 + Math.sin(t * 2.4) * 1.2; P(); g.ellipse(0, fy - 1, 7, 6.5, 0, Math.PI, TAU); g.closePath(); done('rgba(150,225,255,0.75)', OL, 1.2); circ(0, fy - 4, 1.8); done('#7aff3a', OL, 0.6); circ(-0.6, fy - 4.4, 0.4); done(OL, null); circ(0.8, fy - 4.4, 0.4); done(OL, null);
           ell(0, fy, 15, 4); done(lin('#c4ccd2', fy - 4, fy + 4)); line('rgba(255,255,255,0.6)', 1, [[-11, fy - 1.5], [-5, fy - 2.8]]); for (let i = -2; i <= 2; i++) { circ(i * 5, fy + 1.2, 1.1); done(Math.sin(t * 6 + i) > 0 ? ['#ff5a5a', '#ffd23f', '#7aff3a', '#3ad8ff', '#ff5ad1'][i + 2] : '#6a7078', null); } break; }
-        default: break;
+        default: evDraw('hat', hat, e, top); break; // events v2
       }
     }
     function effect(layer) {
@@ -914,6 +926,7 @@
       else if (fx === 'luckyDice') for (let i = 0; i < 2; i++) { const a = t * 1.1 + i * Math.PI, front = Math.sin(a) > 0; if (front === back) continue; const dx = Math.cos(a) * 20, dy = -30 + Math.sin(t * 2.2 + i * 2) * 10; g.save(); g.translate(dx, dy); g.rotate(t * 2.5 + i); rr(-3.6, -3.6, 7.2, 7.2, 1.4); done(i ? '#ffffff' : '#e8323c', OL, 0.8); const pc = i ? OL : '#ffffff'; for (const [px, py] of [[-1.7, -1.8], [-1.7, 0], [-1.7, 1.8], [1.7, -1.8], [1.7, 0], [1.7, 1.8]]) { circ(px, py, 0.6); done(pc, null); } g.restore(); }
       else if (fx === 'orbit') { const pl = [['#ff8a3a', 3.2, 0], ['#3ad8ff', 2.4, 2.1], ['#b6ff5c', 2, 4.2]]; if (back) { g.save(); ell(0, -24, 22, 6, -0.12); g.strokeStyle = 'rgba(160,200,255,0.4)'; g.lineWidth = 0.8; g.setLineDash && g.setLineDash([2, 2]); g.stroke(); g.setLineDash && g.setLineDash([]); g.restore(); }
         for (const [c, r, off] of pl) { const a = t * 0.9 + off, front = Math.sin(a) > 0; if (front === back) continue; const px = Math.cos(a) * 22, py = -24 + Math.sin(a) * 6 + px * -0.12 * 0.27; circ(px, py, r); done(lin(c, py - r, py + r, 0.3, -0.25), OL, 0.7); if (c === '#ff8a3a') { ell(px, py, r + 2, 0.9, -0.3); done(null, '#ffe08a', 0.8); } } }
+      evDraw('effect', fx, back); // events v2
       g.restore();
     }
   }
