@@ -62,7 +62,7 @@
   const say = (text, big) => { race.msgs.push({ text, at: performance.now(), big }); if (race.msgs.length > 5) race.msgs.shift(); };
   const nm = (id) => (race.ducks[id] || {}).name || '?';
   function posAt(tr, simT) { const i = simT / race.R.sample, a = Math.floor(i); if (a >= tr.s.length - 1) return tr.s[tr.s.length - 1] / 10; return (tr.s[a] + (tr.s[a + 1] - tr.s[a]) * (i - a)) / 10; }
-  const EV_ICON = { trip: '💫', slip: '😱', skid: '🌀', boost: '⚡', tired: '😮‍💨' };
+  const EV_ICON = { trip: 'dizzy', slip: 'alert', skid: 'swirl', boost: 'bolt' }; // drawn art (DUCK_ART.drawIcon), not emoji
   const EV_TEXT = { trip: 'trips over a jump!', slip: 'slips down the cliff!', skid: 'skids on the ice!', boost: 'catches a boost! ⚡', tired: 'is running out of steam…' };
   const SEC_SAY = { track: '🏃 {n} is back on the track!', pond: '🌊 {n} splashes into the pond first!', cliff: '🧗 {n} starts up the cliff!', gap: '🪽 {n} leaps over the ravine!' };
   function rrect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
@@ -114,8 +114,8 @@
       art.drawDuck(g, x, y, sc, d.color, d.hat, (now + lane * 0.37) * (race.rate < 0.9 ? 0.35 : 1), mode, false, d.stage == null ? 2 : Math.max(0, d.stage));
       g.textAlign = 'center';
       const evk = ev.find((k) => k !== 'tired');
-      if (evk) { g.font = `${22 * sc}px sans-serif`; g.fillText(EV_ICON[evk], x, y - 34 * sc); }
-      else if (tired) { g.font = `${14 * sc}px sans-serif`; g.fillText('💦', x - 18 * sc, y - 26 * sc); }
+      if (evk && EV_ICON[evk]) art.drawIcon(g, EV_ICON[evk], x, y - 42 * sc, 26 * sc, now);
+      else if (tired) art.drawIcon(g, 'sweat', x - 20 * sc, y - 30 * sc, 18 * sc, now);
       if (labelled.has(p.id) || (done && race.place[p.id].place <= 3)) {
         g.font = `600 ${Math.min(20, 13 * sc)}px Fredoka, sans-serif`;
         const fim = faceImg(farmerOf(p.id, d), 64);
@@ -125,7 +125,7 @@
         if (fim) g.drawImage(fim, x - tw / 2 + 1, ly + fh - fw * 0.92, fw, fw);
       }
       g.textAlign = 'left';
-      for (const c of race.cheers) if (c.id === p.id) { const age = (pnow - c.at) / 1000; if (age < 1.5) { g.globalAlpha = 1 - age / 1.5; g.font = `${18 * sc}px sans-serif`; g.fillText('📣', x + Math.sin(age * 8 + c.at) * 10, y - 60 * sc - age * 40); g.globalAlpha = 1; } }
+      for (const c of race.cheers) if (c.id === p.id) { const age = (pnow - c.at) / 1000; if (age < 1.5) { g.globalAlpha = 1 - age / 1.5; art.drawIcon(g, 'megaphone', x + Math.sin(age * 8 + c.at) * 10, y - 66 * sc - age * 40, 24 * sc, age); g.globalAlpha = 1; } }
       for (const [t, k] of p.tr.ev) {
         const key = p.id + t + k; if (t > simT || race.seenEv.has(key)) continue;
         race.seenEv.add(key);

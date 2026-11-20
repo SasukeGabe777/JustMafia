@@ -94,6 +94,209 @@
     g.restore();
   }
 
+  // The duck's hit shapes, from the same numbers drawDuck uses (stage size, scale, bob), so
+  // mini-game collisions match what is on screen. Local units: body ellipse 18×12 at the
+  // origin, head r 9 at (13,−13), tail to −24, legs down to 18 (when they show).
+  //  - box: body + head, slightly inside the outline (tail tip and beak are soft)
+  //  - feet: the narrow bottom zone (legs and belly) that trips over things
+  //  - circle: a round core (body + head) for rings and clouds
+  function duckBox(x, y, s, mode = 'stand', t = 0, stage = 2, flip = false) {
+    const ss = s * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : 1);
+    const bob = mode === 'swim' ? Math.sin(t * 6) * 1.2 : mode === 'run' ? -Math.abs(Math.sin(t * 14)) * 2.5 : mode === 'fly' ? Math.sin(t * 5) * 2 : mode === 'sleep' ? 2 : 0;
+    const legs = mode !== 'swim' && mode !== 'fly' && mode !== 'sleep', yy = y + bob * ss, fx = flip ? -1 : 1;
+    const L = x + Math.min(-19 * fx, 21 * fx) * ss, R = x + Math.max(-19 * fx, 21 * fx) * ss;
+    return {
+      ss, x, y: yy, l: L, r: R, t: yy - 21 * ss, b: yy + (legs ? 18 : 11) * ss,
+      feet: { l: x - 12 * ss, r: x + 12 * ss, t: yy + 4 * ss, b: yy + (legs ? 18 : 11) * ss },
+      cx: x + 1 * fx * ss, cy: yy - 4.5 * ss, rad: 14.5 * ss,
+    };
+  }
+
+  // ---------- props, critters and icons ----------
+  // Original vector art, used wherever something is drawn as an object (instead of emoji).
+  // Every icon is drawn in a 32×32 box centred on (0,0); drawIcon scales it to `size` px.
+  const circ = (g, x, y, r) => { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); };
+  const ell = (g, x, y, rx, ry, rot = 0) => { g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, TAU); g.fill(); };
+  const poly = (g, pts) => { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.closePath(); };
+  function starPath(g, x, y, R, r, n = 5, rot = -Math.PI / 2) { g.beginPath(); for (let i = 0; i < n * 2; i++) { const a = rot + (i * Math.PI) / n, q = i % 2 ? r : R; g.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } g.closePath(); }
+  function drop(g, x, y, s) { g.beginPath(); g.moveTo(x, y - 8 * s); g.bezierCurveTo(x + 7 * s, y + 1 * s, x + 5 * s, y + 6 * s, x, y + 6 * s); g.bezierCurveTo(x - 5 * s, y + 6 * s, x - 7 * s, y + 1 * s, x, y - 8 * s); g.fill(); }
+  const INK = '#3a2400';
+  function trophy(g, c, d) {
+    g.strokeStyle = c; g.lineWidth = 3; g.beginPath(); g.arc(-10, -6, 5, Math.PI * 0.5, Math.PI * 1.5); g.stroke(); g.beginPath(); g.arc(10, -6, 5, -Math.PI * 0.5, Math.PI * 0.5); g.stroke();
+    g.fillStyle = c; g.beginPath(); g.moveTo(-11, -13); g.lineTo(11, -13); g.quadraticCurveTo(11, 4, 0, 5); g.quadraticCurveTo(-11, 4, -11, -13); g.fill();
+    g.fillStyle = d; g.fillRect(-2.5, 4, 5, 6); g.fillRect(-8, 10, 16, 5); g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(-7, -11, 3, 9);
+  }
+  function face(g, col, mouth) {
+    g.fillStyle = col; circ(g, 0, 0, 14); g.strokeStyle = 'rgba(58,36,0,.6)'; g.lineWidth = 1.5; g.stroke();
+    g.fillStyle = INK; circ(g, -5, -3, 1.9); circ(g, 5, -3, 1.9);
+    g.strokeStyle = INK; g.lineWidth = 2; g.lineCap = 'round'; g.beginPath(); mouth(); g.stroke();
+  }
+  const ICONS = {
+    corn(g) {
+      g.fillStyle = '#4fae3c'; g.beginPath(); g.moveTo(-1, 15); g.quadraticCurveTo(-13, 6, -9, -7); g.quadraticCurveTo(-4, 4, 3, 9); g.closePath(); g.fill();
+      g.save(); g.rotate(0.3);
+      g.fillStyle = '#ffd23f'; ell(g, 0, -4, 7, 13);
+      g.fillStyle = '#e9a800'; for (let i = -3; i <= 2; i++) for (const j of [-3.4, 0, 3.4]) if (Math.abs(j) < 6.5 * Math.sqrt(Math.max(0, 1 - ((i * 3.6) / 13) ** 2))) circ(g, j, -4 + i * 3.6, 1.2);
+      g.fillStyle = 'rgba(255,255,255,.55)'; ell(g, -3, -9, 1.6, 4);
+      g.restore();
+      g.fillStyle = '#6cc94f'; g.beginPath(); g.moveTo(2, 15); g.quadraticCurveTo(14, 7, 12, -5); g.quadraticCurveTo(6, 5, -2, 9); g.closePath(); g.fill();
+    },
+    heart(g) { g.fillStyle = '#ff4f6d'; g.beginPath(); g.moveTo(0, 13); g.bezierCurveTo(-18, 1, -13, -14, 0, -6); g.bezierCurveTo(13, -14, 18, 1, 0, 13); g.fill(); g.fillStyle = 'rgba(255,255,255,.6)'; ell(g, -7, -4, 2.5, 3.5, -0.6); },
+    star(g) { g.fillStyle = '#ffd23f'; starPath(g, 0, 1, 15, 6.5); g.fill(); g.strokeStyle = '#e09a00'; g.lineWidth = 2; g.stroke(); g.fillStyle = 'rgba(255,255,255,.6)'; circ(g, -3, -3, 2); },
+    sparkle(g, t) { g.fillStyle = '#fff3a6'; starPath(g, 0, 0, 15, 3.5, 4, t * 0.5); g.fill(); g.fillStyle = '#fff'; starPath(g, 9, -9, 6, 1.5, 4, 0); g.fill(); starPath(g, -9, 9, 4, 1, 4, 0); g.fill(); },
+    hammer(g) { g.save(); g.rotate(-0.6); g.fillStyle = '#a8774d'; g.fillRect(-2.5, -6, 5, 22); g.fillStyle = '#8b95a3'; g.fillRect(-11, -14, 22, 9); g.fillStyle = '#c3cbd6'; g.fillRect(-11, -14, 22, 3); g.restore(); },
+    medal(g) {
+      g.fillStyle = '#3ec1ff'; poly(g, [-9, -16, -2, -16, 3, -2, -4, -2]); g.fill(); g.fillStyle = '#e63946'; poly(g, [9, -16, 2, -16, -3, -2, 4, -2]); g.fill();
+      g.fillStyle = '#ffcc00'; circ(g, 0, 6, 10); g.fillStyle = '#e9a800'; circ(g, 0, 6, 7); g.fillStyle = '#ffe680'; starPath(g, 0, 6.5, 5.5, 2.4); g.fill();
+    },
+    hatch(g) {
+      g.fillStyle = '#ffd23f'; circ(g, 0, -5, 8); g.fillStyle = '#ff9f1c'; poly(g, [6, -6, 12, -4, 6, -2]); g.fill(); g.fillStyle = '#1b1b2b'; circ(g, 2.5, -7, 1.3);
+      g.fillStyle = '#f3ead9'; g.beginPath(); g.moveTo(-12, 2); for (let i = 0; i <= 6; i++) g.lineTo(-12 + i * 4, i % 2 ? -3 : 1); g.lineTo(12, 2); g.ellipse(0, 2, 12, 13, 0, 0, Math.PI); g.closePath(); g.fill();
+      g.fillStyle = '#c9a978'; circ(g, -4, 8, 2); circ(g, 5, 10, 1.6);
+    },
+    sprout(g) {
+      g.fillStyle = '#8b5a2b'; ell(g, 0, 12, 12, 4); g.strokeStyle = '#3d8b37'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(0, 12); g.lineTo(0, -2); g.stroke();
+      g.fillStyle = '#5fbf4a'; ell(g, -6, -4, 7, 3.5, -0.5); ell(g, 6, -7, 7, 3.5, 0.5);
+    },
+    wheel(g, t) {
+      const C = ['#ff4f9a', '#ffd23f', '#3ec1ff', '#2ee6a6', '#b388ff', '#ff8c42'];
+      for (let i = 0; i < 6; i++) { const a = i * (TAU / 6) + t * 3; g.fillStyle = C[i]; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 14, a, a + TAU / 6); g.closePath(); g.fill(); }
+      g.strokeStyle = '#5a3b22'; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 14, 0, TAU); g.stroke(); g.fillStyle = '#fff'; circ(g, 0, 0, 3.5);
+      g.fillStyle = '#5a3b22'; poly(g, [-3, -17, 3, -17, 0, -11]); g.fill();
+    },
+    gift(g) {
+      g.fillStyle = '#ff4f9a'; g.fillRect(-12, -3, 24, 16); g.fillStyle = '#ff7ab8'; g.fillRect(-14, -9, 28, 7); g.fillStyle = '#ffd23f'; g.fillRect(-2.5, -9, 5, 22);
+      ell(g, -5, -12, 5, 3.5, -0.5); ell(g, 5, -12, 5, 3.5, 0.5);
+    },
+    bolt(g) { g.fillStyle = '#ffd23f'; poly(g, [4, -16, -9, 2, -1, 2, -5, 16, 9, -3, 1, -3, 7, -16]); g.fill(); g.strokeStyle = '#e08a00'; g.lineWidth = 1.5; g.lineJoin = 'round'; g.stroke(); },
+    swirl(g, t) { g.strokeStyle = '#7fd0ff'; g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); for (let a = 0; a < TAU * 2.2; a += 0.2) { const r = 1 + a * 1.05; g.lineTo(Math.cos(a + t * 6) * r, Math.sin(a + t * 6) * r * 0.8); } g.stroke(); },
+    dizzy(g, t) { for (let i = 0; i < 3; i++) { const a = t * 5 + (i * TAU) / 3; g.fillStyle = ['#ffd23f', '#fff3a6', '#ffb13b'][i]; starPath(g, Math.cos(a) * 12, Math.sin(a) * 5, 5.5, 2.3); g.fill(); g.strokeStyle = 'rgba(120,70,0,.6)'; g.lineWidth = 1; g.stroke(); } },
+    alert(g) { g.fillStyle = '#ff6a5c'; starPath(g, 0, 0, 16, 11, 9); g.fill(); g.fillStyle = '#fff'; g.fillRect(-2, -9, 4, 11); circ(g, 0, 6, 2.3); },
+    sweat(g) { g.fillStyle = '#7fd0ff'; drop(g, -4, 0, 1.2); drop(g, 7, -6, 0.8); g.fillStyle = 'rgba(255,255,255,.7)'; ell(g, -6, 0, 1.4, 2.6); },
+    megaphone(g) {
+      g.save(); g.rotate(-0.35); g.fillStyle = '#ff8c42'; poly(g, [-10, -4, 8, -12, 8, 12, -10, 4]); g.fill(); g.fillStyle = '#ffd23f'; ell(g, 8, 0, 3, 12);
+      g.fillStyle = '#5a3b22'; g.fillRect(-15, -4, 6, 8); g.fillRect(-6, 4, 4, 7); g.restore();
+      g.strokeStyle = '#fff'; g.lineWidth = 2; g.lineCap = 'round'; for (const r of [15, 20]) { g.beginPath(); g.arc(-4, 0, r, -1.1, -0.1); g.stroke(); }
+    },
+    trophy1(g) { trophy(g, '#ffcc00', '#c98f00'); },
+    trophy2(g) { trophy(g, '#d7dde5', '#8b95a3'); },
+    trophy3(g) { trophy(g, '#e0975a', '#a8683a'); },
+    happy(g) { face(g, '#ffd23f', () => g.arc(0, 2, 7, 0.25, Math.PI - 0.25)); },
+    okay(g) { face(g, '#ffe9a0', () => { g.moveTo(-5, 6); g.quadraticCurveTo(0, 8, 5, 6); }); },
+    grumpy(g) { face(g, '#ff8a6a', () => { g.arc(0, 11, 6, Math.PI + 0.5, -0.5); g.moveTo(-8, -8); g.lineTo(-3, -6); g.moveTo(8, -8); g.lineTo(3, -6); }); },
+    // what a duck is training (the farm's little thought bubble)
+    hurdle(g) { g.fillStyle = '#fff'; g.fillRect(-11, -6, 4, 20); g.fillRect(7, -6, 4, 20); g.fillStyle = '#e63946'; g.fillRect(-14, -10, 28, 7); g.fillStyle = '#fff'; g.fillRect(-6, -10, 5, 7); g.fillRect(4, -10, 5, 7); },
+    wave(g) { g.fillStyle = '#3ea7f0'; g.beginPath(); g.moveTo(-15, 12); g.lineTo(-15, 2); g.quadraticCurveTo(-8, -6, -1, 2); g.quadraticCurveTo(6, -14, 15, -2); g.lineTo(15, 12); g.closePath(); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 2.5; g.lineCap = 'round'; g.beginPath(); g.moveTo(-12, 1); g.quadraticCurveTo(-8, -3, -4, 1); g.moveTo(1, -2); g.quadraticCurveTo(6, -10, 12, -3); g.stroke(); },
+    ring(g) { g.strokeStyle = '#ff4f9a'; g.lineWidth = 5; g.beginPath(); g.ellipse(0, 0, 7, 13, 0, 0, TAU); g.stroke(); g.fillStyle = '#ffd23f'; starPath(g, 0, 0, 4, 1.6); g.fill(); },
+    climb(g) { g.fillStyle = '#9a8f86'; poly(g, [-15, 14, -9, -12, 2, -16, 14, -6, 15, 14]); g.fill(); g.fillStyle = '#2ee6a6'; ell(g, -4, -3, 5, 3.5); g.fillStyle = '#ffd23f'; ell(g, 6, 7, 4, 3); g.fillStyle = '#ff4f9a'; ell(g, 5, -9, 3.5, 2.5); },
+    bug(g, t) { drawBug(g, 'ladybug', 0, 0, 13, t); },
+    // farm decorations
+    flowers(g, t) {
+      for (const [x, c, h] of [[-9, '#ff6fb5', 10], [0, '#ffd23f', 14], [9, '#b388ff', 9]]) {
+        g.strokeStyle = '#3d8b37'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, 15); g.lineTo(x + Math.sin(t * 2 + x) * 1.5, 15 - h); g.stroke();
+        g.fillStyle = c; const tx = x + Math.sin(t * 2 + x) * 1.5, ty = 15 - h; g.beginPath(); g.moveTo(tx - 5, ty - 6); g.lineTo(tx - 2.5, ty - 2); g.lineTo(tx, ty - 6); g.lineTo(tx + 2.5, ty - 2); g.lineTo(tx + 5, ty - 6); g.quadraticCurveTo(tx + 5, ty + 2, tx, ty + 2); g.quadraticCurveTo(tx - 5, ty + 2, tx - 5, ty - 6); g.fill();
+      }
+      g.fillStyle = '#5fbf4a'; ell(g, -5, 12, 4, 2, -0.5); ell(g, 5, 12, 4, 2, 0.5);
+    },
+    flag(g, t) { g.fillStyle = '#6b4420'; g.fillRect(-9, -15, 3, 31); g.fillStyle = '#e63946'; g.beginPath(); g.moveTo(-6, -15); g.quadraticCurveTo(3, -17 + Math.sin(t * 5) * 2, 13, -11); g.quadraticCurveTo(4, -6 + Math.sin(t * 5 + 1) * 2, -6, -4); g.closePath(); g.fill(); },
+    gnome(g) {
+      g.fillStyle = '#3e7bd6'; poly(g, [-9, 15, -7, 2, 7, 2, 9, 15]); g.fill(); g.fillStyle = '#f7d2b8'; circ(g, 0, -2, 5.5);
+      g.fillStyle = '#fff'; poly(g, [-6, 0, 6, 0, 0, 11]); g.fill(); g.fillStyle = '#e63946'; poly(g, [-7, -4, 7, -4, 2, -17]); g.fill(); g.fillStyle = '#ff9f9f'; circ(g, 0, -1, 1.8);
+    },
+    lantern(g, t) {
+      const gl = g.createRadialGradient(0, 0, 2, 0, 0, 16); gl.addColorStop(0, `rgba(255,220,120,${0.45 + Math.sin(t * 3) * 0.1})`); gl.addColorStop(1, 'rgba(255,220,120,0)'); g.fillStyle = gl; circ(g, 0, 0, 16);
+      g.strokeStyle = '#5a3b22'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(0, -16); g.lineTo(0, -11); g.stroke();
+      g.fillStyle = '#e63946'; ell(g, 0, 0, 10, 11); g.strokeStyle = '#b02a35'; g.lineWidth = 1; for (const x of [-5, 0, 5]) { g.beginPath(); g.ellipse(0, 0, Math.abs(x) + 0.5, 11, 0, 0, TAU); g.stroke(); }
+      g.fillStyle = '#ffcc00'; g.fillRect(-5, -12, 10, 3); g.fillRect(-5, 9, 10, 3); g.fillRect(-1, 12, 2, 4);
+    },
+    scarecrow(g) {
+      g.fillStyle = '#7a4f2f'; g.fillRect(-1.5, -6, 3, 22); g.fillRect(-14, -2, 28, 3);
+      g.fillStyle = '#4f8fd6'; poly(g, [-8, -3, 8, -3, 10, 9, -10, 9]); g.fill(); g.fillStyle = '#e0b34a'; poly(g, [-14, -3, -16, 3, -12, 1]); g.fill(); poly(g, [14, -3, 16, 3, 12, 1]); g.fill();
+      g.fillStyle = '#f2d59a'; circ(g, 0, -9, 5.5); g.fillStyle = '#c9893b'; ell(g, 0, -13, 10, 2.2); poly(g, [-5, -13, 5, -13, 3, -19, -3, -19]); g.fill();
+      g.fillStyle = INK; circ(g, -2, -9, 0.9); circ(g, 2, -9, 0.9);
+    },
+    fountain(g, t) {
+      g.fillStyle = '#a9b4c2'; ell(g, 0, 10, 15, 5); g.fillStyle = '#4fb3ff'; ell(g, 0, 9, 12, 3.2); g.fillStyle = '#a9b4c2'; g.fillRect(-2.5, -4, 5, 13); ell(g, 0, -4, 7, 2.5);
+      g.strokeStyle = 'rgba(127,208,255,.95)'; g.lineWidth = 1.8; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(0, -6); g.quadraticCurveTo(s * 7, -16 - Math.sin(t * 6) * 1.5, s * 10, 8); g.stroke(); }
+      g.fillStyle = '#bfe7ff'; circ(g, 0, -8, 2);
+    },
+    statue(g) {
+      g.fillStyle = '#9aa3ad'; g.fillRect(-10, 6, 20, 9); g.fillStyle = '#b8c0c9'; g.fillRect(-12, 4, 24, 3);
+      g.fillStyle = '#c9d0d8'; ell(g, -1, -2, 9, 6); circ(g, 6, -9, 4.5); poly(g, [-8, -4, -13, -7, -9, 1]); g.fill(); g.fillStyle = '#9aa3ad'; poly(g, [10, -10, 14, -9, 10, -7]); g.fill();
+    },
+    rainbow(g) { const C = ['#ff5a5f', '#ffb13b', '#ffe14d', '#5fd36a', '#3ec1ff', '#8f6cff']; g.lineWidth = 2.6; C.forEach((c, i) => { g.strokeStyle = c; g.beginPath(); g.arc(0, 10, 15 - i * 2.4, Math.PI, 0); g.stroke(); }); g.fillStyle = '#fff'; circ(g, -12, 10, 3.5); circ(g, -9, 11, 3); circ(g, 12, 10, 3.5); circ(g, 9, 11, 3); },
+    // climbing wall pieces
+    crystal(g, t) {
+      g.fillStyle = '#7fe0ff'; poly(g, [0, -14, 9, -4, 5, 12, -5, 12, -9, -4]); g.fill();
+      g.fillStyle = '#4fb8f0'; poly(g, [0, -14, 9, -4, 0, -2]); g.fill(); poly(g, [-5, 12, 5, 12, 0, -2]); g.fill();
+      g.strokeStyle = '#2f8fe0'; g.lineWidth = 1.2; poly(g, [0, -14, 9, -4, 5, 12, -5, 12, -9, -4]); g.stroke();
+      g.fillStyle = `rgba(255,255,255,${0.6 + Math.sin(t * 6) * 0.3})`; starPath(g, -4, -6, 4, 1, 4, 0); g.fill();
+    },
+    rock(g) {
+      g.fillStyle = '#c8553d'; poly(g, [-15, 7, -12, -6, -3, -13, 9, -10, 15, -1, 12, 10, -5, 13]); g.fill();
+      g.fillStyle = '#e07a5f'; poly(g, [-12, -6, -3, -13, 9, -10, 3, -6, -6, -3]); g.fill();
+      g.strokeStyle = '#6e2318'; g.lineWidth = 1.6; g.lineJoin = 'round'; g.beginPath(); g.moveTo(-2, -12); g.lineTo(1, -5); g.lineTo(-3, 1); g.lineTo(2, 8); g.moveTo(1, -5); g.lineTo(8, -2); g.stroke();
+      g.strokeStyle = 'rgba(110,35,24,.8)'; g.lineWidth = 1.4; poly(g, [-15, 7, -12, -6, -3, -13, 9, -10, 15, -1, 12, 10, -5, 13]); g.stroke();
+    },
+  };
+  function drawIcon(g, name, x, y, size, t = 0) {
+    const f = ICONS[name] || ICONS.sparkle;
+    g.save(); g.translate(x, y); g.scale(size / 32, size / 32); g.lineCap = 'butt'; g.lineJoin = 'miter'; f(g, t); g.restore();
+  }
+  const moodIcon = (m) => (m >= 70 ? 'happy' : m >= 30 ? 'okay' : 'grumpy');
+
+  // Critters for the mini-games. r is the body radius in px (what a tap or a hit is measured against).
+  function drawBug(g, kind, x, y, r, t = 0) {
+    g.save(); g.translate(x, y); const k = r / 16; g.scale(k, k);
+    const wig = Math.sin(t * 18) * 1.5;
+    if (kind === 'bee') {
+      const flap = Math.abs(Math.sin(t * 40));
+      g.fillStyle = 'rgba(230,248,255,.85)'; ell(g, -4, -13, 7, 4 + flap * 4, -0.5); ell(g, 5, -13, 6, 3 + flap * 4, 0.5);
+      g.fillStyle = '#1b1b2b'; poly(g, [-17, 0, -12, -3, -12, 3]); g.fill();
+      g.fillStyle = '#ffc61a'; ell(g, -1, 0, 14, 11);
+      g.save(); g.beginPath(); g.ellipse(-1, 0, 14, 11, 0, 0, TAU); g.clip(); g.fillStyle = '#1b1b2b'; for (const sx of [-9, -2, 5]) g.fillRect(sx, -12, 4, 24); g.restore();
+      g.fillStyle = '#1b1b2b'; circ(g, 13, -1, 7); g.fillStyle = '#fff'; circ(g, 15, -3, 2.6); g.fillStyle = '#1b1b2b'; circ(g, 15.6, -2.6, 1.3);
+      g.strokeStyle = '#e63946'; g.lineWidth = 2; g.lineCap = 'round'; g.beginPath(); g.moveTo(11.5, -7.5); g.lineTo(17.5, -5); g.stroke(); // angry brow
+      g.strokeStyle = '#1b1b2b'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(14, -7); g.quadraticCurveTo(16, -14, 19, -14); g.stroke();
+    } else if (kind === 'caterpillar') {
+      for (let i = 4; i >= 0; i--) { const sx = -15 + i * 6.5, sy = Math.sin(t * 10 + i) * 2; g.fillStyle = i % 2 ? '#7ccf3a' : '#5fb32b'; circ(g, sx, sy + 3, 6.5); g.fillStyle = '#3f7f1f'; g.fillRect(sx - 1, sy + 8, 2, 3); }
+      g.fillStyle = '#8be04a'; circ(g, 14, -3, 8); g.fillStyle = '#fff'; circ(g, 16, -5, 2.6); g.fillStyle = '#1b1b2b'; circ(g, 16.8, -5, 1.4);
+      g.fillStyle = '#ff6f8f'; circ(g, 18, 0, 1.6);
+      g.strokeStyle = '#3f7f1f'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(12, -10); g.lineTo(10, -16); g.moveTo(16, -10); g.lineTo(18, -16); g.stroke(); g.fillStyle = '#ffd23f'; circ(g, 10, -16, 1.8); circ(g, 18, -16, 1.8);
+    } else if (kind === 'cricket') {
+      g.strokeStyle = '#2f6b1f'; g.lineWidth = 2.4; g.lineCap = 'round'; g.lineJoin = 'round';
+      g.beginPath(); g.moveTo(-4, 2); g.lineTo(-10, -10 + wig); g.lineTo(-16, 10); g.moveTo(2, 5); g.lineTo(-1, 12); g.moveTo(8, 5); g.lineTo(11, 12); g.stroke();
+      g.fillStyle = '#6cc94f'; ell(g, -1, 1, 14, 7, -0.1); g.fillStyle = '#4fa63a'; ell(g, -3, -2, 11, 4, -0.15);
+      g.fillStyle = '#7fe05f'; circ(g, 13, -2, 6.5); g.fillStyle = '#1b1b2b'; circ(g, 15, -4, 1.8);
+      g.strokeStyle = '#2f6b1f'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(16, -7); g.quadraticCurveTo(22, -18, 8, -20 + wig); g.moveTo(14, -8); g.quadraticCurveTo(14, -18, 2, -18); g.stroke();
+    } else { // ladybug / golden beetle (seen from above)
+      const gold = kind === 'beetle';
+      g.strokeStyle = '#1b1b2b'; g.lineWidth = 2; g.lineCap = 'round';
+      for (const s of [-1, 1]) for (const dy of [-5, 1, 7]) { g.beginPath(); g.moveTo(s * 9, dy); g.lineTo(s * (16 + (dy === 1 ? wig : 0)), dy + (dy - 1) * 0.5); g.stroke(); }
+      g.fillStyle = '#1b1b2b'; circ(g, 0, -12, 6.5);
+      if (gold) { g.strokeStyle = '#1b1b2b'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -16); g.quadraticCurveTo(1, -22, 5, -22); g.stroke(); }
+      else { g.strokeStyle = '#1b1b2b'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-2, -17); g.quadraticCurveTo(-5, -21, -8, -20); g.moveTo(2, -17); g.quadraticCurveTo(5, -21, 8, -20); g.stroke(); }
+      g.fillStyle = '#fff'; circ(g, -3, -14, 1.6); circ(g, 3, -14, 1.6);
+      const shell = g.createLinearGradient(-12, -8, 12, 14); if (gold) { shell.addColorStop(0, '#fff1a0'); shell.addColorStop(0.45, '#ffcc00'); shell.addColorStop(1, '#c98f00'); } else { shell.addColorStop(0, '#ff6b5f'); shell.addColorStop(1, '#d62c2c'); }
+      g.fillStyle = shell; ell(g, 0, 2, 12, 13);
+      g.strokeStyle = gold ? '#8a6200' : '#1b1b2b'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(0, -11); g.lineTo(0, 15); g.stroke();
+      g.fillStyle = gold ? 'rgba(255,255,255,.55)' : '#1b1b2b'; if (gold) ell(g, -5, -3, 2.5, 5, 0.3); else for (const [sx, sy, sr] of [[-6, -3, 2.6], [5, -1, 2.4], [-5, 8, 2.2], [6, 9, 2.6]]) circ(g, sx, sy, sr);
+    }
+    g.restore();
+  }
+  // A little songbird flying left (Hurdle Dash). s = 1 → body radius 12 px.
+  function drawBird(g, x, y, s, t = 0) {
+    g.save(); g.translate(x, y); g.scale(s, s);
+    const f = Math.sin(t * 18);
+    g.fillStyle = '#2f6fb8'; poly(g, [10, -2, 20, -7, 19, 3]); g.fill(); // tail
+    g.fillStyle = '#4f9be8'; ell(g, 0, 0, 13, 10.5);
+    g.fillStyle = '#e8f4ff'; ell(g, -3, 4, 8, 5.5);
+    g.fillStyle = '#ff9f1c'; poly(g, [-11, -4, -19, -2, -11, 1]); g.fill();
+    g.fillStyle = '#fff'; circ(g, -6, -4, 3); g.fillStyle = '#1b1b2b'; circ(g, -6.8, -4, 1.6);
+    g.fillStyle = '#2f6fb8'; g.beginPath(); g.moveTo(-3, -3); g.quadraticCurveTo(4, -16 * f - 2, 10, -3); g.closePath(); g.fill();
+    g.restore();
+  }
+
   // ---------- Duck Valley ----------
   // Layout: farms in a grid, ordered by when each player joined (plot), with dirt roads between.
   function valleyLayout(n, W, H) {
@@ -144,8 +347,8 @@
     if (f.buildings.garden) for (let i = 0; i < 1 + f.buildings.garden; i++) { const gx = ix + iw * (0.68 + i * 0.06), gy = iy + ih * 0.9; g.strokeStyle = '#3d8b37'; g.lineWidth = Math.max(1, iw * 0.006); g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx, gy - ih * 0.1); g.stroke(); g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(gx, gy - ih * 0.1, iw * 0.018, 0, TAU); g.fill(); }
     // feeder
     if (f.buildings.feeder) { g.fillStyle = '#b08968'; g.beginPath(); g.ellipse(ix + iw * 0.45, iy + ih * 0.35, iw * 0.04, ih * 0.025, 0, 0, TAU); g.fill(); }
-    // decorations (emoji)
-    if (f.decor.length && iw > 50) { g.font = `${Math.max(8, iw * 0.07)}px sans-serif`; g.textAlign = 'center'; f.decor.forEach((d, i) => g.fillText(DECOR_ICON[d] || '', ix + iw * (0.08 + i * 0.1), iy + ih * 0.16)); g.textAlign = 'left'; }
+    // decorations (drawn art, along the top fence)
+    if (f.decor.length && iw > 50) { const ds0 = Math.max(9, iw * 0.085); f.decor.forEach((d, i) => drawIcon(g, d, ix + iw * (0.08 + i * 0.1), iy + ih * 0.16 - ds0 * 0.35, ds0, t + i)); }
     // fence
     g.strokeStyle = '#8b5a2b'; g.lineWidth = Math.max(1.5, iw * 0.012); g.strokeRect(ix, iy, iw, ih);
     g.fillStyle = '#6b4420'; const posts = 6; for (let i = 0; i <= posts; i++) { g.fillRect(ix + (iw * i) / posts - 1.5, iy - 2, 3, 5); g.fillRect(ix + (iw * i) / posts - 1.5, iy + ih - 3, 3, 5); }
@@ -154,7 +357,7 @@
     // the duck
     const sp = f.stage === -1 ? { x: 0.52, y: 0.5, mode: 'stand' } : duckSpot(f, t, k), ds = Math.max(0.25, iw / 220);
     // trophy shelf by the house
-    if (f.trophies && f.trophies.length) { const n = Math.min(6, f.trophies.length); g.fillStyle = '#7a4a24'; g.fillRect(ix + iw * 0.6, iy + ih * 0.36, iw * 0.24, ih * 0.025); g.font = `${Math.max(7, iw * 0.05)}px sans-serif`; for (let i = 0; i < n; i++) g.fillText(['🏆', '🥈', '🥉'][f.trophies[i] - 1] || '🏆', ix + iw * (0.6 + i * 0.04), iy + ih * 0.355); }
+    if (f.trophies && f.trophies.length) { const n = Math.min(6, f.trophies.length); g.fillStyle = '#7a4a24'; g.fillRect(ix + iw * 0.6, iy + ih * 0.36, iw * 0.24, ih * 0.025); const ts = Math.max(7, iw * 0.05); for (let i = 0; i < n; i++) drawIcon(g, 'trophy' + (f.trophies[i] >= 1 && f.trophies[i] <= 3 ? f.trophies[i] : 1), ix + iw * (0.6 + i * 0.04) + ts * 0.5, iy + ih * 0.355 - ts * 0.45, ts); }
     // the farmer: the player's own character (BOX.drawChar), by the coop, watching their duck
     const BX = window.BOX;
     if (f.id && BX && BX.drawChar && iw * zoom > 46) {
@@ -168,16 +371,16 @@
     // effects from the phone (hearts when petted, sparkles on level up, crumbs when eating, dust when building)
     for (const e of fx) {
       const age = (performance.now() - e.at) / 1000; if (age > 1.6) continue;
-      g.globalAlpha = 1 - age / 1.6; g.font = `${Math.max(10, 18 * ds)}px sans-serif`; g.textAlign = 'center';
-      g.fillText({ pet: '❤️', levelUp: '⭐', eat: '🌽', build: '🔨', badge: '🏅', farm: '✨', hatch: '🐣', grow: '🌱', spin: '🎡', gift: '🎁' }[e.kind] || '✨', ix + iw * sp.x + Math.sin(age * 6) * 8, iy + ih * sp.y - 30 * ds - age * 30);
-      g.globalAlpha = 1; g.textAlign = 'left';
+      g.globalAlpha = 1 - age / 1.6;
+      drawIcon(g, FX_ICON[e.kind] || 'sparkle', ix + iw * sp.x + Math.sin(age * 6) * 8, iy + ih * sp.y - 36 * ds - age * 30, Math.max(12, 22 * ds), age);
+      g.globalAlpha = 1;
     }
     // what the duck is doing right now: a little bubble with the mini-game's icon
-    const BUSY = { hurdles: '🏃', paddle: '🌊', rings: '🪽', climb: '🧗', bugs: '💪' };
+    const BUSY = { hurdles: 'hurdle', paddle: 'wave', rings: 'ring', climb: 'climb', bugs: 'bug' };
     if (BUSY[f.busy] && f.owner) {
       const bx = ix + iw * sp.x + 14 * ds, by = iy + ih * sp.y - 34 * ds, br = Math.max(7, 11 * ds);
       g.fillStyle = 'rgba(255,255,255,.92)'; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.fill(); g.beginPath(); g.moveTo(bx - br * 0.5, by + br * 0.7); g.lineTo(bx - br * 0.9, by + br * 1.4); g.lineTo(bx, by + br * 0.9); g.fill();
-      g.font = `${br * 1.15}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(BUSY[f.busy], bx, by + 1); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+      drawIcon(g, BUSY[f.busy], bx, by, br * 1.5, t);
     }
     // sign: owner, mood, rank (the phone draws its own overlay instead)
     if (!f.owner) return;
@@ -192,10 +395,11 @@
       g.fillStyle = f.stage >= 3 ? '#ffd23f' : f.stage === 2 ? '#8be36a' : f.stage === 1 ? '#7fe0ff' : '#fff4d6'; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.fill();
       g.strokeStyle = 'rgba(40,24,10,.8)'; g.lineWidth = Math.max(1, fs * 0.12); g.stroke();
       g.fillStyle = '#3a2400'; g.font = `800 ${fs * 0.95}px Fredoka, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(f.total), cx, cy + 1); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
-      if (w * zoom > 90) { g.font = `${fs}px sans-serif`; g.fillText(MOOD(f.mood), cx - r - fs * 1.3, iy + fs + 4); }
-    } else if (w * zoom > 90) { g.font = `${fs}px sans-serif`; g.fillText(MOOD(f.mood), ix + iw - fs * 1.4, iy + fs + 4); }
+      if (w * zoom > 90) drawIcon(g, moodIcon(f.mood), cx - r - fs * 0.8, iy + 3 + (fs + 6) / 2, fs * 1.15);
+    } else if (w * zoom > 90) drawIcon(g, moodIcon(f.mood), ix + iw - fs * 0.9, iy + 3 + (fs + 6) / 2, fs * 1.15);
     if (w * zoom > 150) { const L = f.levels; g.font = `600 ${fs * 0.8}px Fredoka, sans-serif`; g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(ix + 3, iy + ih - fs - 6, iw - 6, fs + 4); g.fillStyle = '#fff'; g.fillText(`🏃${L.run} 🌊${L.swim} 🪽${L.fly} 🧗${L.climb} 💪${L.stamina}`, ix + 8, iy + ih - 8, iw - 14); }
   }
+  const FX_ICON = { pet: 'heart', levelUp: 'star', eat: 'corn', build: 'hammer', badge: 'medal', farm: 'sparkle', hatch: 'hatch', grow: 'sprout', spin: 'wheel', gift: 'gift' };
   const DECOR_ICON = { flowers: '🌷', flag: '🚩', gnome: '🧙', lantern: '🏮', scarecrow: '🎃', fountain: '⛲', statue: '🗿', rainbow: '🌈' };
   // ---------- Duck Valley: one shared map ----------
   // Farm plots sit on a grid of lots around the Raceway (centre), nearest lots first, so the
@@ -373,5 +577,5 @@
     return base;
   }
 
-  window.DUCK_ART = { PAL, THEME, drawDuck, duckImg, drawEgg, eggImg, drawFarm, drawFox, drawValley, valleyLayout, raceGeometry, groundAt, drawRaceWorld, SEC_COLORS, MOOD, DECOR_ICON };
+  window.DUCK_ART = { PAL, THEME, drawDuck, duckBox, duckImg, drawEgg, eggImg, drawFarm, drawFox, drawValley, valleyLayout, raceGeometry, groundAt, drawRaceWorld, SEC_COLORS, MOOD, DECOR_ICON, drawIcon, drawBug, drawBird, moodIcon, ICON_NAMES: Object.keys(ICONS) };
 })();
