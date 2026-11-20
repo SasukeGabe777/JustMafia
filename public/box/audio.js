@@ -33,6 +33,9 @@
      BOX.audio.stinger(name, scoreKey)   one-shot (score stinger or a built-in one)
      BOX.audio.fx(scoreKey, kind)    play the score's stinger for a game fx kind -> true if it did
      BOX.audio.sfx(name)             the current score's restyled version of an SFX name -> bool
+     BOX.audio.clip(path, o)         a small RECORDED sound effect: public/audio/sfx/<path> (e.g. 'bid/garage.ogg')
+                                     on the SFX bus, quiet by default (o.vol 0.3; o.rate, o.pan, o.delay s, o.jitter).
+                                     Same path at most once per o.gap ms (150). Silent if missing. -> bool
      BOX.audio.duck(on)              lower the music under the narrator
      BOX.audio.stop(fade)            stop the music
      BOX.audio.need(key, cb)         load a score file
@@ -907,6 +910,7 @@
     return find(name) || find((m.aliases || {})[name]);
   }
   const bufs = new Map(); // url -> 'loading' | 'failed' | AudioBuffer
+  const clipLast = new Map(); // sfx clip path -> last start (ms), so a clip never machine-guns
   function loadBuf(url, cb) {
     const b = bufs.get(url);
     if (b && b !== 'loading') { cb(); return; }
@@ -1097,6 +1101,21 @@
     stinger(name, key) { try { return playStinger(key, name); } catch (e) { console.error(e); return false; } },
     fx(key, kind) { const sc = BOX.scores[key]; const n = sc && sc.fx && sc.fx[kind]; return n ? api.stinger(n, key) : false; },
     sfx(name) { const sc = BOX.scores[curScore]; const n = sc && sc.sfx && sc.sfx[name]; return n ? api.stinger(n, curScore) : false; },
+    clip(path, o = {}) {
+      if (!path || !E || E.ctx.state !== 'running') return false;
+      const now = performance.now(), gap = o.gap != null ? o.gap : 150, last = clipLast.get(path) || 0;
+      if (now - last < gap) return false; clipLast.set(path, now);
+      const url = '/audio/sfx/' + String(path).split('/').map(encodeURIComponent).join('/');
+      loadBuf(url, () => {
+        const buf = bufs.get(url); if (!buf || typeof buf === 'string' || !E) return;
+        const c = E.ctx, src = c.createBufferSource(), g = c.createGain(), j = o.jitter != null ? o.jitter : 0.04;
+        src.buffer = buf; src.playbackRate.value = (o.rate || 1) * (1 + (rnd() * 2 - 1) * j);
+        g.gain.value = clamp(o.vol != null ? o.vol : 0.3, 0, 1);
+        let out = g; if (o.pan && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = clamp(o.pan, -1, 1); g.connect(p); out = p; }
+        src.connect(g); out.connect(E.sfx.dry || E.sfx); src.start(c.currentTime + Math.max(0, o.delay || 0));
+      });
+      return true;
+    },
     duck(on) { if (duckOn === !!on) return; duckOn = !!on; applyLevels(); },
     set(kind, v) { if (!(kind in settings)) return; settings[kind] = kind === 'mute' ? !!v : clamp(Number(v) || 0, 0, 1); saveSettings(); applyLevels(); },
     mute(on) { api.set('mute', on); },

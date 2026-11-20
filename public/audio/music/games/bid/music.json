@@ -1,0 +1,10 @@
+{
+ "cues": {
+  "title": { "file": "games/bid/title-confusement-rag.mp3" },
+  "intro": { "file": "games/bid/title-confusement-rag.mp3" },
+  "lobby": { "file": "games/bid/title-confusement-rag.mp3" }
+ },
+ "credits": [
+  { "file": "games/bid/title-confusement-rag.mp3", "title": "Confusement Rag", "author": "Skrjablin", "source": "https://opengameart.org/node/25403", "license": "CC0 1.0" }
+ ]
+}
