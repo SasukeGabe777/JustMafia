@@ -1,4 +1,4 @@
-/* JustGameBox title screen. Layout: header (logo + Party Mode) → the 3 big games → "More games"
+/* JustGameBox title screen. Layout: header (logo; the seasonal event + Party Mode) → the 3 big games → "More games"
    (a slim filter bar, then labelled shelves of compact cards that hub.js builds by type). */
 :root {
   --bg1: #170f38; --bg2: #2e1258; --ink: #fff8ef; --muted: #c9bfe6; --dim: #9b90c2;
@@ -21,15 +21,17 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
 
 .hub { position: relative; z-index: 1; max-width: 1800px; margin: 0 auto; padding: clamp(16px, 2.2vw, 44px) clamp(16px, 3.2vw, 64px) clamp(20px, 2vw, 36px); display: flex; flex-direction: column; gap: clamp(16px, 2vw, 34px); }
 
-/* ---------- Header: logo left, Party Mode right (the ⚙ sits fixed in the corner) ---------- */
+/* ---------- Header, one row: logo left; the seasonal event + Party Mode right (the ⚙ sits fixed in the corner) ---------- */
 .hub-head { display: flex; align-items: center; justify-content: space-between; gap: 20px 32px; flex-wrap: wrap; padding-right: 64px; }
-.logo { margin: 0; font-size: clamp(40px, 4.3vw, 84px); font-weight: 700; letter-spacing: -0.02em; line-height: 1; text-shadow: 0 5px 0 rgba(0, 0, 0, 0.32); }
+.logo { margin: 0; font-size: clamp(40px, 4.3vw, 84px); font-weight: 700; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; text-shadow: 0 5px 0 rgba(0, 0, 0, 0.32); }
 .logo .just { color: var(--ink); }
 .logo .game { color: var(--pink); }
 .logo .box { color: var(--yellow); display: inline-block; transform: rotate(-4deg); animation: bob 3.2s ease-in-out infinite; }
 @keyframes bob { 50% { transform: rotate(-4deg) translateY(-5px); } }
-.tag { margin: 8px 0 0; color: var(--muted); font-size: clamp(15px, 1.15vw, 21px); }
-.head-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.brand { flex: 1 1 380px; min-width: 0; }
+.tag { margin: 8px 0 0; color: var(--muted); font-size: clamp(15px, 1.15vw, 21px); display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.tag .hiw-link { margin-left: 0; }
+.head-actions { display: flex; align-items: stretch; justify-content: flex-end; gap: 14px; flex-wrap: wrap; }
 
 .party-btn { font: inherit; color: var(--ink); cursor: pointer; display: flex; align-items: center; gap: 12px; text-align: left; padding: 10px 22px 10px 12px; border-radius: 18px; border: 2px solid transparent;
   background: linear-gradient(#2a1a5c, #24164f) padding-box, linear-gradient(100deg, #ffd23f, #ff8cc6, #3ee6ff) border-box;
@@ -40,17 +42,38 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
 .party-btn small { font-size: clamp(12px, 0.8vw, 15px); color: var(--muted); }
 .party-btn:hover, .party-btn:focus-visible { outline: none; transform: translateY(-2px); box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35), 0 0 30px rgba(255, 140, 198, 0.35); }
 
+/* The seasonal event (or the next one), beside Party Mode and the same shape, in the event's colours
+   (public/progress-ui.js fills [data-season-banner="hub"] from public/shared/seasons.js). */
+.hub-event { display: flex; }
+.hub-event[hidden] { display: none; }
+.jgp-hub { --ea: #ffcf3f; --eb: #4a2a8a; --ec: #fff4c8; flex: 1; display: flex; align-items: center; gap: 12px; padding: 10px 22px 10px 12px; border-radius: 18px; border: 2px solid transparent; color: var(--ink); text-align: left; cursor: default;
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--ea) 34%, transparent), transparent 60%) padding-box, linear-gradient(#2a1a5c, #24164f) padding-box, linear-gradient(100deg, var(--ea), var(--ec)) border-box;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
+.jgp-hub-ic { font-size: clamp(26px, 2vw, 36px); line-height: 1; display: grid; place-items: center; flex: 0 0 auto; width: 1.6em; height: 1.6em; border-radius: 12px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ea) 55%, transparent), color-mix(in srgb, var(--eb) 55%, transparent)); }
+.jgp-hub-txt { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.jgp-hub-txt b { font-size: clamp(18px, 1.3vw, 24px); white-space: nowrap; }
+.jgp-hub-txt small { font-size: clamp(12px, 0.8vw, 15px); color: var(--muted); white-space: nowrap; }
+.jgp-hub-txt em { font-style: normal; font-weight: 600; color: var(--ec); }
+.jgp-hub.soon { background: linear-gradient(#2a1a5c, #24164f) padding-box, linear-gradient(100deg, color-mix(in srgb, var(--ea) 55%, transparent), rgba(255, 255, 255, 0.14)) border-box; }
+.jgp-hub.soon .jgp-hub-ic { filter: saturate(0.6); background: rgba(255, 255, 255, 0.08); }
+.jgp-hub.soon .jgp-hub-txt em { color: var(--muted); font-weight: 400; }
+
 .continue { font: inherit; font-size: clamp(15px, 1vw, 18px); font-weight: 700; border-radius: 14px; padding: 12px 18px; text-decoration: none; background: var(--cyan); color: #12233a; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25); }
 .continue[hidden] { display: none; }
 .new-room { font: inherit; font-size: clamp(14px, 0.9vw, 17px); font-weight: 700; cursor: pointer; border-radius: 14px; padding: 11px 16px; color: var(--ink); background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.35); }
 .new-room:hover, .new-room:focus-visible { background: rgba(255, 255, 255, 0.18); }
 .new-room[hidden], .room-live[hidden] { display: none; }
-.room-live { margin: 0 0 14px; padding: 10px 16px; border-radius: 14px; font-size: clamp(14px, 0.95vw, 18px); background: rgba(62, 230, 255, 0.12); border: 2px solid rgba(62, 230, 255, 0.45); }
+/* The TV's open room (hub.js): one strip under the header, its buttons on the right. Hidden when nothing in it shows. */
+.room-bar { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; padding: 8px 8px 8px 18px; border-radius: 18px; background: rgba(62, 230, 255, 0.1); border: 2px solid rgba(62, 230, 255, 0.4); }
+.room-bar:not(:has(> :not([hidden]))) { display: none; }
+.room-bar:has(> .room-live.err:not([hidden])) { background: rgba(255, 90, 90, 0.15); border-color: rgba(255, 120, 120, 0.6); }
+.room-live { flex: 1 1 320px; margin: 0; padding: 4px 0; font-size: clamp(14px, 0.95vw, 18px); }
 .room-live b { color: var(--cyan); letter-spacing: 0.08em; }
-.room-live.err { background: rgba(255, 90, 90, 0.15); border-color: rgba(255, 120, 120, 0.6); }
 
-.phone-join.shop-join { margin-top: 8px; background: linear-gradient(180deg, #ffe58a, #e0b52e); }
-.phone-join { display: none; text-align: center; padding: 14px; border-radius: 16px; background: var(--yellow); color: #2a1650; text-decoration: none; font-size: 18px; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3); }
+/* Phones only: join a game (the main thing on a phone), then the character & shop link. */
+.phone-join { display: none; text-align: center; padding: 14px 16px; border-radius: 18px; background: var(--yellow); color: #2a1650; text-decoration: none; font-size: 17px; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3); }
+.phone-join.shop-join { padding: 12px 16px; font-size: 16px; color: var(--ink); background: linear-gradient(#2a1a5c, #24164f) padding-box, linear-gradient(100deg, #ffd23f, #e0b52e) border-box; border: 2px solid transparent; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
 
 /* ---------- Tiles: shared ---------- */
 .tile { position: relative; display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; background: var(--card); border: 2px solid var(--line); color: inherit; text-decoration: none; outline: none; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, opacity 0.2s ease; }
@@ -240,8 +263,12 @@ body { background: var(--bg1); color: var(--ink); font-family: 'Fredoka', system
 @media (max-width: 700px) {
   .phone-join { display: block; }
   .hub-head { flex-direction: column; align-items: stretch; text-align: center; padding-right: 0; padding-top: 44px; }
-  .head-actions { flex-direction: column; align-items: stretch; }
-  .party-btn { justify-content: center; }
+  .brand { flex: none; }
+  .tag { justify-content: center; }
+  .head-actions { flex-direction: column; align-items: stretch; gap: 10px; }
+  .room-bar { flex-direction: column; align-items: stretch; padding: 12px; text-align: center; }
+  .room-live { flex: none; }
+  .party-btn, .jgp-hub { justify-content: flex-start; }
   .continue { text-align: center; }
   .more-head { flex-direction: column; align-items: stretch; }
   .hub-tools { justify-content: center; }
