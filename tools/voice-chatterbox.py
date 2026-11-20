@@ -27,10 +27,30 @@ import soundfile as sf
 import torch
 
 SR_OUT = 24000
-MAX_TRIES = int(os.environ.get('VOICE_TRIES', '4'))
+MAX_TRIES = int(os.environ.get('VOICE_TRIES', '3'))
 WER_OK = 0.12          # accept at or below this word error rate
 SIL_MAX_MS = 900       # a pause inside a line longer than this is a glitch
 WHISPER = os.environ.get('VOICE_WHISPER', 'small.en')
+# The GPU is shared (the owner's rule: all processes together stay under 10 GB). This process keeps
+# PyTorch under GPU_FRACTION of the card (~4.9 GB of 12; the Whisper check adds ~1 GB), frees its
+# cache after every clip, and waits while the whole card is above GPU_TOTAL_MAX_MB.
+GPU_FRACTION = float(os.environ.get('VOICE_GPU_FRACTION', '0.4'))
+GPU_TOTAL_MAX_MB = int(os.environ.get('VOICE_GPU_TOTAL_MAX_MB', '9500'))
+
+
+def gpu_used_mb():
+    free, total = torch.cuda.mem_get_info()
+    return (total - free) / 1048576
+
+
+def wait_for_room():
+    for i in range(720):  # up to an hour
+        torch.cuda.empty_cache()
+        if gpu_used_mb() <= GPU_TOTAL_MAX_MB:
+            return
+        if i % 10 == 0:
+            log(f'  GPU at {gpu_used_mb():.0f} MB (limit {GPU_TOTAL_MAX_MB}); waiting')
+        time.sleep(5)
 
 
 def log(*a):
@@ -132,6 +152,8 @@ def hear(wm, x, sr):
 
 def load_tts():
     from chatterbox.tts import ChatterboxTTS
+    torch.cuda.set_per_process_memory_fraction(GPU_FRACTION)
+    wait_for_room()
     for i in range(60):
         try:
             return ChatterboxTTS.from_pretrained(device='cuda')
@@ -145,6 +167,7 @@ def load_tts():
 def gen(model, text, job, seed):
     for i in range(40):
         try:
+            wait_for_room()
             torch.manual_seed(seed)
             with torch.inference_mode():
                 w = model.generate(text, exaggeration=float(job.get('exaggeration', 0.5)), cfg_weight=float(job.get('cfg', 0.5)), temperature=float(job.get('temperature', 0.8)))
@@ -211,6 +234,37 @@ def build_refs(spec, out):
     return refs
 
 
+def convert(recs, spec, wm, res_path, out):
+    """A take of the line in anyone's voice -> the character's voice (the delivery stays the reader's)."""
+    from chatterbox.vc import ChatterboxVC
+    torch.cuda.set_per_process_memory_fraction(GPU_FRACTION)
+    wait_for_room()
+    vc = ChatterboxVC.from_pretrained('cuda')
+    cur = None
+    with open(res_path, 'a', encoding='utf-8') as rf:
+        for n, j in enumerate(recs):
+            ref = spec['refs'][j['voice']]
+            if ref != cur:
+                vc.set_target_voice(ref)
+                cur = ref
+            wait_for_room()
+            with torch.inference_mode():
+                x = trim(vc.generate(j['source']).squeeze(0).float().cpu().numpy(), vc.sr)
+            heard = hear(wm, x, vc.sr) if len(x) > vc.sr * 0.15 else ''
+            w = wer(j['text'], heard)
+            r = {'id': j['id'], 'ms': int(len(x) / vc.sr * 1000), 'wer': round(w, 3), 'heard': heard, 'silence_ms': longest_silence_ms(x, vc.sr), 'clip': round(clip_ratio(x), 5), 'long': False, 'tries': 1, 'score': round(w, 3), 'ok': w <= WER_OK, 'source': j['source']}
+            sf.write(os.path.join(out, j['id'] + '.wav'), x, vc.sr, subtype='FLOAT')
+            rf.write(json.dumps(r) + '\n')
+            rf.flush()
+            torch.cuda.empty_cache()
+            if not r['ok']:
+                log(f'  take {os.path.basename(j["source"])}: heard "{heard[:70]}" for "{j["text"][:70]}" (wer {r["wer"]}): re-record?')
+            if (n + 1) % 20 == 0 or n == len(recs) - 1:
+                log(f'  converted {n + 1}/{len(recs)} recordings')
+    del vc
+    torch.cuda.empty_cache()
+
+
 def main():
     jobs_path, out = sys.argv[1], sys.argv[2]
     os.makedirs(out, exist_ok=True)
@@ -231,11 +285,18 @@ def main():
     if not todo:
         return
     t0 = time.time()
-    model = load_tts()
     wm, wdev = load_whisper()
+    # Your own recordings first (job.source): Chatterbox voice conversion into the character's voice.
+    recs = [j for j in todo if j.get('source')]
+    todo = [j for j in todo if not j.get('source')]
+    if recs:
+        convert(recs, spec, wm, res_path, out)
+    if not todo:
+        return
+    model = load_tts()
     log(f'models ready in {time.time() - t0:.0f} s (whisper {WHISPER} on {wdev})')
-    # Group by voice so each reference is prepared once.
-    todo.sort(key=lambda j: (j['voice'], j.get('exaggeration', 0.5)))
+    # Most-heard lines first (pri 0), then by voice so each reference is prepared once per batch.
+    todo.sort(key=lambda j: (j.get('pri', 0), j['voice'], j.get('exaggeration', 0.5)))
     cur_ref = None
     audio_s = 0.0
     tr = time.time()
@@ -268,6 +329,7 @@ def main():
             sf.write(os.path.join(out, j['id'] + '.wav'), x, model.sr, subtype='FLOAT')
             rf.write(json.dumps(r) + '\n')
             rf.flush()
+            torch.cuda.empty_cache()
             audio_s += r['ms'] / 1000
             if not r['ok']:
                 log(f'  check failed after {r["tries"]} tries: wer {r["wer"]} sil {r["silence_ms"]} long {r["long"]}: "{text[:70]}" heard "{r["heard"][:70]}"')

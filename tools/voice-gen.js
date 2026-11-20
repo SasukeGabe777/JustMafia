@@ -6,6 +6,12 @@
 //   node tools/voice-gen.js --list          print the lines, render nothing
 //   node tools/voice-gen.js --force         re-render everything (or only the games named)
 //   node tools/voice-gen.js --engine kokoro use the old Kokoro-only path (no Python needed)
+//   node tools/voice-gen.js --encode-only   encode what an interrupted Chatterbox run already made
+//   node tools/voice-gen.js --sheet lines.csv          write a recording sheet (line id, character, text)
+//   node tools/voice-gen.js --recordings <dir> [games] voice lines from your own recordings: <dir>/<line id>.wav
+//        (or .webm .mp3 .m4a .ogg .flac), one take per line, any voice; Chatterbox voice conversion
+//        turns each take into that character's voice (the delivery stays yours). Recorded clips are
+//        kept (e=rec) by later TTS runs; --force re-converts them.
 //
 // What it renders:
 //  * JustGameBox: every STATIC line a game's intro speaks (public/box/intros/<key>.js: the opening
@@ -53,10 +59,15 @@ const KOKORO_URL = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web
 const BITRATE = 24000;
 const args = process.argv.slice(2);
 const opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
-const only = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--engine');
-const FORCE = args.includes('--force'), LIST = args.includes('--list');
+const only = args.filter((a, i) => !a.startsWith('--') && !['--engine', '--sheet', '--recordings'].includes(args[i - 1]));
+const FORCE = args.includes('--force'), LIST = args.includes('--list'), ENCODE_ONLY = args.includes('--encode-only');
+// Render order (Chatterbox): what players hear most first, the short role reveals last.
+const PRI = { caption: 1, game: 1, lead: 1, surprise: 1, extra: 1, role: 2 };
 const ENGINE = opt('--engine') || (fs.existsSync(PY) ? 'chatterbox' : 'kokoro');
 const E_TAG = ENGINE === 'chatterbox' ? 'cb' : 'kokoro';
+const SHEET = opt('--sheet'), RECS = opt('--recordings');
+// <line id>.<ext> files in the recordings folder -> { id: path }
+const recordings = () => { const r = {}; if (RECS) for (const f of fs.readdirSync(RECS)) { const m = /^([0-9a-f]{16})\.(wav|webm|mp3|m4a|ogg|flac)$/i.exec(f); if (m) r[m[1]] = path.join(RECS, f); } return r; };
 
 // Chatterbox delivery presets (spec.cb). exaggeration: emotion intensity (0.25-2, 0.5 neutral);
 // cfg: how closely it follows the reference's pacing (lower = freer, slower, more dramatic);
@@ -316,14 +327,25 @@ async function main() {
     const mafia = require('./voice-lines-mafia').collect();
     const said = await page.eval(`(${JSON.stringify(mafia.map((l) => l.t))}).map((t) => BOX.voice.spoken(t))`);
     mafia.forEach((l, i) => { games[l.g] = games[l.g] || []; addJob(l.g, { h: l.h, t: l.t, say: said[i], voice: l.V, from: l.from }); });
+    if (SHEET) {
+      // A recording sheet: read each line in the character's spirit; save it as <id>.wav in one folder.
+      const q = (x) => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"';
+      const rows = [['id', 'game', 'character voice', 'delivery', 'kind', 'read this', 'screen text'].map(q).join(',')];
+      for (const j of jobs.values()) if (wanted(j.g)) rows.push([j.h, j.g, j.v, j.cb || 'warm', j.from || '', j.say || j.t, j.t].map(q).join(','));
+      fs.writeFileSync(SHEET, '\ufeff' + rows.join('\r\n') + '\r\n');
+      console.log(`Recording sheet: ${rows.length - 1} lines -> ${SHEET}. Save each take as <id>.wav in one folder, then: npm run voices -- --recordings <folder>`);
+      return;
+    }
     if (LIST) { for (const j of jobs.values()) console.log(`${j.g.padEnd(16)} ${String(j.v).padEnd(11)} ${String(j.cb || '').padEnd(8)} ${String(j.from || '').padEnd(10)} ${j.say || j.t}`); console.log(jobs.size + ' lines'); notes.forEach((n) => console.log('note: ' + n)); return; }
 
     // 2. what needs rendering (a clip made by another engine is re-rendered)
-    const todo = [], clips = {};
+    const todo = [], clips = {}, REC = recordings();
     for (const j of jobs.values()) {
       const o = old.clips && old.clips[j.h], g = o ? o.g : j.g, file = path.join(OUT, g, j.h + '.webm');
       const forced = FORCE && wanted(j.g);
-      const current = o && o.ms && fs.existsSync(file) && ((o.e || 'kokoro') === E_TAG || !wanted(j.g));
+      const recorded = RECS && REC[j.h] && (!o || o.e !== 'rec' || FORCE);
+      if (RECS && !recorded) { if (o && fs.existsSync(file)) clips[j.h] = { ...o, g, t: o.t || j.t }; continue; } // a recordings run only converts takes
+      const current = !recorded && o && o.ms && fs.existsSync(file) && ((o.e || 'kokoro') === E_TAG || o.e === 'rec' || !wanted(j.g));
       if (!forced && current) { clips[j.h] = { ...o, g, t: o.t || j.t }; continue; }
       if (j.keep) { if (o && fs.existsSync(file)) clips[j.h] = { ...o, g }; continue; }
       if (!wanted(j.g)) { if (o && fs.existsSync(file)) clips[j.h] = { ...o, g }; continue; }
@@ -332,7 +354,8 @@ async function main() {
     console.log(`${jobs.size} lines in ${Object.keys(games).length} games; ${jobs.size - todo.length} up to date, ${todo.length} to render with ${ENGINE}.`);
 
     // 3. render
-    const write = (j, r, extra) => { clips[j.h] = { g: j.g, ms: r.ms, v: j.v, s: j.s, ...(j.cb ? { cb: j.cb } : {}), t: j.t, db: r.db, e: E_TAG, ...extra }; };
+    const write = (j, r, extra) => { clips[j.h] = { g: j.g, ms: r.ms, v: j.v, s: j.s, ...(j.cb ? { cb: j.cb } : {}), t: j.t, db: r.db, e: REC[j.h] && RECS ? 'rec' : E_TAG, ...extra }; };
+    if (RECS && ENGINE !== 'chatterbox') throw new Error('--recordings needs the Chatterbox venv');
     if (todo.length && ENGINE === 'kokoro') {
       const dev = await page.eval(INIT);
       console.log('Kokoro on ' + dev + ` (model load ${((Date.now() - t0) / 1000).toFixed(1)} s in)`);
@@ -351,7 +374,7 @@ async function main() {
     }
     if (todo.length && ENGINE === 'chatterbox') {
       fs.mkdirSync(CACHE, { recursive: true });
-      if (FORCE) forget(new Set(todo.map((j) => j.h)));
+      if (FORCE && !ENCODE_ONLY) forget(new Set(todo.map((j) => j.h)));
       // Reference prompts: the repo copy (tools/voice-refs) or, the first time, the voice's own Kokoro clips.
       const voices = [...new Set(todo.map((j) => j.v))], ref_files = {}, ref_sources = {};
       for (const v of voices) {
@@ -360,11 +383,12 @@ async function main() {
         ref_sources[v] = Object.entries(old.clips).filter(([h, c]) => c.v === v && (c.e || 'kokoro') === 'kokoro').map(([h, c]) => path.join(OUT, c.g, h + '.webm')).filter((f) => fs.existsSync(f));
         if (!ref_sources[v].length) throw new Error('No reference for voice ' + v + ': add tools/voice-refs/' + v + '.webm or render it once with --engine kokoro.');
       }
-      const spec = { ref_files, ref_sources, jobs: todo.map((j) => ({ id: j.h, text: j.say || j.t, voice: j.v, ...(PRESETS[j.cb] || PRESETS.warm) })) };
+      const spec = { ref_files, ref_sources, jobs: todo.map((j) => ({ id: j.h, text: j.say || j.t, voice: j.v, pri: PRI[j.from] || 0, ...(RECS && REC[j.h] ? { source: REC[j.h] } : {}), ...(PRESETS[j.cb] || PRESETS.warm) })) };
+      if (RECS) forget(new Set(todo.map((j) => j.h))); // a new take replaces any cached render
       const jf = path.join(CACHE, 'jobs.json');
       fs.writeFileSync(jf, JSON.stringify(spec));
       console.log(`Chatterbox: ${todo.length} clips (${PY})`);
-      await runPython(jf);
+      if (ENCODE_ONLY) console.log('  --encode-only: using what is already rendered in ' + CACHE); else await runPython(jf);
       // Keep the references in the repo (Opus 48 kbps), so every checkout clones the same voices.
       for (const v of Object.keys(ref_sources)) { const w = path.join(CACHE, 'refs', v + '.wav'); if (fs.existsSync(w)) { await encodeTo(page, path.join(REFS, v + '.webm'), readWav(w), false, 48000); console.log('  saved reference tools/voice-refs/' + v + '.webm'); } }
       const res = readResults(); let audioMs = 0, bad = 0, checked = false;
