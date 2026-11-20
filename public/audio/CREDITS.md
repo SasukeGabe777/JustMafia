@@ -7,3 +7,46 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | Game | Kind | File | Title | Author | License | Source |
 |---|---|---|---|---|---|---|
 | bid | Music | `games/bid/title-confusement-rag.mp3` | Confusement Rag | Skrjablin | CC0 1.0 | https://opengameart.org/node/25403 |
+| blanks | Music | `games/blanks/title-catchy-swing.ogg` | Catchy Swing | Doge | CC0 1.0 | https://opengameart.org/node/114712 |
+| blanks | Music | `games/blanks/play-jazzy-blues.mp3` | Jazzy blues | LushoGames | CC0 1.0 | https://opengameart.org/node/15278 |
+| funny | Music | `games/funny/title-blue-intermission.ogg` | Blue Intermission | congusbongus | CC0 1.0 | https://opengameart.org/node/130655 |
+| funny | Music | `games/funny/think-taken-lightly.mp3` | Taken Lightly | Pro Sensory | CC0 1.0 | https://opengameart.org/node/80007 |
+| likely | Music | `games/likely/title-pomp-and-circumstance.ogg` | Pomp and Circumstance, Op. 39 No. 1 (Edward Elgar) | United States Army Band | Public domain | https://commons.wikimedia.org/wiki/File:Pomp_and_Circumstance,_Op._39_-_No._1_-_United_States_Army_Band.mp3 |
+| likely | Music | `games/likely/play-high-school-cadets.ogg` | The High School Cadets (John Philip Sousa) | United States Marine Band | Public domain | https://commons.wikimedia.org/wiki/File:Sousa_The_High_School_Cadets_United_States_Marine_Band.ogg |
+| memes | Music | `games/memes/title-goofy-attitude.ogg` | Goofy Attitude! | SkyleTheFrench | CC0 1.0 | https://opengameart.org/node/165451 |
+| memes | Music | `games/memes/think-respectable-amount-of-bounce.ogg` | A respectable amount of Bounce | Some Weirdo | CC0 1.0 | https://opengameart.org/node/180401 |
+| truths | Music | `games/truths/title-investigation.ogg` | Investigation | Umplix | CC0 1.0 | https://opengameart.org/node/136389 |
+| truths | Music | `games/truths/think-jazz-saxophone.mp3` | Jazz Saxaphone | Pro Sensory | CC0 1.0 | https://opengameart.org/node/85233 |
+| whosaid | Music | `games/whosaid/title-chills.ogg` | Chills | Holizna | CC0 1.0 | https://opengameart.org/node/161825 |
+| whosaid | Music | `games/whosaid/think-something-in-the-air.ogg` | Something In the Air | Holizna | CC0 1.0 | https://opengameart.org/node/161819 |
+| blanks | Sound effect | `blanks/shuffle.ogg` | Casino Audio (card-shuffle.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blanks | Sound effect | `blanks/card-1.ogg` | Casino Audio (card-place-1.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blanks | Sound effect | `blanks/card-2.ogg` | Casino Audio (card-place-3.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blanks | Sound effect | `blanks/slide.ogg` | Casino Audio (card-slide-1.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| blanks | Sound effect | `blanks/laugh.ogg` | live audience comedy show genuine laughter_moderate (excerpt) | HowardV | CC0 1.0 | https://freesound.org/people/HowardV/sounds/581528/ |
+| blanks | Sound effect | `blanks/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
+| funny | Sound effect | `funny/projector.ogg` | Film Projector - Long Run with Finish (start-up excerpt) | Stefan021 | CC0 1.0 | https://freesound.org/people/Stefan021/sounds/412145/ |
+| funny | Sound effect | `funny/laugh.ogg` | Sitcom Laughter 9x, Small Audience (excerpt) | Kinoton | CC0 1.0 | https://freesound.org/people/Kinoton/sounds/383207/ |
+| funny | Sound effect | `funny/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
+| funny | Sound effect | `funny/boo.ogg` | crowd booing (excerpt) | HowardV | CC0 1.0 | https://freesound.org/people/HowardV/sounds/264378/ |
+| funny | Sound effect | `funny/click.ogg` | UI Audio (switch3.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| likely | Sound effect | `likely/envelope.ogg` | Tearing Open An Envelope (excerpt) | 21100375 | CC0 1.0 | https://freesound.org/people/21100375/sounds/593146/ |
+| likely | Sound effect | `likely/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
+| likely | Sound effect | `likely/flash.ogg` | Camera shutter and flash combined (excerpt) | montclairguy | CC0 1.0 | https://freesound.org/people/montclairguy/sounds/353044/ |
+| likely | Sound effect | `likely/ooh.ogg` | Crowd Ooohs and Ahhhs in Excitement (excerpt) | noah0189 | CC0 1.0 | https://freesound.org/people/noah0189/sounds/264499/ |
+| likely | Sound effect | `likely/click.ogg` | UI Audio (click3.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| memes | Sound effect | `memes/shutter.ogg` | DSLR Camera Click (excerpt) | akonze | CC0 1.0 | https://freesound.org/people/akonze/sounds/157812/ |
+| memes | Sound effect | `memes/laugh-1.ogg` | Sitcom Laughter 9x, Small Audience (excerpt) | Kinoton | CC0 1.0 | https://freesound.org/people/Kinoton/sounds/383207/ |
+| memes | Sound effect | `memes/laugh-2.ogg` | Sitcom Laughter 9x, Small Audience (excerpt) | Kinoton | CC0 1.0 | https://freesound.org/people/Kinoton/sounds/383207/ |
+| memes | Sound effect | `memes/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
+| memes | Sound effect | `memes/click.ogg` | Interface Sounds (click_002.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
+| truths | Sound effect | `truths/typewriter.ogg` | typewriter22 (excerpt) | tams_kp | CC0 1.0 | https://freesound.org/people/tams_kp/sounds/43560/ |
+| truths | Sound effect | `truths/stamp.ogg` | RPG Audio (bookPlace1.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/rpg-audio |
+| truths | Sound effect | `truths/gavel.ogg` | Wooden Gavel Hits (excerpt) | Stefan021 | CC0 1.0 | https://freesound.org/people/Stefan021/sounds/798872/ |
+| truths | Sound effect | `truths/flash.ogg` | Vintage Camera Flash Powder and Shutter (excerpt) | Werra | CC0 1.0 | https://freesound.org/people/Werra/sounds/232130/ |
+| truths | Sound effect | `truths/click.ogg` | Interface Sounds (click_003.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
+| whosaid | Sound effect | `whosaid/spotlight.ogg` | Spotlight on (excerpt) | Kagateni | CC0 1.0 | https://freesound.org/people/Kagateni/sounds/518587/ |
+| whosaid | Sound effect | `whosaid/gasp.ogg` | small crowd gasp shock surprise (excerpt) | HowardV | CC0 1.0 | https://freesound.org/people/HowardV/sounds/264376/ |
+| whosaid | Sound effect | `whosaid/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
+| whosaid | Sound effect | `whosaid/laugh.ogg` | Sitcom Laughter 9x, Small Audience (excerpt) | Kinoton | CC0 1.0 | https://freesound.org/people/Kinoton/sounds/383207/ |
+| whosaid | Sound effect | `whosaid/click.ogg` | Interface Sounds (tick_002.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/interface-sounds |

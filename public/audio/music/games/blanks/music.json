@@ -1,0 +1,15 @@
+{
+ "cues": {
+  "title": { "file": "games/blanks/title-catchy-swing.ogg" },
+  "intro": { "file": "games/blanks/title-catchy-swing.ogg" },
+  "lobby": { "file": "games/blanks/title-catchy-swing.ogg" },
+  "finale": { "file": "games/blanks/title-catchy-swing.ogg" },
+  "think": { "file": "games/blanks/play-jazzy-blues.mp3" },
+  "play": { "file": "games/blanks/play-jazzy-blues.mp3" },
+  "tense": { "file": "games/blanks/play-jazzy-blues.mp3" }
+ },
+ "credits": [
+  { "file": "games/blanks/title-catchy-swing.ogg", "title": "Catchy Swing", "author": "Doge", "source": "https://opengameart.org/node/114712", "license": "CC0 1.0" },
+  { "file": "games/blanks/play-jazzy-blues.mp3", "title": "Jazzy blues", "author": "LushoGames", "source": "https://opengameart.org/node/15278", "license": "CC0 1.0" }
+ ]
+}

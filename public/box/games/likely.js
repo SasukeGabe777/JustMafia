@@ -4,6 +4,9 @@
 // Phone: a searchable, scrollable grid of names (vote, then predict), YES/NO for the Hot Seat.
 (function () {
   const { esc, mmss } = BOX;
+  // Recorded sound effects (public/audio/sfx/likely/, credits.json there): quiet touches on the TV,
+  // timed to what is on screen. false when they can't play (no audio engine yet, locked, muted file).
+  const clip = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('likely/' + f, o));
   // Phone-side state that must survive the shell re-rendering (~6×/s).
   let q = '', scroll = 0, duo = [], duoKey = '', edit = null, celebrated = '';
   // A countdown whose end time stays fixed for one phase, so identical renders can be skipped.
@@ -208,7 +211,7 @@
         if (k) {
           for (const b of k.parentNode.querySelectorAll('.mll-opt')) b.classList.toggle('on', b === k);
           const s = el.querySelector(`select[data-set="${k.dataset.k}"]`); if (s) s.value = k.dataset.v;
-          el.__L.set(k.dataset.k, k.dataset.v); BOX.sfx('ballot'); return;
+          el.__L.set(k.dataset.k, k.dataset.v); clip('click.ogg', { vol: 0.25 }) || BOX.sfx('ballot'); return;
         }
         const c = e.target.closest('[data-kick]');
         if (c && confirm('Remove this player?')) el.__L.kick(c.dataset.kick);
@@ -255,7 +258,18 @@
       'Bonus rounds: 👯 Double Trouble (pick two people) and 🔥 Hot Seat (“Would they actually do it?” YES or NO).',
       'At the end: the Hall of Titles and awards for the best room readers.',
     ],
-    fx: { prompt: 'whoosh', bonus: 'sting', open: 'tick', allin: 'chime', drum: 'drum', reveal: 'reveal', none: 'shrug', crown: 'cheer', yes: 'gasp', no: 'poof', split: 'shrug', win: 'win' },
+    // 'clip' = no synth sound: onFx plays a recorded one (and falls back to the old sound).
+    fx: { prompt: 'whoosh', bonus: 'sting', open: 'tick', allin: 'chime', drum: 'drum', reveal: 'reveal', none: 'shrug', crown: 'cheer', yes: 'clip', no: 'poof', split: 'shrug', win: 'win' },
+    onFx(f) {
+      const k = f.kind;
+      // "The envelope, please…": it tears open as the result appears
+      if (k === 'reveal' || k === 'yes' || k === 'no' || k === 'split' || k === 'none') clip('envelope.ogg', { vol: 0.3 });
+      if (k === 'yes') clip('ooh.ogg', { vol: 0.15, delay: 0.5 }) || BOX.sfx('gasp'); // the hot seat gets a YES
+      // the winner is crowned under the spotlight: applause and a press camera flash
+      if (k === 'crown') { clip('applause.ogg', { vol: 0.15, delay: 0.2 }); clip('flash.ogg', { vol: 0.13, delay: 0.5 }); }
+      // the Hall of Titles: applause and a few red-carpet camera flashes
+      if (k === 'win') { clip('applause.ogg', { vol: 0.14, delay: 0.6 }); for (const d of [0.9, 1.7, 2.6]) setTimeout(() => clip('flash.ogg', { vol: 0.1, pan: Math.random() * 1.2 - 0.6 }), d * 1000); }
+    },
 
     tv(el, s, ctx) {
       if (!s) return;

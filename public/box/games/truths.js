@@ -8,6 +8,9 @@
 // vote (or lean early), see if you caught it.
 (function () {
   const { esc, timer } = BOX;
+  // Recorded sound effects (public/audio/sfx/truths/, credits.json there): quiet touches on the TV,
+  // timed to what is on screen. false when they can't play (no audio engine yet, locked, muted file).
+  const clip = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('truths/' + f, o));
   let draft = ['', '', ''], lie = null, editing = false, hintN = -1, lobbyErr = '';
   const once = new Set();
   const first = (k) => { if (once.has(k)) return false; once.add(k); if (once.size > 300) once.clear(); return true; };
@@ -81,7 +84,7 @@
       </section>
     </div><div class="tx-lamp"></div>`);
     for (const s of el.querySelectorAll('select[data-set]')) { s.onchange = () => L.set(s.dataset.set, s.value); s.onclick = (e) => e.stopPropagation(); }
-    for (const b of el.querySelectorAll('[data-cycle]')) b.onclick = () => { const s = b.querySelector('select'); s.selectedIndex = (s.selectedIndex + 1) % s.options.length; BOX.sfx('flip'); s.onchange(); };
+    for (const b of el.querySelectorAll('[data-cycle]')) b.onclick = () => { const s = b.querySelector('select'); s.selectedIndex = (s.selectedIndex + 1) % s.options.length; clip('click.ogg', { vol: 0.3 }) || BOX.sfx('flip'); s.onchange(); };
     el.querySelector('#start').onclick = async () => { const r = await L.start(); lobbyErr = r && !r.ok ? r.error || 'Could not start.' : ''; const e = el.querySelector('#lobby-err'); if (e) e.textContent = lobbyErr; };
     el.querySelector('#add-bots').onclick = () => L.bots(5);
     el.querySelector('#rm-bots').onclick = () => L.removeBots();
@@ -233,8 +236,17 @@
       'Grill them! Ask questions out loud, then everyone votes on their phone: which one is the lie?',
       'Guess right: +1 point. In the hot seat: +1 for every person you fool (up to 5 points a turn).',
     ],
-    fx: { flip: 'flip', talk: 'talk', gavel: 'gavel', drum: 'drum', ready: 'pop', win: 'win' },
-    onFx(f) { if (f.kind === 'drum') setTimeout(() => BOX.sfx(f.twist ? 'gasp' : f.fooled ? 'laugh' : 'cheer'), 2200); },
+    // 'clip' = no synth sound: onFx plays a recorded one (and falls back to the old sound).
+    fx: { flip: 'clip', talk: 'talk', gavel: 'clip', drum: 'drum', ready: 'clip', win: 'win' },
+    onFx(f) {
+      const k = f.kind;
+      // the next suspect's three statements are typed onto the case file
+      if (k === 'flip') clip('typewriter.ogg', { vol: 0.15 }) || (BOX.audio ? BOX.audio.stinger('flip', 'truths') : BOX.sfx('flip'));
+      else if (k === 'ready') clip('stamp.ogg', { vol: 0.22, gap: 200 }) || BOX.sfx('pop'); // a suspect's statements are stamped FILED
+      else if (k === 'gavel') clip('gavel.ogg', { vol: 0.2 }) || BOX.sfx('gavel'); // voting opens
+      else if (k === 'drum') setTimeout(() => BOX.sfx(f.twist ? 'gasp' : f.fooled ? 'laugh' : 'cheer'), 2200);
+      else if (k === 'win') clip('flash.ogg', { vol: 0.15, delay: 1.2 }); // case closed: an old press camera's flash powder
+    },
     lobbyTv,
     lobby: () => '<div class="tx tx-phlobby"><div class="tx-paper"><div class="tx-formh">WHILE YOU WAIT</div><p>Think of <b>two true things</b> about you and <b>one believable lie</b>. The best lies are boring!</p></div></div>',
     tv,

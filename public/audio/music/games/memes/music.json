@@ -1,0 +1,15 @@
+{
+ "cues": {
+  "title": { "file": "games/memes/title-goofy-attitude.ogg" },
+  "intro": { "file": "games/memes/title-goofy-attitude.ogg" },
+  "lobby": { "file": "games/memes/title-goofy-attitude.ogg" },
+  "finale": { "file": "games/memes/title-goofy-attitude.ogg" },
+  "think": { "file": "games/memes/think-respectable-amount-of-bounce.ogg" },
+  "play": { "file": "games/memes/think-respectable-amount-of-bounce.ogg" },
+  "tense": { "file": "games/memes/think-respectable-amount-of-bounce.ogg" }
+ },
+ "credits": [
+  { "file": "games/memes/title-goofy-attitude.ogg", "title": "Goofy Attitude!", "author": "SkyleTheFrench", "source": "https://opengameart.org/node/165451", "license": "CC0 1.0" },
+  { "file": "games/memes/think-respectable-amount-of-bounce.ogg", "title": "A respectable amount of Bounce", "author": "Some Weirdo", "source": "https://opengameart.org/node/180401", "license": "CC0 1.0" }
+ ]
+}

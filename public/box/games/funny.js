@@ -5,6 +5,9 @@
 // rate it, throw reactions, vote to skip, and vote for the funniest at the end.
 (function () {
   const { esc, timer } = BOX;
+  // Recorded sound effects (public/audio/sfx/funny/, credits.json there): quiet touches on the TV,
+  // timed to what is on screen. false when they can't play (no audio engine yet, locked, muted file).
+  const clip = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('funny/' + f, o));
   const morph = (el, html) => { if (el) BOX.morph(el, html); };
   // Players as their JustGameBox character (public/box/portrait.js). face(): in place of an emoji
   // (falls back to it); pic0(): only when they have a character (nothing otherwise).
@@ -185,7 +188,7 @@
     const hot = laugh.level >= 75, st = document.getElementById('fn-stage');
     if (st) st.classList.toggle('hot', hot);
     const co = document.getElementById('fn-couch'); if (co) { co.classList.toggle('lol', laugh.level >= 45); co.classList.toggle('howl', hot); }
-    if (hot && Date.now() - laugh.hotAt > 12000) { laugh.hotAt = Date.now(); BOX.sfx('laugh'); }
+    if (hot && Date.now() - laugh.hotAt > 12000) { laugh.hotAt = Date.now(); clip('laugh.ogg', { vol: 0.15 }) || BOX.sfx('laugh'); } // the couch is howling: a little studio-audience laugh
   }
   function float(el, text) {
     const f = document.createElement('div'); f.className = 'fn-float'; f.textContent = text;
@@ -527,10 +530,10 @@
     for (const it of box.querySelectorAll('.fnl-item')) {
       const f = L.fields.find((x) => x.key === it.dataset.k); if (!f) continue;
       const sel = it.querySelector('select');
-      sel.onchange = () => { sel.blur(); lob.set(f.key, sel.value); BOX.sfx('click'); };
+      sel.onchange = () => { sel.blur(); lob.set(f.key, sel.value); clip('click.ogg', { vol: 0.25 }) || BOX.sfx('click'); };
       for (const b of it.querySelectorAll('[data-step]')) b.onclick = () => {
         const nx = f.options[(optIdx(f, lob.settings[f.key]) + Number(b.dataset.step) + f.options.length) % f.options.length];
-        lob.set(f.key, String(nx.value)); BOX.sfx('pop');
+        lob.set(f.key, String(nx.value)); clip('click.ogg', { vol: 0.25 }) || BOX.sfx('pop');
         it.classList.remove('bump'); void it.offsetWidth; it.classList.add('bump');
       };
     }
@@ -556,8 +559,13 @@
       'Bored? Vote to skip. Enough skips and the next video starts.',
       'At the end, vote for the funniest video. The best-of reel replays the winners from their biggest laugh.',
     ],
-    fx: { start: 'start', boo: 'boo', cheer: 'cheer', chime: 'chime', gavel: 'gavel', win: 'win', shrug: 'shrug', ballot: 'ballot', drum: 'drum', reveal: 'reveal' },
+    // 'clip' = no synth sound: onFx plays a recorded one (and falls back to the old sound).
+    fx: { start: 'clip', boo: 'clip', cheer: 'clip', chime: 'chime', gavel: 'gavel', win: 'win', shrug: 'shrug', ballot: 'ballot', drum: 'drum', reveal: 'reveal' },
     onFx(f) {
+      // the projector whirrs up as a video starts; the room applauds a big laugh or boos a skip
+      if (f.kind === 'start') { clip('projector.ogg', { vol: 0.14 }) || (BOX.audio ? BOX.audio.stinger('start', 'funny') : BOX.sfx('start')); return; }
+      if (f.kind === 'cheer') { clip('applause.ogg', { vol: 0.17 }) || BOX.sfx('cheer'); return; }
+      if (f.kind === 'boo') { clip('boo.ogg', { vol: 0.13 }) || BOX.sfx('boo'); return; }
       if (f.kind !== 'react') return;
       const o = document.getElementById('fn-react'); if (o) float(o, f.e);
       if (f.pid) palPop(f.pid, f.e);

@@ -1,0 +1,15 @@
+{
+ "cues": {
+  "title": { "file": "games/whosaid/title-chills.ogg" },
+  "intro": { "file": "games/whosaid/title-chills.ogg" },
+  "lobby": { "file": "games/whosaid/title-chills.ogg" },
+  "finale": { "file": "games/whosaid/title-chills.ogg" },
+  "think": { "file": "games/whosaid/think-something-in-the-air.ogg" },
+  "play": { "file": "games/whosaid/think-something-in-the-air.ogg" },
+  "tense": { "file": "games/whosaid/think-something-in-the-air.ogg" }
+ },
+ "credits": [
+  { "file": "games/whosaid/title-chills.ogg", "title": "Chills", "author": "Holizna", "source": "https://opengameart.org/node/161825", "license": "CC0 1.0" },
+  { "file": "games/whosaid/think-something-in-the-air.ogg", "title": "Something In the Air", "author": "Holizna", "source": "https://opengameart.org/node/161819", "license": "CC0 1.0" }
+ ]
+}
