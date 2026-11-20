@@ -1,8 +1,10 @@
 # Your own music
 
 Drop audio files (mp3, m4a, ogg, wav, flac) into these folders and the big screen mixes them
-in with the game's own composed soundtrack: a composed track, then one of yours, then a
-composed track, and so on, crossfading between them.
+in with the game's own soundtrack: a game track, then one of yours, then a game track, and so
+on, crossfading between them. (The game's soundtrack is the recorded one in
+`public/audio/music/` where a world and moment has a track, see `docs/music.md`, and the
+composed chiptune everywhere else.)
 
 ## Which folder?
 

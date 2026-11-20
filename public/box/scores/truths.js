@@ -71,7 +71,7 @@
       flip: (X) => { X.note('piano', 'g5', 0, 0.3, 0.6); X.drum('sn', 0, 0.6); },
       win: { bpm: 90, swing: 0.62, tracks: { s: { type: 'sax' }, p: { type: 'piano', mode: 'chord', center: 62, n: 4 } }, chords: 'Abmaj7 | Cm9', bars: 2, parts: { s: 'c5 eb5 g5 bb5 - c6 - - | g5 - - - - - - -', p: '................|x---------------' } },
     },
-    fx: { win: 'win', flip: 'flip' },
+    fx: { win: 'win' }, // 'flip' is a recorded typewriter now (games/truths.js onFx), the stinger is its fallback
     sfx: { drum: 'roll', gasp: 'gotcha', laugh: 'fooled', win: 'win', gavel: 'gavel' },
   };
 })();

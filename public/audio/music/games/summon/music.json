@@ -1,0 +1,69 @@
+{
+ "cues": {
+  "title": {
+   "file": "games/summon/war-theme.ogg",
+   "loopStart": 2,
+   "loopEnd": 159.24
+  },
+  "intro": {
+   "file": "games/summon/war-theme.ogg",
+   "loopStart": 2,
+   "loopEnd": 159.24
+  },
+  "play": {
+   "file": "games/summon/war-theme.ogg",
+   "loopStart": 2,
+   "loopEnd": 159.24
+  },
+  "lobby": {
+   "file": "games/summon/militaristic-tune.ogg",
+   "loopStart": 2,
+   "loopEnd": 146.45
+  },
+  "think": {
+   "file": "games/summon/militaristic-tune.ogg",
+   "loopStart": 2,
+   "loopEnd": 146.45
+  },
+  "tense": {
+   "file": "games/summon/final-stand.ogg",
+   "loopStart": 0,
+   "loopEnd": 64
+  },
+  "finale": {
+   "file": "games/summon/a-legend-will-rise.ogg",
+   "loopStart": 2,
+   "loopEnd": 57.19
+  }
+ },
+ "credits": [
+  {
+   "file": "games/summon/war-theme.ogg",
+   "title": "War Theme (ver 2)",
+   "author": "Spring Spring",
+   "source": "https://opengameart.org/content/war-theme",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/summon/militaristic-tune.ogg",
+   "title": "Some Militaristic Tune",
+   "author": "Spring Spring",
+   "source": "https://opengameart.org/content/some-militaristic-tune",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/summon/final-stand.ogg",
+   "title": "Final Stand",
+   "author": "iamoneabe",
+   "source": "https://opengameart.org/content/final-stand",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/summon/a-legend-will-rise.ogg",
+   "title": "A Legend Will Rise",
+   "author": "CodeManu",
+   "source": "https://opengameart.org/content/a-legend-will-rise-orchestral",
+   "license": "CC0 1.0"
+  }
+ ]
+}

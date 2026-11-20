@@ -77,7 +77,8 @@
       radio: { bpm: 160, tracks: { s: { type: 'fmkeys', ratio: 2, index: 2.2, vol: 0.55 } }, bars: 1, parts: { s: 'a5 . a5 . a5 . . .' } },
       round: { bpm: 120, tracks: { b: { type: 'brass', vol: 0.5 }, d: { type: 'drums', kit: 'orch' } }, bars: 1, parts: { b: 'e4+b4 . e4+b4 . g4+d5 - - -', d: { s: 'x.x.x...' } } },
     },
-    fx: { defused: 'defused', strike: 'strike', solve: 'solve', radio: 'radio', round: 'round' },
+    // radio: a recorded crackle in games/bomb.js onFx instead (the 'radio' stinger stays available)
+    fx: { defused: 'defused', strike: 'strike', solve: 'solve', round: 'round' },
     sfx: {},
   };
 })();

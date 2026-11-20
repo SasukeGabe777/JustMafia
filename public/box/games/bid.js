@@ -27,6 +27,20 @@
   const RAR = { J: 'Junk', C: 'Common', G: 'Good', R: 'Rare', E: 'Epic', L: 'LEGENDARY' };
   const STAGE = ['', 'Going once…', 'Going twice…'];
 
+  // Small recorded touches (public/audio/sfx/bid/, credits.json there), TV only, under the music.
+  const clip = (f, o) => { try { return !!(BOX.audio && BOX.audio.clip('bid/' + f, o)); } catch { return false; } };
+  // Someone in the studio audience shouts the bid ("Two hundred!") now and then; exact amounts only.
+  const SHOUT = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000];
+  let lastShout = 0;
+  function crowdSound(f) {
+    if (f.kind === 'bid') {
+      const now = Date.now(), a = Number(f.amount) || 0;
+      const say = SHOUT.includes(a) ? String(a) : ['yep', 'here', 'hup', 'yeah'][Math.floor(Math.random() * 4)];
+      if (now - lastShout > 2600 && Math.random() < 0.75 && clip('shout-' + say + '.webm', { vol: 0.2, pan: Math.random() * 1.2 - 0.6, jitter: 0.02 })) lastShout = now;
+      else if (!(BOX.audio && BOX.audio.stinger('bid', 'bid'))) BOX.sfx('click'); // the score's little piano note
+    }
+  }
+
   function patter(s) {
     const L = s.locker, h = s.high, n = s.bidCount || 0;
     if (s.phase === 'preview') return ['Step right up, folks! Take a good look inside…', 'Ooh, what have we got here? Have a peek!', 'Fresh locker, folks! Eyes on the clues!'][s.round % 3];
@@ -209,7 +223,7 @@
       'Special lockers: 🔒 Sealed Bid (second price), 🎲 Mystery (no clues), 💎 Premium, and the 👑 Grand Locker finale. Highest net worth wins!',
     ],
     fx: {
-      door: 'whoosh', open: 'gavel', bid: 'click', once: 'tick', twice: 'heartbeat', sold: 'gavel', nosale: 'shrug', withdrawn: 'gasp',
+      door: 'whoosh', open: 'gavel', once: 'tick', twice: 'heartbeat', sold: 'gavel', nosale: 'shrug', withdrawn: 'gasp',
       envelope: 'ballot', flash: 'unlock', loan: 'chime', rollup: 'reveal', tension: 'drum',
       itemJ: 'poof', itemC: 'pop', itemG: 'flip', itemR: 'chime', itemE: 'swell', itemL: 'win', jackpot: 'cheer',
       profit: 'cheer', loss: 'boo', missed: 'shrug', set: 'win', premium: 'sting', mystery: 'shuffle', sealed: 'ballot', grand: 'swell', over: 'win',
@@ -218,6 +232,7 @@
       if (f.kind === 'jackpot') rain(['💰', '💎', '✨', '🤑', '💵']);
       else if (f.kind === 'itemL') rain(['✨', '⭐', '💛'], 28);
       else if (f.kind === 'set') rain(['🧩', '✨'], 18);
+      crowdSound(f);
       // Rusty Rattlebang and the studio audience react.
       if (!F) return;
       const s = last || {}, sale = s.sale, pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -270,9 +285,12 @@
     // The lobby is a storage locker: the door rolls up and every setting is an item inside.
     lobbyTv(el, L) {
       if (!BOX.studio) return;
+      const hadDoor = !!el.querySelector('.sl-door');
       BOX.studio.lobby(el, L, { key: 'bid', title: '<span class="a">Just</span><span class="b">Bid</span>', tagline: 'Storage locker auctions! Bid live, unpack the loot. Treasure or trash?',
         icons: { rounds: '🚪', cash: '💵', countdown: '🔨', specials: '🎲', loans: '🏦', showIntro: '🎤' }, setTitle: 'UNIT 1 · House rules (click an item to change it)', joinTitle: 'Bidder check-in',
         startLabel: '🔨 Open the auction!', crowdTitle: 'bidders on the floor', emptyCrowd: 'No bidders yet… scan the tag to grab a paddle!', door: true });
+      // The roll-up door over the house rules rattles open (bid.css slRoll: 1.6 s after 0.5 s).
+      if (!hadDoor && el.querySelector('.sl-door')) clip('garage-lift.webm', { vol: 0.18, delay: 0.5, gap: 1000 });
     },
 
     phone(el, v, ctx) {

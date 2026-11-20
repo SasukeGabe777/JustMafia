@@ -1,0 +1,14 @@
+{
+ "cues": {
+  "title": { "file": "games/sketch/childrens-march.ogg" },
+  "intro": { "file": "games/sketch/childrens-march.ogg" },
+  "lobby": { "file": "games/sketch/childrens-march.ogg" },
+  "think": { "file": "games/sketch/recorder-jam.ogg", "gain": 0.75 },
+  "play": { "file": "games/sketch/recorder-jam.ogg", "gain": 0.75 },
+  "finale": { "file": "games/sketch/childrens-march.ogg" }
+ },
+ "credits": [
+  { "file": "games/sketch/childrens-march.ogg", "title": "Children's March Theme", "author": "CleytonKauffman", "source": "https://opengameart.org/content/childrens-march-theme", "license": "CC0 1.0" },
+  { "file": "games/sketch/recorder-jam.ogg", "title": "Recorder Jam", "author": "Of Far Different Nature", "source": "https://opengameart.org/content/recorder-jam", "license": "CC0 1.0" }
+ ]
+}

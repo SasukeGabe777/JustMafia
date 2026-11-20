@@ -5,6 +5,8 @@
 // evidence or the controls of a lock.
 (function () {
   const { esc, timer } = BOX;
+  // Quiet recorded sound effects (public/audio/sfx/escape/, TV only; credits in credits.json there).
+  const clip = (f, o) => { try { return !!(window.BOX && BOX.audio && BOX.audio.clip && BOX.audio.clip('escape/' + f, o)); } catch { return false; } };
   // Players are their own characters (BOX.face / BOX.body), holding their detective's magnifier
   // (the 'escape' magnifier wearable); the emoji stays for players without a character.
   const av = (r, n = 30, o) => (BOX.face ? BOX.face(r, n, o) : esc((r && r.avatar) || '🙂'));
@@ -283,7 +285,7 @@
     if (set.dataset.sig !== sig && !set.contains(document.activeElement)) {
       set.dataset.sig = sig;
       set.innerHTML = L.fields.map((f) => `<label class="es-l-f"><span>${esc(f.label)}</span><select data-set="${esc(f.key)}">${f.options.map((o) => `<option value="${esc(String(o.value))}" ${String(L.settings[f.key]) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`).join('');
-      for (const s of set.querySelectorAll('[data-set]')) s.onchange = () => L.set(s.dataset.set, s.value);
+      for (const s of set.querySelectorAll('[data-set]')) s.onchange = () => { clip('typewriter.ogg', { vol: 0.22 }); L.set(s.dataset.set, s.value); };
     }
     BOX.morph(el.querySelector('#roster'), L.players.map((p) => `<span class="chip es-chip"><span class="av">${av(p, 34)}</span> ${esc(p.name)}</span>`).join('') || '<span class="muted">Scan the code to join the investigation. 2–6 detectives is perfect.</span>');
   }
@@ -299,7 +301,14 @@
       'When every lock is open, read out your clues and everyone votes on the culprit. A wrong accusation costs a minute.',
       'Points: the team scores for clearing a room with time to spare; you score for locks you helped open and for catching the culprit.',
     ],
-    fx: { start: 'start', go: 'start', opened: 'chime', wrong: 'buzz', accuse: 'pop', caught: 'win', wrongAccuse: 'buzz', hint: 'pop', win: 'win', timeup: 'buzz', over: 'win' },
+    // 'opened' is a recorded padlock click (onFx), not a synth sound.
+    fx: { start: 'start', go: 'start', wrong: 'buzz', accuse: 'pop', caught: 'win', wrongAccuse: 'buzz', hint: 'pop', win: 'win', timeup: 'buzz', over: 'win' },
+    onFx(f) {
+      if (f.kind === 'story') clip('thunder.ogg', { vol: 0.16, delay: 0.4 }); // a new chapter card: thunder over Hazel's rainy city
+      else if (f.kind === 'opened') clip('lock-open.ogg', { vol: 0.3 }); // the padlock pops open (es-pop)
+      else if (f.kind === 'caught') clip('handcuffs.ogg', { vol: 0.3, delay: 0.7 }); // the culprit is cuffed, after the sting
+      else if (f.kind === 'win' || f.kind === 'timeup' || f.kind === 'over') clip('stamp.ogg', { vol: 0.28 }); // SOLVED / TIME'S UP / CASE CLOSED stamp
+    },
     music: (s) => (s.phase === 'story' ? 'think' : s.phase === 'play' ? (s.accuse ? 'reveal' : 'play') : s.phase === 'outro' ? (s.outro && s.outro.cleared ? 'reveal' : 'think') : s.phase === 'over' ? 'finale' : undefined),
     lobbyTv,
     tv(el, s) {

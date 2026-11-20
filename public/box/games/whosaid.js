@@ -8,6 +8,9 @@
 // once a game), keep a poker face when it's yours.
 (function () {
   const { esc, timer } = BOX;
+  // Recorded sound effects (public/audio/sfx/whosaid/, credits.json there): quiet touches on the TV,
+  // timed to what is on screen. false when they can't play (no audio engine yet, locked, muted file).
+  const clip = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('whosaid/' + f, o));
   // The game's own stylesheet, loaded once on whichever page shows the game.
   if (!document.querySelector('link[data-ws-css]') && !document.querySelector('link[href$="/games/whosaid.css"]')) {
     const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/box/games/whosaid.css'; l.dataset.wsCss = '1';
@@ -71,7 +74,7 @@
         ${L.lineupHtml ? `<div class="wx-party">${L.lineupHtml}</div>` : ''}</section>
     </div>${moon}`);
     for (const s of el.querySelectorAll('select[data-set]')) { s.onchange = () => L.set(s.dataset.set, s.value); s.onclick = (e) => e.stopPropagation(); }
-    for (const b of el.querySelectorAll('[data-cycle]')) b.onclick = () => { const s = b.querySelector('select'); s.selectedIndex = (s.selectedIndex + 1) % s.options.length; BOX.sfx('pop'); s.onchange(); };
+    for (const b of el.querySelectorAll('[data-cycle]')) b.onclick = () => { const s = b.querySelector('select'); s.selectedIndex = (s.selectedIndex + 1) % s.options.length; clip('click.ogg', { vol: 0.3 }) || BOX.sfx('pop'); s.onchange(); };
     el.querySelector('#start').onclick = async () => { const r = await L.start(); lobbyErr = r && !r.ok ? r.error || 'Could not start.' : ''; const e = el.querySelector('#lobby-err'); if (e) e.textContent = lobbyErr; };
     el.querySelector('#add-bots').onclick = () => L.bots(5);
     el.querySelector('#rm-bots').onclick = () => L.removeBots();
@@ -242,8 +245,13 @@
       'Wrote it? Keep a poker face! You get +50 for everyone you fool, and a 🎭 Bluff badge if nobody guesses you.',
       'Once a game you can 🎲 Double Down: double points if you’re right, −50 if you’re wrong.',
     ],
-    fx: { round: 'swell', in: 'pop', spot: 'whoosh', drum: 'drum', wall: 'chime', unlock: 'unlock', win: 'win' },
-    onFx(f) { if (f.kind === 'drum') setTimeout(() => BOX.sfx(f.bluff ? 'gasp' : f.crowd ? 'cheer' : 'laugh'), 1400); },
+    // 'clip' = no synth sound: onFx plays a recorded one (and falls back to the old sound).
+    fx: { round: 'swell', in: 'pop', spot: 'clip', drum: 'drum', wall: 'chime', unlock: 'unlock', win: 'win' },
+    onFx(f) {
+      if (f.kind === 'spot') clip('spotlight.ogg', { vol: 0.2 }) || BOX.sfx('whoosh'); // the next whisper steps into the spotlight
+      // the author is unmasked: a gasp at a bluff, applause if the room got it, a laugh if it fooled them
+      if (f.kind === 'drum') setTimeout(() => (f.bluff ? clip('gasp.ogg', { vol: 0.15 }) || BOX.sfx('gasp') : f.crowd ? clip('applause.ogg', { vol: 0.15 }) || BOX.sfx('cheer') : clip('laugh.ogg', { vol: 0.15 }) || BOX.sfx('laugh')), 1400);
+    },
     lobbyTv,
     lobby: () => `<div class="wx wx-phlobby"><div class="wx-qph"><div class="wx-ql">psst…</div>Get ready to whisper. Nobody will know it was you ${dots}</div></div>`,
     tv,

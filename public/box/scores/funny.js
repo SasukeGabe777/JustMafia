@@ -66,7 +66,7 @@
       boo: { bpm: 90, tracks: { m: { type: 'mute' } }, parts: { m: 'c5 - b4 - bb4 - a4 -' } },
       start: (X) => { X.chord('epiano', ['f4', 'a4', 'c5', 'e5'], 0, 0.8, 0.8, 0.03); X.drum('tri', 0, 0.6); },
     },
-    fx: { win: 'win', start: 'start' },
+    fx: { win: 'win' }, // 'start' is a recorded projector clip now (games/funny.js onFx), the stinger is its fallback
     sfx: { win: 'win', drum: 'roll' },
   };
 })();

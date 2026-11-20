@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
+@import url('/fonts/fonts.css');
 /* Meme Maker: a corkboard covered in meme printouts, push pins and tape. Big Impact-style
    lettering (white with a black outline), paper cards, tilted polaroids. TV + phone (body.g-memes). */
 body.g-memes { --mm-cork1: #c8925a; --mm-cork2: #a8703e; --mm-ink: #1c1820; --mm-paper: #fffdf6; --mm-yellow: #ffe14d; --mm-red: #ff4f5a; --mm-imp: Impact, Anton, 'Arial Black', sans-serif; }

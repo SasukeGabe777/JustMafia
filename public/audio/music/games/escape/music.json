@@ -1,0 +1,69 @@
+{
+ "cues": {
+  "title": {
+   "file": "games/escape/jazzy-detective.ogg",
+   "loopStart": 2,
+   "loopEnd": 96.81
+  },
+  "lobby": {
+   "file": "games/escape/jazzy-detective.ogg",
+   "loopStart": 2,
+   "loopEnd": 96.81
+  },
+  "intro": {
+   "file": "games/escape/jazzy-detective.ogg",
+   "loopStart": 2,
+   "loopEnd": 96.81
+  },
+  "finale": {
+   "file": "games/escape/jazzy-detective.ogg",
+   "loopStart": 2,
+   "loopEnd": 96.81
+  },
+  "think": {
+   "file": "games/escape/gentle-rain.ogg",
+   "loopStart": 4,
+   "loopEnd": 129.75
+  },
+  "play": {
+   "file": "games/escape/hong-kong-noir.ogg",
+   "loopStart": 2,
+   "loopEnd": 102.61
+  },
+  "tense": {
+   "file": "games/escape/photos-of-murder.ogg",
+   "loopStart": 2,
+   "loopEnd": 51.99
+  }
+ },
+ "credits": [
+  {
+   "file": "games/escape/jazzy-detective.ogg",
+   "title": "Jazzy Detective",
+   "author": "John Bartmann",
+   "source": "https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/jazzy-detective/",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/escape/gentle-rain.ogg",
+   "title": "Gentle Rain",
+   "author": "John Bartmann",
+   "source": "https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/gentle-rain/",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/escape/hong-kong-noir.ogg",
+   "title": "Hong Kong Noir",
+   "author": "John Bartmann",
+   "source": "https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/hong-kong-noir/",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/escape/photos-of-murder.ogg",
+   "title": "Photos Of Murder",
+   "author": "John Bartmann",
+   "source": "https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/photos-of-murder/",
+   "license": "CC0 1.0"
+  }
+ ]
+}

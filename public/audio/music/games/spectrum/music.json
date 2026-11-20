@@ -1,0 +1,14 @@
+{
+ "cues": {
+  "title": { "file": "games/spectrum/down-the-river.ogg" },
+  "intro": { "file": "games/spectrum/down-the-river.ogg" },
+  "lobby": { "file": "games/spectrum/down-the-river.ogg" },
+  "think": { "file": "games/spectrum/apple-cider.ogg", "gain": 0.75 },
+  "play": { "file": "games/spectrum/apple-cider.ogg", "gain": 0.75 },
+  "finale": { "file": "games/spectrum/down-the-river.ogg" }
+ },
+ "credits": [
+  { "file": "games/spectrum/down-the-river.ogg", "title": "Down the River", "author": "Komiku (Loyalty Freak Music)", "source": "https://opengameart.org/content/down-the-river", "license": "CC0 1.0" },
+  { "file": "games/spectrum/apple-cider.ogg", "title": "Apple Cider", "author": "Zane Little Music", "source": "https://opengameart.org/content/apple-cider", "license": "CC0 1.0" }
+ ]
+}

@@ -209,9 +209,16 @@
       <div class="tb-awards">${aw.map(([ic, lab, nm, txt], i) => `<div class="tb-award" style="animation-delay:${0.5 + i * 0.3}s"><div class="ic">${ic}</div><div class="lb">${lab}</div><div class="nm">${esc(nm)}</div><div class="muted">${esc(txt)}</div></div>`).join('')}</div>
       <div class="tb-final-board">${board(st.slice(0, 10), (r) => r.points, ' pts')}</div></div>`;
   }
+  // Recorded sound effects (public/audio/sfx/tune/, CC0, see credits.json there): radio foley between
+  // the songs, never over them. warm() decodes them once (silently) as soon as audio is unlocked.
+  const REC = ['static', 'needle'];
+  let recWarm = false;
+  const rec = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('tune/' + f + '.ogg', o));
+  const warm = () => { if (!recWarm && rec(REC[0], { vol: 0, gap: 0 })) { recWarm = true; for (const f of REC.slice(1)) rec(f, { vol: 0, gap: 0 }); } };
   let lastTv = null;
   function tv(el, s) {
     if (!s) return;
+    warm();
     lastTv = { el, s }; TVP.rerender = () => lastTv && tv(lastTv.el, lastTv.s);
     if (!el.__tbTap) { el.__tbTap = true; document.addEventListener('pointerdown', () => { if (TVP.blocked) tvUnblock(); }, true); }
     tvSchedule(s);
@@ -497,7 +504,14 @@
       'Your own songs: you sit out. If some (not all) got it you score 150 × difficulty. Everyone got it: 50 ×. Nobody: 0.',
       'Pick songs that are fun-hard, not impossible. Top of the charts wins!',
     ],
-    fx: { round: 'pop', clip: 'tick', right: 'chime', artist: 'pop', reveal: 'reveal', nobody: 'shrug', score: 'pop', sweet: 'win', added: 'pop', win: 'win' },
+    // clip plays a recorded needle drop instead (onFx below).
+    fx: { round: 'pop', right: 'chime', artist: 'pop', reveal: 'reveal', nobody: 'shrug', score: 'pop', sweet: 'win', added: 'pop', win: 'win' },
+    onFx(f) {
+      // The 💿 SONG n card (3.5 s): after the round jingle, the dial tunes in to the next station...
+      if (f.kind === 'round') rec('static', { vol: 0.12, delay: 1.8 });
+      // ...then the needle drops and crackles for the 1.2 s lead-in before the song starts.
+      if (f.kind === 'clip') rec('needle', { vol: 0.24 });
+    },
     tv, phone,
     _test: { seekPlay, rateOf },
   };

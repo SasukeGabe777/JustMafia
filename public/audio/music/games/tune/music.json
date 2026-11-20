@@ -1,0 +1,13 @@
+{
+ "cues": {
+  "title": { "file": "games/tune/midnight-cruiser.ogg" },
+  "intro": { "file": "games/tune/midnight-cruiser.ogg" },
+  "lobby": { "file": "games/tune/midnight-cruiser.ogg" },
+  "reveal": { "file": "games/tune/wednesday-night.ogg", "gain": 0.85 },
+  "finale": { "file": "games/tune/wednesday-night.ogg" }
+ },
+ "credits": [
+  { "file": "games/tune/midnight-cruiser.ogg", "title": "Midnight Cruiser", "author": "Zane Little Music", "source": "https://opengameart.org/content/midnight-cruiser", "license": "CC0 1.0" },
+  { "file": "games/tune/wednesday-night.ogg", "title": "Wednesday Night [Funk Fusion]", "author": "Zane Little Music", "source": "https://opengameart.org/content/wednesday-night-funk-fusion", "license": "CC0 1.0" }
+ ]
+}

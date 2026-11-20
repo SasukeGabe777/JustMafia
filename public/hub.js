@@ -66,8 +66,10 @@
   // ⚙ Settings (top right): unlock or re-lock every unlockable game, for testing.
   const gear = document.getElementById('gear'), gm = document.getElementById('gear-menu');
   if (gear && gm) {
-    const setOpen = (on) => { gm.hidden = !on; gear.setAttribute('aria-expanded', on ? 'true' : 'false'); };
-    gear.addEventListener('click', (e) => { e.stopPropagation(); setOpen(gm.hidden); sfx('pop'); });
+    // Quiet recorded UI sounds (public/audio/sfx/ui/, BOX.audio.ui); the old synth pop if they can't play.
+    const ui = (kind, fb) => { let ok = false; try { ok = !!(window.BOX && window.BOX.audio && window.BOX.audio.ui(kind)); } catch { /* no audio */ } if (!ok && fb) sfx(fb); };
+    const setOpen = (on) => { if (gm.hidden === on) ui(on ? 'open' : 'close', on ? 'pop' : null); gm.hidden = !on; gear.setAttribute('aria-expanded', on ? 'true' : 'false'); };
+    gear.addEventListener('click', (e) => { e.stopPropagation(); setOpen(gm.hidden); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !gm.hidden) setOpen(false); });
     document.addEventListener('click', (e) => { if (!gm.hidden && !gm.contains(e.target)) setOpen(false); });
     document.getElementById('unlock-all').addEventListener('click', () => { if (U) { U.unlockAll(); location.reload(); } });
@@ -78,11 +80,11 @@
       const r = document.getElementById(id), o = document.getElementById(id + '-o'); if (!r || !A) { if (r) r.closest('label').hidden = true; continue; }
       const show = () => { if (o) o.textContent = r.value + '%'; };
       r.value = Math.round(A.settings[kind] * 100); show();
-      r.addEventListener('input', () => { A.set(kind, r.value / 100); show(); if (kind === 'sfx') sfx('pop'); });
+      r.addEventListener('input', () => { A.set(kind, r.value / 100); show(); ui('tick', kind === 'sfx' ? 'pop' : null); });
     }
     // Mute everything (music and effects, on every screen of this TV).
     const mb = document.getElementById('mute-all');
-    if (mb && A) { const paint = () => { const m = A.settings.mute; mb.textContent = m ? '🔇 Muted: tap to unmute' : '🔇 Mute everything'; mb.classList.toggle('on', m); }; paint(); mb.addEventListener('click', () => { A.mute(!A.settings.mute); paint(); }); }
+    if (mb && A) { const paint = () => { const m = A.settings.mute; mb.textContent = m ? '🔇 Muted: tap to unmute' : '🔇 Mute everything'; mb.classList.toggle('on', m); }; paint(); mb.addEventListener('click', () => { const was = A.settings.mute; if (!was) ui('toggle'); A.mute(!was); if (was) ui('toggle'); paint(); }); }
     else if (mb) mb.hidden = true;
   }
   // The main-menu theme (public/box/scores/menu.js) starts with the first click or key press.

@@ -1,8 +1,9 @@
 # JustGameBox soundtrack: scores
 
 Every game's music is composed in code and synthesized live in the browser by the audio
-engine in `public/box/audio.js` (`BOX.audio`). Nothing is downloaded and no audio files
-are needed. One file per game, `public/box/scores/<key>.js`, loaded on demand by the TV.
+engine in `public/box/audio.js` (`BOX.audio`). These scores are the fallback: where the
+shipped recorded soundtrack has a track for a cue, the track plays instead (see the end of this
+file and `docs/music.md`). One file per game, `public/box/scores/<key>.js`, loaded on demand by the TV.
 
 Special scores: `menu` (main menu), `party` (Party Mode: `shuffle`, `board`, `finale`),
 `generic` (the fallback for any missing game or cue) and `_template.js` (the starter
@@ -101,18 +102,24 @@ clipping, near-silence or errors. Keep cues around -14 to -18 dB RMS.
 
 ## Dropping in real recorded tracks
 
-Put the file in `public/audio/<game>/` and list it in `public/audio/manifest.json`:
+The shipped soundtrack (AI-generated, see `docs/music.md`) lives in `public/audio/music/` and
+is listed in `public/audio/music/manifest.json`:
 
 ```json
 {
-  "price": { "title": "title.mp3", "think": { "file": "think.ogg", "gain": 0.8 }, "stinger:win": "win.mp3" },
-  "menu":  { "title": "theme.mp3" }
+  "aliases": { "story": "think" },
+  "sets":  { "party": { "think": { "file": "sets/party/think.ogg", "loopStart": 4.1, "loopEnd": 70.3 } } },
+  "games": { "_default": { "set": "party" }, "zombie": { "set": "spooky" },
+             "price": { "title": "games/price/title.ogg", "think": { "file": "x.ogg", "gain": 0.8 }, "stinger:win": "win.ogg" } }
 }
 ```
 
-A listed file replaces that synthesized cue (looping, unless `"loop": false`), with the same
-crossfades, ducking and volume settings; `stinger:<name>` replaces a stinger. Only listed
-files are ever requested, so nothing 404s.
+A game's cue looks in `games.<key>` first, then in its mood set (`games.<key>.set`, or
+`_default`'s), then tries `aliases.<cue>`; with no file it plays the synthesized score. A
+listed file replaces that cue (looping between `loopStart` and `loopEnd`, unless
+`"loop": false`), with the same crossfades, ducking and volume settings; `stinger:<name>`
+replaces a stinger. A file that fails to load falls back to the synth. Only listed files are
+ever requested, so nothing 404s.
 
 ## Narrator voices
 

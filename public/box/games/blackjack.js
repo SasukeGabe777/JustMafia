@@ -262,6 +262,8 @@
     ],
     fx: { deal: 'deal', flip: 'flip', bust: 'boo', dealerBust: 'cheer', dealerBJ: 'sting', settle: 'chime', chip: 'ballot', allin: 'drum', double: 'pop', shuffle: 'shuffle', win: 'win', event: 'bell', charlie: 'cheer', bjWin: 'swell' },
     onFx(f) {
+      // Cards hitting the felt (Kenney Casino Audio): one quick slide per card dealt, a few at most.
+      if (f.kind === 'deal') { const n = Math.min(5, Math.max(1, Number(f.n) || 1) * (f.n > 1 ? 2 : 1)); for (let i = 0; i < n; i++) { try { BOX.audio.clip('blackjack/deal-' + (1 + (i % 4)) + '.webm', { vol: 0.26, delay: i * 0.11, gap: 0 }); } catch { /* no audio */ } } }
       if (f.kind === 'event') {
         const e = { happy: ['🍹', 'HAPPY HOUR', 'Blackjack pays 2 to 1!'], charlie: ['🖐️', 'FIVE-CARD CHARLIE', '5 cards without busting wins!'], ties: ['🤝', 'TIES WIN', 'Tie the dealer, get paid!'], lucky21: ['🍀', 'LUCKY 21', 'A 21 with 3+ cards pays 2 to 1!'], finale: ['🏁', 'HIGH ROLLER FINALE', 'Last hand: every win pays DOUBLE!'] }[f.ev];
         if (e) flash(`<div class="ic">${e[0]}</div><div class="big">${e[1]}</div><div>${e[2]}</div>`, f.ev);

@@ -707,7 +707,17 @@
       'Tap 🛎️ Serve when it’s ready. Modes: Lunch Rush (speed tips), each kitchen’s special (Half & Half, Mix & Match, Rainbow Roll, Tower Burger, Mega Sundae), Phone Order, Flash Order, Head Chef, or Mixed.',
       'The closer the match, the bigger the tip; the best dish each order earns a bonus. Most tips wins.',
     ],
-    fx: { start: 'start', order: 'join', shown: 'pop', build: 'whoosh', serve: 'chime', reveal: 'reveal', win: 'win' },
+    fx: { start: 'start', shown: 'pop', reveal: 'reveal', win: 'win' },
+    // Recorded kitchen sounds (public/audio/sfx/pizza/): the shop door chimes as a customer walks in (or the
+    // phone rings for a phone order), knives chop when the cooking starts, the counter bell dings for every
+    // served dish, and the food court claps at the end. The old sound if there's no BOX.audio.
+    onFx(f) {
+      const a = BOX.audio, clip = (n, o) => { if (!a || !a.clip) return false; try { a.clip('pizza/' + n + '.ogg', o); } catch { /* no audio */ } return true; };
+      if (f.kind === 'order') (f.mode === 'phone' ? clip('phone', { vol: 0.2, jitter: 0 }) : clip('door', { vol: 0.26 })) || BOX.sfx('join');
+      else if (f.kind === 'build') clip('chop', { vol: 0.2 }) || BOX.sfx('whoosh');
+      else if (f.kind === 'serve') clip('bell', { vol: 0.24, gap: 250 }) || BOX.sfx('chime');
+      else if (f.kind === 'win') clip('applause', { vol: 0.13, delay: 1 });
+    },
     // Each kitchen has its own tune while the order is shown; building is the shared kitchen groove.
     music: (s) => (s.phase === 'order' ? ({ pizza: 'play', taco: 'taco', sushi: 'sushi', burger: 'burger', sundae: 'sundae' }[s.kitchen] || 'play') : s.phase === 'build' ? 'think' : s.phase === 'reveal' ? 'reveal' : s.phase === 'over' ? 'finale' : undefined),
     lobbyTv,

@@ -1324,3 +1324,34 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
 - Limits: the main scene features sit at the edges, so on a TV most of the scene shows around the
   tiles rather than behind them; JustMafia's own title screen keeps its look; the old 6-kind event
   windows changed (e.g. Harvest Fest is now Nov 16–30, not the whole month).
+
+## Steam desktop app (claude/steam-app, November 20, 2026)
+
+- `desktop/`: Electron 45.3.4 app (electron-builder 26.18.1, steamworks.js 0.4.0, own
+  package.json/lock). `server.js` runs as a utilityProcess child on 0.0.0.0 (stable port 47800,
+  next free one if taken); the window (no menu, no dev tools when packaged, single instance,
+  autoplay without a click, F11/Alt+Enter fullscreen) shows the title screen from 127.0.0.1.
+  App settings window (F10, or a button injected into the title screen's ⚙ menu; only this local
+  page gets an IPC bridge): Local/Online mode with server URL test, network adapter pick (join link
+  changes live via `setBaseUrl`), firewall/same-Wi-Fi help with buttons to Windows' pages (the app
+  never changes the firewall), port, fullscreen, Steam overlay, saves/music/log folders.
+  Online mode loads a hosted server (checked via /healthz, waits up to 75 s for a sleeping free
+  host); unreachable → local mode with a message. Server crash → restarted on the same port.
+- Server: `DATA_DIR` (data-dir.js) for profiles.json and box-profiles.json (the only .data
+  writers), `MUSIC_DIR`, `HOST`, lan.js (adapter scoring: virtual adapters/MACs and 169.254 down;
+  the default-route adapter preferred in the app), fatal listen errors, achievements.js hook.
+- Steam: guarded; App ID from STEAM_APP_ID/SteamAppId/steam_appid.txt, 480 only in development,
+  packaged without an ID = no Steam. Achievement stubs only.
+- Fonts: all 22 Google Fonts families self-hosted (`public/fonts/`, latin + latin-ext, licences);
+  pages and CSS no longer call Google. Left on CDNs on purpose: kokoro-js (optional live voice, needs
+  the internet for its model anyway), YouTube/TikTok/Instagram embeds and iTunes/Deezer (online games).
+- The build ships only git-tracked runtime files + production deps (scripts/stage-server.js,
+  after-pack.js); the repo's my-music songs are left out (licences unconfirmed; JGB_BUNDLE_MUSIC=1).
+- package.json renamed `mafia-town` → `justgamebox`. THIRD_PARTY_NOTICES.md and
+  docs/steam-release.md (owner checklist) added.
+- Validation: the built exe was tested only hidden (JGB_TEST_HIDDEN=1, tools/e2e-desktop.js):
+  title screen, self-hosted fonts, autoplay, settings window, QR = LAN link, a headless phone
+  joined via the LAN address, saves in userData, single instance, quit stops the server, online
+  mode and its fallback all passed. Not verified: how it looks on screen (fullscreen, settings
+  window layout), the Steam overlay/achievements with a real App ID, a real phone on Wi-Fi,
+  Steam Deck.

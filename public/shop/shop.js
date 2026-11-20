@@ -982,4 +982,6 @@
   window.addEventListener('pageshow', (e) => { if (e.persisted && S.st) refresh(); });
   if (API.live) { /* boot runs on connect */ S.waiting = true; setTimeout(() => { if (S.waiting) { S.waiting = false; boot(); } }, 50); } else boot();
   window.JG_SHOP = { state: () => S, select, render, account: () => acct };
+  // Shop music (public/audio/music: menu/shop) on a computer / TV screen only, never on phones.
+  try { if (window.BOX && BOX.audio && matchMedia('(pointer: fine)').matches) BOX.audio.music('shop', 'menu'); } catch { /* no audio */ }
 })();

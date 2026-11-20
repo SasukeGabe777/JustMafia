@@ -16,6 +16,8 @@
   const haptic = (ctx, kind) => { try { if (ctx && ctx.haptic) ctx.haptic(kind); } catch { /* none */ } };
   let felt = {};
   const feel = (ctx, chan, key, kind) => { if (felt[chan] === key) return; felt[chan] = key; haptic(ctx, kind); };
+  // Quiet recorded sound effects (public/audio/sfx/bomb/, TV only; credits in credits.json there).
+  const clip = (f, o) => { try { return !!(window.BOX && BOX.audio && BOX.audio.clip && BOX.audio.clip('bomb/' + f, o)); } catch { return false; } };
 
   // ---------- the countdown: fixed end times, a 10 Hz ticker, the fuse burns down ----------
   const ends = {};
@@ -305,7 +307,7 @@
       $('#bsl-pick').onclick = () => el.__L.pick();
       el.addEventListener('click', (e) => {
         const k = e.target.closest('[data-k]');
-        if (k) { for (const b of k.parentNode.querySelectorAll('.bsl-opt')) b.classList.toggle('on', b === k); const s = el.querySelector(`select[data-set="${k.dataset.k}"]`); if (s) s.value = k.dataset.v; el.__L.set(k.dataset.k, k.dataset.v); BOX.sfx('click'); return; }
+        if (k) { for (const b of k.parentNode.querySelectorAll('.bsl-opt')) b.classList.toggle('on', b === k); const s = el.querySelector(`select[data-set="${k.dataset.k}"]`); if (s) s.value = k.dataset.v; el.__L.set(k.dataset.k, k.dataset.v); clip('switch.ogg', { vol: 0.25 }); return; }
         const c = e.target.closest('[data-kick]'); if (c && confirm('Remove this player?')) el.__L.kick(c.dataset.kick);
       });
     }
@@ -344,7 +346,14 @@
       'The team shares a score; you earn points for solving modules (+150), holding the right page (+100) and every defused bomb (+200).',
     ],
     music: (s) => ({ brief: 'play', tick: 'think', reveal: 'reveal', over: 'finale' }[s.phase] || 'play'),
-    fx: { round: 'whoosh', arm: 'click', strike: 'zap', solve: 'chime', radio: 'siren', boom: 'explosion', defused: 'win', cheer: 'cheer', groan: 'groan', win: 'win' },
+    // arm, radio and boom are recorded clips (onFx below), not synth sounds.
+    fx: { round: 'whoosh', strike: 'zap', solve: 'chime', defused: 'win', cheer: 'cheer', groan: 'groan', win: 'win' },
+    onFx(f) {
+      if (f.kind === 'arm') clip('fuse-light.ogg', { vol: 0.4 }); // the match lights the fuse as the clock starts
+      else if (f.kind === 'radio') clip('radio-static.ogg', { vol: 0.1 }); // the needy radio crackles
+      else if (f.kind === 'boom') clip('explosion.ogg', { vol: 0.32, delay: 0.2, jitter: 0.06 }); // KA-BLAM (the blast pops at 0.25 s)
+      else if (f.kind === 'win') clip('stamp.ogg', { vol: 0.3, delay: 1.15 }); // the mission report's stamp lands (bsStamp 1 s + 0.4 s)
+    },
 
     tv(el, s) {
       if (!s) return;

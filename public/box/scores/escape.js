@@ -93,7 +93,8 @@
       win: { bpm: 112, tracks: { b: { type: 'brass', vol: 0.55 }, g: { type: 'vibes', vol: 0.4 }, d: { type: 'drums', kit: 'orch' } }, bars: 2, parts: { b: 'g4+b4+d5 . g4+b4+d5 ab4+c5+eb5 - - g4+b4+d5 - | c5+e5+g5+c6 - - - - - - -', g: 'd6 b5 g5 d5 b5 d6 g6 - | c6 - - - - - - -', d: { s: 'x.x.x.....x.....', y: '................|x...............' } } },
       lose: { bpm: 80, tracks: { t: { type: 'mute', vol: 0.5 }, p: { type: 'piano', vol: 0.35 } }, bars: 1, parts: { t: 'g4 - f4 - eb4 - d4 -', p: '. . . . . . c3+g3+eb4 -' } },
     },
-    fx: { opened: 'unlock', wrong: 'wrong', caught: 'caught', hint: 'hint', wrongAccuse: 'wrong' },
+    // opened: a recorded padlock click in games/escape.js onFx instead (the 'unlock' stinger stays available)
+    fx: { wrong: 'wrong', caught: 'caught', hint: 'hint', wrongAccuse: 'wrong' },
     sfx: { thunder: 'boom' },
   };
 })();

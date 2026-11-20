@@ -2,7 +2,8 @@
 /* =====================================================================================
    JustGameBox AUDIO ENGINE (public/box/audio.js) -> window.BOX.audio
    =====================================================================================
-   Every note is synthesized in the browser with Web Audio (no audio files, no downloads).
+   Recorded soundtrack files play where public/audio/music/manifest.json lists one (REAL TRACKS
+   below); everything else is synthesized in the browser with Web Audio.
    The TV page and the main menu play music; phones never load this file.
 
    SIGNAL FLOW
@@ -32,6 +33,11 @@
      BOX.audio.stinger(name, scoreKey)   one-shot (score stinger or a built-in one)
      BOX.audio.fx(scoreKey, kind)    play the score's stinger for a game fx kind -> true if it did
      BOX.audio.sfx(name)             the current score's restyled version of an SFX name -> bool
+     BOX.audio.clip(path, o)         a small RECORDED sound effect: public/audio/sfx/<path> (e.g. 'bid/garage.ogg')
+                                     on the SFX bus, quiet by default (o.vol 0.3; o.rate, o.pan, o.delay s, o.jitter).
+                                     Same path at most once per o.gap ms (150). Silent if missing. -> bool
+     BOX.audio.ui(kind, o)           a quiet recorded UI sound (public/audio/sfx/ui/<kind>.ogg): click, toggle, open,
+                                     close, tick (sliders), join (a player joins the lobby). -> bool (false: play your own)
      BOX.audio.duck(on)              lower the music under the narrator
      BOX.audio.stop(fade)            stop the music
      BOX.audio.need(key, cb)         load a score file
@@ -42,9 +48,11 @@
      BOX.sfx(name) is wrapped: the current score can restyle any SFX name (score.sfx map);
      anything it doesn't restyle plays the old sfx.js sound.
 
-   REAL TRACKS: list files in public/audio/manifest.json, e.g.
-     { "price": { "title": "title.mp3", "think": "think.ogg", "stinger:win": "win.mp3" } }
-   and put them in public/audio/price/. A listed file replaces the synthesized cue.
+   REAL TRACKS: recorded music lives in public/audio/music/ and is listed in
+     public/audio/music/manifest.json (see docs/music.md): per game cue, or shared mood sets
+     that many games reuse. A listed file replaces the synthesized cue (looping between its
+     loop points, same crossfades / volume / ducking); a cue without a file, or a file that
+     fails to load, plays the synthesized score.
    ===================================================================================== */
 (function () {
   const W = window;
@@ -792,7 +800,7 @@
   };
 
   // ---------------------------------------------------------------- score lookup
-  const FALLBACK = { lobby: ['title'], intro: ['title', 'play'], think: ['play'], play: ['think'], tense: ['play', 'think'], reveal: ['play', 'think'], finale: ['win', 'title'], win: ['finale', 'title'], board: ['lobby', 'title'], shuffle: ['play', 'title'], lose: ['tense', 'reveal'], story: ['think', 'intro'] };
+  const FALLBACK = { lobby: ['title'], intro: ['title', 'play'], think: ['play'], play: ['think'], tense: ['play', 'think'], reveal: ['play', 'think'], finale: ['win', 'title'], win: ['finale', 'title'], board: ['lobby', 'title'], shuffle: ['play', 'title'], lose: ['tense', 'reveal'], shop: ['lobby', 'title'], story: ['think', 'intro'] };
   function mergeCue(base, d) {
     const out = { ...base, ...d, tracks: { ...base.tracks }, sections: { ...base.sections }, all: { ...(base.all || {}), ...(d.all || {}) } };
     for (const [k, v] of Object.entries(d.tracks || {})) { if (v === null) delete out.tracks[k]; else out.tracks[k] = { ...(base.tracks[k] || {}), ...v }; }
@@ -872,35 +880,72 @@
     E.vol.gain.setTargetAtTime(settings.mute ? 0 : settings.master, t, r / 3);
     E.level(E.music, settings.music * (duckOn ? 0.32 : 1), duckOn ? 0.18 : 0.7);
     E.level(E.sfx, settings.sfx, 0.05);
-    for (const a of fileEls) a.el.volume = settings.mute ? 0 : clamp(settings.master * settings.music * (duckOn ? 0.32 : 1) * a.gain, 0, 1);
   }
   function tick() {
     if (!E || E.ctx.state !== 'running') return;
     const ahead = document.hidden ? 1.8 : 0.3, until = E.ctx.currentTime + ahead;
     for (const p of [...E.players]) { p.pump(until); if (p.done && p.endAt != null && E.ctx.currentTime > p.endAt + 6) p.dispose(); }
   }
-  // file overrides (public/audio/manifest.json)
-  const fileEls = new Set();
+  // ---- Recorded tracks (public/audio/music/manifest.json, docs/music.md) ----
+  // games.<scoreKey>.<cue> -> a file, else the game's mood set (games.<key>.set, or the
+  // _default entry's set) -> sets.<set>.<cue>; a cue with no file there tries its alias
+  // (aliases.<cue>, e.g. story -> think) and then plays the synthesized score as before.
+  // A file is { file, gain, loopStart, loopEnd, loop } or just its path; it is decoded once and
+  // looped sample-accurately between loopStart and loopEnd (the intro before loopStart plays once).
+  const MUSIC_DIR = '/audio/music/';
   function loadManifest() {
     if (manifest) return manifest;
-    manifest = fetch('/audio/manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})).then((m) => (manifest = m || {}, manifest));
+    manifest = fetch(MUSIC_DIR + 'manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})).then((m) => (manifest = m && typeof m === 'object' ? m : {}, manifest));
     return manifest;
   }
-  function fileFor(key, name) {
-    const m = manifest && !(manifest instanceof Promise) ? manifest[key] : null; if (!m) return null;
-    let f = Array.isArray(m) ? m.find((x) => String(x).replace(/\.[a-z0-9]+$/i, '') === name) : m[name];
+  function fileSpec(f) {
     if (!f) return null; if (typeof f === 'string') f = { file: f };
-    return { url: '/audio/' + encodeURIComponent(key) + '/' + f.file.split('/').map(encodeURIComponent).join('/'), loop: f.loop !== false, gain: f.gain || 1 };
+    if (!f.file) return null;
+    return { url: MUSIC_DIR + f.file.split('/').map(encodeURIComponent).join('/'), loop: f.loop !== false, gain: f.gain != null ? f.gain : 1, loopStart: f.loopStart || 0, loopEnd: f.loopEnd || 0 };
   }
-  function FilePlayer(info) {
-    const el = new Audio(info.url); el.loop = info.loop; el.preload = 'auto';
-    this.a = { el, gain: info.gain }; fileEls.add(this.a); applyLevels();
-    el.play().catch(() => {}); this.stopping = false;
+  function fileFor(key, name) {
+    const m = manifest && !(manifest instanceof Promise) ? manifest : null; if (!m) return null;
+    const games = m.games || {}, sets = m.sets || {}, g = games[key] || {}, d = games._default || {};
+    const setName = 'set' in g ? g.set : d.set, set = (setName && sets[setName]) || {};
+    if (name.startsWith('stinger:')) return fileSpec(g[name]);
+    const find = (cue) => (cue && (fileSpec(g[cue]) || fileSpec(set[cue]))) || null;
+    return find(name) || find((m.aliases || {})[name]);
+  }
+  const bufs = new Map(); // url -> 'loading' | 'failed' | AudioBuffer
+  const clipLast = new Map(); // sfx clip path -> last start (ms), so a clip never machine-guns
+  const UI_VOL = { click: 0.16, toggle: 0.14, open: 0.13, close: 0.12, tick: 0.1, join: 0.16 }; // api.ui: quiet, tasteful
+  function loadBuf(url, cb) {
+    const b = bufs.get(url);
+    if (b && b !== 'loading') { cb(); return; }
+    if (b === 'loading') return;
+    bufs.set(url, 'loading');
+    fetch(url).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('HTTP ' + r.status))))
+      .then((ab) => new Promise((ok, no) => E.ctx.decodeAudioData(ab, ok, no)))
+      .then((buf) => bufs.set(url, buf))
+      .catch((e) => { console.warn('[music] could not play ' + url + ', using the synthesized score', e && e.message); bufs.set(url, 'failed'); })
+      .then(cb);
+  }
+  // A recorded track on the music bus (so volume, mute and ducking apply), crossfaded in and out.
+  function FilePlayer(E, buf, f, t, fadeIn) {
+    const c = E.ctx, src = c.createBufferSource(), g = c.createGain();
+    src.buffer = buf;
+    if (f.loop) {
+      src.loop = true;
+      const le = f.loopEnd > 0 ? Math.min(f.loopEnd, buf.duration) : buf.duration, ls = clamp(f.loopStart, 0, le - 0.5);
+      if (le - ls > 1) { src.loopStart = ls; src.loopEnd = le; }
+    }
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(f.gain, t + Math.max(0.02, fadeIn));
+    src.connect(g); g.connect(E.music.dry); src.start(t);
+    if (!f.loop) src.onended = () => { this.done = true; };
+    Object.assign(this, { E, src, g, gain: f.gain, url: f.url, stopping: false });
   }
   FilePlayer.prototype.stop = function (t, fade) {
-    if (this.stopping) return; this.stopping = true; const a = this.a, v0 = a.el.volume, t0 = performance.now(); fileEls.delete(a);
-    const step = () => { const k = (performance.now() - t0) / (fade * 1000); if (k >= 1) { a.el.pause(); a.el.src = ''; return; } a.el.volume = v0 * (1 - k); requestAnimationFrame(step); };
-    step();
+    if (this.stopping) return; this.stopping = true;
+    const g = this.g.gain, now = this.E.ctx.currentTime; t = Math.max(t, now);
+    if (g.cancelAndHoldAtTime) g.cancelAndHoldAtTime(t); else { g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); }
+    g.linearRampToValueAtTime(0, t + fade);
+    try { this.src.stop(t + fade + 0.05); } catch { /* already stopped */ }
+    setTimeout(() => { try { this.g.disconnect(); } catch { /* gone */ } }, (t - now + fade + 0.5) * 1000);
   };
 
   function startMusic() {
@@ -913,18 +958,24 @@
     const id = w.key + '/' + w.cue;
     if (cur && cur.id === id && !cur.p.stopping) return;
     const now = E.ctx.currentTime;
-    const file = fileFor(w.key, w.cue);
+    let file = fileFor(w.key, w.cue);
+    if (file) {
+      const b = bufs.get(file.url);
+      if (!b || b === 'loading') { loadBuf(file.url, startMusic); return; } // keep the old cue playing until it's decoded
+      if (b === 'failed') file = null; else file.buf = b;
+    }
     const r = file ? null : resolve(w.key, w.cue);
     if (!file && !r) return;
-    if (cur && cur.rid && r && cur.rid === r.key && !cur.p.stopping) { cur.id = id; return; }
+    if (cur && !cur.p.stopping && ((cur.rid && r && cur.rid === r.key) || (file && cur.p.url === file.url && !cur.p.done))) { cur.id = id; return; }
     let t = now + 0.05;
+    const wasFile = !!(cur && cur.p.url);
     if (cur && !cur.p.stopping) {
       if (cur.p.nextBar && r) { const nb = cur.p.nextBar(now + 0.12); t = nb - now <= 2.4 ? nb : cur.p.nextBeat(now + 0.12); }
       cur.p.stop(t, w.fade != null ? w.fade : 1.6);
     }
-    if (file) { cur = { id, p: new FilePlayer(file) }; return; }
+    if (file) { cur = { id, p: new FilePlayer(E, file.buf, file, t, cur ? 1.2 : 0.4) }; return; }
     E.setDelay(60 / r.comp.bpm * 0.75);
-    const p = new Player(E, r.comp, E.music, t, 0.04); E.players.add(p);
+    const p = new Player(E, r.comp, E.music, t, wasFile ? 0.8 : 0.04); E.players.add(p);
     prewarm(r.comp); p.pump(now + 0.3);
     cur = { id, rid: r.key, p };
   }
@@ -997,18 +1048,19 @@
   }
   function panel(anchor) {
     css();
-    if (panelEl) { panelEl.remove(); panelEl = null; return; }
+    if (panelEl) { panelEl.remove(); panelEl = null; api.ui('close'); return; }
+    api.ui('open');
     const p = panelEl = document.createElement('div'); p.className = 'ba-panel';
     const row = (k, label) => `<label><span>${label}</span><input type="range" min="0" max="100" value="${Math.round(settings[k] * 100)}" data-k="${k}"></label>`;
     p.innerHTML = `<h4>🔊 Sound</h4>${row('music', '🎵 Music')}${row('sfx', '✨ Effects')}${row('master', '🔈 Master')}<button data-mute class="${settings.mute ? 'on' : ''}">${settings.mute ? '🔇 Muted (tap to unmute)' : '🔇 Mute everything'}</button>${liveRow()}`;
     document.body.appendChild(p);
     const r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : null;
     if (r) { p.style.top = Math.min(innerHeight - p.offsetHeight - 8, r.bottom + 8) + 'px'; p.style.left = clamp(r.right - 260, 8, innerWidth - 268) + 'px'; } else { p.style.right = '16px'; p.style.bottom = '16px'; }
-    for (const i of p.querySelectorAll('input')) i.oninput = () => api.set(i.dataset.k, i.value / 100);
-    const bindLive = () => { const lv = p.querySelector('[data-live]'); if (lv) lv.onclick = () => { BOX.voice.setLive(!BOX.voice.live); lv.outerHTML = liveRow(); bindLive(); }; };
+    for (const i of p.querySelectorAll('input')) i.oninput = () => { api.set(i.dataset.k, i.value / 100); api.ui('tick', { gap: 90 }); };
+    const bindLive = () => { const lv = p.querySelector('[data-live]'); if (lv) lv.onclick = () => { api.ui('toggle'); BOX.voice.setLive(!BOX.voice.live); lv.outerHTML = liveRow(); bindLive(); }; };
     bindLive();
-    p.querySelector('[data-mute]').onclick = (e) => { api.mute(!settings.mute); e.target.className = settings.mute ? 'on' : ''; e.target.textContent = settings.mute ? '🔇 Muted (tap to unmute)' : '🔇 Mute everything'; };
-    setTimeout(() => { const off = (e) => { if (!panelEl) return document.removeEventListener('pointerdown', off, true); if (!p.contains(e.target) && e.target !== anchor) { p.remove(); panelEl = null; document.removeEventListener('pointerdown', off, true); } }; document.addEventListener('pointerdown', off, true); }, 0);
+    p.querySelector('[data-mute]').onclick = (e) => { const was = settings.mute; if (!was) api.ui('toggle'); api.mute(!was); if (was) api.ui('toggle'); e.target.className = settings.mute ? 'on' : ''; e.target.textContent = settings.mute ? '🔇 Muted (tap to unmute)' : '🔇 Mute everything'; };
+    setTimeout(() => { const off = (e) => { if (!panelEl) return document.removeEventListener('pointerdown', off, true); if (!p.contains(e.target) && e.target !== anchor) { p.remove(); panelEl = null; api.ui('close'); document.removeEventListener('pointerdown', off, true); } }; document.addEventListener('pointerdown', off, true); }, 0);
   }
 
   // ---------------------------------------------------------------- offline render check
@@ -1039,6 +1091,8 @@
     get ready() { return !!E && E.ctx.state === 'running'; },
     get settings() { return { ...settings }; },
     get current() { return cur ? cur.id : null; },
+    // what is actually playing: 'file:<url>' (a recorded track) or 'synth:<score/cue>'
+    get source() { return cur && !cur.p.stopping ? (cur.p.url ? 'file:' + cur.p.url : 'synth:' + cur.rid) : null; },
     unlock() { unlocked = true; const e = ensure(); if (e && e.ctx.state !== 'running') e.ctx.resume().then(startMusic).catch(() => {}); else startMusic(); },
     use(key) { curScore = key; need(key); },
     need,
@@ -1051,6 +1105,22 @@
     stinger(name, key) { try { return playStinger(key, name); } catch (e) { console.error(e); return false; } },
     fx(key, kind) { const sc = BOX.scores[key]; const n = sc && sc.fx && sc.fx[kind]; return n ? api.stinger(n, key) : false; },
     sfx(name) { const sc = BOX.scores[curScore]; const n = sc && sc.sfx && sc.sfx[name]; return n ? api.stinger(n, curScore) : false; },
+    clip(path, o = {}) {
+      if (!path || !E || E.ctx.state !== 'running') return false;
+      const now = performance.now(), gap = o.gap != null ? o.gap : 150, last = clipLast.get(path) || 0;
+      if (now - last < gap) return false; clipLast.set(path, now);
+      const url = '/audio/sfx/' + String(path).split('/').map(encodeURIComponent).join('/');
+      loadBuf(url, () => {
+        const buf = bufs.get(url); if (!buf || typeof buf === 'string' || !E) return;
+        const c = E.ctx, src = c.createBufferSource(), g = c.createGain(), j = o.jitter != null ? o.jitter : 0.04;
+        src.buffer = buf; src.playbackRate.value = (o.rate || 1) * (1 + (rnd() * 2 - 1) * j);
+        g.gain.value = clamp(o.vol != null ? o.vol : 0.3, 0, 1);
+        let out = g; if (o.pan && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = clamp(o.pan, -1, 1); g.connect(p); out = p; }
+        src.connect(g); out.connect(E.sfx.dry || E.sfx); src.start(c.currentTime + Math.max(0, o.delay || 0));
+      });
+      return true;
+    },
+    ui(kind, o = {}) { return api.clip('ui/' + kind + '.ogg', { vol: UI_VOL[kind] || 0.14, jitter: 0.03, ...o }); },
     duck(on) { if (duckOn === !!on) return; duckOn = !!on; applyLevels(); },
     set(kind, v) { if (!(kind in settings)) return; settings[kind] = kind === 'mute' ? !!v : clamp(Number(v) || 0, 0, 1); saveSettings(); applyLevels(); },
     mute(on) { api.set('mute', on); },

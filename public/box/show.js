@@ -1174,7 +1174,7 @@
       st.fsig = fsig;
       box.innerHTML = L.fields.map((f, i) => `<label class="sl-item" style="--i:${i}" data-k="${esc(f.key)}"><span class="sl-ic">${esc((o.icons && o.icons[f.key]) || '⚙️')}</span><b>${esc(f.label)}</b><span class="sl-val"></span>
         <select data-set="${esc(f.key)}" aria-label="${esc(f.label)}">${f.options.map((x) => `<option value="${esc(String(x.value))}">${esc(x.label)}</option>`).join('')}</select></label>`).join('');
-      for (const s of box.querySelectorAll('select')) s.onchange = () => { s.blur(); sfx('click'); st.L.set(s.dataset.set, s.value); const v = s.closest('.sl-item').querySelector('.sl-val'); v.textContent = s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : ''; };
+      for (const s of box.querySelectorAll('select')) s.onchange = () => { s.blur(); if (!(B.audio && B.audio.ui && B.audio.ui('click'))) sfx('click'); st.L.set(s.dataset.set, s.value); const v = s.closest('.sl-item').querySelector('.sl-val'); v.textContent = s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : ''; };
     }
     for (const f of L.fields) {
       const it = box.querySelector(`[data-k="${CSS.escape(f.key)}"]`); if (!it) continue;

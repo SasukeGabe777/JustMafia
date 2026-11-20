@@ -1,0 +1,14 @@
+{
+ "cues": {
+  "title": { "file": "games/actout/catchy-swing.ogg" },
+  "intro": { "file": "games/actout/catchy-swing.ogg" },
+  "lobby": { "file": "games/actout/catchy-swing.ogg" },
+  "play": { "file": "games/actout/catchy-swing.ogg", "gain": 0.85 },
+  "think": { "file": "games/actout/the-fridge-is-hungry.ogg", "gain": 0.55 },
+  "finale": { "file": "games/actout/catchy-swing.ogg" }
+ },
+ "credits": [
+  { "file": "games/actout/catchy-swing.ogg", "title": "Catchy Swing", "author": "Doge", "source": "https://opengameart.org/content/catchy-swing", "license": "CC0 1.0" },
+  { "file": "games/actout/the-fridge-is-hungry.ogg", "title": "The Fridge is Hungry", "author": "congusbongus", "source": "https://opengameart.org/content/the-fridge-is-hungry", "license": "CC0 1.0" }
+ ]
+}

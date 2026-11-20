@@ -12,6 +12,8 @@
   const lerp = (a, b, t) => a + (b - a) * t;
   const ease = (t) => { t = clamp(t); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
   const easeOut = (t) => 1 - Math.pow(1 - clamp(t), 3);
+  // Quiet recorded sound effects (public/audio/sfx/alien/, TV only; credits in credits.json there).
+  const clip = (f, o) => { try { return !!(window.BOX && BOX.audio && BOX.audio.clip && BOX.audio.clip('alien/' + f, o)); } catch { return false; } };
   const HEAD = '"Righteous", "Lilita One", sans-serif', BODY = '"Fredoka", system-ui, sans-serif';
   const EMOJI = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
   try { if (document.fonts) document.fonts.load('40px "Righteous"'); } catch { /* fine */ }
@@ -543,7 +545,7 @@
         <div class="aa-links"><button id="add-bots">+ 5 test bots</button><button id="rm-bots">remove bots</button><button id="aa-pick">🎮 another game</button><button id="aa-back">◀ games</button></div></section>
       <section class="aa-manifest"><h3>🧑‍🚀 Crew manifest <b>${n}</b></h3><div class="aa-roster" id="roster">${L.players.map((p) => `<span class="chip aa-mchip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove" style="--c:${esc(p.color || '#7dff6a')}"><span class="h">${avF(p)}</span><b>${esc(p.name)}</b></span>`).join('') || '<div class="aa-empty">Scan the boarding pass to join the crew!</div>'}</div>${L.lineupHtml ? `<div class="aa-lineup">${L.lineupHtml}</div>` : ''}</section>`);
     const box = el.querySelector('#aa-lui');
-    for (const s of box.querySelectorAll('select[data-set]')) s.onchange = () => { BOX.sfx('click'); L.set(s.dataset.set, s.value); };
+    for (const s of box.querySelectorAll('select[data-set]')) s.onchange = () => { clip('switch.ogg', { vol: 0.25 }); L.set(s.dataset.set, s.value); };
     for (const b of box.querySelectorAll('[data-k]')) b.onclick = () => { const s = box.querySelector(`select[data-set="${b.dataset.k}"]`); if (s) { s.value = b.dataset.v; s.onchange(); } };
     box.querySelector('#start').onclick = async () => { const r = await L.start(); lobbyErr = r && !r.ok ? r.error || 'Could not start.' : ''; const e = box.querySelector('#lobby-err'); if (e) e.textContent = lobbyErr; if (r && r.ok) BOX.sfx('whoosh'); };
     box.querySelector('#add-bots').onclick = () => L.bots(5);
@@ -712,6 +714,16 @@
     ],
     music: (s) => ({ roles: 'intro', emergency: 'alarm', shift: 'think', report: 'reveal', discuss: 'play', vote: 'think', eject: 'reveal', over: s.over && s.over.winner === 'aliens' ? 'lose' : 'finale' }[s.phase] || 'play'),
     fx: { roles: 'eerie', alarm: 'siren', shift: 'click', sabotage: 'explosion', jump: 'whoosh', discuss: 'pop', say: 'pop', vote: 'ballot', gotcha: 'triumph', oops: 'wail', skip: 'shrug', win: 'win', lose: 'lose' },
+    // Quiet recorded effects synced to the canvas timelines in drawTv / drawEject (ms since the phase began).
+    onFx(f) {
+      const s = T.s, u = Date.now() - T.t0, at = (ms) => Math.max(0, (ms - u) / 1000);
+      if ((f.kind === 'sabotage' || f.kind === 'jump') && s && s.report) {
+        const R = s.report;
+        if (R.S) clip('sabotage-boom.ogg', { vol: 0.28, delay: at(1600) }); // the room blows at u 1600
+        if (R.jumped) clip('hyperspace.ogg', { vol: 0.14, delay: at(3300) }); // the warp (u 3200..5800)
+        if (R.abducted) clip('tractor-beam.ogg', { vol: 0.14, delay: at(5400), rate: 0.8 }); // the saucer's beam switches on
+      } else if ((f.kind === 'gotcha' || f.kind === 'oops') && s && s.eject && s.eject.out) clip('airlock.ogg', { vol: 0.22, delay: at(60) }); // the hatch puff
+    },
     tv, phone,
   };
 })();

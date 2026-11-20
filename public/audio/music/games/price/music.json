@@ -1,0 +1,16 @@
+{
+ "cues": {
+  "title": { "file": "games/price/title-urban-theme.ogg", "gain": 0.72 },
+  "intro": { "file": "games/price/title-urban-theme.ogg", "gain": 0.72 },
+  "lobby": { "file": "games/price/title-urban-theme.ogg", "gain": 0.72 },
+  "think": { "file": "games/price/think-urban-shop.ogg", "gain": 0.68 },
+  "play": { "file": "games/price/think-urban-shop.ogg", "gain": 0.68 },
+  "tense": { "file": "games/price/think-urban-shop.ogg", "gain": 0.68 },
+  "finale": { "file": "games/price/finale-funky-disco-beats.ogg", "gain": 0.9 }
+ },
+ "credits": [
+  { "file": "games/price/title-urban-theme.ogg", "title": "Urban Theme", "author": "MintoDog", "source": "https://opengameart.org/content/urban-theme", "license": "CC0 1.0" },
+  { "file": "games/price/think-urban-shop.ogg", "title": "Urban Shop", "author": "MintoDog", "source": "https://opengameart.org/content/urban-shop", "license": "CC0 1.0" },
+  { "file": "games/price/finale-funky-disco-beats.ogg", "title": "Funky Disco Beats to Boogie/Woogie To", "author": "Fupi", "source": "https://opengameart.org/content/funky-disco-beats-to-boogiewoogie-to", "license": "CC0 1.0" }
+ ]
+}

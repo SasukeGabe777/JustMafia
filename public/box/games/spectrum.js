@@ -65,11 +65,24 @@
     }
     return { out, rows: Math.max(1, rowEnd.length) };
   }
+  // Recorded sound effects (public/audio/sfx/spectrum/, CC0, see credits.json there): a soft woodblock
+  // tock as each dot lands on the line (pitched and panned by where it lands), a snare roll for Read a
+  // Friend and a small cheer for a cluster. warm() decodes them once (silently) as soon as audio is
+  // unlocked so the first one is on time.
+  const REC = ['tock', 'drumroll', 'cheer'];
+  let recWarm = false, drops = [];
+  const rec = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('spectrum/' + f + '.ogg', o));
+  const warm = () => { if (!recWarm && rec(REC[0], { vol: 0, gap: 0 })) { recWarm = true; for (const f of REC.slice(1)) rec(f, { vol: 0, gap: 0 }); } };
+  function tocks() {
+    const every = Math.ceil(drops.length / 14); // at most ~14 taps, however big the room
+    drops.forEach(([t, pos], i) => { if (i % every === 0) rec('tock', { vol: 0.12, delay: t / 1000 + 0.38, rate: 0.8 + pos / 200, pan: (pos - 50) / 70, gap: 0 }); }); // spSlide lands ~0.38 s in
+  }
   function field(dots, { names, start = 300, spread = 2200 }) {
     let labelled = names && dots.length <= 30 && dots.every((d) => d.name);
     let st = labelled ? stack(dots, true) : null;
     if (!st) { labelled = false; st = stack(dots, false); }
     const rowH = labelled ? 36 : 20, step = dots.length ? Math.min(140, spread / dots.length) : 0;
+    drops = st.out.map((d, i) => [Math.round(start + i * step), d.pos]); // when each dot lands, for its sound
     const html = st.out.map((d, i) => {
       const delay = Math.round(start + i * step), style = `left:${d.pos}%;bottom:${d.row * rowH + 4}px;--c:${esc(d.color)};animation-delay:${delay}ms`;
       return labelled ? `<div class="sp-pin ${has(d) ? 'has-face' : ''}" style="${style}">${has(d) ? face(d, 28, { cls: 'sp-pf' }) : '<i></i>'}<span>${esc(d.name)}</span></div>` : `<div class="sp-pip" style="${style}"></div>`;
@@ -218,7 +231,7 @@
           const tr = k.parentNode, kn = tr.querySelector('.spl-knob'); if (kn) kn.style.left = k.style.left;
           for (const b of tr.querySelectorAll('.spl-stop')) b.classList.toggle('on', b === k);
           const s = el.querySelector(`select[data-set="${k.dataset.k}"]`); if (s) s.value = k.dataset.v;
-          el.__L.set(k.dataset.k, k.dataset.v); BOX.sfx('pop'); return;
+          el.__L.set(k.dataset.k, k.dataset.v); if (!rec('tock', { vol: 0.3, rate: 1.1 })) BOX.sfx('pop'); return;
         }
         const c = e.target.closest('[data-kick]');
         if (c && confirm('Remove this player?')) el.__L.kick(c.dataset.kick);
@@ -267,10 +280,18 @@
       'Every 3rd round is 🔦 READ A FRIEND: one person places themselves, everyone else guesses where. Closest guesses win big (300 / 200 / 100, +150 for a bullseye).',
       'At the end: meet your 🔗 twin tonight (the person most like you) and your 🧲 opposite. Go say hi!',
     ],
-    fx: { round: 'whoosh', bonus: 'sting', spot: 'heartbeat', open: 'tick', lock: 'pop', allin: 'chime', reveal: 'reveal', cluster: 'cheer', drum: 'drum', drop: 'gasp', bullseye: 'cheer', dozed: 'shrug', win: 'win' },
+    // cluster / drum play recorded sounds instead (onFx below).
+    fx: { round: 'whoosh', bonus: 'sting', spot: 'heartbeat', open: 'tick', lock: 'pop', allin: 'chime', reveal: 'reveal', drop: 'gasp', bullseye: 'cheer', dozed: 'shrug', win: 'win' },
+    onFx(f) {
+      if (f.kind === 'reveal' || f.kind === 'drum') tocks(); // the dots (or the guesses) slide onto the line
+      // Read a Friend: a snare roll under the 🥁 that peaks as the spotlight's marker drops (~3.25 s).
+      if (f.kind === 'drum') rec('drumroll', { vol: 0.2, delay: 0.45 });
+      if (f.kind === 'cluster') rec('cheer', { vol: 0.15 }); // "All of you, together!"
+    },
 
     tv(el, s, ctx) {
       if (!s) return;
+      warm(); drops = [];
       if (s.phase === 'over') { paint(el, finalTv(s), 'over'); return; }
       const key = s.n + ':' + s.phase, t = timer('t' + key, s.endsIn), read = s.kind === 'read';
       const spot = s.spot ? who(s.spot) : '';

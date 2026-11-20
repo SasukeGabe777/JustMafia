@@ -1,0 +1,37 @@
+[
+ {
+  "file": "alien/airlock.ogg",
+  "title": "Sci-fi Sounds: doorOpen_000",
+  "author": "Kenney",
+  "source": "https://kenney.nl/assets/sci-fi-sounds",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "alien/sabotage-boom.ogg",
+  "title": "Sci-fi Sounds: lowFrequency_explosion_000",
+  "author": "Kenney",
+  "source": "https://kenney.nl/assets/sci-fi-sounds",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "alien/hyperspace.ogg",
+  "title": "Sci-fi Sounds: spaceEngineLarge_000",
+  "author": "Kenney",
+  "source": "https://kenney.nl/assets/sci-fi-sounds",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "alien/tractor-beam.ogg",
+  "title": "Sci-fi Sounds: forceField_000",
+  "author": "Kenney",
+  "source": "https://kenney.nl/assets/sci-fi-sounds",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "alien/switch.ogg",
+  "title": "UI Audio: switch7",
+  "author": "Kenney",
+  "source": "https://kenney.nl/assets/ui-audio",
+  "license": "CC0 1.0"
+ }
+]

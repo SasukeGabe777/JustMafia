@@ -1,0 +1,30 @@
+[
+ {
+  "file": "summon/war-horn.ogg",
+  "title": "war horn.wav",
+  "author": "adharca",
+  "source": "https://freesound.org/people/adharca/sounds/539956/",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "summon/sword-clash.ogg",
+  "title": "Sword clash 1.wav",
+  "author": "spycrah",
+  "source": "https://freesound.org/people/spycrah/sounds/471095/",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "summon/siege-thud.ogg",
+  "title": "Impact Sounds: impactWood_heavy_000",
+  "author": "Kenney",
+  "source": "https://kenney.nl/assets/impact-sounds",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "summon/crumble.ogg",
+  "title": "Stone Crumble 2",
+  "author": "Kastenfrosch",
+  "source": "https://freesound.org/people/Kastenfrosch/sounds/521956/",
+  "license": "CC0 1.0"
+ }
+]

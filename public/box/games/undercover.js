@@ -7,6 +7,8 @@
 // a drawing pad on your turn, the vote, and the caught mole's last guess.
 (function () {
   const { esc, timer } = BOX;
+  // Quiet recorded sound effects (public/audio/sfx/undercover/, TV only; credits in credits.json there).
+  const clip = (f, o) => { try { return !!(window.BOX && BOX.audio && BOX.audio.clip && BOX.audio.clip('undercover/' + f, o)); } catch { return false; } };
   const fc = (x, n = 40, o) => (x && BOX.face ? BOX.face(x, n, { cls: 'uc-fc', ...(o || {}) }) : `<span class="uc-emo">${esc((x && x.avatar) || '🙂')}</span>`);
   const photo = (x, n = 120) => (x && BOX.face && (!BOX.hasLook || BOX.hasLook(x)) ? BOX.face(x, n, { fill: true }) : `<span class="uc-emo fill">${esc((x && x.avatar) || '🙂')}</span>`);
   const fig = (x, h = 220) => (x && BOX.body && BOX.hasLook && BOX.hasLook(x) ? BOX.body(x, h) : `<span class="uc-emo huge">${esc((x && x.avatar) || '🙂')}</span>`);
@@ -354,7 +356,7 @@
     if (set.dataset.sig !== sig && !set.contains(document.activeElement)) {
       set.dataset.sig = sig;
       set.innerHTML = L.fields.map((f) => `<label class="uc-l-f"><span>${esc(f.label)}</span><select data-set="${esc(f.key)}">${f.options.map((o) => `<option value="${esc(String(o.value))}" ${String(L.settings[f.key]) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`).join('');
-      for (const s of set.querySelectorAll('[data-set]')) s.onchange = () => L.set(s.dataset.set, s.value);
+      for (const s of set.querySelectorAll('[data-set]')) s.onchange = () => { clip('ballot.ogg', { vol: 0.2 }); L.set(s.dataset.set, s.value); };
     }
     BOX.morph(el.querySelector('#roster'), L.players.map((p, i) => `<span class="chip uc-l-agent" style="--c:${esc(p.color || '#5ff2ff')};--r:${tilt(p.name, 3).toFixed(1)}deg">${fc(p, 44)}<span><small>AGENT ${String(i + 1).padStart(3, '0')}</small>${esc(p.name)}</span></span>`).join('') || '<span class="uc-l-empty">Scan the pass to join the agency. 4–10 agents is perfect (3–20 works).</span>');
   }
@@ -370,7 +372,13 @@
       'Modes: Mixed, Blank Agent (no word at all), Double Agents, Rival Words (find your teammates), Speed Round, Picture Clue.',
       'Agents score for catching moles; moles score for surviving. Most points after the last case wins.',
     ],
-    fx: { start: 'start', case: 'swell', clues: 'whoosh', turn: 'click', clue: 'pop', stroke: 'pop', talk: 'pop', vote: 'ballot', voted: 'click', caught: 'triumph', innocent: 'wail', tie: 'shrug', guess: 'heartbeat', cracked: 'sting', wrong: 'buzz', casewin: 'chime', molewin: 'sting', win: 'win' },
+    // case and voted are recorded clips (onFx), not synth sounds.
+    fx: { start: 'start', clues: 'whoosh', turn: 'click', clue: 'pop', stroke: 'pop', talk: 'pop', vote: 'ballot', caught: 'triumph', innocent: 'wail', tie: 'shrug', guess: 'heartbeat', cracked: 'sting', wrong: 'buzz', casewin: 'chime', molewin: 'sting', win: 'win' },
+    onFx(f) {
+      if (f.kind === 'case') { clip('folder.ogg', { vol: 0.3 }); clip('stamp.ogg', { vol: 0.22, delay: 0.8 }); } // the case folder slides in, CLASSIFIED lands (uc-stampin2 0.5 s + 0.5 s)
+      else if (f.kind === 'voted') clip('ballot.ogg', { vol: 0.16, gap: 120 }); // a vote card drops
+      else if (f.kind === 'caught' || f.kind === 'innocent') { clip('shutter.ogg', { vol: 0.2, delay: 0.35 }); clip('stamp.ogg', { vol: 0.3, delay: 1.7 }); } // the dossier photo, then MOLE / AGENT slams (uc-slam 1.4 s)
+    },
     music: (s) => (s.phase === 'brief' ? 'play' : s.phase === 'clue' || s.phase === 'talk' ? 'think' : s.phase === 'vote' || s.phase === 'pick' || s.phase === 'guess' ? 'tense' : s.phase === 'eject' || s.phase === 'case' ? 'reveal' : s.phase === 'over' ? 'finale' : undefined),
     lobbyTv,
     paint, // shared drawing (tests and the title screen)

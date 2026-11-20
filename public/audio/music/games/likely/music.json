@@ -1,0 +1,14 @@
+{
+ "cues": {
+  "title": { "file": "games/likely/title-pomp-and-circumstance.ogg" },
+  "intro": { "file": "games/likely/title-pomp-and-circumstance.ogg" },
+  "lobby": { "file": "games/likely/title-pomp-and-circumstance.ogg" },
+  "finale": { "file": "games/likely/title-pomp-and-circumstance.ogg" },
+  "think": { "file": "games/likely/play-high-school-cadets.ogg" },
+  "play": { "file": "games/likely/play-high-school-cadets.ogg" }
+ },
+ "credits": [
+  { "file": "games/likely/title-pomp-and-circumstance.ogg", "title": "Pomp and Circumstance, Op. 39 No. 1 (Edward Elgar)", "author": "United States Army Band", "source": "https://commons.wikimedia.org/wiki/File:Pomp_and_Circumstance,_Op._39_-_No._1_-_United_States_Army_Band.mp3", "license": "Public domain" },
+  { "file": "games/likely/play-high-school-cadets.ogg", "title": "The High School Cadets (John Philip Sousa)", "author": "United States Marine Band", "source": "https://commons.wikimedia.org/wiki/File:Sousa_The_High_School_Cadets_United_States_Marine_Band.ogg", "license": "Public domain" }
+ ]
+}

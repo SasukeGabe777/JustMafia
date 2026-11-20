@@ -1,0 +1,62 @@
+{
+ "cues": {
+  "title": {
+   "file": "games/bomb/secret-agent-rock.ogg",
+   "loopStart": 2,
+   "loopEnd": 133
+  },
+  "lobby": {
+   "file": "games/bomb/secret-agent-rock.ogg",
+   "loopStart": 2,
+   "loopEnd": 133
+  },
+  "intro": {
+   "file": "games/bomb/secret-agent-rock.ogg",
+   "loopStart": 2,
+   "loopEnd": 133
+  },
+  "play": {
+   "file": "games/bomb/secret-agent-rock.ogg",
+   "loopStart": 2,
+   "loopEnd": 133
+  },
+  "finale": {
+   "file": "games/bomb/secret-agent-rock.ogg",
+   "loopStart": 2,
+   "loopEnd": 133
+  },
+  "think": {
+   "file": "games/bomb/ghost-surf-rock.ogg",
+   "loopStart": 2,
+   "loopEnd": 146.5
+  },
+  "tense": {
+   "file": "games/bomb/shooter-on-the-roof.ogg",
+   "loopStart": 2,
+   "loopEnd": 144.18
+  }
+ },
+ "credits": [
+  {
+   "file": "games/bomb/secret-agent-rock.ogg",
+   "title": "Secret Agent Rock",
+   "author": "John Bartmann",
+   "source": "https://freemusicarchive.org/music/John_Bartmann/Public_Domain_Soundtrack_Music_Album_One/secret-agent-rock/",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/bomb/ghost-surf-rock.ogg",
+   "title": "Ghost Surf Rock",
+   "author": "Loyalty Freak Music",
+   "source": "https://freemusicarchive.org/music/Loyalty_Freak_Music/WITCHY_BATTY_SPOOKY_HALLOWEEN_IN_SEPTEMBER_/Ghost_Surf_Rock/",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/bomb/shooter-on-the-roof.ogg",
+   "title": "Shooter On The Roof",
+   "author": "John Bartmann",
+   "source": "https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/shooter-on-the-roof/",
+   "license": "CC0 1.0"
+  }
+ ]
+}
