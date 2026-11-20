@@ -398,7 +398,7 @@ async function setup(browser, game, settings = {}) {
 
   // ---------- YesChef (pizza): a customer shows the order, the phone builds it and serves it, the reveal ----------
   {
-    const { tv, ph } = await setup(browser, 'pizza', { kitchen: 'pizza', mode: 'classic', rounds: 3, seconds: 30 });
+    const { tv, ph } = await setup(browser, 'pizza', { kitchen: 'pizza', mode: 'classic', rounds: 3, seconds: 30, difficulty: 'hard' });
     assert(/YesChef/.test(await tv.eval(`document.body.textContent`)), 'the YesChef lobby');
     await tv.click('#start'); await skipShow(tv);
     await tv.until(`!!document.querySelector('.pz-plate .pz-svg') && !!document.querySelector('.pz-cust')`, 'the customer shows the order', 20000);
@@ -425,7 +425,7 @@ async function setup(browser, game, settings = {}) {
   }
   // ---------- YesChef (burger joint): another kitchen on the same engine, layers stacked in order ----------
   {
-    const { tv, ph } = await setup(browser, 'pizza', { kitchen: 'burger', mode: 'classic', rounds: 3, seconds: 30 });
+    const { tv, ph } = await setup(browser, 'pizza', { kitchen: 'burger', mode: 'classic', rounds: 3, seconds: 30, difficulty: 'hard' });
     await tv.click('#start'); await skipShow(tv);
     await tv.until(`!!document.querySelector('.pz-tv.k-burger .pz-plate .pz-svg')`, 'the burger order', 20000);
     await wait(800); await tv.shot('box-yeschef-burger-order');
