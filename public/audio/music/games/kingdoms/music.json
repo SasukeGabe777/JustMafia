@@ -1,0 +1,19 @@
+{
+ "cues": {
+  "title": { "file": "games/kingdoms/title-kings-feast.ogg" },
+  "intro": { "file": "games/kingdoms/title-kings-feast.ogg" },
+  "lobby": { "file": "games/kingdoms/lobby-minstrel-dance.ogg" },
+  "think": { "file": "games/kingdoms/play-market-day.ogg" },
+  "play": { "file": "games/kingdoms/play-market-day.ogg" },
+  "reveal": { "file": "games/kingdoms/play-market-day.ogg" },
+  "tense": { "file": "games/kingdoms/tense-battle.ogg" },
+  "finale": { "file": "games/kingdoms/finale-victory.ogg" }
+ },
+ "credits": [
+  { "file": "games/kingdoms/title-kings-feast.ogg", "title": "Medieval: King's Feast (loop)", "author": "RandomMind", "source": "https://opengameart.org/content/medieval-kings-feast", "license": "CC0 1.0" },
+  { "file": "games/kingdoms/lobby-minstrel-dance.ogg", "title": "Medieval: Minstrel Dance (loop)", "author": "RandomMind", "source": "https://opengameart.org/content/medieval-minstrel-dance", "license": "CC0 1.0" },
+  { "file": "games/kingdoms/play-market-day.ogg", "title": "Medieval: Market Day (loop)", "author": "RandomMind", "source": "https://opengameart.org/content/medieval-market-day", "license": "CC0 1.0" },
+  { "file": "games/kingdoms/tense-battle.ogg", "title": "Medieval: Battle", "author": "RandomMind", "source": "https://opengameart.org/content/medieval-battle", "license": "CC0 1.0" },
+  { "file": "games/kingdoms/finale-victory.ogg", "title": "Medieval: Victory Theme", "author": "RandomMind", "source": "https://opengameart.org/content/medieval-victory-theme", "license": "CC0 1.0" }
+ ]
+}

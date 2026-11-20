@@ -84,7 +84,8 @@
       bad: { bpm: 100, tracks: { b: { type: 'mute' } }, bars: 1, parts: { b: 'e4 - eb4 - d4 - - -' } },
       round: { bpm: 120, tracks: { b: { type: 'pluck', dly: 0.3 } }, bars: 1, parts: { b: 'g4 d5 g5 . . . . .' } },
     },
-    fx: { pass: 'pass', gem: 'gem', hole: 'hole', win: 'sink', lineup: 'round' },
+    // pass / hole / win play recorded sounds instead (onFx in public/box/games/marble.js)
+    fx: { gem: 'gem', lineup: 'round' },
     sfx: {},
   };
 })();

@@ -55,6 +55,9 @@
     pops: {}, seatT0: 0, bursts: [], flights: [], moments: [], tickSeen: new Map(), lastBattleSnd: 0, overAt: 0, mode: null,
   };
   const tnow = () => performance.now() / 1000;
+  // A quiet recorded sound effect (public/audio/sfx/kingdoms/, credits.json there). True when the engine
+  // took it (even if it skipped a too-quick repeat), false only without BOX.audio (then play the old sound).
+  const clip = (name, o) => { const a = BOX.audio; if (!a || !a.clip) return false; try { a.clip('kingdoms/' + name + '.ogg', o); } catch { /* no audio */ } return true; };
   const gameNow = () => (kv.s ? kv.s.now + (performance.now() - kv.recvAt) : 0);
 
   // ---------- title screen ----------
@@ -541,14 +544,18 @@
       'Talk at the table! Make alliances, send gifts, trade, or betray your friends at the worst moment.',
       'Win by ⚔️ conquest, 🕊️ a Peace Monument built by everyone, or 🚀 launching a rocket. Otherwise the best Kingdom Score wins.',
     ],
-    fx: { seat: 'pop', age: 'swell', village: 'chime', capture: 'boom', vassal: 'gavel', rebel: 'roar', alliance: 'bell', betray: 'stab', gift: 'chime', message: 'talk', event: 'bell', rocket: 'reveal', launchpad: 'reveal', launch: 'explosion', monument: 'chime', kingdom: 'join', win: 'win', council: 'bell', councilResult: 'gavel', coalition: 'roar', bounty: 'reveal', bountyClaim: 'chime', peacehold: 'swell', peacebroken: 'stab', final: 'reveal' },
+    fx: { seat: 'pop', age: 'swell', village: 'chime', capture: 'boom', vassal: 'gavel', rebel: 'roar', alliance: 'bell', betray: 'stab', event: 'bell', rocket: 'reveal', launchpad: 'reveal', launch: 'explosion', monument: 'chime', kingdom: 'join', win: 'win', council: 'bell', councilResult: 'gavel', coalition: 'roar', bounty: 'reveal', peacehold: 'swell', peacebroken: 'stab', final: 'reveal' },
     onFx(f) {
       const s = kv.s, T = tnow();
       // the engine passes the kingdom id as `id`; if the room keeps its own sequence id there, use `k`
       const kid = f.k || f.who || (typeof f.id === 'string' ? f.id : null), k = kid && kv.kById.get(kid), n = k ? kname(k) : '';
       switch (f.kind) {
         case 'seat': if (Number.isInteger(f.seat)) kv.pops[f.seat] = T; break;
-        case 'battle': if (T - kv.lastBattleSnd > 1.2) { kv.lastBattleSnd = T; BOX.sfx('hit'); } break;
+        // recorded sounds (public/audio/sfx/kingdoms/): steel on steel for a battle on the map, a purse of
+        // coins for a gift or a claimed bounty, a parchment for a royal message (the old synth sound if a clip can't play)
+        case 'battle': if (T - kv.lastBattleSnd > 1.2) { kv.lastBattleSnd = T; clip('swords', { vol: 0.17, pan: Math.random() * 0.8 - 0.4 }) || BOX.sfx('hit'); } break;
+        case 'message': clip('scroll', { vol: 0.2, gap: 2500 }) || BOX.sfx('talk'); break;
+        case 'bountyClaim': clip('coins', { vol: 0.22 }) || BOX.sfx('chime'); break;
         case 'capture': kv.bursts.push({ kind: 'capture', q: f.q, r: f.r, at: T, dur: 1.6, color: k ? k.color : null }); break;
         case 'village': if (f.q != null) kv.bursts.push({ kind: 'village', q: f.q, r: f.r, at: T, dur: 1.2 }); break;
         case 'age': if (k) { kv.bursts.push({ kind: 'age', q: k.home.q, r: k.home.r, at: T, dur: 2.4 }); if (f.first && f.age >= 3) moment('🥇', `${n} is the first ${AGE_NAME[f.age]}!`); else if (f.age >= 4) moment(AGE_ICON[f.age], `${n} became a ${AGE_NAME[f.age]}!`); } break;
@@ -560,7 +567,7 @@
         case 'peacehold': moment('🕊️', 'One world alliance! If the peace holds, everyone wins', 'diplo'); break;
         case 'peacebroken': moment('💔', 'The peace is broken!', 'war'); break;
         case 'final': moment('⏳', 'Final 3 minutes!', 'win'); break;
-        case 'gift': { const to = kv.kById.get(f.to); if (to) kv.bursts.push({ kind: 'gift', q: to.home.q, r: to.home.r, at: T, dur: 2 }); break; }
+        case 'gift': { clip('coins', { vol: 0.2 }) || BOX.sfx('chime'); const to = kv.kById.get(f.to); if (to) kv.bursts.push({ kind: 'gift', q: to.home.q, r: to.home.r, at: T, dur: 2 }); break; }
         case 'vassal': { const by = kv.kById.get(f.by); if (k && by) moment('⛓️', `${n} bows to ${kname(by)}!`, 'war'); break; }
         case 'rebel': if (k) moment('✊', f.ok ? `${n} broke free!` : `${n}'s rebellion failed!`, 'war'); break;
         case 'betray': if (k) moment('🗡️', `${n} betrayed their allies!`, 'war'); break;

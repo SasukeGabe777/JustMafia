@@ -7,6 +7,8 @@
 (function () {
   const { esc, timer } = BOX;
   const A = () => window.DUCK_ART;
+  // A quiet recorded sound effect on the TV (public/audio/sfx/ducks/, credits.json there). Phones have no BOX.audio.
+  const clip = (p, o) => { try { return !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('ducks/' + p + '.ogg', o)); } catch { return false; } };
   const SK = { run: ['🏃', 'Run', 'Hurdle Dash', '#ff8c42'], swim: ['🌊', 'Swim', 'Paddle Power', '#3ec1ff'], fly: ['🪽', 'Fly', 'Sky Rings', '#b388ff'], climb: ['🧗', 'Climb', 'Cliff Climb', '#c49a6c'], stamina: ['💪', 'Stamina', 'Bug Snack', '#2ee6a6'] };
   const GAME = { run: 'hurdles', swim: 'paddle', fly: 'rings', climb: 'climb', stamina: 'bugs' };
   const SEC = { track: ['🏃', 'Track', 'run'], pond: ['🌊', 'Pond', 'swim'], cliff: ['🧗', 'Cliff', 'climb'], gap: ['🪽', 'Ravine', 'fly'] };
@@ -57,6 +59,7 @@
     race.ducks = { ...(R.wild || {}), ...Object.fromEntries(s.farms.map((f) => [f.id, f])) };
     race.place = Object.fromEntries(R.results.map((r) => [r.id, r]));
     race.lanes = Object.fromEntries(R.tracks.map((tr, i) => [tr.id, i]));
+    if (Date.now() - race.start < 2500) clip('crowd', { vol: 0.16 }); // the crowd settles in as the race intro starts
     loop(canvas, drawRace);
   }
   const say = (text, big) => { race.msgs.push({ text, at: performance.now(), big }); if (race.msgs.length > 5) race.msgs.shift(); };
@@ -130,12 +133,13 @@
         const key = p.id + t + k; if (t > simT || race.seenEv.has(key)) continue;
         race.seenEv.add(key);
         const show = k === 'boost' ? labelled.has(p.id) && Math.random() < 0.5 : k === 'tired' ? p.id === race.leader : labelled.has(p.id) || R.tracks.length <= 12;
-        if (show) say(`${d.name} ${EV_TEXT[k]}`);
+        if (show) { say(`${d.name} ${EV_TEXT[k]}`); if (k === 'trip' || k === 'slip') clip('trip', { vol: 0.16, gap: 700, pan: Math.max(-0.6, Math.min(0.6, x / W - 0.5)) }); }
       }
       if (done && !race.finished.has(p.id)) {
         race.finished.add(p.id); const pl = race.place[p.id].place;
         if (pl === 1) {
           race.firstDoneAt = pnow; BOX.sfx('cheer'); BOX.sfx('win');
+          if (race.photo) clip('camera', { vol: 0.28, jitter: 0 }); // the photo-finish camera
           const second = R.results[1] && race.ducks[R.results[1].id];
           race.banner = { at: pnow, text: `🏆 ${d.name} WINS!`, sub: race.photo && second ? `📸 Photo finish: ahead of ${second.name} by ${R.margin.toFixed(2)}s` : d.wild ? 'A wild duck takes it!' : (d.owner ? 'Raised by ' + d.owner : '') };
           say(race.photo && second ? `📸 PHOTO FINISH! ${d.name} beats ${second.name} by a beak!` : `🏆 ${d.name} WINS the ${R.name}!`, true);
@@ -150,7 +154,7 @@
         race.leader = lead.id; race.leadAt = pnow;
       }
       const si = G.secs.findIndex((q) => lead.x >= q.a && lead.x < q.b);
-      if (si > 0 && si !== race.leaderSec) say(SEC_SAY[G.secs[si].type].replace('{n}', nm(lead.id)));
+      if (si > 0 && si !== race.leaderSec) { say(SEC_SAY[G.secs[si].type].replace('{n}', nm(lead.id))); if (G.secs[si].type === 'pond') clip('splash', { vol: 0.22 }); }
       race.leaderSec = si;
       const b = unfinished[1];
       if (b && lead.x - b.x < 0.8 && pnow - race.neckAt > 6000 && pnow - race.leadAt > 1500) { race.neckAt = pnow; say(`⚔️ ${nm(lead.id)} and ${nm(b.id)} are neck and neck!`); }
@@ -224,11 +228,17 @@
       const left = Math.ceil((R.intro - e) / 1000);
       if (left <= 3) { g.font = '800 140px Fredoka, sans-serif'; g.fillStyle = '#ffd23f'; g.fillText(String(left), W / 2, H * 0.8); if (race.beep !== left) { race.beep = left; BOX.sfx('tick'); } }
       g.textAlign = 'left';
-    } else if (!race.go) { race.go = true; BOX.sfx('start'); say('QUACK! And they’re off!', true); }
+    } else if (!race.go) { race.go = true; BOX.sfx('start'); clip('quack', { vol: 0.24, delay: 0.2 }); say('QUACK! And they’re off!', true); }
   }
 
   // ---------- Duck Valley on the TV ----------
-  function drawValley(g, W, H, now) { A().drawValley(g, W, H, tvw.farms, now, tvw.fxBy, tvw.born, tvw.weather); }
+  function drawValley(g, W, H, now) {
+    A().drawValley(g, W, H, tvw.farms, now, tvw.fxBy, tvw.born, tvw.weather);
+    // now and then a duck on one of the farms quacks, softly, from its side of the valley
+    const t = performance.now();
+    if (!tvw.quackAt) tvw.quackAt = t + 12000;
+    else if (t > tvw.quackAt) { tvw.quackAt = t + 22000 + Math.random() * 26000; if (tvw.farms.some((f) => f.stage >= 0)) clip('quack', { vol: 0.07 + Math.random() * 0.05, pan: Math.random() * 1.2 - 0.6, rate: 0.95 + Math.random() * 0.15 }); }
+  }
   function spotlight(s) {
     const farms = s.farms.filter((f) => f.stage >= 0);
     if (!farms.length) return '<p class="muted">Eggs are about to hatch…</p>';
@@ -475,6 +485,7 @@
     onFx(f) {
       if (f.kind === 'cheer') {
         race.cheers = race.cheers || []; race.cheers.push({ id: f.who, at: performance.now() }); if (race.cheers.length > 60) race.cheers.shift();
+        if (race.R && tvw.mode === 'race') clip('cheer', { vol: 0.12, gap: 3000 }); // the stands cheer along (a megaphone pops up over the duck)
         const n = race.cheers.filter((c) => c.id === f.who && performance.now() - c.at < 2000).length;
         if (race.R && n >= 5 && performance.now() - (race.cheerSaid || 0) > 5000) { race.cheerSaid = performance.now(); say(`📣 The crowd is roaring for ${nm(f.who)}!`); }
         return;
