@@ -265,4 +265,14 @@ test('Family mode (room.family): no item outside the family pool ever appears, i
   for (let k = 0; k < 100; k++) for (const i of room.game.drawPair()) assert(!bad.has(i.name));
 });
 
+test('difficulty: Easy has a wider Bullseye and a softer bust; Hard a narrow Bullseye and faster falloff; Medium is the classic rule', () => {
+  assert.equal(def.defaults.difficulty, 'medium');
+  assert.deepEqual(def.scoreGuess(92, 100), def.scoreGuess(92, 100, { level: 'medium' }));
+  assert.equal(def.scoreGuess(92, 100, { level: 'easy' }).bull, true); assert.equal(def.scoreGuess(92, 100).bull, false);
+  assert.equal(def.scoreGuess(96, 100, { level: 'hard' }).bull, false); assert.equal(def.scoreGuess(97, 100, { level: 'hard' }).bull, true);
+  assert(def.scoreGuess(120, 100, { level: 'easy' }).pts > def.scoreGuess(120, 100).pts, 'going over costs less on Easy');
+  assert(def.scoreGuess(70, 100, { level: 'hard' }).pts < def.scoreGuess(70, 100).pts, 'Hard falls off faster');
+  for (const d of ['easy', 'hard']) { const { room, clock } = setup(4, { difficulty: d, rounds: 6 }); room.start(); runOut(room, clock); assert.equal(room.game.phase, 'over', d); }
+});
+
 console.log(`\nPrice Panic: ${passed} tests passed.`);

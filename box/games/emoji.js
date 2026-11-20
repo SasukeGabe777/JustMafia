@@ -13,7 +13,7 @@ const fields = [
   { key: 'maxRounds', label: 'Most rounds', options: opt([[5, '5 rounds'], [8, '8 rounds'], [12, '12 rounds'], [20, '20 rounds']]) },
   { key: 'stages', label: 'Clue givers at once', options: opt([['auto', 'Auto (more in big groups)'], [1, '1 giver'], [2, '2 givers'], [3, '3 givers']]) },
   { key: 'category', label: 'Categories', options: opt([['all', 'All categories'], ...CATEGORIES.map((c) => [c.key, c.icon + ' ' + c.label])]) },
-  { key: 'difficulty', label: 'Difficulty', options: opt([['mix', 'Mixed'], ['easy', 'Easy ★'], ['medium', 'Easy & medium'], ['hard', 'Medium & hard']]) },
+  { key: 'difficulty', label: 'Difficulty', options: opt([['mix', '🎲 Mixed'], ['easy', '🟢 Easy ★'], ['medium', '🟡 Easy & medium'], ['hard', '🔴 Medium & hard']]) },
   { key: 'family', label: 'Answers', options: opt([[false, 'Everything'], [true, 'Family-friendly only']]) },
   { key: 'ticker', label: 'Show wrong guesses on TV', options: opt([[true, 'Yes (anonymous)'], [false, 'No']]) },
 ];

@@ -497,6 +497,7 @@ const partyFit = ({ players: P, minutes: M }) => {
 
 module.exports = {
   partyFit,
+  difficulty: { key: 'clip', values: { easy: 6, medium: 4, hard: 2 } }, // Party Mode's "How hard?": the first listen (box/party-fit.js)
   key: 'tune', name: 'Tune Buzz', min: 2, best: [3, 12], fields, defaults, howSteps: 6,
   show: { facts: false }, // intro cutscene before the game (public/box/intros/tune.js)
   locked: { how: 'Finish a game of JustFunny to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js

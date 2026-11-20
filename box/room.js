@@ -33,8 +33,12 @@ const PF = require('./party-fit');
 // rounds) and records nothing (no party points, JustGold, stats, trophies or unlocks). Phones show
 // hints from the how-to steps, the TV a PRACTICE badge. When it ends (or after PRACTICE_MAX_MS):
 // "Practice over, now for real!" for PRACTICE_END_MS, then the real game with the real settings,
-// without the intro. Default: on for a TV that has never finished a game (host:create `onboard`),
-// for games it hasn't played yet. Games that can't do a short practice are left out (no setting).
+// without the intro. Default (practiceAuto): on only for a game that is new here: never finished on
+// this TV (host:create `onboard`, the TV's box.done), not played or practised in this room tonight,
+// and not finished before by most of the people in the room (their profiles). Party Mode: 'new'
+// follows the same rule, 'on' practises every game, 'off' none. The host can always change it.
+// Games that can't do a short practice are left out (no setting).
+const DIFFICULTIES = ['easy', 'medium', 'hard', 'mixed'];
 const PRACTICE_MODES = ['on', 'off', 'new'], PRACTICE_END_MS = 6000, PRACTICE_MIN_MS = 60 * 1000, PRACTICE_MAX_MS = 3 * 60 * 1000;
 const NO_PRACTICE = new Set(['ducks', 'kingdoms', 'escape', 'marble', 'mafia']);
 const PRACTICE_FIELD = { key: 'practice', label: 'Practice round first', options: [{ value: false, label: 'Off' }, { value: true, label: 'On: a quick warm-up that doesn’t count' }] };
@@ -133,17 +137,41 @@ class BoxRoom {
   // Games this group already knows: finished on this TV before (`seen`), played or practised tonight.
   seenGame(key) { return !!((this.seen && this.seen.has(key)) || (this.practiced && this.practiced.has(key)) || (this.played || []).some((g) => g.game === key)); }
   setSeen(list) { if (Array.isArray(list)) for (const k of list.slice(0, 80)) if (typeof k === 'string' && /^[a-z]{2,16}$/.test(k)) this.seen.add(k); }
-  // The default for the setting: Party Mode's choice for its games, else on for a new TV's new games.
-  practiceAuto(def) {
-    const pm = this.partyMode, fresh = !this.seenGame(def.key);
-    if (pm && pm.phase !== 'done' && pm.defs.includes(def)) return pm.practice === 'on' || (pm.practice === 'new' && fresh);
-    return !!this.newTv && fresh;
+  // Most of the people here have finished this game before (their lifetime profiles), so it isn't new to them.
+  crowdKnows(key) {
+    const humans = this.list().filter((p) => !p.bot); if (!humans.length || !this.profiles || typeof this.profiles.get !== 'function') return false;
+    let known = 0;
+    for (const p of humans) {
+      let prof = null; try { prof = p.profileId ? this.profiles.get(p.profileId) : null; } catch (e) { prof = null; }
+      const g = prof && prof.stats && prof.stats.byGame && prof.stats.byGame[key];
+      if (g && g.played > 0) known++;
+    }
+    return known * 2 > humans.length;
   }
-  // The TV says whether it's new here (never finished a game) and which games it has finished.
+  // New to everyone here: not finished on this TV, not played or practised tonight, not known to most players.
+  freshGame(key) { return !this.seenGame(key) && !this.crowdKnows(key); }
+  // The default for the setting. Never for a game this TV or this crowd has already played:
+  //   Party Mode's games: its "Practice rounds" choice ('new' = new games only, 'on' = every game, 'off').
+  //   Otherwise: on for a new game once the TV has said what it has played ('new'), unless it asked for none ('off').
+  practiceAuto(def) {
+    const pm = this.partyMode, fresh = this.freshGame(def.key);
+    if (pm && pm.phase !== 'done' && pm.defs.includes(def)) return pm.practice === 'on' || (pm.practice === 'new' && fresh);
+    return this.tvPractice === 'new' && fresh;
+  }
+  // The TV says which games it has finished (box.done) and whether it wants practice rounds at
+  // all: { seen: [keys], auto: 'new' | 'off' } (older pages: { newbie, seen } = 'new').
   setOnboard(o) {
     if (!o || typeof o !== 'object') return;
-    this.newTv = o.newbie === true; this.setSeen(o.seen);
-    if (this.phase === 'lobby' && this.canPractice()) { if (this.practiceAuto(this.def)) this.settings.practice = true; else delete this.settings.practice; }
+    this.tvPractice = o.auto === 'off' ? 'off' : 'new'; this.newTv = o.newbie === true; this.setSeen(o.seen);
+    this.practiceRefresh(true);
+  }
+  // Keep the lobby's practice setting on its default as people join (until the host picks it).
+  practiceRefresh(force) {
+    if (this.phase !== 'lobby' || !this.canPractice() || (this.practiceTouched && !force)) return;
+    if (force) this.practiceTouched = false;
+    const on = this.practiceAuto(this.def);
+    if (on && this.settings.practice !== true) this.settings.practice = true;
+    else if (!on && this.settings.practice !== undefined) delete this.settings.practice;
   }
   // The practice copy of the settings: the game's party fit for 2 minutes, then the fewest rounds.
   practiceSettings() {
@@ -224,7 +252,7 @@ class BoxRoom {
     this.away = null; this.practice = null;
     if (this.partyMode) this.partyMode.ext = false;
     if (this.partyMode && this.partyMode.phase !== 'done') this.partyMode.phase = 'playing';
-    this.def = def; this.settings = this.defaultSettings(def); this.phase = 'lobby'; this.show = null;
+    this.def = def; this.practiceTouched = false; this.settings = this.defaultSettings(def); this.phase = 'lobby'; this.show = null;
     this.partyFit(); // Party Mode: settings that suit this crowd and this game's slot in the plan
     this.game = def.liveLobby ? def.create(this, this.settings) : null;
     if (this.game && this.game.joined) for (const p of this.players.values()) this.game.joined(p);
@@ -588,7 +616,16 @@ class BoxRoom {
     this.partyMode = { defs, index: 0, minutes: total, phase: 'playing', at: this.now(), startedAt: null, paused: false, timer: null, flow: flow === 'lobby' ? 'lobby' : 'auto',
       intros: INTRO_MODES.includes(opts.intros) ? opts.intros : 'play', each, plan, players: Math.max(0, Math.min(100, Number(opts.players) || 0)),
       practice: PRACTICE_MODES.includes(opts.practice) ? opts.practice : 'off',
+      // "How hard?": easy | medium | hard for every game, 'mixed' a different one per game, null = each game's own default.
+      difficulty: DIFFICULTIES.includes(opts.difficulty) ? opts.difficulty : null, levels: {},
       fit: null, nextFit: null, preview: null, previewed: null };
+    if (this.partyMode.difficulty === 'mixed') { // shuffled easy / medium / hard cycles, so it really varies
+      let bag = [];
+      for (const d of defs) {
+        if (!bag.length) { bag = ['easy', 'medium', 'hard']; for (let i = 2; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; } }
+        this.partyMode.levels[d.key] = bag.pop();
+      }
+    }
     this.setSeen(opts.seen);
     if (this.def === defs[0]) { this.settings = this.defaultSettings(this.def); this.partyFit(); }
     return { ok: true };
@@ -598,7 +635,8 @@ class BoxRoom {
   // has joined, the group size picked in the setup).
   partyCtx(def) {
     const pm = this.partyMode;
-    return { players: this.players.size || pm.players || 6, minutes: pm.plan[def.key] || 10 };
+    const difficulty = pm.difficulty === 'mixed' ? pm.levels[def.key] || 'medium' : pm.difficulty;
+    return { players: this.players.size || pm.players || 6, minutes: pm.plan[def.key] || 10, difficulty: difficulty || null };
   }
   // The current party game's settings: fitted when the lineup reaches it (and again at Start with
   // the players actually here, unless the host changed them in the lobby).
@@ -607,7 +645,7 @@ class BoxRoom {
     if (!pm || pm.phase === 'done' || pm.defs[pm.index] !== this.def || this.def.external) return;
     const ctx = this.partyCtx(this.def), fit = PF.fitSettings(this.def, ctx);
     Object.assign(this.settings, fit.settings);
-    pm.fit = { game: this.def.key, summary: fit.summary, minutes: ctx.minutes, players: ctx.players, touched: false };
+    pm.fit = { game: this.def.key, summary: fit.summary, minutes: ctx.minutes, players: ctx.players, difficulty: fit.difficulty || null, touched: false };
   }
   // People joined or left in the lobby: the settings follow the crowd (until the host changes them).
   partyRefit() {
@@ -730,9 +768,9 @@ class BoxRoom {
     return { games: pm.defs.map((d) => d.key), titles: pm.defs.map((d) => d.name), index: pm.index, minutes: pm.minutes, phase: pm.phase, paused: pm.paused,
       in: Math.max(0, pm.at - this.now()), elapsed: pm.startedAt == null ? 0 : this.now() - pm.startedAt,
       next: pm.defs[pm.index + 1] ? pm.defs[pm.index + 1].key : null, boardMs: BOARD_MS, ext: !!pm.ext, flow: pm.flow,
-      intros: pm.intros, each: pm.each, plan: pm.defs.map((d) => pm.plan[d.key] || null), practice: pm.practice,
+      intros: pm.intros, each: pm.each, plan: pm.defs.map((d) => pm.plan[d.key] || null), practice: pm.practice, difficulty: pm.difficulty,
       // This game's chosen settings ("5 orders · 45 seconds"), and the next game's on the board.
-      fit: pm.fit && cur && pm.fit.game === cur.key ? { summary: pm.fit.summary, minutes: pm.fit.minutes, players: pm.fit.players, touched: pm.fit.touched } : null,
+      fit: pm.fit && cur && pm.fit.game === cur.key ? { summary: pm.fit.summary, minutes: pm.fit.minutes, players: pm.fit.players, difficulty: pm.fit.difficulty || null, touched: pm.fit.touched } : null,
       upNext: pm.phase === 'board' ? pm.nextInfo || null : null,
       preview: tv && pm.preview && !pm.preview.over && pm.phase === 'board' ? pm.preview.tv() : null };
   }
@@ -819,6 +857,7 @@ class BoxRoom {
           else if (f.type === 'bool') this.settings[f.key] = v === true || v === 'true';
         }
         if (this.partyMode && this.partyMode.fit && this.phase === 'lobby') this.partyMode.fit.touched = true; // the host's choice stands
+        if (msg.settings && 'practice' in msg.settings) this.practiceTouched = true; // no more automatic practice default
         this.sync(); return { ok: true, settings: this.settings };
       }
       case 'partyIntros': return this.setIntros(String(msg.mode || ''));
@@ -941,6 +980,7 @@ class BoxRoom {
   // Coalesce: many changes in one tick send one update per screen.
   sync() {
     this.practiceTick();
+    this.practiceRefresh(); // people joined: is this game new to the crowd?
     if (!this.nsp || this.pending) return;
     this.pending = true;
     setImmediate(() => { this.pending = false; this.flush(); });

@@ -43,8 +43,13 @@
   const DONE_KEY = 'box.done';
   const doneList = () => { try { const v = JSON.parse(localStorage.getItem(DONE_KEY) || '[]'); return Array.isArray(v) ? v.filter((k) => typeof k === 'string') : []; } catch { return []; } };
   const markDone = (key) => { const d = doneList(); if (key && !d.includes(key)) { d.push(key); try { localStorage.setItem(DONE_KEY, JSON.stringify(d.slice(-80))); } catch { /* private mode */ } } };
-  const onboard = () => { const q = params.get('practice'), d = doneList(); return { newbie: q === '1' || q === 'on' || (q !== '0' && q !== 'off' && !d.length), seen: d }; };
-  if (partyParam) { const q = params.get('practice'); partyParam.practice = ['on', 'off', 'new'].includes(q) ? q : 'off'; partyParam.seen = doneList(); }
+  // The server turns practice on by default only for games new to this TV and this crowd
+  // (auto 'new'); ?practice=0 asks for none. In a party, ?practice= is the party's own choice.
+  const onboard = () => { const q = partyParam ? null : params.get('practice'), d = doneList(); return { newbie: !d.length, seen: d, auto: q === '0' || q === 'off' ? 'off' : 'new' }; };
+  if (partyParam) {
+    const q = params.get('practice'); partyParam.practice = ['on', 'off', 'new'].includes(q) ? q : 'new'; partyParam.seen = doneList();
+    const h = params.get('difficulty'); if (['easy', 'medium', 'hard', 'mixed'].includes(h)) partyParam.difficulty = h;
+  }
   let partyUsed = false;
   const myUnlocks = () => (window.UNLOCKS ? window.UNLOCKS.all() : []);
   // Streamer options (⚙ host menu, remembered on this TV): hide the code, filter player text,

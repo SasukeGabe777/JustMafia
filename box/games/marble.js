@@ -398,6 +398,7 @@ const partyFit = ({ minutes: M }) => ({ rounds: M >= 14 ? 5 : 3, size: M <= 6 ? 
 
 module.exports = {
   partyFit,
+  difficulty: { key: 'holes', values: { easy: 'off', medium: 'some', hard: 'lots' } }, // Party Mode's "How hard?": the holes (box/party-fit.js)
   key: 'marble', name: 'JustMarble', min: 1, best: [2, 6], howSteps: 6, fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/marble.js)
   create: (room, settings) => new Game(room, settings),

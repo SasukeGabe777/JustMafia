@@ -16,8 +16,11 @@ const fields = [
   { key: 'rounds', label: 'Rounds', options: opt([[5, '5 rounds'], [7, '7 rounds'], [10, '10 rounds']]) },
   { key: 'seconds', label: 'Time to mix', options: opt([[15, '15 seconds'], [20, '20 seconds'], [30, '30 seconds']]) },
   { key: 'styles', label: 'Round styles', options: opt([['mix', 'All styles'], ['memory', 'Memory only']]) },
+  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy'], ['medium', '🟡 Medium'], ['hard', '🔴 Hard']]) },
 ];
-const defaults = { rounds: 7, seconds: 20, styles: 'mix' };
+const defaults = { rounds: 7, seconds: 20, styles: 'mix', difficulty: 'medium' };
+// Difficulty: how forgiving the score is (match % = 100 − slope·ΔE00) and how long a colour to remember stays up.
+const LEVEL = { easy: { slope: 1.0, look: 1.5 }, medium: { slope: 1.4, look: 1 }, hard: { slope: 1.9, look: 0.75 } };
 
 const INTRO_MS = 2800;
 const LOOK_MS = { memory: 3000, blink: 1000, two: 3500 };
@@ -95,7 +98,7 @@ function deltaE00(l1, l2) {
 }
 const distHex = (a, b) => deltaE00(rgbToLab(fromHex(a)), rgbToLab(fromHex(b)));
 // ΔE00 -> "% match" (0–100). ΔE00 ≈ 2 is barely visible; a memory guess is usually 5–15 off.
-const matchPct = (dE) => clamp(100 - 1.4 * dE, 0, 100);
+const matchPct = (dE, slope = 1.4) => clamp(100 - slope * dE, 0, 100);
 const avgLab = (labs) => labs.reduce((s, l) => [s[0] + l[0] / labs.length, s[1] + l[1] / labs.length, s[2] + l[2] / labs.length], [0, 0, 0]);
 
 // A phone colour {h, s, v}: anything else is rejected; numbers are clamped.
@@ -180,9 +183,11 @@ class Game {
   }
   afterIntro() {
     if (this.phase !== 'intro') return;
-    if (LOOK_MS[this.cur.kind]) { this.phase = 'look'; this.room.fx('look', { kind: this.cur.kind }); this.setTimer(LOOK_MS[this.cur.kind], () => this.startPick()); this.room.sync(); }
+    if (LOOK_MS[this.cur.kind]) { this.phase = 'look'; this.room.fx('look', { kind: this.cur.kind }); this.setTimer(this.lookMs(this.cur.kind), () => this.startPick()); this.room.sync(); }
     else this.startPick();
   }
+  level() { return LEVEL[this.s.difficulty] || LEVEL.medium; }
+  lookMs(kind) { return Math.round((LOOK_MS[kind] || 0) * this.level().look); }
   pickMs() { return Number(this.s.seconds) * 1000 || 20000; }
   startPick() {
     if (this.phase !== 'intro' && this.phase !== 'look') return;
@@ -248,7 +253,7 @@ class Game {
       } else {
         e.picks = pk.colors;
         const tg = [].concat(target);
-        const pcts = tg.map((t, i) => matchPct(distHex(t, pk.colors[i] || pk.colors[0])));
+        const pcts = tg.map((t, i) => matchPct(distHex(t, pk.colors[i] || pk.colors[0]), this.level().slope));
         const raw = pcts.reduce((a, b) => a + b, 0) / pcts.length;
         e.raw = Math.round(raw * 10) / 10; e.pct = Math.round(raw); if (tg.length > 1) e.parts = pcts.map(Math.round);
         e.perfect = e.pct >= PERFECT;
@@ -352,7 +357,7 @@ class Game {
   tv() {
     const c = this.cur || {}, ph = this.phase;
     const pub = { kind: c.kind, ...KINDS[c.kind || 'memory'], final: !!c.final };
-    if (ph === 'look') { pub.target = c.target; pub.obj = c.obj || null; pub.lookMs = LOOK_MS[c.kind]; }
+    if (ph === 'look') { pub.target = c.target; pub.obj = c.obj || null; pub.lookMs = this.lookMs(c.kind); }
     if (ph === 'pick' || ph === 'intro') { pub.obj = c.kind === 'memory' ? c.obj || null : null; }
     if (ph === 'pick' || ph === 'look' || ph === 'intro') { if (c.kind === 'name') pub.name = c.name; if (c.kind === 'gradient') pub.ends = c.ends; }
     if (ph === 'pick' && c.kind === 'odd') pub.tiles = c.tiles;

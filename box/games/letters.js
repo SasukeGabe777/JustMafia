@@ -482,13 +482,17 @@ class LetterRush {
 
 // Party Mode: settings that fit the players in the room and this game's minutes in the plan (box/party-fit.js).
 const PF = require('../party-fit');
-const partyFit = ({ players: P, minutes: M }) => {
-  const s = PF.best({ rounds: [3, 5], seconds: [90, 60, 120], cats: [8, 6, 10] }, (x) => 1.5 + x.rounds * (x.seconds / 60 + 0.9 + x.cats * 0.12 * Math.min(P, 10) / 6), M);
+const partyFit = ({ players: P, minutes: M, difficulty }) => {
+  // Easy leans to more writing time and fewer categories, Hard to less time and more.
+  const seconds = difficulty === 'easy' ? [120, 90, 60] : difficulty === 'hard' ? [60, 90, 120] : [90, 60, 120];
+  const cats = difficulty === 'easy' ? [6, 8, 10] : difficulty === 'hard' ? [10, 8, 6] : [8, 6, 10];
+  const s = PF.best({ rounds: [3, 5], seconds, cats }, (x) => 1.5 + x.rounds * (x.seconds / 60 + 0.9 + x.cats * 0.12 * Math.min(P, 10) / 6), M);
   return { rounds: s.rounds, seconds: s.seconds, cats: s.cats };
 };
 
 module.exports = {
   partyFit,
+  difficulty: { key: 'hard', values: { easy: 'off', medium: 'off', hard: 'on' } }, // Party Mode's "How hard?": Q, X, Z (and partyFit's writing time)
   key: 'letters', name: 'Letter Rush', min: 2, best: [3, 10], howSteps: 6, fields, defaults, // best: the ideal crowd (Party Mode + the menu use it)
   show: { facts: false }, // intro cutscene before the game (public/box/intros/letters.js)
   locked: { how: 'Finish a game of Who Said It? to unlock it.' }, // public/unlocks.js + UNLOCK_RULES in box/room.js

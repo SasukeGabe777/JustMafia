@@ -191,4 +191,15 @@ test('room-wide Family mode (room.family): forces the Family setting and never a
   const s = setup({ questions: 8 }, 2); assert.equal(s.g.family, false, 'room.family undefined: normal game');
 });
 
+test('difficulty: Easy asks rating-1 questions, Hard 2–3, Medium 1–2; Mixed (the default) any; whole games finish on each', () => {
+  assert.equal(def.defaults.difficulty, 'mixed');
+  for (const [d, ok] of [['easy', (x) => x === 1], ['medium', (x) => x <= 2], ['hard', (x) => x >= 2]]) {
+    const s = setup({ difficulty: d, questions: 16 }, 3);
+    const seen = [];
+    run(s.room, s.clock, () => { if (s.g.r && seen[s.g.n - 1] == null) seen[s.g.n - 1] = s.g.r.q.diff; return s.g.phase === 'over'; });
+    assert.equal(s.g.phase, 'over', d + ' finishes');
+    assert(seen.filter(ok).length >= seen.length - 1, d + ': ' + seen.join(','));
+  }
+});
+
 console.log(`\n${passed} Hot Take Trivia tests passed.`);

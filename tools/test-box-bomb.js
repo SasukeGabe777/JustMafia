@@ -207,4 +207,17 @@ test('the rule book is consistent (maps solvable, manual complete)', () => {
   assert.equal(new Set(R.GLYPHS).size, 24);
 });
 
+test('difficulty: Easy bombs have fewer modules and no radio; Hard more and the radio from bomb 2; Medium as before', () => {
+  assert.equal(def.defaults.difficulty, 'medium');
+  const mods = {};
+  for (const d of ['easy', 'medium', 'hard']) {
+    const { clock, room, g } = setup(4, { settings: { difficulty: d, bombs: 4 } });
+    mods[d] = [];
+    for (let r = 0; r < 4 && g.phase !== 'over'; r++) { toTick(room, clock); mods[d].push([g.nMods, g.needy]); g.next(); run(room, clock, () => g.phase !== 'tick'); if (g.phase === 'reveal') g.next(); }
+  }
+  assert.deepEqual(mods.medium.map((x) => x[0]), [3, 4, 5, 6]); assert.deepEqual(mods.medium.map((x) => x[1]), [false, false, true, true]);
+  assert.deepEqual(mods.easy.map((x) => x[0]), [2, 3, 4, 4]); assert(mods.easy.every((x) => !x[1]), 'no radio on Easy');
+  assert.deepEqual(mods.hard.map((x) => x[0]), [4, 5, 6, 6]); assert.deepEqual(mods.hard.map((x) => x[1]), [false, true, true, true]);
+});
+
 console.log(`\n${passed} Bomb Squad tests passed.`);

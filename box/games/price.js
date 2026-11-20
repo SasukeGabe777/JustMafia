@@ -16,8 +16,12 @@ const fields = [
   { key: 'seconds', label: 'Time to guess', options: opt([[20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds']]) },
   { key: 'category', label: 'Aisles', options: opt([['all', 'Everything'], ['everyday', 'Everything but Big Ticket'], ...CATEGORIES.filter((c) => !c.pack).map((c) => [c.key, `${c.icon} ${c.label} only`]),
     ...CATEGORIES.filter((c) => c.pack).map((c) => [c.key, `${c.icon} ${c.pack} pack`])]) },
+  { key: 'difficulty', label: 'Difficulty', options: opt([['easy', '🟢 Easy (10% Bullseye)'], ['medium', '🟡 Medium (5%)'], ['hard', '🔴 Hard (3%)']]) },
 ];
-const defaults = { rounds: 10, seconds: 30, category: 'all' };
+const defaults = { rounds: 10, seconds: 30, category: 'all', difficulty: 'medium' };
+// Difficulty: Easy is a Bullseye within 10% and going over only costs a quarter; Hard a Bullseye
+// within 3% and points fall off twice as fast. Medium is the classic rule (5%, over = half).
+const LEVEL = { easy: { bull: 0.10, bust: 0.75, slope: 1 }, medium: { bull: 0.05, bust: 0.5, slope: 1 }, hard: { bull: 0.03, bust: 0.5, slope: 2 } };
 const INTRO_MS = 3500, DRUM_MS = 2400, REVEAL_MS = 8000, HILO_REVEAL_MS = 6000, HILO_SECONDS = 12, END_EARLY_MS = 900;
 const MAX_GUESS = 1e8, STREAK_PCT = 0.15, STREAK_BONUS = 300, BULL_BONUS = 500, JACKPOT_BONUS = 1000;
 const POWERS = ['double', 'shield', 'peek'];
@@ -46,18 +50,19 @@ const cents = (v) => Math.round(v * 100) / 100;
 
 // The scoring rule for one price guess (exported for the tests and shown as math on reveal).
 function scoreGuess(guess, price, o = {}) {
+  const L = LEVEL[o.level] || LEVEL.medium;
   const off = Math.abs(guess - price) / price;
   const pct = Math.round(off * 1000) / 10;
   const exact = Math.round(guess * 100) === Math.round(price * 100);
   const over = guess > price && !exact;
   const math = [];
-  let pts = Math.round(1000 * Math.max(0, 1 - off));
+  let pts = Math.round(1000 * Math.max(0, 1 - off * L.slope));
   math.push({ label: exact ? 'Spot on!' : `${pct}% ${over ? 'over' : 'under'}`, val: String(pts) });
   const bust = over && !o.shield;
-  if (bust) { pts = Math.round(pts / 2); math.push({ label: '💥 Bust! Went over', val: '½ → ' + pts }); }
+  if (bust) { pts = Math.round(pts * L.bust); math.push({ label: '💥 Bust! Went over', val: (L.bust === 0.5 ? '½' : '¾') + ' → ' + pts }); }
   else if (over) math.push({ label: '🛡️ Bust Shield saved you', val: 'no halving' });
-  const bull = off <= 0.05 && (!over || !!o.shield);
-  if (bull) { pts += BULL_BONUS; math.push({ label: '🎯 Bullseye! (within 5%)', val: '+' + BULL_BONUS }); }
+  const bull = off <= L.bull + 1e-9 && (!over || !!o.shield);
+  if (bull) { pts += BULL_BONUS; math.push({ label: `🎯 Bullseye! (within ${Math.round(L.bull * 100)}%)`, val: '+' + BULL_BONUS }); }
   if (exact) { pts += JACKPOT_BONUS; math.push({ label: '💰 JACKPOT! Exact price', val: '+' + JACKPOT_BONUS }); }
   return { off, pct, over, bust, bull, exact, pts, math };
 }
@@ -164,7 +169,7 @@ class Price {
     return { pick: g.pick, right, speed, secs, pts, math: right ? [{ label: '✅ Right!', val: '500' }, { label: `⚡ Speed bonus (${secs}s)`, val: '+' + speed }] : [{ label: '❌ Wrong way!', val: '0' }] };
   }
   scorePrice(id, g) {
-    const r = scoreGuess(g.guess, this.price, { shield: g.shield });
+    const r = scoreGuess(g.guess, this.price, { shield: g.shield, level: this.s.difficulty });
     const st = this.stats.get(id);
     const streak = st && r.off <= STREAK_PCT ? st.streak + 1 : 0;
     let pts = r.pts;

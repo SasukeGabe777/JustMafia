@@ -34,9 +34,23 @@ Then replace the placeholder with the real game, and restart the server.
 | Party fit | `partyFit({ players, minutes })` in the module | Party Mode picks the game's settings when it starts: the players in the room and this game's minutes in the plan (the setup's "Each game" length). Return only the fields that matter (rounds, timers, mode…), most telling first: the TV shows the first three labels ("5 orders · 45 seconds"). `PF.best(grid, estimate, minutes)` from `box/party-fit.js` picks the options whose estimated minutes come closest. Invalid values are dropped. `node tools/test-party-plan.js` checks every game. |
 | Characters + gear | `BOX.face` / `BOX.body` / `BOX.drawChar` (`public/box/portrait.js`) + `public/shared/gear.js` | Show players as their character, never just their emoji: `BOX.face(p, size)` in lists, `BOX.body(p, h)` or `BOX.drawChar(ctx, x, y, p, o)` where the game stages people (it falls back to the emoji). Gear: 3–12 items in the JustGold shop, with at least one **wearable** slot (`spot`: head/face/hand/chest/back, `paint.shape` from `public/wear-art.js`) that the character wears in your game automatically. Optional object slots (a marble skin, a card back…): copy `gear: gearSet(p, '<key>')` into the per-player data on the server and draw `MT_GEAR.paint('<key>', slot, x.gear)` (null = the normal look). `tools/test-box-gear.js` checks every game. |
 
+## Difficulty (optional)
+
+A game where "how hard" means something (memory, timing, scoring tolerance, question level) gets a
+`difficulty` setting with the values `easy` / `medium` / `hard` (labels `🟢 Easy` / `🟡 Medium` /
+`🔴 Hard`; extra values such as `mixed` are fine). If an existing setting already is the game's
+difficulty, map it instead: `difficulty: { key: 'pace', values: { easy: 'easy', medium: 'normal', hard: 'sharp' } }`
+in the module. Party Mode's "How hard?" (Easy / Medium / Hard / Mixed) then sets it for every game
+(`box/party-fit.js` `levelOf`), `partyFit` receives `ctx.difficulty` to tune other fields, and the
+level leads the TV's chips ("🟢 Easy · 5 orders · 45 seconds"). Social and voting games have none.
+`node tools/test-party-plan.js` checks every game.
+
 ## Practice round
 
-Every game gets a "Practice round first" lobby setting for free (`box/room.js`): the game runs once
+Every game gets a "Practice round first" lobby setting for free (`box/room.js`). It is on by default only
+for a game new here (never finished on this TV, not played tonight, not finished before by most of the
+people in the room); Party Mode asks "🎓 Practice rounds before new games?" (Yes for new games / No /
+Every game). The game runs once
 with its `partyFit` for 2 minutes and the fewest rounds, records nothing, then the real game starts
 without the intro. The phones' tips are the intro's `tutorial` steps. It ends at the game's end or the
 first new `round` / `n` in `tv()` after a minute. A game can shape it with
