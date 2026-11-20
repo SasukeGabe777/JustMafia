@@ -435,8 +435,17 @@
     return f;
   }
 
+  // Recorded sound effects (public/audio/sfx/sketch/, CC0, see credits.json there): quiet paper and
+  // pencil foley on the TV, synced to what is on screen. warm() decodes them once (silently) as soon
+  // as audio is unlocked, so the first one lands on time.
+  const REC = ['pages', 'page', 'scribble', 'pen', 'pencil-tick'];
+  let recWarm = false, replayMs = 0;
+  const rec = (f, o) => !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('sketch/' + f + '.ogg', o));
+  const warm = () => { if (!recWarm && rec(REC[0], { vol: 0, gap: 0 })) { recWarm = true; for (const f of REC.slice(1)) rec(f, { vol: 0, gap: 0 }); } };
+
   function tv(el, s, ctx) {
     if (!s) return;
+    warm();
     if (s.phase === 'over') return tvOver(el, s, ctx);
     const side = `<aside class="sk-side"><div class="sk-index"><h3>Scores</h3>${BOX.board(s.standings, (r) => r.points, '')}</div></aside>`;
     if (s.phase === 'write') {
@@ -465,7 +474,8 @@
       const e = b.entries[s.entry];
       if (put(el, `show:${b.id}:${s.entry}`, `<div class="sk-reveal">${title}<div class="sk-strip">${b.entries.slice(0, s.entry).map((x, i) => mini(x, i)).join('')}</div><div class="sk-stage">${stageEntry(e)}</div><div class="sk-dots">${Array.from({ length: b.total }, (_, i) => `<i class="${i <= s.entry ? 'on' : ''}"></i>`).join('')}</div><div class="sk-reacthint">React on your phone!</div></div>`)) {
         paintAll(el, b.entries.map((x) => x && x.strokes));
-        const cv = el.querySelector('.sk-stagecv'); if (cv) replay(cv, e.strokes, Math.min(2600, 700 + e.strokes.length * 120));
+        const cv = el.querySelector('.sk-stagecv'); replayMs = 0;
+        if (cv) { replayMs = e.strokes.length ? Math.min(2600, 700 + e.strokes.length * 120) : 0; replay(cv, e.strokes, Math.min(2600, 700 + e.strokes.length * 120)); }
       }
       return;
     }
@@ -617,11 +627,11 @@
     for (const note of box.querySelectorAll('.skl-note')) {
       const f = L.fields.find((x) => x.key === note.dataset.k); if (!f) continue;
       const sel = note.querySelector('select');
-      sel.onchange = () => { sel.blur(); lob.set(f.key, sel.value); BOX.sfx('click'); };
+      sel.onchange = () => { sel.blur(); lob.set(f.key, sel.value); if (!rec('pencil-tick', { vol: 0.3 })) BOX.sfx('click'); };
       for (const b of note.querySelectorAll('[data-step]')) b.onclick = (e) => {
         e.stopPropagation();
         const cur = optIdx(f, lob.settings[f.key]), nx = f.options[(cur + Number(b.dataset.step) + f.options.length) % f.options.length];
-        lob.set(f.key, String(nx.value)); BOX.sfx('flip');
+        lob.set(f.key, String(nx.value)); if (!rec('page', { vol: 0.26, rate: 1.15 })) BOX.sfx('flip'); // the sticky note flips
         note.classList.remove('flip'); void note.offsetWidth; note.classList.add('flip');
       };
     }
@@ -643,8 +653,18 @@
       'Then the big screen replays every book, stroke by stroke. React from your phone and watch “a cat on a skateboard” become something else entirely!',
       'Vote for the funniest entry: 100 points per vote. If the final guess still matches the prompt, everyone in that book gets +50.',
     ],
-    fx: { draw: 'start', guess: 'chime', hurry: 'tension', pass: 'whoosh', book: 'reveal', flip: 'flip', guessIn: 'pop', survived: 'cheer', chaos: 'laugh', vote: 'ballot', results: 'drum', shrug: 'shrug', win: 'win' },
+    // pass / flip / guessIn play recorded paper + pencil sounds instead (onFx below).
+    fx: { draw: 'start', guess: 'chime', hurry: 'tension', book: 'reveal', survived: 'cheer', chaos: 'laugh', vote: 'ballot', results: 'drum', shrug: 'shrug', win: 'win' },
     onFx(f) {
+      // PASS IT ON!: a riffle of sketchbook pages as the books slide along.
+      if (f.kind === 'pass') rec('pages', { vol: 0.26 });
+      // A drawing appears and replays stroke by stroke: the page turns, then a pencil scribbles while it draws.
+      if (f.kind === 'flip') {
+        rec('page', { vol: 0.22 });
+        if (replayMs) { rec('scribble', { vol: 0.14, delay: 0.3, gap: 0 }); if (replayMs > 1900) rec('scribble', { vol: 0.12, delay: 1.45, rate: 0.94, gap: 0 }); }
+      }
+      // A guess appears on the page: a quick pen scrawl.
+      if (f.kind === 'guessIn') { rec('page', { vol: 0.18 }); rec('pen', { vol: 0.2, delay: 0.25 }); }
       if (f.kind !== 'react') return;
       const layer = floats(), e = document.createElement('div');
       e.className = 'sk-float'; e.textContent = f.e; e.style.left = 4 + Math.random() * 90 + '%'; e.style.setProperty('--dx', (Math.random() * 80 - 40).toFixed(0) + 'px');

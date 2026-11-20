@@ -1,0 +1,14 @@
+{
+ "cues": {
+  "title": { "file": "games/snap/funky-disco-beats.ogg" },
+  "intro": { "file": "games/snap/funky-disco-beats.ogg" },
+  "lobby": { "file": "games/snap/funky-disco-beats.ogg" },
+  "play": { "file": "games/snap/funky-disco-beats.ogg", "gain": 0.85 },
+  "think": { "file": "games/snap/remembering-the-disco.ogg", "gain": 0.8 },
+  "finale": { "file": "games/snap/funky-disco-beats.ogg" }
+ },
+ "credits": [
+  { "file": "games/snap/funky-disco-beats.ogg", "title": "Funky Disco Beats to Boogie/Woogie to", "author": "Fupi", "source": "https://opengameart.org/content/funky-disco-beats-to-boogiewoogie-to", "license": "CC0 1.0" },
+  { "file": "games/snap/remembering-the-disco.ogg", "title": "(Loop) Remembering the Time at the Disco", "author": "Pro Sensory", "source": "https://opengameart.org/content/loop-remembering-the-time-at-the-disco", "license": "CC0 1.0" }
+ ]
+}

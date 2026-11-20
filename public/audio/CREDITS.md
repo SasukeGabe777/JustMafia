@@ -6,4 +6,37 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 
 | Game | Kind | File | Title | Author | License | Source |
 |---|---|---|---|---|---|---|
+| actout | Music | `games/actout/catchy-swing.ogg` | Catchy Swing | Doge | CC0 1.0 | https://opengameart.org/content/catchy-swing |
+| actout | Music | `games/actout/the-fridge-is-hungry.ogg` | The Fridge is Hungry | congusbongus | CC0 1.0 | https://opengameart.org/content/the-fridge-is-hungry |
 | bid | Music | `games/bid/title-confusement-rag.mp3` | Confusement Rag | Skrjablin | CC0 1.0 | https://opengameart.org/node/25403 |
+| debate | Music | `games/debate/the-diplomat.ogg` | The Diplomat (John Philip Sousa, 1904) | United States Marine Band (performance); John Philip Sousa (composition) | Public domain | https://archive.org/details/InternetJukebox.JPS.63 |
+| debate | Music | `games/debate/the-liberty-bell.ogg` | The Liberty Bell (John Philip Sousa, 1893) | United States Marine Band (performance); John Philip Sousa (composition) | Public domain | https://archive.org/details/InternetJukebox.JPS.48 |
+| sketch | Music | `games/sketch/childrens-march.ogg` | Children's March Theme | CleytonKauffman | CC0 1.0 | https://opengameart.org/content/childrens-march-theme |
+| sketch | Music | `games/sketch/recorder-jam.ogg` | Recorder Jam | Of Far Different Nature | CC0 1.0 | https://opengameart.org/content/recorder-jam |
+| snap | Music | `games/snap/funky-disco-beats.ogg` | Funky Disco Beats to Boogie/Woogie to | Fupi | CC0 1.0 | https://opengameart.org/content/funky-disco-beats-to-boogiewoogie-to |
+| snap | Music | `games/snap/remembering-the-disco.ogg` | (Loop) Remembering the Time at the Disco | Pro Sensory | CC0 1.0 | https://opengameart.org/content/loop-remembering-the-time-at-the-disco |
+| spectrum | Music | `games/spectrum/down-the-river.ogg` | Down the River | Komiku (Loyalty Freak Music) | CC0 1.0 | https://opengameart.org/content/down-the-river |
+| spectrum | Music | `games/spectrum/apple-cider.ogg` | Apple Cider | Zane Little Music | CC0 1.0 | https://opengameart.org/content/apple-cider |
+| tune | Music | `games/tune/midnight-cruiser.ogg` | Midnight Cruiser | Zane Little Music | CC0 1.0 | https://opengameart.org/content/midnight-cruiser |
+| tune | Music | `games/tune/wednesday-night.ogg` | Wednesday Night [Funk Fusion] | Zane Little Music | CC0 1.0 | https://opengameart.org/content/wednesday-night-funk-fusion |
+| actout | Sound effect | `actout/clapper.ogg` | Clapboard sound | uEffects | CC0 1.0 | https://freesound.org/people/uEffects/sounds/207867/ |
+| actout | Sound effect | `actout/applause.ogg` | small group applauding (48/24) | neilraouf | CC0 1.0 | https://freesound.org/people/neilraouf/sounds/484513/ |
+| actout | Sound effect | `actout/cheer.ogg` | Short Crowd Cheer | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182571/ |
+| debate | Sound effect | `debate/gavel.ogg` | Gavel on wooden desk | Aerny | CC0 1.0 | https://freesound.org/people/Aerny/sounds/618138/ |
+| debate | Sound effect | `debate/mic.ogg` | tappingMic | susychristiansen | CC0 1.0 | https://freesound.org/people/susychristiansen/sounds/149034/ |
+| debate | Sound effect | `debate/applause.ogg` | Small applause | Breviceps | CC0 1.0 | https://freesound.org/people/Breviceps/sounds/462362/ |
+| debate | Sound effect | `debate/laugh.ogg` | Small Crowd Laughing | snakebarney | CC0 1.0 | https://freesound.org/people/snakebarney/sounds/138112/ |
+| debate | Sound effect | `debate/boo.ogg` | Voice_Crowd_Small_Expression_Boo_Stereo | Nox_Sound | CC0 1.0 | https://freesound.org/people/Nox_Sound/sounds/752707/ |
+| sketch | Sound effect | `sketch/pages.ogg` | Paper Sketchbook Page Flips 1 | OwlStorm | CC0 1.0 | https://freesound.org/people/OwlStorm/sounds/320148/ |
+| sketch | Sound effect | `sketch/page.ogg` | Book Turn Page 2 | esperri | CC0 1.0 | https://freesound.org/people/esperri/sounds/119127/ |
+| sketch | Sound effect | `sketch/scribble.ogg` | Scribble_short | waldram | CC0 1.0 | https://freesound.org/people/waldram/sounds/257518/ |
+| sketch | Sound effect | `sketch/pen.ogg` | Pen sign writing 1 sec | aleKfx | CC0 1.0 | https://freesound.org/people/aleKfx/sounds/562153/ |
+| sketch | Sound effect | `sketch/pencil-tick.ogg` | Pencil Stroke | sokworks | CC0 1.0 | https://freesound.org/people/sokworks/sounds/860362/ |
+| snap | Sound effect | `snap/flash.ogg` | Camera shutter and flash combined | montclairguy | CC0 1.0 | https://freesound.org/people/montclairguy/sounds/353044/ |
+| snap | Sound effect | `snap/shutter.ogg` | 350d shutter | xef6 | CC0 1.0 | https://freesound.org/people/xef6/sounds/61059/ |
+| snap | Sound effect | `snap/projector.ogg` | Projector Button Push | GreekIrish | CC0 1.0 | https://freesound.org/people/GreekIrish/sounds/254713/ |
+| spectrum | Sound effect | `spectrum/tock.ogg` | Woodblock-soft | hollandm | CC0 1.0 | https://freesound.org/people/hollandm/sounds/692828/ |
+| spectrum | Sound effect | `spectrum/drumroll.ogg` | drumroll | adriann | CC0 1.0 | https://freesound.org/people/adriann/sounds/191718/ |
+| spectrum | Sound effect | `spectrum/cheer.ogg` | Small crowd cheering | misjoc | CC0 1.0 | https://freesound.org/people/misjoc/sounds/400590/ |
+| tune | Sound effect | `tune/needle.ogg` | Record Player Needle is dropped & Vinyl crackling | Breviceps | CC0 1.0 | https://freesound.org/people/Breviceps/sounds/556722/ |
+| tune | Sound effect | `tune/static.ogg` | AM Tuning | NobodyYouKnowOf | CC0 1.0 | https://freesound.org/people/NobodyYouKnowOf/sounds/261873/ |

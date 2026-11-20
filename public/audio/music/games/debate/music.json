@@ -1,0 +1,12 @@
+{
+ "cues": {
+  "title": { "file": "games/debate/the-diplomat.ogg" },
+  "intro": { "file": "games/debate/the-diplomat.ogg" },
+  "lobby": { "file": "games/debate/the-diplomat.ogg" },
+  "finale": { "file": "games/debate/the-liberty-bell.ogg" }
+ },
+ "credits": [
+  { "file": "games/debate/the-diplomat.ogg", "title": "The Diplomat (John Philip Sousa, 1904)", "author": "United States Marine Band (performance); John Philip Sousa (composition)", "source": "https://archive.org/details/InternetJukebox.JPS.63", "license": "Public domain" },
+  { "file": "games/debate/the-liberty-bell.ogg", "title": "The Liberty Bell (John Philip Sousa, 1893)", "author": "United States Marine Band (performance); John Philip Sousa (composition)", "source": "https://archive.org/details/InternetJukebox.JPS.48", "license": "Public domain" }
+ ]
+}
