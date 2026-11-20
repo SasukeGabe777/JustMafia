@@ -41,11 +41,11 @@
 .jga-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:10px 0;border-radius:14px;background:linear-gradient(135deg,#ffd23f,#ffb03f);color:#3a2a00;text-align:left;font-family:inherit;box-shadow:0 4px 14px rgba(0,0,0,.2)}
 .jga-banner .jga-bi{font-size:26px;flex:0 0 auto}
 .jga-banner .jga-bt{flex:1 1 auto;min-width:0;font-size:14px;line-height:1.3}.jga-banner .jga-bt b{display:block;font-size:16px}
-.jga-banner button{flex:0 0 auto;font:inherit;font-weight:700;border:0;border-radius:12px;padding:9px 14px;background:#2a1d5c;color:#fff;cursor:pointer}
+.jga-banner button{flex:0 0 auto;font:inherit;font-weight:700;border:0;border-radius:12px;padding:9px 14px;min-height:42px;background:#2a1d5c;color:#fff;cursor:pointer}
 .jga-banner.saved{background:#1d3b2c;color:#eafff2;box-shadow:none;border:1px solid rgba(46,204,113,.6)}
 .jga-banner.saved button{background:rgba(255,255,255,.14)}
 .jga-banner.slim{background:rgba(20,12,44,.55);box-shadow:none;padding:8px 12px;margin:6px 0;color:#fff;justify-content:center;text-align:center}
-.jga-banner.slim button{background:none;color:#ffd23f;text-decoration:underline;padding:4px}
+.jga-banner.slim button{background:none;color:#ffd23f;text-decoration:underline;padding:10px 6px;margin:-6px 0;min-height:44px}
 .jga-nudge{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));width:min(420px,calc(100% - 20px));z-index:8000;margin:0}
 .jga-toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translateX(-50%);z-index:9100;background:#211846;color:#fff;padding:10px 16px;border-radius:14px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.4);max-width:calc(100% - 32px);text-align:center}
 .jga-toast[hidden]{display:none}
