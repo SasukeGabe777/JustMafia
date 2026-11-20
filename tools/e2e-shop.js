@@ -9,7 +9,7 @@ const path = require('node:path');
 const { io } = require('socket.io-client');
 const { CHROME, Browser, startServer, cleanup, wait } = require('./cdp');
 
-const PORT = 3992, URL = `http://localhost:${PORT}`;
+const PORT = Number(process.env.PORT) || 3992, URL = `http://localhost:${PORT}`;
 const SHOTS = process.env.SHOTS || path.join(os.tmpdir(), 'mt-e2e');
 if (!CHROME) { console.log('SKIP e2e-shop: Chrome not found (set CHROME=path).'); process.exit(0); }
 let passed = 0;
@@ -19,7 +19,7 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
   await startServer(PORT, { MT_DEV_GRANTS: '1' });
   const host = io(URL, { transports: ['websocket'] }); let tv = null; host.on('host:state', (s) => { tv = s; });
   const room = await new Promise((r) => host.emit('host:create', {}, r));
-  const browser = new Browser({ shots: SHOTS, debugPort: 9334 }); await browser.launch();
+  const browser = new Browser({ shots: SHOTS, debugPort: Number(process.env.DEBUG_PORT) || 9334 }); await browser.launch();
   const a = await browser.page();
   const me = () => tv && tv.players.find((p) => p.name === 'Ana');
   const gold = () => a.eval(`Number((document.querySelector('#s-pouch b, #g-pouch b') || {}).textContent)`);

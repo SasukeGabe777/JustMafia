@@ -11,7 +11,7 @@
   // Economy dials. Every gold reward (games, challenges, season tiers, achievements) is paid
   // at goldRate, and every gold price (items, the season pass, Fate Token trades) is charged
   // at priceRate. The numbers written below are the base values before these dials.
-  const ECONOMY = { goldRate: 0.5, priceRate: 1.3 };
+  const ECONOMY = { goldRate: 1.25, priceRate: 1.3 }; // goldRate: JustMafia pays about what a box game of the same length does (docs/justgold.md)
   const price = (n) => Math.round(n * ECONOMY.priceRate / 5) * 5;
   const pay = (n) => Math.max(1, Math.round(n * ECONOMY.goldRate));
   // field -> [option list, how many are free from the start]

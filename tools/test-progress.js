@@ -81,6 +81,16 @@ test('challenge pool: varied, every id valid; 3 a day and 5 a week, the same for
   assert.equal(X.weekKey(Date.parse('2026-11-11T12:00:00Z')), C.weekKey(new Date('2026-11-11T12:00:00Z')), 'same weeks as JustMafia used');
 });
 
+test('"Earn JustGold" challenges are sized for the chest-era payouts (box/gold.js): about 2 games a day, 12 a week', () => {
+  const GOLD = require('../box/gold'), game = GOLD.goldFor('likely', 3, 6, 10 * 60000);
+  assert.equal(X.challenge('gold', 'daily').count, 60); assert.equal(X.challenge('gold', 'weekly').count, 400);
+  assert(X.challenge('gold', 'daily').count / game >= 2 && X.challenge('gold', 'daily').count / game <= 3, 'a daily one takes 2–3 games');
+  for (const kind of ['clover', 'robot']) { const c = X.eventChallenges(kind + '-2026').find((x) => x.stat === 'gold'); if (c) assert.equal(c.count, 400, kind); }
+  // A whole Party Mode pays more than any single game, and the party XP stays.
+  assert(GOLD.partyLines({ place: 6, of: 6, games: 4, total: 4, stayed: true }).total > GOLD.goldFor('likely', 1, 6, 16 * 60000));
+  assert(X.partyXp(1) > X.partyXp(4));
+});
+
 test('days and weeks roll over at midnight UTC and on Monday (injected clock)', () => {
   const s = store('2026-11-22T23:58:00Z'), a = s.create(); // Sunday night
   let v = s.progressView(a.id);

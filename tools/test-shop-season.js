@@ -190,9 +190,12 @@ test('set bonus: +5% (at least 1, at most 3) in the set’s own game, only for t
   ps[0].look = { ...wallets.lookOf(ps[0].wallet) || {}, ...look };
   room.gameStartAt = room.now() - 10 * 60000; room.gameNo = 1;
   room.payGold('quickdraw', ps.map((p) => p.id));
-  const led = wallets.data.profiles[ps[0].wallet].ledger[0], base = GOLD.goldFor('quickdraw', 1, 2, 10 * 60000);
-  assert.equal(led.delta, base + 1); assert.match(led.reason, /🤠 set \+1/); assert.equal(ps[0].jg.set.extra, 1);
-  assert.equal(wallets.data.profiles[ps[1].wallet].ledger[0].delta, GOLD.goldFor('quickdraw', 2, 2, 10 * 60000), 'no set, no bonus');
+  // (box/gold.js gameLines: the set bonus is its own line, +5% of the rest, at least 1, at most 3)
+  const led = wallets.data.profiles[ps[0].wallet].ledger[0], lines = ps[0].jg.lines, rest = lines.filter((l) => l.key !== 'set').reduce((t, l) => t + l.n, 0);
+  const extra = Math.min(3, Math.max(1, Math.round(rest * 0.05)));
+  assert.equal(led.delta, rest + extra); assert.equal(led.delta, ps[0].jg.n); assert(led.reason.includes('🤠 set +' + extra)); assert.equal(ps[0].jg.set.extra, extra);
+  assert.deepEqual(lines.find((l) => l.key === 'set'), { key: 'set', icon: ww.icon, label: ww.name + ' set bonus', n: extra });
+  assert(!ps[1].jg.lines.some((l) => l.key === 'set'), 'no set, no bonus'); assert.equal(wallets.data.profiles[ps[1].wallet].ledger[0].delta, ps[1].jg.n);
   const coins = wallets.coins(ps[0].wallet); room.payGold('quickdraw', ps.map((p) => p.id)); assert.equal(wallets.coins(ps[0].wallet), coins, 'paid once');
 });
 

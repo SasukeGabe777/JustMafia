@@ -225,8 +225,9 @@ test('End-of-game gold: server-calculated breakdown, winners vs losers, paid onc
   const { room, ps, profiles, mafia } = play();
   for (const p of ps) {
     const r = room.playerView(p).reward; assert(r && r.eligible, 'eligible reward for ' + p.name);
-    const sum = r.lines.reduce((t, l) => t + l.amount, 0);
-    assert.equal(r.coins, Math.min(sum, C.REWARDS.maxPerGame)); assert.equal(r.after - r.before, r.coins);
+    const DAY = ['daily', 'streak'], day = r.lines.filter((l) => DAY.includes(l.key)).reduce((t, l) => t + l.amount, 0); // the first game of the day pays on top (box/gold.js)
+    const sum = r.lines.filter((l) => !DAY.includes(l.key)).reduce((t, l) => t + l.amount, 0);
+    assert.equal(r.coins, Math.min(sum, C.REWARDS.maxPerGame) + day); assert(day > 0, 'first game today'); assert.equal(r.after - r.before, r.coins);
     assert.equal(profiles.view(p.profileId).coins, r.after, 'gold really paid');
     assert(r.lines.some((l) => l.key === 'completed'));
     const won = room.team(p) === 'town';
@@ -249,7 +250,7 @@ test('End-of-game gold: server-calculated breakdown, winners vs losers, paid onc
   // Farming is capped: lots of repeated actions only count up to each cap and the per-game max.
   const big = new ProfileStore(null), id = big.create().id;
   const res = big.award(id, 'farm', { won: true, alive: true, team: 'neutral', metrics: { abilities: 99, objectives: 99, correctInvestigations: 99, saves: 99 } });
-  const bonus = res.lines.filter((l) => l.key === 'challenge' || l.key === 'pass' || l.key === 'level').reduce((t, l) => t + l.amount, 0); // challenges, level ups and the season pass pay on top of the cap
+  const bonus = res.lines.filter((l) => l.key === 'challenge' || l.key === 'pass' || l.key === 'level' || l.key === 'daily' || l.key === 'streak').reduce((t, l) => t + l.amount, 0); // challenges, level ups and the season pass pay on top of the cap
   assert.equal(res.coins - bonus, C.REWARDS.maxPerGame); assert.equal(res.capped, C.REWARDS.maxPerGame);
   assert.equal(res.lines.find((l) => l.key === 'abilities').amount, C.REWARDS.abilityCap * C.REWARDS.ability);
 });

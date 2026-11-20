@@ -44,7 +44,46 @@ test('JustGold rates: longer games and better places pay more; co-op pays everyo
   assert(GOLD.goldFor('likely', 1, 6, 30 * 60000) > GOLD.goldFor('likely', 1, 6, ten));
   assert.equal(GOLD.goldFor('escape', 1, 4, ten), GOLD.goldFor('escape', 4, 4, ten));
   assert(GOLD.partyGold(1) > GOLD.goldFor('likely', 1, 6, 40 * 60000), 'winning a party beats winning one long game');
-  for (const n of [1, 2, 6, 20]) for (const ms of [90000, ten, 3600000]) for (let place = 1; place <= n; place++) { const g = GOLD.goldFor('x', place, n, ms); assert(g >= 1 && g <= 40, `sane amount ${g}`); }
+  for (const n of [1, 2, 6, 20]) for (const ms of [90000, ten, 3600000]) for (let place = 1; place <= n; place++) { const g = GOLD.goldFor('x', place, n, ms); assert(g >= 1 && g <= 60, `sane amount ${g}`); }
+});
+
+// docs/justgold.md "Earning": the numbers the owner signed off on (a common item after 2–4 games).
+test('payout table: participation + placement for a 10-minute game of 6, short games and the caps', () => {
+  const ten = 10 * 60000, R = GOLD.RATES;
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map((pl) => GOLD.goldFor('likely', pl, 6, ten)), [33, 27, 23, 15, 15, 15]);
+  assert.deepEqual([1, 2].map((pl) => GOLD.goldFor('likely', pl, 2, ten)), [33, 15], 'two players: no podium line for last place');
+  assert.equal(GOLD.goldFor('escape', 3, 4, ten), 27, 'co-op: everyone gets "Team cleared it"');
+  assert.equal(GOLD.goldFor('escape', 3, 4, ten, false), 15, 'co-op that failed: just playing');
+  assert.equal(GOLD.goldFor('likely', 1, 6, 60 * 60000), Math.round(33 * 1.6), 'long games pay up to ×1.6');
+  // Every source is its own line.
+  const g = GOLD.gameLines({ game: 'likely', place: 1, of: 6, ms: ten, achievements: [{ icon: '🔮', label: 'Mind reader' }, { icon: '📈', label: 'Comeback win' }, { icon: '🧭', label: 'New game' }, { icon: 'x', label: 'a 4th (capped)' }], night: { games: 5, wins: 2 }, day: { first: true, streak: 4 } });
+  assert.deepEqual(g.lines.map((l) => [l.key, l.n]), [['play', 15], ['place', 18], ['ach', 6], ['ach', 6], ['ach', 6], ['roll', 10], ['wins', 10], ['daily', 25], ['streak', 15]]);
+  assert.equal(g.total, 111);
+  // Short games (90 s – 4 min): half rate, no extras, at most shortCap before the daily bonus.
+  const s = GOLD.gameLines({ game: 'likely', place: 1, of: 6, ms: 3 * 60000, achievements: [{ icon: 'x', label: 'y' }], night: { games: 9, wins: 4 }, day: { first: false } });
+  assert(s.short && s.total <= R.shortCap && !s.lines.some((l) => ['ach', 'roll', 'wins'].includes(l.key)), JSON.stringify(s.lines));
+  assert.equal(s.total, 17);
+  // The day streak tops out; the daily bonus is once a day.
+  assert.equal(GOLD.dayLines({ first: true, streak: 40 }).find((l) => l.key === 'streak').n, R.dayStreakMax);
+  assert.deepEqual(GOLD.dayLines({ first: false, streak: 5 }), []);
+  // Tiers by amount.
+  assert.deepEqual([5, 20, 45, 80, 200].map((n) => GOLD.tierOf(n)), ['wood', 'silver', 'gold', 'epic', 'epic']);
+  assert.equal(GOLD.tierOf(5, true), 'legendary');
+  // An evening: 6 ten-minute games in mid-table + the party finale buys a rare (~150–300 JG) item.
+  const night = GOLD.dayLines({ first: true, streak: 1 })[0].n + [3, 4, 3, 5, 2, 4].reduce((t, pl, i) => t + GOLD.gameLines({ game: 'likely', place: pl, of: 6, ms: ten, night: { games: i + 1 } }).total, 0) + GOLD.partyLines({ place: 3, of: 6, games: 6, total: 6, stayed: true }).total;
+  assert(night >= 250 && night <= 400, 'an evening: ' + night);
+  // Three games (one a win) and the daily bonus buy a common (80–150 JG) item.
+  const three = 25 + [4, 1, 3].reduce((t, pl, i) => t + GOLD.gameLines({ game: 'likely', place: pl, of: 6, ms: ten, night: { games: i + 1 } }).total, 0);
+  assert(three >= 80 && three <= 150, 'three games: ' + three);
+});
+
+test('day state: the first game of the day pays the daily bonus, days in a row grow the streak, a gap resets it', () => {
+  const w = {}, day = (s) => Date.parse(s + 'T15:00:00Z');
+  let d = GOLD.dayInfo(w, day('2026-03-01')); assert(d.first); assert.equal(d.streak, 1); GOLD.markDay(w, d);
+  d = GOLD.dayInfo(w, day('2026-03-01')); assert(!d.first, 'once a day');
+  d = GOLD.dayInfo(w, day('2026-03-02')); assert(d.first); assert.equal(d.streak, 2); GOLD.markDay(w, d);
+  d = GOLD.dayInfo(w, day('2026-03-03')); assert.equal(d.streak, 3); GOLD.markDay(w, d);
+  d = GOLD.dayInfo(w, day('2026-03-05')); assert(d.first); assert.equal(d.streak, 1, 'a day missed: back to 1');
 });
 
 function roomWithAccounts(humans = 3, bots = 2, game = 'likely') {
@@ -86,13 +125,69 @@ test('no JustGold for a lone player with bots, or a game shorter than 90 seconds
   assert.equal(quick.wallets.coins(quick.ps[0].wallet), 0); assert(/too short/.test(quick.ps[0].jg.why));
 });
 
-test('Party Mode finale pays everyone once, the winner most', () => {
-  const { room, wallets, ps } = roomWithAccounts(3, 0);
-  room.partyMode = { defs: [], index: 0, phase: 'done', at: 0 };
-  room.party = new Map(ps.map((p, i) => [p.id, { pts: 30 - i * 10, wins: 0, games: 1 }]));
+test('Party Mode finale: the legendary chest pays once, by place and real games played, with a bonus for staying all night', () => {
+  const { room, wallets, ps } = roomWithAccounts(4, 0);
+  // 5 real (paid) games; P3 joined late and played only 2.
+  room.partyMode = { defs: [], index: 0, phase: 'done', at: 0, real: 5, paid: { [ps[0].id]: 5, [ps[1].id]: 5, [ps[2].id]: 4, [ps[3].id]: 2 } };
+  room.party = new Map(ps.map((p, i) => [p.id, { pts: 40 - i * 10, wins: 0, games: 1 }]));
   room.partyFinished(); room.partyFinished();
   const got = ps.map((p) => wallets.data.profiles[p.wallet].ledger.filter((l) => /Party Mode finale/.test(l.reason)).reduce((n, l) => n + l.delta, 0)); // (challenges may pay too)
-  assert.deepEqual(got, [GOLD.partyGold(1), GOLD.partyGold(2), GOLD.partyGold(3)]);
+  const P = GOLD.PARTY;
+  assert.deepEqual(got, [P.stayed + 5 * P.perGame + P.places[0], P.stayed + 5 * P.perGame + P.places[1], P.stayed + 4 * P.perGame + P.places[2], 2 * P.perGame], 'missing one game of 5 still counts as the whole night');
+  assert.deepEqual(got, [155, 130, 102, 16]);
+  // The TV's chest row and each phone's own chest: legendary, with the lines.
+  const c = room.tvState().chest; assert(c && c.kind === 'party' && c.rows.length === 4 && c.rows.every((r) => r.tier === 'legendary'));
+  const mine = room.playerState(ps[0]).chest; assert(mine && mine.kind === 'party' && mine.lines.some((l) => l.key === 'stayed') && mine.n >= got[0]);
+  assert.equal(mine.after, wallets.coins(ps[0].wallet));
+  // No real games (practice / too short / solo): no party gold.
+  const z = roomWithAccounts(2, 0); z.room.partyMode = { defs: [], index: 0, phase: 'done', at: 0 };
+  z.room.party = new Map(z.ps.map((p, i) => [p.id, { pts: 10 - i, wins: 0, games: 1 }])); z.room.partyFinished();
+  assert.equal(z.wallets.data.profiles[z.ps[0].wallet].ledger.filter((l) => /Party Mode finale/.test(l.reason)).length, 0);
+});
+
+test('a played Party Mode counts real games for the finale; every game opens a chest on the TV and the phones; the host can skip it', () => {
+  const { clock, room, wallets, ps } = roomWithAccounts(3, 1);
+  assert(room.setParty([GAMES.likely, GAMES.likely], 60).ok);
+  assert(room.start().ok); runOut(room, clock); room.flush();
+  const c = room.tvState().chest; assert(c && c.kind === 'game' && c.rows.length === 3, 'one chest per human');
+  assert(c.startsIn > 0 && c.left > c.startsIn, 'opens after the end screen has had a moment');
+  assert(c.rows.every((r) => r.n > 0 && ['wood', 'silver', 'gold', 'epic'].includes(r.tier)));
+  const pc = room.playerState(ps[0]).chest; assert(pc && pc.lines.length >= 2 && pc.lines[0].key === 'play' && pc.after === wallets.coins(ps[0].wallet));
+  assert(pc.lines.some((l) => l.key === 'daily'), 'the first game of the day');
+  assert.equal(pc.before + pc.n, pc.after, 'the counter rolls from before to after');
+  assert(!room.playerState(ps[0]).chest.guest);
+  assert.equal(room.vipAction(ps[1], 'chestSkip').ok, false, 'only the host skips');
+  assert(room.vipAction(ps[0], 'chestSkip').ok); assert(room.tvState().chest.skipped);
+  assert.equal(room.partyMode.real, 1); assert.equal(room.partyMode.paid[ps[0].id], 1);
+  // Nothing is paid twice, the daily bonus only once.
+  const p2 = room.playerState(ps[0]);
+  assert(room.partyNext().ok); assert.equal(room.tvState().chest, null, 'the next game closes the chest');
+  runOut(room, clock); room.flush();
+  assert(!room.playerState(ps[0]).chest.lines.some((l) => l.key === 'daily'), 'daily bonus once a day');
+  assert(p2.me.gold < room.playerState(ps[0]).me.gold, 'the balance on the phone goes up');
+  assert.equal(room.partyMode.real, 2);
+});
+
+test('a guest without a wallet sees the chest ("save your stuff") and gets the gold when the seat gets a wallet, once', () => {
+  const { clock, room, wallets, ps } = roomWithAccounts(3, 0);
+  const g = ps[2]; g.wallet = null;
+  assert(room.start().ok); runOut(room, clock);
+  const st = room.playerState(g); assert(st.chest && st.chest.guest && st.chest.n > 0); assert(st.me.pending === st.chest.n); assert.equal(st.me.gold, null);
+  const tvRow = room.tvState().chest.rows.find((r) => r.id === g.id); assert(tvRow && tvRow.guest);
+  // Saves: the account gets a wallet (box/index.js dressUp → claimPending).
+  const w = wallets.create(); g.wallet = w.id;
+  const got = room.claimPending(g); assert.equal(got, st.chest.n); assert.equal(wallets.coins(w.id), got);
+  assert.equal(room.claimPending(g), 0, 'once');
+  assert(!room.playerState(g).chest.guest); assert.equal(room.playerState(g).jgClaim.n, got);
+});
+
+test('kicked players get no chest; a short game pays half', () => {
+  const { clock, room, wallets, ps } = roomWithAccounts(3, 0);
+  assert(room.start().ok); room.kick(ps[2].id); runOut(room, clock);
+  assert(!room.tvState().chest.rows.some((r) => r.id === ps[2].id)); assert.equal(wallets.coins(ps[2].wallet), 0, 'kicked: nothing');
+  const q = roomWithAccounts(2, 1); assert(q.room.start().ok);
+  while (q.room.game.phase !== 'over' && q.clock.step()); q.room.gameStartAt = q.room.now() - 3 * 60000; q.room.scoreParty(); // (the game "ran" 3 minutes)
+  const l = q.room.playerState(q.ps[0]).chest.lines; assert(/short/.test(l[0].label));
 });
 
 test('players wear their account: look and gear reach the TV and their phone', () => {

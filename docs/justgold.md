@@ -63,12 +63,91 @@ The old phone-theme slots are gone; their ids no longer exist and are ignored (g
 
 ## Earning JustGold
 
-Box games pay at the end of a game (`BoxRoom` scoring → `wallet.awardBox()`), to humans with an
-account who played it, when the room had at least 2 humans and the game ran at least 90 s. Amount =
-`GOLD[game]` by place: `{ play, top, win }` (top = top half). Longer games pay more. Party Mode pays a
-finale bonus to everyone who played the party (`partyFinished`): the easiest way to get JG.
-JustMafia keeps its own rules (`REWARDS`, capped at 30 a game). Everything goes through `record()`
-(the ledger), so the pouch shows where every coin came from.
+Branch `claude/gold-chests` (the owner: "earning takes way too long and the only way to see how much
+you have is in the shop"). Rules: `box/gold.js`; paid by `BoxRoom.payGold` / `partyGold`
+(`box/room.js`) through `wallet.awardBox()` (one ledger line per game, once per result).
+
+**Targets** (checked in `tools/test-justgold.js`): a common shop item (80–150 JG) after 2–4 games, a
+rare one (150–300 JG) in an evening. Shop prices for reference: character items median 85 JG
+(25% under 70, 75% under 135, max 520), game gear median 90 (40–280), pets 80–100 common, 130–180
+rare, 220–310 epic, 390–495 legendary, the season pass 195.
+
+### Every finished box game (each source is its own line in the chest)
+
+| source | JG | notes |
+|---|---|---|
+| 🎮 Played the game | 15 × length | length = minutes / 10, from ×0.5 to ×1.6 |
+| 🥇 Winner / 🥈 2nd / 🥉 3rd | 18 / 12 / 8 × length | 2nd needs 3+ players, 3rd 4+ (last place never gets a podium line) |
+| 🎖️ Top half | 5 × length | 4+ players, below the podium |
+| 🤝 Team cleared it | 12 × length | co-op games (JustEscape, Bomb Squad, JustMarble), everyone |
+| 🏅 Achievements | +6 each, up to 3 | the game's own end awards for you (sad ones like "most strikes" don't pay), 📈 comeback win (from the bottom half of the party standings), 💪 landslide win (2× the runner-up), 🧭 a game new to you, 🕵️ caught the mole, 📸 made the cover, 🧟 survived the horde |
+| 🎢 On a roll | +5 from your 3rd game in a row tonight, +10 from the 5th | games in a row = every paid game you finished in this room |
+| ⚡ Wins in a row | +10 | 2+ wins back to back |
+| ☀️ First game today | +25 | the first paid game of the UTC day, any game (JustMafia too); on the wallet as `jgDay` |
+| 🔥 Day streak | +5 per day after the first, up to +30 | paid with the first game of the day |
+| 🤠 Theme set | +5% (1–3) | wearing a whole theme set in its own game (unchanged) |
+| ✅ challenges, ⭐ level ups, 🎟️ season-pass tiers | as before | `box/progress.js`; shown on the same chest |
+
+Typical 10-minute game for 6: 33 / 27 / 23 / 15 / 15 / 15 JG before bonuses. Three games (4th, 1st, 3rd)
+plus the daily bonus = 101 JG; six mid-table games and the party finale (3rd) = 291 JG, before
+achievements, challenges and level ups (which add 20–60 more on a typical night).
+
+**Anti-abuse** (server-side, unchanged rules plus caps): 2+ people in the room (bots don't count),
+the game ran 90 s+, practice rounds pay nothing, each result pays once (`payId`), kicked players are
+not in the results. Games under 4 minutes pay half, no achievements or streaks, at most 20 JG (before
+the daily bonus); any game at most 150 JG before the daily bonus (`awardBox` caps a payment at 500).
+
+**Players without a wallet yet** (a phone that never opened the shop or its profile) see the same
+chest with "Save your stuff to keep this gold!". The room keeps what they earned as `p.jgPending`
+(computed on the server, at most 12 games); the moment that seat gets a wallet in the same room
+(saving, signing in or opening the shop: `box/index.js dressUp → room.claimPending`) it is paid,
+once per game, and the phone says "💾 Saved! +N JG are yours now". No daily bonus on pending gold.
+
+### Party Mode finale: the legendary chest
+
+| source | JG |
+|---|---|
+| 🌙 Stayed the whole night (every real game, or all but one in a party of 4+; 2+ real games) | +40 |
+| 🎮 Each real game you played | +8 (up to 80) |
+| 👑 Party champion / 🥈 2nd / 🥉 3rd / 🎖️ top half | +75 / +50 / +30 / +15 |
+
+"Real" games are the ones that paid (`partyMode.real`, `partyMode.paid[id]`); a party of practice or
+too-short games pays nothing. A 6-game night: champion 163 JG, 3rd 118, everyone who stayed ≥ 88.
+
+### JustMafia
+
+`ECONOMY.goldRate` 0.5 → 1.25 (`public/shared/cosmetics.js`): finishing 10, winning 15, surviving 4,
+role plays, capped at 38 a game (was 15), so a JustMafia game pays about what a box game of the same
+length does. Plus the same ☀️ daily / 🔥 day-streak lines (on top of the cap). The reward scene draws
+the JustGold chest instead of the pouch (`public/reward-ui.js`, `JGChest.drawChest`).
+
+The "Earn N JustGold" challenges were rescaled to the new rates (daily 60, weekly 400, event 400).
+
+## The chest scene
+
+`public/box/chest.js` (`JGChest`), original canvas art: wood, silver, gold, epic and legendary chests
+(`box/gold.js tierOf`: wood < 20 JG, silver < 45, gold < 80, epic 80+, legendary = Party Mode).
+
+- **Server**: `BoxRoom.openChest` after `payGold` / `partyGold` sets `room.chest` (`id, kind game|party,
+  at` = 2.5 s after the end screen appears, `dur` 8.5 s, 14 s for the party). `tvState().chest` has
+  everyone's row (name, total, tier, top 3 callouts, guest), `playerState().chest` that player's
+  lines, `before` / `after` balance. Starting, switching game or the lobby close it. The host skips it
+  for everyone (`chestSkip`: the TV's button or Enter, or "Skip for everyone" on the host phone).
+- **Phone**: the chest drops in, shakes (rattle + light haptics), bursts open (flash, sparks, coins,
+  `haptic('win')`), then each line appears and its coins fly into the counter, which rolls up to the
+  new balance. Guests get the yellow "Save your stuff" card (it stays until they close it).
+  Sounds: `SFX` coin / chestOpen / rattle (quiet synth on the phone).
+- **TV**: "💰 Chest time!" with everyone's chests in a row, opening left to right, counting up, with
+  their bonus callouts; the party version has fireworks and confetti. Sounds on the SFX bus:
+  `BOX.audio.clip('kingdoms/coins.ogg')` (quiet) and the `coin` / `cash` / `chips` / `ding` / `swell` stingers.
+  TV celebrations (unlocks, trophies) wait until the chests are done.
+- **Balance everywhere**: the phone header's 🪙 pill (`me.gold`; held during the chest, then it ticks
+  up; dashed "save" for a guest's pending gold), the TV lobby roster (`players[i].gold`, standard
+  lobby), the main menu for this device's account (`POST /api/jg/balance`, ticking up from the last
+  balance seen there).
+- Tests: `tools/test-justgold.js` (table, caps, day streak, party finale, guests, chest state, skip),
+  `tools/e2e-chest.js` (phones + TV + party finale, screenshots; `PORT`, `DEBUG_PORT`, `SHOTS`;
+  needs `MT_DEV_GRANTS=1`'s `dev:finish`, which it sets).
 
 ## Socket API (`/box` namespace; every call carries `auth = { id, token }` of the account)
 
