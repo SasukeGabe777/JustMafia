@@ -386,7 +386,7 @@
   // drawSmooth options (all optional): t (seconds), walking, facing (-1..1), scale, alpha, jump,
   // spin, lean (radians, from the feet), arms ({ l, r } radians: 0 hangs down, + swings toward
   // screen-left), dragged (±1: heels dug in), scared, dead, expression (overrides the look's),
-  // theme (JustMafia world equipment: space, fantasy, rsp, spies, fbi), seed, and
+  // theme (JustMafia world equipment: space, fantasy, spies, fbi), seed, and
   // wear: [{ spot: 'head'|'face'|'hand'|'chest'|'back', shape, a, b, c, glow }] game wearables
   // (public/wear-art.js draws the shapes; a worn spot replaces the look's own hat/extra there).
   function drawSmooth(g, x, y, av, o = {}) {
@@ -530,7 +530,6 @@
     // JustMafia world equipment over the clothes (o.theme).
     if (o.theme === 'space') { rr(-SW + 1, -27, 4, 8, 1.5); done('#7ed6cf', OL, 0.8); line('#c4d8da', 1.4, [[SW - 3, -30], [SW - 3, -18]]); }
     if (o.theme === 'fantasy') { line('#c8b6df', 1, [[-4, -31], [0, -24], [4, -31]]); circ(0, -23, 2.2); done('#7ed6cf', OL, 0.7); }
-    if (o.theme === 'rsp') { line('#1f4fa8', 1.4, [[-4, -31.5], [0, -22]]); line('#1f4fa8', 1.4, [[4, -31.5], [0, -22]]); rr(-3.5, -22.5, 7, 7, 1); done('#ffd21f', OL, 0.7); rect('#1f4fa8', -2.5, -21, 5, 1.6); }
     if (o.theme === 'spies' || o.theme === 'fbi') { rr(2.5, -27, 5, 4, 1); done('#c4ad73', OL, 0.6); }
 
     // ---- head ----

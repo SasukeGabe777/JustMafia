@@ -3,7 +3,7 @@
 //   - the living world: creatures, traffic, weather and sky, drawn every frame
 //   - building touches (snow caps, block roofs, ink outlines, realistic shading)
 //   - a whole-screen look (Noir is black and white with film grain)
-// The classic look (Medieval Village "Mafia Town", Small Town) and RSP Supply are untouched:
+// The classic look (Medieval Village "Mafia Town", Small Town) is untouched:
 // every function below does nothing for a theme without an entry in WORLDS.
 (function () {
   const TAU = Math.PI * 2;

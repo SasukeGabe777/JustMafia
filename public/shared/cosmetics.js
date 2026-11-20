@@ -37,14 +37,13 @@
   // Where an equipped item lives: avatar field, or house design field (HOME_FIELDS key).
   const SLOT = { houseStyle: { target: 'home', key: 'style' }, houseDecor: { target: 'home', key: 'decor' } };
   const slotOf = (field) => SLOT[field] || { target: 'avatar', key: field };
-  const PRICES = { 'houseStyle:darkMansion': 140, 'houseStyle:modernHouse': 120, 'houseStyle:rspOffice': 160,
+  const PRICES = { 'houseStyle:darkMansion': 140, 'houseStyle:modernHouse': 120,
     'deathAnim:petals': 90, 'deathAnim:fireflies': 110, 'deathAnim:letter': 80, 'deathAnim:candle': 100, 'deathAnim:lantern': 120, 'deathAnim:starfall': 150, 'deathAnim:ascend': 200,
     'deathAnim:ectoplasm': 110, 'deathAnim:soulChains': 130, 'ghostSkin:sheet': 45, 'ghostSkin:chains': 75, 'ghostSkin:royalGhost': 160,
     'hat:dealerVisor': 120, 'hat:highRoller': 250, 'effect:goldRain': 400 };
   const DESCRIPTIONS = {
     'houseStyle:darkMansion': 'A towering, gloomy mansion with iron gates and a single candle in the attic. Fits the darkest secrets.',
     'houseStyle:modernHouse': 'Clean lines, big windows and a flat roof. The most futuristic address in town.',
-    'houseStyle:rspOffice': 'A tidy yellow-and-blue corporate branch office, courtesy of RSP Supply.',
     'hat:executionerHood': 'A crimson executioner’s hood trimmed in gold, worn only by those who gave their life on the gallows to save another. Earned by saving someone as the Executioner.',
     'outfit:plagueDoctor': 'The beaked coat of a healer who has seen too much. Earned by saving ten players.',
     'outfit:detectiveCoat': 'A long coat with deep pockets for clues. Earned by identifying five Mafia.',

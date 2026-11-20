@@ -258,10 +258,8 @@ per game each). Anyone can visibly defend the accused, and the condemned can
 leave last words made from a name and a fixed word. With anonymous votes, the
 mob is masked, and the interrupter is never identified.
 
-**RSP Supply theme:** pick "📦 RSP Supply" in Setup for a yellow-and-blue
-corporate-takeover version. The Mafia become RSP Supply, led by President Tom
-Smith. Themes are defined entirely in `public/shared/themes.js`; copy the RSP
-Supply entry to make another.
+**Themes:** pick a world in Setup. Themes are defined entirely in
+`public/shared/themes.js`; copy an entry to make another.
 
 ## Judge console (`/judge`)
 
@@ -342,7 +340,7 @@ Small Town, Medieval Village, Space Station, Fantasy Realm, Dragon Peaks, Dungeo
 
 ### Worlds (Themes v2)
 
-The classic look (Medieval Village "Mafia Town", Small Town) and RSP Supply are unchanged. The other eleven themes are full **worlds**: Space Station, Fantasy Realm, Dragon Peaks, Dungeon Crawl, Secret Agents, Federal Investigation, and five new ones: **Snowy Village**, **Block World** (blocky voxel look, all original), **Tabletop Quest** (a parchment battle map with dice), **Realistic** (natural colors, soft lighting and textures; the characters keep their current look) and **Noir** (black and white, rain, film grain).
+The classic look (Medieval Village "Mafia Town", Small Town) is unchanged. The other eleven themes are full **worlds**: Space Station, Fantasy Realm, Dragon Peaks, Dungeon Crawl, Secret Agents, Federal Investigation, and five new ones: **Snowy Village**, **Block World** (blocky voxel look, all original), **Tabletop Quest** (a parchment battle map with dice), **Realistic** (natural colors, soft lighting and textures; the characters keep their current look) and **Noir** (black and white, rain, film grain).
 
 - **Roles change with the world** and keep their real name beside them, e.g. *Med-Bay Surgeon (Doctor)*, *Alpha Wolf (Godfather)*. Teams are renamed too (*The Dragon Cult*, *The Outfit*…). Text lives in `public/shared/theme-text.js`.
 - **The narrator adapts**: every world has its own lines for the start, nights, deaths (one per death location), votes and wins (Noir is a first-person private eye; Tabletop is the Game Master).

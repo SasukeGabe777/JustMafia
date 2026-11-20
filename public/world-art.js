@@ -5,7 +5,7 @@
   const FAMILIES = ['Cottage', 'Timber house', 'Stone house', 'Townhouse', 'Farmhouse', 'Narrow home', 'Family home', 'Noble residence'];
   // Player-chosen home styles: [base family, width, wall height]. Each style adds
   // its own signage and props in STYLE_ART; door and footprint stay in the slot.
-  const STYLES = { darkMansion: [7, 86, 66], modernHouse: [2, 84, 46], rspOffice: [3, 74, 60], cottage: [0, 64, 40], tavern: [6, 80, 52], bakery: [1, 70, 48], smithy: [4, 74, 42], apothecary: [3, 58, 64], library: [2, 76, 54], chapel: [5, 50, 60], tailor: [3, 62, 56], watchtower: [2, 56, 46], windmill: [0, 60, 42], farmhouse: [4, 78, 43], manor: [7, 82, 62] };
+  const STYLES = { darkMansion: [7, 86, 66], modernHouse: [2, 84, 46], cottage: [0, 64, 40], tavern: [6, 80, 52], bakery: [1, 70, 48], smithy: [4, 74, 42], apothecary: [3, 58, 64], library: [2, 76, 54], chapel: [5, 50, 60], tailor: [3, 62, 56], watchtower: [2, 56, 46], windmill: [0, 60, 42], farmhouse: [4, 78, 43], manor: [7, 82, 62] };
   const STYLE_ART = {
     // Premium shop designs.
     darkMansion: { post({ r, polygon, w, height, top, lit, time, index }) {
@@ -22,12 +22,6 @@
       r('#2b2f36', -w / 2 + 4, -height + 13, w - 22, 1);
       r('#1e2228', -w / 2 - 2, -height - 14, 26, 3); for (let i = 0; i < 4; i++) r('#2f6fb3', -w / 2 + i * 6, -height - 13, 5, 2); // solar panels
       r('#cfd5db', w / 2 - 14, -height - 14, 3, 6); r('#7fd38a', w / 2 + 2, -8, 10, 8); r('#4f9a5b', w / 2 + 3, -12, 8, 5); // planter
-    } },
-    rspOffice: { flatRoof: true, post({ r, w, height, time }) {
-      r('#0f2a63', -w / 2 + 2, -height - 4, w - 4, 12); r('#1f4fa8', -w / 2 + 4, -height - 2, w - 8, 8); r('#ffd21f', -w / 2 + 4, -height + 3, w - 8, 2); // fascia sign
-      for (const [x, ch] of [[-12, 'R'], [-3, 'S'], [6, 'P']]) { r('#ffd21f', x, -height - 1, 6, 1); r('#ffd21f', x, -height - 1, 1, 4); r('#ffd21f', x + 5, -height - 1, 1, 2); if (ch !== 'P') r('#ffd21f', x, -height + 1, 6, 1); }
-      const blink = Math.sin(time * 4) > 0; r('#3a3a42', w / 2 - 12, -height - 14, 4, 10); r(blink ? '#ffd21f' : '#8a7a2a', w / 2 - 13, -height - 17, 6, 4); // beacon
-      r('#0f2a63', w / 2 + 2, -12, 12, 12); r('#ffd21f', w / 2 + 3, -11, 10, 2); // RSP crate
     } },
     cottage: { post({ r, w }) {
       for (let a = -w / 2 - 10; a < w / 2 + 10; a += 5) if (a < -13 || a > 11) r('#eee6d2', a, -7, 2, 8);
@@ -219,8 +213,6 @@
     if (art.post) art.post(kit);
     if (window.MT_THEME_WORLD) window.MT_THEME_WORLD.buildingExtra(kit, options.theme); // snow caps, ink lines, shading
     if (YARD[options.yard]) YARD[options.yard](kit);
-    // RSP Supply theme: a company plaque over every door (blue with a yellow stripe).
-    if (options.theme === 'rsp') { r('#0f2a63', -11, -34, 22, 7); r('#1f4fa8', -10, -33, 20, 5); r('#ffd21f', -8, -31, 16, 1); r('#ffd21f', -10, -33, 2, 5); }
     if (options.damage === 'damaged' || options.damage === 'burned') { r('#292726', 8, -height, 8, height); r('#3e3430', -w / 2, -8, w, 8); }
     ctx.restore();
   }

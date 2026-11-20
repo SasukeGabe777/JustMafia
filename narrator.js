@@ -169,7 +169,7 @@ const { THEMES } = require('./public/shared/themes');
 
 function line(style, key, vars = {}, rng = Math.random) {
   let bank = (LINES[style] && LINES[style][key]) || LINES.classic[key] || [''];
-  // A theme's own narration (e.g. RSP Supply) replaces the style bank for that key.
+  // A theme's own narration (e.g. Space Station) replaces the style bank for that key.
   const themed = THEMES[vars.theme] && THEMES[vars.theme].narration && THEMES[vars.theme].narration[key];
   if (themed) {
     const render = (tpl) => tpl.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ''));

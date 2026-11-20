@@ -40,7 +40,7 @@
   let creatorTab = 'body';
 
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
-  // Role names shown to players follow the theme (e.g. RSP Supply Associate); rules use role ids.
+  // Role names shown to players follow the theme (e.g. Med-Bay Surgeon); rules use role ids.
   function roleLabel(id) { return window.MT_THEMES ? MT_THEMES.roleName(view && view.theme, id, (ROLES[id] || {}).name || id) : (ROLES[id] || {}).name || id; }
   function load(k) { try { return JSON.parse(localStorage.getItem(key(k)) || 'null'); } catch { return null; } }
   function save(k, v) { try { localStorage.setItem(key(k), JSON.stringify(v)); } catch { /* ignore */ } }
