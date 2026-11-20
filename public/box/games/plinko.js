@@ -13,6 +13,9 @@
   const easeOut = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
   const AU = () => BOX.audio;
   const sting = (name) => { try { const a = AU(); if (a && a.stinger) return a.stinger(name, 'plinko'); } catch { /* no audio */ } return false; };
+  // A quiet recorded sound effect (public/audio/sfx/plinko/, credits.json there). True when the engine took it
+  // (even if it skipped a too-quick repeat), false only without BOX.audio.
+  const clip = (name, o) => { const a = AU(); if (!a || !a.clip) return false; try { a.clip('plinko/' + name + '.ogg', o); } catch { /* no audio */ } return true; };
   const PAL = {
     classic: { bg1: '#4a0b1f', bg2: '#16030b', frame: '#d4a73c', frame2: '#7a5312', peg: '#fff1c2', pegGlow: '#ffd166', zone: 'rgba(0,0,0,0.28)', grid: 'rgba(255,215,140,0.06)', ink: '#fff4d6',
       slot: { pts: ['#7a1630', '#5e0f24'], jack: ['#ffd23f', '#d99a00'], bust: ['#16121a', '#000'], x2: ['#1f9e5c', '#116a3c'], steal: ['#7b3fd9', '#4a1f8f'], gift: ['#2f8bff', '#1a55b3'] }, bump: '#ff3b5c', spin: '#ffd166', ghost: 0.32 },
@@ -333,9 +336,9 @@
   function landFx(s, ti, b, board) {
     const sl = board.slots[b.slot]; if (!sl) return;
     const x = (sl.x0 + sl.x1) / 2, nm = nameOf(s, b.id);
-    if (sl.k === 'jack') { burst(ti, x, SLOT_TOP, '#ffe14d', 60); burst(ti, x, SLOT_TOP, '#fff', 30); pop(ti, x, SLOT_TOP - 160, 'JACKPOT!', `${nm} +${sl.v}`, b.c, { big: true }); sting('jackpot'); }
-    else if (sl.k === 'bust') { burst(ti, x, SLOT_TOP + 40, '#333', 30); burst(ti, x, SLOT_TOP + 40, '#ff3b3b', 20); pop(ti, x, SLOT_TOP - 80, 'BUST!', nm, b.c, { bad: true }); sting('bust'); }
-    else { burst(ti, x, SLOT_TOP + 20, b.c, 22); pop(ti, x, SLOT_TOP - 80, sl.k === 'pts' ? '+' + sl.v : sl.label, nm, b.c); sting(sl.k === 'pts' ? 'slot' : 'special'); }
+    if (sl.k === 'jack') { burst(ti, x, SLOT_TOP, '#ffe14d', 60); burst(ti, x, SLOT_TOP, '#fff', 30); pop(ti, x, SLOT_TOP - 160, 'JACKPOT!', `${nm} +${sl.v}`, b.c, { big: true }); sting('jackpot'); clip('cheer', { vol: 0.16, delay: 0.45, gap: 1500 }); }
+    else if (sl.k === 'bust') { burst(ti, x, SLOT_TOP + 40, '#333', 30); burst(ti, x, SLOT_TOP + 40, '#ff3b3b', 20); pop(ti, x, SLOT_TOP - 80, 'BUST!', nm, b.c, { bad: true }); sting('bust'); clip('aww', { vol: 0.13, delay: 0.3, gap: 1500 }); }
+    else { burst(ti, x, SLOT_TOP + 20, b.c, 22); pop(ti, x, SLOT_TOP - 80, sl.k === 'pts' ? '+' + sl.v : sl.label, nm, b.c); if (sl.k !== 'pts' || !clip('chips', { vol: 0.24, pan: (x / W - 0.5) * 0.8 })) sting(sl.k === 'pts' ? 'slot' : 'special'); } // points pay out in casino chips
   }
   // Game over: the drop of the night, replayed on its own board.
   function drawBest(g, w, h, dpr, s, now) {
@@ -469,6 +472,7 @@
     TV.s = s; TV.at = Date.now();
     if (!TV.raf) TV.raf = requestAnimationFrame(tvFrame);
     if (s.phase === 'over') return tvOver(el, s);
+    TV.clapped = false;
     const style = s.style || 'classic';
     BOX.morph(el, `<div class="pk-tv pk-${esc(style)}">
       <div class="pk-top"><div class="pk-rnd">${s.sudden ? '⚡ SUDDEN DEATH' : `ROUND <b>${s.round}</b>/${s.of}`}</div><div class="pk-ph">${esc(s.phase === 'intro' ? (s.sudden ? 'Tie-breaker!' : 'Here’s the board') : PH_TITLE[s.phase] || '')}</div><div class="pk-lv">${stars5(s.level)}</div><div class="pk-timer"><i id="pk-tbar"></i></div></div>
@@ -478,6 +482,7 @@
   function mountCv(el) { const st = el.querySelector('#pk-stage'); if (st && !st.querySelector('canvas')) st.innerHTML = '<canvas id="pk-cv"></canvas>'; }
   function tvOver(el, s) {
     const st = s.standings || [], w = st[0] || {};
+    if (!TV.clapped) { TV.clapped = true; clip('applause', { vol: 0.14, delay: 0.6 }); } // the room applauds the champion
     const pod = [st[1], st[0], st[2]].map((r, i) => (r ? `<div class="pk-pod p${[2, 1, 3][i]}" style="--c:${esc(r.color)}"><div class="av">${fig(r, [150, 190, 130][i], i === 1 ? { mood: 'grin' } : undefined)}</div><div class="nm">${esc(r.name)}</div><div class="pts">${r.total}</div><div class="blk">${[2, 1, 3][i]}</div></div>` : '<div class="pk-pod empty"></div>')).join('');
     BOX.morph(el, `<div class="pk-tv pk-${esc(s.style || 'classic')} pk-over">
       <div class="pk-win"><small>JACKPOT CHAMPION</small><h2>🏆 ${esc(w.name || '')} wins!</h2>${s.sdWinner ? '<p>…after a sudden-death drop!</p>' : ''}</div>

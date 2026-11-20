@@ -1,0 +1,17 @@
+{
+ "cues": {
+  "title": { "file": "games/marble/title-cozy-puzzle.ogg" },
+  "intro": { "file": "games/marble/title-cozy-puzzle.ogg" },
+  "lobby": { "file": "games/marble/lobby-stage-select.ogg" },
+  "think": { "file": "games/marble/play-cozy-in-game.ogg" },
+  "play": { "file": "games/marble/play-cozy-in-game.ogg" },
+  "reveal": { "file": "games/marble/finale-clear.ogg" },
+  "finale": { "file": "games/marble/finale-clear.ogg" }
+ },
+ "credits": [
+  { "file": "games/marble/title-cozy-puzzle.ogg", "title": "Cozy Puzzle Title", "author": "MintoDog", "source": "https://opengameart.org/content/cozy-puzzle-title", "license": "CC0 1.0" },
+  { "file": "games/marble/lobby-stage-select.ogg", "title": "Cozy Puzzle Stage Select", "author": "MintoDog", "source": "https://opengameart.org/content/cozy-puzzle-stage-select", "license": "CC0 1.0" },
+  { "file": "games/marble/play-cozy-in-game.ogg", "title": "Cozy Puzzle In-Game 1", "author": "MintoDog", "source": "https://opengameart.org/content/cozy-puzzle-in-game-1", "license": "CC0 1.0" },
+  { "file": "games/marble/finale-clear.ogg", "title": "Cozy Puzzle Clear (Loop)", "author": "MintoDog", "source": "https://opengameart.org/content/cozy-puzzle-jingle-result", "license": "CC0 1.0" }
+ ]
+}

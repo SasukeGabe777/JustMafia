@@ -454,7 +454,16 @@
       'Get it into the 🏁 before time runs out. Holes send it back to where it came onto your board.',
       'Points: the whole team scores for clearing a maze (more with time left), +30 for a pass that gets closer to the goal, +25 per 💎, +50 for sinking it, −15 per hole.',
     ],
-    fx: { start: 'start', lineup: 'pop', go: 'start', pass: 'pop', gem: 'chime', hole: 'buzz', win: 'win', timeup: 'buzz', over: 'win' },
+    fx: { start: 'start', lineup: 'pop', go: 'start', gem: 'chime', timeup: 'buzz', over: 'win' },
+    // Recorded sounds for the marble itself (public/audio/sfx/marble/): it rolls across the wood to the next
+    // phone, drops into a hole, rattles into the goal cup; the room claps at the end. Old sound without BOX.audio.
+    onFx(f) {
+      const a = BOX.audio, clip = (n, o) => { if (!a || !a.clip) return false; try { a.clip('marble/' + n + '.ogg', o); } catch { /* no audio */ } return true; };
+      if (f.kind === 'pass') clip('roll', { vol: 0.2 }) || BOX.sfx('pop');
+      else if (f.kind === 'hole') clip('drop', { vol: 0.26 }) || BOX.sfx('buzz');
+      else if (f.kind === 'win') clip('cup', { vol: 0.28 }) || BOX.sfx('win');
+      else if (f.kind === 'over') clip('applause', { vol: 0.13, delay: 0.9 });
+    },
     // Music: calm while lining up, the rolling groove (tense in the last 10 s), the reveal.
     music: (s) => (s.phase === 'lineup' ? 'think' : s.phase === 'roll' ? 'play' : s.phase === 'result' ? 'reveal' : s.phase === 'over' ? 'finale' : undefined),
     lobbyTv,

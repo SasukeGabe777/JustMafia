@@ -1,0 +1,15 @@
+{
+ "cues": {
+  "title": { "file": "games/pizza/title-bushwick-tarantella.ogg" },
+  "intro": { "file": "games/pizza/title-bushwick-tarantella.ogg" },
+  "lobby": { "file": "games/pizza/title-bushwick-tarantella.ogg" },
+  "think": { "file": "games/pizza/play-gypsy-alex.ogg" },
+  "play": { "file": "games/pizza/play-gypsy-alex.ogg" },
+  "finale": { "file": "games/pizza/finale-bushwick-tarantella-loop.ogg" }
+ },
+ "credits": [
+  { "file": "games/pizza/title-bushwick-tarantella.ogg", "title": "Bushwick Tarantella", "author": "Kevin MacLeod (incompetech.com)", "source": "https://commons.wikimedia.org/wiki/File:Bushwick_Tarantella_(MacLeod,_Kevin)_(ISRC_USUAN1300002).oga", "license": "CC-BY 3.0" },
+  { "file": "games/pizza/play-gypsy-alex.ogg", "title": "GypsyAlex", "author": "Pro Sensory", "source": "https://opengameart.org/content/gypsyalex", "license": "CC0 1.0" },
+  { "file": "games/pizza/finale-bushwick-tarantella-loop.ogg", "title": "Bushwick Tarantella Loop", "author": "Kevin MacLeod (incompetech.com)", "source": "https://commons.wikimedia.org/wiki/File:Bushwick_Tarantella_Loop_(ISRC_USUAN1300003).mp3", "license": "CC-BY 3.0" }
+ ]
+}

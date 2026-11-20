@@ -1,0 +1,18 @@
+{
+ "cues": {
+  "title": { "file": "games/ducks/theme-apple-cider.ogg" },
+  "intro": { "file": "games/ducks/theme-apple-cider.ogg" },
+  "lobby": { "file": "games/ducks/theme-apple-cider.ogg" },
+  "think": { "file": "games/ducks/training-course-select.ogg" },
+  "play": { "file": "games/ducks/race-gone-fishin.ogg" },
+  "reveal": { "file": "games/ducks/results-apple-cider.ogg" },
+  "finale": { "file": "games/ducks/finale-beary-fishy.ogg" }
+ },
+ "credits": [
+  { "file": "games/ducks/theme-apple-cider.ogg", "title": "Apple Cider (loop)", "author": "Zane Little Music", "source": "https://opengameart.org/content/apple-cider-juiced", "license": "CC0 1.0" },
+  { "file": "games/ducks/training-course-select.ogg", "title": "Course Select (Apple Cider Juiced!)", "author": "Zane Little Music", "source": "https://opengameart.org/content/apple-cider-juiced", "license": "CC0 1.0" },
+  { "file": "games/ducks/race-gone-fishin.ogg", "title": "Gone Fishin'", "author": "Memoraphile (You're Perfect Studio)", "source": "https://opengameart.org/content/gone-fishin", "license": "CC0 1.0" },
+  { "file": "games/ducks/results-apple-cider.ogg", "title": "Results (Apple Cider Juiced!)", "author": "Zane Little Music", "source": "https://opengameart.org/content/apple-cider-juiced", "license": "CC0 1.0" },
+  { "file": "games/ducks/finale-beary-fishy.ogg", "title": "Beary Fishy Menu Screen", "author": "Memoraphile (You're Perfect Studio)", "source": "https://opengameart.org/content/gone-fishin", "license": "CC0 1.0" }
+ ]
+}

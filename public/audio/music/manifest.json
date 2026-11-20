@@ -175,6 +175,29 @@
     "file": "games/debate/the-liberty-bell.ogg"
    }
   },
+  "ducks": {
+   "title": {
+    "file": "games/ducks/theme-apple-cider.ogg"
+   },
+   "intro": {
+    "file": "games/ducks/theme-apple-cider.ogg"
+   },
+   "lobby": {
+    "file": "games/ducks/theme-apple-cider.ogg"
+   },
+   "think": {
+    "file": "games/ducks/training-course-select.ogg"
+   },
+   "play": {
+    "file": "games/ducks/race-gone-fishin.ogg"
+   },
+   "reveal": {
+    "file": "games/ducks/results-apple-cider.ogg"
+   },
+   "finale": {
+    "file": "games/ducks/finale-beary-fishy.ogg"
+   }
+  },
   "escape": {
    "title": {
     "file": "games/escape/jazzy-detective.ogg",
@@ -232,6 +255,32 @@
     "file": "games/funny/think-taken-lightly.mp3"
    }
   },
+  "kingdoms": {
+   "title": {
+    "file": "games/kingdoms/title-kings-feast.ogg"
+   },
+   "intro": {
+    "file": "games/kingdoms/title-kings-feast.ogg"
+   },
+   "lobby": {
+    "file": "games/kingdoms/lobby-minstrel-dance.ogg"
+   },
+   "think": {
+    "file": "games/kingdoms/play-market-day.ogg"
+   },
+   "play": {
+    "file": "games/kingdoms/play-market-day.ogg"
+   },
+   "reveal": {
+    "file": "games/kingdoms/play-market-day.ogg"
+   },
+   "tense": {
+    "file": "games/kingdoms/tense-battle.ogg"
+   },
+   "finale": {
+    "file": "games/kingdoms/finale-victory.ogg"
+   }
+  },
   "likely": {
    "title": {
     "file": "games/likely/title-pomp-and-circumstance.ogg"
@@ -250,6 +299,29 @@
    },
    "play": {
     "file": "games/likely/play-high-school-cadets.ogg"
+   }
+  },
+  "marble": {
+   "title": {
+    "file": "games/marble/title-cozy-puzzle.ogg"
+   },
+   "intro": {
+    "file": "games/marble/title-cozy-puzzle.ogg"
+   },
+   "lobby": {
+    "file": "games/marble/lobby-stage-select.ogg"
+   },
+   "think": {
+    "file": "games/marble/play-cozy-in-game.ogg"
+   },
+   "play": {
+    "file": "games/marble/play-cozy-in-game.ogg"
+   },
+   "reveal": {
+    "file": "games/marble/finale-clear.ogg"
+   },
+   "finale": {
+    "file": "games/marble/finale-clear.ogg"
    }
   },
   "memes": {
@@ -273,6 +345,49 @@
    },
    "tense": {
     "file": "games/memes/think-respectable-amount-of-bounce.ogg"
+   }
+  },
+  "pizza": {
+   "title": {
+    "file": "games/pizza/title-bushwick-tarantella.ogg"
+   },
+   "intro": {
+    "file": "games/pizza/title-bushwick-tarantella.ogg"
+   },
+   "lobby": {
+    "file": "games/pizza/title-bushwick-tarantella.ogg"
+   },
+   "think": {
+    "file": "games/pizza/play-gypsy-alex.ogg"
+   },
+   "play": {
+    "file": "games/pizza/play-gypsy-alex.ogg"
+   },
+   "finale": {
+    "file": "games/pizza/finale-bushwick-tarantella-loop.ogg"
+   }
+  },
+  "plinko": {
+   "title": {
+    "file": "games/plinko/title-funky-disco.ogg"
+   },
+   "intro": {
+    "file": "games/plinko/title-funky-disco.ogg"
+   },
+   "lobby": {
+    "file": "games/plinko/title-funky-disco.ogg"
+   },
+   "think": {
+    "file": "games/plinko/play-funked-up.ogg"
+   },
+   "play": {
+    "file": "games/plinko/play-funked-up.ogg"
+   },
+   "reveal": {
+    "file": "games/plinko/play-funked-up.ogg"
+   },
+   "finale": {
+    "file": "games/plinko/finale-wednesday-night.ogg"
    }
   },
   "president": {

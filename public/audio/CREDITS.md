@@ -23,16 +23,36 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | bomb | Music | `games/bomb/shooter-on-the-roof.ogg` | Shooter On The Roof | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/shooter-on-the-roof/ |
 | debate | Music | `games/debate/the-diplomat.ogg` | The Diplomat (John Philip Sousa, 1904) | United States Marine Band (performance); John Philip Sousa (composition) | Public domain | https://archive.org/details/InternetJukebox.JPS.63 |
 | debate | Music | `games/debate/the-liberty-bell.ogg` | The Liberty Bell (John Philip Sousa, 1893) | United States Marine Band (performance); John Philip Sousa (composition) | Public domain | https://archive.org/details/InternetJukebox.JPS.48 |
+| ducks | Music | `games/ducks/theme-apple-cider.ogg` | Apple Cider (loop) | Zane Little Music | CC0 1.0 | https://opengameart.org/content/apple-cider-juiced |
+| ducks | Music | `games/ducks/training-course-select.ogg` | Course Select (Apple Cider Juiced!) | Zane Little Music | CC0 1.0 | https://opengameart.org/content/apple-cider-juiced |
+| ducks | Music | `games/ducks/race-gone-fishin.ogg` | Gone Fishin' | Memoraphile (You're Perfect Studio) | CC0 1.0 | https://opengameart.org/content/gone-fishin |
+| ducks | Music | `games/ducks/results-apple-cider.ogg` | Results (Apple Cider Juiced!) | Zane Little Music | CC0 1.0 | https://opengameart.org/content/apple-cider-juiced |
+| ducks | Music | `games/ducks/finale-beary-fishy.ogg` | Beary Fishy Menu Screen | Memoraphile (You're Perfect Studio) | CC0 1.0 | https://opengameart.org/content/gone-fishin |
 | escape | Music | `games/escape/jazzy-detective.ogg` | Jazzy Detective | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/jazzy-detective/ |
 | escape | Music | `games/escape/gentle-rain.ogg` | Gentle Rain | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/gentle-rain/ |
 | escape | Music | `games/escape/hong-kong-noir.ogg` | Hong Kong Noir | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/hong-kong-noir/ |
 | escape | Music | `games/escape/photos-of-murder.ogg` | Photos Of Murder | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/photos-of-murder/ |
 | funny | Music | `games/funny/title-blue-intermission.ogg` | Blue Intermission | congusbongus | CC0 1.0 | https://opengameart.org/node/130655 |
 | funny | Music | `games/funny/think-taken-lightly.mp3` | Taken Lightly | Pro Sensory | CC0 1.0 | https://opengameart.org/node/80007 |
+| kingdoms | Music | `games/kingdoms/title-kings-feast.ogg` | Medieval: King's Feast (loop) | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-kings-feast |
+| kingdoms | Music | `games/kingdoms/lobby-minstrel-dance.ogg` | Medieval: Minstrel Dance (loop) | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-minstrel-dance |
+| kingdoms | Music | `games/kingdoms/play-market-day.ogg` | Medieval: Market Day (loop) | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-market-day |
+| kingdoms | Music | `games/kingdoms/tense-battle.ogg` | Medieval: Battle | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-battle |
+| kingdoms | Music | `games/kingdoms/finale-victory.ogg` | Medieval: Victory Theme | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-victory-theme |
 | likely | Music | `games/likely/title-pomp-and-circumstance.ogg` | Pomp and Circumstance, Op. 39 No. 1 (Edward Elgar) | United States Army Band | Public domain | https://commons.wikimedia.org/wiki/File:Pomp_and_Circumstance,_Op._39_-_No._1_-_United_States_Army_Band.mp3 |
 | likely | Music | `games/likely/play-high-school-cadets.ogg` | The High School Cadets (John Philip Sousa) | United States Marine Band | Public domain | https://commons.wikimedia.org/wiki/File:Sousa_The_High_School_Cadets_United_States_Marine_Band.ogg |
+| marble | Music | `games/marble/title-cozy-puzzle.ogg` | Cozy Puzzle Title | MintoDog | CC0 1.0 | https://opengameart.org/content/cozy-puzzle-title |
+| marble | Music | `games/marble/lobby-stage-select.ogg` | Cozy Puzzle Stage Select | MintoDog | CC0 1.0 | https://opengameart.org/content/cozy-puzzle-stage-select |
+| marble | Music | `games/marble/play-cozy-in-game.ogg` | Cozy Puzzle In-Game 1 | MintoDog | CC0 1.0 | https://opengameart.org/content/cozy-puzzle-in-game-1 |
+| marble | Music | `games/marble/finale-clear.ogg` | Cozy Puzzle Clear (Loop) | MintoDog | CC0 1.0 | https://opengameart.org/content/cozy-puzzle-jingle-result |
 | memes | Music | `games/memes/title-goofy-attitude.ogg` | Goofy Attitude! | SkyleTheFrench | CC0 1.0 | https://opengameart.org/node/165451 |
 | memes | Music | `games/memes/think-respectable-amount-of-bounce.ogg` | A respectable amount of Bounce | Some Weirdo | CC0 1.0 | https://opengameart.org/node/180401 |
+| pizza | Music | `games/pizza/title-bushwick-tarantella.ogg` | Bushwick Tarantella | Kevin MacLeod (incompetech.com) | CC-BY 3.0 | https://commons.wikimedia.org/wiki/File:Bushwick_Tarantella_(MacLeod,_Kevin)_(ISRC_USUAN1300002).oga |
+| pizza | Music | `games/pizza/play-gypsy-alex.ogg` | GypsyAlex | Pro Sensory | CC0 1.0 | https://opengameart.org/content/gypsyalex |
+| pizza | Music | `games/pizza/finale-bushwick-tarantella-loop.ogg` | Bushwick Tarantella Loop | Kevin MacLeod (incompetech.com) | CC-BY 3.0 | https://commons.wikimedia.org/wiki/File:Bushwick_Tarantella_Loop_(ISRC_USUAN1300003).mp3 |
+| plinko | Music | `games/plinko/title-funky-disco.ogg` | Funky Disco Beats to Boogie/Woogie to | Fupi | CC0 1.0 | https://opengameart.org/content/funky-disco-beats-to-boogiewoogie-to |
+| plinko | Music | `games/plinko/play-funked-up.ogg` | Funked Up | Joth | CC0 1.0 | https://opengameart.org/content/funked-up |
+| plinko | Music | `games/plinko/finale-wednesday-night.ogg` | Wednesday Night [Funk Fusion] | Zane Little Music | CC0 1.0 | https://opengameart.org/content/wednesday-night-funk-fusion |
 | president | Music | `games/president/title-kings-feast.mp3` | Medieval: King's Feast | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-kings-feast |
 | president | Music | `games/president/play-harpsichord-flurry.ogg` | Harpsichord Flurry | Spring Spring (Julie Damsgaard) | CC0 1.0 | https://opengameart.org/content/harpsichord-flurry |
 | price | Music | `games/price/title-urban-theme.ogg` | Urban Theme | MintoDog | CC0 1.0 | https://opengameart.org/content/urban-theme |
@@ -118,6 +138,12 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | debate | Sound effect | `debate/applause.ogg` | Small applause | Breviceps | CC0 1.0 | https://freesound.org/people/Breviceps/sounds/462362/ |
 | debate | Sound effect | `debate/laugh.ogg` | Small Crowd Laughing | snakebarney | CC0 1.0 | https://freesound.org/people/snakebarney/sounds/138112/ |
 | debate | Sound effect | `debate/boo.ogg` | Voice_Crowd_Small_Expression_Boo_Stereo | Nox_Sound | CC0 1.0 | https://freesound.org/people/Nox_Sound/sounds/752707/ |
+| ducks | Sound effect | `ducks/quack.ogg` | Duck quacking | DigPro120 | CC0 1.0 | https://freesound.org/people/DigPro120/sounds/558858/ |
+| ducks | Sound effect | `ducks/splash.ogg` | Small Water Splash | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/737233/ |
+| ducks | Sound effect | `ducks/camera.ogg` | C220 camera shutter release | adeluc4 | CC0 1.0 | https://freesound.org/people/adeluc4/sounds/125318/ |
+| ducks | Sound effect | `ducks/cheer.ogg` | Voice_Crowd_Small_Expression_Applause_Cheer_Stereo | Nox_Sound | CC0 1.0 | https://freesound.org/people/Nox_Sound/sounds/752709/ |
+| ducks | Sound effect | `ducks/crowd.ogg` | Murmur 3 approval | jayfrosting | CC0 1.0 | https://freesound.org/people/jayfrosting/sounds/333414/ |
+| ducks | Sound effect | `ducks/trip.ogg` | Impact Sounds (impactSoft_medium_001) | Kenney | CC0 1.0 | https://kenney.nl/assets/impact-sounds |
 | escape | Sound effect | `escape/lock-open.ogg` | RPG Audio: metalLatch | Kenney | CC0 1.0 | https://kenney.nl/assets/rpg-audio |
 | escape | Sound effect | `escape/thunder.ogg` | thunder | netaj | CC0 1.0 | https://freesound.org/people/netaj/sounds/193170/ |
 | escape | Sound effect | `escape/stamp.ogg` | es-stamp.wav | eddies2000 | CC0 1.0 | https://freesound.org/people/eddies2000/sounds/448474/ |
@@ -128,16 +154,32 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | funny | Sound effect | `funny/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
 | funny | Sound effect | `funny/boo.ogg` | crowd booing (excerpt) | HowardV | CC0 1.0 | https://freesound.org/people/HowardV/sounds/264378/ |
 | funny | Sound effect | `funny/click.ogg` | UI Audio (switch3.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| kingdoms | Sound effect | `kingdoms/swords.ogg` | Sword_Clash (7) | JohnBuhr | CC0 1.0 | https://freesound.org/people/JohnBuhr/sounds/326868/ |
+| kingdoms | Sound effect | `kingdoms/coins.ogg` | RPG Audio (handleCoins) | Kenney | CC0 1.0 | https://kenney.nl/assets/rpg-audio |
+| kingdoms | Sound effect | `kingdoms/scroll.ogg` | RPG Audio (bookFlip2) | Kenney | CC0 1.0 | https://kenney.nl/assets/rpg-audio |
 | likely | Sound effect | `likely/envelope.ogg` | Tearing Open An Envelope (excerpt) | 21100375 | CC0 1.0 | https://freesound.org/people/21100375/sounds/593146/ |
 | likely | Sound effect | `likely/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
 | likely | Sound effect | `likely/flash.ogg` | Camera shutter and flash combined (excerpt) | montclairguy | CC0 1.0 | https://freesound.org/people/montclairguy/sounds/353044/ |
 | likely | Sound effect | `likely/ooh.ogg` | Crowd Ooohs and Ahhhs in Excitement (excerpt) | noah0189 | CC0 1.0 | https://freesound.org/people/noah0189/sounds/264499/ |
 | likely | Sound effect | `likely/click.ogg` | UI Audio (click3.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| marble | Sound effect | `marble/drop.ogg` | Marble Drop | gamer500 | CC0 1.0 | https://freesound.org/people/gamer500/sounds/682661/ |
+| marble | Sound effect | `marble/cup.ogg` | Marble in plastic cup-3 | Valerie-Vivegnis | CC0 1.0 | https://freesound.org/people/Valerie-Vivegnis/sounds/759548/ |
+| marble | Sound effect | `marble/roll.ogg` | Glass Marbles Rolling on Wood | Solar01 | CC0 1.0 | https://freesound.org/people/Solar01/sounds/661650/ |
+| marble | Sound effect | `marble/applause.ogg` | Small applause | Breviceps | CC0 1.0 | https://freesound.org/people/Breviceps/sounds/462362/ |
 | memes | Sound effect | `memes/shutter.ogg` | DSLR Camera Click (excerpt) | akonze | CC0 1.0 | https://freesound.org/people/akonze/sounds/157812/ |
 | memes | Sound effect | `memes/laugh-1.ogg` | Sitcom Laughter 9x, Small Audience (excerpt) | Kinoton | CC0 1.0 | https://freesound.org/people/Kinoton/sounds/383207/ |
 | memes | Sound effect | `memes/laugh-2.ogg` | Sitcom Laughter 9x, Small Audience (excerpt) | Kinoton | CC0 1.0 | https://freesound.org/people/Kinoton/sounds/383207/ |
 | memes | Sound effect | `memes/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
 | memes | Sound effect | `memes/click.ogg` | Interface Sounds (click_002.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
+| pizza | Sound effect | `pizza/door.ogg` | Shop Door Chime | Qvantor | CC0 1.0 | https://freesound.org/people/Qvantor/sounds/879804/ |
+| pizza | Sound effect | `pizza/phone.ogg` | Telephone Ring (old German W48) | meisterleise | CC0 1.0 | https://freesound.org/people/meisterleise/sounds/332073/ |
+| pizza | Sound effect | `pizza/bell.ogg` | Service Bell Ding | Qvantor | CC0 1.0 | https://freesound.org/people/Qvantor/sounds/879808/ |
+| pizza | Sound effect | `pizza/chop.ogg` | chopping edit 2 | Luisa_Sanchez | CC0 1.0 | https://freesound.org/people/Luisa_Sanchez/sounds/816873/ |
+| pizza | Sound effect | `pizza/applause.ogg` | Small Crowd Applause | miuziqa | CC0 1.0 | https://freesound.org/people/miuziqa/sounds/858309/ |
+| plinko | Sound effect | `plinko/chips.ogg` | Casino Audio (chips-stack-1) | Kenney | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| plinko | Sound effect | `plinko/cheer.ogg` | Small Audience Cheer | Robo9418 | CC0 1.0 | https://freesound.org/people/Robo9418/sounds/863035/ |
+| plinko | Sound effect | `plinko/aww.ogg` | crowd oh - disappointed | mrrap4food | CC0 1.0 | https://freesound.org/people/mrrap4food/sounds/619007/ |
+| plinko | Sound effect | `plinko/applause.ogg` | Small Crowd Applause | miuziqa | CC0 1.0 | https://freesound.org/people/miuziqa/sounds/858309/ |
 | president | Sound effect | `president/shuffle.webm` | card-shuffle.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
 | president | Sound effect | `president/play-1.webm` | card-place-2.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
 | president | Sound effect | `president/play-2.webm` | card-place-3.ogg (Kenney Casino Audio) | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
