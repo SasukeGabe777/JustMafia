@@ -1,0 +1,62 @@
+{
+ "cues": {
+  "title": {
+   "file": "games/undercover/smooth-criminal.ogg",
+   "loopStart": 2,
+   "loopEnd": 86.91
+  },
+  "lobby": {
+   "file": "games/undercover/smooth-criminal.ogg",
+   "loopStart": 2,
+   "loopEnd": 86.91
+  },
+  "intro": {
+   "file": "games/undercover/smooth-criminal.ogg",
+   "loopStart": 2,
+   "loopEnd": 86.91
+  },
+  "play": {
+   "file": "games/undercover/smooth-criminal.ogg",
+   "loopStart": 2,
+   "loopEnd": 86.91
+  },
+  "finale": {
+   "file": "games/undercover/smooth-criminal.ogg",
+   "loopStart": 2,
+   "loopEnd": 86.91
+  },
+  "think": {
+   "file": "games/undercover/sneaky-detective.ogg",
+   "loopStart": 2,
+   "loopEnd": 83.12
+  },
+  "tense": {
+   "file": "games/undercover/covert-operations.ogg",
+   "loopStart": 2,
+   "loopEnd": 90.13
+  }
+ },
+ "credits": [
+  {
+   "file": "games/undercover/smooth-criminal.ogg",
+   "title": "Smooth Criminal",
+   "author": "John Bartmann",
+   "source": "https://freemusicarchive.org/music/John_Bartmann/hide-and-sneak/smooth-criminal/",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/undercover/sneaky-detective.ogg",
+   "title": "Sneaky Detective",
+   "author": "John Bartmann",
+   "source": "https://freemusicarchive.org/music/John_Bartmann/hide-and-sneak/sneaky-detective/",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/undercover/covert-operations.ogg",
+   "title": "Covert Operations",
+   "author": "artisticdude",
+   "source": "https://opengameart.org/content/covert-operations",
+   "license": "CC0 1.0"
+  }
+ ]
+}

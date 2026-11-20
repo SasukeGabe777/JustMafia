@@ -1,0 +1,52 @@
+{
+ "cues": {
+  "title": {
+   "file": "games/alien/little-green-men.ogg",
+   "loopStart": 2,
+   "loopEnd": 141.94
+  },
+  "lobby": {
+   "file": "games/alien/little-green-men.ogg",
+   "loopStart": 2,
+   "loopEnd": 141.94
+  },
+  "intro": {
+   "file": "games/alien/little-green-men.ogg",
+   "loopStart": 2,
+   "loopEnd": 141.94
+  },
+  "think": {
+   "file": "games/alien/hello-from-the-children.ogg",
+   "loopStart": 0,
+   "loopEnd": 54.884
+  },
+  "play": {
+   "file": "games/alien/somethings-out-there.ogg",
+   "loopStart": 5,
+   "loopEnd": 145.84
+  }
+ },
+ "credits": [
+  {
+   "file": "games/alien/little-green-men.ogg",
+   "title": "Little Green Men",
+   "author": "HoliznaCC0",
+   "source": "https://freemusicarchive.org/music/holiznacc0/stranger-than-fiction-halloween-sci-fi/little-green-men/",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/alien/hello-from-the-children.ogg",
+   "title": "Hello from the children of planet Earth",
+   "author": "hatmix",
+   "source": "https://opengameart.org/content/hello-from-the-children-of-planet-earth",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/alien/somethings-out-there.ogg",
+   "title": "Somethings Out There",
+   "author": "HoliznaCC0",
+   "source": "https://freemusicarchive.org/music/holiznacc0/stranger-than-fiction-halloween-sci-fi/somethings-out-there/",
+   "license": "CC0 1.0"
+  }
+ ]
+}

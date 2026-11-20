@@ -21,6 +21,9 @@
   const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
   const AU = () => BOX.audio;
   const sting = (name) => { try { const a = AU(); if (a && a.stinger) return a.stinger(name, 'summon'); } catch { /* no audio */ } return false; };
+  // Quiet recorded sound effects (public/audio/sfx/summon/, TV only; credits in credits.json there).
+  const clip = (f, o) => { try { const a = AU(); return !!(a && a.clip && a.clip('summon/' + f, o)); } catch { return false; } };
+  const CLIPS = { clash: ['sword-clash.ogg', 0.16], basehit: ['siege-thud.ogg', 0.24] }; // recorded instead of the synth stinger
 
   // ---------------- troops (names, icons, counters: mirrors box/games/summon.js) ----------------
   const U = {
@@ -341,7 +344,7 @@
   // ---------------- TV ----------------
   const TV = { el: null, cv: null, raf: 0, W: 0, H: 0, dpr: 1, snaps: [], rt: 0, last: 0, vis: new Map(), parts: [], pops: [], shots: [], evSeen: 0, evQ: [], banner: null, shake: [0, 0], s: null, dead: new Set(), knot: 500, knotV: 0, wheelUntil: 0, tierCards: null, lastSnd: {}, meteor: [], overAt: 0, seenTicker: 0 };
   const now = () => performance.now();
-  function sndOnce(name, gap) { const t = now(); if (TV.lastSnd[name] && t - TV.lastSnd[name] < gap) return; TV.lastSnd[name] = t; if (!sting(name)) BOX.sfx({ summon: 'pop', clash: 'hit', basehit: 'boom', arrow: 'arrow', slash: 'slash' }[name] || name); }
+  function sndOnce(name, gap) { const t = now(); if (TV.lastSnd[name] && t - TV.lastSnd[name] < gap) return; TV.lastSnd[name] = t; if (CLIPS[name] && clip(CLIPS[name][0], { vol: CLIPS[name][1] })) return; if (!sting(name)) BOX.sfx({ summon: 'pop', clash: 'hit', basehit: 'boom', arrow: 'arrow', slash: 'slash' }[name] || name); }
   function ensureTv(el) {
     if (TV.el === el && el.querySelector('#sm-cv')) return;
     TV.el = el; el.innerHTML = '<div class="sm-tv"><canvas id="sm-cv" class="sm-cv"></canvas><div class="sm-ov" id="sm-ov"></div></div>';
@@ -580,7 +583,7 @@
     else if (e.k === 'res') TV.pops.push({ x: X(e.x), y: GROUND - 120, text: 'RESISTED', col: '#c9c4d8', life: 0.9, max: 0.9, small: true, t: e.t });
     else if (e.k === 'tw') { const x0 = e.t === 0 ? 150 : 1770; for (let i = 0; i < Math.min(4, e.n); i++) TV.shots.push({ kind: 'arrow', x0: x0 + (e.t ? -1 : 1) * i * 12, y0: GROUND - 220 + i * 18, x1: X(e.x) + (Math.random() - 0.5) * 30, y1: GROUND - 10, life: 0.35 + i * 0.05, max: 0.35 + i * 0.05, t: e.t, arc: 40 }); }
     else if (e.k === 'keep') { (TV.keepFlash || (TV.keepFlash = [0, 0]))[e.t] = 0.3; TV.shake[0] = Math.max(TV.shake[0], 0.25); spark(e.t ? 1720 : 200, GROUND - 60 - Math.random() * 80, 1 - e.t); sndOnce('basehit', 700); }
-    else if (e.k === 'down') { const k = s.teams[e.t].keeps.find((q) => q.id === e.id); TV.shake[0] = 1.2; showBanner(`💥 ${k ? k.name + "'s" : 'A'} keep has fallen!`, TEAM[e.t].main, 2600); const x = e.t ? 1770 : 150; for (let i = 0; i < 50; i++) { const a = Math.random() * Math.PI, sp = 100 + Math.random() * 400; TV.parts.push({ x, y: GROUND - 120, vx: Math.cos(a) * sp, vy: -Math.sin(a) * sp, life: 1.2, max: 1.2, c: i % 2 ? '#9a8f80' : '#ff8a2a', r: 8, grav: true }); } }
+    else if (e.k === 'down') { const k = s.teams[e.t].keeps.find((q) => q.id === e.id); TV.shake[0] = 1.2; clip('crumble.ogg', { vol: 0.28, pan: e.t ? 0.5 : -0.5 }); showBanner(`💥 ${k ? k.name + "'s" : 'A'} keep has fallen!`, TEAM[e.t].main, 2600); const x = e.t ? 1770 : 150; for (let i = 0; i < 50; i++) { const a = Math.random() * Math.PI, sp = 100 + Math.random() * 400; TV.parts.push({ x, y: GROUND - 120, vx: Math.cos(a) * sp, vy: -Math.sin(a) * sp, life: 1.2, max: 1.2, c: i % 2 ? '#9a8f80' : '#ff8a2a', r: 8, grav: true }); } }
     else if (e.k === 'tier') { const ks = KEYS.filter((k) => U[k].tier === e.tier); TV.tierCards = { team: e.t, tier: e.tier, keys: ks }; TV.wheelUntil = now() + 5200; }
     else if (e.k === 'rally') { showBanner(`📯 ${TEAM[e.t].name} RALLY!`, TEAM[e.t].main, 1800); }
     else if (e.k === 'meteor') { TV.meteor.push({ x: X(e.x), t: e.t, life: 0.9, max: 0.9 }); sndOnce('whoosh', 100); }
@@ -938,7 +941,9 @@
       'Your team levels up as it spends: Tier 2 and 3 unlock Knights, Catapults, Healers, Giants, Dragons and Ballistas. Dragons fly: only shooters can hit them.',
       'Troops that reach the far wall smash its keeps. Knock down every enemy keep, or hold the front line deepest in their land when time runs out!',
     ],
-    fx: { start: 'start', ready: 'drum', charge: 'roar', tier: 'triumph', keepdown: 'explosion', meteor: 'boom', rally: 'bell', surge: 'swell', win: 'win' },
+    // charge is a recorded war horn (onFx), not a synth sound.
+    fx: { start: 'start', ready: 'drum', tier: 'triumph', keepdown: 'explosion', meteor: 'boom', rally: 'bell', surge: 'swell', win: 'win' },
+    onFx(f) { if (f.kind === 'charge') clip('war-horn.ogg', { vol: 0.24, jitter: 0.02 }); }, // the armies charge: a war horn
     music(s) {
       if (!s) return 'play';
       if (s.phase === 'over') return 'finale';

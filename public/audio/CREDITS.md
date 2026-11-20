@@ -6,4 +6,58 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 
 | Game | Kind | File | Title | Author | License | Source |
 |---|---|---|---|---|---|---|
+| alien | Music | `games/alien/little-green-men.ogg` | Little Green Men | HoliznaCC0 | CC0 1.0 | https://freemusicarchive.org/music/holiznacc0/stranger-than-fiction-halloween-sci-fi/little-green-men/ |
+| alien | Music | `games/alien/hello-from-the-children.ogg` | Hello from the children of planet Earth | hatmix | CC0 1.0 | https://opengameart.org/content/hello-from-the-children-of-planet-earth |
+| alien | Music | `games/alien/somethings-out-there.ogg` | Somethings Out There | HoliznaCC0 | CC0 1.0 | https://freemusicarchive.org/music/holiznacc0/stranger-than-fiction-halloween-sci-fi/somethings-out-there/ |
 | bid | Music | `games/bid/title-confusement-rag.mp3` | Confusement Rag | Skrjablin | CC0 1.0 | https://opengameart.org/node/25403 |
+| bomb | Music | `games/bomb/secret-agent-rock.ogg` | Secret Agent Rock | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Public_Domain_Soundtrack_Music_Album_One/secret-agent-rock/ |
+| bomb | Music | `games/bomb/ghost-surf-rock.ogg` | Ghost Surf Rock | Loyalty Freak Music | CC0 1.0 | https://freemusicarchive.org/music/Loyalty_Freak_Music/WITCHY_BATTY_SPOOKY_HALLOWEEN_IN_SEPTEMBER_/Ghost_Surf_Rock/ |
+| bomb | Music | `games/bomb/shooter-on-the-roof.ogg` | Shooter On The Roof | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/shooter-on-the-roof/ |
+| escape | Music | `games/escape/jazzy-detective.ogg` | Jazzy Detective | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/jazzy-detective/ |
+| escape | Music | `games/escape/gentle-rain.ogg` | Gentle Rain | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/gentle-rain/ |
+| escape | Music | `games/escape/hong-kong-noir.ogg` | Hong Kong Noir | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/hong-kong-noir/ |
+| escape | Music | `games/escape/photos-of-murder.ogg` | Photos Of Murder | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/photos-of-murder/ |
+| summon | Music | `games/summon/war-theme.ogg` | War Theme (ver 2) | Spring Spring | CC0 1.0 | https://opengameart.org/content/war-theme |
+| summon | Music | `games/summon/militaristic-tune.ogg` | Some Militaristic Tune | Spring Spring | CC0 1.0 | https://opengameart.org/content/some-militaristic-tune |
+| summon | Music | `games/summon/final-stand.ogg` | Final Stand | iamoneabe | CC0 1.0 | https://opengameart.org/content/final-stand |
+| summon | Music | `games/summon/a-legend-will-rise.ogg` | A Legend Will Rise | CodeManu | CC0 1.0 | https://opengameart.org/content/a-legend-will-rise-orchestral |
+| undercover | Music | `games/undercover/smooth-criminal.ogg` | Smooth Criminal | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/hide-and-sneak/smooth-criminal/ |
+| undercover | Music | `games/undercover/sneaky-detective.ogg` | Sneaky Detective | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/hide-and-sneak/sneaky-detective/ |
+| undercover | Music | `games/undercover/covert-operations.ogg` | Covert Operations | artisticdude | CC0 1.0 | https://opengameart.org/content/covert-operations |
+| zombie | Music | `games/zombie/music-box-spooky-waltz.ogg` | Spooky Waltz (4 Music Box Tracks) | Aureolus_Omicron | CC0 1.0 | https://opengameart.org/content/4-music-box-tracks |
+| zombie | Music | `games/zombie/night-of-the-streets.ogg` | Night of the Streets | nene | CC0 1.0 | https://opengameart.org/content/night-of-the-streets-horrorsuspense |
+| zombie | Music | `games/zombie/when-the-shadows-gather.ogg` | When the Shadows Gather | Tsorthan Grove | CC0 1.0 | https://opengameart.org/content/when-the-shadows-gather |
+| zombie | Music | `games/zombie/zombies-are-coming.ogg` | Zombies March | yd | CC0 1.0 | https://opengameart.org/content/zombies-march |
+| zombie | Music | `games/zombie/music-box-sad-tune.ogg` | Sad Tune (4 Music Box Tracks) | Aureolus_Omicron | CC0 1.0 | https://opengameart.org/content/4-music-box-tracks |
+| alien | Sound effect | `alien/airlock.ogg` | Sci-fi Sounds: doorOpen_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/sci-fi-sounds |
+| alien | Sound effect | `alien/sabotage-boom.ogg` | Sci-fi Sounds: lowFrequency_explosion_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/sci-fi-sounds |
+| alien | Sound effect | `alien/hyperspace.ogg` | Sci-fi Sounds: spaceEngineLarge_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/sci-fi-sounds |
+| alien | Sound effect | `alien/tractor-beam.ogg` | Sci-fi Sounds: forceField_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/sci-fi-sounds |
+| alien | Sound effect | `alien/switch.ogg` | UI Audio: switch7 | Kenney | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| bomb | Sound effect | `bomb/fuse-light.ogg` | Match - Strike and Light 02 | JarredGibb | CC0 1.0 | https://freesound.org/people/JarredGibb/sounds/248236/ |
+| bomb | Sound effect | `bomb/radio-static.ogg` | Static.wav | Jace | CC0 1.0 | https://freesound.org/people/Jace/sounds/17804/ |
+| bomb | Sound effect | `bomb/explosion.ogg` | Muffled Distant Explosion | NenadSimic | CC0 1.0 | https://freesound.org/people/NenadSimic/sounds/149966/ |
+| bomb | Sound effect | `bomb/stamp.ogg` | traditional stamp.wav | I.fekry | CC0 1.0 | https://freesound.org/people/I.fekry/sounds/470710/ |
+| bomb | Sound effect | `bomb/switch.ogg` | UI Audio: switch2 | Kenney | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| escape | Sound effect | `escape/lock-open.ogg` | RPG Audio: metalLatch | Kenney | CC0 1.0 | https://kenney.nl/assets/rpg-audio |
+| escape | Sound effect | `escape/thunder.ogg` | thunder | netaj | CC0 1.0 | https://freesound.org/people/netaj/sounds/193170/ |
+| escape | Sound effect | `escape/stamp.ogg` | es-stamp.wav | eddies2000 | CC0 1.0 | https://freesound.org/people/eddies2000/sounds/448474/ |
+| escape | Sound effect | `escape/handcuffs.ogg` | cuffs locking.mp3 | Mbytemama93 | CC0 1.0 | https://freesound.org/people/Mbytemama93/sounds/666604/ |
+| escape | Sound effect | `escape/typewriter.ogg` | Typewriter - single key - type 1.wav | yottasounds | CC0 1.0 | https://freesound.org/people/yottasounds/sounds/380138/ |
+| summon | Sound effect | `summon/war-horn.ogg` | war horn.wav | adharca | CC0 1.0 | https://freesound.org/people/adharca/sounds/539956/ |
+| summon | Sound effect | `summon/sword-clash.ogg` | Sword clash 1.wav | spycrah | CC0 1.0 | https://freesound.org/people/spycrah/sounds/471095/ |
+| summon | Sound effect | `summon/siege-thud.ogg` | Impact Sounds: impactWood_heavy_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/impact-sounds |
+| summon | Sound effect | `summon/crumble.ogg` | Stone Crumble 2 | Kastenfrosch | CC0 1.0 | https://freesound.org/people/Kastenfrosch/sounds/521956/ |
+| undercover | Sound effect | `undercover/folder.ogg` | document folder open-close #2.wav | Timbre | CC0 1.0 | https://freesound.org/people/Timbre/sounds/511699/ |
+| undercover | Sound effect | `undercover/stamp.ogg` | traditional stamp.wav | I.fekry | CC0 1.0 | https://freesound.org/people/I.fekry/sounds/470710/ |
+| undercover | Sound effect | `undercover/shutter.ogg` | Camera Shutter | roachpowder | CC0 1.0 | https://freesound.org/people/roachpowder/sounds/170229/ |
+| undercover | Sound effect | `undercover/ballot.ogg` | Casino Audio: card-place-1 | Kenney | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| zombie | Sound effect | `zombie/groan-1.ogg` | Burp Monster Zombie groan moan | EricsSoundschmiede | CC0 1.0 | https://freesound.org/people/EricsSoundschmiede/sounds/463721/ |
+| zombie | Sound effect | `zombie/groan-2.ogg` | SZ_Zombies_06.wav | PaulMorek | CC0 1.0 | https://freesound.org/people/PaulMorek/sounds/196722/ |
+| zombie | Sound effect | `zombie/groan-3.ogg` | Zombie | nanity05 | CC0 1.0 | https://freesound.org/people/nanity05/sounds/193759/ |
+| zombie | Sound effect | `zombie/gunshot.ogg` | Distant Gunshot | Resaural | CC0 1.0 | https://freesound.org/people/Resaural/sounds/541164/ |
+| zombie | Sound effect | `zombie/barricade.ogg` | Impact Sounds: impactWood_heavy_001 | Kenney | CC0 1.0 | https://kenney.nl/assets/impact-sounds |
+| zombie | Sound effect | `zombie/glass.ogg` | Impact Sounds: impactGlass_heavy_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/impact-sounds |
+| zombie | Sound effect | `zombie/creak.ogg` | RPG Audio: creak1 | Kenney | CC0 1.0 | https://kenney.nl/assets/rpg-audio |
+| zombie | Sound effect | `zombie/thunder.ogg` | thunder | netaj | CC0 1.0 | https://freesound.org/people/netaj/sounds/193170/ |
+| zombie | Sound effect | `zombie/body-fall.ogg` | Impact Sounds: impactSoft_heavy_000 | Kenney | CC0 1.0 | https://kenney.nl/assets/impact-sounds |

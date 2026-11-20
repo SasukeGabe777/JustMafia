@@ -116,7 +116,8 @@
       win: { bpm: 100, tracks: { b: { type: 'brass', bright: 1.2 }, s: { type: 'strings', mode: 'chord', center: 64, n: 4 }, d: { type: 'drums', kit: 'orch' } }, chords: 'Bb C | D', bars: 2, parts: { b: 'f5 - - - g5 - - - | a5 - - - - - - -', s: 'x-------x-------|x---------------', d: { y: '................|x...............', k: '................|x...............' } } },
       wipe: (X) => { X.chord('choir', ['d3', 'f3', 'a3'], 0, 2.5, 0.8); X.note('cbell', 'd3', 0, 3, 0.8); X.drum('hb', 0.4, 0.9); X.drum('hb', 1.6, 0.6); },
     },
-    fx: { chapter: 'chapter', allin: 'heartbeat', gift: 'safe', win: 'win', wipe: 'wipe' },
+    // chapter: recorded thunder in games/zombie.js onFx instead (the 'chapter' stinger stays available)
+    fx: { allin: 'heartbeat', gift: 'safe', win: 'win', wipe: 'wipe' },
     sfx: { groan: 'groan', heartbeat: 'heartbeat', hit: 'scare', fall: 'death', shield: 'safe', thunder: 'chapter' },
   };
 })();

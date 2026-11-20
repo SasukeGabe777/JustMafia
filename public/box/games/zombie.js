@@ -21,7 +21,12 @@
     cured: { icon: '🩹', word: 'CURED', cls: 'safe', col: '#7dff8a' },
   };
   const ANIM_SFX = { run: 'step', decoy: 'siren', climb: 'creak', fight: 'hit', hide: 'heartbeat', sneak: 'drag', drive: 'whoosh', search: 'click', swim: 'whoosh', hold: 'knock', rest: 'chime', talk: 'talk' };
-  const VOICE = { like: /guy|male|david|mark|daniel|george|ryan/i, accent: /en-(US|GB)/i, pitch: 0.82, rate: 1.0 };
+  // Quiet recorded sound effects (public/audio/sfx/zombie/, TV only; credits in credits.json there) for
+  // the sounds a recording does better than the synth; everything else stays BOX.sfx.
+  const clip = (f, o) => { try { return !!(window.BOX && BOX.audio && BOX.audio.clip && BOX.audio.clip('zombie/' + f, o)); } catch { return false; } };
+  const REC = { groan: [['groan-1.ogg', 'groan-2.ogg', 'groan-3.ogg'], 0.2], shot: [['gunshot.ogg'], 0.15], knock: [['barricade.ogg'], 0.3], shatter: [['glass.ogg'], 0.22], creak: [['creak.ogg'], 0.26], fall: [['body-fall.ogg'], 0.3] };
+  const snd = (name) => { const r = REC[name]; if (r && clip(r[0][Math.floor(Math.random() * r[0].length)], { vol: r[1] })) return; BOX.sfx(name); };
+  const VOICE = { like:/guy|male|david|mark|daniel|george|ryan/i, accent: /en-(US|GB)/i, pitch: 0.82, rate: 1.0 };
   const DANGER = ['', '⚠️ risky', '☠️ dangerous', '☠️☠️ deadly'];
   const danger = (o) => (o.danger ? `<i class="zs-t danger d${o.danger}">${DANGER[o.danger] || ''}</i>` : '');
   const tag = (o) => [danger(o), o.need ? `<i class="zs-t need">needs ${o.need}</i>` : '', o.help || o.flags ? `<i class="zs-t help">better with ${o.help || ''}${o.flags || ''}</i>` : '', o.gain ? `<i class="zs-t gain">find ${o.gain}</i>` : '', o.heal ? '<i class="zs-t heal">heals</i>' : '', o.cure ? '<i class="zs-t cure">cures bites</i>' : '', o.hero ? '<i class="zs-t hero">🦸 hero</i>' : ''].join('');
@@ -362,24 +367,24 @@
     else drawTally(g, s, t, u);
     g.restore();
     // sound + narration on each beat
-    cue('recap', 0, u, () => { BOX.sfx('groan'); say(s, 'Here’s what everyone chose. ' + O.recap, O.recapMs); });
+    cue('recap', 0, u, () => { snd('groan'); say(s, 'Here’s what everyone chose. ' + O.recap, O.recapMs); });
     groups.forEach((G, gi) => {
       const actEnd = G.verdictAt - CONSEQ;
-      cue('g' + gi, G.at, u, () => { BOX.sfx(ANIM_SFX[G.anim] || 'whoosh'); say(s, G.setup + '…', actEnd - G.at); });
+      cue('g' + gi, G.at, u, () => { snd(ANIM_SFX[G.anim] || 'whoosh'); say(s, G.setup + '…', actEnd - G.at); });
       cue('c' + gi, actEnd, u, () => {
-        if (G.role === 'hold' && G.anim === 'hold') BOX.sfx(O.groupOk === false ? 'shatter' : 'knock'); else BOX.sfx('groan');
-        if (G.people.some((p) => p.used === '🔫')) BOX.sfx('shot');
+        if (G.role === 'hold' && G.anim === 'hold') snd(O.groupOk === false ? 'shatter' : 'knock'); else snd('groan');
+        if (G.people.some((p) => p.used === '🔫')) snd('shot');
       });
       cue('v' + gi, G.verdictAt, u, () => say(s, G.line, G.at + G.ms - G.verdictAt));
       G.people.forEach((p, i) => cue(`p${gi}-${i}`, p.at, u, () => {
         if (G.per < 450 && p.fate === 'safe') return;
-        BOX.sfx({ safe: 'pop', hurt: 'hit', bitten: 'groan', dead: 'fall' }[p.fate] || 'pop');
+        snd({ safe: 'pop', hurt: 'hit', bitten: 'groan', dead: 'fall' }[p.fate] || 'pop');
         if (p.fate === 'dead') setTimeout(() => BOX.sfx('spirit'), 900);
       }));
     });
     if (O.fever) {
-      cue('fv', O.fever.at, u, () => { BOX.sfx('heartbeat'); say(s, O.fever.line, O.endAt - O.fever.at); });
-      O.fever.people.forEach((p, i) => cue('fp' + i, p.at, u, () => BOX.sfx(p.fate === 'turned' ? 'groan' : 'shield')));
+      cue('fv', O.fever.at, u, () => { snd('heartbeat'); say(s, O.fever.line, O.endAt - O.fever.at); });
+      O.fever.people.forEach((p, i) => cue('fp' + i, p.at, u, () => snd(p.fate === 'turned' ? 'groan' : 'shield')));
     }
     cue('end', O.endAt, u, () => { BOX.sfx(O.final ? 'win' : 'reveal'); say(s, O.final ? `${O.tally.made} survivors made the last flight!` : `${O.tally.made} still standing${O.tally.fell ? `, ${O.tally.fell} fell` : ''}.`, 4000); });
   }
@@ -518,7 +523,7 @@
     const box = el.querySelector('#zs-lui');
     for (const s of box.querySelectorAll('select[data-set]')) { s.onchange = () => { BOX.sfx('click'); L.set(s.dataset.set, s.value); }; s.onclick = (e) => e.stopPropagation(); }
     for (const b of box.querySelectorAll('[data-sup]')) b.onclick = () => { const s = b.querySelector('select'); s.selectedIndex = (s.selectedIndex + 1) % s.options.length; s.onchange(); };
-    box.querySelector('#start').onclick = async () => { const r = await L.start(); lobbyErr = r && !r.ok ? r.error || 'Could not start.' : ''; const e = box.querySelector('#lobby-err'); if (e) e.textContent = lobbyErr; if (r && r.ok) BOX.sfx('creak'); };
+    box.querySelector('#start').onclick = async () => { const r = await L.start(); lobbyErr = r && !r.ok ? r.error || 'Could not start.' : ''; const e = box.querySelector('#lobby-err'); if (e) e.textContent = lobbyErr; if (r && r.ok) snd('creak'); };
     box.querySelector('#add-bots').onclick = () => L.bots(5);
     box.querySelector('#rm-bots').onclick = () => L.removeBots();
     box.querySelector('#zs-pick').onclick = () => L.pick();
@@ -640,7 +645,12 @@
       'Bitten? Find a 🩹 medkit by the end of the next scene or you turn. Fall, and you’re a ghost: bless 🍀 or curse 🕯️ the living.',
       'Points for every scene and every new day you survive, for gear and past choices that save you, +500 for the rescue. Whoever gets furthest wins.',
     ],
-    fx: { chapter: 'thunder', scene: 'groan', allin: 'chime', gift: 'chime', win: 'win', wipe: 'lose' },
+    // chapter (thunder) and scene (a groan) are recorded clips (onFx), not synth sounds.
+    fx: { allin: 'chime', gift: 'chime', win: 'win', wipe: 'lose' },
+    onFx(f) {
+      if (f.kind === 'chapter') clip('thunder.ogg', { vol: 0.2, delay: 0.3 }); // a new day's chapter card: distant thunder
+      else if (f.kind === 'scene') snd('groan'); // a new scene: something groans in the dark
+    },
     lobbyTv,
     tv(el, s) {
       if (!s) return;

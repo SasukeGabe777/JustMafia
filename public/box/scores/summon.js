@@ -103,7 +103,8 @@
       bad: { bpm: 100, tracks: { b: { type: 'mute' } }, bars: 1, parts: { b: 'e4 - eb4 - d4 - - -' } },
       round: { bpm: 120, tracks: { t: { type: 'timp', vol: 0.6 } }, bars: 1, parts: { t: 'd3 . a2 . d3 - - -' } },
     },
-    fx: { ready: 'round', charge: 'rally', tier: 'tier', keepdown: 'keepdown', meteor: 'meteor', rally: 'rally', surge: 'surge', win: 'win' },
+    // charge: a recorded war horn in games/summon.js onFx instead
+    fx: { ready: 'round', tier: 'tier', keepdown: 'keepdown', meteor: 'meteor', rally: 'rally', surge: 'surge', win: 'win' },
     sfx: {},
   };
 })();

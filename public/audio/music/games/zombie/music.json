@@ -1,0 +1,81 @@
+{
+ "cues": {
+  "title": {
+   "file": "games/zombie/music-box-spooky-waltz.ogg",
+   "loopStart": 0,
+   "loopEnd": 106.667
+  },
+  "lobby": {
+   "file": "games/zombie/music-box-spooky-waltz.ogg",
+   "loopStart": 0,
+   "loopEnd": 106.667
+  },
+  "intro": {
+   "file": "games/zombie/night-of-the-streets.ogg",
+   "loopStart": 2,
+   "loopEnd": 146.42
+  },
+  "story": {
+   "file": "games/zombie/night-of-the-streets.ogg",
+   "loopStart": 2,
+   "loopEnd": 146.42
+  },
+  "think": {
+   "file": "games/zombie/when-the-shadows-gather.ogg",
+   "loopStart": 0,
+   "loopEnd": 153.6
+  },
+  "tense": {
+   "file": "games/zombie/zombies-are-coming.ogg",
+   "loopStart": 0,
+   "loopEnd": 84.004
+  },
+  "action": {
+   "file": "games/zombie/zombies-are-coming.ogg",
+   "loopStart": 0,
+   "loopEnd": 84.004
+  },
+  "lose": {
+   "file": "games/zombie/music-box-sad-tune.ogg",
+   "loopStart": 0,
+   "loopEnd": 156
+  }
+ },
+ "credits": [
+  {
+   "file": "games/zombie/music-box-spooky-waltz.ogg",
+   "title": "Spooky Waltz (4 Music Box Tracks)",
+   "author": "Aureolus_Omicron",
+   "source": "https://opengameart.org/content/4-music-box-tracks",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/zombie/night-of-the-streets.ogg",
+   "title": "Night of the Streets",
+   "author": "nene",
+   "source": "https://opengameart.org/content/night-of-the-streets-horrorsuspense",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/zombie/when-the-shadows-gather.ogg",
+   "title": "When the Shadows Gather",
+   "author": "Tsorthan Grove",
+   "source": "https://opengameart.org/content/when-the-shadows-gather",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/zombie/zombies-are-coming.ogg",
+   "title": "Zombies March",
+   "author": "yd",
+   "source": "https://opengameart.org/content/zombies-march",
+   "license": "CC0 1.0"
+  },
+  {
+   "file": "games/zombie/music-box-sad-tune.ogg",
+   "title": "Sad Tune (4 Music Box Tracks)",
+   "author": "Aureolus_Omicron",
+   "source": "https://opengameart.org/content/4-music-box-tracks",
+   "license": "CC0 1.0"
+  }
+ ]
+}
