@@ -1316,3 +1316,32 @@ Validated: `tools/test-pets.js` (5 tests), `tools/e2e-pets.js` (6 checks, screen
 JustGold once" fails the same way on the commit before this branch (ledger delta 10 vs 3 with
 today's date); its other tests pass. Limits: JustMafia's join creator still starts from the phone's
 stored draft (existing behaviour); the server keeps the account's pet when the phone doesn't send one.
+
+## Seasonal events v2: an event every half month, animated title screen, items and sets for every event (November 20, 2026)
+
+Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs/justgold.md`.
+- `public/shared/seasons.js` is now a rule, not a list: 24 kinds, 1st–15th and 16th–end of every month
+  (UTC), any year, ids `<kind>-<year>` (today: `harvest-2026`, Nov 16–30). Real holidays where there is
+  one (New Year, Valentine's, St Patrick's, Easter time, Earth Day, May flowers, Ocean Day, solstice,
+  summer fireworks, Moon landing, the August meteor shower, back to school, Talk Like a Pirate Day,
+  Halloween, Thanksgiving, winter holidays) and original events in the gaps (Neon Nights, Dino Days,
+  Robot Rumble, Blood Moon, Campfire Nights, Gingerbread Town). Same API (`currentSeason`, `nextSeason`,
+  `daysLeft`, `SEASONS`) plus `nextOfKind`, `seasonById`, `isSeasonId`; `?eventDate=` previews a date.
+- Title screen: `public/hub-events.js` + a small block in `hub.css`: one animated canvas scene per
+  event (leaves and a harvest moon, snow and aurora, red moon and bats, fireworks, jellyfish, synthwave
+  grid, lanterns, …), shaded in the middle for readability, reduced-motion aware, falls back to soft
+  party lights. The header layout (event card beside Party Mode) is unchanged.
+- 121 new limited items (18 kinds × 6–7: hat, outfit, two extras, shoes for most, effect, nameplate),
+  drawn in their own file `public/avatar-events.js` through small hooks in `avatar.js drawSmooth`
+  (hat, hatBack, details, behind, hand, chest, face, back, shoe, effect); script tag on every page that
+  loads avatar.js. A full themed set per event (`ev-<kind>`, 4–5 pieces), bundle only during its event,
+  set bonus in every game while it runs. Event challenges (3 per kind) and the pass track per kind
+  (nameplate free at tier 10, the rest premium).
+- Validated: `test-shop-season` (12, incl. calendar for 2026–2028, holidays, event sets, every event's
+  pass, every item drawn on both bodies), `test-progress` (14), `test-season`, `test-justgold` (after
+  merging main's fix), `test-box-kit`, `test-expressions`, `test-pets`, `e2e-shop`, `e2e-onboard`,
+  `e2e-pets`; screenshots of the hub for all 24 events at 1920×1080 and 8 at 390 px, the shop's Event
+  tab (phone + wide, try-on, bundle) and every event set on female and male characters were looked at.
+- Limits: the main scene features sit at the edges, so on a TV most of the scene shows around the
+  tiles rather than behind them; JustMafia's own title screen keeps its look; the old 6-kind event
+  windows changed (e.g. Harvest Fest is now Nov 16–30, not the whole month).

@@ -50,16 +50,33 @@ Rewards: XP + JG (weekly and event ones also a Fate Token, as JustMafia's weekly
 
 ## The seasonal event and its season pass
 
+**The calendar (events v2).** A new event every half month, all year, no gaps: the 1st–15th and the
+16th–end of each month (UTC), by rule (`seasons.js CALENDAR`, works for any year), ids `<kind>-<year>`.
+Real holidays where there is one, original box events in between:
+
+| Window | Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1st–15th | 🎊 New Year Countdown | 💘 Sweetheart Week | 🌃 Neon Nights* | 🌸 Spring Bloom | 🪅 Fiesta Flowers | 🐙 Deep Sea | 🎇 Firework Fest | ☄️ Meteor Shower | 🤖 Robot Rumble* | 🌕 Blood Moon* | 🏕️ Campfire Nights* | 🍪 Gingerbread Town* |
+| 16th–end | 🏮 Lantern Festival | 🎭 Carnival | ☘️ Lucky Clover | 🌍 Green Earth | 🦖 Dino Days* | 🏖️ Summer Splash | 🚀 Space Week | 🎒 Back to School | 🏴‍☠️ Pirate Week | 🎃 Spooky Season | 🍂 Harvest Fest | ❄️ Frostival |
+
+(* an original event.) API: `currentSeason(now)` (always one), `nextSeason`, `nextOfKind(kind)`,
+`seasonById(id)`, `isSeasonId`, `seasonsBetween`, `daysLeft`; `SEASONS` is a convenience list (last year
+to two years ahead). On a page, `?eventDate=YYYY-MM-DD` previews any date (testing only; `clock()`).
+**Title screen**: `public/hub-events.js` paints the running event's animated scene behind the menu
+(one canvas, still parts cached, ~30 fps, paused in a hidden tab, one still frame with reduced motion,
+`.ev-shade` keeps the tiles readable; no event → soft party lights).
+
 The running event comes from `seasons.js currentSeason()` (dates, name, icon, theme colours).
 It shows as a banner on the title screen, the TV lobby (games with the standard lobby), the box
 phone's join screen, the profile view and the shop strip, with "Event ends in N days".
-Each event has 2–3 **event challenges** (`EVENT_CHALLENGES` in challenges.js, keyed by season id;
-unknown seasons get three generic ones).
+Each event has 3 **event challenges** (`EVENT_CHALLENGES` in challenges.js, keyed by kind: ids
+`ev:<kind>:<what>`, counts sized for a half-month event; unknown ids get three generic ones).
 
 **Season pass**: 25 tiers, 120 season XP each (season XP = all XP earned while the event runs).
-Free track: JG every other tier (10–30) and on tiers 5/15, a "<Event> Hero" title at tier 25.
+Free track: JG every other tier (10–30) and on tiers 5/15, the event's nameplate at tier 10
+(`FREE_ITEM_TIER`), a "<Event> Hero" title at tier 25.
 Premium track (195 JG, from the box profile or JustMafia's phone): JG on every tier (15–35) and the
-event's limited items from `season.items` (filled by the shop), spread over the track with the
+event's other limited items from `season.items`, spread over the track with the
 last one at tier 25. Until the shop fills them, the old Blood Moon pass items are used. Ids that
 are not in the catalog / gear are skipped (that tier pays JG); an item you already own pays
 25 JG. Buying late pays every tier already reached. A new event starts a fresh pass.

@@ -115,12 +115,20 @@ Rules live in `public/shared/shop-season.js` (shared by the server and the shop 
 enforced by the server (`profiles.js` `buy` / `buyGear` / `buySet` / `wearSet`, `box/gold.js`). The
 store's clock is `ProfileStore.now()` (`setClock(fn)` in tests).
 
-**Limited-time event items.** Each event in `public/shared/seasons.js` (Harvest Fest, Frostival,
-Sweetheart Week, Spring Bloom, Summer Splash, Spooky Season) has a `kind` and 7–9 new character items
-(`seasons.js ITEMS[kind]`: hats, outfits, extras, shoes, effects, nameplates; 48 in all). They can be
-bought only while an event of that kind runs; the server refuses them otherwise ("Limited: sold
-during Frostival (back 1 Dec)"). Owned items stay owned and wearable. The same ids come back every
-year: `harvest-2027` and `frost-2027` are already listed with the same items.
+**Limited-time event items.** Events run every half month (events v2, see `docs/progress.md`): 24
+kinds, each with 6–9 character items (`seasons.js ITEMS[kind]`: hats, outfits, extras, shoes, effects,
+nameplates; 169 in all, the 121 newer ones drawn in `public/avatar-events.js`, nameplates in
+`shop.css` + `town.js`). They can be bought only while an event of that kind runs; the server refuses
+them otherwise ("Limited: sold during Frostival (back 16 Dec)"). Owned items stay owned and wearable.
+The same ids come back every year (`nextOfKind`).
+
+**Event sets.** Every kind also has a full themed set (`seasons.js SET_ITEMS`, `shop-season.js
+EVENT_SETS`, ids `ev-<kind>`: hat + outfit + accessory + shoes where it has some + effect). The Event tab
+shows it first (try on, "Buy the rest" at the usual bundle discount); the bundle is sold only while
+its event runs (`bundle.locked` otherwise). Wearing the whole set during its event pays the set bonus
+(+5%, 1–3 JG) in **every** game (`setBonus(game, look, n, now)`); out of season it is just an outfit.
+`shop:state` lists the game sets plus the running event's set and any event set you own a piece of
+(`sets[i].event`, `eventName`, `eventOn`; `eventSet`).
 
 **New items are not on the shelf.** Event items and the new theme-set pieces are listed in
 `options.js OPTIONS.SPECIAL` and marked `special` in the catalog, so `STOCKABLE` / `nextStock` (the
