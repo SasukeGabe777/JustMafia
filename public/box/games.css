@@ -118,6 +118,7 @@
 .dk-pads { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; height: 130px; }
 .dk-pads button { font: inherit; font-size: 26px; font-weight: 700; border: 0; border-radius: 18px; background: var(--yellow); color: #2a1650; touch-action: manipulation; }
 .dk-pads button:active { background: var(--pink); color: #fff; }
+.dk-pads button.next { box-shadow: 0 0 0 4px #fff inset, 0 0 18px rgba(255, 210, 63, 0.9); }
 .dk-result { position: absolute; inset: 20% 8% auto; background: #1b1240; border: 3px solid var(--yellow); border-radius: 20px; padding: 20px; text-align: center; z-index: 3; }
 .dk-result h2 { margin: 0 0 8px; } .dk-result .lvup { color: var(--yellow); font-weight: 700; font-size: 20px; }
 .dk-result .btn { width: 100%; margin-top: 10px; }

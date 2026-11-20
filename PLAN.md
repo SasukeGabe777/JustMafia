@@ -1249,3 +1249,28 @@ Validated: `tools/test-progress.js` (14 tests, incl. real bot games of 5 box gam
 JustMafia sims, sockets), updated `test-season.js`, `e2e-shop.js`; screenshots looked at.
 Limits: games with their own TV lobby (e.g. Most Likely To…) don't show the lobby banner; players
 without a linked wallet earn nothing until the phone links it (opening the profile does).
+
+## JustRaiseDucks training mini-games: hitboxes, feel and drawn art (November 20, 2026)
+
+- Every mini-game hit test now uses the numbers the drawing uses: `DUCK_ART.duckBox` gives the duck's
+  body box, feet zone and round core from the same scale/stage/bob as `drawDuck`. `?dkdebug=1` on the
+  phone page draws all hitboxes (and keeps a miss log on `DUCK_MINI.dbg`).
+- Sky Rings: a ring is judged once, when the duck's centre crosses its plane: through the opening
+  (PERFECT near the centre), clipping the rim, or missed. The ring's back half is drawn behind the duck
+  and its front half over it. Ring openings are the duck's size plus a margin per difficulty; storm
+  cloud hitboxes are the drawn puffs. Hold-to-fly steers toward a target speed (quick reversals,
+  nose tilts with speed); gusts stay well under top speed; rings spawn within reach.
+- Hurdle Dash: hurdles trip only the feet zone; floatier jump (150 px, ~0.68 s) so each hurdle has
+  ~0.2 s of timing slack; birds fly just above a grown duck's head; the ground strip no longer smears.
+- Paddle Power: a real beat clock (no jump at stage changes), early/late feedback, the next pad glows,
+  a stroke meter. Cliff Climb: the grab point is a drawn dot at the end of the duck's wing, the
+  PERFECT band is drawn at its true width, loose rocks never overlap the hold. Bug Snack: tap radius
+  = drawn body + a fingertip of slop; bees only sting on a direct tap; moving bugs stay on screen.
+- Emoji used as sprites replaced with original canvas art (`DUCK_ART.drawIcon/drawBug/drawBird`): corn,
+  birds, bugs, bees, beetles, crystals, rocks, storm clouds, the climbing wing; farm decorations,
+  trophies, effects, mood faces and the training bubble; race event icons and cheers. Emoji remain
+  only in text labels.
+- Validated: test-box-ducks, test-box-kit, the ducks sections of e2e-box; phone-size (390x844)
+  screenshots of every mini-game with and without hitboxes; scripted perfect-play bots on Easy and
+  Hard finish runs with no unfair misses (Hard rings: an occasional clip right as a gust starts).
+  Not yet played on real phones.

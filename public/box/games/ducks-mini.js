@@ -5,23 +5,32 @@
 //  - combos (×2 from 8, ×3 from 16) and PERFECT timing reward skilled players
 //  - each run gets faster in three stages, with new things appearing as it goes
 // Games: Hurdle Dash (Run), Paddle Power (Swim), Sky Rings (Fly), Cliff Climb (Climb), Bug Snack (Stamina).
+// Every hit test uses the same numbers the drawing uses (DUCK_ART.duckBox for the duck, and
+// each object's drawn size), so what you see is what counts. Add ?dkdebug=1 to the page URL
+// to draw the hitboxes on top.
 (function () {
   const A = () => window.DUCK_ART;
   const TIPS = {
-    hurdles: 'Tap to jump (tap again in the air to double-jump). Jump hurdles, grab corn 🌽, but stay low under birds!',
-    paddle: 'Tap LEFT, RIGHT, LEFT, RIGHT… Strokes right on the beat ⭕ count double!',
+    hurdles: 'Tap to jump (tap again in the air to double-jump). Jump hurdles, grab corn, but stay low under birds!',
+    paddle: 'Tap LEFT, RIGHT, LEFT, RIGHT… Strokes when the gold ring meets the duck count double!',
     rings: 'Hold to fly up, let go to glide down. Fly through the middle of the rings for PERFECT. Dodge storm clouds!',
-    climb: 'Tap when your hand is over the GREEN hold. Blue crystals are worth more. Never grab a red loose rock!',
+    climb: 'Tap when your wing is over the GREEN hold (the middle stripe is PERFECT). Crystals are worth more. Never grab a red loose rock!',
     bugs: 'Tap bugs fast for PERFECT. Golden beetles are worth 3. Don’t tap the bees!',
   };
   const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch { /* none */ } };
   const TAU = Math.PI * 2;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const DEBUG = (() => { try { return /[?&]dkdebug=1\b/.test(location.search) || localStorage.getItem('dk.debug') === '1'; } catch { return false; } })();
+  // circle vs. rectangle overlap
+  const circRect = (cx, cy, r, b) => { const dx = cx - clamp(cx, b.l, b.r), dy = cy - clamp(cy, b.t, b.b); return dx * dx + dy * dy < r * r; };
+  function rrect(g, x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
   function play(kind, seconds, duck, done, opts = {}) {
     const SP = opts.speed || 1, TARGET = opts.target || 0, DIFF = opts.diff || 'medium';
     const DL = { easy: '🌱 Easy', medium: '⚡ Medium', hard: '🔥 Hard' }[DIFF] || '';
     // Hit windows: Easy forgives a little more, Hard a little less.
     const EASE = { easy: 1.3, medium: 1, hard: 0.85 }[DIFF] || 1;
+    const pick = (o) => (o[DIFF] != null ? o[DIFF] : o.medium);
     const seenKey = 'dk.seen.' + kind; let first = false;
     try { first = !localStorage.getItem(seenKey); localStorage.setItem(seenKey, '1'); } catch { /* private mode */ }
     const ov = document.createElement('div'); ov.className = 'dk-over';
@@ -30,16 +39,19 @@
       <canvas></canvas>${kind === 'paddle' ? '<div class="dk-pads"><button data-pad="L">LEFT</button><button data-pad="R">RIGHT</button></div>' : ''}
       <div class="dk-tip ${first ? 'first' : ''}">${first ? '<b>How to play</b>' : ''}${TIPS[kind]}</div><div class="dk-ready">3</div>`;
     document.body.appendChild(ov); document.body.classList.add('dk-lock');
-    const close = () => { ov.remove(); document.body.classList.remove('dk-lock'); };
+    const close = () => { ov.remove(); document.body.classList.remove('dk-lock'); if (window.DUCK_MINI.dbg && window.DUCK_MINI.dbg.ov === ov) window.DUCK_MINI.dbg = null; };
     // iPhones start selecting text / show the magnifier on a held finger: stop that here.
     ov.addEventListener('touchstart', (e) => { if (!e.target.closest('button')) e.preventDefault(); }, { passive: false });
     const cv = ov.querySelector('canvas'), g = cv.getContext('2d');
     const DPR = Math.min(2, window.devicePixelRatio || 1), W = ov.clientWidth, H = ov.clientHeight - (kind === 'paddle' ? 130 : 0);
     cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.flex = 'none'; g.setTransform(DPR, 0, 0, DPR, 0, 0);
-    const drawDuck = A().drawDuck, stageOf = (el) => (el < seconds / 3 ? 0 : el < (seconds * 2) / 3 ? 1 : 2);
+    // All game coordinates are CSS pixels (the DPR transform above maps them to the backing
+    // store), and sizes scale with U so a big phone gets a proportionally bigger course.
+    const U = clamp(Math.min(W / 390, H / 740), 0.8, 1.6);
+    const ART = A(), drawDuck = ART.drawDuck, stageOf = (el) => (el < seconds / 3 ? 0 : el < (seconds * 2) / 3 ? 1 : 2);
     const SM = [1, 1.15, 1.32]; // speed per stage
     let score = 0, combo = 0, bestCombo = 0, t0 = 0, last = 0, over = false, holding = false, started = false, stage = 0;
-    const stats = { ok: 0, perfect: 0, miss: 0 };
+    const stats = { ok: 0, perfect: 0, miss: 0 }, log = []; // log: what went wrong (debug only)
     const fx = { floats: [], parts: [], shake: 0 };
     const hud = () => {
       const el = ov.querySelector('.sc'); el.textContent = score;
@@ -64,208 +76,420 @@
     // A mistake: only the combo is lost (and a little shake).
     function bad(x, y, text = 'Oops!', lose = 0) {
       if (combo >= 5) float(x, y - 26, 'Combo lost', '#ffb3b3', 18);
-      combo = 0; stats.miss++; score = Math.max(0, score - lose);
+      combo = 0; stats.miss++; score = Math.max(0, score - lose); if (DEBUG) log.push(text);
       float(x, y, lose ? `${text} −${lose}` : text, '#ff8a8a', 22); fx.shake = 10; BOX.sfx('boo'); buzz(60); hud();
     }
-    const quietMiss = () => { combo = 0; hud(); };
+    const quietMiss = (why = 'miss') => { combo = 0; hud(); if (DEBUG) log.push(why); };
+    // debug drawing helpers (only with ?dkdebug=1)
+    const dbgRect = (b, c = '#ff00ff') => { g.strokeStyle = c; g.lineWidth = 1.5; g.strokeRect(b.l, b.t, b.r - b.l, b.b - b.t); };
+    const dbgCirc = (x, y, r, c = '#00e5ff') => { g.strokeStyle = c; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, Math.max(0.5, r), 0, TAU); g.stroke(); };
+    const dbgText = (x, y, t, c = '#fff') => { g.font = '600 11px monospace'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(x - 2, y - 10, g.measureText(t).width + 4, 13); g.fillStyle = c; g.fillText(t, x, y); };
+    const sky = (top, bottom, h = H) => { const s = g.createLinearGradient(0, 0, 0, h); s.addColorStop(0, top); s.addColorStop(1, bottom); g.fillStyle = s; g.fillRect(0, 0, W, h); };
+    function puffCloud(x, y, s, col) { g.fillStyle = col; for (const [dx, dy, r] of [[0, 0, 22], [24, -8, 18], [46, 0, 20], [22, 6, 18]]) { g.beginPath(); g.arc(x + dx * s, y + dy * s, r * s, 0, TAU); g.fill(); } }
 
     // ---- the five games ----
     const S = { items: [], spawn: 0.6, stun: 0, t: 0 };
     const GAMES = {
+      // ---------------- Hurdle Dash ----------------
+      // Ground line S.surf; the duck's feet stand on it. Hurdles are hit against the duck's
+      // feet zone (legs + belly), birds and corn against its body box.
       hurdles: {
-        init() { S.ground = H * 0.72; S.y = S.ground; S.vy = 0; S.jumps = 0; S.scroll = 0; },
-        press() { if (S.jumps < 2) { S.vy = -H * (S.jumps ? 1.2 : 1.55); S.jumps++; S.buf = 0; BOX.sfx('pop'); } else S.buf = 0.16; }, // a tap just before landing still jumps
+        init() {
+          S.surf = Math.round(H * 0.74); S.h = 0; S.vy = 0; S.jumps = 0; S.scroll = 0; S.buf = 0;
+          S.ds = 1.7 * U; S.dx = Math.round(W * 0.26);
+          S.ss = ART.duckBox(0, 0, S.ds, 'stand', 0, duck.stage).ss;
+          S.G = 2600 * U; S.V1 = Math.sqrt(2 * S.G * 150 * U); S.V2 = S.V1 * 0.75; // a 150 px jump, ~0.68 s in the air (clears a hurdle with ~0.2 s to spare)
+          S.bs = 1.15 * U; S.birdR = 11 * S.bs; // bird body (hit) radius
+          S.birdH = 39 * S.ds + 14 * U + S.birdR; // above a grown duck's head, with room to spare
+          S.slack = pick({ easy: 5, medium: 2, hard: 0 }) * U;
+        },
+        mode() { return S.stun > 0 ? 'stand' : S.h > 0.5 ? 'fly' : 'run'; },
+        y() { return S.surf - S.h - 18 * S.ss; },
+        box(el) { return ART.duckBox(S.dx, this.y(), S.ds, this.mode(), el, duck.stage); },
+        hurdleRect(it) { const hh = (it.tall ? 62 : 42) * U; return { l: it.x - 15 * U, r: it.x + 15 * U, t: S.surf - hh, b: S.surf + 4 * U }; },
+        press() { if (S.jumps < 2) { S.vy = -(S.jumps ? S.V2 : S.V1); S.jumps++; S.buf = 0; BOX.sfx('pop'); } else S.buf = 0.15; }, // a tap just before landing still jumps
         update(dt, el) {
-          const spd = W * 0.46 * SP * SM[stage] * (S.stun > 0 ? 0.45 : 1);
-          S.vy += H * 4.2 * dt; S.y = Math.min(S.ground, S.y + S.vy * dt); if (S.y >= S.ground) { S.vy = 0; S.jumps = 0; if (S.buf > 0) this.press(); }
-          S.buf = Math.max(0, (S.buf || 0) - dt);
+          const spd = 185 * U * SP * SM[stage] * (S.stun > 0 ? 0.5 : 1);
+          if (S.h > 0 || S.vy < 0) { S.vy += S.G * dt; S.h -= S.vy * dt; if (S.h <= 0) { S.h = 0; S.vy = 0; S.jumps = 0; if (S.buf > 0) this.press(); } }
+          S.buf = Math.max(0, S.buf - dt);
           S.scroll += spd * dt; S.stun -= dt;
           S.spawn -= dt;
           if (S.spawn <= 0) {
-            const r = Math.random(), birdRate = DIFF === 'easy' ? (stage === 2 ? 0.14 : 0) : stage >= 1 ? 0.22 : 0;
-            if (r < birdRate) S.items.push({ k: 'bird', x: W + 30, y: S.ground - H * 0.2 });
-            else if (r < 0.42) S.items.push({ k: 'corn', x: W + 30, y: S.ground - H * (0.16 + Math.random() * 0.12) });
-            else S.items.push({ k: 'hurdle', x: W + 30, tall: stage === 2 && Math.random() < 0.35 });
+            const lastIt = S.items[S.items.length - 1], room = !lastIt || lastIt.x < W - 170 * U; // never a bird right on top of a hurdle
+            const r = Math.random(), birdRate = DIFF === 'easy' ? (stage === 2 ? 0.14 : 0) : stage >= 1 ? 0.22 : 0, x = W + 40 * U;
+            if (r < birdRate && room) S.items.push({ k: 'bird', x, y: S.surf - S.birdH, ph: Math.random() * TAU });
+            else if (r < 0.42) S.items.push({ k: 'corn', x, y: S.surf - [30, 95, 150][Math.floor(Math.random() * 3)] * U, ph: Math.random() * TAU });
+            else S.items.push({ k: 'hurdle', x, tall: stage === 2 && Math.random() < 0.35, clear: Infinity });
             S.spawn = (0.8 + Math.random() * 0.55) / (SP * SM[stage]);
           }
-          const dx = W * 0.25;
+          const b = this.box(el), fb = b.feet, f = S.slack;
           for (const it of S.items) {
-            it.x -= spd * dt * (it.k === 'bird' ? 1.35 : 1);
-            const near = Math.abs(it.x - dx) < 22;
+            it.x -= spd * dt * (it.k === 'bird' ? 1.2 : 1);
             if (it.k === 'hurdle') {
-              const top = S.ground - (it.tall ? 52 : 34);
-              if (near && !it.hit) { if (S.y > top + 6 + (EASE - 1) * 24) { it.hit = true; S.stun = 0.6; bad(dx, S.ground - 60, 'Trip!'); } else it.clear = Math.min(it.clear == null ? 1e9 : it.clear, top - S.y); }
-              if (!it.done && !it.hit && it.x < dx - 24) { it.done = true; good(dx, S.ground - 70, it.tall ? 2 : 1, it.clear < 30); }
+              if (it.hit || it.done) continue;
+              const hr = this.hurdleRect(it);
+              if (fb.r > hr.l + f && fb.l < hr.r - f) { // over the hurdle right now
+                const gap = hr.t - fb.b;
+                if (gap < -f) { it.hit = true; it.fall = 0; S.stun = 0.6; bad(S.dx, S.surf - 70 * U, 'Trip!'); }
+                else it.clear = Math.min(it.clear, gap);
+              } else if (hr.r < fb.l) { it.done = true; good(S.dx, S.surf - 80 * U, it.tall ? 2 : 1, it.clear < 20 * U); }
             } else if (it.k === 'corn') {
-              if (!it.done && near && Math.abs(S.y - 20 - it.y) < 30) { it.done = true; good(it.x, it.y, 1, false, '🌽'); }
+              if (!it.done && circRect(it.x, it.y + Math.sin(el * 6 + it.ph) * 4 * U, 12 * U, b)) { it.done = true; good(it.x, it.y, 1, false, 'Corn'); }
             } else if (it.k === 'bird') {
-              if (!it.done && Math.abs(it.x - dx) < 26 && Math.abs(S.y - 20 - it.y) < 28) { it.done = true; S.stun = 0.5; bad(dx, S.ground - 80, 'Bonk!'); }
-              if (!it.done && it.x < dx - 30) { it.done = true; good(dx, S.ground - 70, 1, false, 'Dodge'); }
+              const by = it.y + Math.sin(el * 5 + it.ph) * 3 * U;
+              if (!it.done && circRect(it.x, by, S.birdR, { l: b.l + f, r: b.r - f, t: b.t + f, b: b.b - f })) { it.done = true; it.hit = true; S.stun = 0.5; bad(S.dx, S.surf - 90 * U, 'Bonk!'); }
+              if (!it.done && it.x + S.birdR < b.l) { it.done = true; good(S.dx, S.surf - 80 * U, 1, false, 'Dodge'); }
             }
           }
-          S.items = S.items.filter((i) => i.x > -60 && !(i.k === 'corn' && i.done));
+          for (const it of S.items) if (it.fall != null) it.fall = Math.min(1, it.fall + dt * 6);
+          S.items = S.items.filter((i) => i.x > -60 * U && !(i.k === 'corn' && i.done));
         },
         draw(el) {
-          const gr = S.ground;
-          const sky = g.createLinearGradient(0, 0, 0, gr); sky.addColorStop(0, '#7cc8ff'); sky.addColorStop(1, '#d8f1ff'); g.fillStyle = sky; g.fillRect(0, 0, W, gr);
-          g.fillStyle = '#9fd39a'; g.beginPath(); g.moveTo(0, gr); for (let x = 0; x <= W; x += 16) g.lineTo(x, gr - 50 - Math.sin((x + S.scroll * 0.3) / 70) * 18); g.lineTo(W, gr); g.fill();
-          g.fillStyle = '#6cc26a'; g.fillRect(0, gr + 18, W, H); g.fillStyle = '#d9a86c'; g.fillRect(0, gr + 12, W, 10);
-          g.fillStyle = 'rgba(120,80,40,.35)'; for (let x = -((S.scroll) % 40); x < W; x += 40) g.fillRect(x, gr + 15, 16, 3);
+          const gr = S.surf;
+          sky('#7cc8ff', '#d8f1ff', gr);
+          g.fillStyle = '#fff3b0'; g.beginPath(); g.arc(W * 0.82, H * 0.14, 26 * U, 0, TAU); g.fill();
+          for (let i = 0; i < 4; i++) { const x = ((i * 160 - S.scroll * 0.12) % (W + 160) + W + 160) % (W + 160) - 80; puffCloud(x, H * 0.1 + (i % 2) * 60 * U, 0.8 * U, 'rgba(255,255,255,.85)'); }
+          g.fillStyle = '#9fd39a'; g.beginPath(); g.moveTo(0, gr); for (let x = 0; x <= W; x += 16) g.lineTo(x, gr - 60 * U - Math.sin((x + S.scroll * 0.3) / 70) * 18 * U); g.lineTo(W, gr); g.fill();
+          g.fillStyle = '#86c97f'; g.beginPath(); g.moveTo(0, gr); for (let x = 0; x <= W; x += 16) g.lineTo(x, gr - 26 * U - Math.sin((x + S.scroll * 0.6) / 45) * 9 * U); g.lineTo(W, gr); g.fill();
+          // the running path and the grass below (everything under the sky is repainted each frame)
+          g.fillStyle = '#d9a86c'; g.fillRect(0, gr - 4 * U, W, 18 * U);
+          g.fillStyle = 'rgba(120,80,40,.35)'; for (let x = -(S.scroll % 40); x < W; x += 40) g.fillRect(x, gr + 4 * U, 16 * U, 3 * U);
+          g.fillStyle = '#6cc26a'; g.fillRect(0, gr + 14 * U, W, H);
+          g.fillStyle = '#5db35b'; for (let x = -(S.scroll % 60); x < W; x += 60) for (let r = 0; r < 4; r++) g.fillRect(x + r * 23 % 60, gr + 30 * U + r * 38 * U, 26 * U, 5 * U);
+          // the duck's shadow (smaller the higher it jumps)
+          const sh = clamp(1 - S.h / (220 * U), 0.3, 1);
+          g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(S.dx, gr + 2 * U, 20 * S.ss * sh, 4 * U * sh, 0, 0, TAU); g.fill();
           for (const it of S.items) {
-            if (it.k === 'hurdle') { const h = it.tall ? 52 : 34; g.fillStyle = '#fff'; g.fillRect(it.x - 12, gr - h + 2, 5, h + 12); g.fillRect(it.x + 8, gr - h + 2, 5, h + 12); g.fillStyle = it.tall ? '#ff8c42' : '#e63946'; g.fillRect(it.x - 15, gr - h, 31, 8); }
-            else if (it.k === 'corn') { g.font = '30px sans-serif'; g.textAlign = 'center'; g.fillText('🌽', it.x, it.y + Math.sin(el * 6 + it.x) * 4); g.textAlign = 'left'; }
-            else if (it.k === 'bird') { g.font = '34px sans-serif'; g.textAlign = 'center'; g.save(); g.translate(it.x, it.y); g.scale(-1, 1); g.fillText('🐦', 0, 10 + Math.sin(el * 10) * 4); g.restore(); g.textAlign = 'left'; }
+            if (it.k === 'hurdle') {
+              const hr = this.hurdleRect(it), hh = gr - hr.t;
+              g.save(); g.translate(it.x, gr);
+              if (it.fall != null) g.rotate(it.fall * 1.35); // knocked over
+              g.fillStyle = 'rgba(0,0,0,.15)'; g.fillRect(-15 * U, 2 * U, 30 * U, 3 * U);
+              g.fillStyle = '#f4f4f4'; g.strokeStyle = 'rgba(60,40,30,.45)'; g.lineWidth = 1;
+              for (const px of [-12, 8]) { g.fillRect(px * U, -hh, 4 * U, hh + 4 * U); g.strokeRect(px * U, -hh, 4 * U, hh + 4 * U); g.fillRect((px - 2) * U, 0, 8 * U, 4 * U); }
+              g.fillStyle = it.tall ? '#ff8c42' : '#e63946'; g.fillRect(-15 * U, -hh, 30 * U, 9 * U);
+              g.fillStyle = '#fff'; for (const sx of [-8, 3]) g.fillRect(sx * U, -hh, 5 * U, 9 * U);
+              g.strokeStyle = 'rgba(60,20,20,.55)'; g.strokeRect(-15 * U, -hh, 30 * U, 9 * U);
+              g.restore();
+            } else if (it.k === 'corn') {
+              const cy = it.y + Math.sin(el * 6 + it.ph) * 4 * U;
+              g.fillStyle = 'rgba(255,230,120,.35)'; g.beginPath(); g.arc(it.x, cy, 16 * U, 0, TAU); g.fill();
+              ART.drawIcon(g, 'corn', it.x, cy, 30 * U, el);
+            } else if (it.k === 'bird') ART.drawBird(g, it.x, it.y + Math.sin(el * 5 + it.ph) * 3 * U, S.bs * (it.hit ? 0.9 : 1), el + it.ph);
           }
-          const air = S.y < S.ground - 2;
-          drawDuck(g, W * 0.25, S.y - 4, 1.6, duck.color, duck.hat, el, S.stun > 0 ? 'stand' : air ? 'fly' : 'run', false, duck.stage);
+          drawDuck(g, S.dx, this.y(), S.ds, duck.color, duck.hat, el, this.mode(), false, duck.stage);
+          if (S.stun > 0) ART.drawIcon(g, 'dizzy', S.dx + 6 * U, this.y() - 30 * S.ss, 30 * U, el);
+        },
+        debug(el) {
+          const b = this.box(el); dbgRect(b, '#ff00ff'); dbgRect(b.feet, '#00e5ff');
+          g.strokeStyle = 'rgba(255,255,255,.6)'; g.beginPath(); g.moveTo(0, S.surf); g.lineTo(W, S.surf); g.stroke();
+          for (const it of S.items) {
+            if (it.k === 'hurdle') { dbgRect(this.hurdleRect(it), it.hit ? '#ff4040' : '#ffff00'); if (it.clear < Infinity) dbgText(it.x - 14, this.hurdleRect(it).t - 6, 'gap ' + Math.round(it.clear)); }
+            else if (it.k === 'corn') dbgCirc(it.x, it.y + Math.sin(el * 6 + it.ph) * 4 * U, 12 * U, '#7cff7c');
+            else dbgCirc(it.x, it.y + Math.sin(el * 5 + it.ph) * 3 * U, S.birdR, '#ff4040');
+          }
         },
       },
+      // ---------------- Paddle Power ----------------
+      // A beat clock (S.prev / S.next = the last and the coming beat). The gold ring closes on
+      // the duck exactly at each beat; a stroke within the window of a beat is "on the beat".
       paddle: {
-        init() { S.side = null; S.strokes = 0; S.x = 0; S.beatT = DIFF === 'easy' ? 0.5 : DIFF === 'hard' ? 0.36 : 0.42; S.win = DIFF === 'easy' ? 0.13 : DIFF === 'hard' ? 0.07 : 0.1; S.per = DIFF === 'easy' ? 4 : DIFF === 'hard' ? 6 : 5; S.drift = 0; S.lastStroke = 0; S.lastCount = -1; },
+        init() {
+          S.side = null; S.strokes = 0; S.x = 0; S.lastStroke = 0; S.lastCount = -1; S.lastBeat = -1; S.flash = 0; S.rip = [];
+          S.beatT = pick({ easy: 0.5, medium: 0.42, hard: 0.36 }); S.win = pick({ easy: 0.13, medium: 0.1, hard: 0.075 }); S.per = pick({ easy: 4, medium: 5, hard: 6 });
+          S.prev = 0; S.next = S.beatT; S.beatI = 0; S.ds = 2.2 * U; S.cy = H * 0.56;
+        },
+        tick(el) { while (el >= S.next) { S.prev = S.next; S.beatI++; S.next = S.prev + S.beatT / SM[stageOf(S.prev)]; } },
+        setNext(sd) { for (const b of ov.querySelectorAll('[data-pad]')) b.classList.toggle('next', !!sd && b.dataset.pad !== sd); },
         pad(sd, el) {
-          if (sd === S.side) { S.stun = 0.35; S.x -= 0.4; bad(W * 0.5, H * 0.4, 'Splash!'); S.side = sd; return; }
-          S.side = sd; S.lastStroke = el;
-          const beat = S.beatT / SM[stage], ph = (el % beat), off = Math.min(ph, beat - ph), bi = Math.round(el / beat), onBeat = off < S.win && bi !== S.lastBeat; // one on-beat stroke per beat
-          if (onBeat) S.lastBeat = bi;
-          if (!onBeat && el - S.lastCount < beat * 0.45) { S.x += 0.3; return; } // too fast: find the rhythm
+          this.tick(el);
+          if (sd === S.side) { S.stun = 0.35; S.x -= 0.4; bad(W * 0.5, H * 0.4, 'Splash!'); return; }
+          S.side = sd; S.lastStroke = el; this.setNext(sd);
+          S.rip.push({ sd, age: 0 });
+          const B = S.next - S.prev, dPrev = el - S.prev, dNext = S.next - el, near = dPrev <= dNext ? S.beatI : S.beatI + 1, off = Math.min(dPrev, dNext);
+          const onBeat = off < S.win && near !== S.lastBeat; // one on-beat stroke per beat
+          if (onBeat) { S.lastBeat = near; S.flash = 0.22; }
+          if (!onBeat && el - S.lastCount < B * 0.45) { S.x += 0.3; return; } // too fast: find the rhythm
           S.lastCount = el;
           S.strokes += onBeat ? 2 : 1; S.x += onBeat ? 1.6 : 1;
-          if (onBeat) float(W * (sd === 'L' ? 0.3 : 0.7), H * 0.75, '♪', '#ffd23f', 26);
+          const px = W * (sd === 'L' ? 0.28 : 0.72);
+          if (onBeat) float(px, H * 0.78, '♪', '#ffd23f', 26);
+          else if (off < S.win * 2.6) float(px, H * 0.78, dPrev <= dNext ? 'late' : 'early', '#ffffffcc', 16);
           BOX.sfx('step');
-          while (S.strokes >= S.per) { S.strokes -= S.per; good(W * 0.5, H * 0.38, 1, false, onBeat ? '♪' : '', true); }
+          while (S.strokes >= S.per) { S.strokes -= S.per; good(W * 0.5, H * 0.36, 1, false, onBeat ? '♪' : '', true); }
         },
         update(dt, el) {
-          S.stun -= dt;
+          this.tick(el); S.stun -= dt; S.flash -= dt;
+          for (const r of S.rip) r.age += dt; S.rip = S.rip.filter((r) => r.age < 0.6);
           // from stage 2 the river pushes back if you stop paddling
           if (stage >= 1 && el - S.lastStroke > 0.7) { S.x -= dt * 1.5; if (S.strokes > 0 && Math.random() < dt * 2) S.strokes = Math.max(0, S.strokes - 1); }
         },
+        ringR(el) { return (40 + clamp((S.next - el) / (S.next - S.prev), 0, 1) * 70) * U; },
         draw(el) {
-          g.fillStyle = '#4fb3ff'; g.fillRect(0, 0, W, H); g.fillStyle = 'rgba(255,255,255,.35)';
-          for (let i = 0; i < 14; i++) { const yy = (i * 61) % H, xx = ((i * 97 - S.x * 14) % (W + 80) + W + 80) % (W + 80) - 40; g.fillRect(xx, yy, 40, 3); }
-          g.fillStyle = '#5fd3a0'; for (let i = 0; i < 6; i++) { const xx = ((i * 173 - S.x * 22) % (W + 120) + W + 120) % (W + 120) - 60; g.beginPath(); g.ellipse(xx, H * 0.15 + (i % 3) * 30, 22, 9, 0, 0, TAU); g.fill(); }
-          if (stage >= 1) { g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 3; for (let i = 0; i < 5; i++) { const yy = H * 0.3 + i * 40, xx = W - ((el * 160 + i * 90) % (W + 100)); g.beginPath(); g.moveTo(xx, yy); g.lineTo(xx + 40, yy); g.stroke(); } }
-          // the beat: a ring that closes in on the duck
-          const beat = S.beatT / SM[stage], ph = (el % beat) / beat, cx = W * 0.5, cy = H * 0.55;
-          g.strokeStyle = 'rgba(255,210,63,.9)'; g.lineWidth = 4; g.beginPath(); g.arc(cx, cy, 40 + (1 - ph) * 70, 0, TAU); g.stroke();
-          g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, 40, 0, TAU); g.stroke();
-          drawDuck(g, cx, cy, 2.2, duck.color, duck.hat, el * (1 + S.x * 0.02), 'swim', false, duck.stage);
-          g.fillStyle = '#fff'; g.font = 'bold 18px Fredoka, sans-serif'; g.textAlign = 'center';
-          g.fillText(S.stun > 0 ? 'Splash! Alternate!' : `Stroke on the beat ⭕ · ${S.per - S.strokes} more for +1`, W / 2, H * 0.9); g.textAlign = 'left';
+          g.fillStyle = '#4fb3ff'; g.fillRect(0, 0, W, H);
+          g.fillStyle = '#7cc96f'; g.fillRect(0, 0, 26 * U, H); g.fillRect(W - 26 * U, 0, 26 * U, H); // the banks
+          g.fillStyle = '#5aa64f'; for (let i = 0; i < 12; i++) { const yy = (((i * 90 + S.x * 22) % (H + 90)) + H + 90) % (H + 90) - 45; g.beginPath(); g.arc(i % 2 ? W - 12 * U : 12 * U, yy, 14 * U, 0, TAU); g.fill(); }
+          g.fillStyle = 'rgba(255,255,255,.35)';
+          for (let i = 0; i < 14; i++) { const yy = (i * 61) % H, xx = ((i * 97 - S.x * 14) % (W + 80) + W + 80) % (W + 80) - 40; g.fillRect(xx, yy, 40 * U, 3 * U); }
+          for (let i = 0; i < 6; i++) { const xx = ((i * 173 - S.x * 22) % (W + 120) + W + 120) % (W + 120) - 60, yy = H * 0.15 + (i % 3) * 30 * U; g.fillStyle = '#4caf50'; g.beginPath(); g.ellipse(xx, yy, 22 * U, 9 * U, 0, 0.35, TAU); g.lineTo(xx, yy); g.fill(); if (i % 3 === 1) { g.fillStyle = '#ff9ccf'; g.beginPath(); g.arc(xx + 6 * U, yy - 3 * U, 4 * U, 0, TAU); g.fill(); } }
+          if (stage >= 1) { g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 3; for (let i = 0; i < 5; i++) { const yy = H * 0.3 + i * 40 * U, xx = W - ((el * 160 + i * 90) % (W + 100)); g.beginPath(); g.moveTo(xx, yy); g.lineTo(xx + 40 * U, yy); g.stroke(); } }
+          const cx = W * 0.5, cy = S.cy;
+          for (const r of S.rip) { g.strokeStyle = `rgba(255,255,255,${0.8 * (1 - r.age / 0.6)})`; g.lineWidth = 3; g.beginPath(); g.ellipse(cx + (r.sd === 'L' ? -1 : 1) * 34 * U, cy + 18 * U, (8 + r.age * 50) * U, (3 + r.age * 16) * U, 0, 0, TAU); g.stroke(); }
+          // the beat: a gold ring that closes on the duck; the white ring is "now"
+          if (S.flash > 0) { g.fillStyle = `rgba(255,210,63,${S.flash * 2})`; g.beginPath(); g.arc(cx, cy, 52 * U, 0, TAU); g.fill(); }
+          g.strokeStyle = 'rgba(255,255,255,.65)'; g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, 40 * U, 0, TAU); g.stroke();
+          g.strokeStyle = 'rgba(255,210,63,.95)'; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, this.ringR(el), 0, TAU); g.stroke();
+          drawDuck(g, cx, cy, S.ds, duck.color, duck.hat, el * (1 + S.x * 0.02), 'swim', false, duck.stage);
+          // the stroke meter: S.per pips, filled with this lap's strokes
+          const pw = 18 * U, gap = 6 * U, x0 = cx - (S.per * (pw + gap) - gap) / 2;
+          for (let i = 0; i < S.per; i++) { g.fillStyle = i < S.strokes ? '#ffd23f' : 'rgba(255,255,255,.35)'; rrect(g, x0 + i * (pw + gap), H * 0.86, pw, 10 * U, 4 * U); g.fill(); }
+          g.fillStyle = '#fff'; g.font = `bold ${Math.round(17 * U)}px Fredoka, sans-serif`; g.textAlign = 'center';
+          g.fillText(S.stun > 0 ? 'Splash! Alternate LEFT and RIGHT!' : 'Stroke when the gold ring meets the white one', W / 2, H * 0.94); g.textAlign = 'left';
+        },
+        debug(el) {
+          const B = S.next - S.prev, k = (S.win / B) * 70 * U; // the on-beat window, in ring radius
+          dbgCirc(W / 2, S.cy, 40 * U + k, '#7cff7c'); dbgText(8, 90, `beat ${B.toFixed(2)}s win ±${S.win}s next in ${(S.next - el).toFixed(2)}`);
         },
       },
+      // ---------------- Sky Rings ----------------
+      // The duck's hit circle is DUCK_ART.duckBox(...).rad (body + head), turned with the tilt.
+      // A ring's opening (inner edge of the rim) is `open`; the rim is S.rim thick. A ring is
+      // judged once, when the duck's centre crosses the ring's plane:
+      //   off <= open − rad  → through the hole (PERFECT if off <= perfect radius)
+      //   off <  open + rim + rad → clipped the rim;  else missed.
       rings: {
-        init() { S.y = H * 0.5; S.vy = 0; S.gust = 0; S.gustT = 4; },
+        init() {
+          S.ds = 1.75 * U; S.dx = Math.round(W * 0.28); S.y = H * 0.5; S.vy = 0; S.gust = 0; S.gustT = 4; S.tilt = 0; S.ft = 0;
+          S.VMAX = 360 * U; S.top = 66; S.bot = H - 8;
+          S.R = ART.duckBox(0, 0, S.ds, 'fly', 0, duck.stage).rad;
+          S.margin = pick({ easy: 40, medium: 30, hard: 21 }) * U; S.rim = 8 * U;
+          S.cloudK = pick({ easy: 0.72, medium: 0.82, hard: 0.9 }); S.gustK = pick({ easy: 0.6, medium: 1, hard: 1.25 });
+          S.lastRing = null; S.lastCloud = null; S.gap = 1;
+        },
+        // the duck's hit circle right now (same t, tilt and scale as the drawing)
+        hit() {
+          const b = ART.duckBox(0, 0, S.ds, 'fly', S.ft, duck.stage), c = Math.cos(S.tilt), s = Math.sin(S.tilt);
+          return { x: S.dx + b.cx * c - b.cy * s, y: S.y + b.cx * s + b.cy * c, r: b.rad, oy: b.cy };
+        },
+        perfR(it) { return Math.max(5 * U, (it.open - S.R) * 0.4); },
         update(dt, el) {
-          S.vy += (holding ? -H * 2.2 : H * 1.6) * dt; S.vy = Math.max(-H * 0.7, Math.min(H * 0.7, S.vy));
-          if (stage >= 1) { S.gustT -= dt; if (S.gustT <= 0) { S.gust = (Math.random() < 0.5 ? -1 : 1) * H * 0.35; S.gustT = 3 + Math.random() * 2; banner(S.gust < 0 ? '💨 Updraft!' : '💨 Downdraft!'); } S.gust *= Math.pow(0.4, dt); }
-          S.y = Math.max(24, Math.min(H - 24, S.y + (S.vy + S.gust) * dt));
+          const tgt = holding ? -S.VMAX : S.VMAX * 0.8, turning = holding ? S.vy > 0 : S.vy < 0;
+          S.vy += (tgt - S.vy) * Math.min(1, dt * (turning ? 10 : 5)); // reversing snaps quickly: responsive
+          if (stage >= 1) { S.gustT -= dt; if (S.gustT <= 0) { S.gust = (Math.random() < 0.5 ? -1 : 1) * 150 * U * S.gustK; /* well under top speed: you can always fight it */ S.gustT = 3 + Math.random() * 2; banner(S.gust < 0 ? '💨 Updraft!' : '💨 Downdraft!'); } S.gust *= Math.pow(0.4, dt); }
+          S.y += (S.vy + S.gust) * dt; S.ft += dt * (holding ? 1.8 : 0.8);
+          S.tilt = clamp(S.vy / S.VMAX, -1, 1) * 0.28;
+          const h0 = this.hit(), lo = S.top + S.R - (h0.y - S.y), hi = S.bot - S.R - (h0.y - S.y); // keep the hit circle on screen
+          if (S.y < lo) { S.y = lo; if (S.vy < 0) S.vy = 0; } if (S.y > hi) { S.y = hi; if (S.vy > 0) S.vy = 0; }
+          const spd = 165 * U * SP * SM[stage];
           S.spawn -= dt;
           if (S.spawn <= 0) {
-            const cloud = Math.random() < 0.22 * SP;
-            S.items.push({ x: W + 30, y: H * (0.15 + Math.random() * 0.7), gold: !cloud && Math.random() < 0.15, cloud, wob: stage === 2 && !cloud && Math.random() < 0.6 ? Math.random() * TAU : null });
-            S.spawn = (0.8 + Math.random() * 0.4) / (SP * SM[stage]);
+            const recent = (o, d) => o && o.x > W - d * U;
+            if (S.lastRing && Math.random() < 0.22 * SP * (DIFF === 'easy' ? 0.75 : 1)) {
+              const cs = (1 + Math.random() * 0.25) * U, puffs = [[0, 0, 20], [18, -8, 16], [-18, -5, 15], [8, 9, 15], [-9, 9, 14]].map(([x, y, r]) => [x * cs, y * cs, r * cs]);
+              let y = 0; for (let k = 0; k < 10; k++) { y = S.top + 40 * U + Math.random() * (S.bot - S.top - 80 * U); if (!recent(S.lastRing, 230) || Math.abs(y - S.lastRing.y) > S.lastRing.open + 70 * U) break; }
+              const it = { cloud: true, x: W + 50 * U, y, puffs, ph: Math.random() * 10 }; S.items.push(it); S.lastCloud = it;
+            } else {
+              const gold = Math.random() < 0.15, open = S.R + S.margin * (gold ? 0.75 : 1), m = open + S.rim + 4 * U;
+              const reach = S.VMAX * 0.65 * S.gap;
+              let y = S.lastRing ? S.lastRing.y + (Math.random() * 2 - 1) * reach : H * 0.5;
+              if (recent(S.lastCloud, 170) && Math.abs(y - S.lastCloud.y) < open + 60 * U) y = S.lastCloud.y + Math.sign(y - S.lastCloud.y || 1) * (open + 60 * U);
+              y = clamp(y, S.top + m, S.bot - m);
+              const it = { x: W + 40 * U, y, dy: S.lastRing ? y - S.lastRing.y : 0, gold, open, wob: stage === 2 && Math.random() < 0.6 ? Math.random() * TAU : null, age: 0 };
+              S.items.push(it); S.lastRing = it;
+            }
+            S.gap = (0.95 + Math.random() * 0.35) / (SP * SM[stage]); S.spawn = S.gap;
           }
-          const dx = W * 0.3;
+          const h = this.hit();
           for (const it of S.items) {
-            it.x -= W * 0.42 * SP * SM[stage] * dt;
-            if (it.wob != null) it.y += Math.sin(el * 3 + it.wob) * 60 * dt;
-            if (it.done || Math.abs(it.x - dx) > 12) continue;
-            if (it.cloud) { if (Math.abs(it.y - S.y) < 30 / EASE) { it.done = true; S.vy = H * 0.4; bad(dx, S.y - 30, 'Bonk!'); } }
-            else if (Math.abs(it.y - S.y) < 28 * EASE) { it.done = true; good(dx, S.y - 34, it.gold ? 2 : 1, Math.abs(it.y - S.y) < 10 * EASE); }
+            const px = it.x; it.x -= spd * dt; it.age = (it.age || 0) + dt; if (it.shake > 0) it.shake -= dt;
+            if (it.cloud) {
+              if (!it.done) for (const [ox, oy, r] of it.puffs) if (Math.hypot(it.x + ox - h.x, it.y + oy - h.y) < r * S.cloudK + h.r) { it.done = true; S.vy = S.VMAX * 0.7; bad(h.x, h.y - 34 * U, 'Zap!'); break; }
+              continue;
+            }
+            if (it.wob != null) it.y = clamp(it.y + Math.sin(el * 2.6 + it.wob) * 50 * U * dt, S.top + it.open + S.rim, S.bot - it.open - S.rim);
+            if (!it.done && px > h.x && it.x <= h.x) { // the duck crosses the ring's plane right now
+              const off = Math.abs(it.y - h.y); it.done = true; it.off = off; it.at = el; if (DEBUG) log.push('ring off ' + Math.round(off) + ' hole ' + Math.round(it.open - h.r) + ' dy ' + Math.round(it.dy || 0) + (it.wob != null ? ' wob' : '') + ' gust ' + Math.round(S.gust));
+              if (off <= it.open - h.r) { it.pass = true; good(h.x, h.y - 40 * U, it.gold ? 2 : 1, off <= this.perfR(it)); }
+              else if (off < it.open + S.rim + h.r) { it.clip = true; it.shake = 0.4; bad(h.x, h.y - 40 * U, 'Clipped!'); }
+              else { it.missed = true; quietMiss('ring missed'); }
+            }
           }
-          for (const it of S.items) if (!it.done && !it.cloud && it.x < dx - 20) { it.done = true; it.missed = true; quietMiss(); }
-          S.items = S.items.filter((i) => i.x > -50);
+          S.items = S.items.filter((i) => i.x > -80 * U);
+        },
+        // half: 'back' (left side, behind the duck) or 'front' (right side, over the duck)
+        drawRing(it, half, el) {
+          const ry = it.open + S.rim / 2, rx = ry * 0.34, x = it.x + (it.shake > 0 ? Math.sin(el * 70) * 4 * U * it.shake : 0), y = it.y;
+          const a0 = half === 'back' ? Math.PI / 2 : -Math.PI / 2, a1 = a0 + Math.PI;
+          const col = it.gold ? ['#c99a00', '#ffcc00', '#fff1a0'] : ['#c2306e', '#ff4f9a', '#ffc0dc'];
+          g.globalAlpha = it.missed || it.clip ? 0.35 : it.pass ? Math.max(0.25, 1 - (el - it.at) * 1.5) : 1;
+          if (half === 'back' && !it.done) { const gl = g.createRadialGradient(x, y, 0, x, y, this.perfR(it) * 1.6); gl.addColorStop(0, 'rgba(255,255,255,.75)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.beginPath(); g.ellipse(x, y, this.perfR(it) * 0.6, this.perfR(it) * 1.6, 0, 0, TAU); g.fill(); }
+          g.lineCap = 'butt';
+          g.strokeStyle = half === 'back' ? col[0] : col[1]; g.lineWidth = S.rim; g.beginPath(); g.ellipse(x, y, rx, ry, 0, a0, a1); g.stroke();
+          if (half === 'front') { g.strokeStyle = col[2]; g.lineWidth = S.rim * 0.28; g.beginPath(); g.ellipse(x + S.rim * 0.12, y, rx, ry - S.rim * 0.22, 0, a0 + 0.25, a1 - 0.25); g.stroke(); }
+          if (it.gold && half === 'front' && !it.done) ART.drawIcon(g, 'sparkle', x + rx, y - ry, 16 * U, el);
+          g.globalAlpha = 1;
+        },
+        drawCloud(it, el) {
+          for (const [ox, oy, r] of it.puffs) { g.fillStyle = '#5b6474'; g.beginPath(); g.arc(it.x + ox, it.y + oy, r, 0, TAU); g.fill(); }
+          for (const [ox, oy, r] of it.puffs) if (oy < 2) { g.fillStyle = '#7d8798'; g.beginPath(); g.arc(it.x + ox - r * 0.15, it.y + oy - r * 0.2, r * 0.7, 0, TAU); g.fill(); }
+          const flick = Math.sin(el * 13 + it.ph) > 0.2;
+          if (flick) ART.drawIcon(g, 'bolt', it.x + 2 * U, it.y + 26 * U, 22 * U, el);
+          g.fillStyle = '#fff'; for (const ex of [-7, 7]) { g.beginPath(); g.arc(it.x + ex * U, it.y + 1 * U, 3 * U, 0, TAU); g.fill(); }
+          g.strokeStyle = '#2b3240'; g.lineWidth = 2 * U; g.beginPath(); g.moveTo(it.x - 12 * U, it.y - 6 * U); g.lineTo(it.x - 3 * U, it.y - 3 * U); g.moveTo(it.x + 12 * U, it.y - 6 * U); g.lineTo(it.x + 3 * U, it.y - 3 * U); g.stroke();
         },
         draw(el) {
-          const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#9fdcff'); sky.addColorStop(1, '#e8f7ff'); g.fillStyle = sky; g.fillRect(0, 0, W, H);
-          g.fillStyle = 'rgba(255,255,255,.7)'; for (let i = 0; i < 6; i++) { const x = ((i * 170 - el * 40) % (W + 120) + W + 120) % (W + 120) - 60; g.beginPath(); g.arc(x, 40 + i * 70 % H, 22, 0, TAU); g.arc(x + 24, 34 + i * 70 % H, 18, 0, TAU); g.fill(); }
-          for (const it of S.items) {
-            if (it.cloud) { g.fillStyle = '#6b7280'; for (const [dx, dy, r] of [[0, 0, 18], [16, -6, 14], [-16, -4, 13], [6, 8, 13]]) { g.beginPath(); g.arc(it.x + dx, it.y + dy, r, 0, TAU); g.fill(); } g.fillStyle = '#ffd23f'; g.font = '16px sans-serif'; g.fillText('⚡', it.x - 6, it.y + 22); }
-            else if (!it.done || !it.missed) { g.globalAlpha = it.done ? 0.3 : 1; g.strokeStyle = it.gold ? '#ffcc00' : '#ff4f9a'; g.lineWidth = 6; g.beginPath(); g.ellipse(it.x, it.y, 12, 30, 0, 0, TAU); g.stroke(); g.fillStyle = 'rgba(255,255,255,.6)'; g.beginPath(); g.arc(it.x, it.y, 3, 0, TAU); g.fill(); g.globalAlpha = 1; }
-          }
+          sky('#8fd4ff', '#e8f7ff');
+          for (let i = 0; i < 6; i++) { const x = ((i * 170 - el * 40) % (W + 140) + W + 140) % (W + 140) - 70; puffCloud(x, 80 * U + ((i * 137) % Math.max(1, H - 160 * U)), 0.7 * U, 'rgba(255,255,255,.7)'); }
+          for (const it of S.items) if (it.cloud) this.drawCloud(it, el);
+          for (const it of S.items) if (!it.cloud) this.drawRing(it, 'back', el);
           if (Math.abs(S.gust) > 20) { g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 3; for (let i = 0; i < 6; i++) { const x = (i * 77 + el * 200) % W, y = (i * 113) % H; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + (S.gust > 0 ? 24 : -24)); g.stroke(); } }
-          drawDuck(g, W * 0.3, S.y, 1.5, duck.color, duck.hat, el, 'fly', false, duck.stage);
+          g.save(); g.translate(S.dx, S.y); g.rotate(S.tilt); drawDuck(g, 0, 0, S.ds, duck.color, duck.hat, S.ft, 'fly', false, duck.stage); g.restore();
+          for (const it of S.items) if (!it.cloud) this.drawRing(it, 'front', el);
+        },
+        debug() {
+          const h = this.hit(); dbgCirc(h.x, h.y, h.r, '#00e5ff'); g.fillStyle = '#00e5ff'; g.fillRect(h.x - 1.5, h.y - 1.5, 3, 3);
+          g.strokeStyle = 'rgba(0,229,255,.5)'; g.beginPath(); g.moveTo(h.x, 0); g.lineTo(h.x, H); g.stroke();
+          for (const it of S.items) {
+            if (it.cloud) { for (const [ox, oy, r] of it.puffs) dbgCirc(it.x + ox, it.y + oy, r * S.cloudK, '#ff4040'); continue; }
+            g.lineWidth = 3; g.strokeStyle = '#7cff7c'; g.beginPath(); g.moveTo(it.x, it.y - it.open); g.lineTo(it.x, it.y + it.open); g.stroke();
+            g.strokeStyle = '#ff4040'; g.beginPath(); g.moveTo(it.x, it.y - it.open - S.rim); g.lineTo(it.x, it.y - it.open); g.moveTo(it.x, it.y + it.open); g.lineTo(it.x, it.y + it.open + S.rim); g.stroke();
+            g.strokeStyle = '#ffff00'; g.beginPath(); g.moveTo(it.x, it.y - this.perfR(it)); g.lineTo(it.x, it.y + this.perfR(it)); g.stroke();
+            if (it.done) dbgText(it.x + 8, it.y, `${it.pass ? 'PASS' : it.clip ? 'CLIP' : 'MISS'} off ${Math.round(it.off)}/${Math.round(it.open - S.R)}`, it.pass ? '#7cff7c' : '#ff8080');
+          }
         },
       },
+      // ---------------- Cliff Climb ----------------
+      // The wing swings across the wall; its grab point (the white dot) must be over the hold.
       climb: {
-        init() { S.hand = 0; S.height = 0; this.next(0); },
+        init() { S.hand = 0; S.sp = 2.3; S.lastEl = 0; S.height = 0; S.shown = 0; S.rowY = Math.round(H * 0.34); S.tol = pick({ easy: 8, medium: 4, hard: 1 }) * U; S.ds = 2 * U; this.next(0); },
+        // the grab point, as a fraction of the width (extrapolated to the tap's exact time)
+        handAt(el) { return 0.05 + 0.9 * (Math.sin(S.hand + Math.max(0, el - S.lastEl) * S.sp) + 1) / 2; },
         next(el) {
-          const w = Math.max(0.09, (0.3 - el * 0.007) / SP), c = 0.12 + Math.random() * (0.76 - w);
+          const w = Math.max(0.09, (0.3 - el * 0.007) / SP), c = 0.1 + Math.random() * (0.8 - w);
           S.hold = { c, w, crystal: Math.random() < 0.18, drift: stage >= 1 ? (Math.random() < 0.5 ? -1 : 1) * 0.08 * SM[stage] : 0 };
-          S.rock = stage === 2 && Math.random() < 0.6 ? { c: (c + 0.35 + Math.random() * 0.2) % 0.8 + 0.05, w: 0.1 } : null;
+          S.rock = null;
+          if (stage === 2 && Math.random() < 0.6) { // a loose rock, never on top of the hold
+            const rw = 0.1, left = c - 0.08 - rw, right = c + w + 0.08, opts2 = [];
+            if (left >= 0.05) opts2.push(0.05 + Math.random() * (left - 0.05)); if (right + rw <= 0.95) opts2.push(right + Math.random() * (0.95 - rw - right));
+            if (opts2.length) S.rock = { c: opts2[Math.floor(Math.random() * opts2.length)], w: rw };
+          }
         },
         press(x, y, el) {
           if (S.stun > 0) return;
-          const hand = (Math.sin(S.hand) + 1) / 2, h = S.hold, r = S.rock;
-          if (r && hand >= r.c && hand <= r.c + r.w) { S.stun = 0.6; S.height = Math.max(0, S.height - 1); bad(W * hand, H * 0.32, 'Loose rock!'); return; }
-          if (hand >= h.c && hand <= h.c + h.w) {
+          const hand = this.handAt(el), h = S.hold, r = S.rock, tol = S.tol / W, hx = W * hand;
+          if (r && hand >= r.c && hand <= r.c + r.w) { S.stun = 0.6; S.height = Math.max(0, S.height - 1); bad(hx, S.rowY, 'Loose rock!'); return; }
+          if (hand >= h.c - tol && hand <= h.c + h.w + tol) {
             const mid = Math.abs(hand - (h.c + h.w / 2)) < h.w * 0.18;
-            S.height += 1; good(W * hand, H * 0.28, h.crystal ? 2 : 1, mid, h.crystal ? '💎' : ''); this.next(el);
-          } else { S.stun = 0.5; S.height = Math.max(0, S.height - 0.5); bad(W * hand, H * 0.32, 'Slip!'); }
+            S.height += 1; good(hx, S.rowY - 34 * U, h.crystal ? 2 : 1, mid, h.crystal ? 'Crystal' : ''); this.next(el);
+          } else { S.stun = 0.5; S.height = Math.max(0, S.height - 0.5); bad(hx, S.rowY, 'Slip!'); }
         },
         update(dt, el) {
-          S.stun -= dt; S.hand += dt * (2.3 + el * 0.06) * SP * SM[stage];
-          if (S.hold.drift) { S.hold.c += S.hold.drift * dt; if (S.hold.c < 0.05 || S.hold.c + S.hold.w > 0.95) S.hold.drift *= -1; }
+          S.stun -= dt; S.sp = (2.3 + el * 0.06) * SP * SM[stage]; S.hand += dt * S.sp; S.lastEl = el;
+          S.shown += (S.height - S.shown) * Math.min(1, dt * 8);
+          const h = S.hold;
+          if (h.drift) {
+            h.c += h.drift * dt;
+            const r = S.rock, hitsRock = r && h.c < r.c + r.w + 0.04 && h.c + h.w > r.c - 0.04;
+            if (h.c < 0.05 || h.c + h.w > 0.95 || hitsRock) { h.c -= h.drift * dt; h.drift *= -1; }
+          }
         },
         draw(el) {
-          g.fillStyle = '#8a7f76'; g.fillRect(0, 0, W, H);
-          const off = (S.height * 70) % 140;
-          g.fillStyle = '#7a7068'; for (let r = -1; r < H / 70 + 1; r++) for (let c = 0; c < 5; c++) g.fillRect(((c * 97 + r * 41) % W), r * 70 + off, 30, 14);
-          const rowY = H * 0.32, h = S.hold;
-          g.fillStyle = h.crystal ? '#7fe0ff' : '#2ee6a6'; g.fillRect(W * h.c, rowY - 16, W * h.w, 32);
-          g.fillStyle = h.crystal ? '#2f8fe0' : '#1b6f55'; g.fillRect(W * h.c + 6, rowY - 7, W * h.w - 12, 14);
-          g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(W * (h.c + h.w / 2) - 2, rowY - 16, 4, 32);
-          if (S.rock) { g.fillStyle = '#e05a4f'; g.fillRect(W * S.rock.c, rowY - 14, W * S.rock.w, 28); g.fillStyle = '#7f2a22'; g.fillRect(W * S.rock.c + 4, rowY - 4, W * S.rock.w - 8, 8); }
-          const hx = W * ((Math.sin(S.hand) + 1) / 2);
-          g.font = '44px sans-serif'; g.textAlign = 'center'; g.fillText(S.stun > 0 ? '💥' : '✋', hx, rowY + 16); g.textAlign = 'left';
-          drawDuck(g, W * 0.5, H * 0.7 + (S.stun > 0 ? Math.sin(el * 40) * 4 : 0), 2, duck.color, duck.hat, el, 'climb', false, duck.stage);
-          g.fillStyle = '#fff'; g.font = 'bold 20px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText(`Height: ${Math.floor(S.height * 2)} m`, W / 2, H * 0.93); g.textAlign = 'left';
+          const wall = g.createLinearGradient(0, 0, W, 0); wall.addColorStop(0, '#7f746b'); wall.addColorStop(0.5, '#93877d'); wall.addColorStop(1, '#7a6f66'); g.fillStyle = wall; g.fillRect(0, 0, W, H);
+          const off = (S.shown * 70 * U) % (140 * U);
+          for (let r = -2; r < H / (70 * U) + 1; r++) for (let c = 0; c < 5; c++) { const bx = ((c * 97 + r * 41) % W), by = r * 70 * U + off; g.fillStyle = '#6f655d'; rrect(g, bx, by, 34 * U, 16 * U, 6 * U); g.fill(); g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(bx + 4 * U, by + 2 * U, 24 * U, 3 * U); }
+          const rowY = S.rowY, h = S.hold, x0 = W * h.c, w0 = W * h.w;
+          // the hold (green ledge, or a blue crystal ledge); the light middle band is PERFECT
+          g.fillStyle = 'rgba(0,0,0,.25)'; rrect(g, x0 + 2 * U, rowY - 14 * U, w0, 34 * U, 10 * U); g.fill();
+          g.fillStyle = h.crystal ? '#5fc8f5' : '#2ecf8f'; rrect(g, x0, rowY - 17 * U, w0, 34 * U, 10 * U); g.fill();
+          g.fillStyle = h.crystal ? '#8fe0ff' : '#5ff0b5'; rrect(g, x0 + 3 * U, rowY - 15 * U, w0 - 6 * U, 9 * U, 5 * U); g.fill();
+          g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(x0 + w0 * 0.32, rowY - 17 * U, w0 * 0.36, 34 * U);
+          g.strokeStyle = h.crystal ? '#1f6fb0' : '#167a52'; g.lineWidth = 2; rrect(g, x0, rowY - 17 * U, w0, 34 * U, 10 * U); g.stroke();
+          if (h.crystal) ART.drawIcon(g, 'crystal', x0 + w0 / 2, rowY, 30 * U, el);
+          if (S.rock) { // the loose rock: the red zone is exactly what you must not grab
+            const rx = W * S.rock.c, rw = W * S.rock.w;
+            g.fillStyle = 'rgba(224,90,79,.35)'; rrect(g, rx, rowY - 17 * U, rw, 34 * U, 8 * U); g.fill();
+            ART.drawIcon(g, 'rock', rx + rw / 2, rowY + Math.sin(el * 30) * 0.8 * U, Math.max(26 * U, rw * 0.95), el);
+            g.fillStyle = 'rgba(110,35,24,.6)'; for (let i = 0; i < 3; i++) { const fy = (el * 60 + i * 13) % 40; g.fillRect(rx + rw * (0.3 + i * 0.2), rowY + 18 * U + fy * U, 2 * U, 2 * U); }
+          }
+          // the duck below, its wing reaching up to the grab point
+          const dx = W * 0.5, dy = rowY + 190 * U + (S.stun > 0 ? Math.sin(el * 40) * 4 : 0), hx = W * this.handAt(el), wing = (ART.PAL[duck.color] || ART.PAL.sunny)[1];
+          g.strokeStyle = wing; g.lineWidth = 9 * U; g.lineCap = 'round'; g.beginPath(); g.moveTo(dx + 2 * U, dy - 24 * U); g.quadraticCurveTo(dx + (hx - dx) * 0.2, rowY + 90 * U, hx, rowY + 22 * U); g.stroke();
+          g.fillStyle = wing; for (const a of [-0.5, 0, 0.5]) { g.save(); g.translate(hx, rowY + 18 * U); g.rotate(a); g.beginPath(); g.ellipse(0, -10 * U, 5 * U, 12 * U, 0, 0, TAU); g.fill(); g.restore(); }
+          g.lineCap = 'butt';
+          g.fillStyle = '#fff'; g.strokeStyle = '#1b1b2b'; g.lineWidth = 2; g.beginPath(); g.arc(hx, rowY, 6 * U, 0, TAU); g.fill(); g.stroke();
+          if (S.stun > 0) ART.drawIcon(g, 'dizzy', hx, rowY - 26 * U, 34 * U, el);
+          drawDuck(g, dx, dy, S.ds, duck.color, duck.hat, el, 'climb', false, duck.stage);
+          g.fillStyle = '#fff'; g.font = `bold ${Math.round(20 * U)}px Fredoka, sans-serif`; g.textAlign = 'center'; g.fillText(`Height: ${Math.floor(S.height * 2)} m`, W / 2, H * 0.93); g.textAlign = 'left';
+        },
+        debug(el) {
+          const h = S.hold, rowY = S.rowY;
+          dbgRect({ l: W * h.c - S.tol, r: W * (h.c + h.w) + S.tol, t: rowY - 20 * U, b: rowY + 20 * U }, '#7cff7c');
+          dbgRect({ l: W * (h.c + h.w / 2 - h.w * 0.18), r: W * (h.c + h.w / 2 + h.w * 0.18), t: rowY - 18 * U, b: rowY + 18 * U }, '#ffff00');
+          if (S.rock) dbgRect({ l: W * S.rock.c, r: W * (S.rock.c + S.rock.w), t: rowY - 20 * U, b: rowY + 20 * U }, '#ff4040');
+          const hx = W * this.handAt(el); g.strokeStyle = '#00e5ff'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(hx, rowY - 30 * U); g.lineTo(hx, rowY + 30 * U); g.stroke();
         },
       },
+      // ---------------- Bug Snack ----------------
+      // Each bug is drawn with body radius b.r. A tap counts on a bug within b.r·1.1 + slop (a
+      // fingertip's worth); a bee only stings when the tap is right on it (b.r·0.85).
       bugs: {
-        init() { S.cols = 3; S.rows = 4; },
+        init() { S.cols = 3; S.rows = 4; S.top = 70; S.slop = pick({ easy: 16, medium: 10, hard: 5 }) * U; },
+        cell(i, j) { const cw = W / S.cols, ch = (H - S.top) / S.rows; return { x: i * cw + cw / 2, y: S.top + j * ch + ch / 2, cw, ch }; },
         press(x, y, el) {
-          let best = null, bd = 1e9;
-          for (const b of S.items) if (!b.hit) { const d = Math.hypot(b.x - x, b.y - y); if (d < b.r * 1.6 * EASE && d < bd) { bd = d; best = b; } }
-          if (!best) { if (combo) { float(x, y, 'miss', '#ffffffaa', 16); quietMiss(); } return; } // empty taps only break the combo
+          let best = null, bd = 1e9, bee = null;
+          for (const b of S.items) {
+            if (b.hit) continue; const d = Math.hypot(b.x - x, b.y - y);
+            if (b.bee) { if (d < b.r * 0.85) bee = b; } else if (d < b.r * 1.1 + S.slop && d - b.r < bd) { bd = d - b.r; best = b; }
+          }
+          if (bee && !(best && bd <= 0)) best = bee; // right on a bee (and not right on a bug): ouch
+          if (!best) { if (combo) { float(x, y, 'miss', '#ffffffaa', 16); quietMiss('empty tap'); } return; } // empty taps only break the combo
           best.hit = true; best.ttl = 0.3;
           if (best.bee) bad(best.x, best.y, 'Ouch!', 1);
-          else good(best.x, best.y, best.gold ? 3 : 1, best.age < best.life * 0.4, best.gold ? '✨' : '');
+          else good(best.x, best.y - best.r, best.gold ? 3 : 1, best.age < best.life * 0.4, best.gold ? 'Gold' : '');
         },
         update(dt, el) {
-          const cw = W / S.cols, ch = H / S.rows;
           S.spawn -= dt;
           if (S.spawn <= 0) {
             const n = stage === 2 && Math.random() < 0.5 ? 2 : 1;
             for (let k = 0; k < n; k++) {
               const i = Math.floor(Math.random() * S.cols), j = Math.floor(Math.random() * S.rows);
               if (S.items.some((b) => b.i === i && b.j === j && !b.hit)) continue;
-              const r = Math.random(), life = Math.max(0.5, (1.15 - el * 0.02) / (SP * SM[stage]));
-              S.items.push({ i, j, x: i * cw + cw / 2, y: j * ch + ch / 2, r: Math.min(cw, ch) * 0.22, life: r < 0.08 ? life * 0.6 : life, ttl: r < 0.08 ? life * 0.6 : life, age: 0, gold: r < 0.08, bee: r >= 0.08 && r < 0.08 + 0.2 * SP * (stage === 2 ? 1.3 : 1), vx: stage >= 1 ? (Math.random() - 0.5) * cw * 0.8 : 0 });
+              const c = this.cell(i, j), r = Math.random(), life = Math.max(0.5, (1.15 - el * 0.02) / (SP * SM[stage]));
+              const gold = r < 0.08, bee = !gold && r < 0.08 + 0.2 * SP * (stage === 2 ? 1.3 : 1);
+              S.items.push({ i, j, x: c.x, y: c.y, r: Math.min(c.cw, c.ch) * 0.24, life: gold ? life * 0.6 : life, ttl: gold ? life * 0.6 : life, age: 0, gold, bee, kind: bee ? 'bee' : gold ? 'beetle' : ['caterpillar', 'cricket', 'ladybug'][(i + j) % 3], vx: stage >= 1 ? (Math.random() - 0.5) * c.cw * 0.8 : 0 });
             }
             S.spawn = Math.max(0.22, (0.62 - el * 0.012) / (SP * SM[stage]));
           }
-          for (const b of S.items) { b.ttl -= dt; b.age += dt; if (!b.hit) b.x += b.vx * dt; if (!b.hit && !b.bee && b.ttl <= 0) quietMiss(); }
+          for (const b of S.items) {
+            b.ttl -= dt; b.age += dt;
+            if (!b.hit) { b.x += b.vx * dt; if (b.x < b.r * 1.2 || b.x > W - b.r * 1.2) { b.vx *= -1; b.x = clamp(b.x, b.r * 1.2, W - b.r * 1.2); } }
+            if (!b.hit && !b.bee && b.ttl <= 0) quietMiss('bug escaped');
+          }
           S.items = S.items.filter((b) => b.ttl > 0);
         },
-        draw() {
+        draw(el) {
           g.fillStyle = '#7bc96f'; g.fillRect(0, 0, W, H);
-          const cw = W / S.cols, ch = H / S.rows;
-          g.fillStyle = '#5aa64f'; for (let i = 0; i < S.cols; i++) for (let j = 0; j < S.rows; j++) { g.beginPath(); g.ellipse(i * cw + cw / 2, j * ch + ch / 2 + 18, cw * 0.32, 14, 0, 0, TAU); g.fill(); }
-          g.textAlign = 'center'; g.textBaseline = 'middle';
+          g.fillStyle = '#6fbd63'; for (let i = 0; i < 40; i++) { const x = (i * 97) % W, y = (i * 211) % H; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 3, y - 9); g.lineTo(x + 6, y); g.fill(); }
+          for (let i = 0; i < S.cols; i++) for (let j = 0; j < S.rows; j++) { const c = this.cell(i, j); g.fillStyle = '#8a6a43'; g.beginPath(); g.ellipse(c.x, c.y + 22 * U, c.cw * 0.3, 12 * U, 0, 0, TAU); g.fill(); g.fillStyle = '#5c4426'; g.beginPath(); g.ellipse(c.x, c.y + 23 * U, c.cw * 0.22, 7 * U, 0, 0, TAU); g.fill(); }
           for (const b of S.items) {
-            if (b.hit) continue;
-            const pop = Math.min(1, b.age * 8), s = b.r * 1.8 * pop;
+            if (b.hit) { // squished / shooed: a quick puff
+              const k = 1 - b.ttl / 0.3; g.globalAlpha = Math.max(0, 1 - k); g.fillStyle = b.bee ? '#ffe9a0' : '#fff';
+              for (let q = 0; q < 6; q++) { const a = (q * TAU) / 6; g.beginPath(); g.arc(b.x + Math.cos(a) * b.r * (0.5 + k), b.y + Math.sin(a) * b.r * (0.5 + k), b.r * 0.25 * (1 - k * 0.5), 0, TAU); g.fill(); }
+              g.globalAlpha = 1; continue;
+            }
+            const pop = Math.min(1, b.age * 8), leave = Math.min(1, b.ttl * 6), s = pop * leave;
             if (b.gold) { g.fillStyle = 'rgba(255,215,64,.35)'; g.beginPath(); g.arc(b.x, b.y, b.r * 1.5, 0, TAU); g.fill(); }
-            g.font = `${s}px sans-serif`; g.fillText(b.bee ? '🐝' : b.gold ? '🪲' : ['🐛', '🦗', '🐞'][(b.i + b.j) % 3], b.x, b.y);
-            g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(b.x - b.r, b.y + b.r + 6, b.r * 2, 4); g.fillStyle = b.bee ? '#ff8a8a' : '#fff'; g.fillRect(b.x - b.r, b.y + b.r + 6, b.r * 2 * Math.max(0, b.ttl / b.life), 4);
+            if (!b.bee && b.age < b.life * 0.4) { const k = b.age / (b.life * 0.4); g.strokeStyle = `rgba(255,210,63,${0.9 - k * 0.5})`; g.lineWidth = 3; g.beginPath(); g.arc(b.x, b.y, b.r * (1.6 - k * 0.45), 0, TAU); g.stroke(); } // PERFECT while this ring shows
+            ART.drawBug(g, b.kind, b.x, b.y, b.r * s, el + b.i);
+            g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(b.x - b.r, b.y + b.r + 8 * U, b.r * 2, 4); g.fillStyle = b.bee ? '#ff8a8a' : '#fff'; g.fillRect(b.x - b.r, b.y + b.r + 8 * U, b.r * 2 * Math.max(0, b.ttl / b.life), 4);
           }
-          g.textAlign = 'left'; g.textBaseline = 'alphabetic';
         },
+        debug() { for (const b of S.items) if (!b.hit) { if (b.bee) dbgCirc(b.x, b.y, b.r * 0.85, '#ff4040'); else { dbgCirc(b.x, b.y, b.r, '#ffff00'); dbgCirc(b.x, b.y, b.r * 1.1 + S.slop, '#7cff7c'); } } },
       },
     };
     const G = GAMES[kind]; G.init();
     g.save(); G.draw(0); g.restore(); // the course is visible behind the countdown
+    if (DEBUG) window.DUCK_MINI.dbg = { ov, S, G, kind, W, H, U, log, get holding() { return holding; }, get el() { return started ? (performance.now() - t0) / 1000 : 0; } };
 
     // ---- input ----
     const press = (e) => {
@@ -298,6 +522,7 @@
       g.save();
       if (fx.shake > 0) { g.translate((Math.random() - 0.5) * fx.shake, (Math.random() - 0.5) * fx.shake); fx.shake = Math.max(0, fx.shake - dt * 40); }
       G.draw(el);
+      if (DEBUG && G.debug) { g.save(); G.debug(el); g.restore(); }
       // sparkles and floating score text
       for (const p of fx.parts) { p.age += dt; p.vy += 300 * dt; p.x += p.vx * dt; p.y += p.vy * dt; g.globalAlpha = Math.max(0, 1 - p.age / 0.7); g.fillStyle = p.color; g.fillRect(p.x - 2, p.y - 2, 4, 4); }
       fx.parts = fx.parts.filter((p) => p.age < 0.7);
@@ -312,7 +537,7 @@
       requestAnimationFrame(frame);
     }
     function finish() {
-      over = true; window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release);
+      over = true; holding = false; window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release);
       const tip = ov.querySelector('.dk-tip'); if (tip) tip.remove();
       const card = document.createElement('div'); card.className = 'dk-result'; card.innerHTML = `<h2>Time! Score: ${score}</h2><p class="muted">Saving…</p>`;
       ov.appendChild(card);
@@ -332,5 +557,5 @@
     }
     return ov;
   }
-  window.DUCK_MINI = { play };
+  window.DUCK_MINI = { play, debug: DEBUG };
 })();
