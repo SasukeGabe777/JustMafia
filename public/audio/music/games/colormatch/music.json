@@ -1,0 +1,71 @@
+{
+ "cues": {
+  "title": {
+   "file": "games/colormatch/title-le-baguette.webm",
+   "loopStart": 6.613,
+   "loopEnd": 38.613
+  },
+  "lobby": {
+   "file": "games/colormatch/title-le-baguette.webm",
+   "loopStart": 6.613,
+   "loopEnd": 38.613
+  },
+  "intro": {
+   "file": "games/colormatch/title-le-baguette.webm",
+   "loopStart": 6.613,
+   "loopEnd": 38.613
+  },
+  "play": {
+   "file": "games/colormatch/play-martini-sunset.webm",
+   "loopStart": 18.403,
+   "loopEnd": 107.562,
+   "gain": 0.93
+  },
+  "think": {
+   "file": "games/colormatch/think-bass-meant-jazz.webm",
+   "loopStart": 30.732,
+   "loopEnd": 119.765,
+   "gain": 0.63
+  },
+  "finale": {
+   "file": "games/colormatch/finale-alls-fair-in-love.webm",
+   "loopStart": 6.045,
+   "loopEnd": 105.343,
+   "gain": 0.54
+  }
+ },
+ "credits": [
+  {
+   "file": "games/colormatch/title-le-baguette.webm",
+   "title": "Le Baguette",
+   "author": "Alexander Nakarada",
+   "source": "https://freepd.com/world.php (FreePD, site closed; archived: https://web.archive.org/web/2021/https://freepd.com/world.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for title, lobby, intro"
+  },
+  {
+   "file": "games/colormatch/play-martini-sunset.webm",
+   "title": "Martini Sunset",
+   "author": "Anonymous",
+   "source": "https://freepd.com/misc.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/misc.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for play"
+  },
+  {
+   "file": "games/colormatch/think-bass-meant-jazz.webm",
+   "title": "Bass Meant Jazz",
+   "author": "Kevin MacLeod",
+   "source": "https://freepd.com/misc.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/misc.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for think"
+  },
+  {
+   "file": "games/colormatch/finale-alls-fair-in-love.webm",
+   "title": "Alls Fair In Love",
+   "author": "Bryan Teoh",
+   "source": "https://freepd.com/comedy.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/comedy.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for finale"
+  }
+ ]
+}
