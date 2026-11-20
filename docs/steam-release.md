@@ -100,8 +100,12 @@ Fill in Steamworks → your app → Store page. Assets (PNG or JPG; sizes as Ste
       Content** survey.
 - [ ] **AI-generated content disclosure** (Content Survey → "AI Generated Content"). Steam requires
       describing both:
-  - **Pre-generated** AI content: the narrator voice clips in `public/audio/voice/` are generated
-    with the Kokoro-82M text-to-speech model (and any Chatterbox voices, if used); any music that
+  - **Pre-generated** AI content: the host and narrator voice clips in `public/audio/voice/` are
+    generated with the **Orpheus TTS** text-to-speech model (Canopy Labs, Apache-2.0; a fine-tune of Meta
+    Llama 3.2 3B, so the Llama 3.2 Community License also applies, commercial use allowed), using its
+    built-in voices (no real person's voice is cloned); every clip is checked by speech recognition
+    (faster-whisper) and the lines are the game's own text with no player names. Clips made from your own
+    recordings are voice-converted with Chatterbox (Resemble AI, MIT, inaudible Perth watermark). Any music that
     was generated with AI tools; any AI-assisted art/text (the code was written with AI coding
     assistants — Valve currently asks about content, not code *(check)*). Say what guardrails
     you used (you reviewed every line/clip).
@@ -141,9 +145,12 @@ Fill in Steamworks → your app → Store page. Assets (PNG or JPG; sizes as Ste
     Black Ops One, Cinzel, Cinzel Decorative, MedievalSharp, Anton — SIL Open Font License 1.1;
     Permanent Marker, Special Elite, Luckiest Guy — Apache 2.0. Both allow commercial use and
     bundling (OFL: don't sell the fonts on their own).
-  - Kokoro-82M model: Apache 2.0 (commercial use OK; generated audio is yours). kokoro-js:
-    Apache-2.0 according to its npm package (an older comment in tools/voice-gen.js says MIT).
-  - Chatterbox (Resemble AI) is MIT, if any clips were made with it — record which.
+  - Orpheus TTS (rendered the voice clips): code and weights Apache-2.0 (Canopy Labs); built on Llama 3.2,
+    so the Llama 3.2 Community License applies (commercial use OK below 700M monthly users; keep the
+    "Built with Llama" credit in THIRD_PARTY_NOTICES.md). SNAC decoder: MIT. Only the audio ships.
+  - Kokoro-82M model: Apache 2.0 (commercial use OK; generated audio is yours). Only the optional live
+    voice uses it now. kokoro-js: Apache-2.0 according to its npm package.
+  - Chatterbox (Resemble AI) is MIT: used only for voice conversion of recorded takes (manifest `e: rec`).
   - Any AI music generator: check that tool's terms allow commercial use of its output (many
     free tiers don't). List it in the notices.
 

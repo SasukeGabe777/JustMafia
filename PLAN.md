@@ -1,5 +1,56 @@
 # Mafia Town: expansion plan
 
+## November 20, 2026 - Natural voices: Orpheus re-voice + a recorded JustMafia narrator (branch claude/voices-natural)
+
+- **How the engine was chosen.** The owner listened to three A/B rounds (files in `%LOCALAPPDATA%\jgb-voice\ab`, `ab2`, `ab3`):
+  Chatterbox (MIT, cloned from each Kokoro voice) "better but still like text to speech"; round 2 Orpheus vs
+  Dia 1.6B vs Orpheus+Chatterbox voice conversion: **Orpheus, its own voices, won** (leo and dan were
+  liked; tara came out "quiet and scary"). Round 3 tried the female voices on upbeat hosts: mia is quiet
+  like tara, so upbeat hosts use jess and zoe. Rejected: Higgs Audio v2 (Boson community license needs an
+  expanded license above 100k annual users), Kyutai TTS (CC-BY weights, but no public voice cloning and
+  several voices come from non-commercial datasets), XTTS/F5 (non-commercial).
+- **Orpheus TTS 0.1-ft** (Canopy Labs; Apache-2.0, a Llama 3.2 3B fine-tune so the Llama 3.2 Community
+  License applies too: commercial use OK) as the unsloth Q8_0 GGUF through llama.cpp (CUDA) + SNAC 24 kHz
+  (MIT), in `tools/voice-orpheus.py`. Every host has an Orpheus voice (`host.voice.orpheus`, part of the clip
+  key with the delivery preset `cb`); the full cast is in `tools/voice-gen.js`' history and the intros.
+  JustMafia narrators: zac (Small Town, Medieval, Tabletop, Dragons, Dungeon), dan (Noir, FBI, Spies,
+  Realistic), leah (Fantasy, Snow), jess (Space, Blocky).
+- **Quality gate (every clip, best of up to 4 seeds kept):** transcribe back with faster-whisper small.en
+  (MIT; word error rate above 12% = re-roll, spelling-only differences forgiven), a pause over 0.9 s,
+  far too long for the text, and the owner's "quiet and scary" complaint measured: raw speech level below
+  -23 dB, spectral flatness above 0.05 (breathy) or, for upbeat hosts, under 3.8 semitones of pitch movement
+  (flat). Then long pauses are tightened (260 ms for upbeat hosts, 450 ms for narrators) and every clip is
+  normalized to the same speech level (-19 dBFS) before the usual 24 kbps mono Opus WebM encode.
+- **GPU etiquette.** PyTorch is capped at 40% of the card, the cache is freed after every clip, and the render
+  waits while the whole card is above 9.5 GB (`VOICE_GPU_FRACTION`, `VOICE_GPU_TOTAL_MAX_MB`). Renders resume from
+  `%LOCALAPPDATA%/jgb-voice/render`; `--encode-only` publishes what an interrupted run made.
+- **Setup (once per PC, Windows + NVIDIA):** Python 3.11; `python -m venv %LOCALAPPDATA%\jgb-voice\venv`; in it
+  `pip install torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124`,
+  `pip install chatterbox-tts faster-whisper snac "setuptools<80"` and
+  `pip install llama-cpp-python==0.3.4 --only-binary=:all: --index-url https://abetlen.github.io/llama-cpp-python/whl/cu124`
+  (newer wheels crash with an illegal instruction on this CPU). Then `npm run voices` (`-- mafia`, `-- price`, ...).
+  Without the venv it falls back to the old in-browser Kokoro path (`--engine kokoro`).
+- **Record it yourself.** `npm run voices -- --sheet lines.csv` writes a recording sheet (line id, game,
+  character, what to read). Save takes as `<id>.wav` in one folder and run `npm run voices -- --recordings <folder>`:
+  Chatterbox voice conversion (MIT) turns each take into that character's voice (the delivery stays the
+  reader's), checks it by speech recognition, and saves it as the clip (`e: 'rec'`; later TTS runs keep it).
+- **JustMafia narrator** (was the browser speech voice only). `public/shared/narration-say.js` turns each
+  template into what the voice SAYS: names become "someone" / "they" (in cutscene captions the victim is on
+  screen, so "they"), `{town}` "the town", sentences with counts are not spoken, and a role reveal is its own
+  clip ("They were the Doctor."). The TV still SHOWS the full line. The server sends `narration.say`
+  (game.js `narrate`, surprises, shroud); cutscene captions send theirs with the `mt-caption` event.
+  `public/host.js` plays the clips with the voice on/off and narrator volume settings; the browser voice is the
+  last resort (a Judge's typed line, the appended story sentence, a missing clip) or when a browser voice is
+  picked by hand in Host controls ("Recorded narrator" is the default). `tools/voice-lines-mafia.js` lists every
+  reachable line. Also fixed: role phrases like "the The Fixer".
+- **JustGameBox name lines.** Contestant reveals and "…and N more" are spoken as their pre-rendered name-free
+  lead ("Give it up for…", "…and more high rollers!") while the card shows the name and fact (show.js
+  `nameless()`, `factSpoken()`, `Speech.say(..., { speak })`); with "Natural live voice" on, the full line is
+  spoken live instead. Static in-game host lines (`line: '…'` in a game's TV code) are pre-voiced too.
+- **Script.** How-to steps are spoken as title + rule; the phone hint stays on screen (shorter, more natural).
+- Tests: `tools/test-narration-voice.js` (keys match, spoken forms clean and name-free, every narrator line
+  has a clip once rendered, name-free leads); `test-voice-timing.js`.
+
 ## November 19, 2026 - Difficulty everywhere, practice rounds only for new games (branch claude/difficulty)
 
 - **YesChef difficulty** (`difficulty`: 🟢 Easy default / 🟡 Medium / 🔴 Hard; Hard = the game as it was).
