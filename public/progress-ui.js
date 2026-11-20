@@ -9,7 +9,7 @@
 //   JGProgress.banner(season, opts)    -> the event banner (title screen, TV lobby, phones)
 //   JGProgress.news(prog)              -> toast lines for level ups and finished challenges
 //   JGProgress.theme(el, season)       -> paints the season colours on an element (CSS vars)
-// Elements with [data-season-banner] (title screen, TV lobby) and [data-progress-strip] (the shop
+// Elements with [data-season-banner] (title screen header card: ="hub"; TV lobby; join screen) and [data-progress-strip] (the shop
 // header) fill themselves when the page loads.
 (function () {
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -29,6 +29,8 @@
   };
   const themeVars = (s) => (s && s.theme ? `--ea:${s.theme.a};--eb:${s.theme.b};--ec:${s.theme.c};` : '');
   function theme(el, s) { if (!el || !s || !s.theme) return; el.style.setProperty('--ea', s.theme.a); el.style.setProperty('--eb', s.theme.b); el.style.setProperty('--ec', s.theme.c); }
+  // The title screen's header card (sits beside Party Mode, same shape): icon, name, "kicker · time".
+  const hubCard = (s, kicker, when, soon) => `<div class="jgp-hub${soon ? ' soon' : ''}" style="${themeVars(s)}" title="${esc(s.blurb || '')}"><span class="jgp-hub-ic" aria-hidden="true">${esc(s.icon)}</span><span class="jgp-hub-txt"><b>${esc(s.name)}</b><small>${esc(kicker)} · <em>${esc(when)}</em></small></span></div>`;
   const daysText = (n) => (n <= 0 ? 'Ends today' : n === 1 ? 'Event ends tomorrow' : `Event ends in ${n} days`);
   // The event banner: the running event, or the next one ("coming soon").
   function banner(season, opts = {}) {
@@ -39,8 +41,10 @@
       const nx = opts.next || (sz && sz.nextSeason());
       if (!nx || opts.currentOnly) return '';
       const inDays = nx.inDays != null ? nx.inDays : Math.max(0, Math.ceil((Date.parse(nx.start + 'T00:00:00Z') - Date.now()) / 86400000));
+      if (opts.hub) return hubCard(nx, 'Next event', `starts in ${inDays} day${inDays === 1 ? '' : 's'}`, true);
       return `<div class="jgp-banner soon${opts.compact ? ' compact' : ''}" style="${themeVars(nx)}"><span class="jgp-bi">${esc(nx.icon)}</span><div><small>NEXT EVENT</small><b>${esc(nx.name)}</b><span>Starts in ${inDays} day${inDays === 1 ? '' : 's'}</span></div></div>`;
     }
+    if (opts.hub) { const n = season.daysLeft; return hubCard(season, 'Seasonal event', n <= 0 ? 'last day!' : n === 1 ? 'ends tomorrow' : `${n} days left`, false); }
     if (opts.pill) return `<span class="jgp-pill" style="${themeVars(season)}" title="${esc(season.blurb || '')}"><b>${esc(season.icon)} ${esc(season.name)}</b><em>${esc(daysText(season.daysLeft))}</em></span>`;
     return `<div class="jgp-banner${opts.compact ? ' compact' : ''}${opts.tv ? ' tv' : ''}" style="${themeVars(season)}"><span class="jgp-bi">${esc(season.icon)}</span><div><small>SEASONAL EVENT</small><b>${esc(season.name)}</b>${opts.compact ? '' : `<span class="jgp-blurb">${esc(season.blurb || '')}</span>`}</div><em class="jgp-days">⏳ ${esc(daysText(season.daysLeft))}</em></div>`;
   }
@@ -113,7 +117,7 @@
   function mountBanners() {
     for (const el of document.querySelectorAll('[data-season-banner]')) {
       const mode = el.dataset.seasonBanner || '';
-      el.innerHTML = banner(null, { compact: /compact/.test(mode), tv: /tv/.test(mode), pill: /pill/.test(mode), currentOnly: /current/.test(mode) });
+      el.innerHTML = banner(null, { compact: /compact/.test(mode), tv: /tv/.test(mode), pill: /pill/.test(mode), hub: /hub/.test(mode), currentOnly: /current/.test(mode) });
       el.hidden = !el.innerHTML;
     }
   }

@@ -1249,3 +1249,14 @@ Validated: `tools/test-progress.js` (14 tests, incl. real bot games of 5 box gam
 JustMafia sims, sockets), updated `test-season.js`, `e2e-shop.js`; screenshots looked at.
 Limits: games with their own TV lobby (e.g. Most Likely To…) don't show the lobby banner; players
 without a linked wallet earn nothing until the phone links it (opening the profile does).
+
+### Title screen header cleanup (claude/hub-clean)
+The seasonal event banner floated on its own centred row between the header and the games, with a
+tiny icon (a `.jgp-banner span` rule shrank the icon too). The header is now one row: logo, tagline
+and How it works on the left; on the right the event card (`data-season-banner="hub"`: icon, name,
+"Seasonal event · N days left", or "Next event · starts in N days" muted when none is running), shaped
+and sized like the Party Mode button beside it, in the event's colours. The open-room notice and its
+"Back to room" / "New room" buttons became one strip under the header (`.room-bar`); the phone-only
+join and shop links moved into the header so phones see them first. Also fixed the event icon size on
+the phone join screen banner. Validated: screenshots at 1920, 1366, 1024, 800 and 390 wide (first
+visit, returning, no event, open room), `e2e-onboard.js`, `test-box-kit.js`, `test-season.js`, `e2e-box.js`.

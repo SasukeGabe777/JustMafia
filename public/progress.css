@@ -33,7 +33,7 @@
 .jgp-banner > div { flex: 1; min-width: 0; display: grid; position: relative; z-index: 1; }
 .jgp-banner small { font-size: 10.5px; letter-spacing: 1.6px; opacity: 0.85; font-weight: 600; }
 .jgp-banner b { font-size: 20px; line-height: 1.1; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
-.jgp-banner .jgp-blurb, .jgp-banner span { font-size: 12.5px; opacity: 0.92; }
+.jgp-banner .jgp-blurb, .jgp-banner > div > span { font-size: 12.5px; opacity: 0.92; }
 .jgp-bi { font-size: 34px; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.25)); position: relative; z-index: 1; animation: jgpBob 3s ease-in-out infinite; }
 .jgp-days { position: relative; z-index: 1; font-style: normal; font-size: 12px; font-weight: 700; background: rgba(0, 0, 0, 0.3); padding: 5px 9px; border-radius: 99px; white-space: nowrap; }
 .jgp-banner.compact { padding: 8px 12px; border-radius: 14px; }
@@ -109,10 +109,6 @@
 .h-me { position: relative; }
 .h-me .jgp-badge, .h-me span.jgp-badge { position: absolute; left: -2px; bottom: -3px; font-size: 9px; padding: 1px 3px 1px 2px; margin: 0; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45); z-index: 1; }
 .h-me #h-name { display: inline-flex; align-items: center; white-space: nowrap; min-width: 0; }
-/* title screen (public/hub.html) */
-.hub-event { max-width: 760px; margin: 4px auto 18px; }
-.hub-event .jgp-banner { padding: 14px 20px; }
-.hub-event .jgp-banner b { font-size: 24px; }
 /* the shop: a slim strip under the header */
 .jgp-shopstrip { display: flex !important; justify-content: center; gap: 6px; padding: 4px 10px 6px; }
 .jgp-shopstrip[hidden] { display: none !important; }
@@ -125,6 +121,8 @@
 /* narrow phones: the banner's "ends in" pill goes under the name */
 .jgp-banner { flex-wrap: wrap; }
 .jgp-banner > div { flex: 1 1 140px; }
+.jgp-banner.compact { flex-wrap: nowrap; }
+.jgp-banner.compact > div { flex-basis: 0; }
 @media (max-width: 420px) { .jgp-banner:not(.compact) .jgp-days { margin-left: 46px; } }
 /* TV header pill (every game, public/box/tv.html) */
 .jgp-pill { --ea: #ffcf3f; --eb: #4a2a8a; --ec: #fff4c8; display: inline-flex; align-items: center; gap: 8px; padding: 5px 6px 5px 12px; border-radius: 99px; color: #fff; font: 600 14px 'Fredoka', system-ui, sans-serif;

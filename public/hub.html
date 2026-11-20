@@ -55,21 +55,23 @@
         <p class="tag">Party games for the big screen. Everyone plays from their phone. <button class="hiw-link" id="hiw-open">▶ How it works <small>1 min</small></button></p>
       </div>
       <div class="head-actions">
-        <a class="continue" id="continue" hidden></a>
-        <button class="new-room" id="new-room" hidden title="Forget this room: the next game gets a new code">✨ New room</button>
+        <!-- Phones only (hidden on a TV): join a game, or dress up and shop. -->
+        <a class="phone-join" href="/box/play">📱 On your phone? <b>Tap here to join a game</b></a>
+        <a class="phone-join shop-join" href="/shop?back=/">🛍️ <b>Your character &amp; the JustGold shop</b></a>
+        <div class="hub-event" data-season-banner="hub" hidden></div> <!-- the seasonal event, or the next one (public/progress-ui.js, public/shared/seasons.js) -->
         <button class="party-btn" id="party-open"><span class="pb-ic" aria-hidden="true">🎉</span><span class="pb-txt"><b>Party Mode</b><small>A whole night of games, picked for you</small></span></button>
       </div>
     </header>
-    <div class="hub-event" data-season-banner hidden></div> <!-- the seasonal event (public/progress-ui.js, public/shared/seasons.js) -->
     <!-- One code for the night (hub.js): this TV's room is still open, so a game picked here
          switches that room and every phone follows. -->
-    <p class="room-live" id="room-live" hidden></p>
+    <div class="room-bar">
+      <p class="room-live" id="room-live" hidden></p>
+      <a class="continue" id="continue" hidden></a>
+      <button class="new-room" id="new-room" hidden title="Forget this room: the next game gets a new code">✨ New room</button>
+    </div>
     <!-- New people (public/hub-onboard.js): what's just been unlocked, and "New here? Start with these 5". -->
     <div class="whats-new" id="whats-new" hidden></div>
     <section class="new-here" id="new-here" aria-label="New here? Start with these" hidden></section>
-
-    <a class="phone-join" href="/box/play">📱 On your phone? <b>Tap here to join a game</b></a>
-    <a class="phone-join shop-join" href="/shop?back=/">🛍️ <b>Your character &amp; the JustGold shop</b></a>
 
     <!-- The three big games. -->
     <section class="tiles big" id="tiles" aria-label="Featured games">
