@@ -78,19 +78,16 @@
   },
   "blackjack": {
    "title": {
-    "file": "games/blackjack/title-once-in-a-while.mp3",
-    "gain": 0.8,
-    "loopEnd": 105
+    "file": "games/blackjack/play-blue-intermission.ogg",
+    "gain": 0.94
    },
    "intro": {
-    "file": "games/blackjack/title-once-in-a-while.mp3",
-    "gain": 0.8,
-    "loopEnd": 105
+    "file": "games/blackjack/play-blue-intermission.ogg",
+    "gain": 0.94
    },
    "lobby": {
-    "file": "games/blackjack/title-once-in-a-while.mp3",
-    "gain": 0.8,
-    "loopEnd": 105
+    "file": "games/blackjack/play-blue-intermission.ogg",
+    "gain": 0.94
    },
    "think": {
     "file": "games/blackjack/think-buy-something.ogg",

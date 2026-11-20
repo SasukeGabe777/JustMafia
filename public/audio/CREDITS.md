@@ -13,7 +13,6 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | alien | Music | `games/alien/somethings-out-there.ogg` | Somethings Out There | HoliznaCC0 | CC0 1.0 | https://freemusicarchive.org/music/holiznacc0/stranger-than-fiction-halloween-sci-fi/somethings-out-there/ |
 | bid | Music | `games/bid/title-confusement-rag.mp3` | Confusement Rag | Skrjablin | CC0 1.0 | https://opengameart.org/node/25403 |
 | bid | Music | `games/bid/play-the-adventurers-rag.mp3` | The Adventurer's Rag | Skrjablin | CC0 1.0 | https://opengameart.org/node/25403 |
-| blackjack | Music | `games/blackjack/title-once-in-a-while.mp3` | Once In A While | Pro Sensory (Alex McCulloch) | CC0 1.0 | https://opengameart.org/content/once-in-a-while |
 | blackjack | Music | `games/blackjack/think-buy-something.ogg` | Buy Something! (Shop Theme) | Cleyton Kauffman | CC0 1.0 | https://opengameart.org/content/shop-theme |
 | blackjack | Music | `games/blackjack/play-blue-intermission.ogg` | Blue Intermission | congusbongus | CC0 1.0 | https://opengameart.org/content/blue-intermission |
 | blackjack | Music | `games/blackjack/finale-catchy-swing.ogg` | Catchy Swing | Doge | CC0 1.0 | https://opengameart.org/content/catchy-swing |

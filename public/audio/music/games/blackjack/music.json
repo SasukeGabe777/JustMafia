@@ -1,14 +1,13 @@
 {
  "cues": {
-  "title": { "file": "games/blackjack/title-once-in-a-while.mp3", "gain": 0.8, "loopEnd": 105 },
-  "intro": { "file": "games/blackjack/title-once-in-a-while.mp3", "gain": 0.8, "loopEnd": 105 },
-  "lobby": { "file": "games/blackjack/title-once-in-a-while.mp3", "gain": 0.8, "loopEnd": 105 },
+  "title": { "file": "games/blackjack/play-blue-intermission.ogg", "gain": 0.94 },
+  "intro": { "file": "games/blackjack/play-blue-intermission.ogg", "gain": 0.94 },
+  "lobby": { "file": "games/blackjack/play-blue-intermission.ogg", "gain": 0.94 },
   "think": { "file": "games/blackjack/think-buy-something.ogg", "gain": 0.92 },
   "play": { "file": "games/blackjack/play-blue-intermission.ogg", "gain": 0.94 },
   "finale": { "file": "games/blackjack/finale-catchy-swing.ogg" }
  },
  "credits": [
-  { "file": "games/blackjack/title-once-in-a-while.mp3", "title": "Once In A While", "author": "Pro Sensory (Alex McCulloch)", "source": "https://opengameart.org/content/once-in-a-while", "license": "CC0 1.0" },
   { "file": "games/blackjack/think-buy-something.ogg", "title": "Buy Something! (Shop Theme)", "author": "Cleyton Kauffman", "source": "https://opengameart.org/content/shop-theme", "license": "CC0 1.0" },
   { "file": "games/blackjack/play-blue-intermission.ogg", "title": "Blue Intermission", "author": "congusbongus", "source": "https://opengameart.org/content/blue-intermission", "license": "CC0 1.0" },
   { "file": "games/blackjack/finale-catchy-swing.ogg", "title": "Catchy Swing", "author": "Doge", "source": "https://opengameart.org/content/catchy-swing", "license": "CC0 1.0" }
