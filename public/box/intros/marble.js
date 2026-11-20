@@ -142,7 +142,7 @@
     theme: { accent: '#ffd23f', accent2: '#2f47d6', accent3: '#e3bb80', ink: '#fff2dc', fade: '#170b04', confetti: ['#ffd23f', '#6fb7ff', '#ff7ac6', '#e3bb80', '#ffffff'] },
     host: {
       name: 'Tilly Burl',
-      voice: { kokoro: 'bf_isabella', speed: 0.93, like: /female|libby|sonia|hazel|samantha|zira/i, accent: /en-GB|en-US/i, pitch: 1.05, rate: 1.0 },
+      voice: { kokoro: 'bf_isabella', cb: 'warm', speed: 0.93, like: /female|libby|sonia|hazel|samantha|zira/i, accent: /en-GB|en-US/i, pitch: 1.05, rate: 1.0 },
       look,
     },
     lines: {

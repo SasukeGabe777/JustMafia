@@ -167,32 +167,39 @@ Object.assign(LINES.corporate, {
 
 const { THEMES } = require('./public/shared/themes');
 
-function line(style, key, vars = {}, rng = Math.random) {
-  let bank = (LINES[style] && LINES[style][key]) || LINES.classic[key] || [''];
+// Which templates a line is picked from (also used by tools/voice-gen.js to pre-render the voice).
+function bank(style, key, vars = {}) {
   // A theme's own narration (e.g. RSP Supply) replaces the style bank for that key.
   const themed = THEMES[vars.theme] && THEMES[vars.theme].narration && THEMES[vars.theme].narration[key];
-  if (themed) {
-    const render = (tpl) => tpl.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ''));
-    const fresh = themed.filter((tpl) => render(tpl) !== vars.previous), list = fresh.length ? fresh : themed;
-    return render(list[Math.floor(rng() * list.length)]);
-  }
-  const nightFlavor = {
-    medieval: ['Lanterns dim along the lanes of {town}. Behind shuttered cottages, a footstep breaks the silence.', 'The tavern doors close in {town}. Not every traveler has gone to sleep.'],
-    space: ['Habitat lights dim across {town}. A motion sensor blinks in an empty corridor.', 'Night cycle begins in {town}. Beyond the glass, the stars keep their secrets.'],
-    fantasy: ['The enchanted woods fall silent around {town}. A shadow crosses the moonlit path.', 'Blue embers flicker in {town}. Somewhere, a door opens without a sound.'],
-    dragons: ['Ash drifts across the roofs of {town}. Something moves beneath the mountain.', 'The watchfires dim in {town}. A shadow slips between the stones.'],
-    dungeon: ['Torches gutter in the passages of {town}. Listen carefully.', 'Stone doors close in {town}. A distant echo sounds like a footstep.'],
-    spies: ['Streetlights blink across {town}. Somewhere, a surveillance feed goes dark.', 'The last office closes in {town}. One operative is still at work.'],
-    fbi: ['Radios fall quiet in {town}. Someone has slipped past the perimeter.', 'The night shift begins in {town}. Every closed door could conceal a secret.'],
-  };
-  if (key === 'night' && style === 'classic' && nightFlavor[vars.theme]) bank = nightFlavor[vars.theme];
-  if (key === 'kill' && vars.firstDeath && style === 'classic') bank = ['The first empty chair in {town} belongs to {name}.{role} Take a moment. Then look at the neighbors still beside you.'];
-  if (key === 'discussion' && vars.alive <= 5 && style === 'classic') bank = ['Only {alive} voices remain in {town}. Think about who benefits from the silence.', 'There are fewer places to hide in {town} now. Choose your words carefully.'];
+  if (themed) return themed;
+  let bank = (LINES[style] && LINES[style][key]) || LINES.classic[key] || [''];
+  if (key === 'night' && style === 'classic' && NIGHT_FLAVOR[vars.theme]) bank = NIGHT_FLAVOR[vars.theme];
+  if (key === 'kill' && vars.firstDeath && style === 'classic') bank = FIRST_DEATH;
+  if (key === 'discussion' && vars.alive <= 5 && style === 'classic') bank = FEW_LEFT;
+  return bank;
+}
+const NIGHT_FLAVOR = {
+  medieval: ['Lanterns dim along the lanes of {town}. Behind shuttered cottages, a footstep breaks the silence.', 'The tavern doors close in {town}. Not every traveler has gone to sleep.'],
+  space: ['Habitat lights dim across {town}. A motion sensor blinks in an empty corridor.', 'Night cycle begins in {town}. Beyond the glass, the stars keep their secrets.'],
+  fantasy: ['The enchanted woods fall silent around {town}. A shadow crosses the moonlit path.', 'Blue embers flicker in {town}. Somewhere, a door opens without a sound.'],
+  dragons: ['Ash drifts across the roofs of {town}. Something moves beneath the mountain.', 'The watchfires dim in {town}. A shadow slips between the stones.'],
+  dungeon: ['Torches gutter in the passages of {town}. Listen carefully.', 'Stone doors close in {town}. A distant echo sounds like a footstep.'],
+  spies: ['Streetlights blink across {town}. Somewhere, a surveillance feed goes dark.', 'The last office closes in {town}. One operative is still at work.'],
+  fbi: ['Radios fall quiet in {town}. Someone has slipped past the perimeter.', 'The night shift begins in {town}. Every closed door could conceal a secret.'],
+};
+const FIRST_DEATH = ['The first empty chair in {town} belongs to {name}.{role} Take a moment. Then look at the neighbors still beside you.'];
+const FEW_LEFT = ['Only {alive} voices remain in {town}. Think about who benefits from the silence.', 'There are fewer places to hide in {town} now. Choose your words carefully.'];
+
+// -> { text, tpl }: the rendered line and the template it came from (the voice speaks sayOf(tpl)).
+function pick(style, key, vars = {}, rng = Math.random) {
+  let list = bank(style, key, vars);
   const render = (tpl) => tpl.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ''));
-  const fresh = bank.filter((tpl) => render(tpl) !== vars.previous);
-  if (fresh.length) bank = fresh;
-  const tpl = bank[Math.floor(rng() * bank.length)];
-  return render(tpl);
+  const fresh = list.filter((tpl) => render(tpl) !== vars.previous);
+  if (fresh.length) list = fresh;
+  const tpl = list[Math.floor(rng() * list.length)];
+  return { text: render(tpl), tpl };
 }
 
-module.exports = { line, STYLES };
+function line(style, key, vars = {}, rng = Math.random) { return pick(style, key, vars, rng).text; }
+
+module.exports = { line, pick, bank, STYLES, LINES, NIGHT_FLAVOR, FIRST_DEATH, FEW_LEFT };

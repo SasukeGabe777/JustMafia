@@ -9,6 +9,7 @@
 
 const crypto = require('crypto');
 const narrator = require('./narrator');
+const SAY = require('./public/shared/narration-say');
 const OPTIONS = require('./public/shared/options');
 const R = require('./public/shared/roles');
 const { THEMES } = require('./public/shared/themes');
@@ -186,9 +187,13 @@ class Room {
 
   narrate(key, vars = {}) {
     this.narrationHistory = this.narrationHistory || {};
-    const text = narrator.line(this.settings.narratorStyle, key, { town: this.settings.townName, theme: this.settings.theme, alive: this.alive().length, firstDeath: !!this.stats && this.stats.nightKills.length === 1, previous: this.narrationHistory[key], ...vars }, this.rng);
+    const { text, tpl } = narrator.pick(this.settings.narratorStyle, key, { town: this.settings.townName, theme: this.settings.theme, alive: this.alive().length, firstDeath: !!this.stats && this.stats.nightKills.length === 1, previous: this.narrationHistory[key], ...vars }, this.rng);
     this.narrationHistory[key] = text;
-    this.narration = { id: ++this.narrationSeq, text, key, suggestion: this.settings.narratorMode === 'human' };
+    // What the narrator's voice says: pre-rendered clips with no names in them (public/shared/narration-say.js);
+    // a lone role reveal ("They were the Doctor.") is its own clip.
+    const say = SAY.sayOf(tpl, { plural: key === 'multiKill' });
+    if (vars.role && key !== 'multiKill' && /\{role\}/.test(tpl)) { const r = SAY.roleSay(String(vars.role).replace(/^\s*They were\s+/, '').replace(/\.\s*$/, '')); if (r) say.push(r); }
+    this.narration = { id: ++this.narrationSeq, text, key, say, suggestion: this.settings.narratorMode === 'human' };
     this.addLog(this.narration.suggestion ? `💡 (suggested line) ${text}` : `📣 ${text}`);
   }
 
@@ -196,7 +201,8 @@ class Room {
     const r = this.role(p), T = require('./public/shared/themes'), theme = this.settings.theme;
     if (p.role === 'mafia') return `a member of ${T.teamName(theme, 'mafia', 'the Mafia')}`;
     if (r.team === 'town' && p.role === 'villager') return `a ${T.roleName(theme, 'villager', 'Villager')}`;
-    return `the ${T.roleName(theme, p.role, r.name)}`;
+    const name = T.roleName(theme, p.role, r.name);
+    return /^the /i.test(name) ? name : `the ${name}`; // "The Fixer", not "the The Fixer"
   }
 
   roleSuffix(p) {

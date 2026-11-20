@@ -2,6 +2,14 @@
 // Seasonal events the Judge can switch on for a game (settings.event).
 //   bloodMoon: every third night the moon turns red and the Mafia strike twice
 //   (a second victim even if they all agreed on one). Season XP is doubled (profiles.js).
+const SURPRISES = {
+  fog: { text: '🌫 A thick fog rolls into {town}. Tonight, nobody can see who goes where.', log: '🌫 Fog: visit information is hidden tonight.' },
+  festival: { text: '🎉 It’s festival night in {town}! Lanterns everywhere, music till dawn. Even the Mafia won’t risk a kill tonight.', log: '🎉 Festival: no Mafia kill tonight.' },
+  bloodMoon: { text: '🌕 The moon rises blood red over {town}. Tonight, the Mafia will strike twice.', log: '🌕 Blood Moon: the Mafia kill twice tonight.' },
+};
+// What the narrator says for them (pre-rendered clips; see public/shared/narration-say.js).
+const SAY = require('../public/shared/narration-say');
+
 module.exports = function install(Room) {
   const startNight = Room.prototype.startNight;
   Room.prototype.startNight = function () {
@@ -10,22 +18,17 @@ module.exports = function install(Room) {
     if (this.settings.event === 'surprises') return this.nightSurprise();
     if (this.settings.event !== 'bloodMoon' || this.day % 3 !== 0) return;
     this.night.bloodMoon = true;
-    this.narration = { id: ++this.narrationSeq, text: '🌕 The moon rises blood red over the town. Tonight, the Mafia will strike twice.', key: 'bloodMoon', custom: true };
+    this.narration = { id: ++this.narrationSeq, text: '🌕 The moon rises blood red over the town. Tonight, the Mafia will strike twice.', say: SAY.sayOf(SURPRISES.bloodMoon.text), key: 'bloodMoon', custom: true };
     this.addLog('🌕 Blood Moon: the Mafia kill twice tonight.');
     this.sync();
   };
   // Daily Surprises: from night 2, about half the nights bring one twist (never the same twice in a row).
-  const SURPRISES = {
-    fog: { text: '🌫 A thick fog rolls into {town}. Tonight, nobody can see who goes where.', log: '🌫 Fog: visit information is hidden tonight.' },
-    festival: { text: '🎉 It’s festival night in {town}! Lanterns everywhere, music till dawn. Even the Mafia won’t risk a kill tonight.', log: '🎉 Festival: no Mafia kill tonight.' },
-    bloodMoon: { text: '🌕 The moon rises blood red over {town}. Tonight, the Mafia will strike twice.', log: '🌕 Blood Moon: the Mafia kill twice tonight.' },
-  };
   Room.prototype.nightSurprise = function () {
     if (this.day < 2 || this.rng() < 0.5) { this.lastSurprise = null; return; }
     const options = Object.keys(SURPRISES).filter((k) => k !== this.lastSurprise);
     const kind = this.pick(options); this.lastSurprise = kind;
     this.night[kind] = true; this.night.surprise = kind;
-    this.narration = { id: ++this.narrationSeq, text: SURPRISES[kind].text.replace('{town}', this.settings.townName), key: 'surprise', custom: true };
+    this.narration = { id: ++this.narrationSeq, text: SURPRISES[kind].text.replace('{town}', this.settings.townName), say: SAY.sayOf(SURPRISES[kind].text), key: 'surprise', custom: true };
     this.addLog(SURPRISES[kind].log);
     this.sync();
   };
@@ -43,3 +46,4 @@ module.exports = function install(Room) {
     return out;
   };
 };
+module.exports.SURPRISES = SURPRISES;

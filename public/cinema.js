@@ -1228,9 +1228,9 @@
     // Narrator caption (AI narrator only; a human narrator tells the story themselves).
     a_caption(a) {
       if (this.town.state && this.town.state.narratorMode === 'human') return;
-      const lines = a.lines || [a.text], text = this.text(lines[Math.floor(Math.random() * lines.length)]);
+      const lines = a.lines || [a.text], tpl = lines[Math.floor(Math.random() * lines.length)], text = this.text(tpl);
       this.caption = { text, t0: this.scene.t, dur: a.dur || 3 };
-      try { window.dispatchEvent(new CustomEvent('mt-caption', { detail: text })); } catch { /* voice is optional */ }
+      try { window.dispatchEvent(new CustomEvent('mt-caption', { detail: { text, say: window.MT_SAY ? window.MT_SAY.sayOf(tpl, { caption: true }) : null } })); } catch { /* voice is optional */ }
     }
     a_release(a) { const x = this.actors.get(a.id); if (x) { x.follow = null; x.lean = 0; x.dragged = 0; x.arms = null; x.struggle = null; } const L = this.actors.get(a.by || 'exec'); if (L) { L.arms = null; L.lean = 0; } }
     a_follow(a) { this.camFollow = a && a.id ? { id: a.id, zoom: a.zoom, dx: a.dx, dy: a.dy } : null; }

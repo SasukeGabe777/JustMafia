@@ -44,7 +44,7 @@
   if (B.voice.engine === 'kokoro') return; // loaded twice
   const prev = { speak: B.voice.speak, stop: B.voice.stop };
   const DEADLINE = 1200;
-  const NARRATOR = { kokoro: 'bf_emma', speed: 1.0 };
+  const NARRATOR = { kokoro: 'bf_emma', speed: 1.0, cb: 'warm' };
   // The line queue (see speak): a line waits for the one playing instead of cutting it off.
   const MAX_WAIT = 6000; // a queued line older than this when its turn comes is dropped (stale)
   const MAX_PENDING = 3; // more waiting than this: the oldest waiting line is dropped
@@ -79,8 +79,10 @@
     for (const ch of String(str)) { const c = ch.codePointAt(0); a = Math.imul(a ^ c, 0x01000193); b = Math.imul(b ^ c, 0x01000193); b ^= b >>> 13; }
     return (a >>> 0).toString(16).padStart(8, '0') + (b >>> 0).toString(16).padStart(8, '0');
   }
-  const voiceOf = (V) => (V && V.kokoro ? { kokoro: String(V.kokoro), speed: Number(V.speed) || 1 } : NARRATOR);
-  function keyOf(text, V) { const v = voiceOf(V); return hash(v.kokoro + '|' + v.speed.toFixed(2) + '|' + clean(text)); }
+  // spec.cb names the Chatterbox delivery preset the clip was rendered with (tools/voice-gen.js
+  // PRESETS: 'hype', 'warm', 'calm', 'dry', 'spooky', 'narrator'); it is part of the clip key.
+  const voiceOf = (V) => (V && V.kokoro ? { kokoro: String(V.kokoro), speed: Number(V.speed) || 1, ...(V.cb ? { cb: String(V.cb) } : {}) } : NARRATOR);
+  function keyOf(text, V) { const v = voiceOf(V); return hash(v.kokoro + '|' + v.speed.toFixed(2) + (v.cb ? '|' + v.cb : '') + '|' + clean(text)); }
 
   // ---------- the clip manifest + a small blob cache ----------
   let manifest = null;

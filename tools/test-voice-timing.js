@@ -38,7 +38,7 @@ test('every intro has its file, a tutorial, and voices for its lines', () => {
     const lines = [];
     for (const s of N.shots(d, modeOf(d))) if (s.say) lines.push(['open:' + s.say, say(s.say)]);
     for (const k of modeOf(d) === 'facts' ? ['joke', 'others', 'play'] : ['roll', 'play']) if (say(k)) lines.push([k, say(k)]);
-    I.tutorial.slice(0, 8).forEach((s, i) => lines.push(['step' + (i + 1), s.say || [s.title, s.text, s.phone].filter(Boolean).join('. ')]));
+    I.tutorial.slice(0, 8).forEach((s, i) => lines.push(['step' + (i + 1), s.say || [s.title, s.text].filter(Boolean).join('. ')]));
     lines.push(['done', N.DONE_LINE]);
     for (const t of [].concat(I.story || [])) lines.push(['story', t]);
     for (const [from, t] of lines) if (!N.line(t, spec).clip) missing.push(`${d.key} ${from}: "${String(t).slice(0, 60)}"`);

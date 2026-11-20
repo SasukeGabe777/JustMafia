@@ -61,7 +61,7 @@ function engine() {
   try { run(ctx, files[0]); } catch (e) { /* the generic intro is optional */ }
   run(ctx, files[1]);
   const V = ctx.BOX.voice;
-  core = { sig, G: ctx.BOX.intros.generic || { lines: {}, opening: [], castOpening: [] }, clean: V.clean, keyOf: V.keyOf, spoken: V.spoken, voiceOf: V.voiceOf };
+  core = { sig, G: ctx.BOX.intros.generic || { lines: {}, opening: [], castOpening: [] }, clean: V.clean, keyOf: V.keyOf, spoken: V.spoken, voiceOf: V.voiceOf, nameless: (ctx.BOX.studio && ctx.BOX.studio.nameless) || null };
   return core;
 }
 
@@ -134,7 +134,9 @@ function cast(def, n, more, o = {}) {
   const roll = line(N.say('roll'), N.spec);
   let rollMs = Math.max(n * per, roll.ms ? roll.ms + MARGIN : 0), moreAt = null;
   if (more > 0) {
-    const m = line(N.say('more', { n: more }), N.spec);
+    // The voice says the name-free lead (show.js nameless(): '…and more!'), the screen shows the count.
+    const E = engine(), raw = [].concat(N.L.more || [])[0] || '';
+    const m = line(E.nameless ? fill(E.nameless(raw), { title: N.title }) : N.say('more', { n: more }), N.spec);
     moreAt = Math.max(n * per - 1400, roll.ms ? roll.ms + MARGIN : 0);
     rollMs = Math.max(rollMs, moreAt + m.ms + MARGIN);
   }
@@ -161,8 +163,8 @@ function howto(def) {
   const N = info(def), I = N.I;
   const steps = I && Array.isArray(I.tutorial) && I.tutorial.length ? I.tutorial.slice(0, 8) : null;
   if (!steps) return null;
-  const ms = steps.map((s) => { const L = line(s.say || [s.title, s.text, s.phone].filter(Boolean).join('. '), N.spec); return Math.max(STEP_MIN_MS, L.ms + MARGIN); });
-  const lines = steps.map((s) => line(s.say || [s.title, s.text, s.phone].filter(Boolean).join('. '), N.spec).ms);
+  const ms = steps.map((s) => { const L = line(s.say || [s.title, s.text].filter(Boolean).join('. '), N.spec); return Math.max(STEP_MIN_MS, L.ms + MARGIN); });
+  const lines = steps.map((s) => line(s.say || [s.title, s.text].filter(Boolean).join('. '), N.spec).ms);
   const done = line(DONE_LINE, N.spec);
   return { steps: ms, lines, endMs: Math.max(2500, done.ms + MARGIN), total: ms.reduce((a, x) => a + x, 0) + Math.max(2500, done.ms + MARGIN) };
 }

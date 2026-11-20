@@ -149,7 +149,7 @@
       pod1: '#3a1470', pod2: '#1a0538', podTop: '#ff4f8b', spots: ['255,240,170', '255,140,200', '120,220,255', '255,240,170'], confetti: ['#ffe14d', '#ff4f8b', '#3ec7ff', '#7ee06a', '#ffffff', '#b77bff'] },
     host: {
       name: 'Polly Punchline',
-      voice: { kokoro: 'af_bella', speed: 1.03, like: /female|zira|aria|jenny|samantha|susan|hazel|libby|sonia/i, accent: /en-(US|GB)/i, pitch: 1.2, rate: 1.04 },
+      voice: { kokoro: 'af_bella', cb: 'hype', speed: 1.03, like: /female|zira|aria|jenny|samantha|susan|hazel|libby|sonia/i, accent: /en-(US|GB)/i, pitch: 1.2, rate: 1.04 },
       look: { skin: '#f6c39a', skinShade: '#dba17a', suit: '#ff4f8b', suit2: '#c2185b', sleeve: '#ff4f8b', lapel: '#ffe14d', shirt: '#fff6e8', cuff: '#fff6e8', tie: 'bow', tieColor: '#3ec7ff', hair: 'curly', hairColor: '#7b2cbf', brow: '#4a1680', prop: 'cards', grin: true, glasses: '#2a0b4f' },
     },
     lines: {

@@ -31,7 +31,7 @@
                 confetti: ['#hex', ...] },
        host: {                                   // or null for no host / narrator only
          name: 'Sterling Sparks',                // subtitle speaker tag
-         voice: { kokoro: 'am_puck', speed: 1.05,  // Kokoro voice + speed for the pre-rendered
+         voice: { kokoro: 'am_puck', cb: 'hype', speed: 1.05,  // Kokoro voice identity + delivery preset (cb: hype|warm|calm|dry|spooky, tools/voice-gen.js) for the pre-rendered
                   like: /guy|male/i, accent: /en-US/i, pitch: 1.1, rate: 1.1 }, // clips (npm run voices; public/box/voice.js); the rest picks the browser fallback voice
          look: { ... },                          // a BOX.studio.makeHost spec (see below) OR
          draw(g, a) { ... },                     // your own drawing; a = see HOST ANIM below
@@ -239,7 +239,8 @@
     // o: speak options for voice.js ({ maxWait, key, onstart }).
     function say(str, V, fitMs, o) {
       V = V || { pitch: 1, rate: 1 };
-      const t = clean(str); if (!t) return 0;
+      // o.speak: what the voice says when it differs from the subtitle (a name line's name-free lead).
+      const t = clean((o && o.speak) || str); if (!t) return 0;
       const r = V.rate || 1;
       let est = (t.length * 70 + 500) / r;
       try { const ms = B.voice.clipMs && B.voice.clipMs(t, V); if (ms) est = ms; } catch { /* estimate */ }
@@ -614,7 +615,7 @@
   }
   intros.generic = {
     theme: GEN_THEME,
-    host: { name: 'Vicky Volume', voice: { kokoro: 'af_heart', speed: 1.0, like: /aria|jenny|ava|emma|samantha|zira|female/i, accent: /en-US/i, pitch: 1.2, rate: 1.04 },
+    host: { name: 'Vicky Volume', voice: { kokoro: 'af_heart', cb: 'hype', speed: 1.0, like: /aria|jenny|ava|emma|samantha|zira|female/i, accent: /en-US/i, pitch: 1.2, rate: 1.04 },
       look: { skin: '#8d5a3b', suit: '#16b8b0', suit2: '#0b6f6a', lapel: '#ff4f9a', shirt: '#1b1240', tie: 'none', hair: 'curly', hairColor: '#7b3fe4', brow: '#2a1240', prop: 'headset', grin: true, sparkle: '#c9fffb' } },
     lines: {
       welcome: 'Welcome, welcome to {title}! I\'m Vicky Volume, and tonight we turn it UP!',
@@ -662,6 +663,16 @@
     return { w, h, d, W, H };
   }
   const fill = (str, v) => String(str || '').replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : ''));
+  // The voice never reads a player's name or a count out of a recording: a name line is spoken as
+  // its pre-rendered lead ('Give it up for {name}' -> 'Give it up for…') while the screen shows the
+  // name. With the live voice on (voice.js "Natural live voice") the whole line is spoken instead.
+  const nameless = (raw) => {
+    const r = String(raw || ''), tail = /\{(name|n)\}[\s.!?…]*$/.test(r); // the name ends the line: trail off ("Say hello to…")
+    let x = r.replace(/[,:]?\s*\{name\}/g, '').replace(/\s*\{n\}/g, '').replace(/\s+([.!?…,])/g, '$1').trim();
+    if (tail) x = x.replace(/[\s,.!?…]+$/, '') + '…';
+    return /[A-Za-z]/.test(x) ? x : '';
+  };
+  const liveNames = () => !!(B.voice && B.voice.live && B.voice.liveStatus && B.voice.liveStatus() === 'ready');
 
   // A draw context for intro code (see the API at the top).
   function makeCtx(owner, g) {
@@ -841,15 +852,22 @@
         const Ti = T - at, c = F[i], len = slot(i);
         this.cue('w' + i, at, T, () => sfx('whoosh'));
         this.cue('c' + i, at + 320, T, () => { sfx('cheer'); this.setCrowd('cheer', 2600, now); });
-        this.cue('l' + i, at + 250, T, () => { this.say(this.factLine(i, c, n), 0, now, { maxWait: 9000 }); this.saidMeet = true; this.A.setPose('pointL', 1800, now); });
+        this.cue('l' + i, at + 250, T, () => { this.say(this.factLine(i, c, n), 0, now, { maxWait: 9000, speak: this.factSpoken(i, c, n) }); this.saidMeet = true; this.A.setPose('pointL', 1800, now); });
         this.contestant(c, i, Ti, len);
         return 'c' + i;
       }
       return this.outro(T - at, now, S.outroMs || 6000);
     }
+    leadOf(i, n) { const L = this.lines(); return i === 0 && !this.saidMeet ? L.first : i === n - 1 && n > 2 ? L.last : L.intros[i % L.intros.length]; }
+    // What the voice says for a contestant reveal: the lead without the name (plus the no-fact quip).
+    factSpoken(i, c, n) {
+      if (liveNames()) return null;
+      const L = this.lines(), lead = fill(nameless(this.leadOf(i, n)), { title: this.title });
+      return String(c.fact || '').trim() ? lead : lead + ' ' + fill(L.noFact, { n: i + 1 });
+    }
     factLine(i, c, n) {
       const L = this.lines(), v = { name: c.name, n: i + 1 };
-      const lead = fill(i === 0 && !this.saidMeet ? L.first : i === n - 1 && n > 2 ? L.last : L.intros[i % L.intros.length], { ...v, title: this.title });
+      const lead = fill(this.leadOf(i, n), { ...v, title: this.title });
       const f = String(c.fact || '').trim().replace(/[.!?…\s]+$/, '');
       if (!f) return `${lead}… ${fill(L.noFact, v)}`;
       if (/^(i|i'm|i've|i'd|i'll|my|me|im)\b/i.test(f)) return `${lead}! ${c.name} says: “${f}!”`;
@@ -932,7 +950,7 @@
       const g = this.g, s = this.s, th = this.theme, n = F.length, more = (this.show.others || []).length;
       const moreAt = this.show.moreAt != null ? this.show.moreAt : Math.max(0, n * per - 1400);
       this.cue('roll', open0(this) + 0, open0(this) + u, () => { this.say(this.line('roll'), 0, now); this.A.setPose('point', 1600, now); this.setCrowd('cheer', rollMs + 800, now); });
-      this.cue('rollmore', open0(this) + moreAt, open0(this) + u, () => { if (more) this.say(this.line('more', { n: more }), 0, now); });
+      this.cue('rollmore', open0(this) + moreAt, open0(this) + u, () => { if (more) this.say(this.line('more', { n: more }), 0, now, { speak: liveNames() ? null : fill(nameless(this.lines().more), { title: this.title }) }); });
       s.T = u; s.k = u / Math.max(1, rollMs);
       // An intro can draw its own roll call (doodle portraits, the couch, …):
       //   roll(g, s, featured, u, per, { more, title, theme }) in the 1920×1080 world; u = ms into it.
@@ -1184,7 +1202,7 @@
 
   B.studio = {
     intro: (key) => { need(key); return introFor(key); }, need, makeHost, HostAnim, Confetti, frame, lobby,
-    say: Speech.say, stop: Speech.stop,
+    say: Speech.say, stop: Speech.stop, nameless,
     draw: { podium, spots, sign, audience, backs, floor, emoji: drawEmoji, face: drawFace, body: drawBody, text, rr, wrap },
     util: { clamp, lerp, ss, ease, easeOut, back, rng, hash, shade, hexA, OUT, FONT, BODY, TAU },
   };

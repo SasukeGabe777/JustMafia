@@ -1,26 +1,37 @@
 'use strict';
-// Pre-render the JustGameBox narrator lines with the Kokoro TTS model (`npm run voices`).
+// Pre-render every narrator / host line as a voice clip (`npm run voices`).
 //
 //   node tools/voice-gen.js                 render every new or changed line, prune unused clips
-//   node tools/voice-gen.js price likely    only render these games (other games keep their clips)
+//   node tools/voice-gen.js price likely    only render these games ('mafia' = the JustMafia narrator)
 //   node tools/voice-gen.js --list          print the lines, render nothing
-//   node tools/voice-gen.js --force         re-render everything
+//   node tools/voice-gen.js --force         re-render everything (or only the games named)
+//   node tools/voice-gen.js --engine kokoro use the old Kokoro-only path (no Python needed)
 //
-// What it renders: every STATIC line a game's intro speaks (public/box/intros/<key>.js:
-// the opening shots' `say` lines, joke/banter/meet/others/play in 'facts' mode, roll/play in
-// 'cast' mode, with {title} filled in; lines with {name} or {n} are live lines) and every
-// how-to-play step exactly as public/box/howto.js speaks it, plus the generic intro.
-// The voice is the intro's host.voice.kokoro (+ .speed); hosts without one use the narrator
-// voice in public/box/voice.js. Text cleaning, the speakable form and the file hash all come
-// from public/box/voice.js itself (run in the page), so the TV looks clips up the same way.
+// What it renders:
+//  * JustGameBox: every STATIC line a game's intro speaks (public/box/intros/<key>.js: the opening
+//    shots' `say` lines, joke/banter/meet/others/play in 'facts' mode, roll/play in 'cast' mode,
+//    with {title} filled in; lines with {name} or {n} are spoken as their name-free lead, see
+//    public/box/show.js nameless()) and every how-to step exactly as public/box/howto.js speaks it.
+//    The voice is the intro's host.voice (kokoro identity + cb delivery preset).
+//  * JustMafia: every line the narrator can say (tools/voice-lines-mafia.js: narrator.js and theme
+//    narration, cutscene captions, role reveals) in each world's narrator voice
+//    (public/shared/narration-say.js). Clips go to public/audio/voice/mafia-<voice>/.
+// Text cleaning, the speakable form and the clip key come from public/box/voice.js (run in the
+// page) and public/shared/narration-say.js, so the TVs look clips up the same way.
 //
-// How: a private server (PORT 3948) + headless Chrome (debug port 9348, muted, WebGPU on,
-// a persistent profile so the ~300 MB model downloads once) runs kokoro-js 1.2.1 (MIT) with
-// onnx-community/Kokoro-82M-v1.0-ONNX (Apache-2.0): WebGPU fp32 if there is a GPU, else
-// WASM q8 (about 3x slower than real time). Each clip is trimmed, loudness-normalized (speech RMS
-// -19 dBFS, stored as `db` in the manifest), encoded
-// to 24 kbps mono Opus with WebCodecs and muxed into WebM here, written to
-// public/audio/voice/<game>/<hash>.webm, and listed in public/audio/voice/manifest.json.
+// Engines
+//  chatterbox (default) Chatterbox TTS (Resemble AI, MIT; weights ResembleAI/chatterbox) on CUDA,
+//    run by tools/voice-chatterbox.py in a Python venv (VOICE_PY, default
+//    %LOCALAPPDATA%/jgb-voice/venv; set up: see the PLAN.md "Voices" notes). Each host's voice is
+//    cloned from a ~10 s reference stitched from that Kokoro voice's own clips (kept in
+//    tools/voice-refs/<voice>.webm so a fresh checkout clones the same voices), with a delivery
+//    preset per host (PRESETS). Every clip is transcribed back with faster-whisper and re-rendered
+//    when the words do not match, it has a long silence or it clips; the manifest keeps its `wer`.
+//    The model's output carries Resemble's inaudible Perth watermark.
+//  kokoro  kokoro-js 1.2.1 (MIT) + Kokoro-82M (Apache-2.0) in headless Chrome (WebGPU or WASM).
+// Either way each clip is trimmed, loudness-normalized (speech RMS -19 dBFS, `db` in the manifest),
+// encoded to mono Opus with WebCodecs in headless Chrome (muted), muxed into WebM here, written to
+// public/audio/voice/<game>/<hash>.webm and listed in public/audio/voice/manifest.json.
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -31,14 +42,33 @@ const { CHROME, Page, startServer, cleanup, wait } = require('./cdp');
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'public', 'audio', 'voice');
 const INTROS = path.join(ROOT, 'public', 'box', 'intros');
-const PORT = Number(process.env.VOICE_PORT) || 3948;
-const DEBUG = Number(process.env.VOICE_DEBUG_PORT) || 9348;
+const REFS = path.join(__dirname, 'voice-refs');
+const PORT = Number(process.env.VOICE_PORT) || 3431;
+const DEBUG = Number(process.env.VOICE_DEBUG_PORT) || 9431;
 const PROFILE = process.env.VOICE_PROFILE || path.join(os.tmpdir(), 'jgb-kokoro-profile');
+const LOCAL = process.env.LOCALAPPDATA || path.join(os.homedir(), '.local', 'share');
+const PY = process.env.VOICE_PY || path.join(LOCAL, 'jgb-voice', 'venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+const CACHE = process.env.VOICE_CACHE || path.join(LOCAL, 'jgb-voice', 'render');
 const KOKORO_URL = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
 const BITRATE = 24000;
 const args = process.argv.slice(2);
-const only = args.filter((a) => !a.startsWith('--'));
+const opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
+const only = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--engine');
 const FORCE = args.includes('--force'), LIST = args.includes('--list');
+const ENGINE = opt('--engine') || (fs.existsSync(PY) ? 'chatterbox' : 'kokoro');
+const E_TAG = ENGINE === 'chatterbox' ? 'cb' : 'kokoro';
+
+// Chatterbox delivery presets (spec.cb). exaggeration: emotion intensity (0.25-2, 0.5 neutral);
+// cfg: how closely it follows the reference's pacing (lower = freer, slower, more dramatic);
+// temperature: variety. Energetic hosts use 'hype', narrators 'narrator'.
+const PRESETS = {
+  narrator: { exaggeration: 0.45, cfg: 0.5, temperature: 0.7 }, // JustMafia: calm, measured storyteller
+  calm: { exaggeration: 0.4, cfg: 0.5, temperature: 0.7 },
+  dry: { exaggeration: 0.35, cfg: 0.55, temperature: 0.7 }, // deadpan, clipped
+  warm: { exaggeration: 0.55, cfg: 0.45, temperature: 0.75 }, // friendly default
+  spooky: { exaggeration: 0.6, cfg: 0.35, temperature: 0.75 }, // slow and dramatic
+  hype: { exaggeration: 0.75, cfg: 0.35, temperature: 0.8 }, // game-show energy
+};
 
 // ---------------------------------------------------------------- WebM (Matroska) muxer
 function vint(n) {
@@ -74,8 +104,24 @@ function webm({ chunks, sr, desc, ms }) {
   flush();
   return Buffer.concat([ebml, el([0x18, 0x53, 0x80, 0x67], info, tracks, ...clusters)]);
 }
+// A float WAV (as written by soundfile) -> { sr, data: Float32Array }
+function readWav(file) {
+  const b = fs.readFileSync(file);
+  let p = 12, fmt = null, sr = 0, bits = 0, ch = 1;
+  while (p + 8 <= b.length) {
+    const id = b.toString('ascii', p, p + 4), n = b.readUInt32LE(p + 4), s = p + 8;
+    if (id === 'fmt ') { fmt = b.readUInt16LE(s); ch = b.readUInt16LE(s + 2); sr = b.readUInt32LE(s + 4); bits = b.readUInt16LE(s + 14); if (fmt === 0xfffe) fmt = b.readUInt16LE(s + 24); }
+    if (id === 'data') {
+      const len = Math.floor(Math.min(n, b.length - s) / (bits / 8) / ch), out = new Float32Array(len);
+      for (let i = 0; i < len; i++) { const o = s + i * ch * (bits / 8); out[i] = fmt === 3 ? b.readFloatLE(o) : b.readInt16LE(o) / 32768; }
+      return { sr, data: out };
+    }
+    p = s + n + (n & 1);
+  }
+  throw new Error('no data in ' + file);
+}
 
-// ---------------------------------------------------------------- headless Chrome (persistent profile)
+// ---------------------------------------------------------------- headless Chrome (persistent profile, muted)
 async function launch() {
   fs.mkdirSync(PROFILE, { recursive: true });
   const proc = spawn(CHROME, ['--headless=new', '--mute-audio', '--enable-unsafe-webgpu', '--no-first-run', '--no-default-browser-check', `--remote-debugging-port=${DEBUG}`, `--user-data-dir=${PROFILE}`, 'about:blank'], { stdio: 'ignore' });
@@ -93,7 +139,7 @@ async function launch() {
 
 // ---------------------------------------------------------------- in the page
 // Collect the lines of one game (runs in the page; returns { lines, note }).
-const COLLECT = `async (key, gi) => {
+const COLLECT = `async (key, gi, extra) => {
   const B = window.BOX, V = B.voice, G = B.intros.generic;
   const load = (src) => new Promise((r) => { const s = document.createElement('script'); s.src = src; s.onload = () => r(true); s.onerror = () => r(false); document.head.appendChild(s); });
   let I = key === 'generic' ? G : null;
@@ -114,17 +160,26 @@ const COLLECT = `async (key, gi) => {
   for (const mode of modes) {
     const shots = mode === 'facts' ? (I.opening || G.opening) : (I.castOpening || I.opening || G.castOpening);
     for (const s of shots || []) if (s && s.say) want.add(s.say);
-    for (const k of mode === 'facts' ? ['joke', 'banter', 'meet', 'others', 'play'] : ['roll', 'play']) want.add(k);
+    for (const k of mode === 'facts' ? ['joke', 'banter', 'meet', 'others', 'play'] : ['roll', 'play', 'more']) want.add(k);
+    // Contestant reveals are spoken as the name-free lead ("Give it up for…", show.js factSpoken()).
+    if (mode === 'facts') for (const raw of [].concat(L.first || [], L.intros || [], L.last || [])) {
+      const nl = fill(B.studio.nameless(raw), { title }); if (!nl) continue;
+      add('lead', nl, spec); if (L.noFact) add('lead', nl + ' ' + fill(L.noFact, {}), spec);
+    }
   }
   for (const k of want) for (const raw of [].concat(L[k] || [])) {
-    if (/\\{(name|n)\\}/.test(raw) || (!title && /\\{title\\}/.test(raw))) continue;
+    if (!title && /\\{title\\}/.test(raw)) continue;
+    // A line with a name or a count is spoken as its name-free form (show.js nameless()).
+    if (/\\{(name|n)\\}/.test(raw)) { const nl = B.studio.nameless(raw); if (nl) add(k, fill(nl, { title }), spec); continue; }
     add(k, fill(raw, { title }), spec);
   }
+  // The game's own static host lines (react({ line: '…' }) in public/box/games/<key>.js).
+  if (!vx) for (const t of extra || []) add('game', t, spec);
   if (key !== 'generic') {
     if (!(I.tutorial && I.tutorial.length) && !B.games[key]) await load('/box/games/' + key + '.js');
     const steps = B.howtoSteps(key) || [];
     if (steps.some((s) => /^step (one|two|three)\\.?$/i.test(String(s.text || '').trim()))) return { lines: [], note: 'unfinished (placeholder how-to steps), skipped' };
-    steps.forEach((s, i) => add('step' + (i + 1), s.say || [s.title, s.text, s.phone].filter(Boolean).join('. '), spec));
+    steps.forEach((s, i) => add('step' + (i + 1), s.say || [s.title, s.text].filter(Boolean).join('. '), spec));
     if (steps.length) add('done', 'That’s it. Let’s play!', spec);
     for (const t of [].concat(I.story || [])) add('story', t, spec);
   }
@@ -144,10 +199,8 @@ const INIT = `(async () => {
   })();
   return (await window.__tts).dev;
 })()`;
-const RENDER = `async (say, voice, speed, bitrate) => {
-  const { tts } = await window.__tts;
-  const a = await tts.generate(say, { voice, speed });
-  const sr = a.sampling_rate; let x = a.audio;
+// Trim, level and encode one clip (in the page). norm=false keeps the level (reference clips).
+const PROCESS = `window.__process = async (x, sr, bitrate, norm = true) => {
   let s = 0, e = x.length - 1; const th = 0.008;
   while (s < e && Math.abs(x[s]) < th) s++; while (e > s && Math.abs(x[e]) < th) e--;
   x = x.slice(Math.max(0, s - Math.round(sr * 0.03)), Math.min(x.length, e + Math.round(sr * 0.12)));
@@ -156,9 +209,11 @@ const RENDER = `async (say, voice, speed, bitrate) => {
   // rare peaks instead of turning the whole clip down (the peak stays under 0.99).
   const win = Math.max(1, Math.round(sr * 0.02));
   const level = () => { let pw = 0, nw = 0; for (let i = 0; i + win <= x.length; i += win) { let e2 = 0; for (let j = i; j < i + win; j++) e2 += x[j] * x[j]; e2 /= win; if (e2 > 1e-5) { pw += e2; nw++; } } return nw ? Math.sqrt(pw / nw) : 0; };
-  const rms = level(), TARGET = 0.112, KNEE = 0.75;
-  const g = rms > 0 ? Math.min(8, TARGET / rms) : 1;
-  for (let i = 0; i < x.length; i++) { let v = x[i] * g; const a = Math.abs(v); if (a > KNEE) v = Math.sign(v) * (KNEE + (0.99 - KNEE) * Math.tanh((a - KNEE) / (0.99 - KNEE))); x[i] = v; }
+  if (norm) {
+    const rms = level(), TARGET = 0.112, KNEE = 0.75;
+    const g = rms > 0 ? Math.min(8, TARGET / rms) : 1;
+    for (let i = 0; i < x.length; i++) { let v = x[i] * g; const a = Math.abs(v); if (a > KNEE) v = Math.sign(v) * (KNEE + (0.99 - KNEE) * Math.tanh((a - KNEE) / (0.99 - KNEE))); x[i] = v; }
+  }
   const out = level(), db = out > 0 ? Math.round(20 * Math.log10(out) * 10) / 10 : -99;
   const b64 = (u8) => { let s2 = ''; for (let i = 0; i < u8.length; i += 0x8000) s2 += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s2); };
   const chunks = []; let desc = null, err = null;
@@ -172,10 +227,52 @@ const RENDER = `async (say, voice, speed, bitrate) => {
   if (err) throw err;
   return { ms: Math.round((x.length / sr) * 1000), sr, chunks, desc, db };
 }`;
+const RENDER = `async (say, voice, speed, bitrate) => { const { tts } = await window.__tts; const a = await tts.generate(say, { voice, speed }); return window.__process(a.audio, a.sampling_rate, bitrate); }`;
+const RENDER_PCM = `async (b64, sr, bitrate, norm) => { const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return window.__process(new Float32Array(u8.buffer), sr, bitrate, norm); }`;
 const CHECK = `async (url) => { const b = await (await fetch(url, { cache: 'no-store' })).arrayBuffer(); const c = new OfflineAudioContext(1, 48000, 48000); const d = await c.decodeAudioData(b); return Math.round(d.duration * 1000); }`;
+
+// ---------------------------------------------------------------- Chatterbox (Python)
+function runPython(jobsFile) {
+  return new Promise((resolve, reject) => {
+    const p = spawn(PY, ['-I', path.join(__dirname, 'voice-chatterbox.py'), jobsFile, CACHE], { env: { ...process.env, PYTHONIOENCODING: 'utf-8', HF_HUB_DISABLE_SYMLINKS_WARNING: '1', TRANSFORMERS_VERBOSITY: 'error' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const show = (b) => { for (const ln of String(b).split(/\r?\n|\r/)) if (ln.trim() && !/it\/s\]|s\/it\]|Sampling|FutureWarning|deprecate\(|unauthenticated|LoRACompatible|^\s*\d+%\|/.test(ln)) console.log('  ' + ln.trim()); };
+    p.stdout.on('data', show); p.stderr.on('data', show);
+    p.on('exit', (c) => (c === 0 ? resolve() : reject(new Error('voice-chatterbox.py exited with ' + c))));
+  });
+}
+function readResults() {
+  const r = {}, f = path.join(CACHE, 'results.jsonl');
+  if (fs.existsSync(f)) for (const ln of fs.readFileSync(f, 'utf8').split('\n')) { try { const x = JSON.parse(ln); r[x.id] = x; } catch { /* partial line */ } }
+  return r;
+}
+// Forget cached renders (--force), so Python makes them again.
+function forget(ids) {
+  const f = path.join(CACHE, 'results.jsonl'); if (!fs.existsSync(f) || !ids.size) return;
+  fs.writeFileSync(f, fs.readFileSync(f, 'utf8').split('\n').filter((ln) => { try { return !ids.has(JSON.parse(ln).id); } catch { return false; } }).join('\n'));
+  for (const id of ids) try { fs.unlinkSync(path.join(CACHE, id + '.wav')); } catch { /* none */ }
+}
+const encodeTo = async (page, file, pcm, norm, bitrate = BITRATE) => {
+  const r = await page.eval(`(${RENDER_PCM})(${JSON.stringify(Buffer.from(pcm.data.buffer, pcm.data.byteOffset, pcm.data.byteLength).toString('base64'))}, ${pcm.sr}, ${bitrate}, ${norm})`);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, webm({ chunks: r.chunks, sr: r.sr, desc: r.desc ? Buffer.from(r.desc, 'base64') : null, ms: r.ms }));
+  return r;
+};
+
+// A game's static in-play host lines: `line: '…'` and `line: pick(['…', '…'])` in its TV code.
+// (Lines built at run time, with names or numbers, stay with the browser voice.)
+function gameLines(key) {
+  const f = path.join(ROOT, 'public', 'box', 'games', key + '.js');
+  if (!fs.existsSync(f)) return [];
+  const src = fs.readFileSync(f, 'utf8'), out = [], lit = /'((?:[^'\\\n]|\\.)*)'/g;
+  for (const m of src.matchAll(/\bline:\s*(?:pick\(\s*\[([^\]]*)\]\s*\)|'((?:[^'\\\n]|\\.)*)'\s*[,}])/g)) {
+    if (m[2] != null) out.push(m[2]); else for (const s of m[1].matchAll(lit)) out.push(s[1]);
+  }
+  return [...new Set(out.map((s) => s.replace(/\\(.)/g, '$1')).filter((s) => /[A-Za-z]{2}/.test(s)))];
+}
 
 // ---------------------------------------------------------------- main
 function sizeOf(dir) { let n = 0; if (!fs.existsSync(dir)) return 0; for (const f of fs.readdirSync(dir, { withFileTypes: true })) n += f.isDirectory() ? sizeOf(path.join(dir, f.name)) : fs.statSync(path.join(dir, f.name)).size; return n; }
+const wanted = (g) => !only.length || only.includes(g) || (only.includes('mafia') && g.startsWith('mafia-'));
 async function main() {
   const t0 = Date.now();
   let GAMES = {};
@@ -186,6 +283,7 @@ async function main() {
   const mfPath = path.join(OUT, 'manifest.json');
   let old = { clips: {}, games: {} };
   try { old = JSON.parse(fs.readFileSync(mfPath, 'utf8')); } catch { /* first run */ }
+  if (ENGINE === 'chatterbox' && !fs.existsSync(PY)) throw new Error('No Python venv at ' + PY + ' (set VOICE_PY, or use --engine kokoro). See PLAN.md "Voices".');
 
   await startServer(PORT);
   const { page, close } = await launch();
@@ -194,12 +292,17 @@ async function main() {
     await page.eval(`document.documentElement.innerHTML = "<head></head><body></body>"`);
     await page.eval(`(async () => { document.title = 'voice-gen'; const load = (src) => new Promise((r, j) => { const s = document.createElement('script'); s.src = src; s.onload = r; s.onerror = () => j(new Error(src)); document.head.appendChild(s); });
       for (const s of ['/box/box.js', '/box/show.js', '/box/howto.js', '/box/voice.js']) await load(s); return !!(BOX.voice && BOX.voice.keyOf); })()`);
+    await page.eval(PROCESS);
 
     // 1. collect
     const jobs = new Map(), games = {}, notes = [];
+    const addJob = (key, L) => {
+      if (!games[key].includes(L.h)) games[key].push(L.h);
+      if (!jobs.has(L.h)) jobs.set(L.h, { h: L.h, g: key, t: L.t, say: L.say, v: L.voice.kokoro, s: L.voice.speed, cb: L.voice.cb || null, from: L.from });
+    };
     for (const key of keys) {
       let r;
-      try { r = await page.eval(`(${COLLECT})(${JSON.stringify(key)}, ${JSON.stringify(info[key] || {})})`); } catch (e) { r = { lines: [], note: 'failed: ' + e.message.split('\n')[0] }; }
+      try { r = await page.eval(`(${COLLECT})(${JSON.stringify(key)}, ${JSON.stringify(info[key] || {})}, ${JSON.stringify(gameLines(key))})`); } catch (e) { r = { lines: [], note: 'failed: ' + e.message.split('\n')[0] }; }
       if (r.note) notes.push(`${key}: ${r.note}`);
       if (!r.lines.length) {
         // Keep what this game had, so a half-edited intro doesn't lose its clips.
@@ -207,53 +310,80 @@ async function main() {
         continue;
       }
       games[key] = [];
-      for (const L of r.lines) {
-        if (!games[key].includes(L.h)) games[key].push(L.h);
-        if (!jobs.has(L.h)) jobs.set(L.h, { h: L.h, g: key, t: L.t, say: L.say, v: L.voice.kokoro, s: L.voice.speed, from: L.from });
-      }
+      for (const L of r.lines) addJob(key, L);
     }
-    if (LIST) { for (const j of jobs.values()) console.log(`${j.g.padEnd(11)} ${String(j.v).padEnd(10)} ${String(j.from || '').padEnd(7)} ${j.say || j.t}`); console.log(jobs.size + ' lines'); notes.forEach((n) => console.log('note: ' + n)); return; }
+    // JustMafia narrator lines (spoken form made in the page, like the box lines).
+    const mafia = require('./voice-lines-mafia').collect();
+    const said = await page.eval(`(${JSON.stringify(mafia.map((l) => l.t))}).map((t) => BOX.voice.spoken(t))`);
+    mafia.forEach((l, i) => { games[l.g] = games[l.g] || []; addJob(l.g, { h: l.h, t: l.t, say: said[i], voice: l.V, from: l.from }); });
+    if (LIST) { for (const j of jobs.values()) console.log(`${j.g.padEnd(16)} ${String(j.v).padEnd(11)} ${String(j.cb || '').padEnd(8)} ${String(j.from || '').padEnd(10)} ${j.say || j.t}`); console.log(jobs.size + ' lines'); notes.forEach((n) => console.log('note: ' + n)); return; }
 
-    // 2. what needs rendering
+    // 2. what needs rendering (a clip made by another engine is re-rendered)
     const todo = [], clips = {};
     for (const j of jobs.values()) {
       const o = old.clips && old.clips[j.h], g = o ? o.g : j.g, file = path.join(OUT, g, j.h + '.webm');
-      // --force re-renders only the games named (all when none are): the others keep their clips.
-      const forced = FORCE && (!only.length || only.includes(j.g));
-      if (!forced && o && o.ms && fs.existsSync(file)) { clips[j.h] = { g, ms: o.ms, v: o.v, s: o.s, t: o.t || j.t, ...(o.db != null ? { db: o.db } : {}) }; continue; }
-      if (j.keep) continue;
-      if (only.length && !only.includes(j.g)) continue;
+      const forced = FORCE && wanted(j.g);
+      const current = o && o.ms && fs.existsSync(file) && ((o.e || 'kokoro') === E_TAG || !wanted(j.g));
+      if (!forced && current) { clips[j.h] = { ...o, g, t: o.t || j.t }; continue; }
+      if (j.keep) { if (o && fs.existsSync(file)) clips[j.h] = { ...o, g }; continue; }
+      if (!wanted(j.g)) { if (o && fs.existsSync(file)) clips[j.h] = { ...o, g }; continue; }
       todo.push(j);
     }
-    console.log(`${jobs.size} lines in ${Object.keys(games).length} games; ${jobs.size - todo.length} up to date, ${todo.length} to render.`);
+    console.log(`${jobs.size} lines in ${Object.keys(games).length} games; ${jobs.size - todo.length} up to date, ${todo.length} to render with ${ENGINE}.`);
 
     // 3. render
-    if (todo.length) {
+    const write = (j, r, extra) => { clips[j.h] = { g: j.g, ms: r.ms, v: j.v, s: j.s, ...(j.cb ? { cb: j.cb } : {}), t: j.t, db: r.db, e: E_TAG, ...extra }; };
+    if (todo.length && ENGINE === 'kokoro') {
       const dev = await page.eval(INIT);
       console.log('Kokoro on ' + dev + ` (model load ${((Date.now() - t0) / 1000).toFixed(1)} s in)`);
-      const tr = Date.now(); let audioMs = 0, checked = false;
+      const tr = Date.now(); let audioMs = 0;
       for (let i = 0; i < todo.length; i++) {
         const j = todo[i];
         try {
           const r = await page.eval(`(${RENDER})(${JSON.stringify(j.say)}, ${JSON.stringify(j.v)}, ${j.s}, ${BITRATE})`);
-          const buf = webm({ chunks: r.chunks, sr: r.sr, desc: r.desc ? Buffer.from(r.desc, 'base64') : null, ms: r.ms });
           fs.mkdirSync(path.join(OUT, j.g), { recursive: true });
-          fs.writeFileSync(path.join(OUT, j.g, j.h + '.webm'), buf);
-          clips[j.h] = { g: j.g, ms: r.ms, v: j.v, s: j.s, t: j.t, db: r.db };
-          audioMs += r.ms;
-          if (!checked) { checked = true; const d = await page.eval(`(${CHECK})('/audio/voice/${j.g}/${j.h}.webm')`); if (Math.abs(d - r.ms) > 150) console.warn(`  decode check: ${d} ms vs ${r.ms} ms rendered`); else console.log(`  decode check ok (${d} ms)`); }
+          fs.writeFileSync(path.join(OUT, j.g, j.h + '.webm'), webm({ chunks: r.chunks, sr: r.sr, desc: r.desc ? Buffer.from(r.desc, 'base64') : null, ms: r.ms }));
+          write(j, r); audioMs += r.ms;
           if ((i + 1) % 25 === 0 || i === todo.length - 1) console.log(`  ${i + 1}/${todo.length}  ${((Date.now() - tr) / 1000).toFixed(0)} s`);
         } catch (e) { console.warn(`  FAILED ${j.g} "${j.t.slice(0, 50)}": ${e.message.split('\n')[0]}`); }
       }
       console.log(`Rendered ${(audioMs / 1000).toFixed(0)} s of speech in ${((Date.now() - tr) / 1000).toFixed(0)} s.`);
+    }
+    if (todo.length && ENGINE === 'chatterbox') {
+      fs.mkdirSync(CACHE, { recursive: true });
+      if (FORCE) forget(new Set(todo.map((j) => j.h)));
+      // Reference prompts: the repo copy (tools/voice-refs) or, the first time, the voice's own Kokoro clips.
+      const voices = [...new Set(todo.map((j) => j.v))], ref_files = {}, ref_sources = {};
+      for (const v of voices) {
+        const repo = path.join(REFS, v + '.webm');
+        if (fs.existsSync(repo)) { ref_files[v] = repo; continue; }
+        ref_sources[v] = Object.entries(old.clips).filter(([h, c]) => c.v === v && (c.e || 'kokoro') === 'kokoro').map(([h, c]) => path.join(OUT, c.g, h + '.webm')).filter((f) => fs.existsSync(f));
+        if (!ref_sources[v].length) throw new Error('No reference for voice ' + v + ': add tools/voice-refs/' + v + '.webm or render it once with --engine kokoro.');
+      }
+      const spec = { ref_files, ref_sources, jobs: todo.map((j) => ({ id: j.h, text: j.say || j.t, voice: j.v, ...(PRESETS[j.cb] || PRESETS.warm) })) };
+      const jf = path.join(CACHE, 'jobs.json');
+      fs.writeFileSync(jf, JSON.stringify(spec));
+      console.log(`Chatterbox: ${todo.length} clips (${PY})`);
+      await runPython(jf);
+      // Keep the references in the repo (Opus 48 kbps), so every checkout clones the same voices.
+      for (const v of Object.keys(ref_sources)) { const w = path.join(CACHE, 'refs', v + '.wav'); if (fs.existsSync(w)) { await encodeTo(page, path.join(REFS, v + '.webm'), readWav(w), false, 48000); console.log('  saved reference tools/voice-refs/' + v + '.webm'); } }
+      const res = readResults(); let audioMs = 0, bad = 0, checked = false;
+      for (const j of todo) {
+        const w = path.join(CACHE, j.h + '.wav'), q = res[j.h];
+        if (!q || !fs.existsSync(w)) { console.warn(`  MISSING ${j.g} "${j.t.slice(0, 50)}"`); const o = old.clips[j.h]; if (o && fs.existsSync(path.join(OUT, o.g, j.h + '.webm'))) clips[j.h] = o; continue; }
+        const r = await encodeTo(page, path.join(OUT, j.g, j.h + '.webm'), readWav(w), true);
+        write(j, r, { wer: q.wer }); audioMs += r.ms; if (!q.ok) bad++;
+        if (!checked) { checked = true; const d = await page.eval(`(${CHECK})('/audio/voice/${j.g}/${j.h}.webm')`); console.log(Math.abs(d - r.ms) > 150 ? `  decode check: ${d} ms vs ${r.ms} ms rendered` : `  decode check ok (${d} ms)`); }
+      }
+      console.log(`Encoded ${(audioMs / 60000).toFixed(1)} min of speech; ${bad} clips still above the error threshold after retries (see wer in the manifest).`);
     }
 
     // 4. manifest + prune
     for (const k of Object.keys(games)) { games[k] = games[k].filter((h) => clips[h]); if (!games[k].length) delete games[k]; }
     const sorted = (o) => Object.fromEntries(Object.keys(o).sort().map((k) => [k, o[k]]));
     const voices = {};
-    for (const k of Object.keys(games)) { const c = clips[games[k][0]]; if (c) voices[k] = `${c.v}@${c.s}`; }
-    const mf = { v: 1, about: 'Pre-rendered narrator clips (Kokoro-82M, Apache-2.0, via kokoro-js). Made by tools/voice-gen.js (npm run voices); do not edit.', voices: sorted(voices), games: sorted(games), clips: sorted(clips) };
+    for (const k of Object.keys(games)) { const c = clips[games[k][0]]; if (c) voices[k] = `${c.v}@${c.s}${c.cb ? '/' + c.cb : ''}`; }
+    const mf = { v: 2, about: 'Pre-rendered voice clips: e=cb Chatterbox TTS (Resemble AI, MIT) cloned from Kokoro-82M voices (Apache-2.0); e=kokoro Kokoro-82M via kokoro-js. wer = word error rate of the transcribe-back check. Made by tools/voice-gen.js (npm run voices); do not edit.', voices: sorted(voices), games: sorted(games), clips: sorted(clips) };
     fs.mkdirSync(OUT, { recursive: true });
     fs.writeFileSync(mfPath, JSON.stringify(mf, null, 0).replace(/\],"/g, '],\n"').replace(/\},"/g, '},\n"') + '\n');
     let removed = 0;
@@ -263,10 +393,12 @@ async function main() {
       for (const f of fs.readdirSync(dir)) { const h = f.replace(/\.webm$/, ''); if (!clips[h] || clips[h].g !== d.name) { fs.unlinkSync(path.join(dir, f)); removed++; } }
       if (!fs.readdirSync(dir).length) fs.rmdirSync(dir);
     }
-    const n = Object.keys(clips).length, bytes = sizeOf(OUT);
-    for (const k of Object.keys(games)) console.log(`  ${k.padEnd(11)} ${String(games[k].length).padStart(3)} clips  ${voices[k]}`);
+    const all = Object.values(clips), n = all.length, bytes = sizeOf(OUT), mins = all.reduce((a, c) => a + c.ms, 0) / 60000;
+    for (const k of Object.keys(games)) console.log(`  ${k.padEnd(16)} ${String(games[k].length).padStart(4)} clips  ${voices[k]}`);
     notes.forEach((x) => console.log('note: ' + x));
-    console.log(`${n} clips, ${(bytes / 1048576).toFixed(2)} MB in public/audio/voice (${removed} unused removed). ${((Date.now() - t0) / 1000).toFixed(0)} s total.`);
+    const w = all.filter((c) => c.wer != null);
+    if (w.length) console.log(`Transcribe-back check: mean WER ${(w.reduce((a, c) => a + c.wer, 0) / w.length * 100).toFixed(1)}%, ${w.filter((c) => c.wer > 0.12).length} clips above 12%.`);
+    console.log(`${n} clips (${mins.toFixed(1)} min), ${(bytes / 1048576).toFixed(2)} MB in public/audio/voice (${removed} unused removed). ${((Date.now() - t0) / 1000).toFixed(0)} s total.`);
   } finally { close(); cleanup(); }
 }
 main().then(() => process.exit(0), (e) => { console.error(e); cleanup(); process.exit(1); });

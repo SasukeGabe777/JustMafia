@@ -200,7 +200,7 @@
       spots: ['255,226,160', '255,200,120', '255,226,160', '255,170,190'], confetti: ['#ffd34d', '#fff2a8', '#c11a3a', '#ffffff', '#b06cff', '#e8b43a'] },
     host: {
       name: 'Lord Pemberton, Royal Herald',
-      voice: { kokoro: 'bm_george', speed: 1.0, like: /george|ryan|thomas|daniel|uk english male|british|male/i, accent: /en-GB/i, pitch: 0.95, rate: 1.0 },
+      voice: { kokoro: 'bm_george', cb: 'warm', speed: 1.0, like: /george|ryan|thomas|daniel|uk english male|british|male/i, accent: /en-GB/i, pitch: 0.95, rate: 1.0 },
       draw: hostDraw,
     },
     lines: {

@@ -309,7 +309,7 @@
     else if (n.key === 'jesterLaughs') SFX.play('laugh');
     else if (n.key === 'judgeKill') SFX.play('boom');
     else if (n.key === 'revive') SFX.play('saved');
-    speak(n.text);
+    speak(n.text, n.say);
   }
 
   // ---------- the narrator's voice ----------
@@ -346,9 +346,9 @@
   function fillVoices() {
     const sel = $('#pref-voice-name'); if (!sel) return;
     const vs = allVoices().sort((a, b) => (natural(b) - natural(a)) || a.name.localeCompare(b.name));
-    sel.innerHTML = '<option value="">Automatic (best available)</option>' + vs.map((v) => `<option value="${v.name.replace(/"/g, '&quot;')}">${natural(v) ? '★ ' : ''}${v.name.replace(/</g, '&lt;')}</option>`).join('');
+    sel.innerHTML = '<option value="">🎙️ Recorded narrator (natural, recommended)</option>' + vs.map((v) => `<option value="${v.name.replace(/"/g, '&quot;')}">${natural(v) ? '★ ' : ''}${v.name.replace(/</g, '&lt;')}</option>`).join('');
     sel.value = vs.some((v) => v.name === prefs.voiceName) ? prefs.voiceName : '';
-    $('#voice-tip').textContent = vs.some((v) => natural(v) || /google/i.test(v.name)) ? '★ = natural-sounding voice. Microsoft Edge has the most natural ones.'
+    $('#voice-tip').textContent = !sel.value ? 'The recorded narrator has a voice for every world. Pick a browser voice instead to hear player names read out (★ = more natural).' : vs.some((v) => natural(v) || /google/i.test(v.name)) ? '★ = natural-sounding voice. Microsoft Edge has the most natural ones.'
       : 'This browser only has robotic voices. For a natural narrator, open the game in Microsoft Edge (free “Natural” voices), or Chrome for its Google voices.';
   }
   if (window.speechSynthesis) speechSynthesis.onvoiceschanged = fillVoices;
@@ -357,33 +357,77 @@
   // Lines are queued and read in full: a new line waits for the current one instead of
   // cutting it off. Long sentences are split (some browsers stop after ~15 seconds), and a
   // watchdog moves on if the browser never reports that it finished.
-  let speakToken = 0, speakQueue = [], speaking = false;
-  window.addEventListener('mt-caption', (e) => speak(e.detail));
-  function stopSpeaking() { speakToken++; speakQueue = []; speaking = false; if (window.speechSynthesis) speechSynthesis.cancel(); SFX.duck(false); }
-  function speak(text) {
+  //
+  // The recorded narrator: every static narrator line is a pre-rendered clip in /audio/voice
+  // (tools/voice-gen.js, `npm run voices`), one natural voice per world. The server sends each
+  // line's spoken form (`say`: no player names or numbers, public/shared/narration-say.js); the
+  // screen still shows the full line. The browser's own voice is the last resort: it reads a line
+  // with no clips at all (a Judge's typed line), or everything when a browser voice is picked by
+  // hand in Host controls.
+  let speakToken = 0, speakQueue = [], speaking = false, curAudio = null;
+  const clipsReady = (window.fetch ? fetch('/audio/voice/manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)) : Promise.resolve(null))
+    .catch(() => null).then((m) => (m && m.clips ? m : { clips: {} }));
+  let clipManifest = null; clipsReady.then((m) => { clipManifest = m; });
+  const recorded = () => !prefs.voiceName && !!window.MT_SAY;
+  function clipFor(text) {
+    const S = window.MT_SAY; if (!S || !clipManifest) return null;
+    const h = S.keyOf(text, S.voiceFor(state && state.theme)), c = clipManifest.clips[h];
+    return c ? { url: '/audio/voice/' + c.g + '/' + h + '.webm', ms: c.ms } : null;
+  }
+  const voiceVol = () => Math.max(0, Math.min(1, (prefs.volVoice == null ? 100 : prefs.volVoice) / 100));
+  window.addEventListener('mt-caption', (e) => { const d = e.detail; if (d && typeof d === 'object') speak(d.text, d.say); else speak(d); });
+  function stopSpeaking() {
+    speakToken++; speakQueue = []; speaking = false;
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    if (curAudio) { try { curAudio.pause(); curAudio.removeAttribute('src'); } catch { /* gone */ } curAudio = null; }
+    SFX.duck(false);
+  }
+  const browserParts = (text) => (String(text).replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu, '').match(/[^.!?…]+[.!?…]*["”’)]*\s*/g) || [String(text)])
+    .flatMap((s) => s.length > 180 ? s.split(/(?<=[,;:])\s+/) : [s]).map((s) => s.trim()).filter(Boolean);
+  // speak(text, say): say = the line's spoken clips (from the server or a cutscene caption).
+  function speak(text, say) {
     if (state && state.narratorMode === 'human') return;
-    if (!prefs.voice || !window.speechSynthesis || !text) return;
-    const parts = (String(text).replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, '').match(/[^.!?…]+[.!?…]*["”’)]*\s*/g) || [String(text)])
-      .flatMap((s) => s.length > 180 ? s.split(/(?<=[,;:])\s+/) : [s]).map((s) => s.trim()).filter(Boolean);
-    if (!parts.length) return;
-    speakQueue.push(parts);
+    if (!prefs.voice || !text) return;
+    speakQueue.push({ text: String(text), say: Array.isArray(say) ? say.filter(Boolean) : null });
     while (speakQueue.length > 3) speakQueue.shift(); // far behind: skip the oldest lines, never the current one
     if (!speaking) nextLine();
   }
+  // A queued line -> parts: { clip, t } (recorded) or { t } (browser voice).
+  function partsOf(item) {
+    if (recorded() && item.say && item.say.length) {
+      const parts = item.say.map((t) => { const c = clipFor(t); return c ? { clip: c, t } : { t }; });
+      if (parts.some((p) => p.clip)) return parts; // a single missing clip is read by the browser voice
+    }
+    return window.speechSynthesis ? browserParts(item.text).map((t) => ({ t })) : [];
+  }
   function nextLine() {
-    const parts = speakQueue.shift();
-    if (!parts) { speaking = false; SFX.duck(false); return; }
+    const item = speakQueue.shift();
+    if (!item) { speaking = false; SFX.duck(false); return; }
     speaking = true; SFX.duck(true);
-    const token = speakToken, style = state && state.settings.narratorStyle, { v: voice, rate } = voiceFor(state && state.theme);
+    const token = speakToken;
+    // The very first line may wait (briefly) for the clip list.
+    Promise.race([clipsReady, new Promise((r) => setTimeout(r, 1500))]).then(() => { if (token === speakToken) playParts(partsOf(item), token); });
+  }
+  function playParts(parts, token) {
+    const style = state && state.settings.narratorStyle, { v: voice, rate } = voiceFor(state && state.theme);
     const say = (i) => {
       if (token !== speakToken) return;
       if (i >= parts.length) { setTimeout(() => { if (token === speakToken) nextLine(); }, 450); return; }
-      const u = new SpeechSynthesisUtterance(parts[i]);
+      const p = parts[i];
+      let done = false, guard = 0;
+      const go = () => { if (done) return; done = true; clearTimeout(guard); if (curAudio && curAudio === p.a) curAudio = null; setTimeout(() => say(i + 1), p.clip ? 250 : /[.…!?]["”’)]*$/.test(p.t) ? 380 : 180); };
+      if (p.clip) {
+        const a = p.a = new Audio(p.clip.url); a.volume = voiceVol(); curAudio = a;
+        guard = setTimeout(go, p.clip.ms + 2500); // never stuck on a clip that does not report its end
+        a.onended = go; a.onerror = go;
+        a.play().catch(go);
+        return;
+      }
+      if (!window.speechSynthesis) { go(); return; }
+      const u = new SpeechSynthesisUtterance(p.t);
       if (voice) { u.voice = voice; u.lang = voice.lang; }
-      u.rate = rate * (style === 'comedy' ? 1.06 : 1); u.pitch = 1; u.volume = Math.max(0, Math.min(1, (prefs.volVoice == null ? 100 : prefs.volVoice) / 100));
-      let done = false;
-      const go = () => { if (done) return; done = true; clearTimeout(guard); setTimeout(() => say(i + 1), /[.…!?]["”’)]*$/.test(parts[i]) ? 380 : 180); };
-      const guard = setTimeout(go, 2500 + parts[i].length * 95 / u.rate);
+      u.rate = rate * (style === 'comedy' ? 1.06 : 1); u.pitch = 1; u.volume = voiceVol();
+      guard = setTimeout(go, 2500 + p.t.length * 95 / u.rate);
       u.onend = go; u.onerror = go;
       speechSynthesis.speak(u);
     };
@@ -602,11 +646,11 @@
     el.value = prefs[key]; outEl.textContent = prefs[key] + '%';
     el.addEventListener('input', () => { prefs[key] = Number(el.value); outEl.textContent = el.value + '%'; apply(prefs[key]); savePrefs(); });
   }
-  $('#vol-voice').addEventListener('change', () => { stopSpeaking(); speak('This is how loud I will be.'); });
+  $('#vol-voice').addEventListener('change', () => { stopSpeaking(); speak('This is how loud I will be.', ['This is how loud I will be.']); });
   $('#vol-sfx').addEventListener('change', () => SFX.play('vote'));
   $('#pref-music').addEventListener('change', (e) => { prefs.music = e.target.checked; savePrefs(); SFX.musicOn = prefs.music; if (prefs.music) { SFX.unlock(); phaseMusic(true); } });
-  $('#pref-voice-name').addEventListener('change', (e) => { prefs.voiceName = e.target.value; savePrefs(); });
-  $('#voice-test').addEventListener('click', () => { SFX.unlock(); stopSpeaking(); const was = prefs.voice; prefs.voice = true; speak(`Welcome to ${(state && state.settings && state.settings.townName) || 'Mafia Town'}. Night is falling. Trust no one.`); prefs.voice = was; });
+  $('#pref-voice-name').addEventListener('change', (e) => { prefs.voiceName = e.target.value; savePrefs(); fillVoices(); });
+  $('#voice-test').addEventListener('click', () => { SFX.unlock(); stopSpeaking(); const was = prefs.voice; prefs.voice = true; speak(`Welcome to ${(state && state.settings && state.settings.townName) || 'Mafia Town'}. Night is falling. Trust no one.`, ['Welcome to town. Night is falling. Trust no one.']); prefs.voice = was; });
   $('#pref-sfx').addEventListener('change', (e) => { prefs.sfx = e.target.checked; SFX.enabled = prefs.sfx; savePrefs(); });
   $('#join-base').addEventListener('change', (e) => act('joinBase', { url: e.target.value }));
 

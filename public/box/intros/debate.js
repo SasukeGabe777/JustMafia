@@ -23,7 +23,7 @@
       spots: ['255,240,200', '255,226,170', '200,220,255', '255,200,200'], confetti: ['#f2b84b', '#ffd77a', '#3f8cff', '#ff4d5e', '#fff3dc', '#ffffff'] },
     host: {
       name: 'Judge Penelope Gavel',
-      voice: { kokoro: 'af_kore', speed: 1.0, like: /female|zira|aria|jenny|libby|sonia|hazel|susan|samantha|serena|natasha/i, accent: /en-(GB|AU|US)/i, pitch: 1.05, rate: 1.02 },
+      voice: { kokoro: 'af_kore', cb: 'dry', speed: 1.0, like: /female|zira|aria|jenny|libby|sonia|hazel|susan|samantha|serena|natasha/i, accent: /en-(GB|AU|US)/i, pitch: 1.05, rate: 1.02 },
       look: { skin: '#e8b48f', skinShade: '#c99071', suit: '#5a1e2c', suit2: '#3a0f1a', sleeve: '#5a1e2c', lapel: '#f2b84b', shirt: '#fffdf7', cuff: '#fffdf7', tie: 'bow', tieColor: '#1b4fa8',
         hair: 'bun', hairColor: '#d8d2c8', hairShade: '#b3aba0', brow: '#8a8278', glasses: '#2a1a12', prop: 'gavel', grin: true },
     },

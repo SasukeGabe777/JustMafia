@@ -166,7 +166,7 @@ module.exports = function install(Room) {
     if (!DAY.includes(this.phase)) return { ok: false, error: 'The mist can only roll in before the votes are counted.' };
     if (this.shroudDay === this.day) return { ok: false, error: 'Today’s ballot is already shrouded.' };
     p.shroudUsed = true; this.shroudDay = this.day;
-    this.narration = { id: ++this.narrationSeq, text: '🌫 A cold mist rolls over the ballot box. Today, nobody will see who voted for whom.', key: 'shroud', custom: true };
+    this.narration = { id: ++this.narrationSeq, text: '🌫 A cold mist rolls over the ballot box. Today, nobody will see who voted for whom.', say: ['A cold mist rolls over the ballot box. Today, nobody will see who voted for whom.'], key: 'shroud', custom: true };
     this.addLog(`🌫 ${p.name} (a Mafia ghost) shrouded day ${this.day}'s ballot.`, true);
     this.sync(); return { ok: true };
   };

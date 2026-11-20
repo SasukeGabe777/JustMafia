@@ -104,7 +104,7 @@
     theme: { accent: '#f2b632', accent2: '#b8402a', accent3: '#3ec1ff', ink: '#fff4d6', fade: '#2a160a', confetti: ['#f2b632', '#b8402a', '#fff4d6', '#2f6b8a', '#8bd346'] },
     host: {
       name: 'Sheriff Sundown',
-      voice: { kokoro: 'am_michael', speed: 1.0, like: /guy|davis|christopher|eric|andrew|brian|guy|male/i, accent: /en-US/i, pitch: 0.92, rate: 1.0 },
+      voice: { kokoro: 'am_michael', cb: 'dry', speed: 1.0, like: /guy|davis|christopher|eric|andrew|brian|guy|male/i, accent: /en-US/i, pitch: 0.92, rate: 1.0 },
       look,
     },
     lines: {

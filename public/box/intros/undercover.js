@@ -197,7 +197,7 @@
     theme: { accent: GOLD, accent2: RED, accent3: CYAN, ink: PAPER, panel: 'rgba(8,12,24,0.92)', fade: '#05080f', confetti: [GOLD, RED, CYAN, PAPER, '#3d8bff'] },
     host: {
       name: 'Director Grey',
-      voice: { kokoro: 'bm_daniel', speed: 1.0, like: /male|george|daniel|ryan|david|guy/i, accent: /en-GB|en-US/i, pitch: 0.92, rate: 0.98 },
+      voice: { kokoro: 'bm_daniel', cb: 'dry', speed: 1.0, like: /male|george|daniel|ryan|david|guy/i, accent: /en-GB|en-US/i, pitch: 0.92, rate: 0.98 },
       look,
       draw: greyDraw,
     },

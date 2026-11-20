@@ -53,7 +53,8 @@
             ${s.phone ? `<div class="ht-phone"><div class="ht-ph"><div class="ht-ph-notch"></div><div class="ht-ph-screen"><span>📱</span><b>${esc(s.phone)}</b></div></div><div class="ht-ph-label">On your phone</div></div>` : ''}
           </div>`);
       st.el.querySelector('.ht-dots').innerHTML = steps.map((_, k) => `<i class="${k < i || done ? 'past' : k === i ? 'on' : ''}"></i>`).join('');
-      if (!done && st.said !== i) { st.said = i; speak(s.say || [s.title, s.text, s.phone].filter(Boolean).join('. ')); BOX.sfx('pop'); }
+      // The voice reads the title and the rule; the phone hint stays on screen (shorter, less robotic).
+      if (!done && st.said !== i) { st.said = i; speak(s.say || [s.title, s.text].filter(Boolean).join('. ')); BOX.sfx('pop'); }
       if (done && st.said !== 99) { st.said = 99; speak('That’s it. Let’s play!'); }
     }
     st.raf = requestAnimationFrame(frame);
