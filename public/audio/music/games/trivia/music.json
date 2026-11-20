@@ -1,0 +1,61 @@
+{
+ "cues": {
+  "title": {
+   "file": "games/trivia/title-groovin.webm",
+   "loopStart": 20.024,
+   "loopEnd": 84.01
+  },
+  "lobby": {
+   "file": "games/trivia/title-groovin.webm",
+   "loopStart": 20.024,
+   "loopEnd": 84.01
+  },
+  "intro": {
+   "file": "games/trivia/title-groovin.webm",
+   "loopStart": 20.024,
+   "loopEnd": 84.01
+  },
+  "think": {
+   "file": "games/trivia/think-funky-energy-loop.webm",
+   "loopStart": 50.849,
+   "loopEnd": 117.632
+  },
+  "play": {
+   "file": "games/trivia/think-funky-energy-loop.webm",
+   "loopStart": 50.849,
+   "loopEnd": 117.632
+  },
+  "finale": {
+   "file": "games/trivia/finale-funkeriffic.webm",
+   "loopStart": 38.137,
+   "loopEnd": 106.709,
+   "gain": 0.86
+  }
+ },
+ "credits": [
+  {
+   "file": "games/trivia/title-groovin.webm",
+   "title": "Groovin",
+   "author": "Brian Boyko",
+   "source": "https://freepd.com/misc.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/misc.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for title, lobby, intro"
+  },
+  {
+   "file": "games/trivia/think-funky-energy-loop.webm",
+   "title": "Funky Energy Loop",
+   "author": "Kevin MacLeod",
+   "source": "https://freepd.com/scoring.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/scoring.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for think, play"
+  },
+  {
+   "file": "games/trivia/finale-funkeriffic.webm",
+   "title": "Funkeriffic",
+   "author": "Kevin MacLeod",
+   "source": "https://freepd.com/misc.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/misc.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for finale"
+  }
+ ]
+}

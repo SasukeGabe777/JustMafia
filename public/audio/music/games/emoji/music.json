@@ -1,0 +1,71 @@
+{
+ "cues": {
+  "title": {
+   "file": "games/emoji/title-funshine.webm",
+   "loopStart": 20.821,
+   "loopEnd": 100.821,
+   "gain": 0.59
+  },
+  "lobby": {
+   "file": "games/emoji/title-funshine.webm",
+   "loopStart": 20.821,
+   "loopEnd": 100.821,
+   "gain": 0.59
+  },
+  "intro": {
+   "file": "games/emoji/title-funshine.webm",
+   "loopStart": 20.821,
+   "loopEnd": 100.821,
+   "gain": 0.59
+  },
+  "play": {
+   "file": "games/emoji/play-screen-saver.webm",
+   "loopStart": 12.955,
+   "loopEnd": 93.226
+  },
+  "think": {
+   "file": "games/emoji/think-silly-boy.webm",
+   "loopStart": 24.152,
+   "loopEnd": 79.018
+  },
+  "finale": {
+   "file": "games/emoji/finale-going-bananas.webm",
+   "loopEnd": 137.301,
+   "gain": 0.57
+  }
+ },
+ "credits": [
+  {
+   "file": "games/emoji/title-funshine.webm",
+   "title": "Funshine",
+   "author": "Kevin MacLeod",
+   "source": "https://freepd.com/upbeat.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/upbeat.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for title, lobby, intro"
+  },
+  {
+   "file": "games/emoji/play-screen-saver.webm",
+   "title": "Screen Saver",
+   "author": "Kevin MacLeod",
+   "source": "https://freepd.com/upbeat.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/upbeat.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for play"
+  },
+  {
+   "file": "games/emoji/think-silly-boy.webm",
+   "title": "Silly Boy",
+   "author": "Rafael Krux",
+   "source": "https://freepd.com/comedy.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/comedy.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for think"
+  },
+  {
+   "file": "games/emoji/finale-going-bananas.webm",
+   "title": "Going Bananas",
+   "author": "Bryan Teoh",
+   "source": "https://freepd.com/comedy.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/comedy.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for finale"
+  }
+ ]
+}

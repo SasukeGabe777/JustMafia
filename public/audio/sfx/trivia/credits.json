@@ -1,0 +1,58 @@
+[
+ {
+  "file": "trivia/lock.webm",
+  "title": "Interface Sounds pack: select_003",
+  "author": "Kenney (kenney.nl)",
+  "source": "https://kenney.nl/assets/interface-sounds",
+  "license": "CC0 1.0",
+  "note": "levelled and re-encoded (Opus)"
+ },
+ {
+  "file": "trivia/desk-switch.webm",
+  "title": "UI Audio pack: switch3",
+  "author": "Kenney (kenney.nl)",
+  "source": "https://kenney.nl/assets/ui-audio",
+  "license": "CC0 1.0",
+  "note": "levelled and re-encoded (Opus)"
+ },
+ {
+  "file": "trivia/match.webm",
+  "title": "MatchBox - Strike and Light 03.wav",
+  "author": "JarredGibb",
+  "source": "https://freesound.org/s/248241/",
+  "license": "CC0 1.0",
+  "note": "trimmed, levelled and re-encoded (Opus)"
+ },
+ {
+  "file": "trivia/applause.webm",
+  "title": "smallcrowd.wav",
+  "author": "moxobna",
+  "source": "https://freesound.org/s/32260/",
+  "license": "CC0 1.0",
+  "note": "trimmed, levelled and re-encoded (Opus)"
+ },
+ {
+  "file": "trivia/aww.webm",
+  "title": "aww.wav",
+  "author": "phmiller42",
+  "source": "https://freesound.org/s/124996/",
+  "license": "CC0 1.0",
+  "note": "levelled and re-encoded (Opus)"
+ },
+ {
+  "file": "trivia/cheer.webm",
+  "title": "Crowd.Yay.Applause.25ppl.Short.wav",
+  "author": "jessepash",
+  "source": "https://freesound.org/s/139972/",
+  "license": "CC0 1.0",
+  "note": "trimmed, levelled and re-encoded (Opus)"
+ },
+ {
+  "file": "trivia/ooh.webm",
+  "title": "Crowd gasp.wav",
+  "author": "RadioCounseling",
+  "source": "https://freesound.org/s/635110/",
+  "license": "CC0 1.0",
+  "note": "levelled and re-encoded (Opus)"
+ }
+]
