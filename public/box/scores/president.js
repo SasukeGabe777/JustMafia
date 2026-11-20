@@ -5,6 +5,9 @@
 // "revolution" with driving string ostinato when the table turns.
 (function () {
   const S = (window.BOX.scores = window.BOX.scores || {});
+  // Recorded card sounds (Kenney Casino Audio, CC0: public/audio/sfx/president/, credits.json there), quiet.
+  const clip = (f, o) => BOX.audio.clip('president/' + f, o);
+  const card = (f, vol, fb) => { if (!clip(f, { vol })) BOX.sfx(fb); }; // fb: the old synth sound if the clip can't play
   const tracks = {
     hp: { type: 'harpsi', mode: 'chord', center: 64, n: 4, vol: 0.4, pan: -0.2 },
     arp: { type: 'harpsi', mode: 'chord', center: 67, n: 4, vol: 0.3, pan: 0.25 },
@@ -88,8 +91,14 @@
       burn: (X) => { ['g4', 'b4', 'd5', 'g5', 'b5', 'd6'].forEach((n, i) => X.note('harpsi', n, i * 0.03, 0.6, 0.7)); X.note('timp', 'g2', 0, 0.8, 0.9); },
       bells: (X) => { X.chord('cbell', ['d4', 'a4'], 0, 2, 0.8); X.note('cbell', 'd5', 0.5, 2, 0.6); },
       round: { bpm: 100, tracks: { t: { type: 'brass', bright: 1.3 } }, parts: { t: 'a4 - - a4 d5 - - -' } },
+      card: () => card('play-' + (1 + Math.floor(Math.random() * 3)) + '.webm', 0.3, 'deal'),
+      slap: () => card('slap.webm', 0.34, 'flip'), // a high card slapped down
+      sweep: () => card('sweep.webm', 0.26, 'poof'), // the pile is cleared away
+      tribute: () => card('tribute.webm', 0.28, 'whoosh'), // cards slid across to pay tribute
+      deal: () => card('deal.webm', 0.28, 'deal'),
+      shuffle: () => card('shuffle.webm', 0.24, 'shuffle'),
     },
-    fx: { win: 'win', revolution: 'revolution', final: 'roll', roundOver: 'bells', tableDone: 'flourish', out: 'flourish', burn: 'burn' },
+    fx: { card: 'card', big: 'slap', clear: 'sweep', give: 'tribute', deal: 'deal', shuffle: 'shuffle', win: 'win', revolution: 'revolution', final: 'roll', roundOver: 'bells', tableDone: 'flourish', out: 'flourish', burn: 'burn' },
     sfx: { win: 'win', drum: 'roll', bell: 'bells', start: 'round' },
   };
 })();

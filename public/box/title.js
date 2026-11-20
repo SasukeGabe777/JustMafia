@@ -43,7 +43,7 @@
     el.querySelector('#bt-go').onclick = start;
     const rs = el.querySelector('#bt-resume'); if (rs) rs.onclick = resume;
     el.querySelector('#bt-back').onclick = back;
-    el.querySelector('#bt-how-btn').onclick = () => { const h = el.querySelector('#bt-how'); h.hidden = !h.hidden; };
+    el.querySelector('#bt-how-btn').onclick = () => { const h = el.querySelector('#bt-how'); h.hidden = !h.hidden; try { BOX.audio.ui(h.hidden ? 'close' : 'open'); } catch { /* no audio */ } };
     // Enter starts (TV remotes / keyboards).
     const card = el.querySelector('.bt');
     const onKey = (e) => { if (!document.body.contains(card)) return document.removeEventListener('keydown', onKey); if (e.key === 'Enter' && !(e.target && e.target.tagName === 'BUTTON')) { e.preventDefault(); (rs || el.querySelector('#bt-go')).click(); } };

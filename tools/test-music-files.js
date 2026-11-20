@@ -68,7 +68,7 @@ if (!CHROME) { console.log('SKIP browser part: Chrome not found (set CHROME=path
   await tv.until(`(BOX.audio.source || '').startsWith('synth:')`, 'synth fallback for a cue with no track', 10000);
   ok('a cue with no track falls back to the synth score');
   // A track that cannot load: the synth plays instead.
-  await tv.send('Fetch.enable', { patterns: [{ urlPattern: '*/audio/music/sets/*/finale.ogg' }] });
+  await tv.send('Fetch.enable', { patterns: [{ urlPattern: '*/audio/music/*/finale*' }] });
   const fail = (m) => { if (m.method === 'Fetch.requestPaused' && m.sessionId === tv.s) tv.send('Fetch.failRequest', { requestId: m.params.requestId, errorReason: 'Failed' }).catch(() => {}); };
   browser.listeners.push(fail);
   await tv.eval(`BOX.audio.music('finale', 'price'); true`);

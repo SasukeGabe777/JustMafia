@@ -109,6 +109,8 @@
     fx: { item: 'whoosh', lock: 'click', drum: 'drum', drop: 'reveal', bull: 'cheer', jackpot: 'win', bust: 'poof', hilo: 'sting', versus: 'sting', spree: 'swell', over: 'win' },
     // The host and the studio audience react to the game's cues.
     onFx(f) {
+      // The studio audience applauds the big moments (public/audio/sfx/price/applause.webm), quietly.
+      if (f.kind === 'jackpot' || f.kind === 'over') { try { BOX.audio.clip('price/applause.webm', { vol: 0.14, delay: f.kind === 'over' ? 0.4 : 0.2, gap: 4000 }); } catch { /* no audio */ } }
       if (!F) return;
       const s = last || {}, topName = () => { const id = (s.top || [])[0], m = id && (s.marks || []).find((x) => x.id === id); return m ? m.name : null; };
       const pick = (a) => a[Math.floor(Math.random() * a.length)];

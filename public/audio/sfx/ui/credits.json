@@ -1,0 +1,44 @@
+[
+ {
+  "file": "ui/click.ogg",
+  "title": "select_001.ogg (Kenney Interface Sounds)",
+  "author": "Kenney (kenney.nl)",
+  "source": "https://kenney.nl/assets/interface-sounds",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "ui/toggle.ogg",
+  "title": "toggle_002.ogg (Kenney Interface Sounds)",
+  "author": "Kenney (kenney.nl)",
+  "source": "https://kenney.nl/assets/interface-sounds",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "ui/open.ogg",
+  "title": "open_001.ogg (Kenney Interface Sounds)",
+  "author": "Kenney (kenney.nl)",
+  "source": "https://kenney.nl/assets/interface-sounds",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "ui/close.ogg",
+  "title": "close_001.ogg (Kenney Interface Sounds)",
+  "author": "Kenney (kenney.nl)",
+  "source": "https://kenney.nl/assets/interface-sounds",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "ui/tick.ogg",
+  "title": "tick_002.ogg (Kenney Interface Sounds)",
+  "author": "Kenney (kenney.nl)",
+  "source": "https://kenney.nl/assets/interface-sounds",
+  "license": "CC0 1.0"
+ },
+ {
+  "file": "ui/join.ogg",
+  "title": "pluck_001.ogg (Kenney Interface Sounds)",
+  "author": "Kenney (kenney.nl)",
+  "source": "https://kenney.nl/assets/interface-sounds",
+  "license": "CC0 1.0"
+ }
+]

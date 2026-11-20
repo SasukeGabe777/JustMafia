@@ -4,6 +4,8 @@
 // the dealer plays; a brassy shout chorus for the payout.
 (function () {
   const S = (window.BOX.scores = window.BOX.scores || {});
+  // Recorded table sounds (Kenney Casino Audio, CC0: public/audio/sfx/blackjack/, credits.json there), quiet.
+  const clip = (f, o) => BOX.audio.clip('blackjack/' + f, o);
   const tracks = {
     ep: { type: 'epiano', mode: 'chord', center: 62, n: 4, rootless: true, vol: 0.42, pan: -0.2, trem: 0.25 },
     vib: { type: 'vibes', vol: 0.55, pan: 0.18, dly: 0.12 },
@@ -71,8 +73,14 @@
       blackjack: { bpm: 140, tracks: { v: { type: 'vibes' }, s: { type: 'brass', mode: 'chord', center: 68, n: 4 } }, chords: 'Dbmaj7 | Fm9', bars: 2, parts: { v: 'f5 ab5 c6 eb6 f6 ab6 c7 - | - - - - - - - -', s: '................|X---------------' } },
       bust: { bpm: 100, tracks: { m: { type: 'mute' } }, parts: { m: 'g4 - f#4 - f4 - - - | e4 - - - - - - -' }, bars: 2 },
       sting: { bpm: 120, tracks: { s: { type: 'brass', mode: 'chord', center: 64, n: 4 } }, chords: 'C7#9', parts: { s: 'X---............' } },
+      chips: () => { if (!clip('chips-' + (1 + Math.floor(Math.random() * 3)) + '.webm', { vol: 0.3 })) BOX.audio.stinger('chips', 'generic'); },
+      payout: () => { if (!clip('payout.webm', { vol: 0.28, delay: 0.15 })) BOX.audio.stinger('chips', 'generic'); else clip('chips-3.webm', { vol: 0.22, delay: 0.45 }); },
+      double: () => { clip('chip-lay.webm', { vol: 0.32 }); clip('chips-1.webm', { vol: 0.24, delay: 0.12 }); },
+      flip: () => { clip('flip.webm', { vol: 0.32 }); },
+      shuffle: () => { clip('shuffle.webm', { vol: 0.26 }); },
+      foley: () => {}, // the cards themselves: the game's onFx deals one recorded card per card on the table
     },
-    fx: { bust: 'bust', dealerBust: 'win', dealerBJ: 'sting', settle: 'chips', chip: 'chips', allin: 'roll', bjWin: 'blackjack', charlie: 'blackjack', win: 'win' },
+    fx: { bust: 'bust', dealerBust: 'win', dealerBJ: 'sting', settle: 'payout', chip: 'chips', deal: 'foley', flip: 'flip', shuffle: 'shuffle', double: 'double', allin: 'roll', bjWin: 'blackjack', charlie: 'blackjack', win: 'win' },
     sfx: { win: 'win', drum: 'roll', swell: 'blackjack', zap: 'ding', ballot: 'chips' },
   };
 })();

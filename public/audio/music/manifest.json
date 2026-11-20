@@ -10,6 +10,79 @@
    },
    "lobby": {
     "file": "games/bid/title-confusement-rag.mp3"
+   },
+   "think": {
+    "file": "games/bid/play-the-adventurers-rag.mp3"
+   },
+   "play": {
+    "file": "games/bid/play-the-adventurers-rag.mp3"
+   },
+   "tense": {
+    "file": "games/bid/play-the-adventurers-rag.mp3"
+   },
+   "reveal": {
+    "file": "games/bid/play-the-adventurers-rag.mp3"
+   },
+   "finale": {
+    "file": "games/bid/title-confusement-rag.mp3"
+   }
+  },
+  "blackjack": {
+   "title": {
+    "file": "games/blackjack/title-once-in-a-while.mp3",
+    "gain": 0.8,
+    "loopEnd": 105
+   },
+   "intro": {
+    "file": "games/blackjack/title-once-in-a-while.mp3",
+    "gain": 0.8,
+    "loopEnd": 105
+   },
+   "lobby": {
+    "file": "games/blackjack/title-once-in-a-while.mp3",
+    "gain": 0.8,
+    "loopEnd": 105
+   },
+   "think": {
+    "file": "games/blackjack/think-buy-something.ogg",
+    "gain": 0.92
+   },
+   "play": {
+    "file": "games/blackjack/play-blue-intermission.ogg",
+    "gain": 0.94
+   },
+   "finale": {
+    "file": "games/blackjack/finale-catchy-swing.ogg"
+   }
+  },
+  "price": {
+   "title": {
+    "file": "games/price/title-urban-theme.ogg",
+    "gain": 0.72
+   },
+   "intro": {
+    "file": "games/price/title-urban-theme.ogg",
+    "gain": 0.72
+   },
+   "lobby": {
+    "file": "games/price/title-urban-theme.ogg",
+    "gain": 0.72
+   },
+   "think": {
+    "file": "games/price/think-urban-shop.ogg",
+    "gain": 0.68
+   },
+   "play": {
+    "file": "games/price/think-urban-shop.ogg",
+    "gain": 0.68
+   },
+   "tense": {
+    "file": "games/price/think-urban-shop.ogg",
+    "gain": 0.68
+   },
+   "finale": {
+    "file": "games/price/finale-funky-disco-beats.ogg",
+    "gain": 0.9
    }
   }
  }
