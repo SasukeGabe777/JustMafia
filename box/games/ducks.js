@@ -7,7 +7,13 @@
 // events, predictions and badges keep every minute busy.
 const SKILLS = ['run', 'swim', 'fly', 'climb', 'stamina'];
 const GAME_FOR = { run: 'hurdles', swim: 'paddle', fly: 'rings', climb: 'climb', stamina: 'bugs' };
-const SECTIONS = { track: { skill: 'run', len: 80, base: 3.2, per: 0.42 }, pond: { skill: 'swim', len: 60, base: 2.6, per: 0.38 }, cliff: { skill: 'climb', len: 40, base: 1.6, per: 0.26 }, gap: { skill: 'fly', len: 50, base: 3.0, per: 0.42 } };
+// Section lengths (metres) are short enough that a race plays at about real speed on the TV
+// (30-60 s), so every jump, splash and climb can be animated instead of fast-forwarded.
+const SECTIONS = { track: { skill: 'run', len: 48, base: 3.2, per: 0.42 }, pond: { skill: 'swim', len: 36, base: 2.6, per: 0.38 }, cliff: { skill: 'climb', len: 26, base: 1.6, per: 0.26 }, gap: { skill: 'fly', len: 32, base: 3.0, per: 0.42 } };
+// Stamina: seconds of full effort before a duck tires (scaled to the shorter races).
+const POOL = (lv, bar, lungs) => (18 + 6 * lv + (bar ? 12 : 0)) * (lungs ? 1.4 : 1);
+// Jumps: how long a crashed duck sits dazed, and how long a clipped hurdle slows it.
+const TRIP_STOP = 1.2, CLIP_SLOW = 0.6;
 const COLORS = ['sunny', 'snow', 'cocoa', 'mallard', 'bubblegum', 'sky', 'midnight', 'mint', 'ember', 'lilac'];
 const HATS = ['none', 'cap', 'tophat', 'crown', 'flower', 'shades', 'bow', 'viking', 'pirate', 'party', 'chef', 'headband'];
 const FOOD = {
@@ -117,13 +123,25 @@ const SPIN = [
   { w: 8, kind: 'gear', label: 'Free race gear', icon: '🎒' }, { w: 6, kind: 'hat', label: 'A new hat', icon: '🎩' }, { w: 6, kind: 'nothing', label: 'A feather… nice?', icon: '🪶' },
 ];
 const RUN_SECONDS = 20, TRAIN_COST = 15, NAP_SECONDS = 15, MAX_LEVEL = 25, SCORE_RATE = 3.2, SCORE_MAX = 60 /* combos let good players score more */;
-const RACE_INTRO = 5000, RACE_RUN = 32000, RACE_OUTRO = 6000, RESULT_SHOW = 10000;
+const RACE_INTRO = 5000, RACE_OUTRO = 6000, RESULT_SHOW = 10000;
+// Race pacing on the TV: the winner crosses after about RACE_WIN seconds (the simulation plays at
+// 0.85-2.2x speed), then the rest of the field comes home within RACE_TAIL more seconds.
+const RACE_WIN = 34, RACE_TAIL = 9;
 const POINTS = [10, 8, 6, 5, 4, 3, 2];
 const PRIZE = [40, 30, 22, 16, 12];
 const PET_COOLDOWN = 8000;
 const HYPE_MS = 15000; // race-day hype: the last 15 seconds before the start
 const CHEER_GAP = 150; // one cheer per 150 ms per phone (the TV shows each one)
 
+// How the TV plays a race back (the phones use the same numbers): k = simulated seconds per real
+// second until the winner crosses at tw seconds, then k2 until the last duck is home tail seconds
+// later. run = the whole race on screen, in ms.
+function racePace(entries) {
+  const winT = entries.length ? entries[0].time : 1, lastT = entries.length ? entries[entries.length - 1].time : 1;
+  const k = clamp(winT / RACE_WIN, 0.85, 2.2), tw = winT / k, rest = Math.max(0, lastT - winT);
+  const tail = Math.max(2.5, Math.min(RACE_TAIL, rest / k)), k2 = Math.max(k, rest / tail);
+  return { pace: { k: +k.toFixed(4), tw: +tw.toFixed(3), k2: +k2.toFixed(4), tail: +tail.toFixed(3) }, run: Math.ceil((tw + tail + 1.5) * 1000) };
+}
 const xpFor = (L) => 10 * L * L + 10 * L;
 const level = (xp) => { let L = 0; while (L < MAX_LEVEL && xp >= xpFor(L + 1)) L++; return L; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -238,7 +256,7 @@ class Ducks {
 
   // ---- season ----
   newCourse(n) {
-    const count = ({ sprint: 4, classic: 5, marathon: 8 }[this.s.course] || 5) + Math.floor((n - 1) / 3);
+    const count = ({ sprint: 4, classic: 5, marathon: 8 }[this.s.course] || 5) + Math.min(1, Math.floor((n - 1) / 3));
     const pool = { mixed: ['track', 'pond', 'cliff', 'gap'], track: ['track'], pond: ['pond'], mountain: ['cliff', 'gap', 'track'] }[this.s.terrain] || ['track', 'pond', 'cliff', 'gap'];
     const rng = this.room.rng, themeKeys = Object.keys(THEMES);
     let theme; do theme = themeKeys[Math.floor(rng() * themeKeys.length)]; while (theme === (this.course && this.course.theme) && themeKeys.length > 1);
@@ -278,8 +296,8 @@ class Ducks {
   simulate() {
     const C = this.course, entries = [];
     const bounds = []; let acc = 0; for (const x of C.sections) { bounds.push([acc, acc + SECTIONS[x.type].len, x.type, x.v]); acc += SECTIONS[x.type].len; }
-    // Jumps: hurdles (every 16 m) or fallen logs (every 22 m, harder) on track sections.
-    const hurdles = []; for (const [a, b, s, v] of bounds) if (s === 'track' && (v === 'hurdles' || v === 'logs')) for (let x = a + 12; x < b - 4; x += v === 'logs' ? 22 : 16) hurdles.push({ x, log: v === 'logs' });
+    // Jumps: hurdles (every 11 m) or fallen logs (every 15 m, harder) on track sections.
+    const hurdles = []; for (const [a, b, s, v] of bounds) if (s === 'track' && (v === 'hurdles' || v === 'logs')) for (let x = a + 9; x < b - 4; x += v === 'logs' ? 15 : 11) hurdles.push({ x, log: v === 'logs' });
     const boosts = []; for (const [a, b, s, v] of bounds) if (s !== 'cliff') { boosts.push({ x: a + (b - a) * 0.55, s }); if (v === 'clouds' || v === 'lily') boosts.push({ x: a + (b - a) * 0.25, s }); }
     const racers = [...this.ducks].filter(([id]) => this.room.get(id));
     // Wild ducks fill the field when only a few people are playing, stronger in higher leagues.
@@ -294,7 +312,7 @@ class Ducks {
     for (const [id, d] of racers) {
       const lv = this.levels(d), gear = new Set(d.gear), rng = this.room.rng;
       const perk = new Set(d.perks || []);
-      let x = 0, t = 0, lastV = 1, pool = (30 + 10 * lv.stamina + (gear.has('energybar') ? 20 : 0)) * (perk.has('lungs') ? 1.4 : 1), stopped = 0, tired = false, nextH = 0, nextB = 0, boostUntil = 0;
+      let x = 0, t = 0, lastV = 1, pool = POOL(lv.stamina, gear.has('energybar'), perk.has('lungs')), stopped = 0, tired = false, nextH = 0, nextB = 0, boostUntil = 0, slowUntil = 0;
       const slipAt = {}; bounds.forEach(([a, b, s, v], i) => { if (s === 'cliff') slipAt[i] = a + (b - a) * (0.3 + rng() * 0.5); if (s === 'track' && v === 'ice') slipAt[i] = a + (b - a) * (0.2 + rng() * 0.6); });
       const luck = 0.97 + rng() * 0.06 + (C.weather === 'fog' ? (rng() - 0.5) * 0.1 : 0);
       const samples = [0], events = [];
@@ -322,6 +340,7 @@ class Ducks {
           if (d.energy < 20) v *= 0.92;
           if (tired) v *= 0.72;
           if (t < boostUntil) v *= 1.35;
+          if (t < slowUntil) v *= 0.55; // stumbled after clipping a hurdle
           if (perk.size) { const pg = x / L; if (perk.has('burst') && pg < 0.2) v *= 1.15; if (perk.has('closer') && pg > 0.8) v *= 1.1; if (perk.has('webbed') && sec === 'pond') v *= 1.08; if (perk.has('feather') && sec === 'gap') v *= 1.08; }
           v *= luck;
           const drain = (d.tactic === 'sprint' && prog < 0.4 ? 1.5 : d.tactic === 'steady' ? 0.85 : 1) * (C.weather === 'heat' ? 1.3 : 1);
@@ -329,23 +348,28 @@ class Ducks {
           if (!tired && pool <= 0) { tired = true; events.push({ t: +t.toFixed(1), id, k: 'tired' }); }
           lastV = v;
           const nx = x + v * DT;
-          // Hurdles: a chance to trip (Run level, rain and sneakers matter).
           // Boost pads / currents / updrafts: a better-trained duck catches them more often.
           while (nextB < boosts.length && boosts[nextB].x <= nx) {
             const B = boosts[nextB++];
             if (B.x > x && rng() < (0.25 + 0.04 * lv[SECTIONS[B.s].skill]) * (perk.has('lucky') ? 1.6 : 1)) { boostUntil = t + 1.2; events.push({ t: +t.toFixed(1), id, k: 'boost' }); }
           }
+          // Hurdles: every jump is clean, clipped (the bar goes down, a stumble) or a crash into the
+          // fence (a dazed stop). Run level, rain, sneakers and Nimble Feet set the odds.
           while (nextH < hurdles.length && hurdles[nextH].x <= nx) {
             if (hurdles[nextH].x > x) {
-              const p = gear.has('sneakers') ? 0 : clamp(0.32 - 0.03 * lv.run, 0.03, 0.32) * (C.weather === 'rain' ? 1.6 : 1) * (hurdles[nextH].log ? 1.3 : 1);
-              if (rng() < p * (perk.has('nimble') ? 0.5 : 1)) { stopped = 0.9; events.push({ t: +t.toFixed(1), id, k: 'trip' }); }
+              const H = hurdles[nextH], wet = C.weather === 'rain' ? 1.6 : 1, nim = perk.has('nimble') ? 0.5 : 1;
+              const pTrip = gear.has('sneakers') ? 0 : clamp(0.32 - 0.03 * lv.run, 0.03, 0.32) * wet * (H.log ? 1.3 : 1) * nim;
+              const pClip = clamp(0.3 - 0.025 * lv.run, 0.04, 0.3) * wet * (H.log ? 1.2 : 1) * nim * (gear.has('sneakers') ? 0.5 : 1);
+              const r = rng();
+              if (r < pTrip) { stopped = TRIP_STOP; events.push({ t: +t.toFixed(2), id, k: 'trip', h: nextH }); }
+              else if (r < pTrip + pClip) { slowUntil = t + CLIP_SLOW; events.push({ t: +t.toFixed(2), id, k: 'clip', h: nextH }); }
             }
             nextH++;
           }
           x = stopped > 0 ? Math.min(nx, hurdles[nextH - 1] ? hurdles[nextH - 1].x : nx) : nx;
           if (si >= 0 && slipAt[si] != null && x >= slipAt[si]) {
             const ice = bounds[si][3] === 'ice', p = (sec === 'cliff' && perk.has('grip')) ? 0 : (sec === 'track' && perk.has('nimble') ? 0.5 : 1) * ice && sec === 'track' ? clamp(0.35 - 0.02 * lv.run, 0.08, 0.35) : clamp(0.3 - 0.025 * lv.climb, 0.02, 0.3) * (gear.has('claws') ? 0.5 : 1) * (ice ? 1.6 : 1);
-            if (rng() < p) { if (sec === 'track') stopped = 0.8; else x = Math.max(bounds[si][0], x - 5); events.push({ t: +t.toFixed(1), id, k: sec === 'track' ? 'skid' : 'slip' }); }
+            if (rng() < p) { if (sec === 'track') stopped = 0.8; else x = Math.max(bounds[si][0], x - 3.5); events.push({ t: +t.toFixed(1), id, k: sec === 'track' ? 'skid' : 'slip' }); }
             delete slipAt[si];
           }
         }
@@ -353,7 +377,7 @@ class Ducks {
       }
       const time = t - (x > L ? Math.min(DT, (x - L) / Math.max(0.1, lastV)) : 0); // the moment it crossed the line
       samples.push(Math.round(L * 10));
-      entries.push({ id, time, samples, events });
+      entries.push({ id, time, samples, events, lv: SKILLS.map((k) => lv[k]) });
     }
     return { entries, hurdles, boosts: boosts.map((b) => b.x) };
   }
@@ -421,13 +445,16 @@ class Ducks {
     if (tripper && tripper.n >= 3) highlights.push({ icon: '💫', text: `${nameOf(tripper.id)} took ${tripper.n} tumbles and still finished` });
     this.lastRace = {
       n: this.race, name: this.course.name, final: this.course.final, sections: this.course.sections, theme: this.course.theme, themeName: this.course.themeName, league: this.course.league, wild: this.wild, weather: this.course.weather, wind: this.course.wind, length: this.course.length, hurdles, boosts,
-      intro: RACE_INTRO, run: RACE_RUN, sample: 0.5, results, margin, favorites, moves, highlights: highlights.slice(0, 4),
-      tracks: entries.map((e) => ({ id: e.id, s: e.samples, ev: e.events.map((x) => [x.t, x.k]) })),
+      intro: RACE_INTRO, sample: 0.5, results, margin, favorites, moves, highlights: highlights.slice(0, 4), secLen: Object.fromEntries(Object.entries(SECTIONS).map(([k, x]) => [k, x.len])), tripStop: TRIP_STOP,
+      // each duck: its path (x every 0.5 s), its moments ([t, kind] or [t, kind, hurdle]) and its levels (run, swim, fly, climb, stamina)
+      tracks: entries.map((e) => ({ id: e.id, s: e.samples, ev: e.events.map((x) => (x.h != null ? [x.t, x.k, x.h] : [x.t, x.k])), lv: e.lv })),
+      ...racePace(entries),
     };
     const w = winnerId && (this.ducks.get(winnerId) || this.wild[winnerId]);
+    const runMs = this.lastRace.run;
     this.room.fx('raceStart');
-    this.endsAt = this.room.now() + RACE_INTRO + RACE_RUN + RACE_OUTRO;
-    this.timer = this.room.after(RACE_INTRO + RACE_RUN + RACE_OUTRO, () => {
+    this.endsAt = this.room.now() + RACE_INTRO + runMs + RACE_OUTRO;
+    this.timer = this.room.after(RACE_INTRO + runMs + RACE_OUTRO, () => {
       this.phase = 'results'; this.endsAt = this.room.now() + RESULT_SHOW; this.room.fx('raceDone');
       if (w) this.log(`🏆 ${w.name}${wildWin ? ' (a wild duck!)' : ''} wins the ${this.course.name}!`, 'win');
       this.timer = this.room.after(RESULT_SHOW, () => this.afterRace());
@@ -464,13 +491,21 @@ class Ducks {
     return [...this.ducks].filter(([id]) => this.room.get(id)).map(([id, d]) => ({ id, owner: this.room.name(id), avatar: this.avatar(id), duck: d.name, points: d.points, wins: d.wins, best: d.best }))
       .sort((a, b) => b.points - a.points || b.wins - a.wins || (a.best || 99) - (b.best || 99));
   }
+  // The phone's live race: the same playback numbers the TV uses, and only this duck's own path,
+  // so the phone follows its duck jump by jump while everyone watches the big screen.
+  liveFor(id) {
+    const R = this.lastRace, tr = R && R.tracks.find((x) => x.id === id);
+    if (!tr) return null;
+    const res = R.results.find((x) => x.id === id);
+    return { intro: R.intro, run: R.run, outro: RACE_OUTRO, pace: R.pace, sample: R.sample, length: R.length, secLen: R.secLen, sections: R.sections, hurdles: R.hurdles, tripStop: R.tripStop, s: tr.s, ev: tr.ev, time: res.time, place: res.place, of: R.results.length };
+  }
   // A rough race-time estimate for the next course (no luck, trips or boosts): what the phone's
   // "projected place" and the TV's favorites use. Lower is faster.
   eta(d) {
     const C = this.course; if (!C) return 0;
     const lv = this.levels(d); let t = 0;
     for (const x of C.sections) { const S = SECTIONS[x.type]; t += S.len / (S.base + S.per * lv[S.skill]); }
-    const pool = (30 + 10 * lv.stamina) * ((d.perks || []).includes('lungs') ? 1.4 : 1);
+    const pool = POOL(lv.stamina, false, (d.perks || []).includes('lungs'));
     if (pool < t) t = pool + (t - pool) / 0.72; // out of steam for the rest of the race
     return t / (d.mood >= 70 ? 1.02 : d.mood < 30 ? 0.97 : 1) / (d.energy < 20 ? 0.92 : 1);
   }
@@ -776,6 +811,7 @@ class Ducks {
       food: FOOD, gear: this.s.gear ? GEAR : null, buildings: BUILDINGS, buildCost: BUILD_COST, decor: DECOR, tactics: TACTICS, badges: BADGES, hats: HATS, colors: COLORS, hatCost: 15,
       predictions: this.s.predictions, rivals: this.s.predictions && this.phase === 'training' ? st.map((x) => ({ id: x.id, duck: x.duck, owner: x.owner })) : [],
       predictWon: this.phase === 'results' ? d.predictWon : null,
+      live: this.phase === 'race' ? this.liveFor(p.id) : null,
       rank: st.findIndex((x) => x.id === p.id) + 1, of: st.length,
       final: this.phase === 'over' ? st.slice(0, 10) : null, awards: this.phase === 'over' ? this.awards || [] : null,
       hype: this.phase === 'training' && out0.endsIn <= HYPE_MS, ladder: this.started ? this.ladder() : null,
@@ -803,5 +839,5 @@ module.exports = {
   partyFit,
   key: 'ducks', name: 'JustRaiseDucks', min: 1, best: [2, 12], fields, defaults, liveLobby: true,
   create: (room, settings) => new Ducks(room, settings),
-  _test: { level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, DIFF, PERKS, SPIN, HYPE_MS, CHEER_GAP },
+  _test: { racePace, TRIP_STOP, level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, DIFF, PERKS, SPIN, HYPE_MS, CHEER_GAP },
 };

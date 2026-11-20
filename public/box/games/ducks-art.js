@@ -498,21 +498,140 @@
     else if (kind === 'cactus') { g.fillStyle = '#4f8f3a'; g.fillRect(x - 7, base - 70, 14, 70); g.fillRect(x - 24, base - 50, 10, 26); g.fillRect(x - 24, base - 30, 20, 9); g.fillRect(x + 14, base - 58, 10, 24); g.fillRect(x + 4, base - 40, 20, 9); }
     else if (kind === 'lamp') { g.fillStyle = '#333'; g.fillRect(x - 3, base - 70, 6, 70); g.fillStyle = '#ffe9a0'; g.beginPath(); g.arc(x, base - 74, 9, 0, TAU); g.fill(); const gl = g.createRadialGradient(x, base - 74, 2, x, base - 74, 60); gl.addColorStop(0, 'rgba(255,230,150,.35)'); gl.addColorStop(1, 'rgba(255,230,150,0)'); g.fillStyle = gl; g.beginPath(); g.arc(x, base - 74, 60, 0, TAU); g.fill(); }
   }
+  // ---------- the racing duck ----------
+  // drawDuck's duck with working parts: two jointed legs with webbed feet placed by the caller
+  // (so a planted foot stays planted while the body moves), a wing that folds, flaps or spreads,
+  // a far wing behind the body when flying, an open beak (panting, quacking) and eyes that
+  // squint when tired or spin after a crash. (x, y) is the body centre, s the scale. P is a pose
+  // object the caller keeps and reuses (nothing is allocated per frame):
+  //   lean: body tilt in radians (+ = nose down)        rot: the whole duck (tumbles)
+  //   sx, sy: squash and stretch                         legs: draw the legs (false when flying folded)
+  //   f1x, f1y, f2x, f2y: far and near foot, in local units (not tilted; the ground is y = 18)
+  //   t1, t2: foot angles (0 = flat, + = toes down)      wing: 0 folded … 1 raised; flap: −1…1 stroke
+  //   farWing: draw the far wing too                     eyes: '' | 'tired' | 'dizzy' | 'shut'
+  //   beak: 0…1 open                                     hx, hy: head offset (stretch, droop)
+  function racePose() { return { lean: 0, rot: 0, sx: 1, sy: 1, legs: true, f1x: -4, f1y: 18, f2x: 3, f2y: 18, t1: 0, t2: 0, wing: 0, flap: 0, farWing: false, eyes: '', beak: 0, hx: 0, hy: 0 }; }
+  const LEG1 = 6.2, LEG2 = 6.8;
+  function leg(g, hx, hy, fx, fy, toe, col) {
+    let dx = fx - hx, dy = fy - hy, d = Math.hypot(dx, dy);
+    const max = LEG1 + LEG2 - 0.05;
+    if (d > max) { fx = hx + (dx / d) * max; fy = hy + (dy / d) * max; dx = fx - hx; dy = fy - hy; d = max; }
+    d = Math.max(0.5, d);
+    // the joint you see on a duck's leg bends backwards
+    const a = Math.atan2(dy, dx) + Math.acos(Math.max(-1, Math.min(1, (LEG1 * LEG1 + d * d - LEG2 * LEG2) / (2 * LEG1 * d))));
+    const kx = hx + Math.cos(a) * LEG1, ky = hy + Math.sin(a) * LEG1;
+    g.strokeStyle = col; g.lineWidth = 2.6; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.beginPath(); g.moveTo(hx, hy); g.lineTo(kx, ky); g.lineTo(fx, fy); g.stroke();
+    g.fillStyle = col; g.save(); g.translate(fx, fy); g.rotate(toe);
+    g.beginPath(); g.moveTo(-1.8, -0.6); g.lineTo(6.4, -1.4); g.quadraticCurveTo(7.4, 0.6, 6.2, 1.6); g.lineTo(-1.6, 1.2); g.closePath(); g.fill();
+    g.restore();
+  }
+  function wingShape(g, ang, col) {
+    g.save(); g.translate(5, -3); g.rotate(ang); g.fillStyle = col;
+    g.beginPath(); g.moveTo(1, -3); g.quadraticCurveTo(-8, -7, -19, -1); g.quadraticCurveTo(-11, 1, -14, 4); g.quadraticCurveTo(-6, 6, 1, 4); g.closePath(); g.fill();
+    g.restore();
+  }
+  function drawRacer(g, x, y, s, color, hat, stage, P) {
+    const [body, wing, head] = PAL[color] || PAL.sunny;
+    const ss = s * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : 1);
+    g.save(); g.translate(x, y);
+    if (stage >= 3) { g.globalAlpha = 0.25; g.fillStyle = '#ffd740'; g.beginPath(); g.arc(0, -4, 30 * s, 0, TAU); g.fill(); g.globalAlpha = 1; }
+    g.scale(ss, ss);
+    if (P.rot) g.rotate(P.rot);
+    const c = Math.cos(P.lean), sn = Math.sin(P.lean);
+    const wa = P.wing * 1.5 + P.flap * 0.9; // wing angle: + lifts the wing tip
+    if (P.farWing) { wingShape(g, wa * 0.92 - 0.12, wing); g.globalAlpha = 0.28; wingShape(g, wa * 0.92 - 0.12, '#000'); g.globalAlpha = 1; } // the far wing, behind the body
+    if (P.legs) {
+      // hips turn with the body; the feet are where the caller put them
+      leg(g, -4 * c - 8 * sn, -4 * sn + 8 * c, P.f1x, P.f1y, P.t1, '#d06f1c');
+      leg(g, 3 * c - 8 * sn, 3 * sn + 8 * c, P.f2x, P.f2y, P.t2, '#f08a24');
+    }
+    g.rotate(P.lean); if (P.sx !== 1 || P.sy !== 1) { g.translate(0, 8); g.scale(P.sx, P.sy); g.translate(0, -8); }
+    g.fillStyle = body; g.beginPath(); g.ellipse(0, 0, 18, 12, 0, 0, TAU); g.fill();
+    g.beginPath(); g.moveTo(-15, -4); g.lineTo(-24, -9); g.lineTo(-17, 4); g.fill();
+    g.save(); g.translate(P.hx, P.hy);
+    const hr = stage <= 0 ? 11 : 9; g.fillStyle = head; g.beginPath(); g.arc(13, -13, hr, 0, TAU); g.fill();
+    if (stage <= 0) { g.strokeStyle = head; g.lineWidth = 2; g.beginPath(); g.moveTo(11, -23); g.quadraticCurveTo(9, -29, 14, -27); g.moveTo(14, -24); g.quadraticCurveTo(16, -30, 19, -26); g.stroke(); }
+    const op = P.beak * 4;
+    g.fillStyle = '#ff9f1c'; g.beginPath(); g.moveTo(20, -14 - op * 0.3); g.quadraticCurveTo(30, -12 - op * 0.5, 21, -10 - op * 0.2); g.closePath(); g.fill();
+    g.fillStyle = '#e8850f'; g.beginPath(); g.moveTo(20, -11 + op * 0.2); g.quadraticCurveTo(28, -10 + op, 21, -8 + op * 0.4); g.closePath(); g.fill();
+    if (P.eyes === 'dizzy') { g.strokeStyle = '#1b1b2b'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(13.5, -17); g.lineTo(17.5, -13); g.moveTo(17.5, -17); g.lineTo(13.5, -13); g.stroke(); }
+    else if (P.eyes === 'shut') { g.strokeStyle = '#1b1b2b'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(13, -15); g.quadraticCurveTo(15.5, -13, 18, -15); g.stroke(); }
+    else {
+      g.fillStyle = '#1b1b2b'; g.beginPath(); g.arc(15.5, -15, 1.9, 0, TAU); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(16.1, -15.6, 0.6, 0, TAU); g.fill();
+      if (P.eyes === 'tired') { g.fillStyle = head; g.fillRect(12.8, -18.2, 5.6, 3); g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 0.9; g.beginPath(); g.moveTo(13, -15.2); g.lineTo(18.2, -15.2); g.stroke(); }
+    }
+    drawHat(g, hat);
+    g.restore();
+    if (Math.abs(wa) < 0.05) { g.fillStyle = wing; g.beginPath(); g.ellipse(-2, 1, 10, 6, -0.25, 0, TAU); g.fill(); }
+    else wingShape(g, wa, wing);
+    g.restore();
+  }
+  // A hurdle (or a fallen log) across one lane: two posts and a striped bar going back into the
+  // lane's depth. fall: 0 standing … 1 knocked flat (it tips forward, the way the duck was going).
+  function drawHurdle(g, x, gy, s, depth, log, fall, t) {
+    g.save(); g.translate(x, gy);
+    if (log) {
+      const wob = fall > 0 && fall < 1 ? Math.sin(fall * 20) * 0.08 * (1 - fall) : 0; g.rotate(wob);
+      g.fillStyle = '#6e4527'; g.beginPath(); g.moveTo(-4 * s, -18 * s); g.lineTo(-4 * s + depth * 0.6, -18 * s - depth); g.lineTo(4 * s + depth * 0.6, -depth); g.lineTo(4 * s, 0); g.closePath(); g.fill();
+      g.fillStyle = '#7a4f2f'; g.beginPath(); g.ellipse(0, -9 * s, 9 * s, 9 * s, 0, 0, TAU); g.fill();
+      g.fillStyle = '#c99a5b'; g.beginPath(); g.ellipse(0, -9 * s, 6.5 * s, 6.5 * s, 0, 0, TAU); g.fill();
+      g.strokeStyle = '#a0753f'; g.lineWidth = 1.2 * s; g.beginPath(); g.arc(0, -9 * s, 3.2 * s, 0, TAU); g.stroke();
+      g.restore(); return;
+    }
+    g.rotate(Math.min(1, fall) * 1.42);
+    const h = 20 * s, dx = depth * 0.7 + 12 * s, bt = 3.4 * s;
+    // feet (pointing back at the runners), the back post, the striped bar, the front post
+    g.fillStyle = '#7d848c'; g.fillRect(-9 * s, -1.5 * s, 10 * s, 3 * s); g.fillRect(dx - 9 * s, -depth - 1.5 * s, 10 * s, 3 * s);
+    g.fillStyle = '#cfd3d8'; g.fillRect(dx - 1.8 * s, -h - depth, 3.6 * s, h);
+    const n = 5;
+    for (let i = 0; i < n; i++) {
+      const a = i / n, b = (i + 1) / n;
+      g.fillStyle = i % 2 ? '#ffffff' : '#e63946';
+      g.beginPath(); g.moveTo(dx * a, -h - depth * a - bt); g.lineTo(dx * b, -h - depth * b - bt); g.lineTo(dx * b, -h - depth * b + bt); g.lineTo(dx * a, -h - depth * a + bt); g.closePath(); g.fill();
+    }
+    g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, -h + bt); g.lineTo(dx, -h - depth + bt); g.stroke();
+    g.fillStyle = '#ffffff'; g.fillRect(-1.8 * s, -h, 3.6 * s, h);
+    g.restore();
+  }
+
+  // ---------- the course ----------
+  // The course in metres: sections one after another. The server sends its section lengths.
   function raceGeometry(R) {
-    let acc = 0; const secs = R.sections.map((s) => { const type = s.type || s, len = { track: 80, pond: 60, cliff: 40, gap: 50 }[type]; const o = { type, v: s.v || null, a: acc, b: acc + len }; acc += len; return o; });
+    const LEN = R.secLen || { track: 80, pond: 60, cliff: 40, gap: 50 };
+    let acc = 0; const secs = R.sections.map((s) => { const type = s.type || s, len = LEN[type]; const o = { type, v: s.v || null, a: acc, b: acc + len }; acc += len; return o; });
     return { secs, L: acc };
   }
-  // Height of the ground at x (in metres) above the base line, and the pose there.
+  const CLIFF_H = 10, CLIFF_STEPS = 5, CLIFF_FACE = 0.78, CLIFF_DOWN = 0.86, RIM = 1.3;
+  function secAt(G, x) { const S = G.secs; for (let i = 0; i < S.length; i++) if (x < S[i].b) return S[i]; return S[S.length - 1]; }
+  const smooth = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
+  // Height of the ground (metres above the base line) at x. The cliff is a staircase of rock
+  // ledges (a steep riser, then a flat step) up to the top, then a slope back down; the ravine
+  // has a rim on each side and a deep pit; the pond surface sits a little below the bank.
+  function groundH(G, x) {
+    if (x <= 0 || x >= G.L) return 0;
+    const s = secAt(G, x), f = (x - s.a) / (s.b - s.a);
+    if (s.type === 'cliff') {
+      if (f < CLIFF_FACE) { const p = (f / CLIFF_FACE) * CLIFF_STEPS, k = Math.floor(p), u = p - k; return (CLIFF_H / CLIFF_STEPS) * (k + smooth(u / 0.26)); }
+      if (f < CLIFF_DOWN) return CLIFF_H;
+      return CLIFF_H * (1 - smooth((f - CLIFF_DOWN) / (1 - CLIFF_DOWN)));
+    }
+    if (s.type === 'gap') return x - s.a < RIM || s.b - x < RIM ? 0 : -14;
+    if (s.type === 'pond') return x - s.a < 0.15 || s.b - x < 0.15 ? 0 : -0.6;
+    return 0;
+  }
+  // Old interface (the pose and height at x), kept for anything that still asks.
   function groundAt(G, x) {
-    const s = G.secs.find((q) => x >= q.a && x < q.b) || G.secs[G.secs.length - 1];
-    const f = (x - s.a) / (s.b - s.a);
-    if (s.type === 'cliff') return { h: Math.min(1, f / 0.8) * 9, mode: f < 0.8 ? 'climb' : 'run', type: 'cliff', f };
+    const s = secAt(G, x), f = (x - s.a) / (s.b - s.a);
+    if (s.type === 'cliff') return { h: groundH(G, x), mode: f < CLIFF_FACE ? 'climb' : 'run', type: 'cliff', f };
     if (s.type === 'gap') return { h: Math.sin(Math.PI * f) * 6 + 1, mode: 'fly', type: 'gap', f };
     if (s.type === 'pond') return { h: -0.6, mode: 'swim', type: 'pond', f };
     return { h: 0, mode: 'run', type: 'track', f };
   }
-  function drawRaceWorld(g, W, H, R, G, cam, PX, t, VPX = PX) { // VPX: height scale, so zooming in never makes cliffs huge
-    const base = H * 0.72, TH = THEME[R.theme] || THEME.meadow;
+  // The world behind the ducks. band: how deep the lanes go (px), so the track, the water and the
+  // ledges are wide enough for every lane. Hurdles are drawn per lane by the race (drawHurdle).
+  function drawRaceWorld(g, W, H, R, G, cam, PX, t, VPX = PX, band = 0, laneN = 1) { // VPX: height scale, so zooming in never makes cliffs huge
+    const base = H * 0.76, TH = THEME[R.theme] || THEME.meadow, YK = VPX * 0.9;
     // sky, sun or moon, stars, clouds, far hills with props (parallax)
     const sky = g.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, R.weather === 'rain' && !TH.night ? '#7d8ca3' : TH.sky[0]); sky.addColorStop(1, R.weather === 'heat' ? '#ffd9a0' : TH.sky[1]);
@@ -520,62 +639,92 @@
     if (TH.night) { g.fillStyle = '#fff'; for (let i = 0; i < 90; i++) { const sx = (i * 137) % W, sy = (i * 71) % (base * 0.7); g.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + i)); g.fillRect(sx, sy, 2, 2); } g.globalAlpha = 1; g.fillStyle = '#fdf6d0'; g.beginPath(); g.arc(W * 0.82, H * 0.16, 34, 0, TAU); g.fill(); g.fillStyle = TH.sky[0]; g.beginPath(); g.arc(W * 0.82 + 14, H * 0.16 - 8, 30, 0, TAU); g.fill(); }
     else if (R.weather !== 'rain' && R.weather !== 'fog') { g.fillStyle = R.weather === 'heat' || R.theme === 'canyon' ? '#ff9f1c' : '#ffe066'; g.beginPath(); g.arc(W * 0.85, H * 0.15, 40, 0, TAU); g.fill(); }
     if (!TH.night) { g.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 8; i++) { const cx = ((i * 380 - cam * PX * 0.15) % (W + 300) + W + 300) % (W + 300) - 150, cy = 50 + (i % 3) * 40; g.beginPath(); g.arc(cx, cy, 26, 0, TAU); g.arc(cx + 28, cy - 8, 22, 0, TAU); g.arc(cx + 54, cy, 24, 0, TAU); g.fill(); } }
-    g.fillStyle = TH.hill; g.beginPath(); g.moveTo(0, base); for (let x = 0; x <= W; x += 20) g.lineTo(x, base - 90 - Math.sin((x + cam * PX * 0.35) / 160) * 40); g.lineTo(W, base); g.fill();
-    for (let i = -1; i < W / 260 + 2; i++) { const off = (cam * PX * 0.55) % 260; drawProp(g, TH.prop, i * 260 - off + 60, base - 10, t); }
-    if (TH.night) for (let i = 0; i < 24; i++) { const fx = (i * 173 + Math.sin(t + i) * 40) % W, fy = base - 40 - ((i * 37) % 140) + Math.sin(t * 2 + i) * 10; g.fillStyle = 'rgba(220,255,120,' + (0.4 + 0.6 * Math.abs(Math.sin(t * 3 + i))) + ')'; g.beginPath(); g.arc(fx, fy, 2.5, 0, TAU); g.fill(); }
+    const hz = base - band; // the far edge of the course
+    g.fillStyle = TH.hill; g.beginPath(); g.moveTo(0, hz); for (let x = 0; x <= W; x += 20) g.lineTo(x, hz - 70 - Math.sin((x + cam * PX * 0.35) / 160) * 36); g.lineTo(W, hz); g.fill();
+    for (let i = -1; i < W / 260 + 2; i++) { const off = (cam * PX * 0.55) % 260; drawProp(g, TH.prop, i * 260 - off + 60, hz - 6, t); }
+    if (TH.night) for (let i = 0; i < 24; i++) { const fx = (i * 173 + Math.sin(t + i) * 40) % W, fy = hz - 40 - ((i * 37) % 140) + Math.sin(t * 2 + i) * 10; g.fillStyle = 'rgba(220,255,120,' + (0.4 + 0.6 * Math.abs(Math.sin(t * 3 + i))) + ')'; g.beginPath(); g.arc(fx, fy, 2.5, 0, TAU); g.fill(); }
     // course
-    const m2x = (m) => (m - cam) * PX, cliffTop = 9 * VPX * 0.9;
+    const m2x = (m) => (m - cam) * PX;
     for (const s of G.secs) {
       const x0 = m2x(s.a), x1 = m2x(s.b); if (x1 < -50 || x0 > W + 50) continue;
       if (s.type === 'track') {
-        g.fillStyle = TH.ground; g.fillRect(x0, base, x1 - x0, H - base);
-        g.fillStyle = s.v === 'ice' ? '#cfeaff' : s.v === 'sand' ? '#f2dca6' : TH.path; g.fillRect(x0, base, x1 - x0, 14);
-        if (s.v === 'ice') { g.fillStyle = 'rgba(255,255,255,.8)'; for (let x = x0; x < x1; x += 70) g.fillRect(x + 10, base + 3, 30, 3); }
-        if (s.v === 'sand') { g.fillStyle = '#d9bf85'; for (let x = x0; x < x1; x += 22) g.fillRect(x + (x % 7), base + 4 + (x % 5), 3, 3); }
-        if (s.v === 'mud') { g.fillStyle = '#6b4a2b'; for (let x = x0 + 30; x < x1 - 20; x += 90) { g.beginPath(); g.ellipse(x, base + 6, 34, 7, 0, 0, TAU); g.fill(); } }
+        g.fillStyle = TH.ground; g.fillRect(x0, hz, x1 - x0 + 1, H - hz);
+        g.fillStyle = s.v === 'ice' ? '#cfeaff' : s.v === 'sand' ? '#f2dca6' : s.v === 'mud' ? '#8a6240' : TH.path; g.fillRect(x0, hz - 4, x1 - x0 + 1, band + 18);
+        // lane lines
+        g.fillStyle = s.v === 'mud' ? 'rgba(60,35,15,.35)' : 'rgba(255,255,255,.35)';
+        for (let i = 1; i < laneN; i++) { const ly = base + 8 - i * (band / laneN); for (let x = Math.max(x0, ((x0 % 40) + 40) % 40 - 40); x < Math.min(x1, W); x += 40) g.fillRect(x, ly, 22, 2); }
+        if (s.v === 'ice') { g.fillStyle = 'rgba(255,255,255,.8)'; for (let x = x0; x < x1; x += 70) { g.fillRect(x + 10, base + 3, 30, 3); g.fillRect(x + 40, base - band * 0.5, 24, 2); } }
+        if (s.v === 'sand') { g.fillStyle = '#d9bf85'; for (let x = x0; x < x1; x += 22) for (let r = 0; r < 4; r++) g.fillRect(x + ((r * 7) % 11), base + 4 - r * band / 4 + (x % 5), 3, 3); }
+        if (s.v === 'mud') { g.fillStyle = '#6b4a2b'; for (let x = x0 + 30; x < x1 - 20; x += 90) for (let r = 0; r < 3; r++) { g.beginPath(); g.ellipse(x + r * 23, base + 4 - r * band / 3, 34, 6, 0, 0, TAU); g.fill(); } }
+        g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x0, base + 14, x1 - x0 + 1, 4);
       }
       if (s.type === 'pond') {
-        g.fillStyle = TH.ground; g.fillRect(x0, base + 30, x1 - x0, H);
-        g.fillStyle = TH.water; g.fillRect(x0, base + 0.6 * VPX * 0.9, x1 - x0, H - base);
-        g.fillStyle = 'rgba(255,255,255,.5)';
+        g.fillStyle = TH.ground; g.fillRect(x0, hz, x1 - x0 + 1, H - hz);
+        const wy = base + 0.6 * YK;
+        g.fillStyle = TH.water; g.fillRect(x0 + 4, wy - band - 2, x1 - x0 - 8, H);
+        g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(x0 + 4, wy - band - 2, x1 - x0 - 8, 4);
+        g.fillStyle = 'rgba(0,30,60,.18)'; g.fillRect(x0 + 4, wy + 46, x1 - x0 - 8, H);
+        g.fillStyle = 'rgba(255,255,255,.45)';
         const speed = s.v === 'rapids' ? 140 : 30;
-        for (let x = x0; x < x1; x += 40) g.fillRect(x + ((t * speed) % 40), base + 12 + Math.sin(x + t * 3) * 2, s.v === 'rapids' ? 28 : 18, 3);
-        if (s.v === 'waves') { g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 3; g.beginPath(); for (let x = x0; x <= x1; x += 8) g.lineTo(x, base + 8 + Math.sin(x / 18 + t * 4) * 5); g.stroke(); }
-        if (s.v === 'lily') { g.fillStyle = '#3fae5a'; for (let x = x0 + 40; x < x1; x += 110) { g.beginPath(); g.ellipse(x, base + 10, 22, 6, 0, 0.3, TAU); g.fill(); g.fillStyle = '#ff9ccf'; g.beginPath(); g.arc(x + 6, base + 6, 4, 0, TAU); g.fill(); g.fillStyle = '#3fae5a'; } }
-        if (s.v === 'icy') { g.fillStyle = 'rgba(235,248,255,.9)'; for (let x = x0 + 20; x < x1; x += 120) { g.beginPath(); g.moveTo(x, base + 8); g.lineTo(x + 30, base + 4); g.lineTo(x + 44, base + 12); g.lineTo(x + 6, base + 16); g.fill(); } }
+        for (let r = 0; r < 3; r++) for (let x = x0; x < x1 - 40; x += 46) g.fillRect(x + ((t * speed + r * 17) % 40), wy - r * band / 3 + 6 + Math.sin(x + t * 3 + r) * 2, s.v === 'rapids' ? 28 : 16, 2.5);
+        if (s.v === 'waves') { g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 3; g.beginPath(); for (let x = x0; x <= x1; x += 8) g.lineTo(x, wy + 10 + Math.sin(x / 18 + t * 4) * 5); g.stroke(); }
+        if (s.v === 'lily') { for (let x = x0 + 40; x < x1; x += 110) { g.fillStyle = '#3fae5a'; g.beginPath(); g.ellipse(x, wy - band * 0.55, 22, 6, 0, 0.3, TAU); g.fill(); g.fillStyle = '#ff9ccf'; g.beginPath(); g.arc(x + 6, wy - band * 0.55 - 4, 4, 0, TAU); g.fill(); } }
+        if (s.v === 'icy') { g.fillStyle = 'rgba(235,248,255,.9)'; for (let x = x0 + 20; x < x1; x += 120) { const yy = wy - band * 0.4; g.beginPath(); g.moveTo(x, yy + 8); g.lineTo(x + 30, yy + 4); g.lineTo(x + 44, yy + 12); g.lineTo(x + 6, yy + 16); g.fill(); } }
+        // muddy banks at both ends
+        g.fillStyle = TH.path; g.fillRect(x0 - 2, hz - 4, 8, band + 20); g.fillRect(x1 - 6, hz - 4, 8, band + 20);
       }
       if (s.type === 'cliff') {
-        g.fillStyle = s.v === 'ice' ? '#bcd9f0' : TH.rock; g.beginPath(); g.moveTo(x0, H); g.lineTo(x0, base); g.lineTo(x0 + (x1 - x0) * 0.8, base - cliffTop); g.lineTo(x1, base - cliffTop); g.lineTo(x1, H); g.fill();
-        g.fillStyle = s.v === 'ice' ? '#e8f4ff' : TH.rockDark; for (let i = 0; i < 12; i++) { const fx = x0 + ((i * 53) % (x1 - x0) * 0.8), fy = base - (fx - x0) / ((x1 - x0) * 0.8) * cliffTop + 18 + (i % 3) * 14; g.fillRect(fx, fy, 14, 8); }
-        g.fillStyle = s.v === 'ice' ? '#ffffff' : TH.ground; g.fillRect(x0 + (x1 - x0) * 0.8, base - cliffTop, (x1 - x0) * 0.2, 8);
+        const N = 64, top = '#b9ad9f', rock = s.v === 'ice' ? '#bcd9f0' : TH.rock, dark = s.v === 'ice' ? '#9cc0dd' : TH.rockDark;
+        // the ledges' walking surface (lane depth) …
+        g.fillStyle = s.v === 'ice' ? '#e8f4ff' : TH.ground; g.beginPath(); g.moveTo(x0, base + 14);
+        for (let i = 0; i <= N; i++) { const m = s.a + ((s.b - s.a) * i) / N; g.lineTo(m2x(m), base - groundH(G, Math.min(m, s.b - 0.001)) * YK - band - 4); }
+        g.lineTo(x1, base + 14); g.closePath(); g.fill();
+        g.fillStyle = s.v === 'ice' ? '#d4e8f8' : top; g.globalAlpha = 0.55; g.fill(); g.globalAlpha = 1;
+        // … and the rock face in front
+        g.fillStyle = rock; g.beginPath(); g.moveTo(x0, H);
+        for (let i = 0; i <= N; i++) { const m = s.a + ((s.b - s.a) * i) / N; g.lineTo(m2x(m), base - groundH(G, Math.min(m, s.b - 0.001)) * YK + 14); }
+        g.lineTo(x1, H); g.closePath(); g.fill();
+        g.fillStyle = dark; for (let i = 0; i < 16; i++) { const m = s.a + (s.b - s.a) * ((i * 0.618) % 1) * 0.95, fy = base - groundH(G, m) * YK + 30 + (i % 4) * 16; g.fillRect(m2x(m), fy, 12 + (i % 3) * 4, 6); }
+        // ledge lips
+        g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 3; g.beginPath();
+        for (let k = 1; k <= CLIFF_STEPS; k++) { const m = s.a + (s.b - s.a) * CLIFF_FACE * ((k - 1 + 0.26) / CLIFF_STEPS), yy = base - (CLIFF_H / CLIFF_STEPS) * k * YK + 14; g.moveTo(m2x(m), yy); g.lineTo(m2x(m) + (s.b - s.a) * CLIFF_FACE / CLIFF_STEPS * 0.74 * PX, yy); }
+        g.stroke();
       }
       if (s.type === 'gap') {
-        g.fillStyle = TH.rockDark; g.fillRect(x0, base + 6, x1 - x0, H); g.fillStyle = TH.pit; g.fillRect(x0 + 20, base + 6, x1 - x0 - 40, H);
-        g.fillStyle = TH.ground; g.fillRect(x0, base, 20, 10); g.fillRect(x1 - 20, base, 20, 10);
-        if (s.v === 'clouds') { g.fillStyle = 'rgba(255,255,255,.9)'; for (let x = x0 + 40; x < x1 - 30; x += 70) { const cy = base + 30 + Math.sin(t + x) * 4; g.beginPath(); g.arc(x, cy, 18, 0, TAU); g.arc(x + 20, cy - 6, 16, 0, TAU); g.arc(x + 38, cy, 17, 0, TAU); g.fill(); } }
+        const r0 = m2x(s.a + RIM), r1 = m2x(s.b - RIM);
+        g.fillStyle = TH.pit; g.fillRect(x0, hz - 4, x1 - x0 + 1, H);
+        g.fillStyle = TH.rockDark; g.beginPath(); g.moveTo(r0, hz - 4); g.lineTo(r0 + 26, H); g.lineTo(x0, H); g.lineTo(x0, hz - 4); g.fill(); g.beginPath(); g.moveTo(r1, hz - 4); g.lineTo(r1 - 26, H); g.lineTo(x1, H); g.lineTo(x1, hz - 4); g.fill();
+        g.fillStyle = TH.ground; g.fillRect(x0, hz - 4, r0 - x0, band + 18); g.fillRect(r1, hz - 4, x1 - r1, band + 18);
+        g.fillStyle = TH.path; g.fillRect(x0, base + 10, r0 - x0, 8); g.fillRect(r1, base + 10, x1 - r1, 8);
+        if (s.v === 'clouds') { g.fillStyle = 'rgba(255,255,255,.9)'; for (let x = r0 + 30; x < r1 - 40; x += 70) { const cy = base + 40 + Math.sin(t + x) * 4; g.beginPath(); g.arc(x, cy, 18, 0, TAU); g.arc(x + 20, cy - 6, 16, 0, TAU); g.arc(x + 38, cy, 17, 0, TAU); g.fill(); } }
       }
     }
+    // the run-up before the start and the run-out after the finish
+    for (const [x0, x1] of [[-60, m2x(0)], [m2x(G.L), W + 60]]) { if (x1 <= x0) continue; g.fillStyle = TH.ground; g.fillRect(x0, hz, x1 - x0, H - hz); g.fillStyle = TH.path; g.fillRect(x0, hz - 4, x1 - x0, band + 18); g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x0, base + 14, x1 - x0, 4); }
     // boost pads (track), fast currents (pond), updrafts (ravine)
     for (const bx of R.boosts || []) {
       const x = m2x(bx); if (x < -40 || x > W + 40) continue;
-      const gt = groundAt(G, bx).type;
-      if (gt === 'track') { g.fillStyle = '#ffd23f'; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(x - 20 + i * 14, base + 2); g.lineTo(x - 10 + i * 14, base + 7); g.lineTo(x - 20 + i * 14, base + 12); g.fill(); } }
+      const gt = secAt(G, bx).type;
+      if (gt === 'track') { g.fillStyle = '#ffd23f'; for (let r = 0; r < 2; r++) for (let i = 0; i < 3; i++) { const yy = base + 2 - r * band * 0.5; g.beginPath(); g.moveTo(x - 20 + i * 14 + r * 8, yy); g.lineTo(x - 10 + i * 14 + r * 8, yy + 5); g.lineTo(x - 20 + i * 14 + r * 8, yy + 10); g.fill(); } }
       else if (gt === 'pond') { g.strokeStyle = '#bff3ff'; g.lineWidth = 3; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(x - 30 + ((t * 60 + i * 20) % 60), base + 18 + i * 8); g.lineTo(x - 14 + ((t * 60 + i * 20) % 60), base + 18 + i * 8); g.stroke(); } }
-      else if (gt === 'gap') { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 3; for (let i = 0; i < 3; i++) { const yy = base - ((t * 80 + i * 40) % 120); g.beginPath(); g.moveTo(x - 8, yy); g.quadraticCurveTo(x + 8, yy - 10, x - 4, yy - 22); g.stroke(); } }
+      else if (gt === 'gap') { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 3; for (let i = 0; i < 3; i++) { const yy = base - ((t * 80 + i * 40) % 160); g.beginPath(); g.moveTo(x - 8, yy); g.quadraticCurveTo(x + 8, yy - 10, x - 4, yy - 22); g.stroke(); } }
     }
-    // jumps: hurdles or fallen logs
-    for (const h of R.hurdles) {
-      const hx = h.x != null ? h.x : h, x = m2x(hx); if (x < -30 || x > W + 30) continue;
-      if (h.log) { g.fillStyle = '#7a4f2f'; g.beginPath(); g.ellipse(x, base - 10, 22, 13, 0, 0, TAU); g.fill(); g.fillStyle = '#c99a5b'; g.beginPath(); g.ellipse(x + 18, base - 10, 6, 11, 0, 0, TAU); g.fill(); g.strokeStyle = '#a0753f'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(x + 18, base - 10, 3, 6, 0, 0, TAU); g.stroke(); }
-      else { g.fillStyle = '#fff'; g.fillRect(x - 10, base - 30, 4, 32); g.fillRect(x + 8, base - 30, 4, 32); g.fillStyle = '#e63946'; g.fillRect(x - 12, base - 32, 26, 7); }
+    // start and finish lines (across every lane)
+    for (const [m, label] of [[0, 'START'], [G.L, 'FINISH']]) {
+      const x = m2x(m); if (x < -60 || x > W + 60) continue;
+      const gh = groundH(G, Math.min(m, G.L - 0.01)) * YK;
+      for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? '#fff' : '#1b1b2b'; g.beginPath(); const y0 = base - gh + 14 - (band + 14) * (i / 6), y1 = base - gh + 14 - (band + 14) * ((i + 1) / 6); g.moveTo(x + (y0 - base) * -0.5, y0); g.lineTo(x + 8 + (y0 - base) * -0.5, y0); g.lineTo(x + 8 + (y1 - base) * -0.5, y1); g.lineTo(x + (y1 - base) * -0.5, y1); g.fill(); }
+      const px = x + band * 0.5; for (let y = 0; y < 120; y += 12) { g.fillStyle = (y / 12) % 2 ? '#fff' : '#1b1b2b'; g.fillRect(px, base - gh - band - 120 + y, 8, 12); }
+      g.fillStyle = TH.night ? '#fff' : '#1b1240'; g.font = 'bold 18px Fredoka, sans-serif'; g.fillText(label, px - 20, base - gh - band - 128);
     }
-    // start and finish lines
-    for (const [m, label] of [[0, 'START'], [G.L, 'FINISH']]) { const x = m2x(m); if (x < -60 || x > W + 60) continue; const gh = groundAt(G, Math.min(m, G.L - 0.01)).h * VPX * 0.9; for (let y = 0; y < 120; y += 12) { g.fillStyle = (y / 12) % 2 ? '#fff' : '#1b1b2b'; g.fillRect(x, base - gh - 120 + y, 8, 12); } g.fillStyle = TH.night ? '#fff' : '#1b1240'; g.font = 'bold 18px Fredoka, sans-serif'; g.fillText(label, x - 20, base - gh - 128); }
-    if (R.weather === 'rain') { g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1.5; for (let i = 0; i < 120; i++) { const rx = (i * 97 + t * 400) % W, ry = (i * 53 + t * 900) % H; g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx - 4, ry + 14); g.stroke(); } }
-    if (R.theme === 'snow') { g.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 70; i++) { const sx = (i * 89 + Math.sin(t + i) * 20 + t * 30) % W, sy = (i * 61 + t * 60) % H; g.beginPath(); g.arc(sx, sy, 2.2, 0, TAU); g.fill(); } }
-    if (R.weather === 'fog') { g.fillStyle = 'rgba(230,235,240,.35)'; g.fillRect(0, 0, W, H); }
     return base;
   }
+  // Weather on top of everything (after the ducks).
+  function drawRaceWeather(g, W, H, R, t) {
+    if (R.weather === 'rain') { g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1.5; g.beginPath(); for (let i = 0; i < 120; i++) { const rx = (i * 97 + t * 400) % W, ry = (i * 53 + t * 900) % H; g.moveTo(rx, ry); g.lineTo(rx - 4, ry + 14); } g.stroke(); }
+    if (R.theme === 'snow') { g.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 70; i++) { const sx = (i * 89 + Math.sin(t + i) * 20 + t * 30) % W, sy = (i * 61 + t * 60) % H; g.beginPath(); g.arc(sx, sy, 2.2, 0, TAU); g.fill(); } }
+    if (R.weather === 'fog') { g.fillStyle = 'rgba(230,235,240,.35)'; g.fillRect(0, 0, W, H); }
+  }
 
-  window.DUCK_ART = { PAL, THEME, drawDuck, duckBox, duckImg, drawEgg, eggImg, drawFarm, drawFox, drawValley, valleyLayout, raceGeometry, groundAt, drawRaceWorld, SEC_COLORS, MOOD, DECOR_ICON, drawIcon, drawBug, drawBird, moodIcon, ICON_NAMES: Object.keys(ICONS) };
+  window.DUCK_ART = { PAL, THEME, drawDuck, duckBox, duckImg, drawEgg, eggImg, drawFarm, drawFox, drawValley, valleyLayout, raceGeometry, groundAt, groundH, secAt, drawRaceWorld, drawRaceWeather, drawRacer, racePose, drawHurdle, SEC_COLORS, MOOD, DECOR_ICON, drawIcon, drawBug, drawBird, moodIcon, ICON_NAMES: Object.keys(ICONS) };
 })();
