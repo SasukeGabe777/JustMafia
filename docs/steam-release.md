@@ -101,8 +101,8 @@ Fill in Steamworks → your app → Store page. Assets (PNG or JPG; sizes as Ste
 - [ ] **AI-generated content disclosure** (Content Survey → "AI Generated Content"). Steam requires
       describing both:
   - **Pre-generated** AI content: the narrator voice clips in `public/audio/voice/` are generated
-    with the Kokoro-82M text-to-speech model (and any Chatterbox voices, if used); any music that
-    was generated with AI tools; any AI-assisted art/text (the code was written with AI coding
+    with open text-to-speech models (Kokoro-82M, being replaced by Orpheus TTS); the music is NOT
+    AI-generated (recorded CC0/CC-BY tracks, see public/audio/CREDITS.md and ship that credits list); any AI-assisted art/text (the code was written with AI coding
     assistants — Valve currently asks about content, not code *(check)*). Say what guardrails
     you used (you reviewed every line/clip).
   - **Live-generated** AI content: the optional "Natural live voice" runs Kokoro in the player's
