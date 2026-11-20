@@ -24,12 +24,9 @@ files:
 # The Steamworks native module and steam_api64.dll must be real files on disk.
 asarUnpack:
   - node_modules/steamworks.js/**
-# The game server (staged by scripts/stage-server.js) runs from real files, not the asar.
-extraResources:
-  - from: .stage/server
-    to: server
-    filter:
-      - "**/*"
+# The game server (staged by scripts/stage-server.js) runs from real files, not the asar:
+# scripts/after-pack.js copies it to resources/server (extraResources would drop node_modules).
+afterPack: scripts/after-pack.js
 extraFiles:
   - from: ../THIRD_PARTY_NOTICES.md
     to: THIRD_PARTY_NOTICES.md

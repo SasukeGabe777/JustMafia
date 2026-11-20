@@ -18,6 +18,8 @@ const net = require('net');
 const { spawn } = require('child_process');
 
 const DEV = !app.isPackaged;
+// Automated tests only (tools/e2e-desktop.js): never show any window or dialog on screen.
+const HIDDEN = process.env.JGB_TEST_HIDDEN === '1';
 // Tests and portable setups can move the whole profile (saves + settings + browser storage).
 if (process.env.JGB_USER_DATA) app.setPath('userData', path.resolve(process.env.JGB_USER_DATA));
 const SERVER_DIR = DEV ? path.join(__dirname, '..') : path.join(process.resourcesPath, 'server');
@@ -53,7 +55,7 @@ function log(...a) {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } });
+  app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); if (!HIDDEN) { win.show(); win.focus(); } } });
   boot();
 }
 
@@ -79,12 +81,12 @@ function boot() {
 function createWindow(settings) {
   win = new BrowserWindow({
     width: 1600, height: 900, minWidth: 960, minHeight: 540, show: false, backgroundColor: BG,
-    title: 'JustGameBox', fullscreen: settings.fullscreen, autoHideMenuBar: true,
+    title: 'JustGameBox', fullscreen: settings.fullscreen && !HIDDEN, autoHideMenuBar: true,
     icon: fs.existsSync(path.join(__dirname, 'build', 'icon.png')) ? path.join(__dirname, 'build', 'icon.png') : undefined,
-    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, devTools: DEV, spellcheck: false },
+    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, devTools: DEV, spellcheck: false, backgroundThrottling: !HIDDEN },
   });
   win.loadFile(path.join(__dirname, 'ui', 'loading.html'));
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => { if (!HIDDEN) win.show(); });
   win.on('enter-full-screen', () => store.set({ fullscreen: true }));
   win.on('leave-full-screen', () => store.set({ fullscreen: false }));
   win.on('closed', () => { win = null; });
@@ -122,7 +124,7 @@ function guardContents(wc) {
   wc.setWindowOpenHandler(({ url }) => {
     let u; try { u = new URL(url); } catch { return { action: 'deny' }; }
     if (run.origin && u.origin === run.origin && !u.pathname.startsWith('/__desktop/')) {
-      return { action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true, backgroundColor: BG, webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, devTools: DEV } } };
+      return { action: 'allow', overrideBrowserWindowOptions: { show: !HIDDEN, autoHideMenuBar: true, backgroundColor: BG, webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, devTools: DEV } } };
     }
     if (/^https?:$/.test(u.protocol)) shell.openExternal(url);
     return { action: 'deny' };
@@ -283,7 +285,7 @@ async function start({ startup = false } = {}) {
     }
     run.notice = r.error + ' Playing on this PC (local mode) instead.';
     log('online mode failed:', r.error);
-    if (startup && win) dialog.showMessageBox(win, { type: 'warning', title: 'Online server unreachable', message: 'Couldn’t reach the online server', detail: run.notice + '\n\nChange it in App settings (F10).' }).catch(() => {});
+    if (startup && win && !HIDDEN) dialog.showMessageBox(win, { type: 'warning', title: 'Online server unreachable', message: 'Couldn’t reach the online server', detail: run.notice + '\n\nChange it in App settings (F10).' }).catch(() => {});
   }
   showLoading('Starting the game server…');
   try { await startLocal(); return { ok: true, notice: run.notice }; } catch (e) { fail(e); return { ok: false, error: e.message }; }
@@ -297,15 +299,15 @@ function fail(e) {
 
 // ---------- settings window ----------
 function openSettings(tab) {
-  if (settingsWin) { settingsWin.focus(); return; }
+  if (settingsWin) { if (!HIDDEN) settingsWin.focus(); return; }
   settingsWin = new BrowserWindow({
-    parent: win || undefined, modal: !!win, width: 820, height: 760, minWidth: 560, minHeight: 480, show: false,
+    parent: win || undefined, modal: !!win && !HIDDEN, width: 820, height: 760, minWidth: 560, minHeight: 480, show: false,
     backgroundColor: BG, title: 'JustGameBox — App settings', autoHideMenuBar: true,
-    webPreferences: { preload: path.join(__dirname, 'preload-settings.js'), contextIsolation: true, sandbox: true, nodeIntegration: false, devTools: DEV },
+    webPreferences: { preload: path.join(__dirname, 'preload-settings.js'), contextIsolation: true, sandbox: true, nodeIntegration: false, devTools: DEV, backgroundThrottling: !HIDDEN },
   });
   settingsWin.loadFile(path.join(__dirname, 'ui', 'settings.html'), { query: { tab: tab || '' } });
-  settingsWin.once('ready-to-show', () => settingsWin && settingsWin.show());
-  settingsWin.on('closed', () => { settingsWin = null; if (win) win.focus(); });
+  settingsWin.once('ready-to-show', () => settingsWin && !HIDDEN && settingsWin.show());
+  settingsWin.on('closed', () => { settingsWin = null; if (win && !HIDDEN) win.focus(); });
   const wc = settingsWin.webContents;
   keys(wc);
   wc.on('will-navigate', (e) => e.preventDefault());
@@ -337,7 +339,7 @@ ipcMain.handle('jgb:save', async (e, patch) => {
     next.onlineUrl = r.url;
   }
   store.set(next);
-  if (win && next.fullscreen !== win.isFullScreen()) win.setFullScreen(next.fullscreen);
+  if (win && !HIDDEN && next.fullscreen !== win.isFullScreen()) win.setFullScreen(next.fullscreen);
   const modeChanged = next.mode !== run.mode || (next.mode === 'online' && next.onlineUrl !== run.origin);
   if (modeChanged || (next.mode === 'local' && next.port !== prev.port)) {
     const r = await start();
