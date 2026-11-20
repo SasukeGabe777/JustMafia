@@ -7,6 +7,9 @@
 (function () {
   const { esc, timer } = BOX;
   const SEP = '│';
+  // Small recorded touches on the TV (public/audio/sfx/emoji, credits there): a crowd cheer for the
+  // first solver, "awww" when nobody gets it, applause for the champion, a bubble pop in the lobby.
+  const clip = (f, o) => { try { return !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('emoji/' + f + '.webm', o)); } catch { return false; } };
 
   // ---- The emoji keyboard: an exact copy of KEYBOARD_TEXT in box/games/emoji-content.js ----
   /*KB-START*/
@@ -783,7 +786,7 @@ const KB_CATS = [
         if (k) {
           for (const b of k.parentNode.querySelectorAll('.eml-key')) b.classList.toggle('on', b === k);
           const s = el.querySelector(`select[data-set="${k.dataset.k}"]`); if (s) s.value = k.dataset.v;
-          el.__L.set(k.dataset.k, k.dataset.v); BOX.sfx('pop'); return;
+          el.__L.set(k.dataset.k, k.dataset.v); if (!clip('bubble', { vol: 0.3 })) BOX.sfx('pop'); return;
         }
         const c = e.target.closest('[data-kick]');
         if (c && confirm('Remove this player?')) el.__L.kick(c.dataset.kick);
@@ -831,8 +834,12 @@ const KB_CATS = [
       'First right answer scores the most. Fewer emojis = bigger points. The Clue Giver scores for everyone who gets it.',
       'Stuck? Hints show the number of words, then the first letters.',
     ],
-    fx: { shuffle: 'shuffle', pick: 'click', go: 'whoosh', emoji: 'pop', sep: 'click', undo: 'poof', hint: 'unlock', first: 'cheer', correct: 'chime', reveal: 'reveal', boo: 'shrug', poof: 'poof', win: 'win' },
+    // first and boo are recorded crowd sounds in onFx (the synth ones are the fallback)
+    fx: { shuffle: 'shuffle', pick: 'click', go: 'whoosh', emoji: 'pop', sep: 'click', undo: 'poof', hint: 'unlock', correct: 'chime', reveal: 'reveal', poof: 'poof', win: 'win' },
     onFx(f) {
+      // "⚡ X got it!": a little crowd cheer. Nobody got it: the usual reveal drum, then "awww" as the answer lands (1.1 s).
+      if (f.kind === 'first' && !clip('cheer', { vol: 0.17, gap: 1200 }) && !(BOX.audio && BOX.audio.stinger('first', 'emoji'))) BOX.sfx('cheer');
+      if (f.kind === 'boo') { BOX.sfx('reveal'); if (!clip('aww', { vol: 0.2, delay: 1.3 }) && !(BOX.audio && BOX.audio.stinger('boo', 'emoji'))) BOX.sfx('shrug'); }
       if (f.kind !== 'first' || !T || !T.flash) return;
       const n = h('div', 'em-flashmsg', `⚡ <b>${esc(f.name)}</b> got it!`); T.flash.appendChild(n); setTimeout(() => n.remove(), 2600);
     },
@@ -842,8 +849,10 @@ const KB_CATS = [
       const t = tvRoot(el);
       const over = s.phase === 'over';
       t.body.hidden = over; t.over.hidden = !over;
+      if (!over) t.cheered = false;
       if (over) {
         const w = s.standings[0];
+        if (!t.cheered) { t.cheered = true; if (w && w.points) clip('applause', { vol: 0.15, delay: 0.4 }); } // the champion takes a bow
         put(t.round, ''); put(t.status, ''); clock(t.clock, 0);
         const won = w && w.points;
         put(t.over, `<div class="em-end"><div class="em-champ"><div class="f ${won && BOX.hasLook && BOX.hasLook(w) ? 'has-fig' : ''}">${won ? (BOX.hasLook && BOX.hasLook(w) ? BOX.body(w, 230, { mood: 'grin' }) : esc(w.avatar || '😎')) : '🤷'}</div><div class="cap">${won ? 'EMOJI CHAMPION' : 'NOBODY CRACKED A CLUE'}</div><h2>${won ? esc(w.name) : 'Tough crowd!'}</h2>${won ? `<div class="pts">${w.points} points</div>` : ''}</div>${awardsHtml(s.awards)}

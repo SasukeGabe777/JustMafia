@@ -80,7 +80,7 @@
       hot: { bpm: 132, tracks: { b: { type: 'brass', vol: 0.55 }, s: { type: 'strings', vol: 0.35 }, d: { type: 'drums', kit: 'orch' } }, bars: 2, parts: { b: 'e4 f4 f#4 g4 g#4 a4 bb4 b4 | e4+g#4+b4+e5 - - - - - - -', s: 'e5 - - - - - - - | e5+b5 - - - - - - -', d: { s: '2345678999999999|x...............', y: '................|x...............' } } },
       allin: { bpm: 110, tracks: { b: { type: 'brass', vol: 0.6 }, t: { type: 'timp', vol: 0.6 }, d: { type: 'drums', kit: 'orch' } }, bars: 2, parts: { b: 'a3+e4+a4 - - - . . . . | c4+e4+a4+c5 - - - - - - -', t: 'a2 a2 a2 a2 a2 a2 e2 e2 | a2 - - - - - - -', d: { y: 'x...............|x...............' } } },
     },
-    fx: { question: 'round', hot: 'hot', allin: 'allin', reveal: 'reveal', seatRight: 'good', seatWrong: 'bad', nobody: 'bad', win: 'win' },
+    fx: { question: 'round', hot: 'hot', allin: 'allin', reveal: 'reveal', nobody: 'bad', win: 'win' }, // seatRight / seatWrong: a recorded audience (onFx in games/trivia.js)
     sfx: {},
   };
 })();

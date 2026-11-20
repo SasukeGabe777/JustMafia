@@ -77,7 +77,7 @@
       gavel: { bpm: 110, tracks: { t: { type: 'timp', vol: 0.6 }, b: { type: 'brass', vol: 0.45 } }, bars: 1, parts: { t: 'g2 . g2 . . . . .', b: '. . . . g3+d4+g4 - - -' } },
       round: { bpm: 120, tracks: { b: { type: 'pluck', dly: 0.3 } }, bars: 1, parts: { b: 'g5 d6 g6 . . . . .' } },
     },
-    fx: { verdict: 'gavel', scores: 'round', win: 'win' },
+    fx: { scores: 'round', win: 'win' }, // verdict: a recorded gavel (onFx in games/letters.js), 'gavel' is its fallback
     sfx: {},
   };
 })();

@@ -8,6 +8,11 @@
 // lock-in button. Prefix cm- (game) and cml- (lobby).
 (function () {
   const { esc, mmss } = BOX;
+  // Small recorded studio touches on the TV (public/audio/sfx/colormatch, credits there), timed to the
+  // CSS: a paint splat for each new round, a cloth drops over the colour, a brush dab per lock-in,
+  // applause for a perfect match, the Gallery frames knocked onto the wall. -> false if it can't play.
+  const clip = (f, o) => { try { return !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('colormatch/' + f + '.webm', o)); } catch { return false; } };
+  const heard = { key: '', top: 0.7 };
 
   // ---------- colour helpers (the server re-checks everything) ----------
   const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
@@ -258,7 +263,7 @@
         if (k) {
           for (const b of k.parentNode.querySelectorAll('.cml-pot')) b.classList.toggle('on', b === k);
           const s = el.querySelector(`select[data-set="${k.dataset.k}"]`); if (s) s.value = k.dataset.v;
-          el.__L.set(k.dataset.k, k.dataset.v); BOX.sfx('pop'); return;
+          el.__L.set(k.dataset.k, k.dataset.v); if (!clip('brush', { vol: 0.28 })) BOX.sfx('pop'); return;
         }
         const c = e.target.closest('[data-kick]');
         if (c && confirm('Remove this player?')) el.__L.kick(c.dataset.kick);
@@ -305,12 +310,29 @@
       'Watch for Blink (1 second!), Two-Tone, Name It, Halfway There and Odd One Out rounds.',
       'A perfect match (96%+) builds a 🔥 combo. The last round is worth double!',
     ],
-    fx: { round: 'whoosh', look: 'swell', hide: 'poof', lock: 'pop', allin: 'chime', reveal: 'reveal', perfect: 'cheer', win: 'win' },
+    // round, hide, lock and perfect are recorded sounds in onFx (these synth sounds are the fallback)
+    fx: { look: 'swell', allin: 'chime', reveal: 'reveal', win: 'win' },
+    onFx(f) {
+      const fb = { round: 'whoosh', hide: 'poof', lock: 'pop', perfect: 'cheer' }[f.kind]; if (!fb) return;
+      let ok;
+      if (f.kind === 'round') ok = clip('splat', { vol: 0.22, delay: 0.12 }); // the splat card pops in (cmPop .7s)
+      else if (f.kind === 'hide') ok = clip('cloth', { vol: 0.22 }); // a dust sheet over the colour
+      else if (f.kind === 'lock') ok = clip('brush', { vol: 0.16, gap: 120 }); // a brush dab per lock-in
+      else ok = clip('applause', { vol: 0.14, delay: heard.top + 0.3 }); // as the best card (a perfect one) lands
+      if (!ok && !(f.kind === 'round' && BOX.audio && BOX.audio.stinger('round', 'colormatch'))) BOX.sfx(fb);
+    },
 
     tv(el, s) {
       if (!s) return;
-      if (s.phase === 'over') { paint(el, tvOver(s), 'over'); return; }
+      if (s.phase === 'over') {
+        paint(el, tvOver(s), 'over');
+        // the Gallery: each podium frame pops onto the wall (0.3 / 0.9 / 1.3 s + cmPop), then polite applause
+        if (heard.key !== 'over') { heard.key = 'over'; const n = Math.min(3, (s.standings || []).length); [0.5, 1.1, 1.5].slice(0, n).forEach((d, i) => clip(i ? 'frame' + (i + 1) : 'frame', { vol: 0.22, delay: d })); clip('applause', { vol: 0.15, delay: 1.8 }); }
+        return;
+      }
       const key = s.round + '-' + s.phase;
+      heard.key = key;
+      if (s.phase === 'reveal' && s.result) { const n = Math.min(20, s.result.entries.length), step = Math.max(110, Math.min(420, 3600 / Math.max(1, n))); heard.top = (700 + Math.max(0, n - 1) * step) / 1000; }
       let main = '';
       if (s.phase === 'intro') main = tvIntro(s);
       else if (s.phase === 'look') main = tvLook(s);

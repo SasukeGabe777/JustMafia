@@ -16,6 +16,9 @@
     return { style: `--pa:${a};--pb:${b};background:${bg}`, glow: !!p.glow };
   }
   const { esc, timer } = BOX;
+  // Small recorded touches on the TV (public/audio/sfx/letters, credits there), timed to the CSS:
+  // the die clatters as it lands, a pencil scribbles the list in, rubber stamps, the gavel. -> false if it can't play.
+  const clip = (f, o) => { try { return !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('letters/' + f + '.webm', o)); } catch { return false; } };
   // Phone state that survives re-renders (rendering pauses while an input is focused).
   let drafts = [], sent = [], draftKey = '', saveT = 0, flushT = 0, endT = 0, deadline = 0, lobbyErr = '';
   const seen = new Set();
@@ -88,7 +91,7 @@
         ${L.lineupHtml ? `<div class="lr-party">${L.lineupHtml}</div>` : ''}</section>
     </div>`);
     for (const s of el.querySelectorAll('select[data-set]')) { s.onchange = () => L.set(s.dataset.set, s.value); s.onclick = (e) => e.stopPropagation(); }
-    for (const b of el.querySelectorAll('[data-cycle]')) b.onclick = () => { const s = b.querySelector('select'); s.selectedIndex = (s.selectedIndex + 1) % s.options.length; BOX.sfx('pop'); s.onchange(); };
+    for (const b of el.querySelectorAll('[data-cycle]')) b.onclick = () => { const s = b.querySelector('select'); s.selectedIndex = (s.selectedIndex + 1) % s.options.length; if (!clip('pencil-tap', { vol: 0.3 })) BOX.sfx('pop'); s.onchange(); };
     el.querySelector('#start').onclick = async () => { const r = await L.start(); lobbyErr = r && !r.ok ? r.error || 'Could not start.' : ''; const e = el.querySelector('#lobby-err'); if (e) e.textContent = lobbyErr; };
     el.querySelector('#add-bots').onclick = () => L.bots(5);
     el.querySelector('#rm-bots').onclick = () => L.removeBots();
@@ -334,10 +337,25 @@
       'Something fishy? Tap 👎 to challenge it and the room votes on whether it counts. Five scoring answers in a row: 🔥 +1.',
       'Watch for Speed rounds, Theme rounds and the final Double Letter round (two letters, double points).',
     ],
-    fx: { roll: 'diceRoll', go: 'bell', first: 'pop', cat: 'whoosh', challenge: 'pop', vote: 'ballot', verdict: 'gavel', streak: 'cheer', scores: 'chime', win: 'win' },
+    // roll, first and verdict are recorded sounds in onFx (the old synth sounds are the fallback)
+    fx: { go: 'bell', cat: 'whoosh', challenge: 'pop', vote: 'ballot', streak: 'cheer', scores: 'chime', win: 'win' },
     onFx(f) {
-      if (f.kind === 'roll') setTimeout(() => BOX.sfx(f.double ? 'drum' : 'pop'), 2500);
-      if (f.kind === 'verdict') setTimeout(() => BOX.sfx(f.struck ? 'gasp' : 'cheer'), 500);
+      if (f.kind === 'roll') {
+        // letters.css: each die (0.35 s apart) flies in and hits the desk at 45% of its 2.6 s hop (1.17 s),
+        // then the list is written in from 3.2 s
+        if (clip('shake', { vol: 0.16 })) {
+          for (let i = 0; i < (f.double ? 2 : 1); i++) clip(i ? 'die2' : 'die', { vol: 0.3, delay: 1.12 + i * 0.35 });
+          clip('scribble', { vol: 0.15, delay: 3.2, jitter: 0.02 });
+        } else { BOX.sfx('diceRoll'); setTimeout(() => BOX.sfx(f.double ? 'drum' : 'pop'), 2500); }
+      }
+      if (f.kind === 'first' && !clip('pencil-tap', { vol: 0.32 })) BOX.sfx('pop'); // "⚡ X finished first!": pencil down
+      // a shared answer: its meld card drops in at 5 s and gets the MATCH stamp at 5.5 s
+      if (f.kind === 'cat' && f.shared) clip('stamp', { vol: 0.16, delay: 5.5 });
+      if (f.kind === 'verdict') {
+        // the gavel, the STRUCK / COUNTS stamp (0.5 s), then the room reacts
+        if (clip('gavel', { vol: 0.3 })) { clip('stamp', { vol: 0.2, delay: 0.5 }); clip(f.struck ? 'ooh' : 'applause', { vol: f.struck ? 0.18 : 0.14, delay: 0.85 }); }
+        else { if (!(BOX.audio && BOX.audio.stinger('gavel', 'letters'))) BOX.sfx('gavel'); setTimeout(() => BOX.sfx(f.struck ? 'gasp' : 'cheer'), 500); }
+      }
     },
     lobbyTv,
     lobby: () => '<div class="lr lr-phlobby"><div class="lr-pcard lr-c"><div class="lr-sletters">' + 'RUSH'.split('').map((c) => tile(c)).join('') + '</div><p>Warm up your thumbs: you’ll be typing fast!</p></div></div>',

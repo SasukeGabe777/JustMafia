@@ -25,3 +25,39 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | trivia | Music | `games/trivia/title-groovin.webm` | Groovin | Brian Boyko | CC0 1.0 | https://freepd.com/misc.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/misc.php) |
 | trivia | Music | `games/trivia/think-funky-energy-loop.webm` | Funky Energy Loop | Kevin MacLeod | CC0 1.0 | https://freepd.com/scoring.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/scoring.php) |
 | trivia | Music | `games/trivia/finale-funkeriffic.webm` | Funkeriffic | Kevin MacLeod | CC0 1.0 | https://freepd.com/misc.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/misc.php) |
+| colormatch | Sound effect | `colormatch/splat.webm` | Cartoon Splat | Breviceps | CC0 1.0 | https://freesound.org/s/445117/ |
+| colormatch | Sound effect | `colormatch/cloth.webm` | Foley_Clothes_Jacket_Whoosh_Sequence_Stereo.wav | Nox_Sound | CC0 1.0 | https://freesound.org/s/495390/ |
+| colormatch | Sound effect | `colormatch/brush.webm` | Pincel en lienzo | Pipe98x | CC0 1.0 | https://freesound.org/s/409608/ |
+| colormatch | Sound effect | `colormatch/frame.webm` | Impact Sounds pack: impactWood_light_002 | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/impact-sounds |
+| colormatch | Sound effect | `colormatch/applause.webm` | Audience Clapping 2.wav | Zeraora | CC0 1.0 | https://freesound.org/s/429149/ |
+| colormatch | Sound effect | `colormatch/frame2.webm` | Impact Sounds pack: impactWood_light_000 | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/impact-sounds |
+| colormatch | Sound effect | `colormatch/frame3.webm` | Impact Sounds pack: impactWood_light_004 | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/impact-sounds |
+| emoji | Sound effect | `emoji/bubble.webm` | Plop! | Breviceps | CC0 1.0 | https://freesound.org/s/447910/ |
+| emoji | Sound effect | `emoji/cheer.webm` | Crowd.Yay.Applause.25ppl.Short.wav | jessepash | CC0 1.0 | https://freesound.org/s/139972/ |
+| emoji | Sound effect | `emoji/aww.webm` | aww.wav | phmiller42 | CC0 1.0 | https://freesound.org/s/124996/ |
+| emoji | Sound effect | `emoji/applause.webm` | smallcrowd.wav | moxobna | CC0 1.0 | https://freesound.org/s/32260/ |
+| letters | Sound effect | `letters/die.webm` | Casino Audio pack: die-throw-3 | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| letters | Sound effect | `letters/scribble.webm` | scribble.mp3 | indigosierra | CC0 1.0 | https://freesound.org/s/82610/ |
+| letters | Sound effect | `letters/pencil-tap.webm` | Impact Sounds pack: impactWood_light_002 | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/impact-sounds |
+| letters | Sound effect | `letters/stamp.webm` | traditional stamp.wav | I.fekry | CC0 1.0 | https://freesound.org/s/470710/ |
+| letters | Sound effect | `letters/gavel.webm` | wood hammer, gavel, knock, pound, jury, court.mp3 | JohnsonBrandEditing | CC0 1.0 | https://freesound.org/s/173941/ |
+| letters | Sound effect | `letters/applause.webm` | smallcrowd.wav | moxobna | CC0 1.0 | https://freesound.org/s/32260/ |
+| letters | Sound effect | `letters/ooh.webm` | Crowd gasp.wav | RadioCounseling | CC0 1.0 | https://freesound.org/s/635110/ |
+| letters | Sound effect | `letters/shake.webm` | Casino Audio pack: dice-shake-2 | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| letters | Sound effect | `letters/die2.webm` | Casino Audio pack: die-throw-1 | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/casino-audio |
+| quickdraw | Sound effect | `quickdraw/gunshot.webm` | 44_black_powder.wav | Jon285 | CC0 1.0 | https://freesound.org/s/34708/ |
+| quickdraw | Sound effect | `quickdraw/spurs.webm` | Authentic Spurs.mp3 | TheAcidRomance | CC0 1.0 | https://freesound.org/s/400593/ |
+| quickdraw | Sound effect | `quickdraw/rooster.webm` | Rooster Crow 1 | BenjaminNelan | CC0 1.0 | https://freesound.org/s/435508/ |
+| quickdraw | Sound effect | `quickdraw/cluck1.webm` | Chicken Single Alarm Call | Rudmer_Rotteveel | CC0 1.0 | https://freesound.org/s/316920/ |
+| quickdraw | Sound effect | `quickdraw/cluck2.webm` | Chicken Single Alarm Call | Rudmer_Rotteveel | CC0 1.0 | https://freesound.org/s/316920/ |
+| quickdraw | Sound effect | `quickdraw/gallop.webm` | Horse Galloping.wav | Max_Headroom | CC0 1.0 | https://freesound.org/s/175356/ |
+| quickdraw | Sound effect | `quickdraw/whinny.webm` | horse neigh shortened.wav | shadoWisp | CC0 1.0 | https://freesound.org/s/269571/ |
+| quickdraw | Sound effect | `quickdraw/wind.webm` | desertwind1FINAL.wav | slugzilla | CC0 1.0 | https://freesound.org/s/112296/ |
+| quickdraw | Sound effect | `quickdraw/cock.webm` | revolvercock1.wav | Dredile | CC0 1.0 | https://freesound.org/s/111676/ |
+| trivia | Sound effect | `trivia/lock.webm` | Interface Sounds pack: select_003 | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
+| trivia | Sound effect | `trivia/desk-switch.webm` | UI Audio pack: switch3 | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| trivia | Sound effect | `trivia/match.webm` | MatchBox - Strike and Light 03.wav | JarredGibb | CC0 1.0 | https://freesound.org/s/248241/ |
+| trivia | Sound effect | `trivia/applause.webm` | smallcrowd.wav | moxobna | CC0 1.0 | https://freesound.org/s/32260/ |
+| trivia | Sound effect | `trivia/aww.webm` | aww.wav | phmiller42 | CC0 1.0 | https://freesound.org/s/124996/ |
+| trivia | Sound effect | `trivia/cheer.webm` | Crowd.Yay.Applause.25ppl.Short.wav | jessepash | CC0 1.0 | https://freesound.org/s/139972/ |
+| trivia | Sound effect | `trivia/ooh.webm` | Crowd gasp.wav | RadioCounseling | CC0 1.0 | https://freesound.org/s/635110/ |

@@ -90,7 +90,7 @@
       round: { bpm: 130, tracks: { b: { type: 'pluck', dly: 0.3 }, g: { type: 'glock', vol: 0.25 } }, bars: 1, parts: { b: 'd5 g5 b5 d6 . . . .', g: '. . . . g6 . . .' } },
       flash: { bpm: 160, tracks: { g: { type: 'chime', vol: 0.4 }, s: { type: 'strings', vol: 0.3 } }, bars: 1, parts: { g: 'c6 e6 g6 c7 - - - -', s: 'c5+e5+g5 - - - - - - -' } },
     },
-    fx: { round: 'round', look: 'flash', reveal: 'reveal', perfect: 'good', win: 'win' },
+    fx: { look: 'flash', reveal: 'reveal', win: 'win' }, // round / perfect: recorded splat and applause (onFx in games/colormatch.js)
     sfx: {},
   };
 })();
