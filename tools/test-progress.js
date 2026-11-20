@@ -239,7 +239,7 @@ test('migration: the old JustMafia season pass turns into XP and a premium pass;
   assert.equal(u.progressView(c.id).season.premium, false); assert.equal(u.progressView(c.id).xp, 120);
   // Saved and loaded again: the same.
   const fs = require('node:fs'), os = require('node:os'), file = path.join(os.tmpdir(), `mt-progress-${process.pid}.json`);
-  try { const d = new ProfileStore(file), e = d.create(); d.progressGame(e.id, ev('z', { xp: 300 })); const again = new ProfileStore(file); assert.equal(again.progressView(e.id).xp, 300); } finally { try { fs.unlinkSync(file); } catch (e) { /* gone */ } }
+  try { const d = new ProfileStore(file); d.now = () => Date.parse('2027-01-20T12:00:00Z'); const e = d.create(); d.progressGame(e.id, ev('z', { xp: 300 })); const again = new ProfileStore(file); assert.equal(again.progressView(e.id).xp, 300); } finally { try { fs.unlinkSync(file); } catch (e) { /* gone */ } }
 });
 
 // ---------- real games ----------
