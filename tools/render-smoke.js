@@ -127,7 +127,7 @@ function sceneSweep() {
       n++;
     } catch (e) { errs++; console.error('execution reconnect', e); }
   }
-  // Every theme's game-over path for each winner (themed team names, e.g. RSP Supply).
+  // Every theme's game-over path for each winner (themed team names, e.g. Space Station).
   for (const theme of W.MT_THEMES.THEME_ORDER) for (const winner of ['mafia', 'town', 'jester', 'draw']) {
     try {
       const g = new W.Town(makeCanvas());

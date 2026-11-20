@@ -423,7 +423,7 @@
     cottage: ['#eadcb9', '#c4674f', 'tri'], tavern: ['#d39a55', '#7a3a2a', 'tri', 'sign'], bakery: ['#f3e2c8', '#d06a4a', 'tri', 'awning'], smithy: ['#9c9b95', '#4c5a6e', 'tri', 'chimney'],
     apothecary: ['#9fbe86', '#3f6b4a', 'tri', 'bottle'], library: ['#e3d7bb', '#2f4f80', 'flat', 'columns'], chapel: ['#f2efe8', '#6a4a7a', 'steeple'], tailor: ['#d996ae', '#7a3a5a', 'tri', 'awning'],
     watchtower: ['#b0a898', '#5a4a3a', 'tower'], windmill: ['#eadcb9', '#8a3b2f', 'tri', 'mill'], farmhouse: ['#c4674f', '#3a3a42', 'barn'], manor: ['#e8e0cc', '#2f4f80', 'wide'],
-    darkMansion: ['#4a3a5a', '#1e1628', 'tower', 'candle'], modernHouse: ['#f4f4f4', '#3a3a42', 'flat', 'glass'], rspOffice: ['#ffd21f', '#1f4fa8', 'flat', 'rsp'],
+    darkMansion: ['#4a3a5a', '#1e1628', 'tower', 'candle'], modernHouse: ['#f4f4f4', '#3a3a42', 'flat', 'glass'],
   };
   function drawHouse(g, x, y, s, style, decor, t = 0) {
     const [wall, roof, shape, extra] = HOUSES[style] || HOUSES.cottage, W = (shape === 'wide' ? 70 : shape === 'tower' ? 34 : 54) * s, H = (shape === 'tower' ? 62 : 40) * s;
@@ -453,7 +453,6 @@
     if (extra === 'mill') { g.save(); g.translate(x, top - 10 * s); g.rotate(t * 0.8); for (let k = 0; k < 4; k++) { g.rotate(Math.PI / 2); g.beginPath(); g.rect(-3 * s, 2 * s, 6 * s, 24 * s); g.fillStyle = '#f2ead6'; g.fill(); g.stroke(); } g.restore(); g.beginPath(); g.arc(x, top - 10 * s, 3 * s, 0, TAU); g.fillStyle = ink; g.fill(); }
     if (extra === 'bottle') { g.beginPath(); g.arc(L + W - 10 * s, y - 6 * s, 4 * s, 0, TAU); g.fillStyle = '#7ad08a'; g.fill(); g.stroke(); }
     if (extra === 'candle') { g.beginPath(); g.arc(x, top - 14 * s, 2.5 * s, 0, TAU); g.fillStyle = '#ffd35c'; g.fill(); }
-    if (extra === 'rsp') { g.beginPath(); g.rect(L + 6 * s, top + 24 * s, W - 12 * s, 6 * s); g.fillStyle = '#1f4fa8'; g.fill(); g.stroke(); }
     // decor
     if (decor === 'flowers') for (let k = 0; k < 6; k++) { g.beginPath(); g.arc(L + 4 * s + k * (W - 8 * s) / 5, y - 2 * s, 3 * s, 0, TAU); g.fillStyle = ['#ff8cc6', '#ffd23f', '#ff5a5f'][k % 3]; g.fill(); g.lineWidth = 1.2 * s; g.stroke(); }
     if (decor === 'banner') { g.lineWidth = 1.6 * s; g.beginPath(); g.moveTo(L + 6 * s, top + 26 * s); g.lineTo(L + 6 * s, top + 40 * s); g.lineTo(L + 10 * s, top + 36 * s); g.lineTo(L + 14 * s, top + 40 * s); g.lineTo(L + 14 * s, top + 26 * s); g.closePath(); g.fillStyle = '#c0283c'; g.fill(); g.stroke(); }

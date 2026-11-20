@@ -21,7 +21,6 @@ composed track, and so on, crossfading between them.
   | `Dungeon Crawl/` | Dungeon Crawl |
   | `Secret Agents/` | Secret Agents |
   | `Federal Investigation/` | Federal Investigation |
-  | `RSP Supply/` | RSP Supply |
   | `Snowy Village/` | Snowy Village |
   | `Block World/` | Block World |
   | `Tabletop Quest/` | Tabletop Quest |

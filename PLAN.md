@@ -722,39 +722,18 @@ Implementation checklist (updated after verification below):
   `/preview?scene=death_lake` and tuned the lake ripples, the watcher
   position and the field framing. Not yet checked on a projector.
 
-### Development update 5: RSP Supply theme
+### Development update 5: optional theme fields
 
-- A new selectable theme `rsp` ("RSP Supply", town "Supplyville"). It's a
-  lighthearted corporate-takeover parody in which the Mafia team is RSP
-  Supply, led by President Tom Smith. Yellow and blue throughout.
-- Everything lives in the theme registry (`public/shared/themes.js`), with new
-  optional, documented fields any theme can use: `roleNames`, `teamNames`,
-  `villain` {name, title, avatar}, `ui` colors, `narration` (overrides lines
-  for every narrator style), `effects.confetti`, `civic`, `houseTrim`.
-  Helpers `roleName()` / `teamName()` fall back to the normal names, so other
-  themes are unchanged. Rules never read any of this.
-- Applied to: menus (phone/TV/Judge CSS variables via `<html data-theme>`,
-  set from game state), clothing (company lanyard + ID badge), buildings and
-  houses (yellow walls, blue roofs, a company plaque over every door; RSP HQ,
-  Break Room, Water Cooler, Warehouse, Loading Dock, "Former Employees"
-  cemetery), cinematics (navy-suited associates with an office stapler, a
-  blue office bedroom, yellow/blue confetti), the town introduction (Tom
-  Smith appears in a spotlight: "President of RSP Supply has big plans for
-  Supplyville"), text (role card, teammates, composition, game-over and
-  victory title use themed names), and narration (takeover lines, themed
-  location lore).
+- The theme registry (`public/shared/themes.js`) gained optional, documented
+  fields any theme can use: `roleNames`, `teamNames`, `villain` {name, title,
+  avatar}, `ui` colors, `narration` (overrides lines for every narrator
+  style), `effects.confetti`, `civic`, `houseTrim`. Helpers `roleName()` /
+  `teamName()` fall back to the normal names. Rules never read any of this.
 - Engine improvements that came with it: the cinema spotlight now works on
-  the town stage (it previously never received a position), titles can have
-  a readability band, scenes can show a theme villain, and cinema kits are
-  per theme (`KITS.rsp`).
-- Validation: expansion test covering the theme being selectable, yellow
-  walls / blue roofs, villain and themed names, an RSP game narrating the
-  takeover and "member of RSP Supply", a medieval game never mentioning RSP,
-  the theme locking at start, and every renamed role id existing. The render
-  sweep now includes RSP for every scene (1476 runs). The e2e test checks the
-  phone menus switching to RSP colors live and back. I reviewed screenshots
-  of the town, the Tom Smith intro, and the phone and TV menus.
-- Note: the repository is public, so the theme's names are visible there.
+  the town stage, titles can have a readability band, scenes can show a theme
+  villain, and cinema kits are per theme.
+- The one-off custom theme that first used these fields was later removed
+  before release; a saved setup naming it falls back to the default world.
 
 ### Development update 6: shop, gold pouch and inventory
 
@@ -765,8 +744,8 @@ Implementation checklist (updated after verification below):
   the server, and an unaffordable or duplicate purchase changes nothing.
 - Catalog (`public/shared/cosmetics.js`): items now carry a category,
   description and optional price override, and the file documents how to add
-  items. New premium house designs: Dark Mansion, Modern House and RSP
-  Supply Office, with new art and a flat-roof variant in `world-art.js`.
+  items. New premium house designs: Dark Mansion and Modern House,
+  with new art and a flat-roof variant in `world-art.js`.
   Random/default homes only use the 12 free designs.
 - Inventory: `profile.inventory` (owned shop items with their equipped
   state) and `ProfileStore.equip()` / socket `profile:equip` equip or

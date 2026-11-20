@@ -245,7 +245,7 @@ test('Old saved settings without roleSelection still load (and Manual can be cho
 
 test('Default stays the draft unless custom roles are chosen (role list or preset); Default can be picked again', () => {
   const { room } = makeRoom({ bots: 6 });
-  room.updateSettings({ nightSeconds: 40, theme: 'rsp' });
+  room.updateSettings({ nightSeconds: 40, theme: 'space' });
   assert.equal(room.settings.roleSelection, 'draft', 'other settings never change the mode');
   room.updateSettings({ roleCounts: { detective: 1, doctor: 1, sheriff: 1 } });
   assert.equal(room.settings.roleSelection, 'manual', 'editing the role list = custom roles');

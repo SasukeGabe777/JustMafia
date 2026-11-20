@@ -4,7 +4,7 @@
 // The narrator's templates (narrator.js, theme narration in public/shared/theme-text.js) and the
 // cutscene captions (public/scenes.js) are turned into their spoken form by
 // public/shared/narration-say.js (no player names, no numbers), plus one "They were the X." line
-// per role and world. Each world's narrator voice says them; RSP Supply is not voiced.
+// per role and world. Each world's narrator voice says them.
 // collect() -> [{ g: 'mafia-<voice>', t: spoken text, V: voice spec, from }]
 const fs = require('node:fs');
 const path = require('node:path');
@@ -16,7 +16,7 @@ const R = require('../public/shared/roles');
 
 const { SURPRISES } = require('../rules/events');
 
-const SKIP_THEMES = new Set(['rsp']);
+const SKIP_THEMES = new Set([]); // themes that are not voiced (none)
 // Fixed spoken lines (they must match the `say` text in public/host.js and rules/afterlife.js).
 const EXTRA = ['A cold mist rolls over the ballot box. Today, nobody will see who voted for whom.', 'This is how loud I will be.', 'Welcome to town. Night is falling. Trust no one.'];
 

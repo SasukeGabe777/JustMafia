@@ -66,15 +66,10 @@
       room: { style: 'bedroom', wall: '#6a6450', wall2: '#5c5644', floor: '#5a4a3a', floor2: '#4c3e30', trim: '#e4dfcf', sky: '#0a0e20' },
     },
   };
-  // RSP Supply: navy-suited "associates" with yellow eyes, an office stapler, and a blue-carpet office bedroom.
-  KITS.rsp = {
-    weapon: 'stapler', root: 100, assassin: { cloak: '#0f2a63', trim: '#ffd21f', eyes: '#ffd21f', suit: true },
-    room: { style: 'bedroom', wall: '#2a4f9e', wall2: '#244586', floor: '#5a6272', floor2: '#4e5564', trim: '#ffd21f', sky: '#071433' },
-  };
   // Themes v2: how each world kills. weapon = what the attacker carries; burst = the impact
   // effect; mark = what is left on the ground (replaces the blood pool); body = how the
   // fallen body looks (a CSS filter: petrified, charred, frozen...); strike/die = sounds.
-  // The classic kits (modern, medieval, rsp) keep the original knife, pool and sounds.
+  // The classic kits (modern, medieval) keep the original knife, pool and sounds.
   Object.assign(KITS.space, { weapon: 'blaster', burst: 'dust', mark: 'dust', body: 'saturate(0) brightness(1.9) opacity(0.55)', die: 'vaporize' });
   Object.assign(KITS.fantasy, { weapon: 'wand', burst: 'sparkle', mark: 'stone', body: 'grayscale(1) brightness(0.9) contrast(1.3)', die: 'petrify' });
   Object.assign(KITS.dragons, { weapon: 'firebrand', burst: 'fire', mark: 'ash', body: 'brightness(0.28) sepia(0.5)', die: 'roar' });
@@ -96,7 +91,7 @@
   KITS.noir = { weapon: 'revolver', root: 87, burst: 'blood', mark: 'blood', die: 'fall',
     assassin: { cloak: '#151515', trim: '#2a2a2a', eyes: '#e8e8e8', suit: true },
     room: { style: 'bedroom', wall: '#5a5a5a', wall2: '#4a4a4a', floor: '#3a3a3a', floor2: '#303030', trim: '#bbbbbb', sky: '#050505' } };
-  const THEME_KIT = { smalltown: 'modern', medieval: 'medieval', space: 'space', fantasy: 'fantasy', dragons: 'dragons', dungeon: 'dungeon', spies: 'spies', fbi: 'fbi', rsp: 'rsp', snow: 'snow', blocky: 'blocky', tabletop: 'tabletop', realistic: 'realistic', noir: 'noir' };
+  const THEME_KIT = { smalltown: 'modern', medieval: 'medieval', space: 'space', fantasy: 'fantasy', dragons: 'dragons', dungeon: 'dungeon', spies: 'spies', fbi: 'fbi', snow: 'snow', blocky: 'blocky', tabletop: 'tabletop', realistic: 'realistic', noir: 'noir' };
   const RANGED = { blaster: { color: '#30fff0', sfx: 'vaporize' }, pistol: { color: '#ffd76a', sfx: 'shot' }, wand: { color: '#d080ff', sfx: 'petrify' },
     firebrand: { color: '#ff8a20', sfx: 'fireBreath', fire: true }, silenced: { color: '#ff2a2a', sfx: 'suppressed', laser: true }, revolver: { color: '#fff2b0', sfx: 'revolver', muzzle: true },
     bow: { color: '#c9a66b', sfx: 'arrow', arrow: true } };
@@ -148,11 +143,6 @@
       case 'pistol':
         ctx.fillStyle = '#1a1a1e'; roundRect(ctx, -2, -3, 18, 6, 2); ctx.fill(); ctx.fillRect(0, 1, 5, 8);
         ctx.fillStyle = '#2c2c32'; ctx.fillRect(14, -2, 10, 4);
-        break;
-      case 'stapler': // RSP Supply's weapon of choice
-        ctx.fillStyle = '#1f4fa8'; roundRect(ctx, -2, -5, 22, 6, 2); ctx.fill();
-        ctx.fillStyle = '#ffd21f'; ctx.fillRect(0, 1, 22, 3);
-        ctx.fillStyle = '#c8ced6'; ctx.fillRect(18, -3, 4, 2);
         break;
       case 'icicle':
         ctx.fillStyle = '#d8f2ff'; ctx.beginPath(); ctx.moveTo(-2, -3); ctx.lineTo(30, 0); ctx.lineTo(-2, 3); ctx.closePath(); ctx.fill();
@@ -600,10 +590,6 @@
         r('#2a2a30', 556, F - 220, 8, 220); r('#3a3a42', 526, F - 6, 68, 8); ctx.fillStyle = lamp > 0 ? '#fff4c8' : '#c8c0a8'; ctx.beginPath(); ctx.moveTo(520, F - 220); ctx.lineTo(600, F - 220); ctx.lineTo(585, F - 270); ctx.lineTo(535, F - 270); ctx.closePath(); ctx.fill();
         r('#111216', 950, 210, 240, 140); r(`rgba(80,140,220,${0.35 + 0.1 * Math.sin(t * 3)})`, 958, 218, 224, 124); r('#2a2a30', 1060, 350, 20, 30);
         break;
-      case 'rspOffice':
-        r('#1f3f86', 470, F - 90, 200, 20); r('#16306a', 480, F - 70, 14, 70); r('#16306a', 646, F - 70, 14, 70); r('#2a2a30', 530, F - 160, 90, 64); r(`rgba(255,210,31,${0.4 + 0.1 * Math.sin(t * 2)})`, 536, F - 154, 78, 52); r('#2a2a30', 568, F - 96, 14, 8);
-        r('#ffd21f', 960, 190, 220, 160); r('#1f3f86', 970, 200, 200, 140); ctx.fillStyle = '#ffd21f'; ctx.font = '700 64px monospace'; ctx.textAlign = 'center'; ctx.fillText('RSP', 1070, 292); ctx.textAlign = 'start';
-        break;
       default: // cottage
         r('#8a5a3a', 520, F - 60, 80, 60); r('#6a4a2a', 512, F - 66, 96, 12); ctx.fillStyle = '#4a8a3a'; for (const [dx, dy, rr] of [[560, F - 100, 40], [530, F - 120, 30], [590, F - 125, 28]]) { ctx.beginPath(); ctx.arc(dx, dy, rr, 0, Math.PI * 2); ctx.fill(); }
         r('#c9a24a', 990, 210, 160, 130); r('#f2ead6', 1002, 222, 136, 106); ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.arc(1050, 270, 14, 0, Math.PI * 2); ctx.arc(1080, 270, 14, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.moveTo(1037, 276); ctx.lineTo(1065, 306); ctx.lineTo(1093, 276); ctx.fill();
@@ -937,7 +923,7 @@
       if (f) f.call(this, a == null ? {} : a);
     }
 
-    // A theme's antagonist (e.g. RSP Supply's Tom Smith); null for themes without one.
+    // A theme's antagonist ({ name, title, avatar }); null for themes without one.
     villain() { const T = window.MT_THEMES, t = T && T.THEMES[this.town.themeId]; return t && t.villain || null; }
     text(s) { const b = this.ctx.bind, v = this.villain() || {}, S = b.story || {}; return String(s || '').replace(/\{roommate\}/g, S.roommate || 'someone').replace(/\{defended\}/g, S.defended || 'someone').replace(/\{accused\}/g, S.accused || 'someone').replace(/\{alive\}/g, S.alive != null ? S.alive : 'a few').replace(/\{town\}/g, (this.town.state && this.town.state.townName) || 'town').replace(/\{name\}/g, this.ctx.name).replace(/\{host\}/g, this.ctx.host).replace(/\{villain\}/g, v.name || '').replace(/\{villainTitle\}/g, v.title || '').replace(/\{guard\}/g, b.guardName || 'Someone').replace(/\{lastWords\}/g, b.lastWordsText || '').replace(/\{title\}/g, b.title || '').replace(/\{sub\}/g, b.sub || '').replace(/\{mood\}/g, b.mood || ''); }
 
@@ -1620,7 +1606,7 @@
           ctx.save();
           ctx.globalAlpha = a;
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          // Optional dark band for titles shown over a bright, busy scene (e.g. the RSP villain intro).
+          // Optional dark band for titles shown over a bright, busy scene (e.g. a theme villain intro).
           if (this.title.band) { ctx.fillStyle = 'rgba(10,16,40,0.72)'; ctx.fillRect(0, H / 2 - 110, W, 210); }
           ctx.font = `700 96px ${FONT}`;
           ctx.shadowColor = this.title.color; ctx.shadowBlur = 30;

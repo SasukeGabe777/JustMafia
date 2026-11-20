@@ -77,8 +77,6 @@ window.MT_MUSIC = (function () {
     realistic: { flavor: 'dreamy', bpm: 104, key: 62, scale: 'major', prog: [0, 4, 5, 3], lead: { wave: 'triangle', alt: 'bell', motif: M('4 - - 2 - 0 - - 2 - - - . . . . | 4 - - 5 - 4 - 2 - - - - . . . .') }, bass: '0.......0...4...', arp: '0.4.7.4.0.4.7.4.', drums: 'soft' },
     // Noir: rain on the window. A slow, sad muted horn over brushes and a walking bass.
     noir: { flavor: 'grim', bpm: 74, key: 50, scale: 'harmonic', prog: [0, 5, 3, 4], lead: { wave: 'saw', alt: 'bell', cutoff: 950, vibrato: 4.5, motif: M('4 - - - 3 - 2 - 1 - - - 0 - - - | 2 - - 3 4 - - - 3 - 2 - 0 - - -') }, bass: '0...2...4...5...', arp: '', pad: true, drums: 'brush', swing: 0.18 },
-    // RSP Supply: upbeat corporate jingle.
-    rsp: { flavor: 'playful', bpm: 118, key: 60, scale: 'major', prog: [0, 3, 4, 0], lead: { wave: 'square', alt: 'pulse', cutoff: 2400, motif: M('0 . 2 . 4 . 7 . | 4 - - - 2 . . . | 5 . 4 . 2 . 4 . | 0 - - - . . . .') }, bass: '0...0...4...0...', arp: '0.4.7.4.0.4.7.4.', drums: 'pop' },
   };
   // ----- What plays when -----
   // Each mood is its own piece, played in the current world's key, instruments and character:

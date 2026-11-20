@@ -169,7 +169,7 @@ const { THEMES } = require('./public/shared/themes');
 
 // Which templates a line is picked from (also used by tools/voice-gen.js to pre-render the voice).
 function bank(style, key, vars = {}) {
-  // A theme's own narration (e.g. RSP Supply) replaces the style bank for that key.
+  // A theme's own narration (e.g. Space Station) replaces the style bank for that key.
   const themed = THEMES[vars.theme] && THEMES[vars.theme].narration && THEMES[vars.theme].narration[key];
   if (themed) return themed;
   let bank = (LINES[style] && LINES[style][key]) || LINES.classic[key] || [''];
