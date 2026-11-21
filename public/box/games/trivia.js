@@ -10,6 +10,11 @@
   const LET = ['A', 'B', 'C', 'D'], SHAPE = ['▲', '◆', '●', '■'];
   const BET = { 1: { n: '1×', l: 'Hunch', e: '🧊' }, 2: { n: '2×', l: 'Sure', e: '🌶️' }, 3: { n: '3×', l: 'HOT TAKE', e: '🔥' } };
   const WAGERS = [0, 25, 50, 75, 100];
+  // Small recorded touches on the TV (public/audio/sfx/trivia, credits there), quiet and timed to the
+  // screen: the fuse is lit, a podium clicks on as each contestant locks in, the studio audience
+  // reacts to the reveal and the Hot Seat, applause for the podium. -> false when it can't play.
+  const clip = (f, o) => { try { return !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('trivia/' + f + '.webm', o)); } catch { return false; } };
+  const heard = { key: '', locked: 0 };
   // Phone-side state that must survive re-renders.
   let bet = 1, betKey = '', felt = {}, warned = '';
   // A countdown whose end stays fixed for one phase, so identical renders can be skipped.
@@ -191,7 +196,7 @@
         if (k) {
           for (const b of k.parentNode.querySelectorAll('.ttl-opt')) b.classList.toggle('on', b === k);
           const s = el.querySelector(`select[data-set="${k.dataset.k}"]`); if (s) s.value = k.dataset.v;
-          el.__L.set(k.dataset.k, k.dataset.v); BOX.sfx('click'); return;
+          el.__L.set(k.dataset.k, k.dataset.v); if (!clip('desk-switch', { vol: 0.28 })) BOX.sfx('click'); return;
         }
         const c = e.target.closest('[data-kick]');
         if (c && confirm('Remove this player?')) el.__L.kick(c.dataset.kick);
@@ -240,7 +245,15 @@
     ],
     // Soundtrack cue per phase (public/box/scores/trivia.js); the TV turns the last 10 s of 'think' tense.
     music: (s) => (s.phase === 'over' ? 'finale' : s.phase === 'reveal' ? 'reveal' : s.phase === 'drum' ? 'tense' : s.phase === 'ask' ? (s.kind === 'allin' || s.kind === 'hot' ? 'tense' : 'think') : s.phase === 'wager' ? 'tense' : 'play'),
-    fx: { question: 'whoosh', hot: 'sting', allin: 'swell', wager: 'tick', open: 'pop', allIn: 'chime', lock: 'drum', reveal: 'reveal', nobody: 'shrug', seatRight: 'cheer', seatWrong: 'gasp', win: 'win' },
+    fx: { question: 'whoosh', hot: 'sting', allin: 'swell', wager: 'tick', allIn: 'chime', lock: 'drum', reveal: 'reveal', nobody: 'shrug', win: 'win' },
+    // The question opens: a match lights the fuse clock (the old pop if it can't play).
+    // The Hot Seat verdict: the studio audience cheers or gasps (the synth stinger if the clip can't play).
+    onFx(f) {
+      if (f.kind === 'open' && !clip('match', { vol: 0.2, delay: 0.1 })) BOX.sfx('pop');
+      if (f.kind !== 'seatRight' && f.kind !== 'seatWrong') return;
+      const ok = f.kind === 'seatRight';
+      if (!clip(ok ? 'cheer' : 'ooh', { vol: ok ? 0.2 : 0.22, delay: 0.25 })) { if (!(BOX.audio && BOX.audio.stinger(ok ? 'good' : 'bad', 'trivia'))) BOX.sfx(ok ? 'cheer' : 'gasp'); }
+    },
 
     tv(el, s) {
       if (!s) return;
@@ -249,10 +262,13 @@
         const pod = [st[1], st[0], st[2]].map((r, i) => (r ? `<div class="tt-pod p${[2, 1, 3][i]}${gl(r).cls}" style="--c:${esc(r.color)}${gl(r).css}"><div class="tt-poda">${fig(r, i === 1 ? 160 : 128, { mood: i === 1 ? 'grin' : undefined }) || av(r, 64)}</div><div class="tt-podn">${esc(r.name)}</div><div class="tt-podp" data-plain="1" data-count="${r.points}" data-delay="${600 + i * 200}">${r.points}</div><div class="tt-podb">${[2, 1, 3][i]}</div></div>` : '<div></div>')).join('');
         const fresh = paint(el, `<div class="tt-over"><h1 class="tt-wins">🏆 ${esc(w.name)} wins!</h1><div class="tt-podium">${pod}</div>
           ${awardsHtml(f.awards.slice(0, 6))}${st.length > 3 ? `<div class="tt-rest">${st.slice(3).map((r, i) => `<span>${i + 4}. ${av(r)} ${esc(r.name)} <b>${r.points}</b></span>`).join('')}</div>` : ''}</div>`, 'over');
-        if (fresh) countUp(el);
+        if (fresh) { countUp(el); clip('applause', { vol: 0.16, delay: 0.5, jitter: 0 }); }
         return;
       }
       const key = s.n + ':' + s.phase;
+      // a quiet podium click for each new lock-in
+      if (heard.key !== key) { heard.key = key; heard.locked = s.locked || 0; }
+      else if ((s.phase === 'ask' || s.phase === 'wager') && (s.locked || 0) > heard.locked) { heard.locked = s.locked; clip('lock', { vol: 0.12, rate: 1.1 }); }
       let main;
       if (s.phase === 'intro') main = tvIntro(s);
       else if (s.phase === 'wager') {
@@ -269,7 +285,12 @@
         main = `${seat}${card}${answersTv(s, res)}${foot}`;
       }
       const fresh = paint(el, `<div class="tt-tv ph-${s.phase} k-${s.kind}"><section class="tt-main">${top(s)}${main}</section>${board(s)}</div>`, key);
-      if (fresh && s.phase === 'reveal') countUp(el);
+      if (fresh && s.phase === 'reveal') {
+        countUp(el);
+        // the studio audience, as the right answer lights up: "awww" when everyone missed, applause when most got it
+        const r = s.result;
+        if (r && s.kind !== 'hot' && r.answered) { if (!r.rights) clip('aww', { vol: 0.2, delay: 0.9 }); else if (r.answered >= 2 && r.rights / r.answered >= 0.6) clip('applause', { vol: 0.13, delay: 0.9 }); }
+      }
     },
 
     phone(el, v, ctx) {

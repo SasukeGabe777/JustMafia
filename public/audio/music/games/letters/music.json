@@ -1,0 +1,62 @@
+{
+ "cues": {
+  "title": {
+   "file": "games/letters/title-happy-whistling-ukulele.webm",
+   "loopStart": 38.386,
+   "loopEnd": 97.493
+  },
+  "lobby": {
+   "file": "games/letters/title-happy-whistling-ukulele.webm",
+   "loopStart": 38.386,
+   "loopEnd": 97.493
+  },
+  "intro": {
+   "file": "games/letters/title-happy-whistling-ukulele.webm",
+   "loopStart": 38.386,
+   "loopEnd": 97.493
+  },
+  "finale": {
+   "file": "games/letters/title-happy-whistling-ukulele.webm",
+   "loopStart": 38.386,
+   "loopEnd": 97.493
+  },
+  "think": {
+   "file": "games/letters/think-busybody.webm",
+   "loopStart": 12.287,
+   "loopEnd": 81.621,
+   "gain": 0.95
+  },
+  "play": {
+   "file": "games/letters/play-managing-mischief.webm",
+   "loopStart": 78.761,
+   "loopEnd": 150.784,
+   "gain": 0.97
+  }
+ },
+ "credits": [
+  {
+   "file": "games/letters/title-happy-whistling-ukulele.webm",
+   "title": "Happy Whistling Ukulele",
+   "author": "Rafael Krux",
+   "source": "https://freepd.com/upbeat.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/upbeat.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for title, lobby, intro, finale"
+  },
+  {
+   "file": "games/letters/think-busybody.webm",
+   "title": "Busybody",
+   "author": "Bryan Teoh",
+   "source": "https://freepd.com/comedy.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/comedy.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for think"
+  },
+  {
+   "file": "games/letters/play-managing-mischief.webm",
+   "title": "Managing Mischief",
+   "author": "Bryan Teoh",
+   "source": "https://freepd.com/comedy.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/comedy.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for play"
+  }
+ ]
+}

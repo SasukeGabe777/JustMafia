@@ -161,6 +161,41 @@
     "loopEnd": 144.18
    }
   },
+  "colormatch": {
+   "title": {
+    "file": "games/colormatch/title-le-baguette.webm",
+    "loopStart": 6.613,
+    "loopEnd": 38.613
+   },
+   "lobby": {
+    "file": "games/colormatch/title-le-baguette.webm",
+    "loopStart": 6.613,
+    "loopEnd": 38.613
+   },
+   "intro": {
+    "file": "games/colormatch/title-le-baguette.webm",
+    "loopStart": 6.613,
+    "loopEnd": 38.613
+   },
+   "play": {
+    "file": "games/colormatch/play-martini-sunset.webm",
+    "loopStart": 18.403,
+    "loopEnd": 107.562,
+    "gain": 0.93
+   },
+   "think": {
+    "file": "games/colormatch/think-bass-meant-jazz.webm",
+    "loopStart": 30.732,
+    "loopEnd": 119.765,
+    "gain": 0.63
+   },
+   "finale": {
+    "file": "games/colormatch/finale-alls-fair-in-love.webm",
+    "loopStart": 6.045,
+    "loopEnd": 105.343,
+    "gain": 0.54
+   }
+  },
   "debate": {
    "title": {
     "file": "games/debate/the-diplomat.ogg"
@@ -196,6 +231,41 @@
    },
    "finale": {
     "file": "games/ducks/finale-beary-fishy.ogg"
+   }
+  },
+  "emoji": {
+   "title": {
+    "file": "games/emoji/title-funshine.webm",
+    "loopStart": 20.821,
+    "loopEnd": 100.821,
+    "gain": 0.59
+   },
+   "lobby": {
+    "file": "games/emoji/title-funshine.webm",
+    "loopStart": 20.821,
+    "loopEnd": 100.821,
+    "gain": 0.59
+   },
+   "intro": {
+    "file": "games/emoji/title-funshine.webm",
+    "loopStart": 20.821,
+    "loopEnd": 100.821,
+    "gain": 0.59
+   },
+   "play": {
+    "file": "games/emoji/play-screen-saver.webm",
+    "loopStart": 12.955,
+    "loopEnd": 93.226
+   },
+   "think": {
+    "file": "games/emoji/think-silly-boy.webm",
+    "loopStart": 24.152,
+    "loopEnd": 79.018
+   },
+   "finale": {
+    "file": "games/emoji/finale-going-bananas.webm",
+    "loopEnd": 137.301,
+    "gain": 0.57
    }
   },
   "escape": {
@@ -279,6 +349,40 @@
    },
    "finale": {
     "file": "games/kingdoms/finale-victory.ogg"
+   }
+  },
+  "letters": {
+   "title": {
+    "file": "games/letters/title-happy-whistling-ukulele.webm",
+    "loopStart": 38.386,
+    "loopEnd": 97.493
+   },
+   "lobby": {
+    "file": "games/letters/title-happy-whistling-ukulele.webm",
+    "loopStart": 38.386,
+    "loopEnd": 97.493
+   },
+   "intro": {
+    "file": "games/letters/title-happy-whistling-ukulele.webm",
+    "loopStart": 38.386,
+    "loopEnd": 97.493
+   },
+   "finale": {
+    "file": "games/letters/title-happy-whistling-ukulele.webm",
+    "loopStart": 38.386,
+    "loopEnd": 97.493
+   },
+   "think": {
+    "file": "games/letters/think-busybody.webm",
+    "loopStart": 12.287,
+    "loopEnd": 81.621,
+    "gain": 0.95
+   },
+   "play": {
+    "file": "games/letters/play-managing-mischief.webm",
+    "loopStart": 78.761,
+    "loopEnd": 150.784,
+    "gain": 0.97
    }
   },
   "likely": {
@@ -445,6 +549,46 @@
     "gain": 0.9
    }
   },
+  "quickdraw": {
+   "title": {
+    "file": "games/quickdraw/title-sun-up-gunned-down.webm",
+    "loopEnd": 83.925,
+    "gain": 0.82
+   },
+   "lobby": {
+    "file": "games/quickdraw/title-sun-up-gunned-down.webm",
+    "loopEnd": 83.925,
+    "gain": 0.82
+   },
+   "intro": {
+    "file": "games/quickdraw/title-sun-up-gunned-down.webm",
+    "loopEnd": 83.925,
+    "gain": 0.82
+   },
+   "play": {
+    "file": "games/quickdraw/title-sun-up-gunned-down.webm",
+    "loopEnd": 83.925,
+    "gain": 0.82
+   },
+   "think": {
+    "file": "games/quickdraw/think-hillbilly-swing.webm",
+    "loopStart": 18.001,
+    "loopEnd": 97.45,
+    "gain": 0.65
+   },
+   "race": {
+    "file": "games/quickdraw/race-murder-on-the-bayou.webm",
+    "loopStart": 34.932,
+    "loopEnd": 99.797,
+    "gain": 0.53
+   },
+   "finale": {
+    "file": "games/quickdraw/finale-del-rio-bravo.webm",
+    "loopStart": 4.613,
+    "loopEnd": 70.613,
+    "gain": 0.74
+   }
+  },
   "sketch": {
    "title": {
     "file": "games/sketch/childrens-march.ogg"
@@ -546,6 +690,39 @@
     "file": "games/summon/a-legend-will-rise.ogg",
     "loopStart": 2,
     "loopEnd": 57.19
+   }
+  },
+  "trivia": {
+   "title": {
+    "file": "games/trivia/title-groovin.webm",
+    "loopStart": 20.024,
+    "loopEnd": 84.01
+   },
+   "lobby": {
+    "file": "games/trivia/title-groovin.webm",
+    "loopStart": 20.024,
+    "loopEnd": 84.01
+   },
+   "intro": {
+    "file": "games/trivia/title-groovin.webm",
+    "loopStart": 20.024,
+    "loopEnd": 84.01
+   },
+   "think": {
+    "file": "games/trivia/think-funky-energy-loop.webm",
+    "loopStart": 50.849,
+    "loopEnd": 117.632
+   },
+   "play": {
+    "file": "games/trivia/think-funky-energy-loop.webm",
+    "loopStart": 50.849,
+    "loopEnd": 117.632
+   },
+   "finale": {
+    "file": "games/trivia/finale-funkeriffic.webm",
+    "loopStart": 38.137,
+    "loopEnd": 106.709,
+    "gain": 0.86
    }
   },
   "truths": {

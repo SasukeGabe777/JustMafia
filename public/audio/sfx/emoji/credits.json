@@ -1,0 +1,34 @@
+[
+ {
+  "file": "emoji/bubble.webm",
+  "title": "Plop!",
+  "author": "Breviceps",
+  "source": "https://freesound.org/s/447910/",
+  "license": "CC0 1.0",
+  "note": "levelled and re-encoded (Opus)"
+ },
+ {
+  "file": "emoji/cheer.webm",
+  "title": "Crowd.Yay.Applause.25ppl.Short.wav",
+  "author": "jessepash",
+  "source": "https://freesound.org/s/139972/",
+  "license": "CC0 1.0",
+  "note": "trimmed, levelled and re-encoded (Opus)"
+ },
+ {
+  "file": "emoji/aww.webm",
+  "title": "aww.wav",
+  "author": "phmiller42",
+  "source": "https://freesound.org/s/124996/",
+  "license": "CC0 1.0",
+  "note": "levelled and re-encoded (Opus)"
+ },
+ {
+  "file": "emoji/applause.webm",
+  "title": "smallcrowd.wav",
+  "author": "moxobna",
+  "source": "https://freesound.org/s/32260/",
+  "license": "CC0 1.0",
+  "note": "trimmed, levelled and re-encoded (Opus)"
+ }
+]

@@ -72,7 +72,7 @@
       boo: { bpm: 110, tracks: { l: { type: 'lead', wave: 'square', cut: 1500 } }, parts: { l: 'g4 - f#4 - f4 - - -' } },
       win: { bpm: 128, tracks: { l: { type: 'lead', wave: 'square', uni: true, cut: 3000 }, k: { type: 'fmkeys', mode: 'chord', center: 68, n: 4 }, d: { type: 'drums' } }, chords: 'A B | E', bars: 2, parts: { l: 'b4 e5 . g#5 . b5 . e6 | - - - - - - - -', k: 'x.x.x.x.x.x.x.x.|X---------------', d: { c: 'x.x.x.x.xxxxxxxx|x...............', y: '................|x...............' } } },
     },
-    fx: { correct: 'correct', first: 'first', emoji: 'pop', boo: 'boo', win: 'win' },
+    fx: { correct: 'correct', emoji: 'pop', win: 'win' }, // first / boo: recorded crowd (onFx in games/emoji.js), these stingers are the fallback
     sfx: { win: 'win', drum: 'roll' },
   };
 })();

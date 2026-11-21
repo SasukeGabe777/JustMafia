@@ -1,0 +1,76 @@
+{
+ "cues": {
+  "title": {
+   "file": "games/quickdraw/title-sun-up-gunned-down.webm",
+   "loopEnd": 83.925,
+   "gain": 0.82
+  },
+  "lobby": {
+   "file": "games/quickdraw/title-sun-up-gunned-down.webm",
+   "loopEnd": 83.925,
+   "gain": 0.82
+  },
+  "intro": {
+   "file": "games/quickdraw/title-sun-up-gunned-down.webm",
+   "loopEnd": 83.925,
+   "gain": 0.82
+  },
+  "play": {
+   "file": "games/quickdraw/title-sun-up-gunned-down.webm",
+   "loopEnd": 83.925,
+   "gain": 0.82
+  },
+  "think": {
+   "file": "games/quickdraw/think-hillbilly-swing.webm",
+   "loopStart": 18.001,
+   "loopEnd": 97.45,
+   "gain": 0.65
+  },
+  "race": {
+   "file": "games/quickdraw/race-murder-on-the-bayou.webm",
+   "loopStart": 34.932,
+   "loopEnd": 99.797,
+   "gain": 0.53
+  },
+  "finale": {
+   "file": "games/quickdraw/finale-del-rio-bravo.webm",
+   "loopStart": 4.613,
+   "loopEnd": 70.613,
+   "gain": 0.74
+  }
+ },
+ "credits": [
+  {
+   "file": "games/quickdraw/title-sun-up-gunned-down.webm",
+   "title": "Sun Up Gunned Down",
+   "author": "Bryan Teoh",
+   "source": "https://freepd.com/misc.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/misc.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for title, lobby, intro, play"
+  },
+  {
+   "file": "games/quickdraw/think-hillbilly-swing.webm",
+   "title": "Hillbilly Swing",
+   "author": "Kevin MacLeod",
+   "source": "https://freepd.com/world.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/world.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for think"
+  },
+  {
+   "file": "games/quickdraw/race-murder-on-the-bayou.webm",
+   "title": "Murder On The Bayou",
+   "author": "Bryan Teoh",
+   "source": "https://freepd.com/misc.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/misc.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for race"
+  },
+  {
+   "file": "games/quickdraw/finale-del-rio-bravo.webm",
+   "title": "Del Rio Bravo",
+   "author": "Kevin MacLeod",
+   "source": "https://freepd.com/world.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/world.php)",
+   "license": "CC0 1.0",
+   "note": "trimmed to a loop and re-encoded (Opus); used for finale"
+  }
+ ]
+}

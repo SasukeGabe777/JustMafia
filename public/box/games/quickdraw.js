@@ -33,6 +33,10 @@
   const ord = (n) => n + (n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th');
   const medal = (r) => ['🥇', '🥈', '🥉'][r] || `#${r + 1}`;
   const sting = (name, fb) => { let ok = false; try { ok = !!(BOX.audio && BOX.audio.stinger(name, 'quickdraw')); } catch { ok = false; } if (!ok && fb) BOX.sfx(fb); };
+  // Small recorded Old West touches on the TV (public/audio/sfx/quickdraw, credits there), synced to the
+  // canvas: spurs and a desert gust for the ten paces, a black-powder shot on DRAW!, a rooster and
+  // clucks for the Chicken Run, hooves and a whinny for the Stampede. -> false when it can't play.
+  const clip = (f, o) => { try { return !!(BOX.audio && BOX.audio.clip && BOX.audio.clip('quickdraw/' + f + '.webm', o)); } catch { return false; } };
 
   // ---------------------------------------------------------------- clock sync
   const SYNC = { off: null, rtt: Infinity, busy: false, at: 0 };
@@ -272,7 +276,8 @@
     if (now < arm) ART.text(g, 'Ten paces…', W / 2, H * 0.33, 44 * S, '#ffe7a8', { font: '"Special Elite", monospace', stroke: '#2a1206', lw: 6 * S });
     if (steady) { const p = 1 + 0.04 * Math.sin(now / 120); g.save(); g.translate(W / 2, H * 0.3); g.scale(p, p); ART.text(g, 'STEADY…', 0, 0, 110 * S, '#ffd2a0', { font: '"Abril Fatface", serif', stroke: '#2a0a04', lw: 14 * S }); g.restore(); ART.text(g, 'don’t touch that pad', W / 2, H * 0.42, 34 * S, '#ffe7c8', { font: '"Special Elite", monospace', stroke: '#2a0a04', lw: 5 * S }); }
     if (now >= go) {
-      once('go' + c.id + ':' + (c.heat || c.shot), () => sting('draw', 'revolver'));
+      // the church bell rings DRAW! and the muzzle flash fires: a recorded black-powder shot (the synth one is the fallback)
+      once('go' + c.id + ':' + (c.heat || c.shot), () => { if (clip('gunshot', { vol: 0.26, jitter: 0.06 })) sting('drawBell'); else sting('draw', 'revolver'); });
       const f = 1 - clamp((now - go) / 300); if (f > 0) { g.fillStyle = `rgba(255,250,220,${f * 0.85})`; g.fillRect(0, 0, W, H); }
       if (!shot) bigWord(g, W, H, 'DRAW!', (now - go) / 260, '#ffd23f', S);
       else ART.text(g, 'BANG!', W / 2, H * 0.2, 100 * S, '#ffd23f', { font: '"Abril Fatface", serif', stroke: '#3a1206', lw: 14 * S });
@@ -330,7 +335,7 @@
       const place = fins.indexOf(r.id); if (place >= 0) ART.text(g, medal(place), x1 + lh * 0.5, y, lh * 0.5, '#fff');
     });
     if (!started) { const n = Math.ceil((c.goAt - ts) / 1000); once('cd' + c.id + n, () => n <= 3 && BOX.sfx('tick')); g.fillStyle = 'rgba(30,10,0,0.35)'; g.fillRect(0, 0, W, H); ART.text(g, n <= 3 ? String(n) : 'SADDLE UP!', W / 2, H * 0.45, (n <= 3 ? 220 : 110) * S, '#ffd23f', { font: '"Abril Fatface", serif', stroke: '#3a1206', lw: 16 * S }); }
-    else if (ts - c.goAt < 700) { once('gogo' + c.id, () => sting('gallop', 'start')); bigWord(g, W, H, 'GO!', (ts - c.goAt) / 250, '#ffd23f', S); }
+    else if (ts - c.goAt < 700) { once('gogo' + c.id, () => { if (!clip('gallop', { vol: 0.2 })) sting('gallop', 'start'); }); bigWord(g, W, H, 'GO!', (ts - c.goAt) / 250, '#ffd23f', S); }
     ART.text(g, '📳 SHAKE YOUR PHONE!', W / 2, H * 0.1, 56 * S, '#fff4d6', { font: '"Abril Fatface", serif', stroke: '#3a1206', lw: 9 * S });
   }
   function drawDrum(g, W, H, c, now, t, S) {
@@ -354,7 +359,7 @@
         const k = clamp((u - 0.2 - i * 0.12) / 0.25); if (k <= 0) continue;
         const x = W / 2 + (i - (N - 1) / 2) * per, y = H * 0.09;
         ART.emoji(g, '🐔', x, y - (1 - back(k)) * 40, per * 0.85 * back(k));
-        if (k >= 1 && i === Math.min(N - 1, Math.floor((u - 0.2) / 0.12))) once('cl' + c.id + i, () => BOX.sfx('pop'));
+        if (k >= 1 && i === Math.min(N - 1, Math.floor((u - 0.2) / 0.12))) once('cl' + c.id + i, () => { if (!clip(i % 2 ? 'cluck2' : 'cluck1', { vol: 0.11, rate: 1 + (i % 3) * 0.05, pan: Math.max(-0.6, Math.min(0.6, (i - (N - 1) / 2) / Math.max(1, N) * 1.4)) })) BOX.sfx('pop'); }); // each tallied chicken clucks
       }
     } else {
       // the winner of this challenge stands proud on the left (a silhouette when they have no character)
@@ -467,7 +472,7 @@
       set.innerHTML = Lb.fields.map((f) => `<div class="qdl-row"><div class="qdl-lab">${SET_ICON[f.key] || '⚙️'} ${esc(f.label)}</div><div class="qdl-chips">${f.options.map((o) => `<button class="qdl-chip ${String(Lb.settings[f.key]) === String(o.value) ? 'on' : ''}" data-k="${esc(f.key)}" data-v="${esc(String(o.value))}">${esc(o.label)}</button>`).join('')}</div>
         <select class="qdl-hide" data-set="${esc(f.key)}" aria-label="${esc(f.label)}">${f.options.map((o) => `<option value="${esc(String(o.value))}" ${String(Lb.settings[f.key]) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></div>`).join('');
       for (const s of set.querySelectorAll('[data-set]')) s.onchange = () => LOBBY.set(s.dataset.set, s.value);
-      for (const b of set.querySelectorAll('[data-k]')) b.onclick = () => { const s = set.querySelector(`[data-set="${b.dataset.k}"]`); if (s) { s.value = b.dataset.v; s.onchange(); } for (const x of set.querySelectorAll(`[data-k="${b.dataset.k}"]`)) x.classList.toggle('on', x === b); BOX.sfx('click'); };
+      for (const b of set.querySelectorAll('[data-k]')) b.onclick = () => { const s = set.querySelector(`[data-set="${b.dataset.k}"]`); if (s) { s.value = b.dataset.v; s.onchange(); } for (const x of set.querySelectorAll(`[data-k="${b.dataset.k}"]`)) x.classList.toggle('on', x === b); if (!clip('cock', { vol: 0.22 })) BOX.sfx('click'); }; // a revolver hammer click
     }
     el.querySelector('#qdl-n').textContent = Lb.players.length ? `(${Lb.players.length})` : '';
     BOX.morph(el.querySelector('#roster'), Lb.players.map((p, i) => `<span class="chip ${p.online ? '' : 'off'} ${p.name === Lb.vip ? 'vip' : ''}" style="--c:${esc(p.color)};--r:${((i * 37) % 7) - 3}deg"><span class="av">${face(p, 34)}</span>${esc(p.name)}${p.name === Lb.vip ? ' 👑' : ''}</span>`).join('') || '<span class="qdl-empty">The saloon is empty… scan the poster to ride in! 🌵</span>');
@@ -694,7 +699,16 @@
       '🥁 Copycat: listen to the drum, then tap the same rhythm back.',
       'Points by rank every challenge (500 for 1st), a podium-streak bonus, double points in the Final Showdown. Most points wins!',
     ],
-    fx: { intro: 'whoosh', standoff: 'wind', false: 'boo', duelDone: 'chime', lantern: 'click', chickens: 'rooster', lockin: 'tick', stampede: 'drum', finish: 'pop', listen: 'tick', repeat: 'chime', result: 'reveal', win: 'win' },
+    // standoff, chickens and finish are recorded sounds in onFx (these synth sounds are the fallback)
+    fx: { intro: 'whoosh', false: 'boo', duelDone: 'chime', lantern: 'click', lockin: 'tick', stampede: 'drum', listen: 'tick', repeat: 'chime', result: 'reveal', win: 'win' },
+    onFx(f) {
+      if (f.kind === 'standoff') {
+        // the duellists walk their ten paces (ARM_MS 1.8 s): spurs, and a desert gust on the first one
+        const ok = clip('spurs', { vol: 0.2, delay: 0.05 }); if (f.heat === 1) clip('wind', { vol: 0.16 });
+        if (!ok) BOX.sfx('wind');
+      } else if (f.kind === 'chickens') { if (!clip('rooster', { vol: 0.2 })) BOX.sfx('rooster'); } // "Count the chickens…"
+      else if (f.kind === 'finish') { if (!clip('whinny', { vol: 0.2, gap: 1500 })) sting('good', 'pop'); } // a horse crosses the line
+    },
     music(s) {
       if (!s) return 'play';
       if (s.phase === 'over') return 'finale';

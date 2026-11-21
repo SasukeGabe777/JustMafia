@@ -105,8 +105,9 @@ Fill in Steamworks → your app → Store page. Assets (PNG or JPG; sizes as Ste
     Llama 3.2 3B, so the Llama 3.2 Community License also applies, commercial use allowed), using its
     built-in voices (no real person's voice is cloned); every clip is checked by speech recognition
     (faster-whisper) and the lines are the game's own text with no player names. Clips made from your own
-    recordings are voice-converted with Chatterbox (Resemble AI, MIT, inaudible Perth watermark). Any music that
-    was generated with AI tools; any AI-assisted art/text (the code was written with AI coding
+    recordings are voice-converted with Chatterbox (Resemble AI, MIT, inaudible Perth watermark). The music is
+    NOT AI-generated (recorded CC0/CC-BY tracks, see public/audio/CREDITS.md and ship that credits list); any
+    AI-assisted art/text (the code was written with AI coding
     assistants — Valve currently asks about content, not code *(check)*). Say what guardrails
     you used (you reviewed every line/clip).
   - **Live-generated** AI content: the optional "Natural live voice" runs Kokoro in the player's

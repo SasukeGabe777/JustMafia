@@ -94,6 +94,8 @@
     stingers: {
       // the DRAW! signal: a church bell clang and a gunshot echo down the street
       draw: (X) => { X.note('cbell', 'e6', 0, 1.4, 1); X.note('cbell', 'b5', 0, 1.4, 0.7); X.noise({ at: 0, dur: 0.28, f0: 2400, vol: 0.55 }); X.tone({ at: 0, dur: 0.35, f0: 90, f1: 38, vol: 0.5 }); X.noise({ at: 0.28, dur: 0.8, f0: 700, vol: 0.14 }); },
+      // just the bell: the TV fires a recorded gunshot over it (games/quickdraw.js)
+      drawBell: (X) => { X.note('cbell', 'e6', 0, 1.4, 0.8); X.note('cbell', 'b5', 0, 1.4, 0.55); },
       beat: (X) => { X.drum('k', 0, 1, 'world'); X.drum('t1', 0, 0.6); },
       gallop: { bpm: 160, tracks: { b: { type: 'brass', vol: 0.6 }, d: { type: 'drums', kit: 'std' } }, bars: 1, parts: { b: 'e5 e5 e5 a5 - - - -', d: { wb: gallop, k: 'x.......x.......' } } },
       bad: (X) => { X.tone({ dur: 0.7, f0: 700, f1: 160, wave: 'sawtooth', vol: 0.22, lp: 1600 }); X.drum('wb2', 0.7, 1); },
@@ -102,7 +104,7 @@
       reveal: { bpm: 110, gain: 1, tracks: { b: { type: 'brass', vol: 0.55 }, d: { type: 'drums', kit: 'orch' } }, bars: 1, parts: { b: 'a4+c#5+e5+a5 - - - - - - -', d: { k: 'x', y: 'x' } } },
       win: { bpm: 120, tracks: { b: { type: 'brass', vol: 0.6 }, w: { type: 'whistle', vol: 0.45 }, d: { type: 'drums', kit: 'orch' } }, bars: 2, parts: { b: 'a4+c#5+e5 . a4+c#5+e5 a4+d5+f#5 - - a4+c#5+e5 - | a4+c#5+e5+a5 - - - - - - -', w: 'e5 . e5 f#5 - - e5 - | a5 - - - - - - -', d: { s: 'x.x.x.....x.....', y: '................|x...............' } } },
     },
-    fx: { intro: 'round', result: 'reveal', win: 'win', false: 'bad', finish: 'good', duelDone: 'good' },
+    fx: { intro: 'round', result: 'reveal', win: 'win', false: 'bad', duelDone: 'good' }, // finish: a recorded whinny (onFx in games/quickdraw.js)
     sfx: {},
   };
 })();
