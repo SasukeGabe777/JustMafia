@@ -48,6 +48,11 @@
   `nameless()`, `factSpoken()`, `Speech.say(..., { speak })`); with "Natural live voice" on, the full line is
   spoken live instead. Static in-game host lines (`line: '…'` in a game's TV code) are pre-voiced too.
 - **Script.** How-to steps are spoken as title + rule; the phone hint stays on screen (shorter, more natural).
+- **Result:** 2,093 clips, 134.7 min of speech, 25.1 MB (24 kbps Opus): 634 JustGameBox lines and 1,459 JustMafia
+  narrator lines (4 world voices). Transcribe-back mean WER 0.9%; 14 clips above 12%, nearly all invented role names the
+  recognizer mishears ("Frost Writer" heard as "Frost Rider"). Rendered in ~3.3 h on the RTX 3060 (x0.46 real time).
+  Still the browser voice: a Judge's typed lines, the appended story sentence, in-game reactions built at run time
+  (names, scores; the optional live Kokoro voice can read those).
 - Tests: `tools/test-narration-voice.js` (keys match, spoken forms clean and name-free, every narrator line
   has a clip once rendered, name-free leads); `test-voice-timing.js`.
 
