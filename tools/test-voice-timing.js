@@ -59,7 +59,8 @@ test('intro schedule: every narrated shot, roll call, outro and how-to step outl
         assert.equal(c.openMs, c.openShots.reduce((a, x) => a + x, 0), d.key + ': opening = its shots');
         const roll = N.line(say('roll'), spec).ms, play = N.line(say('play'), spec).ms;
         assert(c.rollMs >= roll + MIN_GAP, `${d.key}: roll call ${c.rollMs} < clip ${roll}`);
-        if (more) { const m = N.line(say('more', { n: more }), spec).ms; assert(c.moreAt >= roll + MIN_GAP && c.rollMs >= c.moreAt + m + MIN_GAP, d.key + ': "…and N more" fits'); }
+        // The voice says the name-free form ('…and more!', show.js nameless()); the count is on screen.
+        if (more) { const m = N.line(N.engine().nameless([].concat(N.info(d).L.more || [])[0] || ''), spec).ms; assert(c.moreAt >= roll + MIN_GAP && c.rollMs >= c.moreAt + m + MIN_GAP, d.key + ': "…and N more" fits'); }
         assert(c.outroMs >= play + MIN_GAP, `${d.key}: outro ${c.outroMs} < clip ${play}`);
       }
     } else {

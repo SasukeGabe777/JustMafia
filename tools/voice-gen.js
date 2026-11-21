@@ -390,7 +390,7 @@ async function main() {
       }
       const spec = useCB
         ? { ref_files, ref_sources, jobs: todo.map((j) => ({ id: j.h, text: j.say || j.t, voice: vkey(j), pri: PRI[j.from] || 0, ...(RECS && REC[j.h] ? { source: REC[j.h] } : {}), ...(PRESETS[j.cb] || PRESETS.warm) })) }
-        : { jobs: todo.map((j) => ({ id: j.h, text: j.say || j.t, voice: j.o || 'leah', energetic: ['hype', 'warm'].includes(j.cb), pause: ['hype', 'warm'].includes(j.cb) ? 260 : 450, pri: PRI[j.from] || 0 })) };
+        : { jobs: todo.map((j) => ({ id: j.h, text: j.say || j.t, voice: j.o || 'leah', energetic: ['hype', 'warm'].includes(j.cb) && !/^(step|done|story|role)/.test(j.from || ''), pause: ['hype', 'warm'].includes(j.cb) ? 260 : 450, pri: PRI[j.from] || 0 })) };
       if (RECS) forget(new Set(todo.map((j) => j.h))); // a new take replaces any cached render
       const jf = path.join(CACHE, 'jobs.json');
       fs.writeFileSync(jf, JSON.stringify(spec));

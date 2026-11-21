@@ -163,7 +163,7 @@ def render_one(model, wm, j):
     for t in range(MAX_TRIES):
         C.wait_for_room()
         try:
-            x = model.say(j['voice'], text, 1234 + t * 7919 + int(j.get('seed', 0)), max_s=min(60, 4 + len(text) / 9))
+            x = model.say(j['voice'], text, 1234 + t * 7919 + int(j.get('seed', 0)) + int(os.environ.get('VOICE_SEED', '0')), max_s=min(60, 4 + len(text) / 9))
         except OSError as e:  # llama.cpp error: try another seed
             log('  llama.cpp error, retrying: ' + str(e)[:80])
             x = None
@@ -180,7 +180,9 @@ def render_one(model, wm, j):
         r = {'id': j['id'], 'ms': int(len(y) / SR * 1000), 'wer': round(w, 3), 'heard': heard, 'silence_ms': sil, 'long': too_long, 'bad': bad, **m, 'tries': t + 1, 'score': round(score, 3)}
         if best is None or score < best[0]['score']:
             best = (r, y)
-        if score <= C.WER_OK:
+        # Wrong words / glitches get up to MAX_TRIES; a delivery-only flag (quiet, breathy, flat) gets one
+        # re-roll (loudness is normalized anyway, and some voices sit near the limits on every seed).
+        if score <= C.WER_OK or (t >= 1 and best[0]['wer'] <= C.WER_OK and best[0]['silence_ms'] <= C.SIL_MAX_MS and not best[0]['long']):
             break
         torch.cuda.empty_cache()
     return best
