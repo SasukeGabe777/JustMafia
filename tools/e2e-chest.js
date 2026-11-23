@@ -20,6 +20,8 @@ const ok = (name) => { passed++; console.log(`  ✓ ${name}`); };
 const snap = async (p, name) => { const { data } = await p.send('Page.captureScreenshot', { format: 'png' }); require('node:fs').writeFileSync(path.join(SHOTS, name + '.png'), Buffer.from(data, 'base64')); };
 // Headless Chrome only animates the front tab smoothly: bring the one being checked forward.
 const front = (p) => p.send('Page.bringToFront').catch(() => {});
+// Page loads get 30 s (busy machines).
+const nav = async (p, url) => { await p.send('Page.navigate', { url }); await wait(400); await p.until('document.readyState === "complete"', 'load ' + url, 30000); };
 const emit = (s, ev, msg) => new Promise((res) => s.emit(ev, msg, (r) => res(r)));
 
 async function tvPage(browser, q) {
@@ -33,15 +35,15 @@ async function tvPage(browser, q) {
 async function phonePage(browser, code, name, creds) {
   const ph = await browser.page(); PAGES.push(ph);
   await ph.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
-  await ph.go(`${URL}/box/play`); await ph.eval(`localStorage.setItem('box.tour', '1'); true`); // (no first-join tour over the screenshots)
+  await nav(ph, `${URL}/box/play`); await ph.eval(`localStorage.setItem('box.tour', '1'); true`); // (no first-join tour over the screenshots)
   if (creds) await ph.eval(`localStorage.setItem('box.profile', ${JSON.stringify(JSON.stringify(creds.auth))}); localStorage.setItem('mt.profile', ${JSON.stringify(JSON.stringify(creds.wallet))}); true`);
-  await ph.go(`${URL}/j/${code}`);
+  await nav(ph, `${URL}/j/${code}`);
   await ph.until(`!document.querySelector('#join').hidden && document.querySelector('#j-code').value === '${code}'`, 'join screen');
   await ph.eval(`document.querySelector('#j-name').value = ${JSON.stringify(name)}`); await ph.click('#j-go');
   await ph.until(`!document.querySelector('#game').hidden`, name + ' joined');
   return ph;
 }
-const join = (ph, code, name) => ph.go(`${URL}/j/${code}`).then(() => ph.until(`!document.querySelector('#join').hidden || !document.querySelector('#game').hidden`, 'page')).then(async () => {
+const join = (ph, code, name) => nav(ph, `${URL}/j/${code}`).then(() => ph.until(`!document.querySelector('#join').hidden || !document.querySelector('#game').hidden`, 'page')).then(async () => {
   if (await ph.eval(`!document.querySelector('#join').hidden`)) { await ph.eval(`document.querySelector('#j-name').value = ${JSON.stringify(name)}`); await ph.click('#j-go'); }
   await ph.until(`!document.querySelector('#game').hidden`, name + ' joined');
 });
@@ -74,10 +76,10 @@ async function finish(dev, room) {
   await A.tv.click('#start'); await wait(600);
   await finish(dev, { code: A.code, hostKey: A.hostKey });
   await A.tv.until(`!!document.querySelector('.jgc-ov.jgc-tv') && document.querySelector('.jgc-ov.jgc-tv').style.visibility !== 'hidden'`, 'the TV chest row', 9000);
-  await wait(1300); await snap(A.tv, 'chest-tv-opening'); await wait(1500); await snap(A.tv, 'chest-tv');
   assert.equal(await A.tv.eval(`document.querySelectorAll('.jgc-cell').length`), 2, 'a chest for each person, none for bots');
   assert(await A.tv.eval(`/Ana/.test(document.querySelector('.jgc-row').textContent) && /Bo/.test(document.querySelector('.jgc-row').textContent)`));
   assert(await A.tv.eval(`!!document.querySelector('.jgc-guestb')`), 'the guest’s chest says to save it');
+  await wait(1300); await snap(A.tv, 'chest-tv-opening'); await wait(1500); await snap(A.tv, 'chest-tv');
   await ana.until(`!!document.querySelector('.jgc-ov.jgc-phone') && document.querySelector('.jgc-ov.jgc-phone').style.visibility !== 'hidden'`, 'Ana’s chest', 6000);
   await clearPhone(ana); await clearPhone(bo);
   await front(ana); await wait(600); await snap(ana, 'chest-phone-open');
@@ -103,7 +105,7 @@ async function finish(dev, room) {
   await bo.until(`!!document.querySelector('#h-jg') && !document.querySelector('#h-jg').classList.contains('unsaved') && Number(document.querySelector('#h-jg b').textContent) > 0`, 'Bo’s saved gold in his header', 8000);
   ok('the header balance ticks up after the chest; a guest who saves keeps the gold of the game he just played');
   // The main menu shows the signed-in host's balance.
-  const hub = ana; await hub.go(`${URL}/`); await hub.until(`!!document.querySelector('#hub-jg')`, 'hub balance');
+  const hub = ana; await nav(hub, `${URL}/`); await hub.until(`!!document.querySelector('#hub-jg')`, 'hub balance');
   await hub.until(`document.querySelector('#hub-jg [data-jg]').textContent === '${status.gold}'`, 'hub balance number', 4000);
   await snap(hub, 'hub-balance-phone');
   ok('the main menu shows the JustGold of the account on this device');
