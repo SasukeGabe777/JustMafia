@@ -150,14 +150,14 @@ test('Ducks: levels grow with XP; scores are capped by how long you actually pla
   assert.equal(sc.score, Math.floor(5 * D.SCORE_RATE) + 1, 'a 5-second run can’t score 999');
   assert.equal(r.game.ducks.get(a.id).energy, 100 - D.TRAIN_COST);
 });
-test('Ducks: food, naps and hats cost coins; you can’t train during a race', () => {
+test('Ducks: food and hats cost coins, tired ducks nap by themselves; you can’t train during a race', () => {
   const { r, clock } = room('ducks', 0, { startCoins: 60, raceEvery: 60 }, 2);
   const a = human(r, 'Ann'); go(r);
   const d = r.game.ducks.get(a.id); d.energy = 10; d.coins = 50;
   assert(r.act(a, { op: 'feed', item: 'corn' }).ok); assert.equal(d.coins, 38); assert.equal(d.energy, 55);
   assert(r.act(a, { op: 'hat', hat: 'crown' }).ok); assert.equal(d.hat, 'crown'); assert.equal(d.coins, 23);
   assert(r.act(a, { op: 'style', name: 'Sir Quacks', color: 'mallard' }).ok); assert.equal(d.name, 'Sir Quacks');
-  assert(r.act(a, { op: 'nap' }).ok); assert.equal(r.act(a, { op: 'train', stat: 'run' }).ok, false, 'napping');
+  assert.equal(r.act(a, { op: 'nap' }).ok, false, 'no nap button: naps happen by themselves'); d.energy = 4; assert(r.game.autoNap(a.id, d)); assert.equal(r.act(a, { op: 'train', stat: 'run' }).ok, false, 'napping');
   while (r.game.phase === 'training') clock.step();
   assert.equal(r.game.phase, 'race');
   assert.equal(r.act(a, { op: 'train', stat: 'run' }).ok, false);
