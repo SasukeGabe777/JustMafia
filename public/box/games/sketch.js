@@ -641,6 +641,9 @@
     el.querySelector('#roster').classList.toggle('many', n > 14);
   }
 
+  // The sketchpad toolkit, shared with JustPitch (its saboteurs draw slides with it: public/box/games/pitch.js).
+  BOX.sketchKit = { INK, PAPER, NAMES, SWATCHES, SIZES, ERASER, MAX_FILLS, colorOf, floodFill, paint, replay, fit, countPts, TOOL_ART };
+
   BOX.games.sketch = {
     // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
     music: (s) => ({ write: 'think', step: 'think', pass: 'play', show: 'reveal', final: 'reveal', vote: 'play', results: 'reveal', over: 'finale' }[s.phase] || 'play'),

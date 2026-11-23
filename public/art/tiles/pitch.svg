@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+  <!-- JustPitch: a keynote stage. A projection screen with a scribbled (sabotaged) product slide,
+       a walnut podium with a mic, a coral and a teal spotlight, and a cue card fluttering in. -->
+  <defs>
+    <linearGradient id="pitch-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b0e2c"/><stop offset="0.65" stop-color="#1d2560"/><stop offset="1" stop-color="#0a0b22"/></linearGradient>
+    <linearGradient id="pitch-beam1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5a3c" stop-opacity="0.75"/><stop offset="1" stop-color="#ff5a3c" stop-opacity="0"/></linearGradient>
+    <linearGradient id="pitch-beam2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#18d4c8" stop-opacity="0.7"/><stop offset="1" stop-color="#18d4c8" stop-opacity="0"/></linearGradient>
+    <linearGradient id="pitch-wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a5530"/><stop offset="1" stop-color="#3d1f0e"/></linearGradient>
+    <radialGradient id="pitch-glow" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="#8fa2ff" stop-opacity="0.45"/><stop offset="1" stop-color="#8fa2ff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#pitch-bg)"/>
+  <path d="M60 0 L72 0 L150 240 L-20 240 Z" fill="url(#pitch-beam1)"/>
+  <path d="M328 0 L340 0 L420 240 L250 240 Z" fill="url(#pitch-beam2)"/>
+  <!-- curtains -->
+  <path d="M0 0 H46 C40 80 44 150 38 200 H0 Z" fill="#7a1230" stroke="#1a0610" stroke-width="3"/>
+  <path d="M14 0 V196 M28 0 V198" stroke="#9c1c40" stroke-width="5"/>
+  <path d="M400 0 H354 C360 80 356 150 362 200 H400 Z" fill="#7a1230" stroke="#1a0610" stroke-width="3"/>
+  <path d="M386 0 V196 M372 0 V198" stroke="#9c1c40" stroke-width="5"/>
+  <!-- floor -->
+  <rect y="196" width="400" height="44" fill="#2e1834"/><rect y="194" width="400" height="4" fill="#ffc83d" opacity="0.6"/>
+  <ellipse cx="200" cy="110" rx="170" ry="100" fill="url(#pitch-glow)"/>
+  <!-- the screen -->
+  <rect x="96" y="44" width="208" height="122" rx="6" fill="#1a1d33" stroke="#0b0d24" stroke-width="5"/>
+  <rect x="104" y="52" width="192" height="106" fill="#f4f6ff"/>
+  <rect x="104" y="52" width="192" height="20" fill="#1d2560"/>
+  <circle cx="116" cy="62" r="6" fill="#ff5a3c"/>
+  <rect x="128" y="58" width="64" height="8" rx="3" fill="#fff" opacity="0.9"/>
+  <!-- the product: a winged toaster -->
+  <path d="M124 104 H168 V140 H124 Z" fill="#fff" stroke="#1d1b26" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M132 104 V94 H140 V104 M150 104 V94 H158 V104" fill="none" stroke="#e63946" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M124 112 L108 100 L112 124 L124 124 M168 112 L184 100 L180 124 L168 124" fill="#bfe0ff" stroke="#2f7bff" stroke-width="3.5" stroke-linejoin="round"/>
+  <!-- a sales graph going wild -->
+  <path d="M206 146 L222 128 L234 136 L250 106 L262 116 L284 72" fill="none" stroke="#2bb673" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M272 72 L286 70 L284 84" fill="none" stroke="#2bb673" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- sabotage scribble -->
+  <path d="M196 92 C206 80 218 98 228 86 C236 78 244 96 252 84" fill="none" stroke="#8e44ff" stroke-width="4" stroke-linecap="round"/>
+  <!-- the podium and mic -->
+  <path d="M150 176 H250 L242 228 H158 Z" fill="url(#pitch-wood)" stroke="#1a0b04" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="142" y="168" width="116" height="12" rx="5" fill="#ffc83d" stroke="#1a0b04" stroke-width="3"/>
+  <circle cx="200" cy="204" r="12" fill="#14163a" stroke="#ffc83d" stroke-width="3"/>
+  <path d="M206 168 C212 152 204 142 196 136" fill="none" stroke="#c4ccd2" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="192" cy="130" rx="7" ry="10" transform="rotate(-25 192 130)" fill="#d8dee9" stroke="#1a1f3a" stroke-width="3"/>
+  <!-- a cue card drifting in from backstage -->
+  <g transform="rotate(-12 300 176)">
+    <rect x="262" y="160" width="74" height="40" rx="4" fill="#fff7c2" stroke="#0b0d24" stroke-width="3"/>
+    <path d="M272 172 H324 M272 182 H314 M272 191 H304" stroke="#e63946" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+  <g transform="rotate(10 104 182)">
+    <rect x="74" y="168" width="58" height="32" rx="4" fill="#d8f7ff" stroke="#0b0d24" stroke-width="3"/>
+    <path d="M82 178 H122 M82 187 H112" stroke="#127a8a" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+</svg>

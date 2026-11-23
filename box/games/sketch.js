@@ -614,5 +614,6 @@ module.exports = {
   partyFit,
   key: 'sketch', name: 'JustSketch Relay', min: 3, best: [4, 10], fields, defaults,
   create: (room, settings) => new Sketch(room, settings),
+  cleanStrokes, // JustPitch's saboteurs draw slides on the same sketchpad (box/games/pitch.js)
   _test: { pensOf, similarity, matches, cleanStrokes, PROMPTS, PACKS, NOT_FAMILY, MAX_POINTS, MAX_STROKES, MAX_FILLS, REACTS },
 };

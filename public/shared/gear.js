@@ -127,6 +127,10 @@
     { game: 'snap', slot: 'hat', label: 'Photographer hat', spot: 'head', default: OWN('hat') },
     { game: 'snap', slot: 'pass', label: 'Press pass', spot: 'chest', default: OWN('press pass') },
     { game: 'snap', slot: 'shades', label: 'Shades', spot: 'face', default: OWN('shades') },
+    { game: 'pitch', slot: 'mic', label: 'Microphone', spot: 'hand', default: OWN('mic') },
+    { game: 'pitch', slot: 'tie', label: 'Tie', spot: 'chest', default: OWN('tie') },
+    { game: 'pitch', slot: 'hat', label: 'Stage hat', spot: 'head', default: OWN('hat') },
+    { game: 'pitch', slot: 'shades', label: 'Shades', spot: 'face', default: OWN('shades') },
   ];
 
   // [game, slot, value, name, cost, icon, paint, desc]
@@ -381,6 +385,15 @@
     ['snap', 'pass', 'press', 'Press Pass', 50, '🪪', { shape: 'pressPass', a: '#ff4f6d', b: '#1d1d24' }, 'SNAP! magazine, staff photographer.'],
     ['snap', 'pass', 'vip', 'All-Access Pass', 140, '🎟️', { shape: 'pressPass', a: '#ffcc33', b: '#7b3fb5' }, 'Backstage, front row, the editor’s office.'],
     ['snap', 'shades', 'star', 'Red-Carpet Shades', 80, '🕶️', { shape: 'shades', a: '#101014', b: '#ffcc33', d: 'aviator' }, 'The flashes are blinding out there.'],
+    // JustPitch: the keynote look.
+    ['pitch', 'mic', 'keynote', 'Keynote Mic', 70, '🎤', { shape: 'mic', a: '#1d2560', b: '#d8dee9' }, 'For pitches that change the world (or at least the room).'],
+    ['pitch', 'mic', 'gold', 'Golden Mic', 200, '🌟', { shape: 'mic', a: '#ffc83d', b: '#fff3c4', glow: true }, 'Investors can’t say no to a golden mic.'],
+    ['pitch', 'tie', 'power', 'Pitch-Deck Tie', 50, '👔', { shape: 'tie', a: '#ff5a3c', b: '#a82a14' }, 'Bold, confident, slightly too long.'],
+    ['pitch', 'tie', 'teal', 'Late-Night Tie', 90, '📺', { shape: 'tie', a: '#18d4c8', b: '#0a5e5a' }, 'Operators are standing by.'],
+    ['pitch', 'hat', 'showman', 'Showman’s Top Hat', 110, '🎩', { shape: 'tophat', a: '#14163a', b: '#ff5a3c' }, 'Ladies and gentlemen, the product!'],
+    ['pitch', 'hat', 'studio', 'Studio Headphones', 90, '🎧', { shape: 'headphones', a: '#18d4c8', b: '#14163a' }, 'Hear every cue from backstage.'],
+    ['pitch', 'shades', 'visionary', 'Visionary Shades', 80, '🕶️', { shape: 'shades', a: '#14163a', b: '#18d4c8' }, 'You can see the future. It has slides.'],
+    ['pitch', 'shades', 'spot', 'Spotlight Shades', 120, '😎', { shape: 'shades', a: '#ff5a3c', b: '#ffc83d', d: 'aviator' }, 'The stage lights are very bright up here.'],
   ];
 
   const slotInfo = (game, slot) => SLOTS.find((s) => s.game === game && s.slot === slot) || null;

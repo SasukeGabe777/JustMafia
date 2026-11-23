@@ -1,0 +1,17 @@
+{
+ "cues": {
+  "title": { "file": "games/pitch/happy-dance.ogg", "loopStart": 35.5, "loopEnd": 107.5, "gain": 0.78 },
+  "lobby": { "file": "games/pitch/happy-dance.ogg", "loopStart": 35.5, "loopEnd": 107.5, "gain": 0.78 },
+  "intro": { "file": "games/pitch/happy-dance.ogg", "loopStart": 35.5, "loopEnd": 107.5, "gain": 0.78 },
+  "finale": { "file": "games/pitch/happy-dance.ogg", "loopStart": 35.5, "loopEnd": 107.5, "gain": 0.78 },
+  "play": { "file": "games/pitch/which-brand-of-mustard.ogg", "gain": 0.6 },
+  "reveal": { "file": "games/pitch/which-brand-of-mustard.ogg", "gain": 0.6 },
+  "think": { "file": "games/pitch/tension.ogg", "gain": 0.8 },
+  "tense": { "file": "games/pitch/tension.ogg", "gain": 0.8 }
+ },
+ "credits": [
+  { "file": "games/pitch/happy-dance.ogg", "title": "Happy Dance (from Happy Pop Electronic)", "author": "Holizna (HoliznaCC0)", "source": "https://opengameart.org/content/happy-pop-electronic-collection", "license": "CC0 1.0" },
+  { "file": "games/pitch/which-brand-of-mustard.ogg", "title": "Which Brand Of Mustard Shall I Buy", "author": "congusbongus", "source": "https://opengameart.org/content/which-brand-of-mustard-shall-i-buy", "license": "CC0 1.0" },
+  { "file": "games/pitch/tension.ogg", "title": "Tension (loop)", "author": "Tsorthan Grove", "source": "https://opengameart.org/content/tension-0", "license": "CC0 1.0" }
+ ]
+}

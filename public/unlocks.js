@@ -18,6 +18,7 @@
     colormatch: { from: 'emoji', title: "Color Match", icon: "🎨", how: "Finish a game of Emoji Charades to unlock it." },
     memes: { from: 'blanks', title: "Meme Maker", icon: "🖼️", how: "Finish a game of JustBlanks to unlock it." },
     letters: { from: 'whosaid', title: "Letter Rush", icon: "🔤", how: "Finish a game of Who Said It? to unlock it." },
+    pitch: { from: 'sketch', title: 'JustPitch', icon: '🎤', how: 'Finish a game of JustSketch Relay to unlock it.' },
   };
   const KEY = 'box.unlocks', SEEN = 'box.unlocksSeen';
   const read = (k) => { try { const v = JSON.parse(localStorage.getItem(k) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
