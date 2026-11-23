@@ -68,6 +68,22 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
   app.get('/kingdoms', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
   app.get('/kingdoms/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
 
+  // The JustGold balance for the main menu (hub.js): this device's account ({ auth }, box.profile)
+  // or, without one, its JustMafia wallet ({ mafia }, mt.profile). Read-only; no balance, no error.
+  app.post('/api/jg/balance', require('express').json({ limit: '4kb' }), (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const b = req.body && typeof req.body === 'object' ? req.body : {};
+    if (!wallets) return res.json({ ok: false });
+    let w = null, name = null, saved = false;
+    try {
+      const prof = profiles && b.auth && typeof b.auth === 'object' ? profiles.authenticate(b.auth) : null;
+      if (prof) { name = prof.claimed || prof.name || null; saved = !!(prof.claimed && prof.password); w = profiles.walletOf(prof.id); if (w && !wallets.data.profiles[w]) w = null; }
+      if (!w && b.mafia && typeof b.mafia === 'object') { const m = wallets.authenticate(b.mafia); if (m && (!prof || !profiles.ownerOfWallet(m.id))) w = m.id; }
+    } catch (e) { w = null; }
+    if (!w) return res.json({ ok: true, gold: null, name, saved });
+    res.json({ ok: true, gold: wallets.coins(w), name, saved });
+  });
+
   const nsp = io.of('/box');
   const rooms = new Map();
   // Photos taken in a game (JustSnap): kept in the running game's memory only, at an unguessable
@@ -123,15 +139,17 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
       ...SS.shopExtras(now, owned, look) };
   }
   // A room player wears their account's look and gear.
-  function dressUp(p) {
+  function dressUp(p, room = null) {
     if (!wallets || !p || !p.profileId) return;
     const w = profiles.walletOf(p.profileId);
     if (!w || !wallets.data.profiles[w]) { p.wallet = null; p.look = null; p.gear = {}; p.level = null; return; }
     p.wallet = w; p.look = wallets.lookOf(w); p.gear = wallets.gearValues(w);
     try { p.level = typeof wallets.levelOf === 'function' ? wallets.levelOf(w) : null; } catch (e) { p.level = null; }
+    // JustGold this seat earned tonight before it had a wallet (box/room.js claimPending).
+    if (room && typeof room.claimPending === 'function') room.claimPending(p);
   }
   // After a purchase or a change: everyone wearing that account, in any room, updates.
-  function redress(accountId) { for (const r of rooms.values()) { let hit = false; for (const p of r.players.values()) if (p.profileId === accountId) { dressUp(p); hit = true; } if (hit) r.sync(); } }
+  function redress(accountId) { for (const r of rooms.values()) { let hit = false; for (const p of r.players.values()) if (p.profileId === accountId) { dressUp(p, r); hit = true; } if (hit) r.sync(); } }
   const find = (code) => rooms.get(String(code || '').trim().toUpperCase());
   const newCode = () => {
     const L = 'ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -179,7 +197,7 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
     const linkProfile = (room, p, prof) => {
       if (!prof || !p) return;
       p.profileId = prof.id; p.title = profiles.titleOf(prof.id);
-      dressUp(p);
+      dressUp(p, room);
       if (!prof.claimed) profiles.setName(prof.id, p.name);
     };
     const audienceReply = (room, a, back) => ({ ok: true, audience: true, code: room.code, id: a.id, token: a.token, name: a.name, avatar: a.avatar, playNext: a.playNext, game: room.def.key, back: !!back, state: room.audienceState() });
@@ -303,6 +321,16 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
       return { prof, w };
     };
     socket.on('progress:get', (msg, cb) => { const x = progressWallet(msg, cb); if (x) reply(cb, progressReply(x.prof, x.w)); });
+    // Tests and screenshots only (MT_DEV_GRANTS=1): the running game "ran" `minutes` (default 10) and
+    // skips ahead to its end, so the chest scene can be checked without waiting (tools/e2e-chest.js).
+    if (process.env.MT_DEV_GRANTS === '1') socket.on('dev:finish', (msg, cb) => {
+      const room = find(msg.code); if (!room || room.hostKey !== msg.hostKey) return reply(cb, { ok: false, error: 'No such room.' });
+      if (room.phase === 'show' && room.show) room.show.skip();
+      if (room.phase !== 'game' || !room.game) return reply(cb, { ok: false, error: 'No game running.' });
+      room.gameStartAt = room.now() - Math.max(2, Math.min(120, Number(msg.minutes) || 10)) * 60000;
+      for (let i = 0; i < 400 && room.game.phase !== 'over' && room.game.next; i++) room.game.next();
+      room.sync(); reply(cb, { ok: room.game.phase === 'over' });
+    });
     // Tests and screenshots only (MT_DEV_GRANTS=1, like JustMafia's dev:grant): XP / JustGold as if a game paid it.
     if (process.env.MT_DEV_GRANTS === '1') socket.on('dev:progress', (msg, cb) => {
       const x = progressWallet(msg, cb); if (!x) return;

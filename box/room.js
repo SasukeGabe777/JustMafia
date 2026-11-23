@@ -74,6 +74,37 @@ const cleanName = (s) => String(s || '').replace(/[\u0000-\u001f<>&"]/g, '').rep
 
 const GOLD = require('./gold');
 const XPX = require('../public/shared/challenges'); // XP for finished games (box/progress.js)
+// The chest scene after every paid game (public/box/chest.js): it opens CHEST_DELAY after the end
+// screen appears (everyone sees who won first) and lasts CHEST_MS; the Party Mode finale's
+// legendary chest lasts PARTY_CHEST_MS. The host can skip either ('chestSkip').
+const CHEST_DELAY = 2500, CHEST_MS = 8500, PARTY_CHEST_DELAY = 1200, PARTY_CHEST_MS = 14000, CHEST_ROWS = 16, PENDING_MAX = 12;
+// A game's own end-of-game awards, for the player with this id / name: every game shapes them a
+// little differently ([{ id, icon, title }], [{ k, names, text }], { key: { names, value } }, …).
+// Awards nobody wants to win (most strikes, burned bets…) don't pay.
+const SAD_AWARD = /oops|burn|coward|myster|worst|loser|slow|dud|flop|shame|strike|bust|broke|sleep|zero|last place|wooden/i;
+const prettyKey = (k) => String(k || '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
+function gameAwardsFor(g, id, name) {
+  const pools = [];
+  let t = {}; try { t = g.tv() || {}; } catch (e) { t = {}; }
+  const add = (x) => { if (x && typeof x === 'object') pools.push(x); };
+  add(t.awards); if (t.final && typeof t.final === 'object') add(t.final.awards); if (t.end && typeof t.end === 'object') add(t.end.awards);
+  if (g.final && typeof g.final === 'object') add(g.final.awards);
+  if (Array.isArray(g.awards)) add(g.awards); else if (typeof g.awards === 'function' && !pools.length) { try { add(g.awards()); } catch (e) { /* none */ } }
+  const out = [], seen = new Set();
+  for (const pool of pools) {
+    const items = Array.isArray(pool) ? pool.map((a) => [a && a.k, a]) : Object.entries(pool);
+    for (const [k, a] of items) {
+      if (!a || typeof a !== 'object') continue;
+      const names = Array.isArray(a.names) ? a.names : a.name && !a.title ? [a.name] : [];
+      const mine = a.id === id || (Array.isArray(a.ids) && a.ids.includes(id)) || (name && names.includes(name));
+      if (!mine) continue;
+      const label = String(a.title || a.label || a.award || (a.text && !a.title ? a.text : '') || prettyKey(k) || 'Game award').slice(0, 48);
+      if (SAD_AWARD.test(String(k || '')) || SAD_AWARD.test(label) || seen.has(label)) continue;
+      seen.add(label); out.push({ icon: typeof a.icon === 'string' && a.icon.length <= 8 ? a.icon : '🏅', label });
+    }
+  }
+  return out;
+}
 
 class BoxRoom {
   constructor(code, game, { nsp = null, clock = new RealClock(), seed = null, shows = false, profiles = null, wallets = null } = {}) {
@@ -236,6 +267,7 @@ class BoxRoom {
     if (type === 'practiceSkip') return this.hostAction({ type });
     if (type === 'next' && this.phase === 'game' && this.game && this.game.phase !== 'over') return this.hostAction({ type: 'next' });
     if (type === 'partyNext' || type === 'partyPause' || type === 'partyAgain' || type === 'partyBoardNow') return this.hostAction({ type });
+    if (type === 'chestSkip') return this.skipChest();
     if (type === 'bots') return this.hostAction({ type: 'addBots', count: 5 });
     if (type === 'nobots') return this.hostAction({ type: 'removeBots' });
     return { ok: false, error: 'Not now.' };
@@ -249,7 +281,7 @@ class BoxRoom {
     this.scoreParty();
     this.closePoll();
     this.clearTimers();
-    this.away = null; this.practice = null;
+    this.away = null; this.practice = null; this.closeChest();
     if (this.partyMode) this.partyMode.ext = false;
     if (this.partyMode && this.partyMode.phase !== 'done') this.partyMode.phase = 'playing';
     this.def = def; this.practiceTouched = false; this.settings = this.defaultSettings(def); this.phase = 'lobby'; this.show = null;
@@ -332,7 +364,9 @@ class BoxRoom {
     const entry = { game: this.def.key, title: this.def.name, winner: order[0] ? this.name(order[0]) : null, winnerId: order[0] || null, top: this.topOf(order), n: order.length, swing: this.swingNow(), ...extra.entry };
     this.played.push(entry);
     if (this.played.length > 40) this.played.shift();
+    this.lastEntry = entry; // (the chest's achievements read its gap)
     this.recordProfiles(this.def.key, order, extra.survivors);
+    this.openChest(this.def.key, order);
     this.checkUnlocks();
     this.favouritePoll(entry, order);
     if (this.partyMode) this.partyAfterGame();
@@ -374,6 +408,7 @@ class BoxRoom {
   }
   // ---- lifetime profiles (box/profiles.js) ----
   recordProfiles(game, order, survivors) {
+    this._survivors = new Set(survivors || []);
     if (game !== 'mafia') { this.payGold(game, order); this.payProgress(game, order, survivors); }
     if (this.nightStart == null) this.nightStart = this.now();
     if (!this.profiles) return;
@@ -383,20 +418,91 @@ class BoxRoom {
       try { this.trophyNews(p, this.profiles.recordGame(p.profileId, { game, place: i + 1, of: order.length, pts: this.lastGain.get(id) || 0, survived: surv.has(id), room: this.nightKey })); } catch (e) { console.error('[box profiles]', e.message); }
     });
   }
-  // ---- JustGold (box/gold.js): a finished game pays everyone with an account who played it ----
-  payGold(game, order) {
-    if (!this.wallets) return;
+  // ---- JustGold (box/gold.js): a finished game pays everyone who played it, line by line ----
+  // Players with a wallet are paid at once. Players without one yet (a phone that never opened the
+  // shop / profile) see the same chest with "Save your stuff to keep this gold": the room keeps it
+  // as `p.jgPending` (computed here, on the server) and pays it the moment this seat gets a wallet
+  // in this room (claimPending, from box/index.js dressUp: saving, signing in, opening the shop).
+  goldEligible(order) {
     const humans = this.list().filter((p) => !p.bot);
     const ms = this.gameStartAt != null ? this.now() - this.gameStartAt : 0;
     const why = humans.length < GOLD.MIN_HUMANS ? 'JustGold needs 2 or more people in the room' : ms < GOLD.MIN_MS ? 'That game was too short for JustGold' : null;
+    return { ms, why };
+  }
+  // The achievements one player earned in the game just scored (box/gold.js pays RATES.ach each).
+  goldAchievements(game, id, place, of) {
+    const g = this.game && this.def && this.def.key === game ? this.game : null, p = this.players.get(id), out = [];
+    if (g) for (const a of gameAwardsFor(g, id, p && p.name).slice(0, 2)) out.push(a);
+    let tags = {}; try { if (g && typeof g.challengeEvents === 'function') tags = g.challengeEvents(id) || {}; } catch (e) { tags = {}; }
+    if (tags.mole) out.push({ icon: '🕵️', label: 'Caught the mole' });
+    if (tags.cover) out.push({ icon: '📸', label: 'Made the cover' });
+    if (game === 'zombie' && this._survivors && this._survivors.has(id)) out.push({ icon: '🧟', label: 'Survived the horde' });
+    const half = Math.ceil(this.partyBoard().length / 2), was = this.prevRank.get(id);
+    if (place === 1 && of >= 3 && this.played.length >= 2 && was && was > half) out.push({ icon: '📈', label: 'Comeback win' });
+    const gap = this.lastEntry && this.lastEntry.gap;
+    if (place === 1 && of >= 3 && gap && gap.top > 0 && gap.top - gap.diff >= 0 && gap.top >= 2 * (gap.top - gap.diff) && gap.diff > 0) out.push({ icon: '💪', label: 'Landslide win' });
+    try {
+      const prof = p && p.profileId && this.profiles ? this.profiles.get(p.profileId) : null;
+      if (prof && prof.stats && prof.stats.byGame && !prof.stats.byGame[game] && (prof.stats.games || 0) > 0) out.push({ icon: '🧭', label: 'New game discovered' });
+    } catch (e) { /* no profile */ }
+    return out;
+  }
+  // This player's run tonight: games in a row (every paid game they finished) and wins in a row.
+  goldRunOf(id, place) {
+    this.goldRun = this.goldRun || new Map();
+    const r = this.goldRun.get(id) || { games: 0, wins: 0, last: -1 };
+    const next = r.last === this.goldNo - 1 ? r.games + 1 : 1, wins = place === 1 ? (r.last === this.goldNo - 1 ? r.wins + 1 : 1) : 0;
+    const out = { games: next, wins, last: this.goldNo };
+    this.goldRun.set(id, out); return out;
+  }
+  payGold(game, order) {
+    if (!this.wallets) return;
+    this.payTick = (this.payTick || 0) + 1;
+    const { ms, why } = this.goldEligible(order);
+    const payId = this.code + ':' + (this.gameNo || 0) + ':' + game + ':' + this.hostKey, title = this.def && this.def.key === game ? this.def.name : game;
+    if (!why) {
+      this.goldNo = (this.goldNo || 0) + 1;
+      const pm = this.partyMode;
+      if (pm && pm.phase !== 'done') { pm.real = (pm.real || 0) + 1; pm.paid = pm.paid || {}; }
+    }
     order.forEach((id, i) => {
-      const p = this.players.get(id); if (!p || p.bot || !p.wallet) return;
-      if (why) { p.jg = { n: 0, why, at: this.now(), game }; return; }
-      const { n, bonus } = GOLD.withSetBonus(game, GOLD.goldFor(game, i + 1, order.length, ms), p.look); // + a theme-set bonus in its game
+      const p = this.players.get(id); if (!p || p.bot) return;
+      if (why) { if (p.wallet) p.jg = { n: 0, why, at: this.now(), game }; return; }
+      const pm = this.partyMode; if (pm && pm.phase !== 'done' && pm.paid) pm.paid[id] = (pm.paid[id] || 0) + 1;
+      const place = i + 1, of = order.length, night = this.goldRunOf(id, place);
+      const achievements = this.goldAchievements(game, id, place, of);
+      const w = p.wallet ? this.wallets.data.profiles[p.wallet] : null, day = w ? GOLD.dayInfo(w, this.wallets.now()) : null;
+      const r = GOLD.gameLines({ game, place, of, ms, achievements, night, day, look: p.look, now: this.wallets.now ? this.wallets.now() : Date.now() });
+      const reason = title + (i === 0 ? ' · won' : ' · #' + place) + (r.set ? ' · ' + r.set.icon + ' set +' + r.set.extra : '');
+      if (!p.wallet) { this.addPending(p, payId, r.total, reason); p.jg = { n: 0, pending: r.total, guest: true, lines: r.lines, at: this.now(), tick: this.payTick, game, place, set: r.set, tier: GOLD.tierOf(r.total) }; return; }
+      const before = this.wallets.coins(p.wallet);
+      if (!(w.boxPaid || []).includes(payId)) GOLD.markDay(w, day); // (saved with the payment)
       let paid = 0;
-      try { paid = this.wallets.awardBox(p.wallet, this.code + ':' + (this.gameNo || 0) + ':' + game + ':' + this.hostKey, n, (this.def && this.def.key === game ? this.def.name : game) + (i === 0 ? ' · won' : ' · #' + (i + 1)) + (bonus ? ' · ' + bonus.icon + ' set +' + bonus.extra : '')); } catch (e) { console.error('[justgold]', e.message); }
-      if (paid) { p.jg = { n: paid, at: this.now(), game, total: this.wallets.coins(p.wallet), set: bonus ? { icon: bonus.icon, name: bonus.name, extra: bonus.extra } : null }; this.fx('gold', { name: p.name, n: paid }); }
+      try { paid = this.wallets.awardBox(p.wallet, payId, r.total, reason); } catch (e) { console.error('[justgold]', e.message); }
+      if (paid) {
+        p.jg = { n: paid, at: this.now(), tick: this.payTick, game, place, before, total: this.wallets.coins(p.wallet), lines: r.lines, set: r.set, tier: GOLD.tierOf(paid) };
+        this.fx('gold', { name: p.name, n: paid });
+      }
     });
+  }
+  addPending(p, payId, n, reason) {
+    if (!n) return;
+    p.jgPending = (p.jgPending || []).filter((x) => x.payId !== payId).concat([{ payId, n, reason }]).slice(-PENDING_MAX);
+  }
+  // This seat just got a wallet (saved, signed in, opened the shop): the gold it earned tonight
+  // without one goes in now, once per game (awardBox payId).
+  claimPending(p) {
+    if (!this.wallets || !p || !p.wallet || !p.jgPending || !p.jgPending.length) return 0;
+    const list = p.jgPending; p.jgPending = null;
+    let got = 0;
+    for (const x of list) { try { got += this.wallets.awardBox(p.wallet, x.payId, x.n, x.reason + ' · saved') || 0; } catch (e) { console.error('[justgold]', e.message); } }
+    if (got) {
+      p.jgClaim = { n: got, at: this.now(), total: this.wallets.coins(p.wallet) };
+      if (p.jg && p.jg.guest) p.jg = { ...p.jg, guest: false, claimed: got, n: p.jg.pending || 0, total: p.jgClaim.total };
+      this.fx('gold', { name: p.name, n: got, saved: true });
+      this._roster = null; this.sync();
+    }
+    return got;
   }
   // ---- progression (box/progress.js): XP, challenges and the season pass on the wallet ----
   // Same rules as JustGold (2+ people, 90 s+); otherwise it was a practice game. JustMafia
@@ -416,32 +522,90 @@ class BoxRoom {
       const ev = { id: this.code + ':' + (this.gameNo || 0) + ':' + game + ':' + this.hostKey, game, kind: 'box', xp: XPX.boxXp(game, place, of, ms), place, of, won: place === 1 && of > 1, ms,
         gold: p.jg && p.jg.game === game && !p.jg.party ? p.jg.n || 0 : 0, tags };
       let news = null; try { news = this.wallets.progressGame(p.wallet, ev); } catch (e) { console.error('[progress]', e.message); }
-      this.progressNews(p, news);
+      const extra = this.progressNews(p, news);
+      if (p.jg && p.jg.game === game && p.jg.tick === this.payTick && extra.length) { p.jg.extra = extra; p.jg.total = this.wallets.coins(p.wallet); }
     });
   }
-  // News for that phone (toasts) and the TV (level ups get a small celebration).
+  // News for that phone (toasts) and the TV (level ups get a small celebration). Returns the
+  // JustGold it paid as chest lines (challenges, level ups, season-pass tiers).
   progressNews(p, news) {
-    if (!news) return;
+    if (!news) return [];
     p.level = news.level || p.level || null;
     p.prog = { at: this.now(), xp: news.xp, level: news.level, levelUps: news.levelUps.map((u) => ({ level: u.level, gold: u.gold, title: u.title || null, item: u.item || null })), completed: news.completed.map((c) => ({ icon: c.icon, label: c.label, period: c.period, gold: c.gold, xp: c.xp })), tiers: news.tiers.length };
     for (const u of news.levelUps.slice(-1)) this.fx('level', { name: p.name, avatar: p.avatar, level: u.level, title: u.title || null });
     for (const c of news.completed.filter((x) => x.period !== 'daily').slice(0, 2)) this.fx('challenge', { name: p.name, avatar: p.avatar, icon: c.icon, label: c.label, period: c.period });
     this._roster = null;
+    const lines = [];
+    for (const c of news.completed) if (c.gold) lines.push({ key: 'challenge', icon: c.icon || '✅', label: `${c.period === 'daily' ? 'Daily' : c.period === 'weekly' ? 'Weekly' : 'Event'} challenge: ${c.label}`.slice(0, 60), n: c.gold });
+    for (const u of news.levelUps) if (u.gold) lines.push({ key: 'level', icon: '⭐', label: `Reached level ${u.level}`, n: u.gold });
+    const tierGold = (news.tiers || []).reduce((n, t) => n + (t.gold || 0), 0);
+    if (tierGold) lines.push({ key: 'pass', icon: '🎟️', label: `Season pass: ${news.tiers.length} tier${news.tiers.length === 1 ? '' : 's'}`, n: tierGold });
+    const listed = lines.reduce((n, l) => n + l.n, 0);
+    if ((news.gold || 0) > listed) lines.push({ key: 'bonus', icon: '🎁', label: 'Bonus JustGold', n: news.gold - listed });
+    return lines;
   }
+  // The Party Mode finale: the legendary chest (box/gold.js partyLines). Everyone who played real
+  // (paid) games gets a bonus for each, more for the final standings, and a guaranteed bonus for
+  // staying the whole night (every real game, or all but one in a party of 4+).
   partyGold() {
     const pm = this.partyMode; if (!this.wallets || !pm || pm.goldPaid) return;
-    pm.goldPaid = true; pm.no = this.partyNo = (this.partyNo || 0) + 1;
+    pm.goldPaid = true; pm.no = this.partyNo = (this.partyNo || 0) + 1; this.payTick = (this.payTick || 0) + 1;
     if (this.list().filter((p) => !p.bot).length < GOLD.MIN_HUMANS) return;
-    this.partyBoard().forEach((r, i) => {
-      const p = this.players.get(r.id); if (!p || p.bot || !p.wallet) return;
-      const n = GOLD.partyGold(i + 1);
-      let paid = 0; try { paid = this.wallets.awardBox(p.wallet, 'party:' + this.code + ':' + this.hostKey + ':' + (pm.no || 0), n, 'Party Mode finale · #' + (i + 1)); } catch (e) { console.error('[justgold]', e.message); }
-      if (paid) { p.jg = { n: paid, at: this.now(), party: true, total: this.wallets.coins(p.wallet) }; this.fx('gold', { name: p.name, n: paid, party: true }); }
-      if (typeof this.wallets.progressGame === 'function') {
-        let news = null; try { news = this.wallets.progressGame(p.wallet, { id: 'party:' + this.code + ':' + this.hostKey + ':' + (pm.no || 0), game: 'party', kind: 'party', xp: XPX.partyXp(i + 1), place: i + 1, of: this.partyBoard().length, gold: paid }); } catch (e) { console.error('[progress]', e.message); }
-        this.progressNews(p, news);
+    const board = this.partyBoard(), real = pm.real || 0, payId = 'party:' + this.code + ':' + this.hostKey + ':' + (pm.no || 0);
+    board.forEach((r, i) => {
+      const p = this.players.get(r.id); if (!p || p.bot) return;
+      const games = (pm.paid && pm.paid[r.id]) || 0, stayed = real >= 2 && games >= real - (real >= 4 ? 1 : 0);
+      const pl = GOLD.partyLines({ place: i + 1, of: board.length, games, total: real, stayed });
+      const reason = 'Party Mode finale · #' + (i + 1);
+      if (!p.wallet) { if (pl.total) { this.addPending(p, payId, pl.total, reason); p.jg = { n: 0, pending: pl.total, guest: true, party: true, lines: pl.lines, at: this.now(), tick: this.payTick, place: i + 1, tier: 'legendary' }; } return; }
+      const before = this.wallets.coins(p.wallet);
+      let paid = 0; if (pl.total) try { paid = this.wallets.awardBox(p.wallet, payId, pl.total, reason); } catch (e) { console.error('[justgold]', e.message); }
+      if (paid) { p.jg = { n: paid, at: this.now(), tick: this.payTick, party: true, place: i + 1, before, lines: pl.lines, tier: 'legendary', total: this.wallets.coins(p.wallet) }; this.fx('gold', { name: p.name, n: paid, party: true }); }
+      if (typeof this.wallets.progressGame === 'function') { // party XP and party challenges (box/progress.js), once
+        let news = null; try { news = this.wallets.progressGame(p.wallet, { id: payId, game: 'party', kind: 'party', xp: XPX.partyXp(i + 1), place: i + 1, of: board.length, gold: paid }); } catch (e) { console.error('[progress]', e.message); }
+        const extra = this.progressNews(p, news);
+        if (extra.length && !paid) p.jg = { n: 0, at: this.now(), tick: this.payTick, party: true, place: i + 1, before, lines: [], tier: 'legendary' };
+        if (extra.length) { p.jg.extra = extra; p.jg.total = this.wallets.coins(p.wallet); }
       }
     });
+    this.openChest('party', board.map((r) => r.id), true);
+  }
+  // ---- the chest scene (public/box/chest.js) ----
+  // One chest per player who earned something in the game just scored (or the party finale): the
+  // TV shows the row, each phone its own (playerState().chest). It never blocks anything: the game's
+  // end screen stays underneath, and starting / switching / the lobby close it.
+  openChest(game, order, party = false) {
+    const at = this.now(), tick = this.payTick, rows = [];
+    for (const id of order) {
+      const p = this.players.get(id); if (!p || p.bot || !p.jg || p.jg.tick !== tick) continue;
+      const n = p.jg.guest ? p.jg.pending || 0 : (p.jg.n || 0) + (p.jg.extra || []).reduce((t, l) => t + l.n, 0);
+      if (!n) continue;
+      const lines = [...(p.jg.lines || []), ...(p.jg.extra || [])];
+      const callouts = lines.filter((l) => !['play', 'games'].includes(l.key)).sort((a, b) => b.n - a.n).slice(0, 3).map((l) => ({ icon: l.icon, label: l.label, n: l.n }));
+      rows.push({ id, name: p.name, avatar: p.avatar, color: p.color, n, tier: party ? 'legendary' : GOLD.tierOf(n), guest: !!p.jg.guest, place: p.jg.place || null, callouts, total: p.jg.guest ? null : p.jg.total });
+    }
+    if (!rows.length) return;
+    const pm = this.partyMode;
+    this.chest = { id: ++this.fxSeq, kind: party ? 'party' : 'game', game, title: party ? 'Party Mode' : (this.def && this.def.key === game ? this.def.name : game),
+      at: at + (party ? PARTY_CHEST_DELAY : CHEST_DELAY), dur: party ? PARTY_CHEST_MS : CHEST_MS, skipped: false,
+      games: party && pm ? pm.real || 0 : null, rows: rows.slice(0, 100) };
+    this.fx('chest', { party });
+    this.after(this.chest.at - at + this.chest.dur + 5100, () => {}); // (one last update: the phones close it)
+  }
+  closeChest() { if (this.chest) this.chest = null; }
+  skipChest() { if (!this.chest || this.chest.skipped) return { ok: false, error: 'No chest to skip.' }; this.chest.skipped = true; this.sync(); return { ok: true }; }
+  chestLive() { const c = this.chest; return !!(c && !c.skipped && this.now() < c.at + c.dur + 1500); }
+  chestTv() {
+    const c = this.chest; if (!c || this.now() > c.at + c.dur + 1500) return null;
+    const rows = c.rows.slice().sort((a, b) => b.n - a.n);
+    return { id: c.id, kind: c.kind, title: c.title, games: c.games, skipped: c.skipped, startsIn: Math.max(0, c.at - this.now()), left: Math.max(0, c.at + c.dur - this.now()), dur: c.dur,
+      rows: rows.slice(0, CHEST_ROWS), more: Math.max(0, rows.length - CHEST_ROWS), total: rows.reduce((t, r) => t + r.n, 0) };
+  }
+  chestFor(p) {
+    const c = this.chest; if (!c || this.now() > c.at + c.dur + 5000 || !p.jg || !c.rows.some((r) => r.id === p.id)) return null; // (phones keep the totals up a little longer)
+    const row = c.rows.find((r) => r.id === p.id);
+    return { id: c.id, kind: c.kind, title: c.title, skipped: c.skipped, startsIn: Math.max(0, c.at - this.now()), left: Math.max(0, c.at + c.dur - this.now()), dur: c.dur,
+      n: row.n, tier: row.tier, guest: !!(p.jg.guest && !p.jgClaim), lines: [...(p.jg.lines || []), ...(p.jg.extra || [])], before: p.jg.before != null ? p.jg.before : null, after: p.jg.guest ? null : p.jg.total, place: row.place };
   }
   // New trophies: a cue on the TV and a toast on that phone.
   trophyNews(p, list) {
@@ -757,7 +921,7 @@ class BoxRoom {
     this.cancel(pm.timer); this.party = new Map(); this.played = []; this.lastGain = new Map(); this.prevRank = new Map(); this.recap = null;
     if (pm.previewTimer) { this.cancel(pm.previewTimer); pm.previewTimer = null; }
     if (pm.preview) { pm.preview.stop(); pm.preview = null; }
-    pm.index = 0; pm.phase = 'playing'; pm.at = this.now(); pm.startedAt = null; pm.paused = false; pm.goldPaid = false; pm.previewed = null; pm.nextFit = null; pm.nextInfo = null;
+    pm.index = 0; pm.phase = 'playing'; pm.at = this.now(); pm.startedAt = null; pm.paused = false; pm.goldPaid = false; pm.real = 0; pm.paid = {}; pm.previewed = null; pm.nextFit = null; pm.nextInfo = null;
     const sw = this.switchGame(pm.defs[0]); if (!sw.ok) return sw;
     this.sync(); return { ok: true };
   }
@@ -875,6 +1039,7 @@ class BoxRoom {
       case 'partyPause': return this.partyPause(msg.on);
       case 'partyAgain': return this.partyAgain();
       case 'partyBoardNow': return this.partyToBoard();
+      case 'chestSkip': return this.skipChest();
       case 'recap': return this.startRecap();
       case 'recapClose': return this.stopRecap();
       case 'streamer': this.filterOn = !!msg.filter; this.sync(); return { ok: true, filter: this.filterOn };
@@ -888,7 +1053,7 @@ class BoxRoom {
   resetLobby() {
     this.scoreParty();
     this.closePoll();
-    this.clearTimers(); this.show = null; this.practice = null;
+    this.clearTimers(); this.show = null; this.practice = null; this.closeChest();
     if (this.partyMode && this.partyMode.phase !== 'done') this.partyMode.phase = 'playing'; // replaying this game: the board waits for its end
     this.phase = 'lobby';
     this.game = this.def.liveLobby ? this.def.create(this, this.settings) : null;
@@ -898,7 +1063,7 @@ class BoxRoom {
   start() {
     if (this.phase !== 'lobby') return { ok: false, error: 'The game is already running.' };
     if (this.players.size < this.def.min) return { ok: false, error: `${this.def.name} needs at least ${this.def.min} player${this.def.min === 1 ? '' : 's'} (bots count).` };
-    this.clearTimers();
+    this.clearTimers(); this.closeChest();
     const pm = this.partyMode, inParty = !!(pm && pm.phase !== 'done' && pm.defs[pm.index] === this.def);
     // Party Mode: fit the settings again to the players actually here (unless the host changed them).
     if (inParty) this.partyRefit();
@@ -956,16 +1121,18 @@ class BoxRoom {
       fields: this.fieldsOf(), min: this.def.min, max: MAX_PLAYERS, fx: this.fxLog, live: !!this.def.liveLobby,
       vip: this.vip() ? this.vip().name : null, filterOn: this.filterOn, locked: this.locked,
       audience: { count: this.audienceCount(), poll: this.pollView() }, recap: this.recap,
-      players: this.list().map((p) => ({ id: p.id, name: p.name, bot: p.bot, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, online: p.bot || p.sockets > 0, title: p.title || null, level: p.level || null })),
+      players: this.list().map((p) => ({ id: p.id, name: p.name, bot: p.bot, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, online: p.bot || p.sockets > 0, title: p.title || null, level: p.level || null, gold: this.goldOf(p) })),
       party: this.partyBoard().slice(0, 24), played: this.played.slice(-24), partyMode: this.partyState(true), unlocks: [...this.unlocks], away: this.away, practice: this.practiceState(),
-      state: this.game && this.phase !== 'show' ? this.game.tv() : null, show: this.show ? this.show.tv() : null,
+      state: this.game && this.phase !== 'show' ? this.game.tv() : null, show: this.show ? this.show.tv() : null, chest: this.chestTv(),
     };
   }
+  // A player's JustGold balance (null without a wallet), for the phone header and the TV lobby.
+  goldOf(p) { try { return p && !p.bot && p.wallet && this.wallets ? this.wallets.coins(p.wallet) : null; } catch (e) { return null; } }
   playerState(p) {
     return {
       code: this.code, game: this.def.key, title: this.def.name, phase: this.phase,
-      me: { id: p.id, name: p.name, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, title: p.title || null, level: p.level || null, profile: !!p.profileId, wallet: !!p.wallet },
-      jg: p.jg || null, prog: p.prog || null,
+      me: { id: p.id, name: p.name, color: p.color, avatar: p.avatar, look: p.look || null, gear: p.gear || null, title: p.title || null, level: p.level || null, profile: !!p.profileId, wallet: !!p.wallet, gold: this.goldOf(p), pending: p.jgPending && p.jgPending.length ? p.jgPending.reduce((t, x) => t + x.n, 0) : 0 },
+      jg: p.jg ? { n: p.jg.n, why: p.jg.why || null, at: p.jg.at, set: p.jg.set || null, total: p.jg.total, party: !!p.jg.party, guest: !!p.jg.guest, pending: p.jg.pending || 0 } : null, jgClaim: p.jgClaim || null, chest: this.chestFor(p), prog: p.prog || null,
       roster: this.rosterFor(p),
       audience: this.audienceCount(), recap: this.recap ? personalRecap(this, this.recap, p) : null,
       party: (() => { const b = this.partyBoard(), i = b.findIndex((r) => r.id === p.id); return { played: this.played.length, pts: i >= 0 ? b[i].pts : 0, wins: i >= 0 ? b[i].wins : 0, gain: i >= 0 ? b[i].gain : 0, rank: i + 1, of: b.length, top: b.slice(0, 5) }; })(),

@@ -11,7 +11,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { CHROME, Browser, startServer, cleanup, wait } = require('./cdp');
 
-const PORT = 4510, URL = `http://localhost:${PORT}`;
+const PORT = Number(process.env.PORT) || 4510, URL = `http://localhost:${PORT}`;
 const SHOTS = process.env.SHOTS || path.join(os.tmpdir(), 'mt-e2e');
 if (!CHROME) { console.log('SKIP e2e-onboard: Chrome not found (set CHROME=path).'); process.exit(0); }
 let passed = 0; const PAGES = [];
@@ -20,7 +20,7 @@ const key = (pg, k = 'x') => pg.send('Input.dispatchKeyEvent', { type: 'keyDown'
 
 (async () => {
   await startServer(PORT);
-  const browser = new Browser({ shots: SHOTS, debugPort: 9810 }); await browser.launch();
+  const browser = new Browser({ shots: SHOTS, debugPort: Number(process.env.DEBUG_PORT) || 9810 }); await browser.launch();
   const page = async (w, h, mobile = false) => { const p = await browser.page(); await p.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile }); PAGES.push(p); return p; };
 
   // ---------- How it works: the first time only ----------

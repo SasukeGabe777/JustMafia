@@ -284,6 +284,7 @@
   function celebQuiet() {
     if (!state) return false;
     if (state.phase === 'show' || (state.practice && state.practice.phase === 'over')) return true;
+    if (window.JGChest && JGChest.active()) return true; // nor over the chests
     const pm = state.partyMode; if (pm && (pm.phase === 'ending' || (pm.phase === 'board' && pm.preview))) return true; // nor over an intro in the break
     const over = state.state && state.state.phase === 'over';
     if (over && !overSince) overSince = Date.now(); if (!over) overSince = 0;
@@ -415,7 +416,26 @@
     document.body.classList.toggle('st-hide', !!streamer.hide || waiting);
     document.body.classList.toggle('st-waiting', waiting);
     for (const el of codeEls()) if (!el.classList.contains('st-code')) { el.classList.add('st-code'); el.addEventListener('click', peek); }
-    audienceUi(); recapUi(); practiceUi();
+    audienceUi(); recapUi(); practiceUi(); chestUi();
+  }
+  // ---- The JustGold chests (public/box/chest.js): everyone's row after a game, the legendary party chest ----
+  // The server opens it (state.chest); the host skips it here (Enter / the button) or from their phone.
+  const chestSound = (kind) => {
+    const clip = (p, o) => !!(AU && AU.clip && AU.clip(p, o)), sting = (n) => !!(AU && AU.stinger && AU.stinger(n));
+    if (kind === 'coin') return clip('kingdoms/coins.ogg', { vol: 0.14, gap: 110, rate: 1.15, jitter: 0.12 }) || sting('coin') || BOX.sfx('coin');
+    if (kind === 'rattle') return sting('chips') || BOX.sfx('rattle');
+    if (kind === 'open') return sting('cash') || BOX.sfx('chestOpen');
+    if (kind === 'fanfare') { sting('cash'); return sting('swell') || BOX.sfx('chestOpen'); }
+    if (kind === 'done') return sting('ding') || BOX.sfx('saved');
+  };
+  let chestShown = null;
+  function chestUi() {
+    if (!window.JGChest) return;
+    const c = state && state.chest, a = JGChest.active();
+    if (!c || c.skipped) { if (a && a.where === 'tv') JGChest.close(); return; }
+    if (chestShown === c.id) return; // (once: it closes by itself when its time is up)
+    chestShown = c.id;
+    JGChest.tv(c, { players: state.players, sound: chestSound, skip: () => host('chestSkip') });
   }
   // ---- Practice round: a PRACTICE badge while it runs, then "Practice over, now for real!" ----
   function practiceUi() {
@@ -657,7 +677,7 @@
     $('#count').textContent = n ? `${n} player${n > 1 ? 's' : ''} in` : 'Waiting for players…';
     $('#roster-title').textContent = `Players (${n}/${state.max})`;
     $('#start').disabled = n < state.min;
-    $('#roster').innerHTML = state.players.map((p) => `<span class="chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove"><i style="background:${esc(p.color)}"></i><span class="av">${BOX.portrait ? BOX.portrait.html(p, 30) : esc(p.avatar || '')}</span>${esc(p.name)}${p.level && window.JGProgress ? JGProgress.badge(p.level) : ''}${p.title ? `<em class="ptitle">${esc(p.title)}</em>` : ''}</span>`).join('') || '<span class="muted">Scan the QR code to join.</span>';
+    $('#roster').innerHTML = state.players.map((p) => `<span class="chip ${p.online ? '' : 'off'}" data-kick="${esc(p.id)}" title="Click to remove"><i style="background:${esc(p.color)}"></i><span class="av">${BOX.portrait ? BOX.portrait.html(p, 30) : esc(p.avatar || '')}</span>${esc(p.name)}${p.level && window.JGProgress ? JGProgress.badge(p.level) : ''}${p.title ? `<em class="ptitle">${esc(p.title)}</em>` : ''}${p.gold != null ? `<em class="pgold" title="JustGold">🪙 ${Number(p.gold) || 0}</em>` : ''}</span>`).join('') || '<span class="muted">Scan the QR code to join.</span>';
     const lu = $('#lineup'); if (lu) { const lh = state.partyMode && BOX.partyLineup ? BOX.partyLineup(state) : ''; if (lu.dataset.html !== lh) { lu.innerHTML = lh; lu.dataset.html = lh; } }
     const pp = $('#party');
     if (pp) { const ph = state.played && state.played.length ? `<h3>🎉 Party points · ${state.played.length} game${state.played.length === 1 ? '' : 's'} tonight</h3><div class="board">${state.party.slice(0, 8).map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span class="av">${partyFace(r)}</span><span>${esc(r.name)}${r.wins ? ' ' + '🏆'.repeat(Math.min(3, r.wins)) : ''}</span><b>${r.pts}</b></div>`).join('')}</div><div class="played">${state.played.slice(-6).map((g) => `${esc(g.title)}${g.winner ? ': ' + esc(g.winner) : ''}`).join(' · ')}</div>` : ''; if (pp.dataset.html !== ph) { pp.innerHTML = ph; pp.dataset.html = ph; } }

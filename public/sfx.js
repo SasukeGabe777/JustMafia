@@ -125,6 +125,10 @@ window.SFX = (function () {
     laugh: () => [0, 0.16, 0.32, 0.48, 0.64].forEach((a, i) => tone(740 - i * 40, 0.12, { type: 'square', vol: 0.06, at: a, slide: 900 - i * 40 })), // the Jester
     cheer: () => { noise(1.6, { vol: 0.22, filter: 1600, type: 'bandpass' }); [0.1, 0.35, 0.6, 0.9].forEach((a) => noise(0.08, { vol: 0.3, at: a, filter: 3000, type: 'highpass' })); }, // a crowd and claps
     pop: () => tone(900 + Math.random() * 300, 0.07, { type: 'sine', vol: 0.07, slide: 1500 }), // a phone reaction
+    // The JustGold chest (public/box/chest.js): a coin landing, the lid bursting open, a little rattle.
+    coin: () => { const k = 1 + Math.random() * 0.12; tone(1976 * k, 0.07, { type: 'square', vol: 0.025 }); tone(2637 * k, 0.22, { type: 'triangle', vol: 0.05, at: 0.05 }); },
+    chestOpen: () => { noise(0.18, { vol: 0.25, filter: 700 }); tone(98, 0.3, { vol: 0.3, slide: 60 }); [784, 988, 1175, 1568, 1976].forEach((f, i) => tone(f, 0.5, { type: 'triangle', vol: 0.06, at: 0.12 + i * 0.06 })); noise(0.6, { vol: 0.07, at: 0.15, filter: 6000, type: 'highpass' }); },
+    rattle: () => { for (let i = 0; i < 4; i++) noise(0.04, { vol: 0.22, at: i * 0.05, filter: 900, type: 'bandpass' }); },
     spirit: () => { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.9, { type: 'sine', vol: 0.05, at: i * 0.07 })); noise(1.2, { vol: 0.06, filter: 4000, type: 'highpass' }); }, // a farewell: the soul rises
   };
 

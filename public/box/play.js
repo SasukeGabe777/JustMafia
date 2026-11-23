@@ -330,6 +330,61 @@
       $('#j-name').value = nm; showJoin(r && r.error);
     });
   }
+  // ---------- 🪙 JustGold: the chest after every game, the balance in the header ----------
+  let chestSeen = null, jgShown = null, jgHold = false, jgRaf = 0, coinAt = 0;
+  const phoneSound = (k) => {
+    if (k === 'coin') { const now = Date.now(); if (now - coinAt < 70) return; coinAt = now; }
+    BOX.sfx({ coin: 'coin', rattle: 'rattle', open: 'chestOpen', fanfare: 'chestOpen', done: 'saved' }[k] || k);
+    if (k === 'fanfare') setTimeout(() => BOX.sfx('win'), 350);
+  };
+  // Returns true while this game's chest is (about to be) on screen.
+  function chestPhone(v) {
+    if (!window.JGChest) return false;
+    const c = v.chest, a = JGChest.active();
+    if (!c || c.skipped) {
+      // A guest's chest stays up with its "Save your stuff" button after its time (they close it),
+      // until the next game starts.
+      const keep = a && a.guest && !(c && c.skipped) && (v.phase === 'lobby' || (v.state && v.state.phase === 'over'));
+      if (a && a.where === 'phone' && !keep) JGChest.close();
+      return false;
+    }
+    if (chestSeen === c.id) return true;
+    chestSeen = c.id; jgHold = true;
+    JGChest.phone(c, { vip: !!v.vip, haptic, sound: phoneSound, skip: () => hostDo('chestSkip'), save: () => { if (acct) acct.open('save'); },
+      onDone: (after, how) => {
+        jgHold = false; if (view) goldPill(view);
+        // Closed without saving: the usual "Save your stuff" reminder, once.
+        if (how && how.guest && !how.saving && acct) setTimeout(() => acct.nudge(document.body, { earned: c.n }), 600);
+      } });
+    return true;
+  }
+  const COIN_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="17" r="13" fill="#a8620a"/><circle cx="16" cy="15" r="13" fill="#ffcc33"/><circle cx="16" cy="15" r="9.5" fill="none" stroke="#a8620a" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="Fredoka,system-ui,sans-serif" font-weight="900" font-size="14" fill="#a8620a">J</text></svg>';
+  // The balance: held while the chest plays, then it ticks up to the new number.
+  function goldPill(v) {
+    if (!v || !v.me) return;
+    let b = $('#h-jg');
+    if (!b) {
+      b = document.createElement('button'); b.className = 'h-jg'; b.id = 'h-jg'; b.title = 'Your JustGold'; b.innerHTML = COIN_SVG + '<b>0</b><small hidden></small>';
+      $('#h-me').after(b);
+      b.onclick = () => {
+        const vv = view; if (!vv) return;
+        if (vv.me.gold == null) { if (acct) acct.open('save'); return; }
+        const running = vv.phase === 'show' || (vv.phase === 'game' && !(vv.state && vv.state.phase === 'over'));
+        if (running) toast(`🪙 You have ${vv.me.gold} JG. Spend it in the 🛍️ shop between games.`); else location.href = shopUrl();
+      };
+    }
+    const unsaved = v.me.gold == null, target = unsaved ? v.me.pending || 0 : v.me.gold;
+    b.classList.toggle('unsaved', unsaved); b.title = unsaved ? 'JustGold you earned: tap to save it' : 'Your JustGold';
+    const sm = b.querySelector('small'); sm.hidden = !unsaved; sm.textContent = unsaved ? 'save' : '';
+    if (jgHold) return;
+    if (jgShown == null || Math.abs(target - jgShown) > 5000) { jgShown = target; b.querySelector('b').textContent = target; return; }
+    if (target === jgShown) return;
+    const from = jgShown, t0 = performance.now(), dur = Math.min(1400, 500 + Math.abs(target - from) * 8); jgShown = target;
+    cancelAnimationFrame(jgRaf); b.classList.add('tick');
+    const step = (now) => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); b.querySelector('b').textContent = Math.round(from + (target - from) * e); if (k < 1) jgRaf = requestAnimationFrame(step); else b.classList.remove('tick'); };
+    jgRaf = requestAnimationFrame(step);
+    if (target > from) { try { BOX.sfx('coin'); } catch { /* */ } }
+  }
   socket.on('disconnect', () => { $('#offline').hidden = false; });
   socket.on('me', (v) => {
     // The room went to a game outside the box (JustMafia): follow it, joined with my name.
@@ -342,14 +397,20 @@
     const hn = esc(v.me.name) + (v.me.level && window.JGProgress ? JGProgress.badge(v.me.level) : '') + (v.me.title ? ' · ' + esc(v.me.title) : '');
     if ($('#h-name').dataset.html !== hn) { $('#h-name').innerHTML = hn; $('#h-name').dataset.html = hn; }
     const hav = BOX.portrait ? BOX.portrait.html(v.me, 28) : esc(v.me.avatar || ''); if ($('#h-av').dataset.html !== hav) { $('#h-av').innerHTML = hav; $('#h-av').dataset.html = hav; }
-    // JustGold paid at the end of a game (or why it wasn't).
-    if (v.jg && v.jg.at && view0 && (!view0.jg || view0.jg.at !== v.jg.at)) {
+    // The JustGold chest (public/box/chest.js) after a game, and the balance in the header.
+    const chestNow = chestPhone(v);
+    goldPill(v);
+    // JustGold paid at the end of a game (or why it wasn't): the chest shows it; a toast otherwise.
+    if (v.jg && v.jg.at && view0 && (!view0.jg || view0.jg.at !== v.jg.at) && !chestNow) {
       if (v.jg.n > 0) { toast(`🪙 +${v.jg.n} JustGold!${v.jg.set ? ` (${v.jg.set.icon} ${v.jg.set.name} set +${v.jg.set.extra})` : ''}${v.jg.total != null ? ` You have ${v.jg.total} JG.` : ''}`); haptic('win'); } else if (v.jg.why) toast(`🪙 ${v.jg.why}`);
     }
-    // Progress from that game: XP, finished challenges, level ups (after the JustGold toast).
+    // Gold earned before this phone had an account, saved now (box/room.js claimPending).
+    if (v.jgClaim && view0 && (!view0.jgClaim || view0.jgClaim.at !== v.jgClaim.at)) { toast(`💾 Saved! +${v.jgClaim.n} JG are yours now. You have ${v.jgClaim.total} JG.`); haptic('win'); BOX.sfx('saved'); }
+    // Progress from that game: XP, finished challenges, level ups (after the JustGold toast, or the chest).
     if (v.prog && v.prog.at && view0 && (!view0.prog || view0.prog.at !== v.prog.at) && window.JGProgress) {
       const lines = JGProgress.news(v.prog).slice(-4); // (the level up comes last: keep it)
-      lines.forEach((l, i) => setTimeout(() => { toast(l); if (/Level|done/.test(l)) { haptic('win'); BOX.sfx('win'); } }, 2800 * (i + (v.jg && v.jg.n ? 1 : 0))));
+      const after = chestNow && v.chest ? (v.chest.left || 0) + 600 : 0;
+      lines.forEach((l, i) => setTimeout(() => { toast(l); if (/Level|done/.test(l)) { haptic('win'); BOX.sfx('win'); } }, after + 2800 * (i + (v.jg && v.jg.n && !chestNow ? 1 : 0))));
     }
     // After a game: once, if this phone has unsaved JustGold or stats, offer "Save your stuff".
     // Never before this phone has finished a real game (a practice round doesn't count): then on
@@ -357,7 +418,8 @@
     const overNow = v.state && v.state.phase === 'over', over0 = view0 && view0.state && view0.state.phase === 'over';
     if (acct && view0 && overNow && !over0 && !v.practice && v.phase === 'game') {
       acct.markPlayed();
-      setTimeout(() => acct.nudge(document.body, { earned: view && view.jg && view.jg.n > 0 && Date.now() - (view._at || 0) < 60000 ? view.jg.n : 0 }), 3500);
+      // (a guest's chest has its own "Save your stuff" button: no second prompt over it)
+      if (!(v.chest && v.chest.guest)) setTimeout(() => acct.nudge(document.body, { earned: view && view.jg && view.jg.n > 0 && Date.now() - (view._at || 0) < 60000 ? view.jg.n : 0 }), v.chest ? (v.chest.left || 0) + 800 : 3500);
     }
     practiceNews(view0, v);
     if (!tourDone() && !$('#game').hidden && (v.phase === 'lobby' || overNow)) setTimeout(tour, 700);
@@ -557,6 +619,7 @@
       ['#h-me', '👤', 'This is you', 'Tap here to change your avatar, phone sounds and vibration, or to leave the game.'],
       ['#h-react', '😀', 'React', 'Send an emoji. It floats up on the big screen with your name.'],
       ['#h-shop', '🛍️', 'Character & shop', 'Dress up your character and spend JustGold between games.'],
+      ['#h-jg', '🪙', 'Your JustGold', 'Every game you finish opens a chest of JustGold. Your balance is here: spend it in the shop between games.'],
       ['#h-prof', '🏆', 'Your profile', 'Your stats, trophies and titles, across every game.'],
       ['#h-help', '❓', 'How to play', 'The rules of the game you’re in, any time.'],
       ['#h-menu', '👑', 'You’re the host', 'You start the game. Skip ahead, add bots or pick the next game here.'],

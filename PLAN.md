@@ -55,6 +55,22 @@
   (names, scores; the optional live Kokoro voice can read those).
 - Tests: `tools/test-narration-voice.js` (keys match, spoken forms clean and name-free, every narrator line
   has a clip once rendered, name-free leads); `test-voice-timing.js`.
+## November 20, 2026 - JustGold chests: earn faster, see it everywhere (branch claude/gold-chests)
+
+Owner: "earning takes way too long and the only way to see how much you have is in the shop… every
+game including in party mode have a chest opening up scene… After the party mode they should have a
+big award on their chest". Done:
+- Earning re-tuned (`box/gold.js`, table in `docs/justgold.md` "Earning JustGold"): a 10-minute game
+  pays 15–33 JG before bonuses (was 3–10), plus achievements, on-a-roll / win streaks, the first game
+  of the day (+25) and day streaks; a common item after ~3 games, a rare one in an evening. Short
+  games pay half and are capped; practice, solo-with-bots, kicked and too-short rules unchanged.
+- A chest after every box game (`public/box/chest.js`): each phone opens its own (shake, burst, coins
+  line by line, counter to the new balance, haptics, quiet coin sounds), the TV shows everyone's row;
+  host can skip; ~8.5 s. Party Mode finale: the legendary party chest (stayed all night +40, +8 a game,
+  +75/50/30 top 3). Guests see "Save your stuff" and keep the gold if they save in the same room.
+- Balance: phone header pill, TV lobby roster, main menu. JustMafia: goldRate 1.25, daily bonus, the
+  reward scene draws the chest.
+- Tests: `tools/test-justgold.js`, `tools/test-progress.js`, `tools/e2e-chest.js` (new).
 
 ## November 19, 2026 - Difficulty everywhere, practice rounds only for new games (branch claude/difficulty)
 

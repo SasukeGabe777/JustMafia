@@ -28,8 +28,8 @@ class Browser {
   constructor({ debugPort = 9333, shots = path.join(os.tmpdir(), 'mt-e2e') } = {}) { this.debugPort = debugPort; this.shots = shots; fs.mkdirSync(shots, { recursive: true }); }
   async launch() {
     const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-chrome-'));
-    procs.push(spawn(CHROME, ['--headless=new', '--mute-audio', '--disable-gpu', '--no-first-run', '--no-default-browser-check', `--remote-debugging-port=${this.debugPort}`, `--user-data-dir=${profileDir}`, 'about:blank'], { stdio: 'ignore' }));
-    let info; for (let i = 0; i < 100 && !info; i++) { try { info = await (await fetch(`http://127.0.0.1:${this.debugPort}/json/version`)).json(); } catch { await wait(100); } }
+    procs.push(spawn(CHROME, ['--headless=new', '--mute-audio', '--disable-gpu', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--no-first-run', '--no-default-browser-check', `--remote-debugging-port=${this.debugPort}`, `--user-data-dir=${profileDir}`, 'about:blank'], { stdio: 'ignore' }));
+    let info; for (let i = 0; i < 250 && !info; i++) { try { info = await (await fetch(`http://127.0.0.1:${this.debugPort}/json/version`)).json(); } catch { await wait(100); } }
     if (!info) throw new Error('Chrome DevTools did not start');
     this.ws = new WebSocket(info.webSocketDebuggerUrl); this.id = 0; this.pending = new Map(); this.listeners = [];
     this.ws.on('message', (raw) => { const m = JSON.parse(raw); if (m.id && this.pending.has(m.id)) { const { resolve, reject } = this.pending.get(m.id); this.pending.delete(m.id); m.error ? reject(new Error(m.error.message)) : resolve(m.result); } else this.listeners.forEach((l) => l(m)); });

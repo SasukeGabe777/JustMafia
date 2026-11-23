@@ -15,6 +15,7 @@ const MAX_DEVICES = 8, BOX_PAID_MAX = 300;
 // live on this wallet as `progress`. The old JustMafia season pass ('s1') and weekly challenges
 // moved there (migrated on first use: see box/progress.js).
 const PROGRESS = require('./box/progress');
+const GOLD = require('./box/gold'); // the daily first-game bonus and day streak, shared with the box
 const { mafiaXp } = require('./public/shared/challenges');
 const LEDGER_MAX = 20;
 const digest = (token) => crypto.createHash('sha256').update(token).digest('hex');
@@ -325,6 +326,10 @@ class ProfileStore {
     const raw = lines.reduce((t, l) => t + l.amount, 0), capped0 = Math.min(R.maxPerGame, raw);
     const before = p.coins;
     if (capped0) this.record(p, capped0, 'Game reward', { gameId });
+    // The first game of the day (any game, box or JustMafia) and days in a row: on top of the cap (box/gold.js).
+    const day = GOLD.dayInfo(p, this.now());
+    for (const l of GOLD.dayLines(day)) { lines.push({ key: l.key, label: l.label, amount: l.n }); this.record(p, l.n, l.label, { gameId }); }
+    GOLD.markDay(p, day);
     // Profile XP, daily / weekly / event challenges and the box-wide season pass (box/progress.js;
     // paid on top of the per-game cap, once each). The Judge's events multiply the game's XP.
     const mult = (EVENTS[result.event] || {}).xpMultiplier || 1;

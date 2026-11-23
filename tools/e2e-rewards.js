@@ -9,7 +9,7 @@ const path = require('node:path');
 const { io } = require('socket.io-client');
 const { CHROME, Browser, startServer, cleanup, wait } = require('./cdp');
 
-const PORT = 3991, URL = `http://localhost:${PORT}`;
+const PORT = Number(process.env.PORT) || 3991, URL = `http://localhost:${PORT}`;
 const SHOTS = process.env.SHOTS || path.join(os.tmpdir(), 'mt-e2e');
 if (!CHROME) { console.log('SKIP e2e-rewards: Chrome not found (set CHROME=path).'); process.exit(0); }
 let passed = 0;
@@ -24,7 +24,7 @@ const emit = (s, ev, d = {}) => new Promise((r) => s.emit(ev, d, r));
   // Two other humans on their own "phones" (sockets with their own profiles).
   for (const name of ['Ben', 'Cy']) { const s = io(URL, { transports: ['websocket'] }); await emit(s, 'profile:create'); assert((await emit(s, 'player:join', { code: room.code, name })).ok); }
 
-  const browser = new Browser({ shots: SHOTS, debugPort: 9336 }); await browser.launch();
+  const browser = new Browser({ shots: SHOTS, debugPort: Number(process.env.DEBUG_PORT) || 9336 }); await browser.launch();
   const a = await browser.page();
   await a.go(`${URL}/play?room=${room.code}`);
   await a.until(`!document.querySelector('#screen-creator').hidden && !document.querySelector('#j-go').disabled`, 'creator');

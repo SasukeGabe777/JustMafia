@@ -40,7 +40,9 @@
       const cx = w * .26, px = w * .74, base = h * .86;
       MTArt.drawCharacter(g, cx, base, { ...(avatar || {}), expression: reward.eligible && reward.coins ? 'grin' : (avatar || {}).expression }, { scale: h / 95, theme, t, walking: false, jump: reward.eligible && t > end - 0.6 && t < end ? Math.sin((t - end + 0.6) / 0.6 * Math.PI) * 10 : 0 });
       bounce = Math.max(0, bounce - 0.08);
-      window.MT_SHOP.drawPouch(g, px, base - bounce * 6, h / 42, 1);
+      // The JustGold chest (public/box/chest.js), the same one box games open; the old pouch without it.
+      if (window.JGChest) { const n = reward.coins || 0; window.JGChest.drawChest(g, px, base, h * 0.52, { tier: n >= 80 ? 'epic' : n >= 45 ? 'gold' : n >= 20 ? 'silver' : 'wood', open: Math.min(1, t / 0.6), t, squash: bounce * 0.5, glow: 0.6 }); }
+      else window.MT_SHOP.drawPouch(g, px, base - bounce * 6, h / 42, 1);
       for (let i = 0; i < lines.length; i++) if (t >= 0.7 + i * BEAT && revealed < i) { revealed = i; const li = box.querySelector(`[data-line="${i}"]`); if (li) li.hidden = false; }
       for (const c of coins) {
         const p = (t - c.t0) / c.dur;

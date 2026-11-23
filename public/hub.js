@@ -234,3 +234,28 @@
   // Show the real join address (the LAN or public URL), so players know where to go.
   fetch('/api/info').then((r) => r.json()).then((i) => { if (i.baseUrl) document.getElementById('join-url').textContent = i.baseUrl.replace(/^https?:\/\//, '') + '/join'; }).catch(() => {});
 })();
+
+// 🪙 The signed-in host's JustGold on the title screen (box/index.js /api/jg/balance): it ticks up
+// from the balance this device saw last time, so gold earned since then is noticed. A tap opens the shop.
+(function () {
+  const pair = (k) => { try { const p = JSON.parse(localStorage.getItem(k) || 'null'); return p && typeof p.id === 'string' && typeof p.token === 'string' ? { id: p.id, token: p.token } : null; } catch (e) { return null; } };
+  const auth = pair('box.profile'), mafia = pair('mt.profile');
+  if (!auth && !mafia) return;
+  fetch('/api/jg/balance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ auth, mafia }) }).then((r) => r.json()).then((r) => {
+    if (!r || !r.ok || r.gold == null) return;
+    const host = document.querySelector('.head-actions'); if (!host) return;
+    const a = document.createElement('a'); a.className = 'hub-jg'; a.id = 'hub-jg'; a.href = '/shop?back=/';
+    a.title = 'Your JustGold: spend it in the shop';
+    a.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="17" r="13" fill="#a8620a"/><circle cx="16" cy="15" r="13" fill="#ffcc33"/><circle cx="16" cy="15" r="9.5" fill="none" stroke="#a8620a" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="Fredoka,system-ui,sans-serif" font-weight="900" font-size="14" fill="#a8620a">J</text></svg>'
+      + `<span><em><b data-jg>0</b> JG</em><small>${r.name ? String(r.name).replace(/[<>&"]/g, '') : 'JustGold'}${r.saved ? '' : ' · not saved yet'}</small></span>`;
+    host.prepend(a);
+    let seen = null; try { seen = Number(localStorage.getItem('jg.seen')); } catch (e) { /* private */ }
+    const to = r.gold, from = Number.isFinite(seen) && seen >= 0 && seen < to && to - seen < 100000 ? seen : to, b = a.querySelector('[data-jg]');
+    b.textContent = from;
+    try { localStorage.setItem('jg.seen', String(to)); } catch (e) { /* private */ }
+    if (from === to) return;
+    a.classList.add('up'); const t0 = performance.now(), dur = Math.min(2200, 700 + (to - from) * 6);
+    const step = (now) => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); b.textContent = Math.round(from + (to - from) * e); if (k < 1) requestAnimationFrame(step); else a.classList.remove('up'); };
+    setTimeout(() => requestAnimationFrame(step), 500);
+  }).catch(() => {});
+})();
