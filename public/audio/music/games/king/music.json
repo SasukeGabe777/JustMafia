@@ -1,0 +1,19 @@
+{
+ "cues": {
+  "title": { "file": "games/king/court-rejoicing.ogg" },
+  "lobby": { "file": "games/king/court-rejoicing.ogg" },
+  "intro": { "file": "games/king/court-rejoicing.ogg" },
+  "reveal": { "file": "games/king/court-rejoicing.ogg" },
+  "play": { "file": "games/king/play-militaristic-march.ogg" },
+  "think": { "file": "games/king/think-old-tower-inn.ogg" },
+  "tense": { "file": "games/king/tense-confrontation.ogg" },
+  "finale": { "file": "games/king/finale-knights-challenge.ogg" }
+ },
+ "credits": [
+  { "file": "games/king/court-rejoicing.ogg", "title": "Medieval: Rejoicing (loop)", "author": "RandomMind", "source": "https://opengameart.org/content/medieval-rejoicing", "license": "CC0 1.0" },
+  { "file": "games/king/play-militaristic-march.ogg", "title": "Some Militaristic Tune", "author": "Spring Spring (Julie Damsgaard)", "source": "https://opengameart.org/content/some-militaristic-tune", "license": "CC0 1.0" },
+  { "file": "games/king/think-old-tower-inn.ogg", "title": "Medieval: The Old Tower Inn (loop)", "author": "RandomMind", "source": "https://opengameart.org/content/medieval-the-old-tower-inn", "license": "CC0 1.0" },
+  { "file": "games/king/tense-confrontation.ogg", "title": "The Confrontation", "author": "Umplix", "source": "https://opengameart.org/content/the-confrontation", "license": "CC0 1.0" },
+  { "file": "games/king/finale-knights-challenge.ogg", "title": "A Knight's Challenge", "author": "Umplix", "source": "https://opengameart.org/content/a-knights-challenge", "license": "CC0 1.0" }
+ ]
+}

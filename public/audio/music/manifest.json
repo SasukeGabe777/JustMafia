@@ -325,6 +325,32 @@
     "file": "games/funny/think-taken-lightly.mp3"
    }
   },
+  "king": {
+   "title": {
+    "file": "games/king/court-rejoicing.ogg"
+   },
+   "lobby": {
+    "file": "games/king/court-rejoicing.ogg"
+   },
+   "intro": {
+    "file": "games/king/court-rejoicing.ogg"
+   },
+   "reveal": {
+    "file": "games/king/court-rejoicing.ogg"
+   },
+   "play": {
+    "file": "games/king/play-militaristic-march.ogg"
+   },
+   "think": {
+    "file": "games/king/think-old-tower-inn.ogg"
+   },
+   "tense": {
+    "file": "games/king/tense-confrontation.ogg"
+   },
+   "finale": {
+    "file": "games/king/finale-knights-challenge.ogg"
+   }
+  },
   "kingdoms": {
    "title": {
     "file": "games/kingdoms/title-kings-feast.ogg"

@@ -25,6 +25,10 @@
     t.games.push(tile.dataset.game);
   }
   TYPES.push({ k: 'big', name: 'Big games', icon: '🏰', games: ['ducks', 'kingdoms', 'mafia'], c: '#f5b400', big: true });
+  // TRIAL games (tile data-trial, e.g. Kill the King) are experimental: never dealt into a lineup
+  // automatically. The host can still play one mid-party with 🎮 Another game.
+  const TRIAL = new Set([...document.querySelectorAll('.tile[data-trial]')].map((t) => t.dataset.game));
+  for (const t of TYPES) t.games = t.games.filter((k) => !TRIAL.has(k));
   // Locked games (public/unlocks.js) join the shuffle once this TV has unlocked them.
   for (const t of TYPES) t.games = t.games.filter((k) => !window.UNLOCKS || window.UNLOCKS.has(k));
   for (let i = TYPES.length - 1; i >= 0; i--) if (!TYPES[i].games.length) TYPES.splice(i, 1);
@@ -34,7 +38,7 @@
     bid: ['📦', 'JustBid', 1, 100, 22], price: ['💸', 'Price Panic', 1, 100, 15], emoji: ['😜', 'Emoji Charades', 3, 100, 17],
     truths: ['🤥', 'Two Truths & a Lie', 3, 100, 17], likely: ['👑', 'Most Likely To…', 3, 100, 10], whosaid: ['🕵️', 'Who Said It?', 3, 100, 15],
     spectrum: ['🧭', 'Where Do You Stand?', 3, 100, 15], sketch: ['✏️', 'JustSketch Relay', 3, 100, 15], funny: ['😂', 'JustFunny', 2, 100, 30],
-    zombie: ['🧟', 'Zombie Survival', 2, 100, 20], undercover: ['🕵️', 'JustUndercover', 3, 20, 15], snap: ["📸", "JustSnap", 2, 100, 15], pizza: ["🧑‍🍳", "YesChef", 1, 100, 12], escape: ['🗝️', 'JustEscape', 1, 12, 30], marble: ["🔮", "JustMarble", 1, 12, 12], debate: ["🗣️", "Debate Club", 2, 100, 15], actout: ["🎭", "Act It Out", 2, 100, 15], tune: ["🎵", "Tune Buzz", 2, 100, 15], alien: ["🛸", "Alien Abduction", 2, 100, 15], bomb: ["💣", "Bomb Squad", 2, 100, 15], quickdraw: ["⚡", "Quick Draw", 2, 100, 15], summon: ["⚔️", "JustSummon", 2, 100, 15], letters: ["🔤", "Letter Rush", 2, 100, 15], memes: ["🖼️", "Meme Maker", 2, 100, 15], colormatch: ["🎨", "Color Match", 2, 100, 15], trivia: ["🧠", "Hot Take Trivia", 2, 16, 8], plinko: ["🎯", "JustDrop", 1, 100, 12], ducks: ['🦆', 'JustRaiseDucks', 1, 100, 27], kingdoms: ['🏰', 'JustKingdoms', 2, 100, 40],
+    zombie: ['🧟', 'Zombie Survival', 2, 100, 20], king: ["🗡️", "Kill the King", 4, 12, 25], undercover: ['🕵️', 'JustUndercover', 3, 20, 15], snap: ["📸", "JustSnap", 2, 100, 15], pizza: ["🧑‍🍳", "YesChef", 1, 100, 12], escape: ['🗝️', 'JustEscape', 1, 12, 30], marble: ["🔮", "JustMarble", 1, 12, 12], debate: ["🗣️", "Debate Club", 2, 100, 15], actout: ["🎭", "Act It Out", 2, 100, 15], tune: ["🎵", "Tune Buzz", 2, 100, 15], alien: ["🛸", "Alien Abduction", 2, 100, 15], bomb: ["💣", "Bomb Squad", 2, 100, 15], quickdraw: ["⚡", "Quick Draw", 2, 100, 15], summon: ["⚔️", "JustSummon", 2, 100, 15], letters: ["🔤", "Letter Rush", 2, 100, 15], memes: ["🖼️", "Meme Maker", 2, 100, 15], colormatch: ["🎨", "Color Match", 2, 100, 15], trivia: ["🧠", "Hot Take Trivia", 2, 16, 8], plinko: ["🎯", "JustDrop", 1, 100, 12], ducks: ['🦆', 'JustRaiseDucks', 1, 100, 27], kingdoms: ['🏰', 'JustKingdoms', 2, 100, 40],
     mafia: ['🔪', 'JustMafia', 5, 100, 40],
   };
   const range = (txt) => { const m = txt && txt.match(/(\d+)\s*[–-]\s*(\d+)/); return m ? [Number(m[1]), Number(m[2])] : null; };

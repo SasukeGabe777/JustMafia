@@ -42,6 +42,11 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | escape | Music | `games/escape/photos-of-murder.ogg` | Photos Of Murder | John Bartmann | CC0 1.0 | https://freemusicarchive.org/music/John_Bartmann/Royalty-Free_Soundtrack_Music_Album_Two/photos-of-murder/ |
 | funny | Music | `games/funny/title-blue-intermission.ogg` | Blue Intermission | congusbongus | CC0 1.0 | https://opengameart.org/node/130655 |
 | funny | Music | `games/funny/think-taken-lightly.mp3` | Taken Lightly | Pro Sensory | CC0 1.0 | https://opengameart.org/node/80007 |
+| king | Music | `games/king/court-rejoicing.ogg` | Medieval: Rejoicing (loop) | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-rejoicing |
+| king | Music | `games/king/play-militaristic-march.ogg` | Some Militaristic Tune | Spring Spring (Julie Damsgaard) | CC0 1.0 | https://opengameart.org/content/some-militaristic-tune |
+| king | Music | `games/king/think-old-tower-inn.ogg` | Medieval: The Old Tower Inn (loop) | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-the-old-tower-inn |
+| king | Music | `games/king/tense-confrontation.ogg` | The Confrontation | Umplix | CC0 1.0 | https://opengameart.org/content/the-confrontation |
+| king | Music | `games/king/finale-knights-challenge.ogg` | A Knight's Challenge | Umplix | CC0 1.0 | https://opengameart.org/content/a-knights-challenge |
 | kingdoms | Music | `games/kingdoms/title-kings-feast.ogg` | Medieval: King's Feast (loop) | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-kings-feast |
 | kingdoms | Music | `games/kingdoms/lobby-minstrel-dance.ogg` | Medieval: Minstrel Dance (loop) | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-minstrel-dance |
 | kingdoms | Music | `games/kingdoms/play-market-day.ogg` | Medieval: Market Day (loop) | RandomMind | CC0 1.0 | https://opengameart.org/content/medieval-market-day |
@@ -183,6 +188,14 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | funny | Sound effect | `funny/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
 | funny | Sound effect | `funny/boo.ogg` | crowd booing (excerpt) | HowardV | CC0 1.0 | https://freesound.org/people/HowardV/sounds/264378/ |
 | funny | Sound effect | `funny/click.ogg` | UI Audio (switch3.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/ui-audio |
+| king | Sound effect | `king/fanfare.ogg` | Trumpet Fanfare (castlefanfare) | gchoc | CC0 1.0 | https://opengameart.org/content/trumpet-fanfare |
+| king | Sound effect | `king/gavel.ogg` | Gavel (excerpt) | flubberjam | CC0 1.0 | https://freesound.org/people/flubberjam/sounds/703748/ |
+| king | Sound effect | `king/horn.ogg` | war horn.wav (excerpt) | adharca | CC0 1.0 | https://freesound.org/people/adharca/sounds/539956/ |
+| king | Sound effect | `king/gate.ogg` | Opening a creaking door | Ryding | CC0 1.0 | https://freesound.org/people/Ryding/sounds/125957/ |
+| king | Sound effect | `king/whoosh.ogg` | Ghostly Whoosh - Horror Game UI | TommasoMotteran | CC0 1.0 | https://freesound.org/people/TommasoMotteran/sounds/850767/ |
+| king | Sound effect | `king/bell.ogg` | Church Bell - Bb5 (excerpt) | bassimat | CC0 1.0 | https://freesound.org/people/bassimat/sounds/857938/ |
+| king | Sound effect | `king/scroll.ogg` | Unrolling Scroll.wav (excerpt) | spookymodem | CC0 1.0 | https://freesound.org/people/spookymodem/sounds/202107/ |
+| king | Sound effect | `king/stab.ogg` | unsheath_sword.wav | Qat | CC0 1.0 | https://freesound.org/people/Qat/sounds/107589/ |
 | kingdoms | Sound effect | `kingdoms/swords.ogg` | Sword_Clash (7) | JohnBuhr | CC0 1.0 | https://freesound.org/people/JohnBuhr/sounds/326868/ |
 | kingdoms | Sound effect | `kingdoms/coins.ogg` | RPG Audio (handleCoins) | Kenney | CC0 1.0 | https://kenney.nl/assets/rpg-audio |
 | kingdoms | Sound effect | `kingdoms/scroll.ogg` | RPG Audio (bookFlip2) | Kenney | CC0 1.0 | https://kenney.nl/assets/rpg-audio |
