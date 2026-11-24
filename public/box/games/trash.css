@@ -26,6 +26,8 @@ body.g-trash { --tz-green: #9cff3c; --tz-orange: #ff8c2e; --tz-ink: #1b1410; --t
 .tz-join img { width: 200px; height: 200px; }
 .tz-code-l { font: 18px 'Lilita One', sans-serif; text-transform: uppercase; letter-spacing: 2px; }
 .tz-code { font: 70px 'Lilita One', sans-serif; letter-spacing: 0.12em; color: #2b6d1a; line-height: 1; }
+.tz-url { font: 600 15px Nunito, sans-serif; margin: 6px 0 2px; color: #3b2a1a; word-break: break-all; }
+.tz-url b { color: #2b6d1a; }
 .tz-join small { max-width: 220px; font-weight: 700; }
 .tz-lb-set { background: repeating-linear-gradient(45deg, #2b2f33 0 22px, #33383d 22px 44px); border: 6px solid #1b1410; border-radius: 14px; padding: 12px 18px 16px; min-width: 380px; box-shadow: 8px 8px 0 rgba(0,0,0,0.35); }
 .tz-lb-set h3 { margin: 0 0 8px; font: 26px 'Lilita One', sans-serif; color: var(--tz-orange, #ff8c2e); text-shadow: 0 2px 0 #1b1410; }
