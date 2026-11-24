@@ -289,7 +289,7 @@ async function setup(browser, game, settings = {}) {
     await wait(1500); await tv.shot('box-ducks-valley-crowd');
     // Every mini-game really plays: real taps, holds and paddles; each finishes and pays out.
     const scores = {};
-    for (const [skill, game] of [['run', 'hurdles'], ['swim', 'paddle'], ['fly', 'rings'], ['climb', 'climb'], ['stamina', 'bugs']]) {
+    for (const [skill, game] of [['run', 'hurdles'], ['swim', 'paddle'], ['fly', 'rings'], ['climb', 'climb'], ['stamina', 'bugs'], ['smarts', 'maze']]) {
       await ph.until(`!!document.querySelector('[data-sheet="${skill}"]') && !document.querySelector('.dk-over')`, 'skill card ' + skill, 8000);
       await ph.click(`[data-sheet="${skill}"]`); await ph.until(`!!document.querySelector('[data-diff="easy"]')`, 'sheet');
       await ph.click('[data-diff="easy"]'); await wait(150); await ph.click('[data-play]');
@@ -301,6 +301,7 @@ async function setup(browser, game, settings = {}) {
           if ('${game}' === 'paddle') document.querySelector('[data-pad="' + (i % 2 ? 'R' : 'L') + '"]').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
           else if ('${game}' === 'rings') ev(i % 4 < 2 ? 'pointerdown' : 'pointerup', 0.5, 0.5);
           else if ('${game}' === 'bugs') ev('pointerdown', ((i * 7) % 3 + 0.5) / 3, ((i * 5) % 4 + 0.5) / 4);
+          else if ('${game}' === 'maze') ev('pointerdown', ((i * 2) % 3 + 0.5) / 3, 0.2 + ((i * 5) % 4 + 0.5) * 0.17); // the lily pads (Lily Path)
           else ev('pointerdown', 0.5, 0.5);
           return true; })()`);
         if (i === 18) await ph.shot('box-mini-' + game);
@@ -313,7 +314,7 @@ async function setup(browser, game, settings = {}) {
     }
     console.log('    mini-game scores (simple bot taps on Easy):', JSON.stringify(scores));
     assert(Object.values(scores).filter((v) => v > 0).length >= 4, 'the mini-games score points: ' + JSON.stringify(scores));
-    ok('All five mini-games play on a real phone page (Hurdle Dash, Paddle Power, Sky Rings, Cliff Climb, Bug Snack), finish and pay out XP');
+    ok('All six mini-games play on a real phone page (Hurdle Dash, Paddle Power, Sky Rings, Cliff Climb, Bug Snack, Lily Path), finish and pay out XP');
     PAGES.push(tv, ph);
     ok('JustRaiseDucks at /ducks: its own title screen and look, no JustGameBox bar, phone joins at /ducks/play, corner badge + host menu; reloading opens the title first and Continue resumes');
   }
@@ -363,10 +364,18 @@ async function setup(browser, game, settings = {}) {
     await ph.shot('box-ducks-reward');
     await ph.click('.dk-result button');
     ok('JustRaiseDucks: Lucky Spin; Easy/Medium/Hard sheet; egg picked and hatched; Duck Valley shows every farm; color, Lap Pool from the shop (TV news), pet, tactic; Paddle Power earned XP and coins');
+    // A run in progress when the race starts stops right away; its points so far still count.
+    await ph.click('[data-sheet="stamina"]'); await ph.until(`!!document.querySelector('[data-diff="easy"]')`, 'sheet');
+    await ph.click('[data-diff="easy"]'); await wait(150); await ph.click('[data-play]');
+    await ph.until(`!!document.querySelector('.dk-over') && !document.querySelector('.dk-ready')`, 'a run before the race', 6000); await wait(1500);
     await tv.eval(`document.querySelector('[data-h="next"]').click(); true`); // start the race now
+    await ph.until(`/race is starting/.test((document.querySelector('.dk-result') || {}).textContent || '') && /XP/.test(document.querySelector('.dk-result').textContent)`, 'the run stops at the race start and still pays', 8000);
+    await ph.shot('box-ducks-run-stopped'); await ph.click('.dk-result button');
+    await ph.until(`/training opens after the race/.test((document.querySelector('.dk-lock') || {}).textContent || '')`, 'training is closed during the race');
+    ok('JustRaiseDucks: the race start stops a mini-game at once (the points so far still pay) and the phone says training opens after the race');
     await tv.until(`!!document.querySelector('#dk-race')`, 'race canvas');
     await wait(4000); await tv.shot('box-ducks-race-intro'); await wait(9000); await tv.shot('box-ducks-race');
-    await ph.until(`!!document.querySelector('#dk-cheer')`, 'phone cheer button'); await ph.until(`/Running|Jumping|Crashed|Clipped|Swimming|Climbing|Flying|Slogging|ice|boost|Finished|Slipped|Spun/.test((document.querySelector('#dk-livetxt') || {}).textContent || '')`, 'phone follows its duck live', 8000); await ph.click('#dk-cheer'); await ph.shot('box-ducks-cheer');
+    await ph.until(`!!document.querySelector('#dk-cheer')`, 'phone cheer button'); await ph.until(`/Running|Jumping|Crashed|Clipped|Swimming|Climbing|Flying|Slogging|ice|boost|Finished|Slipped|Spun|maze|shortcut|Wrong turn|Which way/.test((document.querySelector('#dk-livetxt') || {}).textContent || '')`, 'phone follows its duck live', 8000); await ph.click('#dk-cheer'); await ph.shot('box-ducks-cheer');
     await tv.until(`!!document.querySelector('.dk-podium')`, 'podium', 75000); // races play at about real speed (30-60 s)
     await tv.shot('box-ducks-results');
     ok('JustRaiseDucks: the race runs on the TV (canvas), then the podium and points');

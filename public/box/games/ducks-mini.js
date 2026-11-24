@@ -4,7 +4,9 @@
 //  - every clean action scores; mistakes only break your combo (no lost points, except bees)
 //  - combos (×2 from 8, ×3 from 16) and PERFECT timing reward skilled players
 //  - each run gets faster in three stages, with new things appearing as it goes
-// Games: Hurdle Dash (Run), Paddle Power (Swim), Sky Rings (Fly), Cliff Climb (Climb), Bug Snack (Stamina).
+// Games: Hurdle Dash (Run), Paddle Power (Swim), Sky Rings (Fly), Cliff Climb (Climb), Bug Snack (Stamina),
+// Lily Path (Smarts: watch the frog's path across the lily pads, then hop it from memory).
+// DUCK_MINI.stop() ends a game at once (the race is starting): the score so far is sent as usual.
 // Every hit test uses the same numbers the drawing uses (DUCK_ART.duckBox for the duck, and
 // each object's drawn size), so what you see is what counts. Add ?dkdebug=1 to the page URL
 // to draw the hitboxes on top.
@@ -16,6 +18,7 @@
     rings: 'Hold to fly up, let go to glide down. Fly through the middle of the rings for PERFECT. Dodge storm clouds!',
     climb: 'Tap when your wing is over the GREEN hold (the middle stripe is PERFECT). Crystals are worth more. Never grab a red loose rock!',
     bugs: 'Tap bugs fast for PERFECT. Golden beetles are worth 3. Don’t tap the bees!',
+    maze: 'Watch the frog hop across the lily pads, then tap the same pads in the same order. Each path is one hop longer. Quick taps are PERFECT!',
   };
   const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch { /* none */ } };
   const TAU = Math.PI * 2;
@@ -25,6 +28,62 @@
   const circRect = (cx, cy, r, b) => { const dx = cx - clamp(cx, b.l, b.r), dy = cy - clamp(cy, b.t, b.b); return dx * dx + dy * dy < r * r; };
   function rrect(g, x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
+  // ---------- Lily Path (Smarts): the rules, without any drawing ----------
+  // A frog hops a path across the lily pads; then the duck repeats it, pad by pad. Each right pad
+  // scores (PERFECT when tapped quickly after the last one), a cleared path pays a bonus and the next
+  // path is one hop longer; a wrong pad is a splash: the combo is lost and the frog shows the same
+  // path again. The play() overlay draws it; tools/test-box-ducks.js plays it headless.
+  //   hooks.good(pad, perfect), hooks.clear(len), hooks.bad(pad), hooks.turn(), hooks.show()
+  function lilyPath(diff = 'medium', rng = Math.random, hooks = {}) {
+    const cols = diff === 'hard' ? 4 : 3, rows = 4, n = cols * rows;
+    const L = { cols, rows, n, len: diff === 'easy' ? 2 : 3, path: [], phase: 'wait', idx: 0, cleared: 0, frog: -1, frogU: 0, lit: [], hopT: diff === 'easy' ? 0.62 : diff === 'hard' ? 0.42 : 0.5, at: 0, lastTap: 0, quick: diff === 'easy' ? 0.6 : diff === 'hard' ? 0.45 : 0.5 };
+    const nb = (i) => { const c = i % cols, r = Math.floor(i / cols), out = []; for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { if (!dr && !dc) continue; const c2 = c + dc, r2 = r + dr; if (c2 >= 0 && c2 < cols && r2 >= 0 && r2 < rows) out.push(r2 * cols + c2); } return out; };
+    L.newPath = () => {
+      // a walk from the bottom row (next to the duck's bank), never back onto a pad it already used
+      let p = (rows - 1) * cols + Math.floor(rng() * cols); const path = [p];
+      while (path.length < L.len) { const opts = nb(p).filter((q) => !path.includes(q)); const pool = opts.length ? opts : nb(p).filter((q) => q !== p); p = pool[Math.floor(rng() * pool.length)]; path.push(p); }
+      L.path = path;
+    };
+    L.start = (el) => { L.newPath(); L.phase = 'show'; L.at = el + 0.6; L.lit = []; L.frog = -1; if (hooks.show) hooks.show(); };
+    // speed: the game's pace (difficulty and the run's stage)
+    L.update = (el, speed = 1) => {
+      const hop = L.hopT / speed;
+      if (L.phase === 'show') {
+        const k = (el - L.at) / hop;
+        if (k < 0) { L.frog = -1; return; }
+        L.frog = Math.min(L.len - 1, Math.floor(k)); L.frogU = Math.min(1, (k - Math.floor(k)) / 0.55);
+        L.lit = L.path.slice(0, L.frog + 1);
+        if (k >= L.len + 0.35) { L.phase = 'input'; L.idx = 0; L.lit = []; L.frog = -1; L.lastTap = el; if (hooks.turn) hooks.turn(); }
+      } else if ((L.phase === 'oops' || L.phase === 'clear') && el >= L.at) {
+        if (L.phase === 'clear') { L.len = Math.min(L.len + 1, Math.min(9, n - 2)); L.newPath(); }
+        L.phase = 'show'; L.at = el + 0.25; L.lit = []; if (hooks.show) hooks.show();
+      }
+    };
+    // A tap on pad i (or -1: on the water). -> 'wait' (not your turn), 'ok', 'clear' or 'wrong'.
+    L.tap = (i, el) => {
+      if (L.phase !== 'input') return 'wait';
+      if (i === L.path[L.idx]) {
+        const perfect = el - L.lastTap <= L.quick; L.idx++; L.lastTap = el; L.lit = L.path.slice(0, L.idx);
+        if (hooks.good) hooks.good(i, perfect);
+        if (L.idx >= L.len) { L.cleared++; L.phase = 'clear'; L.at = el + 0.75; if (hooks.clear) hooks.clear(L.len); return 'clear'; }
+        return 'ok';
+      }
+      L.phase = 'oops'; L.at = el + 0.95; L.idx = 0; if (hooks.bad) hooks.bad(i);
+      return 'wrong';
+    };
+    return L;
+  }
+  // The score rules every mini-game uses (play() below): a clean action scores base (+1 PERFECT), ×2
+  // from a combo of 8, ×3 from 16; a mistake breaks the combo. Exported so tests can score a run.
+  function scorer() {
+    const S = { score: 0, combo: 0 };
+    S.good = (base = 1, perfect = false, noMult = false) => { S.combo++; const m = noMult ? 1 : S.combo >= 16 ? 3 : S.combo >= 8 ? 2 : 1, pts = (base + (perfect ? 1 : 0)) * m; S.score += pts; return pts; };
+    S.bad = (lose = 0) => { S.combo = 0; S.score = Math.max(0, S.score - lose); };
+    return S;
+  }
+
+  // The game on screen right now (DUCK_MINI.stop / active).
+  let current = null;
   function play(kind, seconds, duck, done, opts = {}) {
     const SP = opts.speed || 1, TARGET = opts.target || 0, DIFF = opts.diff || 'medium';
     const DL = { easy: '🌱 Easy', medium: '⚡ Medium', hard: '🔥 Hard' }[DIFF] || '';
@@ -39,7 +98,7 @@
       <canvas></canvas>${kind === 'paddle' ? '<div class="dk-pads"><button data-pad="L">LEFT</button><button data-pad="R">RIGHT</button></div>' : ''}
       <div class="dk-tip ${first ? 'first' : ''}">${first ? '<b>How to play</b>' : ''}${TIPS[kind]}</div><div class="dk-ready">3</div>`;
     document.body.appendChild(ov); document.body.classList.add('dk-lock');
-    const close = () => { ov.remove(); document.body.classList.remove('dk-lock'); if (window.DUCK_MINI.dbg && window.DUCK_MINI.dbg.ov === ov) window.DUCK_MINI.dbg = null; };
+    const close = () => { ov.remove(); document.body.classList.remove('dk-lock'); if (window.DUCK_MINI.dbg && window.DUCK_MINI.dbg.ov === ov) window.DUCK_MINI.dbg = null; if (current && current.ov === ov) current = null; };
     // iPhones start selecting text / show the magnifier on a held finger: stop that here.
     ov.addEventListener('touchstart', (e) => { if (!e.target.closest('button')) e.preventDefault(); }, { passive: false });
     const cv = ov.querySelector('canvas'), g = cv.getContext('2d');
@@ -429,6 +488,106 @@
           const hx = W * this.handAt(el); g.strokeStyle = '#00e5ff'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(hx, rowY - 30 * U); g.lineTo(hx, rowY + 30 * U); g.stroke();
         },
       },
+      // ---------------- Lily Path (Smarts) ----------------
+      // The rules are lilyPath() above. Pads sit in a grid over the pond; a tap counts on the
+      // nearest pad within its drawn radius (+ a fingertip's slop per difficulty). The duck hops to
+      // each pad you tap (a wrong one: splash!). ?dkdebug=1 shows the hit circles and the next pad.
+      maze: {
+        init() {
+          const hk = {
+            good: (i, perfect) => { const p = this.pad(i); this.hopTo(i); good(p.x, p.y - p.r * 0.9, 1, perfect, perfect ? 'QUICK' : ''); },
+            clear: (len) => { const p = this.pad(S.L.path[len - 1]); good(p.x, p.y - p.r * 1.8, len - 1, false, 'Path clear!', true); banner(len >= 6 ? `🧠 ${len} hops! Genius!` : `🐸 ${len} hops: next one is longer!`); S.party = 0.8; },
+            bad: (i) => { const p = i >= 0 ? this.pad(i) : { x: S.tapX, y: S.tapY }; this.hopTo(i, true); bad(p.x, p.y - 30 * U, 'Splash! Watch again'); },
+            turn: () => { banner('Your turn!'); BOX.sfx('tick'); },
+            show: () => { S.duckHop = null; S.duck = -1; },
+          };
+          S.L = lilyPath(DIFF, Math.random, hk);
+          S.top = 118 * U; S.bank = H - 96 * U;
+          const cw = W / S.L.cols, ch = (S.bank - S.top) / S.L.rows;
+          S.cw = cw; S.ch = ch; S.pr = Math.min(cw, ch) * 0.36; S.slop = pick({ easy: 14, medium: 8, hard: 4 }) * U;
+          S.duck = -1; S.duckHop = null; S.splash = 0; S.party = 0; S.ds = clamp(S.pr / 22, 1.2, 2.1);
+          S.started = false;
+        },
+        // pad i: its centre and drawn radius (the pads bob a little from the second stage on)
+        pad(i) { const c = i % S.L.cols, r = Math.floor(i / S.L.cols), x = (c + 0.5) * S.cw, y = S.top + (r + 0.5) * S.ch; return { x, y, r: S.pr }; },
+        bankSpot() { return { x: W * 0.5, y: S.bank + 42 * U }; },
+        hopTo(i, wet = false) { const from = S.duck >= 0 ? this.pad(S.duck) : this.bankSpot(), to = i >= 0 ? this.pad(i) : { x: S.tapX, y: S.tapY }; S.duckHop = { x0: from.x, y0: from.y, x1: to.x, y1: to.y, t: 0, wet }; S.duck = wet ? -1 : i; if (wet) S.splash = 0.9; BOX.sfx(wet ? 'boo' : 'step'); },
+        press(x, y, el) {
+          if (S.L.phase === 'show') { if (!S.watchSaid || el - S.watchSaid > 1.5) { S.watchSaid = el; float(W / 2, S.top - 20 * U, 'Watch the frog!', '#ffffffcc', 18); } return; }
+          let best = -1, bd = 1e9;
+          for (let i = 0; i < S.L.n; i++) { const p = this.pad(i), d = Math.hypot(p.x - x, p.y - y); if (d < p.r * 1.15 + S.slop && d < bd) { bd = d; best = i; } }
+          S.tapX = x; S.tapY = y;
+          if (best < 0) { if (S.L.phase === 'input') quietMiss('tapped the water'); return; } // the water: nothing happens
+          S.L.tap(best, el);
+        },
+        update(dt, el) {
+          if (!S.started) { S.started = true; S.L.start(el + (first ? 0.9 : 0)); } // (a first-timer gets a moment after the tip)
+          S.L.update(el, SP * SM[stage]);
+          if (S.duckHop) { S.duckHop.t = Math.min(1, S.duckHop.t + dt / 0.24); if (S.duckHop.t >= 1 && !S.duckHop.wet) S.duckHop = null; }
+          S.splash = Math.max(0, S.splash - dt); S.party = Math.max(0, S.party - dt);
+        },
+        drawPad(p, i, el, lit, num) {
+          const bob = stage >= 1 ? Math.sin(el * 2 + i) * 1.5 * U : 0, x = p.x, y = p.y + bob, r = p.r;
+          g.fillStyle = 'rgba(0,30,60,.22)'; g.beginPath(); g.ellipse(x + 3 * U, y + 5 * U, r, r * 0.8, 0, 0, TAU); g.fill();
+          if (lit) { g.fillStyle = lit === 'gold' ? 'rgba(255,215,64,.55)' : 'rgba(140,255,140,.5)'; g.beginPath(); g.ellipse(x, y, r * 1.28, r * 1.05, 0, 0, TAU); g.fill(); }
+          g.fillStyle = '#3f9e4a'; g.beginPath(); g.moveTo(x, y); g.ellipse(x, y, r, r * 0.8, 0, -1.25, 4.6); g.closePath(); g.fill();
+          g.fillStyle = '#5fbf5a'; g.beginPath(); g.moveTo(x, y); g.ellipse(x, y - r * 0.06, r * 0.86, r * 0.66, 0, -1.25, 4.6); g.closePath(); g.fill();
+          g.strokeStyle = 'rgba(30,90,40,.6)'; g.lineWidth = 1.5; for (const a of [0.2, 1.3, 2.4, 3.5]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * r * 0.75, y + Math.sin(a) * r * 0.58); g.stroke(); }
+          if ((i * 7) % 5 === 1) { g.fillStyle = '#ff9ccf'; for (let k = 0; k < 5; k++) { const a = k * 1.256 + 0.3; g.beginPath(); g.arc(x + r * 0.42 + Math.cos(a) * 5 * U, y - r * 0.2 + Math.sin(a) * 5 * U, 4 * U, 0, TAU); g.fill(); } g.fillStyle = '#ffe14d'; g.beginPath(); g.arc(x + r * 0.42, y - r * 0.2, 3 * U, 0, TAU); g.fill(); }
+          if (num) { g.font = `800 ${Math.round(r * 0.75)}px Fredoka, sans-serif`; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.45)'; g.strokeText(num, x, y + r * 0.26); g.fillStyle = lit === 'gold' ? '#ffe14d' : '#fff'; g.fillText(num, x, y + r * 0.26); g.textAlign = 'left'; }
+        },
+        drawFrog(x, y, s, el, air) {
+          g.save(); g.translate(x, y); g.scale(s, s);
+          g.fillStyle = 'rgba(0,30,60,.2)'; g.beginPath(); g.ellipse(0, 14 + air * 0.4, 16, 4, 0, 0, TAU); g.fill();
+          g.translate(0, -air);
+          g.fillStyle = '#3f9e3a'; // legs: tucked when sitting, stretched when hopping
+          if (air > 2) { g.beginPath(); g.ellipse(-14, 12, 12, 4, 0.5, 0, TAU); g.ellipse(14, 12, 12, 4, -0.5, 0, TAU); g.fill(); }
+          else { g.beginPath(); g.ellipse(-13, 8, 8, 6, 0, 0, TAU); g.ellipse(13, 8, 8, 6, 0, 0, TAU); g.fill(); }
+          g.fillStyle = '#5ccf4a'; g.beginPath(); g.ellipse(0, 2, 16, 12, 0, 0, TAU); g.fill();
+          g.fillStyle = '#c8f2a8'; g.beginPath(); g.ellipse(0, 7, 10, 6, 0, 0, TAU); g.fill();
+          for (const ex of [-7, 7]) { g.fillStyle = '#5ccf4a'; g.beginPath(); g.arc(ex, -8, 6, 0, TAU); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(ex, -8, 4.2, 0, TAU); g.fill(); g.fillStyle = '#1b1b2b'; g.beginPath(); g.arc(ex + 0.8, -8, 2.2, 0, TAU); g.fill(); }
+          g.strokeStyle = '#1f5a1a'; g.lineWidth = 1.6; g.beginPath(); g.arc(0, 0, 7, 0.3, Math.PI - 0.3); g.stroke();
+          g.fillStyle = '#e63946'; g.beginPath(); g.moveTo(-6, -15); g.lineTo(6, -15); g.lineTo(4, -21); g.lineTo(-4, -21); g.fill(); // a tiny guide's cap
+          g.restore();
+        },
+        draw(el) {
+          const wg = g.createLinearGradient(0, 0, 0, H); wg.addColorStop(0, '#3b9ee0'); wg.addColorStop(1, '#2a78bf'); g.fillStyle = wg; g.fillRect(0, 0, W, H);
+          g.fillStyle = 'rgba(255,255,255,.22)'; for (let i = 0; i < 16; i++) { const x = ((i * 97 + el * 12) % (W + 60)) - 30, y = (i * 71) % H; g.fillRect(x, y, 30 * U, 2.5 * U); }
+          // the frog's rock (top) and the duck's bank (bottom)
+          g.fillStyle = '#8a7f76'; g.beginPath(); g.ellipse(46 * U, S.top - 34 * U, 40 * U, 18 * U, 0, 0, TAU); g.fill(); g.fillStyle = '#a2978d'; g.beginPath(); g.ellipse(42 * U, S.top - 40 * U, 30 * U, 9 * U, 0, 0, TAU); g.fill();
+          g.fillStyle = '#6cc26a'; g.fillRect(0, S.bank + 18 * U, W, H); g.fillStyle = '#5aa64f'; g.beginPath(); g.moveTo(0, S.bank + 22 * U); for (let x = 0; x <= W; x += 20) g.lineTo(x, S.bank + 14 * U + Math.sin(x * 0.07) * 5 * U); g.lineTo(W, S.bank + 30 * U); g.lineTo(0, S.bank + 30 * U); g.fill();
+          g.strokeStyle = '#3d8b37'; g.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = 14 * U + i * 9 * U; g.beginPath(); g.moveTo(x, S.bank + 24 * U); g.quadraticCurveTo(x + 4, S.bank - 6 * U, x + Math.sin(el + i) * 3, S.bank - 24 * U); g.stroke(); }
+          const L = S.L;
+          for (let i = 0; i < L.n; i++) {
+            const shown = L.phase === 'show' ? L.lit.indexOf(i) : -1, done = L.phase !== 'show' ? L.lit.indexOf(i) : -1;
+            this.drawPad(this.pad(i), i, el, shown >= 0 ? 'gold' : done >= 0 ? 'green' : null, shown >= 0 ? String(shown + 1) : done >= 0 ? String(done + 1) : '');
+          }
+          // the frog: on its rock, or hopping the path
+          if (L.phase === 'show' && L.frog >= 0) {
+            const to = this.pad(L.path[L.frog]), from = L.frog > 0 ? this.pad(L.path[L.frog - 1]) : { x: 46 * U, y: S.top - 40 * U }, u = L.frogU;
+            this.drawFrog(from.x + (to.x - from.x) * u, from.y + (to.y - from.y) * u - 6 * U, 1.15 * U, el, Math.sin(u * Math.PI) * 34);
+            if (u >= 1 && L.frog === L.lit.length - 1 && S.lastRibbit !== L.frog + ':' + L.path.join()) { S.lastRibbit = L.frog + ':' + L.path.join(); BOX.sfx('pop'); }
+          } else this.drawFrog(46 * U, S.top - 46 * U, 1.15 * U, el, L.phase === 'clear' ? Math.abs(Math.sin(el * 10)) * 12 : 0);
+          // the duck: on the bank, on its pad, hopping, or splashing
+          const home = S.duck >= 0 ? this.pad(S.duck) : this.bankSpot();
+          let dx = home.x, dy = home.y - 10 * U, air = 0, mode = 'stand';
+          if (S.duckHop && S.duckHop.t < 1) { const h = S.duckHop, u = h.t; dx = h.x0 + (h.x1 - h.x0) * u; dy = h.y0 + (h.y1 - h.y0) * u - 10 * U; air = Math.sin(u * Math.PI) * 40 * U; mode = 'fly'; }
+          else if (S.splash > 0) { const h = S.duckHop || { x1: S.tapX, y1: S.tapY }; dx = h.x1; dy = h.y1; mode = 'swim'; }
+          if (S.splash > 0 && mode === 'swim') { g.strokeStyle = `rgba(255,255,255,${S.splash})`; g.lineWidth = 3; g.beginPath(); g.ellipse(dx, dy + 10 * U, (30 - S.splash * 14) * U, (9 - S.splash * 4) * U, 0, 0, TAU); g.stroke(); }
+          drawDuck(g, dx, dy - air, S.ds, duck.color, duck.hat, el, mode, !!(mode === 'fly' && S.duckHop.x1 < S.duckHop.x0), duck.stage);
+          if (S.splash > 0.4 && mode === 'swim') ART.drawIcon(g, 'dizzy', dx, dy - 34 * U, 28 * U, el);
+          if (S.party > 0) for (let k = 0; k < 6; k++) { const a = el * 4 + k; ART.drawIcon(g, 'sparkle', dx + Math.cos(a) * 34 * U, dy - 30 * U + Math.sin(a) * 18 * U, 18 * U, el); }
+          // what to do now
+          g.font = `800 ${Math.round(20 * U)}px Fredoka, sans-serif`; g.textAlign = 'center'; g.lineWidth = 5; g.strokeStyle = 'rgba(0,30,60,.55)';
+          const msg = L.phase === 'show' ? `🐸 Watch the frog… (${L.len} hops)` : L.phase === 'input' ? `Your turn: hop ${L.idx + 1} of ${L.len}` : L.phase === 'oops' ? 'Splash! Watch again' : '🎉 Path clear!';
+          g.strokeText(msg, W / 2 + 24 * U, S.top - 30 * U); g.fillStyle = L.phase === 'input' ? '#ffe14d' : '#fff'; g.fillText(msg, W / 2 + 24 * U, S.top - 30 * U); g.textAlign = 'left';
+        },
+        debug(el) {
+          for (let i = 0; i < S.L.n; i++) { const p = this.pad(i); dbgCirc(p.x, p.y, p.r * 1.15 + S.slop, '#7cff7c'); dbgCirc(p.x, p.y, p.r, '#ffff00'); }
+          if (S.L.phase === 'input') { const p = this.pad(S.L.path[S.L.idx]); dbgCirc(p.x, p.y, p.r * 0.3, '#ff00ff'); }
+          dbgText(8, 90, `${S.L.phase} len ${S.L.len} idx ${S.L.idx} path ${S.L.path.join(',')}`);
+        },
+      },
       // ---------------- Bug Snack ----------------
       // Each bug is drawn with body radius b.r. A tap counts on a bug within b.r·1.1 + slop (a
       // fingertip's worth); a bee only stings when the tap is right on it (b.r·0.85).
@@ -504,12 +663,16 @@
     // ---- 3, 2, 1, GO! ----
     const ready = ov.querySelector('.dk-ready');
     let n = 3; BOX.sfx('tick'); const STEP = first ? 1000 : 520;
+    // Stop at once (the race is starting): during the countdown the run is cancelled; once it is going,
+    // it finishes right here with the score so far.
+    let stopReason = null;
+    current = { ov, active: () => !over, stop(reason) { if (over) return; if (!started) { over = true; clearInterval(countdown); close(); if (opts.cancel) opts.cancel(); return; } stopReason = reason || 'Training stopped.'; finish(); } };
     const countdown = setInterval(() => {
       n--;
       if (n > 0) { ready.textContent = n; BOX.sfx('tick'); return; }
       clearInterval(countdown); ready.textContent = 'GO!'; BOX.sfx('start'); started = true; t0 = last = performance.now();
       setTimeout(() => ready.remove(), 400); requestAnimationFrame(frame);
-      setTimeout(() => { const tp = ov.querySelector('.dk-tip'); if (tp) tp.classList.add('fade'); }, first ? 4000 : 2500);
+      setTimeout(() => { const tp = ov.querySelector('.dk-tip'); if (tp) tp.classList.add('fade'); }, kind === 'maze' ? 1200 : first ? 4000 : 2500); // Lily Path: the tip must not hide the frog
     }, STEP);
 
     function frame(now) {
@@ -539,15 +702,17 @@
     function finish() {
       over = true; holding = false; window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release);
       const tip = ov.querySelector('.dk-tip'); if (tip) tip.remove();
-      const card = document.createElement('div'); card.className = 'dk-result'; card.innerHTML = `<h2>Time! Score: ${score}</h2><p class="muted">Saving…</p>`;
+      const card = document.createElement('div'); card.className = 'dk-result'; card.innerHTML = `${stopReason ? `<div class="dk-badge">${BOX.esc(stopReason)}</div>` : ''}<h2>${stopReason ? 'Stopped' : 'Time'}! Score: ${score}</h2><p class="muted">Saving…</p>`;
       ov.appendChild(card);
       const line = `<p class="dk-stats">✅ ${stats.ok} · ✨ ${stats.perfect} perfect · 🔗 best combo ${bestCombo}${stats.miss ? ` · 💥 ${stats.miss}` : ''}</p>`;
       done(score, (r) => {
-        const SK = { run: 'Run', swim: 'Swim', fly: 'Fly', climb: 'Climb', stamina: 'Stamina' };
+        const SK = { run: 'Run', swim: 'Swim', fly: 'Fly', climb: 'Climb', stamina: 'Stamina', smarts: 'Smarts' };
+        const cut = stopReason ? `<div class="dk-badge">${BOX.esc(stopReason)}</div><p class="muted">Training stopped for the race. Your points so far still count.</p>` : '';
+        const napLine = r && r.nap ? `<p class="dk-napnote">😴 ${BOX.esc(duck.name || 'Your duck')} is worn out: nap time!</p>` : '';
         const pr = r && r.progress, bar = pr ? `<div class="dk-xpbar"><span>${SK[r.stat]} Lv ${pr.level}</span><div class="bar"><i style="width:${Math.round(((pr.have - pr.gained) / pr.need) * 100)}%"></i><i class="gain" style="width:${Math.round((pr.gained / pr.need) * 100)}%"></i></div><small>${pr.need - pr.have} XP to Lv ${pr.level + 1}</small></div>` : '';
-        const again = opts.again ? '<button class="btn ghost dk-again">↻ Again</button>' : '';
+        const again = opts.again && !stopReason && !(r && r.nap) ? '<button class="btn ghost dk-again">↻ Again</button>' : '';
         if (r && r.practice) card.innerHTML = `<div class="dk-badge good">🎮 PRACTICE</div><h2>Score ${score}</h2>${line}<p class="muted">In the game a run like this earns XP and coins for your duck.</p><div class="dk-resbtns"><button class="btn big">Done</button>${again}</div>`;
-        else card.innerHTML = r && r.ok ? `${r.wipeout ? '<div class="dk-badge bad">💥 WIPEOUT</div>' : r.star ? '<div class="dk-badge good">⭐ TARGET HIT</div>' : ''}<h2>Score ${r.score}</h2>${line}<p class="dk-gain"><b>+${r.xp}</b> XP · <b>+${r.coins}</b> 🪙</p>${r.newBest ? '<p class="lvup">🏅 New personal best!</p>' : ''}${r.streak > 1 ? `<p>🔥 Streak ×${r.streak} (+${Math.min(6, r.streak) * 5}% XP)</p>` : ''}${r.levelUp ? `<p class="lvup">LEVEL UP! ${SK[r.stat]} is now level ${r.levelUp} 🎉</p>` : ''}${bar}<div class="dk-resbtns"><button class="btn big">Back to my farm</button>${again}</div>`
+        else card.innerHTML = r && r.ok ? `${cut}${r.wipeout ? '<div class="dk-badge bad">💥 WIPEOUT</div>' : r.star ? '<div class="dk-badge good">⭐ TARGET HIT</div>' : ''}<h2>Score ${r.score}</h2>${line}<p class="dk-gain"><b>+${r.xp}</b> XP · <b>+${r.coins}</b> 🪙</p>${napLine}${r.newBest ? '<p class="lvup">🏅 New personal best!</p>' : ''}${r.streak > 1 ? `<p>🔥 Streak ×${r.streak} (+${Math.min(6, r.streak) * 5}% XP)</p>` : ''}${r.levelUp ? `<p class="lvup">LEVEL UP! ${SK[r.stat]} is now level ${r.levelUp} 🎉</p>` : ''}${bar}<div class="dk-resbtns"><button class="btn big">Back to my farm</button>${again}</div>`
           : `<h2>Score ${score}</h2>${line}<p>${BOX.esc((r && r.error) || 'Not saved.')}</p><button class="btn big">Back</button>`;
         BOX.sfx(r && r.wipeout ? 'boo' : r && (r.levelUp || r.newBest) ? 'win' : 'chime');
         card.querySelector('button').onclick = close;
@@ -557,5 +722,5 @@
     }
     return ov;
   }
-  window.DUCK_MINI = { play, debug: DEBUG };
+  window.DUCK_MINI = { play, debug: DEBUG, lilyPath, scorer, active: () => !!(current && current.active()), stop: (reason) => { if (current) current.stop(reason); } };
 })();

@@ -133,7 +133,7 @@ for testing (**+ add 5 test bots** in the lobby).
 |---|---|---|---|
 | 👑 President | `president` | 3–100 | Beat the cards on the table (3 low … A, 2 high). Finishing order sets titles; the Scum hands the President their best cards. Several tables at once; Presidents move up, Scums move down. |
 | 🃏 Blackjack Night | `blackjack` | 1–100 | Everyone plays the same dealer at the same time. Bust Bets: bet a friend goes bust. Most chips after the last hand wins. |
-| 🦆 JustRaiseDucks | `ducks` | 1–100 | Each player gets a farm in Duck Valley (on the TV). Train Run, Swim, Fly, Climb and Stamina with phone mini-games; buy food, buildings, decorations, hats and race gear; every few minutes the valley races an obstacle course (track, pond, cliff, ravine) with weather, tactics, predictions and cheering. |
+| 🦆 JustRaiseDucks | `ducks` | 1–100 | Each player gets a farm in Duck Valley (on the TV). Train Run, Swim, Fly, Climb, Stamina and Smarts with phone mini-games (tired ducks nap by themselves); buy food, buildings, decorations, hats and race gear; every few minutes the valley races an obstacle course (track, pond, cliff, ravine, maze) in one of 14 worlds, with weather, tactics, predictions and cheering. Training stops while the race is on. |
 
 | 🃏 JustBlanks | `blanks` | 3–100 | Fill-in-the-blank party cards (all original) or write your own; a rotating Judge or everyone votes. |
 | 🤥 Two Truths & a Lie | `truths` | 3–100 | Type two truths and a lie on your phone; the room votes on the lie. |

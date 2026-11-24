@@ -530,7 +530,7 @@ class Ducks {
       d.best = d.best ? Math.min(d.best, place) : place;
       d.energy = Math.max(0, d.energy - 8 * this.course.sections.length / 4);
       this.checkGrowth(e.id, d);
-      d.last = { place, of: entries.length, pts, coins, time: e.time, trips: e.events.filter((x) => x.k === 'trip').length, slips: e.events.filter((x) => x.k === 'slip').length, tired: e.events.some((x) => x.k === 'tired') };
+      d.last = { place, of: entries.length, pts, coins, time: e.time, trips: e.events.filter((x) => x.k === 'trip').length, slips: e.events.filter((x) => x.k === 'slip').length, shortcuts: e.events.filter((x) => x.k === 'short').length, wrongs: e.events.filter((x) => x.k === 'wrong').length, tired: e.events.some((x) => x.k === 'tired') };
       d.history.push(place); d.gear = [];
       if (place <= 3) d.trophies.push({ race: this.race, league: this.course.league, place, icon: LEAGUES[this.course.league].icon });
       d.stats.boosts += e.events.filter((x) => x.k === 'boost').length;
@@ -751,7 +751,7 @@ class Ducks {
     if (m.op === 'event') return this.resolveEvent(id, d, String(m.choice || ''));
     this.wake(id, d, now);
     // A mini-game cut off by the race start: its score (up to the start) is accepted for a few seconds.
-    const finishing = m.op === 'score' && d.training && d.training.cut && now - d.training.cut <= RACE_GRACE && this.phase !== 'over';
+    const finishing = (m.op === 'score' || m.op === 'cancel') && d.training && d.training.cut && now - d.training.cut <= RACE_GRACE && this.phase !== 'over';
     if (this.phase !== 'training' && !finishing) return { ok: false, error: '🏁 Race in progress: training opens after the race.', race: true };
     switch (m.op) {
       case 'train': {
@@ -769,7 +769,7 @@ class Ducks {
         d.training = null;
         const secs = Math.min(RUN_SECONDS + 2, ((tr.cut || now) - tr.at) / 1000);
         const score = Math.max(0, Math.min(SCORE_MAX, Math.floor(Number(m.score) || 0), Math.floor(secs * SCORE_RATE) + 1));
-        const out = { ok: true, ...this.reward(id, d, tr.stat, score, tr.diff || 'medium'), cut: !!tr.cut };
+        const out = { ok: true, ...this.reward(id, d, tr.stat, score, tr.diff || 'medium', !!tr.cut), cut: !!tr.cut };
         this.autoNap(id, d, now); // too tired for another run: it falls asleep right away
         out.nap = d.napUntil > now ? d.napUntil - now : 0;
         return out;
@@ -841,13 +841,14 @@ class Ducks {
       default: return { ok: false, error: 'Unknown action.' };
     }
   }
-  reward(id, d, stat, score, diff = 'medium') {
+  // cut: the race start stopped this run early (its score counts; a missed star never breaks a streak).
+  reward(id, d, stat, score, diff = 'medium', cut = false) {
     const D = DIFF[diff];
     let xp = score * 4 * D.mult;
-    const wipeout = D.wipe && score < D.wipe;
+    const wipeout = D.wipe && score < D.wipe && !cut;
     const star = score >= D.target;
     // Streak: hit the ⭐ target again and again for up to +30% XP; a miss resets it.
-    if (star) { d.streak++; d.stars++; d.bestStreak = Math.max(d.bestStreak, d.streak); } else d.streak = 0;
+    if (star) { d.streak++; d.stars++; d.bestStreak = Math.max(d.bestStreak, d.streak); } else if (!cut) d.streak = 0;
     xp *= 1 + 0.05 * Math.min(6, d.streak);
     if (wipeout) xp *= 0.25;
     const bests = (d.bests[stat] = d.bests[stat] || {}); const newBest = score > (bests[diff] || 0); if (newBest) bests[diff] = score;

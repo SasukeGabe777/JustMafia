@@ -190,6 +190,22 @@
     ring(g) { g.strokeStyle = '#ff4f9a'; g.lineWidth = 5; g.beginPath(); g.ellipse(0, 0, 7, 13, 0, 0, TAU); g.stroke(); g.fillStyle = '#ffd23f'; starPath(g, 0, 0, 4, 1.6); g.fill(); },
     climb(g) { g.fillStyle = '#9a8f86'; poly(g, [-15, 14, -9, -12, 2, -16, 14, -6, 15, 14]); g.fill(); g.fillStyle = '#2ee6a6'; ell(g, -4, -3, 5, 3.5); g.fillStyle = '#ffd23f'; ell(g, 6, 7, 4, 3); g.fillStyle = '#ff4f9a'; ell(g, 5, -9, 3.5, 2.5); },
     bug(g, t) { drawBug(g, 'ladybug', 0, 0, 13, t); },
+    // the maze: a thought bubble with a question, a sudden "oh no", a bright idea
+    question(g, t) {
+      g.fillStyle = '#fff'; circ(g, 0, -2, 14); circ(g, -10, 12, 3.5); circ(g, -15, 16, 2.2);
+      g.strokeStyle = 'rgba(58,36,0,.35)'; g.lineWidth = 1.5; g.beginPath(); g.arc(0, -2, 14, 0, TAU); g.stroke();
+      g.save(); g.rotate(Math.sin(t * 6) * 0.15); g.strokeStyle = '#7b5fd1'; g.lineWidth = 3.6; g.lineCap = 'round'; g.beginPath(); g.arc(0, -6, 5, Math.PI * 1.05, Math.PI * 0.45); g.lineTo(0, 2); g.stroke(); g.fillStyle = '#7b5fd1'; circ(g, 0, 7.5, 2.2); g.restore();
+    },
+    exclaim(g) { g.fillStyle = '#ff6a5c'; starPath(g, 0, 0, 15, 10, 8); g.fill(); g.fillStyle = '#fff'; g.fillRect(-2, -9, 4, 11); circ(g, 0, 6, 2.3); },
+    bulb(g, t) {
+      const gl = 0.6 + 0.4 * Math.sin(t * 8);
+      g.fillStyle = `rgba(255,236,120,${0.35 * gl})`; circ(g, 0, -3, 16);
+      g.fillStyle = '#ffe14d'; circ(g, 0, -4, 9.5); poly(g, [-5.5, 2, 5.5, 2, 4, 7, -4, 7]); g.fill();
+      g.fillStyle = '#9aa3ad'; g.fillRect(-4, 7, 8, 5); g.fillStyle = '#6f7780'; g.fillRect(-4, 9, 8, 1.4);
+      g.strokeStyle = '#e09a00'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-2.5, 1); g.lineTo(0, -4); g.lineTo(2.5, 1); g.stroke();
+      g.strokeStyle = '#ffd23f'; g.lineWidth = 2; g.lineCap = 'round'; for (const a of [-2.4, -1.57, -0.74]) { g.beginPath(); g.moveTo(Math.cos(a) * 13, -4 + Math.sin(a) * 13); g.lineTo(Math.cos(a) * 16.5, -4 + Math.sin(a) * 16.5); g.stroke(); }
+    },
+    zzz(g, t) { g.fillStyle = '#fff'; g.strokeStyle = 'rgba(40,30,80,.6)'; g.lineWidth = 2; g.font = '800 15px Fredoka, sans-serif'; for (let i = 0; i < 3; i++) { const a = (t * 0.6 + i / 3) % 1, x = -6 + i * 6 + Math.sin(a * 6) * 2, y = 8 - a * 22, s = 0.6 + a * 0.6; g.save(); g.globalAlpha *= 1 - a * 0.7; g.translate(x, y); g.scale(s, s); g.strokeText('z', 0, 0); g.fillText('z', 0, 0); g.restore(); } },
     // farm decorations
     flowers(g, t) {
       for (const [x, c, h] of [[-9, '#ff6fb5', 10], [0, '#ffd23f', 14], [9, '#b388ff', 9]]) {
@@ -318,6 +334,7 @@
     if (b === 'rings') { const a = t * 1.2 + k; return { x: 0.5 + Math.cos(a) * 0.28, y: 0.28 + Math.sin(a * 2) * 0.08, mode: 'fly', flip: Math.sin(a) > 0 }; }
     if (b === 'climb') return { x: 0.86, y: 0.75 - ((t * 0.18 + k) % 1) * 0.4, mode: 'climb' };
     if (b === 'bugs') return { x: 0.72 + Math.sin(t * 0.7 + k) * 0.05, y: 0.78, mode: 'peck' };
+    if (b === 'maze') { const k2 = Math.floor(t * 1.6 + k), u = (t * 1.6 + k) % 1, p = (i) => [0.3 + 0.08 * (i % 3), 0.5 + 0.09 * ((i * 7) % 3)]; const [ax, ay] = p(k2), [bx, by] = p(k2 + 1); return { x: ax + (bx - ax) * u, y: ay + (by - ay) * u - Math.sin(u * Math.PI) * 0.05, mode: u < 0.2 ? 'stand' : 'run', flip: bx < ax }; }
     if (b === 'nap') return { x: 0.62, y: 0.42, mode: 'sleep' };
     // idle: wander slowly between a few spots
     const a = t * 0.25 + k * 7; return { x: 0.45 + Math.sin(a) * 0.15, y: 0.6 + Math.sin(a * 1.7) * 0.1, mode: Math.sin(a * 3) > 0.6 ? 'peck' : 'stand', flip: Math.cos(a) < 0 };
@@ -345,6 +362,8 @@
     if (f.buildings.wall) { const wx = ix + iw * 0.83, wy = iy + ih * 0.42; g.fillStyle = '#8b8f99'; g.fillRect(wx, wy, iw * 0.08, ih * 0.42); g.fillStyle = ['#ff4f9a', '#ffd23f', '#3ec1ff'][f.buildings.wall - 1]; for (let i = 0; i < 5; i++) g.fillRect(wx + iw * (0.015 + (i % 2) * 0.035), wy + ih * (0.05 + i * 0.075), iw * 0.02, ih * 0.025); }
     // bug garden (sunflowers)
     if (f.buildings.garden) for (let i = 0; i < 1 + f.buildings.garden; i++) { const gx = ix + iw * (0.68 + i * 0.06), gy = iy + ih * 0.9; g.strokeStyle = '#3d8b37'; g.lineWidth = Math.max(1, iw * 0.006); g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx, gy - ih * 0.1); g.stroke(); g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(gx, gy - ih * 0.1, iw * 0.018, 0, TAU); g.fill(); }
+    // hedge maze (Smarts): a little square maze in the corner, bigger with each level
+    if (f.buildings.hedge) { const ms = iw * (0.11 + 0.02 * f.buildings.hedge), mx = ix + iw * 0.04, my = iy + ih * 0.3; g.fillStyle = '#d9c39a'; g.fillRect(mx, my, ms, ms); g.fillStyle = '#3f8f3a'; const c = ms / 5; for (const [a, b2, w2, h2] of [[0, 0, 5, 1], [0, 0, 1, 5], [4, 0, 1, 4], [0, 4, 3, 1], [2, 2, 3, 1], [2, 1, 1, 2]]) g.fillRect(mx + a * c, my + b2 * c, w2 * c, h2 * c); g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(mx + 1.5 * c, my + 3 * c, c * 0.35, 0, TAU); g.fill(); }
     // feeder
     if (f.buildings.feeder) { g.fillStyle = '#b08968'; g.beginPath(); g.ellipse(ix + iw * 0.45, iy + ih * 0.35, iw * 0.04, ih * 0.025, 0, 0, TAU); g.fill(); }
     // decorations (drawn art, along the top fence)
@@ -367,7 +386,7 @@
     if (f.event === 'duckling') drawDuck(g, ix + iw * sp.x - 26 * ds, iy + ih * sp.y + 6 * ds, ds * 0.5, 'sunny', 'none', t + 1, 'run', sp.flip);
     if (f.stage === -1) { g.fillStyle = '#c99a5b'; g.beginPath(); g.ellipse(ix + iw * sp.x, iy + ih * sp.y + 14 * ds, 22 * ds, 8 * ds, 0, 0, TAU); g.fill(); drawEgg(g, ix + iw * sp.x, iy + ih * sp.y, ds * 0.9, f.eggColor, null, t, 1); }
     else drawDuck(g, ix + iw * sp.x, iy + ih * sp.y, ds, f.color, f.hat, t + k, sp.mode, sp.flip, f.stage);
-    if (sp.mode === 'sleep') { g.fillStyle = '#fff'; g.font = `bold ${Math.max(8, 14 * ds)}px sans-serif`; g.fillText('z', ix + iw * sp.x + 16 * ds, iy + ih * sp.y - 22 * ds - ((t * 10) % 8)); }
+    if (sp.mode === 'sleep') drawIcon(g, 'zzz', ix + iw * sp.x + 20 * ds, iy + ih * sp.y - 26 * ds, Math.max(14, 30 * ds), t);
     // effects from the phone (hearts when petted, sparkles on level up, crumbs when eating, dust when building)
     for (const e of fx) {
       const age = (performance.now() - e.at) / 1000; if (age > 1.6) continue;
@@ -376,7 +395,7 @@
       g.globalAlpha = 1;
     }
     // what the duck is doing right now: a little bubble with the mini-game's icon
-    const BUSY = { hurdles: 'hurdle', paddle: 'wave', rings: 'ring', climb: 'climb', bugs: 'bug' };
+    const BUSY = { hurdles: 'hurdle', paddle: 'wave', rings: 'ring', climb: 'climb', bugs: 'bug', maze: 'bulb' };
     if (BUSY[f.busy] && f.owner) {
       const bx = ix + iw * sp.x + 14 * ds, by = iy + ih * sp.y - 34 * ds, br = Math.max(7, 11 * ds);
       g.fillStyle = 'rgba(255,255,255,.92)'; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.fill(); g.beginPath(); g.moveTo(bx - br * 0.5, by + br * 0.7); g.lineTo(bx - br * 0.9, by + br * 1.4); g.lineTo(bx, by + br * 0.9); g.fill();
@@ -397,9 +416,9 @@
       g.fillStyle = '#3a2400'; g.font = `800 ${fs * 0.95}px Fredoka, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(f.total), cx, cy + 1); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
       if (w * zoom > 90) drawIcon(g, moodIcon(f.mood), cx - r - fs * 0.8, iy + 3 + (fs + 6) / 2, fs * 1.15);
     } else if (w * zoom > 90) drawIcon(g, moodIcon(f.mood), ix + iw - fs * 0.9, iy + 3 + (fs + 6) / 2, fs * 1.15);
-    if (w * zoom > 150) { const L = f.levels; g.font = `600 ${fs * 0.8}px Fredoka, sans-serif`; g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(ix + 3, iy + ih - fs - 6, iw - 6, fs + 4); g.fillStyle = '#fff'; g.fillText(`🏃${L.run} 🌊${L.swim} 🪽${L.fly} 🧗${L.climb} 💪${L.stamina}`, ix + 8, iy + ih - 8, iw - 14); }
+    if (w * zoom > 150) { const L = f.levels; g.font = `600 ${fs * 0.8}px Fredoka, sans-serif`; g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(ix + 3, iy + ih - fs - 6, iw - 6, fs + 4); g.fillStyle = '#fff'; g.fillText(`🏃${L.run} 🌊${L.swim} 🪽${L.fly} 🧗${L.climb} 💪${L.stamina} 🧠${L.smarts || 0}`, ix + 8, iy + ih - 8, iw - 14); }
   }
-  const FX_ICON = { pet: 'heart', levelUp: 'star', eat: 'corn', build: 'hammer', badge: 'medal', farm: 'sparkle', hatch: 'hatch', grow: 'sprout', spin: 'wheel', gift: 'gift' };
+  const FX_ICON = { nap: 'zzz', wake: 'sparkle', pet: 'heart', levelUp: 'star', eat: 'corn', build: 'hammer', badge: 'medal', farm: 'sparkle', hatch: 'hatch', grow: 'sprout', spin: 'wheel', gift: 'gift' };
   const DECOR_ICON = { flowers: '🌷', flag: '🚩', gnome: '🧙', lantern: '🏮', scarecrow: '🎃', fountain: '⛲', statue: '🗿', rainbow: '🌈' };
   // ---------- Duck Valley: one shared map ----------
   // Farm plots sit on a grid of lots around the Raceway (centre), nearest lots first, so the
@@ -482,7 +501,7 @@
   }
 
   // ---------- the race (side-scrolling) ----------
-  const SEC_COLORS = { track: '#7bc96f', pond: '#4fb3ff', cliff: '#9a8f86', gap: '#c7b9a6' };
+  const SEC_COLORS = { track: '#7bc96f', pond: '#4fb3ff', cliff: '#9a8f86', gap: '#c7b9a6', maze: '#b48ee0' };
   const THEME = {
     meadow: { sky: ['#7cc8ff', '#d8f1ff'], hill: '#9fd39a', ground: '#6cc26a', path: '#d9a86c', water: '#2f8fe0', rock: '#8a7f76', rockDark: '#6f655d', pit: '#2b1d14', prop: 'tree' },
     beach: { sky: ['#8fdcff', '#fff3d6'], hill: '#f3dfae', ground: '#f0d9a0', path: '#e8c98a', water: '#22a7d6', rock: '#b8a48a', rockDark: '#9c8a70', pit: '#3a2c1c', prop: 'palm' },
@@ -510,7 +529,7 @@
   //   t1, t2: foot angles (0 = flat, + = toes down)      wing: 0 folded … 1 raised; flap: −1…1 stroke
   //   farWing: draw the far wing too                     eyes: '' | 'tired' | 'dizzy' | 'shut'
   //   beak: 0…1 open                                     hx, hy: head offset (stretch, droop)
-  function racePose() { return { lean: 0, rot: 0, sx: 1, sy: 1, legs: true, f1x: -4, f1y: 18, f2x: 3, f2y: 18, t1: 0, t2: 0, wing: 0, flap: 0, farWing: false, eyes: '', beak: 0, hx: 0, hy: 0 }; }
+  function racePose() { return { flip: false, lean: 0, rot: 0, sx: 1, sy: 1, legs: true, f1x: -4, f1y: 18, f2x: 3, f2y: 18, t1: 0, t2: 0, wing: 0, flap: 0, farWing: false, eyes: '', beak: 0, hx: 0, hy: 0 }; }
   const LEG1 = 6.2, LEG2 = 6.8;
   function leg(g, hx, hy, fx, fy, toe, col) {
     let dx = fx - hx, dy = fy - hy, d = Math.hypot(dx, dy);
@@ -536,7 +555,7 @@
     const ss = s * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : 1);
     g.save(); g.translate(x, y);
     if (stage >= 3) { g.globalAlpha = 0.25; g.fillStyle = '#ffd740'; g.beginPath(); g.arc(0, -4, 30 * s, 0, TAU); g.fill(); g.globalAlpha = 1; }
-    g.scale(ss, ss);
+    g.scale(P.flip ? -ss : ss, ss); // flip: facing back the way it came (a wrong turn in a maze)
     if (P.rot) g.rotate(P.rot);
     const c = Math.cos(P.lean), sn = Math.sin(P.lean);
     const wa = P.wing * 1.5 + P.flap * 0.9; // wing angle: + lifts the wing tip
@@ -569,7 +588,12 @@
   }
   // A hurdle (or a fallen log) across one lane: two posts and a striped bar going back into the
   // lane's depth. fall: 0 standing … 1 knocked flat (it tips forward, the way the duck was going).
-  function drawHurdle(g, x, gy, s, depth, log, fall, t) {
+  // kind: 'hurdle', 'log', or a newer world's obstacle (lava, cactus, chimney, root, gumdrop, hay:
+  // ducks-lands.js); true/false still mean log/hurdle.
+  function drawHurdle(g, x, gy, s, depth, kind, fall, t) {
+    const k = kind === true ? 'log' : !kind ? 'hurdle' : kind, LD = window.DUCK_LANDS;
+    if (k !== 'hurdle' && k !== 'log' && LD && LD.hurdle(g, k, x, gy, s, depth, fall, t)) return;
+    const log = k === 'log';
     g.save(); g.translate(x, gy);
     if (log) {
       const wob = fall > 0 && fall < 1 ? Math.sin(fall * 20) * 0.08 * (1 - fall) : 0; g.rotate(wob);
@@ -598,7 +622,7 @@
   // ---------- the course ----------
   // The course in metres: sections one after another. The server sends its section lengths.
   function raceGeometry(R) {
-    const LEN = R.secLen || { track: 80, pond: 60, cliff: 40, gap: 50 };
+    const LEN = R.secLen || { track: 48, pond: 36, cliff: 26, gap: 32, maze: 34 };
     let acc = 0; const secs = R.sections.map((s) => { const type = s.type || s, len = LEN[type]; const o = { type, v: s.v || null, a: acc, b: acc + len }; acc += len; return o; });
     return { secs, L: acc };
   }
@@ -632,23 +656,30 @@
   // ledges are wide enough for every lane. Hurdles are drawn per lane by the race (drawHurdle).
   function drawRaceWorld(g, W, H, R, G, cam, PX, t, VPX = PX, band = 0, laneN = 1) { // VPX: height scale, so zooming in never makes cliffs huge
     const base = H * 0.76, TH = THEME[R.theme] || THEME.meadow, YK = VPX * 0.9;
+    // The newer worlds and the maze are drawn by ducks-lands.js (DUCK_LANDS); the six original
+    // worlds draw exactly as before.
+    const L = window.DUCK_LANDS, NEW = !!(L && L.THEMES[R.theme]);
     // sky, sun or moon, stars, clouds, far hills with props (parallax)
     const sky = g.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, R.weather === 'rain' && !TH.night ? '#7d8ca3' : TH.sky[0]); sky.addColorStop(1, R.weather === 'heat' ? '#ffd9a0' : TH.sky[1]);
+    sky.addColorStop(0, R.weather === 'rain' && !TH.night && !TH.dark ? '#7d8ca3' : TH.sky[0]); sky.addColorStop(1, R.weather === 'heat' ? '#ffd9a0' : TH.sky[1]);
     g.fillStyle = sky; g.fillRect(0, 0, W, H);
     if (TH.night) { g.fillStyle = '#fff'; for (let i = 0; i < 90; i++) { const sx = (i * 137) % W, sy = (i * 71) % (base * 0.7); g.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + i)); g.fillRect(sx, sy, 2, 2); } g.globalAlpha = 1; g.fillStyle = '#fdf6d0'; g.beginPath(); g.arc(W * 0.82, H * 0.16, 34, 0, TAU); g.fill(); g.fillStyle = TH.sky[0]; g.beginPath(); g.arc(W * 0.82 + 14, H * 0.16 - 8, 30, 0, TAU); g.fill(); }
+    else if (NEW) L.sky(g, TH, W, H, t, R);
     else if (R.weather !== 'rain' && R.weather !== 'fog') { g.fillStyle = R.weather === 'heat' || R.theme === 'canyon' ? '#ff9f1c' : '#ffe066'; g.beginPath(); g.arc(W * 0.85, H * 0.15, 40, 0, TAU); g.fill(); }
-    if (!TH.night) { g.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 8; i++) { const cx = ((i * 380 - cam * PX * 0.15) % (W + 300) + W + 300) % (W + 300) - 150, cy = 50 + (i % 3) * 40; g.beginPath(); g.arc(cx, cy, 26, 0, TAU); g.arc(cx + 28, cy - 8, 22, 0, TAU); g.arc(cx + 54, cy, 24, 0, TAU); g.fill(); } }
+    if (!TH.night && (!NEW || TH.clouds)) { g.fillStyle = NEW ? TH.clouds : 'rgba(255,255,255,.85)'; for (let i = 0; i < 8; i++) { const cx = ((i * 380 - cam * PX * 0.15) % (W + 300) + W + 300) % (W + 300) - 150, cy = 50 + (i % 3) * 40; g.beginPath(); g.arc(cx, cy, 26, 0, TAU); g.arc(cx + 28, cy - 8, 22, 0, TAU); g.arc(cx + 54, cy, 24, 0, TAU); g.fill(); } }
     const hz = base - band; // the far edge of the course
-    g.fillStyle = TH.hill; g.beginPath(); g.moveTo(0, hz); for (let x = 0; x <= W; x += 20) g.lineTo(x, hz - 70 - Math.sin((x + cam * PX * 0.35) / 160) * 36); g.lineTo(W, hz); g.fill();
-    for (let i = -1; i < W / 260 + 2; i++) { const off = (cam * PX * 0.55) % 260; drawProp(g, TH.prop, i * 260 - off + 60, hz - 6, t); }
+    if (!(NEW && L.far(g, TH, W, hz, cam, PX, t))) { g.fillStyle = TH.hill; g.beginPath(); g.moveTo(0, hz); for (let x = 0; x <= W; x += 20) g.lineTo(x, hz - 70 - Math.sin((x + cam * PX * 0.35) / 160) * 36); g.lineTo(W, hz); g.fill(); }
+    for (let i = -1; i < W / 260 + 2; i++) { const off = (cam * PX * 0.55) % 260, k = i + Math.floor((cam * PX * 0.55) / 260); if (!(NEW && L.prop(g, TH.prop, i * 260 - off + 60, hz - 6, t, k))) drawProp(g, TH.prop, i * 260 - off + 60, hz - 6, t); }
     if (TH.night) for (let i = 0; i < 24; i++) { const fx = (i * 173 + Math.sin(t + i) * 40) % W, fy = hz - 40 - ((i * 37) % 140) + Math.sin(t * 2 + i) * 10; g.fillStyle = 'rgba(220,255,120,' + (0.4 + 0.6 * Math.abs(Math.sin(t * 3 + i))) + ')'; g.beginPath(); g.arc(fx, fy, 2.5, 0, TAU); g.fill(); }
     // course
     const m2x = (m) => (m - cam) * PX;
     for (const s of G.secs) {
       const x0 = m2x(s.a), x1 = m2x(s.b); if (x1 < -50 || x0 > W + 50) continue;
+      if (s.type === 'maze') { if (L) L.maze(g, s, R, TH, G, x0, x1, hz, base, band, laneN, H, t, cam, PX, m2x, W); continue; }
+      if (s.type === 'track' && NEW && L.track(g, s, TH, x0, x1, hz, base, band, laneN, H, t, cam, PX)) continue;
+      if (s.type === 'gap' && L && L.gap(g, s, TH, x0, x1, m2x(s.a + RIM), m2x(s.b - RIM), hz, H, base, band, t, cam, PX)) continue;
       if (s.type === 'track') {
-        g.fillStyle = TH.ground; g.fillRect(x0, hz, x1 - x0 + 1, H - hz);
+        if (NEW) L.fillGround(g, TH, x0, x1, hz, H, base, cam, PX); else { g.fillStyle = TH.ground; g.fillRect(x0, hz, x1 - x0 + 1, H - hz); }
         g.fillStyle = s.v === 'ice' ? '#cfeaff' : s.v === 'sand' ? '#f2dca6' : s.v === 'mud' ? '#8a6240' : TH.path; g.fillRect(x0, hz - 4, x1 - x0 + 1, band + 18);
         // lane lines
         g.fillStyle = s.v === 'mud' ? 'rgba(60,35,15,.35)' : 'rgba(255,255,255,.35)';
@@ -659,9 +690,9 @@
         g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x0, base + 14, x1 - x0 + 1, 4);
       }
       if (s.type === 'pond') {
-        g.fillStyle = TH.ground; g.fillRect(x0, hz, x1 - x0 + 1, H - hz);
+        if (NEW) L.fillGround(g, TH, x0, x1, hz, H, base, cam, PX); else { g.fillStyle = TH.ground; g.fillRect(x0, hz, x1 - x0 + 1, H - hz); }
         const wy = base + 0.6 * YK;
-        g.fillStyle = TH.water; g.fillRect(x0 + 4, wy - band - 2, x1 - x0 - 8, H);
+        g.fillStyle = (L && L.WATER[s.v]) || TH.water; g.fillRect(x0 + 4, wy - band - 2, x1 - x0 - 8, TH.floating ? base + 44 - (wy - band - 2) : H);
         g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(x0 + 4, wy - band - 2, x1 - x0 - 8, 4);
         g.fillStyle = 'rgba(0,30,60,.18)'; g.fillRect(x0 + 4, wy + 46, x1 - x0 - 8, H);
         g.fillStyle = 'rgba(255,255,255,.45)';
@@ -670,11 +701,13 @@
         if (s.v === 'waves') { g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 3; g.beginPath(); for (let x = x0; x <= x1; x += 8) g.lineTo(x, wy + 10 + Math.sin(x / 18 + t * 4) * 5); g.stroke(); }
         if (s.v === 'lily') { for (let x = x0 + 40; x < x1; x += 110) { g.fillStyle = '#3fae5a'; g.beginPath(); g.ellipse(x, wy - band * 0.55, 22, 6, 0, 0.3, TAU); g.fill(); g.fillStyle = '#ff9ccf'; g.beginPath(); g.arc(x + 6, wy - band * 0.55 - 4, 4, 0, TAU); g.fill(); } }
         if (s.v === 'icy') { g.fillStyle = 'rgba(235,248,255,.9)'; for (let x = x0 + 20; x < x1; x += 120) { const yy = wy - band * 0.4; g.beginPath(); g.moveTo(x, yy + 8); g.lineTo(x + 30, yy + 4); g.lineTo(x + 44, yy + 12); g.lineTo(x + 6, yy + 16); g.fill(); } }
+        if (L) L.pond(g, s, TH, x0, x1, hz, base, band, H, t, wy, cam, PX);
         // muddy banks at both ends
         g.fillStyle = TH.path; g.fillRect(x0 - 2, hz - 4, 8, band + 20); g.fillRect(x1 - 6, hz - 4, 8, band + 20);
       }
       if (s.type === 'cliff') {
-        const N = 64, top = '#b9ad9f', rock = s.v === 'ice' ? '#bcd9f0' : TH.rock, dark = s.v === 'ice' ? '#9cc0dd' : TH.rockDark;
+        const CL = L && L.CLIFF[s.v];
+        const N = 64, top = CL ? CL[2] : '#b9ad9f', rock = CL ? CL[0] : s.v === 'ice' ? '#bcd9f0' : TH.rock, dark = CL ? CL[1] : s.v === 'ice' ? '#9cc0dd' : TH.rockDark;
         // the ledges' walking surface (lane depth) …
         g.fillStyle = s.v === 'ice' ? '#e8f4ff' : TH.ground; g.beginPath(); g.moveTo(x0, base + 14);
         for (let i = 0; i <= N; i++) { const m = s.a + ((s.b - s.a) * i) / N; g.lineTo(m2x(m), base - groundH(G, Math.min(m, s.b - 0.001)) * YK - band - 4); }
@@ -684,7 +717,8 @@
         g.fillStyle = rock; g.beginPath(); g.moveTo(x0, H);
         for (let i = 0; i <= N; i++) { const m = s.a + ((s.b - s.a) * i) / N; g.lineTo(m2x(m), base - groundH(G, Math.min(m, s.b - 0.001)) * YK + 14); }
         g.lineTo(x1, H); g.closePath(); g.fill();
-        g.fillStyle = dark; for (let i = 0; i < 16; i++) { const m = s.a + (s.b - s.a) * ((i * 0.618) % 1) * 0.95, fy = base - groundH(G, m) * YK + 30 + (i % 4) * 16; g.fillRect(m2x(m), fy, 12 + (i % 3) * 4, 6); }
+        const patterned = CL && L.cliff(g, s, x0, x1, base, H, t, cam, PX); // (clips to the face path just filled)
+        if (!patterned) g.fillStyle = dark; if (!patterned) for (let i = 0; i < 16; i++) { const m = s.a + (s.b - s.a) * ((i * 0.618) % 1) * 0.95, fy = base - groundH(G, m) * YK + 30 + (i % 4) * 16; g.fillRect(m2x(m), fy, 12 + (i % 3) * 4, 6); }
         // ledge lips
         g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 3; g.beginPath();
         for (let k = 1; k <= CLIFF_STEPS; k++) { const m = s.a + (s.b - s.a) * CLIFF_FACE * ((k - 1 + 0.26) / CLIFF_STEPS), yy = base - (CLIFF_H / CLIFF_STEPS) * k * YK + 14; g.moveTo(m2x(m), yy); g.lineTo(m2x(m) + (s.b - s.a) * CLIFF_FACE / CLIFF_STEPS * 0.74 * PX, yy); }
@@ -700,7 +734,7 @@
       }
     }
     // the run-up before the start and the run-out after the finish
-    for (const [x0, x1] of [[-60, m2x(0)], [m2x(G.L), W + 60]]) { if (x1 <= x0) continue; g.fillStyle = TH.ground; g.fillRect(x0, hz, x1 - x0, H - hz); g.fillStyle = TH.path; g.fillRect(x0, hz - 4, x1 - x0, band + 18); g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x0, base + 14, x1 - x0, 4); }
+    for (const [x0, x1] of [[-60, m2x(0)], [m2x(G.L), W + 60]]) { if (x1 <= x0) continue; if (NEW) L.fillGround(g, TH, x0, x1, hz, H, base, cam, PX); else { g.fillStyle = TH.ground; g.fillRect(x0, hz, x1 - x0, H - hz); } g.fillStyle = TH.path; g.fillRect(x0, hz - 4, x1 - x0, band + 18); g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x0, base + 14, x1 - x0, 4); }
     // boost pads (track), fast currents (pond), updrafts (ravine)
     for (const bx of R.boosts || []) {
       const x = m2x(bx); if (x < -40 || x > W + 40) continue;
@@ -715,13 +749,14 @@
       const gh = groundH(G, Math.min(m, G.L - 0.01)) * YK;
       for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? '#fff' : '#1b1b2b'; g.beginPath(); const y0 = base - gh + 14 - (band + 14) * (i / 6), y1 = base - gh + 14 - (band + 14) * ((i + 1) / 6); g.moveTo(x + (y0 - base) * -0.5, y0); g.lineTo(x + 8 + (y0 - base) * -0.5, y0); g.lineTo(x + 8 + (y1 - base) * -0.5, y1); g.lineTo(x + (y1 - base) * -0.5, y1); g.fill(); }
       const px = x + band * 0.5; for (let y = 0; y < 120; y += 12) { g.fillStyle = (y / 12) % 2 ? '#fff' : '#1b1b2b'; g.fillRect(px, base - gh - band - 120 + y, 8, 12); }
-      g.fillStyle = TH.night ? '#fff' : '#1b1240'; g.font = 'bold 18px Fredoka, sans-serif'; g.fillText(label, px - 20, base - gh - band - 128);
+      g.fillStyle = TH.night || TH.dark ? '#fff' : '#1b1240'; g.font = 'bold 18px Fredoka, sans-serif'; g.fillText(label, px - 20, base - gh - band - 128);
     }
     return base;
   }
   // Weather on top of everything (after the ducks).
   function drawRaceWeather(g, W, H, R, t) {
     if (R.weather === 'rain') { g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1.5; g.beginPath(); for (let i = 0; i < 120; i++) { const rx = (i * 97 + t * 400) % W, ry = (i * 53 + t * 900) % H; g.moveTo(rx, ry); g.lineTo(rx - 4, ry + 14); } g.stroke(); }
+    const L = window.DUCK_LANDS; if (L && L.THEMES[R.theme]) L.ambient(g, W, H, R, THEME[R.theme], t);
     if (R.theme === 'snow') { g.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 70; i++) { const sx = (i * 89 + Math.sin(t + i) * 20 + t * 30) % W, sy = (i * 61 + t * 60) % H; g.beginPath(); g.arc(sx, sy, 2.2, 0, TAU); g.fill(); } }
     if (R.weather === 'fog') { g.fillStyle = 'rgba(230,235,240,.35)'; g.fillRect(0, 0, W, H); }
   }

@@ -1427,3 +1427,44 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
   mode and its fallback all passed. Not verified: how it looks on screen (fullscreen, settings
   window layout), the Steam overlay/achievements with a real App ID, a real phone on Wi-Fi,
   Steam Deck.
+
+## JustRaiseDucks: Smarts, the maze, eight new worlds, automatic naps (claude/ducks-smarts, November 23, 2026)
+
+- Smarts 🧠 is the sixth skill everywhere the other five are: XP/levels, stat bars, duck card, TV
+  spotlight and farm sign, quests, bots, wild ducks, the egg (Starry egg), Walnuts (+40 Smarts XP), a
+  Hedge Maze farm building (+20% Smarts XP per level), the Maze Map gear (no wrong turns), the Inner
+  Compass perk (half the wrong turns). Growth stages are scaled to six skills (12/30/60). Old ducks
+  are migrated on every lookup (`migrate`): missing skills/buildings start at 0.
+- Lily Path (the Smarts mini-game, `ducks-mini.js`): a frog hops a path across the lily pads, then
+  the duck repeats it pad by pad; quick taps are PERFECT, a cleared path pays a bonus and the next
+  is one hop longer, a wrong pad splashes and the frog shows it again. The rules (`lilyPath`) run
+  headless in the tests; `dkdebug=1` on the phone page draws the pad hit circles and the next pad.
+- The maze section (every world has one; Terrain: Everything includes it, Classic has none, Brainy
+  has two or more): a fork every 11 m. The server decides each duck's choice at each fork like a
+  hurdle (Smarts, the map, the compass and fog set the odds): the shortcut (a burst of speed), a
+  think (0.9 s at the signpost, head-scratching) or a wrong turn (2.6 s: on the TV it turns round,
+  waddles down the dead-end path, finds the wall, turns again and walks back). Commentary, a quiet
+  click (`sfx/ducks/maze.ogg`, Kenney CC0) and the phone's live race follow it.
+- Eight new worlds (`public/box/games/ducks-lands.js`, original canvas art; the six old worlds draw
+  exactly as before): Volcano Run (lava streams to leap, ash, basalt, lava pit, lava tubes), Murky
+  Swamp (roots, murky water with floating logs, mud bank, misty bog, reed maze), City Rooftops
+  (chimneys, puddles, fountain pool, building wall with windows, the gap between buildings, alley
+  maze), Lost Jungle (roots, rapids, waterfall climb, gorge with vines, temple maze), Dusty Desert
+  (cactus hurdles, dunes, oasis, sandstone, slot-canyon maze), Sky Islands (floating islands, cloud
+  path, sky lake, big glides over the clouds, cloud maze), Candy Land (gumdrops, taffy, chocolate
+  river, candy-cane cliff, cotton-candy clouds, licorice maze), Haunted Farm (hay bales, foggy pond,
+  the old barn roof, a foggy ravine, a corn maze, bats and the moon). Each has its own far layer,
+  props, ground, obstacles, ambient effect and section weights.
+- Naps are automatic: no Nap button or op. A duck too tired for even an Easy run falls asleep by
+  itself (after a run or on the farm tick); the phone pops up "😴 <Name> is exhausted and needs a
+  nap" with a sleeping duck and a countdown; it can't train until it wakes (+35 ⚡), but it can be
+  fed and petted and the shop works. The TV farm shows it sleeping (Zzz). A race wakes it.
+- Training stops when a race starts: a mini-game in progress closes at once and sends its score so
+  far, which counts (capped by the time played before the start; a cut run never breaks a streak or
+  wipes out); after 6 s nothing more is accepted. Phones show "🏁 Race in progress: training opens
+  after the race" until the podium is over; the server refuses training then too.
+- Validation: test-box-ducks (21 tests: Smarts, Lily Path scoring, maze forks deterministic and
+  stat-driven, every theme, terrain modes, training stopped at the race start, auto-nap, bots),
+  test-box, test-box-kit, test-box-gear, e2e-box (six mini-games on a real phone page, a run stopped
+  by the race start). Headless frame strips of every world and of the maze moments were checked.
+  Not yet seen: real phones and a real TV.

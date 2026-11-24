@@ -255,6 +255,44 @@ test('Old ducks (saved before Smarts) start at Smarts level 0 and keep working: 
   assert(Number.isFinite(room.game.eta(old)));
 });
 
+// ---- Lily Path, the Smarts mini-game: its rules run headless (public/box/games/ducks-mini.js) ----
+test('Lily Path: a duck that remembers the frog\'s path scores the target, a guesser barely scores; a wrong pad replays the path; each clear adds a hop', () => {
+  const vm = require('node:vm'), fs = require('node:fs'), path = require('node:path');
+  const ctx = { window: {}, location: { search: '' }, localStorage: { getItem: () => null, setItem() {} }, navigator: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/box/games/ducks-mini.js'), 'utf8'), ctx);
+  const M = ctx.window.DUCK_MINI;
+  assert(M && typeof M.lilyPath === 'function' && typeof M.stop === 'function' && typeof M.active === 'function');
+  const seeded = (seed) => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const run = (diff, pick, seed, gap = 0.6) => {
+    const S = M.scorer(), lens = [], rnd = seeded(seed + 99);
+    const L = M.lilyPath(diff, seeded(seed), { good: (i, p) => S.good(1, p), clear: (len) => { S.good(len - 1, false, true); lens.push(len); }, bad: () => S.bad() });
+    L.start(0);
+    for (let el = 0; el < 20; el += 0.05) { L.update(el, el < 20 / 3 ? 1 : el < 40 / 3 ? 1.15 : 1.32); if (L.phase === 'input' && el - L.lastTap >= gap) L.tap(pick(L, rnd), el); }
+    return { score: S.score, lens };
+  };
+  const remember = (L) => L.path[L.idx], guess = (L, rnd) => Math.floor(rnd() * L.n);
+  for (const diff of ['easy', 'medium', 'hard']) {
+    let good = 0, bad = 0;
+    for (let seed = 1; seed <= 10; seed++) {
+      const r = run(diff, remember, seed);
+      assert(r.score >= D.DIFF[diff].target, `${diff}: remembering scores the ⭐ target: ${r.score}`);
+      assert(r.score <= 60, `${diff}: but not past the score cap: ${r.score}`);
+      assert(r.lens.length >= 3 && r.lens.every((x, i) => i === 0 || x === r.lens[i - 1] + 1), 'each path is one hop longer: ' + r.lens);
+      good += r.score; bad += run(diff, guess, seed).score;
+    }
+    assert(bad / 10 < 5 && good > bad * 5, `${diff}: guessing ${bad / 10} vs remembering ${good / 10}`);
+  }
+  // A wrong pad: a splash, then the frog shows the same path again.
+  const L = M.lilyPath('medium', seeded(3)); L.start(0);
+  let el = 0; while (L.phase !== 'input') { el += 0.05; L.update(el); }
+  const p0 = L.path.slice(), wrongPad = [...Array(L.n).keys()].find((i) => i !== L.path[0]);
+  assert.equal(L.tap(L.path[0], el), 'ok'); assert.equal(L.tap(wrongPad, el + 0.3), 'wrong'); assert.equal(L.phase, 'oops');
+  assert.equal(L.tap(L.path[0], el + 0.4), 'wait', 'no taps during the splash');
+  while (L.phase !== 'show') { el += 0.05; L.update(el); }
+  assert.deepEqual(L.path, p0, 'the same path again'); assert.equal(L.len, 3);
+  for (let i = 0; i + 1 < L.path.length; i++) { const a = L.path[i], b = L.path[i + 1]; assert(Math.abs((a % L.cols) - (b % L.cols)) <= 1 && Math.abs(Math.floor(a / L.cols) - Math.floor(b / L.cols)) <= 1 && a !== b, 'the frog hops to a neighbouring pad'); }
+});
+
 // ---- the maze section: forks decided in the simulation, stat-driven, deterministic ----
 const mazeRace = (seed, lv, extra = {}) => {
   const { room } = setup(0, { races: 3, raceEvery: 60, weather: false }, seed);

@@ -4,5 +4,6 @@
   { "file": "ducks/camera.ogg", "title": "C220 camera shutter release", "author": "adeluc4", "source": "https://freesound.org/people/adeluc4/sounds/125318/", "license": "CC0 1.0" },
   { "file": "ducks/cheer.ogg", "title": "Voice_Crowd_Small_Expression_Applause_Cheer_Stereo", "author": "Nox_Sound", "source": "https://freesound.org/people/Nox_Sound/sounds/752709/", "license": "CC0 1.0" },
   { "file": "ducks/crowd.ogg", "title": "Murmur 3 approval", "author": "jayfrosting", "source": "https://freesound.org/people/jayfrosting/sounds/333414/", "license": "CC0 1.0" },
-  { "file": "ducks/trip.ogg", "title": "Impact Sounds (impactSoft_medium_001)", "author": "Kenney", "source": "https://kenney.nl/assets/impact-sounds", "license": "CC0 1.0" }
+  { "file": "ducks/trip.ogg", "title": "Impact Sounds (impactSoft_medium_001)", "author": "Kenney", "source": "https://kenney.nl/assets/impact-sounds", "license": "CC0 1.0" },
+  { "file": "ducks/maze.ogg", "title": "toggle_002.ogg (Kenney Interface Sounds), the maze shortcut / wrong-turn click", "author": "Kenney (kenney.nl)", "source": "https://kenney.nl/assets/interface-sounds", "license": "CC0 1.0" }
 ]

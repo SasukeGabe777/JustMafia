@@ -169,6 +169,7 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | ducks | Sound effect | `ducks/cheer.ogg` | Voice_Crowd_Small_Expression_Applause_Cheer_Stereo | Nox_Sound | CC0 1.0 | https://freesound.org/people/Nox_Sound/sounds/752709/ |
 | ducks | Sound effect | `ducks/crowd.ogg` | Murmur 3 approval | jayfrosting | CC0 1.0 | https://freesound.org/people/jayfrosting/sounds/333414/ |
 | ducks | Sound effect | `ducks/trip.ogg` | Impact Sounds (impactSoft_medium_001) | Kenney | CC0 1.0 | https://kenney.nl/assets/impact-sounds |
+| ducks | Sound effect | `ducks/maze.ogg` | toggle_002.ogg (Kenney Interface Sounds), the maze shortcut / wrong-turn click | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
 | emoji | Sound effect | `emoji/bubble.webm` | Plop! | Breviceps | CC0 1.0 | https://freesound.org/s/447910/ |
 | emoji | Sound effect | `emoji/cheer.webm` | Crowd.Yay.Applause.25ppl.Short.wav | jessepash | CC0 1.0 | https://freesound.org/s/139972/ |
 | emoji | Sound effect | `emoji/aww.webm` | aww.wav | phmiller42 | CC0 1.0 | https://freesound.org/s/124996/ |
