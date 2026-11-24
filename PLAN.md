@@ -1748,3 +1748,66 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
   the board opens, arrows move, settings save on the server, Esc closes). Headless screenshots of
   the board at 1600x900 and 400 px, a 2-player race and results, a solo time trial.
   Limits: the par margins (8%/16%) are a first guess, not yet tuned with real players.
+
+## TrashZombies: a phone-first zombie shooter (claude/trashzombies, November 24, 2026)
+
+- New box game `trash` (TrashZombies; `zombie` is the separate story game). Original genre take on a
+  top-down twin-stick arena shooter with waves and roguelite level-up choices; all art is drawn in
+  code (public/box/games/trash-art.js), all names original.
+- The PHONE is the whole game: a full-screen landscape canvas (public/box/games/trash-sim.js runs the
+  area locally: zombies, bullets, XP gems, pickups, abilities). Touch: drag anywhere to move (a
+  floating stick under the thumb), the fixed stick bottom-right aims and fires (pointer ids, so the
+  two thumbs never mix); auto-aim (setting, on by default) shoots the nearest zombie while the aim
+  stick is idle. Keyboard + mouse on a computer: WASD/arrows, mouse aim, hold left click (or Space)
+  to fire, Esc/P pause, 1/2/3 cards, E grabs a pickup from further away; hints follow the device.
+  The hero is the player's own JustGameBox character (BOX.drawChar, pre-rendered into walk/idle/
+  hurt/dead frames; players with no saved look get the seeded made-up character), plus three trash
+  gear slots (head, face, back) in public/shared/gear.js.
+- A run: the garage intro (dark garage, the roll-up door rattles up, you walk out), then waves.
+  Each wave has a kill target; zombies spawn from the edges up to a live cap (<= 90); types:
+  Shambler, Sprinter (w2), Bloater that pops (w3), Can-Head (w4, tough), Spitter (w5), the Dumpster
+  Brute boss every 5th wave. Clearing an area opens the exits; walking out an edge enters the next
+  cell of a 9x9 town grid with a different look (12 looks from the seed, neighbours never match:
+  junkyard, suburb, parking lot, gas station, dead mall, park, rooftops, sewer, carnival, school,
+  docks, landfill; plus "Your Street" with the garage). Each area entered is the next wave (going
+  back gives the same layout and a fresh wave). 23 abilities in Attack / Defense / Special, tiered;
+  every level offers 3 cards, one per category when possible. 8 pickups. One extra life only through
+  the Spare Lunchbox ability (no free revive). Death: stats + build + Play again (a new run).
+- Server (box/games/trash.js): runs, cells, explored map, home cells, kill feed, standings; loose
+  sanity checks on the 1 s status pings (kills per second, level vs kills, ability tiers <= level-1,
+  health caps, waves need areas). Session length: endless (ends after everyone is down 45 s, or no
+  phone connected for 3 min), first to wave 20, or 5-30 minutes. Party Mode: included with a fixed
+  time (partyFit picks 5/10/15/20 min from the plan). No practice round (NO_PRACTICE). New module
+  flag `dropIn: true`: room.busy() lets late phones join a running TrashZombies (own garage).
+- Co-op: each player spawns in their own garage far apart; walking into a cell with another human
+  joins that area. The first one there is the area host: their phone runs the zombies and sends
+  ~15 snapshots/s through a new relay (socket 'player:live' -> game.live(p, msg) -> 'live' to the
+  other phones; play.js ctx.live / G.live). Guests send position/aim, the hits their own bullets
+  land, pickup grabs and nuke/freeze; everyone draws everyone's shots. XP shared in the area (or own
+  kills only, setting). Level-up never pauses co-op: the chooser can't be hurt while choosing. The
+  host walking out or dropping (2.5 s) hands the area to the next phone, which carries on from the
+  last snapshot. Waves scale with the players in the area. Relay is rate limited (60/s/phone),
+  size limited and only between members of the same area.
+- TV: the lobby (garage door + house rules board), the town map (explored cells as thumbnails, fog,
+  player faces with HP rings, danger pulse, co-op glow, garage-door animation when a run starts),
+  side list + kill feed, results podium with builds. Sounds: garage roll-up (JustBid's CC0 clip),
+  zombie groans / body fall (Zombie Survival's CC0 clips), synth stingers. Music: the CC0 zombie
+  tracks already shipped (Zombies March, Night of the Streets, When the Shadows Gather, Sad Tune)
+  mapped in public/audio/music/games/trash/music.json; synth fallback score in E-minor garage punk.
+  Intro: narrator lines voiced (Orpheus, 10 clips). Hub: unlocked from the start (like Kill the
+  King; it isn't an evolution of an existing game), action shelf, best 1-4.
+- Validation: tools/test-box-trash.js (21 tests: area determinism + neighbour looks + clear lanes,
+  offers, waves, spawn spread, drop-in, sanity checks, co-op join, relay routing/limits, host
+  hand-off on leave and on drop, death/respawn/all-down end, results, timed/w20/partyFit, bots
+  playing a whole night, and the phone simulation sandboxed: intro -> wave, exits shut until clear,
+  auto-aim kills, cap, cards + pause + stacking, every pickup and its timer, lunchbox, co-op
+  snapshot -> guest -> hits -> host, shared XP, pickup grab/give, guest takeover). test-box-kit,
+  test-box-gear, test-practice, test-party-plan, test-voice-timing, e2e-box (new TrashZombies
+  section: touch drag + aim stick with two touch points, cards, WASD + mouse + Esc + number keys,
+  pickup, area change, TV map). Headless playthrough (844x390 touch phones, 1600x900 TV): garage
+  intro, 100-zombie horde, cards, every pickup, new areas, boss, 3 players on the map, a 2-phone
+  co-op area, death, results. Frame work time on the phone page ~1 ms average (2-4 ms max) with
+  ~80 zombies on a desktop CPU; a mid phone is maybe 4-6x slower, still inside 16 ms; the page drops
+  its resolution if frames get slow.
+  Limits: not played on real phones yet; co-op tested with two headless phones on one machine (no
+  real network latency); spit hits on guests are approximate; no friendly fire.

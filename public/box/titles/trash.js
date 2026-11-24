@@ -8,6 +8,7 @@
     logo: '<span style="color:#fff6d8;-webkit-text-stroke:3px #1b1410;text-shadow:0 6px 0 #1b1410">Trash</span><span style="color:#9cff3c;-webkit-text-stroke:3px #1b1410;text-shadow:0 6px 0 #1b1410">Zombies</span>',
     tagline: 'Roll up the garage door. Walk out. Don’t get trashed.', start: '▶ Roll up the door', meta: 'Solo or 1–100 players · 5–30 min',
     font: "'Lilita One', sans-serif",
+    css: '.bt-trash .bt-logo { font-size: clamp(40px, 5.6vw, 92px); white-space: nowrap; letter-spacing: 0; }',
     theme: { card: 'rgba(24, 16, 20, 0.86)', button: '#9cff3c', buttonInk: '#1b1410', border: '#ff8c2e', accent: '#9cff3c' },
     init(W, H) {
       const r = (() => { let s = 7; return () => { s = (s * 16807) % 2147483647; return s / 2147483647; }; })();

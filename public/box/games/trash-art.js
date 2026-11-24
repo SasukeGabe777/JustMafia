@@ -178,22 +178,26 @@
     const g = c.getContext('2d'); g.scale(scale, scale); g.translate(M, M); drawArea(g, area, 1);
     return { canvas: c, margin: M, scale };
   }
-  // The roll-up door: open 0 (shut) .. 1 (up); it rattles while it lifts.
+  // The roll-up door, seen from the street: a slatted face standing on the garage's front line
+  // (y = G.h). open 0 (shut) .. 1 (rolled up into the lintel); it rattles while it lifts. Drawn in
+  // the y-sorted pass, so you stand behind it inside and walk out in front of it.
+  const DOOR_H = 190;
   function drawGarage(g, area, open, t) {
     const G = area.garage; if (!G) return;
-    const dw = G.door.w, dx = G.door.x, dh = G.h, shake = open > 0 && open < 1 ? Math.sin(t * 60) * 3 : 0;
-    const shown = dh * (1 - open);
-    if (shown > 2) {
+    const dw = G.door.w, dx = G.door.x, front = G.h, top = front - DOOR_H, shake = open > 0.01 && open < 0.99 ? Math.sin(t * 60) * 3 : 0;
+    const bottom = front - DOOR_H * Math.min(1, Math.max(0, open));
+    if (bottom - top > 2) {
       g.save(); g.translate(shake, 0);
-      g.fillStyle = '#c9ccd1'; g.fillRect(dx, 0, dw, shown);
-      g.strokeStyle = '#8a8f98'; g.lineWidth = 4; g.beginPath(); for (let y = shown - 4; y > 0; y -= 22) { g.moveTo(dx, y); g.lineTo(dx + dw, y); } g.stroke();
-      g.fillStyle = '#5a5f66'; g.fillRect(dx + dw / 2 - 30, shown - 18, 60, 8); // handle
-      g.strokeStyle = OL; g.lineWidth = 4; g.strokeRect(dx, 0, dw, shown);
+      const gr = g.createLinearGradient(0, top, 0, bottom); gr.addColorStop(0, '#9aa0a8'); gr.addColorStop(1, '#d6d8dc'); g.fillStyle = gr; g.fillRect(dx, top, dw, bottom - top);
+      g.strokeStyle = '#7a7f86'; g.lineWidth = 4; g.beginPath(); for (let y = bottom - 6; y > top; y -= 24) { g.moveTo(dx, y); g.lineTo(dx + dw, y); } g.stroke();
+      g.fillStyle = '#4a4f56'; g.fillRect(dx + dw / 2 - 34, bottom - 22, 68, 9); // the handle
+      g.strokeStyle = OL; g.lineWidth = 5; g.strokeRect(dx, top, dw, bottom - top);
+      if (open < 0.99) { g.fillStyle = 'rgba(255,233,168,0.85)'; g.fillRect(dx + 4, bottom - 3, dw - 8, 4); } // light under the door
       g.restore();
     }
-    // the roof over the garage (so we look "into" it from the street)
-    g.fillStyle = '#3b2f2a'; g.fillRect(G.x, -16, G.w, 22);
-    g.fillStyle = '#ffd23f'; g.font = 'bold 26px "Lilita One", sans-serif'; g.textAlign = 'center'; g.fillText('No.' + (10 + ((area.x * 7 + area.y * 3) % 89)), G.x + G.w / 2, -24);
+    // the lintel and the house number
+    g.fillStyle = '#3b2f2a'; g.fillRect(dx - 14, top - 26, dw + 28, 28); g.strokeStyle = OL; g.lineWidth = 4; g.strokeRect(dx - 14, top - 26, dw + 28, 28);
+    g.fillStyle = '#ffd23f'; g.font = 'bold 24px "Lilita One", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('No.' + (10 + ((area.x * 7 + area.y * 3) % 89)), dx + dw / 2, top - 12);
   }
 
   // ---------------- zombies (cached sprites) ----------------

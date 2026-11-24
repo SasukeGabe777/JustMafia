@@ -80,6 +80,14 @@ test('start: everyone gets their own garage, far apart, on the map', () => {
   const t = g.tv(); assert.equal(t.players.length, 4); assert(t.feed.some((f) => /garage/.test(f.text)));
   assert(!JSON.stringify(t).includes('"ab":{'), 'the TV gets ability ids, not the phone run objects');
 });
+test('drop-in: a late phone joins the running night and rolls up its own garage', () => {
+  const { room, ps: [a] } = mk({}, 1); room.start(); const g = room.game;
+  assert.equal(room.busy(), null, 'the room stays open while the night runs');
+  const late = room.join('Late').player; const R = g.runs.get(late.id);
+  assert(R && R.state === 'play', 'a run of their own'); assert(Math.abs(R.cell[0] - g.runs.get(a.id).cell[0]) + Math.abs(R.cell[1] - g.runs.get(a.id).cell[1]) >= 3, 'away from the others');
+  assert.equal(room.fxLog.filter((f) => f.kind === 'tzgarage').length, 2);
+  room.act(a, { op: 'end' }); assert.equal(room.busy(), null, 'over: the lobby is next');
+});
 test('status pings are sanity-checked (kills, levels, abilities, health)', () => {
   const { room, clock, ps: [a] } = mk({}, 1); room.start(); const g = room.game, R = g.runs.get(a.id);
   run(room, clock, 1000);

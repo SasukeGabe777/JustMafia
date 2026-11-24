@@ -227,7 +227,7 @@
     updateIntro(dt, I) {
       this.introT += dt * (I && I.skip ? 6 : 1);
       const P = this.p, T = this.introT;
-      if (T > 2.9) { P.moving = true; P.walkT += dt; P.y = Math.min(380, 120 + (T - 2.9) * 170); P.face = 1; P.aim = Math.PI / 2; }
+      if (T > 2.9) { P.moving = true; P.walkT += dt; P.y = Math.min(380, 120 + (T - 2.9) * 170); P.face = 1; P.aim = 0.5; }
       if (T > 1.3 && T < 2.9) this.shake = Math.max(this.shake, 0.12);
       if (T > 4.5) { this.phase = 'play'; P.moving = false; this.startWave(); this.o.on('start', {}); this.reportStatus(true); }
     }
@@ -546,7 +546,7 @@
     // camera
     const vw = V.w / k, vh = V.h / k, intro = sim.phase === 'intro';
     let cx = P.x, cy = P.y - 30;
-    if (intro) { cx = AW / 2; cy = Math.max(P.y - 40, 300 - Math.max(0, 2.9 - sim.introT) * 40); }
+    if (intro) { cx = AW / 2; cy = Math.max(60, P.y - 40); }
     const M = TA.M;
     cx = vw >= AW + 2 * M ? AW / 2 : clamp(cx, vw / 2 - M, AW + M - vw / 2);
     cy = vh >= AH + 2 * M ? AH / 2 : clamp(cy, vh / 2 - M, AH + M - vh / 2);
@@ -575,7 +575,6 @@
         g.restore();
       }
     }
-    if (sim.area.garage) { const open = intro ? clamp((sim.introT - 1.3) / 1.5, 0, 1) : 1; TA.drawGarage(g, sim.area, open, t); }
     // gems
     if (sim.gems.length) { g.fillStyle = '#5affc8'; g.strokeStyle = '#0a3a2a'; g.lineWidth = 2; g.beginPath(); for (const q of sim.gems) { const s = 7 + Math.sin(q.t * 8) * 1.5; g.moveTo(q.x, q.y - s); g.lineTo(q.x + s * 0.7, q.y); g.lineTo(q.x, q.y + s); g.lineTo(q.x - s * 0.7, q.y); g.closePath(); } g.fill(); g.stroke(); }
     for (const p of sim.pk) TA.drawPickup(g, p.x, p.y, p.k, t, p.life < 4 ? (Math.sin(t * 16) > 0 ? 1 : 0.35) : 1);
@@ -585,11 +584,13 @@
     list.push(P);
     for (const o of sim.others.values()) list.push(o);
     if (sim.raccoon && sim.S.raccoon) list.push(sim.raccoon);
+    const G = sim.area.garage; if (G) list.push(sim._door || (sim._door = { door: true, y: G.h + 0.5 })); if (G && sim._door.y !== G.h + 0.5) sim._door.y = G.h + 0.5;
     list.sort((a, b) => a.y - b.y);
     const frozen = sim.buffs.freeze > 0 || sim.remoteFreeze > 0;
     for (const q of list) {
       if (q === P) { drawYou(g, sim, V); continue; }
       if (q === sim.raccoon) { drawRaccoon(g, q, t); continue; }
+      if (q.door) { TA.drawGarage(g, sim.area, intro ? clamp((sim.introT - 1.3) / 1.5, 0, 1) : 1, t); continue; }
       if (q.tx != null && q.ti == null && q.id && sim.others.has(q.id)) { drawOther(g, sim, q, V); continue; }
       const spr = TA.zombie(q.type, Math.floor(q.f) % 4, kp, q.flash > 0);
       g.save(); g.translate(q.x, q.y); if (q.face < 0) g.scale(-1, 1);

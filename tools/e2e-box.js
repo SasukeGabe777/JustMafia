@@ -62,7 +62,7 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,YesChef,JustSnap,Meme Maker,Letter Rush,Act It Out,JustPitch,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Kill the King,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,YesChef,JustSnap,Meme Maker,Letter Rush,Act It Out,JustPitch,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Kill the King,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,TrashZombies,Quick Draw,Bomb Squad,Zombie Survival');
   // Every small game sits on a category shelf (public/categories.js); there is no catch-all shelf.
   assert.equal(await hub.eval(`[...document.querySelectorAll('.shelf')].map((x) => x.dataset.shelf).join(',')`), 'cards,guess,create,friends,action');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
@@ -579,6 +579,80 @@ async function setup(browser, game, settings = {}) {
     await tv.eval(`(() => { const b = document.querySelector('[data-h="next"]'); if (b) b.click(); return true; })()`);
     await tv.until(`!!document.querySelector('.sn-cover')`, 'the reveal', 15000); await wait(1200); await tv.shot('box-snap-reveal');
     ok('JustSnap: a JPEG from the phone page is shrunk, previewed, sent over the socket, served at an unguessable URL and shown on the TV gallery (anonymous), then the reveal');
+  }
+
+  // ---------- TrashZombies: the phone is the whole game (touch: drag to move + the aim stick; keyboard + mouse) ----------
+  {
+    const { tv, ph } = await setup(browser, 'trash', { length: 'm10', diff: 'chill' });
+    await tv.click('#start'); await skipShow(tv);
+    await ph.send('Emulation.setDeviceMetricsOverride', { width: 844, height: 390, deviceScaleFactor: 1, mobile: true });
+    await ph.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    await ph.until(`!!window.TZ_DEBUG && !!TZ_DEBUG.sim() && !!document.querySelector('.tz-root canvas')`, 'the game on the phone', 20000);
+    assert(await ph.eval(`TZ_DEBUG.sim().phase === 'intro' && !!TZ_DEBUG.sim().area.garage`), 'the run starts inside your garage');
+    await ph.until(`TZ_DEBUG.sim().phase === 'play'`, 'out of the garage', 10000);
+    await ph.eval(`TZ_DEBUG.god(true); TZ_DEBUG.sim().set.aim = 'off'; TZ_DEBUG.sim().spawnCd = 99; true`);
+    const sim = (e) => ph.eval(`(() => { const s = TZ_DEBUG.sim(); return ${e}; })()`);
+    const touch = (type, pts) => ph.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y, id]) => ({ x, y, id })) });
+    // drag anywhere to move: a finger on the left, dragged right
+    const x0 = await sim('s.p.x');
+    await touch('touchStart', [[200, 250, 1]]);
+    for (let i = 1; i <= 6; i++) { await touch('touchMove', [[200 + i * 14, 250, 1]]); await wait(30); }
+    await wait(500);
+    assert((await sim('s.p.x')) > x0 + 60, 'the drag moves you');
+    // a second finger on the aim stick (aiming left) while still dragging: you aim and shoot, and keep moving
+    const st = await ph.eval('TZ_DEBUG.stick()'), b0 = await sim('s.b.length');
+    await touch('touchStart', [[284, 250, 1], [st.x, st.y, 2]]);
+    for (let i = 1; i <= 4; i++) { await touch('touchMove', [[284, 250, 1], [st.x - i * 12, st.y, 2]]); await wait(30); }
+    await wait(400);
+    assert(Math.abs(Math.abs(await sim('s.p.aim')) - Math.PI) < 0.3, 'the stick aims left');
+    assert((await sim('s.b.length')) > b0 || (await sim('s.p.kick')) > 0, 'it fires');
+    const x1 = await sim('s.p.x'); await wait(300); assert((await sim('s.p.x')) > x1 + 20, 'the move finger still moves you');
+    assert.equal(await ph.eval('TZ_DEBUG.device()'), 'touch');
+    await ph.shot('box-trash-touch');
+    await touch('touchEnd', []);
+    // level up: three cards, Attack / Defense / Special, tap one
+    await ph.eval('TZ_DEBUG.xp(30); true');
+    await ph.until(`document.querySelectorAll('.tz-card').length === 3`, 'level-up cards');
+    assert.equal(await ph.eval(`[...document.querySelectorAll('.tz-card')].map((c) => c.className.match(/c-(atk|def|spc)/)[1]).sort().join()`), 'atk,def,spc');
+    await ph.shot('box-trash-cards');
+    for (let i = 0; i < 10 && (await sim('!!s.cards')); i++) { await ph.eval(`document.querySelector('.tz-card').click(); true`); await wait(120); }
+    assert(await sim('Object.keys(s.ab).length >= 1'), 'an ability picked');
+    // keyboard + mouse (the same page on a computer)
+    await ph.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+    await ph.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 720, deviceScaleFactor: 1, mobile: false });
+    await wait(300);
+    const key = (type, k, code, vk) => ph.send('Input.dispatchKeyEvent', { type, key: k, code, windowsVirtualKeyCode: vk });
+    const y0 = await sim('s.p.y');
+    await key('keyDown', 'w', 'KeyW', 87); await wait(450); await key('keyUp', 'w', 'KeyW', 87);
+    assert((await sim('s.p.y')) < y0 - 40, 'W moves you up');
+    const mouse = (type, x, y, extra = {}) => ph.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', ...extra });
+    await mouse('mouseMoved', 640, 360); await mouse('mouseMoved', 1100, 200);
+    await ph.until(`TZ_DEBUG.device() === 'mouse'`, 'mouse mode');
+    const b1 = await sim('s.b.length + (s.p.kick > 0 ? 1 : 0)');
+    await mouse('mousePressed', 1100, 200, { clickCount: 1, buttons: 1 }); await wait(400);
+    const aim = await sim('s.p.aim'); assert(aim < 0 && aim > -Math.PI / 2, 'the mouse aims up-right: ' + aim);
+    assert((await sim('s.b.length')) > 0 || b1 > 0, 'holding the button fires');
+    await mouse('mouseReleased', 1100, 200, { clickCount: 1 });
+    await key('keyDown', 'Escape', 'Escape', 27); await key('keyUp', 'Escape', 'Escape', 27);
+    await ph.until(`TZ_DEBUG.menu() && !!document.querySelector('.tz-menu')`, 'Esc pauses');
+    assert(await ph.eval(`/WASD/.test(document.querySelector('.tz-controls').textContent)`), 'keyboard hints on a computer');
+    await ph.shot('box-trash-pause-desktop');
+    await key('keyDown', 'Escape', 'Escape', 27); await key('keyUp', 'Escape', 'Escape', 27);
+    await ph.until(`!TZ_DEBUG.menu()`, 'Esc resumes');
+    await ph.eval('TZ_DEBUG.xp(60); true'); await ph.until(`document.querySelectorAll('.tz-card').length === 3`, 'cards again');
+    const before = await sim('JSON.stringify(s.ab)');
+    await key('keyDown', '2', 'Digit2', 50); await key('keyUp', '2', 'Digit2', 50); await wait(200);
+    assert.notEqual(await sim('JSON.stringify(s.ab)'), before, 'the 2 key picks a card');
+    for (let i = 0; i < 10 && (await sim('!!s.cards')); i++) { await key('keyDown', '1', 'Digit1', 49); await key('keyUp', '1', 'Digit1', 49); await wait(120); }
+    // a pickup, a cleared area, walking out to a new-looking area; the TV map follows
+    await ph.eval(`TZ_DEBUG.give('shield'); true`); assert(await sim('s.buffs.shield > 7'));
+    const look0 = await sim('s.area.biome.key'), cell0 = await sim('s.cell.join()');
+    await ph.eval('TZ_DEBUG.clear(); true'); await ph.until(`TZ_DEBUG.sim().cleared`, 'area clear');
+    const dir = await sim(`s.area.exits.e ? 'e' : 'w'`); await ph.eval(`TZ_DEBUG.walk('${dir}')`);
+    assert.notEqual(await sim('s.cell.join()'), cell0); assert.notEqual(await sim('s.area.biome.key'), look0, 'a new look'); assert.equal(await sim('s.wave'), 2);
+    await tv.until(`!!document.querySelector('#tz-map') && /Tess/.test(document.querySelector('#tz-side').textContent) && /Wave 2/.test(document.querySelector('#tz-side').textContent)`, 'the TV map shows Tess on wave 2', 10000);
+    await wait(800); await ph.shot('box-trash-new-area'); await tv.shot('box-trash-tv-map');
+    ok('TrashZombies: the run starts in your garage; touch drag moves, the aim stick aims and fires while dragging; level-up cards (Attack/Defense/Special); WASD, mouse aim + hold to fire, Esc pause and number keys on a computer; a pickup; a cleared area opens the exits into a new-looking area; the TV map follows');
   }
 
   // ---------- One code for the night: the title screen switches the live room ----------

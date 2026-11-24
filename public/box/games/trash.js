@@ -279,7 +279,7 @@
     // top-right: minimap (under the pause button)
     minimap(g, sim, V);
     // the banner
-    if (sim.banner) { const a = Math.min(1, sim.banner.t * 2); g.globalAlpha = a; txt(sim.banner.text, w / 2, h * 0.36, small ? 34 : 46, '#ffd23f', 'center'); txt(sim.banner.sub, w / 2, h * 0.36 + (small ? 30 : 40), small ? 14 : 18, '#fff', 'center'); g.globalAlpha = 1; }
+    if (sim.banner) { const a = Math.min(1, sim.banner.t * 2), by2 = h * 0.24; g.globalAlpha = a; txt(sim.banner.text, w / 2, by2, small ? 34 : 46, '#ffd23f', 'center'); txt(sim.banner.sub, w / 2, by2 + (small ? 30 : 40), small ? 14 : 18, '#fff', 'center'); g.globalAlpha = 1; }
     // control hints
     if (PH.hint > 0) { PH.hint -= dt; g.globalAlpha = Math.min(1, PH.hint); txt(isTouch() ? 'Drag anywhere to move · right stick to aim' + (sim.set.aim !== 'off' ? ' (or just move: it auto-aims)' : '') : 'WASD to move · mouse to aim · hold click to shoot · Esc to pause', w / 2, h - 22, small ? 12 : 15, '#ffe9a8', 'center'); g.globalAlpha = 1; }
     // sticks (touch)
@@ -392,6 +392,8 @@
       god(on) { PH.sim.p.inv = on ? 1e9 : 0; return true; }, kill() { const s = PH.sim; s.p.inv = 0; s.buffs.shield = 0; s.p.armor = 0; s.p.lives = 0; s.p.hp = 1; s.hurt(999); return s.dead; },
       walk(dir) { const s = PH.sim, Z = W(); s.cleared = true; if (dir === 'e') { s.p.x = Z.AW + 20; s.p.y = Z.AH / 2; } if (dir === 'w') { s.p.x = -20; s.p.y = Z.AH / 2; } if (dir === 'n') { s.p.x = Z.AW / 2; s.p.y = -20; } if (dir === 's') { s.p.x = Z.AW / 2; s.p.y = Z.AH + 20; } s.leave(dir); return s.cell.join(','); },
       teleport(x, y) { const s = PH.sim; s.p.x = x; s.p.y = y; return true; },
+      stick() { const c = PH.cv; return stickZone({ w: c.clientWidth, h: c.clientHeight }); }, device: () => PH.device, menu: () => PH.menu,
+      intro() { const s = PH.sim; if (!s.area.garage) return false; s.phase = 'intro'; s.introT = 0; s.p.x = W().AW / 2; s.p.y = 120; s.banner = null; return true; },
     };
   }
 
@@ -429,7 +431,7 @@
         set.innerHTML = L.fields.map((f) => `<label>${esc(f.label)}<select data-set="${esc(f.key)}">${f.options.map((o) => `<option value="${esc(String(o.value))}" ${String(L.settings[f.key]) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`).join('');
         for (const s of set.querySelectorAll('[data-set]')) s.onchange = () => L.set(s.dataset.set, s.value);
       }
-      BOX.morph(el.querySelector('#roster'), L.players.map((p) => `<span class="chip">${face(p, 30)} ${nm(p.name)}</span>`).join('') || '<span class="muted">Scan the code to join! Solo works great too.</span>');
+      BOX.morph(el.querySelector('#roster'), L.players.map((p) => `<span class="chip">${face({ ...p, bot: true }, 30)} ${nm(p.name)}</span>`).join('') || '<span class="muted">Scan the code to join! Solo works great too.</span>');
     },
     // ---------------- TV ----------------
     tv(el, s) {
