@@ -22,30 +22,40 @@ const mk = (settings = {}, n = 0) => {
 const run = (room, clock, ms) => { const end = clock.now() + ms; let i = 0; while (clock.now() < end && room.game.phase !== 'over' && clock.step()) if (++i > 200000) throw new Error('stuck'); };
 
 // ---------------- the world ----------------
-test('areas: the same seed builds the same area; neighbours never share a look', () => {
-  for (const seed of [1, 99, 123456]) for (let x = 0; x < W.GRID; x++) for (let y = 0; y < W.GRID; y++) {
-    assert.deepEqual(W.genArea(seed, x, y), W.genArea(seed, x, y));
-    const b = W.biomeOf(seed, x, y).key;
-    if (x + 1 < W.GRID) assert.notEqual(b, W.biomeOf(seed, x + 1, y).key, `${seed} ${x},${y} east`);
-    if (y + 1 < W.GRID) assert.notEqual(b, W.biomeOf(seed, x, y + 1).key, `${seed} ${x},${y} south`);
+test('town: one road network per seed (same seed, same town); every block is reachable by road', () => {
+  for (const seed of [1, 99, 123456, 7]) {
+    assert.deepEqual(JSON.stringify(W.town(seed).cells), JSON.stringify(W.town(seed).cells));
+    const d = W.roadDist(seed, [[0, 0]]); assert(d.every((v) => Number.isFinite(v)), seed + ': connected');
+    for (let x = 0; x < W.GRID; x++) for (let y = 0; y < W.GRID; y++) { const c = W.cellOf(seed, x, y); assert(Object.values(c.side).some(Boolean), 'every block has a road'); }
   }
-  assert.notDeepEqual(W.genArea(1, 2, 2).obstacles, W.genArea(2, 2, 2).obstacles, 'another seed, another layout');
-  const looks = new Set(); for (let x = 0; x < W.GRID; x++) looks.add(W.biomeOf(5, x, 0).key); assert(looks.size >= 8, 'plenty of different looks along a row');
+  assert.notEqual(JSON.stringify(W.town(1).cells.map((c) => c.side)), JSON.stringify(W.town(2).cells.map((c) => c.side)), 'another seed, another town');
+  const looks = new Set(); for (let x = 0; x < W.GRID; x++) for (let y = 0; y < W.GRID; y++) looks.add(W.biomeOf(5, x, y).key); assert(looks.size >= 8, 'plenty of districts: ' + looks.size);
 });
-test('areas: exit lanes, the middle and the border stay clear; home areas have the garage', () => {
-  for (let k = 0; k < 60; k++) {
+test('town: a road leaving a block enters the neighbour at the same place and width; exits only where roads cross', () => {
+  for (const seed of [3, 42, 9001]) for (let x = 0; x < W.GRID; x++) for (let y = 0; y < W.GRID; y++) {
+    const a = W.genArea(seed, x, y);
+    if (x + 1 < W.GRID) { const b = W.genArea(seed, x + 1, y); assert.deepEqual(a.exits.e, b.exits.w, seed + ' ' + x + ',' + y + ' east'); assert.equal(!!a.exits.e, W.roadBetween(seed, [x, y], [x + 1, y])); }
+    if (y + 1 < W.GRID) { const b = W.genArea(seed, x, y + 1); assert.deepEqual(a.exits.s, b.exits.n, seed + ' ' + x + ',' + y + ' south'); }
+    for (const d of ['n', 's', 'w', 'e']) { const e = a.exits[d]; if (!e) continue; assert(e.p - e.w / 2 > 100 && e.p + e.w / 2 < (d === 'n' || d === 's' ? W.AW : W.AH) - 100, 'roads cross away from the corners'); }
+  }
+  assert.equal(W.exitsOf(1, 0, 0).n, null); assert.equal(W.exitsOf(1, 0, 0).w, null); assert.equal(W.exitsOf(1, 8, 8).s, null);
+  assert.equal(W.roadBetween(1, [0, 0], [2, 0]), false, 'only neighbours');
+});
+test('areas: roads, sidewalks and the landmark spot stay clear; home blocks have the garage by the street', () => {
+  for (let k = 0; k < 80; k++) {
     const a = W.genArea(k * 31, k % 9, (k * 7) % 9, k % 5 === 0);
+    assert.deepEqual(a, W.genArea(k * 31, k % 9, (k * 7) % 9, k % 5 === 0), 'deterministic');
+    const hit = (o, q) => o.x < q.x + q.w && o.x + o.w > q.x && o.y < q.y + q.h && o.y + o.h > q.y;
     for (const o of a.obstacles) {
       if (o.kind === 'wall') continue;
-      const hit = (x0, y0, x1, y1) => o.x < x1 && o.x + o.w > x0 && o.y < y1 && o.y + o.h > y0;
-      assert(!hit(W.AW / 2 - 80, 0, W.AW / 2 + 80, W.AH), 'vertical lane clear'); assert(!hit(0, W.AH / 2 - 80, W.AW, W.AH / 2 + 80), 'horizontal lane clear');
-      assert(o.x >= W.TILE && o.y >= W.TILE && o.x + o.w <= W.AW - W.TILE && o.y + o.h <= W.AH - W.TILE, 'border ring clear');
+      for (const q of a.roads) assert(!hit(o, q), 'nothing on the road: ' + o.kind);
+      if (a.spot) assert(!hit(o, a.spot), 'landmark spot clear');
+      assert(o.x >= W.TILE - 30 && o.y >= W.TILE - 30 && o.x + o.w <= W.AW - W.TILE + 30 && o.y + o.h <= W.AH - W.TILE + 30, 'border ring clear');
     }
-    assert.equal(!!a.garage, k % 5 === 0);
+    assert.equal(!!a.garage, k % 5 === 0); if (a.garage) { assert(!a.spot); for (const q of a.roads) assert(!hit(a.garage, q), 'garage off the road'); } else assert(a.spot);
     assert(a.obstacles.filter((o) => o.kind !== 'wall').length >= 6, 'something to hide behind');
+    assert(a.obstacles.some((o) => o.kind === 'bld') || ['lot', 'landfill', 'park', 'carnival', 'junkyard'].includes(a.biome.key), 'buildings in the built-up districts: ' + a.biome.key);
   }
-  assert.deepEqual(W.exitsOf(0, 0), { n: false, s: true, w: false, e: true });
-  assert.deepEqual(W.exitsOf(8, 8), { n: true, s: false, w: true, e: false });
 });
 test('level-up offers: 3 cards, one Attack + one Defense + one Special; nothing ever maxes out', () => {
   const r = W.rng(3);
@@ -102,11 +112,13 @@ test('status pings are sanity-checked (kills, levels, abilities, health)', () =>
   }
   const far = [R.cell[0] + 2, R.cell[1]]; assert.equal(room.act(a, { op: 'enter', x: far[0], y: far[1] }).ok, false, 'no teleporting');
 });
-function walkTo(room, p, target) { // step cell by cell to a target cell
-  const g = room.game; let R = g.runs.get(p.id), n = 0;
-  while ((R.cell[0] !== target[0] || R.cell[1] !== target[1]) && n++ < 30) {
-    const dx = Math.sign(target[0] - R.cell[0]), dy = dx ? 0 : Math.sign(target[1] - R.cell[1]);
-    const r = room.act(p, { op: 'enter', x: R.cell[0] + dx, y: R.cell[1] + dy }); assert(r.ok, r.error);
+// a neighbouring cell you can drive to (there is a road)
+const roadNb = (g, c) => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [c[0] + dx, c[1] + dy]).find((n) => W.roadBetween(g.seed, c, n));
+function walkTo(room, p, target) { // follow the streets, cell by cell, to a target cell
+  const g = room.game; let R = g.runs.get(p.id), n = 0; const d = W.roadDist(g.seed, [target]);
+  while ((R.cell[0] !== target[0] || R.cell[1] !== target[1]) && n++ < 90) {
+    const nx = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [R.cell[0] + dx, R.cell[1] + dy]).filter((c) => W.roadBetween(g.seed, R.cell, c)).sort((a, b) => d[a[1] * W.GRID + a[0]] - d[b[1] * W.GRID + b[0]])[0];
+    const r = room.act(p, { op: 'enter', x: nx[0], y: nx[1] }); assert(r.ok, r.error);
   }
   return g.runs.get(p.id);
 }
@@ -138,7 +150,7 @@ test('co-op relay: host snapshots go to guests, guest input/hits go to the host,
 test('host hand-off: the host walks out, or their phone drops: the guest takes over', () => {
   const { room, clock, ps: [a, b] } = mk({}, 2); room.start(); const g = room.game;
   const cell = g.runs.get(a.id).cell; walkTo(room, b, cell); g.outbox.length = 0;
-  const out = [cell[0] + (cell[0] < 8 ? 1 : -1), cell[1]];
+  const out = roadNb(g, cell);
   room.act(a, { op: 'enter', x: out[0], y: out[1] });
   assert.equal(g.areas.get(cell.join(',')).host, b.id); assert(g.outbox.some((m) => m.to === b.id && m.data.t === 'host' && m.data.host === b.id));
   assert.equal(g.areaOf(a.id).members.length, 1, 'the host is solo in the new area');
@@ -163,7 +175,7 @@ test('results: best run first (wave, then kills); the build comes along', () => 
   const { room, clock, ps: [a, b] } = mk({}, 2); room.start(); const g = room.game;
   run(room, clock, 5000);
   room.act(a, { op: 'st', kills: 40, lvl: 4, hp: 50, mhp: 100, wave: 1, ab: { rapid: 2, orbit: 1 } });
-  walkTo(room, a, [g.runs.get(a.id).cell[0] + (g.runs.get(a.id).cell[0] < 8 ? 1 : -1), g.runs.get(a.id).cell[1]]);
+  walkTo(room, a, roadNb(g, g.runs.get(a.id).cell));
   run(room, clock, 1000); room.act(a, { op: 'st', kills: 45, lvl: 4, hp: 50, mhp: 100, wave: 2, ab: { rapid: 2, orbit: 1 } });
   room.act(b, { op: 'st', kills: 60, lvl: 3, hp: 50, mhp: 100, wave: 1, ab: { hp: 2 } });
   room.act(a, { op: 'ev', k: 'dead' }); room.act(a, { op: 'respawn' }); // the best run is kept
@@ -197,7 +209,9 @@ const cellOf = (g, p) => g.runs.get(p.id).cell;
 test('Regular: gates need more team kills further out, and more with more players', () => {
   for (let t = 1; t <= 4; t++) { assert(ST.need(t, 1) > ST.need(t - 1, 1)); assert(ST.need(t, 4) > ST.need(t, 2) && ST.need(t, 2) > ST.need(t, 1)); }
   assert.equal(ST.need(2, 1), ST.BASE[2]); assert.equal(ST.need(2, 3), Math.round(ST.BASE[2] * 1.8));
-  const P = ST.plan(9, [[4, 4]]); assert.equal(ST.tierAt(P, 4, 4), 0); assert.equal(ST.tierAt(P, 5, 4), 0); assert(ST.tierAt(P, 0, 0) === 4 && ST.tierAt(P, 6, 4) === 1);
+  const P = ST.plan(9, [[4, 4]]), d = W.roadDist(9, [[4, 4]]); assert.equal(ST.tierAt(P, 4, 4), 0);
+  for (let i = 0; i < 81; i++) assert.equal(P.tiers[i], d[i] <= 1 ? 0 : Math.min(4, Math.ceil((d[i] - 1) / 2)), 'tiers grow with road steps from the garage');
+  assert(Math.max(...P.tiers) >= 3);
 });
 test('Regular: the plan is the same for a seed and different across seeds (finds, door place + look, boss)', () => {
   assert.deepEqual(ST.plan(42, [[4, 4]]), ST.plan(42, [[4, 4]]));
@@ -214,8 +228,8 @@ test('Regular: the plan is the same for a seed and different across seeds (finds
 test('Regular: a chained gate blocks the way until the team has the kills; then it bursts open', () => {
   const { room, ps: [a, b] } = story(2); room.start(); const g = room.game;
   assert(g.plan && g.story.tier === 0); assert(g.story.beats.length === 1, 'the radio says hello');
-  const R = g.runs.get(a.id), target = (() => { for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = R.cell[0] + dx * 2, y = R.cell[1] + dy * 2; if (W.inGrid(x, y) && ST.tierAt(g.plan, x, y) === 1) return [x, y, dx, dy]; } return null; })();
-  assert(target, 'a ring-1 cell two steps away');
+  const R = g.runs.get(a.id), nbs = (c) => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [c[0] + dx, c[1] + dy]).filter((n) => W.roadBetween(g.seed, c, n)), target = (() => { for (const n1 of nbs(R.cell)) if (ST.tierAt(g.plan, n1[0], n1[1]) === 0) for (const n2 of nbs(n1)) if (ST.tierAt(g.plan, n2[0], n2[1]) === 1) return [n2[0], n2[1], n1[0] - R.cell[0], n1[1] - R.cell[1]]; return null; })();
+  assert(target, 'a ring-1 cell two road steps away');
   assert(room.act(a, { op: 'enter', x: R.cell[0] + target[2], y: R.cell[1] + target[3] }).ok, 'ring 0 is open');
   const locked = room.act(a, { op: 'enter', x: target[0], y: target[1] }); assert.equal(locked.ok, false); assert.match(locked.error, /chained: \d+ more zombies/);
   assert.equal(g.need(1), ST.need(1, 2));
@@ -254,7 +268,7 @@ test('Regular: the boss door needs the 3 key pieces; beating the boss wins the r
 test('Regular: a fallen player gets back in after 15 s with their build; everyone down loses the round', () => {
   const { room, clock, ps: [a, b] } = story(2); room.start(); const g = room.game, R = g.runs.get(a.id);
   run(room, clock, 2000); room.act(a, { op: 'st', kills: 40, lvl: 4, hp: 80, mhp: 125, wave: 1, ab: { hp: 1, rapid: 2 } });
-  R.cell = [R.home[0] + (R.home[0] < 8 ? 1 : -1), R.home[1]];
+  R.cell = roadNb(g, R.home);
   room.act(a, { op: 'ev', k: 'dead' }); assert.equal(R.state, 'dead'); assert.equal(g.phase, 'play', 'Ben is still up');
   assert.equal(room.act(a, { op: 'respawn' }).ok, false, 'not straight away'); assert(g.view(a).story.reviveIn > 10000);
   run(room, clock, 16000); assert(room.act(a, { op: 'respawn' }).ok);
@@ -291,17 +305,34 @@ function sandbox() {
   const step = (s, sec, I = {}, pick = true) => { for (let t = 0; t < sec; t += 1 / 60) { now += 1000 / 60; if (pick && s.cards) s.pick(0); s.update(1 / 60, I); } };
   return { ctx, make, step, reports, lives, events };
 }
-test('phone: the garage intro, then wave 1; exits stay shut until the area is clear', () => {
-  const S = sandbox(), s = S.make();
-  assert.equal(s.phase, 'intro'); assert(s.area.garage, 'the first area has your garage'); assert(s.p.y < 200, 'you start inside');
-  S.step(s, 5); assert.equal(s.phase, 'play'); assert.equal(s.wave, 1); assert(s.p.y > 300, 'walked out of the garage');
+test('phone: the garage intro, then wave 1; exits stay shut until the area is clear; you leave along the road', () => {
+  const S = sandbox(), s = S.make(), G = s.area.garage;
+  assert.equal(s.phase, 'intro'); assert(G, 'the first area has your garage'); assert(s.p.y < G.y + G.h, 'you start inside');
+  S.step(s, 5); assert.equal(s.phase, 'play'); assert.equal(s.wave, 1); assert(s.p.y > G.y + G.h, 'walked out of the garage');
   s.p.inv = 1e9; // (no dying in this test)
-  s.p.x = W.AW / 2; s.p.y = 60; S.step(s, 2, { my: -1 }); assert.equal(s.cell.join(), '4,4', 'the north exit is shut'); assert(s.p.y >= s.p.r);
+  const dir = ['n', 's', 'w', 'e'].find((d) => s.area.exits[d]), road = s.area.exits[dir], [dx, dy] = W.DIRS[dir];
+  const toEdge = () => { if (dir === 'n') { s.p.x = road.p; s.p.y = 60; } else if (dir === 's') { s.p.x = road.p; s.p.y = W.AH - 60; } else if (dir === 'w') { s.p.x = 60; s.p.y = road.p; } else { s.p.x = W.AW - 60; s.p.y = road.p; } };
+  toEdge(); S.step(s, 2, { mx: dx, my: dy }); assert.equal(s.cell.join(), '4,4', 'the exit is shut');
   assert(!s.cleared);
   s.z.length = 0; s.waveKills = s.spec.target; S.step(s, 0.1); assert(s.cleared, 'cleared'); assert(S.reports.some((r) => r.op === 'ev' && r.k === 'clear'));
-  s.p.x = W.AW / 2; s.p.y = 60; for (let i = 0; i < 120 && s.cell.join() === '4,4'; i++) S.step(s, 1 / 60, { my: -1 });
-  assert.equal(s.cell.join(), '4,3', 'walked north into the next cell'); assert.equal(s.wave, 2); assert(!s.cleared); assert(s.p.y > W.AH - 100, 'arrive at the south edge');
-  assert(S.reports.some((r) => r.op === 'enter' && r.x === 4 && r.y === 3)); assert.notEqual(s.area.biome.key, 'home');
+  // a closed edge (no road there) stays a fence even when the area is clear
+  const shut = ['n', 's', 'w', 'e'].find((d) => !s.area.exits[d]);
+  if (shut) { const [sx, sy] = W.DIRS[shut]; s.p.x = W.AW / 2 + sx * (W.AW / 2 - 40); s.p.y = W.AH / 2 + sy * (W.AH / 2 - 40); S.step(s, 1, { mx: sx, my: sy }); assert.equal(s.cell.join(), '4,4', 'no road, no way out'); }
+  toEdge(); for (let i = 0; i < 120 && s.cell.join() === '4,4'; i++) S.step(s, 1 / 60, { mx: dx, my: dy });
+  assert.equal(s.cell.join(), [4 + dx, 4 + dy].join(), 'walked into the next cell'); assert.equal(s.wave, 2); assert(!s.cleared);
+  const back = s.area.exits[W.OPP[dir]]; assert.deepEqual(back, road, 'the same road on the other side');
+  assert(Math.abs((dir === 'n' || dir === 's' ? s.p.x : s.p.y) - road.p) < 2, 'you arrive on that road');
+  assert(S.reports.some((r) => r.op === 'enter' && r.x === 4 + dx && r.y === 4 + dy)); assert.notEqual(s.area.biome.key, 'home');
+});
+test('phone camera: it leads where you run (eased over ~0.4 s) and where you aim by hand, and stays inside the area', () => {
+  const S = sandbox(), L = S.ctx.TZSim.lead, st = { lx: 0, ly: 0 }, P = { vx: 300, vy: 0, aim: Math.PI / 2 };
+  L(st, P, 600, 330, 0.016, false); assert(st.lx > 0 && st.lx < 20, 'eases in, not a jump');
+  for (let i = 0; i < 25; i++) L(st, P, 600, 330, 0.016, false); // 0.4 s
+  assert(st.lx > 600 * 0.18 * 0.9 && Math.abs(st.ly) < 1, 'settled ahead of you: ' + st.lx);
+  L(st, { vx: 0, vy: 0, aim: Math.PI / 2 }, 600, 330, 1, true); assert(Math.abs(st.lx) < 2 && st.ly > 330 * 0.09, 'aiming down leads down');
+  L(st, { vx: 0, vy: 0, aim: 0 }, 600, 330, 2, false); assert(Math.abs(st.lx) < 1 && Math.abs(st.ly) < 1, 'standing still: back on you');
+  const C = S.ctx.TZSim.camCenter; const c = C(-500, 99999, 600, 330, 140); assert.equal(c.x, 300 - 140); assert.equal(c.y, W.AH + 140 - 165, 'clamped to the area');
+  const wx = new Set(); for (let i = 1; i < 60; i++) wx.add(S.ctx.TZSim.weather(i).tod); assert.deepEqual([...wx].sort(), ['dusk', 'night', 'overcast'], 'every kind of evening shows up');
 });
 test('phone: zombies spawn, chase and get shot (auto-aim); the cap holds; kills give XP gems', () => {
   const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, lvl: 1, run: 1 } });

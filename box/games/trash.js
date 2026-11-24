@@ -236,6 +236,7 @@ class Game {
     const x = Number(m.x), y = Number(m.y);
     if (!W.inGrid(x, y)) return { ok: false, error: 'That’s the edge of town.' };
     if (Math.abs(x - R.cell[0]) + Math.abs(y - R.cell[1]) !== 1) return { ok: false, error: 'Too far away.' };
+    if (!W.roadBetween(this.seed, R.cell, [x, y])) return { ok: false, error: 'No road that way.' };
     if (this.locked(x, y)) return { ok: false, error: `🔒 That gate is chained: ${Math.max(0, this.need(S.tierAt(this.plan, x, y)) - this.teamKills())} more zombies to break through.` };
     this.leaveArea(p.id);
     const fresh = !this.explored.has(key([x, y]));
@@ -324,7 +325,7 @@ class Game {
     if (id && W.levelsFromAbilities(owned) < R.lvl - 1) { owned[id] = (owned[id] || 0) + 1; R.lastPick = id; }
     const hard = this.s.diff === 'hard' ? 1.6 : this.s.diff === 'chill' ? 0.6 : 1;
     if (this.room.rng() < R.fate * R.wave * 0.35 * hard) { R.state = 'dead'; R.hp = 0; R.deadAt = now; R.deaths++; this.keepBest(R); this.news('💀', `${p.name} fell on wave ${R.wave}`, p.id); this.room.fx('tzdead', { id: p.id }); return; }
-    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [R.cell[0] + dx, R.cell[1] + dy]).filter(([x, y]) => W.inGrid(x, y) && !this.locked(x, y));
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [R.cell[0] + dx, R.cell[1] + dy]).filter(([x, y]) => W.roadBetween(this.seed, R.cell, [x, y]) && !this.locked(x, y));
     if (this.story) this.storyCheck();
     if (dirs.length) R.cell = dirs[Math.floor(this.room.rng() * dirs.length)]; R.areas++; R.wave++; this.explore(R.cell, p.id);
     R.hp = R.mhp = 100 + 25 * (owned.hp || 0);

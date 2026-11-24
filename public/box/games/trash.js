@@ -47,13 +47,13 @@
       const px = x0 + x * cw, py = y0 + y * ch, k = x + ',' + y;
       if (ex.has(k)) {
         const area = Z.genArea(s.seed, x, y, (s.homes || []).some((hh) => hh[0] === x && hh[1] === y));
-        const tw = Math.max(16, Math.round(cw - 6)), th = Math.max(10, Math.round(ch - 6));
-        if (A) g.drawImage(A.thumb(area, tw, th), px + 3, py + 3, cw - 6, ch - 6);
-        g.strokeStyle = 'rgba(0,0,0,0.6)'; g.lineWidth = 3; g.strokeRect(px + 3, py + 3, cw - 6, ch - 6);
+        const tw = Math.max(16, Math.round(cw)), th = Math.max(10, Math.round(ch));
+        if (A) g.drawImage(A.thumb(area, tw, th), px, py, cw + 0.5, ch + 0.5);
         if (cw > 70) { g.font = `bold ${Math.max(10, Math.round(cw * 0.1))}px "Lilita One", sans-serif`; g.textAlign = 'left'; g.textBaseline = 'top'; const label = area.biome.icon + ' ' + area.biome.name; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,0.75)'; g.strokeText(label, px + 8, py + 7); g.fillStyle = '#fff6d8'; g.fillText(label, px + 8, py + 7); }
       } else {
-        g.fillStyle = (x + y) % 2 ? '#211a26' : '#1c1621'; g.fillRect(px + 3, py + 3, cw - 6, ch - 6);
-        g.fillStyle = 'rgba(160,140,190,0.12)'; g.font = `${Math.round(ch * 0.4)}px "Lilita One", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', px + cw / 2, py + ch / 2);
+        // fog of war: the town is still there, just dark (its streets show faintly)
+        g.fillStyle = (x + y) % 2 ? '#17141b' : '#141118'; g.fillRect(px, py, cw + 0.5, ch + 0.5);
+        roadLines(g, Z, s.seed, x, y, px, py, cw, ch, 'rgba(150,140,170,0.22)');
       }
     }
     // co-op areas glow
@@ -105,6 +105,13 @@
       });
     }
   }
+  // the streets of one cell as lines (fogged TV cells, the phone minimap)
+  function roadLines(g, Z, seed, x, y, px, py, cw, ch, col) {
+    const c = Z.cellOf(seed, x, y); if (!c) return; const sx = cw / Z.AW, sy = ch / Z.AH, hx = px + c.hub.x * sx, hy = py + c.hub.y * sy;
+    g.strokeStyle = col; g.lineCap = 'round'; g.beginPath();
+    for (const [d, r] of Object.entries(c.side)) { if (!r) continue; g.lineWidth = Math.max(1, r.w * Math.min(sx, sy) * (cw > 40 ? 0.5 : 0.9)); const ex = d === 'w' ? px : d === 'e' ? px + cw : px + r.p * sx, ey = d === 'n' ? py : d === 's' ? py + ch : py + r.p * sy; g.moveTo(ex, ey); if (d === 'n' || d === 's') { g.lineTo(ex, hy); g.lineTo(hx, hy); } else { g.lineTo(hx, ey); g.lineTo(hx, hy); } }
+    g.stroke();
+  }
   function tvSide(s) {
     const P = (s.players || []).slice().sort((a, b) => (a.state === 'dead') - (b.state === 'dead') || b.wave - a.wave || b.kills - a.kills);
     const rows = P.map((p) => `<div class="tz-row ${p.state === 'dead' ? 'dead' : ''} ${p.danger ? 'danger' : ''}">${face({ ...p, bot: true }, 46)}<div class="tz-rmain"><b style="color:${esc(p.color || '#fff')}">${nm(p.name)}</b>
@@ -132,7 +139,10 @@
 
   // ======================================================================= PHONE
   const PH = { root: null, cv: null, sim: null, run: null, v: null, ctx: null, raf: 0, last: 0, input: null, keys: new Set(), mouse: { x: 0, y: 0, down: false, on: false }, touch: { move: null, aim: null }, device: null, menu: false, frames: [], work: [], quality: 1, hint: 0, people: new Map(), overlay: '', vib: true };
-  try { PH.vib = localStorage.getItem('tz.vib') !== '0'; } catch { /* private */ }
+  try { PH.vib = localStorage.getItem('tz.vib') !== '0'; PH.gfxPref = localStorage.getItem('tz.gfx') || 'auto'; } catch { PH.gfxPref = 'auto'; }
+  // Graphics High / Low: picked per device (weak phones start on Low), and dropped to Low if frames get slow.
+  PH.gfxAuto = ((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3) ? 'low' : 'high';
+  const gfxHi = () => (PH.gfxPref === 'auto' ? PH.gfxAuto : PH.gfxPref) !== 'low';
   const isTouch = () => (PH.device ? PH.device === 'touch' : ('ontouchstart' in window || navigator.maxTouchPoints > 0));
   function report(msg, quiet) {
     if (!PH.ctx) return Promise.resolve({ ok: false });
@@ -193,8 +203,13 @@
     if (!PH.root) return;
     let b = PH.root.querySelector('.tz-fs');
     const show = !isFull() && !standalone() && (canFull() || isIOS()) && isTouch();
-    if (!b) { b = document.createElement('button'); b.className = 'tz-fs'; b.innerHTML = '⛶ Full screen'; b.onclick = (e) => { e.stopPropagation(); if (canFull() && !isIOS()) goFull(); else showCard('<span class="tz-rc-i">📲</span><div><small>FULL SCREEN ON IPHONE</small><b>Tap Share, then “Add to Home Screen”</b><p>Open TrashZombies from your home screen: no browser bars.</p></div>', 'find'); }; PH.root.appendChild(b); }
+    if (!b) { b = document.createElement('button'); b.className = 'tz-fs'; b.innerHTML = '⛶ Full screen'; b.onclick = (e) => { e.stopPropagation(); if (canFull() && !isIOS()) goFull(); else iosHint(true); }; PH.root.appendChild(b); }
     b.hidden = !show;
+  }
+  // iPhone Safari has no Fullscreen API: the web app manifest makes a Home Screen icon open without bars.
+  function iosHint(force) {
+    if (!isIOS() || standalone() || (!force && PH.iosHinted)) return; PH.iosHinted = true;
+    showCard('<span class="tz-rc-i">📲</span><div><small>FULL SCREEN ON IPHONE</small><b>Tap Share → Add to Home Screen for full screen</b><p>Then open JustGameBox from your home screen: no browser bars.</p></div>', 'find');
   }
   document.addEventListener('fullscreenchange', () => fsButton()); document.addEventListener('webkitfullscreenchange', () => fsButton());
   // ---------- the game root (full screen, kept between updates) ----------
@@ -221,7 +236,7 @@
       const work = performance.now() - t0;
       PH.frames.push(dt * 1000); PH.work.push(work); if (PH.frames.length > 240) { PH.frames.shift(); PH.work.shift(); }
       // keep it smooth: drop the resolution if frames get slow
-      if (PH.frames.length >= 120 && PH.quality > 0.7) { const avg = PH.work.slice(-120).reduce((a, b) => a + b, 0) / 120; if (avg > 14) { PH.quality = 0.7; PH.frames.length = 0; PH.work.length = 0; } }
+      if (PH.frames.length >= 120) { const avg = PH.work.slice(-120).reduce((a, b) => a + b, 0) / 120; if (avg > 11 && PH.gfxPref === 'auto' && PH.gfxAuto === 'high') { PH.gfxAuto = 'low'; PH.frames.length = 0; PH.work.length = 0; } else if (avg > 14 && PH.quality > 0.7) { PH.quality = 0.7; PH.frames.length = 0; PH.work.length = 0; } }
       PH.raf = requestAnimationFrame(step);
     };
     PH.raf = requestAnimationFrame(step);
@@ -229,7 +244,7 @@
   function view() {
     const c = PH.cv, w = c.clientWidth || innerWidth, h = c.clientHeight || innerHeight, dpr = Math.min(1.75, window.devicePixelRatio || 1) * PH.quality;
     if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
-    return { w, h, dpr, k: w > h ? h / 330 : w / 320 }; // close to the hero (the camera leads where you go)
+    return { w, h, dpr, k: w > h ? h / 330 : w / 320, hi: gfxHi() }; // close to the hero (the camera leads where you go)
   }
   function frame(dt) {
     const sim = PH.sim, V = view(), g = PH.cv.getContext('2d');
@@ -252,7 +267,7 @@
       const p = pos(e);
       if (e.pointerType === 'mouse') { PH.device = 'mouse'; PH.mouse.on = true; PH.mouse.x = p.x; PH.mouse.y = p.y; if (e.button === 0) PH.mouse.down = true; return; }
       PH.device = 'touch'; e.preventDefault();
-      if (!PH.fsAsked && canFull() && !isIOS() && !isFull() && !standalone()) goFull();
+      if (!PH.fsAsked && canFull() && !isIOS() && !isFull() && !standalone()) goFull(); else if (!PH.iosHinted) iosHint(false);
       if (PH.sim && PH.sim.phase === 'intro') PH.skip = true;
       const V = { w: cv.clientWidth, h: cv.clientHeight }, Z = stickZone(V);
       if (!PH.touch.aim && Math.hypot(p.x - Z.x, p.y - Z.y) < Z.r * 1.45) { PH.touch.aim = { id: e.pointerId, x: p.x, y: p.y }; }
@@ -357,7 +372,7 @@
     }
     // off-screen warnings: red arrows for zombies just outside the view, icons for pickups
     if (sim.cam && !sim.dead && sim.phase === 'play') {
-      const C = sim.cam, edge = (wx, wy) => { const sx = (wx + C.ox) * C.k, sy = (wy + C.oy) * C.k; if (sx > 0 && sx < w && sy > 0 && sy < h) return null; const cx = w / 2, cy = h / 2, a = Math.atan2(sy - cy, sx - cx); const m = 26, tx = Math.cos(a), ty = Math.sin(a), sc = Math.min((w / 2 - m) / Math.max(0.001, Math.abs(tx)), (h / 2 - m) / Math.max(0.001, Math.abs(ty))); return { x: cx + tx * sc, y: cy + ty * sc, a }; };
+      const C = sim.cam, edge = (wx, wy) => { const sx = (wx + C.ox) * C.k, sy = (wy + C.oy) * C.k; if (sx > 0 && sx < w && sy > 0 && sy < h) return null; const cx = w / 2, cy = h / 2, a = Math.atan2(sy - cy, sx - cx); const m = 26, tx = Math.cos(a), ty = Math.sin(a), sc = Math.min((w / 2 - m) / Math.max(0.001, Math.abs(tx)), (h / 2 - m) / Math.max(0.001, Math.abs(ty))); return { x: cx + tx * sc, y: Math.max(small ? 70 : 84, cy + ty * sc), a }; };
       const near = []; for (const z of sim.z) { if (z.hp <= 0) continue; const d = Math.hypot(z.x - P.x, z.y - P.y); if (d < 760) near.push([d, z]); }
       near.sort((x, y) => x[0] - y[0]);
       let shown = 0;
@@ -369,7 +384,7 @@
     // exit arrows at the screen edge pointing to exits when cleared
     if (sim.cleared && !sim.dead) {
       const C = sim.cam; if (C) for (const [dd, ok] of Object.entries(sim.area.exits)) {
-        if (!ok) continue; const ex = dd === 'w' ? 0 : dd === 'e' ? Z.AW : Z.AW / 2, ey = dd === 'n' ? 0 : dd === 's' ? Z.AH : Z.AH / 2;
+        if (!ok || sim.gateLeft(dd)) continue; const ex = dd === 'w' ? 0 : dd === 'e' ? Z.AW : ok.p, ey = dd === 'n' ? 0 : dd === 's' ? Z.AH : ok.p;
         const sx = (ex + C.ox) * C.k, sy = (ey + C.oy) * C.k; if (sx > 30 && sx < w - 30 && sy > 30 && sy < h - 30) continue;
         const cx = Math.max(40, Math.min(w - 40, sx)), cy = Math.max(90, Math.min(h - 40, sy)), a = Math.atan2(sy - h / 2, sx - w / 2);
         g.save(); g.translate(cx, cy); g.rotate(a); g.globalAlpha = 0.6 + 0.4 * Math.sin(sim.t * 6); g.fillStyle = '#7dff6a'; g.beginPath(); g.moveTo(18, 0); g.lineTo(-10, -14); g.lineTo(-10, 14); g.closePath(); g.fill(); g.restore(); g.globalAlpha = 1;
@@ -379,10 +394,11 @@
   function roundRect(g, x, y, w, h, r) { w = Math.max(0, w); r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
   function minimap(g, sim, V) {
     const v = PH.v; if (!v) return;
-    const N = v.grid || 9, small = Math.min(V.w, V.h) < 420, cs = small ? 8 : 10, mw = N * cs, x0 = V.w - mw - 14, y0 = 62;
+    const Z = W(), N = v.grid || 9, small = Math.min(V.w, V.h) < 420, cs = small ? 11 : 13, mw = N * cs, x0 = V.w - mw - 14, y0 = 62;
     g.fillStyle = 'rgba(15,10,6,0.75)'; roundRect(g, x0 - 5, y0 - 5, mw + 10, mw * 0.6 + 10 + 0, 6); g.fill();
     const ch = cs * 0.6, ex = new Set((v.explored || []).map((e) => e[0] + ',' + e[1]));
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const seen = ex.has(x + ',' + y); g.fillStyle = seen ? lookOf(v, x, y).ground[0] : 'rgba(255,255,255,0.07)'; g.fillRect(x0 + x * cs + 0.5, y0 + y * ch + 0.5, cs - 1, ch - 1); }
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const seen = ex.has(x + ',' + y); g.fillStyle = seen ? lookOf(v, x, y).ground[0] : 'rgba(255,255,255,0.06)'; g.fillRect(x0 + x * cs, y0 + y * ch, cs, ch); }
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) roadLines(g, Z, v.seed, x, y, x0 + x * cs, y0 + y * ch, cs, ch, ex.has(x + ',' + y) ? 'rgba(40,40,44,0.95)' : 'rgba(200,200,210,0.18)');
     const S0 = v.story;
     if (S0) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const t = S0.tiers[y * N + x], px = x0 + x * cs, py = y0 + y * ch;
@@ -434,15 +450,16 @@
     const v = PH.v || {}, vip = PH.view && PH.view.vip, touch = isTouch();
     const ov = setOverlay(`<div class="tz-menu"><h2>${sim.mode === 'solo' ? '⏸ Paused' : '🤝 Co-op: the game keeps going!'}</h2>
       <div class="tz-mstats"><span>Wave <b>${sim.wave}</b></span><span>Level <b>${sim.lvl}</b></span><span>Kills <b>${sim.killCount}</b></span><span>📍 ${esc(sim.area.biome.name)}</span></div>
-      <h3>Your build</h3><div class="tz-build">${buildHtml(sim.ab)}</div>${Object.keys(sim.eq || {}).length ? `<h3>Your finds</h3><div class="tz-finds">${Object.keys(sim.eq).map((id) => { const F = window.TZS.FINDS[id]; return F ? `<span title="${esc(F.desc)}">${F.icon} ${esc(F.name)}</span>` : ''; }).join('')}</div>` : ''}${sim.story ? `<p class="tz-mut">📖 Regular: 🗝️ ${sim.story.keys}/3 key pieces · 🗺️ ${sim.story.maps}/2 map halves · ring ${sim.story.tier}/${sim.story.max} open${sim.story.boss ? ` · ${sim.story.boss.icon} ${esc(sim.story.boss.name)} waits behind the door` : ''}</p>` : ''}${!isFull() && canFull() && isTouch() && !isIOS() ? '<button class="btn ghost small" data-opt="fs">⛶ Full screen</button>' : ''}
-      <div class="tz-opts"><button class="btn small ${sim.set.aim !== 'off' ? 'green' : 'ghost'}" data-opt="aim">🎯 Auto-aim: ${sim.set.aim !== 'off' ? 'On' : 'Off'}</button><button class="btn small ${PH.vib ? 'green' : 'ghost'}" data-opt="vib">📳 Buzz: ${PH.vib ? 'On' : 'Off'}</button></div>
+      <h3>Your build</h3><div class="tz-build">${buildHtml(sim.ab)}</div>${Object.keys(sim.eq || {}).length ? `<h3>Your finds</h3><div class="tz-finds">${Object.keys(sim.eq).map((id) => { const F = window.TZS.FINDS[id]; return F ? `<span title="${esc(F.desc)}">${F.icon} ${esc(F.name)}</span>` : ''; }).join('')}</div>` : ''}${sim.story ? `<p class="tz-mut">📖 Regular: 🗝️ ${sim.story.keys}/3 key pieces · 🗺️ ${sim.story.maps}/2 map halves · ring ${sim.story.tier}/${sim.story.max} open${sim.story.boss ? ` · ${sim.story.boss.icon} ${esc(sim.story.boss.name)} waits behind the door` : ''}</p>` : ''}${!isFull() && !standalone() && isTouch() && (canFull() || isIOS()) ? '<button class="btn ghost small" data-opt="fs">⛶ Full screen</button>' : ''}
+      <div class="tz-opts"><button class="btn small ${sim.set.aim !== 'off' ? 'green' : 'ghost'}" data-opt="aim">🎯 Auto-aim: ${sim.set.aim !== 'off' ? 'On' : 'Off'}</button><button class="btn small ${PH.vib ? 'green' : 'ghost'}" data-opt="vib">📳 Buzz: ${PH.vib ? 'On' : 'Off'}</button><button class="btn small ghost" data-opt="gfx">🎨 Graphics: ${PH.gfxPref === 'auto' ? 'Auto (' + (gfxHi() ? 'High' : 'Low') + ')' : gfxHi() ? 'High' : 'Low'}</button></div>
       <div class="tz-controls">${touch ? '👆 Drag anywhere to move · 🔴 the stick bottom-right aims and shoots · auto-aim shoots the nearest zombie when you let go.' : '⌨️ WASD / arrows move · 🖱️ mouse aims · hold left click (or Space) to shoot · E grabs a pickup · 1 2 3 pick cards · Esc pauses.'}</div>
       <div class="tz-mbtns"><button class="btn green big" data-opt="resume">▶ Keep playing</button>${vip ? '<button class="btn ghost small" data-opt="end">🏁 End the night (results)</button>' : ''}</div></div>`, 'menu');
     if (!ov) return;
     for (const b of ov.querySelectorAll('[data-opt]')) b.onclick = async (e) => {
       e.stopPropagation(); const o = b.dataset.opt;
       if (o === 'resume') return toggleMenu(false);
-      if (o === 'fs') { goFull(); return toggleMenu(true); }
+      if (o === 'fs') { if (isIOS()) { toggleMenu(false); iosHint(true); return; } goFull(); return toggleMenu(true); }
+      if (o === 'gfx') { PH.gfxPref = { auto: 'high', high: 'low', low: 'auto' }[PH.gfxPref] || 'auto'; try { localStorage.setItem('tz.gfx', PH.gfxPref); } catch { /* private */ } return toggleMenu(true); }
       if (o === 'aim') { sim.set.aim = sim.set.aim !== 'off' ? 'off' : 'on'; PH.aimPref = sim.set.aim; return toggleMenu(true); }
       if (o === 'vib') { PH.vib = !PH.vib; try { localStorage.setItem('tz.vib', PH.vib ? '1' : '0'); } catch { /* private */ } return toggleMenu(true); }
       if (o === 'end') { if (b.dataset.armed) { await report({ op: 'end' }); toggleMenu(false); } else { b.dataset.armed = '1'; b.textContent = 'Tap again to end for everyone'; } }
@@ -474,15 +491,16 @@
       xp(n) { PH.sim.gainXp(n); return PH.sim.lvl; }, skip() { const s = PH.sim; if (s.phase === 'intro') s.introT = 99; return true; },
       clear() { const s = PH.sim; s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; return true; },
       god(on) { PH.sim.p.inv = on ? 1e9 : 0; return true; }, kill() { const s = PH.sim; s.p.inv = 0; s.buffs.shield = 0; s.p.armor = 0; s.p.lives = 0; s.p.hp = 1; s.hurt(999); return s.dead; },
-      walk(dir) { const s = PH.sim, Z = W(); s.cleared = true; if (dir === 'e') { s.p.x = Z.AW + 20; s.p.y = Z.AH / 2; } if (dir === 'w') { s.p.x = -20; s.p.y = Z.AH / 2; } if (dir === 'n') { s.p.x = Z.AW / 2; s.p.y = -20; } if (dir === 's') { s.p.x = Z.AW / 2; s.p.y = Z.AH + 20; } s.leave(dir); return s.cell.join(','); },
+      walk(dir) { const s = PH.sim; s.cleared = true; s.leave(dir); return s.cell.join(','); },
       teleport(x, y) { const s = PH.sim; s.p.x = x; s.p.y = y; return true; },
       kills(n) { PH.sim.killCount += n; PH.sim.reportStatus(true); return PH.sim.killCount; },
       story: () => PH.v && PH.v.story,
+      weather(tod, rain, fog) { const s = PH.sim; s._wx = { tod, rain: !!rain, fog: !!fog }; return true; },
       async goTo(x, y) { const wait = (ms) => new Promise((r) => setTimeout(r, ms)); for (let i = 0; i < 30; i++) { const s = PH.sim; if (s.cell[0] === x && s.cell[1] === y) return true; const dirs = []; if (s.cell[0] < x) dirs.push('e'); if (s.cell[0] > x) dirs.push('w'); if (s.cell[1] < y) dirs.push('s'); if (s.cell[1] > y) dirs.push('n'); const d = dirs.find((q) => !s.gateLeft(q)) || dirs[0]; if (s.gateLeft(d)) return 'locked ' + d; s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; s.cleared = true; s.leave(d); await wait(450); while (PH.sim.cards) { PH.sim.pick(0); } } return false; },
       boss(key) { const s = PH.sim; s.z = s.z.filter((z) => !z.fb); s.finalSpawned = false; s.finalDead = false; s.story.plan.boss = key; s.spawnFinal(); return true; },
 
       stick() { const c = PH.cv; return stickZone({ w: c.clientWidth, h: c.clientHeight }); }, device: () => PH.device, menu: () => PH.menu,
-      intro() { const s = PH.sim; if (!s.area.garage) return false; s.phase = 'intro'; s.introT = 0; s.p.x = W().AW / 2; s.p.y = 120; s.banner = null; return true; },
+      intro() { const s = PH.sim; if (!s.area.garage) return false; s.phase = 'intro'; s.introT = 0; s.p.x = s.area.garage.x + s.area.garage.w / 2; s.p.y = s.area.garage.y + 120; s.banner = null; return true; },
     };
   }
 

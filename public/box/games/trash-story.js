@@ -60,12 +60,12 @@
     open: 'The door is OPEN. Oh no. Oh it’s big. Shoot it! Shoot it a lot!',
     win: 'You did it! The stink is lifting! Radio Dumpster is playing your song all night. Dot out, forever. Or until Tuesday.',
   };
-  function plan(seed, homes) {
+  function plan(seed, homes) { // tiers: road steps from the nearest garage
     homes = (homes && homes.length ? homes : [[4, 4]]).map((h) => [h[0], h[1]]);
     const r = W.rng(W.hash(seed, 'story'));
-    const N = W.GRID, tiers = [];
+    const N = W.GRID, tiers = [], dist = W.roadDist(seed, homes);
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const d = Math.min(...homes.map((h) => Math.abs(h[0] - x) + Math.abs(h[1] - y)));
+      const d = dist[y * N + x];
       tiers.push(d <= 1 ? 0 : Math.min(MAX_TIER, Math.ceil((d - 1) / 2)));
     }
     const tierOf = (x, y) => tiers[y * N + x];

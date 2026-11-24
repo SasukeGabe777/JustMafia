@@ -22,76 +22,199 @@
   }
   const pick = (r, list) => list[Math.floor(r() * list.length)];
 
-  // ---------------- the looks ----------------
-  // ground: base / alt colour; style: how the floor is drawn (public/box/games/trash-art.js);
-  // props: what blocks you (and bullets) here; edge: the fence/wall colour around the area.
+  // ---------------- the looks (districts) ----------------
+  // ground: lot colours (minimap + art); lot: how the open ground off the road is drawn
+  // (public/box/games/trash-art.js); bld: [min, max] buildings, their size range in tiles and roof
+  // style; props: the junk that blocks you (and bullets); edge: fence colour.
   const BIOMES = [
-    { key: 'junkyard', name: 'Junkyard', icon: '🛞', ground: ['#6b5a43', '#5c4c37'], style: 'gravel', edge: '#3b2f22', accent: '#d9a441', props: ['car', 'tires', 'trash', 'container', 'barrel', 'fridge'] },
-    { key: 'suburb', name: 'Suburb Street', icon: '🏡', ground: ['#53585f', '#4f8a3e'], style: 'street', edge: '#2f5a28', accent: '#ffd23f', props: ['car', 'bin', 'hedge', 'tree', 'mailbox', 'car'] },
-    { key: 'lot', name: 'Parking Lot', icon: '🅿️', ground: ['#40454d', '#383c43'], style: 'lot', edge: '#22252a', accent: '#f2f2f2', props: ['car', 'car', 'cart', 'barrier', 'car'] },
-    { key: 'gas', name: 'Gas Station', icon: '⛽', ground: ['#7c7a73', '#6f6d66'], style: 'slabs', edge: '#3a3833', accent: '#ff5a3c', props: ['pump', 'car', 'barrel', 'crate', 'tires'] },
-    { key: 'mall', name: 'Dead Mall', icon: '🛍️', ground: ['#c7bfb1', '#a99f8f'], style: 'checker', edge: '#5d5446', accent: '#ff6fb5', props: ['shelf', 'bench', 'planter', 'cart', 'shelf'] },
-    { key: 'park', name: 'Overgrown Park', icon: '🌳', ground: ['#4e7b3b', '#45702f'], style: 'grass', edge: '#2a4a1d', accent: '#ffe066', props: ['tree', 'tree', 'bench', 'bush', 'fountain'] },
-    { key: 'roof', name: 'Rooftops', icon: '🏙️', ground: ['#59626c', '#4c545d'], style: 'gravel', edge: '#2b3036', accent: '#7fd6ff', props: ['vent', 'tank', 'crate', 'vent', 'dish'] },
-    { key: 'sewer', name: 'Sewer Works', icon: '🕳️', ground: ['#3e4b40', '#334036'], style: 'bricks', edge: '#1d241f', accent: '#9cff5a', props: ['pipe', 'barrel', 'crate', 'pipe', 'grate'] },
-    { key: 'carnival', name: 'Busted Carnival', icon: '🎪', ground: ['#7a4c69', '#6a3f5b'], style: 'stripes', edge: '#3a1f33', accent: '#ffd23f', props: ['booth', 'barrel', 'crate', 'booth', 'balloons'] },
-    { key: 'school', name: 'Shut School', icon: '🏫', ground: ['#a07a4c', '#8f6b40'], style: 'planks', edge: '#4a3520', accent: '#3ec1ff', props: ['desk', 'locker', 'desk', 'bench', 'desk'] },
-    { key: 'docks', name: 'Rusty Docks', icon: '⚓', ground: ['#6b5035', '#5d452c'], style: 'planks', edge: '#1f4a63', accent: '#ff8c42', props: ['container', 'crate', 'barrel', 'rope', 'crate'] },
-    { key: 'landfill', name: 'Landfill Hills', icon: '🗑️', ground: ['#6c6a3d', '#5f5d33'], style: 'dirt', edge: '#3a3820', accent: '#c8ff3c', props: ['trash', 'trash', 'tires', 'bags', 'fridge'] },
+    { key: 'junkyard', name: 'Junkyard', icon: '🛞', ground: ['#6b5a43', '#5c4c37'], lot: 'dirt', edge: '#3b2f22', accent: '#d9a441', bld: [0, 1, [2, 3], [2, 2], 'shack'], props: ['wreck', 'tires', 'trash', 'container', 'barrel', 'fridge', 'wreck', 'stack'] },
+    { key: 'suburb', name: 'Suburb Street', icon: '🏡', ground: ['#4f7a3e', '#466e36'], lot: 'lawn', edge: '#2f5a28', accent: '#ffd23f', bld: [2, 3, [3, 4], [2, 3], 'house'], props: ['car', 'bin', 'hedge', 'tree', 'mailbox', 'car', 'tree'] },
+    { key: 'lot', name: 'Parking Lot', icon: '🅿️', ground: ['#3f434a', '#383c43'], lot: 'parking', edge: '#22252a', accent: '#f2f2f2', bld: [0, 1, [2, 2], [2, 2], 'kiosk'], props: ['car', 'car', 'cart', 'wreck', 'car', 'lamp', 'barrier'] },
+    { key: 'gas', name: 'Gas Station', icon: '⛽', ground: ['#7c7a73', '#6f6d66'], lot: 'slabs', edge: '#3a3833', accent: '#ff5a3c', bld: [1, 1, [3, 4], [2, 2], 'store'], props: ['pump', 'pump', 'car', 'barrel', 'tires', 'dumpster'] },
+    { key: 'mall', name: 'Dead Mall', icon: '🛍️', ground: ['#8c8678', '#7d776a'], lot: 'plaza', edge: '#5d5446', accent: '#ff6fb5', bld: [1, 2, [5, 7], [3, 3], 'mall'], props: ['planter', 'bench', 'cart', 'car', 'lamp', 'dumpster'] },
+    { key: 'park', name: 'Overgrown Park', icon: '🌳', ground: ['#4e7b3b', '#45702f'], lot: 'grass', edge: '#2a4a1d', accent: '#ffe066', bld: [0, 1, [2, 2], [1, 2], 'shack'], props: ['tree', 'tree', 'bench', 'bush', 'fountain', 'tree', 'pond'] },
+    { key: 'roof', name: 'Downtown', icon: '🏙️', ground: ['#77736b', '#6a665e'], lot: 'plaza', edge: '#2b3036', accent: '#7fd6ff', bld: [2, 3, [3, 5], [2, 3], 'tower'], props: ['dumpster', 'crate', 'hydrant', 'car', 'lamp', 'bags'] },
+    { key: 'sewer', name: 'Sewer Works', icon: '🕳️', ground: ['#5b625a', '#4e554d'], lot: 'canal', edge: '#1d241f', accent: '#9cff5a', bld: [1, 1, [3, 3], [2, 2], 'plant'], props: ['pipe', 'barrel', 'crate', 'pipe', 'grate', 'tank'] },
+    { key: 'carnival', name: 'Busted Carnival', icon: '🎪', ground: ['#6a5a4a', '#5c4e40'], lot: 'fair', edge: '#3a1f33', accent: '#ffd23f', bld: [0, 1, [3, 3], [2, 2], 'tent'], props: ['booth', 'barrel', 'crate', 'booth', 'balloons', 'lamp'] },
+    { key: 'school', name: 'Shut School', icon: '🏫', ground: ['#4b7a3c', '#55504a'], lot: 'yard', edge: '#4a3520', accent: '#3ec1ff', bld: [1, 1, [6, 7], [2, 3], 'school'], props: ['bench', 'tree', 'bin', 'picnic', 'bus', 'tree'] },
+    { key: 'docks', name: 'Rusty Docks', icon: '⚓', ground: ['#6b5035', '#5d452c'], lot: 'docks', edge: '#1f4a63', accent: '#ff8c42', bld: [1, 2, [4, 5], [2, 3], 'warehouse'], props: ['container', 'crate', 'barrel', 'rope', 'crate', 'container'] },
+    { key: 'landfill', name: 'Landfill Hills', icon: '🗑️', ground: ['#6c6a3d', '#5f5d33'], lot: 'dirt', edge: '#3a3820', accent: '#c8ff3c', bld: [0, 0, [1, 1], [1, 1], 'shack'], props: ['trash', 'trash', 'tires', 'bags', 'fridge', 'mound', 'mound'] },
   ];
-  const HOME = { key: 'home', name: 'Your Street', icon: '🏠', ground: ['#4d535a', '#5a8a45'], style: 'street', edge: '#2f5a28', accent: '#ffd23f', props: ['bin', 'car', 'hedge', 'mailbox', 'bin'] };
-  // Props: size in tiles, round or boxy, and whether bullets fly over them (low props).
+  const HOME = { key: 'home', name: 'Your Street', icon: '🏠', ground: ['#4f7a3e', '#466e36'], lot: 'lawn', edge: '#2f5a28', accent: '#ffd23f', bld: [1, 2, [3, 4], [2, 3], 'house'], props: ['bin', 'car', 'hedge', 'mailbox', 'tree', 'bin'] };
+  // Props: size in tiles, round (collides a little smaller) or boxy.
   const PROPS = {
-    car: { w: 2, h: 1, kind: 'car' }, container: { w: 3, h: 1, kind: 'container' }, tires: { w: 1, h: 1, round: true }, trash: { w: 1, h: 1, round: true },
+    car: { w: 2, h: 1, kind: 'car' }, wreck: { w: 2, h: 1 }, bus: { w: 3, h: 1 }, stack: { w: 2, h: 1 }, container: { w: 3, h: 1, kind: 'container' }, tires: { w: 1, h: 1, round: true }, trash: { w: 1, h: 1, round: true },
     barrel: { w: 1, h: 1, round: true }, fridge: { w: 1, h: 1 }, bin: { w: 1, h: 1, round: true }, hedge: { w: 2, h: 1 }, tree: { w: 1, h: 1, round: true },
-    mailbox: { w: 1, h: 1, round: true }, cart: { w: 1, h: 1 }, barrier: { w: 2, h: 1 }, pump: { w: 1, h: 2 }, crate: { w: 1, h: 1 }, shelf: { w: 3, h: 1 },
-    bench: { w: 2, h: 1 }, planter: { w: 1, h: 1, round: true }, bush: { w: 1, h: 1, round: true }, fountain: { w: 2, h: 2, round: true }, vent: { w: 2, h: 1 },
-    tank: { w: 2, h: 2, round: true }, dish: { w: 1, h: 1, round: true }, pipe: { w: 3, h: 1 }, grate: { w: 2, h: 1 }, booth: { w: 2, h: 2 }, balloons: { w: 1, h: 1, round: true },
-    desk: { w: 2, h: 1 }, locker: { w: 3, h: 1 }, rope: { w: 1, h: 1, round: true }, bags: { w: 1, h: 1, round: true },
+    mailbox: { w: 1, h: 1, round: true }, cart: { w: 1, h: 1 }, barrier: { w: 2, h: 1 }, pump: { w: 1, h: 2 }, crate: { w: 1, h: 1 }, dumpster: { w: 2, h: 1 },
+    bench: { w: 2, h: 1 }, planter: { w: 1, h: 1, round: true }, bush: { w: 1, h: 1, round: true }, fountain: { w: 2, h: 2, round: true }, pond: { w: 3, h: 2, round: true },
+    tank: { w: 2, h: 2, round: true }, pipe: { w: 3, h: 1 }, grate: { w: 2, h: 1, low: true }, booth: { w: 2, h: 2 }, balloons: { w: 1, h: 1, round: true },
+    picnic: { w: 2, h: 1 }, rope: { w: 1, h: 1, round: true }, bags: { w: 1, h: 1, round: true }, mound: { w: 2, h: 2, round: true }, lamp: { w: 1, h: 1, round: true, thin: true }, hydrant: { w: 1, h: 1, round: true, thin: true },
   };
-  // A cell's look: neighbours never share one (5 and 3 steps apart in a seeded order of the 12).
+  const DIRS = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] }, OPP = { n: 's', s: 'n', w: 'e', e: 'w' };
+  const inGrid = (x, y) => Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < GRID && y < GRID;
+
+  // ---------------- the town: one road network for the whole grid ----------------
+  // Built once per seed: two main streets each way run straight across the town, a random
+  // spanning tree of side streets links every block, plus a few loops. A road leaving a cell's
+  // edge enters the neighbour at the same place with the same width (the edge stores it), so
+  // the town reads as one place on the TV map and the phone minimap. Districts (the looks) are
+  // big seeded patches (Voronoi), so a mall or a park can spill over into the next block. One
+  // side of town is the river, another the highway (drawn outside the fence).
+  const MAIN_W = 230, SIDE_W = 150, SW = 34; // road widths (asphalt) and the sidewalk on each side
+  const towns = new Map();
+  function town(seed) {
+    seed = Number(seed) || 1;
+    if (towns.has(seed)) return towns.get(seed);
+    const r = rng(hash(seed, 'town')), N = GRID;
+    const rows = [1 + Math.floor(r() * 3), 5 + Math.floor(r() * 3)], cols = [1 + Math.floor(r() * 3), 5 + Math.floor(r() * 3)];
+    const rowP = rows.map(() => 330 + Math.round(r() * 300)), colP = cols.map(() => 460 + Math.round(r() * 680));
+    const C = [];
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const ci = cols.indexOf(x), ri = rows.indexOf(y);
+      C.push({ x, y, hub: { x: ci >= 0 ? colP[ci] : 380 + Math.round(r() * 840), y: ri >= 0 ? rowP[ri] : 300 + Math.round(r() * 360) }, side: { n: null, s: null, w: null, e: null }, d: null, end: null });
+    }
+    const at = (x, y) => C[y * N + x];
+    const par = C.map((_, i) => i), find = (i) => (par[i] === i ? i : (par[i] = find(par[i]))), join = (a, b) => { par[find(a)] = find(b); };
+    const link = (a, dir, w, main, p) => {
+      const [dx, dy] = DIRS[dir], b = at(a.x + dx, a.y + dy);
+      if (p == null) p = dir === 'e' || dir === 'w' ? (r() < 0.5 ? a.hub.y : b.hub.y) : (r() < 0.5 ? a.hub.x : b.hub.x);
+      const road = { p, w, main: !!main };
+      a.side[dir] = road; b.side[OPP[dir]] = road; join(a.y * N + a.x, b.y * N + b.x);
+    };
+    rows.forEach((y, i) => { for (let x = 0; x < N - 1; x++) link(at(x, y), 'e', MAIN_W, true, rowP[i]); });
+    cols.forEach((x, i) => { for (let y = 0; y < N - 1; y++) link(at(x, y), 's', MAIN_W, true, colP[i]); });
+    const edges = [];
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (x < N - 1 && !at(x, y).side.e) edges.push([x, y, 'e']); if (y < N - 1 && !at(x, y).side.s) edges.push([x, y, 's']); }
+    for (let i = edges.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [edges[i], edges[j]] = [edges[j], edges[i]]; }
+    const rest = [];
+    for (const [x, y, dir] of edges) { const a = at(x, y), [dx, dy] = DIRS[dir], b = at(x + dx, y + dy); if (find(a.y * N + a.x) !== find(b.y * N + b.x)) link(a, dir, SIDE_W, false); else rest.push([x, y, dir]); }
+    for (const [x, y, dir] of rest) if (r() < 0.16) link(at(x, y), dir, SIDE_W, false);
+    for (const c of C) { const n = Object.values(c.side).filter(Boolean).length; c.n = n; if (n === 1) c.end = r() < 0.55 ? 'culdesac' : 'gate'; }
+    // districts: seeded patches; every look gets a patch, the common ones a couple more
+    const keys = BIOMES.map((b) => b.key).concat(['suburb', 'suburb', 'roof', 'lot', 'park']);
+    const seeds = keys.map((k) => ({ k, x: r() * N, y: r() * N }));
+    for (const c of C) { let best = null, bd = 1e9; for (const s of seeds) { const d = Math.hypot(c.x + 0.5 - s.x, c.y + 0.5 - s.y) + r() * 0.35; if (d < bd) { bd = d; best = s; } } c.d = best.k; }
+    const sides = ['n', 's', 'w', 'e'], river = sides[Math.floor(r() * 4)], highway = sides.filter((s) => s !== river)[Math.floor(r() * 3)];
+    const T = { seed, N, cells: C, rows, cols, river, highway };
+    if (towns.size > 16) towns.clear();
+    towns.set(seed, T); return T;
+  }
+  const cellOf = (seed, x, y) => (inGrid(x, y) ? town(seed).cells[y * GRID + x] : null);
+  // Is there a road from cell a to the neighbouring cell b? (the only way between areas)
+  function roadBetween(seed, a, b) {
+    if (!a || !b || !inGrid(a[0], a[1]) || !inGrid(b[0], b[1])) return false;
+    const dx = b[0] - a[0], dy = b[1] - a[1]; if (Math.abs(dx) + Math.abs(dy) !== 1) return false;
+    const dir = dx === 1 ? 'e' : dx === -1 ? 'w' : dy === 1 ? 's' : 'n';
+    return !!cellOf(seed, a[0], a[1]).side[dir];
+  }
+  // Road steps between cells (breadth first from the given cells).
+  function roadDist(seed, from) {
+    const N = GRID, d = new Array(N * N).fill(Infinity), q = [];
+    for (const f of from) if (inGrid(f[0], f[1])) { d[f[1] * N + f[0]] = 0; q.push(f); }
+    while (q.length) { const [x, y] = q.shift(), c = cellOf(seed, x, y); for (const dir of ['n', 's', 'w', 'e']) if (c.side[dir]) { const nx = x + DIRS[dir][0], ny = y + DIRS[dir][1], i = ny * N + nx; if (d[i] > d[y * N + x] + 1) { d[i] = d[y * N + x] + 1; q.push([nx, ny]); } } }
+    return d;
+  }
+  const byKey = Object.fromEntries(BIOMES.map((b) => [b.key, b]));
   function biomeOf(seed, x, y, homes) {
     if (homes && homes.some((h) => h[0] === x && h[1] === y)) return HOME;
-    const r = rng(hash(seed, 'order')), order = BIOMES.map((b, i) => [r(), i]).sort((a, b) => a[0] - b[0]).map((p) => p[1]);
-    const off = hash(seed, 'off') % 12;
-    return BIOMES[order[(((5 * x + 3 * y + off) % 12) + 12) % 12]];
+    const c = cellOf(seed, x, y); return (c && byKey[c.d]) || BIOMES[0];
   }
-  const inGrid = (x, y) => Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < GRID && y < GRID;
-  const exitsOf = (x, y) => ({ n: y > 0, s: y < GRID - 1, w: x > 0, e: x < GRID - 1 });
-  // The garage you start in (home cells): top middle, door facing down.
-  const GARAGE = { x: 7 * TILE, y: 0, w: 6 * TILE, h: 3 * TILE, door: { x: 8 * TILE, w: 4 * TILE } };
+  // A cell's exits: { n: { p, w } | null, ... } where the roads cross its edges.
+  const exitsOf = (seed, x, y) => { const c = cellOf(seed, x, y); return c ? { n: c.side.n, s: c.side.s, w: c.side.w, e: c.side.e } : { n: null, s: null, w: null, e: null }; };
+  // The road pieces inside a cell as boxes (asphalt): from each edge crossing to the junction.
+  function roadRects(c) {
+    const R = [], h = c.hub;
+    for (const dir of ['n', 's', 'w', 'e']) {
+      const s = c.side[dir]; if (!s) continue; const w = s.w, hw = w / 2;
+      if (dir === 'n' || dir === 's') {
+        const y0 = dir === 'n' ? -60 : Math.min(h.y, AH), y1 = dir === 'n' ? h.y : AH + 60;
+        R.push({ x: s.p - hw, y: Math.min(y0, y1) - (dir === 's' ? hw : 0), w, h: Math.abs(y1 - y0) + hw, dir, main: s.main });
+        if (Math.abs(s.p - h.x) > 2) R.push({ x: Math.min(s.p, h.x) - hw, y: h.y - hw, w: Math.abs(s.p - h.x) + w, h: w, dir, main: s.main, bend: true });
+      } else {
+        const x0 = dir === 'w' ? -60 : h.x, x1 = dir === 'w' ? h.x : AW + 60;
+        R.push({ x: Math.min(x0, x1) - (dir === 'e' ? hw : 0), y: s.p - hw, w: Math.abs(x1 - x0) + hw, h: w, dir, main: s.main });
+        if (Math.abs(s.p - h.y) > 2) R.push({ x: h.x - hw, y: Math.min(s.p, h.y) - hw, w, h: Math.abs(s.p - h.y) + w, dir, main: s.main, bend: true });
+      }
+    }
+    return R;
+  }
+  // The garage you start in (home cells): placed by the street, door facing down.
+  const GARAGE = { w: 6 * TILE, h: 3 * TILE, door: 4 * TILE, apron: 150 };
+  const DOOR = { w: 300, h: 170 }; // the boss door / landmark spot
 
-  // An area's layout from (seed, x, y). Obstacles are axis-aligned boxes (round ones collide as
-  // boxes too, a little smaller). The border ring, the exit lanes and the middle stay clear.
+  // An area's layout from (seed, x, y): its roads (from the town), buildings and props that keep
+  // off the roads and sidewalks, a landmark spot by the road (finds, the boss door, shops) and,
+  // in a home cell, the garage. Obstacles are axis-aligned boxes.
   function genArea(seed, x, y, home) {
-    const r = rng(hash(seed, 'area', x, y));
+    const r = rng(hash(seed, 'area', x, y)), T = town(seed), c = cellOf(seed, x, y) || T.cells[0];
     const biome = home ? HOME : biomeOf(seed, x, y);
+    const roads = roadRects(c), walks = roads.map((q) => ({ x: q.x - SW, y: q.y - SW, w: q.w + 2 * SW, h: q.h + 2 * SW }));
+    const hits = (a, b, pad = 0) => a.x < b.x + b.w + pad && a.x + a.w + pad > b.x && a.y < b.y + b.h + pad && a.y + a.h + pad > b.y;
     const used = Array.from({ length: TH }, () => new Array(TW).fill(0));
-    const block = (tx, ty, w, h, v = 1) => { for (let j = ty; j < ty + h; j++) for (let i = tx; i < tx + w; i++) if (j >= 0 && i >= 0 && j < TH && i < TW) used[j][i] = v; };
-    // reserved: the 1-tile border, the exit lanes (2 tiles wide) through the middle of each edge, the middle
-    block(0, 0, TW, 1, 2); block(0, TH - 1, TW, 1, 2); block(0, 0, 1, TH, 2); block(TW - 1, 0, 1, TH, 2);
-    block(TW / 2 - 1, 0, 2, TH, 2); block(0, TH / 2 - 1, TW, 2, 2); block(TW / 2 - 3, TH / 2 - 2, 6, 4, 2);
+    const mark = (q, v) => { for (let j = Math.max(0, Math.floor(q.y / TILE)); j < Math.min(TH, Math.ceil((q.y + q.h) / TILE)); j++) for (let i = Math.max(0, Math.floor(q.x / TILE)); i < Math.min(TW, Math.ceil((q.x + q.w) / TILE)); i++) used[j][i] = Math.max(used[j][i], v); };
+    for (let i = 0; i < TW; i++) { used[0][i] = 2; used[TH - 1][i] = 2; } for (let j = 0; j < TH; j++) { used[j][0] = 2; used[j][TW - 1] = 2; }
+    for (const q of walks) mark(q, 2);
+    // a spot of open ground right by the road: the garage (home) or the landmark (finds, door, shop)
+    const lot = (w, h, apron) => {
+      let best = null, bs = Infinity;
+      for (let ty = 0; ty <= TH; ty++) for (let tx = 1; tx < TW; tx++) {
+        const q = { x: tx * TILE - (w % TILE) / 2, y: ty === 0 ? 0 : ty * TILE, w, h };
+        if (q.x < TILE || q.x + w > AW - TILE || q.y + h + apron > AH - 20 || (q.y > 0 && q.y < TILE)) continue;
+        if (walks.some((k) => hits(q, k))) continue;
+        const ap = { x: q.x + w / 2 - 60, y: q.y + h, w: 120, h: apron };
+        const touch = walks.some((k) => hits(ap, k, 4)) ? 0 : 400;
+        const d = Math.hypot(q.x + w / 2 - c.hub.x, q.y + h - c.hub.y) * 0.4 + touch + (q.y === 0 ? -60 : 0) + r() * 30;
+        if (d < bs) { bs = d; best = q; }
+      }
+      return best || { x: AW / 2 - w / 2 - (c.hub.x > AW / 2 ? 380 : -380), y: 0, w, h };
+    };
     const obstacles = [];
-    let garage = null;
-    if (home) { garage = { ...GARAGE, kind: 'garage' }; block(GARAGE.x / TILE - 1, 0, GARAGE.w / TILE + 2, GARAGE.h / TILE + 2, 2); }
-    const want = 9 + Math.floor(r() * 6);
-    for (let tries = 0; tries < 300 && obstacles.length < want; tries++) {
+    let garage = null, spot = null;
+    if (home) {
+      const q = lot(GARAGE.w, GARAGE.h, GARAGE.apron);
+      garage = { x: q.x, y: q.y, w: GARAGE.w, h: GARAGE.h, door: { x: q.x + (GARAGE.w - GARAGE.door) / 2, w: GARAGE.door }, kind: 'garage' };
+      mark({ x: q.x - TILE, y: q.y, w: q.w + 2 * TILE, h: q.h + GARAGE.apron }, 2);
+      const G = garage;
+      obstacles.push({ x: G.x, y: G.y, w: G.door.x - G.x, h: G.h, kind: 'wall' }, { x: G.door.x + G.door.w, y: G.y, w: G.x + G.w - G.door.x - G.door.w, h: G.h, kind: 'wall' });
+      if (G.y > 0) obstacles.push({ x: G.door.x, y: G.y, w: G.door.w, h: 30, kind: 'wall', back: true });
+    } else {
+      const q = lot(DOOR.w + 40, DOOR.h, 110); spot = { x: q.x + 20, y: q.y, w: DOOR.w, h: DOOR.h };
+      mark({ x: q.x, y: q.y, w: q.w, h: q.h + 100 }, 2);
+    }
+    const free = (tx, ty, w, h, gap) => { for (let j = ty - gap; j < ty + h + gap; j++) for (let i = tx - gap; i < tx + w + gap; i++) { if (j < 0 || i < 0 || j >= TH || i >= TW) { if (j >= ty && j < ty + h && i >= tx && i < tx + w) return false; continue; } const u = used[j][i]; if (u === 1 || (u === 2 && j >= ty && j < ty + h && i >= tx && i < tx + w)) return false; } return true; };
+    // buildings first (big), then props
+    const [bmin, bmax, [bw0, bw1], [bh0, bh1], style] = biome.bld;
+    const nb = bmin + Math.floor(r() * (bmax - bmin + 1));
+    for (let k = 0, tries = 0; k < nb && tries < 200; tries++) {
+      const w = bw0 + Math.floor(r() * (bw1 - bw0 + 1)), h = bh0 + Math.floor(r() * (bh1 - bh0 + 1));
+      const tx = 1 + Math.floor(r() * (TW - w - 1)), ty = 1 + Math.floor(r() * (TH - h - 1));
+      if (!free(tx, ty, w, h, 1)) continue;
+      mark({ x: tx * TILE, y: ty * TILE, w: w * TILE, h: h * TILE }, 1); k++;
+      obstacles.push({ x: tx * TILE + 6, y: ty * TILE + 6, w: w * TILE - 12, h: h * TILE - 12, kind: 'bld', style, v: Math.floor(r() * 4), seed: Math.floor(r() * 1e6) });
+    }
+    const want = 8 + Math.floor(r() * 6);
+    for (let tries = 0; tries < 320 && obstacles.length - nb < want; tries++) {
       const kind = pick(r, biome.props), P = PROPS[kind];
-      const rot = !P.round && P.w !== P.h && r() < 0.35; // some props stand on end
+      const rot = !P.round && P.w !== P.h && r() < 0.35;
       const w = rot ? P.h : P.w, h = rot ? P.w : P.h;
       const tx = 1 + Math.floor(r() * (TW - w - 1)), ty = 1 + Math.floor(r() * (TH - h - 1));
-      let ok = true;
-      for (let j = ty - 1; j <= ty + h && ok; j++) for (let i = tx - 1; i <= tx + w && ok; i++) { if (j < 0 || i < 0 || j >= TH || i >= TW) continue; const u = used[j][i]; if (u === 1 || (u === 2 && j >= ty && j < ty + h && i >= tx && i < tx + w)) ok = false; }
-      if (!ok) continue;
-      block(tx, ty, w, h, 1);
-      const pad = P.round ? 10 : 6;
-      obstacles.push({ x: tx * TILE + pad, y: ty * TILE + pad, w: w * TILE - pad * 2, h: h * TILE - pad * 2, kind, round: !!P.round, rot, v: Math.floor(r() * 4), seed: Math.floor(r() * 1e6) });
+      if (!free(tx, ty, w, h, 1)) continue;
+      mark({ x: tx * TILE, y: ty * TILE, w: w * TILE, h: h * TILE }, 1);
+      const pad = P.thin ? 28 : P.round ? 10 : 6;
+      obstacles.push({ x: tx * TILE + pad, y: ty * TILE + pad, w: w * TILE - pad * 2, h: h * TILE - pad * 2, kind, round: !!P.round, low: !!P.low, rot, v: Math.floor(r() * 4), seed: Math.floor(r() * 1e6) });
     }
-    if (garage) { obstacles.push({ x: garage.x, y: 0, w: garage.door.x - garage.x, h: garage.h, kind: 'wall' }); obstacles.push({ x: garage.door.x + garage.door.w, y: 0, w: garage.x + garage.w - garage.door.x - garage.door.w, h: garage.h, kind: 'wall' }); }
+    // parked cars and wrecks on the side streets (never blocking: they sit on the sidewalk line)
     const decals = [];
-    const nd = 40 + Math.floor(r() * 25);
-    for (let i = 0; i < nd; i++) decals.push({ x: r() * AW, y: r() * AH, k: Math.floor(r() * 6), s: 0.6 + r() * 0.9, a: r() * Math.PI * 2 });
-    return { x, y, seed, biome, obstacles, decals, garage, home: !!home, exits: exitsOf(x, y) };
+    const nd = 34 + Math.floor(r() * 20);
+    for (let i = 0; i < nd; i++) decals.push({ x: r() * AW, y: r() * AH, k: Math.floor(r() * 8), s: 0.6 + r() * 0.9, a: r() * Math.PI * 2 });
+    const exits = exitsOf(seed, x, y);
+    return { x, y, seed, biome, obstacles, decals, garage, spot, home: !!home, exits, roads, hub: { ...c.hub }, end: c.end, cell: c, town: { river: T.river, highway: T.highway } };
+  }
+  // Where you arrive from a direction (on the road, just inside the edge).
+  function arrival(area, from) {
+    const s = area.exits[from === 'n' ? 's' : from === 's' ? 'n' : from === 'w' ? 'e' : 'w'];
+    if (from === 'n') return { x: s ? s.p : AW / 2, y: AH - 40 }; if (from === 's') return { x: s ? s.p : AW / 2, y: 40 };
+    if (from === 'w') return { x: AW - 40, y: s ? s.p : AH / 2 }; return { x: 40, y: s ? s.p : AH / 2 };
   }
 
   // Spawn cells for runs: far from everybody else (players take turns around the grid).
@@ -194,5 +317,5 @@
   // Soft cap: grows with n but never passes `top` (diminishing returns).
   const soft = (n, top, k) => top * (1 - Math.pow(k, n || 0));
 
-  return { GRID, AW, AH, TILE, TW, TH, BIOMES, HOME, PROPS, biomeOf, inGrid, exitsOf, genArea, GARAGE, spawnCell, ABILITIES, AB, CATS, offer, levelsFromAbilities, PICKUPS, PK, ZOMBIES, waveSpec, xpNeed, limits, soft, hash, rng };
+  return { GRID, AW, AH, TILE, TW, TH, BIOMES, HOME, PROPS, DIRS, OPP, MAIN_W, SIDE_W, SW, town, cellOf, roadBetween, roadDist, roadRects, biomeOf, inGrid, exitsOf, genArea, arrival, GARAGE, DOOR, spawnCell, ABILITIES, AB, CATS, offer, levelsFromAbilities, PICKUPS, PK, ZOMBIES, waveSpec, xpNeed, limits, soft, hash, rng };
 });

@@ -110,8 +110,8 @@
     g.restore();
   }
   const DOOR_POS = { x: 650, y: 40, w: 300, h: 170 };
-  function drawDoor(g, look, open, t, ready) {
-    const D = window.TZS.DOORS.find((d) => d.key === look) || window.TZS.DOORS[0], { x, y, w, h } = DOOR_POS;
+  function drawDoor(g, look, open, t, ready, spot) {
+    const D = window.TZS.DOORS.find((d) => d.key === look) || window.TZS.DOORS[0], { x, y, w, h } = spot || DOOR_POS;
     g.save();
     g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x - 10, y + h, w + 20, 18);
     if (look === 'vault') { rr(g, x, y, w, h, 14); fillOl(g, '#8a8f98', 5); circ(g, x + w / 2, y + h / 2, h * 0.42); fillOl(g, open ? '#1a1410' : '#c9a646', 5); if (!open) { g.save(); g.translate(x + w / 2, y + h / 2); g.rotate(t * 0.5); g.strokeStyle = OL; g.lineWidth = 8; for (let i = 0; i < 3; i++) { g.rotate(TAU / 3); g.beginPath(); g.moveTo(0, 0); g.lineTo(h * 0.3, 0); g.stroke(); } g.restore(); } }
@@ -126,15 +126,15 @@
     g.restore();
   }
   // A locked exit: a chained gate across the lane with the kill counter.
-  function drawGate(g, dir, left, t) {
-    const W = window.TZW, x = dir === 'w' ? 0 : dir === 'e' ? W.AW : W.AW / 2, y = dir === 'n' ? 0 : dir === 's' ? W.AH : W.AH / 2, horiz = dir === 'n' || dir === 's';
+  function drawGate(g, dir, left, t, road) {
+    const W = window.TZW, p = road ? road.p : (dir === 'n' || dir === 's' ? W.AW / 2 : W.AH / 2), hw = road ? road.w / 2 + 30 : 100, x = dir === 'w' ? 0 : dir === 'e' ? W.AW : p, y = dir === 'n' ? 0 : dir === 's' ? W.AH : p, horiz = dir === 'n' || dir === 's';
     g.save(); g.translate(x, y); if (!horiz) g.rotate(Math.PI / 2);
-    rr(g, -100, -18, 200, 36, 6); fillOl(g, '#5a5f66', 5);
-    g.strokeStyle = '#2b2f33'; g.lineWidth = 4; g.beginPath(); for (let i = -90; i <= 90; i += 18) { g.moveTo(i, -16); g.lineTo(i + 10, 16); } g.stroke();
-    g.strokeStyle = '#c9ccd1'; g.lineWidth = 6; g.setLineDash([10, 6]); g.beginPath(); g.moveTo(-96, -10); g.lineTo(96, 10); g.moveTo(-96, 10); g.lineTo(96, -10); g.stroke(); g.setLineDash([]);
+    rr(g, -hw, -18, hw * 2, 36, 6); fillOl(g, '#5a5f66', 3);
+    g.strokeStyle = '#2b2f33'; g.lineWidth = 4; g.beginPath(); for (let i = -hw + 10; i <= hw - 10; i += 18) { g.moveTo(i, -16); g.lineTo(i + 10, 16); } g.stroke();
+    g.strokeStyle = '#c9ccd1'; g.lineWidth = 6; g.setLineDash([10, 6]); g.beginPath(); g.moveTo(-hw + 4, -10); g.lineTo(hw - 4, 10); g.moveTo(-hw + 4, 10); g.lineTo(hw - 4, -10); g.stroke(); g.setLineDash([]);
     rr(g, -16, -22, 32, 34, 6); fillOl(g, '#ffd23f', 4);
     g.restore();
-    const lx = dir === 'w' ? 60 : dir === 'e' ? W.AW - 60 : W.AW / 2, ly = dir === 'n' ? 70 : dir === 's' ? W.AH - 70 : W.AH / 2 - 60;
+    const lx = dir === 'w' ? 60 : dir === 'e' ? W.AW - 60 : p, ly = dir === 'n' ? 70 : dir === 's' ? W.AH - 70 : p - 60;
     g.font = 'bold 26px "Lilita One", sans-serif'; g.textAlign = dir === 'w' ? 'left' : dir === 'e' ? 'right' : 'center'; g.textBaseline = 'middle';
     const s = `🔒 ${left} zombies to break through`; g.lineWidth = 6; g.strokeStyle = OL; g.strokeText(s, lx, ly); g.fillStyle = '#ffd23f'; g.fillText(s, lx, ly);
   }

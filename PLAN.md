@@ -1811,3 +1811,13 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
   its resolution if frames get slow.
   Limits: not played on real phones yet; co-op tested with two headless phones on one machine (no
   real network latency); spit hits on guests are approximate; no friendly fire.
+
+- TrashZombies interim (phase 2, in progress): playable now: closer camera that leads where you run/aim, one connected
+  town per seed (road network with main streets, side streets, dead ends/cul-de-sacs, districts; roads continue across
+  block edges, exits only where roads cross; TV map + phone minimap show the whole town with fogged streets), a much more
+  realistic pre-rendered look (asphalt, sidewalks, lane paint, buildings with roofs/AC units, cars and wrecks, props,
+  shadows), per-run time of day (dusk / overcast / night with a flashlight cone, lamps, muzzle light), rain/fog, vignette,
+  blood splats that fade, zombies that topple when killed, shell casings, explosion fire + smoke, Graphics High/Low/Auto
+  (pause menu), full-screen button + iPhone Add-to-Home-Screen hint, uncapped stacking (up to 4 drones, then they merge
+  power). Regular mode (gates, finds, key, boss door, 4 bosses) from the earlier WIP is in. Still to come: modes polish,
+  downed/revive, shops + merchants + forge, score/party scoring, weapons, classes, items, new zombies, events.
