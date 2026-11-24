@@ -22,6 +22,16 @@
     bugs: 'Tap bugs fast for PERFECT. Golden beetles are worth 3. Don’t tap the bees!',
     maze: 'Watch the frog hop across the lily pads, then tap the same pads in the same order. Each path is one hop longer. Quick taps are PERFECT!',
   };
+  // First run of a game: a fingertip shows the move for 3 seconds (CSS-animated, ducks.css .dk-howto).
+  const TAP = '<i class="tap"><b></b></i>';
+  const HOWTO = {
+    hurdles: `<span class="lbl">Tap to jump!</span><span class="spot mid">${TAP}</span>`,
+    paddle: `<span class="lbl">LEFT, RIGHT, LEFT, RIGHT…</span><span class="spot l">${TAP}</span><span class="spot r">${TAP}</span>`,
+    rings: `<span class="lbl">Hold to fly up, let go to glide down</span><span class="spot mid hold">${TAP}</span>`,
+    climb: `<span class="lbl">Tap when the white dot is over the green hold</span><span class="spot mid">${TAP}</span>`,
+    bugs: `<span class="lbl">Tap the bugs (not the bees!)</span><span class="spot roam">${TAP}</span>`,
+    maze: `<span class="lbl">Watch the frog… then tap the same pads</span><span class="spot roam">${TAP}</span>`,
+  };
   const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch { /* none */ } };
   const TAU = Math.PI * 2;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -149,13 +159,17 @@
     // GOAL: a Risk it! round (the very hard pace); else the normal game with its ⭐ TARGET.
     const SP = opts.speed || 1, GOAL = opts.goal || 0, TARGET = GOAL ? 0 : opts.target || 0, MODE = GOAL ? 'risk' : 'normal';
     const pick = (o) => (o[MODE] != null ? o[MODE] : o.normal);
+    // Quiet help (0-3, from the server for players who find this game hard): wider windows and a bit
+    // more fingertip slop; the server also sends a gentler speed. Never in a Risk it! round.
+    const AS = GOAL ? 0 : Math.max(0, Math.min(3, Number(opts.assist) || 0));
     const seenKey = 'dk.seen.' + kind; let first = false;
     try { first = !localStorage.getItem(seenKey); localStorage.setItem(seenKey, '1'); } catch { /* private mode */ }
+    if (opts.first && !GOAL) first = true; // the server knows this duck never played it
     const ov = document.createElement('div'); ov.className = 'dk-over';
     ov.innerHTML = `<div class="dk-hud"><b class="sc">0</b><span class="mid">${GOAL ? `🎲 RISK IT · 🎯 <b class="gl">0/${GOAL}</b>` : `${TARGET ? `⭐ ${TARGET}` : ''}${opts.best ? ` · best ${opts.best}` : ''}`}</span><span class="tm">${seconds}</span></div>
       <div class="dk-combo" hidden></div><div class="dk-banner" hidden></div>
       <canvas></canvas>${kind === 'paddle' ? '<div class="dk-pads"><button data-pad="L">LEFT</button><button data-pad="R">RIGHT</button></div>' : ''}
-      <div class="dk-tip ${first ? 'first' : ''} ${GOAL ? 'risk' : ''}">${GOAL ? `<b>🎲 RISK IT!</b>Score <b>🎯 ${GOAL}</b> in ${seconds} seconds. Everything is faster and trickier!<br>` : first ? '<b>How to play</b>' : ''}${TIPS[kind]}</div><div class="dk-ready">3</div>${GOAL ? '<div class="dk-goalbar"><i></i></div>' : ''}`;
+      <div class="dk-tip ${first ? 'first' : ''} ${GOAL ? 'risk' : ''}">${GOAL ? `<b>🎲 RISK IT!</b>Score <b>🎯 ${GOAL}</b> in ${seconds} seconds. Everything is faster and trickier!<br>` : first ? '<b>How to play</b>' : ''}${TIPS[kind]}</div>${first && !GOAL ? `<div class="dk-howto ${kind}" aria-hidden="true">${HOWTO[kind]}</div>` : ''}<div class="dk-ready">3</div>${GOAL ? '<div class="dk-goalbar"><i></i></div>' : ''}`;
     if (GOAL) ov.classList.add('risk');
     document.body.appendChild(ov); document.body.classList.add('dk-lock');
     const close = () => { ov.remove(); document.body.classList.remove('dk-lock'); if (window.DUCK_MINI.dbg && window.DUCK_MINI.dbg.ov === ov) window.DUCK_MINI.dbg = null; if (current && current.ov === ov) current = null; };
@@ -224,7 +238,7 @@
           S.G = 2600 * U; S.V1 = Math.sqrt(2 * S.G * 150 * U); S.V2 = S.V1 * 0.75; // a 150 px jump, ~0.68 s in the air (clears a hurdle with ~0.2 s to spare)
           S.bs = 1.15 * U; S.birdR = 11 * S.bs; // bird body (hit) radius
           S.birdH = 39 * S.ds + 14 * U + S.birdR; // above a grown duck's head, with room to spare
-          S.slack = pick({ normal: 2, risk: 0 }) * U;
+          S.slack = (pick({ normal: 2, risk: 0 }) + 3 * AS) * U;
         },
         mode() { return S.stun > 0 ? 'stand' : S.h > 0.5 ? 'fly' : 'run'; },
         y() { return S.surf - S.h - 18 * S.ss; },
@@ -319,7 +333,7 @@
       paddle: {
         init() {
           S.side = null; S.strokes = 0; S.x = 0; S.lastStroke = 0; S.lastCount = -1; S.lastBeat = -1; S.flash = 0; S.rip = [];
-          S.beatT = pick({ normal: 0.42, risk: 0.36 }); S.win = pick({ normal: 0.1, risk: 0.075 }); S.per = 5;
+          S.beatT = pick({ normal: 0.42, risk: 0.36 }); S.win = pick({ normal: 0.1, risk: 0.075 }) + 0.025 * AS; S.per = 5;
           S.prev = 0; S.next = S.beatT; S.beatI = 0; S.ds = 2.2 * U; S.cy = H * 0.56;
         },
         tick(el) { while (el >= S.next) { S.prev = S.next; S.beatI++; S.next = S.prev + S.beatT / SM[stageOf(S.prev)]; } },
@@ -385,7 +399,7 @@
           S.ds = 1.75 * U; S.dx = Math.round(W * 0.28); S.y = H * 0.5; S.vy = 0; S.gust = 0; S.gustT = 4; S.tilt = 0; S.ft = 0;
           S.VMAX = 360 * U; S.top = 66; S.bot = H - 8;
           S.R = ART.duckBox(0, 0, S.ds, 'fly', 0, duck.stage).rad;
-          S.margin = pick({ normal: 30, risk: 21 }) * U; S.rim = 8 * U;
+          S.margin = (pick({ normal: 30, risk: 21 }) + 6 * AS) * U; S.rim = 8 * U;
           S.cloudK = pick({ normal: 0.82, risk: 0.9 }); S.gustK = pick({ normal: 1, risk: 1.25 });
           S.lastRing = null; S.lastCloud = null; S.gap = 1;
         },
@@ -484,7 +498,7 @@
       // ---------------- Cliff Climb ----------------
       // The wing swings across the wall; its grab point (the white dot) must be over the hold.
       climb: {
-        init() { S.hand = 0; S.sp = 2.3; S.lastEl = 0; S.height = 0; S.shown = 0; S.rowY = Math.round(H * 0.34); S.tol = pick({ normal: 4, risk: 1 }) * U; S.ds = 2 * U; this.next(0); },
+        init() { S.hand = 0; S.sp = 2.3; S.lastEl = 0; S.height = 0; S.shown = 0; S.rowY = Math.round(H * 0.34); S.tol = (pick({ normal: 4, risk: 1 }) + 3 * AS) * U; S.ds = 2 * U; this.next(0); },
         // the grab point, as a fraction of the width (extrapolated to the tap's exact time)
         handAt(el) { return 0.05 + 0.9 * (Math.sin(S.hand + Math.max(0, el - S.lastEl) * S.sp) + 1) / 2; },
         next(el) {
@@ -570,7 +584,7 @@
           S.L = lilyPath(MODE, Math.random, hk);
           S.top = 118 * U; S.bank = H - 96 * U;
           const cw = W / S.L.cols, ch = (S.bank - S.top) / S.L.rows;
-          S.cw = cw; S.ch = ch; S.pr = Math.min(cw, ch) * 0.36; S.slop = pick({ normal: 8, risk: 4 }) * U;
+          S.cw = cw; S.ch = ch; S.pr = Math.min(cw, ch) * 0.36; S.slop = (pick({ normal: 8, risk: 4 }) + 4 * AS) * U;
           S.duck = -1; S.duckHop = null; S.splash = 0; S.party = 0; S.ds = clamp(S.pr / 22, 1.2, 2.1);
           S.started = false;
         },
@@ -658,7 +672,7 @@
       // Each bug is drawn with body radius b.r. A tap counts on a bug within b.r·1.1 + slop (a
       // fingertip's worth); a bee only stings when the tap is right on it (b.r·0.85).
       bugs: {
-        init() { S.cols = 3; S.rows = 4; S.top = 70; S.R = bugRules(MODE); S.slop = S.R.slop * U; },
+        init() { S.cols = 3; S.rows = 4; S.top = 70; S.R = bugRules(MODE); S.slop = (S.R.slop + 4 * AS) * U; },
         cell(i, j) { const cw = W / S.cols, ch = (H - S.top) / S.rows; return { x: i * cw + cw / 2, y: S.top + j * ch + ch / 2, cw, ch }; },
         press(x, y, el) {
           let best = null, bd = 1e9, bee = null;
@@ -728,13 +742,16 @@
 
     // ---- 3, 2, 1, GO! ----
     const ready = ov.querySelector('.dk-ready');
-    let n = 3; BOX.sfx(GOAL ? 'drum' : 'tick'); const STEP = GOAL ? 900 : first ? 1000 : 520; // a Risk it! round: a slower, tense countdown
+    let n = first && !GOAL ? 6 : 3; BOX.sfx(GOAL ? 'drum' : 'tick'); const STEP = GOAL ? 900 : first ? 1000 : 520; // a Risk it! round: a slower, tense countdown; a first run: 3 s of "how to play" first
+    if (n > 3) ready.textContent = '';
     // Stop at once (the race is starting): during the countdown the run is cancelled; once it is going,
     // it finishes right here with the score so far.
     let stopReason = null, beat = 0;
     current = { ov, active: () => !over, stop(reason) { if (over) return; if (!started) { over = true; clearInterval(countdown); close(); if (opts.cancel) opts.cancel(); return; } stopReason = reason || 'Training stopped.'; finish(); } };
     const countdown = setInterval(() => {
       n--;
+      if (n > 3) return; // the how-to hand is showing
+      if (n === 3 && ready.textContent === '') { const h = ov.querySelector('.dk-howto'); if (h) h.classList.add('fade'); }
       if (n > 0) { ready.textContent = n; BOX.sfx('tick'); if (GOAL) buzz(30); return; }
       clearInterval(countdown); ready.textContent = 'GO!'; BOX.sfx('start'); started = true; t0 = last = performance.now();
       setTimeout(() => ready.remove(), 400); requestAnimationFrame(frame);

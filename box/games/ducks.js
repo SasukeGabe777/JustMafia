@@ -186,8 +186,8 @@ const NAMES = ['Puddle Cup', 'Reed Run', 'Pond Prix', 'Feather Derby', 'Lily Cla
 // that XP. A risk costs no extra energy. The goal is a share of the score you just made (RISK.share
 // per game), between RISK.min and RISK.max, so it is hard for everyone.
 const TARGET = 16;
-const RISK = { seconds: 15, speed: 1.35, min: 6, max: 30, offerMs: 45000, share: { hurdles: 0.8, paddle: 0.65, rings: 0.8, climb: 0.8, bugs: 0.8, maze: 0.7 } };
-const riskGoal = (game, score) => clamp(Math.round(score * (RISK.share[game] || 0.75)), RISK.min, RISK.max);
+const RISK = { seconds: 15, speed: 1.35, min: 6, max: 30, offerMs: 45000, share: { hurdles: 0.8, paddle: 0.7, rings: 0.8, climb: 0.7, bugs: 0.8, maze: 0.7 }, maxFor: { bugs: 50 } };
+const riskGoal = (game, score) => clamp(Math.round(score * (RISK.share[game] || 0.75)), RISK.min, RISK.maxFor[game] || RISK.max);
 // Perks: pick one each time your duck grows up. They change how it races.
 const PERKS = {
   burst: { icon: '🚀', label: 'Rocket Start', about: '+15% speed for the first fifth of every race' },
@@ -207,6 +207,20 @@ const SPIN = [
   { w: 8, kind: 'gear', label: 'Free race gear', icon: '🎒' }, { w: 6, kind: 'hat', label: 'A new hat', icon: '🎩' }, { w: 6, kind: 'nothing', label: 'A feather… nice?', icon: '🪶' },
 ];
 const RUN_SECONDS = 20, TRAIN_COST = 15, NAP_SECONDS = 15, MAX_LEVEL = 25, SCORE_RATE = 3.2, SCORE_MAX = 60 /* combos let good players score more */;
+// XP per point, per mini-game: the six games score differently for the same effort (combos, how
+// many things come at you), so each pays its own rate. Measured with tools/ducks-minipay.js so that
+// the same kind of player earns about the same XP in every game (no skill is cheaper to train).
+const PAY = { hurdles: 0.9, paddle: 1.25, rings: 1.08, climb: 0.87, bugs: 0.4, maze: 0.84 };
+// The XP floor: a full run where you really played (XP_FLOOR.minScore points or more) earns at least
+// XP_FLOOR.xp base XP, so a player who finds the games hard still grows a duck. Good runs earn more.
+const XP_FLOOR = { xp: 40, minScore: 3 };
+// Quiet help per mini-game: a full run paying under ASSIST.low base XP (a struggling player) adds a
+// step (up to ASSIST.max), one paying ASSIST.high or more takes one away. Each step slows the game by
+// ASSIST.slow and widens its windows a little (public/box/games/ducks-mini.js, opts.assist).
+const ASSIST = { low: 50, high: 80, max: 3, slow: 0.08 };
+const SKILL_OF_GAME = Object.fromEntries(Object.entries(GAME_FOR).map(([k, g]) => [g, k]));
+// The base XP of a run (before streak, buildings, mood, egg and catch-up): full = played to the end.
+const baseXp = (stat, score, full) => Math.max(Math.round(score * 4 * (PAY[GAME_FOR[stat]] || 1)), full && score >= XP_FLOOR.minScore ? XP_FLOOR.xp : 0);
 // When a race starts, a mini-game in progress stops at once: the phone sends what it scored up to
 // that moment (its score counts, capped by the time played before the start) within RACE_GRACE ms.
 const RACE_GRACE = 6000;
@@ -254,6 +268,8 @@ function migrate(d) {
   d.pantry = pantry;
   if (d.training && d.training.diff) delete d.training.diff; // a run started with a difficulty finishes as a normal run
   if (d.riskOffer === undefined) d.riskOffer = null;
+  // Quiet help (0-3 per mini-game) and how many runs of each game this duck has played.
+  for (const key of ['assist', 'runs']) { const o = d[key] && typeof d[key] === 'object' ? d[key] : {}; d[key] = {}; for (const g of Object.values(GAME_FOR)) d[key][g] = Number.isFinite(o[g]) ? o[g] : 0; }
   return d;
 }
 
@@ -908,7 +924,10 @@ class Ducks {
         if (d.energy < cost) return { ok: false, error: 'Too tired! Feed your duck, or it naps by itself.' };
         d.riskOffer = null; // starting a new run keeps the last one's XP
         d.energy -= cost; d.training = { stat: m.stat, at: now };
-        return { ok: true, game: GAME_FOR[m.stat], seconds: RUN_SECONDS, speed: 1, target: TARGET, best: d.bests[m.stat] || 0 };
+        // Quiet help: a player who keeps scoring low in this game gets a gentler pace and wider
+        // windows (assist), never announced; it fades as they do better. Risk it! rounds never get it.
+        const game = GAME_FOR[m.stat], assist = d.assist[game] || 0;
+        return { ok: true, game, seconds: RUN_SECONDS, speed: +(1 - ASSIST.slow * assist).toFixed(2), assist, first: !d.runs[game], target: TARGET, best: d.bests[m.stat] || 0 };
       }
       case 'score': {
         const tr = d.training; if (!tr) return { ok: false, error: 'No training in progress.' };
@@ -1024,12 +1043,14 @@ class Ducks {
   }
   // cut: the race start stopped this run early (its score counts; a missed star never breaks a streak).
   reward(id, d, stat, score, cut = false) {
-    let xp = score * 4;
+    let xp = baseXp(stat, score, !cut);
     const star = score >= TARGET;
     // Streak: hit the ⭐ target again and again for up to +30% XP; a miss resets it.
     if (star) { d.streak++; d.stars++; d.bestStreak = Math.max(d.bestStreak, d.streak); } else if (!cut) d.streak = 0;
     xp *= 1 + 0.05 * Math.min(6, d.streak);
     const newBest = score > (d.bests[stat] || 0); if (newBest) d.bests[stat] = score;
+    const game = GAME_FOR[stat]; d.runs[game] = (d.runs[game] || 0) + 1;
+    if (!cut) { const pay = score * 4 * (PAY[game] || 1); d.assist[game] = clamp((d.assist[game] || 0) + (pay < ASSIST.low ? 1 : pay >= ASSIST.high ? -1 : 0), 0, ASSIST.max); }
     const b = BUILDINGS[Object.keys(BUILDINGS).find((k) => BUILDINGS[k].skill === stat)];
     const bl = b ? d.buildings[Object.keys(BUILDINGS).find((k) => BUILDINGS[k] === b)] : 0;
     xp *= 1 + 0.2 * bl;
@@ -1180,5 +1201,5 @@ module.exports = {
   partyFit,
   key: 'ducks', name: 'JustRaiseDucks', min: 1, best: [2, 12], fields, defaults, liveLobby: true,
   create: (room, settings) => new Ducks(room, settings),
-  _test: { racePace, fatigueDepth, mishap, MISHAP, SKILL_SPEED, sectionSpeed, courseLen, FATIGUE, TRIP_STOP, WRONG_STOP, THINK_STOP, SHORT_BOOST, FORK_GAP, RACE_GRACE, NAP_SECONDS, forkOdds, forksIn, JUMPS, VARIANT, migrate, GAME_FOR, BUILDINGS, FOOD, GEAR, EGGS, level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, TARGET, RISK, riskGoal, PANTRY_MAX, OLD_FOOD, SHORT_SPEED, PERKS, SPIN, HYPE_MS, CHEER_GAP },
+  _test: { racePace, ASSIST, baseXp, PAY, XP_FLOOR, SCORE_MAX, RUN_SECONDS, GAME_FOR_SKILL: SKILL_OF_GAME, fatigueDepth, mishap, MISHAP, SKILL_SPEED, sectionSpeed, courseLen, FATIGUE, TRIP_STOP, WRONG_STOP, THINK_STOP, SHORT_BOOST, FORK_GAP, RACE_GRACE, NAP_SECONDS, forkOdds, forksIn, JUMPS, VARIANT, migrate, GAME_FOR, BUILDINGS, FOOD, GEAR, EGGS, level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, TARGET, RISK, riskGoal, PANTRY_MAX, OLD_FOOD, SHORT_SPEED, PERKS, SPIN, HYPE_MS, CHEER_GAP },
 };

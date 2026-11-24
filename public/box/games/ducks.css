@@ -260,3 +260,29 @@ body.g-ducks .dk-gifts button .bx-face { margin: -6px 4px -6px -2px; }
 .dk-racecard.theme-city { background: linear-gradient(135deg, rgba(255, 143, 115, 0.4), var(--panel)); } .dk-racecard.theme-jungle { background: linear-gradient(135deg, rgba(47, 122, 69, 0.5), var(--panel)); }
 .dk-racecard.theme-desert { background: linear-gradient(135deg, rgba(255, 180, 94, 0.4), var(--panel)); } .dk-racecard.theme-sky { background: linear-gradient(135deg, rgba(79, 166, 255, 0.4), var(--panel)); }
 .dk-racecard.theme-candy { background: linear-gradient(135deg, rgba(255, 174, 220, 0.45), var(--panel)); } .dk-racecard.theme-haunted { background: linear-gradient(135deg, #2a1d45, #5b3f6e); }
+/* First run of a mini-game: a fingertip shows the move for 3 seconds before the countdown. */
+.dk-howto { position: absolute; inset: 0; z-index: 6; pointer-events: none; transition: opacity 0.4s; }
+.dk-howto.fade { opacity: 0; }
+.dk-howto .lbl { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); width: 86%; text-align: center; font: 800 24px 'Fredoka', sans-serif; color: #fff; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); background: rgba(20, 10, 40, 0.7); border: 3px solid #ffcf3f; border-radius: 18px; padding: 10px 12px; box-sizing: border-box; }
+.dk-howto .spot { position: absolute; left: 50%; top: 55%; width: 0; height: 0; }
+.dk-howto.paddle .spot { top: auto; bottom: 64px; }
+.dk-howto.paddle .spot.l { left: 25%; }
+.dk-howto.paddle .spot.r { left: 75%; }
+.dk-howto .tap { position: absolute; left: -26px; top: -26px; width: 52px; height: 52px; border-radius: 50%; background: rgba(255, 255, 255, 0.92); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3), inset 0 -6px 0 #ffd6a0; animation: dk-tap 0.9s ease-in-out infinite; }
+.dk-howto .tap b { position: absolute; inset: -6px; border-radius: 50%; border: 4px solid #ffcf3f; animation: dk-ripple 0.9s ease-out infinite; }
+.dk-howto.paddle .spot.r .tap, .dk-howto.paddle .spot.r .tap b { animation-delay: 0.45s; }
+.dk-howto .hold .tap { animation: dk-hold 1.8s ease-in-out infinite; }
+.dk-howto .hold .tap b { animation: dk-ripple 1.8s ease-out infinite; }
+.dk-howto .roam .tap { animation: dk-roam 2.4s ease-in-out infinite; }
+@keyframes dk-tap { 0%, 100% { transform: translateY(-14px) scale(1); } 45% { transform: translateY(0) scale(0.86); } }
+@keyframes dk-ripple { 0%, 40% { transform: scale(0.6); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.9); opacity: 0; } }
+@keyframes dk-hold { 0% { transform: translateY(-14px) scale(1); } 15%, 70% { transform: translateY(0) scale(0.86); } 85%, 100% { transform: translateY(-14px) scale(1); } }
+@keyframes dk-roam { 0% { transform: translate(-80px, -60px) scale(1); } 20% { transform: translate(-80px, -60px) scale(0.85); } 33% { transform: translate(70px, 10px) scale(1); } 53% { transform: translate(70px, 10px) scale(0.85); } 66% { transform: translate(-20px, 90px) scale(1); } 86% { transform: translate(-20px, 90px) scale(0.85); } 100% { transform: translate(-80px, -60px) scale(1); } }
+/* The weakest skill: a gentle pointer on the training page and after a race. */
+.dk-weakhint { display: flex; gap: 10px; align-items: center; margin: 8px 0; padding: 10px 12px; border-radius: 14px; background: rgba(255, 140, 66, 0.16); border: 2px solid rgba(255, 140, 66, 0.55); text-align: left; }
+.dk-weakhint .ic { font-size: 26px; }
+.dk-weakhint small { display: block; opacity: 0.85; }
+.dk-skill.weak { box-shadow: 0 0 0 3px #ff8c42 inset; }
+/* The next race's featured skills. */
+.dk-focus { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center; font-weight: 700; }
+.dk-focus .f { padding: 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); }

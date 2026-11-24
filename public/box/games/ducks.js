@@ -25,6 +25,9 @@
   const MEDAL = ['🥇', '🥈', '🥉'];
   const ord = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
   const course = (c) => (c ? `<div class="dk-legs">${c.sections.map((s) => `<span class="leg ${typeOf(s)}">${SEC[typeOf(s)][0]} ${SEC[typeOf(s)][1]}${s.v ? ' ' + (VAR_ICON[s.v] || '') : ''}</span>`).join('<span class="arrow">→</span>')}</div>` : '');
+  // The next race's featured skills (every race features two; the final, all of them).
+  const focus = (c) => (c && c.featured && c.featured.length ? `<span class="dk-focus">${c.featured.length > 2 ? '<span class="f">⭐ Every skill</span>' : c.featured.map((k) => `<span class="f">${SK[k][0]} ${SK[k][1]}</span>`).join('')}</span>` : '');
+  const focusText = (c) => (c && c.featured && c.featured.length ? (c.featured.length > 2 ? 'every skill' : c.featured.map((k) => SK[k][0] + ' ' + SK[k][1]).join(' · ')) : '');
   const weatherChip = (c, W) => (c && W ? `<span class="dk-weather">${W[c.weather].icon} ${W[c.weather].label}${c.wind ? (c.wind > 0 ? ' (tailwind)' : ' (headwind)') : ''}</span>` : '');
   const bar = (v, cls = '') => `<div class="bar ${cls}"><i style="width:${Math.max(0, Math.min(100, v))}%"></i></div>`;
   // The farmer: the player's own character (BOX.face / BOX.body, cached face images on the
@@ -151,9 +154,10 @@
     return X[a] + (X[a + 1] - X[a]) * Math.min(1, Math.max(0, (simT - T[a]) / (dt || 1)));
   }
   const EV_ICON = { trip: 'dizzy', slip: 'alert', skid: 'swirl', boost: 'bolt' }; // drawn art (DUCK_ART.drawIcon), not emoji
-  const EV_TEXT = { trip: 'crashes into the fence! 💥', clip: 'clips the bar and stumbles!', slip: 'slips back down the cliff!', skid: 'spins out on the ice!', boost: 'catches a boost! ⚡', tired: 'is running out of steam…', short: 'takes the shortcut! 💡', wrong: 'takes a wrong turn! ↩️', think: 'stops to think… 🤔' };
+  const EV_TEXT = { gulp: 'swallows a mouthful of water! 💦', dip: 'dips into the ravine and flaps back up! 🪽', trip: 'crashes into the fence! 💥', clip: 'clips the bar and stumbles!', slip: 'slips back down the cliff!', skid: 'spins out on the ice!', boost: 'catches a boost! ⚡', tired: 'is running out of steam…', short: 'takes the shortcut! 💡', wrong: 'takes a wrong turn! ↩️', think: 'stops to think… 🤔' };
   // the crash at a fence says what the fence was in this world
   const TRIP_TEXT = { lava: 'skids to a stop at the lava! 🔥', cactus: 'gets prickled by a cactus! 🌵', chimney: 'bonks into a chimney! 💥', root: 'trips on a root! 💥', gumdrop: 'bounces off a gumdrop! 🍬', hay: 'crashes into a hay bale! 💥', log: 'trips over a log! 💥' };
+  const WEAK_SAY = { track: '🐢 {n} can’t run well and plods along…', pond: '🐢 {n} can’t swim well and paddles slowly!', cliff: '🐢 {n} isn’t much of a climber: slow going up the wall!', gap: '🐢 {n} can barely fly: flap, flap, FLAP!', maze: '🐢 {n} isn’t very smart: which way now?' };
   const SEC_SAY = { track: '🏃 {n} is back on the track!', pond: '🌊 {n} hits the water first!', cliff: '🧗 {n} starts up the cliff!', gap: '🪽 {n} leaps over the ravine!', maze: '🧠 {n} leads into the maze!' };
   function rrect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
@@ -465,6 +469,10 @@
         else if (k === 'short') { if (r.lab) clip('maze', { vol: 0.1, rate: 1.25, gap: 350, pan }); if ((r === race.byX[0] || r.lab) && pnow - race.mazeSaid > 1800) { race.mazeSaid = pnow; say(`💡 ${d.name} ${EV_TEXT.short}`); } }
         else if (k === 'wrong') { if (r.lab) clip('maze', { vol: 0.11, rate: 0.7, gap: 350, pan }); if ((r.lab || R.tracks.length <= 12) && pnow - race.mazeSaid > 1500) { race.mazeSaid = pnow; say(`↩️ ${d.name} ${EV_TEXT.wrong}`); } }
         else if (k === 'think') { if (r === race.byX[0] && pnow - race.mazeSaid > 3500) { race.mazeSaid = pnow; say(`🤔 ${d.name} ${EV_TEXT.think}`); } }
+        else if (k === 'gulp' || k === 'dip') { if (k === 'gulp') clip('splash', { vol: r.lab ? 0.16 : 0.08, gap: 400, pan }); if ((r.lab || R.tracks.length <= 12) && pnow - (race.mishapSaid || 0) > 1800) { race.mishapSaid = pnow; say(`${d.name} ${EV_TEXT[k]}`); } }
+        // a duck reaching the part of the course its weakest skill is for: the commentary says so
+        // (one line at a time, so a big field doesn't flood the ticker)
+        else if (k === 'weak') { const sec = G.secs[ev[r.evi - 1][2]]; if (sec && WEAK_SAY[sec.type] && (r.lab || R.tracks.length <= 8) && pnow - (race.weakSaid || 0) > 2600) { race.weakSaid = pnow; say(WEAK_SAY[sec.type].replace('{n}', d.name)); } }
         else if (k === 'tired') { if (r === race.byX[0] || (r.lab && pnow - (race.tiredSaid || 0) > 6000)) { race.tiredSaid = pnow; say(`${d.name} ${EV_TEXT.tired}`); } }
       }
       if (r.done && !race.finished.has(r.id)) {
@@ -625,7 +633,7 @@
   // The phone's live race card: your duck's own run, in step with the TV (the same playback
   // numbers), with what it is doing right now: jumping, crashing, swimming, climbing, flying.
   const liveRace = { key: null, start: 0, raf: 0, buzzed: -1 };
-  const LIVE_EV = { trip: '💥 Crashed into a fence!', clip: '😬 Clipped a hurdle!', slip: '🪨 Slipped down the cliff!', skid: '🧊 Spun out on the ice!', boost: '⚡ Caught a boost!', short: '💡 Took the shortcut!', wrong: '↩️ Wrong turn! Doubling back…', think: '🤔 Which way…?' };
+  const LIVE_EV = { gulp: '💦 Gulped some water!', dip: '🪽 Dipped down, flapping back up!', weak: '🐢 This is your weakest part…', trip: '💥 Crashed into a fence!', clip: '😬 Clipped a hurdle!', slip: '🪨 Slipped down the cliff!', skid: '🧊 Spun out on the ice!', boost: '⚡ Caught a boost!', short: '💡 Took the shortcut!', wrong: '↩️ Wrong turn! Doubling back…', think: '🤔 Which way…?' };
   function liveHtml(L) {
     let acc = 0; const segs = L.sections.map((s) => { const t = typeOf(s), len = (L.secLen || SEC_LEN)[t]; const h = `<span class="leg ${t}" style="left:${(acc / L.length) * 100}%;width:${(len / L.length) * 100}%">${SEC[t][0]}</span>`; acc += len; return h; }).join('');
     return `<div class="dk-live" id="dk-live"><div class="dk-livebar">${segs}<i class="dk-livedot" id="dk-livedot"></i></div><div class="dk-livetxt" id="dk-livetxt">Lining up…</div></div>`;
@@ -785,9 +793,17 @@
     const done = (v.quests || []).filter((q) => q.done).length;
     const quests = v.quests && v.quests.length ? `<div class="card-box dk-quests ${questsOpen ? 'open' : ''}"><button class="dk-qhead" data-quests><b>📜 Quests ${done}/${v.quests.length}</b>${v.rival ? `<span class="muted">⚔️ ${esc(v.rival.name)}</span>` : ''}<span>${questsOpen ? '▲' : '▼'}</span></button>
       ${questsOpen ? v.quests.map((q) => `<div class="q ${q.done ? 'done' : ''}"><span>${q.done ? '✅' : '⬜'} ${esc(q.text)}</span><span class="muted">${q.done ? 'done' : q.have + '/' + q.n} · 🪙${q.reward}</span></div>`).join('') + (v.rival ? `<div class="q rival">⚔️ Beat <b>${esc(v.rival.name)}</b> <span class="muted">(${esc(v.rival.owner)})</span> next race for 🪙15</div>` : '') : ''}</div>` : '';
-    return `${coachHtml(v, d)}${foodRow(v, d)}
-      <div class="dk-skillgrid">${Object.entries(SK).map(([k, [icon, label, game, color]]) => { const p = d.progress[k], pct = p ? Math.round((p.have / p.need) * 100) : 100; return `<button class="dk-skill ${needs.includes(k) ? 'need' : ''}" style="--c:${color}" data-sheet="${k}" ${v.napLeft ? 'disabled' : ''}>${ring(d.levels[k], pct, color)}<span class="t"><b>${icon} ${label}${v.gene && v.gene.skill === k ? ' 🧬' : ''}</b><small>${game}</small></span>${needs.includes(k) ? '<i class="needmark" title="On the next course">🏁</i>' : ''}</button>`; }).join('')}</div>
+    const wk = v.weakest && v.weakest.skill;
+    return `${coachHtml(v, d)}${weakHint(v.weakest, 'train')}${foodRow(v, d)}
+      <div class="dk-skillgrid">${Object.entries(SK).map(([k, [icon, label, game, color]]) => { const p = d.progress[k], pct = p ? Math.round((p.have / p.need) * 100) : 100; return `<button class="dk-skill ${needs.includes(k) ? 'need' : ''} ${wk === k ? 'weak' : ''}" style="--c:${color}" data-sheet="${k}" ${v.napLeft ? 'disabled' : ''}>${ring(d.levels[k], pct, color)}<span class="t"><b>${icon} ${label}${v.gene && v.gene.skill === k ? ' 🧬' : ''}</b><small>${game}</small></span>${needs.includes(k) ? '<i class="needmark" title="On the next course">🏁</i>' : ''}</button>`; }).join('')}</div>
       ${quests}${sheet ? sheetHtml(v, d) : ''}`;
+  }
+  // The weakest skill (the server picks it: clearly behind the others): one short, friendly line.
+  const WEAK_WHY = { run: 'Every track is slow going', swim: 'Your duck paddles slowly in every pond', fly: 'Your duck flaps and dips over every ravine', climb: 'Your duck slips on every climbing wall', stamina: 'Your duck runs out of steam at the end of every race', smarts: 'Your duck gets lost in every maze' };
+  function weakHint(w, where) {
+    if (!w || !SK[w.skill]) return '';
+    const [ic, label] = SK[w.skill];
+    return `<div class="dk-weakhint"><span class="ic">${ic}</span><span><b>${where === 'race' ? 'What slowed you down' : 'Your weakest skill'}: ${label} (Lv ${w.level})</b><small>${WEAK_WHY[w.skill]}. A duck needs every skill: train ${label}!</small></span></div>`;
   }
   // Food, right on the training page: three sizes with their price and how many are in the pantry.
   // A tap feeds one (from the pantry first, else it buys one); a full duck saves it for later.
@@ -807,7 +823,7 @@
   }
   function pageRace(v, d) {
     const W = v.weather[v.course.weather], c = v.course;
-    return `<div class="card-box dk-racecard theme-${c.theme}"><div class="muted">${c.leagueIcon || ''} ${esc(c.leagueName || '')} · race ${c.n} of ${v.races}${c.final ? ' · <b class="dk-x2">×2 points</b>' : ''}</div><h3>${esc(c.name)}</h3>
+    return `<div class="card-box dk-racecard theme-${c.theme}"><div class="muted">${c.leagueIcon || ''} ${esc(c.leagueName || '')} · race ${c.n} of ${v.races}${c.final ? ' · <b class="dk-x2">×2 points</b>' : ''}</div><h3>${esc(c.name)}</h3><p>Featuring: ${focus(c)}</p>
         <div class="dk-racemeta"><span>📍 ${esc(c.themeName || '')}</span><span>${W.icon} ${W.label}</span><span>⏱ ${timer(v.endsIn)}</span></div>
         ${course(c)}
         <details class="dk-notes"><summary>What’s on the course?</summary><p>${W.icon} ${esc(W.about)}</p>${[...new Set(c.sections.map((s) => s.v))].map((k) => `<p>${VAR_ICON[k] || ''} ${esc((v.variants || {})[k] || '')}</p>`).join('')}</details>
@@ -839,7 +855,7 @@
   function resultsCard(v, d) {
     const l = d.last, nextL = v.ladder && v.ladder[v.race];
     return `<div class="card-box dk-myres ${l && l.place <= 3 ? 'podium' : ''}"><div class="dk-bigplace">${l ? (l.place <= 3 ? MEDAL[l.place - 1] : '#' + l.place) : '🏁'}</div><h3>${l ? `You finished ${ord(l.place)} of ${l.of}` : 'Race over'}</h3>
-      ${l ? `<p class="dk-gain"><b>+${l.pts}</b> points · <b>+${l.coins}</b> 🪙${l.place <= 3 ? ' · a trophy for your farm!' : ''}</p><p class="muted">${l.trips ? '💫 Tripped ' + l.trips + '× · ' : ''}${l.slips ? '😱 Slipped ' + l.slips + '× · ' : ''}${l.shortcuts ? '💡 ' + l.shortcuts + ' shortcut' + (l.shortcuts === 1 ? '' : 's') + ' · ' : ''}${l.wrongs ? '↩️ ' + l.wrongs + ' wrong turn' + (l.wrongs === 1 ? '' : 's') + ' (train 🧠 Smarts) · ' : ''}${l.tired ? '😮‍💨 Ran out of stamina (train 💪 Stamina)' : '💪 Stamina held up'}</p>` : ''}
+      ${l ? `<p class="dk-gain"><b>+${l.pts}</b> points · <b>+${l.coins}</b> 🪙${l.place <= 3 ? ' · a trophy for your farm!' : ''}</p><p class="muted">${l.trips ? '💫 Tripped ' + l.trips + '× · ' : ''}${l.slips ? '😱 Slipped ' + l.slips + '× · ' : ''}${l.shortcuts ? '💡 ' + l.shortcuts + ' shortcut' + (l.shortcuts === 1 ? '' : 's') + ' · ' : ''}${l.wrongs ? '↩️ ' + l.wrongs + ' wrong turn' + (l.wrongs === 1 ? '' : 's') + ' (train 🧠 Smarts) · ' : ''}${l.gulps ? '💦 Gulped water ' + l.gulps + '× · ' : ''}${l.dips ? '🪽 Dipped ' + l.dips + '× · ' : ''}${l.tired ? '😮‍💨 Ran out of stamina (train 💪 Stamina)' : '💪 Stamina held up'}</p>${weakHint(l.weak, 'race')}` : ''}
       ${v.rivalWon != null ? `<p>⚔️ Rival: ${v.rivalWon ? 'you beat them! +15 coins' : 'they beat you this time.'}</p>` : ''}${v.predictWon != null ? `<p>🔮 Prediction: ${v.predictWon ? '+' + v.predictWon + ' coins!' : 'no luck this time.'}</p>` : ''}</div>
       <div class="card-box dk-seasonline"><div><b>Season: ${ord(v.rank || 1)} of ${v.of}</b> · ${d.points} pts${v.leader ? `<div class="muted">${v.leader.points - d.points} behind ${esc(v.leader.duck)}</div>` : v.race ? '<div class="muted">You lead the valley! 👑</div>' : ''}</div>${nextL ? `<div class="dk-nextup">Next<br><b>${nextL.icon}</b></div>` : '<div class="dk-nextup">🏆<br>Finale!</div>'}</div>
       ${road(v.ladder, v.race)}`;
@@ -988,7 +1004,7 @@
         return;
       }
       const c = s.course;
-      el.querySelector('#dk-next').innerHTML = `<div class="muted">${c.leagueIcon || ''} ${esc(c.leagueName || '')} · race ${s.race + 1} of ${s.races} · 📍 ${esc(c.themeName || '')} · ${s.farms.length} farm${s.farms.length === 1 ? '' : 's'}</div><div class="dk-rname">${esc(c.name)}${c.final ? ' <span class="dk-x2">×2 points</span>' : ''} ${weatherChip(c, s.weather)}</div>${course(c)}${road(s.ladder, s.race)}`;
+      el.querySelector('#dk-next').innerHTML = `<div class="muted">${c.leagueIcon || ''} ${esc(c.leagueName || '')} · race ${s.race + 1} of ${s.races} · 📍 ${esc(c.themeName || '')} · ${s.farms.length} farm${s.farms.length === 1 ? '' : 's'}</div><div class="dk-rname">${esc(c.name)}${c.final ? ' <span class="dk-x2">×2 points</span>' : ''} ${weatherChip(c, s.weather)}</div><div class="dk-nextfocus">Featuring ${focus(c)}</div>${course(c)}${road(s.ladder, s.race)}`;
       el.querySelector('#dk-timer').innerHTML = timer(s.endsIn);
       el.querySelector('#dk-timer').classList.toggle('hot', !!s.hype);
       el.querySelector('#dk-spot').innerHTML = spotlight(s);
@@ -1002,7 +1018,7 @@
       if (s.hype) {
         const F = Object.fromEntries(s.farms.map((x) => [x.id, x]));
         const fav = (s.favorites || []).map((id) => F[id]).filter(Boolean);
-        hype.innerHTML = `<div class="hk">${c.final ? '🏆 GRAND FINAL' : '🏁 RACE DAY'}</div><div class="hn">${esc(c.name)} starts in ${timer(s.endsIn)}</div>${fav.length ? `<div class="hf">${fav.map((f, i) => `<span>${duckPic(f)}<b>${i + 1}. ${who(f)}${esc(f.name)}</b></span>`).join('')}</div><div class="muted">The favorites · pick your tactic on your phone!</div>` : ''}`;
+        hype.innerHTML = `<div class="hk">${c.final ? '🏆 GRAND FINAL' : '🏁 RACE DAY'}</div><div class="hn">${esc(c.name)} starts in ${timer(s.endsIn)}</div><div class="hfocus">${esc(c.themeName || '')} · ${esc(focusText(c))}</div>${fav.length ? `<div class="hf">${fav.map((f, i) => `<span>${duckPic(f)}<b>${i + 1}. ${who(f)}${esc(f.name)}</b></span>`).join('')}</div><div class="muted">The favorites · pick your tactic on your phone!</div>` : ''}`;
       }
     },
 
@@ -1086,7 +1102,7 @@
         const r = await ctx.act({ op: 'train', stat });
         ctx.redraw();
         if (!r.ok) { if (r.error) ctx.toast(r.error); return; }
-        window.DUCK_MINI.play(r.game, r.seconds, me, send, { speed: r.speed, target: r.target, best: r.best, again: () => play(stat), cancel: () => ctx.act({ op: 'cancel' }), riskIt, keep });
+        window.DUCK_MINI.play(r.game, r.seconds, me, send, { speed: r.speed, assist: r.assist, first: r.first, target: r.target, best: r.best, again: () => play(stat), cancel: () => ctx.act({ op: 'cancel' }), riskIt, keep });
       };
       on('[data-ev]', (b) => ctx.act({ op: 'event', choice: b.dataset.ev }));
       on('[data-tab]', (b) => { if (tab === b.dataset.tab) return; tab = b.dataset.tab; sheet = null; ctx.redraw(); window.scrollTo(0, 0); });
