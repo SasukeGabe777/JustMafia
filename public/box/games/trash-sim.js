@@ -703,7 +703,7 @@
     const now = sim.t, cdt = Math.min(0.1, Math.max(0, now - (sim._camT == null ? now : sim._camT))); sim._camT = now;
     const manual = !!(sim._lastInput && (sim._lastInput.ax || sim._lastInput.ay) && !intro && (sim._lastInput.mouse || sim._lastInput.fire));
     const L = lead(sim._lead || (sim._lead = { lx: 0, ly: 0 }), P, vw, vh, cdt, manual);
-    let cx = P.x + L.lx, cy = P.y - 30 + L.ly;
+    let cx = P.x, cy = P.y - 30; void L; // the camera stays on the hero (the owner found the look-ahead weird)
     const G = sim.area.garage;
     if (intro && G) { cx = G.x + G.w / 2; cy = Math.max(G.y + 60, P.y - 40); L.lx = 0; L.ly = 0; }
     const M = TA.M, C0 = camCenter(cx, cy, vw, vh, M); cx = C0.x; cy = C0.y;
