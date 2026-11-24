@@ -380,7 +380,8 @@ async function setup(browser, game, settings = {}) {
     await ph.shot('box-ducks-sheet');
     await ph.click('[data-play]');
     await ph.until(`!!document.querySelector('.dk-over [data-pad]')`, 'paddle mini-game', 5000);
-    await ph.until(`!document.querySelector('.dk-ready') || document.querySelector('.dk-ready').textContent === 'GO!'`, 'GO');
+    assert(await ph.eval(`!!document.querySelector('.dk-howto.paddle .tap')`), 'the first run of a game shows the how-to hand'); await wait(900); await ph.shot('box-ducks-howto');
+    await ph.until(`!document.querySelector('.dk-ready') || document.querySelector('.dk-ready').textContent === 'GO!'`, 'GO', 12000); // (a first run: 3 s of how-to, then 3, 2, 1)
     for (let i = 0; i < 40; i++) { await ph.eval(`document.querySelector('[data-pad="${i % 2 ? 'R' : 'L'}"]').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); true`); await wait(60); }
     await ph.shot('box-ducks-minigame');
     await ph.until(`/XP/.test((document.querySelector('.dk-result') || {}).textContent || '')`, 'mini-game reward', 30000);
@@ -392,7 +393,7 @@ async function setup(browser, game, settings = {}) {
     // A run in progress when the race starts stops right away; its points so far still count.
     await ph.click('[data-sheet="stamina"]'); await ph.until(`!!document.querySelector('[data-play]')`, 'sheet');
     await wait(150); await ph.click('[data-play]');
-    await ph.until(`!!document.querySelector('.dk-over') && !document.querySelector('.dk-ready')`, 'a run before the race', 6000); await wait(1500);
+    await ph.until(`!!document.querySelector('.dk-over') && !document.querySelector('.dk-ready')`, 'a run before the race', 12000); await wait(1500);
     await tv.eval(`document.querySelector('[data-h="next"]').click(); true`); // start the race now
     await ph.until(`/race is starting/.test((document.querySelector('.dk-result') || {}).textContent || '') && /XP/.test(document.querySelector('.dk-result').textContent)`, 'the run stops at the race start and still pays', 8000);
     await ph.shot('box-ducks-run-stopped'); await ph.click('.dk-result button');
