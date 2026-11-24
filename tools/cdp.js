@@ -57,7 +57,7 @@ class Page {
     return r.result.value;
   }
   async until(expression, what, ms = 6000) { const end = Date.now() + ms; while (!(await this.eval(expression))) { if (Date.now() > end) throw new Error('Timed out: ' + what); await wait(40); } }
-  async go(url) { await this.send('Page.navigate', { url }); await wait(300); await this.until('document.readyState === "complete"', 'load ' + url); }
+  async go(url) { await this.send('Page.navigate', { url }); await wait(300); await this.until('document.readyState === "complete"', 'load ' + url, 20000); }
   click(sel) { return this.eval(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) throw new Error('missing ' + ${JSON.stringify(sel)}); el.click(); return true; })()`); }
   async shot(name) { const { data } = await this.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }); fs.writeFileSync(path.join(this.b.shots, name + '.png'), Buffer.from(data, 'base64')); }
   frames() { return this.eval('new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))'); }

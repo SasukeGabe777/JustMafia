@@ -56,7 +56,7 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,YesChef,JustSnap,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,YesChef,JustSnap,Meme Maker,Letter Rush,Act It Out,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Kill the King,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,Quick Draw,Bomb Squad,Zombie Survival');
   // Every small game sits on a category shelf (public/categories.js); there is no catch-all shelf.
   assert.equal(await hub.eval(`[...document.querySelectorAll('.shelf')].map((x) => x.dataset.shelf).join(',')`), 'cards,guess,create,friends,action');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
@@ -478,6 +478,31 @@ async function setup(browser, game, settings = {}) {
     await tv.until(`!!document.querySelector('.uc-verdict')`, 'the verdict on the TV', 40000);
     await wait(2200); await tv.shot('box-undercover-verdict');
     ok('JustUndercover: the phone peeks at its password (hidden otherwise, never on the TV), gives a clue the case board shows, votes, and the TV stamps the verdict');
+  }
+
+  // ---------- Kill the King (TRIAL): the badge, the hidden secret role, a mission tap, a secret message (never on the TV) ----------
+  {
+    const { tv, ph } = await setup(browser, 'king', { rounds: 3, mission: 45, court: 60 });
+    assert(await tv.eval(`/TRIAL/.test(document.querySelector('.kk-lobby').textContent)`), 'the TRIAL badge in the lobby');
+    await tv.click('#start'); await skipShow(tv);
+    await tv.until(`!!document.querySelector('.kk-tv .kk-ladder')`, 'the castle and the ladder', 20000);
+    await ph.until(`!!document.querySelector('#kk-peek')`, 'the role card', 15000);
+    assert(!(await ph.eval(`!!document.querySelector('.kk-role.open')`)), 'the secret role is hidden until tapped');
+    await ph.click('#kk-peek'); await ph.until(`!!document.querySelector('.kk-role.open .kk-role-b b')`, 'the secret role shows on tap');
+    await ph.click('#kk-peek'); await ph.until(`!document.querySelector('.kk-role.open')`, 'and hides again');
+    await ph.until(`!!document.querySelector('.kk-stone.crack')`, 'the wall mission', 20000);
+    for (let i = 0; i < 5; i++) { await ph.eval(`(() => { const b = document.querySelector('.kk-stone.crack'); b && b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); return 1; })()`); await wait(260); }
+    await ph.until(`/\\+[1-9]/.test(document.querySelector('.kk-card.mis .kk-h small').textContent)`, 'my mends count as defence', 8000);
+    await tv.shot('box-king-mission');
+    await tv.eval(`document.querySelector('[data-h="next"]').click(), 1`); await tv.until(`!!document.querySelector('.ph-repel')`, 'the wave result', 8000);
+    await tv.eval(`document.querySelector('[data-h="next"]').click(), 1`); await ph.until(`!!document.querySelector('[data-tab="inbox"]')`, 'court opens the inbox', 8000);
+    await ph.click('[data-tab="inbox"]'); await ph.until(`!!document.querySelector('[data-to]')`, 'recipients');
+    await ph.click('[data-to]'); await ph.eval(`(() => { const i = document.querySelector('#kk-text'); i.value = 'Psst, crown me and you get Knight'; i.dispatchEvent(new Event('input')); document.querySelector('#kk-send').click(); return 1; })()`);
+    await ph.until(`[...document.querySelectorAll('.kk-msg.mine p')].some((p) => /crown me/.test(p.textContent))`, 'my message in my inbox', 8000);
+    await tv.until(`!!document.querySelector('.kk-court line')`, 'a whisper line on the TV', 8000);
+    assert(!(await tv.eval(`/crown me/.test(document.body.textContent)`)), 'the TV never shows what was said');
+    await tv.shot('box-king-court'); await ph.shot('box-king-inbox');
+    ok('Kill the King: TRIAL badge, the secret role hidden until tapped, mission taps add defence, a secret message reaches the inbox and only a line reaches the TV');
   }
 
   // ---------- JustSnap: the phone takes a real photo (a JPEG file), it goes over the socket, the TV shows it ----------
