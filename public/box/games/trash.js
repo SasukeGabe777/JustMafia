@@ -244,7 +244,7 @@
   function view() {
     const c = PH.cv, w = c.clientWidth || innerWidth, h = c.clientHeight || innerHeight, dpr = Math.min(1.75, window.devicePixelRatio || 1) * PH.quality;
     if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
-    return { w, h, dpr, k: w > h ? h / 330 : w / 320, hi: gfxHi() }; // close to the hero (the camera leads where you go)
+    return { w, h, dpr, k: Math.min(w, h) / 500, hi: gfxHi() }; // the original wide view the owner prefers (the camera still leads where you go)
   }
   function frame(dt) {
     const sim = PH.sim, V = view(), g = PH.cv.getContext('2d');
