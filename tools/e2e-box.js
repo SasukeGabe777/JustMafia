@@ -290,13 +290,36 @@ async function setup(browser, game, settings = {}) {
     for (let i = 0; i < 6; i++) { await tv.eval(`(() => { document.querySelector('#corner .cg').click(); document.querySelector('#corner [data-h="bots"]').click(); return true; })()`); await wait(150); }
     await wait(1500); await tv.shot('box-ducks-valley-crowd');
     // Every mini-game really plays: real taps, holds and paddles; each finishes and pays out.
-    const scores = {};
+    const scores = {}; let riskSeen = null;
     for (const [skill, game] of [['run', 'hurdles'], ['swim', 'paddle'], ['fly', 'rings'], ['climb', 'climb'], ['stamina', 'bugs'], ['smarts', 'maze']]) {
       await ph.until(`!!document.querySelector('[data-sheet="${skill}"]') && !document.querySelector('.dk-over')`, 'skill card ' + skill, 8000);
-      await ph.click(`[data-sheet="${skill}"]`); await ph.until(`!!document.querySelector('[data-diff="easy"]')`, 'sheet');
-      await ph.click('[data-diff="easy"]'); await wait(150); await ph.click('[data-play]');
+      await ph.click(`[data-sheet="${skill}"]`); await ph.until(`!!document.querySelector('[data-play]') && !document.querySelector('[data-diff]')`, 'sheet (no difficulty choice)');
+      await wait(150); await ph.click('[data-play]');
+      await tapGame(game, 21000);
+      try { await ph.until(`/XP/.test((document.querySelector('.dk-result') || {}).textContent || '')`, game + ' reward', 15000); }
+      catch (e) { throw new Error(game + ' reward: the card says ' + JSON.stringify(await ph.eval(`(document.querySelector('.dk-result') || {}).textContent || '(no card)'`))); }
+      scores[game] = await ph.eval(`Number((document.querySelector('.dk-result h2').textContent.match(/\\d+/) || [0])[0])`);
+      // Risk it!: offered after a run that earned XP. Once (Hurdle Dash) we take it: one very hard round with a goal.
+      if (await ph.eval(`!!document.querySelector('.dk-result .dk-riskgo')`)) {
+        if (game === 'hurdles') {
+          assert(await ph.eval(`/Risk it\\?/.test(document.querySelector('.dk-riskoffer').textContent) && /🎯 \\d+/.test(document.querySelector('.dk-riskoffer').textContent)`), 'the offer shows its goal');
+          await ph.shot('box-ducks-risk-offer');
+          await ph.click('.dk-riskgo');
+          await ph.until(`!!document.querySelector('.dk-over.risk') && /RISK IT/.test(document.querySelector('.dk-over .dk-hud').textContent)`, 'the risk round with its goal on the HUD', 8000);
+          await tapGame(game, 17000);
+          await ph.until(`!!document.querySelector('.dk-result.risk.win, .dk-result.risk.fall')`, 'risk result: a win or a fall', 15000);
+          riskSeen = await ph.eval(`document.querySelector('.dk-result.risk').classList.contains('win') ? 'win' : 'fall'`);
+          await wait(1600); await ph.shot('box-ducks-risk-' + riskSeen);
+          await ph.click('.dk-result button');
+          continue;
+        }
+        await ph.click('.dk-keep');
+      } else await ph.click('.dk-result button');
+    }
+    // Real taps, holds and paddles on the open mini-game until its result card shows (or time is up).
+    async function tapGame(game, ms) {
       await ph.until(`!!document.querySelector('.dk-over') && !document.querySelector('.dk-ready')`, game + ' started', 15000);
-      const end = Date.now() + 21000; let i = 0;
+      const end = Date.now() + ms; let i = 0;
       while (Date.now() < end && !(await ph.eval(`!!document.querySelector('.dk-result')`))) {
         await ph.eval(`(() => { const c = document.querySelector('.dk-over canvas'), r = c.getBoundingClientRect(), i = ${i};
           const ev = (type, x, y) => (type === 'pointerup' ? window : c).dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: r.left + x * r.width, clientY: r.top + y * r.height }));
@@ -306,17 +329,14 @@ async function setup(browser, game, settings = {}) {
           else if ('${game}' === 'maze') ev('pointerdown', ((i * 2) % 3 + 0.5) / 3, 0.2 + ((i * 5) % 4 + 0.5) * 0.17); // the lily pads (Lily Path)
           else ev('pointerdown', 0.5, 0.5);
           return true; })()`);
-        if (i === 18) await ph.shot('box-mini-' + game);
+        if (i === 18 && !(await ph.eval(`!!document.querySelector('.dk-over.risk')`))) await ph.shot('box-mini-' + game);
         i++; await wait(game === 'paddle' ? 90 : game === 'bugs' ? 120 : 380);
       }
-      try { await ph.until(`/XP/.test((document.querySelector('.dk-result') || {}).textContent || '')`, game + ' reward', 15000); }
-      catch (e) { throw new Error(game + ' reward: the card says ' + JSON.stringify(await ph.eval(`(document.querySelector('.dk-result') || {}).textContent || '(no card)'`))); }
-      scores[game] = await ph.eval(`Number((document.querySelector('.dk-result h2').textContent.match(/\\d+/) || [0])[0])`);
-      await ph.click('.dk-result button');
     }
-    console.log('    mini-game scores (simple bot taps on Easy):', JSON.stringify(scores));
+    console.log('    mini-game scores (simple bot taps):', JSON.stringify(scores), 'risk:', riskSeen);
+    assert(riskSeen, 'a Risk it! round was played to a win or a fall');
     assert(Object.values(scores).filter((v) => v > 0).length >= 4, 'the mini-games score points: ' + JSON.stringify(scores));
-    ok('All six mini-games play on a real phone page (Hurdle Dash, Paddle Power, Sky Rings, Cliff Climb, Bug Snack, Lily Path), finish and pay out XP');
+    ok('All six mini-games play on a real phone page (Hurdle Dash, Paddle Power, Sky Rings, Cliff Climb, Bug Snack, Lily Path), finish and pay out XP; Risk it! offered, played and settled');
     PAGES.push(tv, ph);
     ok('JustRaiseDucks at /ducks: its own title screen and look, no JustGameBox bar, phone joins at /ducks/play, corner badge + host menu; reloading opens the title first and Continue resumes');
   }
@@ -352,8 +372,11 @@ async function setup(browser, game, settings = {}) {
     await ph.click('[data-tab="train"]'); await ph.until(`!!document.querySelector('[data-spin]')`, 'train tab with Lucky Spin');
     await ph.click('[data-spin]'); await ph.until(`!!document.querySelector('.dk-prize button')`, 'spin prize', 8000);
     await ph.shot('box-ducks-spin'); await ph.click('.dk-prize button');
-    await ph.click('[data-sheet="swim"]'); await ph.until(`document.querySelectorAll('[data-diff]').length === 3`, 'difficulty sheet');
-    await ph.click('[data-diff="easy"]'); await ph.until(`document.querySelector('[data-diff="easy"]').classList.contains('on')`, 'easy chosen');
+    // Food right on the training page: three sizes with price (and pantry count); a tap feeds (or saves it when full).
+    await ph.until(`document.querySelectorAll('.dk-foodrow [data-feed]').length === 3`, 'the food row on the training page');
+    await ph.shot('box-ducks-train-food');
+    await ph.click('.dk-foodrow [data-feed="seeds"]'); await wait(400);
+    await ph.click('[data-sheet="swim"]'); await ph.until(`!!document.querySelector('[data-play]') && !document.querySelector('[data-diff]')`, 'skill sheet: one Play button');
     await ph.shot('box-ducks-sheet');
     await ph.click('[data-play]');
     await ph.until(`!!document.querySelector('.dk-over [data-pad]')`, 'paddle mini-game', 5000);
@@ -364,11 +387,11 @@ async function setup(browser, game, settings = {}) {
     const res = await ph.eval(`document.querySelector('.dk-result').textContent`);
     assert(/Score (\d+)/.test(res) && Number(res.match(/Score (\d+)/)[1]) >= 1, res); // mashing scores a little; rhythm scores more
     await ph.shot('box-ducks-reward');
-    await ph.click('.dk-result button');
-    ok('JustRaiseDucks: Lucky Spin; Easy/Medium/Hard sheet; egg picked and hatched; Duck Valley shows every farm; color, Lap Pool from the shop (TV news), pet, tactic; Paddle Power earned XP and coins');
+    await ph.click(await ph.eval(`!!document.querySelector('.dk-keep')`) ? '.dk-keep' : '.dk-result button');
+    ok('JustRaiseDucks: Lucky Spin; food row; one-pace skill sheet; egg picked and hatched; Duck Valley shows every farm; color, Lap Pool from the shop (TV news), pet, tactic; Paddle Power earned XP and coins');
     // A run in progress when the race starts stops right away; its points so far still count.
-    await ph.click('[data-sheet="stamina"]'); await ph.until(`!!document.querySelector('[data-diff="easy"]')`, 'sheet');
-    await ph.click('[data-diff="easy"]'); await wait(150); await ph.click('[data-play]');
+    await ph.click('[data-sheet="stamina"]'); await ph.until(`!!document.querySelector('[data-play]')`, 'sheet');
+    await wait(150); await ph.click('[data-play]');
     await ph.until(`!!document.querySelector('.dk-over') && !document.querySelector('.dk-ready')`, 'a run before the race', 6000); await wait(1500);
     await tv.eval(`document.querySelector('[data-h="next"]').click(); true`); // start the race now
     await ph.until(`/race is starting/.test((document.querySelector('.dk-result') || {}).textContent || '') && /XP/.test(document.querySelector('.dk-result').textContent)`, 'the run stops at the race start and still pays', 8000);

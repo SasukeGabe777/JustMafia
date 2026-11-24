@@ -1582,3 +1582,34 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
   test-box, test-box-kit, test-box-gear, e2e-box (six mini-games on a real phone page, a run stopped
   by the race start). Headless frame strips of every world and of the maze moments were checked.
   Not yet seen: real phones and a real TV.
+
+## JustRaiseDucks: Risk it!, three foods, a feeder show, Smarts rebalanced (claude/ducks-risk, November 24, 2026)
+
+- Easy / Medium / Hard are gone. Every mini-game plays at one normal pace (⭐ target 16, ⚡15). After
+  a run that earned XP the result card offers **🎲 Risk it?**: one very hard 15-second round (the old
+  Hard pace and windows) with a goal shown up front (a share of the score just made, 6-30). Meet it:
+  the run's XP is added again (double). Miss it: the duck falls over (phone card + TV farm tumble)
+  and keeps only half of that XP (a level gained can be lost). No extra energy. The server decides:
+  no offer, no risk; scores are capped by time; a round reported before its 15 s are up, cancelled
+  after the countdown or never reported back counts as a fall. Offers expire (30 s on the phone,
+  45 s on the server) as "keep it"; none is made in the last ~27 s before a race; an open offer or
+  a risk round cut by the race start keeps the XP (or wins if the goal was already met). Old runs
+  and best scores saved with a difficulty still load (best = the best of the three).
+- Food is three sizes: Seeds (5 coins, +20 ⚡), Corn Cob (12, +45), Feast Bowl (28, fills up), on a
+  quick-buy row on the training page (price + pantry count) and in the shop. A tap feeds one (from
+  the pantry first); a full duck saves it in the pantry (max 9 each). Berries, Worms, Duck Cake,
+  Lucky Clover and Walnuts are gone; any in a pantry convert to the nearest new food.
+- Every farm has a feeder (dressed up with a green roof by the Auto Feeder building): when fed, it
+  shakes and pops the food into its bowl, the duck waddles over, pecks it up piece by piece (soft
+  clicks from the existing ducks/maze.ogg) and hops with a heart.
+- Bug Snack (Stamina) is easier: bugs stay up ~50% longer, fewer bees (a bee only breaks the
+  combo), bugs only walk in the final stretch, a bigger fingertip slop and PERFECT window.
+- Smarts rebalanced: measured with six ducks equal but one skill raised (200 seeds per row), Smarts
+  won 27% at L8+4 on Everything and 58% on Brainy (the top skill). Fork odds now level off
+  (diminishing returns), wrong turns / thinking / shortcuts cost and give less, the Maze Map halves
+  wrong turns (no longer zero), the Inner Compass cuts 30%. Lily Path pads score without the combo
+  multiplier (a fast perfect memory used to score up to 3× the other games). After: 11-20% on
+  Everything (mid-pack; Run 23-35% is the strongest), 28-40% on Brainy, next to Run.
+- Validation: test-box-ducks (29 tests: Risk it! win/fall/kept for all six games and forged
+  scores, food + pantry migration, Bug Snack pace, a Smarts balance check), test-box-kit, test-box,
+  e2e-box (a real Risk it! round on the phone). Headless screenshots checked.

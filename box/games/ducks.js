@@ -19,32 +19,38 @@ const TRIP_STOP = 1.2, CLIP_SLOW = 0.6;
 // Mazes: a fork every FORK_GAP metres. At each one a duck takes the shortcut (a burst of speed),
 // stops to think (THINK_STOP seconds, head-scratching) or takes a wrong turn and walks back to the
 // fork (WRONG_STOP seconds). Smarts sets the odds; it is decided in the simulation, like a hurdle.
-const FORK_GAP = 11, THINK_STOP = 0.9, WRONG_STOP = 2.6, SHORT_BOOST = 1.4;
+// Balance (tools/test-box-ducks.js measures it): Smarts only matters inside mazes, and the fork odds
+// level off (diminishing returns), so a level of Smarts buys about what a level of Run, Swim or Climb
+// buys on the default course. The Maze Map and the Inner Compass each cut wrong turns, never to zero.
+const FORK_GAP = 11, THINK_STOP = 0.7, WRONG_STOP = 2.0, SHORT_BOOST = 1.2, SHORT_SPEED = 1.25;
 const forkOdds = (smarts, map, compass, fog) => {
-  const wrong = map ? 0 : clamp(0.4 - 0.04 * smarts, 0.02, 0.4) * (compass ? 0.5 : 1) * (fog ? 1.5 : 1);
-  const short = clamp(0.08 + 0.06 * smarts, 0.08, 0.8) * (map ? 1.15 : 1);
+  const wrong = 0.3 * Math.pow(0.86, smarts) * (map ? 0.5 : 1) * (compass ? 0.7 : 1) * (fog ? 1.4 : 1);
+  const short = 0.1 + 0.4 * (1 - Math.pow(0.85, smarts));
   return { wrong, short: Math.min(short, 1 - wrong) };
 };
 // Where the forks are in a maze section that runs from a to b (metres).
 const forksIn = (a, b) => { const out = []; for (let x = a + 7; x < b - 5; x += FORK_GAP) out.push(x); return out; };
 const COLORS = ['sunny', 'snow', 'cocoa', 'mallard', 'bubblegum', 'sky', 'midnight', 'mint', 'ember', 'lilac'];
 const HATS = ['none', 'cap', 'tophat', 'crown', 'flower', 'shades', 'bow', 'viking', 'pirate', 'party', 'chef', 'headband'];
+// Food: three sizes, small to big, bought right on the training screen (or in the shop). Food only
+// restores energy. A tap feeds one: from the pantry if you have some, else it buys one. A full duck
+// can't eat, so what you buy then goes into the pantry (up to PANTRY_MAX of each) for later.
 const FOOD = {
   seeds: { label: 'Seeds', icon: '🌾', cost: 5, energy: 20, about: '+20 energy' },
-  berries: { label: 'Berries', icon: '🫐', cost: 10, energy: 15, mood: 15, about: '+15 energy, +15 mood' },
-  corn: { label: 'Corn', icon: '🌽', cost: 12, energy: 45, about: '+45 energy' },
-  worms: { label: 'Worms', icon: '🪱', cost: 18, energy: 25, xp: { stamina: 40 }, about: '+25 energy, +40 Stamina XP' },
-  cake: { label: 'Duck Cake', icon: '🍰', cost: 25, energy: 10, mood: 50, about: '+50 mood (a happy duck learns faster)' },
-  clover: { label: 'Lucky Clover', icon: '🍀', cost: 30, energy: 25, xp: { weakest: 60 }, about: '+25 energy, +60 XP to your weakest skill' },
-  walnuts: { label: 'Walnuts', icon: '🌰', cost: 18, energy: 20, xp: { smarts: 40 }, about: '+20 energy, +40 Smarts XP (brain food!)' },
+  corn: { label: 'Corn Cob', short: 'Corn', icon: '🌽', cost: 12, energy: 45, about: '+45 energy' },
+  feast: { label: 'Feast Bowl', short: 'Feast', icon: '🥗', cost: 28, energy: 100, about: 'Fills energy all the way up' },
 };
+const PANTRY_MAX = 9;
+// Foods from older versions (they also gave mood or XP): anything left in a pantry becomes the new
+// food closest in price.
+const OLD_FOOD = { berries: 'corn', worms: 'corn', walnuts: 'corn', cake: 'feast', clover: 'feast' };
 const GEAR = {
   sneakers: { label: 'Track Sneakers', icon: '👟', cost: 20, about: 'Never trip on a hurdle (next race)' },
   flippers: { label: 'Flippers', icon: '🦶', cost: 20, about: '+10% swimming speed (next race)' },
   glider: { label: 'Glider Wings', icon: '🪁', cost: 20, about: '+10% flying speed (next race)' },
   claws: { label: 'Climbing Claws', icon: '🧗', cost: 20, about: '+10% climbing, half the slips (next race)' },
   energybar: { label: 'Energy Bar', icon: '🍫', cost: 25, about: 'Bigger stamina tank (next race)' },
-  map: { label: 'Maze Map', icon: '🗺️', cost: 20, about: 'Never takes a wrong turn in a maze (next race)' },
+  map: { label: 'Maze Map', icon: '🗺️', cost: 20, about: 'Half as many wrong turns in a maze (next race)' },
 };
 const BUILDINGS = {
   track: { label: 'Running Track', icon: '🏟️', skill: 'run', about: '+20% Run XP per level' },
@@ -140,12 +146,14 @@ const JUMPS = { hurdles: ['hurdle', 11, 1], logs: ['log', 15, 1.3], lava: ['lava
 const MORE_BOOSTS = new Set(['clouds', 'lily', 'murky', 'lavapit', 'sky', 'cotton']);
 const WILD = ['Puddles', 'Sir Waddles', 'Biscuit', 'Captain Quack', 'Noodle', 'Pepper', 'Marsh Mallow', 'Drizzle', 'Tumble', 'Pip Squeak', 'Ziggy', 'Rusty', 'Bramble', 'Coco'];
 const NAMES = ['Puddle Cup', 'Reed Run', 'Pond Prix', 'Feather Derby', 'Lily Classic', 'Breadcrumb Bowl', 'Cattail Chase', 'Quackathon', 'Splash Open'];
-// Training difficulty: easier is cheap and safe, hard is costly and risky but pays far more.
-const DIFF = {
-  easy: { label: 'Easy', icon: '🌱', mult: 0.7, cost: 10, speed: 0.8, target: 12, wipe: 0, about: 'Slower game, less energy, less XP.' },
-  medium: { label: 'Medium', icon: '⚡', mult: 1, cost: 15, speed: 1, target: 16, wipe: 0, about: 'The normal game.' },
-  hard: { label: 'Hard', icon: '🔥', mult: 1.7, cost: 22, speed: 1.3, target: 18, wipe: 7, about: 'Fast and tricky. Big XP, but score under 7 and it’s a wipeout (almost nothing).' },
-};
+// Training: every mini-game plays at one normal pace (⭐ target: TARGET). After a run you can RISK IT:
+// one short round at the very hard pace (RISK.speed) with a goal shown up front. Meet the goal and
+// the XP of the run you just played doubles; miss it and your duck falls over and keeps only half of
+// that XP. A risk costs no extra energy. The goal is a share of the score you just made (RISK.share
+// per game), between RISK.min and RISK.max, so it is hard for everyone.
+const TARGET = 16;
+const RISK = { seconds: 15, speed: 1.35, min: 6, max: 30, offerMs: 45000, share: { hurdles: 0.8, paddle: 0.65, rings: 0.8, climb: 0.8, bugs: 0.8, maze: 0.7 } };
+const riskGoal = (game, score) => clamp(Math.round(score * (RISK.share[game] || 0.75)), RISK.min, RISK.max);
 // Perks: pick one each time your duck grows up. They change how it races.
 const PERKS = {
   burst: { icon: '🚀', label: 'Rocket Start', about: '+15% speed for the first fifth of every race' },
@@ -155,7 +163,7 @@ const PERKS = {
   lungs: { icon: '🫁', label: 'Iron Lungs', about: '+40% stamina tank' },
   lucky: { icon: '🍀', label: 'Lucky Feather', about: 'Catches boosts much more often' },
   nimble: { icon: '🦘', label: 'Nimble Feet', about: 'Half as many trips and skids' },
-  compass: { icon: '🧭', label: 'Inner Compass', about: 'Half as many wrong turns in mazes' },
+  compass: { icon: '🧭', label: 'Inner Compass', about: '30% fewer wrong turns in mazes' },
   closer: { icon: '🏁', label: 'Closer', about: '+10% speed in the last fifth of every race' },
 };
 // Lucky Spin: one free spin each training period.
@@ -202,7 +210,16 @@ function migrate(d) {
   if (!d.buildings || typeof d.buildings !== 'object') d.buildings = {};
   for (const b of Object.keys(BUILDINGS)) if (!Number.isFinite(d.buildings[b])) d.buildings[b] = 0;
   if (!d.bests || typeof d.bests !== 'object') d.bests = {};
+  // Best scores used to be kept per difficulty ({ easy, medium, hard }): keep the best of them.
+  for (const s of Object.keys(d.bests)) { const b = d.bests[s]; if (b && typeof b === 'object') d.bests[s] = Math.max(0, ...Object.values(b).filter(Number.isFinite)); else if (!Number.isFinite(b)) d.bests[s] = 0; }
   if (!Number.isFinite(d.napUntil)) d.napUntil = 0;
+  // The pantry: only the three foods; anything else (old foods) becomes the closest new one.
+  const p = d.pantry && typeof d.pantry === 'object' ? d.pantry : {};
+  const pantry = Object.fromEntries(Object.keys(FOOD).map((k) => [k, 0]));
+  for (const [k, n] of Object.entries(p)) { const to = own(FOOD, k) ? k : own(OLD_FOOD, k) ? OLD_FOOD[k] : null; if (to && Number.isFinite(n) && n > 0) pantry[to] = Math.min(PANTRY_MAX, pantry[to] + Math.floor(n)); }
+  d.pantry = pantry;
+  if (d.training && d.training.diff) delete d.training.diff; // a run started with a difficulty finishes as a normal run
+  if (d.riskOffer === undefined) d.riskOffer = null;
   return d;
 }
 
@@ -305,6 +322,9 @@ class Ducks {
         migrate(d);
         const regen = (this.s.energy === 'relaxed' ? 2 : 1) * (1 + 0.5 * d.buildings.feeder) / 3;
         d.energy = Math.min(100, d.energy + regen);
+        if (d.riskOffer && (d.riskOffer.until <= now || this.phase !== 'training')) d.riskOffer = null; // not taken in time: keep it
+        // A Risk it! round that never reports back (the phone walked away) counts as a fall.
+        if (d.training && d.training.risk && !d.training.cut && now - d.training.at > (RISK.seconds + 12) * 1000) this.riskResult(id, d, d.training, 0, now);
         this.wake(id, d, now); this.autoNap(id, d, now);
         if (this.room.rng() < 0.12) d.mood = Math.max(0, d.mood - 1);
         if (this.phase === 'training' && this.s.events) this.maybeEvent(id, d, now);
@@ -316,12 +336,13 @@ class Ducks {
 
   // ---- naps: automatic, never a button ----
   // The cheapest training there is: below this a duck is too tired to train.
-  napBelow() { return this.s.energy === 'unlimited' ? 0 : Math.min(...Object.values(DIFF).map((x) => x.cost)); }
-  // A duck whose energy runs out (too low for even an Easy run) falls asleep on its own, during the
-  // training period and only between mini-games. It wakes up after the nap with its energy back.
-  // While it sleeps it can't train; it can still be fed and petted (the food waits in its bowl).
+  napBelow() { return this.s.energy === 'unlimited' ? 0 : TRAIN_COST; }
+  // A duck whose energy runs out (too low for another run) falls asleep on its own, during the
+  // training period and only between mini-games (never while a Risk it! offer is open). It wakes up
+  // after the nap with its energy back. While it sleeps it can't train; it can still be fed and petted
+  // (the food waits in its bowl).
   autoNap(id, d, now = this.room.now()) {
-    if (this.phase !== 'training' || this.s.energy === 'unlimited' || d.training || d.napUntil > now || !d.gene || d.energy >= this.napBelow()) return false;
+    if (this.phase !== 'training' || this.s.energy === 'unlimited' || d.training || d.riskOffer || d.napUntil > now || !d.gene || d.energy >= this.napBelow()) return false;
     const secs = NAP_SECONDS - 3 * (d.buildings.coop || 0);
     d.napUntil = now + secs * 1000; d.napGain = 35 + 15 * (d.buildings.coop || 0); d.napped = (d.napped || 0) + 1;
     this.room.fx('nap', { id });
@@ -434,7 +455,7 @@ class Ducks {
           if (vr === 'hotspring') v *= 0.95;
           if (vr === 'choco') v *= Math.min(1, 0.8 + 0.018 * lv.swim);
           if (vr === 'icecave') v *= 0.95;
-          if (t < shortUntil) v *= 1.3; // took a maze shortcut
+          if (t < shortUntil) v *= SHORT_SPEED; // took a maze shortcut
           const prog = x / L;
           if (d.tactic === 'sprint') v *= prog < 0.4 ? 1.08 : 1;
           if (d.tactic === 'finish') v *= prog < 0.5 ? 0.95 : prog > 0.7 ? 1.1 : 1;
@@ -510,6 +531,7 @@ class Ducks {
       migrate(d);
       if (d.napUntil) { d.napUntil = Math.min(d.napUntil, now); this.wake(id, d, now); }
       d.event = null; if (!d.gene) this.hatch(id, d, 0);
+      d.riskOffer = null; // an open Risk it! offer: the player keeps their XP
       if (d.training && !d.training.cut) {
         d.training.cut = now; const tr = d.training;
         this.room.after(RACE_GRACE, () => { if (d.training === tr) d.training = null; });
@@ -636,7 +658,7 @@ class Ducks {
     const odds = forkOdds(lv.smarts, false, (d.perks || []).includes('compass'), C.weather === 'fog');
     for (const x of C.sections) {
       const S = SECTIONS[x.type], v = S.base + S.per * lv[S.skill]; t += S.len / v;
-      if (x.type === 'maze') t += forksIn(0, S.len).length * (odds.wrong * WRONG_STOP + (1 - odds.wrong - odds.short) * THINK_STOP - odds.short * SHORT_BOOST * 0.23);
+      if (x.type === 'maze') t += forksIn(0, S.len).length * (odds.wrong * WRONG_STOP + (1 - odds.wrong - odds.short) * THINK_STOP - odds.short * SHORT_BOOST * (1 - 1 / SHORT_SPEED));
     }
     const pool = POOL(lv.stamina, false, (d.perks || []).includes('lungs'));
     if (pool < t) t = pool + (t - pool) / 0.72; // out of steam for the rest of the race
@@ -758,23 +780,54 @@ class Ducks {
         if (!SKILLS.includes(m.stat)) return { ok: false, error: 'Pick a skill to train.' };
         if (d.napUntil > now) return { ok: false, error: `😴 ${d.name} is napping. Training opens when it wakes up.`, nap: true };
         if (d.training && now - d.training.at < (RUN_SECONDS + 15) * 1000) return { ok: false, error: 'Finish your training first.' };
-        const diff = own(DIFF, m.diff) ? m.diff : 'medium';
-        const cost = this.s.energy === 'unlimited' ? 0 : DIFF[diff].cost;
-        if (d.energy < cost) return { ok: false, error: d.energy < this.napBelow() ? 'Too tired! Your duck needs a nap.' : 'Not enough energy for that. Try an easier run or feed your duck.' };
-        d.energy -= cost; d.training = { stat: m.stat, at: now, diff };
-        return { ok: true, game: GAME_FOR[m.stat], seconds: RUN_SECONDS, diff, speed: DIFF[diff].speed, target: DIFF[diff].target, best: (d.bests[m.stat] || {})[diff] || 0 };
+        if (d.training && d.training.risk) this.riskResult(id, d, d.training, 0, now); // an abandoned Risk it! round counts as a fall
+        // (an old phone may still send a difficulty: it is ignored, every run plays at the normal pace)
+        const cost = this.s.energy === 'unlimited' ? 0 : TRAIN_COST;
+        if (d.energy < cost) return { ok: false, error: 'Too tired! Feed your duck, or it naps by itself.' };
+        d.riskOffer = null; // starting a new run keeps the last one's XP
+        d.energy -= cost; d.training = { stat: m.stat, at: now };
+        return { ok: true, game: GAME_FOR[m.stat], seconds: RUN_SECONDS, speed: 1, target: TARGET, best: d.bests[m.stat] || 0 };
       }
       case 'score': {
         const tr = d.training; if (!tr) return { ok: false, error: 'No training in progress.' };
         d.training = null;
+        if (tr.risk) { const out = this.riskResult(id, d, tr, m.score, now); this.autoNap(id, d, now); out.nap = d.napUntil > now ? d.napUntil - now : 0; return out; }
         const secs = Math.min(RUN_SECONDS + 2, ((tr.cut || now) - tr.at) / 1000);
         const score = Math.max(0, Math.min(SCORE_MAX, Math.floor(Number(m.score) || 0), Math.floor(secs * SCORE_RATE) + 1));
-        const out = { ok: true, ...this.reward(id, d, tr.stat, score, tr.diff || 'medium', !!tr.cut), cut: !!tr.cut };
-        this.autoNap(id, d, now); // too tired for another run: it falls asleep right away
+        const out = { ok: true, ...this.reward(id, d, tr.stat, score, !!tr.cut), cut: !!tr.cut };
+        // Risk it!: offered after every full run that earned XP, unless the race is about to start.
+        if (!tr.cut && out.xp > 0 && !p.bot && this.phase === 'training') {
+          const game = GAME_FOR[tr.stat];
+          if (this.endsAt - now > (RISK.seconds + 12) * 1000) {
+            const goal = riskGoal(game, score);
+            d.riskOffer = { stat: tr.stat, game, xp: out.xp, goal, until: now + RISK.offerMs };
+            out.risk = { goal, seconds: RISK.seconds, win: out.xp, lose: out.xp - Math.floor(out.xp / 2), stat: tr.stat };
+          } else out.riskNo = 'The race is about to start: no time to risk it.';
+        }
+        this.autoNap(id, d, now); // too tired for another run: it falls asleep right away (after the Risk it! choice)
         out.nap = d.napUntil > now ? d.napUntil - now : 0;
         return out;
       }
-      case 'cancel': d.training = null; this.autoNap(id, d, now); return { ok: true };
+      case 'cancel': {
+        const tr = d.training; d.training = null;
+        // A Risk it! round stopped by the race (or during its countdown) keeps the XP; walking away from
+        // one that is already being played counts as a fall.
+        if (tr && tr.risk && !tr.cut && now - tr.at > 4000) { const out = this.riskResult(id, d, tr, 0, now); this.autoNap(id, d, now); return out; }
+        this.autoNap(id, d, now); return { ok: true };
+      }
+      case 'risk': {
+        const o = d.riskOffer; d.riskOffer = null;
+        if (!o || o.until <= now) return { ok: false, error: 'Nothing to risk right now.' };
+        if (d.training) return { ok: false, error: 'Finish your training first.' };
+        if (this.endsAt - now < (RISK.seconds + 6) * 1000) { this.autoNap(id, d, now); return { ok: false, error: 'The race is about to start: you keep your XP.' }; }
+        d.training = { stat: o.stat, at: now, risk: { xp: o.xp, goal: o.goal } };
+        this.room.fx('risk', { id });
+        return { ok: true, game: o.game, seconds: RISK.seconds, speed: RISK.speed, goal: o.goal, risk: true, win: o.xp, lose: o.xp - Math.floor(o.xp / 2), stat: o.stat };
+      }
+      case 'keep': {
+        d.riskOffer = null; this.autoNap(id, d, now);
+        return { ok: true, nap: d.napUntil > now ? d.napUntil - now : 0 };
+      }
       case 'pet': {
         if (now - d.petAt < PET_COOLDOWN) return { ok: false, error: 'Your duck needs a moment. 🦆' };
         d.petAt = now; d.mood = Math.min(100, d.mood + 6); this.checkBadges(id, d); this.quest(id, d, 'pet'); this.quest(id, d, 'mood', d.mood);
@@ -783,12 +836,18 @@ class Ducks {
       }
       case 'feed': {
         const f = own(FOOD, m.item) && FOOD[m.item]; if (!f) return { ok: false, error: 'Not on the menu.' };
-        if (d.coins < f.cost) return { ok: false, error: 'Not enough coins.' };
-        if (!f.mood && !f.xp && d.energy >= 100) return { ok: false, error: 'Your duck is full already.' };
-        d.coins -= f.cost; d.energy = Math.min(100, d.energy + (f.energy || 0)); d.mood = Math.min(100, d.mood + (f.mood || 0)); d.stats.foodEaten++;
-        if (f.xp) for (const [k, v] of Object.entries(f.xp)) { const s = k === 'weakest' ? SKILLS.slice().sort((a, b) => d.xp[a] - d.xp[b])[0] : k; d.xp[s] += v; }
-        this.room.fx('eat', { id }); this.checkBadges(id, d); this.checkGrowth(id, d); this.quest(id, d, 'feed'); this.quest(id, d, 'mood', d.mood);
-        return { ok: true };
+        const item = m.item, have = d.pantry[item] > 0;
+        if (d.energy >= 100) { // full: what you buy now waits in the pantry
+          if (have || d.pantry[item] >= PANTRY_MAX) return { ok: false, error: 'Your duck is full already.' };
+          if (d.coins < f.cost) return { ok: false, error: 'Not enough coins.' };
+          d.coins -= f.cost; d.pantry[item]++;
+          return { ok: true, stored: true, item, have: d.pantry[item] };
+        }
+        if (have) d.pantry[item]--;
+        else { if (d.coins < f.cost) return { ok: false, error: 'Not enough coins.' }; d.coins -= f.cost; }
+        d.energy = Math.min(100, d.energy + f.energy); d.stats.foodEaten++;
+        this.room.fx('eat', { id, item }); this.quest(id, d, 'feed');
+        return { ok: true, item, fromPantry: have, have: d.pantry[item], energy: Math.round(d.energy) };
       }
       case 'build': {
         const b = own(BUILDINGS, m.item) && BUILDINGS[m.item]; if (!b) return { ok: false, error: 'Unknown building.' };
@@ -842,16 +901,13 @@ class Ducks {
     }
   }
   // cut: the race start stopped this run early (its score counts; a missed star never breaks a streak).
-  reward(id, d, stat, score, diff = 'medium', cut = false) {
-    const D = DIFF[diff];
-    let xp = score * 4 * D.mult;
-    const wipeout = D.wipe && score < D.wipe && !cut;
-    const star = score >= D.target;
+  reward(id, d, stat, score, cut = false) {
+    let xp = score * 4;
+    const star = score >= TARGET;
     // Streak: hit the ⭐ target again and again for up to +30% XP; a miss resets it.
     if (star) { d.streak++; d.stars++; d.bestStreak = Math.max(d.bestStreak, d.streak); } else if (!cut) d.streak = 0;
     xp *= 1 + 0.05 * Math.min(6, d.streak);
-    if (wipeout) xp *= 0.25;
-    const bests = (d.bests[stat] = d.bests[stat] || {}); const newBest = score > (bests[diff] || 0); if (newBest) bests[diff] = score;
+    const newBest = score > (d.bests[stat] || 0); if (newBest) d.bests[stat] = score;
     const b = BUILDINGS[Object.keys(BUILDINGS).find((k) => BUILDINGS[k].skill === stat)];
     const bl = b ? d.buildings[Object.keys(BUILDINGS).find((k) => BUILDINGS[k] === b)] : 0;
     xp *= 1 + 0.2 * bl;
@@ -860,15 +916,43 @@ class Ducks {
     if (this.s.catchUp && this.race > 0) { const st = this.standings(), i = st.findIndex((x) => x.id === id); if (i >= st.length / 2) xp *= 1.5; }
     xp = Math.round(xp);
     const before = level(d.xp[stat]);
-    d.xp[stat] += xp; const coins = Math.ceil((score / 2) * (diff === 'easy' ? 0.7 : diff === 'hard' ? 1.5 : 1)) + (star ? 5 : 0); d.coins += coins;
-    if (diff === 'hard' && star && score >= 25) this.log(`🔥 ${d.name} crushed a Hard ${SKILL_NAME[stat]} run: ${score}!`, 'level');
+    d.xp[stat] += xp; const coins = Math.ceil(score / 2) + (star ? 5 : 0); d.coins += coins;
     d.mood = Math.max(0, d.mood - 2); d.stats.trained++; d.stats.bestScore = Math.max(d.stats.bestScore, score);
     const after = level(d.xp[stat]);
     this.checkGrowth(id, d);
     if (after > before) { this.room.fx('levelUp', { id }); if (after % 5 === 0) this.log(`⬆️ ${d.name} reached ${stat} level ${after}!`, 'level'); }
     this.checkBadges(id, d); this.quest(id, d, 'train', 1, stat); this.quest(id, d, 'score', score); if (star) this.quest(id, d, 'star');
     const progress = after >= MAX_LEVEL ? null : { level: after, have: d.xp[stat] - xpFor(after), need: xpFor(after + 1) - xpFor(after), gained: Math.min(xp, d.xp[stat] - xpFor(after)) };
-    return { score, xp, coins, stat, levelUp: after > before ? after : null, mood: d.mood, diff, star, wipeout, streak: d.streak, newBest, target: D.target, progress };
+    return { score, xp, coins, stat, levelUp: after > before ? after : null, mood: d.mood, star, streak: d.streak, newBest, target: TARGET, progress };
+  }
+  // The end of a Risk it! round (tr.risk = { xp, goal }): the server decides, from the score it is
+  // sent (capped by the time played) and how long the round ran.
+  //  win:  the goal is met and the round was played to the end (or cut by the race after the goal
+  //        was already met): the XP of the risked run is added again (double).
+  //  fall: the goal is missed (or the round was abandoned): the duck falls over and loses half of
+  //        that run's XP (it keeps the other half).
+  //  kept: the race start cut the round before the goal was met: nothing changes.
+  riskResult(id, d, tr, raw, now) {
+    const R = tr.risk, stat = tr.stat;
+    const secs = Math.min(RISK.seconds + 4, ((tr.cut || now) - tr.at) / 1000);
+    const score = Math.max(0, Math.min(SCORE_MAX, Math.floor(Number(raw) || 0), Math.floor(secs * SCORE_RATE) + 1));
+    const played = secs >= RISK.seconds - 0.5; // a phone can't finish the round before its time is up
+    const outcome = score >= R.goal && (played || tr.cut) ? 'win' : tr.cut ? 'kept' : 'fall';
+    if (d.training === tr) d.training = null;
+    const before = level(d.xp[stat]);
+    let change = 0;
+    if (outcome === 'win') {
+      change = R.xp; d.xp[stat] += change; d.stats.riskWins = (d.stats.riskWins || 0) + 1;
+      this.room.fx('riskWin', { id }); this.log(`🎲 ${d.name} risked it all on ${SKILL_NAME[stat]}… and DOUBLED the XP!`, 'level');
+    } else if (outcome === 'fall') {
+      change = -Math.min(d.xp[stat], R.xp - Math.floor(R.xp / 2)); d.xp[stat] += change;
+      this.room.fx('tumble', { id });
+    }
+    const after = level(d.xp[stat]);
+    this.checkGrowth(id, d); this.checkBadges(id, d);
+    if (after > before) this.room.fx('levelUp', { id });
+    const progress = after >= MAX_LEVEL ? null : { level: after, have: d.xp[stat] - xpFor(after), need: xpFor(after + 1) - xpFor(after), gained: Math.max(0, Math.min(change, d.xp[stat] - xpFor(after))) };
+    return { ok: true, risk: outcome, score, goal: R.goal, stat, xp: change, base: R.xp, levelUp: after > before ? after : null, levelDown: after < before ? after : null, cut: !!tr.cut, progress };
   }
 
   // ---- bots: train, eat, build, pick tactics ----
@@ -890,8 +974,7 @@ class Ducks {
       else if (!napping) {
         const need = this.course.sections.map((x) => SECTIONS[x.type].skill).concat(['stamina']);
         const stat = this.room.rng() < 0.7 ? need.sort((a, b) => d.xp[a] - d.xp[b])[0] : SKILLS[Math.floor(this.room.rng() * SKILLS.length)];
-        const diff = this.s.energy === 'unlimited' || d.energy >= DIFF.medium.cost ? 'medium' : 'easy';
-        if (this.act(p, { op: 'train', stat, diff }).ok) { d.training.at -= RUN_SECONDS * 1000; this.act(p, { op: 'score', score: 8 + Math.floor(this.room.rng() * 18) }); }
+        if (this.act(p, { op: 'train', stat }).ok) { d.training.at -= RUN_SECONDS * 1000; this.act(p, { op: 'score', score: 8 + Math.floor(this.room.rng() * 18) }); }
       }
       if (d.mood < 50 && this.room.rng() < 0.5) this.act(p, { op: 'pet' });
       this.botLoop(p);
@@ -938,12 +1021,12 @@ class Ducks {
       eggs: d.gene ? null : d.eggs.map((k) => ({ skill: k, ...EGGS[k] })), gene: d.gene ? { skill: d.gene, ...EGGS[d.gene] } : null, stages: STAGES, trophies: d.trophies, leagues: LEAGUES, variants: VARIANT, themes: Object.fromEntries(Object.entries(THEMES).map(([k, t]) => [k, t.label])),
       quests: d.quests.map((q) => ({ text: q.text, have: Math.min(q.have, q.n), n: q.n, done: q.done, reward: q.reward })),
       rival: d.rival && this.ducks.has(d.rival) ? { name: this.ducks.get(d.rival).name, owner: this.room.name(d.rival) } : null, rivalWon: this.phase === 'results' ? d.rivalWon : null,
-      diffs: Object.fromEntries(Object.entries(DIFF).map(([k, x]) => [k, { ...x, cost: this.s.energy === 'unlimited' ? 0 : x.cost }])),
+      target: TARGET, risk: { seconds: RISK.seconds }, riskOffer: d.riskOffer && d.riskOffer.until > now ? { goal: d.riskOffer.goal, stat: d.riskOffer.stat, win: d.riskOffer.xp, lose: d.riskOffer.xp - Math.floor(d.riskOffer.xp / 2), endsIn: d.riskOffer.until - now } : null,
       perks: d.perks.map((k) => ({ key: k, ...PERKS[k] })), perkChoice: d.perkChoice ? d.perkChoice.map((k) => ({ key: k, ...PERKS[k] })) : null,
       streak: d.streak, bestStreak: d.bestStreak, bests: d.bests, canSpin: this.phase === 'training' && d.spunRace !== this.race, spinTable: SPIN.map((x) => ({ icon: x.icon, label: x.label })),
       giftFrom: d.giftFrom || null, neighbors: this.phase === 'training' ? [...this.ducks].filter(([x]) => x !== p.id && this.room.get(x)).map(([x, o]) => ({ id: x, owner: this.room.name(x), duck: o.name })) : [], giftIn: Math.max(0, d.giftAt + 30000 - now),
       trainCost: this.s.energy === 'unlimited' ? 0 : TRAIN_COST, runSeconds: RUN_SECONDS, napSeconds: NAP_SECONDS - 3 * d.buildings.coop,
-      food: FOOD, gear: this.s.gear ? GEAR : null, buildings: BUILDINGS, buildCost: BUILD_COST, decor: DECOR, tactics: TACTICS, badges: BADGES, hats: HATS, colors: COLORS, hatCost: 15,
+      food: FOOD, pantry: d.pantry, pantryMax: PANTRY_MAX, gear: this.s.gear ? GEAR : null, buildings: BUILDINGS, buildCost: BUILD_COST, decor: DECOR, tactics: TACTICS, badges: BADGES, hats: HATS, colors: COLORS, hatCost: 15,
       predictions: this.s.predictions, rivals: this.s.predictions && this.phase === 'training' ? st.map((x) => ({ id: x.id, duck: x.duck, owner: x.owner })) : [],
       predictWon: this.phase === 'results' ? d.predictWon : null,
       live: this.phase === 'race' ? this.liveFor(p.id) : null,
@@ -974,5 +1057,5 @@ module.exports = {
   partyFit,
   key: 'ducks', name: 'JustRaiseDucks', min: 1, best: [2, 12], fields, defaults, liveLobby: true,
   create: (room, settings) => new Ducks(room, settings),
-  _test: { racePace, TRIP_STOP, WRONG_STOP, THINK_STOP, SHORT_BOOST, FORK_GAP, RACE_GRACE, NAP_SECONDS, forkOdds, forksIn, JUMPS, VARIANT, migrate, GAME_FOR, BUILDINGS, FOOD, GEAR, EGGS, level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, DIFF, PERKS, SPIN, HYPE_MS, CHEER_GAP },
+  _test: { racePace, TRIP_STOP, WRONG_STOP, THINK_STOP, SHORT_BOOST, FORK_GAP, RACE_GRACE, NAP_SECONDS, forkOdds, forksIn, JUMPS, VARIANT, migrate, GAME_FOR, BUILDINGS, FOOD, GEAR, EGGS, level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, TARGET, RISK, riskGoal, PANTRY_MAX, OLD_FOOD, SHORT_SPEED, PERKS, SPIN, HYPE_MS, CHEER_GAP },
 };

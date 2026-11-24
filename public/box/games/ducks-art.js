@@ -364,8 +364,9 @@
     if (f.buildings.garden) for (let i = 0; i < 1 + f.buildings.garden; i++) { const gx = ix + iw * (0.68 + i * 0.06), gy = iy + ih * 0.9; g.strokeStyle = '#3d8b37'; g.lineWidth = Math.max(1, iw * 0.006); g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx, gy - ih * 0.1); g.stroke(); g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(gx, gy - ih * 0.1, iw * 0.018, 0, TAU); g.fill(); }
     // hedge maze (Smarts): a little square maze in the corner, bigger with each level
     if (f.buildings.hedge) { const ms = iw * (0.11 + 0.02 * f.buildings.hedge), mx = ix + iw * 0.04, my = iy + ih * 0.3; g.fillStyle = '#d9c39a'; g.fillRect(mx, my, ms, ms); g.fillStyle = '#3f8f3a'; const c = ms / 5; for (const [a, b2, w2, h2] of [[0, 0, 5, 1], [0, 0, 1, 5], [4, 0, 1, 4], [0, 4, 3, 1], [2, 2, 3, 1], [2, 1, 1, 2]]) g.fillRect(mx + a * c, my + b2 * c, w2 * c, h2 * c); g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(mx + 1.5 * c, my + 3 * c, c * 0.35, 0, TAU); g.fill(); }
-    // feeder
-    if (f.buildings.feeder) { g.fillStyle = '#b08968'; g.beginPath(); g.ellipse(ix + iw * 0.45, iy + ih * 0.35, iw * 0.04, ih * 0.025, 0, 0, TAU); g.fill(); }
+    // the feeder (every farm has one; the Auto Feeder building dresses it up) and its food show
+    const eat = latestFx(fx, 'eat', EAT_DUR), FD = feederSpot(ix, iy, iw, ih);
+    drawFeeder(g, FD, f.buildings.feeder || 0, eat ? eat.age : -1, t);
     // decorations (drawn art, along the top fence)
     if (f.decor.length && iw > 50) { const ds0 = Math.max(9, iw * 0.085); f.decor.forEach((d, i) => drawIcon(g, d, ix + iw * (0.08 + i * 0.1), iy + ih * 0.16 - ds0 * 0.35, ds0, t + i)); }
     // fence
@@ -373,8 +374,12 @@
     g.fillStyle = '#6b4420'; const posts = 6; for (let i = 0; i <= posts; i++) { g.fillRect(ix + (iw * i) / posts - 1.5, iy - 2, 3, 5); g.fillRect(ix + (iw * i) / posts - 1.5, iy + ih - 3, 3, 5); }
     // a fox at the fence / a lost duckling
     if (f.event === 'fox') drawFox(g, ix + iw * (0.05 + ((t * 0.08) % 0.3)), iy + ih * 0.95, iw / 260, t);
-    // the duck
-    const sp = f.stage === -1 ? { x: 0.52, y: 0.5, mode: 'stand' } : duckSpot(f, t, k), ds = Math.max(0.25, iw / 220);
+    // the duck (walking over to the food and pecking it up when it was just fed)
+    const ds = Math.max(0.25, iw / 220);
+    let sp = f.stage === -1 ? { x: 0.52, y: 0.5, mode: 'stand' } : duckSpot(f, t, k);
+    const eating = eat && f.stage >= 0 && !f.busy ? eatSpot(eat.age, duckSpot(f, t - eat.age, k), sp, FD, ix, iy, iw, ih, ds * (f.stage <= 0 ? 0.62 : f.stage === 1 ? 0.82 : 1)) : null;
+    if (eating) sp = eating;
+    if (eat) drawFood(g, FD, eat.item, eat.age, !!eating, ds);
     // trophy shelf by the house
     if (f.trophies && f.trophies.length) { const n = Math.min(6, f.trophies.length); g.fillStyle = '#7a4a24'; g.fillRect(ix + iw * 0.6, iy + ih * 0.36, iw * 0.24, ih * 0.025); const ts = Math.max(7, iw * 0.05); for (let i = 0; i < n; i++) drawIcon(g, 'trophy' + (f.trophies[i] >= 1 && f.trophies[i] <= 3 ? f.trophies[i] : 1), ix + iw * (0.6 + i * 0.04) + ts * 0.5, iy + ih * 0.355 - ts * 0.45, ts); }
     // the farmer: the player's own character (BOX.drawChar), by the coop, watching their duck
@@ -385,11 +390,19 @@
     }
     if (f.event === 'duckling') drawDuck(g, ix + iw * sp.x - 26 * ds, iy + ih * sp.y + 6 * ds, ds * 0.5, 'sunny', 'none', t + 1, 'run', sp.flip);
     if (f.stage === -1) { g.fillStyle = '#c99a5b'; g.beginPath(); g.ellipse(ix + iw * sp.x, iy + ih * sp.y + 14 * ds, 22 * ds, 8 * ds, 0, 0, TAU); g.fill(); drawEgg(g, ix + iw * sp.x, iy + ih * sp.y, ds * 0.9, f.eggColor, null, t, 1); }
-    else drawDuck(g, ix + iw * sp.x, iy + ih * sp.y, ds, f.color, f.hat, t + k, sp.mode, sp.flip, f.stage);
+    else {
+      // a Risk it! round that failed: the duck topples over and lies dazed for a moment
+      const tum = latestFx(fx, 'tumble', 3.2);
+      if (tum) {
+        const a = tum.age, u = Math.min(1, a / 0.45), back = a > 2.6 ? Math.min(1, (a - 2.6) / 0.5) : 0, rot = (u - back) * 1.45, hop = a < 0.45 ? Math.sin(u * Math.PI) * 14 * ds : 0;
+        g.save(); g.translate(ix + iw * sp.x, iy + ih * sp.y + 10 * ds - hop); g.rotate(rot); drawDuck(g, 0, -10 * ds, ds, f.color, f.hat, 0, 'stand', sp.flip, f.stage); g.restore();
+        if (a > 0.4 && a < 2.8) drawIcon(g, 'dizzy', ix + iw * sp.x + 4 * ds, iy + ih * sp.y - 22 * ds, Math.max(14, 30 * ds), t);
+      } else drawDuck(g, ix + iw * sp.x, iy + ih * sp.y, ds, f.color, f.hat, t + k, sp.mode, sp.flip, f.stage);
+    }
     if (sp.mode === 'sleep') drawIcon(g, 'zzz', ix + iw * sp.x + 20 * ds, iy + ih * sp.y - 26 * ds, Math.max(14, 30 * ds), t);
     // effects from the phone (hearts when petted, sparkles on level up, crumbs when eating, dust when building)
     for (const e of fx) {
-      const age = (performance.now() - e.at) / 1000; if (age > 1.6) continue;
+      const age = (performance.now() - e.at) / 1000; if (age > 1.6 || e.kind === 'eat' || e.kind === 'tumble') continue; // (eating and falling have their own show)
       g.globalAlpha = 1 - age / 1.6;
       drawIcon(g, FX_ICON[e.kind] || 'sparkle', ix + iw * sp.x + Math.sin(age * 6) * 8, iy + ih * sp.y - 36 * ds - age * 30, Math.max(12, 22 * ds), age);
       g.globalAlpha = 1;
@@ -418,7 +431,72 @@
     } else if (w * zoom > 90) drawIcon(g, moodIcon(f.mood), ix + iw - fs * 0.9, iy + 3 + (fs + 6) / 2, fs * 1.15);
     if (w * zoom > 150) { const L = f.levels; g.font = `600 ${fs * 0.8}px Fredoka, sans-serif`; g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(ix + 3, iy + ih - fs - 6, iw - 6, fs + 4); g.fillStyle = '#fff'; g.fillText(`🏃${L.run} 🌊${L.swim} 🪽${L.fly} 🧗${L.climb} 💪${L.stamina} 🧠${L.smarts || 0}`, ix + 8, iy + ih - 8, iw - 14); }
   }
-  const FX_ICON = { nap: 'zzz', wake: 'sparkle', pet: 'heart', levelUp: 'star', eat: 'corn', build: 'hammer', badge: 'medal', farm: 'sparkle', hatch: 'hatch', grow: 'sprout', spin: 'wheel', gift: 'gift' };
+  // ---------- feeding time ----------
+  // A tap on Seeds / Corn Cob / Feast Bowl: the feeder shakes and pops the food out (little pieces arc
+  // into its bowl), the duck waddles over and pecks them up one by one, then a happy hop and a heart.
+  const EAT_DUR = 5.6;
+  const latestFx = (fx, kind, dur) => { let best = null; for (const e of fx || []) if (e.kind === kind) { const age = (performance.now() - e.at) / 1000; if (age >= 0 && age < dur && (!best || age < best.age)) best = { age, item: e.item }; } return best; };
+  // where the feeder stands on a farm, its spout, and its bowl (all in canvas units)
+  function feederSpot(ix, iy, iw, ih) {
+    const x = ix + iw * 0.35, y = iy + ih * 0.46, s = Math.max(0.3, iw / 220);
+    return { x, y, s, sx: x + 12 * s, sy: y - 26 * s, bx: x + 24 * s, by: y + 1 * s };
+  }
+  function drawFeeder(g, F, lvl, age, t) {
+    const s = F.s, wob = age >= 0 && age < 0.9 ? Math.sin(age * 40) * 0.06 * (1 - age / 0.9) : 0;
+    // the bowl on the ground by the spout
+    g.fillStyle = 'rgba(0,0,0,.16)'; g.beginPath(); g.ellipse(F.bx, F.by + 3 * s, 13 * s, 3.5 * s, 0, 0, TAU); g.fill();
+    g.fillStyle = '#8a5a34'; g.beginPath(); g.ellipse(F.bx, F.by, 12 * s, 4 * s, 0, 0, Math.PI); g.lineTo(F.bx - 12 * s, F.by); g.fill();
+    g.fillStyle = '#b8794a'; g.beginPath(); g.ellipse(F.bx, F.by, 12 * s, 3.2 * s, 0, 0, TAU); g.fill();
+    g.fillStyle = '#5b3a1f'; g.beginPath(); g.ellipse(F.bx, F.by, 9.5 * s, 2.2 * s, 0, 0, TAU); g.fill();
+    g.save(); g.translate(F.x, F.y); g.rotate(wob);
+    g.fillStyle = 'rgba(0,0,0,.16)'; g.beginPath(); g.ellipse(0, 2 * s, 9 * s, 2.5 * s, 0, 0, TAU); g.fill();
+    g.fillStyle = '#7a4f2f'; g.fillRect(-2 * s, -22 * s, 4 * s, 23 * s); // the post
+    // the hopper: a wooden box, wider at the top, with a spout to the right
+    g.fillStyle = lvl ? '#d9a35b' : '#c48a4a'; g.beginPath(); g.moveTo(-10 * s, -44 * s); g.lineTo(10 * s, -44 * s); g.lineTo(7 * s, -24 * s); g.lineTo(-7 * s, -24 * s); g.closePath(); g.fill();
+    g.strokeStyle = '#6b4420'; g.lineWidth = Math.max(1, 1.2 * s); g.stroke();
+    g.beginPath(); g.moveTo(-8 * s, -37 * s); g.lineTo(8 * s, -37 * s); g.moveTo(-7.5 * s, -30 * s); g.lineTo(7.5 * s, -30 * s); g.stroke();
+    g.fillStyle = '#8a5a34'; g.beginPath(); g.moveTo(5 * s, -28 * s); g.lineTo(14 * s, -24 * s); g.lineTo(13 * s, -21 * s); g.lineTo(5 * s, -24 * s); g.closePath(); g.fill(); // spout
+    // a little window with the food inside
+    g.fillStyle = '#f3d36b'; g.fillRect(-4 * s, -42 * s, 8 * s, 4 * s); g.fillStyle = '#e0a83a'; for (let i = 0; i < 4; i++) g.fillRect((-3.5 + i * 2) * s, -40 * s, 1.2 * s, 1.2 * s);
+    // the roof (green and trimmed once the Auto Feeder is built, with one star per level)
+    g.fillStyle = lvl ? '#3f9a4a' : '#9c5b3a'; g.beginPath(); g.moveTo(-13 * s, -44 * s); g.lineTo(0, -52 * s); g.lineTo(13 * s, -44 * s); g.closePath(); g.fill();
+    if (lvl) { g.fillStyle = '#ffd23f'; for (let i = 0; i < lvl; i++) { g.beginPath(); g.arc((-4 + i * 4) * s, -47 * s, 1.4 * s, 0, TAU); g.fill(); } }
+    g.restore();
+  }
+  // The food pieces: each pops out of the spout and arcs into (or near) the bowl, then sits there until
+  // the duck eats it (only when the duck could come over; otherwise it fades away at the end).
+  const FOOD_LOOK = { seeds: { n: 7, cols: ['#d8b56a', '#c79a4f', '#ead08a'], r: 1.4 }, corn: { n: 6, cols: ['#ffd23f', '#f6b72c', '#ffe680'], r: 1.9 }, feast: { n: 9, cols: ['#6cc24a', '#e2463a', '#ffd23f', '#f08a24', '#b388ff'], r: 2.1 } };
+  const pieceAt = (F, i, n, s) => { const a = i * 2.39996, d = Math.sqrt((i + 0.5) / n); return { x: F.bx + Math.cos(a) * 8 * s * d, y: F.by + Math.sin(a) * 1.8 * s * d - 0.6 * s }; };
+  const eatTime = (i, n) => 1.7 + (i * 2.3) / n;
+  function drawFood(g, F, item, age, eaten, s) {
+    const L = FOOD_LOOK[item] || FOOD_LOOK.seeds, n = L.n, fade = age > EAT_DUR - 0.6 ? Math.max(0, (EAT_DUR - age) / 0.6) : 1;
+    for (let i = 0; i < n; i++) {
+      const t0 = 0.12 + i * 0.09, u = (age - t0) / 0.42; if (u < 0) continue;
+      if (eaten && age > eatTime(i, n)) continue; // pecked up
+      const P = pieceAt(F, i, n, F.s), k = Math.min(1, u);
+      const x = F.sx + (P.x - F.sx) * k, y = F.sy + (P.y - F.sy) * k - Math.sin(k * Math.PI) * 12 * F.s + (u > 1 && u < 1.25 ? -Math.sin((u - 1) * 4 * Math.PI) * 1.5 * F.s : 0);
+      g.globalAlpha = fade; g.fillStyle = L.cols[i % L.cols.length];
+      if (item === 'feast' && i % 3 === 0) { g.beginPath(); g.ellipse(x, y, L.r * 1.6 * F.s, L.r * 0.8 * F.s, i, 0, TAU); g.fill(); } // a leaf
+      else { g.beginPath(); g.arc(x, y, L.r * F.s, 0, TAU); g.fill(); }
+      if (item === 'corn') { g.fillStyle = 'rgba(255,255,255,.5)'; g.beginPath(); g.arc(x - 0.5 * F.s, y - 0.5 * F.s, 0.6 * F.s, 0, TAU); g.fill(); }
+      g.globalAlpha = 1;
+    }
+    // little crumbs fly when a piece is pecked, and a heart once the bowl is empty
+    if (eaten) for (let i = 0; i < n; i++) { const e = age - eatTime(i, n); if (e < 0 || e > 0.35) continue; const P = pieceAt(F, i, n, F.s); g.fillStyle = L.cols[i % L.cols.length]; for (let q = 0; q < 3; q++) { g.globalAlpha = 1 - e / 0.35; g.fillRect(P.x + (q - 1) * e * 18 * F.s, P.y - e * 22 * F.s + q, 1.2 * F.s, 1.2 * F.s); } g.globalAlpha = 1; }
+    if (eaten && age > 4.1 && age < 5.3) { const e = age - 4.1; g.globalAlpha = Math.min(1, (5.3 - age) * 2); drawIcon(g, 'heart', F.bx + 26 * F.s, F.by - 34 * F.s - e * 18 * F.s, Math.max(12, 16 * F.s), age); drawIcon(g, 'sparkle', F.bx + 8 * F.s, F.by - 26 * F.s - e * 10 * F.s, Math.max(10, 12 * F.s), age); g.globalAlpha = 1; }
+  }
+  // Where the duck is while it eats: it waddles over (0-1.3 s), pecks (to 4.1 s), hops with joy, then
+  // waddles back to where it would be wandering now. Positions are farm fractions, like duckSpot.
+  function eatSpot(age, from, now, F, ix, iy, iw, ih, ss) {
+    const at = { x: (F.bx + 23 * ss - ix) / iw, y: (F.by - 12 * ss - iy) / ih }; // the beak over the bowl
+    const lerp = (a, b, u) => ({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u });
+    if (age < 1.3) { const u = age / 1.3, p = lerp(from, at, u * u * (3 - 2 * u)); return { ...p, mode: 'run', flip: at.x < from.x }; }
+    if (age < 4.1) return { ...at, mode: 'peck', flip: true };
+    if (age < 4.7) { const hop = Math.abs(Math.sin((age - 4.1) * 10)) * 0.04; return { x: at.x, y: at.y - hop, mode: 'stand', flip: true }; }
+    const u = Math.min(1, (age - 4.7) / 0.9); if (u >= 1) return null;
+    return { ...lerp(at, now, u * u * (3 - 2 * u)), mode: 'run', flip: now.x < at.x };
+  }
+  const FX_ICON = { nap: 'zzz', wake: 'sparkle', pet: 'heart', levelUp: 'star', eat: 'corn', build: 'hammer', badge: 'medal', farm: 'sparkle', hatch: 'hatch', grow: 'sprout', spin: 'wheel', gift: 'gift', riskWin: 'star', risk: 'sparkle' };
   const DECOR_ICON = { flowers: '🌷', flag: '🚩', gnome: '🧙', lantern: '🏮', scarecrow: '🎃', fountain: '⛲', statue: '🗿', rainbow: '🌈' };
   // ---------- Duck Valley: one shared map ----------
   // Farm plots sit on a grid of lots around the Raceway (centre), nearest lots first, so the

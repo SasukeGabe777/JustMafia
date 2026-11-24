@@ -613,7 +613,7 @@
     }
     return hero.canvas;
   }
-  let hatching = null, petted = false, sheet = null, questsOpen = false, sheetDiff = 'medium', lastPet = 0;
+  let hatching = null, petted = false, sheet = null, questsOpen = false, lastPet = 0;
   // The farm picture with only what matters on it: name, stage, coins; energy and mood underneath.
   function heroHtml(v) {
     const d = v.duck, st = d.stage >= 0 ? v.stages[d.stage] : null;
@@ -674,15 +674,14 @@
   }
   // One card, one obvious next step.
   function coachHtml(v, d) {
-    const cheapest = Math.min(...Object.values(v.diffs).map((x) => x.cost));
+    const cheapest = v.trainCost;
     const spin = v.canSpin ? '<button class="dk-spinchip" data-spin>🎡<small>Free spin</small></button>' : '';
     const proj = v.projected && v.projected.of > 1 && v.projected.place ? `<span class="dk-proj">Projected ${ord(v.projected.place)} of ${v.projected.of}</span>` : '';
     let main;
     if (v.napLeft) main = `<div class="dk-coach-main nap"><span class="ic">😴</span><span><b>${esc(d.name)} is napping</b><small>Wakes up in <span class="dk-napleft">${Math.ceil(v.napLeft / 1000)}s</span> with +${v.napGain || 35} ⚡. Training opens then.</small></span></div>`;
     else if (v.hype) main = `<div class="dk-coach-main hype"><span class="ic">🏁</span><span><b>Race in ${timer(v.endsIn)}!</b><small>Last call: pick your tactic</small></span>${proj}</div><div class="dk-qtac">${Object.entries(v.tactics).map(([k, [ic, l]]) => `<button data-qtactic="${k}" class="${d.tactic === k ? 'on' : ''}">${ic} ${esc(l)}</button>`).join('')}</div>`;
     else if (d.energy < cheapest) {
-      const food = d.coins >= v.food.corn.cost ? 'corn' : d.coins >= v.food.seeds.cost ? 'seeds' : null;
-      main = `<div class="dk-coach-main"><span class="ic">🥱</span><span><b>Your duck is tired</b><small>Feed it now, or it falls asleep for a nap by itself</small></span></div>${food ? `<div class="dk-qtac"><button data-feed="${food}">${v.food[food].icon} ${esc(v.food[food].label)} · 🪙${v.food[food].cost}</button></div>` : ''}`;
+      main = `<div class="dk-coach-main"><span class="ic">🥱</span><span><b>Your duck is tired</b><small>Feed it below, or it falls asleep for a nap by itself</small></span></div>`;
     } else {
       const c = coachSkill(v, d), [ic, label, , color] = SK[c.skill];
       const why = c.skill === 'stamina' ? 'Keeps your duck fast to the finish' : `${c.share}% of the next race · Lv ${d.levels[c.skill]}`;
@@ -690,16 +689,13 @@
     }
     return `<div class="dk-coach ${v.hype ? 'hype' : ''}"><div class="dk-coach-body">${main}</div>${spin}</div>`;
   }
-  // Skill sheet: one row to choose Easy, Medium or Hard, one line about it, one Play button.
+  // Skill sheet: what the run is about, one Play button. After the run you may Risk it for double XP.
   function sheetHtml(v, d) {
-    const k = sheet, [icon, label, game, color] = SK[k], best = v.bests[k] || {};
-    const D = v.diffs[sheetDiff];
-    const segs = Object.entries(v.diffs).map(([dk, x]) => `<button class="dk-diff ${sheetDiff === dk ? 'on' : ''} ${dk}" data-diff="${dk}" ${d.energy < x.cost ? 'disabled' : ''}><span class="dn">${x.icon} ${x.label}</span><span class="dc">⚡${x.cost}</span></button>`).join('');
+    const k = sheet, [icon, label, game, color] = SK[k], best = typeof v.bests[k] === 'number' ? v.bests[k] : 0;
     return `<div class="dk-sheet-bg" data-close></div><div class="dk-sheet" style="--c:${color}">
       <div class="dk-sheet-head"><span class="big">${icon}</span><div><b>${label} · Lv ${d.levels[k]}${v.gene && v.gene.skill === k ? ' 🧬' : ''}</b><div class="muted">${game}</div></div><button class="link" data-close aria-label="Close">✕</button></div>
-      <div class="dk-diffs">${segs}</div>
-      <p class="dk-diffinfo"><b>×${D.mult} XP</b> · ⭐ target ${D.target}${best[sheetDiff] ? ` · best ${best[sheetDiff]}` : ''}<br><small>${esc(D.about)}</small></p>
-      <button class="btn big green dk-play" data-play ${d.energy < D.cost ? 'disabled' : ''}>▶ Play ${D.label}</button>
+      <p class="dk-diffinfo">⭐ target ${v.target || 16}${best ? ` · best ${best}` : ''} · ⚡${v.trainCost} energy<br><small>After the run: 🎲 <b>Risk it</b> on one very hard round to double your XP… or keep it safe.</small></p>
+      <button class="btn big green dk-play" data-play ${d.energy < v.trainCost ? 'disabled' : ''}>▶ Play</button>
       <p class="muted dk-streakline">${v.streak ? `🔥 Streak ×${v.streak}: hit ⭐ again for +${Math.min(6, v.streak + 1) * 5}% XP` : 'Hit the ⭐ target to start a streak (up to +30% XP).'}</p></div>`;
   }
   function perkModal(v) {
@@ -789,14 +785,20 @@
     const done = (v.quests || []).filter((q) => q.done).length;
     const quests = v.quests && v.quests.length ? `<div class="card-box dk-quests ${questsOpen ? 'open' : ''}"><button class="dk-qhead" data-quests><b>📜 Quests ${done}/${v.quests.length}</b>${v.rival ? `<span class="muted">⚔️ ${esc(v.rival.name)}</span>` : ''}<span>${questsOpen ? '▲' : '▼'}</span></button>
       ${questsOpen ? v.quests.map((q) => `<div class="q ${q.done ? 'done' : ''}"><span>${q.done ? '✅' : '⬜'} ${esc(q.text)}</span><span class="muted">${q.done ? 'done' : q.have + '/' + q.n} · 🪙${q.reward}</span></div>`).join('') + (v.rival ? `<div class="q rival">⚔️ Beat <b>${esc(v.rival.name)}</b> <span class="muted">(${esc(v.rival.owner)})</span> next race for 🪙15</div>` : '') : ''}</div>` : '';
-    return `${coachHtml(v, d)}
+    return `${coachHtml(v, d)}${foodRow(v, d)}
       <div class="dk-skillgrid">${Object.entries(SK).map(([k, [icon, label, game, color]]) => { const p = d.progress[k], pct = p ? Math.round((p.have / p.need) * 100) : 100; return `<button class="dk-skill ${needs.includes(k) ? 'need' : ''}" style="--c:${color}" data-sheet="${k}" ${v.napLeft ? 'disabled' : ''}>${ring(d.levels[k], pct, color)}<span class="t"><b>${icon} ${label}${v.gene && v.gene.skill === k ? ' 🧬' : ''}</b><small>${game}</small></span>${needs.includes(k) ? '<i class="needmark" title="On the next course">🏁</i>' : ''}</button>`; }).join('')}</div>
       ${quests}${sheet ? sheetHtml(v, d) : ''}`;
+  }
+  // Food, right on the training page: three sizes with their price and how many are in the pantry.
+  // A tap feeds one (from the pantry first, else it buys one); a full duck saves it for later.
+  function foodRow(v, d) {
+    const pan = v.pantry || {};
+    return `<div class="dk-foodrow"><span class="lbl">🍽️<small>Food</small></span>${Object.entries(v.food).map(([k, f]) => { const n = pan[k] || 0, can = n > 0 || d.coins >= f.cost; return `<button class="dk-food ${n ? 'have' : ''}" data-feed="${k}" ${can ? '' : 'disabled'} aria-label="${esc(f.label)}: +${f.energy} energy, ${f.cost} coins${n ? ', ' + n + ' in the pantry' : ''}"><span class="fi">${f.icon}</span><span class="fn"><b>${esc(f.short || f.label)}</b><small>+${f.energy}⚡</small></span><span class="fp">🪙${f.cost}${n ? `<i>×${n}</i>` : ''}</span></button>`; }).join('')}</div>`;
   }
   function pageShop(v, d) {
     const cats = [['food', '🍎 Food'], ['farm', '🏡 Farm'], ['decor', '🌷 Decor'], ...(v.gear ? [['gear', '🎒 Gear']] : []), ['hats', '🎩 Hats']];
     let items = '';
-    if (shopCat === 'food') items = Object.entries(v.food).map(([k, it]) => shopItem(it.icon, it.label, it.about, `🪙 ${it.cost}`, `data-feed="${k}" ${d.coins < it.cost ? 'disabled' : ''}`)).join('');
+    if (shopCat === 'food') items = Object.entries(v.food).map(([k, it]) => { const n = (v.pantry || {})[k] || 0; return shopItem(it.icon, it.label, it.about + (n ? ` · ${n} in the pantry` : ''), `🪙 ${it.cost}`, `data-feed="${k}" ${n || d.coins >= it.cost ? '' : 'disabled'}`); }).join('');
     if (shopCat === 'farm') items = Object.entries(v.buildings).map(([k, b]) => { const lvl = d.buildings[k], cost = v.buildCost[lvl]; return shopItem(b.icon, `${b.label} ${'★'.repeat(lvl)}${'☆'.repeat(3 - lvl)}`, b.about, lvl >= 3 ? 'MAX' : (lvl ? 'Upgrade ' : 'Build ') + '🪙' + cost, `data-build="${k}" ${lvl >= 3 || d.coins < cost ? 'disabled' : ''}`, lvl >= 3 ? 'owned' : ''); }).join('');
     if (shopCat === 'decor') items = Object.entries(v.decor).map(([k, [ic, label, cost]]) => shopItem(ic, label, 'Shows on your farm · +5 mood', d.decor.includes(k) ? 'Placed ✓' : '🪙 ' + cost, `data-decor="${k}" ${d.decor.includes(k) || d.coins < cost ? 'disabled' : ''}`, d.decor.includes(k) ? 'owned' : '')).join('');
     if (shopCat === 'gear' && v.gear) items = Object.entries(v.gear).map(([k, it]) => shopItem(it.icon, it.label, it.about, d.gear.includes(k) ? 'Packed ✓' : '🪙 ' + it.cost, `data-gear="${k}" ${d.gear.includes(k) || d.coins < it.cost ? 'disabled' : ''}`, d.gear.includes(k) ? 'owned' : '')).join('');
@@ -853,7 +855,7 @@
   }
   function practiceRow() { return `<div class="dk-practice"><span class="muted">🎮 Practice while you wait (no energy, no XP):</span><div>${Object.entries(SK).map(([k, [ic, label]]) => `<button data-practice="${k}" aria-label="Practice ${label}">${ic}</button>`).join('')}</div></div>`; }
   function practice(k, d) {
-    const run = () => window.DUCK_MINI.play(GAME[k], 20, { ...d, stage: Math.max(0, d.stage) }, (score, show) => show({ ok: true, practice: true, score }), { speed: 0.8, target: 12, diff: 'easy', again: run });
+    const run = () => window.DUCK_MINI.play(GAME[k], 20, { ...d, stage: Math.max(0, d.stage) }, (score, show) => show({ ok: true, practice: true, score }), { speed: 0.8, target: 12, again: run });
     run();
   }
 
@@ -903,13 +905,14 @@
     how: [
       'Join and a farm appears in Duck Valley on the big screen. Pick an egg: each duckling hatches with a natural talent.',
       'Train Run 🏃, Swim 🌊, Fly 🪽, Climb 🧗, Stamina 💪 and Smarts 🧠 with mini-games. Your duckling grows up as it levels.',
-      'Training costs energy. When your duck runs out it falls asleep by itself for a short nap, then it’s ready again. Food tops it up.',
+      'After a run you can 🎲 Risk it: one very hard round with a goal. Make it and your XP doubles; miss it and your duck falls over and keeps only half.',
+      'Training costs energy. When your duck runs out it falls asleep by itself for a short nap, then it’s ready again. Food (seeds, corn or a feast bowl, right on the training page) tops it up.',
       'Spend coins in the shop: food, farm buildings, decorations, race gear and hats. It all shows on your farm.',
       'Every few minutes the valley races a themed obstacle course in one of 14 worlds (meadow, volcano, swamp, city rooftops, jungle, desert, sky islands, candy land, a haunted farm and more). Smart ducks find the shortcut through the maze. Training stops while the race is on.',
       'Climb from the Rookie Cup to the Grand Championship. Top 3 win trophies for your farm.',
       'Pick a tactic, predict the winner, finish quests, beat your rival, and cheer from your phone!',
     ],
-    fx: { raceDone: 'cheer', levelUp: 'pop', win: 'win', farm: 'join', build: 'click', badge: 'chime', event: 'knock', pet: 'pop', hatch: 'flip', grow: 'chime', spin: 'shuffle', gift: 'chime', hype: 'drum' },
+    fx: { raceDone: 'cheer', levelUp: 'pop', win: 'win', farm: 'join', build: 'click', badge: 'chime', event: 'knock', pet: 'pop', hatch: 'flip', grow: 'chime', spin: 'shuffle', gift: 'chime', hype: 'drum', riskWin: 'chime' },
     onFx(f) {
       if (f.kind === 'cheer') {
         race.cheers = race.cheers || []; race.cheers.push({ id: f.who, at: performance.now() }); if (race.cheers.length > 60) race.cheers.shift();
@@ -920,8 +923,11 @@
       }
       const w = f.who; if (!w) return;
       if (f.kind === 'farm') { tvw.born[w] = performance.now(); return; }
-      (tvw.fxBy[w] = tvw.fxBy[w] || []).push({ kind: f.kind, at: performance.now() });
+      (tvw.fxBy[w] = tvw.fxBy[w] || []).push({ kind: f.kind, at: performance.now(), item: f.item });
       if (tvw.fxBy[w].length > 4) tvw.fxBy[w].shift();
+      // the feeder pops the food out and the duck pecks at it (soft clicks); a risked run that failed: a thud
+      if (f.kind === 'eat' && tvw.mode !== 'race') for (let i = 0; i < 4; i++) clip('maze', { vol: 0.035, delay: 1.5 + i * 0.42, rate: 1.5 + Math.random() * 0.3, pan: 0, gap: 0 });
+      if (f.kind === 'tumble' && tvw.mode !== 'race') clip('trip', { vol: 0.12, delay: 0.8 });
     },
 
     tv(el, s) {
@@ -1068,11 +1074,19 @@
       put(`<div class="dk-phone">${heroHtml(v)}${eventCard(v)}${next}<div class="dk-page">${(pages[tab] || pageTrain)(v, d)}</div>
         <nav class="dk-nav">${[['train', '🏋️', 'Train'], ['shop', '🛒', 'Shop'], ['race', '🏁', 'Race'], ['duck', '🦆', 'My duck']].map(([k, i, l]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}"><span>${i}</span>${l}</button>`).join('')}</nav></div>`);
       mount();
-      const play = async (stat, diff) => {
-        const r = await ctx.act({ op: 'train', stat, diff });
+      const me = { ...d, stage: Math.max(0, d.stage) }, send = (score, show) => ctx.act({ op: 'score', score }).then(show);
+      // Risk it!: the server starts one very hard round with its goal (or says why not).
+      const riskIt = async () => {
+        const r = await ctx.act({ op: 'risk' });
+        if (!r.ok) { ctx.toast(r.error || 'No risk this time: you keep your XP.'); return; }
+        window.DUCK_MINI.play(r.game, r.seconds, me, send, { speed: r.speed, goal: r.goal, cancel: () => ctx.act({ op: 'cancel' }) });
+      };
+      const keep = () => ctx.act({ op: 'keep' });
+      const play = async (stat) => {
+        const r = await ctx.act({ op: 'train', stat });
         ctx.redraw();
         if (!r.ok) { if (r.error) ctx.toast(r.error); return; }
-        window.DUCK_MINI.play(r.game, r.seconds, { ...d, stage: Math.max(0, d.stage) }, (score, show) => ctx.act({ op: 'score', score }).then(show), { speed: r.speed, target: r.target, best: r.best, diff: r.diff, again: () => play(stat, diff), cancel: () => ctx.act({ op: 'cancel' }) });
+        window.DUCK_MINI.play(r.game, r.seconds, me, send, { speed: r.speed, target: r.target, best: r.best, again: () => play(stat), cancel: () => ctx.act({ op: 'cancel' }), riskIt, keep });
       };
       on('[data-ev]', (b) => ctx.act({ op: 'event', choice: b.dataset.ev }));
       on('[data-tab]', (b) => { if (tab === b.dataset.tab) return; tab = b.dataset.tab; sheet = null; ctx.redraw(); window.scrollTo(0, 0); });
@@ -1081,12 +1095,16 @@
       on('[data-sheet]', (b) => { sheet = b.dataset.sheet; ctx.redraw(); });
       on('[data-coach-train]', (b) => { sheet = b.dataset.coachTrain; ctx.redraw(); });
       on('[data-close]', () => { sheet = null; ctx.redraw(); });
-      on('[data-diff]', (b) => { if (sheetDiff === b.dataset.diff) return; sheetDiff = b.dataset.diff; ctx.vibrate(8); ctx.redraw(); });
-      on('[data-play]', (b) => { if (!sheet) return; const stat = sheet; sheet = null; b.disabled = true; play(stat, sheetDiff); });
+      on('[data-play]', (b) => { if (!sheet) return; const stat = sheet; sheet = null; b.disabled = true; play(stat); });
       on('[data-spin]', () => spinWheel(v, ctx));
       on('[data-quests]', () => { questsOpen = !questsOpen; ctx.redraw(); });
       on('[data-gift]', async (b) => { if ((await ctx.act({ op: 'gift', to: b.dataset.gift })).ok) { ctx.toast('🎁 Gift sent!'); ctx.sfx('chime'); } });
-      on('[data-feed]', async (b) => { if ((await ctx.act({ op: 'feed', item: b.dataset.feed })).ok) { ctx.sfx('chime'); petFx.push({ kind: 'eat', at: performance.now() }); } });
+      on('[data-feed]', async (b) => {
+        const item = b.dataset.feed, r = await ctx.act({ op: 'feed', item }), f = v.food[item];
+        if (!r.ok) { if (r.error) ctx.toast(r.error); return; }
+        if (r.stored) { ctx.toast(`${f.icon} ${d.name} is full: saved for later (×${r.have} in the pantry)`); ctx.sfx('click'); return; }
+        ctx.sfx('chime'); ctx.vibrate(15); petFx.push({ kind: 'eat', at: performance.now(), item }); if (petFx.length > 4) petFx.shift();
+      });
       on('[data-build]', async (b) => { if ((await ctx.act({ op: 'build', item: b.dataset.build })).ok) { ctx.sfx('click'); petFx.push({ kind: 'build', at: performance.now() }); ctx.toast('Built! It’s on your farm 🏡'); } });
       on('[data-decor]', async (b) => { if ((await ctx.act({ op: 'decor', item: b.dataset.decor })).ok) { ctx.sfx('chime'); ctx.toast('Placed on your farm 🌷'); } });
       on('[data-gear]', async (b) => { if ((await ctx.act({ op: 'gear', item: b.dataset.gear })).ok) ctx.toast('Packed for race day 🎒'); });

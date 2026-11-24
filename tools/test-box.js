@@ -246,19 +246,20 @@ test('Ducks: eggs hatch with a talent; ducks grow up; wild ducks fill small race
   const mine = r.game.lastRace.results.find((x) => x.id === a.id);
   if (mine.place <= 3) assert.equal(d.trophies.length, 1);
 });
-test('Ducks: Easy / Medium / Hard training trade energy and risk for XP; streaks, wipeouts, bests', () => {
+test('Ducks: one training pace (an old difficulty is ignored); Risk it! doubles or halves a run; streaks, bests', () => {
   const { r, clock } = room('ducks', 0, {}, 12);
   const a = human(r, 'Ann'); go(r);
   const d = r.game.ducks.get(a.id); d.mood = 50; d.quests = [];
-  const run = (diff, score) => { const t = r.act(a, { op: 'train', stat: 'run', diff }); assert(t.ok, t.error); clock.t += 20000; return r.act(a, { op: 'score', score }); };
-  const e0 = d.energy; const easy = run('easy', 10); assert.equal(e0 - d.energy, D.DIFF.easy.cost);
-  d.energy = 100; const med = run('medium', 10); d.energy = 100; const hard = run('hard', 10);
-  assert(easy.xp < med.xp && med.xp < hard.xp, [easy.xp, med.xp, hard.xp].join(' < '));
-  d.energy = 100; const wipe = run('hard', 3); assert(wipe.wipeout && wipe.xp < 10, 'a Hard wipeout earns almost nothing');
-  d.energy = 100; const s1 = run('medium', 20); d.energy = 100; const s2 = run('medium', 20);
+  const run = (score, diff) => { const t = r.act(a, { op: 'train', stat: 'run', diff }); assert(t.ok, t.error); clock.t += 20000; return r.act(a, { op: 'score', score }); };
+  const e0 = d.energy; const easy = run(10, 'easy'); assert.equal(e0 - d.energy, D.TRAIN_COST);
+  d.energy = 100; const hard = run(10, 'hard'); assert.equal(easy.xp, hard.xp, 'the same pace for everyone');
+  assert(hard.risk && hard.risk.win === hard.xp, 'a Risk it! offer');
+  const x0 = d.xp.run; assert(r.act(a, { op: 'risk' }).ok); clock.t += 17000;
+  const f = r.act(a, { op: 'score', score: 0 }); assert.equal(f.risk, 'fall'); assert.equal(d.xp.run, x0 - (hard.xp - Math.floor(hard.xp / 2)));
+  d.energy = 100; const s1 = run(20); d.energy = 100; const s2 = run(20);
   assert(s1.star && s2.star && s2.streak === 2 && s2.xp > s1.xp, 'streak bonus grows');
-  assert.equal(d.bests.run.medium, 20);
-  d.energy = 100; run('medium', 5); assert.equal(d.streak, 0, 'a miss resets the streak');
+  assert.equal(d.bests.run, 20);
+  d.energy = 100; run(5); assert.equal(d.streak, 0, 'a miss resets the streak');
 });
 test('Ducks: growing up offers 3 perks; perks change races; gifts and the Lucky Spin', () => {
   const { r, clock } = room('ducks', 0, { races: 1, raceEvery: 60, startCoins: 60 }, 14);

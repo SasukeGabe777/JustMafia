@@ -46,7 +46,9 @@ test('Phone input: prototype keys and junk never corrupt a duck', () => {
   }
   assert.equal(d.coins, coins); assert.equal(d.energy, energy); assert.equal(d.tactic, 'steady');
   const t = room.act(a, { op: 'train', stat: 'run', diff: '__proto__' });
-  assert(t.ok && t.diff === 'medium', 'an unknown difficulty falls back to Medium');
+  assert(t.ok && t.speed === 1 && t.target === D.TARGET && !('diff' in t), 'an old difficulty value is ignored: one normal pace');
+  assert.equal(room.act(a, { op: 'risk' }).ok, false, 'no Risk it! without an offer');
+  assert.equal(room.act(a, { op: 'feed', item: 'walnuts' }).ok, false, 'removed foods are off the menu');
   assert(Number.isFinite(d.energy));
   room.act(a, { op: 'cancel' });
   assert.equal(room.act(a, null).ok, false); assert.equal(room.act(a, { op: 'train', stat: { x: 1 } }).ok, false);
@@ -221,12 +223,12 @@ test("The phone's live race: during the race your own duck's path and moments, n
 test('Smarts is a sixth skill everywhere: training (the maze mini-game) earns XP, levels, eggs, food, a building, a perk, gear', () => {
   assert.deepEqual(D.SKILLS, ['run', 'swim', 'fly', 'climb', 'stamina', 'smarts']);
   assert.equal(D.GAME_FOR.smarts, 'maze'); assert.equal(D.SECTIONS.maze.skill, 'smarts');
-  assert(D.EGGS.smarts && D.FOOD.walnuts.xp.smarts > 0 && D.GEAR.map && D.PERKS.compass);
+  assert(D.EGGS.smarts && D.GEAR.map && D.PERKS.compass);
   assert(Object.values(D.BUILDINGS).some((b) => b.skill === 'smarts'));
   const { room, clock } = setup(0, { energy: 'normal' });
   const a = human(room, 'Ann'); go(room);
   const d = room.game.ducks.get(a.id); d.quests = [];
-  const t = room.act(a, { op: 'train', stat: 'smarts', diff: 'medium' }); assert(t.ok && t.game === 'maze', JSON.stringify(t));
+  const t = room.act(a, { op: 'train', stat: 'smarts' }); assert(t.ok && t.game === 'maze', JSON.stringify(t));
   clock.t += 20000;
   const r = room.act(a, { op: 'score', score: 18 });
   assert(r.ok && r.stat === 'smarts' && r.xp > 0 && d.xp.smarts === r.xp, JSON.stringify(r));
@@ -235,7 +237,6 @@ test('Smarts is a sixth skill everywhere: training (the maze mini-game) earns XP
   assert.equal(v.duck.levels.smarts, 5); assert(v.duck.progress.smarts && v.duck.progress.smarts.need > 0);
   d.coins = 300;
   assert(room.act(a, { op: 'build', item: 'hedge' }).ok, 'the Hedge Maze building');
-  d.energy = 50; const x0 = d.xp.smarts; assert(room.act(a, { op: 'feed', item: 'walnuts' }).ok); assert.equal(d.xp.smarts, x0 + 40);
   assert(room.act(a, { op: 'gear', item: 'map' }).ok);
   // A score can't beat the clock: a 4-second maze run can't score 40.
   d.energy = 100; room.act(a, { op: 'train', stat: 'smarts', diff: 'easy' }); clock.t += 4000;
@@ -265,17 +266,17 @@ test('Lily Path: a duck that remembers the frog\'s path scores the target, a gue
   const seeded = (seed) => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const run = (diff, pick, seed, gap = 0.6) => {
     const S = M.scorer(), lens = [], rnd = seeded(seed + 99);
-    const L = M.lilyPath(diff, seeded(seed), { good: (i, p) => S.good(1, p), clear: (len) => { S.good(len - 1, false, true); lens.push(len); }, bad: () => S.bad() });
+    const L = M.lilyPath(diff, seeded(seed), { good: (i, p) => S.good(1, p, true), clear: (len) => { S.good(len - 1, false, true); lens.push(len); }, bad: () => S.bad() });
     L.start(0);
     for (let el = 0; el < 20; el += 0.05) { L.update(el, el < 20 / 3 ? 1 : el < 40 / 3 ? 1.15 : 1.32); if (L.phase === 'input' && el - L.lastTap >= gap) L.tap(pick(L, rnd), el); }
     return { score: S.score, lens };
   };
   const remember = (L) => L.path[L.idx], guess = (L, rnd) => Math.floor(rnd() * L.n);
-  for (const diff of ['easy', 'medium', 'hard']) {
+  for (const diff of ['normal', 'risk']) {
     let good = 0, bad = 0;
     for (let seed = 1; seed <= 10; seed++) {
       const r = run(diff, remember, seed);
-      assert(r.score >= D.DIFF[diff].target, `${diff}: remembering scores the ⭐ target: ${r.score}`);
+      assert(r.score >= (diff === 'normal' ? D.TARGET : D.riskGoal('maze', run('normal', remember, seed).score)), `${diff}: remembering scores the ⭐ target / the Risk it! goal: ${r.score}`);
       assert(r.score <= 60, `${diff}: but not past the score cap: ${r.score}`);
       assert(r.lens.length >= 3 && r.lens.every((x, i) => i === 0 || x === r.lens[i - 1] + 1), 'each path is one hop longer: ' + r.lens);
       good += r.score; bad += run(diff, guess, seed).score;
@@ -283,7 +284,7 @@ test('Lily Path: a duck that remembers the frog\'s path scores the target, a gue
     assert(bad / 10 < 5 && good > bad * 5, `${diff}: guessing ${bad / 10} vs remembering ${good / 10}`);
   }
   // A wrong pad: a splash, then the frog shows the same path again.
-  const L = M.lilyPath('medium', seeded(3)); L.start(0);
+  const L = M.lilyPath('normal', seeded(3)); L.start(0);
   let el = 0; while (L.phase !== 'input') { el += 0.05; L.update(el); }
   const p0 = L.path.slice(), wrongPad = [...Array(L.n).keys()].find((i) => i !== L.path[0]);
   assert.equal(L.tap(L.path[0], el), 'ok'); assert.equal(L.tap(wrongPad, el + 0.3), 'wrong'); assert.equal(L.phase, 'oops');
@@ -330,13 +331,16 @@ test('Maze forks are deterministic (same seed, same race) and Smarts decides the
   assert.deepEqual(A1.results.map((x) => x.id), A2.results.map((x) => x.id));
   const tally = (lv, gear) => { const c = { short: 0, think: 0, wrong: 0, n: 0 }; for (let seed = 1; seed <= 30; seed++) { const { R, a } = mazeRace(seed, lv, { gear }); for (const [, k] of R.tracks.find((x) => x.id === a.id).ev) if (k in c) { c[k]++; c.n++; } } return c; };
   const dumb = tally(0), smart = tally(12), mapped = tally(0, ['map']);
-  assert(smart.short / smart.n > 0.6 && dumb.short / dumb.n < 0.2, `shortcuts: smart ${smart.short}/${smart.n}, dumb ${dumb.short}/${dumb.n}`);
-  assert(dumb.wrong / dumb.n > 0.25 && smart.wrong / smart.n < 0.08, `wrong turns: dumb ${dumb.wrong}/${dumb.n}, smart ${smart.wrong}/${smart.n}`);
-  assert.equal(mapped.wrong, 0, 'the Maze Map never takes a wrong turn');
+  assert(smart.short / smart.n > 0.35 && dumb.short / dumb.n < 0.2, `shortcuts: smart ${smart.short}/${smart.n}, dumb ${dumb.short}/${dumb.n}`);
+  assert(dumb.wrong / dumb.n > 0.2 && smart.wrong / smart.n < 0.1, `wrong turns: dumb ${dumb.wrong}/${dumb.n}, smart ${smart.wrong}/${smart.n}`);
+  assert(mapped.wrong > 0 && mapped.wrong < dumb.wrong * 0.75, `the Maze Map cuts wrong turns, never to zero: ${mapped.wrong} vs ${dumb.wrong}`);
   // ...and it shows in the result: a smart duck gets through a maze course faster than a weak one (same everything else).
   let faster = 0; for (let seed = 1; seed <= 12; seed++) { const s = mazeRace(seed, 12), w = mazeRace(seed, 0); const ts = s.R.results.find((x) => x.id === s.a.id).time, tw = w.R.results.find((x) => x.id === w.a.id).time; if (ts < tw) faster++; }
   assert(faster >= 11, 'smart beats weak through the maze: ' + faster + '/12');
-  const fo = D.forkOdds; assert(fo(0).wrong > fo(10).wrong && fo(0).short < fo(10).short && fo(0, true).wrong === 0);
+  const fo = D.forkOdds; assert(fo(0).wrong > fo(10).wrong && fo(0).short < fo(10).short && fo(0, true).wrong > 0 && fo(25, true, true).wrong > 0);
+  // diminishing returns: the first levels of Smarts buy more than the last ones, and the odds level off
+  assert(fo(0).wrong - fo(5).wrong > fo(20).wrong - fo(25).wrong && fo(5).short - fo(0).short > fo(25).short - fo(20).short);
+  assert(fo(25).short <= 0.5 && fo(25).wrong < 0.01);
 });
 
 // ---- the race landscapes ----
@@ -390,10 +394,12 @@ test('Auto-nap: a duck too tired to train falls asleep by itself (no nap button)
   const a = human(room, 'Ann'); go(room);
   const d = room.game.ducks.get(a.id); d.quests = [];
   assert.equal(room.act(a, { op: 'nap' }).ok, false, 'there is no nap button any more');
-  d.energy = 12; // enough for one Easy run, then it's out
-  assert(room.act(a, { op: 'train', stat: 'run', diff: 'easy' }).ok); clock.t += 20000;
-  const r = room.act(a, { op: 'score', score: 12 });
-  assert(r.ok && r.nap > 0, 'it falls asleep right after the run');
+  d.energy = D.TRAIN_COST; // enough for one run, then it's out
+  assert(room.act(a, { op: 'train', stat: 'run' }).ok); clock.t += 20000;
+  const r0 = room.act(a, { op: 'score', score: 12 });
+  assert(r0.ok && r0.risk && r0.nap === 0, 'the Risk it! offer comes first: no nap while it is open');
+  const r = room.act(a, { op: 'keep' });
+  assert(r.ok && r.nap > 0, 'it falls asleep right after the run (once the offer is answered)');
   assert(room.fxLog.some((f) => f.kind === 'nap' && f.who === a.id), 'the TV hears about it');
   const v = room.playerState(a).state;
   assert(v.napLeft > 0 && v.napLeft <= v.napTotal, 'the phone shows the nap countdown');
@@ -428,6 +434,175 @@ test('Bots never press a nap button (there is none): they eat or fall asleep by 
   assert(!ops.includes('nap'), 'no nap op');
   assert(ops.filter((o) => o === 'train').length > 40, 'bots train');
   assert(naps > 0, 'tired bots fall asleep on their own');
+});
+
+// ---- Risk it!: one very hard round after a run; server-side, all six games ----
+const riskSetup = (settings = {}) => {
+  const { room, clock } = setup(0, { energy: 'normal', raceEvery: 300, catchUp: false, ...settings });
+  const a = human(room, 'Ann'); go(room);
+  const d = room.game.ducks.get(a.id); d.quests = []; d.mood = 50; d.energy = 100;
+  return { room, clock, a, d };
+};
+const runOnce = (room, clock, a, stat, score = 20) => { const t = room.act(a, { op: 'train', stat }); assert(t.ok, t.error); clock.t += 21000; return room.act(a, { op: 'score', score }); };
+test('Risk it!: a run offers one very hard round with a goal; meet it and the run\'s XP doubles, for all six mini-games', () => {
+  for (const stat of D.SKILLS) {
+    const { room, clock, a, d } = riskSetup();
+    const r = runOnce(room, clock, a, stat);
+    assert(r.ok && r.xp > 0 && r.risk, stat + ': an offer: ' + JSON.stringify(r));
+    assert.equal(r.risk.goal, D.riskGoal(D.GAME_FOR[stat], r.score)); assert(r.risk.goal >= D.RISK.min && r.risk.goal <= D.RISK.max);
+    assert.equal(r.risk.win, r.xp); assert.equal(r.risk.lose, r.xp - Math.floor(r.xp / 2));
+    assert(room.playerState(a).state.riskOffer && room.playerState(a).state.riskOffer.goal === r.risk.goal, 'the phone sees the offer');
+    const e0 = d.energy, x0 = d.xp[stat];
+    const k = room.act(a, { op: 'risk' });
+    assert(k.ok && k.game === D.GAME_FOR[stat] && k.goal === r.risk.goal && k.seconds === D.RISK.seconds && k.speed > 1, JSON.stringify(k));
+    assert.equal(d.energy, e0, 'a risk costs no extra energy');
+    assert.equal(room.act(a, { op: 'risk' }).ok, false, 'one risk per run');
+    clock.t += (D.RISK.seconds + 1.5) * 1000;
+    const w = room.act(a, { op: 'score', score: k.goal });
+    assert(w.ok && w.risk === 'win' && w.xp === r.xp, stat + ': the goal is met: ' + JSON.stringify(w));
+    assert.equal(d.xp[stat], x0 + r.xp, 'XP doubled'); assert.equal(d.training, null);
+    assert(room.fxLog.some((f) => f.kind === 'riskWin' && f.who === a.id));
+  }
+});
+test('Risk it!: miss the goal and the duck falls over and keeps only half of the run\'s XP (never below zero)', () => {
+  const { room, clock, a, d } = riskSetup();
+  const r = runOnce(room, clock, a, 'stamina', 21);
+  const x0 = d.xp.stamina - r.xp; // before the run
+  assert(room.act(a, { op: 'risk' }).ok); clock.t += (D.RISK.seconds + 1.5) * 1000;
+  const f = room.act(a, { op: 'score', score: r.risk.goal - 1 });
+  assert(f.ok && f.risk === 'fall' && f.xp === -(r.xp - Math.floor(r.xp / 2)), JSON.stringify(f));
+  assert.equal(d.xp.stamina, x0 + Math.floor(r.xp / 2), 'keeps half');
+  assert(room.fxLog.some((x) => x.kind === 'tumble' && x.who === a.id), 'the TV farm shows the fall');
+  // A level gained by the run can be lost again by the fall; XP never goes below zero.
+  const b = riskSetup(); b.d.xp.run = 0;
+  const r2 = runOnce(b.room, b.clock, b.a, 'run', 30); assert(r2.levelUp, 'the run levelled up');
+  assert(b.room.act(b.a, { op: 'risk' }).ok); b.clock.t += 17000;
+  const f2 = b.room.act(b.a, { op: 'score', score: 0 });
+  assert(f2.risk === 'fall' && b.d.xp.run === Math.floor(r2.xp / 2) && b.d.xp.run >= 0);
+  assert(f2.levelDown != null || D.level(b.d.xp.run) === r2.levelUp, 'a lost level is reported');
+});
+test('Risk it! is server-checked: no client-only XP (no offer, forged/early scores, walking away, replays)', () => {
+  const { room, clock, a, d } = riskSetup();
+  assert.equal(room.act(a, { op: 'risk' }).ok, false, 'no offer, no risk');
+  const r = runOnce(room, clock, a, 'swim', 20), x1 = d.xp.swim;
+  assert(room.act(a, { op: 'risk' }).ok);
+  clock.t += 5000; // a phone that reports a winning score after 5 s of a 15 s round
+  const early = room.act(a, { op: 'score', score: 99 });
+  assert(early.ok && early.risk === 'fall' && early.score <= Math.floor(5 * D.SCORE_RATE) + 1, 'too early to win (and capped by time): ' + JSON.stringify(early));
+  assert.equal(d.xp.swim, x1 - (r.xp - Math.floor(r.xp / 2)));
+  assert.equal(room.act(a, { op: 'score', score: 50 }).ok, false, 'nothing left to report');
+  // Walking away mid-round: cancel after the countdown is a fall; never reporting back is a fall too.
+  const r2 = runOnce(room, clock, a, 'swim', 20), x2 = d.xp.swim;
+  assert(room.act(a, { op: 'risk' }).ok); clock.t += 8000;
+  const c = room.act(a, { op: 'cancel' }); assert(c.risk === 'fall', JSON.stringify(c)); assert.equal(d.xp.swim, x2 - (r2.xp - Math.floor(r2.xp / 2)));
+  d.energy = 100; const r3 = runOnce(room, clock, a, 'swim', 20), x3 = d.xp.swim;
+  assert(room.act(a, { op: 'risk' }).ok);
+  stepUntil(clock, () => !d.training, 100);
+  assert.equal(d.xp.swim, x3 - (r3.xp - Math.floor(r3.xp / 2)), 'a round that never reports back counts as a fall');
+  // Cancel during the countdown keeps the XP (the race or the phone stopped it before it began).
+  d.energy = 100; const r4 = runOnce(room, clock, a, 'fly', 20), x4 = d.xp.fly;
+  assert(room.act(a, { op: 'risk' }).ok); clock.t += 1000;
+  assert.equal(room.act(a, { op: 'cancel' }).risk, undefined); assert.equal(d.xp.fly, x4);
+  // Keep it: the offer is gone. A new run also keeps the last one. An offer runs out by itself.
+  d.energy = 100; runOnce(room, clock, a, 'fly', 20); assert(room.act(a, { op: 'keep' }).ok); assert.equal(room.act(a, { op: 'risk' }).ok, false);
+  d.energy = 100; runOnce(room, clock, a, 'fly', 20); assert(d.riskOffer); assert(room.act(a, { op: 'train', stat: 'run' }).ok); assert.equal(d.riskOffer, null);
+  clock.t += 21000; room.act(a, { op: 'score', score: 20 }); assert(d.riskOffer);
+  stepUntil(clock, () => !d.riskOffer, 100); assert.equal(d.riskOffer, null);
+  assert.equal(room.act(a, { op: 'risk' }).ok, false, 'an offer that ran out');
+  // No offer for a run that scored nothing.
+  d.energy = 100; assert.equal(runOnce(room, clock, a, 'run', 0).risk, undefined, 'nothing to risk');
+});
+test('Risk it! and the race: no offer right before it; an open offer or a round cut by the race start keeps the XP (or wins if the goal was already met)', () => {
+  const { room, clock, a, d } = riskSetup({ raceEvery: 60, races: 6 });
+  stepUntil(clock, () => room.game.endsAt - clock.now() <= 25000);
+  const late = runOnce(room, clock, a, 'run', 20); // ~4 s left
+  assert(late.ok && !late.risk && /race/.test(late.riskNo), 'no time to risk it: ' + JSON.stringify(late));
+  room.game.next(); stepUntil(clock, () => room.game.phase === 'training');
+  // an open offer when the race starts: kept
+  d.energy = 100; const r = runOnce(room, clock, a, 'climb', 20), x0 = d.xp.climb; assert(r.risk);
+  room.game.next(); assert.equal(room.game.phase, 'race'); assert.equal(d.riskOffer, null); assert.equal(d.xp.climb, x0);
+  stepUntil(clock, () => room.game.phase === 'training');
+  // a risk round cut by the race start: kept, or won if the goal was already met
+  for (const [score, want] of [[0, 'kept'], [99, 'win']]) {
+    d.energy = 100; stepUntil(clock, () => room.game.phase === 'training' && room.game.endsAt - clock.now() > 50000);
+    const r2 = runOnce(room, clock, a, 'climb', 20), x2 = d.xp.climb;
+    assert(room.act(a, { op: 'risk' }).ok); clock.t += 8000;
+    room.game.next(); assert(d.training && d.training.cut);
+    const k = room.act(a, { op: 'score', score });
+    assert(k.ok && k.risk === want && k.cut, want + ': ' + JSON.stringify(k));
+    assert.equal(d.xp.climb, want === 'win' ? x2 + r2.xp : x2);
+    stepUntil(clock, () => room.game.phase === 'training');
+  }
+});
+test('Old saves: a difficulty on a run in progress or in the best scores still loads; old foods in a pantry convert', () => {
+  const { room, clock, a, d } = riskSetup();
+  d.bests = { run: { easy: 12, medium: 18, hard: 9 }, swim: 'junk' };
+  d.pantry = { walnuts: 2, cake: 1, seeds: 1, berries: 'x' };
+  d.training = { stat: 'run', at: clock.now(), diff: 'hard' }; delete d.riskOffer;
+  const v = room.playerState(a).state;
+  assert.equal(d.bests.run, 18); assert.equal(d.bests.swim, 0); assert.equal(v.bests.run, 18);
+  assert.deepEqual(d.pantry, { seeds: 1, corn: 2, feast: 1 }); assert.deepEqual(Object.keys(v.pantry), Object.keys(D.FOOD));
+  clock.t += 20000; const r = room.act(a, { op: 'score', score: 20 }); assert(r.ok && r.xp > 0 && r.risk, 'the old run finishes as a normal run');
+  assert(!('diffs' in v) && v.target === D.TARGET);
+  assert(D.migrate({ xp: { run: 5 } }).pantry.seeds === 0);
+});
+// ---- food: three sizes, bought on the training screen ----
+test('Food: exactly three, small to big (more energy costs more), no XP or mood; feeding works from the training screen and the pantry', () => {
+  const keys = Object.keys(D.FOOD); assert.equal(keys.length, 3);
+  const F = keys.map((k) => D.FOOD[k]);
+  for (let i = 1; i < F.length; i++) assert(F[i].cost > F[i - 1].cost && F[i].energy > F[i - 1].energy, 'small to big');
+  assert(F.every((f) => !f.xp && !f.mood && f.energy > 0 && f.icon && f.label));
+  for (const k of Object.keys(D.OLD_FOOD)) assert(!D.FOOD[k] && D.FOOD[D.OLD_FOOD[k]], k + ' maps to a new food');
+  const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/box/games/ducks.js'), 'utf8');
+  assert(/function pageTrain[\s\S]*?foodRow\(v, d\)/.test(src) && /data-feed="\$\{k\}"/.test(src), 'the training page has the food row');
+  assert(!/walnut/i.test(src) && !/walnut/i.test(require('node:fs').readFileSync(require('node:path').join(__dirname, '../box/games/ducks.js'), 'utf8').replace(/OLD_FOOD = \{[^}]*\}/, '')), 'nothing points at Walnuts');
+  const { room, clock, a, d } = riskSetup();
+  for (const k of keys) {
+    d.energy = 10; d.coins = 100; const c0 = d.coins;
+    const r = room.act(a, { op: 'feed', item: k });
+    assert(r.ok && !r.stored && r.item === k, JSON.stringify(r)); assert.equal(d.coins, c0 - D.FOOD[k].cost); assert.equal(d.energy, Math.min(100, 10 + D.FOOD[k].energy));
+    assert(room.fxLog.some((f) => f.kind === 'eat' && f.item === k && f.who === a.id), 'the TV feeder pops out ' + k);
+  }
+  // full: what you buy waits in the pantry; next time it is eaten from there (free)
+  d.energy = 100; d.coins = 50;
+  const s = room.act(a, { op: 'feed', item: 'corn' }); assert(s.ok && s.stored && d.pantry.corn === 1 && d.coins === 50 - D.FOOD.corn.cost);
+  assert.equal(room.act(a, { op: 'feed', item: 'corn' }).ok, false, 'full, and one already saved');
+  assert.equal(room.playerState(a).state.pantry.corn, 1);
+  d.energy = 30; const c1 = d.coins; const e = room.act(a, { op: 'feed', item: 'corn' });
+  assert(e.ok && e.fromPantry && d.pantry.corn === 0 && d.coins === c1 && d.energy === 75);
+  d.energy = 30; d.coins = 0; assert.equal(room.act(a, { op: 'feed', item: 'seeds' }).ok, false, 'no coins, none saved');
+});
+// ---- the Stamina mini-game (Bug Snack) is easier; the Risk it! pace is the old hard one ----
+test('Bug Snack (Stamina) normal pace is clearly easier than before; Risk it! is harder than normal', () => {
+  const vm = require('node:vm'), fs = require('node:fs'), path = require('node:path');
+  const ctx = { window: {}, location: { search: '' }, localStorage: { getItem: () => null, setItem() {} }, navigator: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/box/games/ducks-mini.js'), 'utf8'), ctx);
+  const N = ctx.window.DUCK_MINI.bugRules('normal'), R = ctx.window.DUCK_MINI.bugRules('risk');
+  const OLD = { life: 1.15, lifeMin: 0.5, bee: 0.2, slop: 10, moveFrom: 1 }; // the old Medium
+  assert(N.life >= OLD.life * 1.4 && N.lifeMin >= OLD.lifeMin * 1.8, 'bugs stay up much longer');
+  assert(N.bee <= OLD.bee * 0.7 && N.beeLose === 0, 'fewer bees, and a bee only breaks the combo');
+  assert(N.slop > OLD.slop && N.moveFrom > OLD.moveFrom && N.perfect > 0.4, 'bigger fingertip slop, bugs walk later, a longer PERFECT window');
+  assert(R.life < N.life && R.bee > N.bee && R.slop < N.slop && R.beeLose > 0, 'Risk it! is the hard pace');
+  // Enough bugs come up for the ⭐ target (more each stage): well over one per point even at the start pace.
+  assert(20 / N.spawn > 1.5 * D.TARGET);
+});
+// ---- balance: Smarts is no longer the stat that wins races ----
+test('Balance: on the default course, a level of Smarts buys no more than a level of Run, Swim or Climb', () => {
+  const N = 50, share = {}, place = {};
+  for (const [L, k] of [[3, 3], [8, 4]]) {
+    for (const s of D.SKILLS) { share[s] = 0; place[s] = 0; }
+    for (let seed = 1; seed <= N; seed++) {
+      const { room } = setup(0, { terrain: 'mixed', course: 'classic', weather: false, races: 10, raceEvery: 300 }, seed);
+      const ps = D.SKILLS.map((s) => [s, human(room, 'P' + s)]); go(room);
+      for (const [s, p] of ps) { const d = room.game.ducks.get(p.id); for (const x of D.SKILLS) d.xp[x] = D.xpFor(L + (x === s ? k : 0)); d.mood = 60; d.tactic = 'steady'; d.perks = []; d.gear = []; }
+      room.game.next();
+      for (const [s, p] of ps) { const r = room.game.lastRace.results.find((x) => x.id === p.id); if (r.place === 1) share[s]++; place[s] += r.place; }
+    }
+    const best = D.SKILLS.slice().sort((x, y) => place[x] - place[y]);
+    assert(best[0] !== 'smarts', `L${L}+${k}: Smarts is not the best skill: ${best.map((s) => s + ' ' + (place[s] / N).toFixed(2)).join(', ')}`);
+    assert(share.smarts / N <= 0.3, `L${L}+${k}: Smarts wins ${share.smarts}/${N}`);
+    for (const s of ['run', 'swim', 'climb']) assert(place.smarts >= place[s] - N * 0.6, `L${L}+${k}: Smarts vs ${s}: ${place.smarts / N} vs ${place[s] / N}`);
+  }
 });
 
 console.log(`\nAll ${passed} JustRaiseDucks tests passed.`);

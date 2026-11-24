@@ -7,6 +7,8 @@
 // Games: Hurdle Dash (Run), Paddle Power (Swim), Sky Rings (Fly), Cliff Climb (Climb), Bug Snack (Stamina),
 // Lily Path (Smarts: watch the frog's path across the lily pads, then hop it from memory).
 // DUCK_MINI.stop() ends a game at once (the race is starting): the score so far is sent as usual.
+// Every run plays at one normal pace. A Risk it! round (opts.goal) plays the very hard pace: faster,
+// tighter windows, more hazards, with its goal on the HUD.
 // Every hit test uses the same numbers the drawing uses (DUCK_ART.duckBox for the duck, and
 // each object's drawn size), so what you see is what counts. Add ?dkdebug=1 to the page URL
 // to draw the hitboxes on top.
@@ -34,9 +36,10 @@
   // path is one hop longer; a wrong pad is a splash: the combo is lost and the frog shows the same
   // path again. The play() overlay draws it; tools/test-box-ducks.js plays it headless.
   //   hooks.good(pad, perfect), hooks.clear(len), hooks.bad(pad), hooks.turn(), hooks.show()
-  function lilyPath(diff = 'medium', rng = Math.random, hooks = {}) {
-    const cols = diff === 'hard' ? 4 : 3, rows = 4, n = cols * rows;
-    const L = { cols, rows, n, len: diff === 'easy' ? 2 : 3, path: [], phase: 'wait', idx: 0, cleared: 0, frog: -1, frogU: 0, lit: [], hopT: diff === 'easy' ? 0.62 : diff === 'hard' ? 0.42 : 0.5, at: 0, lastTap: 0, quick: diff === 'easy' ? 0.6 : diff === 'hard' ? 0.45 : 0.5 };
+  //   mode: 'normal' (3×4 pads) or 'risk' (the Risk it! round: 4×4 pads, a faster frog)
+  function lilyPath(mode = 'normal', rng = Math.random, hooks = {}) {
+    const risk = mode === 'risk', cols = risk ? 4 : 3, rows = 4, n = cols * rows;
+    const L = { cols, rows, n, len: 3, path: [], phase: 'wait', idx: 0, cleared: 0, frog: -1, frogU: 0, lit: [], hopT: risk ? 0.42 : 0.5, at: 0, lastTap: 0, quick: risk ? 0.45 : 0.5 };
     const nb = (i) => { const c = i % cols, r = Math.floor(i / cols), out = []; for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { if (!dr && !dc) continue; const c2 = c + dc, r2 = r + dr; if (c2 >= 0 && c2 < cols && r2 >= 0 && r2 < rows) out.push(r2 * cols + c2); } return out; };
     L.newPath = () => {
       // a walk from the bottom row (next to the duck's bank), never back onto a pad it already used
@@ -73,6 +76,16 @@
     };
     return L;
   }
+  // ---------- Bug Snack (Stamina): its pacing ----------
+  // Normal: bugs stay up a long while, few bees (a bee only breaks your combo), bugs only start
+  // walking in the final stretch, a big fingertip slop. Risk it!: the old hard pace (short-lived,
+  // walking bugs, lots of bees that cost a point, a tight slop). life/spawn are seconds at the start
+  // (they shrink a little over the run); the game's speed and stage divide them.
+  function bugRules(mode = 'normal') {
+    return mode === 'risk'
+      ? { life: 1.15, lifeMin: 0.5, spawn: 0.62, spawnMin: 0.22, bee: 0.2, beeLose: 1, moveFrom: 1, move: 0.8, twin: 0.5, perfect: 0.4, slop: 5 }
+      : { life: 1.7, lifeMin: 0.95, spawn: 0.72, spawnMin: 0.36, bee: 0.12, beeLose: 0, moveFrom: 2, move: 0.4, twin: 0.3, perfect: 0.55, slop: 15 };
+  }
   // The score rules every mini-game uses (play() below): a clean action scores base (+1 PERFECT), ×2
   // from a combo of 8, ×3 from 16; a mistake breaks the combo. Exported so tests can score a run.
   function scorer() {
@@ -82,21 +95,68 @@
     return S;
   }
 
+  // ---------- Risk it!: the result ----------
+  // win: the duck leaps and sparkles (XP doubled); fall: it runs, trips and tumbles over, dizzy (keeps
+  // half); kept: the race stopped the round first (nothing changes).
+  function riskScene(cv, duck, kind) {
+    const g = cv.getContext('2d'), ART = A(), W = cv.width, H = cv.height, t0 = performance.now();
+    const step = () => {
+      if (!document.body.contains(cv)) return;
+      const t = (performance.now() - t0) / 1000;
+      const sk = g.createLinearGradient(0, 0, 0, H); sk.addColorStop(0, kind === 'win' ? '#ffcf5a' : kind === 'fall' ? '#8fb6d8' : '#a8d8ff'); sk.addColorStop(1, kind === 'win' ? '#ffefb0' : '#e3f1fb'); g.fillStyle = sk; g.fillRect(0, 0, W, H);
+      g.fillStyle = '#6cc26a'; g.fillRect(0, H * 0.78, W, H); g.fillStyle = '#5aa64f'; g.fillRect(0, H * 0.78, W, 6);
+      const gy = H * 0.78, s = 2.6;
+      g.save();
+      if (kind === 'win') {
+        const hop = Math.abs(Math.sin(t * 4.2)) * 46; // happy jumps
+        ART.drawDuck(g, W / 2, gy - 18 * s - hop, s, duck.color, duck.hat, t, hop > 6 ? 'fly' : 'stand', false, duck.stage);
+        for (let k = 0; k < 8; k++) { const a = t * 2 + (k * Math.PI) / 4, r = 70 + Math.sin(t * 3 + k) * 12; ART.drawIcon(g, k % 2 ? 'star' : 'sparkle', W / 2 + Math.cos(a) * r * 1.4, gy - 70 - hop * 0.5 + Math.sin(a) * r * 0.6, 26, t); }
+      } else if (kind === 'fall') {
+        // run in (0-0.8 s), trip (0.8-1.3 s: up and over), lie flat and spin stars
+        const runX = Math.min(1, t / 0.8), x = W * 0.18 + (W * 0.32) * runX;
+        if (t < 0.8) ART.drawDuck(g, x, gy - 18 * s, s, duck.color, duck.hat, t * 2, 'run', false, duck.stage);
+        else {
+          const u = Math.min(1, (t - 0.8) / 0.5), bounce = t < 1.3 ? Math.sin(u * Math.PI) * 40 : Math.max(0, Math.sin((t - 1.3) * 9) * 10 * Math.exp(-(t - 1.3) * 4));
+          g.translate(x + u * 30, gy - 10 * s - bounce); g.rotate(u * Math.PI * 0.62 + (t > 1.3 ? Math.sin(t * 2) * 0.03 : 0));
+          ART.drawDuck(g, 0, -8 * s, s, duck.color, duck.hat, 0, 'stand', false, duck.stage);
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          if (t > 1.1) ART.drawIcon(g, 'dizzy', x + 40, gy - 80, 56, t);
+          if (t < 1.6) { g.globalAlpha = Math.max(0, 1 - (t - 0.8) / 0.8); g.fillStyle = '#d9b98a'; for (let k = 0; k < 6; k++) { g.beginPath(); g.arc(x + 20 + k * 14, gy - 4 - Math.sin(k + t * 9) * 8, 8, 0, Math.PI * 2); g.fill(); } g.globalAlpha = 1; }
+        }
+      } else ART.drawDuck(g, W / 2, gy - 18 * s, s, duck.color, duck.hat, t, 'stand', false, duck.stage);
+      g.restore();
+      requestAnimationFrame(step);
+    };
+    step();
+  }
+  function riskCard(card, r, line, SK, close, duck, opts, stopReason) {
+    const pr = r.progress, bar = pr ? `<div class="dk-xpbar"><span>${SK[r.stat]} Lv ${pr.level}</span><div class="bar"><i style="width:${Math.round(((pr.have - pr.gained) / pr.need) * 100)}%"></i><i class="gain" style="width:${Math.round((pr.gained / pr.need) * 100)}%"></i></div><small>${pr.need - pr.have} XP to Lv ${pr.level + 1}</small></div>` : '';
+    const nm = BOX.esc(duck.name || 'Your duck'), napLine = r.nap ? `<p class="dk-napnote">😴 ${nm} is worn out: nap time!</p>` : '';
+    const head = r.risk === 'win' ? '<div class="dk-badge good">🎲 YOU DID IT!</div>' : r.risk === 'fall' ? `<div class="dk-badge bad">💥 ${nm} FELL!</div>` : `<div class="dk-badge">${BOX.esc(stopReason || 'Stopped for the race')}</div>`;
+    const gain = r.risk === 'win' ? `<p class="dk-gain"><b>+${r.xp}</b> bonus XP · your XP is <b>doubled</b>!</p>`
+      : r.risk === 'fall' ? `<p class="dk-loss"><b>−${-r.xp}</b> XP · ${nm} keeps half (+${r.base + r.xp} of ${r.base})</p>`
+      : '<p class="muted">The race started before the goal: you keep all your XP.</p>';
+    card.className = 'dk-result risk ' + r.risk;
+    card.innerHTML = `${head}<canvas class="dk-riskcv" width="520" height="220"></canvas><h2>${r.score} / 🎯 ${r.goal}</h2>${line}${gain}${r.levelUp ? `<p class="lvup">LEVEL UP! ${SK[r.stat]} is now level ${r.levelUp} 🎉</p>` : ''}${r.levelDown != null ? `<p class="dk-loss">${SK[r.stat]} slipped back to level ${r.levelDown}</p>` : ''}${bar}${napLine}<div class="dk-resbtns"><button class="btn big">Back to my farm</button></div>`;
+    riskScene(card.querySelector('canvas'), duck, r.risk);
+    BOX.sfx(r.risk === 'win' ? 'win' : r.risk === 'fall' ? 'boo' : 'chime'); buzz(r.risk === 'win' ? [40, 40, 80] : r.risk === 'fall' ? [120, 60, 200] : 30);
+    card.querySelector('button').onclick = close;
+  }
+
   // The game on screen right now (DUCK_MINI.stop / active).
   let current = null;
   function play(kind, seconds, duck, done, opts = {}) {
-    const SP = opts.speed || 1, TARGET = opts.target || 0, DIFF = opts.diff || 'medium';
-    const DL = { easy: '🌱 Easy', medium: '⚡ Medium', hard: '🔥 Hard' }[DIFF] || '';
-    // Hit windows: Easy forgives a little more, Hard a little less.
-    const EASE = { easy: 1.3, medium: 1, hard: 0.85 }[DIFF] || 1;
-    const pick = (o) => (o[DIFF] != null ? o[DIFF] : o.medium);
+    // GOAL: a Risk it! round (the very hard pace); else the normal game with its ⭐ TARGET.
+    const SP = opts.speed || 1, GOAL = opts.goal || 0, TARGET = GOAL ? 0 : opts.target || 0, MODE = GOAL ? 'risk' : 'normal';
+    const pick = (o) => (o[MODE] != null ? o[MODE] : o.normal);
     const seenKey = 'dk.seen.' + kind; let first = false;
     try { first = !localStorage.getItem(seenKey); localStorage.setItem(seenKey, '1'); } catch { /* private mode */ }
     const ov = document.createElement('div'); ov.className = 'dk-over';
-    ov.innerHTML = `<div class="dk-hud"><b class="sc">0</b><span class="mid">${DL}${TARGET ? ` · ⭐ ${TARGET}` : ''}${opts.best ? ` · best ${opts.best}` : ''}</span><span class="tm">${seconds}</span></div>
+    ov.innerHTML = `<div class="dk-hud"><b class="sc">0</b><span class="mid">${GOAL ? `🎲 RISK IT · 🎯 <b class="gl">0/${GOAL}</b>` : `${TARGET ? `⭐ ${TARGET}` : ''}${opts.best ? ` · best ${opts.best}` : ''}`}</span><span class="tm">${seconds}</span></div>
       <div class="dk-combo" hidden></div><div class="dk-banner" hidden></div>
       <canvas></canvas>${kind === 'paddle' ? '<div class="dk-pads"><button data-pad="L">LEFT</button><button data-pad="R">RIGHT</button></div>' : ''}
-      <div class="dk-tip ${first ? 'first' : ''}">${first ? '<b>How to play</b>' : ''}${TIPS[kind]}</div><div class="dk-ready">3</div>`;
+      <div class="dk-tip ${first ? 'first' : ''} ${GOAL ? 'risk' : ''}">${GOAL ? `<b>🎲 RISK IT!</b>Score <b>🎯 ${GOAL}</b> in ${seconds} seconds. Everything is faster and trickier!<br>` : first ? '<b>How to play</b>' : ''}${TIPS[kind]}</div><div class="dk-ready">3</div>${GOAL ? '<div class="dk-goalbar"><i></i></div>' : ''}`;
+    if (GOAL) ov.classList.add('risk');
     document.body.appendChild(ov); document.body.classList.add('dk-lock');
     const close = () => { ov.remove(); document.body.classList.remove('dk-lock'); if (window.DUCK_MINI.dbg && window.DUCK_MINI.dbg.ov === ov) window.DUCK_MINI.dbg = null; if (current && current.ov === ov) current = null; };
     // iPhones start selecting text / show the magnifier on a held finger: stop that here.
@@ -115,6 +175,10 @@
     const hud = () => {
       const el = ov.querySelector('.sc'); el.textContent = score;
       if (TARGET && score >= TARGET && !el.classList.contains('star')) { el.classList.add('star'); BOX.sfx('chime'); banner('⭐ Target hit!'); }
+      if (GOAL) {
+        const gl = ov.querySelector('.gl'), gb = ov.querySelector('.dk-goalbar i'); gl.textContent = `${Math.min(score, GOAL)}/${GOAL}`; if (gb) gb.style.width = Math.min(100, (score / GOAL) * 100) + '%';
+        if (score >= GOAL && !ov.classList.contains('made')) { ov.classList.add('made'); BOX.sfx('win'); buzz([40, 30, 40]); banner('🎯 GOAL! Keep going!'); }
+      }
       const c = ov.querySelector('.dk-combo'); const mult = combo >= 16 ? 3 : combo >= 8 ? 2 : 1;
       c.hidden = combo < 3; c.textContent = `Combo ${combo}${mult > 1 ? ` · ×${mult}` : ''}`; c.className = 'dk-combo m' + mult;
     };
@@ -160,7 +224,7 @@
           S.G = 2600 * U; S.V1 = Math.sqrt(2 * S.G * 150 * U); S.V2 = S.V1 * 0.75; // a 150 px jump, ~0.68 s in the air (clears a hurdle with ~0.2 s to spare)
           S.bs = 1.15 * U; S.birdR = 11 * S.bs; // bird body (hit) radius
           S.birdH = 39 * S.ds + 14 * U + S.birdR; // above a grown duck's head, with room to spare
-          S.slack = pick({ easy: 5, medium: 2, hard: 0 }) * U;
+          S.slack = pick({ normal: 2, risk: 0 }) * U;
         },
         mode() { return S.stun > 0 ? 'stand' : S.h > 0.5 ? 'fly' : 'run'; },
         y() { return S.surf - S.h - 18 * S.ss; },
@@ -175,7 +239,7 @@
           S.spawn -= dt;
           if (S.spawn <= 0) {
             const lastIt = S.items[S.items.length - 1], room = !lastIt || lastIt.x < W - 170 * U; // never a bird right on top of a hurdle
-            const r = Math.random(), birdRate = DIFF === 'easy' ? (stage === 2 ? 0.14 : 0) : stage >= 1 ? 0.22 : 0, x = W + 40 * U;
+            const r = Math.random(), birdRate = stage >= 1 ? 0.22 : 0, x = W + 40 * U;
             if (r < birdRate && room) S.items.push({ k: 'bird', x, y: S.surf - S.birdH, ph: Math.random() * TAU });
             else if (r < 0.42) S.items.push({ k: 'corn', x, y: S.surf - [30, 95, 150][Math.floor(Math.random() * 3)] * U, ph: Math.random() * TAU });
             else S.items.push({ k: 'hurdle', x, tall: stage === 2 && Math.random() < 0.35, clear: Infinity });
@@ -255,7 +319,7 @@
       paddle: {
         init() {
           S.side = null; S.strokes = 0; S.x = 0; S.lastStroke = 0; S.lastCount = -1; S.lastBeat = -1; S.flash = 0; S.rip = [];
-          S.beatT = pick({ easy: 0.5, medium: 0.42, hard: 0.36 }); S.win = pick({ easy: 0.13, medium: 0.1, hard: 0.075 }); S.per = pick({ easy: 4, medium: 5, hard: 6 });
+          S.beatT = pick({ normal: 0.42, risk: 0.36 }); S.win = pick({ normal: 0.1, risk: 0.075 }); S.per = 5;
           S.prev = 0; S.next = S.beatT; S.beatI = 0; S.ds = 2.2 * U; S.cy = H * 0.56;
         },
         tick(el) { while (el >= S.next) { S.prev = S.next; S.beatI++; S.next = S.prev + S.beatT / SM[stageOf(S.prev)]; } },
@@ -321,8 +385,8 @@
           S.ds = 1.75 * U; S.dx = Math.round(W * 0.28); S.y = H * 0.5; S.vy = 0; S.gust = 0; S.gustT = 4; S.tilt = 0; S.ft = 0;
           S.VMAX = 360 * U; S.top = 66; S.bot = H - 8;
           S.R = ART.duckBox(0, 0, S.ds, 'fly', 0, duck.stage).rad;
-          S.margin = pick({ easy: 40, medium: 30, hard: 21 }) * U; S.rim = 8 * U;
-          S.cloudK = pick({ easy: 0.72, medium: 0.82, hard: 0.9 }); S.gustK = pick({ easy: 0.6, medium: 1, hard: 1.25 });
+          S.margin = pick({ normal: 30, risk: 21 }) * U; S.rim = 8 * U;
+          S.cloudK = pick({ normal: 0.82, risk: 0.9 }); S.gustK = pick({ normal: 1, risk: 1.25 });
           S.lastRing = null; S.lastCloud = null; S.gap = 1;
         },
         // the duck's hit circle right now (same t, tilt and scale as the drawing)
@@ -343,7 +407,7 @@
           S.spawn -= dt;
           if (S.spawn <= 0) {
             const recent = (o, d) => o && o.x > W - d * U;
-            if (S.lastRing && Math.random() < 0.22 * SP * (DIFF === 'easy' ? 0.75 : 1)) {
+            if (S.lastRing && Math.random() < 0.22 * SP) {
               const cs = (1 + Math.random() * 0.25) * U, puffs = [[0, 0, 20], [18, -8, 16], [-18, -5, 15], [8, 9, 15], [-9, 9, 14]].map(([x, y, r]) => [x * cs, y * cs, r * cs]);
               let y = 0; for (let k = 0; k < 10; k++) { y = S.top + 40 * U + Math.random() * (S.bot - S.top - 80 * U); if (!recent(S.lastRing, 230) || Math.abs(y - S.lastRing.y) > S.lastRing.open + 70 * U) break; }
               const it = { cloud: true, x: W + 50 * U, y, puffs, ph: Math.random() * 10 }; S.items.push(it); S.lastCloud = it;
@@ -420,7 +484,7 @@
       // ---------------- Cliff Climb ----------------
       // The wing swings across the wall; its grab point (the white dot) must be over the hold.
       climb: {
-        init() { S.hand = 0; S.sp = 2.3; S.lastEl = 0; S.height = 0; S.shown = 0; S.rowY = Math.round(H * 0.34); S.tol = pick({ easy: 8, medium: 4, hard: 1 }) * U; S.ds = 2 * U; this.next(0); },
+        init() { S.hand = 0; S.sp = 2.3; S.lastEl = 0; S.height = 0; S.shown = 0; S.rowY = Math.round(H * 0.34); S.tol = pick({ normal: 4, risk: 1 }) * U; S.ds = 2 * U; this.next(0); },
         // the grab point, as a fraction of the width (extrapolated to the tap's exact time)
         handAt(el) { return 0.05 + 0.9 * (Math.sin(S.hand + Math.max(0, el - S.lastEl) * S.sp) + 1) / 2; },
         next(el) {
@@ -492,19 +556,21 @@
       // The rules are lilyPath() above. Pads sit in a grid over the pond; a tap counts on the
       // nearest pad within its drawn radius (+ a fingertip's slop per difficulty). The duck hops to
       // each pad you tap (a wrong one: splash!). ?dkdebug=1 shows the hit circles and the next pad.
+      // Pads score without the combo multiplier: a good memory and quick taps already score fast here,
+      // so Lily Path pays about what the other five games pay (it used to pay up to three times more).
       maze: {
         init() {
           const hk = {
-            good: (i, perfect) => { const p = this.pad(i); this.hopTo(i); good(p.x, p.y - p.r * 0.9, 1, perfect, perfect ? 'QUICK' : ''); },
+            good: (i, perfect) => { const p = this.pad(i); this.hopTo(i); good(p.x, p.y - p.r * 0.9, 1, perfect, perfect ? 'QUICK' : '', true); },
             clear: (len) => { const p = this.pad(S.L.path[len - 1]); good(p.x, p.y - p.r * 1.8, len - 1, false, 'Path clear!', true); banner(len >= 6 ? `🧠 ${len} hops! Genius!` : `🐸 ${len} hops: next one is longer!`); S.party = 0.8; },
             bad: (i) => { const p = i >= 0 ? this.pad(i) : { x: S.tapX, y: S.tapY }; this.hopTo(i, true); bad(p.x, p.y - 30 * U, 'Splash! Watch again'); },
             turn: () => { banner('Your turn!'); BOX.sfx('tick'); },
             show: () => { S.duckHop = null; S.duck = -1; },
           };
-          S.L = lilyPath(DIFF, Math.random, hk);
+          S.L = lilyPath(MODE, Math.random, hk);
           S.top = 118 * U; S.bank = H - 96 * U;
           const cw = W / S.L.cols, ch = (S.bank - S.top) / S.L.rows;
-          S.cw = cw; S.ch = ch; S.pr = Math.min(cw, ch) * 0.36; S.slop = pick({ easy: 14, medium: 8, hard: 4 }) * U;
+          S.cw = cw; S.ch = ch; S.pr = Math.min(cw, ch) * 0.36; S.slop = pick({ normal: 8, risk: 4 }) * U;
           S.duck = -1; S.duckHop = null; S.splash = 0; S.party = 0; S.ds = clamp(S.pr / 22, 1.2, 2.1);
           S.started = false;
         },
@@ -592,7 +658,7 @@
       // Each bug is drawn with body radius b.r. A tap counts on a bug within b.r·1.1 + slop (a
       // fingertip's worth); a bee only stings when the tap is right on it (b.r·0.85).
       bugs: {
-        init() { S.cols = 3; S.rows = 4; S.top = 70; S.slop = pick({ easy: 16, medium: 10, hard: 5 }) * U; },
+        init() { S.cols = 3; S.rows = 4; S.top = 70; S.R = bugRules(MODE); S.slop = S.R.slop * U; },
         cell(i, j) { const cw = W / S.cols, ch = (H - S.top) / S.rows; return { x: i * cw + cw / 2, y: S.top + j * ch + ch / 2, cw, ch }; },
         press(x, y, el) {
           let best = null, bd = 1e9, bee = null;
@@ -600,24 +666,24 @@
             if (b.hit) continue; const d = Math.hypot(b.x - x, b.y - y);
             if (b.bee) { if (d < b.r * 0.85) bee = b; } else if (d < b.r * 1.1 + S.slop && d - b.r < bd) { bd = d - b.r; best = b; }
           }
-          if (bee && !(best && bd <= 0)) best = bee; // right on a bee (and not right on a bug): ouch
+          if (bee && !(best && bd <= 0)) best = bee; // right on a bee (and not right on a bug): ouch (normal: the combo only)
           if (!best) { if (combo) { float(x, y, 'miss', '#ffffffaa', 16); quietMiss('empty tap'); } return; } // empty taps only break the combo
           best.hit = true; best.ttl = 0.3;
-          if (best.bee) bad(best.x, best.y, 'Ouch!', 1);
-          else good(best.x, best.y - best.r, best.gold ? 3 : 1, best.age < best.life * 0.4, best.gold ? 'Gold' : '');
+          if (best.bee) bad(best.x, best.y, 'Ouch!', S.R.beeLose);
+          else good(best.x, best.y - best.r, best.gold ? 3 : 1, best.age < best.life * S.R.perfect, best.gold ? 'Gold' : '');
         },
         update(dt, el) {
           S.spawn -= dt;
           if (S.spawn <= 0) {
-            const n = stage === 2 && Math.random() < 0.5 ? 2 : 1;
+            const R = S.R, n = stage === 2 && Math.random() < R.twin ? 2 : 1;
             for (let k = 0; k < n; k++) {
               const i = Math.floor(Math.random() * S.cols), j = Math.floor(Math.random() * S.rows);
               if (S.items.some((b) => b.i === i && b.j === j && !b.hit)) continue;
-              const c = this.cell(i, j), r = Math.random(), life = Math.max(0.5, (1.15 - el * 0.02) / (SP * SM[stage]));
-              const gold = r < 0.08, bee = !gold && r < 0.08 + 0.2 * SP * (stage === 2 ? 1.3 : 1);
-              S.items.push({ i, j, x: c.x, y: c.y, r: Math.min(c.cw, c.ch) * 0.24, life: gold ? life * 0.6 : life, ttl: gold ? life * 0.6 : life, age: 0, gold, bee, kind: bee ? 'bee' : gold ? 'beetle' : ['caterpillar', 'cricket', 'ladybug'][(i + j) % 3], vx: stage >= 1 ? (Math.random() - 0.5) * c.cw * 0.8 : 0 });
+              const c = this.cell(i, j), r = Math.random(), life = Math.max(R.lifeMin, (R.life - el * 0.02) / (SP * SM[stage]));
+              const gold = r < 0.08, bee = !gold && r < 0.08 + R.bee * SP * (stage === 2 ? 1.3 : 1);
+              S.items.push({ i, j, x: c.x, y: c.y, r: Math.min(c.cw, c.ch) * 0.24, life: gold ? life * 0.6 : life, ttl: gold ? life * 0.6 : life, age: 0, gold, bee, kind: bee ? 'bee' : gold ? 'beetle' : ['caterpillar', 'cricket', 'ladybug'][(i + j) % 3], vx: stage >= R.moveFrom ? (Math.random() - 0.5) * c.cw * R.move : 0 });
             }
-            S.spawn = Math.max(0.22, (0.62 - el * 0.012) / (SP * SM[stage]));
+            S.spawn = Math.max(R.spawnMin, (R.spawn - el * 0.012) / (SP * SM[stage]));
           }
           for (const b of S.items) {
             b.ttl -= dt; b.age += dt;
@@ -638,7 +704,7 @@
             }
             const pop = Math.min(1, b.age * 8), leave = Math.min(1, b.ttl * 6), s = pop * leave;
             if (b.gold) { g.fillStyle = 'rgba(255,215,64,.35)'; g.beginPath(); g.arc(b.x, b.y, b.r * 1.5, 0, TAU); g.fill(); }
-            if (!b.bee && b.age < b.life * 0.4) { const k = b.age / (b.life * 0.4); g.strokeStyle = `rgba(255,210,63,${0.9 - k * 0.5})`; g.lineWidth = 3; g.beginPath(); g.arc(b.x, b.y, b.r * (1.6 - k * 0.45), 0, TAU); g.stroke(); } // PERFECT while this ring shows
+            if (!b.bee && b.age < b.life * S.R.perfect) { const k = b.age / (b.life * S.R.perfect); g.strokeStyle = `rgba(255,210,63,${0.9 - k * 0.5})`; g.lineWidth = 3; g.beginPath(); g.arc(b.x, b.y, b.r * (1.6 - k * 0.45), 0, TAU); g.stroke(); } // PERFECT while this ring shows
             ART.drawBug(g, b.kind, b.x, b.y, b.r * s, el + b.i);
             g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(b.x - b.r, b.y + b.r + 8 * U, b.r * 2, 4); g.fillStyle = b.bee ? '#ff8a8a' : '#fff'; g.fillRect(b.x - b.r, b.y + b.r + 8 * U, b.r * 2 * Math.max(0, b.ttl / b.life), 4);
           }
@@ -662,17 +728,17 @@
 
     // ---- 3, 2, 1, GO! ----
     const ready = ov.querySelector('.dk-ready');
-    let n = 3; BOX.sfx('tick'); const STEP = first ? 1000 : 520;
+    let n = 3; BOX.sfx(GOAL ? 'drum' : 'tick'); const STEP = GOAL ? 900 : first ? 1000 : 520; // a Risk it! round: a slower, tense countdown
     // Stop at once (the race is starting): during the countdown the run is cancelled; once it is going,
     // it finishes right here with the score so far.
-    let stopReason = null;
+    let stopReason = null, beat = 0;
     current = { ov, active: () => !over, stop(reason) { if (over) return; if (!started) { over = true; clearInterval(countdown); close(); if (opts.cancel) opts.cancel(); return; } stopReason = reason || 'Training stopped.'; finish(); } };
     const countdown = setInterval(() => {
       n--;
-      if (n > 0) { ready.textContent = n; BOX.sfx('tick'); return; }
+      if (n > 0) { ready.textContent = n; BOX.sfx('tick'); if (GOAL) buzz(30); return; }
       clearInterval(countdown); ready.textContent = 'GO!'; BOX.sfx('start'); started = true; t0 = last = performance.now();
       setTimeout(() => ready.remove(), 400); requestAnimationFrame(frame);
-      setTimeout(() => { const tp = ov.querySelector('.dk-tip'); if (tp) tp.classList.add('fade'); }, kind === 'maze' ? 1200 : first ? 4000 : 2500); // Lily Path: the tip must not hide the frog
+      setTimeout(() => { const tp = ov.querySelector('.dk-tip'); if (tp) tp.classList.add('fade'); }, kind === 'maze' ? 1200 : GOAL ? 1600 : first ? 4000 : 2500); // Lily Path: the tip must not hide the frog
     }, STEP);
 
     function frame(now) {
@@ -680,6 +746,8 @@
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       const el = (now - t0) / 1000, left = Math.max(0, seconds - el);
       ov.querySelector('.tm').textContent = Math.ceil(left);
+      // Risk it!: the last five seconds without the goal tick like a heartbeat
+      if (GOAL && score < GOAL && left <= 5 && left > 0 && Math.ceil(left) !== beat) { beat = Math.ceil(left); BOX.sfx('tick'); buzz(25); ov.classList.remove('pulse'); void ov.offsetWidth; ov.classList.add('pulse'); }
       const st = stageOf(el); if (st !== stage) { stage = st; banner(stage === 1 ? '⚡ SPEED UP!' : '🔥 FINAL STRETCH!'); BOX.sfx('gavel'); }
       G.update(dt, el);
       g.save();
@@ -707,20 +775,33 @@
       const line = `<p class="dk-stats">✅ ${stats.ok} · ✨ ${stats.perfect} perfect · 🔗 best combo ${bestCombo}${stats.miss ? ` · 💥 ${stats.miss}` : ''}</p>`;
       done(score, (r) => {
         const SK = { run: 'Run', swim: 'Swim', fly: 'Fly', climb: 'Climb', stamina: 'Stamina', smarts: 'Smarts' };
+        if (r && r.ok && r.risk && typeof r.risk === 'string') return riskCard(card, r, line, SK, close, duck, opts, stopReason);
         const cut = stopReason ? `<div class="dk-badge">${BOX.esc(stopReason)}</div><p class="muted">Training stopped for the race. Your points so far still count.</p>` : '';
         const napLine = r && r.nap ? `<p class="dk-napnote">😴 ${BOX.esc(duck.name || 'Your duck')} is worn out: nap time!</p>` : '';
         const pr = r && r.progress, bar = pr ? `<div class="dk-xpbar"><span>${SK[r.stat]} Lv ${pr.level}</span><div class="bar"><i style="width:${Math.round(((pr.have - pr.gained) / pr.need) * 100)}%"></i><i class="gain" style="width:${Math.round((pr.gained / pr.need) * 100)}%"></i></div><small>${pr.need - pr.have} XP to Lv ${pr.level + 1}</small></div>` : '';
-        const again = opts.again && !stopReason && !(r && r.nap) ? '<button class="btn ghost dk-again">↻ Again</button>' : '';
+        const offer = r && r.ok && r.risk && opts.riskIt ? r.risk : null;
+        const again = opts.again && !stopReason && !(r && r.nap) && !offer ? '<button class="btn ghost dk-again">↻ Again</button>' : '';
+        // Risk it?: one very hard round for double the XP, or keep what you have.
+        const riskBox = offer ? `<div class="dk-riskoffer"><div class="dk-riskh">🎲 Risk it?</div><p>One <b>very hard</b> ${offer.seconds}-second round. Score <b class="goal">🎯 ${offer.goal}</b> to <b class="win">double it: +${offer.win} XP</b>. Miss and your duck falls: <b class="lose">−${offer.lose} XP</b>.</p><div class="dk-riskbtns"><button class="btn big dk-riskgo">🎲 Risk it!</button><button class="btn big ghost dk-keep">✅ Keep it</button></div><div class="dk-risktime"><i></i></div></div>` : r && r.riskNo ? `<p class="muted">${BOX.esc(r.riskNo)}</p>` : '';
         if (r && r.practice) card.innerHTML = `<div class="dk-badge good">🎮 PRACTICE</div><h2>Score ${score}</h2>${line}<p class="muted">In the game a run like this earns XP and coins for your duck.</p><div class="dk-resbtns"><button class="btn big">Done</button>${again}</div>`;
-        else card.innerHTML = r && r.ok ? `${cut}${r.wipeout ? '<div class="dk-badge bad">💥 WIPEOUT</div>' : r.star ? '<div class="dk-badge good">⭐ TARGET HIT</div>' : ''}<h2>Score ${r.score}</h2>${line}<p class="dk-gain"><b>+${r.xp}</b> XP · <b>+${r.coins}</b> 🪙</p>${napLine}${r.newBest ? '<p class="lvup">🏅 New personal best!</p>' : ''}${r.streak > 1 ? `<p>🔥 Streak ×${r.streak} (+${Math.min(6, r.streak) * 5}% XP)</p>` : ''}${r.levelUp ? `<p class="lvup">LEVEL UP! ${SK[r.stat]} is now level ${r.levelUp} 🎉</p>` : ''}${bar}<div class="dk-resbtns"><button class="btn big">Back to my farm</button>${again}</div>`
+        else card.innerHTML = r && r.ok ? `${cut}${r.star ? '<div class="dk-badge good">⭐ TARGET HIT</div>' : ''}<h2>Score ${r.score}</h2>${line}<p class="dk-gain"><b>+${r.xp}</b> XP · <b>+${r.coins}</b> 🪙</p>${napLine}${r.newBest ? '<p class="lvup">🏅 New personal best!</p>' : ''}${r.streak > 1 ? `<p>🔥 Streak ×${r.streak} (+${Math.min(6, r.streak) * 5}% XP)</p>` : ''}${r.levelUp ? `<p class="lvup">LEVEL UP! ${SK[r.stat]} is now level ${r.levelUp} 🎉</p>` : ''}${bar}${offer ? riskBox : `${riskBox}<div class="dk-resbtns"><button class="btn big">Back to my farm</button>${again}</div>`}`
           : `<h2>Score ${score}</h2>${line}<p>${BOX.esc((r && r.error) || 'Not saved.')}</p><button class="btn big">Back</button>`;
-        BOX.sfx(r && r.wipeout ? 'boo' : r && (r.levelUp || r.newBest) ? 'win' : 'chime');
-        card.querySelector('button').onclick = close;
+        BOX.sfx(r && (r.levelUp || r.newBest) ? 'win' : 'chime');
+        if (offer) {
+          card.classList.add('offer');
+          let gone = false; const t0o = performance.now(), ms = 30000, bar2 = card.querySelector('.dk-risktime i');
+          const keep = () => { if (gone) return; gone = true; close(); if (opts.keep) opts.keep(); };
+          card.querySelector('.dk-riskgo').onclick = () => { if (gone) return; gone = true; BOX.sfx('drum'); buzz(60); close(); opts.riskIt(); };
+          card.querySelector('.dk-keep').onclick = keep;
+          // the offer runs out (30 s): you keep it
+          const tick = () => { if (gone || !document.body.contains(card)) return; const k = 1 - (performance.now() - t0o) / ms; if (bar2) bar2.style.width = Math.max(0, k * 100) + '%'; if (k <= 0) return keep(); requestAnimationFrame(tick); };
+          requestAnimationFrame(tick);
+        } else card.querySelector('button').onclick = close;
         const ag = card.querySelector('.dk-again'); if (ag) ag.onclick = () => { close(); opts.again(); };
         if (r && r.levelUp) buzz([30, 40, 60]);
       });
     }
     return ov;
   }
-  window.DUCK_MINI = { play, debug: DEBUG, lilyPath, scorer, active: () => !!(current && current.active()), stop: (reason) => { if (current) current.stop(reason); } };
+  window.DUCK_MINI = { play, debug: DEBUG, lilyPath, bugRules, scorer, active: () => !!(current && current.active()), stop: (reason) => { if (current) current.stop(reason); } };
 })();
