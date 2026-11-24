@@ -80,6 +80,13 @@
       if (S0.hint) { const [hx, hy] = S0.hint; g.strokeStyle = `rgba(255,90,60,${0.6 + 0.3 * Math.sin(t * 3)})`; g.lineWidth = 4; g.setLineDash([12, 8]); g.beginPath(); g.ellipse(x0 + (hx + 0.5) * cw, y0 + (hy + 0.5) * ch, cw * 1.6, ch * 1.6, 0, 0, TAU); g.stroke(); g.setLineDash([]); }
       if (S0.door) { const [dx2, dy2] = S0.door, px = x0 + dx2 * cw, py = y0 + dy2 * ch, D = (window.TZS.DOORS.find((d) => d.key === S0.doorLook) || {}); g.strokeStyle = `rgba(255,90,60,${0.7 + 0.3 * Math.sin(t * 5)})`; g.lineWidth = 6; g.strokeRect(px + 2, py + 2, cw - 4, ch - 4); g.font = `${Math.round(ch * 0.42)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(S0.doorOpen ? '☠️' : D.icon || '🚪', px + cw / 2, py + ch * 0.45); }
     }
+    // places the team found, hidden stashes, call-outs (with the route along the streets)
+    const TP = window.TZP;
+    for (const [k, type] of s.found || []) { const [fx, fy] = k.split(',').map(Number), Pl = TP && TP.PLACES[type]; if (!Pl) continue; const px = x0 + fx * cw, py = y0 + fy * ch; g.fillStyle = 'rgba(15,10,6,0.78)'; g.beginPath(); g.arc(px + cw * 0.82, py + ch * 0.28, Math.max(10, cw * 0.11), 0, TAU); g.fill(); g.strokeStyle = Pl.color; g.lineWidth = 3; g.stroke(); g.font = `${Math.max(12, Math.round(cw * 0.13))}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(Pl.icon, px + cw * 0.82, py + ch * 0.29); }
+    for (const q of s.pings || []) {
+      const u = (t * 1.5) % 1, px = x0 + (q.x + 0.5) * cw, py = y0 + (q.y + 0.5) * ch; g.strokeStyle = `rgba(255,210,63,${1 - u})`; g.lineWidth = 5; g.beginPath(); g.arc(px, py, cw * 0.15 + u * cw * 0.4, 0, TAU); g.stroke();
+      const who = (s.players || []).find((p) => p.id === q.id); if (who && (who.x !== q.x || who.y !== q.y)) { const path = routeCells(Z, s.seed, [who.x, who.y], [q.x, q.y]); g.strokeStyle = 'rgba(255,210,63,0.75)'; g.lineWidth = 4; g.setLineDash([10, 8]); g.beginPath(); path.forEach(([rx, ry], i) => { const X = x0 + (rx + 0.5) * cw, Y = y0 + (ry + 0.5) * ch; if (i) g.lineTo(X, Y); else g.moveTo(X, Y); }); g.stroke(); g.setLineDash([]); }
+    }
     // players
     const byCell = new Map();
     for (const p of s.players || []) { const k = p.x + ',' + p.y; if (!byCell.has(k)) byCell.set(k, []); byCell.get(k).push(p); }
@@ -112,13 +119,19 @@
     for (const [d, r] of Object.entries(c.side)) { if (!r) continue; g.lineWidth = Math.max(1, r.w * Math.min(sx, sy) * (cw > 40 ? 0.5 : 0.9)); const ex = d === 'w' ? px : d === 'e' ? px + cw : px + r.p * sx, ey = d === 'n' ? py : d === 's' ? py + ch : py + r.p * sy; g.moveTo(ex, ey); if (d === 'n' || d === 's') { g.lineTo(ex, hy); g.lineTo(hx, hy); } else { g.lineTo(hx, ey); g.lineTo(hx, hy); } }
     g.stroke();
   }
+  // the road route between two cells (breadth first along the streets)
+  function routeCells(Z, seed, from, to) {
+    const d = Z.roadDist(seed, [to]), N = Z.GRID, out = [from.slice()]; let c = from.slice();
+    for (let i = 0; i < 40 && (c[0] !== to[0] || c[1] !== to[1]); i++) { const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [c[0] + dx, c[1] + dy]).filter((n) => Z.roadBetween(seed, c, n)).sort((a, b) => d[a[1] * N + a[0]] - d[b[1] * N + b[0]])[0]; if (!nb) break; c = nb; out.push(c); }
+    return out;
+  }
   function tvSide(s) {
-    const P = (s.players || []).slice().sort((a, b) => (a.state === 'dead') - (b.state === 'dead') || b.wave - a.wave || b.kills - a.kills);
+    const P = (s.players || []).slice().sort((a, b) => (s.mode === 'score' ? b.score - a.score : 0) || (a.state === 'dead') - (b.state === 'dead') || b.wave - a.wave || b.kills - a.kills);
     const rows = P.map((p) => `<div class="tz-row ${p.state === 'dead' ? 'dead' : ''} ${p.danger ? 'danger' : ''}">${face({ ...p, bot: true }, 46)}<div class="tz-rmain"><b style="color:${esc(p.color || '#fff')}">${nm(p.name)}</b>
-      <small>${p.state === 'dead' ? '💀 down · ' : p.ch ? '🃏 picking an ability · ' : ''}Wave ${p.wave} · Lv ${p.lvl} · ${p.kills} kills</small>
+      <small>${p.state === 'dead' ? '💀 out · ' : p.state === 'down' ? '🆘 DOWN · ' : p.ch ? '🃏 picking an ability · ' : ''}${s.mode === 'score' || p.score ? `<b class="tz-sc">${(p.score || 0).toLocaleString('en-US')}</b>${p.streak > 1 ? ` <b class="tz-mx">×${p.streak}</b>` : ''} · ` : ''}Wave ${p.wave} · Lv ${p.lvl} · ${p.kills} kills</small>
       <div class="tz-hp"><i style="width:${p.state === 'dead' || !p.mhp ? 0 : Math.round((100 * p.hp) / p.mhp)}%"></i></div><div class="tz-ab">${abIcons(p.ab)}</div></div></div>`).join('');
     const feed = (s.feed || []).slice().reverse().map((f) => `<li>${esc(f.icon)} ${nm(f.text)}</li>`).join('');
-    const len = { endless: '♾️ Endless', w20: '🏁 First to wave 20' }[s.length] || '';
+    const len = s.mode === 'score' ? '🏆 Score attack' : { endless: '♾️ Endless', w20: '🏁 First to wave 20' }[s.length] || '';
     const S0 = s.story, nt = S0 && S0.tier < S0.max ? S0.tier + 1 : 0;
     const storyBox = S0 ? `<div class="tz-story"><div><b>📖 Ring ${S0.tier}/${S0.max} open</b>${nt ? `<span>⛓️ next gate: ${Math.min(S0.kills, S0.needs[nt - 1])}/${S0.needs[nt - 1]} team kills</span><i style="width:${Math.round(100 * Math.min(1, S0.kills / S0.needs[nt - 1]))}%"></i>` : '<span>All gates are down!</span>'}</div><div class="tz-sk"><span>🗝️ ${S0.keys}/3</span><span>🗺️ ${S0.maps}/2</span><span>${S0.boss ? `${S0.boss.icon} ${esc(S0.boss.name)}${S0.doorOpen ? ' <b>AWAKE</b>' : ''}` : '🚪 door: ???'}</span></div></div>` : '';
     return `<div class="tz-sidehead"><span class="tz-logo-s">Trash<b>Zombies</b></span>${S0 ? `<span class="tz-len">📖 ${timer(S0.time || 0)}</span>` : s.endsIn ? `<span class="tz-clock">⏱ ${timer(s.endsIn)}</span>` : `<span class="tz-len">${len}</span>`}</div>${storyBox}
@@ -126,14 +139,15 @@
   }
   function tvOver(el, s) {
     const st = s.standings || [], top = st.slice(0, 3);
-    const pod = top.map((r, i) => `<div class="tz-pod p${i + 1}"><div class="tz-pbody">${BOX.body ? BOX.body({ ...r, bot: true }, i === 0 ? 210 : 170, { mood: 'grin' }) : esc(r.avatar)}</div><div class="tz-pbase"><b>${['🥇', '🥈', '🥉'][i]} ${nm(r.name)}</b><small>Wave ${r.wave} · ${r.kills} kills · Lv ${r.lvl}</small><div class="tz-ab">${abIcons(r.build)}</div></div></div>`).join('');
+    const scoreTxt = (r) => (r.score ? `<b class="tz-sc">${r.score.toLocaleString('en-US')} pts</b> · ` : '');
+    const pod = top.map((r, i) => `<div class="tz-pod p${i + 1}"><div class="tz-pbody">${BOX.body ? BOX.body({ ...r, bot: true }, i === 0 ? 210 : 170, { mood: 'grin' }) : esc(r.avatar)}</div><div class="tz-pbase"><b>${['🥇', '🥈', '🥉'][i]} ${nm(r.name)}</b><small>${scoreTxt(r)}Wave ${r.wave} · ${r.kills} kills · Lv ${r.lvl}</small><div class="tz-ab">${abIcons(r.build)}</div></div></div>`).join('');
     const rest = st.slice(3).map((r, i) => `<li><span>#${i + 4}</span>${face(r, 34)}<b>${nm(r.name)}</b><small>Wave ${r.wave} · ${r.kills} kills · Lv ${r.lvl}</small><div class="tz-ab">${abIcons(r.build)}</div></li>`).join('');
     const S0 = s.story;
     if (S0 && (s.why === 'win' || s.why === 'lost')) {
       const won = s.why === 'win', finds = (S0.finds || []).map((f) => { const F = window.TZS.FINDS[f.id]; const who = (s.standings || []).find((r) => r.id === f.by); return F ? `<span class="tz-vf">${F.icon} ${esc(F.name)}<small>${who ? nm(who.name) : ''}</small></span>` : ''; }).join('');
       return BOX.morph(el, `<div class="tz-over ${won ? 'tz-victory' : 'tz-defeat'}">${won ? '<div class="tz-rays"></div><div class="tz-confetti"></div>' : ''}<h1 class="tz-logo">${won ? 'THE TOWN IS <b>SAVED!</b>' : 'THE TRASH <b>WON…</b>'}</h1><p class="tz-why">${won ? `${S0.boss ? S0.boss.icon + ' ' + esc(S0.boss.name) : 'The boss'} is down! ` : 'Everyone fell before the boss went down. '}⏱ ${timer(S0.time || 0)} · ${S0.kills} team kills · 🗝️ ${S0.keys}/3 · ${(S0.finds || []).length} finds</p><div class="tz-podium">${pod}</div>${finds ? `<div class="tz-vfinds">${finds}</div>` : ''}${rest ? `<ol class="tz-rest">${rest}</ol>` : ''}</div>`);
     }
-    const why = { time: 'Time’s up! The garbage trucks roll in at dawn.', down: 'Everyone’s down. The zombies take the street…', w20: 'Wave 20 survived! The street is safe (for now).', host: 'The host called it a night.', empty: 'Everyone went home. The zombies have the town.' }[s.why] || 'The night is over.';
+    const why = { time: s.mode === 'score' ? 'Time’s up! Highest score takes it.' : 'Time’s up! The garbage trucks roll in at dawn.', down: 'Everyone’s down. The zombies take the street…', w20: 'Wave 20 survived! The street is safe (for now).', host: 'The host called it a night.', empty: 'Everyone went home. The zombies have the town.' }[s.why] || 'The night is over.';
     BOX.morph(el, `<div class="tz-over"><h1 class="tz-logo">Trash<b>Zombies</b></h1><p class="tz-why">${esc(why)}</p><div class="tz-podium">${pod}</div>${rest ? `<ol class="tz-rest">${rest}</ol>` : ''}</div>`);
   }
 
@@ -156,6 +170,7 @@
     PH.sim = new window.TZSim.Sim({
       seed: v.seed, homes: v.homes, me, settings: { diff: v.settings.diff, aim: PH.aimPref || v.settings.aim, xp: v.settings.xp }, restore: v.me, story: v.story,
       report, live: (m) => PH.ctx && PH.ctx.live && PH.ctx.live(m), people: (id) => PH.people.get(id), on: simEvent,
+      mates: () => ((PH.v && PH.v.players) || []).filter((p) => !p.bot && p.state === 'play').length, stashes: () => (PH.v && PH.v.stashes) || [],
     });
     PH.run = runKey(v.me); PH.dead = null;
     if (v.area) PH.sim.setArea(v.area);
@@ -175,6 +190,12 @@
     else if (kind === 'start') { PH.hint = 7; }
     else if (kind === 'find') { const F = window.TZS.FINDS[d.id]; if (ctx) ctx.haptic('win'); showCard(`<span class="tz-rc-i">${F.icon}</span><div><small>YOU FOUND</small><b>${esc(F.name)}</b><p>${esc(F.desc)}</p></div>`, 'find'); }
     else if (kind === 'final') { buzz([200, 80, 200, 80, 400]); }
+    else if (kind === 'maps') { if (ctx) ctx.haptic('win'); mapUi(d.options); }
+    else if (kind === 'downed') { buzz([200, 100, 200]); }
+    else if (kind === 'revived') { if (ctx) ctx.haptic('success'); }
+    else if (kind === 'unlock') { buzz([60, 40, 160]); }
+    else if (kind === 'camper') { if (ctx) ctx.toast('🚐 A Survivor Camper pulled up: shop before you go!'); }
+    else if (kind === 'buy') { if (ctx) ctx.haptic('select'); }
     else if (kind === 'victory') { if (ctx) ctx.haptic('win'); showCard('<span class="tz-rc-i">🏆</span><div><small>VICTORY</small><b>The boss is down!</b><p>The stink is lifting over the town…</p></div>', 'find'); }
   }
   function showCard(html, cls) {
@@ -251,7 +272,9 @@
     PH.root.classList.toggle('portrait', V.h > V.w * 1.1 && !PH.rotOk);
     if (!sim) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0c0a08'; g.fillRect(0, 0, PH.cv.width, PH.cv.height); return; }
     const I = readInput(V, sim);
-    if (PH.menu && sim.mode === 'solo') sim.paused = true; else if (!sim.cards) sim.paused = false;
+    const busy = PH.menu || PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map';
+    sim.shopping = PH.overlay === 'shop';
+    if (busy && sim.mode === 'solo') sim.paused = true; else if (!sim.cards) sim.paused = false;
     sim._lastInput = I;
     sim.update(dt, I);
     V.k = V.k / sim.zoomStep(dt);
@@ -265,8 +288,9 @@
     const pos = (e) => { const b = cv.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
     cv.addEventListener('pointerdown', (e) => {
       const p = pos(e);
-      if (e.pointerType === 'mouse') { PH.device = 'mouse'; PH.mouse.on = true; PH.mouse.x = p.x; PH.mouse.y = p.y; if (e.button === 0) PH.mouse.down = true; return; }
+      if (e.pointerType === 'mouse') { if (e.button === 0 && hitButton(p.x, p.y)) return; PH.device = 'mouse'; PH.mouse.on = true; PH.mouse.x = p.x; PH.mouse.y = p.y; if (e.button === 0) PH.mouse.down = true; return; }
       PH.device = 'touch'; e.preventDefault();
+      if (hitButton(p.x, p.y)) return;
       if (!PH.fsAsked && canFull() && !isIOS() && !isFull() && !standalone()) goFull(); else if (!PH.iosHinted) iosHint(false);
       if (PH.sim && PH.sim.phase === 'intro') PH.skip = true;
       const V = { w: cv.clientWidth, h: cv.clientHeight }, Z = stickZone(V);
@@ -296,6 +320,7 @@
         if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'e', ' '].includes(k)) { e.preventDefault(); PH.keys.add(k); if (PH.device !== 'mouse') PH.device = 'mouse'; }
         if (k === 'escape' || k === 'p') { e.preventDefault(); toggleMenu(); }
         if (PH.sim && PH.sim.cards && ['1', '2', '3'].includes(k)) choose(Number(k) - 1);
+        if (PH.sim && !PH.sim.cards && !PH.menu) { const act = { f: 'shop', b: 'bomb', t: 'turret', q: 'pocket', c: 'call' }[k]; if (act) { e.preventDefault(); button(act); } }
         if (PH.sim && PH.sim.phase === 'intro' && (k === ' ' || k === 'enter')) PH.skip = true;
         if (k === 'enter' && PH.root.querySelector('[data-again]')) PH.root.querySelector('[data-again]').click();
       });
@@ -343,6 +368,14 @@
     // buffs
     let fy = xy + 40;
     for (const [k, v] of Object.entries(sim.buffs)) if (v > 0) { const Pk = Z.PK[k === 'kicks' ? 'kicks' : k]; if (!Pk) continue; txt(`${Pk.icon} ${Math.ceil(v)}s`, bx, fy, small ? 14 : 16, Pk.color); fy += small ? 20 : 24; }
+    // score + streak multiplier (big), cash
+    if (sim._pl) {
+      const sc = Math.round(sim.score).toLocaleString('en-US'), mx = w * 0.5 + (small ? 150 : 190);
+      txt(sc, mx, 22, small ? 20 : 26, '#fff6d8', 'left');
+      if (sim.mult > 1) { const pulse = 1 + 0.08 * Math.sin(sim.t * 10); g.save(); g.translate(mx + 8, small ? 50 : 58); g.scale(pulse, pulse); txt('×' + sim.mult, 0, 0, (small ? 22 : 28) + sim.mult * 1.5, ['#ffe066', '#ffb02e', '#ff7a3c', '#ff4a6a', '#d06aff'][Math.min(4, sim.mult - 2)], 'left'); g.restore(); const bw2 = 60; g.fillStyle = 'rgba(15,10,6,0.7)'; g.fillRect(mx + 70, (small ? 46 : 54), bw2, 6); g.fillStyle = '#ffb02e'; g.fillRect(mx + 70, (small ? 46 : 54), bw2 * Math.max(0, sim.comboT / 3.2), 6); }
+      txt('$' + sim.cash, bx, fy, small ? 15 : 17, '#ffd23f'); fy += small ? 22 : 26;
+      if (sim.plates) { txt('🛡️×' + sim.plates, bx, fy, 14); fy += 22; }
+    }
     // top-centre: wave + zombies left
     const left = sim.spec ? Math.max(0, sim.spec.target - sim.waveKills) : 0;
     txt(`WAVE ${sim.wave}`, w / 2, 22, small ? 20 : 26, '#ffd23f', 'center');
@@ -357,6 +390,9 @@
     if (sim.mode !== 'solo') txt(sim.mode === 'host' ? '🤝 CO-OP (host)' : '🤝 CO-OP', w / 2, small ? 62 : 72, 12, '#ffd23f', 'center');
     // top-right: minimap (under the pause button)
     minimap(g, sim, V);
+    buttons(g, sim, V, txt);
+    if (sim.down) { const a = 0.5 + 0.5 * Math.sin(sim.t * 6); g.fillStyle = `rgba(120,0,0,${0.25 + 0.1 * a})`; g.fillRect(0, 0, w, h); txt('🆘 YOU’RE DOWN', w / 2, h * 0.4, small ? 30 : 40, '#ff8c6a', 'center'); txt(`A friend can pick you up: ${Math.ceil(sim.down.t)} s`, w / 2, h * 0.4 + 34, small ? 15 : 18, '#fff', 'center'); }
+    route(g, sim, V, txt);
     // the banner
     if (sim.banner) { const a = Math.min(1, sim.banner.t * 2), by2 = h * 0.24; g.globalAlpha = a; txt(sim.banner.text, w / 2, by2, small ? 34 : 46, '#ffd23f', 'center'); txt(sim.banner.sub, w / 2, by2 + (small ? 30 : 40), small ? 14 : 18, '#fff', 'center'); g.globalAlpha = 1; }
     // control hints
@@ -391,6 +427,78 @@
       }
     }
   }
+  // ---------- the buttons on the canvas (shop, pocket, bomb, turret, call-out) ----------
+  function buttons(g, sim, V, txt) {
+    PH.btns = []; if (!sim._pl || sim.dead || sim.phase !== 'play') return;
+    const small = Math.min(V.w, V.h) < 420, r = small ? 22 : 26, y = V.h - r - 16, Zs = stickZone(V);
+    const L = [];
+    if (sim.nearShop) L.push({ id: 'shop', icon: '🛒', label: 'SHOP', big: true });
+    if (sim.pocket) L.push({ id: 'pocket', icon: (W().PK[sim.pocket] || {}).icon || '🎒' });
+    if (sim.bombs) L.push({ id: 'bomb', icon: '💣', n: sim.bombs });
+    if (sim.kits) L.push({ id: 'turret', icon: '🗼', n: sim.kits });
+    L.push({ id: 'call', icon: '📣' });
+    let x = Zs.x - Zs.r - 20 - r;
+    for (const b of L) {
+      const R = b.big ? r * 1.35 : r, cy = b.big ? y - 70 : y, cx = b.big ? Zs.x : x; if (!b.big) x -= r * 2 + 10;
+      PH.btns.push({ id: b.id, x: cx, y: cy, r: R + 6 });
+      g.globalAlpha = b.big ? 0.85 + 0.15 * Math.sin(sim.t * 8) : 0.85; g.fillStyle = b.big ? '#9cff3c' : 'rgba(15,10,6,0.7)'; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.fill(); g.strokeStyle = b.big ? '#1b1410' : 'rgba(255,255,255,0.5)'; g.lineWidth = 2.5; g.stroke(); g.globalAlpha = 1;
+      g.font = `${Math.round(R * 0.95)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(b.icon, cx, cy + 1);
+      if (b.n > 1) txt('×' + b.n, cx + R * 0.7, cy - R * 0.7, 12, '#fff', 'center');
+      if (b.label) txt(b.label, cx, cy - R - 10, 13, '#9cff3c', 'center');
+    }
+  }
+  function hitButton(x, y) { for (const b of PH.btns || []) if (Math.hypot(x - b.x, y - b.y) < b.r) { button(b.id); return true; } return false; }
+  function button(id) {
+    const sim = PH.sim; if (!sim || sim.dead || !sim._pl) return false;
+    if (id === 'shop') { if (sim.nearShop) shopUi(); return true; }
+    if (id === 'pocket') return sim.usePocket();
+    if (id === 'bomb') { const ok = sim.useBomb(); if (ok) buzz([60, 40, 120]); return ok; }
+    if (id === 'turret') return sim.useTurret();
+    if (id === 'call') { callUi(); return true; }
+    return false;
+  }
+  // ---------- the shop panel ----------
+  function shopUi(note) {
+    const sim = PH.sim, St = sim && sim.stockOf(); if (!St) return;
+    const TP = window.TZP, Pl = TP.PLACES[St.type], say = Pl.says[(sim.cell[0] * 3 + sim.cell[1] + sim.wave) % Pl.says.length];
+    const goods = St.list.map((id) => { const G = TP.GOODS[id], c = sim.priceOf(id), sold = St.sold[id];
+      return `<div class="tz-good ${sold ? 'sold' : ''}"><span class="tz-gi">${G.icon}</span><div><b>${esc(G.name)}</b><small>${esc(G.desc)}</small>${G.kind === 'ability' && !sold ? `<select data-ab="${id}">${W().ABILITIES.map((a) => `<option value="${a.id}">${a.icon} ${esc(a.name)}${sim.ab[a.id] ? ' ×' + sim.ab[a.id] : ''}</option>`).join('')}</select>` : ''}</div><button class="btn small ${sold ? 'ghost' : sim.cash >= c ? 'green' : 'ghost'}" data-buy="${id}" ${sold || sim.cash < c ? 'disabled' : ''}>${sold ? 'Sold' : '$' + c}</button></div>`; }).join('');
+    const extra = sim.shopExtra ? sim.shopExtra(St.type) : '';
+    const ov = setOverlay(`<div class="tz-shop" style="--pc:${Pl.color}"><div class="tz-shead"><span class="tz-sicon">${Pl.icon}</span><div><h2>${esc(Pl.name)}</h2><p>“${esc(say)}”</p></div><b class="tz-cash">$${sim.cash}</b></div>${note ? `<p class="tz-snote">${esc(note)}</p>` : ''}<div class="tz-goods">${goods}${extra}</div><p class="tz-mut">${sim.mode === 'solo' ? '⏸ The game waits while you shop.' : '🛡️ You can’t be hurt while you shop.'}</p><div class="tz-mbtns"><button class="btn green" data-close>Done ▶</button></div></div>`, 'shop');
+    if (!ov) return;
+    for (const b of ov.querySelectorAll('[data-buy]')) b.onclick = (e) => { e.stopPropagation(); const id = b.dataset.buy, sel = ov.querySelector(`[data-ab="${id}"]`); const r = sim.buy(id, sel && sel.value); shopUi(r.ok ? '' : r.error); };
+    if (sim.shopBind) sim.shopBind(ov, shopUi);
+    ov.querySelector('[data-close]').onclick = (e) => { e.stopPropagation(); setOverlay(''); };
+  }
+  // ---------- call-outs: quick pings + "let's go" to a place the team found ----------
+  function callUi() {
+    const v = PH.v || {}, TP = window.TZP, sim = PH.sim;
+    const places = (v.found || []).map(([k, type]) => { const Pl = TP.PLACES[type], [x, y] = k.split(',').map(Number), d = W().roadDist(v.seed, [sim.cell])[y * W().GRID + x]; return { k, Pl, d }; }).sort((a, b) => a.d - b.d).slice(0, 8);
+    const ov = setOverlay(`<div class="tz-call"><h2>📣 Call out to the team</h2><div class="tz-qp">${[['here', '📍 Over here!'], ['health', '❤️ Need health'], ['boss', '☠️ Boss here!'], ['help', '🆘 Come help']].map(([k, l]) => `<button class="btn" data-ping="${k}">${l}</button>`).join('')}${sim.placeType() ? `<button class="btn green" data-ping="place" data-cell="${sim.cellKey()}">${TP.PLACES[sim.placeType()].icon} ${esc(TP.PLACES[sim.placeType()].name)} here!</button>` : ''}</div>${places.length ? `<h3>🧭 Let’s all go to…</h3><div class="tz-qp">${places.map((p) => `<button class="btn ghost small" data-ping="go" data-cell="${p.k}">${p.Pl.icon} ${esc(p.Pl.name)} <small>(${p.d} blocks)</small></button>`).join('')}</div>` : '<p class="tz-mut">Places you find (shops, merchants, the crucible) show up here for the whole team.</p>'}<div class="tz-mbtns"><button class="btn ghost" data-close>Close</button></div></div>`, 'call');
+    if (!ov) return;
+    for (const b of ov.querySelectorAll('[data-ping]')) b.onclick = async (e) => { e.stopPropagation(); setOverlay(''); const r = await report({ op: 'ping', k: b.dataset.ping, cell: b.dataset.cell }); if (r && r.ok && PH.ctx) PH.ctx.haptic('select'); };
+    ov.querySelector('[data-close]').onclick = (e) => { e.stopPropagation(); setOverlay(''); };
+  }
+  // ---------- a boss map: you choose where it leads ----------
+  function mapUi(options) {
+    const TP = window.TZP, L = (options || []).slice(0, 4);
+    const label = (o) => o.what === 'door' ? ['🚪', 'The boss door', 'A clue to where the lair is'] : o.what === 'stash' ? ['💰', 'A hidden stash', 'Cash buried somewhere in town'] : [TP.PLACES[o.type].icon, TP.PLACES[o.type].name, o.what === 'forge' ? 'Where weapons evolve' : o.what === 'master' ? 'Upgrades weapons Lv 8→10' : 'The nearest one you haven’t found'];
+    const ov = setOverlay(`<div class="tz-mapc"><h2>🗺️ The boss dropped a map!</h2><p>Where should it lead? The whole team gets the route.</p><div class="tz-mopts">${L.map((o) => { const [i, n, d] = label(o); return `<button class="tz-mopt" data-what="${o.what}"><span>${i}</span><b>${esc(n)}</b><small>${esc(d)}</small></button>`; }).join('')}</div></div>`, 'map');
+    if (!ov) return;
+    for (const b of ov.querySelectorAll('[data-what]')) b.onclick = async (e) => { e.stopPropagation(); setOverlay(''); const r = await report({ op: 'reveal', what: b.dataset.what }); if (r && r.ok && PH.ctx) { PH.ctx.haptic('win'); PH.ctx.toast('🗺️ Marked on everyone’s map!'); } };
+  }
+  // ---------- the route to the newest call-out: an arrow at the exit that leads there ----------
+  function route(g, sim, V, txt) {
+    const v = PH.v; if (!v || !v.pings || !v.pings.length || sim.phase !== 'play' || !sim.cam) return;
+    const q = v.pings[v.pings.length - 1], Z = W(); if (q.x === sim.cell[0] && q.y === sim.cell[1]) return;
+    const path = routeCells(Z, v.seed, sim.cell, [q.x, q.y]); if (path.length < 2) return;
+    const nx = path[1], dir = nx[0] > sim.cell[0] ? 'e' : nx[0] < sim.cell[0] ? 'w' : nx[1] > sim.cell[1] ? 's' : 'n', road = sim.area.exits[dir]; if (!road) return;
+    const ex = dir === 'w' ? 0 : dir === 'e' ? Z.AW : road.p, ey = dir === 'n' ? 0 : dir === 's' ? Z.AH : road.p, C = sim.cam;
+    let sx = (ex + C.ox) * C.k, sy = (ey + C.oy) * C.k; sx = Math.max(40, Math.min(V.w - 40, sx)); sy = Math.max(110, Math.min(V.h - 60, sy));
+    const a = { n: -Math.PI / 2, s: Math.PI / 2, w: Math.PI, e: 0 }[dir], P = q.place && window.TZP.PLACES[q.place];
+    g.save(); g.translate(sx, sy); g.rotate(a); g.globalAlpha = 0.7 + 0.3 * Math.sin(sim.t * 6); g.fillStyle = '#ffd23f'; g.strokeStyle = '#1b1410'; g.lineWidth = 3; g.beginPath(); g.moveTo(22, 0); g.lineTo(-12, -16); g.lineTo(-4, 0); g.lineTo(-12, 16); g.closePath(); g.fill(); g.stroke(); g.restore(); g.globalAlpha = 1;
+    txt(`🧭 ${q.name || ''}: ${P ? P.icon + ' ' + P.name : q.place === 'stash' ? '💰 stash' : q.place === 'door' ? '🚪 lair' : '📣'} · ${path.length - 1} blocks`, V.w / 2, V.h - 18, Math.min(V.w, V.h) < 420 ? 12 : 14, '#ffd23f', 'center');
+  }
   function roundRect(g, x, y, w, h, r) { w = Math.max(0, w); r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
   function minimap(g, sim, V) {
     const v = PH.v; if (!v) return;
@@ -405,6 +513,10 @@
       if (t > S0.tier) { g.fillStyle = 'rgba(200,40,30,0.55)'; g.fillRect(px + 0.5, py + 0.5, cs - 1, ch - 1); }
       const k = x + ',' + y; if (S0.plan && S0.plan.finds[k] && ex.has(k) && !(S0.taken || []).includes(k)) { g.fillStyle = '#ffd23f'; g.fillRect(px + cs / 2 - 1.5, py + ch / 2 - 1.5, 3, 3); }
     }
+    const TP = window.TZP; g.font = `${small ? 8 : 9}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (const [k, type] of v.found || []) { const [fx, fy] = k.split(',').map(Number), Pl = TP && TP.PLACES[type]; if (Pl) g.fillText(Pl.icon, x0 + fx * cs + cs / 2, y0 + fy * ch + ch / 2); }
+    for (const k of v.stashes || []) { const [fx, fy] = k.split(',').map(Number); g.fillText('💰', x0 + fx * cs + cs / 2, y0 + fy * ch + ch / 2); }
+    for (const q of v.pings || []) { const u = (sim.t * 2) % 1; g.strokeStyle = `rgba(255,210,63,${1 - u})`; g.lineWidth = 2; g.beginPath(); g.arc(x0 + q.x * cs + cs / 2, y0 + q.y * ch + ch / 2, 3 + u * 8, 0, TAU); g.stroke(); }
     if (S0 && S0.door) { g.strokeStyle = '#ff5a3c'; g.lineWidth = 2; g.strokeRect(x0 + S0.door[0] * cs, y0 + S0.door[1] * ch, cs, ch); }
     for (const p of v.players || []) { if (p.state === 'dead') continue; g.fillStyle = p.color || '#fff'; g.beginPath(); g.arc(x0 + p.x * cs + cs / 2, y0 + p.y * ch + ch / 2, 3, 0, TAU); g.fill(); }
     if (Math.sin(sim.t * 8) > -0.3) { g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.beginPath(); g.arc(x0 + sim.cell[0] * cs + cs / 2, y0 + sim.cell[1] * ch + ch / 2, 3.5, 0, TAU); g.fill(); g.stroke(); }
@@ -476,8 +588,9 @@
         <div class="tz-mstats"><span>Wave <b>${d.wave}</b></span><span>Kills <b>${d.kills}</b></span><span>Level <b>${d.lvl}</b></span></div>
         ${best && (best.wave > d.wave || (best.wave === d.wave && best.kills > d.kills)) ? `<p class="tz-mut">Best tonight: wave ${best.wave}, ${best.kills} kills</p>` : ''}
         <div class="tz-build">${buildHtml(d.ab)}</div>
+        ${v.mode === 'score' ? `<p class="tz-mut">Score attack: you lose 15% of your points for falling. ${me.reviveIn > 0 ? `Back in <b>${Math.ceil(me.reviveIn / 1000)} s</b> at your garage.` : 'Back in at your garage, with your build.'}</p>` : ''}
         ${v.story ? `<p class="tz-mut">${v.story.reviveIn > 0 ? `Your friends are still fighting. Back in <b>${Math.ceil(v.story.reviveIn / 1000)} s</b> at your garage, with your build.` : 'Back in at your garage, with your whole build.'}</p>` : ''}
-        <div class="tz-mbtns"><button class="btn green big" data-again ${v.story && v.story.reviveIn > 0 ? 'disabled' : ''}>${v.story ? '🔁 Back in' : '🔁 Play again'}${isTouch() ? '' : ' (Enter)'}</button>${vip ? '<button class="btn ghost small" data-end>🏁 End the night</button>' : ''}</div></div></div>`, 'dead');
+        <div class="tz-mbtns"><button class="btn green big" data-again ${(v.story && v.story.reviveIn > 0) || me.reviveIn > 0 ? 'disabled' : ''}>${v.story || v.mode === 'score' ? '🔁 Back in' : '🔁 Play again'}${isTouch() ? '' : ' (Enter)'}</button>${vip ? '<button class="btn ghost small" data-end>🏁 End the night</button>' : ''}</div></div></div>`, 'dead');
       if (!ov) return;
       const a = ov.querySelector('[data-again]'); if (a) a.onclick = async () => { a.disabled = true; const r = await report({ op: 'respawn' }); if (!r.ok) a.disabled = false; };
       const e = ov.querySelector('[data-end]'); if (e) e.onclick = async () => { if (e.dataset.armed) await report({ op: 'end' }); else { e.dataset.armed = '1'; e.textContent = 'Tap again to end for everyone'; } };
@@ -495,6 +608,9 @@
       teleport(x, y) { const s = PH.sim; s.p.x = x; s.p.y = y; return true; },
       kills(n) { PH.sim.killCount += n; PH.sim.reportStatus(true); return PH.sim.killCount; },
       story: () => PH.v && PH.v.story,
+      cash(n) { const s = PH.sim; s.cash = (s.cash || 0) + n; return s.cash; },
+      place() { return PH.sim.placeType(); }, shop() { const s = PH.sim, D = s.shopDoor(); if (!D) return false; s.cleared = true; s.p.x = D.x; s.p.y = D.y + 10; button('shop'); return PH.overlay; },
+      btn(id) { return button(id); }, overlay: () => PH.overlay,
       weather(tod, rain, fog) { const s = PH.sim; s._wx = { tod, rain: !!rain, fog: !!fog }; return true; },
       async goTo(x, y) { const wait = (ms) => new Promise((r) => setTimeout(r, ms)); for (let i = 0; i < 30; i++) { const s = PH.sim; if (s.cell[0] === x && s.cell[1] === y) return true; const dirs = []; if (s.cell[0] < x) dirs.push('e'); if (s.cell[0] > x) dirs.push('w'); if (s.cell[1] < y) dirs.push('s'); if (s.cell[1] > y) dirs.push('n'); const d = dirs.find((q) => !s.gateLeft(q)) || dirs[0]; if (s.gateLeft(d)) return 'locked ' + d; s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; s.cleared = true; s.leave(d); await wait(450); while (PH.sim.cards) { PH.sim.pick(0); } } return false; },
       boss(key) { const s = PH.sim; s.z = s.z.filter((z) => !z.fb); s.finalSpawned = false; s.finalDead = false; s.story.plan.boss = key; s.spawnFinal(); return true; },
@@ -578,7 +694,7 @@
         const st = v.standings || [], i = st.findIndex((r) => r.id === (v.me && v.me.id)), r = st[i] || {};
         const won = v.why === 'win', lost = v.why === 'lost';
         BOX.morph(el, `<div class="card-box tz-ph-over ${won ? 'won' : ''}">${won ? '<div class="tz-confetti"></div><h2 class="tz-win">🏆 YOU WIN!</h2>' : lost ? '<h2 class="tz-lose">💀 The trash won…</h2>' : ''}<h2 class="tz-logo sm">Trash<b>Zombies</b></h2>${won && v.story ? `<p>${v.story.boss ? esc(v.story.boss.name) + ' is down' : 'The boss is down'} in <b>${BOX.mmss ? BOX.mmss(v.story.time) : Math.round(v.story.time / 60000) + ' min'}</b> · ${v.story.kills} team kills · ${v.story.finds.length} finds</p>` : ''}<div class="tz-pbig">${BOX.body ? BOX.body({ id: v.me && v.me.id, bot: true }, 130, { mood: i === 0 ? 'grin' : 'smile' }) : ''}</div>
-          <h3>${i === 0 ? '🏆 Top survivor!' : `#${i + 1} of ${st.length}`}</h3><p>Best run: wave <b>${r.wave || 1}</b> · ${r.kills || 0} kills · level ${r.lvl || 1}</p><div class="tz-ab">${abIcons(r.build)}</div>
+          <h3>${i === 0 ? '🏆 Top survivor!' : `#${i + 1} of ${st.length}`}</h3>${r.score ? `<p class="tz-bigsc">${r.score.toLocaleString('en-US')} points</p>` : ''}<p>Best run: wave <b>${r.wave || 1}</b> · ${r.kills || 0} kills · level ${r.lvl || 1}</p><div class="tz-ab">${abIcons(r.build)}</div>
           <ol class="tz-mini">${st.slice(0, 6).map((x) => `<li>${face(x, 26)} <b>${nm(x.name)}</b> <span>W${x.wave} · ${x.kills}k</span></li>`).join('')}</ol></div>`);
         if (!PH.overHaptic) { PH.overHaptic = true; ctx.haptic('win'); }
         return;

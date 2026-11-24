@@ -13,11 +13,12 @@
 // player in the area becomes host and carries on from the last snapshot.
 const W = require('../../public/box/games/trash-world');
 const S = require('../../public/box/games/trash-story');
+const PL = require('../../public/box/games/trash-shop');
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
-  { key: 'mode', label: 'Mode', options: opt([['story', '📖 Regular: break the gates, find the key, beat the boss'], ['endless', '♾️ Endless: waves forever, no story']]) },
-  { key: 'length', label: 'Run length (Endless)', options: opt([['endless', '♾️ Endless (until everyone falls)'], ['w20', '🏁 Survive to wave 20'], ['m5', '⏱ 5 minutes'], ['m10', '⏱ 10 minutes'], ['m15', '⏱ 15 minutes'], ['m20', '⏱ 20 minutes'], ['m30', '⏱ 30 minutes']]) },
+  { key: 'mode', label: 'Mode', options: opt([['story', '📖 Regular: break the gates, find the key, beat the boss'], ['endless', '♾️ Endless: waves forever, no story'], ['score', '🏆 Score attack: timed, highest score wins']]) },
+  { key: 'length', label: 'Run length (Endless / Score)', options: opt([['endless', '♾️ Endless (until everyone falls)'], ['w20', '🏁 Survive to wave 20'], ['m5', '⏱ 5 minutes'], ['m10', '⏱ 10 minutes'], ['m15', '⏱ 15 minutes'], ['m20', '⏱ 20 minutes'], ['m30', '⏱ 30 minutes']]) },
   { key: 'diff', label: 'Difficulty', options: opt([['chill', '🟢 Chill'], ['normal', '🟡 Normal'], ['hard', '🔴 Hard']]) },
   { key: 'aim', label: 'Auto-aim (touch)', options: opt([['on', '🎯 On: just move, it shoots the nearest'], ['off', '🕹️ Off: aim with the right stick']]) },
   { key: 'xp', label: 'Co-op XP', options: opt([['shared', '🤝 Shared in the same area'], ['own', '🙋 Your own kills only']]) },
@@ -25,9 +26,11 @@ const fields = [
 const defaults = { mode: 'story', length: 'endless', diff: 'normal', aim: 'on', xp: 'shared' };
 const PF = require('../party-fit');
 const MINUTES = { m5: 5, m10: 10, m15: 15, m20: 20, m30: 30 };
-// Party Mode: Endless with a fixed time (the plan's minutes, rounded to an option), then the results.
-// (A Regular story run takes 20-35 minutes: too long for a party slot.)
-const partyFit = ({ minutes: M }) => { const { length } = PF.best({ length: ['m10', 'm5', 'm15', 'm20'] }, (s) => 0.6 + MINUTES[s.length], M); return { mode: 'endless', length }; };
+// Party Mode: a timed Score attack. It lasts exactly the party plan's minutes for this game (start()
+// reads them; the length option below is only the label), and the highest score wins.
+const partyFit = ({ minutes: M }) => { const { length } = PF.best({ length: ['m10', 'm5', 'm15', 'm20'] }, (s) => 0.6 + MINUTES[s.length], M); return { mode: 'score', length }; };
+const PINGS = { here: '📍 Over here!', health: '❤️ Need health!', boss: '☠️ Boss here!', help: '🆘 Come help!', place: '📣 Found a place!', go: '🧭 Let’s go here!' };
+const SCORE_PENALTY = 0.15, SCORE_RESPAWN_MS = 5000, DOWN_MS = 40000;
 const REVIVE_MS = 15000, TICK = 1000, ALL_DOWN_MS = 45000, FEED = 10, HOST_DROP_MS = 2500, EMPTY_MS = 3 * 60000;
 const LIVE_KINDS = new Set(['snap', 'in', 'hit', 'grab', 'give', 'fx', 'need']);
 const key = (c) => c[0] + ',' + c[1];
@@ -46,12 +49,17 @@ class Game {
     this.startedAt = 0; this.endsAt = 0; this.timer = null; this.flushT = null; this.overWhy = '';
     this.allDownSince = 0;
     this.plan = null; this.story = null; this.beatSeq = 0; // Regular mode (trash-story.js)
+    this.found = new Map(); // "x,y" -> { type, by } places the team has discovered (shops, merchants, the crucible)
+    this.pings = []; this.pseq = 0; this.stashes = new Map(); // call-outs on the map; hidden stashes revealed by maps
   }
   get isStory() { return this.s.mode === 'story'; }
+  get isScore() { return this.s.mode === 'score'; }
   // ---------------- life cycle ----------------
   start() {
     this.startedAt = this.room.now();
-    const m = MINUTES[this.s.length]; if (m) this.endsAt = this.startedAt + m * 60000;
+    let m = MINUTES[this.s.length];
+    if (this.isScore) { m = m || 10; const pm = this.room.partyMode; if (pm && pm.plan && pm.defs && pm.defs[pm.index] === this.room.def && !this.room.practice && pm.plan.trash) m = pm.plan.trash; } // party: exactly the plan's minutes
+    if (m) { this.endsAt = this.startedAt + m * 60000; this.minutes = m; }
     for (const p of this.room.list()) this.newRun(p, true);
     if (this.isStory) {
       this.endsAt = 0; // Regular mode ends with the boss (or everyone down), not the clock
@@ -83,6 +91,8 @@ class Game {
     if (this.phase !== 'play') return;
     const now = this.room.now();
     for (const p of this.room.list()) if (p.bot) this.botStep(p, now);
+    for (const R of this.runs.values()) if (R.state === 'down' && now - R.downAt > DOWN_MS) { R.state = 'dead'; R.deadAt = now; R.reviveAt = now + REVIVE_MS; }
+    this.pings = this.pings.filter((q) => now - q.at < 30000);
     // An area host whose phone dropped: the next player in the area takes over.
     for (const [k, A] of this.areas) {
       const h = this.room.get(A.host);
@@ -92,7 +102,7 @@ class Game {
     if (this.story) {
       this.storyCheck();
       const runs = this.humans().map((p) => this.runs.get(p.id)).filter(Boolean);
-      if (runs.length && runs.every((R) => R.state === 'dead')) return this.end('lost');
+      if (runs.length && runs.every((R) => R.state === 'dead' || R.state === 'down')) return this.end('lost');
     }
     // Endless (and wave 20): when everyone is down for a while, the night is over.
     const humans = this.room.list().filter((p) => !p.bot), alive = [...this.runs.values()].some((R) => R.state !== 'dead' && (!R.bot || !humans.length));
@@ -115,6 +125,7 @@ class Game {
   newRun(p, first = false, keep = false) {
     const old = this.runs.get(p.id);
     if (keep && old) { // Regular mode: back in at your own garage with your build
+      if (this.isScore) { const pen = Math.max(200, Math.round(old.score * SCORE_PENALTY)); old.score = Math.max(0, old.score - pen); old.penalty = (old.penalty || 0) + pen; this.news('💸', `${this.room.name(p.id)} lost ${pen} points for falling`, p.id); }
       Object.assign(old, { state: 'play', cell: old.home.slice(), hp: old.mhp, at: this.room.now(), lastSt: this.room.now(), reviveAt: 0, areas: old.areas + 1, comeback: (old.comeback || 0) + 1 });
       this.leaveArea(p.id); this.joinArea(p.id, key(old.cell)); this.room.fx('tzgarage', { id: p.id, x: old.cell[0], y: old.cell[1] });
       this.news('🔁', `${this.room.name(p.id)} is back in the fight`, p.id); return old;
@@ -126,7 +137,7 @@ class Game {
     if (!this.homes.some((h) => h[0] === cell[0] && h[1] === cell[1])) this.homes.push(cell.slice());
     const R = {
       id: p.id, bot: !!p.bot, run: (old ? old.run : 0) + 1, cell: cell.slice(), home: cell.slice(), state: 'play', wave: 1, areas: 1, lvl: 1, xp: 0, kills: 0, hp: 100, mhp: 100,
-      ab: {}, eq: {}, hearts: 0, bank: old ? (old.bank || 0) + old.kills : 0, choosing: false, at: this.room.now(), lastSt: this.room.now(), best: old ? old.best : null, lastPick: null, danger: false, deaths: old ? old.deaths : 0,
+      ab: {}, eq: {}, hearts: 0, score: 0, streak: 0, maps: 0, mapWaves: [], stash: [], bank: old ? (old.bank || 0) + old.kills : 0, choosing: false, at: this.room.now(), lastSt: this.room.now(), best: old ? old.best : null, lastPick: null, danger: false, deaths: old ? old.deaths : 0,
     };
     if (p.bot) Object.assign(R, { nextAt: this.room.now() + 4000 + this.room.rng() * 3000, fate: 0.04 + this.room.rng() * 0.05 });
     this.runs.set(p.id, R);
@@ -136,10 +147,66 @@ class Game {
     return R;
   }
   keepBest(R) {
-    const cur = { wave: R.wave, kills: R.kills, lvl: R.lvl, ab: { ...R.ab } };
-    if (!R.best || cur.wave > R.best.wave || (cur.wave === R.best.wave && cur.kills > R.best.kills)) R.best = cur;
+    const cur = { wave: R.wave, kills: R.kills, lvl: R.lvl, ab: { ...R.ab }, score: R.score || 0 };
+    if (!R.best || (this.isScore ? cur.score > (R.best.score || 0) : cur.wave > R.best.wave || (cur.wave === R.best.wave && cur.kills > R.best.kills))) R.best = cur;
   }
-  explore(cell, by) { const k = key(cell); if (!this.explored.has(k)) this.explored.set(k, { by, at: this.room.now() }); }
+  explore(cell, by) {
+    const k = key(cell); if (!this.explored.has(k)) this.explored.set(k, { by, at: this.room.now() });
+    // a specialised place in this block: the whole team sees it from now on
+    const type = PL.placeAt(this.seed, cell[0], cell[1], this.homes); if (type && !this.found.has(k) && !(this.plan && key(this.plan.door) === k)) this.discover(k, type, by);
+  }
+  discover(k, type, by, how) {
+    if (this.found.has(k)) return false; const P = PL.PLACES[type]; this.found.set(k, { type, by, at: this.room.now() });
+    const p = this.room.get(by); if (p && !p.bot) { this.news(P.icon, `${p.name} ${how || 'found'} a ${P.name}`, by); this.room.fx('tzplace', { id: by, type, k }); }
+    return true;
+  }
+  // ---------------- call-outs ----------------
+  ping(p, R, m) {
+    const k = String(m.k || ''); if (!PINGS[k]) return { ok: false, error: 'Unknown call-out.' };
+    const now = this.room.now(); if (now - (R.pingAt || 0) < 1500) return { ok: false, error: 'Easy on the megaphone!' }; R.pingAt = now;
+    let x = R.cell[0], y = R.cell[1];
+    if (k === 'go' || k === 'place') { const c = String(m.cell || ''); if (!this.found.has(c) && !this.explored.has(c)) return { ok: false, error: 'Nobody has found that place yet.' }; [x, y] = c.split(',').map(Number); }
+    const q = { n: ++this.pseq, id: p.id, k, x, y, at: now, place: (this.found.get(x + ',' + y) || {}).type || null };
+    this.pings.push(q); if (this.pings.length > 8) this.pings.shift();
+    const P = q.place && PL.PLACES[q.place]; this.news('📣', `${p.name}: ${PINGS[k]}${P ? ' ' + P.icon + ' ' + P.name : ''}`, p.id); this.room.fx('tzping', { id: p.id, k }); this.soon();
+    return { ok: true };
+  }
+  // A boss dropped a map: its finder picks where it leads (revealed for the whole team, with a call-out).
+  mapOptions(R) {
+    const d = W.roadDist(this.seed, [R.cell]), out = [], N = W.GRID, places = PL.places(this.seed);
+    const nearest = (types) => { let best = null, bd = Infinity; for (const [k, t] of Object.entries(places)) { if (!types.includes(t) || this.found.has(k) || this.homes.some((h) => key(h) === k)) continue; const [x, y] = k.split(',').map(Number), dd = d[y * N + x]; if (dd < bd) { bd = dd; best = k; } } return best; };
+    for (const [what, types] of [['forge', ['forge']], ['master', ['master']], ['gunsmith', ['gunsmith', 'tinker']], ['clinic', ['clinic']], ['armor', ['armor']], ['market', ['market']]]) { const k = nearest(types); if (k) out.push({ what, k, type: places[k] }); }
+    if (this.story && !(this.story.maps >= 2 || this.story.doorFound)) out.push({ what: 'door', k: null });
+    out.push({ what: 'stash', k: null });
+    return out;
+  }
+  reveal(p, R, m) {
+    if (!(R.maps > 0)) return { ok: false, error: 'You have no map to read.' };
+    const what = String(m.what || ''), o = this.mapOptions(R).find((x) => x.what === what); if (!o) return { ok: false, error: 'That map leads nowhere now.' };
+    R.maps--;
+    let k = o.k;
+    if (what === 'door') { const st = this.story; st.maps = Math.max(st.maps + 1, 1); this.beat('map' + Math.min(2, st.maps)); k = st.maps >= 2 ? key(this.plan.door) : key(this.plan.hint); }
+    else if (what === 'stash') { const r = W.rng(W.hash(this.seed, 'stash', p.id, R.maps, this.stashes.size)); let c; for (let i = 0; i < 40; i++) { c = [Math.floor(r() * W.GRID), Math.floor(r() * W.GRID)]; if (!this.explored.has(key(c)) && !this.locked(c[0], c[1])) break; } k = key(c); this.stashes.set(k, { by: p.id, cash: 60 + 15 * R.wave, took: [] }); this.news('💰', `${p.name}'s map shows a hidden stash!`, p.id); }
+    else this.discover(k, o.type, p.id, 'mapped the way to');
+    const [x, y] = k.split(',').map(Number);
+    this.pings.push({ n: ++this.pseq, id: p.id, k: 'go', x, y, at: this.room.now(), place: o.type || (what === 'stash' ? 'stash' : what === 'door' ? 'door' : null) });
+    this.room.fx('tzmap', { id: p.id, what }); this.soon();
+    return { ok: true, k, what };
+  }
+  stash(p, R) {
+    const k = key(R.cell), s = this.stashes.get(k); if (!s) return { ok: false, error: 'No stash here.' };
+    if (s.took.includes(p.id)) return { ok: false, error: 'You already emptied it.' };
+    s.took.push(p.id); this.news('💰', `${p.name} dug up a stash`, p.id); return { ok: true, cash: s.cash };
+  }
+  // A teammate stood by you long enough: back up.
+  revive(p, R, m) {
+    const T = this.runs.get(String(m.id || '')); if (!T || T.id === p.id) return { ok: false, error: 'Nobody to revive.' };
+    if (T.state !== 'down') return { ok: false, error: 'They’re not down.' };
+    if (R.state !== 'play' || key(T.cell) !== key(R.cell)) return { ok: false, error: 'You need to be right there.' };
+    T.state = 'play'; T.revives = (T.revives || 0) + 1; this.send(T.id, { t: 'revived', by: p.id, area: key(T.cell) });
+    this.news('🤝', `${p.name} got ${this.room.name(T.id)} back on their feet`, p.id); this.room.fx('tzrevive', { id: T.id }); this.soon();
+    return { ok: true };
+  }
   news(icon, text, id) { this.feed.push({ n: ++this.fseq, icon, text, id: id || null, at: this.room.now() }); if (this.feed.length > FEED) this.feed.shift(); }
   // Screens update at most every ~150 ms for a burst of reports (the status pings are quiet).
   soon() { if (this.flushT == null) this.flushT = this.room.after(150, () => { this.flushT = null; }); }
@@ -199,7 +266,7 @@ class Game {
     if (!R) { this.newRun(p, true); return { ok: true }; }
     if (m.op === 'respawn') {
       if (R.state !== 'dead') return { ok: false, error: 'You’re still standing!' };
-      if (this.story) { if (this.room.now() < (R.reviveAt || 0)) return { ok: false, error: 'Catch your breath a moment…' }; this.newRun(p, false, true); return { ok: true }; }
+      if (this.story || this.isScore) { if (this.room.now() < (R.reviveAt || 0)) return { ok: false, error: 'Catch your breath a moment…' }; this.newRun(p, false, true); return { ok: true }; }
       this.newRun(p); return { ok: true };
     }
     if (m.op === 'st') return this.status(p, R, m);
@@ -207,11 +274,16 @@ class Game {
     if (m.op === 'ev') return this.event(p, R, m);
     if (m.op === 'find') return this.find(p, R, m);
     if (m.op === 'door') return this.openDoor(p, R);
+    if (m.op === 'ping') return this.ping(p, R, m);
+    if (m.op === 'reveal') return this.reveal(p, R, m);
+    if (m.op === 'stash') return this.stash(p, R);
+    if (m.op === 'revive') return this.revive(p, R, m);
+    if (m.op === 'maps') return { ok: true, options: this.mapOptions(R) };
     return { ok: false, error: 'Unknown move.' };
   }
   // Status ping (~1 a second): checked loosely (it's a party game, but numbers stay believable).
   status(p, R, m) {
-    if (R.state === 'dead') return { ok: true, quiet: true };
+    if (R.state === 'dead' || R.state === 'down') return { ok: true, quiet: true };
     const now = this.room.now(), dt = Math.max(0.2, (now - R.lastSt) / 1000); R.lastSt = now;
     const before = R.lvl + ':' + R.wave + ':' + (R.danger ? 1 : 0) + ':' + R.choosing;
     R.kills = Math.max(R.kills, int(m.kills, 0, R.kills + Math.ceil(80 * dt) + 40));
@@ -225,6 +297,9 @@ class Game {
       for (const [id, n] of Object.entries(m.ab)) { const A = W.AB[id]; if (!A) continue; const t = int(n, 0, 9999); if (t && total + t <= R.lvl - 1) { ab[id] = t; total += t; } }
       R.ab = ab;
     }
+    // score: it can only climb so fast (kills x the best multiplier, plus the bonuses)
+    if (m.score != null) { const top = R.score + Math.ceil((3000 + 400 * R.wave) * dt) + 6000; R.score = Math.max(R.score, int(m.score, 0, top)); }
+    R.streak = int(m.mult, 1, 12);
     R.choosing = !!m.ch; R.danger = R.hp > 0 && R.hp / R.mhp < 0.3;
     if (this.story) this.storyCheck();
     if (before !== R.lvl + ':' + R.wave + ':' + (R.danger ? 1 : 0) + ':' + R.choosing) this.soon();
@@ -265,6 +340,15 @@ class Game {
     } else if (k === 'victory') {
       if (!this.story || !this.story.doorOpen) return { ok: false, error: 'Not yet.' };
       this.story.won = { by: p.id, at: this.room.now() }; this.news('🏆', `${p.name} took down ${S.BOSSES[this.plan.boss].name}!`, p.id); this.beat('win'); this.keepBest(R); this.end('win'); return { ok: true };
+    } else if (k === 'downed') {
+      if (R.state !== 'play') return { ok: true };
+      const mates = this.humans().filter((h) => h.id !== p.id && (this.runs.get(h.id) || {}).state === 'play');
+      if (!this.story || !mates.length) return { ok: false, error: 'Nobody to revive you.' };
+      R.state = 'down'; R.downAt = this.room.now(); R.hp = 0; this.news('🆘', `${p.name} is down! Get to them!`, p.id); this.room.fx('tzdown', { id: p.id });
+      if (this.humans().every((h) => { const q = this.runs.get(h.id); return !q || q.state === 'dead' || q.state === 'down'; })) { this.end('lost'); return { ok: true }; }
+    } else if (k === 'mapgot') {
+      const w = int(m.wave, 1, 999); if (w % 5 !== 0 || R.mapWaves.includes(w) || w > R.wave + 1) return { ok: false, error: 'No map here.' };
+      R.mapWaves.push(w); R.maps++; this.news('🗺️', `${p.name} pulled a map off the boss`, p.id); this.soon(); return { ok: true, options: this.mapOptions(R) };
     } else if (k === 'heart') { R.hearts = Math.max(0, (R.hearts || 0) - 1); this.news('💖', `${p.name} used a Spare Heart`, p.id); this.room.fx('tzhurt', { id: p.id });
     } else if (k === 'boss') { this.news('🗑️', `A Dumpster Brute crawls out near ${p.name}!`, p.id); this.room.fx('tzboss', { id: p.id }); }
     else if (k === 'down') { this.news('💫', `${p.name} used a Spare Lunchbox`, p.id); this.room.fx('tzhurt', { id: p.id }); }
@@ -272,6 +356,7 @@ class Game {
     else if (k === 'dead') {
       if (R.state === 'dead') return { ok: true };
       R.state = 'dead'; R.hp = 0; R.deaths++; R.deadAt = this.room.now(); this.keepBest(R); this.leaveArea(p.id);
+      if (this.isScore) { R.reviveAt = this.room.now() + SCORE_RESPAWN_MS; this.news('💀', `${p.name} fell (back in a moment, minus points)`, p.id); this.room.fx('tzdead', { id: p.id }); this.soon(); return { ok: true }; }
       if (this.story) { R.reviveAt = this.room.now() + REVIVE_MS; if (this.humans().every((h) => !this.runs.get(h.id) || this.runs.get(h.id).state === 'dead')) { this.news('💀', `${p.name} fell. Nobody is left standing…`, p.id); this.room.fx('tzdead', { id: p.id }); this.end('lost'); return { ok: true }; } }
       this.news('💀', `${p.name} fell on wave ${R.wave} (level ${R.lvl}, ${R.kills} kills)`, p.id); this.room.fx('tzdead', { id: p.id });
     } else return { ok: false, error: 'Unknown event.' };
@@ -318,7 +403,7 @@ class Game {
   botStep(p, now) {
     const R = this.runs.get(p.id); if (!R) return;
     if (R.state === 'dead') { if (now - R.deadAt > 9000) this.newRun(p, false, !!this.story); return; }
-    if (now < R.nextAt) { R.kills += 1 + Math.floor(this.room.rng() * (1 + R.wave / 3)); R.hp = Math.max(1, Math.min(R.mhp, R.hp - Math.floor(this.room.rng() * 6) + 2)); return; }
+    if (now < R.nextAt) { const k0 = R.kills; R.kills += 1 + Math.floor(this.room.rng() * (1 + R.wave / 3)); R.score = (R.score || 0) + (R.kills - k0) * 12 * (1 + Math.floor(R.wave / 4)); R.hp = Math.max(1, Math.min(R.mhp, R.hp - Math.floor(this.room.rng() * 6) + 2)); return; }
     // wave cleared: level up, maybe die, walk on
     R.lvl += 1 + (this.room.rng() < 0.4 ? 1 : 0);
     const owned = R.ab, ids = W.offer(this.room.rng, owned); const id = ids[0];
@@ -337,13 +422,14 @@ class Game {
     return this.room.list().filter((p) => this.runs.has(p.id)).map((p) => {
       const R = this.runs.get(p.id), cur = { wave: R.wave, kills: R.kills, lvl: R.lvl, ab: R.ab };
       const b = R.best && (R.best.wave > cur.wave || (R.best.wave === cur.wave && R.best.kills > cur.kills)) ? R.best : cur;
-      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, wave: b.wave, kills: b.kills, lvl: b.lvl, build: Object.entries(b.ab || {}).sort((a, c) => c[1] - a[1]).slice(0, 6), runs: R.run, eq: Object.keys(R.eq || {}) };
-    }).sort((a, b) => b.wave - a.wave || b.kills - a.kills || b.lvl - a.lvl);
+      const score = this.isScore ? Math.max(R.score || 0, (R.best && R.best.score) || 0) : R.score || 0;
+      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, wave: b.wave, kills: b.kills, lvl: b.lvl, score, build: Object.entries(b.ab || {}).sort((a, c) => c[1] - a[1]).slice(0, 6), runs: R.run, eq: Object.keys(R.eq || {}) };
+    }).sort((a, b) => (this.isScore ? b.score - a.score : 0) || b.wave - a.wave || b.kills - a.kills || b.lvl - a.lvl);
   }
   people() {
     return this.room.list().filter((p) => this.runs.has(p.id)).map((p) => {
       const R = this.runs.get(p.id);
-      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, bot: !!p.bot, x: R.cell[0], y: R.cell[1], state: R.state, wave: R.wave, lvl: R.lvl, kills: R.kills, hp: R.hp, mhp: R.mhp, danger: R.danger, ch: R.choosing, pick: R.lastPick, run: R.run,
+      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, bot: !!p.bot, x: R.cell[0], y: R.cell[1], state: R.state, wave: R.wave, lvl: R.lvl, kills: R.kills, score: R.score || 0, streak: R.streak || 1, hp: R.hp, mhp: R.mhp, danger: R.danger, ch: R.choosing, pick: R.lastPick, run: R.run,
         ab: Object.entries(R.ab).sort((a, c) => c[1] - a[1]).slice(0, 5).map(([id]) => id) };
     });
   }
@@ -352,15 +438,17 @@ class Game {
       phase: this.phase, seed: this.seed, grid: W.GRID, homes: this.homes, explored: [...this.explored].map(([k, v]) => [...k.split(',').map(Number), v.by]),
       players: this.people(), feed: this.feed.slice(-8), endsIn: this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0, length: this.s.length, diff: this.s.diff,
       coop: [...this.areas].filter(([, A]) => A.members.length > 1).map(([k, A]) => ({ k, host: A.host, members: A.members.slice() })),
-      standings: this.standings().slice(0, 12), why: this.overWhy, mode: this.s.mode, story: this.storyTv(),
+      standings: this.standings().slice(0, 12), why: this.overWhy, mode: this.s.mode, story: this.storyTv(), minutes: this.minutes || 0,
+      found: [...this.found].map(([k, f]) => [k, f.type]), pings: this.pings.map((q) => ({ ...q, name: this.room.name(q.id) })),
     };
   }
   view(p) {
     const R = this.runs.get(p.id), A = this.areaOf(p.id);
     return {
       phase: this.phase, seed: this.seed, grid: W.GRID, homes: this.homes, explored: [...this.explored.keys()].map((k) => k.split(',').map(Number)),
-      players: this.people().filter((x) => x.id !== p.id).map(({ id, name, color, avatar, x, y, state, wave, lvl, hp, mhp, bot }) => ({ id, name, color, avatar, x, y, state, wave, lvl, hp, mhp, bot })),
-      me: R ? { id: p.id, run: R.run, cell: R.cell, home: R.home, state: R.state, wave: R.wave, lvl: R.lvl, xp: R.xp, kills: R.kills, hp: R.hp, mhp: R.mhp, ab: R.ab, eq: R.eq || {}, hearts: R.hearts || 0, best: R.best, deaths: R.deaths, comeback: R.comeback || 0 } : null,
+      players: this.people().filter((x) => x.id !== p.id).map(({ id, name, color, avatar, x, y, state, wave, lvl, hp, mhp, bot, score }) => ({ id, name, color, avatar, x, y, state, wave, lvl, hp, mhp, bot, score })),
+      found: [...this.found].map(([k, f]) => [k, f.type]), pings: this.pings.map((q) => ({ ...q, name: this.room.name(q.id) })), stashes: [...this.stashes].filter(([, s]) => !s.took.includes(p.id)).map(([k]) => k),
+      me: R ? { id: p.id, run: R.run, cell: R.cell, home: R.home, state: R.state, wave: R.wave, lvl: R.lvl, xp: R.xp, kills: R.kills, hp: R.hp, mhp: R.mhp, ab: R.ab, eq: R.eq || {}, hearts: R.hearts || 0, best: R.best, deaths: R.deaths, comeback: R.comeback || 0, score: R.score || 0, maps: R.maps || 0, reviveIn: R.state === 'dead' ? Math.max(0, (R.reviveAt || 0) - this.room.now()) : 0 } : null,
       area: A ? { k: A.k, host: A.host, members: A.members.slice() } : null,
       settings: { diff: this.s.diff, aim: this.s.aim, xp: this.s.xp, length: this.s.length, mode: this.s.mode }, endsIn: this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0,
       feed: this.feed.slice(-4), standings: this.phase === 'over' ? this.standings() : null, why: this.overWhy, mode: this.s.mode, story: this.storyView(p),

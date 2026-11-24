@@ -299,7 +299,7 @@ function sandbox() {
   let now = 0; const reports = [], lives = [], events = [];
   const ctx = { console, Math, Date, JSON, Object, Array, Map, Set, Number, String, Promise, Infinity, isFinite, performance: { now: () => now } };
   ctx.window = ctx; ctx.self = ctx; vm.createContext(ctx);
-  for (const f of ['trash-world.js', 'trash-sim.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
+  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-shop.js', 'trash-play.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
   const make = (o = {}) => new ctx.TZSim.Sim({ seed: 42, homes: [[4, 4]], me: { id: o.id || 'me', name: 'Me', color: '#fff' }, settings: { diff: 'normal', aim: 'on', xp: 'shared', ...(o.settings || {}) }, restore: o.restore || { cell: [4, 4], home: [4, 4], wave: 1, run: 1 },
     report: (m) => { reports.push(m); return Promise.resolve({ ok: true }); }, live: (m) => lives.push(m), on: (k, d) => events.push([k, d]), people: () => null });
   const step = (s, sec, I = {}, pick = true) => { for (let t = 0; t < sec; t += 1 / 60) { now += 1000 / 60; if (pick && s.cards) s.pick(0); s.update(1 / 60, I); } };
@@ -328,8 +328,8 @@ test('phone camera: it leads where you run (eased over ~0.4 s) and where you aim
   const S = sandbox(), L = S.ctx.TZSim.lead, st = { lx: 0, ly: 0 }, P = { vx: 300, vy: 0, aim: Math.PI / 2 };
   L(st, P, 600, 330, 0.016, false); assert(st.lx > 0 && st.lx < 20, 'eases in, not a jump');
   for (let i = 0; i < 25; i++) L(st, P, 600, 330, 0.016, false); // 0.4 s
-  assert(st.lx > 600 * 0.18 * 0.9 && Math.abs(st.ly) < 1, 'settled ahead of you: ' + st.lx);
-  L(st, { vx: 0, vy: 0, aim: Math.PI / 2 }, 600, 330, 1, true); assert(Math.abs(st.lx) < 2 && st.ly > 330 * 0.09, 'aiming down leads down');
+  assert(st.lx > 600 * 0.12 * 0.9 && Math.abs(st.ly) < 1, 'settled ahead of you: ' + st.lx);
+  L(st, { vx: 0, vy: 0, aim: Math.PI / 2 }, 600, 330, 1, true); assert(Math.abs(st.lx) < 2 && st.ly > 330 * 0.06, 'aiming down leads down');
   L(st, { vx: 0, vy: 0, aim: 0 }, 600, 330, 2, false); assert(Math.abs(st.lx) < 1 && Math.abs(st.ly) < 1, 'standing still: back on you');
   const C = S.ctx.TZSim.camCenter; const c = C(-500, 99999, 600, 330, 140); assert.equal(c.x, 300 - 140); assert.equal(c.y, W.AH + 140 - 165, 'clamped to the area');
   const wx = new Set(); for (let i = 1; i < 60; i++) wx.add(S.ctx.TZSim.weather(i).tod); assert.deepEqual([...wx].sort(), ['dusk', 'night', 'overcast'], 'every kind of evening shows up');

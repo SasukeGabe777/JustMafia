@@ -51,6 +51,7 @@
     findHere() { const st = this.story; if (!st || !st.plan) return null; const k = this.cellKey(), id = st.plan.finds[k]; return id && !(st.taken || []).includes(k) && !this.looted.has(k) ? id : null; }
     setStory(st, me) {
       const was = this.story; this.story = st || null;
+      if (was && st && st.tier > was.tier) { this.banner = { text: '⛓️ GATES DOWN!', sub: 'Ring ' + st.tier + ' is open: new areas to explore', t: 3 }; this.shake = Math.max(this.shake, 0.3); this.o.on('unlock', { tier: st.tier }); }
       if (me) {
         const eq = me.eq || {}; if (Object.keys(eq).some((k) => !this.eq[k])) { this.eq = { ...this.eq, ...eq }; this.stats(); }
         if ((me.hearts || 0) > this.hearts) { this.p.lives += me.hearts - this.hearts; this.hearts = me.hearts; }
@@ -101,10 +102,10 @@
         rate: 5.5 * (1 + soft(a('rapid'), 2.4, 0.86)), dmg: 10 * (1 + 0.25 * a('big') + 0.04 * Math.max(0, a('rapid') - 8)) * (1 + 0.03 * (lv - 1)) * (spread / shots),
         br: 5 + Math.min(10, 1.6 * a('big')) + (spread > shots ? 2 : 0), bspeed: 980, pierce: Math.min(8, a('pierce') + (E.blower ? 1 : 0)), pierceDmg: 1 + 0.15 * Math.max(0, a('pierce') - 8),
         bounce: Math.min(6, a('bounce')), crit: Math.min(0.8, soft(a('crit'), 0.7, 0.88) + (E.goggles ? 0.15 : 0)), critMul: 3 + 0.2 * Math.max(0, a('crit') - 6), burn: a('burn'),
-        spread: shots, rear: a('rear'), rearDmg: 1 + 0.25 * Math.max(0, a('rear') - 2), mhp: 100 + 25 * a('hp'), regen: a('regen'), armor: 0.3 + 0.7 * Math.pow(0.9, a('plating')), dodge: soft(a('dodge'), 0.6, 0.9),
+        spread: shots, rear: a('rear'), rearDmg: 1 + 0.25 * Math.max(0, a('rear') - 2), mhp: 100 + 25 * a('hp') + (this.gear ? this.gear.mhp : 0), regen: a('regen'), armor: (0.3 + 0.7 * Math.pow(0.9, a('plating'))) * Math.pow(0.92, this.gear ? this.gear.vest : 0), dodge: soft(a('dodge'), 0.6, 0.9),
         thorns: 15 * a('thorns'), shove: a('shove'), orbit: Math.min(10, a('orbit')), orbitN: a('orbit'), drone: a('drone'), bomb: a('bomb'), zap: a('zap'), magnet: 95 * (1 + soft(a('magnet'), 2.5, 0.8)),
         slow: Math.max(soft(a('slow'), 0.6, 0.85), E.boombox ? 0.25 : 0), raccoon: a('raccoon'), speed: 255 * (1 + soft(a('kicks'), 0.8, 0.85)) * (E.skates ? 1.3 : 1),
-        view: 1 + W.soft(a('eagle'), 0.55, 0.8), knock: E.blower ? 3 : 1, aimRange: E.goggles ? 860 : 640, leech: E.leech ? 2 : 0, fire: !!E.fire, storm: !!E.storm, lid: !!E.lid,
+        view: 1 + W.soft(a('eagle') + (this.gear ? this.gear.torch : 0), 0.55, 0.8), knock: E.blower ? 3 : 1, aimRange: E.goggles ? 860 : 640, leech: E.leech ? 2 : 0, fire: !!E.fire, storm: !!E.storm, lid: !!E.lid,
       };
       if (this.S.raccoon && !this.raccoon) this.raccoon = { x: this.p ? this.p.x : 800, y: this.p ? this.p.y : 480, cd: 0, face: 1, t: 0 };
     }
@@ -199,12 +200,13 @@
       if (mine) this.killCount++;
       // XP: gems when you're alone, straight XP in a shared area (shared, or to the shooter)
       if (this.mode === 'solo') { const n = Math.min(4, z.xp), v = z.xp / n; for (let i = 0; i < n; i++) this.gems.push({ x: z.x + (this.rng() - 0.5) * 20, y: z.y + (this.rng() - 0.5) * 20, v, t: 0 }); }
-      else { this.kills.push([by, z.xp]); if (this.set.xp !== 'own' || mine) this.gainXp(z.xp); }
+      else { this.kills.push([by, z.xp, z.ti, z.elite ? 1 : 0]); if (this.set.xp !== 'own' || mine) this.gainXp(z.xp); }
       this.gore(z);
+      if (this.onKill) this.onKill(z, by, mine);
       if (W.ZOMBIES[z.type].pops) this.boom(z.x, z.y, 95, 22 * (this.spec ? this.spec.dmgMul : 1), '#b6ff3c', true);
       if (mine && this.S.leech) this.p.hp = Math.min(this.S.mhp, this.p.hp + this.S.leech);
       if (z.fb) { this.finalDead = true; this.shake = 1; for (let i = 0; i < 60; i++) this.particle(z.x, z.y - z.r, (this.rng() - 0.5) * 700, (this.rng() - 0.8) * 600, ['#ffd23f', '#9cff3c', '#ff5a3c'][i % 3], 1.2, 8); this.o.report({ op: 'ev', k: 'victory' }); this.o.on('victory', this.summary()); }
-      else if (z.boss) { this.dropPickup(z.x, z.y); this.shake = Math.max(this.shake, 0.5); this.o.on('bossdown', {}); }
+      else if (z.boss) { this.dropPickup(z.x, z.y); this.shake = Math.max(this.shake, 0.5); this.o.on('bossdown', {}); if (this.dropMap) this.dropMap(z.x + 40, z.y); }
       else if (this.rng() < 0.025) this.dropPickup(z.x, z.y);
       this.booms.push([1, Math.round(z.x), Math.round(z.y)]);
     }
@@ -236,12 +238,15 @@
       if (this.S.lid && (this.lidAt || 0) <= this.t) { this.lidAt = this.t + 8; P.inv = 0.6; this.fx.push({ k: 'txt', x: P.x, y: P.y - 80, text: 'BLOCKED!', t: 0, life: 0.7, c: '#b7c2cc' }); return; }
       if (P.armor > 0) { P.armor = 0; P.inv = 0.6; this.o.on('armor', {}); this.fx.push({ k: 'ring', x: P.x, y: P.y - 20, r: 10, R: 70, t: 0, life: 0.3, c: '#b7c2cc' }); return; }
       if (this.rng() < this.S.dodge) { this.fx.push({ k: 'txt', x: P.x, y: P.y - 70, text: 'DODGE!', t: 0, life: 0.7, c: '#ffe066' }); P.inv = 0.3; return; }
+      if (this.shopping && this.mode !== 'solo') return;
+      if (this.plates > 0) { this.plates--; P.inv = 0.6; this.fx.push({ k: 'txt', x: P.x, y: P.y - 80, text: 'PLATE!', t: 0, life: 0.7, c: '#c9ccd1' }); if (this.onHurt) this.onHurt(0); return; }
+      if (this.onHurt) this.onHurt(dmg);
       const d = dmg * this.S.armor; P.hp -= d; P.inv = 0.75; this.flash = 0.25; this.shake = Math.max(this.shake, 0.18);
       if (fx != null) { const L = Math.hypot(P.x - fx, P.y - fy) || 1; P.vx += ((P.x - fx) / L) * 260; P.vy += ((P.y - fy) / L) * 260; }
       this.o.on('hurt', { hp: P.hp, mhp: this.S.mhp });
       if (P.hp <= 0) {
         if (P.lives > 0) { P.lives--; P.hp = this.S.mhp * 0.6; P.inv = 2.2; this.boom(P.x, P.y, 220, 80, '#ffd23f', false); this.o.on('down', {}); if (this.hearts > 0) { this.hearts--; this.o.report({ op: 'ev', k: 'heart' }); } else this.o.report({ op: 'ev', k: 'down' }); return; }
-        P.hp = 0; this.die();
+        P.hp = 0; if (this.goDown && this.goDown()) return; this.die();
       }
     }
     die() { this.dead = true; this.phase = 'dead'; this.cards = null; this.choosing = false; this.paused = false; this.reportStatus(true); this.o.report({ op: 'ev', k: 'dead' }); this.o.on('dead', this.summary()); }
@@ -292,6 +297,7 @@
       if (this.banner) { this.banner.t -= dt; if (this.banner.t <= 0) this.banner = null; }
       if (this.phase === 'intro') { this.updateIntro(dt, I); this.fxStep(dt); return; }
       if (this.phase === 'dead') { this.fxStep(dt); this.netStep(); return; }
+      if (this.down) { this.downStep(dt); this.fxStep(dt); this.netStep(); if (this.mode !== 'guest') { this.spawnStep(dt); this.zombieStep(dt); } else this.guestStep(dt); this.othersStep(dt); return; }
       const slow = this.paused ? 0 : 1, sdt = dt * slow;
       if (sdt > 0) {
         this.moveYou(sdt, I);
@@ -302,6 +308,7 @@
         this.contact(sdt);
         this.gemStep(sdt);
         this.storyStep();
+        if (this.playStep) this.playStep(sdt, I);
         this.buffStep(sdt);
         this.othersStep(sdt);
       }
@@ -320,7 +327,7 @@
     moveYou(dt, I) {
       const P = this.p, S = this.S, B = this.buffs;
       let mx = I.mx || 0, my = I.my || 0; const m = Math.hypot(mx, my); if (m > 1) { mx /= m; my /= m; }
-      if (this.choosing && this.mode !== 'solo') { mx = 0; my = 0; }
+      if ((this.choosing || this.shopping) && this.mode !== 'solo') { mx = 0; my = 0; }
       const sp = S.speed * (B.kicks > 0 ? 1.5 : 1);
       P.vx = P.vx * Math.pow(0.0005, dt) + mx * sp * (1 - Math.pow(0.0005, dt)) * 1.0;
       P.vy = P.vy * Math.pow(0.0005, dt) + my * sp * (1 - Math.pow(0.0005, dt)) * 1.0;
@@ -359,7 +366,7 @@
     shoot(dt, I) {
       const P = this.p, S = this.S, B = this.buffs;
       let fire = false;
-      if (this.choosing && this.mode !== 'solo') return;
+      if ((this.choosing || this.shopping) && this.mode !== 'solo') return;
       if (I.ax || I.ay) { P.aim = Math.atan2(I.ay, I.ax); fire = I.mouse ? !!I.fire : true; }
       else if (this.set.aim !== 'off' && !I.mouse) { const z = this.nearestZ(P.x, P.y - 24, S.aimRange); if (z) { P.aim = Math.atan2(z.y - z.r - (P.y - 24), z.x - P.x); fire = true; } }
       if (Math.cos(P.aim) > 0.15) P.face = 1; else if (Math.cos(P.aim) < -0.15) P.face = -1;
@@ -420,8 +427,8 @@
       for (let i = 0; i < burst; i++) this.spawnOne();
     }
     targets() {
-      const L = [this.dead || (this.choosing && this.mode !== 'solo') ? null : this.p];
-      for (const o of this.others.values()) if (o.hp > 0 && !o.ch) L.push(o);
+      const L = [this.dead || this.down || ((this.choosing || this.shopping) && this.mode !== 'solo') ? null : this.p];
+      for (const o of this.others.values()) if (o.hp > 0 && !o.ch && !o.down) L.push(o);
       return L.filter(Boolean);
     }
     zombieStep(dt) {
@@ -547,6 +554,7 @@
     clear() {
       this.cleared = true; this.banner = { text: 'AREA CLEAR!', sub: 'Walk out an exit ➜ new area, next wave', t: 3 };
       for (const g of this.gems) g.vac = true;
+      if (this.onClear) this.onClear();
       this.o.report({ op: 'ev', k: 'clear', wave: this.wave }); this.o.on('clear', { wave: this.wave }); this.reportStatus(true);
     }
     gemStep(dt) {
@@ -580,7 +588,7 @@
       if (this.mode === 'guest' && now - this.lastIn > IN_MS) { this.lastIn = now; this.sendIn(); }
       if (this.mode === 'solo') { this.shots.length = 0; this.kills.length = 0; this.booms.length = 0; this.hits.length = 0; }
     }
-    youMsg() { const P = this.p; return [Math.round(P.x), Math.round(P.y), Math.round(P.aim * 100) / 100, Math.round(P.hp), Math.round(this.S.mhp), this.dead ? 1 : 0, this.choosing ? 1 : 0, Math.round(this.S.slow * 100) / 100, this.buffs.shield > 0 ? 1 : 0, P.face]; }
+    youMsg() { const P = this.p; return [Math.round(P.x), Math.round(P.y), Math.round(P.aim * 100) / 100, Math.round(P.hp), Math.round(this.S.mhp), this.dead ? 1 : 0, this.choosing ? 1 : 0, Math.round(this.S.slow * 100) / 100, this.buffs.shield > 0 ? 1 : 0, P.face, this.down ? 1 : 0, (this.shopping || this.choosing) ? 1 : 0]; }
     sendSnap() {
       const z = []; for (const q of this.z) if (q.hp > 0) z.push(q.id, q.ti, Math.round(q.x), Math.round(q.y), Math.round(q.hp));
       const msg = { t: 'snap', w: [this.wave, this.waveKills, this.spec ? this.spec.target : 0, this.cleared ? 1 : 0, this.bossDue && !this.bossSpawned ? 1 : 0], z, p: this.pk.map((p) => [p.id, p.k, Math.round(p.x), Math.round(p.y), Math.round(p.life)]),
@@ -596,7 +604,7 @@
       if (!you) return null;
       let o = this.others.get(id);
       if (!o) { o = { id, x: you[0], y: you[1], tx: you[0], ty: you[1] }; this.others.set(id, o); }
-      o.tx = you[0]; o.ty = you[1]; o.aim = you[2]; o.hp = you[3]; o.mhp = you[4]; o.dead = !!you[5]; o.ch = !!you[6]; o.slow = you[7] || 0; o.shield = !!you[8]; o.face = you[9] || 1; o.seen = this.t;
+      o.tx = you[0]; o.ty = you[1]; o.aim = you[2]; o.hp = you[3]; o.mhp = you[4]; o.dead = !!you[5]; o.ch = !!you[6]; o.slow = you[7] || 0; o.shield = !!you[8]; o.face = you[9] || 1; o.down = !!you[10]; o.busy = !!you[11]; o.seen = this.t; if (!o.down) o.rev = 0;
       if (o.dead) o.hp = 0;
       return o;
     }
@@ -619,7 +627,7 @@
         const pk = new Map(this.pk.map((p) => [p.id, p])); this.pk = (m.p || []).map(([id, k, x, y, life]) => { const o = pk.get(id); return { id, k, x, y, life, asked: o ? o.asked : false }; });
         this.spit = (m.s || []).map(([x, y, vx, vy, dmg]) => ({ x, y, vx, vy, dmg, life: 1 }));
         this.remoteFreeze = m.fz ? 0.3 : 0;
-        for (const [by, xp] of m.k || []) { if (by === this.me.id) this.killCount++; if (this.set.xp !== 'own' || by === this.me.id) this.gainXp(xp); }
+        for (const [by, xp, ti, el] of m.k || []) { if (by === this.me.id) { this.killCount++; if (this.onKill) this.onKill({ type: Object.keys(W.ZOMBIES)[ti] || 'walker', elite: !!el, x: this.p.x, y: this.p.y - 80, remote: true }, by, true); } if (this.set.xp !== 'own' || by === this.me.id) this.gainXp(xp); }
         this.other(m.from, m.you); this.ghostShots(m.b);
         return;
       }
@@ -631,12 +639,13 @@
       }
       if (m.t === 'grab' && this.mode === 'host') { const i = this.pk.findIndex((p) => p.id === m.id); if (i >= 0) { const p = this.pk.splice(i, 1)[0]; this.o.live({ t: 'give', to: m.from, k: p.k, id: p.id }); } return; }
       if (m.t === 'give' && m.to === this.me.id) { this.pk = this.pk.filter((p) => p.id !== m.id); this.applyPickup(m.k); return; }
+      if (m.t === 'revived' && this.down) { this.getUp(); return; }
       if (m.t === 'fx' && this.mode === 'host') { if (m.kind === 'nuke') { this.nuke(); this.flash = -0.4; } if (m.kind === 'freeze') this.buffs.freeze = Math.max(this.buffs.freeze, 6); }
     }
     reportStatus(force) {
       if (!force && this.t - this.lastSt < ST_MS / 1000) return; this.lastSt = this.t;
       const P = this.p;
-      this.o.report({ op: 'st', hp: Math.max(0, Math.round(P.hp)), mhp: Math.round(this.S.mhp), lvl: this.lvl, xp: Math.round(this.xp), kills: this.killCount, wave: this.wave, ab: this.ab, ch: this.choosing ? 1 : 0 }, true);
+      this.o.report({ op: 'st', hp: Math.max(0, Math.round(P.hp)), mhp: Math.round(this.S.mhp), lvl: this.lvl, xp: Math.round(this.xp), kills: this.killCount, wave: this.wave, ab: this.ab, ch: this.choosing ? 1 : 0, score: Math.round(this.score || 0), mult: this.mult || 1 }, true);
     }
   }
 
@@ -644,10 +653,11 @@
   const SPR = {}; // hero frames per player id
   // The camera leads where you're going (and where you aim by hand), eased over ~0.4 s.
   // state = { lx, ly } (world units, carried between frames). Pure, so it is tested.
+  const LEAD = 0.12, LEAD_AIM = 0.07; // (subtle: the view is wide)
   function lead(state, P, vw, vh, dt, manual) {
     const sp = Math.hypot(P.vx || 0, P.vy || 0); let lx = 0, ly = 0;
-    if (sp > 40) { const k = Math.min(1, sp / 250); lx = (P.vx / sp) * k * vw * 0.18; ly = (P.vy / sp) * k * vh * 0.18; }
-    if (manual) { lx += Math.cos(P.aim) * vw * 0.1; ly += Math.sin(P.aim) * vh * 0.1; }
+    if (sp > 40) { const k = Math.min(1, sp / 250); lx = (P.vx / sp) * k * vw * LEAD; ly = (P.vy / sp) * k * vh * LEAD; }
+    if (manual) { lx += Math.cos(P.aim) * vw * LEAD_AIM; ly += Math.sin(P.aim) * vh * LEAD_AIM; }
     const ease = 1 - Math.exp(-Math.max(0, dt) / 0.13);
     state.lx = (state.lx || 0) + (lx - (state.lx || 0)) * ease; state.ly = (state.ly || 0) + (ly - (state.ly || 0)) * ease; return state;
   }
