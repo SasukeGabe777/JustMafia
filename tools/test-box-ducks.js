@@ -331,7 +331,7 @@ test('Maze forks are deterministic (same seed, same race) and Smarts decides the
   assert.deepEqual(A1.results.map((x) => x.id), A2.results.map((x) => x.id));
   const tally = (lv, gear) => { const c = { short: 0, think: 0, wrong: 0, n: 0 }; for (let seed = 1; seed <= 30; seed++) { const { R, a } = mazeRace(seed, lv, { gear }); for (const [, k] of R.tracks.find((x) => x.id === a.id).ev) if (k in c) { c[k]++; c.n++; } } return c; };
   const dumb = tally(0), smart = tally(12), mapped = tally(0, ['map']);
-  assert(smart.short / smart.n > 0.35 && dumb.short / dumb.n < 0.2, `shortcuts: smart ${smart.short}/${smart.n}, dumb ${dumb.short}/${dumb.n}`);
+  assert(smart.short / smart.n > 0.28 && dumb.short / dumb.n < 0.2, `shortcuts: smart ${smart.short}/${smart.n}, dumb ${dumb.short}/${dumb.n}`);
   assert(dumb.wrong / dumb.n > 0.2 && smart.wrong / smart.n < 0.1, `wrong turns: dumb ${dumb.wrong}/${dumb.n}, smart ${smart.wrong}/${smart.n}`);
   assert(mapped.wrong > 0 && mapped.wrong < dumb.wrong * 0.75, `the Maze Map cuts wrong turns, never to zero: ${mapped.wrong} vs ${dumb.wrong}`);
   // ...and it shows in the result: a smart duck gets through a maze course faster than a weak one (same everything else).
@@ -340,7 +340,7 @@ test('Maze forks are deterministic (same seed, same race) and Smarts decides the
   const fo = D.forkOdds; assert(fo(0).wrong > fo(10).wrong && fo(0).short < fo(10).short && fo(0, true).wrong > 0 && fo(25, true, true).wrong > 0);
   // diminishing returns: the first levels of Smarts buy more than the last ones, and the odds level off
   assert(fo(0).wrong - fo(5).wrong > fo(20).wrong - fo(25).wrong && fo(5).short - fo(0).short > fo(25).short - fo(20).short);
-  assert(fo(25).short <= 0.5 && fo(25).wrong < 0.01);
+  assert(fo(25).short <= 0.5 && fo(25).wrong < 0.04);
 });
 
 // ---- the race landscapes ----
@@ -586,23 +586,48 @@ test('Bug Snack (Stamina) normal pace is clearly easier than before; Risk it! is
   // Enough bugs come up for the ⭐ target (more each stage): well over one per point even at the start pace.
   assert(20 / N.spawn > 1.5 * D.TARGET);
 });
-// ---- balance: Smarts is no longer the stat that wins races ----
-test('Balance: on the default course, a level of Smarts buys no more than a level of Run, Swim or Climb', () => {
-  const N = 50, share = {}, place = {};
-  for (const [L, k] of [[3, 3], [8, 4]]) {
-    for (const s of D.SKILLS) { share[s] = 0; place[s] = 0; }
-    for (let seed = 1; seed <= N; seed++) {
-      const { room } = setup(0, { terrain: 'mixed', course: 'classic', weather: false, races: 10, raceEvery: 300 }, seed);
-      const ps = D.SKILLS.map((s) => [s, human(room, 'P' + s)]); go(room);
-      for (const [s, p] of ps) { const d = room.game.ducks.get(p.id); for (const x of D.SKILLS) d.xp[x] = D.xpFor(L + (x === s ? k : 0)); d.mood = 60; d.tactic = 'steady'; d.perks = []; d.gear = []; }
-      room.game.next();
-      for (const [s, p] of ps) { const r = room.game.lastRace.results.find((x) => x.id === p.id); if (r.place === 1) share[s]++; place[s] += r.place; }
-    }
-    const best = D.SKILLS.slice().sort((x, y) => place[x] - place[y]);
-    assert(best[0] !== 'smarts', `L${L}+${k}: Smarts is not the best skill: ${best.map((s) => s + ' ' + (place[s] / N).toFixed(2)).join(', ')}`);
-    assert(share.smarts / N <= 0.3, `L${L}+${k}: Smarts wins ${share.smarts}/${N}`);
-    for (const s of ['run', 'swim', 'climb']) assert(place.smarts >= place[s] - N * 0.6, `L${L}+${k}: Smarts vs ${s}: ${place.smarts / N} vs ${place[s] / N}`);
+/// ---- balance: every skill is worth about the same, and a duck needs all of them (tools/ducks-balance.js) ----
+const BAL = require('./ducks-balance');
+test('Balance: one skill raised, on the default course every skill wins about as often (none more than ~1.6x another)', () => {
+  for (const [L, n] of [[4, 4], [10, 4]]) {
+    const r = BAL.oneRaised(L, n, { terrain: 'mixed', course: 'classic' }, 300), vals = D.SKILLS.map((k) => r[k]);
+    const ratio = Math.max(...vals) / Math.min(...vals);
+    assert(ratio <= 1.6, `L${L}+${n}: ${D.SKILLS.map((k) => k + ' ' + (r[k] * 100).toFixed(0) + '%').join(', ')} (${ratio.toFixed(2)}x)`);
   }
 });
-
+test('Balance: a well-rounded duck beats a specialist with the same total levels, for every skill', () => {
+  const even = BAL.even(5);
+  for (const k of D.SKILLS) {
+    const lop = BAL.lopsided(30, k), share = BAL.headToHead([even, even, even], [lop, lop, lop], {}, 60);
+    assert(share >= 0.7, `balanced vs half-in ${k}: ${share.toFixed(2)}`);
+  }
+});
+test('Balance: missing any one skill (at 0, the same total spread over the rest) clearly hurts, for every skill', () => {
+  const even = BAL.even(5);
+  for (const k of D.SKILLS) {
+    const m = BAL.missing(5, k), share = BAL.headToHead([even, even, even], [m, m, m], {}, 60);
+    assert(share >= 0.7, `balanced vs no ${k}: ${share.toFixed(2)}`);
+  }
+});
+test('Balance: every course has every kind of section (Everything, Sprint, Marathon); Brainy adds a maze; a theme only adds extras', () => {
+  for (const course of ['sprint', 'classic', 'marathon']) for (const terrain of ['mixed', 'brainy']) for (let seed = 1; seed <= 20; seed++) {
+    const { room } = setup(0, { terrain, course }, seed); human(room, 'Ann'); go(room);
+    for (let n = 1; n <= 5; n++) {
+      const C = room.game.newCourse(n), types = C.sections.map((s) => s.type);
+      for (const t of Object.keys(D.SECTIONS)) assert(types.includes(t), `${course}/${terrain}: ${t} in ${types}`);
+      assert.equal(C.sections[0].type, 'track', 'the ducks run off the line');
+      assert.equal(C.length, C.sections.reduce((a, s) => a + C.secLen[s.type], 0));
+      if (course === 'sprint') assert(C.secLen.track < D.SECTIONS.track.len, 'sprint sections are shorter');
+    }
+  }
+});
+test('Balance: Stamina matters at every level (every duck tires late in the race, less with more Stamina); gear and perks never guarantee anything', () => {
+  const depth = D.fatigueDepth;
+  assert(depth(0) > 0.4 && depth(0) > depth(5) && depth(5) > depth(12) && depth(12) > depth(20) && depth(25) === 0, [0, 5, 12, 20, 25].map((l) => depth(l).toFixed(2)).join(' '));
+  assert(depth(5) - depth(10) > 0.03 && depth(15) - depth(20) > 0.02, 'still worth training late');
+  assert(depth(5, { bar: true, lungs: true }) > 0, 'the Energy Bar and Iron Lungs help, never to zero');
+  for (const k of ['trip', 'gulp', 'dip', 'slip', 'wrong']) assert(D.mishap(D.MISHAP[k], 0) > 0.25 && D.mishap(D.MISHAP[k], 25) < 0.05 && D.mishap(D.MISHAP[k], 25) > 0, k);
+  // a fully geared, perked duck with one skill at 0 still loses most of its head-to-heads to an even duck
+  const fo = D.forkOdds(0, true, true); assert(fo.wrong > 0.05, 'Map + Compass still leave a weak-Smarts duck lost sometimes');
+});
 console.log(`\nAll ${passed} JustRaiseDucks tests passed.`);

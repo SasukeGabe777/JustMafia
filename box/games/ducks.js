@@ -11,11 +11,43 @@ const SKILLS = ['run', 'swim', 'fly', 'climb', 'stamina', 'smarts'];
 const GAME_FOR = { run: 'hurdles', swim: 'paddle', fly: 'rings', climb: 'climb', stamina: 'bugs', smarts: 'maze' };
 // Section lengths (metres) are short enough that a race plays at about real speed on the TV
 // (30-60 s), so every jump, splash and climb can be animated instead of fast-forwarded.
-const SECTIONS = { track: { skill: 'run', len: 48, base: 3.2, per: 0.42 }, pond: { skill: 'swim', len: 36, base: 2.6, per: 0.38 }, cliff: { skill: 'climb', len: 26, base: 1.6, per: 0.26 }, gap: { skill: 'fly', len: 32, base: 3.0, per: 0.42 }, maze: { skill: 'smarts', len: 34, base: 2.9, per: 0.3 } };
-// Stamina: seconds of full effort before a duck tires (scaled to the shorter races).
-const POOL = (lv, bar, lungs) => (18 + 6 * lv + (bar ? 12 : 0)) * (lungs ? 1.4 : 1);
+// Skill balance (measured by tools/ducks-balance.js, checked in tools/test-box-ducks.js):
+//  - Every course has every kind of section (track, pond, cliff, ravine, maze), and each one
+//    takes about the same time, so each skill is worth about the same.
+//  - Every skill speeds up its own section by the same curve, SKILL_SPEED: the first levels count
+//    the most (a skill at 0 is a real bottleneck: that section takes about twice as long) and the
+//    last ones the least (diminishing returns), so a duck that pours everything into one skill
+//    loses to a well-rounded duck with the same total.
+//  - Each section also has its own mishap, rarer the better trained the duck is (MISHAP / speed²):
+//    tripping on a hurdle (Run), swallowing water (Swim), dipping into the ravine (Fly), slipping
+//    down the cliff (Climb), a wrong turn in the maze (Smarts).
+//  - Stamina is the late race: every duck tires over the last part of every race (FATIGUE); the
+//    better its Stamina, the less it slows down.
+const SKILL_SPEED = (lv) => 1 + 0.3 * Math.pow(Math.max(0, lv), 0.65);
+// v0: speed (m/s) at level 0; a level-5 duck goes ~1.85× that.
+const SECTIONS = { track: { skill: 'run', len: 48, v0: 2.9 }, pond: { skill: 'swim', len: 36, v0: 2.5 }, cliff: { skill: 'climb', len: 26, v0: 1.85 }, gap: { skill: 'fly', len: 32, v0: 2.2 }, maze: { skill: 'smarts', len: 34, v0: 2.75 } };
+// Section lengths on this course (Sprint courses are shorter; older courses have none: the defaults).
+const courseLen = (C) => (C && C.secLen) || Object.fromEntries(Object.entries(SECTIONS).map(([k, x]) => [k, x.len]));
+const sectionSpeed = (type, lv) => SECTIONS[type].v0 * SKILL_SPEED(lv);
+// Mishap odds for a skill at level lv (base p at level 0).
+const mishap = (p, lv) => p / Math.pow(SKILL_SPEED(lv), 2);
+// Stamina: from FATIGUE.from of the course (earlier on long courses) a duck slows down, a little
+// more every metre (over FATIGUE.ramp of the course), down to 1 - depth of its speed. The depth
+// follows the same skill curve as every other skill: about half its speed at Stamina 0, less and
+// less with every level, nothing left at the top level. A tired duck (depth past FATIGUE.tired)
+// shows it: sweat, a heavy waddle and the commentary.
+const FATIGUE = { from: 0.5, fromLong: 0.4, ramp: 0.25, pow: 0.55, tired: 0.25 };
+const fatigueDepth = (stamina, { bar = false, lungs = false, tactic = 'steady', heat = false, low = false } = {}) =>
+  clamp((1 - Math.pow(SKILL_SPEED(stamina + (bar ? 3 : 0)) / SKILL_SPEED(25), FATIGUE.pow)) * (lungs ? 0.6 : 1) * (tactic === 'sprint' ? 1.35 : tactic === 'steady' ? 0.85 : 1) * (heat ? 1.3 : 1) * (low ? 1.2 : 1), 0, 0.75);
 // Jumps: how long a crashed duck sits dazed, and how long a clipped hurdle slows it.
 const TRIP_STOP = 1.2, CLIP_SLOW = 0.6;
+// Ponds and ravines: a weak swimmer swallows water / a weak flyer dips into the ravine and has to
+// flap back up: it stops for a moment (GULP_STOP / DIP_STOP seconds).
+const GULP_STOP = 1.0, DIP_STOP = 1.0;
+const MISHAP = { trip: 0.3, clip: 0.28, gulp: 0.36, dip: 0.4, slip: 0.36, skid: 0.35, wrong: 0.32 };
+// A skill this far below the duck's own average (or at 0-1) is "weak": the race commentary says so
+// when the duck reaches that section, and the phone points at it.
+const WEAK_GAP = 3;
 // Mazes: a fork every FORK_GAP metres. At each one a duck takes the shortcut (a burst of speed),
 // stops to think (THINK_STOP seconds, head-scratching) or takes a wrong turn and walks back to the
 // fork (WRONG_STOP seconds). Smarts sets the odds; it is decided in the simulation, like a hurdle.
@@ -24,8 +56,8 @@ const TRIP_STOP = 1.2, CLIP_SLOW = 0.6;
 // buys on the default course. The Maze Map and the Inner Compass each cut wrong turns, never to zero.
 const FORK_GAP = 11, THINK_STOP = 0.7, WRONG_STOP = 2.0, SHORT_BOOST = 1.2, SHORT_SPEED = 1.25;
 const forkOdds = (smarts, map, compass, fog) => {
-  const wrong = 0.3 * Math.pow(0.86, smarts) * (map ? 0.5 : 1) * (compass ? 0.7 : 1) * (fog ? 1.4 : 1);
-  const short = 0.1 + 0.4 * (1 - Math.pow(0.85, smarts));
+  const wrong = mishap(MISHAP.wrong, smarts) * (map ? 0.5 : 1) * (compass ? 0.7 : 1) * (fog ? 1.4 : 1);
+  const short = 0.1 + 0.4 * (1 - 1 / SKILL_SPEED(smarts));
   return { wrong, short: Math.min(short, 1 - wrong) };
 };
 // Where the forks are in a maze section that runs from a to b (metres).
@@ -109,20 +141,20 @@ const LEAGUES = [
 // Course themes change the look and the obstacles: each section gets a variant.
 // Every theme can roll every kind of section (weights), so every landscape can have a maze.
 const THEMES = {
-  meadow: { label: 'Sunny Meadow', weights: { track: 3, pond: 2, cliff: 1, gap: 1, maze: 1 }, variants: { track: ['hurdles', 'mud'], pond: ['lily', 'calm'], cliff: ['rock'], gap: ['clouds'], maze: ['hedge'] } },
-  beach: { label: 'Seashell Beach', weights: { track: 2, pond: 3, cliff: 1, gap: 1, maze: 1 }, variants: { track: ['sand', 'hurdles'], pond: ['waves'], cliff: ['rock'], gap: ['clouds'], maze: ['sandcastle'] } },
-  forest: { label: 'Mossy Forest', weights: { track: 3, pond: 1, cliff: 2, gap: 1, maze: 2 }, variants: { track: ['logs', 'mud'], pond: ['lily', 'calm'], cliff: ['rock'], gap: ['canyon'], maze: ['hedge'] } },
-  snow: { label: 'Frosty Peaks', weights: { track: 2, pond: 1, cliff: 3, gap: 1, maze: 1 }, variants: { track: ['ice', 'hurdles'], pond: ['icy'], cliff: ['ice'], gap: ['canyon'], maze: ['icecave'] } },
-  canyon: { label: 'Red Rock Canyon', weights: { track: 2, pond: 1, cliff: 2, gap: 3, maze: 1 }, variants: { track: ['hurdles', 'logs'], pond: ['rapids'], cliff: ['rock'], gap: ['canyon'], maze: ['slot'] } },
-  night: { label: 'Firefly Night', weights: { track: 2, pond: 2, cliff: 1, gap: 2, maze: 1 }, variants: { track: ['hurdles', 'logs'], pond: ['lily', 'calm'], cliff: ['rock'], gap: ['clouds'], maze: ['hedge'] } },
-  volcano: { label: 'Volcano Run', weights: { track: 3, pond: 1, cliff: 2, gap: 2, maze: 1 }, variants: { track: ['lava', 'ash'], pond: ['hotspring'], cliff: ['basalt'], gap: ['lavapit'], maze: ['lavatubes'] } },
-  swamp: { label: 'Murky Swamp', weights: { track: 2, pond: 3, cliff: 1, gap: 1, maze: 2 }, variants: { track: ['roots', 'mud'], pond: ['murky'], cliff: ['mudbank'], gap: ['bog'], maze: ['reeds'] } },
-  city: { label: 'City Rooftops', weights: { track: 3, pond: 1, cliff: 2, gap: 3, maze: 2 }, variants: { track: ['roof', 'puddles'], pond: ['fountain'], cliff: ['wall'], gap: ['street'], maze: ['alley'] } },
-  jungle: { label: 'Lost Jungle', weights: { track: 2, pond: 2, cliff: 2, gap: 1, maze: 2 }, variants: { track: ['roots', 'mud'], pond: ['rapids'], cliff: ['waterfall'], gap: ['gorge'], maze: ['temple'] } },
-  desert: { label: 'Dusty Desert', weights: { track: 3, pond: 1, cliff: 1, gap: 2, maze: 2 }, variants: { track: ['cactus', 'dunes'], pond: ['oasis'], cliff: ['sandstone'], gap: ['canyon'], maze: ['slot'] } },
-  sky: { label: 'Sky Islands', weights: { track: 2, pond: 1, cliff: 1, gap: 4, maze: 1 }, variants: { track: ['cloudpath', 'hurdles'], pond: ['skylake'], cliff: ['floating'], gap: ['sky'], maze: ['cloudmaze'] } },
-  candy: { label: 'Candy Land', weights: { track: 3, pond: 2, cliff: 1, gap: 1, maze: 2 }, variants: { track: ['gumdrops', 'taffy'], pond: ['choco'], cliff: ['candycane'], gap: ['cotton'], maze: ['licorice'] } },
-  haunted: { label: 'Haunted Farm', weights: { track: 2, pond: 1, cliff: 1, gap: 1, maze: 3 }, variants: { track: ['hay', 'mud'], pond: ['foggy'], cliff: ['barn'], gap: ['fogpit'], maze: ['corn'] } },
+  meadow: { label: 'Sunny Meadow', weights: { track: 2, pond: 2, cliff: 1, gap: 1, maze: 1 }, variants: { track: ['hurdles', 'mud'], pond: ['lily', 'calm'], cliff: ['rock'], gap: ['clouds'], maze: ['hedge'] } },
+  beach: { label: 'Seashell Beach', weights: { track: 1, pond: 3, cliff: 1, gap: 1, maze: 1 }, variants: { track: ['sand', 'hurdles'], pond: ['waves'], cliff: ['rock'], gap: ['clouds'], maze: ['sandcastle'] } },
+  forest: { label: 'Mossy Forest', weights: { track: 2, pond: 1, cliff: 2, gap: 1, maze: 2 }, variants: { track: ['logs', 'mud'], pond: ['lily', 'calm'], cliff: ['rock'], gap: ['canyon'], maze: ['hedge'] } },
+  snow: { label: 'Frosty Peaks', weights: { track: 1, pond: 1, cliff: 3, gap: 1, maze: 1 }, variants: { track: ['ice', 'hurdles'], pond: ['icy'], cliff: ['ice'], gap: ['canyon'], maze: ['icecave'] } },
+  canyon: { label: 'Red Rock Canyon', weights: { track: 1, pond: 1, cliff: 2, gap: 3, maze: 1 }, variants: { track: ['hurdles', 'logs'], pond: ['rapids'], cliff: ['rock'], gap: ['canyon'], maze: ['slot'] } },
+  night: { label: 'Firefly Night', weights: { track: 1, pond: 2, cliff: 1, gap: 2, maze: 1 }, variants: { track: ['hurdles', 'logs'], pond: ['lily', 'calm'], cliff: ['rock'], gap: ['clouds'], maze: ['hedge'] } },
+  volcano: { label: 'Volcano Run', weights: { track: 2, pond: 1, cliff: 2, gap: 2, maze: 1 }, variants: { track: ['lava', 'ash'], pond: ['hotspring'], cliff: ['basalt'], gap: ['lavapit'], maze: ['lavatubes'] } },
+  swamp: { label: 'Murky Swamp', weights: { track: 1, pond: 3, cliff: 1, gap: 1, maze: 2 }, variants: { track: ['roots', 'mud'], pond: ['murky'], cliff: ['mudbank'], gap: ['bog'], maze: ['reeds'] } },
+  city: { label: 'City Rooftops', weights: { track: 2, pond: 1, cliff: 2, gap: 3, maze: 2 }, variants: { track: ['roof', 'puddles'], pond: ['fountain'], cliff: ['wall'], gap: ['street'], maze: ['alley'] } },
+  jungle: { label: 'Lost Jungle', weights: { track: 1, pond: 2, cliff: 2, gap: 1, maze: 2 }, variants: { track: ['roots', 'mud'], pond: ['rapids'], cliff: ['waterfall'], gap: ['gorge'], maze: ['temple'] } },
+  desert: { label: 'Dusty Desert', weights: { track: 2, pond: 1, cliff: 1, gap: 2, maze: 2 }, variants: { track: ['cactus', 'dunes'], pond: ['oasis'], cliff: ['sandstone'], gap: ['canyon'], maze: ['slot'] } },
+  sky: { label: 'Sky Islands', weights: { track: 1, pond: 1, cliff: 1, gap: 4, maze: 1 }, variants: { track: ['cloudpath', 'hurdles'], pond: ['skylake'], cliff: ['floating'], gap: ['sky'], maze: ['cloudmaze'] } },
+  candy: { label: 'Candy Land', weights: { track: 2, pond: 2, cliff: 1, gap: 1, maze: 2 }, variants: { track: ['gumdrops', 'taffy'], pond: ['choco'], cliff: ['candycane'], gap: ['cotton'], maze: ['licorice'] } },
+  haunted: { label: 'Haunted Farm', weights: { track: 1, pond: 1, cliff: 1, gap: 1, maze: 3 }, variants: { track: ['hay', 'mud'], pond: ['foggy'], cliff: ['barn'], gap: ['fogpit'], maze: ['corn'] } },
 };
 const VARIANT = {
   hurdles: 'Hurdles: jump them (Run helps)', logs: 'Fallen logs: big jumps, more trips', mud: 'Mud: slows weak runners', sand: 'Soft sand: slower running', ice: 'Ice: slippery for everyone',
@@ -228,7 +260,7 @@ const onOff = opt([[true, 'On'], [false, 'Off']]);
 const fields = [
   { key: 'raceEvery', label: 'Race every', options: opt([[60, '1 minute'], [120, '2 minutes'], [180, '3 minutes'], [300, '5 minutes']]) },
   { key: 'races', label: 'Races in the season', options: opt([[3, '3 races'], [5, '5 races'], [8, '8 races'], [10, '10 races']]) },
-  { key: 'course', label: 'Course length', options: opt([['sprint', 'Sprint (4 sections)'], ['classic', 'Classic (5 sections)'], ['marathon', 'Marathon (8 sections, Stamina matters)']]) },
+  { key: 'course', label: 'Course length', options: opt([['sprint', 'Sprint (5 short sections)'], ['classic', 'Classic (5 sections, one of each)'], ['marathon', 'Marathon (8 sections, Stamina matters)']]) },
   { key: 'terrain', label: 'Terrain', options: opt([['mixed', 'Everything (track, pond, cliff, ravine, maze)'], ['classic', 'Classic (no mazes)'], ['brainy', 'Brainy (lots of mazes: Smarts matters)'], ['track', 'Track only'], ['pond', 'Pond only'], ['mountain', 'Mountain (cliffs and ravines)']]) },
   { key: 'energy', label: 'Energy', options: opt([['normal', 'Normal (food matters; tired ducks nap)'], ['relaxed', 'Relaxed (refills twice as fast)'], ['unlimited', 'Unlimited (train nonstop)']]) },
   { key: 'startCoins', label: 'Starting coins', options: opt([[30, '30 coins'], [60, '60 coins'], [120, '120 coins']]) },
@@ -359,33 +391,42 @@ class Ducks {
 
   // ---- season ----
   newCourse(n) {
-    const count = ({ sprint: 4, classic: 5, marathon: 8 }[this.s.course] || 5) + Math.min(1, Math.floor((n - 1) / 3));
+    // Every course has each kind of section of its terrain once (so every skill is needed in every
+    // race), plus extra sections the landscape favours (theme weights): Classic courses have one
+    // section of each kind; Sprint is the same with shorter sections; Marathon adds three; from the
+    // fourth race on, one more. Brainy adds a second maze.
     const ALL = ['track', 'pond', 'cliff', 'gap', 'maze'];
     const pool = { mixed: ALL, classic: ['track', 'pond', 'cliff', 'gap'], brainy: ALL, track: ['track'], pond: ['pond'], mountain: ['cliff', 'gap', 'track'] }[this.s.terrain] || ALL;
+    const late = Math.min(1, Math.floor((n - 1) / 3));
+    const extra = ({ sprint: 0, classic: 0, marathon: 3 }[this.s.course] || 0) + late + (this.s.terrain === 'brainy' ? 1 : 0);
+    // (Track only / Pond only / Mountain keep the old counts: 4, 5 or 8 sections.)
+    const count = pool.length >= 4 ? Math.max(5, pool.length) + extra : ({ sprint: 4, classic: 5, marathon: 8 }[this.s.course] || 5) + late;
     const rng = this.room.rng, themeKeys = Object.keys(THEMES);
     let theme; do theme = themeKeys[Math.floor(rng() * themeKeys.length)]; while (theme === (this.course && this.course.theme) && themeKeys.length > 1);
     const T = THEMES[theme];
     const weight = (x) => (T.weights[x] || 1) * (this.s.terrain === 'brainy' && x === 'maze' ? 4 : 1);
-    const pickType = (prev) => { const opts = pool.filter((x) => pool.length === 1 || x !== prev); const tot = opts.reduce((a, x) => a + weight(x), 0); let r = rng() * tot; for (const x of opts) { r -= weight(x); if (r <= 0) return x; } return opts[0]; };
-    const types = [pool.includes('track') ? 'track' : pool[0]];
-    while (types.length < count) types.push(pickType(types[types.length - 1]));
-    // Everything: each kind of section at least once (a maze from 5 sections up); Brainy: two mazes.
-    // A needed section takes the place of a kind that shows up more than once, never of another need.
-    const needs = this.s.terrain === 'mixed' || this.s.terrain === 'classic' ? ['pond', 'cliff', 'gap', ...(this.s.terrain === 'mixed' && count >= 5 ? ['maze'] : [])] : this.s.terrain === 'brainy' ? ['maze', 'maze'] : [];
-    const req = (x) => needs.filter((n) => n === x).length, cnt = (x) => types.filter((n) => n === x).length;
-    for (const need of needs) {
-      if (cnt(need) >= req(need)) continue;
-      const free = types.map((x, i) => i).filter((i) => i > 0 && cnt(types[i]) > req(types[i]));
-      const dup = free.filter((i) => cnt(types[i]) > 1), pick = dup.length ? dup : free;
-      if (pick.length) types[pick[Math.floor(rng() * pick.length)]] = need;
+    const pickW = (opts) => { const tot = opts.reduce((a, x) => a + weight(x), 0); let r = rng() * tot; for (const x of opts) { r -= weight(x); if (r <= 0) return x; } return opts[0]; };
+    const bag = pool.length > 1 ? pool.slice() : [];
+    if (this.s.terrain === 'brainy') bag.push('maze');
+    while (bag.length < count) bag.push(pickW(pool));
+    // The order: a track start (the ducks run off the line) when there is one, then the rest
+    // shuffled, never the same kind twice in a row when that can be helped.
+    const types = [];
+    if (bag.includes('track')) { types.push('track'); bag.splice(bag.indexOf('track'), 1); }
+    while (bag.length) {
+      const prev = types[types.length - 1], ok = bag.map((x, i) => i).filter((i) => bag[i] !== prev);
+      const from = ok.length ? ok : bag.map((x, i) => i), i = from[Math.floor(rng() * from.length)];
+      types.push(bag.splice(i, 1)[0]);
     }
     const sections = types.map((type) => { const vs = T.variants[type]; return { type, v: vs[Math.floor(rng() * vs.length)] }; });
+    const scale = this.s.course === 'sprint' ? 0.8 : 1;
+    const secLen = Object.fromEntries(Object.entries(SECTIONS).map(([k, x]) => [k, Math.round(x.len * scale)]));
     const final = n === this.s.races;
     const league = this.leagueFor(n);
     const weathers = Object.keys(WEATHER);
     const weather = this.s.weather ? (n === 1 ? 'sunny' : weathers[Math.floor(this.room.rng() * weathers.length)]) : 'sunny';
     const wind = weather === 'windy' ? (this.room.rng() < 0.5 ? 1 : -1) : 0;
-    return { n, final, league, leagueName: LEAGUES[league].label, leagueIcon: LEAGUES[league].icon, theme, themeName: T.label, name: final ? 'Grand Championship' : `${LEAGUES[league].label}: ${NAMES[(n - 1) % NAMES.length]}`, sections, weather, wind, length: sections.reduce((a, x) => a + SECTIONS[x.type].len, 0), variants: VARIANT };
+    return { n, final, league, leagueName: LEAGUES[league].label, leagueIcon: LEAGUES[league].icon, theme, themeName: T.label, name: final ? 'Grand Championship' : `${LEAGUES[league].label}: ${NAMES[(n - 1) % NAMES.length]}`, sections, weather, wind, secLen, length: sections.reduce((a, x) => a + secLen[x.type], 0), variants: VARIANT };
   }
   leagueFor(n) { return n >= this.s.races ? LEAGUES.length - 1 : Math.min(LEAGUES.length - 2, Math.floor(((n - 1) * (LEAGUES.length - 1)) / Math.max(1, this.s.races - 1))); }
   // The season road: every race's league, so players can see where the season is going.
@@ -409,7 +450,7 @@ class Ducks {
 
   simulate() {
     const C = this.course, entries = [];
-    const bounds = []; let acc = 0; for (const x of C.sections) { bounds.push([acc, acc + SECTIONS[x.type].len, x.type, x.v]); acc += SECTIONS[x.type].len; }
+    const LEN = courseLen(C), bounds = []; let acc = 0; for (const x of C.sections) { bounds.push([acc, acc + LEN[x.type], x.type, x.v]); acc += LEN[x.type]; }
     // Jumps: hurdles (every 11 m) or fallen logs (every 15 m, harder) on track sections.
     // Jumps: hurdles, fallen logs, lava streams, cactus, chimneys, roots, gumdrops, hay bales (JUMPS).
     const hurdles = []; for (const [a, b, s, v] of bounds) if (s === 'track' && JUMPS[v]) { const [k, gap, hard] = JUMPS[v]; for (let x = a + 9; x < b - 4; x += gap) hurdles.push({ x, k, log: k === 'log', hard }); }
@@ -427,33 +468,39 @@ class Ducks {
     }
     this.wild = Object.fromEntries(racers.filter(([, d]) => d.wild).map(([id, d]) => [id, { name: d.name, color: d.color, hat: d.hat, stage: d.stage, wild: true }]));
     const L = C.length, DT = 0.1, SAMPLE = 0.5;
+    const fatFrom = L * (C.sections.length >= 8 ? FATIGUE.fromLong : FATIGUE.from), fatRamp = L * FATIGUE.ramp;
     for (const [id, d] of racers) {
       const lv = this.levels(d), gear = new Set(d.gear), rng = this.room.rng;
       const perk = new Set(d.perks || []);
-      let x = 0, t = 0, lastV = 1, pool = POOL(lv.stamina, gear.has('energybar'), perk.has('lungs')), stopped = 0, tired = false, nextH = 0, nextB = 0, nextF = 0, boostUntil = 0, slowUntil = 0, shortUntil = 0, holdX = null;
+      let x = 0, t = 0, lastV = 1, stopped = 0, tired = false, nextH = 0, nextB = 0, nextF = 0, boostUntil = 0, slowUntil = 0, shortUntil = 0, holdX = null, lastSi = -1;
       const odds = forkOdds(lv.smarts, gear.has('map'), perk.has('compass'), C.weather === 'fog');
-      const slipAt = {}; bounds.forEach(([a, b, s, v], i) => { if (s === 'cliff') slipAt[i] = a + (b - a) * (0.3 + rng() * 0.5); if (s === 'track' && v === 'ice') slipAt[i] = a + (b - a) * (0.2 + rng() * 0.6); });
+      // Stamina: how much this duck slows down by the finish line (the late race).
+      const depth = fatigueDepth(lv.stamina, { bar: gear.has('energybar'), lungs: perk.has('lungs'), tactic: d.tactic, heat: C.weather === 'heat', low: d.energy < 20 });
+      // One mishap spot per cliff (a slip), pond (a gulp), ravine (a dip) and icy track (a skid).
+      const slipAt = {}; bounds.forEach(([a, b, s, v], i) => { if (s === 'cliff' || s === 'pond' || s === 'gap') slipAt[i] = a + (b - a) * (0.3 + rng() * 0.5); if (s === 'track' && v === 'ice') slipAt[i] = a + (b - a) * (0.2 + rng() * 0.6); });
       const luck = 0.97 + rng() * 0.06 + (C.weather === 'fog' ? (rng() - 0.5) * 0.1 : 0);
+      // "Weak": this skill is 0-1 or WEAK_GAP below the duck's own average (the commentary says so).
+      const avgLv = SKILLS.reduce((a, k) => a + lv[k], 0) / SKILLS.length, weak = (k) => (lv[k] <= 1 && avgLv >= 2) || lv[k] <= avgLv - WEAK_GAP;
       const samples = [0], events = [];
       while (x < L && t < 400) {
         t += DT;
         if (stopped > 0) { stopped -= DT; } else {
           const si = bounds.findIndex(([a, b]) => x >= a && x < b), [, , sec, vr] = bounds[Math.max(0, si)], S = SECTIONS[sec];
-          let v = S.base + S.per * lv[S.skill];
-          // Section variants
-          if (vr === 'mud') v *= gear.has('sneakers') ? 0.95 : Math.min(1, 0.72 + 0.03 * lv.run);
-          if (vr === 'sand') v *= Math.min(1, 0.82 + 0.015 * lv.run);
+          if (si !== lastSi) { lastSi = si; if (si >= 0 && weak(S.skill)) events.push({ t: +t.toFixed(1), id, k: 'weak', h: si }); }
+          let v = sectionSpeed(sec, lv[S.skill]);
+          // Section variants: the same for every duck (the skill already sets the speed).
+          if (vr === 'mud') v *= gear.has('sneakers') ? 0.95 : 0.86;
+          if (vr === 'sand' || vr === 'dunes') v *= 0.9;
           if (vr === 'ice') v *= 0.95;
-          if (vr === 'rapids') v *= 1.15;
-          if (vr === 'icy') v *= Math.min(1, 0.85 + 0.015 * lv.stamina);
+          if (vr === 'rapids') v *= 1.1;
+          if (vr === 'icy') v *= 0.92;
           if (vr === 'waves') v *= 0.9 + rng() * 0.2;
-          if (vr === 'ash') v *= Math.min(1, 0.88 + 0.012 * lv.run);
-          if (vr === 'dunes') v *= Math.min(1, 0.82 + 0.015 * lv.run);
-          if (vr === 'puddles') v *= gear.has('sneakers') ? 0.97 : Math.min(1, 0.84 + 0.02 * lv.run);
-          if (vr === 'taffy') v *= gear.has('sneakers') ? 0.95 : Math.min(1, 0.76 + 0.025 * lv.run);
+          if (vr === 'ash') v *= 0.94;
+          if (vr === 'puddles') v *= gear.has('sneakers') ? 0.97 : 0.92;
+          if (vr === 'taffy') v *= gear.has('sneakers') ? 0.95 : 0.88;
           if (vr === 'cloudpath' || vr === 'skylake') v *= 1.05;
           if (vr === 'hotspring') v *= 0.95;
-          if (vr === 'choco') v *= Math.min(1, 0.8 + 0.018 * lv.swim);
+          if (vr === 'choco') v *= 0.9;
           if (vr === 'icecave') v *= 0.95;
           if (t < shortUntil) v *= SHORT_SPEED; // took a maze shortcut
           const prog = x / L;
@@ -465,29 +512,29 @@ class Ducks {
           if (sec === 'pond' && C.weather === 'rain') v *= 1.05;
           if (sec === 'gap' && C.wind) v *= 1 + 0.1 * C.wind;
           if (d.mood < 30) v *= 0.97; else if (d.mood >= 70) v *= 1.02;
-          if (d.energy < 20) v *= 0.92;
-          if (tired) v *= 0.72;
+          if (d.energy < 20) v *= 0.96;
+          // The late race: every duck tires; Stamina sets how much.
+          const fat = x > fatFrom ? depth * Math.min(1, (x - fatFrom) / fatRamp) : 0;
+          v *= 1 - fat;
+          if (!tired && fat >= FATIGUE.tired) { tired = true; events.push({ t: +t.toFixed(1), id, k: 'tired' }); }
           if (t < boostUntil) v *= 1.35;
           if (t < slowUntil) v *= 0.55; // stumbled after clipping a hurdle
           if (perk.size) { const pg = x / L; if (perk.has('burst') && pg < 0.2) v *= 1.15; if (perk.has('closer') && pg > 0.8) v *= 1.1; if (perk.has('webbed') && sec === 'pond') v *= 1.08; if (perk.has('feather') && sec === 'gap') v *= 1.08; }
           v *= luck;
-          const drain = (d.tactic === 'sprint' && prog < 0.4 ? 1.5 : d.tactic === 'steady' ? 0.85 : 1) * (C.weather === 'heat' ? 1.3 : 1);
-          pool -= drain * DT;
-          if (!tired && pool <= 0) { tired = true; events.push({ t: +t.toFixed(1), id, k: 'tired' }); }
           lastV = v;
           const nx = x + v * DT;
           // Boost pads / currents / updrafts: a better-trained duck catches them more often.
           while (nextB < boosts.length && boosts[nextB].x <= nx) {
             const B = boosts[nextB++];
-            if (B.x > x && rng() < (0.25 + 0.04 * lv[SECTIONS[B.s].skill]) * (perk.has('lucky') ? 1.6 : 1)) { boostUntil = t + 1.2; events.push({ t: +t.toFixed(1), id, k: 'boost' }); }
+            if (B.x > x && rng() < (0.2 + 0.3 * (1 - 1 / SKILL_SPEED(lv[SECTIONS[B.s].skill]))) * (perk.has('lucky') ? 1.6 : 1)) { boostUntil = t + 1.2; events.push({ t: +t.toFixed(1), id, k: 'boost' }); }
           }
           // Hurdles: every jump is clean, clipped (the bar goes down, a stumble) or a crash into the
           // fence (a dazed stop). Run level, rain, sneakers and Nimble Feet set the odds.
           while (nextH < hurdles.length && hurdles[nextH].x <= nx) {
             if (hurdles[nextH].x > x) {
               const H = hurdles[nextH], wet = C.weather === 'rain' ? 1.6 : 1, nim = perk.has('nimble') ? 0.5 : 1;
-              const pTrip = gear.has('sneakers') ? 0 : clamp(0.32 - 0.03 * lv.run, 0.03, 0.32) * wet * H.hard * nim;
-              const pClip = clamp(0.3 - 0.025 * lv.run, 0.04, 0.3) * wet * Math.max(1, H.hard * 0.92) * nim * (gear.has('sneakers') ? 0.5 : 1);
+              const pTrip = gear.has('sneakers') ? 0 : Math.max(0.02, mishap(MISHAP.trip, lv.run)) * wet * H.hard * nim;
+              const pClip = Math.max(0.03, mishap(MISHAP.clip, lv.run)) * wet * Math.max(1, H.hard * 0.92) * nim * (gear.has('sneakers') ? 0.5 : 1);
               const r = rng();
               if (r < pTrip) { stopped = TRIP_STOP; holdX = H.x; events.push({ t: +t.toFixed(2), id, k: 'trip', h: nextH }); }
               else if (r < pTrip + pClip) { slowUntil = t + CLIP_SLOW; events.push({ t: +t.toFixed(2), id, k: 'clip', h: nextH }); }
@@ -506,9 +553,20 @@ class Ducks {
             nextF++;
           }
           x = stopped > 0 && holdX != null ? Math.min(nx, holdX) : nx;
+          // The section's own mishap: a slip down the cliff (Climb), a gulp of water (Swim), a dip into
+          // the ravine (Fly), a skid on ice (Run). Rarer the better the skill (mishap()).
           if (si >= 0 && slipAt[si] != null && x >= slipAt[si]) {
-            const ice = bounds[si][3] === 'ice', p = (sec === 'cliff' && perk.has('grip')) ? 0 : (sec === 'track' && perk.has('nimble') ? 0.5 : 1) * ice && sec === 'track' ? clamp(0.35 - 0.02 * lv.run, 0.08, 0.35) : clamp(0.3 - 0.025 * lv.climb, 0.02, 0.3) * (gear.has('claws') ? 0.5 : 1) * (ice ? 1.6 : 1);
-            if (rng() < p) { if (sec === 'track') stopped = 0.8; else x = Math.max(bounds[si][0], x - 3.5); events.push({ t: +t.toFixed(1), id, k: sec === 'track' ? 'skid' : 'slip' }); }
+            const ice = bounds[si][3] === 'ice';
+            let p = 0, k = null;
+            if (sec === 'cliff') { k = 'slip'; p = perk.has('grip') ? 0 : mishap(MISHAP.slip, lv.climb) * (gear.has('claws') ? 0.5 : 1) * (ice ? 1.6 : 1); }
+            else if (sec === 'pond') { k = 'gulp'; p = mishap(MISHAP.gulp, lv.swim) * (gear.has('flippers') ? 0.6 : 1); }
+            else if (sec === 'gap') { k = 'dip'; p = mishap(MISHAP.dip, lv.fly) * (gear.has('glider') ? 0.6 : 1) * (C.wind < 0 ? 1.3 : 1); }
+            else if (sec === 'track') { k = 'skid'; p = mishap(MISHAP.skid, lv.run) * (perk.has('nimble') ? 0.5 : 1); }
+            if (k && rng() < p) {
+              if (k === 'slip') x = Math.max(bounds[si][0], x - 3.5);
+              else { stopped = k === 'skid' ? 0.8 : k === 'gulp' ? GULP_STOP : DIP_STOP; holdX = x; }
+              events.push({ t: +t.toFixed(1), id, k });
+            }
             delete slipAt[si];
           }
         }
@@ -596,7 +654,7 @@ class Ducks {
     if (tripper && tripper.n >= 3) highlights.push({ icon: '💫', text: `${nameOf(tripper.id)} took ${tripper.n} tumbles and still finished` });
     this.lastRace = {
       n: this.race, name: this.course.name, final: this.course.final, sections: this.course.sections, theme: this.course.theme, themeName: this.course.themeName, league: this.course.league, wild: this.wild, weather: this.course.weather, wind: this.course.wind, length: this.course.length, hurdles, forks, boosts,
-      intro: RACE_INTRO, sample: 0.5, results, margin, favorites, moves, highlights: highlights.slice(0, 4), secLen: Object.fromEntries(Object.entries(SECTIONS).map(([k, x]) => [k, x.len])), tripStop: TRIP_STOP, wrongStop: WRONG_STOP, thinkStop: THINK_STOP,
+      intro: RACE_INTRO, sample: 0.5, results, margin, favorites, moves, highlights: highlights.slice(0, 4), secLen: courseLen(this.course), tripStop: TRIP_STOP, wrongStop: WRONG_STOP, thinkStop: THINK_STOP,
       // each duck: its path (x every 0.5 s), its moments ([t, kind] or [t, kind, hurdle or fork]) and its levels (run, swim, fly, climb, stamina, smarts)
       tracks: entries.map((e) => ({ id: e.id, s: e.samples, ev: e.events.map((x) => (x.h != null ? [x.t, x.k, x.h] : [x.t, x.k])), lv: e.lv })),
       ...racePace(entries),
@@ -650,19 +708,25 @@ class Ducks {
     const res = R.results.find((x) => x.id === id);
     return { intro: R.intro, run: R.run, outro: RACE_OUTRO, pace: R.pace, sample: R.sample, length: R.length, secLen: R.secLen, sections: R.sections, hurdles: R.hurdles, forks: R.forks, tripStop: R.tripStop, wrongStop: R.wrongStop, thinkStop: R.thinkStop, s: tr.s, ev: tr.ev, time: res.time, place: res.place, of: R.results.length };
   }
-  // A rough race-time estimate for the next course (no luck, trips or boosts): what the phone's
-  // "projected place" and the TV's favorites use. Lower is faster.
+  // A rough race-time estimate for the next course (no luck or boosts; mishaps at their average
+  // cost): what the phone's "projected place" and the TV's favorites use. Lower is faster.
   eta(d) {
     const C = this.course; if (!C) return 0;
-    const lv = this.levels(d); let t = 0;
-    const odds = forkOdds(lv.smarts, false, (d.perks || []).includes('compass'), C.weather === 'fog');
+    const lv = this.levels(d), LEN = courseLen(C), perks = d.perks || []; let t = 0;
+    const odds = forkOdds(lv.smarts, false, perks.includes('compass'), C.weather === 'fog');
     for (const x of C.sections) {
-      const S = SECTIONS[x.type], v = S.base + S.per * lv[S.skill]; t += S.len / v;
-      if (x.type === 'maze') t += forksIn(0, S.len).length * (odds.wrong * WRONG_STOP + (1 - odds.wrong - odds.short) * THINK_STOP - odds.short * SHORT_BOOST * (1 - 1 / SHORT_SPEED));
+      const S = SECTIONS[x.type], len = LEN[x.type], v = sectionSpeed(x.type, lv[S.skill]); t += len / v;
+      if (x.type === 'maze') t += forksIn(0, len).length * (odds.wrong * WRONG_STOP + (1 - odds.wrong - odds.short) * THINK_STOP - odds.short * SHORT_BOOST * (1 - 1 / SHORT_SPEED));
+      if (x.type === 'track' && JUMPS[x.v]) t += Math.max(0, Math.floor((len - 13) / JUMPS[x.v][1]) + 1) * mishap(MISHAP.trip, lv.run) * JUMPS[x.v][2] * TRIP_STOP;
+      if (x.type === 'pond') t += mishap(MISHAP.gulp, lv.swim) * GULP_STOP;
+      if (x.type === 'gap') t += mishap(MISHAP.dip, lv.fly) * DIP_STOP;
+      if (x.type === 'cliff' && !perks.includes('grip')) t += (mishap(MISHAP.slip, lv.climb) * 3.5) / v;
     }
-    const pool = POOL(lv.stamina, false, (d.perks || []).includes('lungs'));
-    if (pool < t) t = pool + (t - pool) / 0.72; // out of steam for the rest of the race
-    return t / (d.mood >= 70 ? 1.02 : d.mood < 30 ? 0.97 : 1) / (d.energy < 20 ? 0.92 : 1);
+    // The late race: from the fatigue start the duck slows down by up to `depth` (ramping in).
+    const depth = fatigueDepth(lv.stamina, { lungs: perks.includes('lungs'), tactic: d.tactic, heat: C.weather === 'heat', low: d.energy < 20 });
+    const late = 1 - (C.sections.length >= 8 ? FATIGUE.fromLong : FATIGUE.from), avg = (depth * (late - FATIGUE.ramp / 2)) / late;
+    t = t * (1 - late) + (t * late) / (1 - avg);
+    return t / (d.mood >= 70 ? 1.02 : d.mood < 30 ? 0.97 : 1) / (d.energy < 20 ? 0.96 : 1);
   }
   // Every present duck ranked by eta (cached until something changes).
   etaRanks() {
@@ -1057,5 +1121,5 @@ module.exports = {
   partyFit,
   key: 'ducks', name: 'JustRaiseDucks', min: 1, best: [2, 12], fields, defaults, liveLobby: true,
   create: (room, settings) => new Ducks(room, settings),
-  _test: { racePace, TRIP_STOP, WRONG_STOP, THINK_STOP, SHORT_BOOST, FORK_GAP, RACE_GRACE, NAP_SECONDS, forkOdds, forksIn, JUMPS, VARIANT, migrate, GAME_FOR, BUILDINGS, FOOD, GEAR, EGGS, level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, TARGET, RISK, riskGoal, PANTRY_MAX, OLD_FOOD, SHORT_SPEED, PERKS, SPIN, HYPE_MS, CHEER_GAP },
+  _test: { racePace, fatigueDepth, mishap, MISHAP, SKILL_SPEED, sectionSpeed, courseLen, FATIGUE, TRIP_STOP, WRONG_STOP, THINK_STOP, SHORT_BOOST, FORK_GAP, RACE_GRACE, NAP_SECONDS, forkOdds, forksIn, JUMPS, VARIANT, migrate, GAME_FOR, BUILDINGS, FOOD, GEAR, EGGS, level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, TARGET, RISK, riskGoal, PANTRY_MAX, OLD_FOOD, SHORT_SPEED, PERKS, SPIN, HYPE_MS, CHEER_GAP },
 };
