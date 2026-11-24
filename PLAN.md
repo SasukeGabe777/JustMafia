@@ -43,6 +43,76 @@ evolution of JustSketch. Inspired by the format only: original name, host, modes
 - Limits: the cue cards are honour-system (nobody checks the presenter did it); e2e-box has no
   dedicated JustPitch block (it is locked; the screenshot driver played it on real pages instead);
   bots' slides are scribbles.
+## November 23, 2026 - Kill the King (TRIAL game, branch claude/king)
+
+The owner's "trial game": a co-op siege plus social climbing, coups and secret roles. Key `king`,
+category Friends & Secrets, 4–12 players (best 5–10), 5 rounds (~25 min) or 3 (~15 min).
+- **Trial status.** `trial: true` in the module, `data-trial` + a striped TRIAL badge on the tile
+  (hub.css `.trial-badge`), the badge in the lobby, on the title screen, in the TV top bar and on
+  the intro's logo banner; the first how-to step says it is a trial. Not locked. On its shelf, but
+  `public/party/party.js` never deals a `data-trial` tile into a Party Mode lineup (the host can still
+  play it mid-party with 🎮 Another game; `partyFit` still fits it to the slot).
+- **Feedback.** At the unmask and end screens each phone has 👍/👎 plus an optional note (200 chars,
+  no markup, filtered). `box/trial-feedback.js` appends one JSON line per vote to
+  `<DATA_DIR>/trial-feedback.jsonl` (game, rating, note, players, rounds, survived; no names or ids).
+  Only the live server writes it (or `TRIAL_FEEDBACK_FILE`); the TV shows the 👍/👎 tally.
+- **A round:** brief → MISSION (co-op phone task) → repel (defence vs the wave) → COURT (secret
+  messages, coup button, secret powers) → dusk (only after an Assassin attempt) → COUP vote and the old
+  King's trial (only if someone pressed Coup) → JUDGEMENT (King summons: Kill / Demote / Reveal or mercy;
+  hearing with binding deals) → verdict → PAY. End: siege → unmask → over (podium, rivalries, awards).
+- **Rules decisions.**
+  - Missions (original): Mend the Wall (tap cracked stones, solo warm-up), Light the Beacons (your rune is
+    asked for by someone else: shout it; bots "shout" theirs on the TV), Ring the Bells (rings within
+    0.7 s make one peal worth 0.6 × ringers each), Man the Gate (pairs; the winch turns only while the
+    whole pair holds, slips every 4 s, pairs reshuffle every 20 s). Order for 5 rounds: wall, beacons,
+    bells, gate, beacons; 3 rounds: wall, beacons, bells.
+  - Kingdom: the target is the sum of the waves (players × mission seconds × 0.75 × 0.8…1.1, growing).
+    Missing a wave only dents the walls; the kingdom falls only if total defence < target after the last
+    round. Then everyone keeps 25% of their points (the Turncloak keeps everything, +150).
+  - Ladder: seat 0 King; tiers Crown 100 / Nobles (seats 1–2) 60 / Guild (seats 3–5) 35 / Commons (the
+    bottom seat and seats 6+) 15 per round, plus a mission bonus (defence ÷ 3, max 25). Titles King,
+    Knight, Steward, Cook, Blacksmith, Bard, Jester, Stablehand, Gardener; the bottom seat is Peasant.
+  - Coup: during court, anyone alive but the King. YES from ceil(60%) of all living players (the King
+    counts and always votes no; the caller yes). Passed: the caller is King; seats between keep their
+    places, everyone below the caller moves up one; the old King gets SPARE (to the bottom) or KILL
+    (a ghost; ties spare). Failed: the caller drops to the bottom. One coup a round.
+  - Judgement: King summons a living player with Kill / Demote / Reveal (or mercy). Every living player
+    votes; the King is AYE, the accused NAY; ties go to the King; an audience poll adds one vote.
+    Acquitted: +20. Reveal shows the accused's sent messages from this and last round on the TV at the
+    verdict (the only time message text reaches the TV). Contracts: the King may offer any voter below
+    the Knight "AYE → you rise one seat"; the accused may offer "NAY → 10/25/50 of my points". Offers
+    are binding and paid automatically if the voter votes that way; accepting pledges your vote;
+    voting the other way after accepting is a broken oath (20-point fine to the offerer).
+  - Ghosts: off the ladder, no rank pay, no votes, half-strength missions, can still message; once a
+    round they may Haunt a living player who voted to kill them (steal 15, halve their next mission).
+  - Secret roles (2/3/4/5 for 4/5–6/7–8/9+ players; "Secret roles: Off" setting): Assassin (marks in
+    court every other round, 50% kill at dusk, a miss leaves a fresh clue), Spy (one player a round:
+    their SENT messages, recipients hidden), Ghoul (on death picks one of its killers, any living
+    player if none: drains half their pay every round), Fortune Teller (one peek at a secret role a
+    game), Turncloak (paid by the goblins if the kingdom falls; bots sandbag missions).
+  - Messages: 1–3 recipients, presets or typed, 100 chars, always run through the word filter (strict
+    with the streamer filter), rate-limited; open in every phase except missions and the end.
+- **Presentation.** Sir Bellow, a pompous royal herald (crimson tabard, feathered cap, moustache),
+  hosts the intro (night hills full of goblin torches → the throne room → the KILL THE KING banner
+  with its TRIAL ribbon) and announces every phase on the TV (34 static lines, all pre-voiced; Orpheus
+  `leo`, delivery `hype`). TV: canvas castle and goblin horde (pushed back by the defence), the throne
+  room with the King on the throne, the ladder by tier, court whisper lines with flying envelopes, the
+  coup duel, the hearing with votes flying in, the unmask cards, and round-1 "How it works" banners.
+  Phones: the role card (tap to show / hide), one mission at a time, a Messages tab with unread count,
+  votes, deals, a two-tap Coup button, secret powers, feedback. Gear: Court hat, Court prop, Cloak (7 items).
+- **Audio.** CC0 music from OpenGameArt (RandomMind "Rejoicing" and "The Old Tower Inn", Spring Spring
+  "Some Militaristic Tune", Umplix "The Confrontation" and "A Knight's Challenge"; none of the five
+  JustKingdoms tracks) and eight CC0 Freesound/OpenGameArt effects (fanfare, gavel, war horn, gate,
+  ghost whoosh, bell, scroll, blade). Credits in music.json / credits.json; manifest rebuilt.
+- **Tests.** `tools/test-box-king.js` (20 tests: tiers, missions and targets, the ghost half-effect,
+  judgement outcomes, contracts, the coup's 60% and seat shift, each secret role, the fall rule,
+  message privacy and filtering, secret roles never on the TV, trial feedback, bots playing whole
+  games at 4–10 players, kicks, Party Mode exclusion, every herald line pre-voiced); kit, party, practice,
+  party-plan, gear tests; an e2e-box section (badge, hidden role, mission taps, a message that reaches
+  the inbox while only a line reaches the TV).
+- **Limits (trial).** Mission balance is tuned on bots, not on real crowds. The practice round covers
+  round 1 only (it stops at the 3-minute cap). The Assassin's odds, pay tiers and the 25% fall rule are
+  first guesses: the feedback file is there to find out.
 
 ## November 20, 2026 - Natural voices: Orpheus re-voice + a recorded JustMafia narrator (branch claude/voices-natural)
 

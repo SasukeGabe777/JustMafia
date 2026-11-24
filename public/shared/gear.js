@@ -131,6 +131,9 @@
     { game: 'pitch', slot: 'tie', label: 'Tie', spot: 'chest', default: OWN('tie') },
     { game: 'pitch', slot: 'hat', label: 'Stage hat', spot: 'head', default: OWN('hat') },
     { game: 'pitch', slot: 'shades', label: 'Shades', spot: 'face', default: OWN('shades') },
+    { game: 'king', slot: 'hat', label: 'Court hat', spot: 'head', default: OWN('hat') },
+    { game: 'king', slot: 'hand', label: 'Court prop', spot: 'hand', default: OWN('prop') },
+    { game: 'king', slot: 'cloak', label: 'Cloak', spot: 'back', default: OWN('cloak') },
   ];
 
   // [game, slot, value, name, cost, icon, paint, desc]
@@ -368,6 +371,13 @@
     ['pizza', 'hat', 'paperhat', 'Diner Paper Hat', 60, '🍔', { shape: 'paperHat', a: '#ffffff', b: '#d62828', c: '#ffd23f' }, 'Big Buck’s grill-side classic. Order up!'],
     ['pizza', 'tool', 'scoop', 'Ice Cream Scoop', 110, '🍨', { shape: 'iceScoop', a: '#c4ccd2', b: '#ff9ab0', c: '#e0304a' }, 'Coco’s scoop, loaded with strawberry and a cherry.'],
     // JustUndercover: the agency look.
+    ['king', 'hat', 'circlet', 'Pretender’s Circlet', 90, '👑', { shape: 'crown', a: '#d4dade', b: '#8e1b2e', c: '#3fd0ff' }, 'Not a crown. Not yet.'],
+    ['king', 'hat', 'guard', 'Plumed Guard Helm', 140, '🪖', { shape: 'helm', a: '#c4ccd2', b: '#e0b84a', c: '#8e1b2e', d: 'plume' }, 'For knights who guard the throne, or eye it.'],
+    ['king', 'hat', 'usurper', 'Usurper’s Crown', 240, '💎', { shape: 'crown', a: '#2a1b3d', b: '#e8424f', c: '#e0b84a', d: 'imperial', glow: true }, 'Taken, not given. Worn with a smirk.'],
+    ['king', 'hand', 'dagger', 'Court Dagger', 110, '🗡️', { shape: 'sword', a: '#d4dade', b: '#8e1b2e' }, 'Strictly ceremonial. Strictly.'],
+    ['king', 'hand', 'scepter', 'Royal Scepter', 180, '🪄', { shape: 'staff', a: '#e0b84a', c: '#e8424f', glow: true }, 'Point it at someone and say “summoned”.'],
+    ['king', 'cloak', 'velvet', 'Courtier’s Cloak', 120, '🧣', { shape: 'cape', a: '#5a1a6a', b: '#3a0f46', c: '#e0b84a' }, 'Plum velvet for whispering in corridors.'],
+    ['king', 'cloak', 'shroud', 'Ghostly Shroud', 160, '👻', { shape: 'cape', a: '#b7c7d8', b: '#7a8aa0', c: '#ffffff' }, 'For courtiers who came back to haunt.'],
     ['undercover', 'hat', 'fedora', 'Agent Fedora', 60, '🕵️', { shape: 'fedora', a: '#2a2d36', b: '#c8a24a' }, 'Brim down, collar up. Nobody saw you come in.'],
     ['undercover', 'hat', 'trilby', 'Night Trilby', 130, '🎩', { shape: 'fedora', a: '#5a1e2a', b: '#101014' }, 'A deep red trilby for the late-night briefings.'],
     ['undercover', 'shades', 'mirror', 'Mirror Shades', 80, '🕶️', { shape: 'shades', a: '#101014', b: '#8fd3ff', d: 'aviator' }, 'They can see themselves. They can’t see you.'],
