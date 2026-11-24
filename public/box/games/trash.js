@@ -414,7 +414,7 @@
       if (!el.querySelector('.tz-lobby')) {
         el.innerHTML = `<div class="tz-lobby"><div class="tz-lb-sky"></div><div class="tz-lb-door"><div class="tz-lb-slats"></div><span>No. 13</span></div>
           <div class="tz-lb-main"><h1 class="tz-logo">Trash<b>Zombies</b></h1><p class="tz-tag">Roll up the garage. Walk out. Don’t get trashed.</p>
-          <div class="tz-lb-row"><div class="tz-join"><img id="qr" alt="QR code to join"><div class="tz-code-l">Room code</div><div class="tz-code" id="code"></div><small>Your phone is the controller AND the screen</small></div>
+          <div class="tz-lb-row"><div class="tz-join"><img id="qr" alt="QR code to join"><div class="tz-code-l">Room code</div><div class="tz-code" id="code"></div><div class="tz-url">or go to <b id="url"></b></div><small>Your phone is the controller AND the screen</small></div>
           <div class="tz-lb-set"><h3>🛠️ House rules</h3><div class="tz-settings" id="settings"></div></div></div>
           <div class="tz-roster" id="roster"></div><div class="tz-err" id="lobby-err"></div>
           <button class="btn big tz-start" id="start">Roll up the door ▶</button>
@@ -423,7 +423,7 @@
         el.querySelector('#add-bots').onclick = () => L.bots(5);
         el.querySelector('#pick').onclick = () => L.pick();
       }
-      el.querySelector('#code').textContent = L.code;
+      el.querySelector('#code').textContent = L.code; const u = el.querySelector('#url'); if (u) u.textContent = String(L.joinUrl || '').replace(/^https?:\/\//, '');
       const q = el.querySelector('#qr'); if (q.dataset.u !== L.qr) { q.src = L.qr; q.dataset.u = L.qr; }
       const set = el.querySelector('#settings'), sig = JSON.stringify(L.settings);
       if (set.dataset.sig !== sig && !set.contains(document.activeElement)) {
