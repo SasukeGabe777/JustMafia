@@ -25,7 +25,14 @@ const GAME_FOR = { run: 'hurdles', swim: 'paddle', fly: 'rings', climb: 'climb',
 //    better its Stamina, the less it slows down.
 const SKILL_SPEED = (lv) => 1 + 0.3 * Math.pow(Math.max(0, lv), 0.65);
 // v0: speed (m/s) at level 0; a level-5 duck goes ~1.85× that.
-const SECTIONS = { track: { skill: 'run', len: 48, v0: 2.9 }, pond: { skill: 'swim', len: 36, v0: 2.5 }, cliff: { skill: 'climb', len: 26, v0: 1.85 }, gap: { skill: 'fly', len: 32, v0: 2.2 }, maze: { skill: 'smarts', len: 34, v0: 2.6 } };
+const SECTIONS = { track: { skill: 'run', len: 48, v0: 2.9 }, pond: { skill: 'swim', len: 36, v0: 2.5 }, cliff: { skill: 'climb', len: 26, v0: 2.3 }, gap: { skill: 'fly', len: 32, v0: 2.2 }, maze: { skill: 'smarts', len: 34, v0: 2.6 } };
+// Cliffs are climbing walls: WALL.steps sheer walls (each WALL.rise of a step, over the first
+// WALL.face of the section; public/box/games/ducks-art.js draws the same shape) with flat ledges
+// between. On a wall a duck climbs hand over hand at WALL.speed of its pace, so it really takes time
+// (Climb sets how fast); the cliff's v0 is set so the whole section takes as long as the others.
+const WALL = { face: 0.78, steps: 2, rise: 0.12, speed: 0.28 };
+WALL.share = WALL.face * WALL.rise; // the part of a cliff that is wall
+const onWall = ([a, b], x) => { const f = (x - a) / (b - a); if (f < 0 || f >= WALL.face) return false; const p = (f / WALL.face) * WALL.steps; return p - Math.floor(p) < WALL.rise; };
 // Section lengths on this course (Sprint courses are shorter; older courses have none: the defaults).
 const courseLen = (C) => (C && C.secLen) || Object.fromEntries(Object.entries(SECTIONS).map(([k, x]) => [k, x.len]));
 // The section each skill races on (Stamina has none: it is the late race).
@@ -143,20 +150,20 @@ const LEAGUES = [
 // Course themes change the look and the obstacles: each section gets a variant.
 // Every theme can roll every kind of section (weights), so every landscape can have a maze.
 const THEMES = {
-  meadow: { label: 'Sunny Meadow', weights: { track: 2, pond: 2, cliff: 1, gap: 1, maze: 1 }, variants: { track: ['hurdles', 'mud'], pond: ['lily', 'calm'], cliff: ['rock'], gap: ['clouds'], maze: ['hedge'] } },
-  beach: { label: 'Seashell Beach', weights: { track: 1, pond: 3, cliff: 1, gap: 1, maze: 1 }, variants: { track: ['sand', 'hurdles'], pond: ['waves'], cliff: ['rock'], gap: ['clouds'], maze: ['sandcastle'] } },
-  forest: { label: 'Mossy Forest', weights: { track: 2, pond: 1, cliff: 2, gap: 1, maze: 2 }, variants: { track: ['logs', 'mud'], pond: ['lily', 'calm'], cliff: ['rock'], gap: ['canyon'], maze: ['hedge'] } },
-  snow: { label: 'Frosty Peaks', weights: { track: 1, pond: 1, cliff: 3, gap: 1, maze: 1 }, variants: { track: ['ice', 'hurdles'], pond: ['icy'], cliff: ['ice'], gap: ['canyon'], maze: ['icecave'] } },
+  meadow: { label: 'Sunny Meadow', weights: { track: 2, pond: 2, cliff: 1, gap: 1, maze: 1 }, variants: { track: ['hurdles', 'mud'], pond: ['lily', 'calm'], cliff: ['rock', 'haystack'], gap: ['clouds', 'bridge'], maze: ['hedge'] } },
+  beach: { label: 'Seashell Beach', weights: { track: 1, pond: 3, cliff: 1, gap: 1, maze: 1 }, variants: { track: ['sand', 'hurdles'], pond: ['waves'], cliff: ['rock'], gap: ['clouds', 'river'], maze: ['sandcastle'] } },
+  forest: { label: 'Mossy Forest', weights: { track: 2, pond: 1, cliff: 2, gap: 1, maze: 2 }, variants: { track: ['logs', 'mud'], pond: ['lily', 'calm'], cliff: ['rock', 'vines'], gap: ['canyon', 'bridge'], maze: ['hedge'] } },
+  snow: { label: 'Frosty Peaks', weights: { track: 1, pond: 1, cliff: 3, gap: 1, maze: 1 }, variants: { track: ['ice', 'hurdles'], pond: ['icy'], cliff: ['ice'], gap: ['canyon', 'river'], maze: ['icecave'] } },
   canyon: { label: 'Red Rock Canyon', weights: { track: 1, pond: 1, cliff: 2, gap: 3, maze: 1 }, variants: { track: ['hurdles', 'logs'], pond: ['rapids'], cliff: ['rock'], gap: ['canyon'], maze: ['slot'] } },
-  night: { label: 'Firefly Night', weights: { track: 1, pond: 2, cliff: 1, gap: 2, maze: 1 }, variants: { track: ['hurdles', 'logs'], pond: ['lily', 'calm'], cliff: ['rock'], gap: ['clouds'], maze: ['hedge'] } },
+  night: { label: 'Firefly Night', weights: { track: 1, pond: 2, cliff: 1, gap: 2, maze: 1 }, variants: { track: ['hurdles', 'logs'], pond: ['lily', 'calm'], cliff: ['rock'], gap: ['clouds', 'bridge'], maze: ['hedge'] } },
   volcano: { label: 'Volcano Run', weights: { track: 2, pond: 1, cliff: 2, gap: 2, maze: 1 }, variants: { track: ['lava', 'ash'], pond: ['hotspring'], cliff: ['basalt'], gap: ['lavapit'], maze: ['lavatubes'] } },
-  swamp: { label: 'Murky Swamp', weights: { track: 1, pond: 3, cliff: 1, gap: 1, maze: 2 }, variants: { track: ['roots', 'mud'], pond: ['murky'], cliff: ['mudbank'], gap: ['bog'], maze: ['reeds'] } },
+  swamp: { label: 'Murky Swamp', weights: { track: 1, pond: 3, cliff: 1, gap: 1, maze: 2 }, variants: { track: ['roots', 'mud'], pond: ['murky'], cliff: ['mudbank'], gap: ['bog', 'river'], maze: ['reeds'] } },
   city: { label: 'City Rooftops', weights: { track: 2, pond: 1, cliff: 2, gap: 3, maze: 2 }, variants: { track: ['roof', 'puddles'], pond: ['fountain'], cliff: ['wall'], gap: ['street'], maze: ['alley'] } },
-  jungle: { label: 'Lost Jungle', weights: { track: 1, pond: 2, cliff: 2, gap: 1, maze: 2 }, variants: { track: ['roots', 'mud'], pond: ['rapids'], cliff: ['waterfall'], gap: ['gorge'], maze: ['temple'] } },
+  jungle: { label: 'Lost Jungle', weights: { track: 1, pond: 2, cliff: 2, gap: 1, maze: 2 }, variants: { track: ['roots', 'mud'], pond: ['rapids'], cliff: ['waterfall', 'vines'], gap: ['gorge', 'river'], maze: ['temple'] } },
   desert: { label: 'Dusty Desert', weights: { track: 2, pond: 1, cliff: 1, gap: 2, maze: 2 }, variants: { track: ['cactus', 'dunes'], pond: ['oasis'], cliff: ['sandstone'], gap: ['canyon'], maze: ['slot'] } },
   sky: { label: 'Sky Islands', weights: { track: 1, pond: 1, cliff: 1, gap: 4, maze: 1 }, variants: { track: ['cloudpath', 'hurdles'], pond: ['skylake'], cliff: ['floating'], gap: ['sky'], maze: ['cloudmaze'] } },
-  candy: { label: 'Candy Land', weights: { track: 2, pond: 2, cliff: 1, gap: 1, maze: 2 }, variants: { track: ['gumdrops', 'taffy'], pond: ['choco'], cliff: ['candycane'], gap: ['cotton'], maze: ['licorice'] } },
-  haunted: { label: 'Haunted Farm', weights: { track: 1, pond: 1, cliff: 1, gap: 1, maze: 3 }, variants: { track: ['hay', 'mud'], pond: ['foggy'], cliff: ['barn'], gap: ['fogpit'], maze: ['corn'] } },
+  candy: { label: 'Candy Land', weights: { track: 2, pond: 2, cliff: 1, gap: 1, maze: 2 }, variants: { track: ['gumdrops', 'taffy'], pond: ['choco'], cliff: ['candycane'], gap: ['cotton', 'bridge'], maze: ['licorice'] } },
+  haunted: { label: 'Haunted Farm', weights: { track: 1, pond: 1, cliff: 1, gap: 1, maze: 3 }, variants: { track: ['hay', 'mud'], pond: ['foggy'], cliff: ['barn', 'haystack'], gap: ['fogpit', 'bridge'], maze: ['corn'] } },
 };
 const VARIANT = {
   hurdles: 'Hurdles: jump them (Run helps)', logs: 'Fallen logs: big jumps, more trips', mud: 'Mud: slows weak runners', sand: 'Soft sand: slower running', ice: 'Ice: slippery for everyone',
@@ -168,6 +175,8 @@ const VARIANT = {
   skylake: 'Sky lake: clear and fast', choco: 'Chocolate river: thick and slow for weak swimmers', foggy: 'Foggy pond: calm but spooky',
   rock: 'Rock face', basalt: 'Basalt columns: steps of black rock', mudbank: 'Mud bank: slippery climbing', wall: 'Building wall: window ledges to climb', waterfall: 'Waterfall climb: wet and slippery',
   sandstone: 'Sandstone cliff', floating: 'Floating rocks: climb the stepping stones', candycane: 'Candy-cane cliff: sticky stripes', barn: 'Spooky barn: climb the old roof',
+  bridge: 'Broken bridge: run out on the planks, then fly the gap!', river: 'River gap: fly over the rushing water (weak flyers get their feet wet)',
+  vines: 'Vine wall: climb hand over hand up the vines', haystack: 'Hay-bale stack: scramble up the bales',
   clouds: 'Cloud updrafts: more boosts', canyon: 'Deep canyon', lavapit: 'Lava pit: hot updrafts (more boosts)', bog: 'Misty bog: a long glide', street: 'Gap between buildings: glide across!',
   gorge: 'Jungle gorge: vines and mist', sky: 'Open sky: big glides between islands (more updrafts)', cotton: 'Cotton-candy clouds: soft updrafts', fogpit: 'Foggy ravine',
   hedge: 'Hedge maze: find the way (Smarts helps)', sandcastle: 'Sandcastle maze: find the way (Smarts helps)', icecave: 'Ice caves: twisty tunnels (Smarts helps)', slot: 'Slot-canyon maze: narrow and winding (Smarts helps)',
@@ -553,6 +562,7 @@ class Ducks {
           const si = bounds.findIndex(([a, b]) => x >= a && x < b), [, , sec, vr] = bounds[Math.max(0, si)], S = SECTIONS[sec];
           if (si !== lastSi) { lastSi = si; if (si >= 0 && weak(S.skill)) events.push({ t: +t.toFixed(1), id, k: 'weak', h: si }); }
           let v = sectionSpeed(sec, lv[S.skill]);
+          if (sec === 'cliff' && onWall(bounds[si], x)) v *= WALL.speed; // hand over hand up the rock wall
           // Section variants: the same for every duck (the skill already sets the speed).
           if (vr === 'mud') v *= gear.has('sneakers') ? 0.95 : 0.86;
           if (vr === 'sand' || vr === 'dunes') v *= 0.9;
@@ -780,7 +790,7 @@ class Ducks {
     const lv = this.levels(d), LEN = courseLen(C), perks = d.perks || []; let t = 0;
     const odds = forkOdds(lv.smarts, false, perks.includes('compass'), C.weather === 'fog');
     for (const x of C.sections) {
-      const S = SECTIONS[x.type], len = LEN[x.type], v = sectionSpeed(x.type, lv[S.skill]); t += len / v;
+      const S = SECTIONS[x.type], len = LEN[x.type], v = sectionSpeed(x.type, lv[S.skill]); t += (len / v) * (x.type === 'cliff' ? 1 + WALL.share * (1 / WALL.speed - 1) : 1);
       if (x.type === 'maze') t += forksIn(0, len).length * (odds.wrong * WRONG_STOP + (1 - odds.wrong - odds.short) * THINK_STOP - odds.short * SHORT_BOOST * (1 - 1 / SHORT_SPEED));
       if (x.type === 'track' && JUMPS[x.v]) t += Math.max(0, Math.floor((len - 13) / JUMPS[x.v][1]) + 1) * mishap(MISHAP.trip, lv.run) * JUMPS[x.v][2] * TRIP_STOP;
       if (x.type === 'pond') t += mishap(MISHAP.gulp, lv.swim) * GULP_STOP;
@@ -1201,5 +1211,5 @@ module.exports = {
   partyFit,
   key: 'ducks', name: 'JustRaiseDucks', min: 1, best: [2, 12], fields, defaults, liveLobby: true,
   create: (room, settings) => new Ducks(room, settings),
-  _test: { racePace, ASSIST, baseXp, PAY, XP_FLOOR, SCORE_MAX, RUN_SECONDS, GAME_FOR_SKILL: SKILL_OF_GAME, fatigueDepth, mishap, MISHAP, SKILL_SPEED, sectionSpeed, courseLen, FATIGUE, TRIP_STOP, WRONG_STOP, THINK_STOP, SHORT_BOOST, FORK_GAP, RACE_GRACE, NAP_SECONDS, forkOdds, forksIn, JUMPS, VARIANT, migrate, GAME_FOR, BUILDINGS, FOOD, GEAR, EGGS, level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, TARGET, RISK, riskGoal, PANTRY_MAX, OLD_FOOD, SHORT_SPEED, PERKS, SPIN, HYPE_MS, CHEER_GAP },
+  _test: { racePace, WALL, onWall, ASSIST, baseXp, PAY, XP_FLOOR, SCORE_MAX, RUN_SECONDS, GAME_FOR_SKILL: SKILL_OF_GAME, fatigueDepth, mishap, MISHAP, SKILL_SPEED, sectionSpeed, courseLen, FATIGUE, TRIP_STOP, WRONG_STOP, THINK_STOP, SHORT_BOOST, FORK_GAP, RACE_GRACE, NAP_SECONDS, forkOdds, forksIn, JUMPS, VARIANT, migrate, GAME_FOR, BUILDINGS, FOOD, GEAR, EGGS, level, xpFor, SKILLS, SCORE_RATE, TRAIN_COST, SECTIONS, BUILD_COST, STAGES, LEAGUES, THEMES, TARGET, RISK, riskGoal, PANTRY_MAX, OLD_FOOD, SHORT_SPEED, PERKS, SPIN, HYPE_MS, CHEER_GAP },
 };

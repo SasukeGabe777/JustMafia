@@ -18,7 +18,7 @@
     hotspring: '♨️', murky: '🪵', fountain: '⛲', oasis: '🌴', skylake: '💎', choco: '🍫', foggy: '🌫️',
     basalt: '🌋', mudbank: '🟤', wall: '🧱', waterfall: '💦', sandstone: '🪨', floating: '🪨', candycane: '🍬', barn: '🏚️',
     lavapit: '🔥', bog: '🐸', street: '🏙️', gorge: '🌿', sky: '🕊️', cotton: '🍥', fogpit: '🌫️',
-    hedge: '🌳', sandcastle: '🏰', icecave: '🧊', slot: '🏜️', lavatubes: '🌋', reeds: '🌾', alley: '🧱', temple: '🛕', cloudmaze: '☁️', licorice: '🍬', corn: '🌽' };
+    bridge: '🌉', river: '🏞️', vines: '🌿', haystack: '🌾', hedge: '🌳', sandcastle: '🏰', icecave: '🧊', slot: '🏜️', lavatubes: '🌋', reeds: '🌾', alley: '🧱', temple: '🛕', cloudmaze: '☁️', licorice: '🍬', corn: '🌽' };
   const HAT_NAME = { none: 'No hat', cap: 'Cap', tophat: 'Top hat', crown: 'Crown', flower: 'Flower', shades: 'Shades', bow: 'Bow', viking: 'Viking', pirate: 'Pirate', party: 'Party', chef: 'Chef', headband: 'Headband' };
   const typeOf = (s) => s.type || s;
   const PERK_ICON = { burst: '🚀', webbed: '🦶', feather: '🪶', grip: '🧲', lungs: '🫁', lucky: '🍀', nimble: '🦘', closer: '🏁' };
@@ -183,7 +183,7 @@
     }
     // ---- a moment in progress: an ice skid or a slip down the cliff
     let evNow = null, evAge = 0;
-    for (const e of r.tr.ev) { if (e[0] > simT) break; const age = simT - e[0]; if ((e[1] === 'skid' && age < 0.8) || (e[1] === 'slip' && age < 0.9)) { evNow = e[1]; evAge = age; } }
+    for (const e of r.tr.ev) { if (e[0] > simT) break; const age = simT - e[0]; if ((e[1] === 'skid' && age < 0.8) || (e[1] === 'slip' && age < 0.9) || ((e[1] === 'gulp' || e[1] === 'dip') && age < 1.0)) { evNow = e[1]; evAge = age; } }
     // ---- hurdles in this duck's lane
     let jumpH = -1, crash = -1;
     if (!r.done && s.type === 'track' && race.hurdles.length) {
@@ -286,6 +286,7 @@
       }
       if (swim < 4 && ent >= 2.4 && ex >= 1.3) { P.wing = 0.35; P.flap = Math.sin(F.now * 15 + r.i); if (Math.random() < 0.25) puff(x - 0.2, wy - 4, -0.8, 60, 0.4, 2.5 * F.zoom, SPLASH, 500); } // a weak swimmer flaps and splashes
       if (dm > 0 && ent >= 2.4 && Math.random() < 0.15) puff(x - (16 * U) / PX, wy, -0.3, 30, 0.45, 2 * F.zoom, SPLASH, 300);
+      if (evNow === 'gulp') { const u = evAge / 1.0, dunk = Math.sin(Math.min(1, u * 1.6) * Math.PI); sink += 16 * dunk; P.eyes = 'shut'; P.beak = 0.8; P.wing = 0.8; P.flap = Math.sin(F.now * 24); P.lean = -0.2; if (Math.random() < 0.5) puff(x + (Math.random() - 0.5) * 0.6, wy - 6, (Math.random() - 0.5) * 0.6, 40 + Math.random() * 40, 0.5, 2.2 * F.zoom, SPLASH, -60); }
       const bob = (s.v === 'waves' ? 2.5 : 1) * Math.sin(F.now * 3.2 + r.i);
       r.sx = (x - F.cam) * PX; r.wy = wy; r.gy = wy; r.by = wy - 12 * U + sink * U + bob - bodyLift * hs; r.air = bodyLift; r.swim = ent >= 0.84 && ex >= 0.4 && bodyLift < 6;
       r.px = x; return;
@@ -293,18 +294,22 @@
     r.swim = false; r.wet = false;
     // ---- the ravine: take off from the rim, flap (or glide) across at a height set by Fly, land
     if (!r.done && s.type === 'gap' && mode === 'walk') {
-      const RIM = 1.3, a0 = s.a + RIM - 0.4, a1 = s.b - RIM + 0.4;
+      const RIM = art.rimOf ? art.rimOf(s) : 1.3, a0 = s.a + RIM - 0.4, a1 = s.b - RIM + 0.4;
       if (x > a0 && x < a1) {
         const u = (x - a0) / (a1 - a0), su = Math.sin(Math.PI * u), A2 = -2.4 + 0.6 * fly;
-        const alt = A2 * su + 1.3 * Math.pow(su, 0.45);
+        let alt = A2 * su + 1.3 * Math.pow(su, 0.45);
+        // a dip: a weak flyer drops toward the bottom, flaps like mad and climbs back (the server holds it)
+        const dipU = evNow === 'dip' ? evAge / 1.0 : -1;
+        if (dipU >= 0) { alt -= 3.2 * Math.sin(Math.min(1, dipU) * Math.PI); if (s.v === 'river' && dipU > 0.35 && dipU < 0.6 && Math.random() < 0.6) puff(x, F.feet + 70, (Math.random() - 0.5) * 2, 80, 0.5, 3 * F.zoom, SPLASH, 400); }
         const dAlt = (A2 * Math.PI * Math.cos(Math.PI * u)) / (a1 - a0);
         const hz = 2 + 0.32 * Math.max(0, 10 - fly) + (tired ? 0.6 : 0);
         r.flap += F.simDt * hz;
-        const glide = fly >= 6 && u > 0.3 && u < 0.72;
+        const glide = fly >= 6 && u > 0.3 && u < 0.72 && dipU < 0;
         P.wing = glide ? 0.55 : 0.4; P.flap = glide ? 0.12 * Math.sin(F.now * 3) : Math.sin(r.flap * TAU); P.farWing = true;
         P.lean = Math.max(-0.5, Math.min(0.5, -Math.atan((dAlt * YK * 1.5) / PX) * 0.8)); P.legs = true;
         P.f1x = -10; P.f1y = 12; P.f2x = -7; P.f2y = 13; P.t1 = 1.3; P.t2 = 1.15;
-        if (fly < 3) { P.beak = 0.7; P.eyes = 'shut'; } // working hard
+        if (fly < 3 || dipU >= 0) { P.beak = 0.7; P.eyes = 'shut'; } // working hard
+        if (dipU >= 0) { r.flap += F.simDt * 6; P.flap = Math.sin(r.flap * TAU); P.wing = 0.9; }
         mode = 'fly';
         const gy = F.feet; // the rim height
         r.sx = (x - F.cam) * PX; r.by = gy - 18 * U - alt * YK * 1.5; r.gy = null; r.air = 30;
@@ -347,6 +352,18 @@
         const gy = ground(xv + (fx * U) / PX);
         const fy = (gy - (bodyG - 18 * U)) / U - lf + feetSink;
         if (k) { P.f2x = fx; P.f2y = fy; P.t2 = toe - (gR - gF) / (14 * U) * 0.6; } else { P.f1x = fx; P.f1y = fy; P.t1 = toe - (gR - gF) / (14 * U) * 0.6; }
+      }
+      // On a climbing wall: body up against the rock, wings reaching up one after the other (hand over
+      // hand), feet pushing; a weak climber wobbles and puffs, a strong one scrambles up.
+      const wall = climbing && art.cliffWalls ? art.cliffWalls(s).find((w) => xv >= w.a - 0.15 && xv <= w.b + 0.1) : null;
+      if (wall && evNow !== 'slip' && !r.done) {
+        const reach = r.gait * 2 * TAU;
+        P.rot = -1.05; P.lean = 0; P.wing = 0.95; P.flap = Math.sin(reach); P.farWing = true; P.beak = climb < 4 ? 0.6 : 0.2; P.eyes = climb < 3 ? 'shut' : '';
+        P.f1x = 6 + 4 * Math.sin(reach); P.f1y = 14 + 4 * Math.cos(reach); P.f2x = 6 - 4 * Math.sin(reach); P.f2y = 14 - 4 * Math.cos(reach); P.t1 = -0.8; P.t2 = -0.8;
+        if (climb < 4) P.hx = Math.sin(F.now * 20) * 1.2;
+        if (moving && Math.random() < (climb < 4 ? 0.2 : 0.06)) puff(xv + 0.2, bodyG - 6, (Math.random() - 0.5), 20, 0.5, 2 * F.zoom, PEBBLE, 500);
+        r.gait = (r.gait + F.simDt * (1.2 + 0.12 * climb)) % 1;
+        xv -= 0.35; // hug the face
       }
       if (evNow === 'slip') { // sliding back down the rock: belly to the wall, feet scrabbling
         P.lean = -0.9; P.wing = 0.9; P.flap = Math.sin(F.now * 26); P.eyes = 'shut'; P.beak = 1;

@@ -704,7 +704,17 @@
     let acc = 0; const secs = R.sections.map((s) => { const type = s.type || s, len = LEN[type]; const o = { type, v: s.v || null, a: acc, b: acc + len }; acc += len; return o; });
     return { secs, L: acc };
   }
-  const CLIFF_H = 10, CLIFF_STEPS = 5, CLIFF_FACE = 0.78, CLIFF_DOWN = 0.86, RIM = 1.3;
+  // The cliff: two sheer climbing walls (CLIFF_RISE of each step is wall, the rest a flat ledge),
+  // the same shape the server races (WALL in box/games/ducks.js: the ducks climb slowly on the walls).
+  const CLIFF_H = 12, CLIFF_STEPS = 2, CLIFF_RISE = 0.12, CLIFF_FACE = 0.78, CLIFF_DOWN = 0.86, RIM = 1.3;
+  // The rim at each end of a ravine (a broken bridge reaches further out before the gap).
+  const rimOf = (s) => (s && s.v === 'bridge' ? (s.b - s.a) * 0.24 : RIM);
+  // The walls of a cliff: [{ a, b, h0, h1 }] in metres (the wall runs from x=a, height h0, to b, h1).
+  function cliffWalls(s) {
+    const out = [], step = ((s.b - s.a) * CLIFF_FACE) / CLIFF_STEPS;
+    for (let k = 0; k < CLIFF_STEPS; k++) { const a = s.a + step * k; out.push({ a, b: a + step * CLIFF_RISE, h0: (CLIFF_H / CLIFF_STEPS) * k, h1: (CLIFF_H / CLIFF_STEPS) * (k + 1) }); }
+    return out;
+  }
   function secAt(G, x) { const S = G.secs; for (let i = 0; i < S.length; i++) if (x < S[i].b) return S[i]; return S[S.length - 1]; }
   const smooth = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
   // Height of the ground (metres above the base line) at x. The cliff is a staircase of rock
@@ -714,11 +724,11 @@
     if (x <= 0 || x >= G.L) return 0;
     const s = secAt(G, x), f = (x - s.a) / (s.b - s.a);
     if (s.type === 'cliff') {
-      if (f < CLIFF_FACE) { const p = (f / CLIFF_FACE) * CLIFF_STEPS, k = Math.floor(p), u = p - k; return (CLIFF_H / CLIFF_STEPS) * (k + smooth(u / 0.26)); }
+      if (f < CLIFF_FACE) { const p = (f / CLIFF_FACE) * CLIFF_STEPS, k = Math.floor(p), u = p - k; return (CLIFF_H / CLIFF_STEPS) * (k + smooth(u / CLIFF_RISE)); }
       if (f < CLIFF_DOWN) return CLIFF_H;
       return CLIFF_H * (1 - smooth((f - CLIFF_DOWN) / (1 - CLIFF_DOWN)));
     }
-    if (s.type === 'gap') return x - s.a < RIM || s.b - x < RIM ? 0 : -14;
+    if (s.type === 'gap') { const rim = rimOf(s); return x - s.a < rim || s.b - x < rim ? 0 : -14; }
     if (s.type === 'pond') return x - s.a < 0.15 || s.b - x < 0.15 ? 0 : -0.6;
     return 0;
   }
@@ -729,6 +739,54 @@
     if (s.type === 'gap') return { h: Math.sin(Math.PI * f) * 6 + 1, mode: 'fly', type: 'gap', f };
     if (s.type === 'pond') return { h: -0.6, mode: 'swim', type: 'pond', f };
     return { h: 0, mode: 'run', type: 'track', f };
+  }
+  // Climbing aids on a cliff's walls, drawn on the face of each wall: hand holds on every rock wall,
+  // and per world vines, a stack of hay bales or a ladder (city walls, barns).
+  function wallAids(g, s, m2x, base, YK, band, t, TH) {
+    for (const w of cliffWalls(s)) {
+      const xa = m2x(w.a), xb = m2x(w.b), ya = base - w.h0 * YK + 14, yb = base - w.h1 * YK + 14, hgt = ya - yb;
+      if (xb < -80 || xa > g.canvas.width + 80) continue;
+      const at = (u) => [xa + (xb - xa) * u, ya - hgt * u]; // a point on the wall's face line
+      if (s.v === 'vines' || s.v === 'waterfall') {
+        g.strokeStyle = '#2f7a2a'; g.lineWidth = 4;
+        for (let i = 0; i < 3; i++) { g.beginPath(); for (let k = 0; k <= 12; k++) { const u = k / 12, [x, y] = at(u); g.lineTo(x + 6 + i * 12 + Math.sin(u * 9 + i * 2 + t * 0.6) * 3, y + 4); } g.stroke(); }
+        g.fillStyle = '#5bbf4a'; for (let i = 0; i < 3; i++) for (let k = 1; k < 12; k += 2) { const [x, y] = at(k / 12); g.beginPath(); g.ellipse(x + 6 + i * 12 + 4, y + 4, 5, 2.6, -0.6, 0, TAU); g.fill(); }
+      } else if (s.v === 'haystack') {
+        const rows = 4, bh = hgt / rows;
+        for (let r = 0; r < rows; r++) { const [x] = at((r + 0.5) / rows), y = ya - bh * (r + 1); for (let c = 0; c < 2; c++) { const bx = x - 10 + c * 46 + (r % 2) * 18; g.fillStyle = '#e6c25a'; g.fillRect(bx, y, 44, bh - 2); g.fillStyle = 'rgba(150,100,20,.45)'; g.fillRect(bx, y + bh * 0.3, 44, 2); g.fillRect(bx, y + bh * 0.65, 44, 2); g.fillStyle = 'rgba(255,240,170,.6)'; g.fillRect(bx, y, 44, 3); } }
+      } else if (s.v === 'wall' || s.v === 'barn') {
+        const off = 14; g.strokeStyle = s.v === 'barn' ? '#c9b48a' : '#8f969e'; g.lineWidth = 4;
+        g.beginPath(); for (const d of [-9, 9]) { const [x0, y0] = at(0), [x1, y1] = at(1); g.moveTo(x0 + off + d, y0 + 6); g.lineTo(x1 + off + d, y1 - 10); } g.stroke();
+        g.lineWidth = 3; g.beginPath(); for (let k = 1; k < 9; k++) { const [x, y] = at(k / 9); g.moveTo(x + off - 9, y); g.lineTo(x + off + 9, y); } g.stroke();
+      }
+      // hand holds: little knobs of rock (or candy, or bricks) up the face
+      g.fillStyle = s.v === 'candycane' ? '#3fbf6a' : s.v === 'ice' ? '#e8f6ff' : TH.rockDark || '#6f655d';
+      for (let k = 1; k < 7; k++) { const [x, y] = at(k / 7); g.beginPath(); g.ellipse(x + 6 + (k % 2) * 14, y + 6, 5, 3.5, 0, 0, TAU); g.fill(); }
+    }
+  }
+  // Ravines with more going on: a broken bridge (planks out to the gap, a snapped end hanging down),
+  // a river rushing far below, and wind streaks when it is windy.
+  function gapExtras(g, s, R, x0, x1, r0, r1, hz, H, base, band, t) {
+    if (s.v === 'river') {
+      const wy = base + 70; g.fillStyle = '#2f86c9'; g.fillRect(r0, wy, r1 - r0, H - wy);
+      g.fillStyle = 'rgba(255,255,255,.55)'; for (let r = 0; r < 4; r++) for (let x = r0; x < r1 - 30; x += 54) g.fillRect(x + ((t * 120 + r * 23) % 50), wy + 8 + r * 16, 22, 2.5);
+      g.fillStyle = 'rgba(255,255,255,.8)'; g.fillRect(r0, wy, r1 - r0, 3);
+    }
+    if (s.v === 'bridge') {
+      const deck = base + 10, plank = (xa, xb) => { g.fillStyle = '#9a6a3a'; g.fillRect(xa, deck - band - 6, xb - xa, band + 14); g.strokeStyle = 'rgba(60,35,15,.55)'; g.lineWidth = 2; for (let x = xa; x < xb; x += 14) { g.beginPath(); g.moveTo(x, deck - band - 6); g.lineTo(x, deck + 8); g.stroke(); } g.fillStyle = '#6f4824'; g.fillRect(xa, deck + 8, xb - xa, 6); };
+      plank(x0, r0); plank(r1, x1);
+      // rails and posts
+      g.strokeStyle = '#6f4824'; g.lineWidth = 3; for (const [xa, xb] of [[x0, r0], [r1, x1]]) { g.beginPath(); g.moveTo(xa, deck - band - 34); g.lineTo(xb, deck - band - 34); g.stroke(); for (let x = xa + 6; x < xb; x += 40) { g.beginPath(); g.moveTo(x, deck - band - 6); g.lineTo(x, deck - band - 36); g.stroke(); } }
+      // the snapped ends: planks hanging down into the gap, a rope swinging
+      g.save(); g.fillStyle = '#9a6a3a';
+      for (const [x, dir] of [[r0, 1], [r1, -1]]) { g.save(); g.translate(x, deck + 4); g.rotate(dir * (1.1 + Math.sin(t * 1.5 + x) * 0.05)); g.fillRect(0, -6, 46, 12); g.fillRect(50, -6, 30, 12); g.restore(); }
+      g.strokeStyle = '#c8a56a'; g.lineWidth = 2; g.beginPath(); g.moveTo(r0, deck - band - 34); g.quadraticCurveTo(r0 + 24, deck - band + 30 + Math.sin(t * 2) * 6, r0 + 10, deck + 40); g.stroke();
+      g.restore();
+    }
+    if (R.wind) {
+      g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2.5;
+      for (let i = 0; i < 7; i++) { const span = Math.max(1, r1 - r0), x = r0 + (((t * 260 * R.wind + i * 97) % span) + span) % span, y = base - 140 - (i % 4) * 34; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 30 * R.wind, y - 8, x + 60 * R.wind, y); g.stroke(); }
+    }
   }
   // The world behind the ducks. band: how deep the lanes go (px), so the track, the water and the
   // ledges are wide enough for every lane. Hurdles are drawn per lane by the race (drawHurdle).
@@ -755,7 +813,7 @@
       const x0 = m2x(s.a), x1 = m2x(s.b); if (x1 < -50 || x0 > W + 50) continue;
       if (s.type === 'maze') { if (L) L.maze(g, s, R, TH, G, x0, x1, hz, base, band, laneN, H, t, cam, PX, m2x, W); continue; }
       if (s.type === 'track' && NEW && L.track(g, s, TH, x0, x1, hz, base, band, laneN, H, t, cam, PX)) continue;
-      if (s.type === 'gap' && L && L.gap(g, s, TH, x0, x1, m2x(s.a + RIM), m2x(s.b - RIM), hz, H, base, band, t, cam, PX)) continue;
+      if (s.type === 'gap' && L && L.gap(g, s, TH, x0, x1, m2x(s.a + RIM), m2x(s.b - RIM), hz, H, base, band, t, cam, PX)) { gapExtras(g, s, R, x0, x1, m2x(s.a + RIM), m2x(s.b - RIM), hz, H, base, band, t); continue; }
       if (s.type === 'track') {
         if (NEW) L.fillGround(g, TH, x0, x1, hz, H, base, cam, PX); else { g.fillStyle = TH.ground; g.fillRect(x0, hz, x1 - x0 + 1, H - hz); }
         g.fillStyle = s.v === 'ice' ? '#cfeaff' : s.v === 'sand' ? '#f2dca6' : s.v === 'mud' ? '#8a6240' : TH.path; g.fillRect(x0, hz - 4, x1 - x0 + 1, band + 18);
@@ -799,16 +857,18 @@
         if (!patterned) g.fillStyle = dark; if (!patterned) for (let i = 0; i < 16; i++) { const m = s.a + (s.b - s.a) * ((i * 0.618) % 1) * 0.95, fy = base - groundH(G, m) * YK + 30 + (i % 4) * 16; g.fillRect(m2x(m), fy, 12 + (i % 3) * 4, 6); }
         // ledge lips
         g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 3; g.beginPath();
-        for (let k = 1; k <= CLIFF_STEPS; k++) { const m = s.a + (s.b - s.a) * CLIFF_FACE * ((k - 1 + 0.26) / CLIFF_STEPS), yy = base - (CLIFF_H / CLIFF_STEPS) * k * YK + 14; g.moveTo(m2x(m), yy); g.lineTo(m2x(m) + (s.b - s.a) * CLIFF_FACE / CLIFF_STEPS * 0.74 * PX, yy); }
+        for (let k = 1; k <= CLIFF_STEPS; k++) { const m = s.a + (s.b - s.a) * CLIFF_FACE * ((k - 1 + CLIFF_RISE) / CLIFF_STEPS), yy = base - (CLIFF_H / CLIFF_STEPS) * k * YK + 14; g.moveTo(m2x(m), yy); g.lineTo(m2x(m) + (s.b - s.a) * CLIFF_FACE / CLIFF_STEPS * (1 - CLIFF_RISE) * PX, yy); }
         g.stroke();
+        wallAids(g, s, m2x, base, YK, band, t, TH);
       }
       if (s.type === 'gap') {
-        const r0 = m2x(s.a + RIM), r1 = m2x(s.b - RIM);
+        const r0 = m2x(s.a + rimOf(s)), r1 = m2x(s.b - rimOf(s));
         g.fillStyle = TH.pit; g.fillRect(x0, hz - 4, x1 - x0 + 1, H);
         g.fillStyle = TH.rockDark; g.beginPath(); g.moveTo(r0, hz - 4); g.lineTo(r0 + 26, H); g.lineTo(x0, H); g.lineTo(x0, hz - 4); g.fill(); g.beginPath(); g.moveTo(r1, hz - 4); g.lineTo(r1 - 26, H); g.lineTo(x1, H); g.lineTo(x1, hz - 4); g.fill();
         g.fillStyle = TH.ground; g.fillRect(x0, hz - 4, r0 - x0, band + 18); g.fillRect(r1, hz - 4, x1 - r1, band + 18);
         g.fillStyle = TH.path; g.fillRect(x0, base + 10, r0 - x0, 8); g.fillRect(r1, base + 10, x1 - r1, 8);
         if (s.v === 'clouds') { g.fillStyle = 'rgba(255,255,255,.9)'; for (let x = r0 + 30; x < r1 - 40; x += 70) { const cy = base + 40 + Math.sin(t + x) * 4; g.beginPath(); g.arc(x, cy, 18, 0, TAU); g.arc(x + 20, cy - 6, 16, 0, TAU); g.arc(x + 38, cy, 17, 0, TAU); g.fill(); } }
+        gapExtras(g, s, R, x0, x1, r0, r1, hz, H, base, band, t);
       }
     }
     // the run-up before the start and the run-out after the finish
@@ -839,5 +899,5 @@
     if (R.weather === 'fog') { g.fillStyle = 'rgba(230,235,240,.35)'; g.fillRect(0, 0, W, H); }
   }
 
-  window.DUCK_ART = { PAL, THEME, drawDuck, duckBox, duckImg, drawEgg, eggImg, drawFarm, drawFox, drawValley, valleyLayout, raceGeometry, groundAt, groundH, secAt, drawRaceWorld, drawRaceWeather, drawRacer, racePose, drawHurdle, SEC_COLORS, MOOD, DECOR_ICON, drawIcon, drawBug, drawBird, moodIcon, ICON_NAMES: Object.keys(ICONS) };
+  window.DUCK_ART = { PAL, THEME, drawDuck, duckBox, duckImg, drawEgg, eggImg, drawFarm, drawFox, drawValley, valleyLayout, raceGeometry, groundAt, groundH, secAt, rimOf, cliffWalls, drawRaceWorld, drawRaceWeather, drawRacer, racePose, drawHurdle, SEC_COLORS, MOOD, DECOR_ICON, drawIcon, drawBug, drawBird, moodIcon, ICON_NAMES: Object.keys(ICONS) };
 })();
