@@ -91,6 +91,10 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | summon | Music | `games/summon/militaristic-tune.ogg` | Some Militaristic Tune | Spring Spring | CC0 1.0 | https://opengameart.org/content/some-militaristic-tune |
 | summon | Music | `games/summon/final-stand.ogg` | Final Stand | iamoneabe | CC0 1.0 | https://opengameart.org/content/final-stand |
 | summon | Music | `games/summon/a-legend-will-rise.ogg` | A Legend Will Rise | CodeManu | CC0 1.0 | https://opengameart.org/content/a-legend-will-rise-orchestral |
+| trash | Music | `games/zombie/night-of-the-streets.ogg` | Night of the Streets | nene | CC0 1.0 | https://opengameart.org/content/night-of-the-streets-horrorsuspense |
+| trash | Music | `games/zombie/when-the-shadows-gather.ogg` | When the Shadows Gather | Tsorthan Grove | CC0 1.0 | https://opengameart.org/content/when-the-shadows-gather |
+| trash | Music | `games/zombie/zombies-are-coming.ogg` | Zombies March | yd | CC0 1.0 | https://opengameart.org/content/zombies-march |
+| trash | Music | `games/zombie/music-box-sad-tune.ogg` | Sad Tune (4 Music Box Tracks) | Aureolus_Omicron | CC0 1.0 | https://opengameart.org/content/4-music-box-tracks |
 | trivia | Music | `games/trivia/title-groovin.webm` | Groovin | Brian Boyko | CC0 1.0 | https://freepd.com/misc.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/misc.php) |
 | trivia | Music | `games/trivia/think-funky-energy-loop.webm` | Funky Energy Loop | Kevin MacLeod | CC0 1.0 | https://freepd.com/scoring.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/scoring.php) |
 | trivia | Music | `games/trivia/finale-funkeriffic.webm` | Funkeriffic | Kevin MacLeod | CC0 1.0 | https://freepd.com/misc.php (FreePD, site closed; archived: https://web.archive.org/web/2024/https://freepd.com/misc.php) |

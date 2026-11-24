@@ -1,0 +1,136 @@
+/* TrashZombies: trash-punk look (spray-paint green, hazard orange, rusty metal, chunky outlines).
+   TV: body.g-trash (lobby, the town map, results); phone: the full-screen game (.tz-root). */
+body.g-trash { --tz-green: #9cff3c; --tz-orange: #ff8c2e; --tz-ink: #1b1410; --tz-metal: #c9ccd1; --tz-night: #15111a; }
+.tz-logo { font-family: 'Lilita One', sans-serif; font-size: 92px; margin: 0; line-height: 0.95; color: #fff6d8; letter-spacing: 1px;
+  text-shadow: 0 6px 0 var(--tz-ink, #1b1410), 0 0 0 #000; -webkit-text-stroke: 3px #1b1410; transform: rotate(-2deg); }
+.tz-logo b { color: var(--tz-green, #9cff3c); }
+.tz-logo.sm { font-size: 40px; -webkit-text-stroke: 2px #1b1410; text-shadow: 0 3px 0 #1b1410; }
+.tz-abi { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; border-radius: 8px; margin: 2px; font-size: 18px; background: rgba(0,0,0,0.45); border: 2px solid #777; position: relative; }
+.tz-abi sub { position: absolute; right: -4px; bottom: -6px; font: 11px 'Lilita One', sans-serif; background: #1b1410; color: #fff; border-radius: 6px; padding: 0 3px; }
+.tz-abi.c-atk, .c-atk .tz-cat { border-color: #ff5a3c; } .tz-abi.c-def { border-color: #3ec1ff; } .tz-abi.c-spc { border-color: #c37bff; }
+
+/* ---------------- TV lobby: a junkyard street at dusk, your garage door on the left ---------------- */
+.tz-lobby { position: relative; min-height: calc(100vh - 150px); border-radius: 22px; display: flex; align-items: stretch; overflow: hidden;
+  background: linear-gradient(#2a1d3d 0%, #6b3550 45%, #e0794a 70%, #3b2f22 70.2%, #2b2219 100%); }
+.tz-lb-sky { position: absolute; inset: 0; background: radial-gradient(circle at 82% 22%, #ffe9a8 0 46px, rgba(255,233,168,0.2) 48px, transparent 140px),
+  repeating-linear-gradient(90deg, transparent 0 60px, rgba(20,12,24,0.7) 60px 64px, transparent 64px 160px); background-size: auto, 100% 30%; background-repeat: no-repeat, repeat-x; background-position: 0 0, 0 52%; pointer-events: none; }
+.tz-lb-door { position: relative; width: 26%; min-width: 260px; margin: 6vh 0 0 3%; background: #4a2f2a; border: 10px solid #2b1c18; border-bottom: 0; box-shadow: 0 0 0 6px #1b1410; }
+.tz-lb-slats { position: absolute; inset: 20px 20px 0; background: repeating-linear-gradient(#d6d8dc 0 26px, #9aa0a8 26px 30px); border: 5px solid #1b1410; border-bottom: 0;
+  animation: tz-door 6s ease-in-out infinite; transform-origin: top; }
+.tz-lb-door span { position: absolute; top: -48px; left: 50%; transform: translateX(-50%); font: 30px 'Lilita One', sans-serif; color: #ffd23f; text-shadow: 0 3px 0 #1b1410; }
+@keyframes tz-door { 0%, 40% { transform: scaleY(1); } 55% { transform: scaleY(0.93) translateX(2px); } 58% { transform: scaleY(0.95) translateX(-2px); } 75%, 100% { transform: scaleY(1); } }
+.tz-lb-main { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 26px 30px 30px; text-align: center; }
+.tz-tag { margin: 0; font: 26px 'Lilita One', sans-serif; color: #ffe9a8; text-shadow: 0 2px 0 #1b1410; }
+.tz-lb-row { display: flex; gap: 26px; align-items: stretch; flex-wrap: wrap; justify-content: center; }
+.tz-join { background: #f2efe6; color: #1b1410; border: 6px solid #1b1410; border-radius: 14px; padding: 14px 18px; transform: rotate(-1.5deg); box-shadow: 8px 8px 0 rgba(0,0,0,0.35); display: grid; justify-items: center; gap: 4px; }
+.tz-join img { width: 200px; height: 200px; }
+.tz-code-l { font: 18px 'Lilita One', sans-serif; text-transform: uppercase; letter-spacing: 2px; }
+.tz-code { font: 70px 'Lilita One', sans-serif; letter-spacing: 0.12em; color: #2b6d1a; line-height: 1; }
+.tz-join small { max-width: 220px; font-weight: 700; }
+.tz-lb-set { background: repeating-linear-gradient(45deg, #2b2f33 0 22px, #33383d 22px 44px); border: 6px solid #1b1410; border-radius: 14px; padding: 12px 18px 16px; min-width: 380px; box-shadow: 8px 8px 0 rgba(0,0,0,0.35); }
+.tz-lb-set h3 { margin: 0 0 8px; font: 26px 'Lilita One', sans-serif; color: var(--tz-orange, #ff8c2e); text-shadow: 0 2px 0 #1b1410; }
+.tz-settings { display: grid; gap: 10px; text-align: left; }
+.tz-settings label { display: grid; gap: 3px; font: 17px 'Lilita One', sans-serif; color: #ffe9a8; }
+.tz-settings select { font-size: 18px; padding: 7px 10px; border-radius: 10px; border: 3px solid #1b1410; background: #f2efe6; color: #1b1410; font-weight: 700; }
+.tz-roster { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 1000px; }
+.tz-roster .chip { background: rgba(20,14,10,0.8); border: 3px solid #9cff3c; display: inline-flex; align-items: center; gap: 6px; }
+.tz-start { background: var(--tz-green, #9cff3c) !important; color: #1b1410 !important; border: 5px solid #1b1410 !important; font-family: 'Lilita One', sans-serif; font-size: 34px !important; box-shadow: 0 6px 0 #1b1410; }
+.tz-err { color: #ffb3a8; min-height: 1em; }
+.tz-links .link { color: #ffe9a8; }
+
+/* ---------------- TV game: the map + side panel ---------------- */
+.tz-tv { display: grid; grid-template-columns: 1fr 440px; gap: 16px; height: calc(100vh - 150px); min-height: 520px; padding: 10px 16px 16px; box-sizing: border-box; border-radius: 22px;
+  background: radial-gradient(circle at 30% 20%, #2a2233, #120e16 70%); }
+.tz-mapw { position: relative; min-height: 0; border: 6px solid #1b1410; border-radius: 16px; background: #0c0a0e; box-shadow: inset 0 0 60px rgba(0,0,0,0.8); overflow: hidden; }
+#tz-map { width: 100%; height: 100%; display: block; }
+.tz-maptag { position: absolute; left: 14px; top: 10px; font: 18px 'Lilita One', sans-serif; color: #ffe9a8; background: rgba(15,10,6,0.75); padding: 4px 12px; border-radius: 10px; }
+.tz-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; color: #f2efe6; }
+.tz-sidehead { display: flex; justify-content: space-between; align-items: center; }
+.tz-logo-s { font: 36px 'Lilita One', sans-serif; color: #fff6d8; -webkit-text-stroke: 1.5px #1b1410; text-shadow: 0 3px 0 #1b1410; }
+.tz-logo-s b { color: #9cff3c; }
+.tz-clock, .tz-len { font: 26px 'Lilita One', sans-serif; background: #1b1410; color: #ffd23f; padding: 4px 12px; border-radius: 10px; }
+.tz-len { font-size: 18px; }
+.tz-rows { display: flex; flex-direction: column; gap: 6px; overflow: hidden; flex: 1 1 auto; min-height: 0; }
+.tz-row { display: flex; gap: 10px; align-items: center; background: rgba(30,24,36,0.92); border: 3px solid #3a3044; border-radius: 12px; padding: 6px 10px; }
+.tz-row.danger { border-color: #ff4a3a; animation: tz-pulse 0.8s ease-in-out infinite; }
+.tz-row.dead { opacity: 0.55; filter: grayscale(0.7); }
+@keyframes tz-pulse { 50% { box-shadow: 0 0 18px rgba(255,74,58,0.7); } }
+.tz-rmain { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.tz-rmain b { font: 21px 'Lilita One', sans-serif; text-shadow: 0 2px 0 #1b1410; }
+.tz-rmain small { color: #cfc6d8; font-size: 14px; }
+.tz-hp { height: 7px; background: #2a1d1d; border-radius: 4px; overflow: hidden; } .tz-hp i { display: block; height: 100%; background: linear-gradient(90deg, #5ad65a, #9cff3c); }
+.tz-ab .tz-abi { width: 24px; min-width: 24px; height: 24px; font-size: 15px; }
+.tz-feed { list-style: none; margin: 0; padding: 8px 12px; background: rgba(15,10,6,0.8); border-radius: 12px; border: 3px solid #1b1410; font-size: 16px; display: grid; gap: 4px; flex: 0 0 auto; max-height: 34%; overflow: hidden; }
+.tz-feed li:first-child { color: #ffd23f; font-weight: 700; }
+.tz-over { text-align: center; padding: 20px; min-height: calc(100vh - 150px); border-radius: 22px; box-sizing: border-box; background: radial-gradient(circle at 50% 30%, #3b2a2a, #120e16 70%); color: #f2efe6; }
+.tz-why { font: 28px 'Lilita One', sans-serif; color: #ffe9a8; }
+.tz-podium { display: flex; justify-content: center; align-items: flex-end; gap: 30px; margin: 10px 0 18px; }
+.tz-pod { display: grid; justify-items: center; }
+.tz-pod.p1 { order: 2; } .tz-pod.p2 { order: 1; } .tz-pod.p3 { order: 3; }
+.tz-pbase { background: #2b2f33; border: 5px solid #1b1410; border-radius: 12px; padding: 8px 18px; min-width: 220px; display: grid; gap: 2px; }
+.tz-pod.p1 .tz-pbase { background: #4a3d16; padding-bottom: 40px; } .tz-pod.p2 .tz-pbase { padding-bottom: 22px; }
+.tz-pbase b { font: 26px 'Lilita One', sans-serif; }
+.tz-rest { list-style: none; margin: 0 auto; padding: 0; max-width: 900px; display: grid; gap: 6px; }
+.tz-rest li { display: flex; gap: 12px; align-items: center; background: rgba(30,24,36,0.9); border-radius: 10px; padding: 6px 12px; text-align: left; }
+.tz-rest li b { font: 20px 'Lilita One', sans-serif; min-width: 140px; }
+
+/* ---------------- phone: the full-screen game ---------------- */
+body.tz-playing { overflow: hidden; overscroll-behavior: none; }
+.tz-root { position: fixed; inset: 0; z-index: 60; background: #0c0a08; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.tz-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.tz-pause { position: absolute; top: 10px; right: 12px; width: 46px; height: 42px; border-radius: 12px; border: 3px solid #1b1410; background: rgba(242,239,230,0.92); font-size: 20px; z-index: 3; }
+.tz-ov { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; background: rgba(12,8,6,0.72); color: #f2efe6; overflow: auto; padding: 12px; box-sizing: border-box; }
+.tz-ov[hidden] { display: none; }
+.tz-lvl { text-align: center; width: 100%; max-width: 900px; }
+.tz-lvl h2 { margin: 0; font: 34px 'Lilita One', sans-serif; color: #9cff3c; -webkit-text-stroke: 1.5px #1b1410; text-shadow: 0 3px 0 #1b1410; }
+.tz-lvl h2 span { color: #ffd23f; font-size: 24px; }
+.tz-lvl > p { margin: 4px 0 10px; font-size: 14px; color: #ffe9a8; }
+.tz-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tz-card { position: relative; display: grid; justify-items: center; align-content: start; gap: 4px; padding: 26px 8px 10px; border-radius: 16px; border: 4px solid #1b1410; background: #f2efe6; color: #1b1410; font: inherit; cursor: pointer;
+  box-shadow: 0 5px 0 #1b1410; animation: tz-card-in 0.35s cubic-bezier(.2,1.6,.5,1) both; }
+.tz-card:nth-child(2) { animation-delay: 0.06s; } .tz-card:nth-child(3) { animation-delay: 0.12s; }
+@keyframes tz-card-in { from { transform: translateY(40px) scale(0.8); opacity: 0; } }
+.tz-card:active { transform: translateY(3px); box-shadow: 0 2px 0 #1b1410; }
+.tz-card i { position: absolute; top: 6px; left: 8px; font: 16px 'Lilita One', sans-serif; font-style: normal; color: #777; }
+.tz-cat { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); padding: 2px 12px; border-radius: 10px; border: 3px solid #1b1410; color: #fff; font: 14px 'Lilita One', sans-serif; text-shadow: 0 1px 0 #1b1410; white-space: nowrap; background: #3ec1ff; }
+.tz-card.c-atk { background: #ffe9e2; } .tz-card.c-def { background: #e2f6ff; } .tz-card.c-spc { background: #f3e6ff; }
+.tz-ci { font-size: 38px; line-height: 1.1; }
+.tz-card h3 { margin: 0; font: 19px 'Lilita One', sans-serif; }
+.tz-card p { margin: 0; font-size: 13px; line-height: 1.25; }
+.tz-card small { font-size: 11px; color: #555; font-weight: 700; }
+.tz-menu, .tz-dead { background: #221b28; border: 5px solid #1b1410; border-radius: 18px; padding: 14px 18px; max-width: 760px; width: 100%; box-shadow: 0 8px 0 rgba(0,0,0,0.4); }
+.tz-menu h2, .tz-dead h2 { margin: 0 0 6px; font: 30px 'Lilita One', sans-serif; color: #ffd23f; text-shadow: 0 2px 0 #1b1410; }
+.tz-dead h2 { color: #ff6a4a; }
+.tz-menu h3 { margin: 8px 0 4px; font: 18px 'Lilita One', sans-serif; color: #9cff3c; }
+.tz-mstats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 15px; }
+.tz-mstats b { font: 22px 'Lilita One', sans-serif; color: #fff; }
+.tz-build { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin: 6px 0; }
+.tz-bcat { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 6px 8px; border-left: 5px solid #3ec1ff; }
+.tz-bcat.c-atk { border-color: #ff5a3c; } .tz-bcat.c-spc { border-color: #c37bff; }
+.tz-bcat h4 { margin: 0 0 4px; font: 14px 'Lilita One', sans-serif; text-transform: uppercase; letter-spacing: 1px; }
+.tz-bi { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 4px; font-size: 13px; }
+.tz-bi small { color: #9cff3c; letter-spacing: 1px; }
+.tz-opts, .tz-mbtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+.tz-controls { margin-top: 8px; font-size: 13px; color: #cfc6d8; text-align: center; }
+.tz-mut { color: #aaa; font-size: 13px; }
+.tz-dead { display: flex; gap: 14px; align-items: center; }
+.tz-dbody { flex: 0 0 auto; filter: grayscale(0.3); transform: rotate(-8deg); }
+.tz-dmain { flex: 1; min-width: 0; text-align: left; }
+.tz-rot { position: absolute; inset: 0; z-index: 5; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px; background: rgba(12,8,6,0.94); color: #f2efe6; }
+.tz-rot div { font-size: 56px; animation: tz-rot 1.6s ease-in-out infinite; }
+.tz-rot b { font: 26px 'Lilita One', sans-serif; color: #9cff3c; }
+@keyframes tz-rot { 40%, 70% { transform: rotate(90deg); } }
+.tz-root.portrait .tz-rot { display: flex; }
+.tz-ph-over { text-align: center; }
+.tz-pbig { display: flex; justify-content: center; }
+.tz-mini { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; text-align: left; }
+.tz-mini li { display: flex; gap: 8px; align-items: center; } .tz-mini li span { margin-left: auto; color: #9cff3c; }
+@media (max-height: 430px) {
+  .tz-card { padding: 20px 6px 8px; } .tz-ci { font-size: 30px; } .tz-card h3 { font-size: 16px; } .tz-card p { font-size: 12px; }
+  .tz-lvl h2 { font-size: 26px; } .tz-dbody .bx-body { width: 86px !important; height: 120px !important; }
+}
+@media (max-width: 520px) { .tz-cards { grid-template-columns: 1fr; } .tz-card { grid-template-columns: 48px 1fr; justify-items: start; text-align: left; padding: 14px 10px 8px; } .tz-card .tz-ci { grid-row: span 3; } .tz-cat { left: 70%; } }
+
+/* the first-join header tour points at buttons hidden under the full-screen game */
+body.tz-playing .ph-tour { display: none; }
+body.tz-playing .toast { z-index: 70; top: 10px; bottom: auto; }

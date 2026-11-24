@@ -40,7 +40,7 @@ const PF = require('./party-fit');
 // Games that can't do a short practice are left out (no setting).
 const DIFFICULTIES = ['easy', 'medium', 'hard', 'mixed'];
 const PRACTICE_MODES = ['on', 'off', 'new'], PRACTICE_END_MS = 6000, PRACTICE_MIN_MS = 60 * 1000, PRACTICE_MAX_MS = 3 * 60 * 1000;
-const NO_PRACTICE = new Set(['ducks', 'kingdoms', 'escape', 'marble', 'mafia']);
+const NO_PRACTICE = new Set(['ducks', 'kingdoms', 'escape', 'marble', 'mafia', 'trash']); // trash: a run is its own warm-up (the first waves are gentle)
 const PRACTICE_FIELD = { key: 'practice', label: 'Practice round first', options: [{ value: false, label: 'Off' }, { value: true, label: 'On: a quick warm-up that doesn’t count' }] };
 const COUNT_KEY = /^(rounds|turns|questions|hands|orders|races|debates|bombs|songs|maxRounds|trip|prompts|cases|duels|rooms)$/;
 const { castOpenMs, castMs, CAST_OPEN_MS, CAST_PER_MS, CAST_OUTRO_MS, CAST_MAX } = require('./show');
@@ -640,6 +640,8 @@ class BoxRoom {
   busy() {
     if (this.locked) return 'locked';
     if (this.players.size >= MAX_PLAYERS) return 'full';
+    // A drop-in game (module dropIn: true, e.g. TrashZombies) lets new players straight into the running game.
+    if (this.phase === 'game' && this.def.dropIn && this.game && this.game.phase !== 'over' && !this.practice) return null;
     if (this.phase === 'show' || (this.phase === 'game' && !(this.game && this.game.phase === 'over'))) return 'running';
     return null;
   }

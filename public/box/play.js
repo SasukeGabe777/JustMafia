@@ -40,7 +40,9 @@
   const vibrate = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch { /* no */ } };
   // ctx.haptic('success' | 'error' | 'turn' | 'win' | 'select' | 'buzz' | …): see /haptics.js.
   const haptic = (kind) => { try { window.HAPTIC && window.HAPTIC.play(kind); } catch { /* none */ } };
-  const ctx = { act, actAsync, toast, sfx: BOX.sfx, vibrate, haptic };
+  // ctx.live(msg): a quick real-time message for the game (no reply, no screen sync; TrashZombies co-op).
+  const live = (msg) => { try { if (socket.connected) socket.volatile.emit('player:live', msg); } catch { /* offline */ } };
+  const ctx = { act, actAsync, toast, sfx: BOX.sfx, vibrate, haptic, live };
   const hostDo = (type, extra = {}) => new Promise((res) => socket.emit('player:host', { type, ...extra }, (r) => { if (r && !r.ok && r.error) toast(r.error); res(r || { ok: false }); }));
   // Long-press must not open the copy/save menu or select the page (mini-games use holds).
   document.addEventListener('contextmenu', (e) => { if (!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
@@ -156,7 +158,7 @@
     });
   };
   // Games the room can switch to (the ones this page knows how to draw).
-  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'pitch', 'king', 'undercover', 'snap', 'pizza', 'escape', 'marble', 'debate', 'actout', 'tune', 'alien', 'bomb', 'quickdraw', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
+  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'trash', 'pitch', 'king', 'undercover', 'snap', 'pizza', 'escape', 'marble', 'debate', 'actout', 'tune', 'alien', 'bomb', 'quickdraw', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
   const LOCKABLE = { zombie: 'Finish a Party Mode to unlock it.' };
   function gamePicker() {
     const list = SWITCHABLE.filter((k) => BOX.games[k] && k !== gameKey);
@@ -386,6 +388,8 @@
     if (target > from) { try { BOX.sfx('coin'); } catch { /* */ } }
   }
   socket.on('disconnect', () => { $('#offline').hidden = false; });
+  // Real-time messages from the server for the game on screen (G.live(msg, ctx)).
+  socket.on('live', (m) => { try { if (G && G.live) G.live(m, ctx); } catch (e) { console.error(e); } });
   socket.on('me', (v) => {
     // The room went to a game outside the box (JustMafia): follow it, joined with my name.
     if (v.away && v.away.url && v.away.url.charAt(0) === '/') { if (!socket.leaving) { socket.leaving = true; toast('🔪 Off to JustMafia!'); setTimeout(() => { location.href = v.away.url; }, 500); } return; }

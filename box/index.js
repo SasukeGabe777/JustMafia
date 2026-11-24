@@ -21,6 +21,7 @@ const GAMES = {
   bid: require('./games/bid'),
   kingdoms: require('./games/kingdoms'),
   zombie: require('./games/zombie'),
+  trash: require('./games/trash'),
   pitch: require('./games/pitch'),
   king: require('./games/king'),
   undercover: require('./games/undercover'),
@@ -409,6 +410,12 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
       const { room, p } = ctx();
       if (!room || !p) return reply(cb, { ok: false, error: 'You are not in this room.' });
       reply(cb, room.act(p, msg));
+    });
+    // Real-time relay for games that need it (TrashZombies co-op areas): no reply, no screen sync.
+    socket.on('player:live', (msg) => {
+      const { room, p } = ctx();
+      if (!room || !p || room.phase !== 'game' || !room.game || !room.game.live) return;
+      try { room.game.live(p, msg); } catch (e) { console.error('[guard] box live failed:', e); }
     });
     // The host's phone (first to join) can start the game or play again.
     socket.on('player:host', (msg, cb) => {

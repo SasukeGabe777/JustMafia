@@ -134,6 +134,9 @@
     { game: 'king', slot: 'hat', label: 'Court hat', spot: 'head', default: OWN('hat') },
     { game: 'king', slot: 'hand', label: 'Court prop', spot: 'hand', default: OWN('prop') },
     { game: 'king', slot: 'cloak', label: 'Cloak', spot: 'back', default: OWN('cloak') },
+    { game: 'trash', slot: 'hat', label: 'Scavenger hat', spot: 'head', default: OWN('hat') },
+    { game: 'trash', slot: 'mask', label: 'Face gear', spot: 'face', default: OWN('face gear') },
+    { game: 'trash', slot: 'pack', label: 'Back gear', spot: 'back', default: OWN('back gear') },
   ];
 
   // [game, slot, value, name, cost, icon, paint, desc]
@@ -378,6 +381,13 @@
     ['king', 'hand', 'scepter', 'Royal Scepter', 180, '🪄', { shape: 'staff', a: '#e0b84a', c: '#e8424f', glow: true }, 'Point it at someone and say “summoned”.'],
     ['king', 'cloak', 'velvet', 'Courtier’s Cloak', 120, '🧣', { shape: 'cape', a: '#5a1a6a', b: '#3a0f46', c: '#e0b84a' }, 'Plum velvet for whispering in corridors.'],
     ['king', 'cloak', 'shroud', 'Ghostly Shroud', 160, '👻', { shape: 'cape', a: '#b7c7d8', b: '#7a8aa0', c: '#ffffff' }, 'For courtiers who came back to haunt.'],
+    // TrashZombies: scavenged junk you wear while you blast through the town.
+    ['trash', 'hat', 'hardhat', 'Dented Hard Hat', 60, '⛑️', { shape: 'hardhat', a: '#ff8c2e', b: '#2b1f1a', c: '#fff6a8', d: 'lamp' }, 'Found it in a dumpster. Still has a working lamp.'],
+    ['trash', 'hat', 'rag', 'Hazard Bandana', 80, '⚠️', { shape: 'bandana', a: '#9cff3c', b: '#1a1a1a', d: 'stripes', pattern: 'stripes' }, 'Toxic green with black stripes. Very punk.'],
+    ['trash', 'mask', 'smog', 'Smog Mask', 140, '😷', { shape: 'gasMask', a: '#6a7a5a', b: '#2a2a2a' }, 'Keeps out the landfill smell. Mostly.'],
+    ['trash', 'mask', 'weld', 'Welder Goggles', 90, '🥽', { shape: 'goggles', a: '#9cff3c', b: '#5a5f66' }, 'Green-tinted. Every zombie glows a little.'],
+    ['trash', 'pack', 'junk', 'Junk Backpack', 110, '🎒', { shape: 'backpack', a: '#7a8590', b: '#4a5058', c: '#ff8c2e' }, 'Stuffed with spare hubcaps and duct tape.'],
+    ['trash', 'pack', 'rocket', 'Leaf-Blower Jetpack', 240, '🚀', { shape: 'jetpack', a: '#ff8c2e', b: '#c9ccd1', glow: true }, 'Two leaf blowers strapped together. It sort of flies.'],
     ['undercover', 'hat', 'fedora', 'Agent Fedora', 60, '🕵️', { shape: 'fedora', a: '#2a2d36', b: '#c8a24a' }, 'Brim down, collar up. Nobody saw you come in.'],
     ['undercover', 'hat', 'trilby', 'Night Trilby', 130, '🎩', { shape: 'fedora', a: '#5a1e2a', b: '#101014' }, 'A deep red trilby for the late-night briefings.'],
     ['undercover', 'shades', 'mirror', 'Mirror Shades', 80, '🕶️', { shape: 'shades', a: '#101014', b: '#8fd3ff', d: 'aviator' }, 'They can see themselves. They can’t see you.'],
