@@ -66,6 +66,20 @@
       const shown = dh * (1 - Math.min(1, Math.max(0, u * 1.4 - 0.2)));
       g.fillStyle = '#c9ccd1'; g.fillRect(dx + Math.sin(t * 50) * (u < 0.8 ? 2 : 0), dy, dw, shown); g.strokeStyle = '#1b1410'; g.lineWidth = 2; g.strokeRect(dx, dy, dw, dh);
     }
+    // Regular mode: chained rings, the hinted area, the door
+    const S0 = s.story;
+    if (S0) {
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const tr = S0.tiers[y * N + x]; if (tr <= S0.tier) continue;
+        const px = x0 + x * cw, py = y0 + y * ch;
+        g.fillStyle = 'rgba(120,20,20,0.42)'; g.fillRect(px + 3, py + 3, cw - 6, ch - 6);
+        g.strokeStyle = 'rgba(200,204,209,0.55)'; g.lineWidth = 3; g.setLineDash([8, 6]); g.beginPath(); g.moveTo(px + 6, py + 6); g.lineTo(px + cw - 6, py + ch - 6); g.moveTo(px + cw - 6, py + 6); g.lineTo(px + 6, py + ch - 6); g.stroke(); g.setLineDash([]);
+        g.font = `bold ${Math.max(11, Math.round(cw * 0.12))}px "Lilita One", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,0.8)';
+        const lbl = '🔒 ' + Math.max(0, S0.needs[tr - 1] - S0.kills); g.strokeText(lbl, px + cw / 2, py + ch / 2); g.fillStyle = '#ffd23f'; g.fillText(lbl, px + cw / 2, py + ch / 2);
+      }
+      if (S0.hint) { const [hx, hy] = S0.hint; g.strokeStyle = `rgba(255,90,60,${0.6 + 0.3 * Math.sin(t * 3)})`; g.lineWidth = 4; g.setLineDash([12, 8]); g.beginPath(); g.ellipse(x0 + (hx + 0.5) * cw, y0 + (hy + 0.5) * ch, cw * 1.6, ch * 1.6, 0, 0, TAU); g.stroke(); g.setLineDash([]); }
+      if (S0.door) { const [dx2, dy2] = S0.door, px = x0 + dx2 * cw, py = y0 + dy2 * ch, D = (window.TZS.DOORS.find((d) => d.key === S0.doorLook) || {}); g.strokeStyle = `rgba(255,90,60,${0.7 + 0.3 * Math.sin(t * 5)})`; g.lineWidth = 6; g.strokeRect(px + 2, py + 2, cw - 4, ch - 4); g.font = `${Math.round(ch * 0.42)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(S0.doorOpen ? '☠️' : D.icon || '🚪', px + cw / 2, py + ch * 0.45); }
+    }
     // players
     const byCell = new Map();
     for (const p of s.players || []) { const k = p.x + ',' + p.y; if (!byCell.has(k)) byCell.set(k, []); byCell.get(k).push(p); }
@@ -98,13 +112,20 @@
       <div class="tz-hp"><i style="width:${p.state === 'dead' || !p.mhp ? 0 : Math.round((100 * p.hp) / p.mhp)}%"></i></div><div class="tz-ab">${abIcons(p.ab)}</div></div></div>`).join('');
     const feed = (s.feed || []).slice().reverse().map((f) => `<li>${esc(f.icon)} ${nm(f.text)}</li>`).join('');
     const len = { endless: '♾️ Endless', w20: '🏁 First to wave 20' }[s.length] || '';
-    return `<div class="tz-sidehead"><span class="tz-logo-s">Trash<b>Zombies</b></span>${s.endsIn ? `<span class="tz-clock">⏱ ${timer(s.endsIn)}</span>` : `<span class="tz-len">${len}</span>`}</div>
+    const S0 = s.story, nt = S0 && S0.tier < S0.max ? S0.tier + 1 : 0;
+    const storyBox = S0 ? `<div class="tz-story"><div><b>📖 Ring ${S0.tier}/${S0.max} open</b>${nt ? `<span>⛓️ next gate: ${Math.min(S0.kills, S0.needs[nt - 1])}/${S0.needs[nt - 1]} team kills</span><i style="width:${Math.round(100 * Math.min(1, S0.kills / S0.needs[nt - 1]))}%"></i>` : '<span>All gates are down!</span>'}</div><div class="tz-sk"><span>🗝️ ${S0.keys}/3</span><span>🗺️ ${S0.maps}/2</span><span>${S0.boss ? `${S0.boss.icon} ${esc(S0.boss.name)}${S0.doorOpen ? ' <b>AWAKE</b>' : ''}` : '🚪 door: ???'}</span></div></div>` : '';
+    return `<div class="tz-sidehead"><span class="tz-logo-s">Trash<b>Zombies</b></span>${S0 ? `<span class="tz-len">📖 ${timer(S0.time || 0)}</span>` : s.endsIn ? `<span class="tz-clock">⏱ ${timer(s.endsIn)}</span>` : `<span class="tz-len">${len}</span>`}</div>${storyBox}
       <div class="tz-rows">${rows}</div><ul class="tz-feed">${feed}</ul>`;
   }
   function tvOver(el, s) {
     const st = s.standings || [], top = st.slice(0, 3);
     const pod = top.map((r, i) => `<div class="tz-pod p${i + 1}"><div class="tz-pbody">${BOX.body ? BOX.body({ ...r, bot: true }, i === 0 ? 210 : 170, { mood: 'grin' }) : esc(r.avatar)}</div><div class="tz-pbase"><b>${['🥇', '🥈', '🥉'][i]} ${nm(r.name)}</b><small>Wave ${r.wave} · ${r.kills} kills · Lv ${r.lvl}</small><div class="tz-ab">${abIcons(r.build)}</div></div></div>`).join('');
     const rest = st.slice(3).map((r, i) => `<li><span>#${i + 4}</span>${face(r, 34)}<b>${nm(r.name)}</b><small>Wave ${r.wave} · ${r.kills} kills · Lv ${r.lvl}</small><div class="tz-ab">${abIcons(r.build)}</div></li>`).join('');
+    const S0 = s.story;
+    if (S0 && (s.why === 'win' || s.why === 'lost')) {
+      const won = s.why === 'win', finds = (S0.finds || []).map((f) => { const F = window.TZS.FINDS[f.id]; const who = (s.standings || []).find((r) => r.id === f.by); return F ? `<span class="tz-vf">${F.icon} ${esc(F.name)}<small>${who ? nm(who.name) : ''}</small></span>` : ''; }).join('');
+      return BOX.morph(el, `<div class="tz-over ${won ? 'tz-victory' : 'tz-defeat'}">${won ? '<div class="tz-rays"></div><div class="tz-confetti"></div>' : ''}<h1 class="tz-logo">${won ? 'THE TOWN IS <b>SAVED!</b>' : 'THE TRASH <b>WON…</b>'}</h1><p class="tz-why">${won ? `${S0.boss ? S0.boss.icon + ' ' + esc(S0.boss.name) : 'The boss'} is down! ` : 'Everyone fell before the boss went down. '}⏱ ${timer(S0.time || 0)} · ${S0.kills} team kills · 🗝️ ${S0.keys}/3 · ${(S0.finds || []).length} finds</p><div class="tz-podium">${pod}</div>${finds ? `<div class="tz-vfinds">${finds}</div>` : ''}${rest ? `<ol class="tz-rest">${rest}</ol>` : ''}</div>`);
+    }
     const why = { time: 'Time’s up! The garbage trucks roll in at dawn.', down: 'Everyone’s down. The zombies take the street…', w20: 'Wave 20 survived! The street is safe (for now).', host: 'The host called it a night.', empty: 'Everyone went home. The zombies have the town.' }[s.why] || 'The night is over.';
     BOX.morph(el, `<div class="tz-over"><h1 class="tz-logo">Trash<b>Zombies</b></h1><p class="tz-why">${esc(why)}</p><div class="tz-podium">${pod}</div>${rest ? `<ol class="tz-rest">${rest}</ol>` : ''}</div>`);
   }
@@ -119,13 +140,14 @@
     return quiet ? new Promise((res) => { try { PH.ctx.act(msg).then(res); } catch { res({ ok: false }); } }) : PH.ctx.act(msg);
   }
   function buzz(ms) { if (!PH.vib) return; try { if (PH.ctx && PH.ctx.vibrate) PH.ctx.vibrate(ms); else if (navigator.vibrate) navigator.vibrate(ms); } catch { /* no */ } }
+  const runKey = (me) => me.run + ':' + (me.comeback || 0);
   function newSim(v) {
     const me = { id: v.me.id, name: (PH.view && PH.view.me && PH.view.me.name) || 'You', color: (PH.view && PH.view.me && PH.view.me.color) || '#ffd23f', avatar: (PH.view && PH.view.me && PH.view.me.avatar) || '🙂' };
     PH.sim = new window.TZSim.Sim({
-      seed: v.seed, homes: v.homes, me, settings: { diff: v.settings.diff, aim: PH.aimPref || v.settings.aim, xp: v.settings.xp }, restore: v.me,
+      seed: v.seed, homes: v.homes, me, settings: { diff: v.settings.diff, aim: PH.aimPref || v.settings.aim, xp: v.settings.xp }, restore: v.me, story: v.story,
       report, live: (m) => PH.ctx && PH.ctx.live && PH.ctx.live(m), people: (id) => PH.people.get(id), on: simEvent,
     });
-    PH.run = v.me.run; PH.dead = null;
+    PH.run = runKey(v.me); PH.dead = null;
     if (v.area) PH.sim.setArea(v.area);
     window.TZ_DEBUG = debugApi();
   }
@@ -141,7 +163,40 @@
     else if (kind === 'enter') { if (ctx) ctx.haptic('turn'); }
     else if (kind === 'coop') { if (ctx) { ctx.haptic('big'); ctx.toast(d.mode === 'solo' ? 'You’re on your own again.' : `🤝 Co-op! ${d.members.length} of you in this area${d.mode === 'host' ? ' (your phone runs the zombies)' : ''}.`); } }
     else if (kind === 'start') { PH.hint = 7; }
+    else if (kind === 'find') { const F = window.TZS.FINDS[d.id]; if (ctx) ctx.haptic('win'); showCard(`<span class="tz-rc-i">${F.icon}</span><div><small>YOU FOUND</small><b>${esc(F.name)}</b><p>${esc(F.desc)}</p></div>`, 'find'); }
+    else if (kind === 'final') { buzz([200, 80, 200, 80, 400]); }
+    else if (kind === 'victory') { if (ctx) ctx.haptic('win'); showCard('<span class="tz-rc-i">🏆</span><div><small>VICTORY</small><b>The boss is down!</b><p>The stink is lifting over the town…</p></div>', 'find'); }
   }
+  function showCard(html, cls) {
+    if (!PH.root) return;
+    let c = PH.root.querySelector('.tz-rcard'); if (!c) { c = document.createElement('div'); c.className = 'tz-rcard'; PH.root.appendChild(c); }
+    c.className = 'tz-rcard show ' + (cls || ''); c.innerHTML = html; clearTimeout(PH.cardT); PH.cardT = setTimeout(() => c.classList.remove('show'), cls === 'radio' ? 7000 : 4500);
+  }
+  function radio(v) {
+    const B = (v.story && v.story.beats) || []; const last = B.length ? B[B.length - 1] : null;
+    if (!last) return; if (PH.beatN == null) { PH.beatN = last.n - 1; }
+    if (last.n > PH.beatN) { PH.beatN = last.n; setTimeout(() => showCard(`<span class="tz-rc-i">📻</span><div><small>${esc(window.TZS.RADIO)}</small><p>${esc(last.text)}</p></div>`, 'radio'), 300); }
+  }
+  // ---------- full screen (Android: the Fullscreen API + landscape lock; iPhone: Add to Home Screen) ----------
+  const isIOS = () => /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = () => !!((window.matchMedia && matchMedia('(display-mode: standalone)').matches) || (window.matchMedia && matchMedia('(display-mode: fullscreen)').matches) || navigator.standalone);
+  const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const canFull = () => !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+  async function goFull() {
+    PH.fsAsked = true;
+    const el = document.documentElement;
+    try { if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' }); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); } catch (e) { /* refused */ }
+    try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch (e) { /* not allowed here */ }
+    fsButton();
+  }
+  function fsButton() {
+    if (!PH.root) return;
+    let b = PH.root.querySelector('.tz-fs');
+    const show = !isFull() && !standalone() && (canFull() || isIOS()) && isTouch();
+    if (!b) { b = document.createElement('button'); b.className = 'tz-fs'; b.innerHTML = '⛶ Full screen'; b.onclick = (e) => { e.stopPropagation(); if (canFull() && !isIOS()) goFull(); else showCard('<span class="tz-rc-i">📲</span><div><small>FULL SCREEN ON IPHONE</small><b>Tap Share, then “Add to Home Screen”</b><p>Open TrashZombies from your home screen: no browser bars.</p></div>', 'find'); }; PH.root.appendChild(b); }
+    b.hidden = !show;
+  }
+  document.addEventListener('fullscreenchange', () => fsButton()); document.addEventListener('webkitfullscreenchange', () => fsButton());
   // ---------- the game root (full screen, kept between updates) ----------
   function ensureRoot(el) {
     if (PH.root && el.contains(PH.root)) return PH.root;
@@ -174,7 +229,7 @@
   function view() {
     const c = PH.cv, w = c.clientWidth || innerWidth, h = c.clientHeight || innerHeight, dpr = Math.min(1.75, window.devicePixelRatio || 1) * PH.quality;
     if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
-    return { w, h, dpr, k: Math.min(w, h) / 500 };
+    return { w, h, dpr, k: w > h ? h / 330 : w / 320 }; // close to the hero (the camera leads where you go)
   }
   function frame(dt) {
     const sim = PH.sim, V = view(), g = PH.cv.getContext('2d');
@@ -184,6 +239,7 @@
     if (PH.menu && sim.mode === 'solo') sim.paused = true; else if (!sim.cards) sim.paused = false;
     sim._lastInput = I;
     sim.update(dt, I);
+    V.k = V.k / sim.zoomStep(dt);
     window.TZSim.render(g, sim, V);
     hud(g, sim, V, dt);
   }
@@ -196,6 +252,7 @@
       const p = pos(e);
       if (e.pointerType === 'mouse') { PH.device = 'mouse'; PH.mouse.on = true; PH.mouse.x = p.x; PH.mouse.y = p.y; if (e.button === 0) PH.mouse.down = true; return; }
       PH.device = 'touch'; e.preventDefault();
+      if (!PH.fsAsked && canFull() && !isIOS() && !isFull() && !standalone()) goFull();
       if (PH.sim && PH.sim.phase === 'intro') PH.skip = true;
       const V = { w: cv.clientWidth, h: cv.clientHeight }, Z = stickZone(V);
       if (!PH.touch.aim && Math.hypot(p.x - Z.x, p.y - Z.y) < Z.r * 1.45) { PH.touch.aim = { id: e.pointerId, x: p.x, y: p.y }; }
@@ -275,6 +332,13 @@
     const left = sim.spec ? Math.max(0, sim.spec.target - sim.waveKills) : 0;
     txt(`WAVE ${sim.wave}`, w / 2, 22, small ? 20 : 26, '#ffd23f', 'center');
     txt(sim.cleared ? '✅ Area clear: find an exit' : `🧟 ${Math.max(left, sim.z.length)} left`, w / 2, small ? 44 : 50, small ? 13 : 16, sim.cleared ? '#7dff6a' : '#fff', 'center');
+    const st = sim.story;
+    if (st) {
+      const nextT = st.tier < st.max ? st.tier + 1 : 0, gate = nextT ? `⛓️ ${Math.min(st.kills, st.needs[nextT - 1])}/${st.needs[nextT - 1]}` : '⛓️ all gates open';
+      txt(`🗝️ ${st.keys}/3   🗺️ ${st.maps}/2   ${gate}`, w / 2, small ? 80 : 94, small ? 12 : 14, '#ffe9a8', 'center');
+      const fb = sim.z.find((z) => z.fb);
+      if (fb) { const bw2 = Math.min(520, w * 0.6), bx2 = (w - bw2) / 2, by3 = h - 30; g.fillStyle = 'rgba(15,10,6,0.8)'; roundRect(g, bx2 - 4, by3 - 4, bw2 + 8, 22, 8); g.fill(); g.fillStyle = '#ff4a3a'; roundRect(g, bx2, by3, bw2 * Math.max(0, fb.hp / fb.mhp), 14, 6); g.fill(); const B = window.TZS.BOSSES[fb.fb]; txt(B.icon + ' ' + B.name, w / 2, by3 - 14, small ? 14 : 18, '#ffd23f', 'center'); }
+    }
     if (sim.mode !== 'solo') txt(sim.mode === 'host' ? '🤝 CO-OP (host)' : '🤝 CO-OP', w / 2, small ? 62 : 72, 12, '#ffd23f', 'center');
     // top-right: minimap (under the pause button)
     minimap(g, sim, V);
@@ -290,6 +354,17 @@
       g.fillStyle = '#ff5a3c'; g.beginPath(); g.arc(kx, ky, Zs.r * 0.42, 0, TAU); g.fill(); g.globalAlpha = 1;
       txt(T.aim ? '🔥' : sim.set.aim !== 'off' ? 'AUTO' : 'AIM', Zs.x, Zs.y - Zs.r - 12, 12, '#fff', 'center');
       if (T.move) { g.globalAlpha = 0.5; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.arc(T.move.ox, T.move.oy, 56, 0, TAU); g.stroke(); const dx = T.move.x - T.move.ox, dy = T.move.y - T.move.oy, dd = Math.hypot(dx, dy) || 1, m = Math.min(dd, 56); g.fillStyle = '#fff'; g.beginPath(); g.arc(T.move.ox + (dx / dd) * m, T.move.oy + (dy / dd) * m, 24, 0, TAU); g.fill(); g.globalAlpha = 1; }
+    }
+    // off-screen warnings: red arrows for zombies just outside the view, icons for pickups
+    if (sim.cam && !sim.dead && sim.phase === 'play') {
+      const C = sim.cam, edge = (wx, wy) => { const sx = (wx + C.ox) * C.k, sy = (wy + C.oy) * C.k; if (sx > 0 && sx < w && sy > 0 && sy < h) return null; const cx = w / 2, cy = h / 2, a = Math.atan2(sy - cy, sx - cx); const m = 26, tx = Math.cos(a), ty = Math.sin(a), sc = Math.min((w / 2 - m) / Math.max(0.001, Math.abs(tx)), (h / 2 - m) / Math.max(0.001, Math.abs(ty))); return { x: cx + tx * sc, y: cy + ty * sc, a }; };
+      const near = []; for (const z of sim.z) { if (z.hp <= 0) continue; const d = Math.hypot(z.x - P.x, z.y - P.y); if (d < 760) near.push([d, z]); }
+      near.sort((x, y) => x[0] - y[0]);
+      let shown = 0;
+      for (const [d, z] of near) { if (shown >= 10) break; const e = edge(z.x, z.y - z.r); if (!e) continue; shown++; g.save(); g.translate(e.x, e.y); g.rotate(e.a); g.globalAlpha = Math.max(0.35, 1 - d / 760); g.fillStyle = z.fb || z.boss ? '#ff2a1a' : '#ff5a3c'; g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -10); g.lineTo(-4, 0); g.lineTo(-8, 10); g.closePath(); g.fill(); g.strokeStyle = '#1b1410'; g.lineWidth = 2; g.stroke(); g.restore(); }
+      g.globalAlpha = 1;
+      for (const p of sim.pk) { const e = edge(p.x, p.y); if (!e) continue; const Pk = Z.PK[p.k]; g.font = '18px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = 'rgba(15,10,6,0.7)'; g.beginPath(); g.arc(e.x, e.y, 15, 0, TAU); g.fill(); g.fillText(Pk ? Pk.icon : '✨', e.x, e.y + 1); }
+      if (sim.story && sim.findHere && sim.findHere()) { const e = edge(Z.AW / 2, Z.AH / 2); if (e) { g.font = '20px sans-serif'; g.textAlign = 'center'; g.fillText('📦', e.x, e.y); } }
     }
     // exit arrows at the screen edge pointing to exits when cleared
     if (sim.cleared && !sim.dead) {
@@ -308,6 +383,13 @@
     g.fillStyle = 'rgba(15,10,6,0.75)'; roundRect(g, x0 - 5, y0 - 5, mw + 10, mw * 0.6 + 10 + 0, 6); g.fill();
     const ch = cs * 0.6, ex = new Set((v.explored || []).map((e) => e[0] + ',' + e[1]));
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const seen = ex.has(x + ',' + y); g.fillStyle = seen ? lookOf(v, x, y).ground[0] : 'rgba(255,255,255,0.07)'; g.fillRect(x0 + x * cs + 0.5, y0 + y * ch + 0.5, cs - 1, ch - 1); }
+    const S0 = v.story;
+    if (S0) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const t = S0.tiers[y * N + x], px = x0 + x * cs, py = y0 + y * ch;
+      if (t > S0.tier) { g.fillStyle = 'rgba(200,40,30,0.55)'; g.fillRect(px + 0.5, py + 0.5, cs - 1, ch - 1); }
+      const k = x + ',' + y; if (S0.plan && S0.plan.finds[k] && ex.has(k) && !(S0.taken || []).includes(k)) { g.fillStyle = '#ffd23f'; g.fillRect(px + cs / 2 - 1.5, py + ch / 2 - 1.5, 3, 3); }
+    }
+    if (S0 && S0.door) { g.strokeStyle = '#ff5a3c'; g.lineWidth = 2; g.strokeRect(x0 + S0.door[0] * cs, y0 + S0.door[1] * ch, cs, ch); }
     for (const p of v.players || []) { if (p.state === 'dead') continue; g.fillStyle = p.color || '#fff'; g.beginPath(); g.arc(x0 + p.x * cs + cs / 2, y0 + p.y * ch + ch / 2, 3, 0, TAU); g.fill(); }
     if (Math.sin(sim.t * 8) > -0.3) { g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.beginPath(); g.arc(x0 + sim.cell[0] * cs + cs / 2, y0 + sim.cell[1] * ch + ch / 2, 3.5, 0, TAU); g.fill(); g.stroke(); }
     // the nearest friend: "Ana 2⬆ 1➡"
@@ -328,9 +410,9 @@
     const sim = PH.sim; if (!sim || !sim.cards) return;
     const Z = W(), mouse = !isTouch();
     const cards = sim.cards.map((id, i) => {
-      if (id === '_snack') return `<button class="tz-card c-def" data-card="${i}"><i>${mouse ? i + 1 : ''}</i><span class="tz-cat">Snack</span><b class="tz-ci">🌭</b><h3>Big Snack</h3><p>You have every ability maxed out! Heal 40.</p></button>`;
+      if (id === '_snack' && false) return `<button class="tz-card c-def" data-card="${i}"><i>${mouse ? i + 1 : ''}</i><span class="tz-cat">Snack</span><b class="tz-ci">🌭</b><h3>Big Snack</h3><p>You have every ability maxed out! Heal 40.</p></button>`;
       const A = Z.AB[id], cur = sim.ab[id] || 0, C = Z.CATS[A.cat];
-      return `<button class="tz-card c-${A.cat}" data-card="${i}"><i>${mouse ? i + 1 : ''}</i><span class="tz-cat" style="background:${C.color}">${C.name}</span><b class="tz-ci">${A.icon}</b><h3>${esc(A.name)}</h3><p>${esc(A.desc)}</p><small>${cur ? `Tier ${cur} → ${cur + 1} of ${A.max}` : `NEW · up to ${A.max} tiers`}</small></button>`;
+      return `<button class="tz-card c-${A.cat}" data-card="${i}"><i>${mouse ? i + 1 : ''}</i><span class="tz-cat" style="background:${C.color}">${C.name}</span><b class="tz-ci">${A.icon}</b><h3>${esc(A.name)}</h3><p>${esc(A.desc)}</p><small>${cur ? `×${cur} → ×${cur + 1}` : `NEW · stacks forever`}</small></button>`;
     }).join('');
     const ov = setOverlay(`<div class="tz-lvl"><h2>LEVEL UP! <span>Lv ${sim.lvl - sim.pendingLevels + 1}</span></h2><p>${sim.mode === 'solo' ? 'The game is paused. Pick one:' : '🛡️ You can’t be hurt while you choose (the game keeps going for your friends).'}</p><div class="tz-cards">${cards}</div></div>`, 'cards');
     if (ov) for (const b of ov.querySelectorAll('[data-card]')) b.onclick = (e) => { e.stopPropagation(); choose(Number(b.dataset.card)); };
@@ -342,7 +424,7 @@
   function buildHtml(ab) {
     const Z = W(), L = Object.entries(ab || {}).filter(([, n]) => n > 0);
     if (!L.length) return '<p class="tz-mut">No abilities yet: level up by grabbing the green XP gems.</p>';
-    return ['atk', 'def', 'spc'].map((c) => { const items = L.filter(([id]) => Z.AB[id] && Z.AB[id].cat === c); return items.length ? `<div class="tz-bcat c-${c}"><h4>${Z.CATS[c].name}</h4>${items.map(([id, n]) => `<div class="tz-bi"><span>${Z.AB[id].icon}</span><b>${esc(Z.AB[id].name)}</b><small>${'●'.repeat(n)}${'○'.repeat(Z.AB[id].max - n)}</small></div>`).join('')}</div>` : ''; }).join('');
+    return ['atk', 'def', 'spc'].map((c) => { const items = L.filter(([id]) => Z.AB[id] && Z.AB[id].cat === c); return items.length ? `<div class="tz-bcat c-${c}"><h4>${Z.CATS[c].name}</h4>${items.map(([id, n]) => `<div class="tz-bi"><span>${Z.AB[id].icon}</span><b>${esc(Z.AB[id].name)}</b><small>×${n}</small></div>`).join('')}</div>` : ''; }).join('');
   }
   function toggleMenu(force) {
     const sim = PH.sim; if (!sim || sim.dead) return;
@@ -352,7 +434,7 @@
     const v = PH.v || {}, vip = PH.view && PH.view.vip, touch = isTouch();
     const ov = setOverlay(`<div class="tz-menu"><h2>${sim.mode === 'solo' ? '⏸ Paused' : '🤝 Co-op: the game keeps going!'}</h2>
       <div class="tz-mstats"><span>Wave <b>${sim.wave}</b></span><span>Level <b>${sim.lvl}</b></span><span>Kills <b>${sim.killCount}</b></span><span>📍 ${esc(sim.area.biome.name)}</span></div>
-      <h3>Your build</h3><div class="tz-build">${buildHtml(sim.ab)}</div>
+      <h3>Your build</h3><div class="tz-build">${buildHtml(sim.ab)}</div>${Object.keys(sim.eq || {}).length ? `<h3>Your finds</h3><div class="tz-finds">${Object.keys(sim.eq).map((id) => { const F = window.TZS.FINDS[id]; return F ? `<span title="${esc(F.desc)}">${F.icon} ${esc(F.name)}</span>` : ''; }).join('')}</div>` : ''}${sim.story ? `<p class="tz-mut">📖 Regular: 🗝️ ${sim.story.keys}/3 key pieces · 🗺️ ${sim.story.maps}/2 map halves · ring ${sim.story.tier}/${sim.story.max} open${sim.story.boss ? ` · ${sim.story.boss.icon} ${esc(sim.story.boss.name)} waits behind the door` : ''}</p>` : ''}${!isFull() && canFull() && isTouch() && !isIOS() ? '<button class="btn ghost small" data-opt="fs">⛶ Full screen</button>' : ''}
       <div class="tz-opts"><button class="btn small ${sim.set.aim !== 'off' ? 'green' : 'ghost'}" data-opt="aim">🎯 Auto-aim: ${sim.set.aim !== 'off' ? 'On' : 'Off'}</button><button class="btn small ${PH.vib ? 'green' : 'ghost'}" data-opt="vib">📳 Buzz: ${PH.vib ? 'On' : 'Off'}</button></div>
       <div class="tz-controls">${touch ? '👆 Drag anywhere to move · 🔴 the stick bottom-right aims and shoots · auto-aim shoots the nearest zombie when you let go.' : '⌨️ WASD / arrows move · 🖱️ mouse aims · hold left click (or Space) to shoot · E grabs a pickup · 1 2 3 pick cards · Esc pauses.'}</div>
       <div class="tz-mbtns"><button class="btn green big" data-opt="resume">▶ Keep playing</button>${vip ? '<button class="btn ghost small" data-opt="end">🏁 End the night (results)</button>' : ''}</div></div>`, 'menu');
@@ -360,6 +442,7 @@
     for (const b of ov.querySelectorAll('[data-opt]')) b.onclick = async (e) => {
       e.stopPropagation(); const o = b.dataset.opt;
       if (o === 'resume') return toggleMenu(false);
+      if (o === 'fs') { goFull(); return toggleMenu(true); }
       if (o === 'aim') { sim.set.aim = sim.set.aim !== 'off' ? 'off' : 'on'; PH.aimPref = sim.set.aim; return toggleMenu(true); }
       if (o === 'vib') { PH.vib = !PH.vib; try { localStorage.setItem('tz.vib', PH.vib ? '1' : '0'); } catch { /* private */ } return toggleMenu(true); }
       if (o === 'end') { if (b.dataset.armed) { await report({ op: 'end' }); toggleMenu(false); } else { b.dataset.armed = '1'; b.textContent = 'Tap again to end for everyone'; } }
@@ -376,7 +459,8 @@
         <div class="tz-mstats"><span>Wave <b>${d.wave}</b></span><span>Kills <b>${d.kills}</b></span><span>Level <b>${d.lvl}</b></span></div>
         ${best && (best.wave > d.wave || (best.wave === d.wave && best.kills > d.kills)) ? `<p class="tz-mut">Best tonight: wave ${best.wave}, ${best.kills} kills</p>` : ''}
         <div class="tz-build">${buildHtml(d.ab)}</div>
-        <div class="tz-mbtns"><button class="btn green big" data-again>🔁 Play again${isTouch() ? '' : ' (Enter)'}</button>${vip ? '<button class="btn ghost small" data-end>🏁 End the night</button>' : ''}</div></div></div>`, 'dead');
+        ${v.story ? `<p class="tz-mut">${v.story.reviveIn > 0 ? `Your friends are still fighting. Back in <b>${Math.ceil(v.story.reviveIn / 1000)} s</b> at your garage, with your build.` : 'Back in at your garage, with your whole build.'}</p>` : ''}
+        <div class="tz-mbtns"><button class="btn green big" data-again ${v.story && v.story.reviveIn > 0 ? 'disabled' : ''}>${v.story ? '🔁 Back in' : '🔁 Play again'}${isTouch() ? '' : ' (Enter)'}</button>${vip ? '<button class="btn ghost small" data-end>🏁 End the night</button>' : ''}</div></div></div>`, 'dead');
       if (!ov) return;
       const a = ov.querySelector('[data-again]'); if (a) a.onclick = async () => { a.disabled = true; const r = await report({ op: 'respawn' }); if (!r.ok) a.disabled = false; };
       const e = ov.querySelector('[data-end]'); if (e) e.onclick = async () => { if (e.dataset.armed) await report({ op: 'end' }); else { e.dataset.armed = '1'; e.textContent = 'Tap again to end for everyone'; } };
@@ -392,6 +476,11 @@
       god(on) { PH.sim.p.inv = on ? 1e9 : 0; return true; }, kill() { const s = PH.sim; s.p.inv = 0; s.buffs.shield = 0; s.p.armor = 0; s.p.lives = 0; s.p.hp = 1; s.hurt(999); return s.dead; },
       walk(dir) { const s = PH.sim, Z = W(); s.cleared = true; if (dir === 'e') { s.p.x = Z.AW + 20; s.p.y = Z.AH / 2; } if (dir === 'w') { s.p.x = -20; s.p.y = Z.AH / 2; } if (dir === 'n') { s.p.x = Z.AW / 2; s.p.y = -20; } if (dir === 's') { s.p.x = Z.AW / 2; s.p.y = Z.AH + 20; } s.leave(dir); return s.cell.join(','); },
       teleport(x, y) { const s = PH.sim; s.p.x = x; s.p.y = y; return true; },
+      kills(n) { PH.sim.killCount += n; PH.sim.reportStatus(true); return PH.sim.killCount; },
+      story: () => PH.v && PH.v.story,
+      async goTo(x, y) { const wait = (ms) => new Promise((r) => setTimeout(r, ms)); for (let i = 0; i < 30; i++) { const s = PH.sim; if (s.cell[0] === x && s.cell[1] === y) return true; const dirs = []; if (s.cell[0] < x) dirs.push('e'); if (s.cell[0] > x) dirs.push('w'); if (s.cell[1] < y) dirs.push('s'); if (s.cell[1] > y) dirs.push('n'); const d = dirs.find((q) => !s.gateLeft(q)) || dirs[0]; if (s.gateLeft(d)) return 'locked ' + d; s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; s.cleared = true; s.leave(d); await wait(450); while (PH.sim.cards) { PH.sim.pick(0); } } return false; },
+      boss(key) { const s = PH.sim; s.z = s.z.filter((z) => !z.fb); s.finalSpawned = false; s.finalDead = false; s.story.plan.boss = key; s.spawnFinal(); return true; },
+
       stick() { const c = PH.cv; return stickZone({ w: c.clientWidth, h: c.clientHeight }); }, device: () => PH.device, menu: () => PH.menu,
       intro() { const s = PH.sim; if (!s.area.garage) return false; s.phase = 'intro'; s.introT = 0; s.p.x = W().AW / 2; s.p.y = 120; s.banner = null; return true; },
     };
@@ -407,6 +496,8 @@
       'Glowing pickups give a quick boost: Bubble Shield, Trash-Can Armor, Buzzsaw Minigun, Rocket Sneakers, Garbage Day, Freezer Burn, Health Snack, Double XP.',
       'Clear the wave and the exits open: walk out an edge into a brand-new area for the next, tougher wave. Every 5th wave a Dumpster Brute shows up.',
       'The TV shows the town map. Walk into a friend’s area to team up: you share the zombies (and the XP).',
+      'Regular mode: chained gates open as the team racks up kills. Behind them: unique gear, abilities, map halves and 3 key pieces. Find the hidden boss door, open it with the whole key and beat the boss to win. Endless mode: waves forever.',
+      'Abilities never max out: pick them again and again and they keep stacking.',
     ],
     fx: { start: 'start' },
     // ---------------- lobby ----------------
@@ -451,9 +542,13 @@
       else if (f.kind === 'tzdead') { clip('zombie/body-fall.ogg', { vol: 0.4 }) || BOX.sfx('fall'); }
       else if (f.kind === 'tzclear') { BOX.sfx('reveal'); }
       else if (f.kind === 'tzcoop') { BOX.sfx('join'); }
+      else if (f.kind === 'tzunlock') { clip('zombie/barricade.ogg', { vol: 0.6 }) || BOX.sfx('explosion'); BOX.sfx('reveal'); }
+      else if (f.kind === 'tzfind') { BOX.sfx('chime'); }
+      else if (f.kind === 'tzdoorfound') { BOX.sfx('ominous'); }
+      else if (f.kind === 'tzdoor') { BOX.sfx('roar'); clip('zombie/thunder.ogg', { vol: 0.5 }); }
       void s;
     },
-    music(s) { if (!s) return 'play'; if (s.phase === 'over') return 'finale'; const P = s.players || []; if (P.length && P.every((p) => p.state === 'dead')) return 'lose'; return P.some((p) => p.wave % 5 === 0 && p.state !== 'dead' && !p.bot) ? 'tense' : 'play'; },
+    music(s) { if (!s) return 'play'; if (s.phase === 'over') return s.why === 'lost' ? 'lose' : 'finale'; if (s.story && s.story.doorOpen) return 'action'; const P = s.players || []; if (P.length && P.every((p) => p.state === 'dead')) return 'lose'; return P.some((p) => p.wave % 5 === 0 && p.state !== 'dead' && !p.bot) ? 'tense' : 'play'; },
     // ---------------- phone ----------------
     phone(el, v, ctx, view) {
       if (!v) return;
@@ -463,7 +558,8 @@
       if (v.phase === 'over') {
         if (PH.root) { PH.root = null; PH.sim = null; cancelAnimationFrame(PH.raf); document.body.classList.remove('tz-playing'); }
         const st = v.standings || [], i = st.findIndex((r) => r.id === (v.me && v.me.id)), r = st[i] || {};
-        BOX.morph(el, `<div class="card-box tz-ph-over"><h2 class="tz-logo sm">Trash<b>Zombies</b></h2><div class="tz-pbig">${BOX.body ? BOX.body({ id: v.me && v.me.id, bot: true }, 130, { mood: i === 0 ? 'grin' : 'smile' }) : ''}</div>
+        const won = v.why === 'win', lost = v.why === 'lost';
+        BOX.morph(el, `<div class="card-box tz-ph-over ${won ? 'won' : ''}">${won ? '<div class="tz-confetti"></div><h2 class="tz-win">🏆 YOU WIN!</h2>' : lost ? '<h2 class="tz-lose">💀 The trash won…</h2>' : ''}<h2 class="tz-logo sm">Trash<b>Zombies</b></h2>${won && v.story ? `<p>${v.story.boss ? esc(v.story.boss.name) + ' is down' : 'The boss is down'} in <b>${BOX.mmss ? BOX.mmss(v.story.time) : Math.round(v.story.time / 60000) + ' min'}</b> · ${v.story.kills} team kills · ${v.story.finds.length} finds</p>` : ''}<div class="tz-pbig">${BOX.body ? BOX.body({ id: v.me && v.me.id, bot: true }, 130, { mood: i === 0 ? 'grin' : 'smile' }) : ''}</div>
           <h3>${i === 0 ? '🏆 Top survivor!' : `#${i + 1} of ${st.length}`}</h3><p>Best run: wave <b>${r.wave || 1}</b> · ${r.kills || 0} kills · level ${r.lvl || 1}</p><div class="tz-ab">${abIcons(r.build)}</div>
           <ol class="tz-mini">${st.slice(0, 6).map((x) => `<li>${face(x, 26)} <b>${nm(x.name)}</b> <span>W${x.wave} · ${x.kills}k</span></li>`).join('')}</ol></div>`);
         if (!PH.overHaptic) { PH.overHaptic = true; ctx.haptic('win'); }
@@ -472,10 +568,12 @@
       PH.overHaptic = false;
       if (!v.me) { BOX.morph(el, '<div class="card-box"><h3>Joining the night…</h3></div>'); return; }
       ensureRoot(el);
-      if (v.me.state === 'dead' && (!PH.sim || PH.sim.dead || PH.run !== v.me.run)) { if (!PH.sim || PH.run !== v.me.run) { PH.sim = null; PH.run = v.me.run; } if (PH.overlay !== 'dead') overlay(); return; }
-      if (!PH.sim || PH.run !== v.me.run) { setOverlay(''); PH.menu = false; newSim(v); }
+      radio(v);
+      if (v.me.state === 'dead' && (!PH.sim || PH.sim.dead || PH.run !== runKey(v.me))) { if (!PH.sim || PH.run !== runKey(v.me)) { PH.sim = null; PH.run = runKey(v.me); } overlay(); return; }
+      if (!PH.sim || PH.run !== runKey(v.me)) { setOverlay(''); PH.menu = false; newSim(v); }
       else if (v.area && PH.sim) PH.sim.setArea(v.area);
-      if (PH.sim) { PH.sim.homes = v.homes || PH.sim.homes; }
+      if (PH.sim) { PH.sim.homes = v.homes || PH.sim.homes; PH.sim.setStory(v.story, v.me); }
+      fsButton();
       if (PH.sim && PH.sim.cards && PH.overlay !== 'cards') cardsUi();
     },
     live(m) { if (PH.sim) PH.sim.onLive(m); },

@@ -1,0 +1,16 @@
+{
+  "name": "JustGameBox",
+  "short_name": "GameBox",
+  "description": "Party games for the big screen. Your phone is the controller (and in TrashZombies, the whole game).",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#0c0a08",
+  "theme_color": "#1b1240",
+  "icons": [
+    { "src": "/box/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/box/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/box/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

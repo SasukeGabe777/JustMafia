@@ -16,7 +16,7 @@ const test = (n, fn) => { fn(); passed++; console.log('  ✓ ' + n); };
 const mk = (settings = {}, n = 0) => {
   const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed: 7 });
   const ps = []; for (let i = 0; i < n; i++) { const p = room.join(['Ana', 'Ben', 'Cy', 'Dee'][i]).player; p.sockets = 1; ps.push(p); }
-  Object.assign(room.settings, settings);
+  Object.assign(room.settings, { mode: 'endless' }, settings); // (these tests are Endless; Regular has its own below)
   return { clock, room, ps };
 };
 const run = (room, clock, ms) => { const end = clock.now() + ms; let i = 0; while (clock.now() < end && room.game.phase !== 'over' && clock.step()) if (++i > 200000) throw new Error('stuck'); };
@@ -47,16 +47,16 @@ test('areas: exit lanes, the middle and the border stay clear; home areas have t
   assert.deepEqual(W.exitsOf(0, 0), { n: false, s: true, w: false, e: true });
   assert.deepEqual(W.exitsOf(8, 8), { n: true, s: false, w: true, e: false });
 });
-test('level-up offers: 3 cards, one Attack + one Defense + one Special, never a maxed one, they stack', () => {
+test('level-up offers: 3 cards, one Attack + one Defense + one Special; nothing ever maxes out', () => {
   const r = W.rng(3);
   for (let i = 0; i < 300; i++) {
     const o = W.offer(r, {}); assert.equal(o.length, 3); assert.equal(new Set(o).size, 3);
     assert.deepEqual(o.map((id) => W.AB[id].cat).sort(), ['atk', 'def', 'spc']);
   }
-  // Attack all maxed: still 3 cards, none of them Attack
-  const owned = Object.fromEntries(W.ABILITIES.filter((a) => a.cat === 'atk').map((a) => [a.id, a.max]));
-  for (let i = 0; i < 100; i++) { const o = W.offer(r, owned); assert.equal(o.length, 3); assert(o.every((id) => W.AB[id].cat !== 'atk')); }
-  const all = Object.fromEntries(W.ABILITIES.map((a) => [a.id, a.max])); assert.deepEqual(W.offer(r, all), []);
+  // stacked 50 deep: still a full mixed offer, forever
+  const all = Object.fromEntries(W.ABILITIES.map((a) => [a.id, 50]));
+  for (let i = 0; i < 100; i++) assert.deepEqual(W.offer(r, all).map((id) => W.AB[id].cat).sort(), ['atk', 'def', 'spc']);
+  assert(W.ABILITIES.every((a) => a.max == null), 'no tier caps');
   assert(W.ABILITIES.length >= 20 && ['atk', 'def', 'spc'].every((c) => W.ABILITIES.filter((a) => a.cat === c).length >= 7), 'plenty of each');
   assert.equal(new Set(W.ABILITIES.map((a) => a.name)).size, W.ABILITIES.length);
 });
@@ -92,7 +92,7 @@ test('status pings are sanity-checked (kills, levels, abilities, health)', () =>
   const { room, clock, ps: [a] } = mk({}, 1); room.start(); const g = room.game, R = g.runs.get(a.id);
   run(room, clock, 1000);
   assert.equal(room.act(a, { op: 'st', kills: 999999, lvl: 80, hp: 5000, mhp: 99999, wave: 30, ab: { rapid: 99, nope: 3 } }).ok, true);
-  assert(R.kills <= 200, 'kills capped by time: ' + R.kills); assert(R.lvl <= 7, 'level capped: ' + R.lvl); assert(R.mhp <= W.limits.hp && R.hp <= R.mhp); assert(R.wave <= 2, 'wave needs areas: ' + R.wave);
+  assert(R.kills <= 200, 'kills capped by time: ' + R.kills); assert(R.lvl <= 7, 'level capped: ' + R.lvl); assert(R.mhp <= W.limits.hp(R.lvl) && R.hp <= R.mhp); assert(R.wave <= 2, 'wave needs areas: ' + R.wave);
   assert(!('nope' in R.ab)); assert(W.levelsFromAbilities(R.ab) <= R.lvl - 1, 'no more ability tiers than level-ups');
   run(room, clock, 1000); room.act(a, { op: 'st', kills: 30, lvl: 4, hp: 80, mhp: 125, wave: 1, ab: { hp: 1, rapid: 2 } });
   assert.equal(R.lvl, 4); assert.deepEqual(R.ab, { hp: 1, rapid: 2 }); assert.equal(R.hp, 80);
@@ -174,20 +174,110 @@ test('results: best run first (wave, then kills); the build comes along', () => 
 test('timed nights end on the clock; "wave 20" ends when someone clears it; Party Mode gets a fixed time', () => {
   const { room, clock } = mk({ length: 'm5' }, 1); room.start(); run(room, clock, 4.9 * 60000); assert.equal(room.game.phase, 'play'); run(room, clock, 20000); assert.equal(room.game.phase, 'over'); assert.equal(room.game.overWhy, 'time');
   const w = mk({ length: 'w20' }, 1); w.room.start(); const R = w.room.game.runs.get(w.ps[0].id); R.wave = 20; w.room.act(w.ps[0], { op: 'ev', k: 'clear', wave: 20 }); assert.equal(w.room.game.phase, 'over');
-  assert.deepEqual(def.partyFit({ players: 4, minutes: 10 }), { length: 'm10' }); assert.deepEqual(def.partyFit({ players: 4, minutes: 4 }), { length: 'm5' }); assert.deepEqual(def.partyFit({ players: 2, minutes: 21 }), { length: 'm20' });
+  assert.deepEqual(def.partyFit({ players: 4, minutes: 10 }), { mode: 'endless', length: 'm10' }); assert.deepEqual(def.partyFit({ players: 4, minutes: 4 }), { mode: 'endless', length: 'm5' }); assert.deepEqual(def.partyFit({ players: 2, minutes: 21 }), { mode: 'endless', length: 'm20' });
 });
 test('bots play a whole (timed) night on the server; results() lists everyone best-first', () => {
   const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed: 1 });
-  room.addBots(6); room.settings.length = 'm10'; assert(room.start().ok);
+  room.addBots(6); room.settings.length = 'm10'; room.settings.mode = 'endless'; assert(room.start().ok);
   let i = 0; while (room.game.phase !== 'over' && clock.step()) if (++i > 100000) throw new Error('never ended');
   const g = room.game; assert.equal(g.results().length, 6);
   assert(g.explored.size > 10, 'bots explore the map: ' + g.explored.size); assert(Math.max(...g.standings().map((r) => r.wave)) >= 5);
   const json = JSON.stringify(g.tv()); assert(json.length < 20000, 'TV state stays small: ' + json.length);
 });
 test('endless with bots only ends when they are all down for a while', () => {
-  const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed: 2 }); room.addBots(2); room.start();
+  const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed: 2 }); room.addBots(2); room.settings.mode = 'endless'; room.start();
   for (const R of room.game.runs.values()) { R.state = 'dead'; R.deadAt = clock.now() + 1e9; }
   run(room, clock, 20000); assert.equal(room.game.phase, 'over');
+});
+
+// ---------------- Regular mode (the story) ----------------
+const ST = require('../public/box/games/trash-story');
+const story = (n = 1, settings = {}) => mk({ mode: 'story', ...settings }, n);
+const cellOf = (g, p) => g.runs.get(p.id).cell;
+test('Regular: gates need more team kills further out, and more with more players', () => {
+  for (let t = 1; t <= 4; t++) { assert(ST.need(t, 1) > ST.need(t - 1, 1)); assert(ST.need(t, 4) > ST.need(t, 2) && ST.need(t, 2) > ST.need(t, 1)); }
+  assert.equal(ST.need(2, 1), ST.BASE[2]); assert.equal(ST.need(2, 3), Math.round(ST.BASE[2] * 1.8));
+  const P = ST.plan(9, [[4, 4]]); assert.equal(ST.tierAt(P, 4, 4), 0); assert.equal(ST.tierAt(P, 5, 4), 0); assert(ST.tierAt(P, 0, 0) === 4 && ST.tierAt(P, 6, 4) === 1);
+});
+test('Regular: the plan is the same for a seed and different across seeds (finds, door place + look, boss)', () => {
+  assert.deepEqual(ST.plan(42, [[4, 4]]), ST.plan(42, [[4, 4]]));
+  const doors = new Set(), looks = new Set(), bosses = new Set(), finds = new Set();
+  for (let seed = 1; seed <= 60; seed++) {
+    const P = ST.plan(seed, [[4, 4]]), ids = Object.values(P.finds);
+    doors.add(P.door.join()); looks.add(P.doorLook); bosses.add(P.boss); finds.add(JSON.stringify(P.finds));
+    for (const k of ST.KEYS) assert(ids.includes(k), seed + ' has ' + k); assert(ids.includes('map1') && ids.includes('map2'));
+    assert(!P.finds[P.door.join()], 'no loot on the door'); assert.equal(ST.tierAt(P, P.door[0], P.door[1]), P.top, 'the door is far away');
+    assert(!(P.door[0] === 4 && P.door[1] === 4)); assert(ids.filter((i) => ST.FINDS[i].kind === 'equip' || ST.FINDS[i].kind === 'ability').length >= 5);
+  }
+  assert(doors.size >= 4 && looks.size >= 4 && bosses.size === 4 && finds.size >= 55, `${doors.size} doors, ${looks.size} looks, ${bosses.size} bosses`);
+});
+test('Regular: a chained gate blocks the way until the team has the kills; then it bursts open', () => {
+  const { room, ps: [a, b] } = story(2); room.start(); const g = room.game;
+  assert(g.plan && g.story.tier === 0); assert(g.story.beats.length === 1, 'the radio says hello');
+  const R = g.runs.get(a.id), target = (() => { for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = R.cell[0] + dx * 2, y = R.cell[1] + dy * 2; if (W.inGrid(x, y) && ST.tierAt(g.plan, x, y) === 1) return [x, y, dx, dy]; } return null; })();
+  assert(target, 'a ring-1 cell two steps away');
+  assert(room.act(a, { op: 'enter', x: R.cell[0] + target[2], y: R.cell[1] + target[3] }).ok, 'ring 0 is open');
+  const locked = room.act(a, { op: 'enter', x: target[0], y: target[1] }); assert.equal(locked.ok, false); assert.match(locked.error, /chained: \d+ more zombies/);
+  assert.equal(g.need(1), ST.need(1, 2));
+  R.kills = g.need(1) - 5; g.storyCheck(); assert.equal(g.story.tier, 0);
+  g.runs.get(b.id).kills = 5; g.storyCheck(); assert.equal(g.story.tier, 1, 'team kills count');
+  assert(room.fxLog.some((f) => f.kind === 'tzunlock')); assert(g.feed.some((f) => /chains on the .* gate snapped/.test(f.text)));
+  assert(room.act(a, { op: 'enter', x: target[0], y: target[1] }).ok, 'open now');
+  const tv = g.tv(); assert.equal(tv.story.tier, 1); assert.equal(tv.story.door, null, 'the TV hides the door'); assert(!('finds' in (tv.story.plan || {})), 'and the loot');
+});
+test('Regular: finds go to the finder (keys to the team); the map halves reveal the door', () => {
+  const { room, ps: [a] } = story(1); room.start(); const g = room.game, R = g.runs.get(a.id);
+  g.story.tier = 4; // all gates open for this test
+  const where = (id) => Object.entries(g.plan.finds).find(([, v]) => v === id)[0].split(',').map(Number);
+  const go = (c) => { R.cell = c.slice(); };
+  assert.equal(room.act(a, { op: 'find', x: where('shard1')[0], y: where('shard1')[1] }).ok, false, 'not there');
+  go(where('shard1')); assert.equal(room.act(a, { op: 'find', x: R.cell[0], y: R.cell[1] }).find, 'shard1'); assert.equal(g.story.keys.length, 1);
+  assert.equal(room.act(a, { op: 'find', x: R.cell[0], y: R.cell[1] }).ok, false, 'looted already');
+  const eq = Object.entries(g.plan.finds).find(([, v]) => ST.FINDS[v].kind === 'equip'); go(eq[0].split(',').map(Number)); room.act(a, { op: 'find', x: R.cell[0], y: R.cell[1] });
+  assert.equal(g.view(a).me.eq[eq[1]], 1, 'equipment is yours');
+  go(where('map1')); room.act(a, { op: 'find', x: R.cell[0], y: R.cell[1] }); assert(g.tv().story.hint && !g.tv().story.door, 'half a map: a rough area');
+  go(where('map2')); room.act(a, { op: 'find', x: R.cell[0], y: R.cell[1] }); assert.deepEqual(g.tv().story.door, g.plan.door, 'both halves: the door');
+  assert(room.fxLog.some((f) => f.kind === 'tzfind')); assert(g.story.beats.some((b) => b.k === 'map2'));
+});
+test('Regular: the boss door needs the 3 key pieces; beating the boss wins the round', () => {
+  const { room, ps: [a] } = story(1); room.start(); const g = room.game, R = g.runs.get(a.id);
+  assert.equal(room.act(a, { op: 'ev', k: 'victory' }).ok, false, 'no cheap wins');
+  R.cell = g.plan.door.slice();
+  assert.match(room.act(a, { op: 'door' }).error, /0\/3/);
+  g.story.keys = ['shard1', 'shard2'];
+  assert.equal(room.act(a, { op: 'door' }).ok, false);
+  g.story.keys.push('shard3'); const r = room.act(a, { op: 'door' }); assert(r.ok && r.boss === g.plan.boss); assert(g.story.doorOpen);
+  assert(room.fxLog.some((f) => f.kind === 'tzdoor'));
+  assert(room.act(a, { op: 'ev', k: 'victory' }).ok); assert.equal(g.phase, 'over'); assert.equal(g.overWhy, 'win');
+  const tv = g.tv(); assert(tv.story.won && tv.story.time >= 0); assert.equal(g.results()[0], a.id);
+});
+test('Regular: a fallen player gets back in after 15 s with their build; everyone down loses the round', () => {
+  const { room, clock, ps: [a, b] } = story(2); room.start(); const g = room.game, R = g.runs.get(a.id);
+  run(room, clock, 2000); room.act(a, { op: 'st', kills: 40, lvl: 4, hp: 80, mhp: 125, wave: 1, ab: { hp: 1, rapid: 2 } });
+  R.cell = [R.home[0] + (R.home[0] < 8 ? 1 : -1), R.home[1]];
+  room.act(a, { op: 'ev', k: 'dead' }); assert.equal(R.state, 'dead'); assert.equal(g.phase, 'play', 'Ben is still up');
+  assert.equal(room.act(a, { op: 'respawn' }).ok, false, 'not straight away'); assert(g.view(a).story.reviveIn > 10000);
+  run(room, clock, 16000); assert(room.act(a, { op: 'respawn' }).ok);
+  assert.equal(R.state, 'play'); assert.equal(R.lvl, 4); assert.deepEqual(R.ab, { hp: 1, rapid: 2 }); assert.deepEqual(R.cell, R.home, 'back at the garage');
+  room.act(a, { op: 'ev', k: 'dead' }); room.act(b, { op: 'ev', k: 'dead' }); assert.equal(g.phase, 'over'); assert.equal(g.overWhy, 'lost');
+});
+test('Endless is untouched: no gates, no loot, no door', () => {
+  const { room, ps: [a] } = mk({ mode: 'endless' }, 1); room.start(); const g = room.game;
+  assert.equal(g.plan, null); assert.equal(g.tv().story, null);
+  walkTo(room, a, [0, 0]); walkTo(room, a, [8, 8]);
+  assert.equal(room.act(a, { op: 'find', x: 8, y: 8 }).ok, false); assert.equal(room.act(a, { op: 'door' }).ok, false);
+});
+test('no level or ability cap on the server either', () => {
+  const { room, clock, ps: [a] } = mk({}, 1); room.start(); const R = room.game.runs.get(a.id);
+  R.kills = 5000; R.lvl = 60; run(room, clock, 2000);
+  room.act(a, { op: 'st', kills: 5000, lvl: 60, hp: 900, mhp: 900, wave: 1, ab: { rapid: 30, spread: 20 } });
+  assert.deepEqual(R.ab, { rapid: 30, spread: 20 }); assert.equal(R.mhp, 900);
+});
+test('bots play a Regular night: they respect the gates and the night ends when everyone leaves', () => {
+  const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed: 3 }); room.addBots(4); room.settings.mode = 'story'; room.start();
+  const g = room.game; let i = 0;
+  while (g.phase !== 'over' && clock.step()) { if (++i > 100000) throw new Error('never ended'); for (const R of g.runs.values()) assert(!g.locked(R.cell[0], R.cell[1]), 'never behind a chained gate'); }
+  assert.equal(g.results().length, 4);
 });
 
 // ---------------- the phone simulation (sandboxed) ----------------
@@ -226,7 +316,12 @@ test('phone: level-up shows 3 mixed cards and pauses solo play; picks stack tier
   s.gainXp(W.xpNeed(1)); assert.equal(s.lvl, 2); assert.equal(s.cards.length, 3); assert.equal([...s.cards].map((id) => W.AB[id].cat).sort().join(), 'atk,def,spc');
   assert(s.paused, 'solo pauses'); const t0 = s.t, x0 = s.p.x; S.step(s, 1, { mx: 1 }, false); assert.equal(s.p.x, x0, 'nothing moves while choosing');
   const id = s.cards[0]; s.pick(0); assert.equal(s.ab[id], 1); assert(!s.paused); assert(S.reports.some((r) => r.op === 'ev' && r.k === 'pick' && r.id === id));
-  s.ab.rapid = 4; s.stats(); const r1 = s.S.rate; s.ab.rapid = 5; s.stats(); assert(s.S.rate > r1, 'tiers stack');
+  s.ab.rapid = 4; s.stats(); const r1 = s.S.rate; s.ab.rapid = 5; s.stats(); assert(s.S.rate > r1, 'stacks stack');
+  // no cap, soft limits: 200 stacks of everything still gives sane numbers and more damage
+  for (const A of W.ABILITIES) s.ab[A.id] = 200; s.lvl = 4000; s.stats();
+  assert(s.S.rate < 5.5 * 3.41 && s.S.dodge < 0.6 && s.S.armor >= 0.3 && s.S.speed < 255 * 1.81 && s.S.slow < 0.6 && s.S.crit <= 0.8, JSON.stringify(s.S));
+  assert(s.S.spread <= 9 && s.S.orbit <= 10 && s.S.bounce <= 6 && s.S.pierce <= 8, 'bullet and orbiter counts stay bounded');
+  assert(s.S.mhp === 100 + 25 * 200 && s.S.dmg > 1000, 'health and damage keep growing'); for (const A of W.ABILITIES) delete s.ab[A.id]; s.lvl = 2; s.stats();
   s.gainXp(W.xpNeed(2) + W.xpNeed(3)); assert.equal(s.pendingLevels, 2); s.pick(1); assert(s.cards, 'the next card set comes right after'); s.pick(2); assert(!s.cards);
   void t0;
 });

@@ -109,41 +109,43 @@
   }
 
   // ---------------- abilities ----------------
-  // cat: atk | def | spc. max: tiers. Every pick is one tier.
+  // cat: atk | def | spc. No cap: every pick stacks one more (x2, x3, ...). Stats that would break
+  // the game (fire rate, dodge, speed, cooldowns) use soft diminishing returns in the phone sim.
   const ABILITIES = [
-    { id: 'rapid', cat: 'atk', icon: '⚡', name: 'Itchy Trigger', max: 5, desc: 'Fire 18% faster.' },
-    { id: 'pierce', cat: 'atk', icon: '🍢', name: 'Skewer Rounds', max: 3, desc: 'Bullets go through one more zombie.' },
-    { id: 'spread', cat: 'atk', icon: '🔱', name: 'Scattershot', max: 4, desc: 'One more bullet in every shot.' },
-    { id: 'big', cat: 'atk', icon: '🥫', name: 'Chonky Slugs', max: 4, desc: 'Bigger bullets, +25% damage.' },
-    { id: 'bounce', cat: 'atk', icon: '🎱', name: 'Pinball Rounds', max: 3, desc: 'Bullets bounce off walls once more.' },
-    { id: 'crit', cat: 'atk', icon: '🪙', name: 'Lucky Penny', max: 4, desc: '+10% chance of a triple-damage hit.' },
-    { id: 'burn', cat: 'atk', icon: '🌶️', name: 'Hot Sauce Rounds', max: 3, desc: 'Hits set zombies on fire.' },
-    { id: 'rear', cat: 'atk', icon: '🔙', name: 'Tailpipe Gun', max: 2, desc: 'A second gun fires behind you (then to the sides).' },
-    { id: 'hp', cat: 'def', icon: '🥪', name: 'Extra Lunch', max: 5, desc: '+25 max health, and heal 25.' },
-    { id: 'regen', cat: 'def', icon: '🍕', name: 'Leftover Pizza', max: 4, desc: 'Heal 1 health every second.' },
-    { id: 'plating', cat: 'def', icon: '🛡️', name: 'Hubcap Plating', max: 4, desc: 'Take 10% less damage.' },
-    { id: 'dodge', cat: 'def', icon: '🍌', name: 'Banana Reflexes', max: 4, desc: '8% chance to dodge a hit.' },
-    { id: 'thorns', cat: 'def', icon: '🌵', name: 'Rusty Spikes', max: 3, desc: 'Zombies that touch you take 15 damage.' },
-    { id: 'shove', cat: 'def', icon: '💨', name: 'Stink Cloud', max: 3, desc: 'A stink blast shoves zombies back every few seconds.' },
-    { id: 'life', cat: 'def', icon: '🍱', name: 'Spare Lunchbox', max: 2, desc: 'An extra life: get back up once.' },
-    { id: 'orbit', cat: 'spc', icon: '🛞', name: 'Hubcap Halo', max: 4, desc: 'A hubcap spins around you, slicing zombies.' },
-    { id: 'drone', cat: 'spc', icon: '🛸', name: 'Drone Buddy', max: 3, desc: 'A little drone shoots the nearest zombie.' },
-    { id: 'bomb', cat: 'spc', icon: '💣', name: 'Trash Bomb', max: 3, desc: 'A garbage blast every few seconds (and on level up).' },
-    { id: 'zap', cat: 'spc', icon: '🔌', name: 'Bug Zapper', max: 4, desc: 'Lightning chains between nearby zombies.' },
-    { id: 'magnet', cat: 'spc', icon: '🧲', name: 'Fridge Magnet', max: 3, desc: 'Pull XP from 60% further away.' },
-    { id: 'slow', cat: 'spc', icon: '🍯', name: 'Molasses Aura', max: 3, desc: 'Zombies near you move 15% slower.' },
-    { id: 'raccoon', cat: 'spc', icon: '🦝', name: 'Raccoon Pal', max: 3, desc: 'A raccoon fights by your side.' },
-    { id: 'kicks', cat: 'spc', icon: '👟', name: 'Fresh Kicks', max: 3, desc: 'Run 10% faster.' },
+    { id: 'rapid', cat: 'atk', icon: '⚡', name: 'Itchy Trigger', desc: 'Fire 18% faster.' },
+    { id: 'pierce', cat: 'atk', icon: '🍢', name: 'Skewer Rounds', desc: 'Bullets go through one more zombie.' },
+    { id: 'spread', cat: 'atk', icon: '🔱', name: 'Scattershot', desc: 'One more bullet in every shot.' },
+    { id: 'big', cat: 'atk', icon: '🥫', name: 'Chonky Slugs', desc: 'Bigger bullets, +25% damage.' },
+    { id: 'bounce', cat: 'atk', icon: '🎱', name: 'Pinball Rounds', desc: 'Bullets bounce off walls once more.' },
+    { id: 'crit', cat: 'atk', icon: '🪙', name: 'Lucky Penny', desc: '+10% chance of a triple-damage hit.' },
+    { id: 'burn', cat: 'atk', icon: '🌶️', name: 'Hot Sauce Rounds', desc: 'Hits set zombies on fire.' },
+    { id: 'rear', cat: 'atk', icon: '🔙', name: 'Tailpipe Gun', desc: 'A second gun fires behind you (then to the sides).' },
+    { id: 'hp', cat: 'def', icon: '🥪', name: 'Extra Lunch', desc: '+25 max health, and heal 25.' },
+    { id: 'regen', cat: 'def', icon: '🍕', name: 'Leftover Pizza', desc: 'Heal 1 health every second.' },
+    { id: 'plating', cat: 'def', icon: '🛡️', name: 'Hubcap Plating', desc: 'Take 10% less damage.' },
+    { id: 'dodge', cat: 'def', icon: '🍌', name: 'Banana Reflexes', desc: '8% chance to dodge a hit.' },
+    { id: 'thorns', cat: 'def', icon: '🌵', name: 'Rusty Spikes', desc: 'Zombies that touch you take 15 damage.' },
+    { id: 'shove', cat: 'def', icon: '💨', name: 'Stink Cloud', desc: 'A stink blast shoves zombies back every few seconds.' },
+    { id: 'life', cat: 'def', icon: '🍱', name: 'Spare Lunchbox', desc: 'An extra life: get back up once.' },
+    { id: 'orbit', cat: 'spc', icon: '🛞', name: 'Hubcap Halo', desc: 'A hubcap spins around you, slicing zombies.' },
+    { id: 'drone', cat: 'spc', icon: '🛸', name: 'Drone Buddy', desc: 'A little drone shoots the nearest zombie.' },
+    { id: 'bomb', cat: 'spc', icon: '💣', name: 'Trash Bomb', desc: 'A garbage blast every few seconds (and on level up).' },
+    { id: 'zap', cat: 'spc', icon: '🔌', name: 'Bug Zapper', desc: 'Lightning chains between nearby zombies.' },
+    { id: 'magnet', cat: 'spc', icon: '🧲', name: 'Fridge Magnet', desc: 'Pull XP from 60% further away.' },
+    { id: 'slow', cat: 'spc', icon: '🍯', name: 'Molasses Aura', desc: 'Zombies near you move 15% slower.' },
+    { id: 'raccoon', cat: 'spc', icon: '🦝', name: 'Raccoon Pal', desc: 'A raccoon fights by your side.' },
+    { id: 'kicks', cat: 'spc', icon: '👟', name: 'Fresh Kicks', desc: 'Run faster.' },
+    { id: 'eagle', cat: 'spc', icon: '🦅', name: 'Eagle Eye', desc: 'See further around you (and a wider flashlight at night).' },
   ];
   const AB = Object.fromEntries(ABILITIES.map((a) => [a.id, a]));
   const CATS = { atk: { name: 'Attack', color: '#ff5a3c' }, def: { name: 'Defense', color: '#3ec1ff' }, spc: { name: 'Special', color: '#c37bff' } };
-  // Three cards: one of each category when it can (random within it), never a maxed one.
+  // Three cards: one of each category (random within it). Nothing ever maxes out.
   function offer(r, owned) {
     owned = owned || {};
-    const open = (c) => ABILITIES.filter((a) => a.cat === c && (owned[a.id] || 0) < a.max);
+    const open = (c) => ABILITIES.filter((a) => a.cat === c);
     const out = [];
     for (const c of ['atk', 'def', 'spc']) { const L = open(c); if (L.length) out.push(pick(r, L).id); }
-    const rest = ABILITIES.filter((a) => (owned[a.id] || 0) < a.max && !out.includes(a.id));
+    const rest = ABILITIES.filter((a) => !out.includes(a.id));
     while (out.length < 3 && rest.length) out.push(rest.splice(Math.floor(r() * rest.length), 1)[0].id);
     // shuffle so the categories don't always sit in the same slot
     for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
@@ -161,6 +163,7 @@
     { id: 'freeze', icon: '🧊', name: 'Freezer Burn', dur: 6, color: '#bfefff', desc: 'Zombies freeze solid for 6 seconds.' },
     { id: 'snack', icon: '🌭', name: 'Health Snack', dur: 0, color: '#ff7a8a', desc: 'Heal 35 health.' },
     { id: 'xp2', icon: '✨', name: 'Double XP', dur: 20, color: '#ffe066', desc: 'Twice the XP for 20 seconds.' },
+    { id: 'scope', icon: '🔭', name: 'Lookout Binoculars', dur: 20, color: '#9fd8ff', desc: 'See way further for 20 seconds.' },
   ];
   const PK = Object.fromEntries(PICKUPS.map((p) => [p.id, p]));
 
@@ -172,6 +175,7 @@
     canhead: { name: 'Can-Head', r: 22, hp: 80, speed: 62, dmg: 12, xp: 3, from: 4, w: 2, tough: true },
     spitter: { name: 'Spitter', r: 18, hp: 24, speed: 62, dmg: 9, xp: 2, from: 5, w: 2, spits: true },
     boss: { name: 'Dumpster Brute', r: 56, hp: 650, speed: 52, dmg: 25, xp: 30, from: 99, w: 0, boss: true },
+    final: { name: 'Final boss', r: 60, hp: 2500, speed: 60, dmg: 25, xp: 60, from: 99, w: 0, boss: true }, // Regular mode: the boss behind the door (trash-story.js)
   };
   function waveSpec(wave, players, diff) {
     const hard = diff === 'hard', n = Math.max(1, players || 1);
@@ -180,13 +184,15 @@
       wave, target, boss: wave % 5 === 0,
       every: Math.max(0.16, 1.05 - wave * 0.055) / Math.sqrt(n) / (hard ? 1.2 : 1), // seconds between spawns
       cap: Math.min(90, 16 + wave * 6 + (n - 1) * 10),
-      hpMul: (1 + 0.13 * (wave - 1)) * (hard ? 1.35 : 1), speedMul: Math.min(1.5, 1 + 0.02 * (wave - 1)) * (hard ? 1.1 : 1), dmgMul: (1 + 0.05 * (wave - 1)) * (hard ? 1.3 : 1),
+      hpMul: (1 + 0.13 * (wave - 1) + 0.004 * (wave - 1) * (wave - 1)) * (hard ? 1.35 : 1), speedMul: Math.min(1.5, 1 + 0.02 * (wave - 1)) * (hard ? 1.1 : 1), dmgMul: (1 + 0.05 * (wave - 1) + 0.001 * (wave - 1) * (wave - 1)) * (hard ? 1.3 : 1),
       weights: Object.entries(ZOMBIES).filter(([, z]) => z.from <= wave && z.w).map(([k, z]) => [k, z.w + (k === 'walker' ? 0 : Math.min(6, (wave - z.from) * 0.6))]),
     };
   }
   const xpNeed = (level) => Math.round(5 + level * 4 + Math.pow(level, 1.5));
   // The most a run can plausibly have (the server's loose sanity checks).
-  const limits = { level: (kills) => 1 + Math.floor(Math.sqrt(kills * 3 + 4)) + 6, hp: 100 + 25 * 5 };
+  const limits = { level: (kills) => 1 + Math.floor(Math.sqrt(kills * 3 + 4)) + 6, hp: (lvl) => 100 + 25 * Math.max(1, lvl) + 200 };
+  // Soft cap: grows with n but never passes `top` (diminishing returns).
+  const soft = (n, top, k) => top * (1 - Math.pow(k, n || 0));
 
-  return { GRID, AW, AH, TILE, TW, TH, BIOMES, HOME, PROPS, biomeOf, inGrid, exitsOf, genArea, GARAGE, spawnCell, ABILITIES, AB, CATS, offer, levelsFromAbilities, PICKUPS, PK, ZOMBIES, waveSpec, xpNeed, limits, hash, rng };
+  return { GRID, AW, AH, TILE, TW, TH, BIOMES, HOME, PROPS, biomeOf, inGrid, exitsOf, genArea, GARAGE, spawnCell, ABILITIES, AB, CATS, offer, levelsFromAbilities, PICKUPS, PK, ZOMBIES, waveSpec, xpNeed, limits, soft, hash, rng };
 });

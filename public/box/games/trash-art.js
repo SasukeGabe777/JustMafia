@@ -125,6 +125,7 @@
       case 'locker': { block(g, x, y, w, h, '#3e7fb5', 34, 3); g.strokeStyle = '#2a5a82'; g.lineWidth = 3; g.beginPath(); if (w > h) for (let xx = x + w / 6; xx < x + w - 4; xx += w / 6) { g.moveTo(xx, y - 30); g.lineTo(xx, y + h - 36); } else for (let yy = y - 30 + h / 6; yy < y + h - 36; yy += h / 6) { g.moveTo(x + 4, yy); g.lineTo(x + w - 4, yy); } g.stroke(); break; }
       case 'rope': for (let i = 4; i > 0; i--) { circ(g, cx, cy, i * w * 0.11); g.strokeStyle = i % 2 ? '#c9a26a' : '#a5824e'; g.lineWidth = 8; g.stroke(); } break;
       case 'wall': { rr(g, x, y, w, h, 0); fillOl(g, '#8a4a3a', 0); g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 2; g.beginPath(); for (let yy = y; yy < y + h; yy += 20) { g.moveTo(x, yy); g.lineTo(x + w, yy); } g.stroke(); g.fillStyle = '#5a2f24'; g.fillRect(x, y + h - 14, w, 14); break; }
+      case 'none': break; // drawn by the game (the boss door)
       default: block(g, x, y, w, h, '#888', 16, 6);
     }
   }

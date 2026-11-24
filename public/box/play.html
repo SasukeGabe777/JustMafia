@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#1b1240">
+  <!-- Add to Home Screen opens the phone page without browser bars (iPhone has no Fullscreen API; TrashZombies offers it) -->
+  <link rel="manifest" href="/box/play.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GameBox">
+  <link rel="apple-touch-icon" href="/box/icon-180.png">
   <title>JustGameBox</title>
   <link rel="stylesheet" href="/fonts/fonts.css">
   <link rel="stylesheet" href="/box/box.css">
@@ -108,6 +115,8 @@
   <script src="/box/games/trash-world.js"></script>
   <script src="/box/games/trash-art.js"></script>
   <script src="/box/games/trash-sim.js"></script>
+  <script src="/box/games/trash-story.js"></script>
+  <script src="/box/games/trash-boss.js"></script>
   <script src="/box/games/trash.js"></script>
   <script src="/box/games/pitch.js"></script>
   <script src="/box/games/king.js"></script>

@@ -27,8 +27,9 @@
       this.ab = { ...(R.ab || {}) }; this.lvl = R.lvl || 1; this.xp = R.xp || 0; this.killCount = R.kills || 0; this.wave = R.wave || 1;
       this.cell = (R.cell || [4, 4]).slice();
       const P = this.p = { x: W.AW / 2, y: W.AH / 2, vx: 0, vy: 0, r: 18, hp: 100, aim: 0, face: 1, fireCd: 0, inv: 0, walkT: 0, moving: false, kick: 0, armor: 0, lives: 0, down: 0 };
-      this.buffs = { shield: 0, minigun: 0, kicks: 0, freeze: 0, xp2: 0 };
-      this.stats(); P.hp = R.hp > 0 ? Math.min(R.hp, this.S.mhp) : this.S.mhp; P.lives = (this.ab.life || 0) - (R.livesUsed || 0);
+      this.buffs = { shield: 0, minigun: 0, kicks: 0, freeze: 0, xp2: 0, scope: 0 };
+      this.story = o.story || null; this.eq = { ...(R.eq || {}) }; this.hearts = R.hearts || 0; this.looted = new Set(); this.asked = {};
+      this.stats(); P.hp = R.hp > 0 ? Math.min(R.hp, this.S.mhp) : this.S.mhp; P.lives = (this.ab.life || 0) - (R.livesUsed || 0) + this.hearts;
       this.timers = { bomb: 4, zap: 2, shove: 3, drone: 0, pk: 12, regen: 0 };
       this.orbHit = new Map(); this.raccoon = null; this.drone = { x: 0, y: 0, cd: 0 };
       const home = !R.wave || (R.wave === 1 && R.cell && R.home && R.cell[0] === R.home[0] && R.cell[1] === R.home[1]);
@@ -36,13 +37,73 @@
       if (!home) { this.phase = 'play'; this.startWave(); }
     }
     // ---------------- stats from abilities ----------------
+    // ---------------- Regular mode ----------------
+    cellKey(c = this.cell) { return c[0] + ',' + c[1]; }
+    isDoorCell() { const st = this.story; return !!(st && st.plan && st.plan.door && st.plan.door[0] === this.cell[0] && st.plan.door[1] === this.cell[1]); }
+    tierAt(x, y) { const st = this.story; return st && st.tiers ? st.tiers[y * W.GRID + x] || 0 : 0; }
+    gateLeft(dir) { // zombies still needed to open the gate that way (0 = open)
+      const st = this.story; if (!st) return 0;
+      const d = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] }[dir], x = this.cell[0] + d[0], y = this.cell[1] + d[1];
+      if (!W.inGrid(x, y)) return 0; const t = this.tierAt(x, y); if (t <= st.tier) return 0;
+      return Math.max(1, (st.needs[t - 1] || 0) - st.kills);
+    }
+    exitOpen(dir) { return this.cleared && this.area.exits[dir] && !this.gateLeft(dir); }
+    findHere() { const st = this.story; if (!st || !st.plan) return null; const k = this.cellKey(), id = st.plan.finds[k]; return id && !(st.taken || []).includes(k) && !this.looted.has(k) ? id : null; }
+    setStory(st, me) {
+      const was = this.story; this.story = st || null;
+      if (me) {
+        const eq = me.eq || {}; if (Object.keys(eq).some((k) => !this.eq[k])) { this.eq = { ...this.eq, ...eq }; this.stats(); }
+        if ((me.hearts || 0) > this.hearts) { this.p.lives += me.hearts - this.hearts; this.hearts = me.hearts; }
+      }
+      if (st && st.doorOpen && this.isDoorCell() && this.mode !== 'guest' && !this.finalSpawned && !this.finalDead && this.phase === 'play') this.spawnFinal();
+      void was;
+    }
+    applyFind(id) {
+      const F = window.TZS && TZS.FINDS[id]; if (!F) return;
+      if (F.kind === 'equip' || F.kind === 'ability') { this.eq[id] = 1; this.stats(); }
+      if (F.kind === 'token') { this.p.lives++; this.hearts++; }
+      this.fx.push({ k: 'txt', x: this.p.x, y: this.p.y - 90, text: F.name + '!', t: 0, life: 1.6, c: '#ffd23f' });
+      this.fx.push({ k: 'ring', x: this.p.x, y: this.p.y - 20, r: 10, R: 160, t: 0, life: 0.5, c: '#ffd23f' });
+      this.o.on('find', { id });
+    }
+    storyStep() {
+      const st = this.story, P = this.p; if (!st || this.dead) return;
+      const k = this.cellKey(), id = this.findHere();
+      if (id && this.cleared && !this.asked['f' + k] && Math.hypot(P.x - W.AW / 2, P.y - (W.AH / 2 + 10)) < 75) {
+        this.asked['f' + k] = 1;
+        this.o.report({ op: 'find', x: this.cell[0], y: this.cell[1] }).then((r) => { if (r && r.ok) { this.looted.add(k); this.applyFind(r.find); } else this.asked['f' + k] = 0; });
+      }
+      if (this.isDoorCell() && !st.doorOpen && this.cleared && st.keys >= 3 && !this.asked.door) {
+        const D = TZB.DOOR_POS; if (P.x > D.x - 30 && P.x < D.x + D.w + 30 && P.y < D.y + D.h + 70) {
+          this.asked.door = 1; this.o.report({ op: 'door' }).then((r) => { if (r && r.ok) { st.doorOpen = true; if (this.mode !== 'guest') this.spawnFinal(); } else this.asked.door = 0; });
+        }
+      }
+    }
+    spawnFinal() {
+      if (this.finalSpawned || !this.story) return;
+      const key = this.story.plan.boss, B = TZS.BOSSES[key];
+      this.finalSpawned = true; this.cleared = false;
+      const z = this.makeZ('final', W.AW / 2, TZB.DOOR_POS.y + TZB.DOOR_POS.h + 40);
+      z.fb = key; z.r = B.r; z.speed = B.speed; z.dmg = B.dmg * (1 + 0.04 * (this.wave - 1)); z.xp = 60; z.cd = 2; z.cd2 = 4;
+      z.hp = z.mhp = B.hp * (1 + 0.6 * (this.areaMembers.length - 1)) * (1 + 0.05 * (this.lvl - 1)) * (this.set.diff === 'hard' ? 1.3 : this.set.diff === 'chill' ? 0.75 : 1);
+      this.banner = { text: B.icon + ' ' + B.name.toUpperCase(), sub: B.desc, t: 3 }; this.shake = 0.6;
+      this.o.on('final', { key });
+    }
+    // Every ability stacks without a cap. Damage, health, bullets, orbiters and drones keep growing
+    // (past a count, extra bullets / hubcaps / drones merge into stronger ones so the phone stays
+    // smooth); fire rate, dodge, armour, speed, slow and cooldowns use soft caps (W.soft) that get
+    // closer and closer to a sane limit but never pass it.
     stats() {
-      const a = (id) => this.ab[id] || 0, lv = this.lvl;
+      const a = (id) => this.ab[id] || 0, lv = this.lvl, soft = W.soft, E = this.eq || {};
+      const spread = (1 + a('spread')) * (E.twin ? 2 : 1), shots = Math.min(9, spread);
       this.S = {
-        rate: 5.5 * (1 + 0.18 * a('rapid')), dmg: 10 * (1 + 0.25 * a('big')) * (1 + 0.03 * (lv - 1)), br: 5 + 1.6 * a('big'), bspeed: 980, pierce: a('pierce'), bounce: a('bounce'),
-        crit: 0.1 * a('crit'), burn: a('burn'), spread: 1 + a('spread'), rear: a('rear'), mhp: 100 + 25 * a('hp'), regen: a('regen'), armor: 1 - 0.1 * a('plating'), dodge: 0.08 * a('dodge'),
-        thorns: 15 * a('thorns'), shove: a('shove'), orbit: a('orbit'), drone: a('drone'), bomb: a('bomb'), zap: a('zap'), magnet: 95 * (1 + 0.6 * a('magnet')), slow: 0.15 * a('slow'), raccoon: a('raccoon'),
-        speed: 255 * (1 + 0.1 * a('kicks')),
+        rate: 5.5 * (1 + soft(a('rapid'), 2.4, 0.86)), dmg: 10 * (1 + 0.25 * a('big') + 0.04 * Math.max(0, a('rapid') - 8)) * (1 + 0.03 * (lv - 1)) * (spread / shots),
+        br: 5 + Math.min(10, 1.6 * a('big')) + (spread > shots ? 2 : 0), bspeed: 980, pierce: Math.min(8, a('pierce') + (E.blower ? 1 : 0)), pierceDmg: 1 + 0.15 * Math.max(0, a('pierce') - 8),
+        bounce: Math.min(6, a('bounce')), crit: Math.min(0.8, soft(a('crit'), 0.7, 0.88) + (E.goggles ? 0.15 : 0)), critMul: 3 + 0.2 * Math.max(0, a('crit') - 6), burn: a('burn'),
+        spread: shots, rear: a('rear'), rearDmg: 1 + 0.25 * Math.max(0, a('rear') - 2), mhp: 100 + 25 * a('hp'), regen: a('regen'), armor: 0.3 + 0.7 * Math.pow(0.9, a('plating')), dodge: soft(a('dodge'), 0.6, 0.9),
+        thorns: 15 * a('thorns'), shove: a('shove'), orbit: Math.min(10, a('orbit')), orbitN: a('orbit'), drone: a('drone'), bomb: a('bomb'), zap: a('zap'), magnet: 95 * (1 + soft(a('magnet'), 2.5, 0.8)),
+        slow: Math.max(soft(a('slow'), 0.6, 0.85), E.boombox ? 0.25 : 0), raccoon: a('raccoon'), speed: 255 * (1 + soft(a('kicks'), 0.8, 0.85)) * (E.skates ? 1.3 : 1),
+        view: 1 + W.soft(a('eagle'), 0.55, 0.8), knock: E.blower ? 3 : 1, aimRange: E.goggles ? 860 : 640, leech: E.leech ? 2 : 0, fire: !!E.fire, storm: !!E.storm, lid: !!E.lid,
       };
       if (this.S.raccoon && !this.raccoon) this.raccoon = { x: this.p ? this.p.x : 800, y: this.p ? this.p.y : 480, cd: 0, face: 1, t: 0 };
     }
@@ -58,6 +119,8 @@
       if (from === 'n') { P.x = AW / 2; P.y = AH - 40; } else if (from === 's') { P.x = AW / 2; P.y = 40; } else if (from === 'w') { P.x = AW - 40; P.y = AH / 2; } else if (from === 'e') { P.x = 40; P.y = AH / 2; }
       else if (this.area.garage) { P.x = AW / 2; P.y = 120; } else { P.x = AW / 2; P.y = AH / 2; }
       if (this.raccoon) { this.raccoon.x = P.x; this.raccoon.y = P.y + 30; }
+      this.finalSpawned = false; this.finalDead = false;
+      if (this.isDoorCell()) { const D = window.TZB ? TZB.DOOR_POS : { x: 650, y: 40, w: 300, h: 170 }; this.area.obstacles = this.area.obstacles.filter((o) => o.x > D.x + D.w + 30 || o.x + o.w < D.x - 30 || o.y > D.y + D.h + 60); this.area.obstacles.push({ x: D.x, y: D.y, w: D.w, h: D.h, kind: 'none' }); }
     }
     // Walking out of an exit: the next cell is the next wave.
     leave(dir) {
@@ -133,7 +196,9 @@
       else { this.kills.push([by, z.xp]); if (this.set.xp !== 'own' || mine) this.gainXp(z.xp); }
       for (let i = 0; i < (z.boss ? 30 : 8); i++) this.particle(z.x, z.y - z.r, (this.rng() - 0.5) * 300, (this.rng() - 0.7) * 300, z.boss ? '#2e7d4a' : '#7fbf4a', 0.5 + this.rng() * 0.3, 4 + this.rng() * 4);
       if (W.ZOMBIES[z.type].pops) this.boom(z.x, z.y, 95, 22 * (this.spec ? this.spec.dmgMul : 1), '#b6ff3c', true);
-      if (z.boss) { this.dropPickup(z.x, z.y); this.shake = Math.max(this.shake, 0.5); this.o.on('bossdown', {}); }
+      if (mine && this.S.leech) this.p.hp = Math.min(this.S.mhp, this.p.hp + this.S.leech);
+      if (z.fb) { this.finalDead = true; this.shake = 1; for (let i = 0; i < 60; i++) this.particle(z.x, z.y - z.r, (this.rng() - 0.5) * 700, (this.rng() - 0.8) * 600, ['#ffd23f', '#9cff3c', '#ff5a3c'][i % 3], 1.2, 8); this.o.report({ op: 'ev', k: 'victory' }); this.o.on('victory', this.summary()); }
+      else if (z.boss) { this.dropPickup(z.x, z.y); this.shake = Math.max(this.shake, 0.5); this.o.on('bossdown', {}); }
       else if (this.rng() < 0.025) this.dropPickup(z.x, z.y);
       this.booms.push([1, Math.round(z.x), Math.round(z.y)]);
     }
@@ -150,13 +215,14 @@
     hurt(dmg, fx, fy) {
       const P = this.p, B = this.buffs;
       if (this.dead || P.inv > 0 || B.shield > 0 || this.phase !== 'play' || (this.choosing && this.mode !== 'solo')) return;
+      if (this.S.lid && (this.lidAt || 0) <= this.t) { this.lidAt = this.t + 8; P.inv = 0.6; this.fx.push({ k: 'txt', x: P.x, y: P.y - 80, text: 'BLOCKED!', t: 0, life: 0.7, c: '#b7c2cc' }); return; }
       if (P.armor > 0) { P.armor = 0; P.inv = 0.6; this.o.on('armor', {}); this.fx.push({ k: 'ring', x: P.x, y: P.y - 20, r: 10, R: 70, t: 0, life: 0.3, c: '#b7c2cc' }); return; }
       if (this.rng() < this.S.dodge) { this.fx.push({ k: 'txt', x: P.x, y: P.y - 70, text: 'DODGE!', t: 0, life: 0.7, c: '#ffe066' }); P.inv = 0.3; return; }
       const d = dmg * this.S.armor; P.hp -= d; P.inv = 0.75; this.flash = 0.25; this.shake = Math.max(this.shake, 0.18);
       if (fx != null) { const L = Math.hypot(P.x - fx, P.y - fy) || 1; P.vx += ((P.x - fx) / L) * 260; P.vy += ((P.y - fy) / L) * 260; }
       this.o.on('hurt', { hp: P.hp, mhp: this.S.mhp });
       if (P.hp <= 0) {
-        if (P.lives > 0) { P.lives--; P.hp = this.S.mhp * 0.6; P.inv = 2.2; this.boom(P.x, P.y, 220, 80, '#ffd23f', false); this.o.on('down', {}); this.o.report({ op: 'ev', k: 'down' }); return; }
+        if (P.lives > 0) { P.lives--; P.hp = this.S.mhp * 0.6; P.inv = 2.2; this.boom(P.x, P.y, 220, 80, '#ffd23f', false); this.o.on('down', {}); if (this.hearts > 0) { this.hearts--; this.o.report({ op: 'ev', k: 'heart' }); } else this.o.report({ op: 'ev', k: 'down' }); return; }
         P.hp = 0; this.die();
       }
     }
@@ -217,6 +283,7 @@
         this.bulletStep(sdt);
         this.contact(sdt);
         this.gemStep(sdt);
+        this.storyStep();
         this.buffStep(sdt);
         this.othersStep(sdt);
       }
@@ -242,13 +309,13 @@
       P.moving = Math.hypot(P.vx, P.vy) > 30; if (P.moving) P.walkT += dt;
       this.collide(P);
       // the edges: closed unless this area is cleared and there is an exit lane here
-      const AW = W.AW, AH = W.AH, e = this.area.exits, open = this.cleared, inX = Math.abs(P.x - AW / 2) < 80, inY = Math.abs(P.y - AH / 2) < 80;
-      if (open && e.n && inX && P.y < -10) return this.leave('n');
-      if (open && e.s && inX && P.y > AH + 10) return this.leave('s');
-      if (open && e.w && inY && P.x < -10) return this.leave('w');
-      if (open && e.e && inY && P.x > AW + 10) return this.leave('e');
-      P.x = clamp(P.x, open && e.w && inY ? -30 : P.r, open && e.e && inY ? AW + 30 : AW - P.r);
-      P.y = clamp(P.y, open && e.n && inX ? -30 : P.r, open && e.s && inX ? AH + 30 : AH - P.r);
+      const AW = W.AW, AH = W.AH, inX = Math.abs(P.x - AW / 2) < 80, inY = Math.abs(P.y - AH / 2) < 80, O = (d) => this.exitOpen(d);
+      if (O('n') && inX && P.y < -10) return this.leave('n');
+      if (O('s') && inX && P.y > AH + 10) return this.leave('s');
+      if (O('w') && inY && P.x < -10) return this.leave('w');
+      if (O('e') && inY && P.x > AW + 10) return this.leave('e');
+      P.x = clamp(P.x, O('w') && inY ? -30 : P.r, O('e') && inY ? AW + 30 : AW - P.r);
+      P.y = clamp(P.y, O('n') && inX ? -30 : P.r, O('s') && inX ? AH + 30 : AH - P.r);
       if (P.inv > 0) P.inv -= dt;
       if (P.kick > 0) P.kick = Math.max(0, P.kick - dt * 8);
     }
@@ -274,7 +341,7 @@
       let fire = false;
       if (this.choosing && this.mode !== 'solo') return;
       if (I.ax || I.ay) { P.aim = Math.atan2(I.ay, I.ax); fire = I.mouse ? !!I.fire : true; }
-      else if (this.set.aim !== 'off' && !I.mouse) { const z = this.nearestZ(P.x, P.y - 24, 640); if (z) { P.aim = Math.atan2(z.y - z.r - (P.y - 24), z.x - P.x); fire = true; } }
+      else if (this.set.aim !== 'off' && !I.mouse) { const z = this.nearestZ(P.x, P.y - 24, S.aimRange); if (z) { P.aim = Math.atan2(z.y - z.r - (P.y - 24), z.x - P.x); fire = true; } }
       if (Math.cos(P.aim) > 0.15) P.face = 1; else if (Math.cos(P.aim) < -0.15) P.face = -1;
       P.fireCd -= dt; if (!fire || P.fireCd > 0) return;
       const mini = B.minigun > 0, rate = S.rate * (mini ? 3.5 : 1);
@@ -284,14 +351,15 @@
       const dirs = [];
       const n = S.spread, step = 0.13;
       for (let i = 0; i < n; i++) dirs.push(P.aim + (i - (n - 1) / 2) * step + (mini ? (this.rng() - 0.5) * 0.12 : 0));
+      const front = dirs.length;
       if (S.rear >= 1) dirs.push(P.aim + Math.PI); if (S.rear >= 2) { dirs.push(P.aim + Math.PI / 2, P.aim - Math.PI / 2); }
-      for (const a of dirs) this.fireBullet(ox, oy, a);
+      dirs.forEach((a, i) => this.fireBullet(ox, oy, a, i >= front ? S.rearDmg : 1));
       this.o.on('shot', { mini });
     }
-    fireBullet(x, y, a) {
+    fireBullet(x, y, a, mul = 1) {
       const S = this.S; if (this.b.length >= MAX_B) this.b.shift();
       const crit = this.rng() < S.crit;
-      this.b.push({ x, y, vx: Math.cos(a) * S.bspeed, vy: Math.sin(a) * S.bspeed, r: S.br * (crit ? 1.3 : 1), dmg: S.dmg * (crit ? 3 : 1), crit, pierce: S.pierce, bounce: S.bounce, life: 0.8, hit: null, burn: S.burn });
+      this.b.push({ x, y, vx: Math.cos(a) * S.bspeed, vy: Math.sin(a) * S.bspeed, r: S.br * (crit ? 1.3 : 1), dmg: S.dmg * mul * S.pierceDmg * (crit ? S.critMul : 1), crit, pierce: S.pierce, bounce: S.bounce, life: 0.8, hit: null, burn: S.burn });
       if (this.mode !== 'solo') this.shots.push([Math.round(x), Math.round(y), Math.round(a * 100) / 100]);
     }
     bulletStep(dt) {
@@ -309,7 +377,7 @@
           const zr = z.r + b.r, zy = z.y - z.r;
           if (dist2(b.x, b.y, z.x, zy) < zr * zr) {
             const sp = Math.hypot(b.vx, b.vy) || 1;
-            this.damageZ(z, b.dmg, this.me.id, (b.vx / sp) * 140, (b.vy / sp) * 140, { crit: b.crit, burn: b.burn });
+            this.damageZ(z, b.dmg, this.me.id, (b.vx / sp) * 140 * this.S.knock, (b.vy / sp) * 140 * this.S.knock, { crit: b.crit, burn: b.burn });
             if (b.pierce > 0) { b.pierce--; (b.hit || (b.hit = [])).push(z.id); } else { dead = true; }
             break;
           }
@@ -353,7 +421,8 @@
           if (d < 280) { dx = -dx; dy = -dy; sp *= 0.6; } else if (d < 380) sp = 0;
           z.cd -= dt; if (z.cd <= 0 && d < 520) { z.cd = 2.6; const a = Math.atan2(tg.y - 20 - (z.y - z.r * 2), tg.x - z.x); this.spit.push({ x: z.x, y: z.y - z.r * 2, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, life: 2, dmg: z.dmg }); }
         }
-        if (z.boss) { z.cd -= dt; if (z.charge > 0) { z.charge -= dt; sp *= 3.2; } else if (z.cd <= 0 && d < 520) { z.cd = 4.5; z.charge = 0.7; this.shake = Math.max(this.shake, 0.2); } }
+        if (z.fb) { const m = window.TZB ? TZB.stepBoss(this, z, dt, tg) : 1; z.x = clamp(z.x, 60, W.AW - 60); z.y = clamp(z.y, 80, W.AH - 40); if (m === -1) { z.face = (z.cx || 1) >= 0 ? 1 : -1; this.collide(z); continue; } sp *= m; }
+        else if (z.boss) { z.cd -= dt; if (z.charge > 0) { z.charge -= dt; sp *= 3.2; } else if (z.cd <= 0 && d < 520) { z.cd = 4.5; z.charge = 0.7; this.shake = Math.max(this.shake, 0.2); } }
         // separation from nearby zombies (cheap: only a few neighbours)
         let sx = 0, sy = 0;
         for (let j = i + 1, c = 0; j < n && c < 10; j++) { const o = Z[j]; const ddx = z.x - o.x, ddy = z.y - o.y, rr = z.r + o.r; if (ddx > rr || ddx < -rr || ddy > rr || ddy < -rr) continue; c++; const dd = ddx * ddx + ddy * ddy; if (dd < rr * rr && dd > 0.01) { const k = (rr - Math.sqrt(dd)) * 0.5 / Math.sqrt(dd); sx += ddx * k; sy += ddy * k; o.x -= ddx * k; o.y -= ddy * k; } }
@@ -392,38 +461,40 @@
     abilities(dt) {
       const S = this.S, P = this.p, T = this.timers;
       if (this.dead) return;
+      if (S.fire) { T.fire = (T.fire || 0) - dt; if (T.fire <= 0) { T.fire = 0.5; for (const z of this.z) if (z.hp > 0 && dist2(z.x, z.y, P.x, P.y) < 160 * 160) this.damageZ(z, 10 + 0.5 * this.lvl, this.me.id, 0, 0, { burn: 1 }); this.fx.push({ k: 'ring', x: P.x, y: P.y - 6, r: 150, R: 165, t: 0, life: 0.45, c: '#ff8c42' }); } }
+      if (S.storm) { T.storm = (T.storm || 1.5) - dt; if (T.storm <= 0) { T.storm = 1.5; const z = this.nearestZ(P.x, P.y, 700); if (z) { this.fx.push({ k: 'zap', x: z.x + 30, y: z.y - 400, x2: z.x, y2: z.y - z.r, t: 0, life: 0.25 }); this.damageZ(z, 40 + 4 * this.lvl, this.me.id); } } }
       if (S.regen) { T.regen += dt; if (T.regen >= 1) { T.regen -= 1; P.hp = Math.min(S.mhp, P.hp + S.regen); } }
       if (S.orbit) {
-        const n = S.orbit, R = 85;
+        const n = S.orbit, R = 85, od = (12 + 3 * S.orbitN) * (S.orbitN > 10 ? 1 + 0.1 * (S.orbitN - 10) : 1);
         for (let i = 0; i < n; i++) {
           const a = this.t * 3.2 + (i * TAU) / n, ox = P.x + Math.cos(a) * R, oy = P.y - 20 + Math.sin(a) * R;
-          for (const z of this.z) { if (z.hp <= 0) continue; const rr = z.r + 18; if (dist2(ox, oy, z.x, z.y - z.r) < rr * rr) { const last = this.orbHit.get(z.id) || 0; if (this.t - last > 0.35) { this.orbHit.set(z.id, this.t); this.damageZ(z, 12 + 3 * n, this.me.id, Math.cos(a) * 120, Math.sin(a) * 120); } } }
+          for (const z of this.z) { if (z.hp <= 0) continue; const rr = z.r + 18; if (dist2(ox, oy, z.x, z.y - z.r) < rr * rr) { const last = this.orbHit.get(z.id) || 0; if (this.t - last > 0.35) { this.orbHit.set(z.id, this.t); this.damageZ(z, od, this.me.id, Math.cos(a) * 120, Math.sin(a) * 120); } } }
         }
         if (this.orbHit.size > 400) this.orbHit.clear();
       }
       if (S.drone) {
         const D = this.drone, a = this.t * 1.4; D.x += (P.x + Math.cos(a) * 60 - D.x) * Math.min(1, dt * 5); D.y += (P.y - 90 + Math.sin(a) * 20 - D.y) * Math.min(1, dt * 5);
-        D.cd -= dt; if (D.cd <= 0) { const z = this.nearestZ(D.x, D.y, 560); if (z) { D.cd = 1 / (1.6 + 0.9 * S.drone); const an = Math.atan2(z.y - z.r - D.y, z.x - D.x); const s = this.S; this.b.push({ x: D.x, y: D.y, vx: Math.cos(an) * 900, vy: Math.sin(an) * 900, r: 4, dmg: s.dmg * 0.7, crit: false, pierce: 0, bounce: 0, life: 0.7, hit: null, burn: 0, drone: true }); if (this.mode !== 'solo') this.shots.push([Math.round(D.x), Math.round(D.y), Math.round(an * 100) / 100]); } }
+        D.cd -= dt; if (D.cd <= 0) { const z = this.nearestZ(D.x, D.y, 560); if (z) { D.cd = 1 / (1.6 + W.soft(S.drone, 7, 0.85)); const an = Math.atan2(z.y - z.r - D.y, z.x - D.x); const s = this.S; this.b.push({ x: D.x, y: D.y, vx: Math.cos(an) * 900, vy: Math.sin(an) * 900, r: 4, dmg: s.dmg * 0.7 * (1 + 0.12 * Math.max(0, S.drone - 5)), crit: false, pierce: 0, bounce: 0, life: 0.7, hit: null, burn: 0, drone: true }); if (this.mode !== 'solo') this.shots.push([Math.round(D.x), Math.round(D.y), Math.round(an * 100) / 100]); } }
       }
-      if (S.bomb) { T.bomb -= dt; if (T.bomb <= 0) { T.bomb = 9 - 2 * S.bomb; const z = this.nearestZ(P.x, P.y, 420); const bx = z ? z.x : P.x, by = z ? z.y : P.y; this.boom(bx, by, 150 + 20 * S.bomb, 30 + 22 * S.bomb, '#ff8c42', false); this.o.on('bomb', {}); } }
+      if (S.bomb) { T.bomb -= dt; if (T.bomb <= 0) { T.bomb = 2.5 + 6.5 * Math.pow(0.8, S.bomb); const z = this.nearestZ(P.x, P.y, 420); const bx = z ? z.x : P.x, by = z ? z.y : P.y; this.boom(bx, by, 150 + Math.min(220, 20 * S.bomb), 30 + 22 * S.bomb, '#ff8c42', false); this.o.on('bomb', {}); } }
       if (S.zap) {
         T.zap -= dt;
         if (T.zap <= 0) {
-          T.zap = 2.4 - 0.25 * S.zap; let from = { x: P.x, y: P.y - 30 }, seen = [];
-          for (let j = 0; j < 2 + S.zap; j++) {
+          T.zap = 0.6 + 1.8 * Math.pow(0.85, S.zap); let from = { x: P.x, y: P.y - 30 }, seen = [];
+          for (let j = 0; j < Math.min(12, 2 + S.zap); j++) {
             let best = null, bd = 260 * 260; for (const z of this.z) { if (z.hp <= 0 || seen.includes(z.id)) continue; const d = dist2(from.x, from.y, z.x, z.y - z.r); if (d < bd) { bd = d; best = z; } }
             if (!best) break; seen.push(best.id); this.fx.push({ k: 'zap', x: from.x, y: from.y, x2: best.x, y2: best.y - best.r, t: 0, life: 0.18 }); this.damageZ(best, 16 + 7 * S.zap, this.me.id); from = { x: best.x, y: best.y - best.r };
           }
         }
       }
-      if (S.shove) { T.shove -= dt; if (T.shove <= 0) { T.shove = 5.5 - S.shove; this.fx.push({ k: 'ring', x: P.x, y: P.y - 10, r: 20, R: 170 + 25 * S.shove, t: 0, life: 0.4, c: '#a6d65a' }); for (const z of this.z) { const d = Math.hypot(z.x - P.x, z.y - P.y); if (d < 170 + 25 * S.shove && d > 0) this.damageZ(z, 4 * S.shove, this.me.id, ((z.x - P.x) / d) * 520, ((z.y - P.y) / d) * 520); } } }
+      if (S.shove) { T.shove -= dt; if (T.shove <= 0) { const SR = 170 + Math.min(220, 25 * S.shove); T.shove = 1.2 + 4.3 * Math.pow(0.82, S.shove); this.fx.push({ k: 'ring', x: P.x, y: P.y - 10, r: 20, R: SR, t: 0, life: 0.4, c: '#a6d65a' }); for (const z of this.z) { const d = Math.hypot(z.x - P.x, z.y - P.y); if (d < SR && d > 0) this.damageZ(z, 4 * S.shove, this.me.id, ((z.x - P.x) / d) * 520, ((z.y - P.y) / d) * 520); } } }
       if (S.raccoon && this.raccoon) {
         const Rc = this.raccoon; Rc.t += dt; Rc.cd -= dt;
         const z = this.nearestZ(Rc.x, Rc.y, 380); let tx = P.x - 50 * P.face, ty = P.y + 30;
         if (z && Math.hypot(z.x - P.x, z.y - P.y) < 420) { tx = z.x; ty = z.y; }
-        const d = Math.hypot(tx - Rc.x, ty - Rc.y), sp = 300 + 40 * S.raccoon;
+        const d = Math.hypot(tx - Rc.x, ty - Rc.y), sp = 300 + Math.min(300, 40 * S.raccoon);
         if (d > 6) { Rc.x += ((tx - Rc.x) / d) * Math.min(d, sp * dt); Rc.y += ((ty - Rc.y) / d) * Math.min(d, sp * dt); Rc.face = tx > Rc.x ? 1 : -1; Rc.moving = true; } else Rc.moving = false;
-        if (z && Rc.cd <= 0 && dist2(Rc.x, Rc.y, z.x, z.y) < (z.r + 22) * (z.r + 22)) { Rc.cd = 0.55 - 0.08 * S.raccoon; this.damageZ(z, 14 + 8 * S.raccoon, this.me.id, Rc.face * 100, 0); }
+        if (z && Rc.cd <= 0 && dist2(Rc.x, Rc.y, z.x, z.y) < (z.r + 22) * (z.r + 22)) { Rc.cd = 0.15 + 0.4 * Math.pow(0.85, S.raccoon); this.damageZ(z, 14 + 8 * S.raccoon, this.me.id, Rc.face * 100, 0); }
       }
     }
     pickupStep(dt) {
@@ -443,6 +514,7 @@
     }
     waveStep() {
       const sp = this.spec; if (!sp || this.cleared) return;
+      if (this.finalSpawned && !this.finalDead) return;
       if (this.waveKills >= sp.target && this.z.length === 0 && (!this.bossDue || this.bossSpawned)) this.clear();
     }
     clear() {
@@ -459,6 +531,8 @@
       }
       this.grabCheck(this._lastInput);
     }
+    // how far out the camera sits (Eagle Eye + binoculars), eased
+    zoomStep(dt) { const want = (this.S.view || 1) * (this.buffs.scope > 0 ? 1.6 : 1); this._zoom = (this._zoom || want) + (want - (this._zoom || want)) * Math.min(1, dt * 2.5); return this._zoom; }
     buffStep(dt) { const B = this.buffs; for (const k in B) if (B[k] > 0) B[k] = Math.max(0, B[k] - dt); }
     othersStep(dt) { const k = Math.min(1, dt * 12); for (const o of this.others.values()) { o.x += (o.tx - o.x) * k; o.y += (o.ty - o.y) * k; o.walkT = (o.walkT || 0) + (Math.abs(o.tx - o.x) + Math.abs(o.ty - o.y) > 2 ? dt : 0); } }
     fxStep(dt) {
@@ -502,7 +576,7 @@
         const byId = new Map(this.z.map((z) => [z.id, z])), keep = [];
         for (let i = 0; i < m.z.length; i += 5) {
           const id = m.z[i]; let z = byId.get(id);
-          if (!z) { const T = Object.keys(W.ZOMBIES)[m.z[i + 1]] || 'walker'; const Z = W.ZOMBIES[T]; z = { id, type: T, ti: m.z[i + 1], x: m.z[i + 2], y: m.z[i + 3], r: Z.r, hp: m.z[i + 4], mhp: m.z[i + 4], f: 0, face: 1, flash: 0, dmg: Z.dmg * (this.spec ? this.spec.dmgMul : 1), boss: !!Z.boss }; }
+          if (!z) { const T = Object.keys(W.ZOMBIES)[m.z[i + 1]] || 'walker'; const Z = W.ZOMBIES[T]; z = { id, type: T, ti: m.z[i + 1], x: m.z[i + 2], y: m.z[i + 3], r: Z.r, hp: m.z[i + 4], mhp: m.z[i + 4], f: 0, face: 1, flash: 0, dmg: Z.dmg * (this.spec ? this.spec.dmgMul : 1), boss: !!Z.boss }; if (T === 'final' && this.story && window.TZS) { const B = TZS.BOSSES[this.story.plan.boss]; z.fb = this.story.plan.boss; z.r = B.r; z.dmg = B.dmg; } }
           z.tx = m.z[i + 2]; z.ty = m.z[i + 3]; z.hp = m.z[i + 4]; if (z.hp > z.mhp) z.mhp = z.hp; keep.push(z);
         }
         this.z = keep;
@@ -541,17 +615,25 @@
     g.restore();
   }
   function render(g, sim, V) {
-    const TA = A(), P = sim.p, k = V.k, kp = V.k * V.dpr, AW = W.AW, AH = W.AH;
+    const TA = A(), P = sim.p, k = V.k, kp = Math.max(0.2, Math.round(V.k * V.dpr * 10) / 10), // sprite caches: a few zoom steps only
+       AW = W.AW, AH = W.AH;
     if (!sim.bg || sim.bg.area !== sim.area) { const s = Math.min(1, Math.max(0.5, kp)); sim.bg = TA.areaCanvas(sim.area, s); sim.bg.area = sim.area; }
     // camera
     const vw = V.w / k, vh = V.h / k, intro = sim.phase === 'intro';
-    let cx = P.x, cy = P.y - 30;
-    if (intro) { cx = AW / 2; cy = Math.max(60, P.y - 40); }
+    // look-ahead: the camera leads where you're going (or where you aim by hand), eased
+    const now = sim.t, cdt = Math.min(0.1, Math.max(0, now - (sim._camT || now))); sim._camT = now;
+    const sp = Math.hypot(P.vx, P.vy), manual = sim._lastInput && (sim._lastInput.ax || sim._lastInput.ay) && !intro;
+    let lx = 0, ly = 0;
+    if (sp > 40) { lx = (P.vx / sp) * Math.min(1, sp / 250) * vw * 0.16; ly = (P.vy / sp) * Math.min(1, sp / 250) * vh * 0.16; }
+    if (manual) { lx += Math.cos(P.aim) * vw * 0.08; ly += Math.sin(P.aim) * vh * 0.08; }
+    const ease = Math.min(1, cdt * 3.2); sim._lx = (sim._lx || 0) + (lx - (sim._lx || 0)) * ease; sim._ly = (sim._ly || 0) + (ly - (sim._ly || 0)) * ease;
+    let cx = P.x + sim._lx, cy = P.y - 30 + sim._ly;
+    if (intro) { cx = AW / 2; cy = Math.max(60, P.y - 40); sim._lx = 0; sim._ly = 0; }
     const M = TA.M;
     cx = vw >= AW + 2 * M ? AW / 2 : clamp(cx, vw / 2 - M, AW + M - vw / 2);
     cy = vh >= AH + 2 * M ? AH / 2 : clamp(cy, vh / 2 - M, AH + M - vh / 2);
     const sh = sim.shake > 0 ? sim.shake * 22 : 0, ox = vw / 2 - cx + (sh ? (Math.random() - 0.5) * sh : 0), oy = vh / 2 - cy + (sh ? (Math.random() - 0.5) * sh : 0);
-    sim.cam = { ox, oy, k };
+    sim.cam = { ox, oy, k, vw, vh };
     g.setTransform(V.dpr, 0, 0, V.dpr, 0, 0);
     g.fillStyle = '#0c0a08'; g.fillRect(0, 0, V.w, V.h);
     g.setTransform(V.dpr * k, 0, 0, V.dpr * k, ox * k * V.dpr, oy * k * V.dpr);
@@ -563,6 +645,8 @@
     for (const [d, ok] of Object.entries(e)) {
       if (!ok) continue;
       const x = d === 'w' ? 0 : d === 'e' ? AW : AW / 2, y = d === 'n' ? 0 : d === 's' ? AH : AH / 2, horiz = d === 'n' || d === 's';
+      const gl = sim.gateLeft(d);
+      if (gl && window.TZB) { TZB.drawGate(g, d, gl, t); continue; }
       if (sim.cleared) {
         const pulse = 0.6 + 0.4 * Math.sin(t * 6), dir = { n: -Math.PI / 2, s: Math.PI / 2, w: Math.PI, e: 0 }[d];
         g.save(); g.translate(x, y); g.rotate(dir); g.globalAlpha = pulse;
@@ -584,6 +668,7 @@
     list.push(P);
     for (const o of sim.others.values()) list.push(o);
     if (sim.raccoon && sim.S.raccoon) list.push(sim.raccoon);
+    if (sim.story && window.TZB) { const fid = sim.findHere(); if (fid) list.push(sim._crate && sim._crate.id === fid ? sim._crate : (sim._crate = { crate: true, id: fid, x: AW / 2, y: AH / 2 + 10 })); if (sim.isDoorCell()) list.push(sim._bd || (sim._bd = { bossDoor: true, y: TZB.DOOR_POS.y + TZB.DOOR_POS.h })); }
     const G = sim.area.garage; if (G) list.push(sim._door || (sim._door = { door: true, y: G.h + 0.5 })); if (G && sim._door.y !== G.h + 0.5) sim._door.y = G.h + 0.5;
     list.sort((a, b) => a.y - b.y);
     const frozen = sim.buffs.freeze > 0 || sim.remoteFreeze > 0;
@@ -592,6 +677,9 @@
       if (q === sim.raccoon) { drawRaccoon(g, q, t); continue; }
       if (q.door) { TA.drawGarage(g, sim.area, intro ? clamp((sim.introT - 1.3) / 1.5, 0, 1) : 1, t); continue; }
       if (q.tx != null && q.ti == null && q.id && sim.others.has(q.id)) { drawOther(g, sim, q, V); continue; }
+      if (q.fb) { if (window.TZB) TZB.drawBoss(g, q, t); continue; }
+      if (q.crate) { TZB.drawCrate(g, q.x, q.y, q.id, t, false); continue; }
+      if (q.bossDoor) { TZB.drawDoor(g, sim.story.plan.doorLook, !!sim.story.doorOpen, t, sim.story.keys >= 3); continue; }
       const spr = TA.zombie(q.type, Math.floor(q.f) % 4, kp, q.flash > 0);
       g.save(); g.translate(q.x, q.y); if (q.face < 0) g.scale(-1, 1);
       g.drawImage(spr, -spr.ox, -spr.oy, spr.width / kp, spr.height / kp);
@@ -637,13 +725,13 @@
   }
   function drawYou(g, sim, V) {
     const P = sim.p, B = sim.buffs, t = sim.t;
-    if (sim.dead) { heroDraw(g, sim.me, P.x, P.y, { k: V.k * V.dpr, dead: true, face: P.face }); return; }
+    if (sim.dead) { heroDraw(g, sim.me, P.x, P.y, { k: Math.max(0.2, Math.round(V.k * V.dpr * 10) / 10), dead: true, face: P.face }); return; }
     const blink = P.inv > 0 && Math.sin(t * 40) > 0;
     // aim line (subtle) and the ground ring in your colour
     g.strokeStyle = sim.me.color || '#ffd23f'; g.lineWidth = 3; g.globalAlpha = 0.8; g.beginPath(); g.ellipse(P.x, P.y, 24, 9, 0, 0, TAU); g.stroke(); g.globalAlpha = 1;
     const aimUp = Math.sin(P.aim) < -0.3;
     if (aimUp) gun(g, sim, P);
-    heroDraw(g, sim.me, P.x, P.y, { k: V.k * V.dpr, moving: P.moving || sim.phase === 'intro' && sim.introT > 2.9, walkT: P.walkT, face: P.face, hurt: P.inv > 0.4, alpha: blink ? 0.5 : 1 });
+    heroDraw(g, sim.me, P.x, P.y, { k: Math.max(0.2, Math.round(V.k * V.dpr * 10) / 10), moving: P.moving || sim.phase === 'intro' && sim.introT > 2.9, walkT: P.walkT, face: P.face, hurt: P.inv > 0.4, alpha: blink ? 0.5 : 1 });
     if (!aimUp && (sim.phase !== 'intro' || sim.introT > 2.9)) gun(g, sim, P);
     if (P.armor > 0) { const ay = P.y - 92; g.fillStyle = '#b7c2cc'; g.strokeStyle = '#1b1410'; g.lineWidth = 3; g.beginPath(); g.ellipse(P.x, ay, 20, 7, 0, 0, TAU); g.fill(); g.stroke(); g.fillStyle = '#7a8590'; g.fillRect(P.x - 6, ay - 7, 12, 5); g.strokeRect(P.x - 6, ay - 7, 12, 5); }
     if (B.shield > 0) { g.strokeStyle = `rgba(110,227,255,${0.5 + 0.3 * Math.sin(t * 10)})`; g.lineWidth = 5; g.beginPath(); g.arc(P.x, P.y - 34, 46, 0, TAU); g.stroke(); g.fillStyle = 'rgba(110,227,255,0.13)'; g.fill(); }
@@ -653,7 +741,7 @@
   function drawOther(g, sim, o, V) {
     const who = (sim.o.people && sim.o.people(o.id)) || { id: o.id, name: '?', color: '#fff' };
     g.strokeStyle = who.color || '#fff'; g.lineWidth = 3; g.beginPath(); g.ellipse(o.x, o.y, 24, 9, 0, 0, TAU); g.stroke();
-    heroDraw(g, who, o.x, o.y, { k: V.k * V.dpr, moving: Math.abs(o.tx - o.x) + Math.abs(o.ty - o.y) > 2, walkT: o.walkT, face: o.face || 1, dead: o.dead });
+    heroDraw(g, who, o.x, o.y, { k: Math.max(0.2, Math.round(V.k * V.dpr * 10) / 10), moving: Math.abs(o.tx - o.x) + Math.abs(o.ty - o.y) > 2, walkT: o.walkT, face: o.face || 1, dead: o.dead });
     if (!o.dead) A().drawGun(g, o.x + (o.face || 1) * 6, o.y - 28, o.aim || 0, 0, false);
     if (o.shield) { g.strokeStyle = 'rgba(110,227,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.arc(o.x, o.y - 34, 44, 0, TAU); g.stroke(); }
     g.font = 'bold 20px "Lilita One", sans-serif'; g.textAlign = 'center'; g.lineWidth = 5; g.strokeStyle = '#1b1410'; g.strokeText(who.name || '', o.x, o.y - 92); g.fillStyle = who.color || '#fff'; g.fillText(who.name || '', o.x, o.y - 92);

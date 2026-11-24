@@ -78,7 +78,7 @@ body.g-trash { --tz-green: #9cff3c; --tz-orange: #ff8c2e; --tz-ink: #1b1410; --t
 body.tz-playing { overflow: hidden; overscroll-behavior: none; }
 .tz-root { position: fixed; inset: 0; z-index: 60; background: #0c0a08; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .tz-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-.tz-pause { position: absolute; top: 10px; right: 12px; width: 46px; height: 42px; border-radius: 12px; border: 3px solid #1b1410; background: rgba(242,239,230,0.92); font-size: 20px; z-index: 3; }
+.tz-pause { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); width: 46px; height: 42px; border-radius: 12px; border: 3px solid #1b1410; background: rgba(242,239,230,0.92); font-size: 20px; z-index: 3; }
 .tz-ov { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; background: rgba(12,8,6,0.72); color: #f2efe6; overflow: auto; padding: 12px; box-sizing: border-box; }
 .tz-ov[hidden] { display: none; }
 .tz-lvl { text-align: center; width: 100%; max-width: 900px; }
@@ -134,3 +134,31 @@ body.tz-playing { overflow: hidden; overscroll-behavior: none; }
 /* the first-join header tour points at buttons hidden under the full-screen game */
 body.tz-playing .ph-tour { display: none; }
 body.tz-playing .toast { z-index: 70; top: 10px; bottom: auto; }
+
+/* ---------------- Regular mode ---------------- */
+.tz-rcard { position: absolute; bottom: calc(40px + env(safe-area-inset-bottom)); left: 50%; transform: translate(-50%, 160%); z-index: 6; display: flex; gap: 10px; align-items: center; max-width: min(560px, 92vw); padding: 8px 14px; border-radius: 14px; border: 4px solid #1b1410; background: #f2efe6; color: #1b1410; box-shadow: 0 6px 0 rgba(0,0,0,0.4); transition: transform 0.35s cubic-bezier(.2,1.4,.5,1); pointer-events: none; }
+.tz-rcard.show { transform: translate(-50%, 0); }
+.tz-rcard.radio { background: #2b2f33; color: #f2efe6; border-color: #9cff3c; }
+.tz-rcard small { display: block; font: 12px 'Lilita One', sans-serif; letter-spacing: 1px; color: #9cff3c; }
+.tz-rcard.find small { color: #b4552a; }
+.tz-rcard b { font: 18px 'Lilita One', sans-serif; } .tz-rcard p { margin: 2px 0 0; font-size: 13px; line-height: 1.25; }
+.tz-rc-i { font-size: 34px; }
+.tz-fs { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: calc(66px + env(safe-area-inset-right)); z-index: 3; height: 42px; padding: 0 12px; border-radius: 12px; border: 3px solid #1b1410; background: #9cff3c; color: #1b1410; font: 15px 'Lilita One', sans-serif; }
+.tz-fs[hidden] { display: none; }
+.tz-finds { display: flex; flex-wrap: wrap; gap: 6px; } .tz-finds span { background: rgba(255,210,63,0.15); border: 2px solid #ffd23f; border-radius: 10px; padding: 3px 8px; font-size: 13px; }
+.tz-story { background: rgba(30,24,36,0.92); border: 3px solid #ffd23f; border-radius: 12px; padding: 8px 12px; display: grid; gap: 6px; }
+.tz-story > div:first-child { display: grid; gap: 3px; } .tz-story b { font: 20px 'Lilita One', sans-serif; color: #ffd23f; } .tz-story span { font-size: 15px; }
+.tz-story i { display: block; height: 7px; border-radius: 4px; background: linear-gradient(90deg, #ff8c2e, #ffd23f); }
+.tz-sk { display: flex; gap: 12px; flex-wrap: wrap; font-size: 16px; } .tz-sk b { font-size: 14px; color: #ff5a3c; }
+.tz-victory { position: relative; overflow: hidden; background: radial-gradient(circle at 50% 35%, #4a5a16, #120e16 70%); }
+.tz-defeat { background: radial-gradient(circle at 50% 35%, #3a1414, #0c0a0e 70%); }
+.tz-rays { position: absolute; inset: -50%; background: repeating-conic-gradient(rgba(255,210,63,0.12) 0 10deg, transparent 10deg 20deg); animation: tz-spin 24s linear infinite; pointer-events: none; }
+@keyframes tz-spin { to { transform: rotate(360deg); } }
+.tz-victory > *:not(.tz-rays):not(.tz-confetti) { position: relative; }
+.tz-confetti { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(#ffd23f 3px, transparent 4px), radial-gradient(#9cff3c 3px, transparent 4px), radial-gradient(#ff5a3c 3px, transparent 4px); background-size: 90px 110px, 130px 90px, 70px 120px; animation: tz-fall 6s linear infinite; opacity: 0.8; }
+@keyframes tz-fall { from { background-position: 0 -200px, 40px -300px, 20px -100px; } to { background-position: 30px 900px, 0 900px, 60px 900px; } }
+.tz-vfinds { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 auto 14px; max-width: 1100px; }
+.tz-vf { background: rgba(0,0,0,0.5); border: 3px solid #ffd23f; border-radius: 12px; padding: 5px 12px; font: 18px 'Lilita One', sans-serif; display: grid; } .tz-vf small { font: 12px sans-serif; color: #cfc6d8; }
+.tz-ph-over.won { position: relative; overflow: hidden; } .tz-win { margin: 0; font: 40px 'Lilita One', sans-serif; color: #ffd23f; text-shadow: 0 3px 0 #1b1410; } .tz-lose { margin: 0; font: 30px 'Lilita One', sans-serif; color: #ff6a4a; }
+.tz-safe { position: absolute; visibility: hidden; pointer-events: none; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+html:has(body.tz-playing), body.tz-playing { overscroll-behavior: none; touch-action: none; }
