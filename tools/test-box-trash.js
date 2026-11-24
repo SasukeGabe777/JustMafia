@@ -186,7 +186,7 @@ test('results: best run first (wave, then kills); the build comes along', () => 
 test('timed nights end on the clock; "wave 20" ends when someone clears it; Party Mode gets a fixed time', () => {
   const { room, clock } = mk({ length: 'm5' }, 1); room.start(); run(room, clock, 4.9 * 60000); assert.equal(room.game.phase, 'play'); run(room, clock, 20000); assert.equal(room.game.phase, 'over'); assert.equal(room.game.overWhy, 'time');
   const w = mk({ length: 'w20' }, 1); w.room.start(); const R = w.room.game.runs.get(w.ps[0].id); R.wave = 20; w.room.act(w.ps[0], { op: 'ev', k: 'clear', wave: 20 }); assert.equal(w.room.game.phase, 'over');
-  assert.deepEqual(def.partyFit({ players: 4, minutes: 10 }), { mode: 'endless', length: 'm10' }); assert.deepEqual(def.partyFit({ players: 4, minutes: 4 }), { mode: 'endless', length: 'm5' }); assert.deepEqual(def.partyFit({ players: 2, minutes: 21 }), { mode: 'endless', length: 'm20' });
+  assert.deepEqual(def.partyFit({ players: 4, minutes: 10 }), { mode: 'score', length: 'm10' }); assert.deepEqual(def.partyFit({ players: 4, minutes: 4 }), { mode: 'score', length: 'm5' }); assert.deepEqual(def.partyFit({ players: 2, minutes: 21 }), { mode: 'score', length: 'm20' });
 });
 test('bots play a whole (timed) night on the server; results() lists everyone best-first', () => {
   const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed: 1 });
@@ -223,7 +223,7 @@ test('Regular: the plan is the same for a seed and different across seeds (finds
     assert(!P.finds[P.door.join()], 'no loot on the door'); assert.equal(ST.tierAt(P, P.door[0], P.door[1]), P.top, 'the door is far away');
     assert(!(P.door[0] === 4 && P.door[1] === 4)); assert(ids.filter((i) => ST.FINDS[i].kind === 'equip' || ST.FINDS[i].kind === 'ability').length >= 5);
   }
-  assert(doors.size >= 4 && looks.size >= 4 && bosses.size === 4 && finds.size >= 55, `${doors.size} doors, ${looks.size} looks, ${bosses.size} bosses`);
+  assert(doors.size >= 4 && looks.size >= 4 && bosses.size === 7 && finds.size >= 55, `${doors.size} doors, ${looks.size} looks, ${bosses.size} bosses`);
 });
 test('Regular: a chained gate blocks the way until the team has the kills; then it bursts open', () => {
   const { room, ps: [a, b] } = story(2); room.start(); const g = room.game;
@@ -299,7 +299,7 @@ function sandbox() {
   let now = 0; const reports = [], lives = [], events = [];
   const ctx = { console, Math, Date, JSON, Object, Array, Map, Set, Number, String, Promise, Infinity, isFinite, performance: { now: () => now } };
   ctx.window = ctx; ctx.self = ctx; vm.createContext(ctx);
-  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-shop.js', 'trash-play.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
+  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-shop.js', 'trash-play.js', 'trash-arms.js', 'trash-fight.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
   const make = (o = {}) => new ctx.TZSim.Sim({ seed: 42, homes: [[4, 4]], me: { id: o.id || 'me', name: 'Me', color: '#fff' }, settings: { diff: 'normal', aim: 'on', xp: 'shared', ...(o.settings || {}) }, restore: o.restore || { cell: [4, 4], home: [4, 4], wave: 1, run: 1 },
     report: (m) => { reports.push(m); return Promise.resolve({ ok: true }); }, live: (m) => lives.push(m), on: (k, d) => events.push([k, d]), people: () => null });
   const step = (s, sec, I = {}, pick = true) => { for (let t = 0; t < sec; t += 1 / 60) { now += 1000 / 60; if (pick && s.cards) s.pick(0); s.update(1 / 60, I); } };
@@ -361,7 +361,7 @@ test('phone: pickups and their timers (shield, armour, minigun, sneakers, freeze
   s.applyPickup('shield'); assert.equal(s.buffs.shield, 8); const hp = s.p.hp; s.hurt(50); assert.equal(s.p.hp, hp, 'shield blocks');
   S.step(s, 8.2); assert.equal(s.buffs.shield, 0);
   s.applyPickup('armor'); s.p.inv = 0; s.hurt(50); assert.equal(s.p.hp, hp, 'armour soaks one hit'); assert.equal(s.p.armor, 0); s.p.inv = 0; s.hurt(10); assert(s.p.hp < hp, 'then you get hurt');
-  s.applyPickup('minigun'); assert.equal(s.buffs.minigun, 15); S.step(s, 5); assert(Math.abs(s.buffs.minigun - 10) < 0.2);
+  s.applyPickup('minigun'); assert.equal(s.buffs.minigun, 12); S.step(s, 5); assert(Math.abs(s.buffs.minigun - 7) < 0.2);
   s.applyPickup('kicks'); assert.equal(s.buffs.kicks, 10); s.applyPickup('xp2'); assert.equal(s.buffs.xp2, 20); const x0 = s.xp; s.gainXp(1); assert.equal(s.xp - x0, 2, 'double XP');
   s.p.hp = 10; s.applyPickup('snack'); assert.equal(s.p.hp, 45);
   for (let i = 0; i < 20; i++) s.spawnOne('walker'); s.applyPickup('nuke'); S.step(s, 0.05); assert.equal(s.z.filter((z) => z.hp > 0).length, 0, 'Garbage Day clears the area');
@@ -401,6 +401,244 @@ test('phone co-op: the host sends snapshots, the guest mirrors them, hits come b
   guest.onLive({ t: 'host', area: '2,2', host: 'g', members: ['g'] }); assert.equal(guest.mode, 'solo');
   assert.equal(guest.z.length, last.z.length / 5, 'zombies carried over'); assert(guest.z.every((q) => q.speed > 0), 'and they move again');
   const n = guest.zid; guest.spawnOne(); assert(guest.z[guest.z.length - 1].id >= n, 'fresh ids');
+});
+
+
+// ---------------- B: modes, places, call-outs, maps, going down ----------------
+const PL = require('../public/box/games/trash-shop');
+test('Score attack: timed, ranked by score; falling costs 15% (min 200) and you are back at your garage after 5 s', () => {
+  const { room, clock, ps: [a, b] } = mk({ mode: 'score', length: 'm5' }, 2); room.start(); const g = room.game;
+  assert.equal(g.endsAt - g.startedAt, 5 * 60000);
+  run(room, clock, 2000);
+  room.act(a, { op: 'st', kills: 30, lvl: 3, hp: 90, mhp: 100, wave: 1, score: 2000, mult: 3 });
+  room.act(b, { op: 'st', kills: 40, lvl: 3, hp: 90, mhp: 100, wave: 1, score: 900, mult: 1 });
+  assert.equal(g.runs.get(a.id).score, 2000); assert.deepEqual(g.standings().map((r) => r.id), [a.id, b.id], 'score beats kills');
+  room.act(b, { op: 'st', kills: 41, lvl: 3, hp: 90, mhp: 100, wave: 1, score: 999999999, mult: 1 }); assert(g.runs.get(b.id).score < 30000, 'no impossible jumps');
+  room.act(a, { op: 'ev', k: 'dead' }); assert.equal(room.act(a, { op: 'respawn' }).ok, false, 'a short wait');
+  run(room, clock, 5200); assert(room.act(a, { op: 'respawn' }).ok); const R = g.runs.get(a.id);
+  assert.equal(R.state, 'play'); assert.equal(R.score, 1700); assert.deepEqual(R.cell, R.home); assert(g.feed.some((f) => /lost 300 points/.test(f.text)));
+  run(room, clock, 5 * 60000); assert.equal(g.phase, 'over'); assert.equal(g.overWhy, 'time');
+});
+test('Party Mode: TrashZombies is a score attack lasting exactly the planned minutes; party points go by score', () => {
+  assert.equal(def.partyFit({ players: 4, minutes: 10 }).mode, 'score');
+  const { room, ps: [a, b] } = mk({ mode: 'score', length: 'm10' }, 2);
+  room.partyMode = { defs: [room.def], index: 0, plan: { trash: 7 }, phase: 'playing' }; room.start(); const g = room.game;
+  assert.equal(g.endsAt - g.startedAt, 7 * 60000, 'the plan’s 7 minutes, not the nearest option');
+  g.runs.get(a.id).score = 100; g.runs.get(b.id).score = 5000; g.end('time'); assert.deepEqual(g.results(), [b.id, a.id]);
+});
+test('places: about one block in five, where they fit; the master armorer and the crucible far out; same per seed', () => {
+  for (const seed of [1, 5, 77, 2024]) {
+    const P = PL.places(seed), n = {}; for (const t of Object.values(P)) n[t] = (n[t] || 0) + 1;
+    assert.deepEqual(P, PL.places(seed)); assert(Object.keys(P).length >= 14 && Object.keys(P).length <= 20, Object.keys(P).length);
+    assert.equal(n.forge, 1); assert.equal(n.master, 1); assert(n.tinker >= 2 && n.gunsmith >= 1 && n.market >= 3 && n.clinic >= 2 && n.armor >= 2);
+    const d = W.roadDist(seed, [[4, 4]]); for (const [k, t] of Object.entries(P)) if (t === 'forge' || t === 'master') { const [x, y] = k.split(',').map(Number); assert(d[y * 9 + x] >= 3, t + ' is far out'); }
+    assert(!P['4,4']);
+  }
+  assert.deepEqual([PL.PLACES.tinker.up, PL.PLACES.gunsmith.up, PL.PLACES.master.up], [[1, 5], [5, 8], [8, 10]], 'three ranks of gun merchants');
+  assert(PL.price('medkit', 10) > PL.price('medkit', 1) && PL.price('medkit', 1, 2) > PL.price('medkit', 1), 'prices climb with the wave and with repeat buys');
+  assert.deepEqual([0, 7, 8, 20, 36].map(PL.mult), [1, 1, 2, 3, 4]);
+});
+test('discovery is shared: walking into a place reveals it for the whole team (TV + every phone); call-outs reach everyone', () => {
+  const { room, clock, ps: [a, b] } = mk({}, 2); room.start(); const g = room.game;
+  const target = Object.entries(PL.places(g.seed)).find(([k]) => !g.homes.some((h) => h.join() === k));
+  walkTo(room, a, target[0].split(',').map(Number));
+  assert(g.found.has(target[0])); assert.deepEqual(g.view(b).found.find(([k]) => k === target[0]), target, 'Ben sees it too'); assert(g.tv().found.length >= 1);
+  assert(g.feed.some((f) => f.text.includes(PL.PLACES[target[1]].name)));
+  assert(room.act(a, { op: 'ping', k: 'place', cell: target[0] }).ok); assert.equal(room.act(a, { op: 'ping', k: 'here' }).ok, false, 'not every half second');
+  run(room, clock, 1600); assert(room.act(b, { op: 'ping', k: 'go', cell: target[0] }).ok);
+  assert.equal(room.act(b, { op: 'ping', k: 'go', cell: '0,0' }).ok || g.found.has('0,0') || g.explored.has('0,0'), false, 'only places someone found');
+  const pv = g.view(a).pings; assert.equal(pv.length, 2); assert.equal(pv[1].name, 'Ben'); assert.equal(pv[1].x + ',' + pv[1].y, target[0]); assert(g.tv().pings.length === 2);
+  assert.equal(room.act(a, { op: 'ping', k: 'lol' }).ok, false);
+  run(room, clock, 31000); assert.equal(g.tv().pings.length, 0, 'call-outs fade after a while');
+});
+test('boss maps: only from a boss wave, once; the finder picks where it leads and the team gets the place + a route', () => {
+  const { room, ps: [a, b] } = mk({}, 2); room.start(); const g = room.game, R = g.runs.get(a.id);
+  assert.equal(room.act(a, { op: 'ev', k: 'mapgot', wave: 3 }).ok, false, 'no boss on wave 3');
+  assert.equal(room.act(a, { op: 'reveal', what: 'forge' }).ok, false, 'no map yet');
+  R.wave = 5; const got = room.act(a, { op: 'ev', k: 'mapgot', wave: 5 }); assert(got.ok); assert(got.options.length >= 3 && got.options.some((o) => o.what === 'forge') && got.options.some((o) => o.what === 'stash'));
+  assert.equal(room.act(a, { op: 'ev', k: 'mapgot', wave: 5 }).ok, false, 'one map per boss');
+  const r = room.act(a, { op: 'reveal', what: 'forge' }); assert(r.ok); assert.equal(g.found.get(r.k).type, 'forge'); assert(g.view(b).found.some(([k]) => k === r.k));
+  assert(g.pings.some((q) => q.place === 'forge' && q.x + ',' + q.y === r.k), 'a route call-out for everyone');
+  assert.equal(room.act(a, { op: 'reveal', what: 'stash' }).ok, false, 'that map is used up');
+  R.wave = 10; room.act(a, { op: 'ev', k: 'mapgot', wave: 10 }); const s = room.act(a, { op: 'reveal', what: 'stash' }); assert(s.ok);
+  R.cell = s.k.split(',').map(Number); const c = room.act(a, { op: 'stash' }); assert(c.ok && c.cash > 0); assert.equal(room.act(a, { op: 'stash' }).ok, false, 'once each');
+  assert(g.view(b).stashes.includes(s.k), 'Ben can still dig it up'); assert(!g.view(a).stashes.includes(s.k));
+});
+test('Regular co-op: you go down instead of out; a teammate standing by you picks you up; everyone down loses', () => {
+  const { room, ps: [a, b] } = story(2); room.start(); const g = room.game, A = g.runs.get(a.id), B = g.runs.get(b.id);
+  assert(room.act(a, { op: 'ev', k: 'downed' }).ok); assert.equal(A.state, 'down'); assert(g.feed.some((f) => /is down/.test(f.text)));
+  assert.equal(room.act(b, { op: 'revive', id: a.id }).ok, false, 'you have to be there');
+  B.cell = A.cell.slice(); g.outbox.length = 0; assert(room.act(b, { op: 'revive', id: a.id }).ok); assert.equal(A.state, 'play');
+  assert(g.outbox.some((m) => m.to === a.id && m.data.t === 'revived'), 'Ana’s phone is told');
+  const solo = story(1); solo.room.start(); assert.equal(solo.room.act(solo.ps[0], { op: 'ev', k: 'downed' }).ok, false, 'solo: nobody to pick you up');
+  room.act(a, { op: 'ev', k: 'downed' }); assert.equal(room.act(b, { op: 'ev', k: 'downed' }).ok, false, 'nobody left to help'); room.act(b, { op: 'ev', k: 'dead' }); assert.equal(g.phase, 'over'); assert.equal(g.overWhy, 'lost');
+});
+test('phone: score per kill x the streak; the streak drops when you get hit; wave clear and no-damage bonuses; cash', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.p.inv = 1e9;
+  for (let i = 0; i < 9; i++) { const z = s.spawnOne('walker'); s.damageZ(z, 1e6, 'me'); S.step(s, 0.5); }
+  assert.equal(s.mult, 2); assert(s.score >= 8 * 10 + 20, 'x2 kicks in: ' + s.score);
+  s.p.inv = 0; s.buffs.shield = 0; s.hurt(5); assert.equal(s.mult, 1, 'hit: streak gone'); s.p.inv = 1e9;
+  const sc = s.score; s.z.length = 0; s.waveKills = s.spec.target; S.step(s, 0.1); assert(s.cleared); assert.equal(s.score - sc, 300, 'clear bonus only (you were hit)');
+  assert(s.coins.length > 0 || s.cash > 0, 'zombies drop cash'); S.step(s, 2); assert(s.cash > 0 && s.coins.length === 0, 'coins fly to you after the clear');
+  const s2 = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 2, run: 1 } }); s2.p.inv = 1e9; s2.z.length = 0; s2.waveKills = s2.spec.target; S.step(s2, 0.1); assert.equal(s2.score, 200 + 500, 'clear + no damage');
+  for (let i = 0; i < 4; i++) { const z = s2.spawnOne('walker'); s2.damageZ(z, 1e6, 'me'); } assert(s2.score >= 700 + 40 + 150, 'multi-kill bonus');
+});
+test('phone shops: only by a place once the wave is clear; stock fits the place; buying costs cash, prices rise, one of each per visit', () => {
+  const S = sandbox(), seed = 42, P = PL.places(seed), [k, type] = Object.entries(P).find(([, t]) => t === 'clinic');
+  const s = S.make({ restore: { cell: k.split(',').map(Number), home: [4, 4], wave: 6, run: 1 } }); s.p.inv = 1e9;
+  assert.equal(s.placeType(), 'clinic'); const D = s.shopDoor(); s.p.x = D.x; s.p.y = D.y; S.step(s, 0.1); assert(!s.nearShop, 'closed during the wave');
+  s.z.length = 0; s.waveKills = s.spec.target; S.step(s, 0.1); s.p.x = D.x; s.p.y = D.y; S.step(s, 0.1); assert(s.nearShop, 'open after the clear');
+  const St = s.stockOf(); assert(St.list.length >= 3 && St.list.every((id) => PL.GOODS[id].shop === 'clinic'));
+  const id = St.list[0]; s.cash = 0; assert.equal(s.buy(id).ok, false, 'no cash'); s.cash = 1000; const c = s.priceOf(id); assert(c > PL.GOODS[id].base, 'wave 6 prices');
+  s.p.hp = 10; assert(s.buy(id).ok); assert.equal(s.cash, 1000 - c); assert.equal(s.buy(id).ok, false, 'sold out this visit'); assert(S.reports.some((r) => r.k === 'buy' && r.id === id));
+  // the market: a book teaches the ability you choose; armour gear fills the buttons
+  const mk2 = Object.entries(P).find(([, t]) => t === 'market')[0], m = S.make({ restore: { cell: mk2.split(',').map(Number), home: [4, 4], wave: 2, run: 1 } }); m.cash = 999;
+  m.stocks[m.cellKey() + ':market'] = { wave: m.wave, type: 'market', list: ['book', 'bag', 'ticket', 'chips'], sold: {} };
+  assert(m.buy('book', 'orbit').ok); assert.equal(m.ab.orbit, 1); assert(m.buy('bag').ok); assert(m.pocket && W.PK[m.pocket]); assert(m.usePocket()); assert(!m.pocket);
+  assert(m.buy('ticket').ok); m.gainXp(W.xpNeed(m.lvl)); const c1 = [...m.cards].join(); assert(m.reroll()); assert.equal(m.rerolls, 0); void c1;
+  const ar = Object.entries(P).find(([, t]) => t === 'armor')[0], A = S.make({ restore: { cell: ar.split(',').map(Number), home: [4, 4], wave: 2, run: 1 } }); A.cash = 999; A.p.inv = 0;
+  A.stocks[A.cellKey() + ':armor'] = { wave: A.wave, type: 'armor', list: ['plate', 'grenade', 'turret', 'vest'], sold: {} };
+  assert(A.buy('plate').ok); const hp = A.p.hp; A.buffs.shield = 0; A.hurt(30); assert.equal(A.p.hp, hp, 'a plate soaks a hit'); assert.equal(A.plates, 2);
+  const arm = A.S.armor; assert(A.buy('vest').ok); assert(A.S.armor < arm);
+  assert(A.buy('grenade').ok); for (let i = 0; i < 10; i++) A.spawnOne('walker'); for (const z of A.z) { z.x = A.p.x + 100; z.y = A.p.y; } assert(A.useBomb()); assert.equal(A.z.filter((z) => z.hp > 0).length, 0, 'bomb clears the screen'); assert.equal(A.useBomb(), false);
+  assert(A.buy('turret').ok); assert(A.useTurret()); A.spawnOne('walker'); const z = A.z[A.z.length - 1]; z.x = A.turrets[0].x + 200; z.y = A.turrets[0].y; A.p.inv = 1e9; S.step(A, 2); assert(z.hp < z.mhp || z.hp <= 0, 'the turret shoots');
+});
+test('phone: a boss wave drops a map; walking over it asks the server and offers the choice', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 5, run: 1 } }); s.p.inv = 1e9;
+  const z = s.spawnOne('boss'); s.damageZ(z, 1e9, 'me'); assert(s.mapItem, 'a map on the ground');
+  s.p.x = s.mapItem.x; s.p.y = s.mapItem.y + 20; S.step(s, 0.1); assert(S.reports.some((r) => r.k === 'mapgot' && r.wave === 5)); assert(!s.mapItem);
+  const s2 = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 4, run: 1 } }); const z2 = s2.spawnOne('boss'); s2.damageZ(z2, 1e9, 'me'); assert(!s2.mapItem, 'only on the boss waves');
+});
+test('phone co-op: going down, a friend standing by you for 2 s sends the revive; getting back up', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 2, run: 1 } });
+  s.story = { tiers: new Array(81).fill(0), tier: 0, needs: [1, 2, 3, 4], kills: 0, keys: 0, plan: { finds: {}, door: [8, 8] } }; s.o.mates = () => 1;
+  s.p.inv = 0; s.buffs.shield = 0; s.hurt(9999); assert(s.down && !s.dead, 'down, not out'); assert(S.reports.some((r) => r.k === 'downed'));
+  S.step(s, 3); assert(s.down.t < 23); s.onLive({ t: 'revived', area: '2,2' }); assert(!s.down); assert(s.p.hp > 0);
+  s.p.inv = 0; s.hurt(9999); S.step(s, 26); assert(s.dead, 'bled out');
+  const h = S.make({ id: 'h', restore: { cell: [2, 2], home: [4, 4], wave: 2, run: 1 } }); h.p.inv = 1e9; h.mode = 'host'; h.areaMembers = ['h', 'g'];
+  h.other('g', [h.p.x + 40, h.p.y, 0, 0, 100, 0, 0, 0, 0, 1, 1, 0]); const n = S.reports.length; S.step(h, 2.3); assert(S.reports.slice(n).some((r) => r.op === 'revive' && r.id === 'g'));
+});
+
+
+// ---------------- C: weapons, merchants, the crucible, combos, classes, items, debuffs, new zombies ----------------
+const AR = require('../public/box/games/trash-arms');
+const at = (S, type, wave = 6, extra = {}) => { const [k] = Object.entries(PL.places(42)).find(([, t]) => t === type); return S.make({ restore: { cell: k.split(',').map(Number), home: [4, 4], wave, run: 1, ...extra } }); };
+test('weapons: up to 4 extra slots that fire by themselves; a duplicate adds a level instead; no level past 10', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.p.inv = 1e9;
+  assert.equal(s.addWeapon('shotgun'), true); assert.equal(s.weapons.length, 1); assert(S.reports.some((r) => r.k === 'weapon' && r.id === 'shotgun'));
+  assert.equal(s.addWeapon('shotgun'), 'level'); assert.equal(s.weapons[0].lv, 2, 'duplicate: +1 level');
+  for (const id of ['smg', 'nailgun', 'crossbow']) s.addWeapon(id); assert.equal(s.weapons.length, AR.SLOTS); const c0 = s.cash; assert.equal(s.addWeapon('rail'), 'cash'); assert.equal(s.cash, c0 + 25, 'slots full: cash instead');
+  for (const id of ['flamer', 'blower', 'hubcap', 'launcher', 'coil', 'saw', 'rail', 'bat']) { const t = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); t.p.inv = 1e9; t.addWeapon(id); t.spawnOne('walker'); const z = t.z[0]; z.x = t.p.x + 60; z.y = t.p.y; z.hp = z.mhp = 1e6; S.step(t, 1.6); assert(z.hp < 1e6, id + ' hurts zombies'); }
+  assert(Object.keys(AR.WEAPONS).length >= 12 && new Set(Object.values(AR.WEAPONS).flatMap((w) => w.names)).size === Object.keys(AR.WEAPONS).length * 3, 'every weapon has 3 tier names');
+});
+test('gun merchants: the Tinkerer does Lv 1-5, the Gunsmith 5-8, the Master Armorer 8-10; prices rise with level and tier', () => {
+  assert(AR.canUpgrade('tinker', 1) && AR.canUpgrade('tinker', 4) && !AR.canUpgrade('tinker', 5));
+  assert(!AR.canUpgrade('gunsmith', 4) && AR.canUpgrade('gunsmith', 5) && AR.canUpgrade('gunsmith', 7) && !AR.canUpgrade('gunsmith', 8));
+  assert(!AR.canUpgrade('master', 7) && AR.canUpgrade('master', 8) && AR.canUpgrade('master', 9) && !AR.canUpgrade('master', 10));
+  assert(AR.upgradeCost('shotgun', 5, 1, 1) > AR.upgradeCost('shotgun', 1, 1, 1) && AR.upgradeCost('shotgun', 1, 2, 1) > AR.upgradeCost('shotgun', 1, 1, 1) && AR.upgradeCost('rail', 1, 1, 1) > AR.upgradeCost('smg', 1, 1, 1));
+  const S = sandbox(), s = at(S, 'tinker'); s.cash = 1e5; s.addWeapon('smg');
+  for (let i = 0; i < 4; i++) assert(s.upgrade('smg', 'tinker').ok); assert.equal(s.weapons[0].lv, 5); assert.equal(s.upgrade('smg', 'tinker').ok, false, 'the tinker stops at 5');
+  assert(s.upgrade('pistol', 'tinker').ok, 'the pistol levels up too'); const d0 = s.S.dmg; s.gun.lv = 2; s.stats(); s.gun.lv = 6; s.stats(); assert(s.S.dmg > d0);
+  assert.equal(s.upgrade('smg', 'gunsmith').ok, true); assert.equal(s.upgrade('smg', 'master').ok, false, 'master needs level 8');
+  s.weapons[0].lv = 8; assert(s.upgrade('smg', 'master').ok); assert(s.upgrade('smg', 'master').ok); assert.equal(s.weapons[0].lv, 10); assert.match(s.upgrade('smg', 'master').error, /crucible/);
+  s.cash = 0; s.weapons[0].lv = 2; assert.match(s.upgrade('smg', 'tinker').error, /cash/);
+  assert(S.reports.some((r) => r.k === 'upgrade' && r.id === 'smg'));
+});
+test('the crucible (a separate place) evolves a level-10 weapon: Tier 1 -> 2 -> 3, back to level 1 each time, needs a core; the golden cutscene plays', () => {
+  const S = sandbox(), f = at(S, 'forge'); f.p.inv = 1e9; f.addWeapon('shotgun'); const w = f.weapons[0];
+  assert.equal(f.placeType(), 'forge'); assert.match(f.evolve('shotgun').error, /level 10/); w.lv = 10; assert.match(f.evolve('shotgun').error, /core/);
+  f.cores = 2; assert(f.evolve('shotgun').ok); assert(f.evo, 'the cutscene starts'); assert(S.events.some(([k]) => k === 'evolve'));
+  const x0 = f.p.x; S.step(f, 1, { mx: 1 }); assert.equal(f.p.x, x0, 'solo: the game waits during the cutscene'); assert.equal(w.tier, 1, 'not yet');
+  S.step(f, 2.6); assert(!f.evo); assert.equal(w.tier, 2); assert.equal(w.lv, 1); assert.equal(f.cores, 1); assert(S.reports.some((r) => r.k === 'evolve' && r.tier === 2)); assert.equal(AR.wname('shotgun', 2), 'Double-Barrel Dumpster');
+  assert.match(f.evolve('shotgun').error, /level 10/, 'level 1 again: back to the merchants'); w.lv = 10; assert(f.evolve('shotgun').ok); S.step(f, 3.6); assert.equal(w.tier, 3);
+  w.lv = 10; f.cores = 5; assert.match(f.evolve('shotgun').error, /fully evolved/i); assert.equal(AR.wname('pistol', 3), 'Golden Hand-Cannon');
+  const m = at(S, 'market'); m.addWeapon('smg'); m.weapons[0].lv = 10; m.cores = 1; assert.match(m.evolve('smg').error, /crucible/, 'only at the crucible');
+  assert(!at(S, 'gunsmith').placeType().includes('forge'));
+});
+test('combos: owning both halves unlocks one (banner + feed), listed in the combo book; timed super weapons fuse', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.p.inv = 1e9;
+  s.addWeapon('flamer'); assert.equal(s.combos.size, 0); s.addWeapon('blower'); assert(s.combos.has('firetornado')); assert(/COMBO/.test(s.banner.text)); assert(S.reports.some((r) => r.k === 'combo' && r.id === 'firetornado'));
+  s.addWeapon('shotgun'); s.ab.bounce = 1; S.step(s, 0.6); assert(s.combos.has('pinball'), 'a weapon + an ability');
+  s.ab.drone = 1; s.kits = 1; s.useTurret(); S.step(s, 0.6); assert(s.combos.has('flyturret'), 'used gear + an ability');
+  assert(AR.COMBOS.length >= 8 && AR.COMBOS.every((c) => c.need.length === 2));
+  s.applyPickup('minigun'); assert(!s.tcombo); s.applyPickup('rockets'); assert.equal(s.tcombo.name, 'Rocket Minigun'); S.step(s, 9); assert(!s.tcombo, 'it ends with the rockets');
+});
+test('weapon carriers: some zombies hold a timed super weapon (same on every phone); kill one and it drops for you', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 8, run: 1 } }); s.p.inv = 1e9;
+  let carriers = 0, elites = 0; for (let i = 0; i < 400; i++) { const z = s.makeZ('walker', 100, 100); if (z.carry) carriers++; if (z.elite) elites++; } s.z.length = 0;
+  assert(carriers > 4 && carriers < 30, 'a few carriers: ' + carriers); assert(elites > 2 && elites < 25, 'a few elites: ' + elites);
+  const z = s.makeZ('walker', s.p.x + 200, s.p.y); z.carry = 'raygun'; s.pk.length = 0; s.damageZ(z, 1e9, 'me'); assert(s.pk.some((p) => p.k === 'raygun'), 'it drops the ray gun');
+  s.applyPickup('raygun'); s.spawnOne('walker'); const q = s.z[s.z.length - 1]; q.x = s.p.x + 300; q.y = s.p.y; q.hp = q.mhp = 1e6; S.step(s, 1); assert(q.hp < 1e6, 'the ray gun fires');
+  const w1 = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 1, run: 1 } }); for (let i = 0; i < 200; i++) assert(!w1.makeZ('walker', 1, 1).carry, 'not on the first waves');
+});
+test('classes: six survivors with a passive and starting kit; their cards lean their way', () => {
+  const S = sandbox(), mk1 = (c) => { const s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 2, run: 1 } }); s.setClass(c); return s; };
+  assert.equal(Object.keys(AR.CLASSES).length, 6);
+  const base = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 2, run: 1 } }).S;
+  assert.equal(mk1('demo').bombs, 2); assert.equal(mk1('tinker').kits, 2); const b = mk1('brawler'); assert(b.weapons.some((w) => w.id === 'bat') && b.S.mhp > base.mhp);
+  assert(mk1('sharp').S.crit > base.crit); assert(mk1('medic').S.regen > base.regen); assert(mk1('scav').cashMul > 1.5);
+  const s = mk1('medic'); assert.equal(s.setClass('demo'), false, 'one class per run'); assert(S.reports.some((r) => r.k === 'class' && r.id === 'medic'));
+  let hits = 0; for (let i = 0; i < 200; i++) { s.cards = null; s.offerCards(); if (s.cards.some((c) => AR.CLASSES.medic.bias.includes(c))) hits++; } s.cards = null; s.choosing = false; s.paused = false;
+  assert(hits > 90, 'medic cards lean to healing: ' + hits);
+});
+test('items: trade-offs that stack; lock one for the next visit; rerolling costs more each time', () => {
+  const S = sandbox(), s = at(S, 'market', 3); s.cash = 5000;
+  const St = s.stockOf(); assert(St.items.length >= 2); const id = St.items[0], d0 = s.S.dmg, sp0 = s.S.speed;
+  s.items.boots = 1; s.stats(); assert(s.S.dmg > d0 && s.S.speed < sp0, 'Lead Boots: harder hits, slower feet'); delete s.items.boots; s.stats();
+  assert(s.buyItem(id).ok); assert.equal(s.items[id], 1); assert.equal(s.buyItem(id).ok, false, 'sold');
+  const other = St.items[1]; assert(s.lockItem(other)); const c1 = s.cash; assert(s.rerollShop().ok); assert.equal(c1 - s.cash, 10); assert(St.items.includes(other), 'the locked one stays');
+  const c2 = s.cash; s.rerollShop(); assert.equal(c2 - s.cash, 20, 'reroll price doubles');
+  s.wave++; s.stocks = {}; const St2 = s.stockOf(); assert(St2.items.includes(other), 'locked for the next visit');
+  assert(Object.keys(AR.ITEMS).length >= 10 && Object.values(AR.ITEMS).some((i) => i.rar === 'legendary'));
+  const t = at(S, 'gunsmith'); const G = t.stockOf(); assert(G.weapons.length >= 1 && G.weapons.every((w) => ['rare', 'epic'].includes(AR.WEAPONS[w].rar)), 'the gunsmith sells better guns');
+});
+test('debuffs: short, at most two at once, a little immunity after; blind / zoom / web / jam / dizzy / leech / sludge / rattle; cleansed at the clinic', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 12, run: 1 } }); s.p.inv = 0; s.buffs.shield = 0; s.cleared = true; s.events.length = 0;
+  assert(s.applyDebuff('confuse')); assert(s.applyDebuff('jam')); assert.equal(s.applyDebuff('web'), false, 'cap of 2');
+  const x0 = s.p.x; S.step(s, 0.5, { mx: 1 }); assert(s.p.x < x0, 'dizzy: controls reversed');
+  const r0 = s.p.fireCd; void r0; S.step(s, 0.02); assert.equal(s.rateMul, 0.4, 'jammed: slow fire');
+  S.step(s, 5.2); assert(!s.debuffs.confuse && !s.debuffs.jam, 'short'); assert.equal(s.applyDebuff('confuse'), false, 'immune for a moment'); S.step(s, 4.2); assert(s.applyDebuff('confuse'));
+  assert(s.cleanse()); assert.equal(Object.keys(s.debuffs).length, 0);
+  s.immune = {}; assert(s.applyDebuff('web')); const x1 = s.p.x; S.step(s, 0.3, { mx: 1 }); assert(Math.abs(s.p.x - x1) < 12, 'webbed: stuck');
+  for (let i = 0; i < 20 && s.debuffs.web; i++) S.step(s, 0.05, { mx: i % 2 ? 1 : -1 }); assert(!s.debuffs.web, 'wiggle free');
+  s.immune = {}; assert(s.applyDebuff('zoom')); const z1 = s.zoomStep(1); assert(z1 < 1, 'squinting: the camera closes in');
+  s.immune = {}; s.cleanse(); s.z.length = 0; s.cleared = true; s.cash = 50; s.xp = 10; s.coins.length = 0; s.gems.length = 0; assert(s.applyDebuff('leech')); S.step(s, 2); assert(s.cash < 50 && s.xp < 10, 'leeched');
+  s.cleanse(); s.immune = {}; s.buffs.shield = 5; assert.equal(s.applyDebuff('blind'), false, 'not through a bubble shield'); s.buffs.shield = 0;
+  // the zombies do it: a Spinner's pulse, a Gunk Jammer's touch, an Inkspitter's shot, Sludge puddles, the clinic cleanses
+  const t = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 12, run: 1 } }); t.p.inv = 0; t.buffs.shield = 0; t.p.hp = t.S.mhp = 1e6;
+  const sp = t.makeZ('confuser', t.p.x + 100, t.p.y); sp.pt = 0; sp.speed = 0; S.step(t, 0.05); assert(t.debuffs.confuse > 0, 'spinner pulse');
+  t.cleanse(); t.immune = {}; t.z.length = 0; const j = t.makeZ('jammer', t.p.x + 10, t.p.y); j.speed = 0; t.p.inv = 0; S.step(t, 0.05); assert(t.debuffs.jam > 0, 'jammer touch'); t.z.length = 0;
+  t.cleanse(); t.immune = {}; t.p.inv = 0; t.spit.push({ x: t.p.x, y: t.p.y - 20, vx: 0, vy: 0, life: 1, dmg: 1, debuff: 'blind' }); S.step(t, 0.05); assert(t.debuffs.blind > 0, 'ink hits');
+  t.cleanse(); t.immune = {}; t.p.inv = 0; t.puddles.push({ x: t.p.x, y: t.p.y, r: 60, t: 0, life: 5 }); S.step(t, 0.05); assert(t.debuffs.sludge > 0, 'sludge puddle');
+  const c = at(S, 'clinic'); c.cash = 99; c.applyDebuff('jam'); c.stocks[c.cellKey() + ':clinic'] = { wave: c.wave, type: 'clinic', list: ['antidote'], sold: {}, extra: true, weapons: [], items: [] }; assert(c.buy('antidote').ok); assert(!c.debuffs.jam, 'antidote');
+  const ds = new Set(Object.values(W.ZOMBIES).map((z) => z.debuff).filter(Boolean)); assert.equal(ds.size, 8, 'a zombie for every debuff');
+  assert(W.waveSpec(5, 1).weights.every(([k]) => !W.ZOMBIES[k].debuff), 'none early'); assert(W.waveSpec(14, 1).weights.filter(([k]) => W.ZOMBIES[k].debuff).length >= 6, 'later waves bring them');
+});
+test('new zombies: gas-bags blow up next to you, riot shields block from the front, brutes rage, nests spawn crawlers; mini-bosses on later boss waves', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 12, run: 1 } }); s.p.inv = 0; s.buffs.shield = 0; s.p.hp = 1e5; s.S.mhp = 1e5;
+  const e = s.makeZ('exploder', s.p.x + 30, s.p.y); const hp = s.p.hp; S.step(s, 0.1); assert(e.hp <= 0 && s.p.hp < hp, 'boom'); s.p.inv = 1e9;
+  const r = s.makeZ('riot', s.p.x + 200, s.p.y); r.face = -1; r.hp = r.mhp = 1000; s.damageZ(r, 100, 'me', 140, 0); assert.equal(r.hp, 980, 'shot from the front: 20%'); s.damageZ(r, 100, 'me', -140, 0); assert.equal(r.hp, 880, 'from behind: full');
+  const b = s.makeZ('brute', s.p.x + 300, s.p.y); const sp = b.speed; s.damageZ(b, 1, 'me', 10, 0); assert(b.speed > sp * 1.5, 'enraged');
+  s.z = s.z.filter((z) => z.type === 'nest'); const n = s.makeZ('nest', s.p.x + 400, s.p.y); n.hp = n.mhp = 1e6; const before = s.z.length; S.step(s, 3.2); assert(s.z.filter((z) => z.type === 'crawler').length >= 2 || s.z.length > before, 'a nest makes crawlers');
+  const b10 = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 10, run: 1 } }); b10.p.inv = 1e9; assert(b10.spec.mini && b10.bossDue); b10.waveKills = b10.spec.target; const z = b10.spawnOne('boss'); assert(z.mb && W.ZOMBIES[z.mb].mini, 'a mini-boss: ' + z.mb);
+  assert(['spider', 'foghorn', 'toxic'].every((k) => ST.BOSSES[k]), 'and they can be the final boss too');
+});
+test('slow motion (solo only), area events (gas leak, supply drop, cash grab, car alarm), weapon drops and crucible cores', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1 } }); s.p.inv = 1e9;
+  s.slowMo(0.5); assert(s.slowmo > 0); const t0 = s.t; S.step(s, 0.2); assert(s.t - t0 < 0.15, 'time slows'); s.mode = 'host'; s.slowmo = 0; s.slowMo(0.5); assert.equal(s.slowmo, 0, 'never in co-op'); s.mode = 'solo';
+  s.startEvent('gas'); const g = s.events[s.events.length - 1]; for (let i = 0; i < 5; i++) { const z = s.makeZ('walker', g.x + i * 10, g.y); z.hp = z.mhp = 50; } s.b.push({ x: g.x, y: g.y, vx: 0, vy: 0, r: 4, dmg: 1, pierce: 0, bounce: 0, life: 0.3, hit: null, burn: 0 }); S.step(s, 0.1); assert(g.lit, 'shooting the gas lights it'); assert(s.z.filter((z) => z.hp > 0).length < 5);
+  s.startEvent('drop'); const d = s.events[s.events.length - 1]; S.step(s, 7.2); s.p.x = d.x; s.p.y = d.y; const c0 = s.cash; S.step(s, 0.1); assert(s.cash > c0, 'supplies');
+  s.coins.length = 0; s.startEvent('cash'); assert(s.coins.length >= 30); S.step(s, 15.5); assert(s.coins.filter((c) => c.hold).length === 0, 'cash grab ends');
+  const a = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1 } }); a.p.inv = 1e9; a.startEvent('alarm'); const n0 = a.spec.target; S.step(a, 4.5); assert(a.spec.target > n0, 'the alarm brings more');
+  const k = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 5, run: 1 } }); k.p.inv = 1e9; const bz = k.spawnOne('boss'); k.damageZ(bz, 1e9, 'me'); assert(k.drops.some((q) => q.k === 'core'), 'bosses drop crucible cores'); const q = k.drops.find((x) => x.k === 'core'); k.p.x = q.x; k.p.y = q.y + 20; S.step(k, 0.1); assert.equal(k.cores, 1);
+});
+test('server: classes, combos, upgrades and evolutions reach the feed and the TV; weapon summaries are checked', () => {
+  const { room, clock, ps: [a] } = mk({}, 1); room.start(); const g = room.game; run(room, clock, 1500);
+  assert(room.act(a, { op: 'ev', k: 'class', id: 'medic' }).ok); assert.equal(g.runs.get(a.id).cls, 'medic'); assert.equal(room.act(a, { op: 'ev', k: 'class', id: 'nope' }).ok, false);
+  assert(room.act(a, { op: 'ev', k: 'combo', id: 'arcnails' }).ok); assert(g.feed.some((f) => /Arc Nails/.test(f.text))); assert(room.fxLog.some((f) => f.kind === 'tzcombo'));
+  assert(room.act(a, { op: 'ev', k: 'evolve', id: 'pistol', tier: 3 }).ok); assert(g.feed.some((f) => /Golden Hand-Cannon/.test(f.text))); assert(room.fxLog.some((f) => f.kind === 'tzevolve'));
+  room.act(a, { op: 'st', kills: 5, lvl: 2, hp: 90, mhp: 100, wave: 1, wp: [['pistol', 3, 1], ['smg', 99, 7], ['bogus', 1, 1]] });
+  assert.deepEqual(g.runs.get(a.id).wp, [['pistol', 3, 1], ['smg', 10, 3]]); const t = g.tv().players[0]; assert.equal(t.cls, 'medic'); assert.equal(t.wp.length, 2);
 });
 
 console.log(`\n${passed} TrashZombies tests passed.`);

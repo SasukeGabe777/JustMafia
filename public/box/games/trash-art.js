@@ -402,11 +402,19 @@
   const SKINS = ['#9aa88a', '#a7b096', '#8f9c7a', '#b3b09a', '#8aa080'], CLOTH = ['#4a5a6a', '#6a3a32', '#3d4a3a', '#5a4a6a', '#6b6252', '#2f3a4a', '#7a6a4a'], PANTS = ['#2f3440', '#3a3228', '#2a2a2a', '#45403a'];
   function drawZombie(g, type, f, flash, v = 0) {
     const Z = W.ZOMBIES[type] || W.ZOMBIES.walker, R = Z.r, sw = Math.sin(f * TAU / 4), sw2 = Math.cos(f * TAU / 4);
-    const skin = type === 'spitter' ? '#a3b56a' : SKINS[v % SKINS.length], cloth = type === 'runner' ? ['#3a3f46', '#5a2a2a', '#2a3a2a'][v % 3] : CLOTH[(v * 3 + (type.length)) % CLOTH.length], pants = PANTS[v % PANTS.length];
+    const skin = type === 'spitter' ? '#a3b56a' : SKINS[v % SKINS.length]; let cloth = type === 'runner' ? ['#3a3f46', '#5a2a2a', '#2a3a2a'][v % 3] : CLOTH[(v * 3 + (type.length)) % CLOTH.length], pants = PANTS[v % PANTS.length];
     g.lineJoin = 'round'; g.lineCap = 'round';
     g.fillStyle = 'rgba(0,0,0,0.38)'; ell(g, 4, 1, R * 0.95, R * 0.3); g.fill();
     if (type === 'boss') { drawBrute(g, R, sw, flash); return; }
-    const lean = type === 'runner' ? 0.32 : type === 'spitter' ? 0.18 : type === 'crawler' ? 1.2 : 0.1, fat = type === 'bloater' ? 1.55 : type === 'brute' ? 1.35 : 1, h = R * 2.5;
+    if (type === 'nest') { // a heaving mound of rot with crawlers' arms poking out
+      const p = 1 + 0.06 * sw; ell(g, 0, -R * 0.6, R * 1.2 * p, R * 0.8 * p); g.fillStyle = rad(g, -R * 0.3, -R, 2, R * 1.4, [[0, '#8a7a5a'], [0.6, '#5a4a32'], [1, '#2a2016']]); g.fill();
+      g.fillStyle = 'rgba(160,200,60,0.5)'; for (const [px, py, s] of [[-R * 0.4, -R * 0.8, 7], [R * 0.3, -R * 0.5, 9], [0, -R * 1.1, 6]]) { circ(g, px, py, s * p); g.fill(); }
+      g.strokeStyle = SKINS[v % 5]; g.lineWidth = 5; g.beginPath(); g.moveTo(-R * 0.5, -R * 1.1); g.lineTo(-R * 0.8, -R * 1.6 + sw * 4); g.moveTo(R * 0.4, -R * 1.0); g.lineTo(R * 0.7, -R * 1.5 - sw * 4); g.stroke();
+      if (flash) { g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillRect(-R * 3, -R * 4, R * 6, R * 5); g.globalCompositeOperation = 'source-over'; }
+      return;
+    }
+    const ZD = W.ZOMBIES[type] || {}, lean = type === 'runner' || type === 'stalker' ? 0.32 : type === 'spitter' ? 0.18 : type === 'crawler' ? 1.25 : type === 'screamer' ? -0.15 : 0.1, fat = type === 'bloater' || type === 'exploder' ? 1.55 : type === 'brute' || type === 'shaker' ? 1.35 : type === 'riot' ? 1.15 : 1, h = R * 2.5;
+    if (ZD.aura) cloth = shade(ZD.aura, -0.35); else if (type === 'riot') cloth = '#2a3442'; else if (type === 'brute') cloth = '#5a3a2a';
     const skinG = (x0, y0, x1, y1) => lin(g, x0, y0, x1, y1, [[0, shade(skin, 0.15)], [1, shade(skin, -0.35)]]);
     g.save(); g.rotate(lean * 0.55 + sw * 0.04);
     // back leg, back arm (darker), body, front leg, front arm, head
@@ -416,7 +424,7 @@
     arm(-1, true);
     // torso
     g.save(); g.translate(0, -h * 0.58);
-    if (type === 'bloater') { ell(g, 0, 2, R * 0.95, R * 1.0); g.fillStyle = rad(g, -R * 0.35, -R * 0.35, 2, R * 1.2, [[0, shade(skin, 0.1)], [0.7, shade(skin, -0.15)], [1, shade(skin, -0.5)]]); g.fill(); g.strokeStyle = 'rgba(90,40,60,0.5)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(-R * 0.4, -R * 0.2); g.quadraticCurveTo(-R * 0.1, R * 0.1, -R * 0.3, R * 0.5); g.moveTo(R * 0.3, -R * 0.4); g.quadraticCurveTo(R * 0.5, 0, R * 0.2, R * 0.3); g.stroke(); g.fillStyle = 'rgba(200,220,90,0.55)'; for (const [px, py, s] of [[-8, -6, 5], [10, 6, 6], [-2, 14, 4]]) { circ(g, px, py, s); g.fill(); } g.fillStyle = cloth; g.fillRect(-R * 0.95, R * 0.45, R * 1.9, R * 0.5); }
+    if (type === 'bloater' || type === 'exploder') { const bs = type === 'exploder' ? '#d9a05a' : skin; ell(g, 0, 2, R * 0.95, R * 1.0); g.fillStyle = rad(g, -R * 0.35, -R * 0.35, 2, R * 1.2, [[0, shade(bs, 0.1)], [0.7, shade(bs, -0.15)], [1, shade(bs, -0.5)]]); g.fill(); if (type === 'exploder') { g.fillStyle = 'rgba(255,170,40,0.55)'; circ(g, 0, 4, R * 0.45); g.fill(); } g.strokeStyle = 'rgba(90,40,60,0.5)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(-R * 0.4, -R * 0.2); g.quadraticCurveTo(-R * 0.1, R * 0.1, -R * 0.3, R * 0.5); g.moveTo(R * 0.3, -R * 0.4); g.quadraticCurveTo(R * 0.5, 0, R * 0.2, R * 0.3); g.stroke(); g.fillStyle = 'rgba(200,220,90,0.55)'; for (const [px, py, s] of [[-8, -6, 5], [10, 6, 6], [-2, 14, 4]]) { circ(g, px, py, s); g.fill(); } g.fillStyle = cloth; g.fillRect(-R * 0.95, R * 0.45, R * 1.9, R * 0.5); }
     else {
       const tw = R * 0.62 * fat, th = R * 1.05;
       rr(g, -tw, -th * 0.6, tw * 2, th * 1.2, R * 0.3); g.fillStyle = lin(g, -tw, 0, tw, 0, [[0, shade(cloth, 0.12)], [1, shade(cloth, -0.4)]]); g.fill();

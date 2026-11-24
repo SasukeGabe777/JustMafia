@@ -16,6 +16,7 @@
     return s;
   }
   Object.assign(proto, {
+    initPlay() { pl(this); if (this.initFight) this.initFight(); },
     // ---------------- score ----------------
     onKill(z, by, mine) {
       pl(this); if (!mine) return;
@@ -64,7 +65,7 @@
       const cost = this.priceOf(id); if (this.cash < cost) return { ok: false, error: 'Not enough cash.' };
       const Pp = this.p;
       switch (G.kind) {
-        case 'food': this.heals.push({ left: G.heal, rate: G.heal / (G.heal > 50 ? 8 : 5) }); break;
+        case 'food': { const h = G.heal * (this.cls === 'medic' ? 1.5 : 1); this.heals.push({ left: h, rate: h / (G.heal > 50 ? 8 : 5) }); break; }
         case 'buff': this.buffs[G.buff] = Math.max(this.buffs[G.buff] || 0, G.dur); break;
         case 'xp': this.gainXp(W.xpNeed(this.lvl) * 0.85); break;
         case 'reroll': this.rerolls++; break;
@@ -79,6 +80,7 @@
         case 'full': Pp.hp = this.S.mhp; break;
         case 'life': Pp.lives++; break;
         case 'heal': Pp.hp = Math.min(this.S.mhp, Pp.hp + G.n); break;
+        case 'cleanse': if (this.cleanse) this.cleanse(); break;
         default: return { ok: false, error: 'Not for sale.' };
       }
       this.cash -= cost; St.sold[id] = 1; this.bought[id] = (this.bought[id] || 0) + 1; this.o.on('buy', { id });
@@ -104,7 +106,7 @@
     // ---------------- the frame ----------------
     playStep(dt, I) {
       pl(this); const Pp = this.p;
-      if (this._plArea !== this.area) { this._plArea = this.area; const S = this.area.spot; if (S && this.placeType() && !this.isDoorCell()) this.area.obstacles.push({ x: S.x, y: S.y, w: S.w, h: S.h - 20, kind: 'none' }); this.coins.length = 0; this.turrets.length = 0; this.mapItem = null; }
+      if (this._plArea !== this.area) { const first = !this._plArea; this._plArea = this.area; const S = this.area.spot; if (S && this.placeType() && !this.isDoorCell()) this.area.obstacles.push({ x: S.x, y: S.y, w: S.w, h: S.h - 20, kind: 'none' }); if (!first) { this.coins.length = 0; this.turrets.length = 0; this.mapItem = null; } }
       if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.mult = 1; } }
       // coins: pulled in like the XP gems
       const R = this.S.magnet;
@@ -120,7 +122,7 @@
       }
       // stand by a fallen friend to pull them up
       for (const o of this.others.values()) {
-        if (o.down && !this.dead && d2(o.x, o.y, Pp.x, Pp.y) < 95 * 95) { o.rev = (o.rev || 0) + dt / REVIVE_S; if (o.rev >= 1 && !o.revAsked) { o.revAsked = true; this.o.report({ op: 'revive', id: o.id }).then((r) => { o.revAsked = false; if (r && r.ok) { o.down = false; o.rev = 0; this.popup('REVIVED!', '#7dff6a', o.x, o.y - 100); this.score += 300; } }); } }
+        if (o.down && !this.dead && d2(o.x, o.y, Pp.x, Pp.y) < 95 * 95) { o.rev = (o.rev || 0) + dt / REVIVE_S * (this.cls === 'medic' ? 2 : 1); if (o.rev >= 1 && !o.revAsked) { o.revAsked = true; this.o.report({ op: 'revive', id: o.id }).then((r) => { o.revAsked = false; if (r && r.ok) { o.down = false; o.rev = 0; this.popup('REVIVED!', '#7dff6a', o.x, o.y - 100); this.score += 300; } }); } }
         else if (o.rev) o.rev = Math.max(0, o.rev - dt);
       }
       // by the shop door (once the wave is cleared)
@@ -130,7 +132,7 @@
     },
     // ---------------- drawing (called by TZSim.render) ----------------
     drawExtraGround(g, t, vis) {
-      pl(this);
+      pl(this); if (this.drawFightGround) this.drawFightGround(g, t, vis);
       for (const c of this.coins) { if (!vis(c.x, c.y)) continue; const s = Math.abs(Math.sin(c.t * 5)); g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(c.x + 3, c.y + 4, 7, 3, 0, 0, TAU); g.fill(); g.fillStyle = '#e8b830'; g.beginPath(); g.ellipse(c.x, c.y - 4, 7 * (0.3 + 0.7 * s), 7, 0, 0, TAU); g.fill(); g.fillStyle = '#fff2a8'; g.beginPath(); g.ellipse(c.x - 1, c.y - 6, 2 * s, 2.5, 0, 0, TAU); g.fill(); }
       if (this.mapItem) { const M = this.mapItem, b = Math.sin(t * 4) * 4; g.save(); g.translate(M.x, M.y - 14 + b); const gr = g.createRadialGradient(0, 0, 4, 0, 0, 50); gr.addColorStop(0, 'rgba(255,220,120,0.7)'); gr.addColorStop(1, 'rgba(255,220,120,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 50, 0, TAU); g.fill(); g.rotate(-0.2); g.fillStyle = '#d9c08a'; g.fillRect(-20, -14, 40, 28); g.fillStyle = '#b89a5a'; g.fillRect(-24, -16, 6, 32); g.fillRect(18, -16, 6, 32); g.strokeStyle = '#8a2a22'; g.lineWidth = 2; g.beginPath(); g.moveTo(-12, -6); g.lineTo(0, 4); g.lineTo(10, -4); g.stroke(); g.fillStyle = '#8a2a22'; g.font = 'bold 14px sans-serif'; g.textAlign = 'center'; g.fillText('✕', 10, -2); g.restore(); }
     },
@@ -139,6 +141,9 @@
       if (type && S) list.push(this._placeE && this._placeE.type === type && this._placeE.S === S ? this._placeE : (this._placeE = { type, S, y: S.y + S.h - 20, draw: (g, t) => drawPlace(g, type, S, t, this.cleared) }));
       for (const T of this.turrets) list.push(T._e || (T._e = { y: T.y, draw: (g, t) => drawTurret(g, T, t) }));
     },
+    drawExtraAir(g, t, vis) { if (this.drawFightAir) this.drawFightAir(g, t, vis); },
+    // the pistol shows its tier (steel, chrome, gold); during the evolution it's up in the light
+    drawGun(g, Pp) { const gun = this.gun; if (this.evo && this.evo.id === 'pistol') return; if (!gun || gun.tier < 2 || !window.TZFight || this.buffs.minigun > 0) { window.TZA.drawGun(g, Pp.x + Pp.face * 13, Pp.y - 30, Pp.aim, Pp.kick, this.buffs.minigun > 0); return; } g.save(); g.translate(Pp.x + Pp.face * 13, Pp.y - 30); g.rotate(Pp.aim); if (Math.abs(Pp.aim) > Math.PI / 2) g.scale(1, -1); g.translate(18 - Pp.kick * 4, 0); g.scale(0.7 + 0.15 * gun.tier, 0.7 + 0.15 * gun.tier); window.TZFight.drawWeaponIcon(g, 'pistol', gun.tier); g.restore(); },
     lightHoles(hole) { pl(this); const S = this.area.spot; if (S && this.placeType()) hole(S.x + S.w / 2, S.y + S.h + 20, 240, 0.8); for (const T of this.turrets) hole(T.x, T.y - 20, 110, 0.5); },
   });
   // A place's front: a little shop building with its sign (open once the wave is cleared).

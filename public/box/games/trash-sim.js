@@ -33,6 +33,7 @@
       this.timers = { bomb: 4, zap: 2, shove: 3, drone: 0, pk: 12, regen: 0 };
       this.orbHit = new Map(); this.raccoon = null; this.drones = []; this.decals = []; this.corpses = []; this.muzzle = 0; this.slowmo = 0;
       const home = !R.wave || (R.wave === 1 && R.cell && R.home && R.cell[0] === R.home[0] && R.cell[1] === R.home[1]);
+      if (this.initPlay) this.initPlay(); // score, cash, shops (trash-play.js)
       this.enterArea(this.cell[0], this.cell[1], null, home);
       if (!home) { this.phase = 'play'; this.startWave(); }
     }
@@ -291,14 +292,18 @@
     dropPickup(x, y) { const L = W.PICKUPS, k = L[Math.floor(this.rng() * L.length)].id; this.pk.push({ id: this.pkid++, k, x: clamp(x, 60, W.AW - 60), y: clamp(y, 60, W.AH - 60), life: 22 }); }
     // ---------------- the frame ----------------
     update(dt, I) {
-      dt = Math.min(dt, 0.05); this.t += dt; this._lastInput = I;
+      dt = Math.min(dt, 0.05);
+      if (this.slowmo > 0) { this.slowmo -= dt; dt *= 0.35; } // dramatic slow motion (solo)
+      if (this.mapInput) I = this.mapInput(I || {});
+      this.t += dt; this._lastInput = I;
       this.flash = this.flash > 0 ? Math.max(0, this.flash - dt) : Math.min(0, this.flash + dt);
       this.shake = Math.max(0, this.shake - dt);
       if (this.banner) { this.banner.t -= dt; if (this.banner.t <= 0) this.banner = null; }
       if (this.phase === 'intro') { this.updateIntro(dt, I); this.fxStep(dt); return; }
       if (this.phase === 'dead') { this.fxStep(dt); this.netStep(); return; }
       if (this.down) { this.downStep(dt); this.fxStep(dt); this.netStep(); if (this.mode !== 'guest') { this.spawnStep(dt); this.zombieStep(dt); } else this.guestStep(dt); this.othersStep(dt); return; }
-      const slow = this.paused ? 0 : 1, sdt = dt * slow;
+      const slow = this.paused || (this.evo && this.mode === 'solo') ? 0 : 1, sdt = dt * slow;
+      if (this.evo && slow === 0) this.evoStep(dt);
       if (sdt > 0) {
         this.moveYou(sdt, I);
         this.shoot(sdt, I);
@@ -328,7 +333,7 @@
       const P = this.p, S = this.S, B = this.buffs;
       let mx = I.mx || 0, my = I.my || 0; const m = Math.hypot(mx, my); if (m > 1) { mx /= m; my /= m; }
       if ((this.choosing || this.shopping) && this.mode !== 'solo') { mx = 0; my = 0; }
-      const sp = S.speed * (B.kicks > 0 ? 1.5 : 1);
+      const sp = S.speed * (B.kicks > 0 ? 1.5 : 1) * (this.speedMul || 1);
       P.vx = P.vx * Math.pow(0.0005, dt) + mx * sp * (1 - Math.pow(0.0005, dt)) * 1.0;
       P.vy = P.vy * Math.pow(0.0005, dt) + my * sp * (1 - Math.pow(0.0005, dt)) * 1.0;
       P.x += P.vx * dt; P.y += P.vy * dt;
@@ -371,7 +376,7 @@
       else if (this.set.aim !== 'off' && !I.mouse) { const z = this.nearestZ(P.x, P.y - 24, S.aimRange); if (z) { P.aim = Math.atan2(z.y - z.r - (P.y - 24), z.x - P.x); fire = true; } }
       if (Math.cos(P.aim) > 0.15) P.face = 1; else if (Math.cos(P.aim) < -0.15) P.face = -1;
       P.fireCd -= dt; if (!fire || P.fireCd > 0) return;
-      const mini = B.minigun > 0, rate = S.rate * (mini ? 3.5 : 1);
+      const mini = B.minigun > 0, rate = S.rate * (mini ? 3.5 : 1) * (this.rateMul || 1);
       P.fireCd += 1 / rate; if (P.fireCd < -0.05) P.fireCd = 0;
       P.kick = 1;
       const ox = P.x + Math.cos(P.aim) * 34, oy = P.y - 26 + Math.sin(P.aim) * 34;
@@ -395,6 +400,7 @@
       const obs = this.area.obstacles;
       for (let i = this.b.length - 1; i >= 0; i--) {
         const b = this.b[i]; b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+        if (b.ret && !b.back && b.life < 0.7) { b.back = true; b.vx = -b.vx; b.vy = -b.vy; b.hit = null; } // the boomerang hubcap comes back
         let dead = b.life <= 0 || b.x < -60 || b.y < -60 || b.x > W.AW + 60 || b.y > W.AH + 60;
         if (!dead) for (const o of obs) if (b.x > o.x && b.x < o.x + o.w && b.y > o.y && b.y < o.y + o.h) {
           if (b.bounce > 0) { b.bounce--; const px = b.x - b.vx * dt, py = b.y - b.vy * dt; if (px <= o.x || px >= o.x + o.w) b.vx = -b.vx; else b.vy = -b.vy; b.x = px; b.y = py; b.life = Math.max(b.life, 0.4); }
@@ -406,12 +412,13 @@
           const zr = z.r + b.r, zy = z.y - z.r;
           if (dist2(b.x, b.y, z.x, zy) < zr * zr) {
             const sp = Math.hypot(b.vx, b.vy) || 1;
-            this.damageZ(z, b.dmg, this.me.id, (b.vx / sp) * 140 * this.S.knock, (b.vy / sp) * 140 * this.S.knock, { crit: b.crit, burn: b.burn });
+            this.damageZ(z, b.dmg, this.me.id, (b.vx / sp) * 140 * this.S.knock * (b.kb || 1), (b.vy / sp) * 140 * this.S.knock * (b.kb || 1), { crit: b.crit, burn: b.burn });
+            if (b.zap || b.boom) this.bulletHit(b, z);
             if (b.pierce > 0) { b.pierce--; (b.hit || (b.hit = [])).push(z.id); } else { dead = true; }
             break;
           }
         }
-        if (dead) this.b.splice(i, 1);
+        if (dead) { if (b.boom && b.pierce && this.bulletEnd) this.bulletEnd(b); else if (b.boom && b.life <= 0 && this.bulletEnd) this.bulletEnd(b); this.b.splice(i, 1); }
       }
       for (let i = this.ghost.length - 1; i >= 0; i--) { const b = this.ghost[i]; b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; let dead = b.life <= 0; if (!dead) for (const o of obs) if (b.x > o.x && b.x < o.x + o.w && b.y > o.y && b.y < o.y + o.h) { dead = true; break; } if (dead) this.ghost.splice(i, 1); }
     }
@@ -450,7 +457,7 @@
           if (d < 280) { dx = -dx; dy = -dy; sp *= 0.6; } else if (d < 380) sp = 0;
           z.cd -= dt; if (z.cd <= 0 && d < 520) { z.cd = 2.6; const a = Math.atan2(tg.y - 20 - (z.y - z.r * 2), tg.x - z.x); this.spit.push({ x: z.x, y: z.y - z.r * 2, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, life: 2, dmg: z.dmg }); }
         }
-        if (z.fb) { const m = window.TZB ? TZB.stepBoss(this, z, dt, tg) : 1; z.x = clamp(z.x, 60, W.AW - 60); z.y = clamp(z.y, 80, W.AH - 40); if (m === -1) { z.face = (z.cx || 1) >= 0 ? 1 : -1; this.collide(z); continue; } sp *= m; }
+        if (z.fb || z.mb) { const m = window.TZB ? TZB.stepBoss(this, z, dt, tg) : 1; z.x = clamp(z.x, 60, W.AW - 60); z.y = clamp(z.y, 80, W.AH - 40); if (m === -1) { z.face = (z.cx || 1) >= 0 ? 1 : -1; this.collide(z); continue; } sp *= m; }
         else if (z.boss) { z.cd -= dt; if (z.charge > 0) { z.charge -= dt; sp *= 3.2; } else if (z.cd <= 0 && d < 520) { z.cd = 4.5; z.charge = 0.7; this.shake = Math.max(this.shake, 0.2); } }
         // separation from nearby zombies (cheap: only a few neighbours)
         let sx = 0, sy = 0;
@@ -464,25 +471,26 @@
       for (let i = this.spit.length - 1; i >= 0; i--) {
         const s = this.spit[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
         let dead = s.life <= 0;
-        if (!dead && !this.dead && dist2(s.x, s.y, this.p.x, this.p.y - 20) < 30 * 30) { this.hurt(s.dmg, s.x, s.y); dead = true; }
+        if (!dead && !this.dead && dist2(s.x, s.y, this.p.x, this.p.y - 20) < 30 * 30) { this.hurt(s.dmg, s.x, s.y); if (s.debuff && this.applyDebuff) this.applyDebuff(s.debuff); dead = true; s.hitYou = true; }
         if (!dead) for (const o of this.area.obstacles) if (s.x > o.x && s.x < o.x + o.w && s.y > o.y && s.y < o.y + o.h) { dead = true; break; }
-        if (dead) { this.particle(s.x, s.y, 0, 0, '#b6ff3c', 0.3, 8); this.spit.splice(i, 1); }
+        if (dead) { this.particle(s.x, s.y, 0, 0, s.col || '#b6ff3c', 0.3, 8); this.spitLands(s); this.spit.splice(i, 1); }
       }
     }
     // A guest: zombies glide to the host's positions; spit is checked against you.
     guestStep(dt) {
       const k = Math.min(1, dt * 14);
       for (const z of this.z) { const ox = z.x; z.x += (z.tx - z.x) * k; z.y += (z.ty - z.y) * k; if (Math.abs(z.x - ox) > 0.3) z.face = z.x > ox ? 1 : -1; z.f += dt * 4; if (z.flash > 0) z.flash -= dt; }
-      for (let i = this.spit.length - 1; i >= 0; i--) { const s = this.spit[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt; if (!this.dead && dist2(s.x, s.y, this.p.x, this.p.y - 20) < 30 * 30) { this.hurt(s.dmg, s.x, s.y); s.life = 0; } if (s.life <= 0) this.spit.splice(i, 1); }
+      for (let i = this.spit.length - 1; i >= 0; i--) { const s = this.spit[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt; if (!this.dead && dist2(s.x, s.y, this.p.x, this.p.y - 20) < 30 * 30) { this.hurt(s.dmg, s.x, s.y); if (s.debuff && this.applyDebuff) this.applyDebuff(s.debuff); s.life = 0; s.hitYou = true; } if (s.life <= 0) { this.spitLands(s); this.spit.splice(i, 1); } }
       for (const p of this.pk) p.life -= dt;
     }
     contact(dt) {
       const P = this.p; if (this.dead) return;
       for (const z of this.z) {
-        if (z.hp <= 0) continue;
+        if (z.hp <= 0 || !z.dmg) continue;
         const rr = z.r + P.r - 4;
         if (dist2(z.x, z.y, P.x, P.y) < rr * rr) {
           this.hurt(z.dmg, z.x, z.y);
+          const ZD = W.ZOMBIES[z.type]; if (ZD && ZD.debuff && !ZD.ranged && this.applyDebuff) this.applyDebuff(ZD.debuff);
           if (this.S.thorns && (z.thornCd || 0) <= this.t) { z.thornCd = this.t + 0.5; this.damageZ(z, this.S.thorns, this.me.id); }
         }
       }
@@ -567,7 +575,9 @@
       this.grabCheck(this._lastInput);
     }
     // how far out the camera sits (Eagle Eye + binoculars), eased
-    zoomStep(dt) { const want = (this.S.view || 1) * (this.buffs.scope > 0 ? 1.6 : 1); this._zoom = (this._zoom || want) + (want - (this._zoom || want)) * Math.min(1, dt * 2.5); return this._zoom; }
+    // a web or sludge blob that misses leaves a sticky patch where it lands
+    spitLands(s) { if (s.hitYou || !this.webs) return; if (s.debuff === 'web' && this.webs.length < 10) this.webs.push({ x: s.x, y: s.y + 20, r: 46, t: 0, life: 10 }); else if (s.debuff === 'sludge' && this.puddles.length < 14) this.puddles.push({ x: s.x, y: s.y + 20, r: 55, t: 0, life: 7 }); }
+    zoomStep(dt) { const want = (this.S.view || 1) * (this.buffs.scope > 0 ? 1.6 : 1) / (this.debuffs && this.debuffs.zoom > 0 ? 1.8 : 1); this._zoom = (this._zoom || want) + (want - (this._zoom || want)) * Math.min(1, dt * 2.5); return this._zoom; }
     buffStep(dt) { const B = this.buffs; for (const k in B) if (B[k] > 0) B[k] = Math.max(0, B[k] - dt); }
     othersStep(dt) { const k = Math.min(1, dt * 12); for (const o of this.others.values()) { o.x += (o.tx - o.x) * k; o.y += (o.ty - o.y) * k; o.walkT = (o.walkT || 0) + (Math.abs(o.tx - o.x) + Math.abs(o.ty - o.y) > 2 ? dt : 0); } }
     fxStep(dt) {
@@ -592,7 +602,7 @@
     sendSnap() {
       const z = []; for (const q of this.z) if (q.hp > 0) z.push(q.id, q.ti, Math.round(q.x), Math.round(q.y), Math.round(q.hp));
       const msg = { t: 'snap', w: [this.wave, this.waveKills, this.spec ? this.spec.target : 0, this.cleared ? 1 : 0, this.bossDue && !this.bossSpawned ? 1 : 0], z, p: this.pk.map((p) => [p.id, p.k, Math.round(p.x), Math.round(p.y), Math.round(p.life)]),
-        s: this.spit.map((s) => [Math.round(s.x), Math.round(s.y), Math.round(s.vx), Math.round(s.vy), Math.round(s.dmg)]), you: this.youMsg(), b: this.shots.splice(0, 40), k: this.kills.splice(0), e: this.booms.splice(0, 20), fz: this.buffs.freeze > 0 ? 1 : 0 };
+        s: this.spit.map((s) => [Math.round(s.x), Math.round(s.y), Math.round(s.vx), Math.round(s.vy), Math.round(s.dmg), s.debuff ? ['blind','zoom','web','jam','confuse','leech','sludge','shake'].indexOf(s.debuff) : -1]), you: this.youMsg(), b: this.shots.splice(0, 40), k: this.kills.splice(0), e: this.booms.splice(0, 20), fz: this.buffs.freeze > 0 ? 1 : 0 };
       this.o.live(msg);
       for (const m of this.pend.splice(0)) this.o.live(m);
     }
@@ -619,13 +629,13 @@
         const byId = new Map(this.z.map((z) => [z.id, z])), keep = [];
         for (let i = 0; i < m.z.length; i += 5) {
           const id = m.z[i]; let z = byId.get(id);
-          if (!z) { const T = Object.keys(W.ZOMBIES)[m.z[i + 1]] || 'walker'; const Z = W.ZOMBIES[T]; z = { id, type: T, ti: m.z[i + 1], x: m.z[i + 2], y: m.z[i + 3], r: Z.r, hp: m.z[i + 4], mhp: m.z[i + 4], f: 0, face: 1, flash: 0, dmg: Z.dmg * (this.spec ? this.spec.dmgMul : 1), boss: !!Z.boss }; if (T === 'final' && this.story && window.TZS) { const B = TZS.BOSSES[this.story.plan.boss]; z.fb = this.story.plan.boss; z.r = B.r; z.dmg = B.dmg; } }
+          if (!z) { const T = Object.keys(W.ZOMBIES)[m.z[i + 1]] || 'walker'; const Z = W.ZOMBIES[T]; z = { id, type: T, ti: m.z[i + 1], x: m.z[i + 2], y: m.z[i + 3], r: Z.r, hp: m.z[i + 4], mhp: m.z[i + 4], f: 0, face: 1, flash: 0, dmg: Z.dmg * (this.spec ? this.spec.dmgMul : 1), boss: !!Z.boss }; if (Z.mini) z.mb = T; if (T === 'final' && this.story && window.TZS) { const B = TZS.BOSSES[this.story.plan.boss]; z.fb = this.story.plan.boss; z.r = B.r; z.dmg = B.dmg; } }
           z.tx = m.z[i + 2]; z.ty = m.z[i + 3]; z.hp = m.z[i + 4]; if (z.hp > z.mhp) z.mhp = z.hp; keep.push(z);
         }
         const kept = new Set(keep.map((z) => z.id)); for (const z of this.z) if (!kept.has(z.id)) this.gore(z); // they fall over here too
         this.z = keep;
         const pk = new Map(this.pk.map((p) => [p.id, p])); this.pk = (m.p || []).map(([id, k, x, y, life]) => { const o = pk.get(id); return { id, k, x, y, life, asked: o ? o.asked : false }; });
-        this.spit = (m.s || []).map(([x, y, vx, vy, dmg]) => ({ x, y, vx, vy, dmg, life: 1 }));
+        this.spit = (m.s || []).map(([x, y, vx, vy, dmg, db]) => ({ x, y, vx, vy, dmg, life: 1, debuff: ['blind','zoom','web','jam','confuse','leech','sludge','shake'][db] || null }));
         this.remoteFreeze = m.fz ? 0.3 : 0;
         for (const [by, xp, ti, el] of m.k || []) { if (by === this.me.id) { this.killCount++; if (this.onKill) this.onKill({ type: Object.keys(W.ZOMBIES)[ti] || 'walker', elite: !!el, x: this.p.x, y: this.p.y - 80, remote: true }, by, true); } if (this.set.xp !== 'own' || by === this.me.id) this.gainXp(xp); }
         this.other(m.from, m.you); this.ghostShots(m.b);
@@ -645,7 +655,7 @@
     reportStatus(force) {
       if (!force && this.t - this.lastSt < ST_MS / 1000) return; this.lastSt = this.t;
       const P = this.p;
-      this.o.report({ op: 'st', hp: Math.max(0, Math.round(P.hp)), mhp: Math.round(this.S.mhp), lvl: this.lvl, xp: Math.round(this.xp), kills: this.killCount, wave: this.wave, ab: this.ab, ch: this.choosing ? 1 : 0, score: Math.round(this.score || 0), mult: this.mult || 1 }, true);
+      this.o.report({ op: 'st', hp: Math.max(0, Math.round(P.hp)), mhp: Math.round(this.S.mhp), lvl: this.lvl, xp: Math.round(this.xp), kills: this.killCount, wave: this.wave, ab: this.ab, ch: this.choosing ? 1 : 0, score: Math.round(this.score || 0), mult: this.mult || 1, wp: this._fi ? [[this.gun.id, this.gun.lv, this.gun.tier], ...this.weapons.map((w) => [w.id, w.lv, w.tier])] : undefined }, true);
     }
   }
 
@@ -769,7 +779,8 @@
       if (q.door) { TA.drawGarage(g, sim.area, intro ? clamp((sim.introT - 1.3) / 1.5, 0, 1) : 1, t); continue; }
       if (q.draw) { q.draw(g, t); continue; }
       if (q.tx != null && q.ti == null && q.id && sim.others.has(q.id)) { drawOther(g, sim, q, V); continue; }
-      if (q.fb) { if (window.TZB) TZB.drawBoss(g, q, t); continue; }
+      if (q.fb || q.mb) { if (window.TZB) TZB.drawBoss(g, q, t); continue; }
+      if (q.type === 'stalker') q.alpha = 0.25 + 0.75 * Math.max(0, Math.sin(t * 2.2 + q.id)) ** 4;
       if (q.crate) { TZB.drawCrate(g, q.x, q.y, q.id, t, false); continue; }
       if (q.bossDoor) { TZB.drawDoor(g, sim.story.plan.doorLook, !!sim.story.doorOpen, t, sim.story.keys >= 3, sim.area.spot); continue; }
       const spr = TA.zombie(q.type, Math.floor(q.f) % 4, kp, q.flash > 0, q.id % 5);
@@ -868,6 +879,10 @@
     const lowHp = !sim.dead && sim.p.hp / sim.S.mhp < 0.3 && sim.phase === 'play';
     if (lowHp) { const a = 0.25 + 0.15 * Math.sin(t * 7); const gr = g.createRadialGradient(V.w / 2, V.h / 2, Math.min(V.w, V.h) * 0.35, V.w / 2, V.h / 2, Math.max(V.w, V.h) * 0.75); gr.addColorStop(0, 'rgba(255,0,0,0)'); gr.addColorStop(1, `rgba(170,0,0,${a})`); g.fillStyle = gr; g.fillRect(0, 0, V.w, V.h); }
     if (sim.buffs.freeze > 0) { g.fillStyle = 'rgba(160,220,255,0.10)'; g.fillRect(0, 0, V.w, V.h); }
+    const DBf = sim.debuffs || {};
+    if (DBf.blind > 0 && !sim.dead) { const R0 = Math.min(V.w, V.h) * 0.2, gr = g.createRadialGradient(V.w / 2, V.h / 2 - 10, R0 * 0.6, V.w / 2, V.h / 2 - 10, R0 * 1.6); gr.addColorStop(0, 'rgba(14,6,22,0)'); gr.addColorStop(1, `rgba(14,6,22,${Math.min(0.97, DBf.blind * 0.6)})`); g.fillStyle = gr; g.fillRect(0, 0, V.w, V.h); }
+    if (DBf.confuse > 0) { g.fillStyle = `rgba(150,80,220,${0.12 + 0.06 * Math.sin(t * 6)})`; g.fillRect(0, 0, V.w, V.h); }
+    if (DBf.web > 0) { g.strokeStyle = 'rgba(240,240,240,0.5)'; g.lineWidth = 2; g.beginPath(); for (let i = 0; i < 10; i++) { const a = (i * TAU) / 10; g.moveTo(V.w / 2, V.h / 2); g.lineTo(V.w / 2 + Math.cos(a) * V.w, V.h / 2 + Math.sin(a) * V.w); } g.stroke(); }
     if (sim.slowmo > 0) { g.fillStyle = `rgba(20,30,40,${Math.min(0.25, sim.slowmo * 0.4)})`; g.fillRect(0, 0, V.w, V.h); }
   }
   function drawYou(g, sim, V) {

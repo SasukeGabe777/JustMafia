@@ -280,7 +280,10 @@
   const PICKUPS = [
     { id: 'shield', icon: '🫧', name: 'Bubble Shield', dur: 8, color: '#6fe3ff', desc: 'Nothing can hurt you for 8 seconds.' },
     { id: 'armor', icon: '🗑️', name: 'Trash-Can Armor', dur: 0, color: '#b7c2cc', desc: 'Soaks up the next hit.' },
-    { id: 'minigun', icon: '🔥', name: 'Buzzsaw Minigun', dur: 15, color: '#ffb02e', desc: '15 seconds of crazy-fast fire.' },
+    { id: 'minigun', icon: '🔥', name: 'Buzzsaw Minigun', dur: 12, color: '#ffb02e', desc: '12 seconds of crazy-fast fire.' },
+    { id: 'rockets', icon: '🚀', name: 'Rocket Barrage', dur: 8, color: '#ff5a3c', desc: '8 seconds of rockets flying at everything.' },
+    { id: 'raygun', icon: '🛸', name: 'Ray Gun', dur: 10, color: '#7dff6a', desc: '10 seconds of green beams that go through everything.' },
+    { id: 'truck', icon: '🚛', name: 'Garbage-Truck Ram', dur: 10, color: '#3d8a4a', desc: 'Drive a garbage truck through them for 10 seconds.' },
     { id: 'kicks', icon: '👟', name: 'Rocket Sneakers', dur: 10, color: '#7dff6a', desc: 'Run way faster for 10 seconds.' },
     { id: 'nuke', icon: '☢️', name: 'Garbage Day', dur: 0, color: '#c8ff3c', desc: 'Every zombie here gets taken out.' },
     { id: 'freeze', icon: '🧊', name: 'Freezer Burn', dur: 6, color: '#bfefff', desc: 'Zombies freeze solid for 6 seconds.' },
@@ -297,7 +300,27 @@
     bloater: { name: 'Bloater', r: 29, hp: 55, speed: 48, dmg: 14, xp: 3, from: 3, w: 2, pops: true },
     canhead: { name: 'Can-Head', r: 22, hp: 80, speed: 62, dmg: 12, xp: 3, from: 4, w: 2, tough: true },
     spitter: { name: 'Spitter', r: 18, hp: 24, speed: 62, dmg: 9, xp: 2, from: 5, w: 2, spits: true },
+    crawler: { name: 'Crawler', r: 15, hp: 14, speed: 165, dmg: 7, xp: 1, from: 4, w: 2.5, cap: 4 },
+    exploder: { name: 'Gas-Bag', r: 20, hp: 26, speed: 120, dmg: 0, xp: 2, from: 5, w: 1.5, cap: 3, explodes: true },
+    screamer: { name: 'Screamer', r: 18, hp: 32, speed: 60, dmg: 8, xp: 3, from: 6, w: 1, cap: 2, pulse: 'scream' },
+    stalker: { name: 'Stalker', r: 17, hp: 22, speed: 135, dmg: 11, xp: 2, from: 8, w: 1.2, cap: 3 },
+    brute: { name: 'Raging Brute', r: 30, hp: 170, speed: 50, dmg: 18, xp: 6, from: 9, w: 0.8, cap: 2, tough: true, rage: true },
+    riot: { name: 'Riot Shield', r: 22, hp: 95, speed: 55, dmg: 12, xp: 4, from: 10, w: 0.8, cap: 2, shield: true },
+    nest: { name: 'Rot Nest', r: 34, hp: 260, speed: 0, dmg: 0, xp: 8, from: 11, w: 0.3, cap: 0.6, nest: true },
+    // debuff zombies (a coloured aura tells them apart; trash-fight.js does what they do to you)
+    blinder: { name: 'Inkspitter', r: 19, hp: 34, speed: 62, dmg: 6, xp: 3, from: 7, w: 0.8, cap: 1.6, debuff: 'blind', aura: '#6a3a9a', ranged: true },
+    webber: { name: 'Webber', r: 19, hp: 34, speed: 70, dmg: 6, xp: 3, from: 8, w: 0.8, cap: 1.6, debuff: 'web', aura: '#e8e8e8', ranged: true },
+    jammer: { name: 'Gunk Jammer', r: 19, hp: 40, speed: 68, dmg: 8, xp: 3, from: 9, w: 0.7, cap: 1.4, debuff: 'jam', aura: '#9aa2aa' },
+    sludger: { name: 'Sludger', r: 21, hp: 44, speed: 55, dmg: 8, xp: 3, from: 9, w: 0.7, cap: 1.4, debuff: 'sludge', aura: '#7ad03a', trail: true },
+    squinter: { name: 'Squinter', r: 19, hp: 36, speed: 60, dmg: 6, xp: 3, from: 10, w: 0.6, cap: 1.2, debuff: 'zoom', aura: '#ffe066', pulse: 'flash' },
+    confuser: { name: 'Spinner', r: 19, hp: 36, speed: 66, dmg: 6, xp: 3, from: 11, w: 0.6, cap: 1.2, debuff: 'confuse', aura: '#c37bff', pulse: 'spin' },
+    leecher: { name: 'Leech', r: 18, hp: 30, speed: 90, dmg: 5, xp: 3, from: 12, w: 0.6, cap: 1.2, debuff: 'leech', aura: '#c0392b' },
+    shaker: { name: 'Stomper', r: 26, hp: 90, speed: 48, dmg: 12, xp: 5, from: 12, w: 0.5, cap: 1, debuff: 'shake', aura: '#ff8c42', pulse: 'stomp' },
     boss: { name: 'Dumpster Brute', r: 56, hp: 650, speed: 52, dmg: 25, xp: 30, from: 99, w: 0, boss: true },
+    // later boss waves bring a mini-boss that mixes the debuffs (trash-boss.js: art + patterns)
+    spider: { name: 'Mother Webber', r: 58, hp: 900, speed: 60, dmg: 22, xp: 40, from: 99, w: 0, boss: true, mini: true },
+    foghorn: { name: 'The Foghorn', r: 58, hp: 950, speed: 50, dmg: 22, xp: 40, from: 99, w: 0, boss: true, mini: true },
+    toxic: { name: 'Toxic Tub', r: 62, hp: 1000, speed: 45, dmg: 24, xp: 40, from: 99, w: 0, boss: true, mini: true },
     final: { name: 'Final boss', r: 60, hp: 2500, speed: 60, dmg: 25, xp: 60, from: 99, w: 0, boss: true }, // Regular mode: the boss behind the door (trash-story.js)
   };
   function waveSpec(wave, players, diff) {
@@ -308,7 +331,8 @@
       every: Math.max(0.16, 1.05 - wave * 0.055) / Math.sqrt(n) / (hard ? 1.2 : 1), // seconds between spawns
       cap: Math.min(90, 16 + wave * 6 + (n - 1) * 10),
       hpMul: (1 + 0.13 * (wave - 1) + 0.004 * (wave - 1) * (wave - 1)) * (hard ? 1.35 : 1), speedMul: Math.min(1.5, 1 + 0.02 * (wave - 1)) * (hard ? 1.1 : 1), dmgMul: (1 + 0.05 * (wave - 1) + 0.001 * (wave - 1) * (wave - 1)) * (hard ? 1.3 : 1),
-      weights: Object.entries(ZOMBIES).filter(([, z]) => z.from <= wave && z.w).map(([k, z]) => [k, z.w + (k === 'walker' ? 0 : Math.min(6, (wave - z.from) * 0.6))]),
+      weights: Object.entries(ZOMBIES).filter(([, z]) => z.from <= wave && z.w).map(([k, z]) => [k, k === 'walker' ? z.w : Math.min(z.cap || z.w + 6, z.w + (wave - z.from) * (z.cap ? 0.15 : 0.6))]),
+      mini: wave >= 10 && wave % 5 === 0 ? ['spider', 'foghorn', 'toxic'][(wave / 5) % 3] : null,
     };
   }
   const xpNeed = (level) => Math.round(5 + level * 4 + Math.pow(level, 1.5));

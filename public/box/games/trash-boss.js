@@ -10,7 +10,7 @@
 
   // ---------------- the bosses (feet at 0,0; facing right) ----------------
   function drawBoss(g, z, t) {
-    const type = z.fb, R = z.r, fl = false, c = (x) => x, ph2 = z.hp < z.mhp * 0.5;
+    const type = z.fb || z.mb, R = z.r, fl = false, c = (x) => x, ph2 = z.hp < z.mhp * 0.5;
     g.save(); g.translate(z.x, z.y); if (z.face < 0) g.scale(-1, 1);
     g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(0, 0, R * 1.2, R * 0.38, 0, 0, TAU); g.fill();
     const bob = Math.sin(t * 6) * 3;
@@ -48,6 +48,29 @@
       g.fillStyle = 'rgba(40,60,20,0.5)'; g.fillRect(-R * 0.5, -R * 0.5, 18, 26); circ(g, R * 0.5, -R * 0.35, 10); g.fill(); // a can and a tire in there
       for (const [ex, s] of [[-R * 0.25, 1], [R * 0.3, 0.8]]) { circ(g, ex, -R * 0.95, 16 * s); fillOl(g, '#fff', 3); g.fillStyle = OL; circ(g, ex + 4, -R * 0.95, 7 * s); g.fill(); }
       g.strokeStyle = OL; g.lineWidth = 4; g.beginPath(); g.arc(0, -R * 0.55, R * 0.35, 0.2, Math.PI - 0.2); g.stroke();
+    } else if (type === 'spider') {
+      // Mother Webber: a bloated zombie on eight scrap-metal spider legs, a web sac on her back
+      g.translate(0, bob * 0.5);
+      for (let i = 0; i < 4; i++) for (const s of [-1, 1]) { const a = (i - 1.5) * 0.45, k = Math.sin(t * 8 + i + s) * 6; g.strokeStyle = '#2a2a2e'; g.lineWidth = 7; g.beginPath(); g.moveTo(s * R * 0.3, -R * 0.7); g.lineTo(s * R * (0.9 + i * 0.12), -R * (1.1 - a) + k); g.lineTo(s * R * (1.25 + i * 0.1), 0); g.stroke(); }
+      g.beginPath(); g.ellipse(-R * 0.35, -R * 0.95, R * 0.75, R * 0.6, 0, 0, TAU); fillOl(g, c(ph2 ? '#d8d0c8' : '#e8e4dc'), 4); g.strokeStyle = 'rgba(120,110,100,0.6)'; g.lineWidth = 2; for (let k = 0; k < 4; k++) { g.beginPath(); g.ellipse(-R * 0.35, -R * 0.95, R * 0.2 * (k + 1), R * 0.15 * (k + 1), 0, 0, TAU); g.stroke(); }
+      g.beginPath(); g.ellipse(R * 0.35, -R * 0.85, R * 0.5, R * 0.45, 0, 0, TAU); fillOl(g, c('#8a9a7a'), 4);
+      for (let k = 0; k < 4; k++) { g.fillStyle = '#ff3a3a'; circ(g, R * 0.45 + (k % 2) * 10, -R * 0.95 + Math.floor(k / 2) * 9, 3.5); g.fill(); }
+    } else if (type === 'foghorn') {
+      // The Foghorn: a lighthouse keeper zombie wearing a ship's horn, rings of sound pulse off it
+      g.translate(0, bob);
+      for (let k = 0; k < 3; k++) { const u = ((t * 0.8 + k / 3) % 1); g.strokeStyle = `rgba(195,123,255,${0.6 * (1 - u)})`; g.lineWidth = 4; g.beginPath(); g.arc(R * 0.9, -R * 1.5, 20 + u * R * 1.5, -0.8, 0.8); g.stroke(); }
+      rr(g, -R * 0.6, -R * 1.7, R * 1.2, R * 1.5, 14); fillOl(g, c('#3a4a6a'), 4); g.fillStyle = '#e8d84a'; for (let k = 0; k < 4; k++) g.fillRect(-R * 0.55, -R * 1.55 + k * R * 0.35, R * 1.1, 6);
+      g.beginPath(); g.moveTo(R * 0.2, -R * 1.65); g.lineTo(R * 1.1, -R * 1.95); g.lineTo(R * 1.1, -R * 1.15); g.lineTo(R * 0.2, -R * 1.35); g.closePath(); fillOl(g, c('#c9a646'), 4);
+      circ(g, -R * 0.1, -R * 1.95, R * 0.38); fillOl(g, c('#9aa88a'), 4); g.fillStyle = ph2 ? '#c37bff' : '#fff'; circ(g, R * 0.02, -R * 2.0, 5); g.fill();
+    } else if (type === 'toxic') {
+      // Toxic Tub: a zombie wallowing in an overflowing chemical drum, gunk dripping
+      g.translate(0, bob * 0.4);
+      g.fillStyle = 'rgba(122,208,58,0.45)'; g.beginPath(); g.ellipse(0, -4, R * 1.3, R * 0.4, 0, 0, TAU); g.fill();
+      rr(g, -R * 0.8, -R * 1.5, R * 1.6, R * 1.5, 10); fillOl(g, c('#c9a43a'), 4); g.fillStyle = '#1a1a1a'; g.fillRect(-R * 0.8, -R * 1.1, R * 1.6, 8); g.fillRect(-R * 0.8, -R * 0.5, R * 1.6, 8);
+      g.fillStyle = '#1a1a1a'; g.beginPath(); g.moveTo(0, -R * 0.95); g.lineTo(-14, -R * 0.65); g.lineTo(14, -R * 0.65); g.closePath(); g.fill();
+      g.beginPath(); g.ellipse(0, -R * 1.5, R * 0.8, R * 0.25, 0, 0, TAU); fillOl(g, c(ph2 ? '#b6ff3c' : '#7ad03a'), 3);
+      circ(g, R * 0.1, -R * 1.85, R * 0.38); fillOl(g, c('#9ab06a'), 4); g.fillStyle = '#d6ff5a'; circ(g, R * 0.25, -R * 1.9, 5); g.fill();
+      for (const s of [-1, 1]) { g.strokeStyle = '#9ab06a'; g.lineWidth = 9; g.beginPath(); g.moveTo(s * R * 0.7, -R * 1.45); g.lineTo(s * R * 1.1, -R * 1.2 + Math.sin(t * 5 + s) * 8); g.stroke(); }
     } else {
       // Grinny: a giant grinning corn-dog mascot suit, foam fingers up
       const spin = z.spin > 0 ? z.spin * 12 : 0;
@@ -87,6 +110,18 @@
       if (z.cd <= 0) { z.cd = ph2 ? 1.6 : 2.4; const a = Math.atan2(dy, dx); for (let i = -1; i <= 1; i++) lob(a + i * 0.3, 230, z.dmg * 0.6, 3); }
       const marks = [0.75, 0.5, 0.25]; z.split = z.split || 0;
       if (z.split < marks.length && z.hp < z.mhp * marks[z.split]) { z.split++; minions('bloater', 3 + z.split); sim.boom(z.x, z.y, 140, 0, '#b6ff3c', false); }
+    } else if ((z.fb || z.mb) === 'spider') { // webs + blinding ink
+      const a = Math.atan2(dy, dx);
+      if (z.cd <= 0) { z.cd = ph2 ? 2 : 3; for (let i = -1; i <= 1; i++) sim.spit.push({ x: z.x, y: z.y - z.r, vx: Math.cos(a + i * 0.35) * 300, vy: Math.sin(a + i * 0.35) * 300, life: 2.2, dmg: z.dmg * 0.4, debuff: 'web', col: '#e8e8e8', big: true }); }
+      if (z.cd2 <= 0) { z.cd2 = ph2 ? 4 : 6; for (let i = 0; i < 8; i++) sim.spit.push({ x: z.x, y: z.y - z.r, vx: Math.cos(i * TAU / 8) * 260, vy: Math.sin(i * TAU / 8) * 260, life: 2, dmg: z.dmg * 0.3, debuff: 'blind', col: '#6a3a9a', big: true }); minions('webber', ph2 ? 2 : 1); }
+      if (d < 220) speedMul = 0.4;
+    } else if ((z.fb || z.mb) === 'foghorn') { // confusion + squint rings
+      if (z.cd <= 0) { z.cd = ph2 ? 3 : 4.5; const k = z.flip = !z.flip; ring(ph2 ? 14 : 10, 240, 0); for (const s of sim.spit.slice(-(ph2 ? 14 : 10))) { s.debuff = k ? 'confuse' : 'zoom'; s.col = k ? '#c37bff' : '#ffe066'; } sim.shake = Math.max(sim.shake, 0.3); }
+      if (z.cd2 <= 0) { z.cd2 = 5; minions(ph2 ? 'confuser' : 'squinter', 1); minions('runner', 3); }
+    } else if ((z.fb || z.mb) === 'toxic') { // slow puddles + gun-jamming gunk
+      const a = Math.atan2(dy, dx);
+      if (z.cd <= 0) { z.cd = ph2 ? 1.8 : 2.6; for (let i = -2; i <= 2; i++) sim.spit.push({ x: z.x, y: z.y - z.r, vx: Math.cos(a + i * 0.22) * 230, vy: Math.sin(a + i * 0.22) * 230, life: 2.4, dmg: z.dmg * 0.4, debuff: i % 2 ? 'jam' : 'sludge', col: i % 2 ? '#9aa2aa' : '#7ad03a', big: true }); }
+      if (z.cd2 <= 0) { z.cd2 = 4; if (sim.puddles) for (let i = 0; i < 3; i++) sim.puddles.push({ x: z.x + (rng() - 0.5) * 300, y: z.y + (rng() - 0.5) * 200, r: 60, t: 0, life: 9 }); minions('sludger', 1); }
     } else if (z.fb === 'mascot') {
       if (z.spin > 0) { z.spin -= dt; speedMul = 0; if (Math.floor(z.spin * 10) !== Math.floor((z.spin + dt) * 10)) ring(ph2 ? 14 : 10, 300, z.spin * 4); }
       else if (z.charge > 0) { z.charge -= dt; z.x += z.cx * z.speed * 4 * dt; z.y += z.cy * z.speed * 4 * dt; return -1; }

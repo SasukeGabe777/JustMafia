@@ -43,6 +43,9 @@
     ratking: { name: 'The Rat Queen', icon: '🐀', hp: 2200, r: 54, speed: 70, dmg: 22, desc: 'Calls rat swarms and burrows around.' },
     sludge: { name: 'Big Sludge', icon: '🟢', hp: 2800, r: 74, speed: 40, dmg: 26, desc: 'Lobs toxic goo and splits when hurt.' },
     mascot: { name: 'Grinny the Mascot', icon: '🌭', hp: 2400, r: 60, speed: 75, dmg: 24, desc: 'Dashes, spins and sprays foam.' },
+    spider: { name: 'Mother Webber', icon: '🕷️', hp: 2500, r: 60, speed: 62, dmg: 22, desc: 'Webs you to the ground and sprays blinding ink.' },
+    foghorn: { name: 'The Foghorn', icon: '📯', hp: 2500, r: 60, speed: 52, dmg: 22, desc: 'Its blasts make you dizzy and squint.' },
+    toxic: { name: 'Toxic Tub', icon: '☣️', hp: 2700, r: 64, speed: 46, dmg: 24, desc: 'Slimes the ground and gunks up your guns.' },
   };
   // A few short beats from the radio (and notes) that tell the story as you go.
   const RADIO = 'Dot, Radio Dumpster 101.3';

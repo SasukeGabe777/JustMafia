@@ -19,9 +19,10 @@
     gunsmith: { name: 'Gunsmith', icon: '🛠️', color: '#9a9fa6', where: ['roof', 'gas', 'docks', 'mall'], n: 2, up: [5, 8], says: ['Real tools, real work. Level five and up.', 'That thing’s been through the wars. Let’s fix that.'] },
     master: { name: 'Master Armorer', icon: '⚜️', color: '#ffd23f', where: null, n: 1, up: [8, 10], far: true, says: ['Only the finest work. Levels eight to ten.', 'You came a long way. So did that weapon.'] },
     forge: { name: 'Scrapyard Crucible', icon: '🔥', color: '#ff6a2a', where: ['junkyard', 'sewer', 'docks', 'landfill'], n: 1, far: true, says: ['A level-ten weapon goes in. Something better comes out.', 'Bring a crucible core. The fire needs feeding.'] },
+    truck: { name: 'Roaming Trader', icon: '🚚', color: '#c37bff', says: ['Fresh off the truck! Well, fresh-ish.', 'I don’t stay long. Zombies scratch the paint.'] },
     camper: { name: 'Survivor Camper', icon: '🚐', color: '#8ab4d8', says: ['Parked here for one wave. Quick, browse!', 'Had to move the van. Smelled like zombie.'] },
   };
-  const KEYS = Object.keys(PLACES).filter((k) => k !== 'camper');
+  const KEYS = Object.keys(PLACES).filter((k) => k !== 'camper' && k !== 'truck');
   // The places of a town: about one block in five, where they fit (markets on main streets in
   // the suburbs, the crucible deep in the junk), the master armorer and the crucible far from the
   // middle. Deterministic per seed.
@@ -70,9 +71,11 @@
     vitamins: { shop: 'clinic', icon: '💊', name: 'Mega Vitamins', desc: '+30 max health for this run (and heal 30).', base: 30, kind: 'mhp', n: 30 },
     token: { shop: 'clinic', icon: '💖', name: 'Revive Token', desc: 'If you fall, you get right back up (once).', base: 60, kind: 'life' },
     bandage: { shop: 'clinic', icon: '🩹', name: 'Bandages', desc: 'Heal 45.', base: 9, kind: 'heal', n: 45 },
+    antidote: { shop: 'clinic', icon: '🧪', name: 'Antidote', desc: 'Clears every debuff now (ink, webs, dizziness...).', base: 12, kind: 'cleanse' },
   };
   const BY_SHOP = {}; for (const [id, G] of Object.entries(GOODS)) (BY_SHOP[G.shop] || (BY_SHOP[G.shop] = [])).push(id);
   BY_SHOP.camper = ['hotdog', 'bandage', 'plate', 'chips', 'bag', 'soda'];
+  BY_SHOP.truck = ['bag', 'grenade', 'chips'];
   const price = (id, wave, n = 0) => { const G = GOODS[id]; if (!G) return 0; return Math.round(G.base * (1 + 0.11 * Math.max(0, (wave || 1) - 1)) * (1 + 0.25 * n)); };
   function stock(r, type, wave) {
     const L = (BY_SHOP[type] || []).slice(); for (let i = L.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [L[i], L[j]] = [L[j], L[i]]; }
