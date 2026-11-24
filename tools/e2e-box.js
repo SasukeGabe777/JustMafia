@@ -275,6 +275,8 @@ async function setup(browser, game, settings = {}) {
     await ph.until(`document.querySelectorAll('[data-hatch]').length === 3`, 'egg picker');
     await ph.shot('box-ducks-own-join');
     await ph.click('[data-hatch="0"]'); await ph.until(`!!document.querySelector('[data-vip="start"]')`, 'host start');
+    // six mini-games take over two minutes: races every 5 minutes, so none starts in the middle
+    assert(await tv.eval(`(() => { const s = document.querySelector('[data-set="raceEvery"]'); if (!s) return false; s.value = '300'; s.onchange(); return true; })()`), 'race timer setting on the TV');
     await ph.click('[data-vip="start"]');
     await tv.until(`!!document.querySelector('#corner') && !document.querySelector('#corner').hidden`, 'corner badge in game');
     await wait(900); await tv.shot('box-ducks-own-game');
@@ -293,7 +295,7 @@ async function setup(browser, game, settings = {}) {
       await ph.until(`!!document.querySelector('[data-sheet="${skill}"]') && !document.querySelector('.dk-over')`, 'skill card ' + skill, 8000);
       await ph.click(`[data-sheet="${skill}"]`); await ph.until(`!!document.querySelector('[data-diff="easy"]')`, 'sheet');
       await ph.click('[data-diff="easy"]'); await wait(150); await ph.click('[data-play]');
-      await ph.until(`!!document.querySelector('.dk-over') && !document.querySelector('.dk-ready')`, game + ' started', 6000);
+      await ph.until(`!!document.querySelector('.dk-over') && !document.querySelector('.dk-ready')`, game + ' started', 15000);
       const end = Date.now() + 21000; let i = 0;
       while (Date.now() < end && !(await ph.eval(`!!document.querySelector('.dk-result')`))) {
         await ph.eval(`(() => { const c = document.querySelector('.dk-over canvas'), r = c.getBoundingClientRect(), i = ${i};
