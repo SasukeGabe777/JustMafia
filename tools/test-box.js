@@ -231,8 +231,8 @@ test('Ducks: quests pay coins when done; rivals are the duck just ahead; boost p
   // (a race of only cliffs and mazes, e.g. a Climb-only race, has no boost pads)
   assert(Array.isArray(r.game.lastRace.boosts) && (r.game.lastRace.boosts.length > 0 || r.game.lastRace.sections.every((x) => x.type === 'cliff' || x.type === 'maze')));
 });
-test('Ducks: eggs hatch with a talent; ducks grow up; wild ducks fill small races; themed courses; trophies', () => {
-  const { r, clock } = room('ducks', 0, { races: 3, raceEvery: 60 }, 3);
+test('Ducks: eggs hatch with a talent; ducks grow up; wild ducks (when on) fill small races; themed courses; trophies', () => {
+  const { r, clock } = room('ducks', 0, { races: 3, raceEvery: 60, wild: true }, 3);
   const a = human(r, 'Ann'); const res = r.start(); assert(res.ok);
   const d = r.game.ducks.get(a.id);
   assert.equal(r.act(a, { op: 'train', stat: 'run' }).ok, false, 'hatch first');

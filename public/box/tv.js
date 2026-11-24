@@ -633,7 +633,7 @@
     if (state.live) {
       if (rendered !== 'live') {
         main.innerHTML = `<div class="live-wrap"><div id="g-area"></div><aside class="panel join live-join">${joinPanel()}
-          <details class="live-set"><summary>⚙ Settings</summary><div class="settings" id="settings"></div></details>
+          ${G.settingsTv ? '<div class="live-set-game" id="settings"></div>' : '<details class="live-set"><summary>⚙ Settings</summary><div class="settings" id="settings"></div></details>'}
           <div class="roster" id="roster" hidden></div><span id="roster-title" hidden></span></aside></div>`;
         rendered = 'live'; bindJoin();
       }
@@ -684,6 +684,9 @@
     for (const c of document.querySelectorAll('[data-kick]')) c.onclick = () => { if (confirm('Remove this player?')) host('kick', { id: c.dataset.kick }); };
     // Settings form (keeps focus while the host is choosing).
     const box = $('#settings');
+    // A live-lobby game can draw its own settings (its look, groups and buttons) in the join panel:
+    //   BOX.games.<key>.settingsTv(el, { fields, settings, partyMode, set(key, value), ui(kind) }), called on every update.
+    if (G.settingsTv && state.live) { try { G.settingsTv(box, { fields: state.fields, settings: state.settings, partyMode: state.partyMode || null, set: (key, value) => host('settings', { settings: { [key]: value } }), ui }); } catch (e) { console.error(e); } return; }
     const sig = JSON.stringify(state.settings);
     if (box.dataset.sig !== sig && !box.contains(document.activeElement)) {
       box.dataset.sig = sig;

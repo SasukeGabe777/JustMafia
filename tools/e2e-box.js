@@ -23,6 +23,12 @@ async function skipShow(tv) {
     await tv.eval(`(document.querySelector('#show-skip') || {}).click && document.querySelector('#show-skip').click(); true`); await wait(500);
   }
 }
+// Pick a lobby setting on the TV: a <select> (the shared panel) or a game's own buttons
+// (JustRaiseDucks' Season Rules board: a choice button, or a switch whose data-val is what a press sets).
+const setJs = (k, v) => `(() => { const s = document.querySelector('[data-set="${k}"]'); if (!s) return false;
+  if (s.tagName === 'SELECT') { s.value = '${v}'; s.onchange(); return true; }
+  const b = document.querySelector('[data-set="${k}"][data-val="${v}"]'); if (b && !(b.classList.contains('dks-opt') && b.classList.contains('on'))) b.click();
+  return true; })()`;
 async function setup(browser, game, settings = {}) {
   // Finished sections: park their pages (errors were already collected) so the open tabs don't pile up.
   for (const p of PAGES) if (!p.parked) { p.parked = true; try { await p.send('Page.navigate', { url: 'about:blank' }); } catch { /* closed */ } }
@@ -32,8 +38,8 @@ async function setup(browser, game, settings = {}) {
   await tv.until(`/^[A-Z]{4}$/.test((document.querySelector('#code') || {}).textContent || '')`, game + ' lobby');
   const code = await tv.eval(`document.querySelector('#code').textContent`);
   await tv.until(`document.querySelector('#qr').complete && document.querySelector('#qr').naturalWidth > 100`, 'QR image');
-  assert(await tv.eval(`document.querySelectorAll('#settings select').length >= 3`), 'settings shown');
-  for (const [k, v] of Object.entries(settings)) await tv.eval(`(() => { const s = document.querySelector('[data-set="${k}"]'); s.value = '${v}'; s.onchange(); return true; })()`);
+  assert(await tv.eval(`document.querySelectorAll('#settings select, #settings button[data-set]').length >= 3`), 'settings shown');
+  for (const [k, v] of Object.entries(settings)) assert(await tv.eval(setJs(k, v)), 'setting ' + k);
   const ph = await browser.page();
   await ph.send('Emulation.setDeviceMetricsOverride', { width: 400, height: 820, deviceScaleFactor: 1, mobile: true });
   // One QR for the night: it encodes /j/CODE, which opens this game's phone page.
@@ -276,7 +282,20 @@ async function setup(browser, game, settings = {}) {
     await ph.shot('box-ducks-own-join');
     await ph.click('[data-hatch="0"]'); await ph.until(`!!document.querySelector('[data-vip="start"]')`, 'host start');
     // six mini-games take over two minutes: races every 5 minutes, so none starts in the middle
-    assert(await tv.eval(`(() => { const s = document.querySelector('[data-set="raceEvery"]'); if (!s) return false; s.value = '300'; s.onchange(); return true; })()`), 'race timer setting on the TV');
+    // The settings are the farm's Season Rules noticeboard: a wooden sign in the join card opens it.
+    await tv.click('#dks-open'); await tv.until(`!document.querySelector('.dks-ov').hidden`, 'Season Rules board opens');
+    assert.equal(await tv.eval(`document.querySelectorAll('.dks-note').length`), 4, 'four pinned notes');
+    assert.equal(await tv.eval(`document.querySelector('[data-set="wild"]').getAttribute('aria-checked')`), 'false', 'wild ducks off by default');
+    assert(await tv.eval(`document.activeElement && document.activeElement.dataset.set === 'races'`), 'keyboard focus starts on the board');
+    await tv.eval(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); true`);
+    assert.equal(await tv.eval(`document.activeElement.dataset.val`), '8', '→ moves along a row');
+    await tv.click('[data-set="raceEvery"][data-val="300"]');
+    await tv.until(`document.querySelector('[data-set="raceEvery"][data-val="300"]').classList.contains('on') && /5 min/.test(document.querySelector('[data-row="raceEvery"] .dks-say').textContent)`, 'the race timer is set (server confirmed)');
+    await tv.click('[data-set="wild"]'); await tv.until(`document.querySelector('[data-set="wild"]').getAttribute('aria-checked') === 'true' && /Wild ducks join/.test(document.querySelector('.dks-chips').textContent)`, 'wild ducks switched on');
+    await tv.click('[data-set="wild"]'); await tv.until(`document.querySelector('[data-set="wild"]').getAttribute('aria-checked') === 'false'`, 'and off again');
+    await tv.shot('box-ducks-season-rules');
+    await tv.eval(`document.querySelector('.dks-ov').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); true`);
+    assert(await tv.eval(`document.querySelector('.dks-ov').hidden && document.activeElement.id === 'dks-open'`), 'Esc closes the board');
     await ph.click('[data-vip="start"]');
     await tv.until(`!!document.querySelector('#corner') && !document.querySelector('#corner').hidden`, 'corner badge in game');
     await wait(900); await tv.shot('box-ducks-own-game');

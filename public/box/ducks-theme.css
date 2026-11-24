@@ -88,3 +88,93 @@ body.g-ducks .dk-valley, body.g-ducks .dk-race { border: 4px solid #c79a5d; }
 
 .standalone .dk-racehead { display: none; }
 .dk-racing .corner { display: none; }
+
+/* ---------- Season Rules: the lobby's settings as a farm noticeboard (settingsTv in games/ducks.js) ---------- */
+.live-set-game { width: 100%; }
+.dks-sign { position: relative; width: 100%; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 10px 12px 9px; margin-top: 4px; cursor: pointer; text-align: left; color: #4a2a0c;
+  font: inherit; border: 3px solid #6e4220; border-radius: 12px; background: repeating-linear-gradient(180deg, #e7b878 0 17px, #d9a35f 17px 19px); box-shadow: 0 5px 0 #4a2a0c; transition: transform 0.08s; }
+.dks-sign::before, .dks-sign::after { content: ''; position: absolute; top: 7px; width: 7px; height: 7px; border-radius: 50%; background: #6b4a2a; box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.4); }
+.dks-sign::before { left: 7px; } .dks-sign::after { right: 7px; }
+.dks-sign:hover { transform: translateY(-2px); } .dks-sign:active { transform: translateY(3px); box-shadow: 0 2px 0 #4a2a0c; }
+.dks-sign:focus-visible, .dks-board button:focus-visible { outline: 4px solid #3ec1ff; outline-offset: 3px; }
+.dks-sign-t { font-family: 'Lilita One', 'Fredoka', sans-serif; font-size: 20px; text-align: center; color: #5a2e0c; }
+.dks-sign-c { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.dks-sign-c em { font-style: normal; font-size: 12px; font-weight: 800; background: rgba(255, 248, 230, 0.75); border-radius: 99px; padding: 2px 8px; }
+.dks-sign-go { position: absolute; right: 10px; bottom: -12px; font-family: 'Lilita One', 'Fredoka', sans-serif; font-size: 14px; background: #ffcf3f; color: #4a2a0c; border-radius: 10px; padding: 2px 10px; box-shadow: 0 3px 0 #b8861f; }
+
+.dks-ov { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(12, 40, 24, 0.62); text-align: left; animation: dksFade 0.18s ease-out; }
+@keyframes dksFade { from { opacity: 0; } }
+.dks-board { position: relative; width: min(1380px, 100%); max-height: 100%; display: flex; flex-direction: column; color: #4a2a0c; border-radius: 22px; padding: 14px 26px 14px;
+  border: 10px solid #6e4220; box-shadow: 0 14px 0 #3d200a, 0 30px 70px rgba(0, 0, 0, 0.45), inset 0 0 0 3px #b98349;
+  background: repeating-linear-gradient(180deg, #a86c38 0 46px, #96602f 46px 49px, #a86c38 49px 50px); animation: dksDrop 0.25s cubic-bezier(0.2, 1.4, 0.5, 1); }
+@keyframes dksDrop { from { transform: translateY(-24px) rotate(-1deg); opacity: 0; } }
+.dks-board::before, .dks-board::after { content: ''; position: absolute; top: 8px; width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #d8d0c4, #6d655b); }
+.dks-board::before { left: 8px; } .dks-board::after { right: 8px; }
+.dks-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 24px; row-gap: 8px; margin-bottom: 4px; }
+.dks-hr { display: flex; flex-direction: column; gap: 8px; }
+.dks-title { font-family: 'Lilita One', 'Fredoka', sans-serif; font-size: 40px; line-height: 1; color: #ffcf3f; text-shadow: 0 4px 0 #4a2a0c; padding: 6px 24px 8px; border-radius: 14px;
+  background: #6e4220; border: 4px solid #c79a5d; transform: rotate(-1.2deg); }
+.dks-sub { margin: 0; color: #fff3dc; font-size: 19px; font-weight: 700; text-shadow: 0 2px 0 rgba(60, 30, 8, 0.6); max-width: 560px; }
+.dks-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.dks-chips span { background: #fff6e0; color: #4a2a0c; font-weight: 800; font-size: 16px; border-radius: 99px; padding: 5px 13px; box-shadow: 0 3px 0 rgba(60, 30, 8, 0.45); }
+.dks-notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 22px; overflow: auto; padding: 12px 8px 20px; min-height: 0; }
+.dks-note { position: relative; background: linear-gradient(180deg, #fffaf0, #f6e8c8); border-radius: 6px 6px 10px 10px; padding: 12px 18px 12px; box-shadow: 0 6px 0 rgba(60, 30, 8, 0.35), 0 10px 18px rgba(0, 0, 0, 0.18); }
+.dks-note.n0 { transform: rotate(-0.5deg); } .dks-note.n1 { transform: rotate(0.45deg); } .dks-note.n2 { transform: rotate(0.35deg); } .dks-note.n3 { transform: rotate(-0.4deg); }
+.dks-note::before { content: ''; position: absolute; top: -9px; left: 50%; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff9c8a, #d83a2a 60%, #8e1d12); box-shadow: 0 3px 3px rgba(0, 0, 0, 0.35); }
+.dks-note.n1::before { background: radial-gradient(circle at 35% 30%, #a6e3ff, #2c8fd6 60%, #144f86); }
+.dks-note.n2::before { background: radial-gradient(circle at 35% 30%, #fff1a8, #e8b21c 60%, #8f6608); }
+.dks-note.n3::before { background: radial-gradient(circle at 35% 30%, #c8f5b0, #4fae35 60%, #22631a); }
+.dks-note h3 { margin: 0 0 6px; font-family: 'Lilita One', 'Fredoka', sans-serif; font-weight: 400; font-size: 25px; color: #6b3d14; display: flex; align-items: center; gap: 8px; border-bottom: 2px dashed #d9bf8e; padding-bottom: 5px; }
+.dks-set { padding: 6px 0; }
+.dks-set + .dks-set { border-top: 1px solid rgba(160, 120, 70, 0.22); }
+.dks-lbl b { display: block; font-size: 18px; font-weight: 900; color: #4a2a0c; line-height: 1.2; }
+.dks-lbl small { display: block; font-size: 15px; color: #7a5631; line-height: 1.25; margin-top: 1px; }
+/* a choice: its name on the left, the buttons on the right, what it means underneath (6 choices: the name on top) */
+.dks-set.multi { display: grid; grid-template-columns: 168px minmax(0, 1fr); column-gap: 12px; align-items: center; }
+.dks-set.multi .dks-say { grid-column: 1 / -1; }
+.dks-set.multi.wide { grid-template-columns: minmax(0, 1fr); }
+.dks-set.multi.wide .dks-opts { margin-top: 6px; }
+.dks-opts { display: flex; gap: 8px; }
+.dks-opt { position: relative; flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 6px; font: inherit; font-size: 18px; font-weight: 800; color: #5a3416; cursor: pointer;
+  background: #f1dfb8; border: 3px solid #c79a5d; border-radius: 13px; box-shadow: 0 4px 0 #b08a50; transition: transform 0.08s, background 0.12s; white-space: nowrap; }
+.dks-opt .i { font-size: 21px; line-height: 1; }
+.dks-opts.n6 .dks-opt { flex-direction: column; gap: 2px; padding: 6px 4px 5px; font-size: 16px; }
+.dks-opt:hover { background: #fbeccb; transform: translateY(-2px); }
+.dks-opt:active { transform: translateY(3px); box-shadow: 0 1px 0 #b08a50; }
+.dks-opt.on { background: #ffcf3f; border-color: #8a5a1c; color: #3d200a; box-shadow: 0 4px 0 #a5741a, inset 0 0 0 2px #fff3b0; }
+.dks-opt.on::after { content: '✔'; position: absolute; top: -9px; right: -7px; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; background: #4fae35; border: 2px solid #fffaf0; box-shadow: 0 2px 0 rgba(60, 30, 8, 0.35); }
+.dks-say { margin: 6px 0 0; font-size: 15px; color: #7a5631; line-height: 1.25; min-height: 1.25em; }
+.dks-say::before { content: '👉 '; }
+.dks-set.sw { display: flex; align-items: center; gap: 12px; }
+.dks-set.sw .dks-ic { font-size: 28px; width: 36px; text-align: center; flex: none; }
+.dks-set.sw .dks-lbl { flex: 1; min-width: 0; }
+.dks-sw { flex: none; position: relative; width: 104px; height: 44px; border-radius: 99px; cursor: pointer; font: inherit; border: 3px solid #8f6a3d; background: #cdb894; box-shadow: 0 4px 0 #8a6a40, inset 0 3px 4px rgba(0, 0, 0, 0.15); transition: background 0.15s; }
+.dks-sw i { position: absolute; top: 3px; left: 4px; width: 32px; height: 32px; border-radius: 50%; background: #fffaf0; box-shadow: 0 3px 0 rgba(60, 30, 8, 0.35); transition: left 0.15s; }
+.dks-sw span { position: absolute; top: 0; bottom: 0; right: 13px; display: flex; align-items: center; font-family: 'Lilita One', 'Fredoka', sans-serif; font-size: 18px; color: #6e5434; }
+.dks-sw.on { background: #6cc94f; border-color: #3c7f27; box-shadow: 0 4px 0 #3c7f27, inset 0 3px 4px rgba(0, 0, 0, 0.12); }
+.dks-sw.on i { left: 62px; }
+.dks-sw.on span { right: auto; left: 14px; color: #fff; text-shadow: 0 2px 0 #2f6b1d; }
+.dks-foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 6px; }
+.dks-keys { color: #ffeccd; font-size: 15px; font-weight: 700; opacity: 0.9; }
+.dks-done { font-family: 'Lilita One', 'Fredoka', sans-serif; font-size: 26px; color: #173d12; background: #8be36a; border: 0; border-radius: 16px; padding: 10px 30px; cursor: pointer; box-shadow: 0 6px 0 #4f9a35; transition: transform 0.08s; }
+.dks-done:hover { transform: translateY(-2px); } .dks-done:active { transform: translateY(4px); box-shadow: 0 2px 0 #4f9a35; }
+@media (max-width: 900px) {
+  .dks-ov { padding: 8px; align-items: stretch; }
+  .dks-board { padding: 12px 12px 10px; border-width: 7px; }
+  .dks-title { font-size: 30px; padding: 6px 16px 8px; }
+  .dks-sub { font-size: 15px; text-align: center; }
+  .dks-chips span { font-size: 13px; padding: 3px 9px; }
+  .dks-notes { grid-template-columns: 1fr; gap: 16px; }
+  .dks-note { padding: 10px 12px; }
+  .dks-set.multi { grid-template-columns: minmax(0, 1fr); }
+  .dks-set.multi .dks-opts { margin-top: 6px; }
+  .dks-opts { flex-wrap: wrap; }
+  .dks-opts.n6 .dks-opt { flex-basis: calc(33.3% - 6px); }
+  .dks-opt { font-size: 16px; padding: 8px 4px; white-space: normal; line-height: 1.1; }
+  .dks-opts.n3 .dks-opt { flex-direction: column; gap: 2px; }
+  .dks-opt.on::after { top: -8px; right: -6px; width: 18px; height: 18px; font-size: 10px; }
+  .dks-set.sw .dks-ic { display: none; }
+  .dks-sw { width: 92px; } .dks-sw.on i { left: 50px; }
+  .dks-keys { display: none; }
+  .dks-foot { justify-content: center; }
+}

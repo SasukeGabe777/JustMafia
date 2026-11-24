@@ -528,7 +528,14 @@
       }
       if (r.done && !race.finished.has(r.id)) {
         race.finished.add(r.id); const pl = race.place[r.id].place;
-        if (pl === 1) {
+        // A time trial (one player, no wild ducks): the clock against the par time.
+        if (R.trial && r.id === R.trial.id) {
+          const T = R.trial, gap = Math.abs(T.time - T.par).toFixed(1);
+          race.firstDoneAt = race.firstDoneAt || pnow; BOX.sfx(T.medal ? 'win' : 'cheer');
+          race.banner = { at: pnow, text: `⏱️ ${T.time.toFixed(1)}s!`, sub: T.medal === 1 ? `🥇 GOLD TIME: ${gap}s under par (${T.par.toFixed(1)}s)` : T.medal ? `${MEDAL[T.medal - 1]} ${T.medal === 2 ? 'Silver' : 'Bronze'} time: ${gap}s over par (${T.par.toFixed(1)}s)` : `Par was ${T.par.toFixed(1)}s. Train up and beat it next race!` };
+          say(T.medal === 1 ? `⏱️ ${d.name} beats the par time! GOLD!` : `⏱️ ${d.name} stops the clock at ${T.time.toFixed(1)}s!`, true);
+          if (T.medal) for (let i = 0; i < 100; i++) race.confetti.push({ x: Math.random() * W, y: -Math.random() * H * 0.5, vy: 120 + Math.random() * 160, vx: (Math.random() - 0.5) * 60, c: ['#ffd23f', '#ff4f9a', '#3ec1ff', '#2ee6a6', '#fff'][i % 5], r: Math.random() * 6 });
+        } else if (pl === 1) {
           race.firstDoneAt = pnow; BOX.sfx('cheer'); BOX.sfx('win');
           if (race.photo) clip('camera', { vol: 0.28, jitter: 0 }); // the photo-finish camera
           const second = R.results[1] && race.ducks[R.results[1].id];
@@ -543,6 +550,8 @@
     // Commentary from the race state: lead changes, sections, the first hurdle, neck and neck, halfway, final stretch.
     const b = byX[1] && !byX[1].done ? byX[1] : null;
     if (e > R.intro && !lead.done) {
+      if (R.trial && !race.flags.trial) { race.flags.trial = true; say(`⏱️ Time trial! Beat the par time of ${R.trial.par.toFixed(1)}s for gold.`, true); }
+      if (R.trial && lead.id === R.trial.id && !race.flags.half && lead.x > G.L / 2) { race.flags.half = true; say(`Halfway! ${nm(lead.id)} is ${race.simT <= R.trial.par / 2 ? 'ahead of' : 'behind'} par pace.`); }
       if (race.leader !== lead.id) {
         if (race.leader && pnow - race.leadAt > 900) say(lead.id === 'boss' ? BOSS_TAUNT[Math.floor(Math.random() * BOSS_TAUNT.length)] : race.leader === 'boss' ? `😱 ${nm(lead.id)} overtakes the Golden Goose!` : `${(race.ducks[lead.id] || {}).wild ? '🌿 Wild duck ' : ''}${nm(lead.id)} takes the lead!`, lead.id === 'boss' || race.leader === 'boss');
         race.leader = lead.id; race.leadAt = pnow;
@@ -714,7 +723,7 @@
       dot.style.left = Math.min(100, (x / L.length) * 100) + '%';
       let msg;
       if (e <= 0) msg = `Lining up… ${Math.max(1, Math.ceil(-e))}`;
-      else if (t >= L.time) msg = `🏁 Finished! ${ord(L.place)} of ${L.of}`;
+      else if (t >= L.time) msg = L.par != null ? `🏁 Finished in ${L.time.toFixed(1)}s (par ${L.par.toFixed(1)}s)` : `🏁 Finished! ${ord(L.place)} of ${L.of}`;
       else {
         let ev = null, evI = -1; L.ev.forEach((q, j) => { if (q[0] <= t && t - q[0] < (q[1] === 'wrong' ? 2.4 : 1.4) && LIVE_EV[q[1]]) { ev = q[1]; evI = j; } });
         if (ev) { msg = LIVE_EV[ev]; if ((ev === 'trip' || ev === 'slip' || ev === 'wrong') && liveRace.buzzed !== evI) { liveRace.buzzed = evI; ctx.vibrate(120); } }
@@ -914,8 +923,11 @@
   }
   // Results on the phone: your place, the season, what's next.
   function resultsCard(v, d) {
-    const l = d.last, nextL = v.ladder && v.ladder[v.race];
-    return `<div class="card-box dk-myres ${l && l.place <= 3 ? 'podium' : ''}"><div class="dk-bigplace">${l ? (l.place <= 3 ? MEDAL[l.place - 1] : '#' + l.place) : '🏁'}</div><h3>${l ? `You finished ${ord(l.place)} of ${l.of}` : 'Race over'}</h3>
+    const l = d.last, nextL = v.ladder && v.ladder[v.race], T = l && l.trial;
+    // a time trial (you raced alone): your time against the par time; the medal pays like a place
+    const head = T ? `<div class="dk-bigplace">${T.medal ? MEDAL[T.medal - 1] : '⏱️'}</div><h3>Time trial: ${T.time.toFixed(1)}s</h3><p class="muted">Par time ${T.par.toFixed(1)}s · ${T.medal ? ['Gold', 'Silver', 'Bronze'][T.medal - 1] + ' time!' : 'no medal this time. Beat it next race!'}</p>`
+      : `<div class="dk-bigplace">${l ? (l.place <= 3 ? MEDAL[l.place - 1] : '#' + l.place) : '🏁'}</div><h3>${l ? `You finished ${ord(l.place)} of ${l.of}` : 'Race over'}</h3>`;
+    return `<div class="card-box dk-myres ${l && l.place <= 3 ? 'podium' : ''}">${head}
       ${l ? `<p class="dk-gain"><b>+${l.pts}</b> points · <b>+${l.coins}</b> 🪙${l.place <= 3 ? ' · a trophy for your farm!' : ''}</p><p class="muted">${l.trips ? '💫 Tripped ' + l.trips + '× · ' : ''}${l.slips ? '😱 Slipped ' + l.slips + '× · ' : ''}${l.shortcuts ? '💡 ' + l.shortcuts + ' shortcut' + (l.shortcuts === 1 ? '' : 's') + ' · ' : ''}${l.wrongs ? '↩️ ' + l.wrongs + ' wrong turn' + (l.wrongs === 1 ? '' : 's') + ' (train 🧠 Smarts) · ' : ''}${l.gulps ? '💦 Gulped water ' + l.gulps + '× · ' : ''}${l.dips ? '🪽 Dipped ' + l.dips + '× · ' : ''}${l.tired ? '😮‍💨 Ran out of stamina (train 💪 Stamina)' : '💪 Stamina held up'}</p>${weakHint(l.weak, 'race')}` : ''}
       ${v.rivalWon != null ? `<p>⚔️ Rival: ${v.rivalWon ? 'you beat them! +15 coins' : 'they beat you this time.'}</p>` : ''}${v.predictWon != null ? `<p>🔮 Prediction: ${v.predictWon ? '+' + v.predictWon + ' coins!' : 'no luck this time.'}</p>` : ''}</div>
       <div class="card-box dk-seasonline"><div><b>Season: ${ord(v.rank || 1)} of ${v.of}</b> · ${d.points} pts${v.leader ? `<div class="muted">${v.leader.points - d.points} behind ${esc(v.leader.duck)}</div>` : v.race ? '<div class="muted">You lead the valley! 👑</div>' : ''}</div>${nextL ? `<div class="dk-nextup">Next<br><b>${nextL.icon}</b></div>` : '<div class="dk-nextup">🏆<br>Finale!</div>'}</div>
@@ -973,7 +985,118 @@
     }, 'titleRaf');
   }
 
+  // ---------- the lobby's settings: the farm's Season Rules noticeboard (TV) ----------
+  // tv.js calls settingsTv(el, L) on every lobby update; el sits in the join card. It holds a wooden
+  // sign (a summary of the season) that opens the noticeboard: four pinned notes of settings with
+  // chunky buttons and switches, each saying in plain words what the current choice means.
+  // Presentation only: the server's fields (box/games/ducks.js) own the keys and the values.
+  const RULE_GROUPS = [
+    { icon: '🏁', title: 'The season', keys: ['races', 'raceEvery', 'course'] },
+    { icon: '🗺️', title: 'Courses & weather', keys: ['terrain', 'weather', 'boss'] },
+    { icon: '🦆', title: 'Who races', keys: ['wild', 'catchUp', 'gear', 'predictions'] },
+    { icon: '🌾', title: 'Farm life', keys: ['energy', 'startCoins', 'events'] },
+  ];
+  // key: [label, { value: [button icon, button text, what it means] }] (a switch: true / false)
+  const RULES = {
+    races: ['Races in the season', { 3: ['', '3', 'A quick season: 3 races, the last one is the Grand Championship.'], 5: ['', '5', '5 races from the Rookie Cup up to the Grand Championship.'], 8: ['', '8', 'A long season: 8 races up the leagues.'], 10: ['', '10', 'The full climb: 10 races, every league on the way.'] }],
+    raceEvery: ['Time on the farm between races', { 60: ['', '1 min', '1 minute to train and shop before each race. Fast and frantic!'], 120: ['', '2 min', '2 minutes to train, shop and feed before each race.'], 180: ['', '3 min', '3 minutes on the farm between races: room to try every mini-game.'], 300: ['', '5 min', '5 minutes between races: a relaxed season with lots of training.'] }],
+    course: ['Course length', { sprint: ['⚡', 'Sprint', 'Short races: 5 quick sections.'], classic: ['🏁', 'Classic', '5 sections, one of each kind.'], marathon: ['🏔️', 'Marathon', 'Long races: 8 sections. Stamina really matters.'] }],
+    terrain: ['Terrain', { mixed: ['🌈', 'Everything', 'Tracks, ponds, cliffs, ravines and mazes: every skill counts.'], classic: ['🌳', 'No mazes', 'Tracks, ponds, cliffs and ravines, no mazes.'], brainy: ['🧠', 'Brainy', 'A maze in every race: Smarts matters.'], track: ['🏃', 'Track', 'Running races only.'], pond: ['🌊', 'Pond', 'Swimming races only.'], mountain: ['⛰️', 'Mountain', 'Cliffs to climb and ravines to fly.'] }],
+    weather: ['Weather', { true: ['🌦️', 'On', 'Rain helps swimmers, fog hides the maze, wind helps flyers. It can turn mid-race!'], false: ['☀️', 'Off', 'Always sunny: no weather surprises.'] }],
+    boss: ['Golden Goose final', { true: ['🪿', 'On', 'The Golden Goose races the Grand Championship. Beat it and everyone gets coins!'], false: ['🪿', 'Off', 'No boss: the final is just your ducks.'] }],
+    wild: ['Wild ducks', { false: ['🦆', 'Off', 'Only the players’ ducks race. Playing alone? You race the clock.'], true: ['🌿', 'On', 'Wild ducks join so every race has 6 racers.'] }],
+    catchUp: ['Catch-up help', { true: ['🤝', 'On', 'Ducks at the back of the season earn a little extra XP.'], false: ['🤝', 'Off', 'Everyone earns the same XP, no matter the standings.'] }],
+    gear: ['Race-day gear', { true: ['🎒', 'On', 'Buy energy bars, maps and more for one race.'], false: ['🎒', 'Off', 'No gear shop: only training counts.'] }],
+    predictions: ['Predict the winner', { true: ['🔮', 'On', 'Bet on the winner before each race to win coins.'], false: ['🔮', 'Off', 'No predictions.'] }],
+    energy: ['Energy', { normal: ['🍽️', 'Normal', 'Training costs energy; food tops it up and tired ducks nap.'], relaxed: ['😌', 'Relaxed', 'Energy refills twice as fast.'], unlimited: ['⚡', 'Unlimited', 'Train nonstop: no energy needed.'] }],
+    startCoins: ['Starting coins', { 30: ['🪙', '30', 'A tight start: earn your coins in the races.'], 60: ['💰', '60', 'Enough for some food and a hat to begin.'], 120: ['💎', '120', 'A rich start: build and decorate right away.'] }],
+    events: ['Farm surprises', { true: ['🦊', 'On', 'Foxes, gifts and traveling traders drop by the farms.'], false: ['🦊', 'Off', 'Quiet farms: no surprise visits.'] }],
+  };
+  const isSwitch = (f) => f.options && f.options.length === 2 && f.options.every((o) => typeof o.value === 'boolean');
+  const ruleOf = (f, v) => { const r = RULES[f.key], o = r && r[1][String(v)]; const fo = f.options.find((x) => String(x.value) === String(v)); return o || ['', fo ? fo.label : String(v), fo ? fo.label : '']; };
+  const rulesSummary = (f, s) => {
+    const min = s.races && s.raceEvery ? Math.round(s.races * (s.raceEvery / 60 + 1.5)) : null;
+    return [min ? `⏱️ About ${min} min` : '', s.races ? `🏁 ${s.races} races` : '', s.wild ? '🌿 Wild ducks join' : '🦆 Just your ducks', s.boss ? '🪿 Goose final' : ''].filter(Boolean);
+  };
+  function settingsTv(el, L) {
+    const fields = (L.fields || []).filter((f) => Array.isArray(f.options) && f.options.length);
+    const byKey = Object.fromEntries(fields.map((f) => [f.key, f]));
+    const known = new Set(RULE_GROUPS.flatMap((g) => g.keys));
+    const groups = RULE_GROUPS.map((g) => ({ ...g, fields: g.keys.map((k) => byKey[k]).filter(Boolean) })).concat([{ icon: '⚙️', title: 'More', fields: fields.filter((f) => !known.has(f.key)) }]).filter((g) => g.fields.length);
+    const s = L.settings || {};
+    const sig = JSON.stringify([s, fields.map((f) => f.key), !!L.partyMode]);
+    if (el.dataset.sig === sig) return;
+    el.dataset.sig = sig;
+    let ov = el.querySelector('.dks-ov');
+    const wasOpen = !!(ov && !ov.hidden), focus = document.activeElement && el.contains(document.activeElement) ? [document.activeElement.dataset.set, document.activeElement.dataset.val, document.activeElement.id] : null;
+    const setting = (f) => {
+      const v = s[f.key], r = ruleOf(f, v), label = (RULES[f.key] || [f.label])[0];
+      if (isSwitch(f)) {
+        const on = v === true;
+        return `<div class="dks-set sw" data-row="${esc(f.key)}"><span class="dks-ic">${r[0] || '⚙️'}</span><div class="dks-lbl"><b>${esc(label)}</b><small>${esc(r[2])}</small></div>
+          <button class="dks-sw ${on ? 'on' : ''}" data-set="${esc(f.key)}" data-val="${!on}" role="switch" aria-checked="${on}" aria-label="${esc(label)}"><i></i><span>${on ? 'ON' : 'OFF'}</span></button></div>`;
+      }
+      return `<div class="dks-set multi ${f.options.length > 4 ? 'wide' : ''}" data-row="${esc(f.key)}"><div class="dks-lbl"><b>${esc(label)}</b></div>
+        <div class="dks-opts n${f.options.length}" role="radiogroup" aria-label="${esc(label)}">${f.options.map((o) => { const x = ruleOf(f, o.value), on = String(o.value) === String(v); return `<button class="dks-opt ${on ? 'on' : ''}" data-set="${esc(f.key)}" data-val="${esc(String(o.value))}" role="radio" aria-checked="${on}" title="${esc(x[2])}">${x[0] ? `<span class="i">${x[0]}</span>` : ''}<span class="t">${esc(x[1])}</span></button>`; }).join('')}</div>
+        <p class="dks-say">${esc(r[2])}</p></div>`;
+    };
+    const board = `<div class="dks-board"><div class="dks-head"><div class="dks-title">🪧 Season Rules</div>
+        <div class="dks-hr"><p class="dks-sub">${L.partyMode ? '🎉 Party Mode picked these to fit tonight. Change anything you like!' : 'How this season in Duck Valley works. Pick a sign to change it.'}</p>
+        <div class="dks-chips">${rulesSummary(null, s).map((t) => `<span>${esc(t)}</span>`).join('')}</div></div></div>
+      <div class="dks-notes">${groups.map((g, i) => `<section class="dks-note n${i % 4}"><h3><span>${g.icon}</span>${esc(g.title)}</h3>${g.fields.map(setting).join('')}</section>`).join('')}</div>
+      <div class="dks-foot"><span class="dks-keys">⬅️ ➡️ ⬆️ ⬇️ to move · Enter to pick · Esc to close</span><button class="dks-done" id="dks-done">✔ Looks good!</button></div></div>`;
+    el.innerHTML = `<button class="dks-sign" id="dks-open" aria-haspopup="dialog"><span class="dks-sign-t">🪧 Season Rules</span><span class="dks-sign-c">${rulesSummary(null, s).slice(0, 3).map((t) => `<em>${esc(t)}</em>`).join('')}</span><span class="dks-sign-go">Change ›</span></button>
+      <div class="dks-ov" role="dialog" aria-modal="true" aria-label="Season Rules" ${wasOpen ? '' : 'hidden'}>${board}</div>`;
+    ov = el.querySelector('.dks-ov');
+    const open = () => { ov.hidden = false; L.ui && L.ui('open'); const b = ov.querySelector('.dks-opt.on, .dks-sw'); if (b) b.focus(); };
+    const close = () => { ov.hidden = true; L.ui && L.ui('close'); el.querySelector('#dks-open').focus(); };
+    el.querySelector('#dks-open').onclick = open;
+    el.querySelector('#dks-done').onclick = close;
+    ov.onclick = (e) => { if (e.target === ov) close(); };
+    for (const b of ov.querySelectorAll('[data-set]')) b.onclick = () => {
+      const k = b.dataset.set, f = byKey[k]; if (!f) return;
+      const o = f.options.find((x) => String(x.value) === b.dataset.val); if (!o) return;
+      // show the choice at once (the server's update redraws the board a moment later)
+      if (b.classList.contains('dks-sw')) { b.classList.toggle('on', o.value === true); b.dataset.val = String(!o.value); b.querySelector('span').textContent = o.value ? 'ON' : 'OFF'; }
+      else for (const x of ov.querySelectorAll(`[data-set="${CSS.escape(k)}"]`)) x.classList.toggle('on', x === b);
+      L.ui && L.ui('click');
+      L.set(k, o.value);
+    };
+    // Keyboard (and TV remotes / pads that send arrow keys): ← → along a row, ↑ ↓ between rows, Esc closes.
+    ov.onkeydown = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); return close(); }
+      const cur = document.activeElement; if (!cur || !ov.contains(cur)) return;
+      const items = [...ov.querySelectorAll('[data-set], #dks-done')];
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const row = cur.closest('.dks-opts'); if (!row) return; e.preventDefault();
+        const bs = [...row.children], i = bs.indexOf(cur); bs[(i + (e.key === 'ArrowRight' ? 1 : -1) + bs.length) % bs.length].focus();
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const rows = [...ov.querySelectorAll('[data-row]')], r = cur.closest('[data-row]'), i = r ? rows.indexOf(r) : rows.length;
+        const j = i + (e.key === 'ArrowDown' ? 1 : -1);
+        if (j >= rows.length) return ov.querySelector('#dks-done').focus();
+        const to = rows[(j + rows.length) % rows.length]; (to.querySelector('.on[data-set]') || to.querySelector('[data-set]')).focus();
+      } else if (e.key === 'Tab') {
+        const i = items.indexOf(cur), j = (i + (e.shiftKey ? -1 : 1) + items.length) % items.length; e.preventDefault(); items[j].focus();
+      }
+    };
+    if (focus) { const t = focus[2] ? el.querySelector('#' + CSS.escape(focus[2])) : el.querySelector(`[data-set="${CSS.escape(focus[0] || '')}"]${focus[1] && !el.querySelector(`.dks-sw[data-set="${CSS.escape(focus[0] || '')}"]`) ? `[data-val="${CSS.escape(focus[1])}"]` : ''}`); if (t) t.focus(); }
+  }
+
+  // The results of a time trial (one player, no wild ducks): the duck, its time against the par time, its medal.
+  function trialCard(R, d) {
+    const T = R.trial, r = R.results.find((x) => x.id === T.id) || {}, gap = Math.abs(T.time - T.par).toFixed(1);
+    const name = ['Gold', 'Silver', 'Bronze'][T.medal - 1];
+    return `<div class="dk-trial m${T.medal}"><div class="pod">${duckPic(d)}<b>${esc(d.name || '')}</b><span class="muted">${who(d)}${esc(d.owner || '')}</span></div>
+      <div class="dk-clock"><div class="tk">⏱️ Time trial</div><div class="tt">${T.time.toFixed(1)}s</div>
+        <div class="tp">Par time <b>${T.par.toFixed(1)}s</b> · ${T.time <= T.par ? `${gap}s under par!` : `${gap}s over par`}</div>
+        <div class="tm">${T.medal ? `${MEDAL[T.medal - 1]} ${name} time` : '🏁 No medal this time'}</div>
+        <div class="tg">+${r.pts || 0} pts · +${r.coins || 0} 🪙</div>
+        <div class="muted">${T.medal === 1 ? 'The par time gets tougher as you climb the leagues.' : 'Gold: beat the par time. Silver: within 8%. Bronze: within 16%.'}</div></div></div>`;
+  }
+
   BOX.games.ducks = {
+    settingsTv,
     // Soundtrack cue per phase (public/box/scores/<key>.js); the TV turns the last 10 s of 'think' tense.
     music: (s) => ({ lobby: 'lobby', training: 'think', race: 'play', results: 'reveal', over: 'finale' }[s.phase] || 'lobby'),
     standalone: true, title: titleScreen,
@@ -989,6 +1112,7 @@
       'Each race features the skills that fit its world: sometimes just one (🪽 Sky Dash: Fly only!, a chance to catch up with the skill you trained), sometimes all of them. Some sections need two skills at once (a waterfall to climb takes Climb and Swim). Over the season every skill gets its turn: a duck that trains all six wins the season.',
       'Check the forecast: rain speeds up swimmers, fog makes mazes harder, heat tires everyone, wind helps strong flyers. The weather can even turn mid-race!',
       'Boss race (a lobby setting): the Golden Goose races the Grand Championship. Beat it and everyone gets coins!',
+      'Races are just the ducks of the people playing. Playing alone? Each race is a time trial: beat the par time for gold. (Wild ducks can fill every race to 6: a lobby setting.)',
       'Climb from the Rookie Cup to the Grand Championship. Top 3 win trophies for your farm.',
       'Pick a tactic, predict the winner, finish quests, beat your rival, and cheer from your phone!',
     ],
@@ -1031,7 +1155,7 @@
         const arrow = (id) => { const m = mv[id]; if (!m || R.n === 1) return ''; const k = m[0] - m[1]; return k > 0 ? `<i class="up">▲${k}</i>` : k < 0 ? `<i class="down">▼${-k}</i>` : '<i>–</i>'; };
         el.innerHTML = `<div class="dk-results"><div class="banner">🏁 ${esc(R.name)}: results</div>
           ${R.highlights && R.highlights.length ? `<div class="dk-high">${R.highlights.map((h) => `<span>${h.icon} ${esc(h.text)}</span>`).join('')}</div>` : ''}
-          <div class="dk-podium">${pod.map((r) => { const d = F[r.id] || {}; return `<div class="pod p${r.place}">${duckPic(d)}<b>${esc(d.name)}</b><span class="muted">${d.boss ? '👑 the boss' : d.wild ? '🌿 wild duck' : who(d) + esc(d.owner)}</span><div class="step">${MEDAL[r.place - 1]}${r.wild ? '' : ' +' + r.pts + ' pts'}</div></div>`; }).join('')}</div>
+          ${R.trial ? trialCard(R, F[R.trial.id] || {}) : ''}<div class="dk-podium" ${R.trial ? 'hidden' : ''}>${pod.map((r) => { const d = F[r.id] || {}; return `<div class="pod p${r.place}">${duckPic(d)}<b>${esc(d.name)}</b><span class="muted">${d.boss ? '👑 the boss' : d.wild ? '🌿 wild duck' : who(d) + esc(d.owner)}</span><div class="step">${MEDAL[r.place - 1]}${r.wild ? '' : ' +' + r.pts + ' pts'}</div></div>`; }).join('')}</div>
           <div class="dk-rescols"><div class="dk-res">${top.map((r) => { const d = F[r.id] || {}; return `<div class="row ${r.wild ? 'wild' : ''}"><span>${r.place}.</span><span>${esc(d.name)} <span class="muted">(${d.boss ? 'the boss' : d.wild ? 'wild' : esc(d.owner)})</span></span><span class="muted">${r.time.toFixed(1)}s</span><b>${r.wild ? '—' : '+' + r.pts + ' pts'}</b></div>`; }).join('')}</div>
           <div class="dk-season panel"><h3>Season after race ${R.n} of ${s.races}</h3>${s.standings.slice(0, 8).map((x, i) => `<div class="row"><span>${i + 1}.</span><span>${who(x)}${esc(x.duck)}</span><b>${x.points}</b>${arrow(x.id)}</div>`).join('')}</div></div>
           <p class="muted" style="text-align:center">${s.race >= s.races ? '🏆 The season is over! The finale is next…' : 'Back to the farms in ' + timer(s.endsIn)}</p></div>`;
@@ -1068,7 +1192,7 @@
         return;
       }
       const c = s.course;
-      el.querySelector('#dk-next').innerHTML = `<div class="muted">${c.leagueIcon || ''} ${esc(c.leagueName || '')} · race ${s.race + 1} of ${s.races} · 📍 ${esc(c.themeName || '')} · ${s.farms.length} farm${s.farms.length === 1 ? '' : 's'}</div><div class="dk-rname">${esc(c.name)}${c.final ? ' <span class="dk-x2">×2 points</span>' : ''} ${weatherChip(c, s.weather)}</div><div class="dk-nextfocus">Featuring ${focus(c)}</div>${forecast(c)}${bossNote(c)}${course(c)}${road(s.ladder, s.race)}`;
+      el.querySelector('#dk-next').innerHTML = `<div class="muted">${c.leagueIcon || ''} ${esc(c.leagueName || '')} · race ${s.race + 1} of ${s.races} · 📍 ${esc(c.themeName || '')} · ${s.farms.length} farm${s.farms.length === 1 ? '' : 's'}</div><div class="dk-rname">${esc(c.name)}${c.final ? ' <span class="dk-x2">×2 points</span>' : ''} ${weatherChip(c, s.weather)}</div><div class="dk-nextfocus">Featuring ${focus(c)}</div>${forecast(c)}${bossNote(c)}${s.trialNext ? '<div class="dk-bossnote dk-trialnote">⏱️ TIME TRIAL: racing alone against the par time. Beat it for gold!</div>' : ''}${course(c)}${road(s.ladder, s.race)}`;
       el.querySelector('#dk-timer').innerHTML = timer(s.endsIn);
       el.querySelector('#dk-timer').classList.toggle('hot', !!s.hype);
       el.querySelector('#dk-spot').innerHTML = spotlight(s);

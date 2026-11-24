@@ -385,8 +385,14 @@ const fields = [
   { key: 'gear', label: 'Race-day gear', options: onOff },
   { key: 'catchUp', label: 'Catch-up XP for ducks in the back', options: onOff },
   { key: 'boss', label: 'Championship boss race (the Golden Goose)', options: onOff },
+  // Off (the default): only the players' ducks race (one player alone races a time trial, see PAR).
+  { key: 'wild', label: 'Add wild ducks to fill the race', options: opt([[false, 'Off: only your ducks race'], [true, 'On: wild ducks fill the race to 6']]) },
 ];
-const defaults = { raceEvery: 120, races: 5, course: 'classic', terrain: 'mixed', energy: 'normal', startCoins: 60, weather: true, events: true, predictions: true, gear: true, catchUp: true, boss: false };
+const defaults = { raceEvery: 120, races: 5, course: 'classic', terrain: 'mixed', energy: 'normal', startCoins: 60, weather: true, events: true, predictions: true, gear: true, catchUp: true, boss: false, wild: false };
+// A time trial: one player racing without wild ducks races the clock. A hidden pace duck (as strong
+// as a wild duck would be in this league) sets the par time; beat it for gold, within PAR.silver ×
+// par for silver, within PAR.bronze × par for bronze. Medals pay like 1st/2nd/3rd place.
+const PAR = { silver: 1.08, bronze: 1.16 };
 
 class Ducks {
   constructor(room, settings) {
@@ -683,21 +689,26 @@ class Ducks {
     const wAt = (x) => (C.change && x >= C.change.x ? C.change.to : C.weather);
     const racers = [...this.ducks].filter(([id]) => this.room.get(id));
     for (const [, d] of racers) migrate(d);
-    // Wild ducks fill the field when only a few people are playing, stronger in higher leagues.
+    // Wild ducks (a setting, off by default) fill the field when only a few people are playing.
     // Their level follows the field: about as good as the average player duck, tougher in higher leagues.
     const fieldLv = racers.length ? racers.reduce((a, [, d]) => a + SKILLS.reduce((x, k) => x + level(d.xp[k]), 0) / SKILLS.length, 0) / racers.length : 1;
-    for (let i = 0; racers.length < 6; i++) {
+    // One player and no wild ducks: a time trial. A hidden pace duck sets the par time (PAR).
+    if (!this.s.wild && racers.length === 1) {
+      const L = Math.max(0, Math.round(fieldLv * (0.6 + 0.11 * (C.league || 0))));
+      racers.push(['pace', { pace: true, name: 'Par', xp: Object.fromEntries(SKILLS.map((k) => [k, xpFor(L)])), mood: 60, energy: 100, tactic: 'steady', gear: [], perks: [], stage: 1 }]);
+    }
+    for (let i = 0; this.s.wild && racers.length < 6; i++) {
       const L = Math.max(0, Math.round(fieldLv * (0.55 + 0.11 * (C.league || 0))) + Math.floor(this.room.rng() * 3) - 1);
       racers.push(['w' + i, { wild: true, name: WILD[(this.race * 3 + i) % WILD.length], color: ['cocoa', 'snow', 'mallard', 'sunny', 'midnight', 'ember'][i % 6], hat: ['none', 'cap', 'bow', 'headband', 'none', 'viking'][i % 6], xp: Object.fromEntries(SKILLS.map((k) => [k, xpFor(L)])), mood: 60, energy: 100, tactic: ['steady', 'sprint', 'finish'][i % 3], gear: [], stage: L > 6 ? 2 : 1 }]);
     }
     // The boss race: the Golden Goose joins the Grand Championship (BOSS).
     if (C.boss) {
-      const people = racers.filter(([, d]) => !d.wild), top = people.length ? Math.max(...people.map(([, d]) => SKILLS.reduce((a, k) => a + level(d.xp[k]), 0) / SKILLS.length)) : 1;
+      const people = racers.filter(([, d]) => !d.wild && !d.pace), top = people.length ? Math.max(...people.map(([, d]) => SKILLS.reduce((a, k) => a + level(d.xp[k]), 0) / SKILLS.length)) : 1;
       const BL = clamp(Math.round(top * BOSS.mult + BOSS.edge), 0, MAX_LEVEL);
       racers.push(['boss', { wild: true, boss: true, name: BOSS.name, color: BOSS.color, hat: BOSS.hat, xp: Object.fromEntries(SKILLS.map((k) => [k, xpFor(BL)])), mood: 60, energy: 100, tactic: 'steady', gear: [], perks: [], stage: BOSS.stage }]);
     }
     this.wild = Object.fromEntries(racers.filter(([, d]) => d.wild).map(([id, d]) => [id, { name: d.name, color: d.color, hat: d.hat, stage: d.stage, wild: true, boss: !!d.boss }]));
-    const L = C.length, DT = 0.1, SAMPLE = 0.5;
+    const L = C.length, DT = 0.1, SAMPLE = 0.5; let par = null;
     const fatFrom = L * fatStart(C), fatRamp = L * FATIGUE.ramp;
     for (const [id, d] of racers) {
       const lv = this.levels(d), gear = new Set(d.gear), rng = this.room.rng;
@@ -807,9 +818,10 @@ class Ducks {
       }
       const time = t - (x > L ? Math.min(DT, (x - L) / Math.max(0.1, lastV)) : 0); // the moment it crossed the line
       samples.push(Math.round(L * 10));
+      if (d.pace) { par = time; continue; } // the time trial's par time (the pace duck is never shown)
       entries.push({ id, time, samples, events, lv: SKILLS.map((k) => lv[k]) });
     }
-    return { entries, hurdles: hurdles.map((h) => ({ x: h.x, k: h.k, log: h.log })), forks: forks.map((f) => f.x), boosts: boosts.map((b) => b.x) };
+    return { entries, par, hurdles: hurdles.map((h) => ({ x: h.x, k: h.k, log: h.log })), forks: forks.map((f) => f.x), boosts: boosts.map((b) => b.x) };
   }
   runRace() {
     if (this.phase !== 'training') return;
@@ -829,28 +841,33 @@ class Ducks {
       }
     }
     const favorites = this.favorites(), before = new Map(this.standings().map((x, i) => [x.id, i + 1]));
-    const { entries, hurdles, forks, boosts } = this.simulate();
+    const { entries, hurdles, forks, boosts, par } = this.simulate();
     entries.sort((a, b) => a.time - b.time);
     const mult = this.course.final ? 2 : 1;
     const winnerId = entries[0] && entries[0].id;
     const wildWin = winnerId && this.wild[winnerId];
+    // A time trial (one player, no wild ducks): the medal against the par time decides the rewards.
+    const soloE = par != null ? entries.find((e) => this.ducks.has(e.id)) : null;
+    const trial = soloE ? { id: soloE.id, par: Math.round(par * 100) / 100, time: Math.round(soloE.time * 100) / 100, medal: soloE.time <= par ? 1 : soloE.time <= par * PAR.silver ? 2 : soloE.time <= par * PAR.bronze ? 3 : 0 } : null;
     const results = entries.map((e, i) => {
       const d = this.ducks.get(e.id), place = i + 1;
       if (!d) return { id: e.id, place, time: Math.round(e.time * 100) / 100, pts: 0, coins: 0, wild: true };
-      const pts = (POINTS[i] != null ? POINTS[i] : 1) * mult, coins = PRIZE[i] != null ? PRIZE[i] : 8;
+      // rank: the place that pays (in a time trial: the medal, 1-3, or 4 for no medal)
+      const rank = trial ? trial.medal || 4 : place;
+      const pts = (POINTS[rank - 1] != null ? POINTS[rank - 1] : 1) * mult, coins = PRIZE[rank - 1] != null ? PRIZE[rank - 1] : 8;
       const wasLast = d.history.length && d.history[d.history.length - 1] === d.last.of;
-      d.points += pts; d.coins += coins; if (place === 1) { d.wins++; d.mood = Math.min(100, d.mood + 20); }
-      d.best = d.best ? Math.min(d.best, place) : place;
+      d.points += pts; d.coins += coins; if (rank === 1) { d.wins++; d.mood = Math.min(100, d.mood + 20); }
+      d.best = d.best ? Math.min(d.best, rank) : rank;
       d.energy = Math.max(0, d.energy - 8 * this.course.sections.length / 4);
       this.checkGrowth(e.id, d);
-      d.last = { place, of: entries.length, pts, coins, time: e.time, trips: e.events.filter((x) => x.k === 'trip').length, slips: e.events.filter((x) => x.k === 'slip').length, shortcuts: e.events.filter((x) => x.k === 'short').length, wrongs: e.events.filter((x) => x.k === 'wrong').length, gulps: e.events.filter((x) => x.k === 'gulp').length, dips: e.events.filter((x) => x.k === 'dip').length, tired: e.events.some((x) => x.k === 'tired'), weak: this.weakest(d, this.course) };
-      d.history.push(place); d.gear = [];
-      if (place <= 3) d.trophies.push({ race: this.race, league: this.course.league, place, icon: LEAGUES[this.course.league].icon });
+      d.last = { place: rank, of: trial ? 4 : entries.length, trial: trial ? { par: trial.par, time: trial.time, medal: trial.medal } : null, pts, coins, time: e.time, trips: e.events.filter((x) => x.k === 'trip').length, slips: e.events.filter((x) => x.k === 'slip').length, shortcuts: e.events.filter((x) => x.k === 'short').length, wrongs: e.events.filter((x) => x.k === 'wrong').length, gulps: e.events.filter((x) => x.k === 'gulp').length, dips: e.events.filter((x) => x.k === 'dip').length, tired: e.events.some((x) => x.k === 'tired'), weak: this.weakest(d, this.course) };
+      d.history.push(rank); d.gear = [];
+      if (rank <= 3) d.trophies.push({ race: this.race, league: this.course.league, place: rank, icon: LEAGUES[this.course.league].icon });
       d.stats.boosts += e.events.filter((x) => x.k === 'boost').length;
-      if (place === 1) this.badge(e.id, d, 'firstWin');
-      if (place <= 3) this.badge(e.id, d, 'podium');
-      if (place <= 3 && wasLast) this.badge(e.id, d, 'comeback');
-      if (place === 1 && this.course.final) this.badge(e.id, d, 'champion');
+      if (rank === 1) this.badge(e.id, d, 'firstWin');
+      if (rank <= 3) this.badge(e.id, d, 'podium');
+      if (rank <= 3 && wasLast) this.badge(e.id, d, 'comeback');
+      if (rank === 1 && this.course.final) this.badge(e.id, d, 'champion');
       return { id: e.id, place, time: Math.round(e.time * 100) / 100, pts, coins };
     });
     // The boss race: did anyone beat the Golden Goose?
@@ -887,6 +904,11 @@ class Ducks {
     const margin = entries[1] ? Math.round((entries[1].time - entries[0].time) * 100) / 100 : null;
     const nameOf = (id) => { const d = this.ducks.get(id) || this.wild[id]; return d ? d.name : '?'; };
     const highlights = [];
+    if (trial) {
+      const gap = Math.abs(trial.time - trial.par).toFixed(1), who = nameOf(trial.id);
+      highlights.push(trial.medal === 1 ? { icon: '⏱️', text: `${who} beat the par time (${trial.par.toFixed(1)}s) by ${gap}s: a gold time!` }
+        : { icon: '⏱️', text: `${who} finished ${gap}s behind the par time (${trial.par.toFixed(1)}s)${trial.medal ? ': a ' + (trial.medal === 2 ? 'silver' : 'bronze') + ' time' : ''}. Train and beat it next race!` });
+    }
     if (margin != null && margin < 0.35) highlights.push({ icon: '📸', text: `Photo finish! ${nameOf(entries[0].id)} won by ${margin.toFixed(2)}s` });
     if (boss) highlights.push(boss.beaten ? { icon: '👑', text: `${nameOf(boss.by[0])} beat the Golden Goose! +${BOSS.bonus} coins for everyone` } : { icon: '🪿', text: `The Golden Goose won${boss.place === 1 ? ' the Grand Championship' : ''}. Nobody beat it this time!` });
     if (wildWin && winnerId !== 'boss') highlights.push({ icon: '🌿', text: `A wild duck, ${nameOf(winnerId)}, stole the win!` });
@@ -898,7 +920,7 @@ class Ducks {
     const tripper = entries.map((e) => ({ id: e.id, n: e.events.filter((x) => x.k === 'trip' || x.k === 'slip' || x.k === 'skid').length })).sort((a, b) => b.n - a.n)[0];
     if (tripper && tripper.n >= 3) highlights.push({ icon: '💫', text: `${nameOf(tripper.id)} took ${tripper.n} tumbles and still finished` });
     this.lastRace = {
-      n: this.race, name: this.course.name, final: this.course.final, sections: this.course.sections, theme: this.course.theme, themeName: this.course.themeName, league: this.course.league, wild: this.wild, weather: this.course.weather, wind: this.course.wind, change: this.course.change, forecast: this.course.forecast, featured: this.course.featured, solo: this.course.solo, banner: this.course.banner, boss, length: this.course.length, hurdles, forks, boosts,
+      n: this.race, name: this.course.name, final: this.course.final, sections: this.course.sections, theme: this.course.theme, themeName: this.course.themeName, league: this.course.league, wild: this.wild, weather: this.course.weather, wind: this.course.wind, change: this.course.change, forecast: this.course.forecast, featured: this.course.featured, solo: this.course.solo, banner: this.course.banner, boss, trial, length: this.course.length, hurdles, forks, boosts,
       intro: RACE_INTRO, sample: 0.5, results, margin, favorites, moves, highlights: highlights.slice(0, 4), secLen: courseLen(this.course), tripStop: TRIP_STOP, wrongStop: WRONG_STOP, thinkStop: THINK_STOP,
       // each duck: its path (x every 0.5 s), its moments ([t, kind] or [t, kind, hurdle or fork]) and its levels (run, swim, fly, climb, stamina, smarts)
       tracks: entries.map((e) => ({ id: e.id, s: e.samples, ev: e.events.map((x) => (x.h != null ? [x.t, x.k, x.h] : [x.t, x.k])), lv: e.lv })),
@@ -910,7 +932,8 @@ class Ducks {
     this.endsAt = this.room.now() + RACE_INTRO + runMs + RACE_OUTRO;
     this.timer = this.room.after(RACE_INTRO + runMs + RACE_OUTRO, () => {
       this.phase = 'results'; this.endsAt = this.room.now() + RESULT_SHOW; this.room.fx('raceDone');
-      if (w) this.log(`🏆 ${w.name}${winnerId === 'boss' ? ' (the boss!)' : wildWin ? ' (a wild duck!)' : ''} wins the ${this.course.name}!`, 'win');
+      if (trial) this.log(`⏱️ ${nameOf(trial.id)} clocks ${trial.time.toFixed(1)}s on the ${this.course.name} (par ${trial.par.toFixed(1)}s)${trial.medal ? ': ' + ['🥇 gold', '🥈 silver', '🥉 bronze'][trial.medal - 1] + '!' : '.'}`, 'win');
+      else if (w) this.log(`🏆 ${w.name}${winnerId === 'boss' ? ' (the boss!)' : wildWin ? ' (a wild duck!)' : ''} wins the ${this.course.name}!`, 'win');
       this.timer = this.room.after(RESULT_SHOW, () => this.afterRace());
     });
   }
@@ -951,7 +974,7 @@ class Ducks {
     const R = this.lastRace, tr = R && R.tracks.find((x) => x.id === id);
     if (!tr) return null;
     const res = R.results.find((x) => x.id === id);
-    return { intro: R.intro, run: R.run, outro: RACE_OUTRO, pace: R.pace, sample: R.sample, length: R.length, secLen: R.secLen, sections: R.sections, hurdles: R.hurdles, forks: R.forks, tripStop: R.tripStop, wrongStop: R.wrongStop, thinkStop: R.thinkStop, s: tr.s, ev: tr.ev, time: res.time, place: res.place, of: R.results.length };
+    return { intro: R.intro, run: R.run, outro: RACE_OUTRO, pace: R.pace, sample: R.sample, length: R.length, secLen: R.secLen, sections: R.sections, hurdles: R.hurdles, forks: R.forks, tripStop: R.tripStop, wrongStop: R.wrongStop, thinkStop: R.thinkStop, s: tr.s, ev: tr.ev, time: res.time, place: res.place, of: R.results.length, par: R.trial && R.trial.id === id ? R.trial.par : null };
   }
   // A rough race-time estimate for the next course (no luck or boosts; mishaps at their average
   // cost): what the phone's "projected place" and the TV's favorites use. Lower is faster.
@@ -1323,6 +1346,8 @@ class Ducks {
     return {
       phase: this.phase, race: this.race, races: this.s.races, endsIn, hype, ladder: this.started ? this.ladder() : null,
       favorites: hype ? this.favorites() : null,
+      // the next race is a time trial (one player, no wild ducks)
+      trialNext: !this.s.wild && [...this.ducks.keys()].filter((id) => this.room.get(id)).length === 1,
       course: this.course, weather: WEATHER, tactics: TACTICS, leagues: LEAGUES,
       lastRace: this.lastRace && (this.phase === 'race' || this.phase === 'results' || this.phase === 'over') ? this.lastRace : null,
       farms: [...this.ducks].filter(([id]) => this.room.get(id)).map(([id, d]) => ({ ...this.farmView(id, d), rank: this.race ? rank.get(id) : null })),

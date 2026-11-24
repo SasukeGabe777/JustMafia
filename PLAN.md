@@ -1723,3 +1723,28 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
   race, an all-rounder, a combined-section race in rain turning to storm, a Stamina trek in a
   heatwave and the boss final in a sandstorm. Limits: not yet played by real people; the boss odds
   and the weather effects are tuned in simulation.
+
+## JustRaiseDucks: races are just the players; the Season Rules noticeboard (claude/ducks-settings, November 24, 2026)
+
+- Wild ducks are now a lobby setting (`wild`, default Off; old settings without the key are Off).
+  Off: a race is only the ducks of the people playing (2 players = a 2-duck race, points 10/8…).
+  On: wild ducks fill every race to 6 as before (they score nothing).
+- One player and no wild ducks: every race is a time trial. A hidden pace duck (as strong as a wild
+  duck would be in that league) sets the par time; it is never drawn or listed. Beat par for gold,
+  within 8% silver, within 16% bronze (PAR); the medal pays points/coins/trophies like 1st/2nd/3rd
+  (no medal = 4th). The TV shows "TIME TRIAL" before the race, par commentary during it, a clock card
+  on the results (time, par, medal); the phone shows its time vs par. The Golden Goose still joins the
+  final when the boss setting is on (also against a lone player, who still races the clock).
+- Settings screen: Ducks draws its own settings through a new optional hook in public/box/tv.js
+  (`BOX.games.<key>.settingsTv(el, { fields, settings, partyMode, set, ui })`, live-lobby games
+  only; other games keep the shared panel). The join card has a wooden "Season Rules" sign with a
+  summary (about N minutes, races, wild ducks); it opens a farm noticeboard with four pinned notes
+  (The season, Courses & weather, Who races, Farm life), chunky choice buttons, ON/OFF switches, and
+  a plain line saying what each choice means. Mouse, keyboard (arrows, Enter, Tab, Esc) and phone
+  width work. Party Mode's fit (races, timer, course, energy) is unchanged and shows a note on the board.
+- Validation: test-box-ducks (46 tests, new: wild off by default incl. missing key, wild on fills to
+  6, solo time trial medals/rewards/phone view, boss joins without wild ducks for 1 and 2 players),
+  test-box (wild test now sets wild on), test-box-kit, test-box-party, e2e-box (ports 3640/9640:
+  the board opens, arrows move, settings save on the server, Esc closes). Headless screenshots of
+  the board at 1600x900 and 400 px, a 2-player race and results, a solo time trial.
+  Limits: the par margins (8%/16%) are a first guess, not yet tuned with real players.

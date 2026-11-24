@@ -12,7 +12,8 @@ let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log(`  ✓ ${name}`); };
 function setup(bots = 0, settings = {}, seed = 7) {
   const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed });
-  room.addBots(bots); Object.assign(room.settings, settings);
+  // Most tests race a full field: wild ducks on (the setting is off by default; see the wild-duck tests).
+  room.addBots(bots); Object.assign(room.settings, { wild: true }, settings);
   return { room, clock };
 }
 const human = (room, name) => { const p = room.join(name).player; p.sockets = 1; return p; };
@@ -826,5 +827,61 @@ test('The race shows what each skill does: weak-skill moments, gulps in ponds, d
   // climbing walls: a duck on a wall goes slower than on the ledge
   const cliff = [0, 26]; assert(D.onWall(cliff, 0.5) && !D.onWall(cliff, 6) && D.onWall(cliff, 26 * 0.39 + 0.5) && !D.onWall(cliff, 25));
   room.game.next(); const last = da.last; assert(last.weak && last.weak.level === 0, 'after the race the phone says what slowed you down');
+});
+// ---- wild ducks are a setting (off by default): races are just the people playing ----
+const raceOnce = (room, clock) => { room.game.next(); stepUntil(clock, () => room.game.phase === 'results'); return room.game.lastRace; };
+test('Wild ducks: off by default (old settings without the key too); a 2-player race has only the players’ ducks', () => {
+  assert.equal(def.defaults.wild, false); const f = def.fields.find((x) => x.key === 'wild'); assert(f && f.options[0].value === false, 'a lobby setting, Off first');
+  for (const s of [{ wild: false }, { wild: undefined }]) {
+    const { room, clock } = setup(0, { races: 3, raceEvery: 60, ...s }); if (s.wild === undefined) delete room.settings.wild;
+    const a = human(room, 'Ann'), b = human(room, 'Bob'); go(room);
+    const R = raceOnce(room, clock);
+    assert.deepEqual(R.results.map((r) => r.id).sort(), [a.id, b.id].sort(), 'only the two players race');
+    assert.deepEqual(R.wild, {}); assert.equal(R.trial, null); assert(!R.tracks.some((t) => t.id === 'pace' || /^w\d/.test(t.id)));
+    assert.equal(R.results[0].pts, 10); assert.equal(R.results[1].pts, 8); assert(!R.highlights.some((h) => h.icon === '🌿'));
+    assert.equal(room.game.ducks.get(R.results[1].id).last.of, 2);
+  }
+});
+test('Wild ducks on: they fill the race to 6 and score nothing', () => {
+  const { room, clock } = setup(0, { races: 3, raceEvery: 60, wild: true }); const a = human(room, 'Ann'), b = human(room, 'Bob'); go(room);
+  const R = raceOnce(room, clock);
+  assert.equal(R.results.length, 6); assert.equal(Object.keys(R.wild).length, 4); assert(R.results.filter((r) => r.wild).every((r) => r.pts === 0 && r.coins === 0)); assert.equal(R.trial, null);
+  assert(R.results.some((r) => r.id === a.id) && R.results.some((r) => r.id === b.id));
+});
+test('Solo player, no wild ducks: a time trial against a hidden par time; the medal pays like a place', () => {
+  let medals = new Set();
+  for (let seed = 1; seed <= 10; seed++) {
+    const { room, clock } = setup(0, { races: 3, raceEvery: 60, wild: false, weather: false }, seed); const a = human(room, 'Ann'); go(room);
+    const d = room.game.ducks.get(a.id); for (const k of D.SKILLS) d.xp[k] = D.xpFor(seed % 5 + 1);
+    assert.equal(room.game.tv().trialNext, true, 'the TV knows the next race is a time trial');
+    const pts0 = d.points, coins0 = d.coins;
+    const R = raceOnce(room, clock);
+    assert.equal(R.results.length, 1); assert.equal(R.results[0].id, a.id); assert.deepEqual(R.wild, {});
+    assert.equal(R.tracks.length, 1, 'the pace duck is never shown');
+    const T = R.trial; assert(T && T.id === a.id && T.par > 0 && T.time === R.results[0].time && [0, 1, 2, 3].includes(T.medal));
+    const want = T.time <= T.par ? 1 : T.time <= T.par * 1.08 ? 2 : T.time <= T.par * 1.16 ? 3 : 0; assert.equal(T.medal, want);
+    const rank = T.medal || 4; assert.equal(d.points - pts0, [10, 8, 6, 5][rank - 1]); assert.equal(R.results[0].pts, d.points - pts0);
+    assert(d.coins - coins0 >= [40, 30, 22, 16][rank - 1], 'medal coins');
+    assert.equal(d.last.place, rank); assert.deepEqual(d.last.trial, { par: T.par, time: T.time, medal: T.medal });
+    assert(R.highlights[0].icon === '⏱️' && /par time/.test(R.highlights[0].text));
+    assert.equal(room.game.view(room.get(a.id)).duck.last.trial.medal, T.medal, 'the phone gets the trial');
+    medals.add(T.medal);
+  }
+  assert(medals.size >= 2, 'the par time is beatable but not a given: ' + [...medals]);
+  // a second player joins: back to a normal race
+  const { room, clock } = setup(0, { races: 3, raceEvery: 60 }); human(room, 'Ann'); go(room); human(room, 'Bob');
+  assert.equal(room.game.ducks.size, 2); assert.equal(room.game.tv().trialNext, false);
+});
+test('Boss race without wild ducks: the Golden Goose still joins the final (also against a lone player)', () => {
+  for (const n of [1, 2]) {
+    const { room, clock } = setup(0, { races: 2, raceEvery: 60, boss: true, wild: false, weather: false }); const ps = Array.from({ length: n }, (_, i) => human(room, 'P' + i)); go(room);
+    raceOnce(room, clock); assert(!room.game.lastRace.results.some((r) => r.id === 'boss'), 'not before the final');
+    stepUntil(clock, () => room.game.phase === 'training');
+    const R = raceOnce(room, clock);
+    assert.equal(R.results.length, n + 1); assert(R.wild.boss && R.wild.boss.boss && Object.keys(R.wild).length === 1);
+    assert(R.boss && R.boss.place === R.results.find((r) => r.id === 'boss').place);
+    assert.equal(!!R.trial, n === 1, 'a lone player still races the clock too');
+    for (const p of ps) assert(R.results.some((r) => r.id === p.id));
+  }
 });
 console.log(`\nAll ${passed} JustRaiseDucks tests passed.`);
