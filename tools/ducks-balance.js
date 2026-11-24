@@ -22,16 +22,28 @@ function duckWith(lv) {
   return D.migrate({ xp, gear: [], perks: [], mood: 60, energy: 100, tactic: 'steady' });
 }
 // One race: ducks = [[label, levels], ...]; returns the labels in finishing order.
-// opts: terrain, course, theme (force a world), seed, race (race number, 1 = first).
+// opts: terrain, course, theme (a race in that world), solo (a single-skill race of that skill),
+// seed, race (race number, 1 = first), weather (default off), boss.
 function race(ducks, opts = {}) {
-  const room = fakeRoom(opts.seed || 1);
-  const g = def.create(room, { ...def.defaults, weather: false, races: opts.races || 5, terrain: opts.terrain || 'mixed', course: opts.course || 'classic' });
-  let c, tries = 0; const n = opts.race || 1 + ((opts.seed || 1) % (opts.races || 5));
-  do c = g.newCourse(n); while (opts.theme && c.theme !== opts.theme && ++tries < 500);
-  g.course = c; g.race = n - 1;
+  const { g } = courseFor(opts);
   ducks.forEach(([label, lv], i) => g.ducks.set(label + '#' + i, duckWith(lv)));
   const { entries } = g.simulate();
-  return entries.filter((e) => !/^w\d/.test(e.id)).sort((a, b) => a.time - b.time).map((e) => e.id.replace(/#\d+$/, ''));
+  return entries.filter((e) => !/^w\d/.test(e.id) && e.id !== 'boss').sort((a, b) => a.time - b.time).map((e) => e.id.replace(/#\d+$/, ''));
+}
+// A game set up at race n of a planned season (seed); with opts.theme / opts.solo, the first race
+// (from that seed on) that is in that world / a single-skill race of that skill.
+function courseFor(opts = {}) {
+  const R = opts.races || 5;
+  for (let tries = 0; tries < 2000; tries++) {
+    const seed = (opts.seed || 1) + tries * 7919, room = fakeRoom(seed);
+    const g = def.create(room, { ...def.defaults, weather: !!opts.weather, boss: !!opts.boss, races: R, terrain: opts.terrain || 'mixed', course: opts.course || 'classic' });
+    const n = opts.race || 1 + (seed % R);
+    let c; for (let i = 1; i <= n; i++) { c = g.newCourse(i); g.course = c; }
+    g.race = n - 1;
+    if ((opts.theme && c.theme !== opts.theme) || (opts.solo && c.solo !== opts.solo)) continue;
+    return { g, c, room, seed };
+  }
+  throw new Error('no such race: ' + JSON.stringify(opts));
 }
 const even = (L) => Object.fromEntries(SK.map((k) => [k, L]));
 const plus = (L, k, n) => ({ ...even(L), [k]: L + n });
@@ -80,16 +92,67 @@ function seasonRace(field, opts) {
   const { entries } = g.simulate();
   return entries.filter((e) => /^d\d/.test(e.id)).sort((x, y) => x.time - y.time).map((e) => +e.id.slice(1));
 }
-// Every planned season (seeds 1..N): how many times each skill is featured.
+// Every planned season (seeds 1..N): how many times each skill is featured (c[k]), each skill's
+// share of the season (share[k]: its part of every race's course, counted from the sections that
+// were really built, a combined section half to each skill, a Stamina race's late race and a trek to
+// Stamina), how many skills each race features (counts) and the worlds (themes).
 function seasonSpread(races, terrain = 'mixed', N = 50) {
   const out = [];
   for (let seed = 1; seed <= N; seed++) {
     const g = def.create(fakeRoom(seed), { ...def.defaults, races, terrain });
-    const c = Object.fromEntries(SK.map((k) => [k, 0]));
-    for (let n = 1; n <= races; n++) { const C = g.newCourse(n); g.course = C; for (const k of C.featured) c[k]++; }
-    out.push(c);
+    const c = Object.fromEntries(SK.map((k) => [k, 0])), share = Object.fromEntries(SK.map((k) => [k, 0])), counts = [], themes = [], courses = [];
+    for (let n = 1; n <= races; n++) {
+      const C = g.newCourse(n); g.course = C; courses.push(C);
+      for (const k of C.featured) c[k]++;
+      if (n < races) counts.push(C.featured.length);
+      themes.push(C.theme);
+      const sh = courseShares(C); for (const k of SK) share[k] += sh[k];
+    }
+    out.push({ ...c, c, share, counts, themes, courses });
   }
   return out;
+}
+// A course's share per skill (sums to 1): each section's time at level 0 (a combined section half to
+// each skill), and Stamina one more share when featured (the long late race). A trek is all Stamina.
+function courseShares(C) {
+  const o = Object.fromEntries(SK.map((k) => [k, 0]));
+  if (C.trek) { o.stamina = 1; return o; }
+  let tot = 0;
+  for (const s of C.sections) {
+    const S = D.SECTIONS[s.type], t = C.secLen[s.type] / S.v0 * (s.type === 'cliff' ? 1 + D.WALL.share * (1 / D.WALL.speed - 1) : 1);
+    if (s.mix) { o[S.skill] += t / 2; o[s.mix] += t / 2; } else o[S.skill] += t; tot += t;
+  }
+  const st = C.featured.includes('stamina') ? 1 / C.featured.length : 0;
+  for (const k of SK) o[k] = (o[k] / tot) * (1 - st);
+  o.stamina += st;
+  return o;
+}
+// Single-skill races of skill k: N of them (from seed 1 on), field A against field B; returns the
+// share of races a duck of B wins outright, and the share of A-vs-B pairs B finishes ahead in.
+function soloRaces(k, A, B, N = 40, opts = {}) {
+  let wins = 0, b = 0, pairs = 0, seed = 1;
+  const field = [...A.map((lv) => ['A', lv]), ...B.map((lv) => ['B', lv])];
+  for (let i = 0; i < N; i++) {
+    const r = courseFor({ ...opts, solo: k, seed }), g = r.g; seed = r.seed + 1;
+    field.forEach(([label, lv], j) => g.ducks.set(label + '#' + j, duckWith(lv)));
+    const order = g.simulate().entries.filter((e) => /#/.test(e.id)).sort((x, y) => x.time - y.time).map((e) => e.id[0]);
+    if (order[0] === 'B') wins++;
+    let bSeen = 0; for (const x of order) { if (x === 'B') bSeen++; else { b += bSeen; pairs += B.length; } }
+  }
+  return { wins: wins / N, pairs: b / pairs };
+}
+// The boss race: the best player duck (levels best) and the rest of the field (others), against the
+// Golden Goose in the Grand Championship. Returns how often a player duck finishes ahead of it.
+function bossOdds(best, others = [], N = 200, opts = {}) {
+  let beat = 0;
+  for (let seed = 1; seed <= N; seed++) {
+    const room = fakeRoom(seed), g = def.create(room, { ...def.defaults, weather: !!opts.weather, boss: true, races: 5, terrain: 'mixed' });
+    for (let n = 1; n <= 5; n++) { g.course = g.newCourse(n); } g.race = 4;
+    [best, ...others].forEach((lv, i) => g.ducks.set('p' + i, duckWith(lv)));
+    const order = g.simulate().entries.sort((a, b) => a.time - b.time).map((e) => e.id);
+    if (order.findIndex((id) => /^p/.test(id)) < order.indexOf('boss')) beat++;
+  }
+  return beat / N;
 }
 // (b) Specialists (the same total, all of it in one skill, others at 0; capped at the max level and
 // the rest spread evenly) against balanced ducks. Returns the balanced side's share per skill.
@@ -112,7 +175,7 @@ function missing(L, k) {
   return o;
 }
 
-module.exports = { race, oneRaised, headToHead, seasonHeadToHead, seasonSpread, specialist, lopsided, missing, even, plus, duckWith, SK };
+module.exports = { race, courseFor, courseShares, soloRaces, bossOdds, oneRaised, headToHead, seasonHeadToHead, seasonSpread, specialist, lopsided, missing, even, plus, duckWith, SK };
 
 if (require.main === module) {
   const quick = process.argv.includes('--quick'), N = quick ? 60 : 200;
@@ -144,15 +207,29 @@ if (require.main === module) {
     const E = even(L), row = SK.map((k) => pct(headToHead([E, E, E], [missing(L, k), missing(L, k), missing(L, k)], {}, Math.round(N / 2))) + '/' + pct(seasonHeadToHead([E, E, E], [missing(L, k), missing(L, k), missing(L, k)], {}, S)));
     console.log(`L${String(L).padEnd(6)} ` + row.map((v) => v.padStart(12)).join(''));
   }
-  console.log('\n(d) every world (Everything terrain, L5+4): win share per raised skill (a world may favour its skills)');
+  console.log('\n(d) every world (Everything terrain, L5+4): win share per raised skill (each world favours its own skills)');
+  console.log('         ' + SK.map((k) => k.padStart(8)).join('') + '   theme weights (D.THEMES[k].skills)');
   for (const theme of Object.keys(D.THEMES)) {
-    const r = oneRaised(5, 4, { theme }, Math.round(N / 2));
-    console.log(`${theme.padEnd(9)}` + SK.map((k) => pct(r[k]).padStart(8)).join(''));
+    const r = oneRaised(5, 4, { theme }, Math.round(N / 2)), S = D.THEMES[theme].skills;
+    console.log(`${theme.padEnd(9)}` + SK.map((k) => pct(r[k]).padStart(8)).join('') + '   ' + SK.map((k) => S[k]).join(' '));
   }
-  console.log('\n(e) featured skills over a season (50 planned seasons): min-max times each skill is featured');
+  console.log('\n(e) seasons (300 planned seasons each): each skill\'s share of the whole season (sections really built,');
+  console.log('    combined sections half each), min-max over the seasons; how many skills a race features (non-final races)');
   for (const terrain of ['mixed', 'classic', 'brainy']) for (const races of [3, 5, 8, 10]) {
-    const sp = seasonSpread(races, terrain), sk = terrain === 'classic' ? SK.filter((k) => k !== 'smarts') : SK;
-    console.log(`${terrain.padEnd(8)} ${String(races).padStart(2)} races  ` + sk.map((k) => `${k} ${Math.min(...sp.map((c) => c[k]))}-${Math.max(...sp.map((c) => c[k]))}`).join('  ') + `   (worst season spread ${Math.max(...sp.map((c) => Math.max(...sk.map((k) => c[k])) - Math.min(...sk.map((k) => c[k]))))})`);
+    const sp = seasonSpread(races, terrain, 300), sk = terrain === 'classic' ? SK.filter((k) => k !== 'smarts') : SK;
+    const cnt = [0, 0, 0, 0, 0, 0, 0]; for (const s of sp) for (const n of s.counts) cnt[n]++; const tot = cnt.reduce((a, b) => a + b, 0);
+    const avg = (k) => sp.reduce((a, s) => a + s.share[k], 0) / sp.length / races;
+    const missed = sp.filter((s) => sk.some((k) => s.courses.slice(0, -1).every((C) => !C.featured.includes(k)))).length;
+    console.log(`${terrain.padEnd(8)} ${String(races).padStart(2)} races  avg ` + sk.map((k) => `${k} ${pct(avg(k)).trim()}`).join(' ') + `  | 1-6 skills: ` + cnt.slice(1).map((c) => pct(c / tot).trim()).join(' ') + (races >= 4 ? `  | seasons with a skill never featured before the final: ${missed}` : ''));
   }
+  console.log('\n(f) single-skill races: 3 balanced ducks (all L5) vs 3 specialists (total 30, half or all of it in that skill):');
+  console.log('    how often a specialist wins / the share of match-ups the specialist wins');
+  for (const k of SK) {
+    const E = even(5), h = soloRaces(k, [E, E, E], [lopsided(30, k), lopsided(30, k), lopsided(30, k)], 40), a = soloRaces(k, [E, E, E], [specialist(30, k), specialist(30, k), specialist(30, k)], 40);
+    console.log(`${k.padEnd(8)} half-in ${pct(h.wins)} / ${pct(h.pairs)}    all-in ${pct(a.wins)} / ${pct(a.pairs)}`);
+  }
+  console.log('\n(g) boss race: how often a player duck beats the Golden Goose (best duck at level L, two weaker ducks)');
+  const typ = (L) => ({ run: L + 2, swim: L - 1, fly: L, climb: L + 1, stamina: L - 2, smarts: L });
+  for (const L of [4, 8, 12]) console.log(`L${String(L).padEnd(3)} even ${pct(bossOdds(even(L), [even(L - 2), even(L - 3)], N))}   uneven ${pct(bossOdds(typ(L), [typ(L - 2)], N))}   alone ${pct(bossOdds(even(L), [], N))}`);
   console.log(`\n${((Date.now() - t0) / 1000).toFixed(1)} s`);
 }

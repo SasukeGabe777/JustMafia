@@ -286,3 +286,10 @@ body.g-ducks .dk-gifts button .bx-face { margin: -6px 4px -6px -2px; }
 /* The next race's featured skills. */
 .dk-focus { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center; font-weight: 700; }
 .dk-focus .f { padding: 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); }
+/* themed races: the single-skill banner, the all-rounder banner, combined sections, the forecast, the boss race */
+.dk-focus .f.big { font-size: 1.1em; padding: 3px 12px; }
+.dk-focus .f.big.solo { background: linear-gradient(90deg, #ff8c42, #ffd23f); color: #2a1600; }
+.dk-focus .f.big.all { background: linear-gradient(90deg, #3ec1ff, #b388ff, #2ee6a6); color: #10052a; }
+.dk-legs .leg.mix { outline: 2px dashed rgba(255, 255, 255, 0.7); outline-offset: -2px; }
+.dk-forecast { margin: 6px 0; padding: 5px 10px; border-radius: 10px; background: rgba(120, 180, 255, 0.16); font-weight: 600; }
+.dk-bossnote { margin: 6px 0; padding: 6px 10px; border-radius: 10px; background: linear-gradient(90deg, rgba(255, 207, 51, 0.35), rgba(224, 168, 0, 0.2)); font-weight: 700; }

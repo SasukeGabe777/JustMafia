@@ -12,7 +12,7 @@
   const SK = { run: ['🏃', 'Run', 'Hurdle Dash', '#ff8c42'], swim: ['🌊', 'Swim', 'Paddle Power', '#3ec1ff'], fly: ['🪽', 'Fly', 'Sky Rings', '#b388ff'], climb: ['🧗', 'Climb', 'Cliff Climb', '#c49a6c'], stamina: ['💪', 'Stamina', 'Bug Snack', '#2ee6a6'], smarts: ['🧠', 'Smarts', 'Lily Path', '#b48ee0'] };
   const GAME = { run: 'hurdles', swim: 'paddle', fly: 'rings', climb: 'climb', stamina: 'bugs', smarts: 'maze' };
   const SEC = { track: ['🏃', 'Track', 'run'], pond: ['🌊', 'Pond', 'swim'], cliff: ['🧗', 'Cliff', 'climb'], gap: ['🪽', 'Ravine', 'fly'], maze: ['🧠', 'Maze', 'smarts'] };
-  const SEC_LEN = { track: 48, pond: 36, cliff: 26, gap: 32, maze: 34 }; // fallback; the server sends its own (secLen / sections)
+  const SEC_LEN = { track: 38, pond: 32, cliff: 26, gap: 32, maze: 34 }; // fallback; the server sends its own (secLen / sections)
   const VAR_ICON = { hurdles: '🚧', logs: '🪵', mud: '🟤', sand: '🏖️', ice: '🧊', calm: '💧', lily: '🪷', waves: '🌊', rapids: '💨', icy: '🧊', rock: '🪨', clouds: '☁️', canyon: '🏜️',
     lava: '🌋', ash: '🌫️', roots: '🌿', roof: '🏠', puddles: '💦', cactus: '🌵', dunes: '🏜️', cloudpath: '☁️', gumdrops: '🍬', taffy: '🍭', hay: '🌾',
     hotspring: '♨️', murky: '🪵', fountain: '⛲', oasis: '🌴', skylake: '💎', choco: '🍫', foggy: '🌫️',
@@ -24,10 +24,14 @@
   const PERK_ICON = { burst: '🚀', webbed: '🦶', feather: '🪶', grip: '🧲', lungs: '🫁', lucky: '🍀', nimble: '🦘', closer: '🏁' };
   const MEDAL = ['🥇', '🥈', '🥉'];
   const ord = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
-  const course = (c) => (c ? `<div class="dk-legs">${c.sections.map((s) => `<span class="leg ${typeOf(s)}">${SEC[typeOf(s)][0]} ${SEC[typeOf(s)][1]}${s.v ? ' ' + (VAR_ICON[s.v] || '') : ''}</span>`).join('<span class="arrow">→</span>')}</div>` : '');
-  // The next race's featured skills (every race features two; the final, all of them).
-  const focus = (c) => (c && c.featured && c.featured.length ? `<span class="dk-focus">${c.featured.length > 2 ? '<span class="f">⭐ Every skill</span>' : c.featured.map((k) => `<span class="f">${SK[k][0]} ${SK[k][1]}</span>`).join('')}</span>` : '');
-  const focusText = (c) => (c && c.featured && c.featured.length ? (c.featured.length > 2 ? 'every skill' : c.featured.map((k) => SK[k][0] + ' ' + SK[k][1]).join(' · ')) : '');
+  const course = (c) => (c ? `<div class="dk-legs">${c.sections.map((s) => `<span class="leg ${typeOf(s)}${s.mix ? ' mix' : ''}">${SEC[typeOf(s)][0]}${s.mix ? '+' + SK[s.mix][0] : ''} ${SEC[typeOf(s)][1]}${s.v ? ' ' + (VAR_ICON[s.v] || '') : ''}</span>`).join('<span class="arrow">→</span>')}</div>` : '');
+  // The next race's featured skills: 1 to 6, picked by its world. A single-skill race gets its own
+  // banner ("🪽 Sky Dash: Fly only!"), 5-6 skills an "All-rounder course!" banner.
+  const focus = (c) => (c && c.featured && c.featured.length ? `<span class="dk-focus">${c.banner ? `<span class="f big ${c.solo ? 'solo' : 'all'}">${esc(c.banner)}</span>` : ''}${c.solo ? '' : c.featured.map((k) => `<span class="f">${SK[k][0]} ${SK[k][1]}</span>`).join('')}</span>` : '');
+  const focusText = (c) => (c && c.featured && c.featured.length ? (c.banner ? c.banner + (c.solo ? '' : ' ') : '') + (c.solo ? '' : c.featured.map((k) => SK[k][0] + ' ' + SK[k][1]).join(' · ')) : '');
+  // The forecast (what the weather does, so players can train for it) and the boss race notice.
+  const forecast = (c) => (c && c.forecast ? `<div class="dk-forecast">${esc(c.forecast)}</div>` : '');
+  const bossNote = (c) => (c && c.boss ? '<div class="dk-bossnote">🪿 BOSS RACE: the Golden Goose races the final! Beat it and everyone gets coins.</div>' : '');
   const weatherChip = (c, W) => (c && W ? `<span class="dk-weather">${W[c.weather].icon} ${W[c.weather].label}${c.wind ? (c.wind > 0 ? ' (tailwind)' : ' (headwind)') : ''}</span>` : '');
   const bar = (v, cls = '') => `<div class="bar ${cls}"><i style="width:${Math.max(0, Math.min(100, v))}%"></i></div>`;
   // The farmer: the player's own character (BOX.face / BOX.body, cached face images on the
@@ -90,7 +94,7 @@
     race.simT = wallSim(Math.max(0, (Date.now() - race.start - R.intro) / 1000)); race.last = performance.now(); race.slowUsed = 0; race.rate = 1;
     race.photo = R.margin != null && R.margin < 0.6 && R.results.length > 1;
     race.cam = -6; race.span = 60; race.leader = null; race.msgs = []; race.cheers = []; race.cheerSaid = 0; race.finished = new Set(); race.beep = 0; race.go = false;
-    race.flags = {}; race.leaderSec = -1; race.leadAt = 0; race.neckAt = 0; race.rank = {}; race.moved = {}; race.banner = null; race.confetti = []; race.firstDoneAt = 0; race.clipSaid = 0; race.splashAt = 0;
+    race.flags = {}; race.turned = false; race.RW = null; race.bossSaid = {}; race.leaderSec = -1; race.leadAt = 0; race.neckAt = 0; race.rank = {}; race.moved = {}; race.banner = null; race.confetti = []; race.firstDoneAt = 0; race.clipSaid = 0; race.splashAt = 0;
     race.ducks = { ...(R.wild || {}), ...Object.fromEntries(s.farms.map((f) => [f.id, f])) };
     race.place = Object.fromEntries(R.results.map((r) => [r.id, r]));
     race.hurdles = (R.hurdles || []).map((h) => ({ x: h.x != null ? h.x : h, log: !!h.log, k: h.k || (h.log ? 'log' : 'hurdle') }));
@@ -173,7 +177,7 @@
     P.t1 = 0; P.t2 = 0; P.flip = false;
     const dm = r.px == null ? 0 : x - r.px; // metres moved since the last frame
     let lift = 0, mode = 'walk', xv = x; // xv: where the body is drawn (a crash pushes it back from the fence)
-    r.air = 0;
+    r.air = 0; r.logX = null; r.wade = false; r.vine = false;
     // ---- finished: a little celebration (top 3) or a rest
     if (r.done) {
       mode = 'stand';
@@ -242,6 +246,13 @@
         }
       }
     }
+    // ---- combined mazes: flap up and over the rooftop walls (Smarts + Fly); wade through the
+    // flooded reed maze (Smarts + Swim)
+    if (!r.done && s.type === 'maze' && s.mix && mode === 'walk' && crash < 0) {
+      const u = ((x - s.a) % 7) / 7;
+      if (s.mix === 'fly' && u > 0.5 && u < 0.85) { const k = (u - 0.5) / 0.35; lift = 24 * Math.sin(k * Math.PI); mode = 'air'; P.wing = 0.85; P.flap = Math.sin(F.now * 24); P.farWing = true; P.lean = 0.3 - 0.6 * k; }
+      if (s.mix === 'swim') { r.wade = true; if (dm > 0 && Math.random() < 0.3) puff(x - 0.3, F.feet - 4, -0.5, 40, 0.45, 2.2 * F.zoom, SPLASH, 300); }
+    }
     // ---- the crash itself
     if (crash >= 0) {
       const H = race.hurdles[r.hi], back = (13 * U) / PX;
@@ -287,6 +298,11 @@
       if (swim < 4 && ent >= 2.4 && ex >= 1.3) { P.wing = 0.35; P.flap = Math.sin(F.now * 15 + r.i); if (Math.random() < 0.25) puff(x - 0.2, wy - 4, -0.8, 60, 0.4, 2.5 * F.zoom, SPLASH, 500); } // a weak swimmer flaps and splashes
       if (dm > 0 && ent >= 2.4 && Math.random() < 0.15) puff(x - (16 * U) / PX, wy, -0.3, 30, 0.45, 2 * F.zoom, SPLASH, 300);
       if (evNow === 'gulp') { const u = evAge / 1.0, dunk = Math.sin(Math.min(1, u * 1.6) * Math.PI); sink += 16 * dunk; P.eyes = 'shut'; P.beak = 0.8; P.wing = 0.8; P.flap = Math.sin(F.now * 24); P.lean = -0.2; if (Math.random() < 0.5) puff(x + (Math.random() - 0.5) * 0.6, wy - 6, (Math.random() - 0.5) * 0.6, 40 + Math.random() * 40, 0.5, 2.2 * F.zoom, SPLASH, -60); }
+      if (s.mix === 'run' && ent >= 2.4 && ex >= 1.3) { // rapids: hop from log to log
+        const k0 = Math.floor((x - s.a) / 5), u = (x - s.a - k0 * 5) / 5; r.logX = s.a + k0 * 5 + 1.6;
+        if (u < 0.32 && evNow !== 'gulp') { const k = u / 0.32; bodyLift = 16 * Math.sin(k * Math.PI); sink = 0; mode = 'hop'; P.lean = -0.25 + 0.5 * k; P.f1x = -7; P.f1y = 14; P.f2x = 4; P.f2y = 13; P.t1 = 0.8; P.t2 = 0.8; P.wing = 0.6; P.flap = Math.sin(F.now * 20); }
+      }
+      if (s.mix === 'smarts' && ent >= 2.4) { const u = ((x - s.a) % 9) / 9; if (u > 0.35 && u < 0.6) { r.icon = 'question'; P.hx = Math.sin(F.now * 9) * 1.5; } }
       const bob = (s.v === 'waves' ? 2.5 : 1) * Math.sin(F.now * 3.2 + r.i);
       r.sx = (x - F.cam) * PX; r.wy = wy; r.gy = wy; r.by = wy - 12 * U + sink * U + bob - bodyLift * hs; r.air = bodyLift; r.swim = ent >= 0.84 && ex >= 0.4 && bodyLift < 6;
       r.px = x; return;
@@ -310,6 +326,8 @@
         P.f1x = -10; P.f1y = 12; P.f2x = -7; P.f2y = 13; P.t1 = 1.3; P.t2 = 1.15;
         if (fly < 3 || dipU >= 0) { P.beak = 0.7; P.eyes = 'shut'; } // working hard
         if (dipU >= 0) { r.flap += F.simDt * 6; P.flap = Math.sin(r.flap * TAU); P.wing = 0.9; }
+        if (s.mix === 'climb') { r.vine = true; alt += 0.8 * Math.sin(F.now * 4 + r.i); P.wing = 0.95; P.flap = 0.3 * Math.sin(F.now * 8); P.rot = 0.15 * Math.sin(F.now * 4 + r.i); }
+        if (s.mix === 'smarts' && u > 0.35 && u < 0.6) r.icon = 'question';
         mode = 'fly';
         const gy = F.feet; // the rim height
         r.sx = (x - F.cam) * PX; r.by = gy - 18 * U - alt * YK * 1.5; r.gy = null; r.air = 30;
@@ -322,6 +340,7 @@
     let A2 = climbing ? 5 + 0.4 * climb : 7 + 0.5 * run;
     if (s.type === 'track' && s.v === 'mud') A2 *= 0.62; else if (s.type === 'track' && s.v === 'sand') A2 *= 0.85; else if (s.type === 'track' && s.v === 'ice') A2 *= 1.1;
     if (tired) A2 *= 0.8;
+    if (s.mix === 'stamina') A2 *= 0.8; // uphill in the dunes
     const beta = 0.55, D = A2 / beta;
     const moving = gdm > 1e-4 && mode !== 'stand';
     if (moving && mode !== 'air') r.gait = (r.gait + (gdm * PX) / U / D) % 1;
@@ -365,6 +384,14 @@
         r.gait = (r.gait + F.simDt * (1.2 + 0.12 * climb)) % 1;
         xv -= 0.35; // hug the face
       }
+      if (climbing && s.mix && !r.done) {
+        if (s.mix === 'swim' && moving && Math.random() < 0.35) puff(xv + 0.2, bodyG - 30 * U, -0.3 + Math.random() * 0.6, 50, 0.5, 2.4 * F.zoom, SPLASH, 300);
+        if (s.mix === 'swim' && wall) P.eyes = Math.sin(F.now * 3 + r.i) > 0.3 ? 'shut' : P.eyes;
+        if (s.mix === 'fly' && !wall && moving) { P.wing = 0.85; P.flap = Math.sin(F.now * 22); P.farWing = true; lift += 7 * Math.abs(Math.sin(F.now * 5 + r.i)); }
+      }
+      // dunes: a long uphill slog (Run + Stamina): leaning in, puffing; rooftops: scramble up the walls (Run + Climb)
+      if (s.type === 'track' && s.mix === 'stamina' && moving && mode === 'walk') { P.lean += 0.22; P.beak = 0.4 + 0.3 * Math.sin(F.now * 8); if (Math.random() < 0.05) puff(xv - 0.2, bodyG - 34 * U, -0.4, -40, 0.6, 2 * F.zoom, SWEAT, 300); }
+      if (s.type === 'track' && s.mix === 'climb' && mode === 'walk' && !r.done) { const u = ((x - s.a) % 9) / 9; if (u > 0.6 && u < 0.8) { const k = (u - 0.6) / 0.2; P.rot = -0.8 * Math.sin(k * Math.PI); P.wing = 0.9; P.flap = Math.sin(F.now * 18); lift += 10 * Math.sin(k * Math.PI); } }
       if (evNow === 'slip') { // sliding back down the rock: belly to the wall, feet scrabbling
         P.lean = -0.9; P.wing = 0.9; P.flap = Math.sin(F.now * 26); P.eyes = 'shut'; P.beak = 1;
         P.f1x = 4 + Math.sin(F.now * 30) * 4; P.f2x = 8 + Math.cos(F.now * 30) * 4; P.f1y = 12; P.f2y = 10;
@@ -379,6 +406,7 @@
     r.sx = (xv - F.cam) * PX; r.gy = bodyG + mdy; r.by = bodyG + mdy - 18 * U + bob * U - lift * hs; r.air = lift;
     r.px = x; r.pxv = xv;
   }
+  const BOSS_TAUNT = ['🪿 HONK! The Golden Goose takes the lead!', '🪿 The Golden Goose struts to the front: “Too slow, ducklings!”', '🪿 HONK HONK! The boss is in front!'];
   function trip(r, h) { for (const e of r.tr.ev) if (e[1] === 'trip' && e[2] === h) return e[0]; return null; }
 
   function drawRace(g, W, H, now) {
@@ -417,7 +445,10 @@
     target = Math.max(-5, Math.min(G.L - race.span * 0.8, target));
     race.cam += (target - race.cam) * 0.08;
     const LANES = race.LANES, dz = (LANES <= 6 ? 12 : 9) * Math.min(1.3, W / 1600), band = dz * LANES;
-    const VPX = W / 66, YK = VPX * 0.9, base = art.drawRaceWorld(g, W, H, R, G, race.cam, PX, now, VPX, band, LANES);
+    const wNow = R.change && race.leadX >= R.change.x ? R.change.to : R.weather;
+    if (wNow !== R.weather && !race.turned) { race.turned = true; say(R.change.say || 'The weather turns!', true); }
+    const RW = wNow === R.weather ? R : race.RW || (race.RW = { ...R, weather: wNow });
+    const VPX = W / 66, YK = VPX * 0.9, base = art.drawRaceWorld(g, W, H, RW, G, race.cam, PX, now, VPX, band, LANES);
     const zoom = Math.max(0.9, Math.min(1.35, PX / (W / 44)));
     const F = { art, G, simT, simDt, now, PX, YK, cam: race.cam, W, zoom, U: 1, hs: 1, feet: 0, particles: true, dz };
     const nh = race.hurdles.length, TH = race.TH;
@@ -431,7 +462,7 @@
       }
       for (const r of race.byLane[lane]) {
         const d = race.ducks[r.id] || {}, stage = d.stage == null ? 2 : Math.max(0, d.stage);
-        F.hs = hs; F.U = hs * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : 1); F.feet = feet;
+        F.hs = hs; F.U = hs * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : stage >= 4 ? 1.5 : 1); F.feet = feet;
         const sx0 = (Math.min(r.x, G.L) - race.cam) * PX;
         if (sx0 < -120 || sx0 > W + 120) { r.px = r.x; r.sx = -999; continue; }
         if (r.done) r.x = Math.min(r.x, G.L) + Math.min(5, (race.place[r.id].place - 1) * 0.6) + 1.2;
@@ -444,7 +475,10 @@
           g.strokeStyle = 'rgba(255,255,255,' + (0.5 * (1 - rip)).toFixed(2) + ')'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, wy + 2, (22 + rip * 16) * U, (3 + rip * 2) * U, 0, 0, TAU); g.stroke();
           if (r.vx > 0.3) { g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x - 16 * U, wy); g.lineTo(x - 52 * U, wy - 5 * U); g.moveTo(x - 16 * U, wy + 1); g.lineTo(x - 52 * U, wy + 6 * U); g.stroke(); }
         }
+        if (r.logX != null) { const lx = (r.logX - race.cam) * PX, ly = r.wy + 2; g.fillStyle = '#7a5230'; rrect(g, lx - 22 * U, ly - 5 * U, 44 * U, 10 * U, 5 * U); g.fill(); g.fillStyle = '#a0723f'; g.beginPath(); g.ellipse(lx + 22 * U, ly, 3 * U, 5 * U, 0, 0, TAU); g.fill(); }
+        if (r.vine) { g.strokeStyle = '#3f7a2a'; g.lineWidth = Math.max(2, 3 * U); g.beginPath(); g.moveTo(x - 30 * U, 0); g.quadraticCurveTo(x - 10 * U, y * 0.5, x + 4 * U, y - 14 * U); g.stroke(); }
         art.drawRacer(g, x, y, F.hs, d.color, d.hat, stage, race.P);
+        if (r.wade) { g.fillStyle = 'rgba(70,130,150,.6)'; g.fillRect(x - 28 * U, r.gy - 9 * U, 56 * U, 12 * U); g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(x - 24 * U, r.gy - 9 * U, 48 * U, 1.5); }
         if (r.swim) { // the water in front of the body: the paddling feet show through it
           const ws = art.secAt(G, Math.min(r.x, G.L - 0.01)), LD = window.DUCK_LANDS;
           g.fillStyle = (LD && LD.WATER[ws.v]) || TH.water; g.globalAlpha = 0.62; g.fillRect(x - 30 * U, r.wy + 1, 60 * U, Math.min(24 * U, 44)); g.globalAlpha = 1;
@@ -461,9 +495,9 @@
         if (r.lab || (r.done && race.place[r.id].place <= 3)) {
           g.textAlign = 'center'; g.font = `600 ${Math.min(20, 12 * sc)}px Fredoka, sans-serif`;
           const fim = faceImg(farmerOf(r.id, d), 64);
-          const label = (r.done ? MEDAL[race.place[r.id].place - 1] || '#' + race.place[r.id].place : '') + ' ' + (d.avatar && !fim ? d.avatar + ' ' : '') + (d.name || '') + (d.wild ? ' 🌿' : '');
+          const label = (r.done ? MEDAL[race.place[r.id].place - 1] || '#' + race.place[r.id].place : '') + ' ' + (d.avatar && !fim ? d.avatar + ' ' : '') + (d.name || '') + (d.boss ? ' 👑' : d.wild ? ' 🌿' : '');
           const fh = Math.min(26, 16 * sc), fw = fim ? fh * 1.5 : 0, tw = g.measureText(label).width + 12 + fw * 0.8, ly = y - (50 + (lane % 3) * 16) * sc - r.air * 0;
-          g.fillStyle = d.wild ? 'rgba(40,70,30,.75)' : 'rgba(0,0,0,.62)'; rrect(g, x - tw / 2, ly, tw, fh, 6); g.fill(); g.fillStyle = '#fff'; g.fillText(label, x + fw * 0.4, ly + fh * 0.76);
+          g.fillStyle = d.boss ? 'rgba(120,80,0,.85)' : d.wild ? 'rgba(40,70,30,.75)' : 'rgba(0,0,0,.62)'; rrect(g, x - tw / 2, ly, tw, fh, 6); g.fill(); g.fillStyle = '#fff'; g.fillText(label, x + fw * 0.4, ly + fh * 0.76);
           if (fim) g.drawImage(fim, x - tw / 2 + 1, ly + fh - fw * 0.92, fw, fw);
           g.textAlign = 'left';
         }
@@ -471,7 +505,7 @@
       }
     }
     drawParticles(g, dt * (race.rate < 0.9 ? 0.4 : 1), race.cam, PX);
-    art.drawRaceWeather(g, W, H, R, now);
+    art.drawRaceWeather(g, W, H, RW, now);
     // the race's moments as they happen: commentary and the sounds, in sync with the animation
     for (const r of race.runners) {
       const ev = r.tr.ev, d = race.ducks[r.id] || {};
@@ -498,17 +532,19 @@
           race.firstDoneAt = pnow; BOX.sfx('cheer'); BOX.sfx('win');
           if (race.photo) clip('camera', { vol: 0.28, jitter: 0 }); // the photo-finish camera
           const second = R.results[1] && race.ducks[R.results[1].id];
-          race.banner = { at: pnow, text: `🏆 ${d.name} WINS!`, sub: race.photo && second ? `📸 Photo finish: ahead of ${second.name} by ${R.margin.toFixed(2)}s` : d.wild ? 'A wild duck takes it!' : (d.owner ? 'Raised by ' + d.owner : '') };
+          race.banner = r.id === 'boss' ? { at: pnow, text: '🪿 THE GOLDEN GOOSE WINS!', sub: 'HONK! Nobody could beat the boss this time…' } : { at: pnow, text: `🏆 ${d.name} WINS!`, sub: R.boss && R.boss.beaten ? `👑 The Golden Goose is beaten! Everyone gets coins!` : race.photo && second ? `📸 Photo finish: ahead of ${second.name} by ${R.margin.toFixed(2)}s` : d.wild ? 'A wild duck takes it!' : (d.owner ? 'Raised by ' + d.owner : '') };
           say(race.photo && second ? `📸 PHOTO FINISH! ${d.name} beats ${second.name} by a beak!` : `🏆 ${d.name} WINS the ${R.name}!`, true);
           for (let i = 0; i < 140; i++) race.confetti.push({ x: Math.random() * W, y: -Math.random() * H * 0.5, vy: 120 + Math.random() * 160, vx: (Math.random() - 0.5) * 60, c: ['#ffd23f', '#ff4f9a', '#3ec1ff', '#2ee6a6', '#fff'][i % 5], r: Math.random() * 6 });
         } else if (pl <= 3) say(`${['', '🥈', '🥉'][pl - 1]} ${d.name} takes ${pl === 2 ? 'second' : 'third'}!`);
+        if (R.boss && r.id !== 'boss' && !d.wild && R.boss.by && R.boss.by[0] === r.id && race.place.boss && race.place.boss.place > 1 && pl > 1) { say(`👑 ${d.name} beats the Golden Goose! Coins for everyone!`, true); for (let i = 0; i < 80; i++) race.confetti.push({ x: Math.random() * W, y: -Math.random() * H * 0.4, vy: 120 + Math.random() * 160, vx: (Math.random() - 0.5) * 60, c: ['#ffd23f', '#fff0a0', '#e0a800'][i % 3], r: Math.random() * 6 }); }
+        if (r.id === 'boss' && pl > 1) say('🪿 The Golden Goose crosses the line… beaten! HONK?!');
       }
     }
     // Commentary from the race state: lead changes, sections, the first hurdle, neck and neck, halfway, final stretch.
     const b = byX[1] && !byX[1].done ? byX[1] : null;
     if (e > R.intro && !lead.done) {
       if (race.leader !== lead.id) {
-        if (race.leader && pnow - race.leadAt > 900) say(`${(race.ducks[lead.id] || {}).wild ? '🌿 Wild duck ' : ''}${nm(lead.id)} takes the lead!`);
+        if (race.leader && pnow - race.leadAt > 900) say(lead.id === 'boss' ? BOSS_TAUNT[Math.floor(Math.random() * BOSS_TAUNT.length)] : race.leader === 'boss' ? `😱 ${nm(lead.id)} overtakes the Golden Goose!` : `${(race.ducks[lead.id] || {}).wild ? '🌿 Wild duck ' : ''}${nm(lead.id)} takes the lead!`, lead.id === 'boss' || race.leader === 'boss');
         race.leader = lead.id; race.leadAt = pnow;
       }
       const si = G.secs.indexOf(art.secAt(G, lead.x));
@@ -533,7 +569,7 @@
       g.fillStyle = '#fff'; g.font = '700 15px Fredoka, sans-serif'; g.fillText(String(i + 1), bx + 10, yy);
       const fim = faceImg(farmerOf(p.id, d), 48);
       if (fim) g.drawImage(fim, bx + 44, yy - 21, 26, 26);
-      g.font = '600 15px Fredoka, sans-serif'; g.fillText(`${d.avatar && !fim ? d.avatar + ' ' : ''}${(d.name || '').slice(0, 16)}${d.wild ? ' 🌿' : ''}`, bx + (fim ? 74 : 48), yy, bw - (fim ? 146 : 120));
+      g.font = '600 15px Fredoka, sans-serif'; g.fillText(`${d.avatar && !fim ? d.avatar + ' ' : ''}${(d.name || '').slice(0, 16)}${d.boss ? ' 👑' : d.wild ? ' 🌿' : ''}`, bx + (fim ? 74 : 48), yy, bw - (fim ? 146 : 120));
       g.textAlign = 'right'; g.fillStyle = p.done ? '#ffd23f' : 'rgba(255,255,255,.7)'; g.font = '600 13px Fredoka, sans-serif';
       g.fillText(p.done ? (MEDAL[race.place[p.id].place - 1] || 'FIN') : e < R.intro ? '' : i === 0 ? 'leader' : lead.x - p.x < 0.05 ? 'level' : '-' + (lead.x - p.x).toFixed(1) + 'm', bx + bw - 26, yy);
       if (mv && pnow - mv.at < 1600) { g.fillStyle = mv.up ? '#5be37a' : '#ff6a5c'; g.fillText(mv.up ? '▲' : '▼', bx + bw - 8, yy); }
@@ -574,8 +610,16 @@
       g.fillStyle = R.theme === 'night' ? 'rgba(0,0,10,.55)' : 'rgba(10,5,30,.5)'; g.fillRect(0, 0, W, H); g.textAlign = 'center'; g.fillStyle = '#fff';
       g.font = '700 28px Fredoka, sans-serif'; g.fillText(`${R.themeName || ''} · race ${R.n}${R.final ? ' · DOUBLE POINTS' : ''}`, W / 2, H * 0.17);
       g.font = '800 60px Fredoka, sans-serif'; g.fillStyle = R.final ? '#ffd23f' : '#fff'; g.fillText((R.final ? '🏆 ' : '') + R.name, W / 2, H * 0.27);
+      g.font = '700 22px Fredoka, sans-serif'; g.fillStyle = '#ffeccd'; g.fillText([R.banner, R.forecast].filter(Boolean).join('  ·  '), W / 2, H * 0.32, W * 0.92);
       const fav = (R.favorites || []).filter((id) => race.ducks[id]);
-      if (fav.length) {
+      if (R.boss && race.ducks.boss) { // the boss race: the Golden Goose, big, and its taunt
+        const bd = race.ducks.boss, bob = Math.sin(now * 3) * 6;
+        g.fillStyle = 'rgba(255,207,51,.22)'; g.beginPath(); g.arc(W / 2, H * 0.52, H * 0.11, 0, TAU); g.fill();
+        art.drawDuck(g, W / 2, H * 0.54 + bob, 2.1, bd.color, bd.hat, now, 'stand', false, 4);
+        g.font = '800 44px Fredoka, sans-serif'; g.fillStyle = '#ffd23f'; g.lineWidth = 8; g.strokeStyle = 'rgba(40,20,6,.85)'; g.strokeText('🪿 BOSS RACE: THE GOLDEN GOOSE', W / 2, H * 0.39); g.fillText('🪿 BOSS RACE: THE GOLDEN GOOSE', W / 2, H * 0.39);
+        g.font = '700 26px Fredoka, sans-serif'; g.fillStyle = '#fff'; g.lineWidth = 6; g.strokeText('“HONK! No duck has ever beaten me!”  Beat it: coins for everyone!', W / 2, H * 0.645, W * 0.92); g.fillText('“HONK! No duck has ever beaten me!”  Beat it: coins for everyone!', W / 2, H * 0.645, W * 0.92);
+        if (!race.bossSaid.intro) { race.bossSaid.intro = true; say('🪿 The Golden Goose waddles to the line… HONK!', true); }
+      } else if (fav.length) {
         g.font = '700 22px Fredoka, sans-serif'; g.fillStyle = '#ffeccd'; g.fillText('THE FAVORITES', W / 2, H * 0.36);
         fav.forEach((id, i) => {
           const d = race.ducks[id], cx = W / 2 + (i - (fav.length - 1) / 2) * 220, fm = farmerOf(id, d);
@@ -840,16 +884,16 @@
   }
   function pageRace(v, d) {
     const W = v.weather[v.course.weather], c = v.course;
-    return `<div class="card-box dk-racecard theme-${c.theme}"><div class="muted">${c.leagueIcon || ''} ${esc(c.leagueName || '')} · race ${c.n} of ${v.races}${c.final ? ' · <b class="dk-x2">×2 points</b>' : ''}</div><h3>${esc(c.name)}</h3><p>Featuring: ${focus(c)}</p>
+    return `<div class="card-box dk-racecard theme-${c.theme}"><div class="muted">${c.leagueIcon || ''} ${esc(c.leagueName || '')} · race ${c.n} of ${v.races}${c.final ? ' · <b class="dk-x2">×2 points</b>' : ''}</div><h3>${esc(c.name)}</h3><p>Featuring: ${focus(c)}</p>${forecast(c)}${bossNote(c)}
         <div class="dk-racemeta"><span>📍 ${esc(c.themeName || '')}</span><span>${W.icon} ${W.label}</span><span>⏱ ${timer(v.endsIn)}</span></div>
         ${course(c)}
-        <details class="dk-notes"><summary>What’s on the course?</summary><p>${W.icon} ${esc(W.about)}</p>${[...new Set(c.sections.map((s) => s.v))].map((k) => `<p>${VAR_ICON[k] || ''} ${esc((v.variants || {})[k] || '')}</p>`).join('')}</details>
+        <details class="dk-notes"><summary>What’s on the course?</summary><p>${W.icon} ${esc(W.about)}</p>${[...new Map(c.sections.map((s) => [s.v + (s.mix || ''), s])).values()].map((s) => `<p>${VAR_ICON[s.v] || ''} ${esc((v.variants || {})[s.v] || '')}${s.mix ? ` <b>(needs ${SK[SEC[typeOf(s)][2]][1]} + ${SK[s.mix][1]})</b>` : ''}</p>`).join('')}</details>
         ${road(v.ladder, c.n - 1)}
         ${v.projected && v.projected.of > 1 && v.projected.place ? `<div class="dk-projcard">📈 Projected <b>${ord(v.projected.place)}</b> of ${v.projected.of}${v.projected.place > 1 ? ' · train the 🏁 skills to climb' : ' · you’re the favorite!'}</div>` : ''}</div>
       <h3>Tactic</h3><div class="dk-tactics">${Object.entries(v.tactics).map(([k, [ic, l, about]]) => `<button data-tactic="${k}" class="${d.tactic === k ? 'on' : ''}"><span>${ic}</span><b>${l}</b><small>${esc(about)}</small></button>`).join('')}</div>
       ${v.gear ? `<div class="dk-line"><span>🎒 ${d.gear.length ? d.gear.map((g) => v.gear[g].icon + ' ' + esc(v.gear[g].label)).join(' · ') : 'No race gear packed'}</span><button class="link" data-goshop="gear">Shop →</button></div>` : ''}
       ${v.predictions ? `<h3>🔮 Predict the winner</h3><p class="muted">Winner pays 30 coins, top 3 pays 10.</p><select id="dk-predict" class="dk-select"><option value="">Pick a duck…</option>${v.rivals.map((r) => `<option value="${esc(r.id)}" ${d.predict === r.id ? 'selected' : ''}>${esc(r.duck)} (${esc(r.owner)})</option>`).join('')}</select>` : ''}
-      ${v.trophies.length ? `<h3>🏆 Trophy shelf</h3><div class="dk-trophies">${v.trophies.map((t) => `<span title="${esc(v.leagues[t.league].label)}">${['🏆', '🥈', '🥉'][t.place - 1]}<small>${esc(v.leagues[t.league].label)}</small></span>`).join('')}</div>` : ''}`;
+      ${v.trophies.length ? `<h3>🏆 Trophy shelf</h3><div class="dk-trophies">${v.trophies.map((t) => `<span title="${esc(v.leagues[t.league].label)}">${t.boss ? '👑' : ['🏆', '🥈', '🥉'][t.place - 1]}<small>${t.boss ? 'Beat the Golden Goose' : esc(v.leagues[t.league].label)}</small></span>`).join('')}</div>` : ''}`;
   }
   function pageDuck(v, d) {
     const total = Object.values(d.levels).reduce((a, b) => a + b, 0), nextSt = d.stage >= 0 ? v.stages[d.stage + 1] : null, curSt = v.stages[Math.max(0, d.stage)];
@@ -942,7 +986,9 @@
       'Training costs energy. When your duck runs out it falls asleep by itself for a short nap, then it’s ready again. Food (seeds, corn or a feast bowl, right on the training page) tops it up.',
       'Spend coins in the shop: food, farm buildings, decorations, race gear and hats. It all shows on your farm.',
       'Every few minutes the valley races a themed obstacle course in one of 14 worlds (meadow, volcano, swamp, city rooftops, jungle, desert, sky islands, candy land, a haunted farm and more). Smart ducks find the shortcut through the maze. Training stops while the race is on.',
-      'Each race features two skills (shown before it starts), and over the season every skill gets its turn: a duck that trains all six wins the season.',
+      'Each race features the skills that fit its world: sometimes just one (🪽 Sky Dash: Fly only!, a chance to catch up with the skill you trained), sometimes all of them. Some sections need two skills at once (a waterfall to climb takes Climb and Swim). Over the season every skill gets its turn: a duck that trains all six wins the season.',
+      'Check the forecast: rain speeds up swimmers, fog makes mazes harder, heat tires everyone, wind helps strong flyers. The weather can even turn mid-race!',
+      'Boss race (a lobby setting): the Golden Goose races the Grand Championship. Beat it and everyone gets coins!',
       'Climb from the Rookie Cup to the Grand Championship. Top 3 win trophies for your farm.',
       'Pick a tactic, predict the winner, finish quests, beat your rival, and cheer from your phone!',
     ],
@@ -985,8 +1031,8 @@
         const arrow = (id) => { const m = mv[id]; if (!m || R.n === 1) return ''; const k = m[0] - m[1]; return k > 0 ? `<i class="up">▲${k}</i>` : k < 0 ? `<i class="down">▼${-k}</i>` : '<i>–</i>'; };
         el.innerHTML = `<div class="dk-results"><div class="banner">🏁 ${esc(R.name)}: results</div>
           ${R.highlights && R.highlights.length ? `<div class="dk-high">${R.highlights.map((h) => `<span>${h.icon} ${esc(h.text)}</span>`).join('')}</div>` : ''}
-          <div class="dk-podium">${pod.map((r) => { const d = F[r.id] || {}; return `<div class="pod p${r.place}">${duckPic(d)}<b>${esc(d.name)}</b><span class="muted">${d.wild ? '🌿 wild duck' : who(d) + esc(d.owner)}</span><div class="step">${MEDAL[r.place - 1]}${r.wild ? '' : ' +' + r.pts + ' pts'}</div></div>`; }).join('')}</div>
-          <div class="dk-rescols"><div class="dk-res">${top.map((r) => { const d = F[r.id] || {}; return `<div class="row ${r.wild ? 'wild' : ''}"><span>${r.place}.</span><span>${esc(d.name)} <span class="muted">(${d.wild ? 'wild' : esc(d.owner)})</span></span><span class="muted">${r.time.toFixed(1)}s</span><b>${r.wild ? '—' : '+' + r.pts + ' pts'}</b></div>`; }).join('')}</div>
+          <div class="dk-podium">${pod.map((r) => { const d = F[r.id] || {}; return `<div class="pod p${r.place}">${duckPic(d)}<b>${esc(d.name)}</b><span class="muted">${d.boss ? '👑 the boss' : d.wild ? '🌿 wild duck' : who(d) + esc(d.owner)}</span><div class="step">${MEDAL[r.place - 1]}${r.wild ? '' : ' +' + r.pts + ' pts'}</div></div>`; }).join('')}</div>
+          <div class="dk-rescols"><div class="dk-res">${top.map((r) => { const d = F[r.id] || {}; return `<div class="row ${r.wild ? 'wild' : ''}"><span>${r.place}.</span><span>${esc(d.name)} <span class="muted">(${d.boss ? 'the boss' : d.wild ? 'wild' : esc(d.owner)})</span></span><span class="muted">${r.time.toFixed(1)}s</span><b>${r.wild ? '—' : '+' + r.pts + ' pts'}</b></div>`; }).join('')}</div>
           <div class="dk-season panel"><h3>Season after race ${R.n} of ${s.races}</h3>${s.standings.slice(0, 8).map((x, i) => `<div class="row"><span>${i + 1}.</span><span>${who(x)}${esc(x.duck)}</span><b>${x.points}</b>${arrow(x.id)}</div>`).join('')}</div></div>
           <p class="muted" style="text-align:center">${s.race >= s.races ? '🏆 The season is over! The finale is next…' : 'Back to the farms in ' + timer(s.endsIn)}</p></div>`;
         return;
@@ -1022,7 +1068,7 @@
         return;
       }
       const c = s.course;
-      el.querySelector('#dk-next').innerHTML = `<div class="muted">${c.leagueIcon || ''} ${esc(c.leagueName || '')} · race ${s.race + 1} of ${s.races} · 📍 ${esc(c.themeName || '')} · ${s.farms.length} farm${s.farms.length === 1 ? '' : 's'}</div><div class="dk-rname">${esc(c.name)}${c.final ? ' <span class="dk-x2">×2 points</span>' : ''} ${weatherChip(c, s.weather)}</div><div class="dk-nextfocus">Featuring ${focus(c)}</div>${course(c)}${road(s.ladder, s.race)}`;
+      el.querySelector('#dk-next').innerHTML = `<div class="muted">${c.leagueIcon || ''} ${esc(c.leagueName || '')} · race ${s.race + 1} of ${s.races} · 📍 ${esc(c.themeName || '')} · ${s.farms.length} farm${s.farms.length === 1 ? '' : 's'}</div><div class="dk-rname">${esc(c.name)}${c.final ? ' <span class="dk-x2">×2 points</span>' : ''} ${weatherChip(c, s.weather)}</div><div class="dk-nextfocus">Featuring ${focus(c)}</div>${forecast(c)}${bossNote(c)}${course(c)}${road(s.ladder, s.race)}`;
       el.querySelector('#dk-timer').innerHTML = timer(s.endsIn);
       el.querySelector('#dk-timer').classList.toggle('hot', !!s.hype);
       el.querySelector('#dk-spot').innerHTML = spotlight(s);
@@ -1036,7 +1082,7 @@
       if (s.hype) {
         const F = Object.fromEntries(s.farms.map((x) => [x.id, x]));
         const fav = (s.favorites || []).map((id) => F[id]).filter(Boolean);
-        hype.innerHTML = `<div class="hk">${c.final ? '🏆 GRAND FINAL' : '🏁 RACE DAY'}</div><div class="hn">${esc(c.name)} starts in ${timer(s.endsIn)}</div><div class="hfocus">${esc(c.themeName || '')} · ${esc(focusText(c))}</div>${fav.length ? `<div class="hf">${fav.map((f, i) => `<span>${duckPic(f)}<b>${i + 1}. ${who(f)}${esc(f.name)}</b></span>`).join('')}</div><div class="muted">The favorites · pick your tactic on your phone!</div>` : ''}`;
+        hype.innerHTML = `<div class="hk">${c.final ? '🏆 GRAND FINAL' : '🏁 RACE DAY'}</div><div class="hn">${esc(c.name)} starts in ${timer(s.endsIn)}</div><div class="hfocus">${esc(c.themeName || '')} · ${esc(focusText(c))}</div><div class="hfocus">${esc(c.forecast || '')}</div>${c.boss ? '<div class="hk">🪿 BOSS RACE: THE GOLDEN GOOSE</div>' : ''}${fav.length ? `<div class="hf">${fav.map((f, i) => `<span>${duckPic(f)}<b>${i + 1}. ${who(f)}${esc(f.name)}</b></span>`).join('')}</div><div class="muted">The favorites · pick your tactic on your phone!</div>` : ''}`;
       }
     },
 

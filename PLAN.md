@@ -1662,3 +1662,64 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
   quiet help, weak moments), test-box-kit, test-box, e2e-box; headless TV/phone screenshots of the
   new walls, bridges, rivers, hints and the how-to hand checked. Limits: the mini-game pay and
   Risk it! odds come from a model of the games, not from real players.
+
+## JustRaiseDucks: themed races (1-6 skills), combined sections, weather, the Golden Goose boss race (claude/ducks-themed-races, November 24, 2026)
+
+- Owner asks: each area themed, a random number of skills per race depending on the area ("either a
+  ton of different abilities used or just one") so people can catch up with what they trained,
+  semi-random but fair over a season; areas that combine stats; random weather per race (it
+  depends); an optional championship boss race set at the start.
+- Worlds (`THEMES[k].skills` / `.counts` in box/games/ducks.js): each of the 14 worlds has skill
+  weights from its scenery and odds for how many skills a race there features. Meadow Run+Swim(+Stamina),
+  Beach Swim (Run, Stamina), Forest Climb+Run+Smarts, Frosty Peaks Climb+Stamina, Red Rock Canyon
+  Fly+Climb, Firefly Night Swim+Fly+Smarts, Volcano Climb+Fly, Murky Swamp Swim+Smarts, City
+  Rooftops Fly+Climb+Run, Lost Jungle Climb+Swim+Smarts, Dusty Desert Run+Stamina, Sky Islands Fly
+  (often Fly only), Candy Land everything (often 5-6 skills), Haunted Farm Smarts+Run.
+- `planSeason()` plans every race (world + featured skills) from the room seed: worlds never repeat;
+  the count is drawn from the world's odds (overall ~17-21% single-skill races, ~70% 2-4 skills,
+  ~6-10% 5-6 skills); skills are drawn by world weight × a lean toward the skills featured least so
+  far (SEASON.lean); on 4+ races every skill is featured before the final; a plan where a skill gets
+  over 1.9× (or under 0.45×) the average season share is re-planned (up to 40 tries). Shares count
+  what the race really builds (`raceShares`: combined sections half to each skill, Stamina one share).
+  Brainy: Smarts in every race; Classic: no Smarts. The final features everything.
+- Courses are built only from the featured skills (a Fly-only race is all ravines). A single-skill
+  race gets a banner ("🪽 Sky Dash: Fly only!", "💪 Long Trek: Stamina only!"); 5-6 skills
+  "🌈 All-rounder course!". A Stamina-only race is a long trek on flat trail where everyone walks at
+  one pace (TREK) and only fatigue differs. Featured Stamina: the ducks tire from 15% of the course.
+- Combined sections (COMBO): waterfall (Climb+Swim), rapids with logs to hop (Swim+Run), rooftop maze
+  you flap over (Smarts+Fly), flooded reed maze (Smarts+Swim), dunes uphill slog (Run+Stamina),
+  floating rocks (Climb+Fly), broken bridge (Fly+Run), jungle gorge on the vines (Fly+Climb),
+  rooftop walls (Run+Climb), foggy ravine / foggy pond (Fly+Smarts, Swim+Smarts). Used (75%) when the
+  race features both skills, never in single-skill races. Speed = average of both skill speeds; the
+  section's mishap uses the weaker skill. Each skill gives and gets about equally. The TV animates
+  both actions (hops onto logs, splashes on the climbing duck, flapping over maze walls, wading,
+  swinging on a vine, leaning into the dunes); the phone's course list marks them (🧗+🌊).
+- Section lengths re-tuned so a level is worth the same on every kind of section in head-to-heads
+  (track 38 m, pond 32 m, cliff v0 2.0).
+- Weather (WEATHER, WEATHER_ODDS): clear, rain, wind, heat, fog, snow, storm, sandstorm, ash, picked
+  per world (desert heat/sandstorms, almost no rain; Sky Islands windy; swamp foggy; peaks snowy;
+  volcano heat/ash); the first race is clear; about 30% of races clear. Modest effects (≤6% speed per
+  section kind, more trips/slips in rain, wrong turns in fog/sandstorm/ash, faster tiring in heat).
+  Wind: a tailwind carries strong flyers further, a headwind slows weak flyers most. 12% of races the
+  weather turns mid-race (a downpour, a blizzard, a sandstorm, or it clears) at a set point.
+  The forecast with a tip ("🌧️ Rain expected: swimmers rejoice!…") is on the TV next-race card, the
+  hype screen, the race intro and the phone; the TV draws rain, storms with lightning, snow, sand
+  haze and streaks, falling ash, heat shimmer, gusts and fog, and says when the weather turns.
+- Boss race (lobby setting "Championship boss race", off by default): the Golden Goose (a big golden
+  crowned bird, drawn 1.5× size) races the Grand Championship at the best player duck's average level
+  (BOSS). Big intro on the TV, taunts when it leads, a shout when a duck overtakes it. It scores no
+  points and is never in the standings. If any player duck beats it: every player +50 coins, the
+  ducks that beat it get the 👑 "Beat the Golden Goose" badge and trophy. Measured: a player duck beats
+  it 33-47% (best duck uneven, typical) to 51-56% (even best duck plus two weaker ducks).
+- Balance (`node tools/ducks-balance.js`, 200 races per row): one skill +4, default terrain:
+  every skill 12-21% (max/min 1.4-1.8× per 200-race row, within 1.6× at 300 races in the test; Classic 14-28%, Brainy favours Smarts 32-44% since every Brainy race has a maze). Single-skill races: a
+  specialist (half or all of 30 levels in that skill) beats three balanced level-5 ducks 100% of the
+  time, every skill. Over a whole season a balanced duck still beats a half-specialist 74-98% of
+  match-ups (Stamina half-in 65-79%); a duck missing one skill now mostly loses only the races that
+  feature it (balanced duck 50-74% per season; no Stamina 99-100%).
+- Validation: test-box-ducks (42 tests: season spread/shares/1-6 counts, single-skill races, world
+  themes, combined sections, weather odds/determinism/effects/mid-race turn, boss off by default and
+  on), test-box-kit, test-box, e2e-box (ports 3630/9630). Headless TV/phone screenshots of a Fly-only
+  race, an all-rounder, a combined-section race in rain turning to storm, a Stamina trek in a
+  heatwave and the boss final in a sandstorm. Limits: not yet played by real people; the boss odds
+  and the weather effects are tuned in simulation.

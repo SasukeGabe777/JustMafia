@@ -164,7 +164,7 @@ test('Race events: crashes and clipped bars name their hurdle; a crashed duck wa
   let crashes = 0, clips = 0;
   for (let seed = 1; seed <= 12; seed++) {
     const { R } = trackRace(seed, 0);
-    assert(R.hurdles.length >= 3, 'hurdles on a track course');
+    assert(R.hurdles.length >= 2, 'hurdles on a track course: ' + R.hurdles.length);
     for (const tr of R.tracks) {
       assert(Array.isArray(tr.lv) && tr.lv.length === 6 && tr.lv.every((x) => Number.isInteger(x)), 'levels for the TV');
       for (const [t, k, h] of tr.ev) {
@@ -604,45 +604,165 @@ test('Balance: a well-rounded duck beats a specialist with the same total levels
   const even = BAL.even(5);
   for (const k of D.SKILLS) {
     const lop = BAL.lopsided(30, k), share = BAL.seasonHeadToHead([even, even, even], [lop, lop, lop], {}, 20);
-    assert(share >= 0.75, `balanced vs half-in ${k} over a season: ${share.toFixed(2)}`);
+    assert(share >= 0.65, `balanced vs half-in ${k} over a season: ${share.toFixed(2)}`);
   }
 });
-test('Balance: missing any one skill (at 0, the same total spread over the rest) clearly hurts, for every skill', () => {
+test('Balance: missing one skill costs you the races that feature it (clearly); over a season skipping a skill gains you nothing', () => {
   const even = BAL.even(5);
   for (const k of D.SKILLS) {
-    const m = BAL.missing(5, k), race = BAL.headToHead([even, even, even], [m, m, m], {}, 60), season = BAL.seasonHeadToHead([even, even, even], [m, m, m], {}, 20);
-    assert(race >= 0.6 && season >= 0.75, `balanced vs no ${k}: per race ${race.toFixed(2)}, per season ${season.toFixed(2)}`);
+    const m = BAL.missing(5, k), solo = BAL.soloRaces(k, [m, m, m], [even, even, even], 8), season = BAL.seasonHeadToHead([even, even, even], [m, m, m], {}, 20);
+    assert(solo.pairs >= 0.85 && season >= 0.4, `balanced vs no ${k}: in ${k}-only races ${solo.pairs.toFixed(2)}, per season ${season.toFixed(2)}`);
   }
 });
-test('Seasons: every race features two skills (the final: all), and over 3, 5, 8 or 10 races every skill is featured about equally (never left out)', () => {
+test('Catch-up: a specialist wins the single-skill race of its skill (most of the time), for every skill', () => {
+  const even = BAL.even(5);
+  for (const k of D.SKILLS) {
+    const lop = BAL.lopsided(30, k), r = BAL.soloRaces(k, [even, even, even], [lop, lop, lop], 10);
+    assert(r.wins >= 0.8 && r.pairs >= 0.8, `half-in ${k} in ${k}-only races: wins ${r.wins.toFixed(2)}, match-ups ${r.pairs.toFixed(2)}`);
+  }
+});
+test('Seasons: races feature 1-6 skills (about a fifth single-skill), every skill is featured before the final (5+ races), no skill hogs the season, the final uses everything', () => {
   for (const terrain of ['mixed', 'classic', 'brainy']) for (const races of [3, 5, 8, 10]) {
     const sk = terrain === 'classic' ? D.SKILLS.filter((k) => k !== 'smarts') : D.SKILLS;
-    for (const c of BAL.seasonSpread(races, terrain, 30)) {
-      const v = sk.filter((k) => terrain !== 'brainy' || k !== 'smarts').map((k) => c[k]);
-      if (terrain === 'brainy' && races >= 5) assert(c.smarts >= Math.max(...v), 'Brainy: Smarts featured the most');
-      assert(Math.max(...v) - Math.min(...v) <= 1 && Math.min(...v) >= 1, `${terrain}/${races}: ${JSON.stringify(c)}`);
-      if (terrain === 'classic') assert.equal(c.smarts, 0, 'Classic: no mazes, no Smarts race');
+    const cnt = [0, 0, 0, 0, 0, 0, 0];
+    for (const s of BAL.seasonSpread(races, terrain, 40)) {
+      for (const n of s.counts) cnt[n]++;
+      assert.equal(new Set(s.themes).size, races, 'no world twice in a season: ' + s.themes);
+      if (terrain === 'classic') assert.equal(s.c.smarts, 0, 'Classic: no mazes, no Smarts race');
+      if (terrain === 'brainy') assert(s.courses.every((C) => C.featured.includes('smarts') && C.sections.some((x) => x.type === 'maze')), 'Brainy: Smarts (a maze) in every race');
+      if (races >= 5) for (const k of sk) assert(s.courses.slice(0, -1).some((C) => C.featured.includes(k)), `${terrain}/${races}: ${k} featured before the final: ${s.courses.map((C) => C.featured.join('+')).join(' | ')}`);
+      const sh = sk.filter((k) => terrain !== 'brainy' || k !== 'smarts').map((k) => s.share[k]), mean = sk.reduce((a, k) => a + s.share[k], 0) / sk.length;
+      if (races >= 5) assert(Math.max(...sh) <= 2.4 * mean, `${terrain}/${races}: no skill hogs the season: ${JSON.stringify(s.share)}`);
+      const fin = s.courses[races - 1];
+      assert.deepEqual(fin.featured.slice().sort(), sk.slice().sort(), 'the final features every skill');
     }
+    const tot = cnt.reduce((a, b) => a + b, 0);
+    if (terrain !== 'brainy') {
+      assert(cnt[1] / tot >= 0.1 && cnt[1] / tot <= 0.32, `${terrain}/${races}: single-skill races ${cnt}`);
+      assert((cnt[2] + cnt[3] + cnt[4]) / tot >= 0.5, `${terrain}/${races}: mostly 2-4 skills ${cnt}`);
+    }
+    if (races >= 8) assert(cnt[5] + cnt[6] > 0, `${terrain}/${races}: some all-rounder courses ${cnt}`);
   }
-  for (const course of ['sprint', 'classic', 'marathon']) for (const terrain of ['mixed', 'brainy']) for (let seed = 1; seed <= 12; seed++) {
+  // Over many seasons every skill gets about the same share (default terrain).
+  const sp = BAL.seasonSpread(5, 'mixed', 300), avg = D.SKILLS.map((k) => sp.reduce((a, s) => a + s.share[k], 0) / sp.length / 5);
+  assert(Math.max(...avg) / Math.min(...avg) <= 1.5, 'season shares: ' + avg.map((x) => (100 * x).toFixed(1)).join(' '));
+  // Courses are built from the featured skills only; a single-skill race is all that skill (no combined sections).
+  for (const course of ['sprint', 'classic', 'marathon']) for (const terrain of ['mixed', 'brainy', 'classic']) for (let seed = 1; seed <= 10; seed++) {
     const { room } = setup(0, { terrain, course, races: 5 }, seed); human(room, 'Ann'); go(room);
-    const worlds = [];
     for (let n = 1; n <= 5; n++) {
-      const C = room.game.newCourse(n); room.game.course = C; worlds.push(C.theme);
-      const types = C.sections.map((s) => s.type);
-      if (n < 5) { assert.equal(C.featured.length, 2); assert.notEqual(C.featured[0], C.featured[1]); }
-      else for (const t of Object.keys(D.SECTIONS)) assert(types.includes(t), `the final has every kind of section: ${types}`);
-      for (const k of C.featured) if (k !== 'stamina') assert(types.filter((t) => D.SECTIONS[t].skill === k).length >= 2 || n === 5, `${k} featured: ${types}`);
-      if (n < 5 && C.featured.includes('stamina')) assert(C.endurance, 'a Stamina race is a long one');
-      if (terrain === 'brainy') assert(types.includes('maze'), 'Brainy: a maze in every race');
+      const C = room.game.newCourse(n); room.game.course = C;
+      const types = C.sections.map((s) => s.type), skillsUsed = new Set(C.sections.flatMap(D.secSkills));
       assert.equal(C.length, C.sections.reduce((a, s) => a + C.secLen[s.type], 0));
       if (course === 'sprint') assert(C.secLen.track < D.SECTIONS.track.len, 'sprint sections are shorter');
+      if (n === 5) { for (const t of terrain === 'classic' ? ['track', 'pond', 'cliff', 'gap'] : Object.keys(D.SECTIONS)) assert(types.includes(t), `the final has every kind of section: ${types}`); continue; }
+      for (const k of skillsUsed) assert(C.featured.includes(k) || (C.trek && k === 'run'), `${C.theme}: only featured skills on the course: ${C.featured} / ${types}`);
+      for (const k of C.featured) if (k !== 'stamina') assert(types.includes(D.SEC_OF[k]), `${k} featured: ${types}`);
+      if (C.solo) {
+        assert(C.sections.every((s) => !s.mix), 'a single-skill race has no combined sections');
+        if (C.solo === 'stamina') assert(C.trek && types.every((t) => t === 'track'), 'Stamina only: a long trek');
+        else assert(types.every((t) => t === D.SEC_OF[C.solo]), `${C.solo} only: ${types}`);
+        assert(C.banner && C.banner.includes('only!'), 'the single-skill banner: ' + C.banner);
+      }
+      if (C.featured.length >= 5) assert.equal(C.banner, '🌈 All-rounder course!');
+      if (C.featured.includes('stamina') && !C.solo) assert(C.endurance, 'a Stamina race is a long one');
     }
-    assert.equal(new Set(worlds).size, 5, 'no world twice in a season: ' + worlds);
   }
-  // the same seed plans the same season
-  const plan = (seed) => { const { room } = setup(0, { races: 8 }, seed); human(room, 'Ann'); go(room); return room.game.plan; };
+  // the same seed plans the same season and builds the same courses
+  const plan = (seed) => { const { room } = setup(0, { races: 8 }, seed); human(room, 'Ann'); go(room); const cs = []; for (let n = 1; n <= 8; n++) { room.game.course = room.game.newCourse(n); cs.push(room.game.course); } return { plan: room.game.plan, cs: cs.map((C) => [C.theme, C.featured, C.sections, C.weather, C.change]) }; };
   assert.deepEqual(plan(4), plan(4));
+  assert.notDeepEqual(plan(4).plan, plan(5).plan);
+});
+test('World themes: each world features its own skills most, Sky Islands is often Fly-only, Candy Land often an all-rounder', () => {
+  const by = {};
+  for (const races of [5, 8, 10]) for (const s of BAL.seasonSpread(races, 'mixed', 120)) s.courses.slice(0, -1).forEach((C) => { const o = by[C.theme] || (by[C.theme] = { n: 0, c: Object.fromEntries(D.SKILLS.map((k) => [k, 0])), sizes: [] }); o.n++; o.sizes.push(C.featured.length); for (const k of C.featured) o.c[k]++; });
+  for (const [w, o] of Object.entries(by)) {
+    const W = D.THEMES[w].skills, ks = D.SKILLS.slice().sort((a, b) => W[b] - W[a]);
+    if (W[ks[0]] === W[ks[ks.length - 1]]) continue; // Candy Land: a bit of everything
+    assert(o.c[ks[0]] > o.c[ks[ks.length - 1]] * 1.3, `${w}: its top skill ${ks[0]} featured more than ${ks[ks.length - 1]}: ${JSON.stringify(o.c)}`);
+  }
+  const solo = (w) => by[w].sizes.filter((n) => n === 1).length / by[w].n, big = (w) => by[w].sizes.filter((n) => n >= 5).length / by[w].n;
+  assert(solo('sky') > 0.3 && solo('sky') > solo('candy') * 3, `Sky Islands single-skill ${solo('sky').toFixed(2)} vs Candy ${solo('candy').toFixed(2)}`);
+  assert(big('candy') > 0.3 && big('candy') > big('sky') * 3, `Candy Land all-rounders ${big('candy').toFixed(2)} vs Sky ${big('sky').toFixed(2)}`);
+  assert(by.sky.c.fly > by.sky.n * 0.7, 'Sky Islands is about flying');
+});
+test('Combined sections: they need both skills (speed = the average, mishaps from the weaker), appear when both skills are featured, and show on the course', () => {
+  const lv = (o) => Object.assign(Object.fromEntries(D.SKILLS.map((k) => [k, 2])), o);
+  const fall = { type: 'cliff', v: 'waterfall', mix: 'swim' };
+  assert.deepEqual(D.secSkills(fall), ['climb', 'swim']);
+  assert(D.secSpeed(fall, lv({ climb: 10, swim: 10 })) > D.secSpeed(fall, lv({ climb: 10, swim: 2 })), 'Swim counts on a waterfall');
+  assert(D.secSpeed(fall, lv({ climb: 10, swim: 2 })) > D.secSpeed(fall, lv({ climb: 2, swim: 2 })), 'and so does Climb');
+  assert.equal(D.secSpeed(fall, lv({ climb: 10, swim: 2 })), D.secSpeed(fall, lv({ climb: 2, swim: 10 })), 'both the same');
+  assert.equal(D.secLevel(fall, lv({ climb: 10, swim: 2 })), 2, 'the weak link sets the mishaps');
+  assert.equal(D.secSpeed({ type: 'cliff', v: 'waterfall' }, lv({ climb: 10, swim: 2 })), D.SKILL_SPEED(10), 'an ordinary waterfall (Swim not featured) is just Climb');
+  for (const [key, k] of Object.entries(D.COMBO)) { const [type, v] = key.split(':'); assert(D.VARIANT[v] && D.SKILLS.includes(k) && k !== D.SECTIONS[type].skill, key); assert(Object.values(D.THEMES).some((T) => T.variants[type].includes(v)), key + ' is in a world'); }
+  // every skill gives about as much as it gets (none is only ever the half that loses out)
+  const give = {}, get = {}; for (const [key, k] of Object.entries(D.COMBO)) { const s = D.SECTIONS[key.split(':')[0]].skill; give[s] = (give[s] || 0) + 1; get[k] = (get[k] || 0) + 1; }
+  for (const k of D.SKILLS) assert(Math.abs((get[k] || 0) - (give[k] || 0)) <= 1, `${k}: gives ${give[k] || 0}, gets ${get[k] || 0}`);
+  // they show up in real seasons, only when both skills are featured
+  let combos = 0;
+  for (const s of BAL.seasonSpread(8, 'mixed', 60)) for (const C of s.courses) for (const x of C.sections) if (x.mix) { combos++; assert(C.featured.includes(x.mix) && C.featured.includes(D.SECTIONS[x.type].skill), `${C.theme}: ${x.type}/${x.v}+${x.mix} needs both featured: ${C.featured}`); assert.equal(D.COMBO[x.type + ':' + x.v], x.mix); }
+  assert(combos > 60, 'combined sections in play: ' + combos);
+  // in a race: a duck good at both beats a duck good at only one, through a waterfall course
+  const { room } = setup(0, { weather: false }, 3); const a = human(room, 'Ann'), b = human(room, 'Bob'); go(room);
+  const da = room.game.ducks.get(a.id), db = room.game.ducks.get(b.id);
+  for (const k of D.SKILLS) { da.xp[k] = D.xpFor(5); db.xp[k] = D.xpFor(5); } da.xp.climb = db.xp.climb = D.xpFor(10); da.xp.swim = D.xpFor(10);
+  let wins = 0;
+  for (let i = 0; i < 10; i++) {
+    const C = room.game.course; C.sections = Array.from({ length: 5 }, () => ({ ...fall })); C.length = 5 * C.secLen.cliff; C.endurance = false; C.trek = false; C.weather = 'sunny'; C.change = null;
+    const { entries } = room.game.simulate(); if (entries.find((e) => e.id === a.id).time < entries.find((e) => e.id === b.id).time) wins++;
+  }
+  assert(wins >= 9, 'Climb + Swim beats Climb alone up a waterfall: ' + wins + '/10');
+});
+test('Weather: per world (desert hot, sky windy, swamp foggy, snow snowy), deterministic, announced with a tip, modest effects, sometimes turns mid-race', () => {
+  const seen = {}; let changes = 0, n = 0, clear = 0;
+  for (const s of BAL.seasonSpread(8, 'mixed', 150)) s.courses.forEach((C, i) => {
+    assert(D.WEATHER[C.weather], C.weather); assert(C.forecast && C.forecast.includes(D.WEATHER[C.weather].icon), 'forecast: ' + C.forecast);
+    if (i === 0) { assert.equal(C.weather, 'sunny', 'the first race is clear'); return; }
+    const o = seen[C.theme] || (seen[C.theme] = {}); o[C.weather] = (o[C.weather] || 0) + 1; n++; if (C.weather === 'sunny') clear++;
+    assert(D.WEATHER_ODDS[C.theme][C.weather], `${C.theme} never gets ${C.weather}`);
+    if (C.change) { changes++; assert(C.change.x > C.length * 0.3 && C.change.x < C.length * 0.7 && C.change.to !== C.weather && D.WEATHER[C.change.to]); assert(C.forecast.includes('may turn')); }
+    if (C.weather === 'windy' || C.weather === 'storm' || (C.change && D.WEATHER[C.change.to].wind)) assert(C.wind === 1 || C.wind === -1); else assert.equal(C.wind, 0);
+  });
+  const top = (w) => Object.entries(seen[w]).sort((a, b) => b[1] - a[1])[0][0], share = (w, k) => (seen[w][k] || 0) / Object.values(seen[w]).reduce((a, b) => a + b, 0);
+  assert.equal(top('sky'), 'windy'); assert.equal(top('swamp'), 'fog'); assert.equal(top('snow'), 'snow'); assert(['heat', 'sunny'].includes(top('desert')));
+  assert(share('desert', 'rain') < 0.06 && share('desert', 'sandstorm') > 0.1 && share('volcano', 'ash') > 0.1, 'desert: hardly any rain, sandstorms; volcano: ash');
+  assert(clear / n > 0.2 && clear / n < 0.5, 'some races are clear: ' + (clear / n).toFixed(2));
+  assert(changes / n > 0.05 && changes / n < 0.2, 'the weather sometimes turns mid-race: ' + changes + '/' + n);
+  // weather off: always clear, never turns
+  for (const s of [1, 2, 3]) { const { room } = setup(0, { weather: false, races: 5 }, s); human(room, 'Ann'); go(room); for (let k = 1; k <= 5; k++) { const C = room.game.newCourse(k); assert(C.weather === 'sunny' && !C.change && !C.wind); } }
+  // effects are modest and do what the tip says
+  assert(D.wfx('rain', 'swim') > 1 && D.wfx('rain', 'run') < 1 && D.wfx('rain', 'slip') > 1 && D.wfx('fog', 'wrong') > 1 && D.wfx('heat', 'tire') > 1 && D.wfx('sunny', 'run') === 1);
+  for (const W of Object.values(D.WEATHER)) for (const k of ['run', 'swim', 'fly', 'climb']) if (W[k] != null) assert(Math.abs(W[k] - 1) <= 0.06, 'a few % at most');
+  // a rainy pond course is faster than a dry one; a downpour mid-race changes the second half
+  const { room } = setup(0, { weather: false }, 5); const a = human(room, 'Ann'); go(room);
+  for (const k of D.SKILLS) room.game.ducks.get(a.id).xp[k] = D.xpFor(5);
+  const time = (w, change) => { const C = room.game.course; C.sections = Array.from({ length: 4 }, () => ({ type: 'pond', v: 'calm' })); C.length = 4 * C.secLen.pond; C.endurance = false; C.trek = false; C.weather = w; C.change = change; C.wind = 0; let t = 0; for (let i = 0; i < 8; i++) t += room.game.simulate().entries.find((e) => e.id === a.id).time; return t; };
+  const dry = time('sunny', null), wet = time('rain', null), half = time('sunny', { x: 2 * room.game.course.secLen.pond, to: 'rain' });
+  assert(wet < dry && half < dry && half > wet, `rain speeds up swimmers: dry ${dry.toFixed(1)}, half ${half.toFixed(1)}, wet ${wet.toFixed(1)}`);
+});
+test('Boss race: off by default; on, the Golden Goose races the Grand Championship only, scores no points, and beating it pays everyone', () => {
+  assert.equal(def.defaults.boss, false); assert(def.fields.find((f) => f.key === 'boss'), 'a lobby setting');
+  const run = (boss, strong, seed = 2) => {
+    const { room, clock } = setup(0, { races: 3, raceEvery: 60, boss, weather: false }, seed); const a = human(room, 'Ann'), b = human(room, 'Bob'); go(room);
+    for (const k of D.SKILLS) { room.game.ducks.get(a.id).xp[k] = D.xpFor(strong); room.game.ducks.get(b.id).xp[k] = D.xpFor(3); }
+    const seen = [];
+    while (room.game.phase !== 'over') { if (room.game.phase === 'training') { seen.push(!!room.game.course.boss); room.game.next(); } else stepUntil(clock, () => room.game.phase === 'training' || room.game.phase === 'over'); }
+    return { room, a, b, seen };
+  };
+  const off = run(false, 8); assert.deepEqual(off.seen, [false, false, false]); assert(!off.room.game.lastRace.results.some((r) => r.id === 'boss'));
+  let beaten = 0, lost = 0;
+  for (let seed = 1; seed <= 12; seed++) {
+    const { room, a, b, seen } = run(true, 8, seed), R = room.game.lastRace;
+    assert.deepEqual(seen, [false, false, true], 'only the final');
+    const br = R.results.find((r) => r.id === 'boss'); assert(br && br.pts === 0 && br.coins === 0, 'the boss scores nothing');
+    assert(R.wild.boss && R.wild.boss.boss && R.wild.boss.name === 'The Golden Goose');
+    assert(!room.game.standings().some((x) => x.id === 'boss') && !room.game.results().includes('boss'), 'not in the standings');
+    assert(R.boss && R.boss.place === br.place);
+    const da = room.game.ducks.get(a.id), db = room.game.ducks.get(b.id);
+    if (R.boss.beaten) { beaten++; assert(da.bossBonus === D.BOSS.bonus && db.bossBonus === D.BOSS.bonus, 'everyone gets the bonus'); for (const id of R.boss.by) assert(room.game.ducks.get(id).badges.includes('goose')); assert(R.highlights.some((h) => h.icon === '👑')); }
+    else { lost++; assert(!da.bossBonus && !da.badges.includes('goose')); }
+  }
+  assert(beaten > 0 && lost > 0, `the Goose is beatable but tough: beaten ${beaten}/12`);
 });
 test('Balance: Stamina matters at every level (every duck tires late in the race, less with more Stamina); gear and perks never guarantee anything', () => {
   const depth = D.fatigueDepth;

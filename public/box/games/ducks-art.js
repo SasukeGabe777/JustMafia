@@ -7,6 +7,7 @@
     sunny: ['#ffd23f', '#f2b705', '#ffd23f'], snow: ['#f7f7f2', '#d9d9cf', '#f7f7f2'], cocoa: ['#a8774d', '#7a4f2f', '#a8774d'],
     mallard: ['#b59a78', '#8a6d4b', '#1f8a55'], bubblegum: ['#ff9dcf', '#e86aa8', '#ff9dcf'], sky: ['#8fd1ff', '#4fa6e8', '#8fd1ff'],
     midnight: ['#4a4f86', '#2f3363', '#4a4f86'], mint: ['#9ff3cd', '#5fd3a0', '#9ff3cd'], ember: ['#ff8a5b', '#e0603a', '#ff8a5b'], lilac: ['#c9a7ff', '#a07ce8', '#c9a7ff'],
+    gold: ['#e8a600', '#b37400', '#ffc21a'], // the Golden Goose (the boss race)
   };
   const TAU = Math.PI * 2;
   const hash = (n) => { let h = (n + 1) * 2654435761; h ^= h >>> 15; return (h >>> 0) / 4294967296; };
@@ -16,7 +17,7 @@
     const [body, wing, head] = PAL[color] || PAL.sunny;
     g.save(); g.translate(x, y);
     if (stage >= 3) { const gl = g.createRadialGradient(0, -4, 4, 0, -4, 34 * s); gl.addColorStop(0, 'rgba(255,215,64,.45)'); gl.addColorStop(1, 'rgba(255,215,64,0)'); g.fillStyle = gl; g.beginPath(); g.arc(0, -4, 34 * s, 0, TAU); g.fill(); }
-    const ss = s * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : 1);
+    const ss = s * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : stage >= 4 ? 1.5 : 1);
     g.scale(flip ? -ss : ss, ss);
     const bob = mode === 'swim' ? Math.sin(t * 6) * 1.2 : mode === 'run' ? -Math.abs(Math.sin(t * 14)) * 2.5 : mode === 'fly' ? Math.sin(t * 5) * 2 : mode === 'peck' ? 0 : mode === 'sleep' ? 2 : 0;
     g.translate(0, bob);
@@ -101,7 +102,7 @@
   //  - feet: the narrow bottom zone (legs and belly) that trips over things
   //  - circle: a round core (body + head) for rings and clouds
   function duckBox(x, y, s, mode = 'stand', t = 0, stage = 2, flip = false) {
-    const ss = s * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : 1);
+    const ss = s * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : stage >= 4 ? 1.5 : 1);
     const bob = mode === 'swim' ? Math.sin(t * 6) * 1.2 : mode === 'run' ? -Math.abs(Math.sin(t * 14)) * 2.5 : mode === 'fly' ? Math.sin(t * 5) * 2 : mode === 'sleep' ? 2 : 0;
     const legs = mode !== 'swim' && mode !== 'fly' && mode !== 'sleep', yy = y + bob * ss, fx = flip ? -1 : 1;
     const L = x + Math.min(-19 * fx, 21 * fx) * ss, R = x + Math.max(-19 * fx, 21 * fx) * ss;
@@ -630,7 +631,7 @@
   }
   function drawRacer(g, x, y, s, color, hat, stage, P) {
     const [body, wing, head] = PAL[color] || PAL.sunny;
-    const ss = s * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : 1);
+    const ss = s * (stage <= 0 ? 0.62 : stage === 1 ? 0.82 : stage >= 4 ? 1.5 : 1);
     g.save(); g.translate(x, y);
     if (stage >= 3) { g.globalAlpha = 0.25; g.fillStyle = '#ffd740'; g.beginPath(); g.arc(0, -4, 30 * s, 0, TAU); g.fill(); g.globalAlpha = 1; }
     g.scale(P.flip ? -ss : ss, ss); // flip: facing back the way it came (a wrong turn in a maze)
@@ -700,8 +701,8 @@
   // ---------- the course ----------
   // The course in metres: sections one after another. The server sends its section lengths.
   function raceGeometry(R) {
-    const LEN = R.secLen || { track: 48, pond: 36, cliff: 26, gap: 32, maze: 34 };
-    let acc = 0; const secs = R.sections.map((s) => { const type = s.type || s, len = LEN[type]; const o = { type, v: s.v || null, a: acc, b: acc + len }; acc += len; return o; });
+    const LEN = R.secLen || { track: 38, pond: 32, cliff: 26, gap: 32, maze: 34 };
+    let acc = 0; const secs = R.sections.map((s) => { const type = s.type || s, len = LEN[type]; const o = { type, v: s.v || null, mix: s.mix || null, a: acc, b: acc + len }; acc += len; return o; });
     return { secs, L: acc };
   }
   // The cliff: two sheer climbing walls (CLIFF_RISE of each step is wall, the rest a flat ledge),
@@ -797,11 +798,12 @@
     const L = window.DUCK_LANDS, NEW = !!(L && L.THEMES[R.theme]);
     // sky, sun or moon, stars, clouds, far hills with props (parallax)
     const sky = g.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, R.weather === 'rain' && !TH.night && !TH.dark ? '#7d8ca3' : TH.sky[0]); sky.addColorStop(1, R.weather === 'heat' ? '#ffd9a0' : TH.sky[1]);
+    const grey = ['rain', 'storm', 'snow', 'ash', 'sandstorm'].includes(R.weather);
+    sky.addColorStop(0, grey && !TH.night && !TH.dark ? (R.weather === 'sandstorm' ? '#c9a77a' : R.weather === 'storm' ? '#5d6880' : '#7d8ca3') : TH.sky[0]); sky.addColorStop(1, R.weather === 'heat' ? '#ffd9a0' : TH.sky[1]);
     g.fillStyle = sky; g.fillRect(0, 0, W, H);
     if (TH.night) { g.fillStyle = '#fff'; for (let i = 0; i < 90; i++) { const sx = (i * 137) % W, sy = (i * 71) % (base * 0.7); g.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + i)); g.fillRect(sx, sy, 2, 2); } g.globalAlpha = 1; g.fillStyle = '#fdf6d0'; g.beginPath(); g.arc(W * 0.82, H * 0.16, 34, 0, TAU); g.fill(); g.fillStyle = TH.sky[0]; g.beginPath(); g.arc(W * 0.82 + 14, H * 0.16 - 8, 30, 0, TAU); g.fill(); }
     else if (NEW) L.sky(g, TH, W, H, t, R);
-    else if (R.weather !== 'rain' && R.weather !== 'fog') { g.fillStyle = R.weather === 'heat' || R.theme === 'canyon' ? '#ff9f1c' : '#ffe066'; g.beginPath(); g.arc(W * 0.85, H * 0.15, 40, 0, TAU); g.fill(); }
+    else if (!grey && R.weather !== 'fog') { g.fillStyle = R.weather === 'heat' || R.theme === 'canyon' ? '#ff9f1c' : '#ffe066'; g.beginPath(); g.arc(W * 0.85, H * 0.15, 40, 0, TAU); g.fill(); }
     if (!TH.night && (!NEW || TH.clouds)) { g.fillStyle = NEW ? TH.clouds : 'rgba(255,255,255,.85)'; for (let i = 0; i < 8; i++) { const cx = ((i * 380 - cam * PX * 0.15) % (W + 300) + W + 300) % (W + 300) - 150, cy = 50 + (i % 3) * 40; g.beginPath(); g.arc(cx, cy, 26, 0, TAU); g.arc(cx + 28, cy - 8, 22, 0, TAU); g.arc(cx + 54, cy, 24, 0, TAU); g.fill(); } }
     const hz = base - band; // the far edge of the course
     if (!(NEW && L.far(g, TH, W, hz, cam, PX, t))) { g.fillStyle = TH.hill; g.beginPath(); g.moveTo(0, hz); for (let x = 0; x <= W; x += 20) g.lineTo(x, hz - 70 - Math.sin((x + cam * PX * 0.35) / 160) * 36); g.lineTo(W, hz); g.fill(); }
@@ -892,8 +894,18 @@
     return base;
   }
   // Weather on top of everything (after the ducks).
+  // The weather over the race (R.weather: the weather right now; it can turn mid-race): rain and
+  // storms (a darker sky, lightning), snow, a sandstorm (tan haze, sand streaks), an ash cloud (grey
+  // haze, falling ash), a heatwave (shimmer), fog, and gusts on windy days.
   function drawRaceWeather(g, W, H, R, t) {
-    if (R.weather === 'rain') { g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1.5; g.beginPath(); for (let i = 0; i < 120; i++) { const rx = (i * 97 + t * 400) % W, ry = (i * 53 + t * 900) % H; g.moveTo(rx, ry); g.lineTo(rx - 4, ry + 14); } g.stroke(); }
+    const w = R.weather;
+    if (w === 'storm') { g.fillStyle = 'rgba(20,25,45,.28)'; g.fillRect(0, 0, W, H); const fl = (t % 5.3); if (fl < 0.12 || (fl > 0.22 && fl < 0.28)) { g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(0, 0, W, H); } }
+    if (w === 'rain' || w === 'storm') { g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1.5; g.beginPath(); const n = w === 'storm' ? 200 : 120, sl = w === 'storm' ? 10 : 4; for (let i = 0; i < n; i++) { const rx = (i * 97 + t * 400) % W, ry = (i * 53 + t * 900) % H; g.moveTo(rx, ry); g.lineTo(rx - sl, ry + 14); } g.stroke(); }
+    if (w === 'snow' && R.theme !== 'snow') { g.fillStyle = 'rgba(255,255,255,.9)'; for (let i = 0; i < 90; i++) { const sx = (i * 89 + Math.sin(t + i) * 20 + t * 30) % W, sy = (i * 61 + t * 50) % H; g.beginPath(); g.arc(sx, sy, 2.4, 0, TAU); g.fill(); } }
+    if (w === 'sandstorm') { g.fillStyle = 'rgba(214,170,100,.3)'; g.fillRect(0, 0, W, H); g.strokeStyle = 'rgba(240,210,150,.55)'; g.lineWidth = 2; g.beginPath(); for (let i = 0; i < 70; i++) { const sx = W - ((i * 131 + t * 700) % (W + 80)), sy = (i * 47) % H + Math.sin(t * 3 + i) * 6; g.moveTo(sx, sy); g.lineTo(sx + 40, sy - 2); } g.stroke(); }
+    if (w === 'ash') { g.fillStyle = 'rgba(90,85,85,.25)'; g.fillRect(0, 0, W, H); g.fillStyle = 'rgba(70,65,65,.7)'; for (let i = 0; i < 80; i++) { const sx = (i * 113 + Math.sin(t * 0.7 + i) * 30 + t * 15) % W, sy = (i * 71 + t * 35) % H; g.fillRect(sx, sy, 3, 2); } }
+    if (w === 'heat') { g.strokeStyle = 'rgba(255,200,120,.18)'; g.lineWidth = 3; for (let k = 0; k < 6; k++) { const y0 = H * (0.45 + k * 0.08); g.beginPath(); for (let x = 0; x <= W; x += 24) { const y = y0 + Math.sin(x * 0.02 + t * 4 + k) * 4; if (x) g.lineTo(x, y); else g.moveTo(x, y); } g.stroke(); } }
+    if (w === 'windy') { g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2; g.beginPath(); const dir = R.wind < 0 ? -1 : 1; for (let i = 0; i < 14; i++) { const span = W + 200, x = (((t * 500 * dir + i * 173) % span) + span) % span - 100, y = (i * 67) % (H * 0.7) + 30; g.moveTo(x, y); g.quadraticCurveTo(x + 40 * dir, y - 10, x + 80 * dir, y); } g.stroke(); }
     const L = window.DUCK_LANDS; if (L && L.THEMES[R.theme]) L.ambient(g, W, H, R, THEME[R.theme], t);
     if (R.theme === 'snow') { g.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 70; i++) { const sx = (i * 89 + Math.sin(t + i) * 20 + t * 30) % W, sy = (i * 61 + t * 60) % H; g.beginPath(); g.arc(sx, sy, 2.2, 0, TAU); g.fill(); } }
     if (R.weather === 'fog') { g.fillStyle = 'rgba(230,235,240,.35)'; g.fillRect(0, 0, W, H); }
