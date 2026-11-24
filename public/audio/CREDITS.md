@@ -63,6 +63,9 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | marble | Music | `games/marble/finale-clear.ogg` | Cozy Puzzle Clear (Loop) | MintoDog | CC0 1.0 | https://opengameart.org/content/cozy-puzzle-jingle-result |
 | memes | Music | `games/memes/title-goofy-attitude.ogg` | Goofy Attitude! | SkyleTheFrench | CC0 1.0 | https://opengameart.org/node/165451 |
 | memes | Music | `games/memes/think-respectable-amount-of-bounce.ogg` | A respectable amount of Bounce | Some Weirdo | CC0 1.0 | https://opengameart.org/node/180401 |
+| pitch | Music | `games/pitch/happy-dance.ogg` | Happy Dance (from Happy Pop Electronic) | Holizna (HoliznaCC0) | CC0 1.0 | https://opengameart.org/content/happy-pop-electronic-collection |
+| pitch | Music | `games/pitch/which-brand-of-mustard.ogg` | Which Brand Of Mustard Shall I Buy | congusbongus | CC0 1.0 | https://opengameart.org/content/which-brand-of-mustard-shall-i-buy |
+| pitch | Music | `games/pitch/tension.ogg` | Tension (loop) | Tsorthan Grove | CC0 1.0 | https://opengameart.org/content/tension-0 |
 | pizza | Music | `games/pizza/title-bushwick-tarantella.ogg` | Bushwick Tarantella | Kevin MacLeod (incompetech.com) | CC-BY 3.0 | https://commons.wikimedia.org/wiki/File:Bushwick_Tarantella_(MacLeod,_Kevin)_(ISRC_USUAN1300002).oga |
 | pizza | Music | `games/pizza/play-gypsy-alex.ogg` | GypsyAlex | Pro Sensory | CC0 1.0 | https://opengameart.org/content/gypsyalex |
 | pizza | Music | `games/pizza/finale-bushwick-tarantella-loop.ogg` | Bushwick Tarantella Loop | Kevin MacLeod (incompetech.com) | CC-BY 3.0 | https://commons.wikimedia.org/wiki/File:Bushwick_Tarantella_Loop_(ISRC_USUAN1300003).mp3 |
@@ -223,6 +226,11 @@ Every file is free for commercial use under the license listed. CC-BY / OGA-BY e
 | memes | Sound effect | `memes/laugh-2.ogg` | Sitcom Laughter 9x, Small Audience (excerpt) | Kinoton | CC0 1.0 | https://freesound.org/people/Kinoton/sounds/383207/ |
 | memes | Sound effect | `memes/applause.ogg` | Pleased Crowd (excerpt) | qubodup | CC0 1.0 | https://freesound.org/people/qubodup/sounds/182825/ |
 | memes | Sound effect | `memes/click.ogg` | Interface Sounds (click_002.ogg) | Kenney | CC0 1.0 | https://kenney.nl/assets/interface-sounds |
+| pitch | Sound effect | `pitch/ding.ogg` | service bell ring | AlaskaRobotics | CC0 1.0 | https://freesound.org/people/AlaskaRobotics/sounds/221515/ |
+| pitch | Sound effect | `pitch/mic.ogg` | Hitting Microphone | JoeyCorlett | CC0 1.0 | https://freesound.org/people/JoeyCorlett/sounds/208823/ |
+| pitch | Sound effect | `pitch/slide.ogg` | Projector, Kodak Carousel 35mm | CHallSmith | CC0 1.0 | https://freesound.org/people/CHallSmith/sounds/870605/ |
+| pitch | Sound effect | `pitch/ooh.ogg` | Group Ooh Aah | CHallSmith | CC0 1.0 | https://freesound.org/people/CHallSmith/sounds/870652/ |
+| pitch | Sound effect | `pitch/applause.ogg` | Theatre Applause.wav | makosan | CC0 1.0 | https://freesound.org/people/makosan/sounds/135191/ |
 | pizza | Sound effect | `pizza/door.ogg` | Shop Door Chime | Qvantor | CC0 1.0 | https://freesound.org/people/Qvantor/sounds/879804/ |
 | pizza | Sound effect | `pizza/phone.ogg` | Telephone Ring (old German W48) | meisterleise | CC0 1.0 | https://freesound.org/people/meisterleise/sounds/332073/ |
 | pizza | Sound effect | `pizza/bell.ogg` | Service Bell Ding | Qvantor | CC0 1.0 | https://freesound.org/people/Qvantor/sounds/879808/ |

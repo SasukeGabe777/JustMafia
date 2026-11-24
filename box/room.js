@@ -61,6 +61,7 @@ const UNLOCK_RULES = {
   colormatch: { title: "Color Match", test: playedGame('emoji') },
   memes: { title: "Meme Maker", test: playedGame('blanks') },
   letters: { title: "Letter Rush", test: playedGame('whosaid') },
+  pitch: { title: 'JustPitch', test: playedGame('sketch') }, // the evolution of JustSketch Relay
 };
 
 // Player-typed text for the screens: swear words and slurs covered.

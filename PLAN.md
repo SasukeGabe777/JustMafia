@@ -1,5 +1,48 @@
 # Mafia Town: expansion plan
 
+## November 23, 2026 - JustPitch, the improv pitch game (branch claude/pitch)
+
+Owner: a locked game inspired by the "present while someone backstage messes you up" format, an
+evolution of JustSketch. Inspired by the format only: original name, host, modes, prompts and art
+(no show or cast names, catchphrases or look-alike branding anywhere).
+
+- **Rules** (`box/games/pitch.js`, content in `pitch-content.js`; key `pitch`, Creative shelf, 3–100,
+  best 4–10, locked until a game of JustSketch Relay is finished: `UNLOCK_RULES`, `public/unlocks.js`,
+  tile `data-lock`). A match: card → prep (both players draw the OTHER one's slides at once on
+  JustSketch's sketchpad; strokes validated by sketch.js `cleanStrokes`, now exported) → A presents
+  while B sabotages → SWAP (new topic) → B presents → the audience votes → result. The saboteur flips
+  to the next slide (unshown ones pop up by themselves), sends cue cards from a hand of 4 (6 s
+  cooldown, new hand), or writes their own (cleaned + the room's word filter). The presenter's phone
+  is a prompter (Done it ✓ = +10); the TV shows the cue flying in and a BACKSTAGE feed.
+- **Formats:** Auto = round-robin for 3–4 (everyone meets everyone), bracket for 5–8 (single
+  elimination, byes for odd counts, never two byes for one player if avoidable), quick bracket for
+  9+ (one round, then the two biggest vote shares meet in the final). Bots: 3 players ≈ 8 min,
+  4 ≈ 16, 7 ≈ 17, 12 ≈ 20 min at default lengths. Leavers lose by walkover.
+- **Five modes** (Mixed rotates them): 🗣️ Focus Group (the saboteur sends lines to read and topics
+  to steer to; "panelist" lines go to an audience phone to shout out, also twice per pitch by
+  themselves), 📊 The Big Presentation (3 drawn slides under dealt headings), 📚 Buy My Book (drawn
+  cover, "quotes from the book"; the room rates both books 1–5 stars, stars count as votes),
+  🎙️ Press Conference (Exhibit A; reporter questions, plus questions the audience sends in, which
+  the saboteur can pick: +50 to the asker), 📺 Late-Night Infomercial (product shot, demo
+  instructions, caller testimonials, price tags that stay on screen). Content setting
+  Everything / Family / Party (room Family mode wins).
+- **Scoring:** +100 a vote (+20 a star), +300 the match win, +50 a "nastiest saboteur" vote, +50
+  for backing the winner, +10 a cue taken on, +500 the champion. Audience-mode watchers vote
+  through a room poll, capped at the players' weight. `results()`: champion, then bracket depth /
+  wins, then points. Awards: Silver Tongue, Bestselling Author, Chief Saboteur, Unflappable,
+  Crowd Pleaser.
+- **Kit:** TV + phone screens (keynote hall, projection screen styled per mode, podium, backstage
+  monitor, bracket view), designed lobby (agenda cards + speaker pass), title screen, intro with
+  host Vance Velvet (Orpheus `leo`), 6-step tutorial, partyFit, practice (one 45 s match), gear (8
+  items: mics, ties, shades, top hat, headphones), tile art, synth score + recorded CC0 music
+  (Holizna "Happy Dance", congusbongus "Which Brand Of Mustard Shall I Buy", Tsorthan Grove
+  "Tension") and SFX (ding, mic tap, slide click, ooh, applause; Freesound CC0).
+- Tests: `tools/test-box-pitch.js` (16), test-box-kit, test-box-gear, test-box-party,
+  test-practice, test-party-plan, e2e-box (tile list). Screens checked by headless screenshots of
+  every phase in all five modes (TV 1920×1080, phones 390 px).
+- Limits: the cue cards are honour-system (nobody checks the presenter did it); e2e-box has no
+  dedicated JustPitch block (it is locked; the screenshot driver played it on real pages instead);
+  bots' slides are scribbles.
 ## November 23, 2026 - Kill the King (TRIAL game, branch claude/king)
 
 The owner's "trial game": a co-op siege plus social climbing, coups and secret roles. Key `king`,

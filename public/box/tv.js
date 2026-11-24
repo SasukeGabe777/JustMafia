@@ -170,7 +170,7 @@
     o.appendChild(el); setTimeout(() => el.remove(), 3300);
   });
   // Pick the next game from the TV (the host's phone can do the same).
-  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'king', 'undercover', 'snap', 'pizza', 'escape', 'marble', 'debate', 'actout', 'tune', 'alien', 'bomb', 'quickdraw', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
+  const SWITCHABLE = ['president', 'blanks', 'blackjack', 'bid', 'price', 'emoji', 'truths', 'likely', 'whosaid', 'spectrum', 'sketch', 'funny', 'zombie', 'pitch', 'king', 'undercover', 'snap', 'pizza', 'escape', 'marble', 'debate', 'actout', 'tune', 'alien', 'bomb', 'quickdraw', 'summon', 'letters', 'memes', 'colormatch', 'trivia', 'plinko', 'ducks', 'kingdoms', 'mafia'];
   function tvPicker() {
     let o = $('#tv-pick'); if (o) o.remove();
     o = document.createElement('div'); o.id = 'tv-pick'; o.className = 'tv-pick';

@@ -477,6 +477,48 @@
     "file": "games/memes/think-respectable-amount-of-bounce.ogg"
    }
   },
+  "pitch": {
+   "title": {
+    "file": "games/pitch/happy-dance.ogg",
+    "loopStart": 35.5,
+    "loopEnd": 107.5,
+    "gain": 0.78
+   },
+   "lobby": {
+    "file": "games/pitch/happy-dance.ogg",
+    "loopStart": 35.5,
+    "loopEnd": 107.5,
+    "gain": 0.78
+   },
+   "intro": {
+    "file": "games/pitch/happy-dance.ogg",
+    "loopStart": 35.5,
+    "loopEnd": 107.5,
+    "gain": 0.78
+   },
+   "finale": {
+    "file": "games/pitch/happy-dance.ogg",
+    "loopStart": 35.5,
+    "loopEnd": 107.5,
+    "gain": 0.78
+   },
+   "play": {
+    "file": "games/pitch/which-brand-of-mustard.ogg",
+    "gain": 0.6
+   },
+   "reveal": {
+    "file": "games/pitch/which-brand-of-mustard.ogg",
+    "gain": 0.6
+   },
+   "think": {
+    "file": "games/pitch/tension.ogg",
+    "gain": 0.8
+   },
+   "tense": {
+    "file": "games/pitch/tension.ogg",
+    "gain": 0.8
+   }
+  },
   "pizza": {
    "title": {
     "file": "games/pizza/title-bushwick-tarantella.ogg"
