@@ -25,10 +25,10 @@ function duckWith(lv) {
 // opts: terrain, course, theme (force a world), seed, race (race number, 1 = first).
 function race(ducks, opts = {}) {
   const room = fakeRoom(opts.seed || 1);
-  const g = def.create(room, { ...def.defaults, weather: false, races: 10, terrain: opts.terrain || 'mixed', course: opts.course || 'classic' });
-  let c, tries = 0;
-  do c = g.newCourse(opts.race || 2); while (opts.theme && c.theme !== opts.theme && ++tries < 500);
-  g.course = c; g.race = (opts.race || 2) - 1;
+  const g = def.create(room, { ...def.defaults, weather: false, races: opts.races || 5, terrain: opts.terrain || 'mixed', course: opts.course || 'classic' });
+  let c, tries = 0; const n = opts.race || 1 + ((opts.seed || 1) % (opts.races || 5));
+  do c = g.newCourse(n); while (opts.theme && c.theme !== opts.theme && ++tries < 500);
+  g.course = c; g.race = n - 1;
   ducks.forEach(([label, lv], i) => g.ducks.set(label + '#' + i, duckWith(lv)));
   const { entries } = g.simulate();
   return entries.filter((e) => !/^w\d/.test(e.id)).sort((a, b) => a.time - b.time).map((e) => e.id.replace(/#\d+$/, ''));
@@ -54,6 +54,43 @@ function headToHead(A, B, opts = {}, N = 200) {
   }
   return a / pairs;
 }
+// A whole season (races 1..R of one planned series per seed): season points per duck (10, 8, 6, …
+// like the game); the share of A-vs-B pairs where A ends the season with more points (ties: half).
+const PTS = [10, 8, 6, 5, 4, 3, 2];
+function seasonHeadToHead(A, B, opts = {}, N = 60) {
+  const R = opts.races || 5, field = [...A.map((lv) => ['A', lv]), ...B.map((lv) => ['B', lv])];
+  let a = 0, pairs = 0;
+  for (let seed = 1; seed <= N; seed++) {
+    const pts = field.map(() => 0);
+    for (let n = 1; n <= R; n++) {
+      const order = seasonRace(field, { ...opts, races: R, race: n, seed });
+      order.forEach((i, p) => { pts[i] += PTS[p] != null ? PTS[p] : 1; });
+    }
+    for (let i = 0; i < A.length; i++) for (let j = A.length; j < field.length; j++) { a += pts[i] > pts[j] ? 1 : pts[i] === pts[j] ? 0.5 : 0; pairs++; }
+  }
+  return a / pairs;
+}
+// One race of a season: the plan comes from the season's seed, the luck from the race number.
+function seasonRace(field, opts) {
+  const room = fakeRoom(opts.seed);
+  const g = def.create(room, { ...def.defaults, weather: false, races: opts.races, terrain: opts.terrain || 'mixed', course: opts.course || 'classic' });
+  let c; for (let n = 1; n <= opts.race; n++) { c = g.newCourse(n); g.course = c; }
+  g.race = opts.race - 1;
+  field.forEach(([label, lv], i) => g.ducks.set('d' + i, duckWith(lv)));
+  const { entries } = g.simulate();
+  return entries.filter((e) => /^d\d/.test(e.id)).sort((x, y) => x.time - y.time).map((e) => +e.id.slice(1));
+}
+// Every planned season (seeds 1..N): how many times each skill is featured.
+function seasonSpread(races, terrain = 'mixed', N = 50) {
+  const out = [];
+  for (let seed = 1; seed <= N; seed++) {
+    const g = def.create(fakeRoom(seed), { ...def.defaults, races, terrain });
+    const c = Object.fromEntries(SK.map((k) => [k, 0]));
+    for (let n = 1; n <= races; n++) { const C = g.newCourse(n); g.course = C; for (const k of C.featured) c[k]++; }
+    out.push(c);
+  }
+  return out;
+}
 // (b) Specialists (the same total, all of it in one skill, others at 0; capped at the max level and
 // the rest spread evenly) against balanced ducks. Returns the balanced side's share per skill.
 function specialist(total, k) {
@@ -75,7 +112,7 @@ function missing(L, k) {
   return o;
 }
 
-module.exports = { race, oneRaised, headToHead, specialist, lopsided, missing, even, plus, duckWith, SK };
+module.exports = { race, oneRaised, headToHead, seasonHeadToHead, seasonSpread, specialist, lopsided, missing, even, plus, duckWith, SK };
 
 if (require.main === module) {
   const quick = process.argv.includes('--quick'), N = quick ? 60 : 200;
@@ -92,22 +129,30 @@ if (require.main === module) {
       console.log(`${terrain.padEnd(8)} ${course.padEnd(8)} L${String(L).padEnd(2)}+${n}   ` + SK.map((k) => pct(r[k]).padStart(8)).join('') + '   ' + ratio.toFixed(1) + 'x');
     }
   }
-  console.log('\n(b) balanced vs specialist with the same total: how often the balanced duck finishes ahead');
-  console.log('total   vs         ' + SK.map((k) => k.padStart(8)).join(''));
+  console.log('\n(b) balanced vs specialist with the same total: the share of match-ups the balanced duck wins,');
+  console.log('    per race / over a whole 5-race season (season points)');
+  console.log('total   vs         ' + SK.map((k) => k.padStart(12)).join(''));
+  const S = Math.max(20, Math.round(N / 5));
   for (const total of [12, 30, 60]) for (const [name, f] of [['all-in', specialist], ['half-in', lopsided]]) {
-    const row = SK.map((k) => headToHead([even(total / 6), even(total / 6), even(total / 6)], [f(total, k), f(total, k), f(total, k)], {}, Math.round(N / 2)));
-    console.log(`${String(total).padEnd(7)} ${name.padEnd(10)} ` + row.map((v) => pct(v).padStart(8)).join(''));
+    if (total === 60 && name === 'half-in') continue; // the same ducks as all-in (capped at level 25)
+    const E = even(total / 6), row = SK.map((k) => pct(headToHead([E, E, E], [f(total, k), f(total, k), f(total, k)], {}, Math.round(N / 2))) + '/' + pct(seasonHeadToHead([E, E, E], [f(total, k), f(total, k), f(total, k)], {}, S)));
+    console.log(`${String(total).padEnd(7)} ${name.padEnd(10)} ` + row.map((v) => v.padStart(12)).join(''));
   }
-  console.log('\n(c) balanced vs "all but one" (that skill at 0, the same total): how often the balanced duck finishes ahead');
-  console.log('level   ' + SK.map((k) => ('no ' + k).padStart(11)).join(''));
+  console.log('\n(c) balanced vs "all but one" (that skill at 0, the same total): per race / per season');
+  console.log('level   ' + SK.map((k) => ('no ' + k).padStart(12)).join(''));
   for (const L of [2, 5, 10]) {
-    const row = SK.map((k) => headToHead([even(L), even(L), even(L)], [missing(L, k), missing(L, k), missing(L, k)], {}, Math.round(N / 2)));
-    console.log(`L${String(L).padEnd(6)} ` + row.map((v) => pct(v).padStart(11)).join(''));
+    const E = even(L), row = SK.map((k) => pct(headToHead([E, E, E], [missing(L, k), missing(L, k), missing(L, k)], {}, Math.round(N / 2))) + '/' + pct(seasonHeadToHead([E, E, E], [missing(L, k), missing(L, k), missing(L, k)], {}, S)));
+    console.log(`L${String(L).padEnd(6)} ` + row.map((v) => v.padStart(12)).join(''));
   }
-  console.log('\n(d) every world (Everything terrain, L5+4): win share per raised skill');
+  console.log('\n(d) every world (Everything terrain, L5+4): win share per raised skill (a world may favour its skills)');
   for (const theme of Object.keys(D.THEMES)) {
     const r = oneRaised(5, 4, { theme }, Math.round(N / 2));
     console.log(`${theme.padEnd(9)}` + SK.map((k) => pct(r[k]).padStart(8)).join(''));
+  }
+  console.log('\n(e) featured skills over a season (50 planned seasons): min-max times each skill is featured');
+  for (const terrain of ['mixed', 'classic', 'brainy']) for (const races of [3, 5, 8, 10]) {
+    const sp = seasonSpread(races, terrain), sk = terrain === 'classic' ? SK.filter((k) => k !== 'smarts') : SK;
+    console.log(`${terrain.padEnd(8)} ${String(races).padStart(2)} races  ` + sk.map((k) => `${k} ${Math.min(...sp.map((c) => c[k]))}-${Math.max(...sp.map((c) => c[k]))}`).join('  ') + `   (worst season spread ${Math.max(...sp.map((c) => Math.max(...sk.map((k) => c[k])) - Math.min(...sk.map((k) => c[k]))))})`);
   }
   console.log(`\n${((Date.now() - t0) / 1000).toFixed(1)} s`);
 }

@@ -25,9 +25,11 @@ const GAME_FOR = { run: 'hurdles', swim: 'paddle', fly: 'rings', climb: 'climb',
 //    better its Stamina, the less it slows down.
 const SKILL_SPEED = (lv) => 1 + 0.3 * Math.pow(Math.max(0, lv), 0.65);
 // v0: speed (m/s) at level 0; a level-5 duck goes ~1.85× that.
-const SECTIONS = { track: { skill: 'run', len: 48, v0: 2.9 }, pond: { skill: 'swim', len: 36, v0: 2.5 }, cliff: { skill: 'climb', len: 26, v0: 1.85 }, gap: { skill: 'fly', len: 32, v0: 2.2 }, maze: { skill: 'smarts', len: 34, v0: 2.75 } };
+const SECTIONS = { track: { skill: 'run', len: 48, v0: 2.9 }, pond: { skill: 'swim', len: 36, v0: 2.5 }, cliff: { skill: 'climb', len: 26, v0: 1.85 }, gap: { skill: 'fly', len: 32, v0: 2.2 }, maze: { skill: 'smarts', len: 34, v0: 2.6 } };
 // Section lengths on this course (Sprint courses are shorter; older courses have none: the defaults).
 const courseLen = (C) => (C && C.secLen) || Object.fromEntries(Object.entries(SECTIONS).map(([k, x]) => [k, x.len]));
+// The section each skill races on (Stamina has none: it is the late race).
+const SEC_OF = { run: 'track', swim: 'pond', fly: 'gap', climb: 'cliff', smarts: 'maze' };
 const sectionSpeed = (type, lv) => SECTIONS[type].v0 * SKILL_SPEED(lv);
 // Mishap odds for a skill at level lv (base p at level 0).
 const mishap = (p, lv) => p / Math.pow(SKILL_SPEED(lv), 2);
@@ -36,7 +38,7 @@ const mishap = (p, lv) => p / Math.pow(SKILL_SPEED(lv), 2);
 // follows the same skill curve as every other skill: about half its speed at Stamina 0, less and
 // less with every level, nothing left at the top level. A tired duck (depth past FATIGUE.tired)
 // shows it: sweat, a heavy waddle and the commentary.
-const FATIGUE = { from: 0.5, fromLong: 0.4, ramp: 0.25, pow: 0.55, tired: 0.25 };
+const FATIGUE = { from: 0.5, fromLong: 0.4, fromEndurance: 0.3, ramp: 0.25, pow: 0.75, tired: 0.25 };
 const fatigueDepth = (stamina, { bar = false, lungs = false, tactic = 'steady', heat = false, low = false } = {}) =>
   clamp((1 - Math.pow(SKILL_SPEED(stamina + (bar ? 3 : 0)) / SKILL_SPEED(25), FATIGUE.pow)) * (lungs ? 0.6 : 1) * (tactic === 'sprint' ? 1.35 : tactic === 'steady' ? 0.85 : 1) * (heat ? 1.3 : 1) * (low ? 1.2 : 1), 0, 0.75);
 // Jumps: how long a crashed duck sits dazed, and how long a clipped hurdle slows it.
@@ -390,25 +392,71 @@ class Ducks {
   }
 
   // ---- season ----
+  // The season's races, planned when the first one is set up (from the room's seed): every race but
+  // the final features two skills (a water-and-wings race, a climb-and-maze race, a long run where
+  // Stamina counts…), dealt from a deck that holds every skill the same number of times, so over the
+  // season each skill is featured about equally and none is left out. The Grand Championship uses
+  // everything. -> [[skill, skill], …, null (the final)]
+  planSeason() {
+    const R = Math.max(1, this.s.races), rng = this.room.rng;
+    const skills = SKILLS.filter((k) => this.s.terrain !== 'classic' || k !== 'smarts');
+    const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const deck = []; let last = null;
+    while (deck.length < 2 * (R - 1)) { const round = shuffle(skills.slice()); if (round[0] === last && round.length > 1) [round[0], round[1]] = [round[1], round[0]]; deck.push(...round); last = round[round.length - 1]; }
+    deck.length = 2 * (R - 1);
+    const plan = [];
+    for (let i = 0; i + 1 < deck.length; i += 2) {
+      if (deck[i] === deck[i + 1]) { const j = deck.findIndex((x, q) => q > i + 1 && x !== deck[i] && deck[q - (q % 2 ? 1 : -1)] !== deck[i + 1]); if (j > 0) [deck[i + 1], deck[j]] = [deck[j], deck[i + 1]]; }
+      plan.push([deck[i], deck[i + 1]]);
+    }
+    plan.push(null);
+    return plan;
+  }
   newCourse(n) {
-    // Every course has each kind of section of its terrain once (so every skill is needed in every
-    // race), plus extra sections the landscape favours (theme weights): Classic courses have one
-    // section of each kind; Sprint is the same with shorter sections; Marathon adds three; from the
-    // fourth race on, one more. Brainy adds a second maze.
+    // A race's sections: its two featured skills get two sections each (three on a Marathon), the
+    // rest of the course is other kinds of section (one each, the landscape's favourites first); a
+    // featured Stamina makes it a long race where the ducks tire early. The final: one of each.
+    // Sprint courses have shorter sections; from the fourth race on there is one more section;
+    // Brainy always has a maze (and more of them). Track only / Pond only / Mountain: as before.
     const ALL = ['track', 'pond', 'cliff', 'gap', 'maze'];
     const pool = { mixed: ALL, classic: ['track', 'pond', 'cliff', 'gap'], brainy: ALL, track: ['track'], pond: ['pond'], mountain: ['cliff', 'gap', 'track'] }[this.s.terrain] || ALL;
-    const late = Math.min(1, Math.floor((n - 1) / 3));
-    const extra = ({ sprint: 0, classic: 0, marathon: 3 }[this.s.course] || 0) + late + (this.s.terrain === 'brainy' ? 1 : 0);
-    // (Track only / Pond only / Mountain keep the old counts: 4, 5 or 8 sections.)
-    const count = pool.length >= 4 ? Math.max(5, pool.length) + extra : ({ sprint: 4, classic: 5, marathon: 8 }[this.s.course] || 5) + late;
-    const rng = this.room.rng, themeKeys = Object.keys(THEMES);
-    let theme; do theme = themeKeys[Math.floor(rng() * themeKeys.length)]; while (theme === (this.course && this.course.theme) && themeKeys.length > 1);
+    const rng = this.room.rng, themeKeys = Object.keys(THEMES), late = Math.min(1, Math.floor((n - 1) / 3));
+    const varied = pool.length >= 4;
+    if (varied && (!this.plan || this.plan.length !== this.s.races)) this.plan = this.planSeason();
+    const feat = varied ? this.plan[Math.min(this.plan.length, Math.max(1, n)) - 1] : null;
+    const featSec = feat ? feat.map((k) => SEC_OF[k]).filter((x) => x && pool.includes(x)) : [];
+    const endurance = !!(feat && feat.includes('stamina'));
+    const brainy = this.s.terrain === 'brainy';
+    // The world: one that suits the featured sections, not the last one, and not one already seen
+    // this season while unseen ones are left.
+    this.seenThemes = n <= 1 || !this.seenThemes ? [] : this.seenThemes;
+    const fresh = themeKeys.filter((k) => !this.seenThemes.includes(k) && k !== (this.course && this.course.theme));
+    const cand = fresh.length ? fresh : themeKeys.filter((k) => k !== (this.course && this.course.theme));
+    const fit = (k) => featSec.reduce((a, x) => a * THEMES[k].weights[x], 1);
+    let theme = cand[0]; { const tot = cand.reduce((a, k) => a + fit(k), 0); let r = rng() * tot; for (const k of cand) { r -= fit(k); if (r <= 0) { theme = k; break; } } }
+    this.seenThemes.push(theme);
     const T = THEMES[theme];
-    const weight = (x) => (T.weights[x] || 1) * (this.s.terrain === 'brainy' && x === 'maze' ? 4 : 1);
+    const weight = (x) => (T.weights[x] || 1) * (brainy && x === 'maze' ? 4 : 1);
     const pickW = (opts) => { const tot = opts.reduce((a, x) => a + weight(x), 0); let r = rng() * tot; for (const x of opts) { r -= weight(x); if (r <= 0) return x; } return opts[0]; };
-    const bag = pool.length > 1 ? pool.slice() : [];
-    if (this.s.terrain === 'brainy') bag.push('maze');
-    while (bag.length < count) bag.push(pickW(pool));
+    const base = { sprint: 5, classic: 5, marathon: 8 }[this.s.course] || 5;
+    const bag = [];
+    let count;
+    if (!varied) {
+      count = ({ sprint: 4, classic: 5, marathon: 8 }[this.s.course] || 5) + late;
+      while (bag.length < count) bag.push(pickW(pool));
+    } else if (!feat) { // the final: one of each (+ extras on long courses)
+      count = Math.max(pool.length, base) + late + (brainy ? 1 : 0);
+      bag.push(...pool); if (brainy) bag.push('maze'); // (Brainy: two mazes in every race)
+      while (bag.length < count) bag.push(pickW(pool));
+    } else {
+      count = base + late + (endurance ? 1 : 0);
+      const each = featSec.length === 1 ? (this.s.course === 'marathon' ? 4 : 3) : this.s.course === 'marathon' ? 3 : 2;
+      for (const x of featSec) for (let i = 0; i < each; i++) bag.push(x);
+      while (brainy && bag.filter((x) => x === 'maze').length < 2) bag.push('maze');
+      const others = pool.filter((x) => !featSec.includes(x));
+      while (bag.length < count && others.length) bag.push(others.splice(others.indexOf(pickW(others)), 1)[0]);
+      while (bag.length < count) bag.push(pickW(pool));
+    }
     // The order: a track start (the ducks run off the line) when there is one, then the rest
     // shuffled, never the same kind twice in a row when that can be helped.
     const types = [];
@@ -419,6 +467,7 @@ class Ducks {
       types.push(bag.splice(i, 1)[0]);
     }
     const sections = types.map((type) => { const vs = T.variants[type]; return { type, v: vs[Math.floor(rng() * vs.length)] }; });
+    const featured = feat ? feat.slice() : [...new Set(['stamina', ...types.map((x) => SECTIONS[x].skill)])].filter((k) => SKILLS.includes(k));
     const scale = this.s.course === 'sprint' ? 0.8 : 1;
     const secLen = Object.fromEntries(Object.entries(SECTIONS).map(([k, x]) => [k, Math.round(x.len * scale)]));
     const final = n === this.s.races;
@@ -426,7 +475,7 @@ class Ducks {
     const weathers = Object.keys(WEATHER);
     const weather = this.s.weather ? (n === 1 ? 'sunny' : weathers[Math.floor(this.room.rng() * weathers.length)]) : 'sunny';
     const wind = weather === 'windy' ? (this.room.rng() < 0.5 ? 1 : -1) : 0;
-    return { n, final, league, leagueName: LEAGUES[league].label, leagueIcon: LEAGUES[league].icon, theme, themeName: T.label, name: final ? 'Grand Championship' : `${LEAGUES[league].label}: ${NAMES[(n - 1) % NAMES.length]}`, sections, weather, wind, secLen, length: sections.reduce((a, x) => a + secLen[x.type], 0), variants: VARIANT };
+    return { n, final, league, leagueName: LEAGUES[league].label, leagueIcon: LEAGUES[league].icon, theme, themeName: T.label, name: final ? 'Grand Championship' : `${LEAGUES[league].label}: ${NAMES[(n - 1) % NAMES.length]}`, featured, endurance, sections, weather, wind, secLen, length: sections.reduce((a, x) => a + secLen[x.type], 0), variants: VARIANT };
   }
   leagueFor(n) { return n >= this.s.races ? LEAGUES.length - 1 : Math.min(LEAGUES.length - 2, Math.floor(((n - 1) * (LEAGUES.length - 1)) / Math.max(1, this.s.races - 1))); }
   // The season road: every race's league, so players can see where the season is going.
@@ -468,7 +517,7 @@ class Ducks {
     }
     this.wild = Object.fromEntries(racers.filter(([, d]) => d.wild).map(([id, d]) => [id, { name: d.name, color: d.color, hat: d.hat, stage: d.stage, wild: true }]));
     const L = C.length, DT = 0.1, SAMPLE = 0.5;
-    const fatFrom = L * (C.sections.length >= 8 ? FATIGUE.fromLong : FATIGUE.from), fatRamp = L * FATIGUE.ramp;
+    const fatFrom = L * (C.endurance ? FATIGUE.fromEndurance : C.sections.length >= 8 ? FATIGUE.fromLong : FATIGUE.from), fatRamp = L * FATIGUE.ramp;
     for (const [id, d] of racers) {
       const lv = this.levels(d), gear = new Set(d.gear), rng = this.room.rng;
       const perk = new Set(d.perks || []);
@@ -610,7 +659,7 @@ class Ducks {
       d.best = d.best ? Math.min(d.best, place) : place;
       d.energy = Math.max(0, d.energy - 8 * this.course.sections.length / 4);
       this.checkGrowth(e.id, d);
-      d.last = { place, of: entries.length, pts, coins, time: e.time, trips: e.events.filter((x) => x.k === 'trip').length, slips: e.events.filter((x) => x.k === 'slip').length, shortcuts: e.events.filter((x) => x.k === 'short').length, wrongs: e.events.filter((x) => x.k === 'wrong').length, tired: e.events.some((x) => x.k === 'tired') };
+      d.last = { place, of: entries.length, pts, coins, time: e.time, trips: e.events.filter((x) => x.k === 'trip').length, slips: e.events.filter((x) => x.k === 'slip').length, shortcuts: e.events.filter((x) => x.k === 'short').length, wrongs: e.events.filter((x) => x.k === 'wrong').length, gulps: e.events.filter((x) => x.k === 'gulp').length, dips: e.events.filter((x) => x.k === 'dip').length, tired: e.events.some((x) => x.k === 'tired'), weak: this.weakest(d, this.course) };
       d.history.push(place); d.gear = [];
       if (place <= 3) d.trophies.push({ race: this.race, league: this.course.league, place, icon: LEAGUES[this.course.league].icon });
       d.stats.boosts += e.events.filter((x) => x.k === 'boost').length;
@@ -724,9 +773,18 @@ class Ducks {
     }
     // The late race: from the fatigue start the duck slows down by up to `depth` (ramping in).
     const depth = fatigueDepth(lv.stamina, { lungs: perks.includes('lungs'), tactic: d.tactic, heat: C.weather === 'heat', low: d.energy < 20 });
-    const late = 1 - (C.sections.length >= 8 ? FATIGUE.fromLong : FATIGUE.from), avg = (depth * (late - FATIGUE.ramp / 2)) / late;
+    const late = 1 - (C.endurance ? FATIGUE.fromEndurance : C.sections.length >= 8 ? FATIGUE.fromLong : FATIGUE.from), avg = (depth * (late - FATIGUE.ramp / 2)) / late;
     t = t * (1 - late) + (t * late) / (1 - avg);
     return t / (d.mood >= 70 ? 1.02 : d.mood < 30 ? 0.97 : 1) / (d.energy < 20 ? 0.96 : 1);
+  }
+  // The skill holding this duck back on a course (its lowest among the skills the course uses;
+  // Stamina always counts): { skill, level, gap } when it is clearly behind (at 0 while the others
+  // are not, or WEAK_GAP - 1 levels under the duck's own average), else null. The phone shows it.
+  weakest(d, C) {
+    const lv = this.levels(d), used = new Set(['stamina', ...(C ? C.sections.map((x) => SECTIONS[x.type].skill) : SKILLS)]);
+    const ks = SKILLS.filter((k) => used.has(k)), avg = ks.reduce((a, k) => a + lv[k], 0) / ks.length;
+    const k = ks.slice().sort((a, b) => lv[a] - lv[b])[0];
+    return k && ((lv[k] === 0 && avg >= 1) || lv[k] <= avg - (WEAK_GAP - 1)) ? { skill: k, level: lv[k], gap: Math.round(avg - lv[k]) } : null;
   }
   // Every present duck ranked by eta (cached until something changes).
   etaRanks() {
@@ -1099,6 +1157,7 @@ class Ducks {
       hype: this.phase === 'training' && out0.endsIn <= HYPE_MS, ladder: this.started ? this.ladder() : null,
       projected: this.phase === 'training' && d.gene ? { place: this.etaRanks().get(p.id) || null, of: this.etaRanks().size } : null,
       leader: st[0] && st[0].id !== p.id ? { duck: st[0].duck, points: st[0].points } : null,
+      weakest: d.gene && this.course ? this.weakest(d, this.course) : null,
       season: this.phase === 'over' ? {
         rank: st.findIndex((x) => x.id === p.id) + 1, of: st.length, points: d.points, wins: d.wins, podiums: d.trophies.length, best: d.best,
         trained: d.stats.trained, bestScore: d.stats.bestScore, level: this.totalLevel(d), stage: STAGES[d.stage].label, badges: d.badges.length, bestStreak: d.bestStreak, history: d.history,

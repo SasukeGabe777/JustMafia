@@ -362,9 +362,9 @@ test('Every theme (at least 12, with its own variants) generates valid courses t
     for (let n = 1; n <= 4; n++) {
       const C = room.game.newCourse(n), T = D.THEMES[C.theme];
       assert(T, 'a known theme'); const st = seen.get(C.theme); st.n++;
-      assert(C.sections.length >= 5);
+      assert(C.sections.length >= 4);
       for (const s of C.sections) assert(T.variants[s.type].includes(s.v), `${C.theme}: ${s.type}/${s.v}`);
-      assert(['pond', 'cliff', 'gap', 'maze'].every((t) => C.sections.some((s) => s.type === t)), 'Everything: every kind of section: ' + C.sections.map((s) => s.type));
+      assert(C.featured.filter((k) => k !== 'stamina').every((k) => C.sections.some((s) => D.SECTIONS[s.type].skill === k)), 'the featured skills have their sections: ' + C.featured + ' / ' + C.sections.map((s) => s.type));
       assert.equal(C.length, C.sections.reduce((x, s) => x + D.SECTIONS[s.type].len, 0));
       if (C.sections.some((s) => s.type === 'maze')) st.maze++;
     }
@@ -380,8 +380,11 @@ test('Every theme (at least 12, with its own variants) generates valid courses t
 });
 test('Terrain: Everything has a maze, Classic never does, Brainy has two or more; Track/Pond/Mountain unchanged', () => {
   const count = (terrain, course = 'classic') => { const out = []; for (let seed = 1; seed <= 15; seed++) { const { room } = setup(0, { terrain, course }, seed); human(room, 'Ann'); go(room); for (let n = 1; n <= 3; n++) out.push(room.game.newCourse(n).sections.map((s) => s.type)); } return out; };
-  assert(count('mixed').every((t) => t.includes('maze')));
-  assert(count('classic').every((t) => !t.includes('maze') && ['pond', 'cliff', 'gap'].every((x) => t.includes(x))));
+  // a whole 5-race season on Everything has every kind of section (a single race need not)
+  const season = (terrain) => { const out = []; for (let seed = 1; seed <= 15; seed++) { const { room } = setup(0, { terrain, races: 5 }, seed); human(room, 'Ann'); go(room); const all = []; for (let n = 1; n <= 5; n++) { room.game.course = room.game.newCourse(n); all.push(...room.game.course.sections.map((s) => s.type)); } out.push(all); } return out; };
+  assert(season('mixed').every((t) => ['track', 'pond', 'cliff', 'gap', 'maze'].every((x) => t.includes(x))));
+  assert(count('classic').every((t) => !t.includes('maze')));
+  assert(season('classic').every((t) => !t.includes('maze') && ['track', 'pond', 'cliff', 'gap'].every((x) => t.includes(x))));
   assert(count('brainy', 'sprint').every((t) => t.filter((x) => x === 'maze').length >= 2), 'Brainy: two mazes even in a sprint');
   assert(count('track').every((t) => t.every((x) => x === 'track')));
   assert(count('mountain').every((t) => t.every((x) => ['cliff', 'gap', 'track'].includes(x))));
@@ -586,40 +589,57 @@ test('Bug Snack (Stamina) normal pace is clearly easier than before; Risk it! is
   // Enough bugs come up for the ⭐ target (more each stage): well over one per point even at the start pace.
   assert(20 / N.spawn > 1.5 * D.TARGET);
 });
-/// ---- balance: every skill is worth about the same, and a duck needs all of them (tools/ducks-balance.js) ----
+/// ---- balance: every skill is worth about the same over a season, and a duck needs all of them (tools/ducks-balance.js) ----
 const BAL = require('./ducks-balance');
-test('Balance: one skill raised, on the default course every skill wins about as often (none more than ~1.6x another)', () => {
+test('Balance: one skill raised, over the season every skill wins about as often (none more than ~1.6x another)', () => {
   for (const [L, n] of [[4, 4], [10, 4]]) {
     const r = BAL.oneRaised(L, n, { terrain: 'mixed', course: 'classic' }, 300), vals = D.SKILLS.map((k) => r[k]);
     const ratio = Math.max(...vals) / Math.min(...vals);
     assert(ratio <= 1.6, `L${L}+${n}: ${D.SKILLS.map((k) => k + ' ' + (r[k] * 100).toFixed(0) + '%').join(', ')} (${ratio.toFixed(2)}x)`);
   }
 });
-test('Balance: a well-rounded duck beats a specialist with the same total levels, for every skill', () => {
+test('Balance: a well-rounded duck beats a specialist with the same total levels over a season, for every skill', () => {
   const even = BAL.even(5);
   for (const k of D.SKILLS) {
-    const lop = BAL.lopsided(30, k), share = BAL.headToHead([even, even, even], [lop, lop, lop], {}, 60);
-    assert(share >= 0.7, `balanced vs half-in ${k}: ${share.toFixed(2)}`);
+    const lop = BAL.lopsided(30, k), share = BAL.seasonHeadToHead([even, even, even], [lop, lop, lop], {}, 20);
+    assert(share >= 0.75, `balanced vs half-in ${k} over a season: ${share.toFixed(2)}`);
   }
 });
 test('Balance: missing any one skill (at 0, the same total spread over the rest) clearly hurts, for every skill', () => {
   const even = BAL.even(5);
   for (const k of D.SKILLS) {
-    const m = BAL.missing(5, k), share = BAL.headToHead([even, even, even], [m, m, m], {}, 60);
-    assert(share >= 0.7, `balanced vs no ${k}: ${share.toFixed(2)}`);
+    const m = BAL.missing(5, k), race = BAL.headToHead([even, even, even], [m, m, m], {}, 60), season = BAL.seasonHeadToHead([even, even, even], [m, m, m], {}, 20);
+    assert(race >= 0.6 && season >= 0.75, `balanced vs no ${k}: per race ${race.toFixed(2)}, per season ${season.toFixed(2)}`);
   }
 });
-test('Balance: every course has every kind of section (Everything, Sprint, Marathon); Brainy adds a maze; a theme only adds extras', () => {
-  for (const course of ['sprint', 'classic', 'marathon']) for (const terrain of ['mixed', 'brainy']) for (let seed = 1; seed <= 20; seed++) {
-    const { room } = setup(0, { terrain, course }, seed); human(room, 'Ann'); go(room);
+test('Seasons: every race features two skills (the final: all), and over 3, 5, 8 or 10 races every skill is featured about equally (never left out)', () => {
+  for (const terrain of ['mixed', 'classic', 'brainy']) for (const races of [3, 5, 8, 10]) {
+    const sk = terrain === 'classic' ? D.SKILLS.filter((k) => k !== 'smarts') : D.SKILLS;
+    for (const c of BAL.seasonSpread(races, terrain, 30)) {
+      const v = sk.map((k) => c[k]);
+      assert(Math.max(...v) - Math.min(...v) <= 1 && Math.min(...v) >= 1, `${terrain}/${races}: ${JSON.stringify(c)}`);
+      if (terrain === 'classic') assert.equal(c.smarts, 0, 'Classic: no mazes, no Smarts race');
+    }
+  }
+  for (const course of ['sprint', 'classic', 'marathon']) for (const terrain of ['mixed', 'brainy']) for (let seed = 1; seed <= 12; seed++) {
+    const { room } = setup(0, { terrain, course, races: 5 }, seed); human(room, 'Ann'); go(room);
+    const worlds = [];
     for (let n = 1; n <= 5; n++) {
-      const C = room.game.newCourse(n), types = C.sections.map((s) => s.type);
-      for (const t of Object.keys(D.SECTIONS)) assert(types.includes(t), `${course}/${terrain}: ${t} in ${types}`);
-      assert.equal(C.sections[0].type, 'track', 'the ducks run off the line');
+      const C = room.game.newCourse(n); room.game.course = C; worlds.push(C.theme);
+      const types = C.sections.map((s) => s.type);
+      if (n < 5) { assert.equal(C.featured.length, 2); assert.notEqual(C.featured[0], C.featured[1]); }
+      else for (const t of Object.keys(D.SECTIONS)) assert(types.includes(t), `the final has every kind of section: ${types}`);
+      for (const k of C.featured) if (k !== 'stamina') assert(types.filter((t) => D.SECTIONS[t].skill === k).length >= 2 || n === 5, `${k} featured: ${types}`);
+      if (n < 5 && C.featured.includes('stamina')) assert(C.endurance, 'a Stamina race is a long one');
+      if (terrain === 'brainy') assert(types.filter((t) => t === 'maze').length >= 2, 'Brainy: two mazes');
       assert.equal(C.length, C.sections.reduce((a, s) => a + C.secLen[s.type], 0));
       if (course === 'sprint') assert(C.secLen.track < D.SECTIONS.track.len, 'sprint sections are shorter');
     }
+    assert.equal(new Set(worlds).size, 5, 'no world twice in a season: ' + worlds);
   }
+  // the same seed plans the same season
+  const plan = (seed) => { const { room } = setup(0, { races: 8 }, seed); human(room, 'Ann'); go(room); return room.game.plan; };
+  assert.deepEqual(plan(4), plan(4));
 });
 test('Balance: Stamina matters at every level (every duck tires late in the race, less with more Stamina); gear and perks never guarantee anything', () => {
   const depth = D.fatigueDepth;
