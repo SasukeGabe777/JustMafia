@@ -385,7 +385,9 @@ test('Terrain: Everything has a maze, Classic never does, Brainy has two or more
   assert(season('mixed').every((t) => ['track', 'pond', 'cliff', 'gap', 'maze'].every((x) => t.includes(x))));
   assert(count('classic').every((t) => !t.includes('maze')));
   assert(season('classic').every((t) => !t.includes('maze') && ['track', 'pond', 'cliff', 'gap'].every((x) => t.includes(x))));
-  assert(count('brainy', 'sprint').every((t) => t.filter((x) => x === 'maze').length >= 2), 'Brainy: two mazes even in a sprint');
+  assert(count('brainy', 'sprint').every((t) => t.includes('maze')), 'Brainy: a maze in every race, even a sprint');
+  const mazes = (terrain) => season(terrain).reduce((a, t) => a + t.filter((x) => x === 'maze').length, 0);
+  assert(mazes('brainy') > mazes('mixed') * 1.4, 'Brainy: clearly more mazes over a season');
   assert(count('track').every((t) => t.every((x) => x === 'track')));
   assert(count('mountain').every((t) => t.every((x) => ['cliff', 'gap', 'track'].includes(x))));
   assert(def.fields.find((f) => f.key === 'terrain').options.some((o) => o.value === 'brainy'));
@@ -616,7 +618,8 @@ test('Seasons: every race features two skills (the final: all), and over 3, 5, 8
   for (const terrain of ['mixed', 'classic', 'brainy']) for (const races of [3, 5, 8, 10]) {
     const sk = terrain === 'classic' ? D.SKILLS.filter((k) => k !== 'smarts') : D.SKILLS;
     for (const c of BAL.seasonSpread(races, terrain, 30)) {
-      const v = sk.map((k) => c[k]);
+      const v = sk.filter((k) => terrain !== 'brainy' || k !== 'smarts').map((k) => c[k]);
+      if (terrain === 'brainy' && races >= 5) assert(c.smarts >= Math.max(...v), 'Brainy: Smarts featured the most');
       assert(Math.max(...v) - Math.min(...v) <= 1 && Math.min(...v) >= 1, `${terrain}/${races}: ${JSON.stringify(c)}`);
       if (terrain === 'classic') assert.equal(c.smarts, 0, 'Classic: no mazes, no Smarts race');
     }
@@ -631,7 +634,7 @@ test('Seasons: every race features two skills (the final: all), and over 3, 5, 8
       else for (const t of Object.keys(D.SECTIONS)) assert(types.includes(t), `the final has every kind of section: ${types}`);
       for (const k of C.featured) if (k !== 'stamina') assert(types.filter((t) => D.SECTIONS[t].skill === k).length >= 2 || n === 5, `${k} featured: ${types}`);
       if (n < 5 && C.featured.includes('stamina')) assert(C.endurance, 'a Stamina race is a long one');
-      if (terrain === 'brainy') assert(types.filter((t) => t === 'maze').length >= 2, 'Brainy: two mazes');
+      if (terrain === 'brainy') assert(types.includes('maze'), 'Brainy: a maze in every race');
       assert.equal(C.length, C.sections.reduce((a, s) => a + C.secLen[s.type], 0));
       if (course === 'sprint') assert(C.secLen.track < D.SECTIONS.track.len, 'sprint sections are shorter');
     }
@@ -649,5 +652,59 @@ test('Balance: Stamina matters at every level (every duck tires late in the race
   for (const k of ['trip', 'gulp', 'dip', 'slip', 'wrong']) assert(D.mishap(D.MISHAP[k], 0) > 0.25 && D.mishap(D.MISHAP[k], 25) < 0.05 && D.mishap(D.MISHAP[k], 25) > 0, k);
   // a fully geared, perked duck with one skill at 0 still loses most of its head-to-heads to an even duck
   const fo = D.forkOdds(0, true, true); assert(fo.wrong > 0.05, 'Map + Compass still leave a weak-Smarts duck lost sometimes');
+});
+// ---- fair training for everyone: per-game pay, the XP floor, quiet help, the first-run how-to ----
+test('Mini-game pay: the same kind of player earns about the same XP in every game (tools/ducks-minipay.js model)', () => {
+  const M = require('./ducks-minipay');
+  for (const who of ['struggling', 'casual']) {
+    const xs = ['hurdles', 'paddle', 'rings', 'climb', 'bugs', 'maze'].map((g) => M.average(g, M.PLAYERS[who], 600).xp);
+    assert(Math.max(...xs) / Math.min(...xs) <= 1.35, `${who}: ${xs.map(Math.round).join(' ')}`);
+  }
+});
+test('XP floor: a full run where you really played earns at least the floor; a cut or empty run does not; good runs earn more', () => {
+  const { room } = setup(0, { energy: 'unlimited', catchUp: false }); const a = human(room, 'Ann'); go(room);
+  const d = room.game.ducks.get(a.id); d.mood = 50; d.gene = 'run';
+  const run = (stat, score) => { assert(room.act(a, { op: 'train', stat }).ok); d.training.at -= (D.RUN_SECONDS + 1) * 1000; const r = room.act(a, { op: 'score', score }); room.act(a, { op: 'keep' }); d.riskOffer = null; d.streak = 0; return r; };
+  const low = run('swim', 4); assert.equal(low.xp, D.XP_FLOOR.xp, 'a weak run gets the floor: ' + low.xp);
+  const none = run('swim', 1); assert(none.xp < D.XP_FLOOR.xp, 'barely playing: no floor');
+  const good = run('swim', 30); assert(good.xp > D.XP_FLOOR.xp * 1.5);
+  assert.equal(D.baseXp('swim', 3, false), Math.round(3 * 4 * D.PAY.paddle), 'a run cut by the race: no floor');
+});
+test('Quiet help: low scores in a game make the next runs of THAT game gentler (slower, wider), good scores take it away; Risk it! never gets it', () => {
+  const { room } = setup(0, { energy: 'unlimited' }); const a = human(room, 'Ann'); go(room);
+  const d = room.game.ducks.get(a.id);
+  const run = (stat, score, keep) => { const t = room.act(a, { op: 'train', stat }); assert(t.ok); d.training.at -= (D.RUN_SECONDS + 1) * 1000; const r = room.act(a, { op: 'score', score }); if (!keep) d.riskOffer = null; return { t, r }; };
+  const first = run('fly', 3).t; assert.equal(first.assist, 0); assert.equal(first.speed, 1); assert.equal(first.first, true, 'the first run of a game shows the how-to');
+  run('fly', 3); run('fly', 3);
+  const helped = run('fly', 3).t; assert.equal(helped.assist, D.ASSIST.max); assert(helped.speed < 1 && helped.speed >= 0.7, 'gentler pace: ' + helped.speed); assert.equal(helped.first, false);
+  assert.equal(room.act(a, { op: 'train', stat: 'run' }).assist, 0, 'only the game you struggle with'); room.act(a, { op: 'cancel' });
+  for (let i = 0; i < 4; i++) run('fly', 40);
+  assert.equal(run('fly', 20).t.assist, 0, 'good runs take the help away');
+  // Risk it!: the hard pace, no help
+  d.assist.rings = 3; const off = run('fly', 25, true).r; assert(off.risk);
+  const rk = room.act(a, { op: 'risk' }); assert(rk.ok && rk.speed === D.RISK.speed && !rk.assist);
+  // old saves: no assist/runs yet
+  const old = D.migrate({ xp: { run: 50 } }); assert.equal(old.assist.rings, 0); assert.equal(old.runs.maze, 0); assert.equal(D.level(old.xp.run), D.level(50));
+});
+test('The race shows what each skill does: weak-skill moments, gulps in ponds, dips over ravines, slow climbing on walls; the phone names the weakest skill', () => {
+  const { room } = setup(0, { weather: false, races: 5 }, 11); const a = human(room, 'Ann'), b = human(room, 'Bob'); go(room);
+  const da = room.game.ducks.get(a.id), db = room.game.ducks.get(b.id);
+  for (const k of D.SKILLS) { da.xp[k] = D.xpFor(8); db.xp[k] = D.xpFor(8); }
+  da.xp.swim = 0; da.xp.fly = 0; da.xp.climb = 0;
+  const C = room.game.course; C.sections = [{ type: 'track', v: 'hurdles' }, { type: 'pond', v: 'calm' }, { type: 'gap', v: 'bridge' }, { type: 'cliff', v: 'vines' }]; C.endurance = false;
+  C.length = C.sections.reduce((x, s) => x + C.secLen[s.type], 0);
+  const w = room.playerState(a).state.weakest; assert(w && ['swim', 'fly', 'climb'].includes(w.skill) && w.level === 0, JSON.stringify(w));
+  assert.equal(room.playerState(b).state.weakest, null, 'an even duck has no weakest skill to point at');
+  let gulps = 0, dips = 0, weak = 0;
+  for (let i = 0; i < 6; i++) {
+    room.game.course = { ...C }; const { entries } = room.game.simulate(); const ea = entries.find((e) => e.id === a.id), eb = entries.find((e) => e.id === b.id);
+    gulps += ea.events.filter((e) => e.k === 'gulp').length; dips += ea.events.filter((e) => e.k === 'dip').length; weak += ea.events.filter((e) => e.k === 'weak').length;
+    assert(!eb.events.some((e) => e.k === 'weak'));
+    assert(ea.time > eb.time, 'missing three skills loses');
+  }
+  assert(gulps > 0 && dips > 0, `gulps ${gulps}, dips ${dips}`); assert.equal(weak, 6 * 3, 'a weak moment at the pond, the ravine and the cliff every race');
+  // climbing walls: a duck on a wall goes slower than on the ledge
+  const cliff = [0, 26]; assert(D.onWall(cliff, 0.5) && !D.onWall(cliff, 6) && D.onWall(cliff, 26 * 0.39 + 0.5) && !D.onWall(cliff, 25));
+  room.game.next(); const last = da.last; assert(last.weak && last.weak.level === 0, 'after the race the phone says what slowed you down');
 });
 console.log(`\nAll ${passed} JustRaiseDucks tests passed.`);

@@ -942,6 +942,7 @@
       'Training costs energy. When your duck runs out it falls asleep by itself for a short nap, then it’s ready again. Food (seeds, corn or a feast bowl, right on the training page) tops it up.',
       'Spend coins in the shop: food, farm buildings, decorations, race gear and hats. It all shows on your farm.',
       'Every few minutes the valley races a themed obstacle course in one of 14 worlds (meadow, volcano, swamp, city rooftops, jungle, desert, sky islands, candy land, a haunted farm and more). Smart ducks find the shortcut through the maze. Training stops while the race is on.',
+      'Each race features two skills (shown before it starts), and over the season every skill gets its turn: a duck that trains all six wins the season.',
       'Climb from the Rookie Cup to the Grand Championship. Top 3 win trophies for your farm.',
       'Pick a tactic, predict the winner, finish quests, beat your rival, and cheer from your phone!',
     ],

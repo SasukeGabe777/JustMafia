@@ -188,8 +188,9 @@ test('Ducks: buildings speed up training; a happy duck learns faster than a grum
   assert(r.act(a, { op: 'build', item: 'track' }).ok); assert.equal(da.buildings.track, 1); assert.equal(da.coins, 80);
   da.mood = 50; db.mood = 50;
   const run = (p) => { r.act(p, { op: 'train', stat: 'run' }); clock.t += 20000; return r.act(p, { op: 'score', score: 15 }).xp; }; // 15 is under the ⭐ target, so no streak bonus
-  assert.equal(run(b), 60); assert.equal(run(a), 72, 'Running Track level 1: +20%');
-  db.mood = 90; assert.equal(run(b), 69, 'happy: +15%'); db.mood = 10; assert.equal(run(b), 48, 'grumpy: −20%');
+  // Hurdle Dash pays 0.9 XP per point ×4 (box/games/ducks.js PAY): 15 points = 54 base XP
+  assert.equal(run(b), 54); assert.equal(run(a), 65, 'Running Track level 1: +20%');
+  db.mood = 90; assert.equal(run(b), 62, 'happy: +15%'); db.mood = 10; assert.equal(run(b), 43, 'grumpy: −20%');
   assert(r.act(a, { op: 'pet' }).ok); assert.equal(r.act(a, { op: 'pet' }).ok, false, 'petting has a short cooldown');
 });
 test('Ducks: Track Sneakers prevent trips; gear is used up by the race; predictions pay', () => {

@@ -424,7 +424,8 @@ class Ducks {
   // everything. -> [[skill, skill], …, null (the final)]
   planSeason() {
     const R = Math.max(1, this.s.races), rng = this.room.rng;
-    const skills = SKILLS.filter((k) => this.s.terrain !== 'classic' || k !== 'smarts');
+    // (Classic: no mazes, so no Smarts races; Brainy: Smarts is dealt twice as often.)
+    const skills = SKILLS.filter((k) => this.s.terrain !== 'classic' || k !== 'smarts').concat(this.s.terrain === 'brainy' ? ['smarts'] : []);
     const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
     const deck = []; let last = null;
     while (deck.length < 2 * (R - 1)) { const round = shuffle(skills.slice()); if (round[0] === last && round.length > 1) [round[0], round[1]] = [round[1], round[0]]; deck.push(...round); last = round[round.length - 1]; }
@@ -471,13 +472,13 @@ class Ducks {
       while (bag.length < count) bag.push(pickW(pool));
     } else if (!feat) { // the final: one of each (+ extras on long courses)
       count = Math.max(pool.length, base) + late + (brainy ? 1 : 0);
-      bag.push(...pool); if (brainy) bag.push('maze'); // (Brainy: two mazes in every race)
+      bag.push(...pool);
       while (bag.length < count) bag.push(pickW(pool));
     } else {
       count = base + late + (endurance ? 1 : 0);
       const each = featSec.length === 1 ? (this.s.course === 'marathon' ? 4 : 3) : this.s.course === 'marathon' ? 3 : 2;
       for (const x of featSec) for (let i = 0; i < each; i++) bag.push(x);
-      while (brainy && bag.filter((x) => x === 'maze').length < 2) bag.push('maze');
+      if (brainy && !bag.includes('maze')) bag.push('maze'); // Brainy: a maze in every race
       const others = pool.filter((x) => !featSec.includes(x));
       while (bag.length < count && others.length) bag.push(others.splice(others.indexOf(pickW(others)), 1)[0]);
       while (bag.length < count) bag.push(pickW(pool));

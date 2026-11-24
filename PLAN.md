@@ -1613,3 +1613,52 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
 - Validation: test-box-ducks (29 tests: Risk it! win/fall/kept for all six games and forged
   scores, food + pantry migration, Bug Snack pace, a Smarts balance check), test-box-kit, test-box,
   e2e-box (a real Risk it! round on the phone). Headless screenshots checked.
+
+## JustRaiseDucks: every skill counts, varied seasons, help for non-gamers, real climbing and flying (claude/ducks-balance, November 24, 2026)
+
+- Owner asks: "Balance each skill and make each one needed to train that makes it good"; help bad
+  players / non-gamers; fly and climb shown for real (a bridge to fly across, a rock wall to climb);
+  each race a bit different, the skills spread evenly over the whole 5- or 8-race season.
+- Measured with `node tools/ducks-balance.js` (six ducks equal, one skill raised; balanced vs
+  specialist; balanced vs "all but one"; per world; per season). Before (one skill +4 at level 8,
+  Everything, 200 races): Run 37%, Smarts 20%, Climb 22%, Swim 12%, Fly 7%, Stamina 3% (Stamina
+  60% at level 1, nearly useless later); Classic terrain Run 75%. After: every skill 13-21% at
+  every level (max/min about 1.2-1.9x per 200-race row, within 1.6x at 500 races); Classic 13-23%
+  (no Smarts there: no mazes); Brainy favours Smarts (23-32%); Marathon favours Stamina (~25%).
+- Race model (box/games/ducks.js): one skill curve for every section, SKILL_SPEED = 1 + 0.3·lv^0.65
+  (a skill at 0 is a real bottleneck, diminishing returns at the top); each section has its own
+  mishap, rarer with the skill (trip/clip Run, gulp Swim, dip Fly, slip Climb, wrong turn Smarts;
+  mishap = p / SKILL_SPEED²); Stamina is late-race fatigue in every race (depth from the same curve,
+  never zero below level 25; Energy Bar = +3 levels, Iron Lungs 40% less, tactics and heat as
+  before). Section variants (mud, sand, taffy…) no longer depend on Run. Section v0 values tuned so
+  each section takes about the same time. Cliffs are two climbing walls (WALL: ducks climb at 28% of
+  their pace on the wall, hand over hand), ledges between.
+- Seasons: `planSeason()` deals every race (but the final) two featured skills from a deck holding
+  every skill equally (Classic: no Smarts; Brainy: Smarts twice as often), so over 3/5/8/10 races
+  each skill is featured within one of every other and never left out; the final uses everything.
+  A featured skill gets 2 sections (3 on a Marathon); featured Stamina makes a long race where the
+  ducks tire early (fatigue from 30%). Worlds are picked to suit the featured sections and never
+  repeat within a season. The TV next-race card, the race-day hype and the phone race card show
+  "Featuring 🪽 Fly · 🧗 Climb". Over a season a balanced duck beats a half-specialist 84-100% and
+  a duck missing any one skill 85-100% (per race 62-100%).
+- Seen in play: race commentary when a duck reaches the section of its weak skill ("Rex can't swim
+  well and paddles slowly!"), gulps and dips; the phone's training page marks the weakest skill
+  ("Your weakest skill: Fly (Lv 0)… train it!") and the results card says what slowed you down.
+- Fair training: `node tools/ducks-minipay.js` models the six mini-games for three kinds of player.
+  Bug Snack paid ~2.7× the others, Paddle Power least. Per-game XP rate PAY (hurdles 0.9, paddle
+  1.25, rings 1.08, climb 0.87, bugs 0.4, maze 0.84) → struggling and casual players earn within
+  ~1.2× across the six games. Risk it! goals re-tuned per game (paddle 0.7, climb 0.7, bugs 0.8 up
+  to 50) so a casual player meets the goal 25-47% of the time in every game (model).
+- Non-gamers: an XP floor (a full run with 3+ points earns at least 40 base XP); quiet adaptive help
+  per player per game (a run under ~50 base XP adds a step, 80+ takes one away, up to 3: 8% slower
+  each and wider windows / more fingertip slop; never announced, never in Risk it!); the first run
+  of each game shows a 3-second animated fingertip "how to play" (the server says it is the first).
+- New landscape pieces: broken bridges (meadow, forest, night, candy, haunted) and river gaps
+  (beach, snow, swamp, jungle) to fly over, wind streaks on windy days; weak flyers dip and flap,
+  strong ones glide high. Cliffs are climbed hand over hand up steep walls with holds, vines
+  (forest, jungle), hay-bale stacks (meadow, haunted) or ladders (city walls, barns).
+- Old saves: levels and XP unchanged (the XP table did not change); missing assist/runs fill in.
+- Validation: test-box-ducks (37 tests, incl. season spread, season balance, per-game pay, floor,
+  quiet help, weak moments), test-box-kit, test-box, e2e-box; headless TV/phone screenshots of the
+  new walls, bridges, rivers, hints and the how-to hand checked. Limits: the mini-game pay and
+  Risk it! odds come from a model of the games, not from real players.
