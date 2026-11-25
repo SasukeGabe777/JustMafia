@@ -1144,7 +1144,7 @@ atest('helicopter travel (phone): stand on the pad, ask the pilot, board, lift o
     const list = []; s.extraStanding(list); assert(list.some((q) => q.k === 'heli'), 'drawn in the scene');
   });
 });
-test('flying rides (rare, timed, with HP): gunship, jetpack, hang-glider; up high you pass over walls and zombies can\'t reach you; the gunship fires down by itself; the glider never stops', () => {
+test('flying rides (rare, timed, with HP): gunship, hang-glider; up high you pass over walls and zombies can\'t reach you; the gunship fires down by itself; the glider never stops', () => {
   for (const k of ['gunship', 'jetpack', 'glider']) { const V = X.VEHICLES[k]; assert(V && V.fly && V.time > 0 && V.hp > 0, k); }
   let n = 0; for (let seed = 1; seed < 40; seed++) for (let x = 0; x < 9; x++) for (let y = 0; y < 9; y++) if (X.FLY.includes(X.vehicleAt(seed, x, y, []))) n++; assert(n > 30 && n < 300, 'rare: ' + n);
   const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.breakT = 9999; s.spawnCd = 999;
@@ -1155,9 +1155,6 @@ test('flying rides (rare, timed, with HP): gunship, jetpack, hang-glider; up hig
   const bump = s.makeZ('walker', s.p.x, s.p.y); bump.speed = 0; s.p.inv = 0; s.buffs.shield = 0; const hp0 = s.ride.hp, php = s.p.hp; s.contact(0.1); assert.equal(s.ride.hp, hp0); assert.equal(s.p.hp, php, 'zombies can\'t reach you up there');
   const wall = s.area.obstacles.find((o) => o.kind === 'bld' || o.kind === 'prop') || s.area.obstacles[0]; s.p.x = wall.x + wall.w / 2; s.p.y = wall.y + wall.h / 2; s.collide(s.p); assert.equal(s.p.x, wall.x + wall.w / 2, 'over the roofs');
   S.step(s, 20); assert(!s.ride, 'timed: out of fuel');
-  // the jetpack hops while you move
-  s.p.x = 600; s.p.y = 480; s.parked = { kind: 'jetpack', x: s.p.x, y: s.p.y, hp: 160, mhp: 160, face: 1 }; s.p.inv = 1e9; s.toggleRide(); let top = 0; for (let i = 0; i < 40; i++) { S.step(s, 1 / 60, { mx: 1, my: 0 }); top = Math.max(top, s.ride.alt); } assert(top > 50, 'a hop'); S.step(s, 1.2, {}); assert.equal(s.ride.alt, 0, 'lands when you stop');
-  s.toggleRide();
   // the glider keeps moving with no input
   s.p.x = 400; s.p.y = 480; s.parked = { kind: 'glider', x: s.p.x, y: s.p.y, hp: 150, mhp: 150, face: 1 }; s.toggleRide(); s.ride.head = 0; const gx = s.p.x; S.step(s, 0.6, {}); assert(s.p.x > gx + 100, 'soaring on'); S.step(s, 1, { mx: 0, my: 1 }); assert(s.ride.head > 0.8, 'steers toward the drag');
   s.reportStatus(true); assert.equal(S.reports.filter((r) => r.op === 'st').pop().veh, 'glider', 'friends see it');
@@ -1234,4 +1231,30 @@ test('wild gameplay: ice keeps your momentum, lava burns you and the zombies (no
   for (const f of ['play.html', 'tv.html']) assert(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', f), 'utf8').includes('trash-biome.js'), f + ' loads it');
 });
 
+test('the jetpack is a rare pickup: 10 s of fuel, fly anywhere (and shoot), melee can\'t reach you, spit still can, then you float down and land on open ground; friends see you fly', () => {
+  assert(W.PK.jetpack && W.PK.jetpack.dur === 10 && !W.PICKUPS.some((p) => p.id === 'jetpack'), 'a pickup, outside the usual drop table');
+  assert(!X.FLY.includes('jetpack'), 'not a ride you board'); for (let seed = 1; seed < 40; seed++) for (let x = 0; x < 9; x++) for (let y = 0; y < 9; y++) assert.notEqual(X.vehicleAt(seed, x, y, []), 'jetpack');
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.breakT = 9999; s.spawnCd = 999;
+  let n = 0; for (let i = 0; i < 400; i++) { s.pk.length = 0; s.dropPickup(500, 500); if (s.pk[0] && s.pk[0].k === 'jetpack') n++; } assert(n > 4 && n < 50, 'fairly rare: ' + n + '/400');
+  s.pk.length = 0; s.p.x = 600; s.p.y = 480; s.pk.push({ id: 99, k: 'jetpack', x: s.p.x, y: s.p.y, life: 20 }); S.step(s, 0.1); assert(s.jet && s.buffs.jetpack > 9.5, 'walk over it: strapped on');
+  S.step(s, 0.6); assert(s.jet.alt > 60 && s.airborne(), 'up in the air'); assert(!s.ride, 'not a vehicle');
+  // walls don't stop you, melee can't reach you, you can shoot
+  const z = s.makeZ('walker', s.p.x, s.p.y); z.speed = 0; s.p.inv = 0; s.buffs.shield = 0; const hp0 = s.p.hp; s.contact(0.1); assert.equal(s.p.hp, hp0, 'no melee in the air');
+  const z2 = s.makeZ('walker', s.p.x + 200, s.p.y); z2.speed = 0; const shots0 = s.shotN || 0; S.step(s, 0.5, { ax: 1, ay: 0 }); assert((s.shotN || 0) > shots0, 'you can shoot while flying'); s.z.length = 0;
+  s.spit.push({ x: s.p.x + 5, y: s.p.y, vx: 0, vy: 0, life: 1, dmg: 7 }); s.p.inv = 0; const hp1 = s.p.hp; S.step(s, 0.05); assert(s.p.hp < hp1, 'spit still hits you up there');
+  const wall = s.area.obstacles.find((o) => o.kind === 'bld') || s.area.obstacles.find((o) => o.kind !== 'wall'); s.p.x = wall.x + wall.w / 2; s.p.y = wall.y + wall.h / 2; s.collide(s.p); assert.equal(s.p.x, wall.x + wall.w / 2, 'over the roofs');
+  s.reportStatus(true); assert.equal(S.reports.filter((r) => r.op === 'st').pop().veh, 'jetpack', 'friends see you fly');
+  // fuel: 10 s in all, then ~1.25 s of floating down; you land on open ground even if you were over a building
+  s.p.inv = 1e9; S.step(s, 8.6); assert(s.jet && !s.jet.fall, 'still flying near the end of the fuel'); S.step(s, 0.6); assert(s.jet && s.jet.fall, 'out of fuel: floating down');
+  s.p.x = wall.x + wall.w / 2; s.p.y = wall.y + wall.h / 2; S.step(s, 1.4); assert(!s.jet, 'down');
+  for (const o of s.area.obstacles) if (!o.low) assert(!(s.p.x + s.p.r > o.x && s.p.x - s.p.r < o.x + o.w && s.p.y + s.p.r > o.y && s.p.y - s.p.r < o.y + o.h), 'landed on open ground, not on the ' + o.kind);
+  assert(S.events.some(([k, d]) => k === 'jet' && d && d.on === false) && S.events.some(([k]) => k === 'land'), 'the sputter and the landing');
+});
+test('the class picker is a jukebox wheel: swipe / arrows / keys spin it, locked classes show their price and cannot be picked', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-wheel.js'), 'utf8'), t = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash.js'), 'utf8');
+  for (const k of ['rotateY', 'pointerdown', 'ArrowLeft', 'Enter', 'vibrate', 'locked']) assert(src.includes(k), 'wheel: ' + k);
+  assert(t.includes('if (window.TZWheel) return classWheel(sim, owned, party, can);') && t.includes("'PLAY AS ' + it.name.toUpperCase()"), 'classUi uses it');
+  assert(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'play.html'), 'utf8').includes('trash-wheel.js'));
+  assert(fs.readFileSync(path.join(__dirname, 'e2e-trash-touch.js'), 'utf8').includes('dispatchTouchEvent'), 'real-tap checks: tools/e2e-trash-touch.js');
+});
 Promise.all(pending).then(() => console.log(`\n${passed} JustZombies tests passed.`));

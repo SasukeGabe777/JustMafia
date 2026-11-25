@@ -289,6 +289,7 @@
   }
   function showCard(html, cls) {
     if (!PH.root) return;
+    if (PH.overlay === 'class') { setTimeout(() => showCard(html, cls), 1200); return; } // (not over the class wheel: after it)
     let c = PH.root.querySelector('.tz-rcard'); if (!c) { c = document.createElement('div'); c.className = 'tz-rcard'; PH.root.appendChild(c); }
     c.className = 'tz-rcard show ' + (cls || ''); c.innerHTML = html; clearTimeout(PH.cardT); PH.cardT = setTimeout(() => c.classList.remove('show'), cls === 'radio' ? 7000 : 4500);
   }
@@ -319,9 +320,17 @@
   // iPhone Safari has no Fullscreen API: the web app manifest makes a Home Screen icon open without bars.
   function iosHint(force) {
     if (!isIOS() || standalone() || (!force && PH.iosHinted)) return; PH.iosHinted = true;
-    showCard('<span class="tz-rc-i">📲</span><div><small>FULL SCREEN ON IPHONE</small><b>Tap Share → Add to Home Screen for full screen</b><p>Then open JustGameBox from your home screen: no browser bars.</p></div>', 'find');
+    let seen = false; try { seen = localStorage.getItem('jz-iostip') === '1'; } catch (e) { seen = false; } if (seen && !force) return;
+    try { localStorage.setItem('jz-iostip', '1'); } catch (e) { /* private mode */ }
+    if (!PH.root) return; let t = PH.root.querySelector('.tz-iostip'); if (t) t.remove();
+    t = document.createElement('div'); t.className = 'tz-iostip'; t.innerHTML = '📲 Full screen: Share → Add to Home Screen <button aria-label="Close">✕</button>'; PH.root.appendChild(t);
+    const close = (e) => { if (e) e.stopPropagation(); t.remove(); }; t.querySelector('button').onclick = close; t.addEventListener('pointerdown', (e) => e.stopPropagation()); setTimeout(close, 9000);
   }
   document.addEventListener('fullscreenchange', () => fsButton()); document.addEventListener('webkitfullscreenchange', () => fsButton());
+  // no pinch-zoom or double-tap zoom on the game (iPhone Safari ignores user-scalable=no)
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => { if (document.body.classList.contains('tz-playing')) e.preventDefault(); }, { passive: false });
+  document.addEventListener('dblclick', (e) => { if (document.body.classList.contains('tz-playing')) e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove', (e) => { if (document.body.classList.contains('tz-playing') && e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
   // ---------- the game root (full screen, kept between updates) ----------
   function ensureRoot(el) {
     if (PH.root && el.contains(PH.root)) return PH.root;
@@ -803,11 +812,29 @@
   function classUi() {
     const sim = PH.sim, R = window.TZR; if (!sim || sim.cls || sim.dead || PH.overlay === 'class') return;
     const owned = (sim.load && sim.load.classes) || [], party = !!(PH.v && PH.v.party), can = (id) => !R.CLASSES[id].locked || owned.includes(id);
+    if (window.TZWheel) return classWheel(sim, owned, party, can);
     const ov = setOverlay(`<div class="tz-class"><h2>Pick your survivor</h2><div class="tz-clist">${Object.entries(R.CLASSES).filter(([id, C]) => can(id) || !party).map(([id, C]) => can(id) ? `<button class="tz-copt ${C.locked ? 'unl' : ''}" data-cls="${id}"><span>${C.icon}</span><b>${esc(C.name)}</b><small>${esc(C.desc)}</small></button>` : `<button class="tz-copt locked" disabled><span>🔒</span><b>${esc(C.name)}</b><small>Unlock it with scrap (pause menu → 🔓 Unlocks)</small></button>`).join('')}</div>${party ? '<p class="tz-mut">🎉 Party Mode: everyone starts equal (no unlocks).</p>' : ''}<p class="tz-mut">${sim.mode === 'solo' ? 'The game waits.' : 'You can’t be hurt while you pick.'}</p></div>`, 'class');
     if (!ov) return;
     const pick = (id) => { if (sim.setClass(id)) { setOverlay(''); if (PH.ctx) PH.ctx.haptic('select'); } };
     for (const b of ov.querySelectorAll('[data-cls]')) b.onclick = (e) => { e.stopPropagation(); pick(b.dataset.cls); };
     clearTimeout(PH.clsT); PH.clsT = setTimeout(() => { if (PH.sim === sim && !sim.cls && PH.overlay === 'class') { const L = Object.keys(R.CLASSES).filter(can); pick(L[Math.floor(Math.random() * L.length)]); } }, 25000);
+  }
+  // the survivor class picker: a jukebox wheel (trash-wheel.js). Swipe / drag / arrows / keys spin it, every notch
+  // clicks; the card in front says what the class does; PLAY AS picks; locked classes show their scrap price.
+  const CLASS_MORE = { medic: ['🩹 Heals as you go', 'Playstyle: stay alive, keep the team up'], demo: ['💣 Starts with 2 bomb charges', 'Playstyle: crowds go boom'], brawler: ['🏏 Starts with the Nail Bat', 'Playstyle: up close and tough'],
+    sharp: ['🎯 Crits and range', 'Playstyle: pick them off from afar'], scav: ['🦝 Cash, pickups, magnet', 'Playstyle: loot everything'], tinker: ['🗼 Starts with 2 turret kits', 'Playstyle: set up and hold'],
+    sparky: ['⚡ Starts with the Lightning Coil', 'Playstyle: chain the shocks'], chef: ['🔥 Starts with the Hairspray Torch', 'Playstyle: burn and heal'], janitor: ['🧹 Zombies slip near you', 'Playstyle: slow them, outlast them'], courier: ['📮 +20% speed, tougher rides', 'Playstyle: always on the move'] };
+  function classWheel(sim, owned, party, can) {
+    const R = window.TZR, X = window.TZX, ids = Object.keys(R.CLASSES).filter((id) => can(id) || !party);
+    const hero = (window.BOX && BOX.body && sim.me) ? BOX.body({ ...sim.me, bot: true }, 120, { mood: 'grin' }) : '';
+    const items = ids.map((id) => { const C = R.CLASSES[id], ok = can(id), U = X && X.UNLOCK && X.UNLOCK['cls:' + id], ab = (C.bias || []).map((b) => window.TZW.AB[b] && window.TZW.AB[b].icon + ' ' + window.TZW.AB[b].name).filter(Boolean).slice(0, 3).join(' · ');
+      return { id, icon: C.icon, name: C.name, sub: C.desc.split('.')[0], locked: !ok, cost: U ? U.cost : 0, art: hero ? `<span class="jz-hero">${hero}<i>${C.icon}</i></span>` : C.icon,
+        lines: [esc(C.desc), ...(CLASS_MORE[id] || []).map(esc), ab ? 'Levels up best with: ' + esc(ab) : ''].filter(Boolean).concat(ok ? [] : ['🔒 Unlock it with scrap: pause menu → 🔓 Unlocks']) }; });
+    const ov = setOverlay('<div class="jz-host"></div>', 'class'); if (!ov) return;
+    let W2 = null; const pick = (it) => { if (it.locked) return; if (sim.setClass(it.id)) { if (W2) W2.destroy(); setOverlay(''); if (PH.ctx) PH.ctx.haptic('select'); try { if (window.TZSnd) TZSnd.play('sfx.level.up', 0.3); } catch (e) { /* quiet */ } } };
+    W2 = PH.wheel = window.TZWheel.mount(ov.querySelector('.jz-host'), items, { start: Math.max(0, items.findIndex((it) => !it.locked)), title: '🎵 Pick your survivor 🎵', go: (it) => 'PLAY AS ' + it.name.toUpperCase(), onPick: pick,
+      tick: () => { try { if (window.TZSnd) TZSnd.play('sfx.ui.click', 0.22, { gap: 25, jitter: 0.1 }); } catch (e) { /* quiet */ } } });
+    clearTimeout(PH.clsT); PH.clsT = setTimeout(() => { if (PH.sim === sim && !sim.cls && PH.overlay === 'class') { const it = W2.item(); pick(it.locked ? items.find((q) => !q.locked) : it); } }, 30000);
   }
   function toggleMenu(force) {
     const sim = PH.sim; if (!sim || sim.dead) return;
@@ -948,7 +975,7 @@
       clear() { const s = PH.sim; s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; return true; },
       god(on) { PH.sim.p.inv = on ? 1e9 : 0; return true; }, kill() { const s = PH.sim; s.p.inv = 0; s.buffs.shield = 0; s.p.armor = 0; s.p.lives = 0; s.p.hp = 1; s.hurt(999); return s.dead; },
       walk(dir) { const s = PH.sim; s.cleared = true; s.leave(dir); return s.cell.join(','); },
-      view: () => PH.v, pads() { return window.TZX.helipads(PH.sim.seed); },
+      wheel: () => PH.wheel, btns: () => PH.btns, view: () => PH.v, pads() { return window.TZX.helipads(PH.sim.seed); },
       // walk block by block (open roads only) to the nearest helipad; then stand on it
       async goPad() { const s = PH.sim, Z = W(), N = Z.GRID, LK = PH.v && PH.v.locks, pads = new Set(window.TZX.helipads(s.seed).map((p) => p.join(','))), open = (x, y) => !LK || !(LK.req[y * N + x] > LK.kills);
         const prev = new Map([[s.cell.join(','), null]]), q = [s.cell.slice()]; let end = pads.has(s.cell.join(',')) ? s.cell.join(',') : null;
@@ -1035,7 +1062,7 @@
       'Hop into shopping carts, push mowers and ride-on mowers (V or the button), grab the rare garbage truck or the even rarer tank. Every ride is on a clock (the ring over it): when it runs out, or it gets wrecked, you hop out. Escort hiding survivors to a shop or the clinic. Rain, fog and heat waves change the fight.',
       'The map is different every run: a few town blocks, and all around them the countryside (open fields, tall corn that hides zombies, hay bales for cover), the frozen north (slippery ice, frozen zombies that shatter, blizzards) and volcano land (lava burns, ember zombies, eruptions: get out of the red rings!). The Volcano Crater and the Frozen Fortress are the toughest blocks of all.',
       '🚁 Helipads: a few hide around town (some in the tougher, locked blocks). Find one and the whole team sees it on the map. Stand on it, tap FLY and pick ANY block the team has explored: the chopper flies you there and drops you off on a rope. Then the pilot refuels for a while (longer in Score attack).',
-      'Rare flying rides: the Gunship (its chain gun and rockets fire down by themselves), the Jetpack (short hops over zombies and walls) and the Hang-Glider (always moving, you shoot as you soar). Up high, walls can’t stop you and zombies can’t reach you, but each is on a clock and has its own health.',
+      '🎒 The rare Jetpack pickup: walk over it and it straps on. 10 seconds of fuel (the ring by you): fly anywhere with the usual controls, faster, and keep shooting; melee can’t reach you up there (spit and other thrown stuff still can). When it runs dry you float down and land on open ground. Rare flying rides: the Gunship (its chain gun and rockets fire down by themselves) and the Hang-Glider (always moving, you shoot as you soar). Up high, walls can’t stop you and zombies can’t reach you, but each is on a clock and has its own health.',
       'Down, out or just watching? Your phone helps: drop supply crates, vote on the next event, or (Score attack) send a horde at the leader. Scrap from every night unlocks classes, starting weapons, outfits and harder tiers (not in Party Mode).',
     ],
     fx: { start: 'start' },

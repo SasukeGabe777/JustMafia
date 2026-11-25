@@ -94,7 +94,7 @@
   // ---------------- flying rides ----------------
   const flyV = (r) => (r && X.VEHICLES[r.kind] && X.VEHICLES[r.kind].fly ? X.VEHICLES[r.kind] : null);
   proto.flying = function () { return flyV(this.ride) ? this.ride : null; };
-  proto.airborne = function () { const r = this.flying(); return !!(r && (r.alt || 0) > 25); };
+  proto.airborne = function () { const r = this.flying(); return !!((r && (r.alt || 0) > 25) || (this.jet && this.jet.alt > 25)); };
   const baseEnterRide = proto.enterRide;
   proto.enterRide = function (v) {
     const out = baseEnterRide.call(this, v), r = this.ride, V = flyV(r);
@@ -152,5 +152,38 @@
   // the run save carries the cooldown
   const baseSave = proto.saveData;
   if (baseSave) proto.saveData = function () { const d = baseSave.call(this); if (d) d.heliAt = this.heliAt || 0; return d; };
-  window.TZHeli = { PH };
+  // ---------------- the jetpack (a rare pickup) ----------------
+  // Walk over it: it straps on (the hero's quick grab). 10 s of fuel (the ring by you, the HUD timer): fly freely with
+  // the walking controls, faster, shooting as usual, over walls, cars and hordes; melee / contact can't reach you up
+  // there, but spit (spitters, the Sludge-type bosses' globs: anything thrown) still can. When it runs dry you float
+  // down over ~1.25 s (you can steer a little) and land on open ground (never inside a wall: nudged out), dust puff.
+  const JET = { alt: 75, speed: 1.5, fall: 1.25, fallSpeed: 0.45, drop: 0.04 };
+  proto.jetAlt = function () { return this.jet ? this.jet.alt : 0; };
+  const baseDrop = proto.dropPickup;
+  proto.dropPickup = function (x, y) { if (this.rng() < JET.drop && !(this.pk || []).some((p) => p.k === 'jetpack')) { this.pk.push({ id: this.pkid++, k: 'jetpack', x: clamp(x, 60, W.AW - 60), y: clamp(y, 60, W.AH - 60), life: 22 }); return; } return baseDrop.call(this, x, y); };
+  const baseApply = proto.applyPickup;
+  proto.applyPickup = function (k) { const out = baseApply.call(this, k); if (k === 'jetpack') { this.jet = this.jet || { alt: 0 }; this.jet.fall = false; this.banner = { text: '🎒 JETPACK!', sub: '10 seconds of fuel: fly over everything', t: 2 }; this.o.on('jet', { on: true }); } return out; };
+  // open ground nearest to (x, y) for a body of radius r
+  proto.openSpot = function (x, y, r) {
+    const hit = (px, py) => px < r || py < r || px > W.AW - r || py > W.AH - r || this.area.obstacles.some((o) => !o.low && px + r > o.x && px - r < o.x + o.w && py + r > o.y && py - r < o.y + o.h);
+    if (!hit(x, y)) return { x, y };
+    for (let d = 20; d < 700; d += 20) for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2, px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; if (!hit(px, py)) return { x: px, y: py }; }
+    return { x: this.area.hub.x, y: this.area.hub.y };
+  };
+  proto.jetStep = function (dt) {
+    const J = this.jet, P = this.p, B = this.buffs; if (!J) return;
+    if (this.dead || this.ride || this.heli) { this.jet = null; B.jetpack = 0; return; }
+    if (B.jetpack > 0 && !J.fall) {
+      J.alt += (JET.alt - J.alt) * Math.min(1, dt * 4); this.speedMul = (this.speedMul || 1) * JET.speed;
+      if (this.fx.length < 200 && Math.random() < 0.6) this.fx.push({ k: 's', x: P.x + (this.rng() - 0.5) * 10, y: P.y + 4, h: Math.max(0, J.alt - 20), r: 9 + this.rng() * 6, t: 0, life: 0.8, a: 0.35, c: '#8a8580' });
+    } else if (!J.fall) { J.fall = true; J.t = 0; J.a0 = J.alt; this.banner = { text: '🎒 OUT OF FUEL', sub: 'Floating down…', t: 1.4 }; this.o.on('jet', { on: false }); }
+    if (J.fall) {
+      J.t += dt; const u = Math.min(1, J.t / JET.fall); J.alt = J.a0 * (1 - u * u * (3 - 2 * u)); this.speedMul = (this.speedMul || 1) * JET.fallSpeed;
+      if (u >= 1) { this.jet = null; const q = this.openSpot(P.x, P.y, P.r + 2); P.x = q.x; P.y = q.y; P.inv = Math.max(P.inv, 0.3);
+        for (let i = 0; i < 8; i++) this.fx.push({ k: 's', x: P.x + (this.rng() - 0.5) * 50, y: P.y, r: 12 + this.rng() * 10, t: 0, life: 0.7, a: 0.45, c: '#b8a890' }); this.o.on('land', {}); }
+    }
+  };
+  const baseRide2 = proto.rideStep;
+  proto.rideStep = function (dt) { baseRide2.call(this, dt); this.jetStep(dt); };
+  window.TZHeli = { PH, JET };
 })();

@@ -12366,6 +12366,12 @@
    "seconds": 1.3,
    "loop": false,
    "source": "justzombies-synth"
+  },
+  "sfx.jet.sputter": {
+   "file": "sfx/jet-sputter.wav",
+   "seconds": 1.1,
+   "loop": false,
+   "source": "justzombies-synth"
   }
  },
  "ui": {

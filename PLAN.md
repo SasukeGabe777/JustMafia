@@ -2224,3 +2224,39 @@ TrashZombies is now **JustZombies** (internal key stays `trash`, no file renames
   ~8.9 ms in a heavier night/rain scene).
 - Limits: the farm/lodge shops reuse the town shops' buildings; no animals; the blizzard and eruptions are phone-local
   (each area host's phone runs its own); snow/ash tiles are procedural rather than ambientCG photos.
+
+## JustZombies: the jukebox class wheel, the jetpack pickup, real-tap checks, mobile full screen (claude/justzombies-heli, November 25, 2026)
+
+- **Class picker = a jukebox wheel** (`public/box/games/trash-wheel.js`, TZWheel; classUi -> classWheel in trash.js): the
+  classes sit on a CSS 3D drum (rotateY), the chosen one big and lit in front, the neighbours curving away smaller
+  and darker; a chrome rim, warm neon, record-label cards with your own hero on the disc and the class badge.
+  Swipe / drag with momentum and a snap to the notch, tap a neighbour, the arrow buttons, the left / right keys or
+  the mouse wheel; every notch ticks (the UI click + a light vibrate). The info line says what the class does, its
+  starting gear and playstyle and which abilities it levels best with; PLAY AS <class> (or Enter) picks; locked
+  classes are greyed with a lock and their scrap price and can't be picked. Landscape, portrait and PC sizes. The
+  radio message waits until the wheel is closed. (The unlocks screen kept its list: a wheel didn't make choosing a
+  starting weapon or tier quicker there.)
+- **Jetpack = a rare pickup** (`trash-heli.js` jetStep; `TZW.PK.jetpack`, outside the usual drop table: ~4% of
+  drops): it straps on with the hero's grab, 10 s of fuel (a fuel ring by the hero, the HUD timer), fly freely with
+  the walking controls 1.5x faster and keep shooting, over walls, cars and hordes; height + shadow; smoke trail and
+  flame jets; contact / melee can't reach you up there, but thrown things (spitter spit and every other glob or
+  projectile, bosses' included) still hit. Out of fuel: a sputter, a little chute, ~1.25 s float down (steerable at
+  half speed), a dust puff, and you land on the nearest open ground (never inside a wall). Friends see you fly (the
+  snapshot's ride field). Our own synthesized jet loop and sputter. The jetpack is no longer a ride you board.
+- **Real taps** (`tools/e2e-trash-touch.js`, `npm run e2e-trash-touch`): an 844x390 touch-emulated iPhone (mobile
+  UA) taps with Input.dispatchTouchEvent and checks that each control is the element under the finger and gets the
+  tap: the class wheel (and a swipe spins it), the level-up cards, a shop buy button, the canvas OPEN button for a
+  chest, the helipad map picker (a block, then FLY), the build panel, the helper panel, the full-screen tip.
+  The TV/phone CSS clash (`.tz-cards`, fixed on main by scoping it to `.tz-tv`) was the only shared class with a
+  pointer-events / position rule; the TV's other classes (rows, chips, kill feed, boss / recap cards, spotlight) are
+  not used by the phone.
+- **Mobile full screen:** Android keeps the Fullscreen API + landscape lock (the button comes back whenever you leave
+  full screen and re-enters). iPhone Safari (no element Fullscreen API): viewport-fit=cover, the game root sized to
+  100dvh and kept clear of the notch (the strips stay dark), no page scroll / bounce, no pinch or double-tap zoom
+  (gesture events and multi-touch moves are blocked on the game), and the Add to Home Screen hint is now a small
+  one-time tip at the top with a close button (the ⛶ button shows it again).
+- Validation: test-box-trash 90 (new: the jetpack: rarity, 10 s of fuel, no melee in the air, spit still hits,
+  shooting while flying, the descent, landing on open ground, friends see it; the wheel wiring), e2e-trash-touch
+  (10 real-tap checks), test-box-kit, test-box, test-box-party, e2e-box. Screenshots looked at: the wheel settled,
+  mid-spin and on a locked class (iPhone landscape), portrait, PC; the jetpack on the ground, flying with the fuel
+  ring, floating down; the iPhone tip.

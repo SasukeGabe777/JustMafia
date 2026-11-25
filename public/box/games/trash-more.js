@@ -410,10 +410,10 @@
       const out = {}; if (!this._mo) return out;
       if (this.kfq.length) { const agg = new Map(); for (const [ti, el, b] of this.kfq) { const k = ti + ':' + el; const a = agg.get(k) || [ti, 0, el, b]; a[1]++; agg.set(k, a); } out.kf = [...agg.values()].slice(0, 20); this.kfq.length = 0; }
       if (this.build) out.gdoor = Math.max(0, Math.round(this.build.door.hp));
-      out.veh = this.ride ? this.ride.kind : '';
+      out.veh = this.ride ? this.ride.kind : this.jet ? 'jetpack' : '';
       return out;
     },
-    youExtra() { if (!this._mo) return []; const N = this.npc; return [Math.max(0, VK.indexOf(this.ride ? this.ride.kind : '')), Math.max(0, FITS.indexOf(this.fit || '')), N ? Math.round(N.x) : -1, N ? Math.round(N.y) : -1, N ? Math.round(N.hp) : 0]; },
+    youExtra() { if (!this._mo) return []; const N = this.npc; return [Math.max(0, VK.indexOf(this.ride ? this.ride.kind : this.jet ? 'jetpack' : '')), Math.max(0, FITS.indexOf(this.fit || '')), N ? Math.round(N.x) : -1, N ? Math.round(N.y) : -1, N ? Math.round(N.hp) : 0]; },
     otherExtra(o, you) {
       o.veh = VK[you[12]] || null; o.fit = FITS[you[13]] || null;
       if (you[14] >= 0 && you[14] != null) { if (!o.npc) o.npc = { x: you[14], y: you[15], tx: you[14], ty: you[15], hp: you[16], mhp: X.SURV_HP, other: o.id }; o.npc.tx = you[14]; o.npc.ty = you[15]; o.npc.hp = you[16]; o.npc.x += (o.npc.tx - o.npc.x) * 0.5; o.npc.y += (o.npc.ty - o.npc.y) * 0.5; } else o.npc = null;

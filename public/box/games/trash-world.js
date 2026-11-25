@@ -360,6 +360,8 @@
     { id: 'scope', icon: '🔭', name: 'Lookout Binoculars', dur: 20, color: '#9fd8ff', desc: 'See way further for 20 seconds.' },
   ];
   const PK = Object.fromEntries(PICKUPS.map((p) => [p.id, p]));
+  // a rare one, outside the usual drop table: the jetpack (trash-heli.js: 10 s of flight, then you float down)
+  PK.jetpack = { id: 'jetpack', icon: '🎒', name: 'Jetpack', dur: 10, color: '#ff7a2a', rare: true, desc: 'Strap it on: fly over everything for 10 seconds (you can shoot), then float back down.' };
 
   // ---------------- zombies + waves ----------------
   const ZOMBIES = {

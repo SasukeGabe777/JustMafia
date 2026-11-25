@@ -53,10 +53,10 @@
     // flying rides (rare): over walls and cars; zombies can't reach you while you're up (spit still can).
     // alt: how high (world units); gun: the gunship's chain gun + rockets; hop: the jetpack's hops; glide: always moving.
     gunship: { icon: '🚁', name: 'Gunship', speed: 1.25, hp: 520, r: 46, time: 18, fly: true, alt: 110, gun: { rate: 9, dmg: 1.6, range: 620, rocket: 1.4, rad: 120, rdmg: 70 }, desc: 'Rare! Fly over the walls and rain fire on them. 18 seconds of fuel.' },
-    jetpack: { icon: '🎒', name: 'Jetpack', speed: 1.4, hp: 160, r: 22, time: 16, fly: true, hop: 0.7, alt: 80, desc: 'Rare! Short hops over zombies and walls. 16 seconds of fuel.' },
+    jetpack: { icon: '🎒', name: 'Jetpack', speed: 1.5, hp: 160, r: 22, time: 10, fly: true, alt: 75, pickup: true, desc: 'A rare pickup (not a ride): 10 seconds of flight.' }, // (only how friends see you fly: trash-heli.js)
     glider: { icon: '🪁', name: 'Hang-Glider', speed: 1.75, hp: 150, r: 30, time: 16, fly: true, glide: true, alt: 90, desc: 'Rare! Soar over everything, always moving, guns blazing. 16 seconds of wind.' },
   };
-  const FLY = Object.keys(VEHICLES).filter((k) => VEHICLES[k].fly);
+  const FLY = Object.keys(VEHICLES).filter((k) => VEHICLES[k].fly && !VEHICLES[k].pickup); // the flying rides you board (the jetpack is a pickup)
   // ---------------- helipads ----------------
   // A few per map (seeded: every phone agrees), spread out, some far out in the harder (kill-locked) blocks.
   // Found by exploring (shared on the team's map); stand on one to fly to ANY block the team has explored.
@@ -89,7 +89,7 @@
     if ((homes || []).some((h) => h[0] === x && h[1] === y)) return null;
     const h = W.hash(seed, 'veh', x, y) % 100, b = W.biomeOf(seed, x, y).key;
     if (h >= 97) return 'tank'; // rare
-    if (h >= 94) return FLY[h - 94]; // rare: a gunship, a jetpack or a hang-glider
+    if (h >= 95) return FLY[h - 95]; // rare: a gunship or a hang-glider
     if (CART_AT.includes(b) && h < 45) return 'cart';
     if (MOWER_AT.includes(b) && h < 45) return h % 3 === 0 ? 'push' : 'mower';
     return h < 10 ? (h < 5 ? 'cart' : 'mower') : null;

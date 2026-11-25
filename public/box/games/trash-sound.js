@@ -76,6 +76,8 @@
       case 'weapon': case 'upgrade': case 'item': play('sfx.pickup', 0.3); break;
       case 'debuff': play('sfx.slime', 0.3, { gap: 400 }); break;
       case 'tick': play('sfx.ui.click', 0.25, { gap: 300 }); break;
+      case 'jet': if (!d.on) play('sfx.jet.sputter', 0.35); break;
+      case 'land': play('sfx.crate.break', 0.15, { rate: 1.4 }); break;
       case 'erupt': play('sfx.explosion.b', 0.45, { rate: 0.6 }); play('sfx.engine.heavy', 0.2, { rate: 0.5 }); break;
       default: break;
     }
@@ -118,7 +120,7 @@
     const hp = sim.heliPose && sim.heliPose(), fo = sim.flyover, rk = r && r.kind;
     const rotorV = (hp ? (hp.flying ? 0.3 : 0.26) : 0) + (fo ? 0.2 * (1 - Math.min(1, fo.t / fo.T)) : 0) + (rk === 'gunship' ? 0.2 : 0);
     loop('rotor', 'sfx.heli.rotor.loop', !sim.paused && !sim.dead ? Math.min(0.32, rotorV) : 0, hp && hp.flying ? 1.08 : 1);
-    loop('jet', 'sfx.jet.loop', rk === 'jetpack' && !sim.paused && !sim.dead ? 0.08 + Math.min(0.12, (r.alt || 0) / 500) : 0, 0.9 + Math.min(0.3, (r && r.alt || 0) / 300));
+    const jet = sim.jet && !sim.jet.fall; loop('jet', 'sfx.jet.loop', jet && !sim.paused && !sim.dead ? 0.16 : 0, 1.05);
     // the wild realms' ambience (our own synthesized loops): wind up north, lava in volcano land, birds in the country (and a cow now and then)
     const rl = sim.area && sim.area.realm, amb = rl === 'frozen' ? 'sfx.wind.loop' : rl === 'volcano' ? 'sfx.lava.loop' : rl === 'country' ? 'sfx.birds.loop' : '';
     loop('amb', amb, amb && !sim.paused && !sim.dead && sim.phase === 'play' ? (rl === 'frozen' && sim.blizzard && sim.blizzard() ? 0.2 : 0.1) : 0, 1);

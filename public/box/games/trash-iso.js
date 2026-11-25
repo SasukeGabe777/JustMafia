@@ -414,7 +414,7 @@
     let fx0 = P.x, fy0 = P.y; if (intro && G) { fx0 = G.x + G.w / 2; fy0 = Math.max(G.y + G.h * 0.7, P.y - 20); }
     const sh = sim.shake > 0 ? sim.shake * 22 * V.k : 0;
     // (up in the air: a gunship, a glider, the helicopter: the camera looks at the ride, up where it flies)
-    const fr0 = sim.flying && sim.flying(), hp0 = sim.heliPose && sim.heliPose(), camAlt = fr0 && fr0.kind !== 'jetpack' ? fr0.alt || 0 : hp0 ? (hp0.inside ? hp0.alt : hp0.heroAlt || 0) : 0;
+    const fr0 = sim.flying && sim.flying(), hp0 = sim.heliPose && sim.heliPose(), camAlt = fr0 && fr0.kind !== 'jetpack' ? fr0.alt || 0 : hp0 ? (hp0.inside ? hp0.alt : hp0.heroAlt || 0) : sim.jetAlt ? sim.jetAlt() * 0.7 : 0;
     Object.assign(C, { s, k: V.k, dpr: V.dpr, w: V.w, h: V.h, cx: isoX(fx0, fy0), cy: isoY(fx0, fy0) - 34 - camAlt * HZ * 0.8, sx: sh ? (Math.random() - 0.5) * sh : 0, sy: sh ? (Math.random() - 0.5) * sh : 0 });
     sim.cam = C; TZI.cam = C;
     const dt = Math.min(0.1, Math.max(0, t - (sim._isoT == null ? t : sim._isoT))); sim._isoT = t;
@@ -462,7 +462,7 @@
     const spin = (key, x, y, k, bob = 4, glow) => { const [X, Y] = C.toScreen(x, y); if (glow) { setScreen(g); const R = 34 * s * k; const gr = g.createRadialGradient(X, Y - 10 * s, 1, X, Y - 10 * s, R); gr.addColorStop(0, glow); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(X - R, Y - 10 * s - R, R * 2, R * 2); g.globalCompositeOperation = 'source-over'; } sprite(g, key, 'spin', 'S', Math.floor(t * 10 + x * 0.01), X, Y - (Math.sin(t * 4 + x) * bob + bob) * s, s * k); };
     for (const q2 of sim.gems) if (vis(q2.x, q2.y)) spin(q2.v >= 3 ? 'pickup.xp.pink' : q2.v >= 2 ? 'pickup.xp.green' : 'pickup.xp', q2.x, q2.y, 0.7, 3);
     for (const c of sim.coins || []) if (vis(c.x, c.y)) spin('pickup.coins', c.x, c.y, 0.55, 2);
-    for (const p of sim.pk) if (vis(p.x, p.y)) { const Pk = Z.PK[p.k]; g.globalAlpha = p.life < 4 ? (Math.sin(t * 16) > 0 ? 1 : 0.35) : 1; spin('pickup.' + p.k, p.x, p.y, 1.15, 5, Pk ? hexA(Pk.color, 0.55) : null); g.globalAlpha = 1; }
+    for (const p of sim.pk) if (vis(p.x, p.y)) { const Pk = Z.PK[p.k]; g.globalAlpha = p.life < 4 ? (Math.sin(t * 16) > 0 ? 1 : 0.35) : 1; spin(p.k === 'jetpack' ? 'fly.jetpack' : 'pickup.' + p.k, p.x, p.y, p.k === 'jetpack' ? 1.4 : 1.15, 5, Pk ? hexA(Pk.color, 0.55) : null); g.globalAlpha = 1; }
     for (const d of sim.drops || []) if (vis(d.x, d.y)) spin(d.k === 'core' ? 'pickup.core' : 'pickup.ammo.crate', d.x, d.y, 1.1, 5, d.k === 'core' ? 'rgba(255,110,40,0.6)' : 'rgba(127,214,255,0.55)');
     if (sim.mapItem) spin('pickup.map', sim.mapItem.x, sim.mapItem.y, 1.3, 5, 'rgba(255,220,120,0.6)');
     // ---- everything that stands, sorted by depth (x + y) ----
@@ -687,6 +687,8 @@
     }
     setScreen(g); g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(X + 5 * s, Y + 1 * s, 22 * s, 9 * s, 0, 0, TAU); g.fill();
     const kp = Math.max(0.2, Math.round(s * HB * C.dpr * 10) / 10), F0 = P.face; P.face = face;
+    const jalt = sim.jetAlt ? sim.jetAlt() : 0; sim._heroZ = jalt;
+    if (jalt > 0.5) return drawJetYou(g, sim, P, aS, face, X, Y, kp, t, jalt, F0);
     try {
       setBill(g, P.x, P.y, 0, HB);
       if (sim.dead) { TS.heroDraw(g, sim.me, P.x, P.y, { k: kp, dead: true, face }); return; }
@@ -763,12 +765,27 @@
       if (Q.swing && melee) H.melee(g, melee.id, Hh, Q.swing.a, Q.swing.u, K, melee.tier, t);
       setScreen(g); H.hand(g, Hh, AL, K);
     };
-    const drawBody = () => { setBill(g, P.x, P.y, 0, HB); TS.heroDraw(g, sim.me, P.x, P.y, { k: kp, moving, walkT: P.walkT, face, hurt: P.inv > 0.4, alpha, noArms: true, dx: Q.body.dx / s, dy: Q.body.dy / s, lean: Q.body.lean, sq: Q.body.sq }); };
+    const drawBody = () => { setBill(g, P.x, P.y, sim._heroZ || 0, HB); TS.heroDraw(g, sim.me, P.x, P.y, { k: kp, moving, walkT: P.walkT, face, hurt: P.inv > 0.4, alpha, noArms: true, dx: Q.body.dx / s, dy: Q.body.dy / s, lean: Q.body.lean, sq: Q.body.sq }); };
     if (Q.behind) { drawGunArms(); drawBody(); drawFree(); } else { drawBody(); drawGunArms(); drawFree(); }
     // a quick grab: a flash at the hand
     if (Q.flash) { setScreen(g); const col = FLASH[Q.flash.k] || '#ffd23f', u = Q.flash.u; g.globalCompositeOperation = 'lighter'; g.globalAlpha = (1 - u) * 0.9; g.strokeStyle = col; g.lineWidth = 3 * s; g.beginPath(); g.arc(Q.flash.x, Q.flash.y, (4 + u * 16) * s, 0, TAU); g.stroke(); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; fx(g, 'fx.star', Math.floor(u * fxLen('fx.star')), Q.flash.x, Q.flash.y - 4 * s, 0.45, { add: true, alpha: 1 - u }); }
     if (Q.item && Q.item.k > 0.02 && E.kind === 'catch') { setScreen(g); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.5 * Q.item.k; g.fillStyle = '#fff1b0'; g.beginPath(); g.arc(Q.item.x, Q.item.y, 18 * s, 0, TAU); g.fill(); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
     return true;
+  }
+  // flying on the jetpack: the pack on your back, two flame jets, you (with your gun) up high, the fuel ring
+  function drawJetYou(g, sim, P, aS, face, X, Y, kp, t, alt, F0) {
+    const s = C.s, Y2 = Y - alt * HZ * s, fuel = Math.max(0, (sim.buffs.jetpack || 0) / 10), J = sim.jet || {};
+    try {
+      sprite(g, 'fly.jetpack', 'static', face > 0 ? 'SW' : 'SE', 0, X - face * 13 * s, Y2 - 22 * s, s * 1.1);
+      if (!J.fall) { setScreen(g); g.globalCompositeOperation = 'lighter'; for (const dx of [-5, 5]) { const fx0 = X - face * 13 * s + dx * s, fy0 = Y2 - 20 * s, L = (16 + Math.random() * 12) * s, gr = g.createLinearGradient(fx0, fy0, fx0, fy0 + L); gr.addColorStop(0, 'rgba(255,240,170,0.95)'); gr.addColorStop(0.5, 'rgba(255,140,40,0.7)'); gr.addColorStop(1, 'rgba(255,60,20,0)'); g.fillStyle = gr; g.beginPath(); g.moveTo(fx0 - 3.5 * s, fy0); g.lineTo(fx0 + 3.5 * s, fy0); g.lineTo(fx0, fy0 + L); g.closePath(); g.fill(); } g.globalCompositeOperation = 'source-over'; }
+      const moving = P.moving, blink = P.inv > 0 && P.inv < 60 && Math.sin(t * 40) > 0;
+      if (!(window.TZH && heroArms(g, sim, P, aS, face, X, Y2, kp, false, blink ? 0.5 : 1, t))) { setBill(g, P.x, P.y, alt, HB); window.TZSim.heroDraw(g, sim.me, P.x, P.y, { k: kp, face, moving }); }
+      if (J.fall) { setScreen(g); g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 2 * s; g.beginPath(); g.moveTo(X - 16 * s, Y2 - 60 * s); g.lineTo(X, Y2 - 120 * s); g.lineTo(X + 16 * s, Y2 - 60 * s); g.stroke(); g.fillStyle = '#ff6a2a'; g.beginPath(); g.ellipse(X, Y2 - 122 * s, 34 * s, 14 * s, 0, Math.PI, 0); g.fill(); g.strokeStyle = '#1b1410'; g.stroke(); } // (a little chute on the way down)
+      // the fuel ring
+      setScreen(g); const rx = X + 30 * s, ry = Y2 - 74 * s, r = 11 * s; g.fillStyle = 'rgba(15,10,6,0.75)'; g.beginPath(); g.arc(rx, ry, r + 3 * s, 0, TAU); g.fill();
+      g.strokeStyle = fuel < 0.3 ? (Math.sin(t * 14) > 0 ? '#ff4a3a' : '#ffb02e') : '#ff9a2e'; g.lineWidth = 4 * s; g.beginPath(); g.arc(rx, ry, r, -Math.PI / 2, -Math.PI / 2 + TAU * fuel); g.stroke();
+      g.font = `${Math.round(11 * s)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText('⛽', rx, ry + s);
+    } finally { P.face = F0; sim._heroZ = 0; }
   }
   // The gun held in your hand(s) at chest height, turned to the on-screen aim (never upside down), with a
   // recoil kick; two-handed guns get the front hand on the fore-grip. Sets sim._gunTip (the barrel tip:
