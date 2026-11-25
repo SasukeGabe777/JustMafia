@@ -410,6 +410,7 @@
       const out = {}; if (!this._mo) return out;
       if (this.kfq.length) { const agg = new Map(); for (const [ti, el, b] of this.kfq) { const k = ti + ':' + el; const a = agg.get(k) || [ti, 0, el, b]; a[1]++; agg.set(k, a); } out.kf = [...agg.values()].slice(0, 20); this.kfq.length = 0; }
       if (this.build) out.gdoor = Math.max(0, Math.round(this.build.door.hp));
+      if (this.gunName && this.gunName !== this._gnSent) { out.gn = this.gunName; this._gnSent = this.gunName; } // (the TV shows each player's merged gun)
       out.veh = this.ride ? this.ride.kind : this.jet ? 'jetpack' : '';
       return out;
     },
@@ -446,7 +447,7 @@
       if (d.gear) this.gear = { mhp: num(d.gear.mhp, 0, 9999, 0), vest: num(d.gear.vest, 0, 99, 0), torch: num(d.gear.torch, 0, 99, 0) };
       if (this._fi) {
         if (d.gun && d.gun.id === 'pistol') this.gun = { id: 'pistol', lv: num(d.gun.lv, 1, 10, 1), tier: num(d.gun.tier, 1, 3, 1) };
-        if (Array.isArray(d.weapons)) this.weapons = d.weapons.filter((w) => w && R().WEAPONS[w.id] && w.id !== 'pistol').slice(0, R().SLOTS).map((w) => ({ id: w.id, lv: num(w.lv, 1, 10, 1), tier: num(w.tier, 1, 3, 1), cd: 0.4, a: 0, swing: 0 }));
+        if (Array.isArray(d.weapons)) this.weapons = d.weapons.filter((w) => w && R().WEAPONS[w.id] && w.id !== 'pistol').slice(0, window.TZGUN ? window.TZGUN.slots(this.ab) - 1 : R().SLOTS).map((w) => ({ id: w.id, lv: num(w.lv, 1, 10, 1), tier: num(w.tier, 1, 3, 1), cd: 0.4, a: 0, swing: 0 }));
         this.cores = num(d.cores, 0, 99, 0); if (d.cls && R().CLASSES[d.cls]) this.cls = d.cls;
         this.items = Object.fromEntries(Object.entries(d.items || {}).filter(([k, n]) => R().ITEMS[k] && Number.isFinite(n)));
         this.combos = new Set((d.combos || []).filter((c) => R().COMBOS.some((C) => C.id === c))); this.lockedItems = d.lockedItems || {}; this.rerollsDone = num(d.rerollsDone, 0, 99, 0); this.usedTurret = !!d.usedTurret;

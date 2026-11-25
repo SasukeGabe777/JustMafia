@@ -25,7 +25,7 @@
     rail: { kind: 'rail', rar: 'legendary', icon: '📡', rate: 0.5, dmg: 9, range: 1400, names: ['Rail Rifle', 'Microwave Rail', 'Sky Splitter'], color: '#7fd6ff' },
   };
   const RARITY = { common: { name: 'Common', color: '#c9ccd1', price: 1 }, rare: { name: 'Rare', color: '#3ec1ff', price: 1.5 }, epic: { name: 'Epic', color: '#c37bff', price: 2.2 }, legendary: { name: 'Legendary', color: '#ffb02e', price: 3.2 } };
-  const SLOTS = 4; // extra weapons next to your pistol (they all fire by themselves)
+  const SLOTS = 4; // the most parts merged into your gun (5 slots with the base gun: trash-gun.js; you start with 2)
   const MAX_LV = 10, MAX_TIER = 3, TIER_MUL = [1, 2.2, 5];
   const power = (lv, tier) => (1 + 0.16 * (lv - 1)) * TIER_MUL[Math.max(0, Math.min(2, tier - 1))];
   const speed = (lv, tier) => 1 + 0.035 * (lv - 1) + 0.12 * (tier - 1);

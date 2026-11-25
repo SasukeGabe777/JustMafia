@@ -149,7 +149,7 @@
   function tvSide(s) {
     const ranked = s.mode === 'score' || s.mode === 'garage';
     const P = (s.players || []).slice().sort((a, b) => (ranked ? b.score - a.score : 0) || (a.state === 'dead') - (b.state === 'dead') || b.wave - a.wave || b.kills - a.kills);
-    const rows = P.map((p, i) => `<div class="tz-row ${p.state === 'dead' ? 'dead' : ''} ${p.danger ? 'danger' : ''} ${s.spot && s.spot.id === p.id ? 'spot' : ''}"><span class="tz-rank">${i + 1}</span>${face({ ...p, bot: true }, 46)}<div class="tz-rmain"><b style="color:${esc(p.color || '#fff')}">${p.veh && window.TZX ? window.TZX.VEHICLES[p.veh].icon + ' ' : ''}${p.cls && window.TZR ? window.TZR.CLASSES[p.cls].icon + ' ' : ''}${nm(p.name)}</b>
+    const rows = P.map((p, i) => `<div class="tz-row ${p.state === 'dead' ? 'dead' : ''} ${p.danger ? 'danger' : ''} ${s.spot && s.spot.id === p.id ? 'spot' : ''}"><span class="tz-rank">${i + 1}</span>${face({ ...p, bot: true }, 46)}<div class="tz-rmain"><b style="color:${esc(p.color || '#fff')}">${p.veh && window.TZX ? window.TZX.VEHICLES[p.veh].icon + ' ' : ''}${p.cls && window.TZR ? window.TZR.CLASSES[p.cls].icon + ' ' : ''}${nm(p.name)}</b>${p.gn ? `<small class="tz-gn">🔫 ${esc(p.gn)}</small>` : ''}
       <small>${p.state === 'dead' ? '💀 out · ' : p.state === 'down' ? '🆘 DOWN · ' : p.ch ? '🃏 picking an ability · ' : p.brk >= 0 ? `<b class="tz-brk-s">⏱ break ${p.brk}s</b> · ` : ''}${s.mode === 'score' || p.score ? `<b class="tz-sc">${(p.score || 0).toLocaleString('en-US')}</b>${p.streak > 1 ? ` <b class="tz-mx">×${p.streak}</b>` : ''} · ` : ''}Wave ${p.wave} · Lv ${p.lvl} · ${p.kills} kills</small>
       <div class="tz-hp"><i style="width:${p.state === 'dead' || !p.mhp ? 0 : Math.round((100 * p.hp) / p.mhp)}%"></i></div><div class="tz-ab">${abIcons(p.ab)}${(p.wp || []).slice(1).map(([id, lv, tier]) => window.TZR && window.TZR.WEAPONS[id] ? `<span class="tz-abi t${tier}" title="${esc(window.TZR.wname(id, tier))}">${window.TZR.WEAPONS[id].icon}<sub>${lv}</sub></span>` : '').join('')}</div></div></div>`).join('');
     const feed = (s.feed || []).slice(-5).reverse().map((f) => `<li>${esc(f.icon)} ${nm(f.text)}</li>`).join('');
@@ -268,6 +268,7 @@
     else if (kind === 'final') { buzz([200, 80, 200, 80, 400]); }
     else if (kind === 'combo') { if (ctx) { ctx.haptic('win'); ctx.toast(d.timed ? `💥 ${d.name}!` : '🧪 New combo! It’s in your combo book (pause menu).'); } }
     else if (kind === 'weapon' || kind === 'upgrade' || kind === 'item' || kind === 'core') { if (ctx) ctx.haptic('success'); }
+    else if (kind === 'swap') { if (ctx) ctx.haptic('select'); setTimeout(() => loadoutUi(true), 60); }
     else if (kind === 'evolve') { setOverlay(''); buzz([60, 60, 60, 60, 300]); }
     else if (kind === 'debuff') { buzz(90); }
     else if (kind === 'truck' || kind === 'event') { if (ctx) ctx.haptic('turn'); }
@@ -375,7 +376,7 @@
     if (window.TZI && TZI.ready && PH.artArea !== sim.area) { PH.artArea = sim.area; TZI.prefetchArea(sim); }
     if (window.TZSnd) TZSnd.frame(sim, dt);
     const I = readInput(V, sim);
-    const busy = PH.menu || PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map' || PH.overlay === 'heli' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks';
+    const busy = PH.menu || PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map' || PH.overlay === 'heli' || PH.overlay === 'loadout' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks';
     sim.menuPause = !!PH.menu;
     sim.shopping = PH.overlay === 'shop' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks'; sim._dpr = V.dpr;
     if (performance.now() - (PH.saveAt || 0) > 2000) saveRun();
@@ -549,7 +550,9 @@
       // your weapons (level, tier stars), crucible cores, debuffs with timers
       const ws = [sim.gun, ...sim.weapons], s0 = small ? 26 : 30; let wx = bx;
       for (const wpn of ws) { const Wd = window.TZR.WEAPONS[wpn.id]; g.fillStyle = 'rgba(15,10,6,0.72)'; roundRect(g, wx, fy - s0 / 2, s0, s0, 6); g.fill(); g.strokeStyle = wpn.tier >= 3 ? '#ffd23f' : wpn.tier === 2 ? '#8ab0d0' : 'rgba(255,255,255,0.3)'; g.lineWidth = 2; g.stroke(); g.font = `${Math.round(s0 * 0.6)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(Wd.icon, wx + s0 / 2, fy); txt(String(wpn.lv), wx + s0 - 3, fy + s0 / 2 - 4, 10, '#fff', 'right'); if (wpn.tier > 1) txt('★'.repeat(wpn.tier - 1), wx + 3, fy - s0 / 2 + 5, 9, '#ffd23f', 'left'); wx += s0 + 4; }
+      txt('🔩' + ws.length + '/' + (sim.slots ? sim.slots() : 5), wx + 4, fy, small ? 11 : 13, '#cfc4a8'); wx += small ? 40 : 46; // (weapon slots used / you have)
       if (sim.cores) { txt('🔥×' + sim.cores, wx + 4, fy, 13, '#ff8c42'); }
+      if (sim.gunName) { txt('🔫 ' + sim.gunName, bx, fy + s0 / 2 + 8, small ? 11 : 13, '#ffb02e'); fy += small ? 14 : 16; }
       fy += s0 / 2 + 16;
       for (const [k, v2] of Object.entries(sim.debuffs || {})) { if (!(v2 > 0)) continue; const D = window.TZR.DEBUFFS[k]; g.strokeStyle = '#ff6a5a'; g.lineWidth = 3; g.beginPath(); g.arc(bx + 12, fy, 12, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, v2 / D.dur)); g.stroke(); txt(D.icon, bx + 12, fy, 13, '#fff', 'center'); txt(D.name + (k === 'web' ? ': wiggle to break free!' : ''), bx + 30, fy, small ? 12 : 14, '#ff9a8a'); fy += 28; }
       if (sim.tcombo) { txt(sim.tcombo.icon + ' ' + sim.tcombo.name, bx, fy, small ? 13 : 15, '#ffb02e'); fy += 22; }
@@ -803,10 +806,36 @@
   }
   function gearHtml(sim) {
     if (!sim._fi) return ''; const R = window.TZR, cls = sim.cls && R.CLASSES[sim.cls];
-    const ws = [sim.gun, ...sim.weapons].map((w) => `<span class="tz-wp t${w.tier}">${R.WEAPONS[w.id].icon} <b>${esc(R.wname(w.id, w.tier))}</b> <small>Lv ${w.lv}${w.tier > 1 ? ' · ' + '★'.repeat(w.tier - 1) : ''}</small></span>`).join('');
+    const ws = loadoutHtml(sim, null);
     const its = Object.entries(sim.items || {}).map(([id, n]) => `<span title="${esc(R.ITEMS[id].desc)}">${R.ITEMS[id].icon} ${esc(R.ITEMS[id].name)}${n > 1 ? ' ×' + n : ''}</span>`).join('');
     const book = R.COMBOS.map((C) => sim.combos.has(C.id) ? `<span class="tz-cb on" title="${esc(C.desc)}">${C.icon} <b>${esc(C.name)}</b><small>${esc(C.desc)}</small></span>` : '<span class="tz-cb">❔ <b>???</b><small>Not discovered yet</small></span>').join('');
-    return `${cls ? `<p class="tz-mut">${cls.icon} <b>${cls.name}</b>: ${esc(cls.desc)}</p>` : ''}<h3>Weapons <small>(${sim.weapons.length}/${R.SLOTS} slots · 🔥 ${sim.cores} cores)</small></h3><div class="tz-finds">${ws}</div>${its ? `<h3>Items</h3><div class="tz-finds">${its}</div>` : ''}<h3>🧪 Combo book <small>(${sim.combos.size}/${R.COMBOS.length})</small></h3><div class="tz-book">${book}</div>`;
+    return `${cls ? `<p class="tz-mut">${cls.icon} <b>${cls.name}</b>: ${esc(cls.desc)}</p>` : ''}<h3>🔫 Your gun <small>(${sim.weapons.length + 1}/${sim.slots()} slots · 🔥 ${sim.cores} cores)</small></h3>${ws}${its ? `<h3>Items</h3><div class="tz-finds">${its}</div>` : ''}<h3>🧪 Combo book <small>(${sim.combos.size}/${R.COMBOS.length})</small></h3><div class="tz-book">${book}</div>`;
+  }
+  // ---------- the loadout: your ONE merged gun (trash-gun.js), its parts, drop / swap ----------
+  // The gun big (its composed model), its name and stats, a card per part (icon, level, tier, what it adds) with a
+  // Drop button, the empty slots. swap: a new weapon came with no free slot: pick the part it replaces (or skip).
+  function gunStats(sim) { const S = sim.S, MG = sim.merged || {}; const L = [`⚡ ${(S.rate || 0).toFixed(1)} shots/s`, `💥 ${Math.round(S.dmg || 0)} damage${S.spread > 1 ? ' × ' + S.spread + ' pellets' : ''}`]; if (S.pierce) L.push(`🍢 pierces ${S.pierce}`); if (MG.burn) L.push('🔥 burns'); if (MG.zap) L.push(`⚡ chains ×${MG.zap}`); for (const e of MG.every || []) L.push({ grenade: '🧨 a grenade', rail: '📡 a rail beam', hubcap: '🥏 a hubcap' }[e.kind] + ' every ' + e.n + ' shots'); for (const m of MG.melee || []) L.push(m.id === 'saw' ? '🪚 a buzzing blade' : '🏏 a bayonet swipe'); if (MG.knock > 1) L.push('🍃 knocks them back'); return L; }
+  function loadoutHtml(sim, swapId) {
+    const R = window.TZR, TG = window.TZGUN, cap = sim.partCap ? sim.partCap() : 1, star = (t) => (t > 1 ? ' ' + '★'.repeat(t - 1) : '');
+    const card = (w, base) => { const Wd = R.WEAPONS[w.id]; return `<div class="tz-part t${w.tier}${base ? ' base' : ''}"><span class="tz-pi">${Wd.icon}</span><div><b>${esc(R.wname(w.id, w.tier))}</b><small>Lv ${w.lv}${star(w.tier)} · ${base ? 'the base gun' : esc((TG && TG.TRAITS[w.id] ? TG.TRAITS[w.id].what : ''))}</small></div>${base ? '' : swapId ? `<button class="btn small" data-swap="${w.id}">Swap for this</button>` : `<button class="btn small ghost" data-drop="${w.id}">Drop</button>`}</div>`; };
+    const empty = Math.max(0, cap - sim.weapons.length), next = (sim.slots ? sim.slots() : 2) < (TG ? TG.SLOTS_MAX : 5);
+    return `<div class="tz-load"><canvas class="tz-gunc" width="360" height="160"></canvas><div class="tz-gst"><b class="tz-gname">${esc(sim.gunName || 'Pipe Blaster')}</b><p>${gunStats(sim).map(esc).join(' · ')}</p></div></div>
+      <div class="tz-parts">${card(sim.gun, true)}${sim.weapons.map((w) => card(w, false)).join('')}${'<div class="tz-part empty"><span class="tz-pi">➕</span><div><b>Empty slot</b><small>Pick up or buy a gun: it merges in</small></div></div>'.repeat(empty)}${next ? '<div class="tz-part lockslot"><span class="tz-pi">🔩</span><div><b>More slots</b><small>Pick the Gun Rack ability (up to 5)</small></div></div>' : ''}</div>`;
+  }
+  function bindLoadout(ov, sim, redraw) {
+    const cv = ov.querySelector('.tz-gunc'); if (cv && window.TZI_HELI && TZI_HELI.gunPreview) { const paint = (n) => { if (!cv.isConnected) return; if (!TZI_HELI.gunPreview(cv, sim) && n < 30) setTimeout(() => paint(n + 1), 120); }; paint(0); }
+    for (const b of ov.querySelectorAll('[data-drop]')) b.onclick = (e) => { e.stopPropagation(); if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to drop'; return; } sim.dropPart(b.dataset.drop); buzz(30); redraw(); };
+  }
+  function loadoutUi(swap) {
+    const sim = PH.sim; if (!sim || !sim._fi || sim.dead) return; const R = window.TZR, S0 = swap ? sim.swapOffer : null; if (swap && !S0) return;
+    const nw = S0 && R.WEAPONS[S0.id];
+    const ov = setOverlay(`<div class="tz-menu tz-loadout"><h2>${S0 ? `${nw.icon} New: ${esc(R.wname(S0.id, 1))}` : '🔫 Your gun'}</h2>${S0 ? `<p class="tz-mut">No free slot (${sim.weapons.length + 1}/${sim.slots()}). Swap a part for it (${esc((window.TZGUN && TZGUN.TRAITS[S0.id] || {}).what || '')}), or skip it for $25.</p>` : ''}
+      ${loadoutHtml(sim, S0 ? S0.id : null)}<div class="tz-mbtns">${S0 ? '<button class="btn ghost" data-skip>Skip it (+$25)</button>' : '<button class="btn green" data-close>Done</button>'}</div></div>`, 'loadout');
+    if (!ov) return;
+    bindLoadout(ov, sim, () => loadoutUi(false));
+    for (const b of ov.querySelectorAll('[data-swap]')) b.onclick = (e) => { e.stopPropagation(); sim.takeSwap(b.dataset.swap); buzz([30, 20, 60]); loadoutUi(false); };
+    const sk = ov.querySelector('[data-skip]'); if (sk) sk.onclick = (e) => { e.stopPropagation(); sim.takeSwap(null); setOverlay(''); };
+    const cl = ov.querySelector('[data-close]'); if (cl) cl.onclick = (e) => { e.stopPropagation(); setOverlay(''); };
   }
   // ---------- the survivor class (picked at the start of a run) ----------
   function classUi() {
@@ -850,6 +879,7 @@
       <details class="tz-cred"><summary>🎨 Credits: CC0 art + sound packs</summary>${creditsHtml()}</details>
       <div class="tz-mbtns"><button class="btn green big" data-opt="resume">▶ Keep playing</button><button class="btn ghost small" data-opt="unl">🔓 Unlocks (🔩 ${(PH.view && PH.view.meta && PH.view.meta.scrap) || 0})</button>${vip ? '<button class="btn ghost small" data-opt="end">🏁 End the night (results)</button>' : ''}</div></div>`, 'menu');
     if (!ov) return;
+    bindLoadout(ov, sim, () => toggleMenu(true));
     for (const b of ov.querySelectorAll('[data-opt]')) b.onclick = async (e) => {
       e.stopPropagation(); const o = b.dataset.opt;
       if (o === 'resume') return toggleMenu(false);
@@ -983,7 +1013,7 @@
         if (!end) return null; const steps = []; for (let k = end; prev.get(k); k = prev.get(k)[0]) steps.unshift(prev.get(k)[1]);
         for (const d of steps) { s.z.length = 0; s.cleared = true; s.leave(d); await new Promise((r) => setTimeout(r, 450)); while (s.cards) s.pick(0); }
         const pd = s.padHere(); if (pd) { s.p.x = pd.x; s.p.y = pd.y + 30; } return s.cell.join(','); },
-      atPad() { const s = PH.sim, pd = s.padHere(); if (!pd) return false; s.p.x = pd.x; s.p.y = pd.y + 30; return true; }, heliUi() { heliUi(); return PH.overlay; }, heliGo(k) { return PH.sim.heliGo(k); },
+      atPad() { const s = PH.sim, pd = s.padHere(); if (!pd) return false; s.p.x = pd.x; s.p.y = pd.y + 30; return true; }, heliUi() { heliUi(); return PH.overlay; }, loadoutUi(sw) { loadoutUi(!!sw); return PH.overlay; }, heliGo(k) { return PH.sim.heliGo(k); },
       teleport(x, y) { const s = PH.sim; s.p.x = x; s.p.y = y; return true; },
       kills(n) { PH.sim.killCount += n; PH.sim.reportStatus(true); return PH.sim.killCount; },
       story: () => PH.v && PH.v.story, pv: () => PH.v,
@@ -1055,7 +1085,8 @@
       'Regular mode: the 3 key pieces sit in chests in locked key vaults; other chests hold unique gear, abilities and map halves. Find the hidden boss door, open it with the whole key and beat the boss to win. Endless mode: waves forever, and the far gates keep climbing.',
       'Abilities never max out: pick them again and again and they keep stacking.',
       'Pick a survivor class at the start. Zombies drop cash: spend it at the places you find in town (market, army surplus, clinic). The Tinkerer, the Gunsmith and the rare Master Armorer level your weapons up to 10; the far-off Crucible evolves a level-10 weapon (bosses drop the cores it needs).',
-      'Extra weapons fire by themselves. Own the right pair and they combine. Some zombies carry a super weapon: take them out and it’s yours for a few seconds.',
+      '🔫 ONE gun that grows: every weapon you pick up merges into your pistol as a part (a launcher makes it a Pistol Rocket Gun; add a shotgun: a Scatter Rocket Gun). Each part adds its trick (pellets, speed, piercing, fire, chain lightning, a grenade every few shots, a bayonet...) and has its own level (the merchants) and tier (the Crucible). You start with 2 slots (the gun + 1 part); the Gun Rack ability adds slots up to 5. A duplicate levels its part up; with no free slot you can swap a part or skip it, and the pause screen lets you drop parts to build the perfect gun. Notable pairs have their own names.',
+      'Own the right pair and they combine. Some zombies carry a super weapon: take them out and it’s yours for a few seconds.',
       'Later waves bring nasty zombies that blind you, web you (wiggle to break free), jam your guns or flip your controls. The clinic cleans you up.',
       '📣 Call out to the team: places you find show up for everyone, with the route along the streets. Score attack (and Party Mode): the highest score wins; keep the kill streak going for a bigger multiplier.',
       'Garage Defense: every 5 waves a horde night pulls everyone home. Build barricades, turrets, spike strips, sprinkler-flamers and car-alarm decoys, then hold the door. Broken doors cost the town hope.',

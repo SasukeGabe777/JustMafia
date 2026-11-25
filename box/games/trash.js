@@ -632,6 +632,7 @@ class Game {
     if (R.streak >= 6 && R.streak > (R.bestStreak || 0)) { R.bestStreak = R.streak; this.moment('streak', p, R.streak, `${p.name} hit a ×${R.streak} kill streak`); }
     if (m.gdoor != null) R.door = int(m.gdoor, 0, 99999);
     if (m.veh != null) R.veh = typeof m.veh === 'string' && X.VEHICLES[m.veh] ? m.veh : null;
+    if (typeof m.gn === 'string') R.gn = m.gn.replace(/[<>&"]/g, '').slice(0, 48);
     R.brk = m.brk != null && m.brk >= 0 ? int(m.brk, 0, BREAK_S) : -1;
     if (this.gd && this.gd.phase === 'explore' && R.wave >= this.gd.next) this.startBuild();
     if (this.story) this.storyCheck();
@@ -787,13 +788,13 @@ class Game {
       const R = this.runs.get(p.id), cur = { wave: R.wave, kills: R.kills, lvl: R.lvl, ab: R.ab };
       const b = R.best && (R.best.wave > cur.wave || (R.best.wave === cur.wave && R.best.kills > cur.kills)) ? R.best : cur;
       const score = this.ranked ? Math.max(R.score || 0, (R.best && R.best.score) || 0) : R.score || 0;
-      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, wave: b.wave, kills: b.kills, lvl: b.lvl, score, build: Object.entries(b.ab || {}).sort((a, c) => c[1] - a[1]).slice(0, 6), runs: R.run, eq: Object.keys(R.eq || {}), cls: R.cls || null, wp: R.wp || [], combos: (R.combos || []).length, scrap: R.scrap == null ? null : R.scrap, rescues: R.rescues || 0, nights: R.nights || 0 };
+      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, wave: b.wave, kills: b.kills, lvl: b.lvl, score, build: Object.entries(b.ab || {}).sort((a, c) => c[1] - a[1]).slice(0, 6), runs: R.run, eq: Object.keys(R.eq || {}), cls: R.cls || null, wp: R.wp || [], gn: R.gn || null, combos: (R.combos || []).length, scrap: R.scrap == null ? null : R.scrap, rescues: R.rescues || 0, nights: R.nights || 0 };
     }).sort((a, b) => (this.ranked ? b.score - a.score : 0) || b.wave - a.wave || b.kills - a.kills || b.lvl - a.lvl);
   }
   people() {
     return this.room.list().filter((p) => this.runs.has(p.id)).map((p) => {
       const R = this.runs.get(p.id);
-      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, bot: !!p.bot, x: R.cell[0], y: R.cell[1], state: R.state, wave: R.wave, lvl: R.lvl, kills: R.kills, score: R.score || 0, streak: R.streak || 1, cls: R.cls || null, wp: R.wp || [], hp: R.hp, mhp: R.mhp, danger: R.danger, ch: R.choosing, pick: R.lastPick, run: R.run, veh: R.veh || null, fit: R.load ? R.load.fit : null, brk: R.state === 'play' && R.brk != null && R.brk >= 0 ? R.brk : -1,
+      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, bot: !!p.bot, x: R.cell[0], y: R.cell[1], state: R.state, wave: R.wave, lvl: R.lvl, kills: R.kills, score: R.score || 0, streak: R.streak || 1, cls: R.cls || null, wp: R.wp || [], gn: R.gn || null, hp: R.hp, mhp: R.mhp, danger: R.danger, ch: R.choosing, pick: R.lastPick, run: R.run, veh: R.veh || null, fit: R.load ? R.load.fit : null, brk: R.state === 'play' && R.brk != null && R.brk >= 0 ? R.brk : -1,
         ab: Object.entries(R.ab).sort((a, c) => c[1] - a[1]).slice(0, 5).map(([id]) => id) };
     });
   }

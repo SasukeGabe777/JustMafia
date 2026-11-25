@@ -304,6 +304,7 @@
   // the game (fire rate, dodge, speed, cooldowns) use soft diminishing returns in the phone sim.
   const ABILITIES = [
     { id: 'rapid', cat: 'atk', icon: '⚡', name: 'Itchy Trigger', desc: 'Fire 18% faster.' },
+    { id: 'mount', cat: 'atk', icon: '🔩', name: 'Gun Rack', desc: '+1 weapon slot: merge one more gun into yours (5 max).', max: 3 },
     { id: 'pierce', cat: 'atk', icon: '🍢', name: 'Skewer Rounds', desc: 'Bullets go through one more zombie.' },
     { id: 'spread', cat: 'atk', icon: '🔱', name: 'Scattershot', desc: 'One more bullet in every shot.' },
     { id: 'big', cat: 'atk', icon: '🥫', name: 'Chonky Slugs', desc: 'Bigger bullets, +25% damage.' },
@@ -333,7 +334,7 @@
   // Three cards: one of each category (random within it). Nothing ever maxes out.
   function offer(r, owned) {
     owned = owned || {};
-    const open = (c) => ABILITIES.filter((a) => a.cat === c);
+    const open = (c) => ABILITIES.filter((a) => a.cat === c && !(a.max && (owned[a.id] || 0) >= a.max)); // (a few abilities cap: the Gun Rack at 5 slots)
     const out = [];
     for (const c of ['atk', 'def', 'spc']) { const L = open(c); if (L.length) out.push(pick(r, L).id); }
     const rest = ABILITIES.filter((a) => !out.includes(a.id));

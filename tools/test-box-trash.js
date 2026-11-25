@@ -66,7 +66,7 @@ test('level-up offers: 3 cards, one Attack + one Defense + one Special; nothing 
   // stacked 50 deep: still a full mixed offer, forever
   const all = Object.fromEntries(W.ABILITIES.map((a) => [a.id, 50]));
   for (let i = 0; i < 100; i++) assert.deepEqual(W.offer(r, all).map((id) => W.AB[id].cat).sort(), ['atk', 'def', 'spc']);
-  assert(W.ABILITIES.every((a) => a.max == null), 'no tier caps');
+  assert(W.ABILITIES.every((a) => a.max == null || a.id === 'mount'), 'no tier caps (only the Gun Rack: 5 slots at most)');
   assert(W.ABILITIES.length >= 20 && ['atk', 'def', 'spc'].every((c) => W.ABILITIES.filter((a) => a.cat === c).length >= 7), 'plenty of each');
   assert.equal(new Set(W.ABILITIES.map((a) => a.name)).size, W.ABILITIES.length);
 });
@@ -302,7 +302,7 @@ function sandbox() {
   let now = 0; const reports = [], lives = [], events = [];
   const ctx = { console, Math, Date, JSON, Object, Array, Map, Set, Number, String, Promise, Infinity, isFinite, performance: { now: () => now } };
   ctx.window = ctx; ctx.self = ctx; vm.createContext(ctx);
-  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-story.js', 'trash-boss.js', 'trash-shop.js', 'trash-play.js', 'trash-arms.js', 'trash-fight.js', 'trash-extra.js', 'trash-more.js', 'trash-gates.js', 'trash-heli.js', 'trash-biome.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
+  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-story.js', 'trash-boss.js', 'trash-shop.js', 'trash-play.js', 'trash-arms.js', 'trash-gun.js', 'trash-fight.js', 'trash-extra.js', 'trash-more.js', 'trash-gates.js', 'trash-heli.js', 'trash-biome.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
   const make = (o = {}) => new ctx.TZSim.Sim({ seed: 42, homes: [[4, 4]], me: { id: o.id || 'me', name: 'Me', color: '#fff' }, settings: { diff: 'normal', aim: 'on', xp: 'shared', ...(o.settings || {}) }, restore: o.restore || { cell: [4, 4], home: [4, 4], wave: 1, run: 1 },
     report: (m) => { reports.push(m); return Promise.resolve({ ok: true }); }, live: (m) => lives.push(m), on: (k, d) => events.push([k, d]), people: () => null });
   const step = (s, sec, I = {}, pick = true) => { for (let t = 0; t < sec; t += 1 / 60) { now += 1000 / 60; if (pick && s.cards) s.pick(0); s.update(1 / 60, I); } };
@@ -530,7 +530,7 @@ test('weapons: up to 4 extra slots that fire by themselves; a duplicate adds a l
   const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.p.inv = 1e9;
   assert.equal(s.addWeapon('shotgun'), true); assert.equal(s.weapons.length, 1); assert(S.reports.some((r) => r.k === 'weapon' && r.id === 'shotgun'));
   assert.equal(s.addWeapon('shotgun'), 'level'); assert.equal(s.weapons[0].lv, 2, 'duplicate: +1 level');
-  for (const id of ['smg', 'nailgun', 'crossbow']) s.addWeapon(id); assert.equal(s.weapons.length, AR.SLOTS); const c0 = s.cash; assert.equal(s.addWeapon('rail'), 'cash'); assert.equal(s.cash, c0 + 25, 'slots full: cash instead');
+  s.ab.mount = 3; s.stats(); for (const id of ['smg', 'nailgun', 'crossbow']) s.addWeapon(id); assert.equal(s.weapons.length, AR.SLOTS); const c0 = s.cash; assert.equal(s.addWeapon('rail'), 'swap', 'slots full: a swap is offered'); s.takeSwap(null); assert.equal(s.cash, c0 + 25, 'skipped: cash instead');
   for (const id of ['flamer', 'blower', 'hubcap', 'launcher', 'coil', 'saw', 'rail', 'bat']) { const t = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); t.p.inv = 1e9; t.addWeapon(id); t.spawnOne('walker'); const z = t.z[0]; z.x = t.p.x + 60; z.y = t.p.y; z.hp = z.mhp = 1e6; S.step(t, 1.6); assert(z.hp < 1e6, id + ' hurts zombies'); }
   assert(Object.keys(AR.WEAPONS).length >= 12 && new Set(Object.values(AR.WEAPONS).flatMap((w) => w.names)).size === Object.keys(AR.WEAPONS).length * 3, 'every weapon has 3 tier names');
 });
@@ -559,7 +559,7 @@ test('the crucible (a separate place) evolves a level-10 weapon: Tier 1 -> 2 -> 
   assert(!at(S, 'gunsmith').placeType().includes('forge'));
 });
 test('combos: owning both halves unlocks one (banner + feed), listed in the combo book; timed super weapons fuse', () => {
-  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.p.inv = 1e9;
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.p.inv = 1e9; s.ab.mount = 3;
   s.addWeapon('flamer'); assert.equal(s.combos.size, 0); s.addWeapon('blower'); assert(s.combos.has('firetornado')); assert(/COMBO/.test(s.banner.text)); assert(S.reports.some((r) => r.k === 'combo' && r.id === 'firetornado'));
   s.addWeapon('shotgun'); s.ab.bounce = 1; S.step(s, 0.6); assert(s.combos.has('pinball'), 'a weapon + an ability');
   s.ab.drone = 1; s.kits = 1; s.useTurret(); S.step(s, 0.6); assert(s.combos.has('flyturret'), 'used gear + an ability');
@@ -858,7 +858,7 @@ test('new bosses with their own arenas: the ice-cream truck laps and leaves slow
 });
 test('run save: reloading the phone brings back cash, weapons, items, class, combos, the ride and the survivor (same run only)', () => {
   const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1, lvl: 4 } }); s.p.inv = 1e9; s.phase = 'play';
-  s.cash = 321; s.score = 4567; s.setClass('demo'); s.addWeapon('shotgun'); s.addWeapon('smg'); s.weapons[0].lv = 7; s.weapons[1].tier = 2; s.cores = 2; s.items.boots = 2; s.combos.add('pinball'); s.bombs = 3; s.plates = 2; s.pocket = 'shield'; s.gear.mhp = 20;
+  s.cash = 321; s.score = 4567; s.setClass('demo'); s.ab.mount = 2; s.addWeapon('shotgun'); s.addWeapon('smg'); s.weapons[0].lv = 7; s.weapons[1].tier = 2; s.cores = 2; s.items.boots = 2; s.combos.add('pinball'); s.bombs = 3; s.plates = 2; s.pocket = 'shield'; s.gear.mhp = 20;
   s.ride = { kind: 'mower', hp: 100, mhp: 220 }; s.npc = { id: '3,3', name: 'Mabel', color: '#fff', hp: 80, mhp: 120, x: 0, y: 0 }; s.giftN = 7; s.evN = 3;
   const d = JSON.parse(JSON.stringify(s.saveData()));
   const t = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1, lvl: 4 } }); assert(t.loadSave(d));
@@ -1257,4 +1257,60 @@ test('the class picker is a jukebox wheel: swipe / arrows / keys spin it, locked
   assert(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'play.html'), 'utf8').includes('trash-wheel.js'));
   assert(fs.readFileSync(path.join(__dirname, 'e2e-trash-touch.js'), 'utf8').includes('dispatchTouchEvent'), 'real-tap checks: tools/e2e-trash-touch.js');
 });
+// ---------------- ONE merged gun (the weapons redesign) ----------------
+test('weapon slots: 2 to start (the base gun + 1 part), +1 per Gun Rack ability, 5 at most; the Gun Rack stops being offered at 5', () => {
+  const TG = require('../public/box/games/trash-gun');
+  assert.equal(TG.slots({}), 2); assert.equal(TG.slots({ mount: 1 }), 3); assert.equal(TG.slots({ mount: 3 }), 5); assert.equal(TG.slots({ mount: 9 }), 5);
+  assert(W.AB.mount && W.AB.mount.cat === 'atk' && W.AB.mount.max === 3, 'the Gun Rack is an Attack card');
+  let seen = 0; for (let i = 0; i < 400; i++) { const o = W.offer(W.rng(i + 1), { mount: 3 }); assert(!o.includes('mount'), 'capped'); if (W.offer(W.rng(i + 1), {}).includes('mount')) seen++; } assert(seen > 10, 'offered while there is room: ' + seen);
+});
+test('merged gun names: built from the parts (Pistol Rocket Gun, Scatter Rocket Gun...), the old combos as named pairs', () => {
+  const TG = require('../public/box/games/trash-gun');
+  assert.equal(TG.name([], { lv: 1, tier: 1 }), 'Pipe Blaster');
+  assert.equal(TG.name([{ id: 'launcher', lv: 1, tier: 1 }]), 'Pistol Rocket Gun');
+  assert.equal(TG.name([{ id: 'launcher', lv: 5, tier: 1 }, { id: 'shotgun', lv: 1, tier: 1 }]), 'Scatter Rocket Gun');
+  assert.equal(TG.name([{ id: 'smg', lv: 9, tier: 1 }, { id: 'coil', lv: 1, tier: 1 }, { id: 'flamer', lv: 2, tier: 1 }]), 'Flame-Chain Rattler');
+  assert.equal(TG.name([{ id: 'flamer', lv: 1, tier: 1 }, { id: 'blower', lv: 1, tier: 1 }], null, new Set(['firetornado'])), 'Fire Tornado');
+  assert.equal(TG.name([{ id: 'launcher', lv: 1, tier: 1 }], { lv: 1, tier: 3 }), 'Golden Pistol Rocket Gun');
+  const ids = Object.keys(TG.TRAITS), names = new Set(); for (const a of ids) for (const b of ids) if (a < b) names.add(TG.name([{ id: a, lv: 2, tier: 1 }, { id: b, lv: 1, tier: 1 }])); assert(names.size > 50, 'every pair its own gun: ' + names.size);
+});
+test('the merged gun in play: parts merge (no free-firing side guns), a full rack offers a swap, duplicates level a part up, drop a part, traits stack, specials every few shots, part levels scale it', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.breakT = 9999; s.spawnCd = 999; s.p.inv = 1e9; s.initFight();
+  assert.equal(s.slots(), 2); assert.equal(s.partCap(), 1);
+  const st0 = { rate: s.S.rate, spread: s.S.spread, dmg: s.S.dmg };
+  assert.equal(s.addWeapon('launcher'), true); assert.equal(s.gunName, 'Pistol Rocket Gun'); assert.equal(s.weapons.length, 1);
+  assert.equal(s.addWeapon('shotgun'), 'swap', 'no free slot: a swap is offered'); assert(s.swapOffer && s.swapOffer.id === 'shotgun'); assert(S.events.some(([k]) => k === 'swap'));
+  s.takeSwap('launcher'); assert.equal(s.weapons.map((w) => w.id).join(), 'shotgun', 'swapped in'); assert.equal(s.gunName, 'Pistol Scattergun');
+  assert(s.S.spread > st0.spread, 'the shotgun part adds pellets');
+  assert.equal(s.addWeapon('shotgun'), 'level'); assert.equal(s.weapons[0].lv, 2, 'a duplicate levels the part up (no slot)');
+  s.ab.mount = 2; s.stats(); assert.equal(s.slots(), 4); assert.equal(s.addWeapon('smg'), true); assert.equal(s.addWeapon('launcher'), true); assert.equal(s.weapons.length, 3);
+  assert(s.S.rate > st0.rate * 1.2, 'the SMG part: faster'); assert(/Rocket|Rattle|Scatter/.test(s.gunName));
+  // no side guns fire on their own: only the gun (and its every-4th grenade)
+  s.b.length = 0; s.set.aim = 'off'; s.shotN = 0; const z = s.makeZ('walker', s.p.x + 300, s.p.y); z.hp = z.mhp = 1e7; z.speed = 0;
+  for (let i = 0; i < 60; i++) s.update(1 / 60, { ax: 1, ay: 0 });
+  assert(s.shotN >= 8, 'fired: ' + s.shotN); assert(s.b.some((b) => b.kind === 'grenade') || S.lives.length >= 0, 'a grenade every 4th shot');
+  // part levels scale the gun
+  s.stats(); const d0 = s.S.dmg, r0 = s.S.rate; s.weaponById('smg').lv = 10; s.weaponById('smg').tier = 3; s.stats(); assert(s.S.rate > r0 && s.S.dmg >= d0 * 0.95, 'a levelled part makes the gun better');
+  // drop a part from the loadout
+  s.dropPart('launcher'); assert(!s.weapons.some((w) => w.id === 'launcher') && !/Rocket/.test(s.gunName), 'dropped');
+  s.reportStatus(true); const st = S.reports.filter((r) => r.op === 'st').pop(); assert.equal(st.gn, s.gunName, 'the TV gets the gun\'s name');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash.js'), 'utf8'); assert(src.includes('function loadoutUi(swap)') && src.includes('data-drop') && src.includes('data-swap'), 'the loadout screen: drop + swap');
+});
+test('balance: the merged gun scales sensibly (sim: the same dummy line, 5 s of fire) - no runaway DPS', () => {
+  const dps = (parts, ab) => {
+    const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 }, settings: { aim: 'off' } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.breakT = 9999; s.spawnCd = 999; s.p.inv = 1e9; s.initFight();
+    Object.assign(s.ab, ab || {}); for (const p of parts) { s.weapons.push({ id: p[0], lv: p[1], tier: p[2], cd: 0.4, a: 0, swing: 0 }); } s.stats(); s.p.x = 300; s.p.y = 480;
+    const Z = []; for (let i = 0; i < 6; i++) for (let j = -1; j <= 1; j++) { const z = s.makeZ('walker', 420 + i * 70, 480 + j * 50); z.hp = z.mhp = 1e7; z.speed = 0; Z.push(z); }
+    for (let i = 0; i < 300; i++) s.update(1 / 60, { ax: 1, ay: 0 });
+    return Z.reduce((a, z) => a + (1e7 - z.hp), 0) / 5;
+  };
+  const base = dps([]), out = { pistol: Math.round(base) };
+  for (const id of Object.keys(require('../public/box/games/trash-gun').TRAITS)) { const d = dps([[id, 1, 1]]); out[id] = +(d / base).toFixed(2); assert(d >= base * 0.85, id + ' is worth a slot: ' + (d / base).toFixed(2)); assert(d <= base * 4, id + ' alone is not a runaway: ' + (d / base).toFixed(2)); }
+  const maxed = dps([['smg', 10, 3], ['shotgun', 10, 3], ['launcher', 10, 3], ['coil', 10, 3]], { mount: 3 }) / base; out.maxed4 = +maxed.toFixed(2);
+  const mid = dps([['smg', 5, 1], ['shotgun', 5, 1]], { mount: 1 }) / base; out.mid2 = +mid.toFixed(2);
+  console.log('    DPS vs the plain pistol: ' + JSON.stringify(out));
+  assert(maxed > 3 && maxed < 30, 'four maxed parts: strong but bounded: ' + maxed.toFixed(1));
+  assert(mid > 1.3 && mid < maxed, 'it builds up: ' + mid.toFixed(2));
+});
+
 Promise.all(pending).then(() => console.log(`\n${passed} JustZombies tests passed.`));

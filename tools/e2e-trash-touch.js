@@ -81,6 +81,11 @@ async function swipe(ph, sel, dx) {
     await tap(ph, '.tz-ov:not([hidden]) [data-buy]:not([disabled])', 'shop buy'); await wait(300); assert(await ph.eval(`window.__tapped === 1`), 'buy got the tap');
     assert((await ph.eval(`TZ_DEBUG.sim().cash`)) < cash0, 'cash was spent'); ok('shop: a real tap on a buy button buys it');
     await tap(ph, '[data-close]', 'shop close'); await wait(300);
+    // the loadout: a new gun with no free slot offers a swap; tap a part to swap it out; then drop a part (two taps)
+    await ph.eval(D(`const s = T.sim(); s.weapons.length = 0; s.ab.mount = 0; s.stats(); s.addWeapon('launcher'); s.banner = null; return s.addWeapon('coil');`)); await ph.until(`!!document.querySelector('.tz-ov:not([hidden]) [data-swap]')`, 'the swap offer', 4000); await wait(300);
+    await tap(ph, '.tz-ov:not([hidden]) [data-swap]', 'swap'); await wait(300); assert.equal(await ph.eval(`TZ_DEBUG.sim().weapons.map((w) => w.id).join()`), 'coil', 'swapped in by a tap');
+    await tap(ph, '.tz-ov:not([hidden]) [data-drop]', 'drop (arm)'); await tap(ph, '.tz-ov:not([hidden]) [data-drop]', 'drop'); await wait(300); assert.equal(await ph.eval(`TZ_DEBUG.sim().weapons.length`), 0, 'dropped by two taps');
+    await tap(ph, '.tz-ov:not([hidden]) [data-close]', 'done'); await wait(300); ok('loadout: real taps swap a part for a new gun and drop a part');
     // the chest OPEN button (drawn on the canvas)
     await ph.eval(D(`const s = T.sim(); window.__chest = 0; s.chestNear = () => ({ x: s.p.x + 40, y: s.p.y, kind: 'loot' }); s.openChest = () => { window.__chest++; return true; }; return true;`)); await wait(300);
     const cb = await ph.eval(`(TZ_DEBUG.btns() || []).find((b) => b.id === 'chest')`); assert(cb, 'an OPEN button'); await tapAt(ph, cb.x, cb.y);

@@ -31,6 +31,11 @@
     S.regen += cls === 'medic' ? 2 : 0; S.thorns += cls === 'brawler' ? 10 : 0; S.boomMul = cls === 'demo' ? 1.4 : 1; S.aimRange *= cls === 'sharp' ? 1.2 : 1;
     if (g.tier >= 2) { S.br += 2 * (g.tier - 1); S.pierce += g.tier - 1; }
     if (this.combos && this.combos.has('hubstorm')) S.orbit += 2;
+    // ONE merged gun (trash-gun.js): every part adds its trait to your gun's shots
+    const MG = this.merged = window.TZGUN ? window.TZGUN.merge(this.weapons) : null;
+    if (MG) { S.rate *= MG.rate; S.dmg *= MG.dmg; S.pierce = Math.min(12, S.pierce + MG.pierce); S.bspeed *= MG.bspeed; S.burn += MG.burn; S.knock = (S.knock || 1) * MG.knock;
+      if (MG.pellets) { S.spread = Math.min(14, S.spread + MG.pellets); S.dmg *= MG.pelletDmg; } S.zapN = MG.zap; S.zapDmg = MG.zapDmg; }
+    this.gunName = window.TZGUN ? window.TZGUN.name(this.weapons, this.gun, this.combos) : null;
     this.cashMul = (cls === 'scav' ? 1.6 : 1) * (S.luck || 1);
   };
   const baseOffer = proto.offerCards;
@@ -128,13 +133,29 @@
       fi(this); if (!R().WEAPONS[id] || id === 'pistol') return false;
       const have = this.weapons.find((w) => w.id === id);
       if (have) { if (have.lv < R().MAX_LV) { have.lv++; this.popup(R().wname(id, have.tier) + ' Lv ' + have.lv, '#7fd6ff', this.p.x, this.p.y - 110); } else this.cash += 25; return 'level'; } // a duplicate: +1 level
-      if (this.weapons.length >= R().SLOTS) { this.cash += 25; this.popup('SLOTS FULL: +$25', '#ffd23f', this.p.x, this.p.y - 110); return 'cash'; }
+      if (this.weapons.length >= this.partCap() + (quiet ? 1 : 0)) { if (quiet) { this.cash += 25; return 'cash'; } this.swapOffer = { id, at: this.t }; this.o.on('swap', { id }); this.popup('NO FREE SLOT: SWAP?', '#ffd23f', this.p.x, this.p.y - 110); return 'swap'; } // (the loadout screen offers a swap: trash.js; starting gear (a class or unlock weapon) always fits: one over the cap)
       this.weapons.push({ id, lv: 1, tier: 1, cd: 0.4, a: 0, swing: 0 });
       if (!quiet) { const at = this._grabAt; this._grab = { kind: 'weapon', k: id, at: this.t, x: at ? at.x : null, y: at ? at.y : null }; this._grabAt = null; } // (the hero crouches and grabs it: trash-hero.js)
-      if (!quiet) { this.banner = { text: R().WEAPONS[id].icon + ' ' + R().wname(id, 1).toUpperCase(), sub: 'It fires by itself, next to your pistol', t: 2.2 }; this.o.report({ op: 'ev', k: 'weapon', id }); }
-      this.o.on('weapon', { id }); this.comboCheck(); return true;
+      const nc0 = this.combos.size; this.comboCheck(); this.stats(); const fused = this.combos.size > nc0;
+      if (!quiet) this.o.report({ op: 'ev', k: 'weapon', id }); if (!quiet && !fused) { this.banner = { text: R().WEAPONS[id].icon + ' ' + (this.gunName || R().wname(id, 1)).toUpperCase(), sub: 'Merged into your gun: ' + ((window.TZGUN && window.TZGUN.TRAITS[id]) ? window.TZGUN.TRAITS[id].what.toLowerCase() : 'a new trick'), t: 2.4 }; }
+      this.o.on('weapon', { id }); return true;
     },
     weaponById(id) { return id === 'pistol' ? this.gun : this.weapons.find((w) => w.id === id); },
+    // weapon slots (the base gun counts as one): 2 .. 5; parts = slots - 1
+    slots() { return window.TZGUN ? window.TZGUN.slots(this.ab) : 2; },
+    partCap() { return this.slots() - 1; },
+    // the loadout: drop a part, or swap the offered new one in for a part (or skip it for a little cash)
+    dropPart(id) { fi(this); const i = this.weapons.findIndex((w) => w.id === id); if (i < 0) return false; this.weapons.splice(i, 1); this.combos = new Set([...this.combos].filter((c) => { const C = R().COMBOS.find((q) => q.id === c); return !C || C.need.every((n) => !n.startsWith('w:') || this.weapons.some((w) => 'w:' + w.id === n)); })); this.stats(); this.o.on('drop', { id }); return true; },
+    takeSwap(replaceId) { fi(this); const S0 = this.swapOffer; if (!S0) return false; this.swapOffer = null; if (!replaceId) { this.cash += 25; this.popup('+$25', '#ffd23f', this.p.x, this.p.y - 110); return 'skip'; } if (!this.dropPart(replaceId)) return false; return this.addWeapon(S0.id); },
+    // every few shots a part fires its special: a grenade, a rail beam, a hubcap
+    fireSpecial(e) {
+      const P = this.p, S = this.S, a = P.aim, ox = P.x, oy = P.y, z = this.nearestZ(ox, oy, 900);
+      const push = (o) => { if (this.b.length >= 300) this.b.shift(); const sp = o.sp; this.b.push({ x: ox + Math.cos(a) * 26, y: oy + Math.sin(a) * 26, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: o.r, dmg: o.dmg, crit: false, pierce: o.pierce || 0, bounce: 0, life: o.life, hit: null, burn: 0, kind: o.kind, color: o.color, boom: o.boom, ret: o.ret, t0: this.t }); };
+      if (e.kind === 'grenade') push({ sp: 640, r: 7, kind: 'grenade', boom: 100 + 20 * (e.tier - 1), dmg: S.dmg * (1.4 + 0.5 * e.k), life: z ? Math.min(1, Math.sqrt(d2(z.x, z.y, ox, oy)) / 640) : 0.6, color: '#c0392b' });
+      else if (e.kind === 'hubcap') push({ sp: 700, r: 12, kind: 'hubcap', pierce: 99, ret: true, life: 1.4, dmg: S.dmg * (1 + 0.4 * e.k), color: '#c9ced6' });
+      else if (e.kind === 'rail') { const L = 1400, cx = Math.cos(a), cy = Math.sin(a), dmg = S.dmg * (1.6 + 0.8 * e.k); for (const q of this.z) { if (q.hp <= 0) continue; const px = q.x - ox, py = q.y - oy, t = px * cx + py * cy; if (t < 0 || t > L) continue; if (Math.abs(px * cy - py * cx) < q.r + 10) { this.damageZ(q, dmg, this.me.id, cx * 200, cy * 200); if (this.combos.has('railstorm') && this.rng() < 0.4) this.fx.push({ k: 'zap', x: q.x, y: q.y - 300, x2: q.x, y2: q.y - q.r, t: 0, life: 0.2 }); } } this.fx.push({ k: 'rail', x: ox, y: oy, x2: ox + cx * L, y2: oy + cy * L, t: 0, life: 0.25, c: '#7fd6ff' }); }
+      if (this.snd) this.snd('w:' + (e.kind === 'grenade' ? 'launcher' : e.kind), ox, oy);
+    },
     upgrade(id, rank) {
       fi(this); const w = this.weaponById(id); if (!w) return { ok: false, error: 'You don’t have that.' };
       if (!R().canUpgrade(rank, w.lv)) return { ok: false, error: w.lv >= 10 ? 'Level 10: take it to the crucible to evolve.' : 'This merchant can’t work on that level.' };
@@ -158,7 +179,8 @@
     weaponsStep(dt) {
       const P = this.p, S = this.S, combos = this.combos, rm = this.rateMul;
       for (const w of this.weapons) {
-        const Wd = R().WEAPONS[w.id], pw = R().power(w.lv, w.tier), dmg = S.dmg * Wd.dmg * pw, ox = P.x, oy = P.y;
+        const Wd0 = R().WEAPONS[w.id]; if (Wd0.kind !== 'swing' && Wd0.kind !== 'saw') continue; // (one merged gun: the parts' traits are in its shots, trash-gun.js)
+        const Wd = Wd0, pw = window.TZGUN ? 0.5 * window.TZGUN.strength(w) : R().power(w.lv, w.tier), dmg = S.dmg * Wd.dmg * pw, ox = P.x, oy = P.y;
         w.cd -= dt * R().speed(w.lv, w.tier) * rm; w.swing = Math.max(0, w.swing - dt * 4);
         if (w.cd > 0) continue;
         const z = this.nearestZ(ox, oy, Wd.range * (S.aimRange / 640)); if (!z) { w.cd = 0.1; continue; }
@@ -182,7 +204,7 @@
       }
     },
     // bullets with a trick: they explode, spark, or come back (called from the core bullet loop)
-    bulletHit(b, z) { if (b.zap) { const q = this.nearestZ(z.x + 60, z.y, 200); if (q && q !== z) { this.fx.push({ k: 'zap', x: z.x, y: z.y - z.r, x2: q.x, y2: q.y - q.r, t: 0, life: 0.15 }); this.damageZ(q, b.dmg * 0.6, this.me.id, 0, 0, { shock: 1 }); } } if (b.boom && !b.pierce) this.boom(b.x, b.y, b.boom, b.dmg, '#ff8c42', false); },
+    bulletHit(b, z) { if (b.zap) { let from = z; const seen = [z.id]; for (let j = 0; j < (b.zapN || 1); j++) { let q = null, bd = 200 * 200; for (const c of this.z) { if (c.hp <= 0 || seen.includes(c.id)) continue; const dd = d2(c.x, c.y, from.x, from.y); if (dd < bd) { bd = dd; q = c; } } if (!q) break; seen.push(q.id); this.fx.push({ k: 'zap', x: from.x, y: from.y - from.r, x2: q.x, y2: q.y - q.r, t: 0, life: 0.15 }); this.damageZ(q, b.dmg * (b.zapDmg || 0.6), this.me.id, 0, 0, { shock: 1 }); from = q; } } if (b.boom && !b.pierce) this.boom(b.x, b.y, b.boom, b.dmg, '#ff8c42', false); },
     bulletEnd(b) { if (b.boom) this.boom(b.x, b.y, b.boom, b.dmg, '#ff8c42', false); },
     // ---------------- timed super weapons ----------------
     timedCheck() {
@@ -313,7 +335,7 @@
       const St = this.stockOf();
       for (const b of ov.querySelectorAll('[data-up]')) b.onclick = (e) => { e.stopPropagation(); const r = this.upgrade(b.dataset.up, St.type); refresh(r.ok ? '' : r.error); };
       for (const b of ov.querySelectorAll('[data-evo]')) b.onclick = (e) => { e.stopPropagation(); const r = this.evolve(b.dataset.evo); if (r.ok) refresh(null, true); else refresh(r.error); };
-      for (const b of ov.querySelectorAll('[data-wbuy]')) b.onclick = (e) => { e.stopPropagation(); const id = b.dataset.wbuy, c = R().weaponCost(id, this.wave); if (this.cash < c || St.sold['w:' + id]) return; if (this.weapons.length >= R().SLOTS && !this.weapons.some((w) => w.id === id)) return refresh('All weapon slots are full.'); this.cash -= c; St.sold['w:' + id] = 1; this.addWeapon(id); refresh(''); };
+      for (const b of ov.querySelectorAll('[data-wbuy]')) b.onclick = (e) => { e.stopPropagation(); const id = b.dataset.wbuy, c = R().weaponCost(id, this.wave); if (this.cash < c || St.sold['w:' + id]) return; this.cash -= c; St.sold['w:' + id] = 1; this.addWeapon(id); refresh(''); };
       for (const b of ov.querySelectorAll('[data-ibuy]')) b.onclick = (e) => { e.stopPropagation(); const r = this.buyItem(b.dataset.ibuy); refresh(r.ok ? '' : r.error); };
       for (const b of ov.querySelectorAll('[data-lock]')) b.onclick = (e) => { e.stopPropagation(); this.lockItem(b.dataset.lock); refresh(''); };
       const rr = ov.querySelector('[data-reroll]'); if (rr) rr.onclick = (e) => { e.stopPropagation(); const r = this.rerollShop(); refresh(r.ok ? '' : r.error); };
@@ -383,6 +405,11 @@
       }
     },
   });
+  // the merged gun's own shots: chain lightning (coil), knockback (blower); its every-Nth specials
+  const baseFire = proto.fireBullet;
+  proto.fireBullet = function (x, y, a, mul) { baseFire.call(this, x, y, a, mul); const S = this.S, b = this.b[this.b.length - 1]; if (b && S && S.zapN) { b.zap = true; b.zapN = S.zapN; b.zapDmg = S.zapDmg; } if (b && S && S.knock > 1) b.kb = S.knock; };
+  const baseShoot2 = proto.shoot;
+  proto.shoot = function (dt, I) { const n0 = this.shotN || 0; const out = baseShoot2.call(this, dt, I); const n1 = this.shotN || 0; if (n1 > n0 && this.merged && this.merged.every.length) for (const e of this.merged.every) if (n1 % e.n === 0) this.fireSpecial(e); return out; };
   function drawCap(g, x, y, a) { g.save(); g.translate(x, y); g.rotate(a); const gr = g.createRadialGradient(-4, -4, 1, 0, 0, 13); gr.addColorStop(0, '#f2f4f6'); gr.addColorStop(1, '#6a737c'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 13, 0, TAU); g.fill(); g.fillStyle = '#4a525a'; for (let i = 0; i < 5; i++) { g.rotate(TAU / 5); g.fillRect(3, -1.5, 8, 3); } g.restore(); }
   // a weapon drawn big (evolution, HUD): its tier changes the finish (steel, chrome, gold)
   function drawWeaponIcon(g, id, tier) {

@@ -2260,3 +2260,40 @@ TrashZombies is now **JustZombies** (internal key stays `trash`, no file renames
   (10 real-tap checks), test-box-kit, test-box, test-box-party, e2e-box. Screenshots looked at: the wheel settled,
   mid-spin and on a locked class (iPhone landscape), portrait, PC; the jetpack on the ground, flying with the fuel
   ring, floating down; the iPhone tip.
+
+## JustZombies: ONE merged gun (claude/justzombies-heli, November 25, 2026)
+
+- **The owner's ask:** slots start at 2 and go to 5 with abilities; every gun you pick up adds to your base gun (a
+  pistol + a rocket gun = a pistol rocket gun), each combination its own gun and look; drop / swap parts on the pause
+  screen to build the perfect loadout; every gun builds on itself and the levels scale it.
+- **Slots** (`public/box/games/trash-gun.js`, TZGUN, shared): 2 to start (the base gun + 1 part), +1 per **Gun Rack**
+  (a new Attack card, offered until you're at 5), 5 at most. The HUD shows 🔩 used/slots and the gun's name.
+  Starting gear (a class or unlock weapon) always fits (one over the cap).
+- **One gun:** the parts no longer fire by themselves. Each adds its trait to your gun's shots: shotgun pellets, SMG
+  rate, nail-gun / crossbow piercing (+ fast bolts), a rail beam every 6th shot, a grenade every 4th (launcher), a
+  boomerang hubcap every 8th, burning rounds (flamer), chain lightning that really chains (coil), knockback
+  (blower), a bayonet / buzzing blade up close (bat / saw). Traits stack. Each part keeps its own level (the three
+  merchant ranks) and tier (the Crucible's gold beam), and its strength (1 at Lv1 T1, ~2.2 at Lv10 T3) scales its
+  trait; the base gun's level / tier still scale everything. Timed super weapons stay as temporary overrides on
+  top (the minigun's rate, the rocket barrage, the ray gun). A duplicate pickup levels its part up (no slot).
+- **Names:** generated from the parts (Pistol Rocket Gun, Scatter Rocket Gun, Flame-Chain Rattler, Rocket-Buzz Rail
+  Rifle...; Chrome / Golden for a tier 2 / 3 base); the old combo pairs are named guns (Fire Tornado, Arc Nailer,
+  Boom-Bolt Bow, Thunder Rail...) and keep their tricks. 66 different two-part names alone.
+- **The look:** the gun in your hands is the body (your strongest two-handed part, else the pistol) with the other
+  parts mounted on it small (under the barrel, on the top rail, front, rear: their own cartoon art), a little bigger
+  with each part; the muzzle mixes effects (fire licks with a flame part, smoke puffs with a launcher / rail).
+- **Loadout** (pause menu, and on its own when a new gun has no free slot): the gun big (its composed model), its name
+  and stats, a card per part (icon, level, tier, what it adds) with Drop (tap twice), the empty slots and how to get
+  more; a swap offer for a new gun: swap it for a part, or skip it for $25. Same on phone and PC (real-tap checked).
+- **TV:** the leaderboard shows each player's gun name (the phone reports it with the status).
+- **Balance** (test-box-trash: the same dummy line, 5 s of fire, DPS vs the plain pistol): one part at Lv1 is worth
+  1.0-3.3x (piercing parts look best against a lined-up crowd, the bayonets only count up close), two mid parts
+  ~2.4x, four maxed parts (Lv10 tier 3, 5 slots) ~13x: strong but bounded (the old free-firing weapons stacked
+  each at up to 12x on their own).
+- Validation: test-box-trash 94 (slots 2..5 + the Gun Rack cap, merge names, the swap / skip / drop / duplicate flow,
+  traits, specials every Nth shot, part levels, the TV name, the balance sim), e2e-trash-touch 11 (new: tap a swap and
+  a drop), test-box-kit, test-box, test-box-party, e2e-box (now picks the class on the wheel). Screenshots looked at:
+  six combos in hand, the pause loadout, the swap offer.
+- Limits: the part art is the weapons' own sprites composed (no separate per-part renders); the base gun is the pistol
+  for everyone (a class's starting weapon is its first part); the combo book stays in the pause menu as the list of
+  named pairs.

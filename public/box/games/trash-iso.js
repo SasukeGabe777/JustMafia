@@ -721,11 +721,28 @@
     ARMS = { id, L }; return L;
   }
   const GUN_K = 1.3; // the held gun's size (art px per art px at the scene scale): clearly a gun in your hands
-  function gunInfo(key) {
+  let PARTS_N = 0; // (how many parts are merged into the gun being drawn: it grows a little with each)
+  // where the other parts sit on the gun (along it from the grip, and under (+) / over (-) it): under-barrel, top rail, front top, rear
+  const MOUNTS = [[0.72, 0.42], [0.35, -0.5], [0.95, -0.25], [0.05, 0.2]];
+  function partKey(id) { return id === 'bat' || id === 'saw' ? 'weapon.' + id : 'weapon.' + id; }
+  // the parts other than the body, drawn small on it (a rocket tube, a drum, a coil, a blade...)
+  function drawParts(g, sim, I, hx, hy, ang, bodyId) {
+    const parts = (sim.weapons || []).filter((w) => 'weapon.' + w.id !== bodyId); if (!parts.length) return;
+    const c = Math.cos(ang), sn = Math.sin(ang), fy = c < 0 ? -1 : 1, gx = I.Lg * (1 - I.G.g), dx = -sn * fy, dy = c * fy;
+    parts.slice(0, 4).forEach((w, i) => { const Pk = need(partKey(w.id)); if (!Pk || !Pk.anims.spin) return; const Ia = gunInfo(partKey(w.id), 0.42); if (!Ia) return; const [fa, fb] = MOUNTS[i];
+      const mx = hx + c * gx * fa + dx * I.Hg * fb, my = hy + sn * gx * fa + dy * I.Hg * fb; gunAt(g, Ia, mx - c * Ia.Lg * (0.5 - Ia.G.g), my - sn * Ia.Lg * (0.5 - Ia.G.g), ang); });
+  }
+  // the merged gun on its own (the loadout screen): the body and its parts, big, on a canvas
+  function gunPreview(cv, sim) {
+    const x = cv.getContext('2d'), w = cv.width, h = cv.height, s0 = C.s, d0 = C.dpr; C.dpr = 1; x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, w, h);
+    try { const key = GUN(sim); PARTS_N = (sim.weapons || []).length; C.s = Math.min(w / 120, h / 60); const I = gunInfo(key); if (!I) return false; const hx = w / 2 - I.Lg * (0.5 - I.G.g), hy = h / 2 + I.Hg * 0.2; gunAt(x, I, hx, hy, 0); drawParts(x, sim, I, hx, hy, 0, key); return true; }
+    finally { C.s = s0; C.dpr = d0; PARTS_N = 0; x.setTransform(1, 0, 0, 1, 0, 0); }
+  }
+  function gunInfo(key, scale) {
     const Pk = need(key); if (!Pk || !Pk.anims.spin) return null;
     if (!Pk._side) { const L0 = Pk.anims.spin.rows.S; let bi = 0; L0.forEach((q, i) => { if (q.w / q.h > L0[bi].w / L0[bi].h + 0.02) bi = i; }); const q = L0[bi]; Pk._side = { fr: q, ml: q.lx == null ? true : q.lx > q.w / 2 }; }
-    const G = GUNS[key] || GUNS['weapon.pistol'], sc = C.s * GUN_K * Pk.sc * G.k, fr = Pk._side.fr;
-    return { Pk, fr, ml: Pk._side.ml, G, sc, Lg: fr.w * sc, Hg: fr.h * sc };
+    const G = GUNS[key] || GUNS['weapon.pistol'], sc = C.s * GUN_K * Pk.sc * G.k * (1 + 0.06 * (PARTS_N || 0)), fr = Pk._side.fr;
+    const sc2 = sc * (scale || 1); return { Pk, fr, ml: Pk._side.ml, G, sc: sc2, Lg: fr.w * sc2, Hg: fr.h * sc2 };
   }
   // the gun with its grip at (hx, hy), turned to ang (never upside down); returns the barrel tip
   function gunAt(g, I, hx, hy, ang, alpha) {
@@ -738,7 +755,7 @@
   }
   const FLASH = { cash: '#ffd23f', snack: '#7dff6a', armor: '#c9ccd1', shield: '#7fd6ff', freeze: '#bfefff', xp2: '#5affc8', kicks: '#7dff6a', nuke: '#ff8c42' };
   function heroArms(g, sim, P, aS, face, X, Y, kp, moving, alpha, t) {
-    const H = window.TZH, TS = window.TZSim, s = C.s, key = GUN(sim), I = gunInfo(key); if (!I) return false;
+    const H = window.TZH, TS = window.TZSim, s = C.s, key = GUN(sim); PARTS_N = (sim.weapons || []).length; const I = gunInfo(key); PARTS_N = 0; if (!I) return false;
     const AL = armLookOf(sim), dt = Math.min(0.1, Math.max(0, t - (sim._heroT == null ? t : sim._heroT))); sim._heroT = t;
     const E = sim._eq = H.equipStep(sim._eq, key, sim._grab, t, dt);
     const fi = Math.floor((P.walkT || 0) * 14) % 8, bob = moving ? Math.abs(Math.sin((fi / 8) * TAU)) * 2.5 : 0.43;
@@ -756,7 +773,9 @@
       if (Q.F) Hf = H.arm(g, Q.SF, Q.F, AL, K);
       if (Q.item && Q.item.k > 0.02) { // the item flying into your hands
         const a = Q.ang + Q.item.spin * (face > 0 ? -1 : 1); gunAt(g, J, Q.item.x, Q.item.y, a); sim._gunTip = null;
-      } else sim._gunTip = [...gunAt(g, J, Hg[0], Hg[1], Q.ang), Q.ang];
+      } else { sim._gunTip = [...gunAt(g, J, Hg[0], Hg[1], Q.ang), Q.ang]; drawParts(g, sim, J, Hg[0], Hg[1], Q.ang, Q.gunKey);
+        // mixed muzzle effects: a flame part licks fire, a launcher / rail part puffs smoke
+        const MG = sim.merged; if (MG && sim.muzzle > 0) { const [tx, ty] = sim._gunTip; if (MG.flame) fx(g, 'fx.fire', Math.floor(t * 20) % fxLen('fx.fire'), tx, ty, 0.22, { add: true, alpha: 0.9 }); if (MG.every.length && (sim.shotN || 0) % 2 === 0) fx(g, 'fx.smoke', Math.floor(t * 12) % fxLen('fx.smoke'), tx, ty - 4 * s, 0.16, { alpha: 0.6 }); } }
       setScreen(g); H.hand(g, Hg, AL, K); if (Hf) H.hand(g, Hf, AL, K);
     };
     const drawFree = () => {
@@ -1083,6 +1102,6 @@
     return true;
   }
 
-  window.TZI_HELI = { heliAt };
+  window.TZI_HELI = { heliAt, gunPreview };
   const TZI = window.TZI = { bodyOf, bodyBox, hitPoint, chestH, SHOT_H, ZOOM_OUT, fxImage: () => FX.img, topFor, E, SHOW_KEYS, showcase, ready: false, boot, need, has, prefetch, prefetchArea, render, sprite, fx, dirOf, dirToWorld, screenAngle, toScreen: C.toScreen, cam: C, C, st, setGround, setScreen, setBill, prism, groundFor, standFor, garageParts, iso: { HX, HY, HZ, CH, BB }, manifest: () => M, zKey, drawZombie, zState, animFrame, animName, BOSSKEY, VEH, keyOf };
 })();

@@ -268,6 +268,18 @@ small.tz-why { color: #a89c84; max-width: 130px; text-align: right; }
 .tz-tmc { flex: 1; min-height: 180px; width: 100%; display: block; border-radius: 10px; background: #0e0b10; }
 .tz-tmap .tz-mut { margin: 0; font-size: 12px; }
 
+/* the loadout (your ONE merged gun) */
+.tz-load { display: flex; align-items: center; gap: 12px; background: #1d1813; border: 3px solid #ffb02e; border-radius: 14px; padding: 6px 10px; margin: 4px 0 8px; }
+.tz-gunc { width: 240px; height: 107px; flex: none; background: radial-gradient(ellipse, rgba(255,176,46,0.25), transparent 70%); }
+.tz-gname { font: 22px 'Lilita One', sans-serif; color: #ffd23f; } .tz-gst p { margin: 2px 0 0; font-size: 13px; color: #e8dcc0; }
+.tz-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
+.tz-part { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 12px; background: #2a231c; border: 3px solid #3d3329; text-align: left; }
+.tz-part.base { border-color: #9cff3c; } .tz-part.t2 { border-color: #8ab0d0; } .tz-part.t3 { border-color: #ffd23f; } .tz-part.empty, .tz-part.lockslot { opacity: 0.65; border-style: dashed; }
+.tz-part > div { flex: 1; min-width: 0; } .tz-part b { display: block; font: 15px 'Lilita One', sans-serif; color: #fff6d8; } .tz-part small { color: #cfc4a8; font-size: 12px; }
+.tz-pi { font-size: 26px; } .tz-part .btn { flex: none; min-height: 40px; }
+.tz-ov.loadout { align-items: flex-start; }
+.tz-gn { display: block; color: #ffb02e; font-size: 12px; }
+@media (max-height: 460px) { .tz-gunc { width: 180px; height: 80px; } .tz-load { padding: 4px 8px; } }
 /* the helicopter map picker */
 .tz-heli { border-color: #9cff3c; }
 .tz-heli-go { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 700; color: #ffe9a8; }
