@@ -11,6 +11,9 @@ const KN = (kit, n) => `${X}kenney-${kit}/Models/GLB format/${n}.glb`, KG = (kit
 const PP = (uuid) => `${A}pp-items/${uuid}.glb`; // poly.pizza downloads (Quaternius, CC0), named by their static.poly.pizza file id
 const Z24 = A + 'pp-quaternius-zombie/c4002f69-6979-42e8-ad6e-2f4e14fc3a9d.glb'; // Quaternius "Zombie" (poly.pizza VlXjG0N8Eg)
 const D5 = [0, 1, 2, 3, 4];
+// The cartoon look for every character (cel shading, ink lines, punchier colours, bigger heads, chunkier hands): see toon in iso.js.
+const TOON = { head: 1.22, hand: 1.3, sat: 1.45, light: 1.08, ink: 0.02 };
+const headUp = (at) => (at || []).map((a) => (a.bone === 'Head' && a.pos ? { ...a, pos: [a.pos[0], a.pos[1] * TOON.head, a.pos[2]] } : a));
 const BLOOD = { url: ZK + 'Prop/Blood 1.glb', length: 1.3, castShadow: false };
 const GOO = [0.45, 1.6, 0.35], INK = [0.35, 0.2, 0.6];
 const jobs = [];
@@ -21,7 +24,7 @@ const ZB = ZK + 'Zombie/Zombie Basic.glb', ZC = ZK + 'Zombie/Zombie Chubby.glb',
 const ATT = { [ZB]: 'Idle_Attack', [ZC]: 'Idle_Attack', [ZA]: 'Punch', [ZR]: null, [Z24]: 'Idle_Attack' };
 function zAnims(url, o = {}) {
   const a = [
-    { name: 'idle', clip: 'Idle', frames: 6, fps: 6 },
+    // (no idle row: the game never shows a zombie standing still, it plays walk / attack)
     { name: 'walk', clip: o.walk || 'Walk', frames: 12, fps: o.walkFps || 12 },
   ];
   if (o.run) a.push({ name: 'run', clip: o.run === true ? 'Run' : o.run, frames: 10, fps: 15 });
@@ -32,7 +35,7 @@ function zAnims(url, o = {}) {
 }
 const Z = (id, url, o = {}) => add('zombie.' + id, `sprites/zombie-${id}.webp`, {
   url, height: o.h || 1.8, cell: o.cell || [160, 160], anchor: o.anchor || [80, 104], blob: [0.35 * (o.h || 1.8) / 1.8, 0.3], dirs: D5,
-  tint: o.tint, emissive: o.emissive, emissiveIntensity: o.ei, attach: o.attach, quality: 0.72, outlineColor: o.outline, outlinePx: o.outlinePx, matTint: o.matTint,
+  tint: o.tint, emissive: o.emissive, emissiveIntensity: o.ei, attach: headUp(o.attach), quality: 0.64, outlineColor: o.outline || 'rgba(18,10,8,0.95)', outlinePx: o.outlinePx || 2, matTint: o.matTint, toon: o.toon === false ? undefined : { ...TOON, ...(o.toon || {}) },
   blood: { ...BLOOD, length: 1.3 * (o.h || 1.8) / 1.8, tint: o.bloodTint }, anims: o.anims || zAnims(url, o),
 }, { kind: 'character', type: id, name: o.name, look: o.look });
 
@@ -40,32 +43,32 @@ const CAN = PP('9586bdcb-a768-4915-a8c6-8de8e4b0a4c6'); // Quaternius Trashcan
 Z('walker', ZB, { name: 'Shambler', look: 'base zombie' });
 Z('runner', ZR, { name: 'Sprinter', run: true, tint: [1.05, 0.95, 0.85], look: 'ribcage zombie, run cycle' });
 Z('crawler', ZB, { name: 'Crawler', tint: [0.85, 0.9, 0.8], look: 'legless crawl cycle', anims: [
-  { name: 'idle', clip: 'Crawl', frames: 6, fps: 5 }, { name: 'walk', clip: 'Crawl', frames: 12, fps: 14 },
+  { name: 'walk', clip: 'Crawl', frames: 12, fps: 14 },
   { name: 'attack', clip: 'Crawl', frames: 10, fps: 18, loop: false }, { name: 'hit', clip: 'HitReact', frames: 5, fps: 16, loop: false },
   { name: 'death', clip: 'Death', frames: 16, fps: 14, loop: false, blood: 0.35 }] });
-Z('bloater', ZC, { name: 'Bloater', h: 2.0, tint: [1.0, 1.05, 0.62], cell: [176, 176], anchor: [88, 116], bloodTint: [0.9, 1.3, 0.3], look: 'yellow fat zombie' });
+Z('bloater', ZC, { name: 'Bloater', toon: { hue: 0.13, skinSat: 0.8, skinLight: 1.2, from: [0.5, 0.75] }, h: 2.0, tint: [1.0, 1.05, 0.62], cell: [176, 176], anchor: [88, 116], bloodTint: [0.9, 1.3, 0.3], look: 'yellow fat zombie' });
 Z('canhead', ZB, { name: 'Can-Head', tint: [0.9, 0.95, 1.0], look: 'trash can on its head', attach: [{ url: CAN, bone: 'Head', width: 0.56, pos: [0, 0.86, 0], rot: [180, 0, 0], tint: [2.2, 2.2, 2.3], castShadow: true }] });
-Z('spitter', ZA, { name: 'Spitter', tint: [0.72, 1.12, 0.55], emissive: 0x1d3a00, ei: 0.25, bloodTint: GOO, look: 'green one-armed zombie' });
-Z('exploder', ZC, { name: 'Gas-Bag', h: 1.9, tint: [1.2, 0.95, 0.5], emissive: 0x5a2a00, ei: 0.3, look: 'orange fat zombie with a gas can strapped on',
+Z('spitter', ZA, { name: 'Spitter', toon: { hue: 0.33, skinSat: 0.9, skinLight: 1.1 }, tint: [0.72, 1.12, 0.55], emissive: 0x1d3a00, ei: 0.25, bloodTint: GOO, look: 'green one-armed zombie' });
+Z('exploder', ZC, { name: 'Gas-Bag', toon: { hue: 0.07, skinSat: 0.9, skinLight: 1.15, from: [0.5, 0.75] }, h: 1.9, tint: [1.2, 0.95, 0.5], emissive: 0x5a2a00, ei: 0.3, look: 'orange fat zombie with a gas can strapped on',
   attach: [{ url: TS + 'Prop/Gas Can.glb', bone: 'Torso', height: 0.45, pos: [0, 0.05, -0.32], rot: [0, 90, 0], castShadow: true }] });
-Z('screamer', Z24, { name: 'Screamer', tint: [0.95, 0.82, 1.2], look: 'second zombie body, violet', attack: 'Idle_Attack' });
-Z('stalker', ZR, { name: 'Stalker', run: true, tint: [0.55, 0.58, 0.7], look: 'dark ribcage zombie' });
-Z('brute', ZC, { name: 'Raging Brute', h: 2.6, tint: [1.2, 0.72, 0.66], cell: [224, 224], anchor: [112, 150], attack: 'Punch', look: 'huge red zombie' });
+Z('screamer', Z24, { name: 'Screamer', toon: { hue: 0.08, skinSat: 0.45, skinLight: 1.1 }, tint: [0.95, 0.82, 1.2], look: 'second zombie body, violet', attack: 'Idle_Attack' });
+Z('stalker', ZR, { name: 'Stalker', toon: { sat: 0.6, light: 0.85 }, run: true, tint: [0.55, 0.58, 0.7], look: 'dark ribcage zombie' });
+Z('brute', ZC, { name: 'Raging Brute', toon: { hue: 0.0, skinSat: 0.75, from: [0.5, 0.75] }, h: 2.6, tint: [1.2, 0.72, 0.66], cell: [224, 224], anchor: [112, 150], attack: 'Punch', look: 'huge red zombie' });
 Z('riot', ZB, { name: 'Riot Shield', tint: [0.8, 0.85, 0.95], look: 'carries a riot shield', attach: [{ url: 'proc:shield', bone: 'LowerArm.L', height: 0.95, pos: [0, -0.75, 0.28], rot: [0, 0, 0] }] });
 Z('elite', ZB, { name: 'Glowing elite (any type can glow; this is the stock elite)', tint: [0.9, 1.08, 0.9], emissive: 0x1fbf50, ei: 0.22, outline: 'rgba(140,255,160,0.95)', outlinePx: 2, look: 'glowing green outline' });
 Z('carrier', ZB, { name: 'Weapon carrier (drops the timed super weapon it holds)', tint: [1.15, 0.9, 0.72], look: 'holds a minigun', attack: 'Punch',
   attach: [{ url: 'proc:minigun', bone: 'Torso', length: 0.95, keepMetal: true, pos: [-0.32, -0.25, 0.45], rot: [0, -90, 0], castShadow: true }] });
 // debuff zombies: own look so each reads differently (the game adds its aura on top)
-Z('blinder', ZA, { name: 'Inkspitter', tint: [0.7, 0.55, 0.95], emissive: 0x1a0a30, ei: 0.3, bloodTint: INK, look: 'violet, inky blood' });
-Z('webber', ZR, { name: 'Webber', tint: [1.35, 1.35, 1.35], look: 'pale white ribcage' });
-Z('jammer', ZB, { name: 'Gunk Jammer', tint: [0.75, 0.78, 0.8], look: 'grey, a wrench through its head',
+Z('blinder', ZA, { name: 'Inkspitter', toon: { hue: 0.76, skinSat: 0.75 }, tint: [0.7, 0.55, 0.95], emissive: 0x1a0a30, ei: 0.3, bloodTint: INK, look: 'violet, inky blood' });
+Z('webber', ZR, { name: 'Webber', toon: { sat: 0.25, light: 1.3 }, tint: [1.35, 1.35, 1.35], look: 'pale white ribcage' });
+Z('jammer', ZB, { name: 'Gunk Jammer', toon: { hue: 0.57, skinSat: 0.35, skinLight: 1.15 }, tint: [0.75, 0.78, 0.8], look: 'grey, a wrench through its head',
   attach: [{ url: A + 'gd-kk-rpgtools/Tool/Wrench A.glb', bone: 'Head', length: 0.34, pos: [0, 0.32, 0], rot: [0, 0, 70], castShadow: true }] });
-Z('sludger', ZC, { name: 'Sludger', h: 1.9, tint: [0.65, 1.15, 0.4], emissive: 0x143a00, ei: 0.3, bloodTint: GOO, look: 'slimy green fat zombie' });
-Z('squinter', Z24, { name: 'Squinter', tint: [1.3, 1.2, 0.55], emissive: 0x504000, ei: 0.35, look: 'yellow glow, second body' });
-Z('confuser', ZA, { name: 'Spinner', tint: [1.0, 0.7, 1.25], look: 'pink one-armed zombie, traffic cone hat',
+Z('sludger', ZC, { name: 'Sludger', toon: { hue: 0.24, skinSat: 1, skinLight: 1.2, from: [0.48, 0.72] }, h: 1.9, tint: [0.65, 1.15, 0.4], emissive: 0x143a00, ei: 0.3, bloodTint: GOO, look: 'slimy green fat zombie' });
+Z('squinter', Z24, { name: 'Squinter', toon: { hue: 0.15, skinSat: 1, skinLight: 1.25 }, tint: [1.3, 1.2, 0.55], emissive: 0x504000, ei: 0.35, look: 'yellow glow, second body' });
+Z('confuser', ZA, { name: 'Spinner', toon: { hue: 0.9, skinSat: 0.85, skinLight: 1.2 }, tint: [1.0, 0.7, 1.25], look: 'pink one-armed zombie, traffic cone hat',
   attach: [{ url: ZK + 'Prop/Traffic Cone 1.glb', bone: 'Head', height: 0.35, pos: [0, 0.42, 0], castShadow: true }] });
-Z('leecher', ZR, { name: 'Leech', run: true, tint: [1.25, 0.55, 0.5], look: 'blood-red ribcage' });
-Z('shaker', ZC, { name: 'Stomper', h: 2.3, tint: [1.25, 0.85, 0.55], cell: [208, 208], anchor: [104, 140], attack: 'Punch', look: 'big orange stomper' });
+Z('leecher', ZR, { name: 'Leech', toon: { hue: 0.99, skinSat: 0.85 }, run: true, tint: [1.25, 0.55, 0.5], look: 'blood-red ribcage' });
+Z('shaker', ZC, { name: 'Stomper', toon: { hue: 0.47, skinSat: 0.8, skinLight: 1.15, from: [0.5, 0.75] }, h: 2.3, tint: [1.25, 0.85, 0.55], cell: [208, 208], anchor: [104, 140], attack: 'Punch', look: 'big orange stomper' });
 
 // rot nest: a breathing trash mound (idle pulse, hit squash, death sink) - not a body, so its own job
 add('zombie.nest', 'sprites/zombie-nest.webp', {
@@ -84,19 +87,19 @@ const bossAnims = (url, o = {}) => [
   ATT[url] || o.attack ? { name: 'attack', clip: o.attack || ATT[url], frames: 10, fps: 12, loop: false } : { name: 'attack', clip: 'Jump', frames: 10, fps: 12, loop: false, to: 0.55 },
   { name: 'hit', clip: o.hit || 'HitReact', frames: 4, fps: 12, loop: false }, { name: 'death', clip: 'Death', frames: 14, fps: 10, loop: false, blood: 0.3 }];
 const B = (id, url, o) => add('boss.' + id, `sprites/boss-${id}.webp`, {
-  url, height: o.h, cell: o.cell || [256, 256], anchor: o.anchor || [128, 176], blob: [0.7, 0.35], dirs: D5, tint: o.tint, emissive: o.emissive, emissiveIntensity: o.ei, attach: o.attach, matTint: o.matTint,
-  quality: 0.7, light: { shadowExtent: 8 }, outlinePx: 2, blood: { ...BLOOD, length: 2.6, tint: o.bloodTint }, anims: o.anims || bossAnims(url, o),
+  url, height: o.h, cell: o.cell || [256, 256], anchor: o.anchor || [128, 176], blob: [0.7, 0.35], dirs: D5, tint: o.tint, emissive: o.emissive, emissiveIntensity: o.ei, attach: headUp(o.attach), matTint: o.matTint,
+  quality: 0.62, light: { shadowExtent: 8 }, outlinePx: 3, outlineColor: 'rgba(18,10,8,0.95)', toon: { ...TOON, ink: 0.035, ...(o.toon || {}) }, blood: { ...BLOOD, length: 2.6, tint: o.bloodTint }, anims: o.anims || bossAnims(url, o),
 }, { kind: 'character', type: id, boss: true, name: o.name, look: o.look });
-B('dumpster', ZC, { name: 'Dumpster Brute', h: 3.3, tint: [0.78, 0.9, 0.72], look: 'giant zombie with a dumpster on its back',
+B('dumpster', ZC, { name: 'Dumpster Brute', toon: { hue: 0.3, skinSat: 0.6, from: [0.5, 0.75] }, h: 3.3, tint: [0.78, 0.9, 0.72], look: 'giant zombie with a dumpster on its back',
   attach: [{ url: KC + '3D City Builder/Dumpster.glb', bone: 'Torso', length: 1.4, pos: [0, -0.5, -0.75], rot: [0, 90, 0] }] });
-B('spider', ZR, { name: 'Mother Webber', h: 2.2, tint: [1.35, 1.3, 1.35], look: 'huge pale crawler', anims: [
+B('spider', ZR, { name: 'Mother Webber', toon: { sat: 0.3, light: 1.3 }, h: 2.2, tint: [1.35, 1.3, 1.35], look: 'huge pale crawler', anims: [
   { name: 'idle', clip: 'Crawl', frames: 6, fps: 5 }, { name: 'walk', clip: 'Crawl', frames: 10, fps: 12 }, { name: 'attack', clip: 'Jump', frames: 10, fps: 12, loop: false, to: 0.55 },
   { name: 'hit', clip: 'HitReact', frames: 4, fps: 12, loop: false }, { name: 'death', clip: 'Death', frames: 14, fps: 10, loop: false, blood: 0.3 }] });
 B('foghorn', ZA, { name: 'The Foghorn', h: 3.1, tint: [1.15, 0.9, 0.62], look: 'giant with a traffic-cone horn',
   attach: [{ url: ZK + 'Prop/Traffic Cone 1.glb', bone: 'Head', height: 0.6, pos: [0, 0.35, 0.35], rot: [90, 0, 0], castShadow: true }] });
-B('toxic', ZC, { name: 'Toxic Tub', h: 3.1, tint: [0.55, 1.2, 0.45], emissive: 0x1f5a00, ei: 0.35, bloodTint: GOO, look: 'green giant with a leaking barrel',
+B('toxic', ZC, { name: 'Toxic Tub', toon: { hue: 0.23, skinSat: 0.95, skinLight: 1.15, from: [0.5, 0.75] }, h: 3.1, tint: [0.55, 1.2, 0.45], emissive: 0x1f5a00, ei: 0.35, bloodTint: GOO, look: 'green giant with a leaking barrel',
   attach: [{ url: TS + 'Prop/Exploding Barrel.glb', bone: 'Torso', height: 0.9, pos: [0, -0.3, -0.55], rot: [0, 0, 0], castShadow: true }] });
-B('final', ZB, { name: 'Final boss (door boss fallback)', h: 3.5, tint: [1.25, 0.55, 0.55], emissive: 0x3a0000, ei: 0.3, look: 'huge red zombie' });
+B('final', ZB, { name: 'Final boss (door boss fallback)', toon: { hue: 0.98, skinSat: 0.8 }, h: 3.5, tint: [1.25, 0.55, 0.55], emissive: 0x3a0000, ei: 0.3, look: 'huge red zombie' });
 B('ratking', QM + 'Standing/Monkroose.glb', { name: 'The Rat Queen', h: 2.6, matTint: [['Monkroose_Main', '#8a7f78'], ['Monkroose_Secondary', '#d9a6a0']], attack: 'Punch', hit: 'HitReact', look: 'grey rodent queen with a crown',
   attach: [{ url: 'proc:crown', bone: 'Head', height: 0.34, pos: [0, 0.8, 0], castShadow: true }] });
 B('sludge', QM + 'Blob/GreenBlob.glb', { name: 'Big Sludge', h: 2.4, tint: [0.75, 1.15, 0.55], emissive: 0x1f4a00, ei: 0.3, attack: 'Bite_Front', hit: 'HitRecieve', bloodTint: GOO, look: 'giant green slime' });
@@ -106,7 +109,7 @@ B('mascot', QM + 'Standing/Bunny.glb', { name: 'Grinny the Mascot', h: 2.9, tint
 // ---------------- survivors / NPCs ----------------
 for (const [id, file] of [['lis', 'Characters Lis'], ['matt', 'Characters Matt'], ['sam', 'Characters Sam'], ['shaun', 'Characters Shaun']]) {
   add('survivor.' + id, `sprites/survivor-${id}.webp`, {
-    url: ZK + 'Character/' + file + '.glb', height: 1.75, cell: [160, 160], anchor: [80, 104], blob: [0.33, 0.3], dirs: D5, quality: 0.72,
+    url: ZK + 'Character/' + file + '.glb', height: 1.75, cell: [160, 160], anchor: [80, 104], blob: [0.33, 0.3], dirs: D5, quality: 0.64, toon: { ...TOON, head: 1.15 }, outlinePx: 2, outlineColor: 'rgba(18,10,8,0.95)',
     blood: BLOOD, anims: [
       { name: 'idle', clip: 'Idle_Gun', frames: 6, fps: 6 }, { name: 'walk', clip: 'Walk_Gun', frames: 12, fps: 12 }, { name: 'run', clip: 'Run_Gun', frames: 10, fps: 14 },
       { name: 'wave', clip: 'Wave', frames: 10, fps: 10 }, { name: 'hit', clip: 'HitReact', frames: 5, fps: 16, loop: false },
@@ -117,10 +120,10 @@ const npcAnims = [{ name: 'idle', clip: 'Idle', frames: 6, fps: 6 }, { name: 'wa
   { name: 'interact', clip: 'Interact', frames: 10, fps: 12 }, { name: 'hit', clip: 'HitRecieve', frames: 5, fps: 16, loop: false }, { name: 'death', clip: 'Death', frames: 14, fps: 12, loop: false, blood: 0.4 }];
 for (const [id, file, name] of [['tinker', 'Male Worker', 'Tinker (gun merchant rank 1)'], ['gunsmith', 'Swat', 'Gunsmith (rank 2)'], ['master', 'Male Suit', 'Master gunsmith (rank 3)'],
   ['grocer', 'Male Farmer', 'Market grocer'], ['quartermaster', 'Femal Worker', 'Surplus quartermaster'], ['trader', 'Femal Adventurer', 'Travelling trader']]) {
-  add('npc.' + id, `sprites/npc-${id}.webp`, { url: QC + file + '.glb', height: 1.75, cell: [160, 160], anchor: [80, 104], blob: [0.33, 0.3], dirs: D5, quality: 0.72, blood: BLOOD, anims: npcAnims },
+  add('npc.' + id, `sprites/npc-${id}.webp`, { url: QC + file + '.glb', height: 1.75, cell: [160, 160], anchor: [80, 104], blob: [0.33, 0.3], dirs: D5, quality: 0.64, toon: { ...TOON, head: 1.15 }, outlinePx: 2, outlineColor: 'rgba(18,10,8,0.95)', blood: BLOOD, anims: npcAnims },
     { kind: 'character', type: id, name });
 }
-add('npc.medic', 'sprites/npc-medic.webp', { url: TS + 'Character/Character Hazmat.glb', height: 1.75, cell: [160, 160], anchor: [80, 104], blob: [0.33, 0.3], dirs: D5, quality: 0.72, blood: BLOOD,
+add('npc.medic', 'sprites/npc-medic.webp', { url: TS + 'Character/Character Hazmat.glb', height: 1.75, cell: [160, 160], anchor: [80, 104], blob: [0.33, 0.3], dirs: D5, quality: 0.64, toon: { ...TOON, head: 1.15 }, outlinePx: 2, outlineColor: 'rgba(18,10,8,0.95)', blood: BLOOD,
   anims: [{ name: 'idle', clip: 'Idle', frames: 6, fps: 6 }, { name: 'walk', clip: 'Walk', frames: 12, fps: 12 }, { name: 'wave', clip: 'Wave', frames: 10, fps: 10 },
     { name: 'hit', clip: 'HitReact', frames: 5, fps: 16, loop: false }, { name: 'death', clip: 'Death', frames: 14, fps: 12, loop: false, blood: 0.4 }] }, { kind: 'character', type: 'medic', name: 'Clinic medic (hazmat)' });
 

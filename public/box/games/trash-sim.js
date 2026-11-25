@@ -232,14 +232,15 @@
       // the body plays its death animation, lingers and fades (the iso view); capped at 40
       if (this.corpses.length >= 40) this.corpses.shift();
       this.corpses.push({ type: z.type, v: z.id % 5, x: z.x, y: z.y, face: z.face || 1, t: 0, life: z.boss ? 6 : 4.8, dir: z._dir || 'S', boss: z.fb || z.mb || (z.boss ? z.type : null) });
-      if (this.fx.length < MAX_FX - 10) this.fx.push({ k: 'spurt', x: z.x, y: z.y - 30, t: 0, life: 0.4, goo, big: true, wa: Math.atan2(z.y - this.p.y, z.x - this.p.x) });
+      if (this.fx.length < MAX_FX - 12) this.fx.push({ k: 'poof', src: z, x: z.x, y: z.y - 30, t: 0, life: 0.45, big: !!z.boss }); // (a cartoon poof + stars)
+      if (this.fx.length < MAX_FX - 10) this.fx.push({ k: 'spurt', src: z, x: z.x, y: z.y - 30, t: 0, life: 0.4, goo, big: true, wa: Math.atan2(z.y - this.p.y, z.x - this.p.x) });
       this.snd(z.boss ? 'bossdie' : goo ? 'splat' : 'kill', z.x, z.y);
     }
     decal(k, x, y, s = 1) { if (this.decals.length > 70) this.decals.shift(); this.decals.push({ k, x, y, s, rot: this.rng() * TAU, i: Math.floor(this.rng() * 4), t: 0, life: k === 'scorch' ? 30 : 16, a: 0.9 }); }
     droneN() { return Math.min(4, this.S.drone || 0); }
     fxHit(z, dmg, crit) {
       this.particle(z.x, z.y - z.r * 1.4, (this.rng() - 0.5) * 160, -80 - this.rng() * 120, crit ? '#ffe066' : '#8fd65a', 0.3, crit ? 6 : 3);
-      if (this.fx.length < MAX_FX - 40 && this.rng() < 0.6) this.fx.push({ k: 'spurt', x: z.x, y: z.y - 30, t: 0, life: 0.3, goo: !!(W.ZOMBIES[z.type] && (W.ZOMBIES[z.type].pops || z.type === 'spitter')), wa: Math.atan2(z.y - this.p.y, z.x - this.p.x) });
+      const hb = this._hb; if (this.fx.length < MAX_FX - 40 && this.rng() < 0.6) this.fx.push({ k: 'spurt', src: z, x: hb ? hb.x : z.x, y: (hb ? hb.y : z.y) - 30, t: 0, life: 0.3, goo: !!(W.ZOMBIES[z.type] && (W.ZOMBIES[z.type].pops || z.type === 'spitter')), wa: Math.atan2(z.y - this.p.y, z.x - this.p.x) });
       this.snd('hit', z.x, z.y);
     }
     // a sound for the phone to play (trash-sound.js drains it; a test sandbox just ignores it)
@@ -389,7 +390,7 @@
     }
     nearestZ(x, y, range) {
       let best = null, bd = range * range;
-      for (const z of this.z) { if (z.hp <= 0) continue; const d = dist2(x, y, z.x, z.y - z.r); if (d < bd) { bd = d; best = z; } }
+      for (const z of this.z) { if (z.hp <= 0) continue; const d = dist2(x, y, z.x, z.y); if (d < bd) { bd = d; best = z; } }
       return best;
     }
     shoot(dt, I) {
@@ -397,13 +398,13 @@
       let fire = false;
       if ((this.choosing || this.shopping) && this.mode !== 'solo') return;
       if (I.ax || I.ay) { P.aim = Math.atan2(I.ay, I.ax); fire = I.mouse ? !!I.fire : true; }
-      else if (this.set.aim !== 'off' && !I.mouse) { const z = this.nearestZ(P.x, P.y - 24, S.aimRange); if (z) { P.aim = Math.atan2(z.y - z.r - (P.y - 24), z.x - P.x); fire = true; } }
+      else if (this.set.aim !== 'off' && !I.mouse) { const z = this.nearestZ(P.x, P.y, S.aimRange); if (z) { P.aim = Math.atan2(z.y - P.y, z.x - P.x); fire = true; } }
       if (Math.cos(P.aim) > 0.15) P.face = 1; else if (Math.cos(P.aim) < -0.15) P.face = -1;
       P.fireCd -= dt; if (!fire || P.fireCd > 0) return;
       const mini = B.minigun > 0, rate = S.rate * (mini ? 3.5 : 1) * (this.rateMul || 1);
       P.fireCd += 1 / rate; if (P.fireCd < -0.05) P.fireCd = 0;
       P.kick = 1;
-      const ox = P.x + Math.cos(P.aim) * 34, oy = P.y - 26 + Math.sin(P.aim) * 34;
+      const ox = P.x + Math.cos(P.aim) * 34, oy = P.y + Math.sin(P.aim) * 34;
       const dirs = [];
       const n = S.spread, step = 0.13;
       for (let i = 0; i < n; i++) dirs.push(P.aim + (i - (n - 1) / 2) * step + (mini ? (this.rng() - 0.5) * 0.12 : 0));
@@ -433,11 +434,12 @@
         }
         if (!dead) for (const z of this.z) {
           if (z.hp <= 0 || (b.hit && b.hit.includes(z.id))) continue;
-          const zr = z.r + b.r, zy = z.y - z.r;
+          const zr = z.r + b.r, zy = z.y;
           if (dist2(b.x, b.y, z.x, zy) < zr * zr) {
             const sp = Math.hypot(b.vx, b.vy) || 1;
+            this._hb = b; // (where the shot met it: the hit spurt shows there)
             this.damageZ(z, b.dmg, this.me.id, (b.vx / sp) * 140 * this.S.knock * (b.kb || 1), (b.vy / sp) * 140 * this.S.knock * (b.kb || 1), { crit: b.crit, burn: b.burn });
-            if (b.zap || b.boom) this.bulletHit(b, z);
+            this._hb = null; if (b.zap || b.boom) this.bulletHit(b, z);
             if (b.pierce > 0) { b.pierce--; (b.hit || (b.hit = [])).push(z.id); } else { dead = true; }
             break;
           }
@@ -481,7 +483,7 @@
         let dx = tg.x - z.x, dy = tg.y - z.y; const d = Math.sqrt(bd) || 1; dx /= d; dy /= d;
         if (W.ZOMBIES[z.type].spits) { // keep a distance and lob goo
           if (d < 280) { dx = -dx; dy = -dy; sp *= 0.6; } else if (d < 380) sp = 0;
-          z.cd -= dt; if (z.cd <= 0 && d < 520) { z.cd = 2.6; const a = Math.atan2(tg.y - 20 - (z.y - z.r * 2), tg.x - z.x); this.spit.push({ x: z.x, y: z.y - z.r * 2, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, life: 2, dmg: z.dmg }); }
+          z.cd -= dt; if (z.cd <= 0 && d < 520) { z.cd = 2.6; const a = Math.atan2(tg.y - z.y, tg.x - z.x); this.spit.push({ x: z.x, y: z.y, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, life: 2, dmg: z.dmg }); }
         }
         if (z.fb || z.mb) { const m = window.TZB ? TZB.stepBoss(this, z, dt, tg) : 1; z.x = clamp(z.x, 60, W.AW - 60); z.y = clamp(z.y, 80, W.AH - 40); if (m === -1) { z.face = (z.cx || 1) >= 0 ? 1 : -1; if (!z.noCollide) this.collide(z); continue; } sp *= m; }
         else if (z.boss) { z.cd -= dt; if (z.charge > 0) { z.charge -= dt; sp *= 3.2; } else if (z.cd <= 0 && d < 520) { z.cd = 4.5; z.charge = 0.7; this.shake = Math.max(this.shake, 0.2); } }
@@ -497,7 +499,7 @@
       for (let i = this.spit.length - 1; i >= 0; i--) {
         const s = this.spit[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
         let dead = s.life <= 0;
-        if (!dead && !this.dead && dist2(s.x, s.y, this.p.x, this.p.y - 20) < 30 * 30) { this.hurt(s.dmg, s.x, s.y); if (s.debuff && this.applyDebuff) this.applyDebuff(s.debuff); dead = true; s.hitYou = true; }
+        if (!dead && !this.dead && dist2(s.x, s.y, this.p.x, this.p.y) < 30 * 30) { this.hurt(s.dmg, s.x, s.y); if (s.debuff && this.applyDebuff) this.applyDebuff(s.debuff); dead = true; s.hitYou = true; }
         if (!dead) for (const o of this.area.obstacles) if (!o.low && s.x > o.x && s.x < o.x + o.w && s.y > o.y && s.y < o.y + o.h) { dead = true; break; }
         if (dead) { this.particle(s.x, s.y, 0, 0, s.col || '#b6ff3c', 0.3, 8); this.spitLands(s); this.spit.splice(i, 1); }
       }
@@ -506,7 +508,7 @@
     guestStep(dt) {
       const k = Math.min(1, dt * 14);
       for (const z of this.z) { const ox = z.x; z.x += (z.tx - z.x) * k; z.y += (z.ty - z.y) * k; if (Math.abs(z.x - ox) > 0.3) z.face = z.x > ox ? 1 : -1; z.f += dt * 4; if (z.flash > 0) z.flash -= dt; }
-      for (let i = this.spit.length - 1; i >= 0; i--) { const s = this.spit[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt; if (!this.dead && dist2(s.x, s.y, this.p.x, this.p.y - 20) < 30 * 30) { this.hurt(s.dmg, s.x, s.y); if (s.debuff && this.applyDebuff) this.applyDebuff(s.debuff); s.life = 0; s.hitYou = true; } if (s.life <= 0) { this.spitLands(s); this.spit.splice(i, 1); } }
+      for (let i = this.spit.length - 1; i >= 0; i--) { const s = this.spit[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt; if (!this.dead && dist2(s.x, s.y, this.p.x, this.p.y) < 30 * 30) { this.hurt(s.dmg, s.x, s.y); if (s.debuff && this.applyDebuff) this.applyDebuff(s.debuff); s.life = 0; s.hitYou = true; } if (s.life <= 0) { this.spitLands(s); this.spit.splice(i, 1); } }
       for (const p of this.pk) p.life -= dt;
     }
     contact(dt) {
@@ -530,8 +532,8 @@
       if (S.orbit) {
         const n = S.orbit, R = 85, od = (12 + 3 * S.orbitN) * (S.orbitN > 10 ? 1 + 0.1 * (S.orbitN - 10) : 1);
         for (let i = 0; i < n; i++) {
-          const a = this.t * 3.2 + (i * TAU) / n, ox = P.x + Math.cos(a) * R, oy = P.y - 20 + Math.sin(a) * R;
-          for (const z of this.z) { if (z.hp <= 0) continue; const rr = z.r + 18; if (dist2(ox, oy, z.x, z.y - z.r) < rr * rr) { const last = this.orbHit.get(z.id) || 0; if (this.t - last > 0.35) { this.orbHit.set(z.id, this.t); this.damageZ(z, od, this.me.id, Math.cos(a) * 120, Math.sin(a) * 120); } } }
+          const a = this.t * 3.2 + (i * TAU) / n, ox = P.x + Math.cos(a) * R, oy = P.y + Math.sin(a) * R;
+          for (const z of this.z) { if (z.hp <= 0) continue; const rr = z.r + 18; if (dist2(ox, oy, z.x, z.y) < rr * rr) { const last = this.orbHit.get(z.id) || 0; if (this.t - last > 0.35) { this.orbHit.set(z.id, this.t); this.damageZ(z, od, this.me.id, Math.cos(a) * 120, Math.sin(a) * 120); } } }
         }
         if (this.orbHit.size > 400) this.orbHit.clear();
       }
@@ -541,16 +543,16 @@
         for (let i = 0; i < n; i++) {
           const D = this.drones[i] || (this.drones[i] = { x: P.x, y: P.y - 90, cd: i * 0.2 }), a = this.t * 1.4 + (i * TAU) / n;
           D.x += (P.x + Math.cos(a) * 64 - D.x) * Math.min(1, dt * 5); D.y += (P.y - 90 + Math.sin(a) * 24 - D.y) * Math.min(1, dt * 5);
-          D.cd -= dt; if (D.cd <= 0) { const z = this.nearestZ(D.x, D.y, 560); if (z) { D.cd = 1 / (1.6 + W.soft(per, 5, 0.85)); const an = Math.atan2(z.y - z.r - D.y, z.x - D.x); const s = this.S; this.b.push({ x: D.x, y: D.y, vx: Math.cos(an) * 900, vy: Math.sin(an) * 900, r: 4, dmg: s.dmg * 0.7 * (1 + 0.12 * Math.max(0, per - 3)), crit: false, pierce: 0, bounce: 0, life: 0.7, hit: null, burn: 0, drone: true }); if (this.mode !== 'solo') this.shots.push([Math.round(D.x), Math.round(D.y), Math.round(an * 100) / 100]); } }
+          D.cd -= dt; if (D.cd <= 0) { const z = this.nearestZ(D.x, D.y, 560); if (z) { D.cd = 1 / (1.6 + W.soft(per, 5, 0.85)); const an = Math.atan2(z.y - D.y, z.x - D.x); const s = this.S; this.b.push({ x: D.x, y: D.y, vx: Math.cos(an) * 900, vy: Math.sin(an) * 900, r: 4, dmg: s.dmg * 0.7 * (1 + 0.12 * Math.max(0, per - 3)), crit: false, pierce: 0, bounce: 0, life: 0.7, hit: null, burn: 0, drone: true }); if (this.mode !== 'solo') this.shots.push([Math.round(D.x), Math.round(D.y), Math.round(an * 100) / 100]); } }
         }
       }
       if (S.bomb) { T.bomb -= dt; if (T.bomb <= 0) { T.bomb = 2.5 + 6.5 * Math.pow(0.8, S.bomb); const z = this.nearestZ(P.x, P.y, 420); const bx = z ? z.x : P.x, by = z ? z.y : P.y; this.boom(bx, by, 150 + Math.min(220, 20 * S.bomb), 30 + 22 * S.bomb, '#ff8c42', false); this.o.on('bomb', {}); } }
       if (S.zap) {
         T.zap -= dt;
         if (T.zap <= 0) {
-          T.zap = 0.6 + 1.8 * Math.pow(0.85, S.zap); let from = { x: P.x, y: P.y - 30 }, seen = [];
+          T.zap = 0.6 + 1.8 * Math.pow(0.85, S.zap); let from = { x: P.x, y: P.y }, seen = [];
           for (let j = 0; j < Math.min(12, 2 + S.zap); j++) {
-            let best = null, bd = 260 * 260; for (const z of this.z) { if (z.hp <= 0 || seen.includes(z.id)) continue; const d = dist2(from.x, from.y, z.x, z.y - z.r); if (d < bd) { bd = d; best = z; } }
+            let best = null, bd = 260 * 260; for (const z of this.z) { if (z.hp <= 0 || seen.includes(z.id)) continue; const d = dist2(from.x, from.y, z.x, z.y); if (d < bd) { bd = d; best = z; } }
             if (!best) break; seen.push(best.id); this.fx.push({ k: 'zap', x: from.x, y: from.y, x2: best.x, y2: best.y - best.r, t: 0, life: 0.18 }); this.damageZ(best, 16 + 7 * S.zap, this.me.id, 0, 0, { shock: 1 }); from = { x: best.x, y: best.y - best.r };
           }
         }

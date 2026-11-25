@@ -1000,10 +1000,10 @@ test('iso view: screen directions turn into the world directions that look the s
   assert(near(left[0], -Math.SQRT1_2) && near(left[1], Math.SQRT1_2) && near(down[0], Math.SQRT1_2) && near(down[1], Math.SQRT1_2), 'left and down');
   for (let a = 0; a < 6.28; a += 0.3) { const d = d2w(Math.cos(a) * 0.7, Math.sin(a) * 0.7), sa = I.screenAngle(Math.atan2(d[1], d[0])); assert(near(Math.hypot(d[0], d[1]), 0.7, 1e-9), 'same length'); assert(near(Math.cos(sa), Math.cos(a), 1e-6) && near(Math.sin(sa), Math.sin(a), 1e-6), 'and it shows where you pushed'); }
   assert.equal(I.dirOf(1, 1), 'S'); assert.equal(I.dirOf(1, -1), 'E'); assert.equal(I.dirOf(-1, -1), 'N'); assert.equal(I.dirOf(-1, 1), 'W'); assert.equal(I.dirOf(1, 0), 'SE');
-  // the camera: centred on you, no look-ahead, and the same amount of ground as the old top-down view (k = min(w, h) / 500)
+  // the camera: centred on you, no look-ahead, and (the owner's later ask) 8% more ground each way than the old top-down view (k = min(w, h) / 500); never closer
   const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-iso.js'), 'utf8');
-  assert(src.includes('const s = V.k / 0.8;') && /cx: isoX\(fx0, fy0\)/.test(src) && !/lead\(/.test(src), 'iso camera: centred, no lead, area-matched scale');
-  const k = 390 / 500, s = k / 0.8, oldArea = (844 / k) * (390 / k), isoArea = (844 * 390) / (s * s * 0.64); assert(Math.abs(isoArea / oldArea - 1) < 1e-9, 'the visible ground area matches');
+  assert(src.includes('const s = V.k / 0.8 / ZOOM_OUT;') && /const ZOOM_OUT = 1.08;/.test(src) && /cx: isoX\(fx0, fy0\)/.test(src) && !/lead\(/.test(src), 'iso camera: centred, no lead, area-matched scale');
+  const k = 390 / 500, s = k / 0.8 / 1.08, oldArea = (844 / k) * (390 / k), isoArea = (844 * 390) / (s * s * 0.64); assert(Math.abs(isoArea / oldArea - 1.08 * 1.08) < 1e-9, 'the visible ground: 8% further out each way (never closer)');
 });
 test('JustZombies: the new name everywhere players see it; its own address (/zombies), a big game with JustMafia and JustRaiseDucks; JustKingdoms on the More games shelf', () => {
   const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');

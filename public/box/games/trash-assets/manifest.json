@@ -7575,9 +7575,9 @@
     0.736
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -7587,10 +7587,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -7599,9 +7599,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -7611,9 +7611,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -7621,18 +7621,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -7669,9 +7657,9 @@
     0.945
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -7681,10 +7669,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -7693,9 +7681,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -7705,9 +7693,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -7715,18 +7703,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -7763,9 +7739,9 @@
     1.228
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -7775,10 +7751,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -7787,9 +7763,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -7799,9 +7775,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -7809,18 +7785,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -7857,9 +7821,9 @@
     0.903
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -7869,10 +7833,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -7881,9 +7845,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -7893,9 +7857,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -7903,18 +7867,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -7951,9 +7903,9 @@
     0.903
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -7963,10 +7915,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -7975,9 +7927,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -7987,9 +7939,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -7997,18 +7949,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -8045,9 +7985,9 @@
     0.736
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -8057,10 +7997,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -8069,9 +8009,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -8081,9 +8021,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -8091,18 +8031,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -8139,9 +8067,9 @@
     0.903
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 5,
+    "walk": {
+     "frames": 12,
+     "fps": 14,
      "loop": true,
      "rows": {
       "S": 0,
@@ -8151,10 +8079,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 14,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 18,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -8163,9 +8091,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 18,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -8175,9 +8103,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -8185,18 +8113,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -8233,9 +8149,9 @@
     0.903
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -8245,10 +8161,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -8257,9 +8173,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -8269,9 +8185,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -8279,18 +8195,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -8327,9 +8231,9 @@
     0.897
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -8339,10 +8243,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -8351,9 +8255,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -8363,9 +8267,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -8373,18 +8277,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -8421,9 +8313,9 @@
     0.903
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -8433,10 +8325,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -8445,9 +8337,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -8457,9 +8349,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -8467,18 +8359,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -8515,9 +8395,9 @@
     0.72
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -8527,9 +8407,9 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
+    "run": {
+     "frames": 10,
+     "fps": 15,
      "loop": true,
      "rows": {
       "S": 5,
@@ -8539,10 +8419,10 @@
       "N": 9
      }
     },
-    "run": {
+    "attack": {
      "frames": 10,
-     "fps": 15,
-     "loop": true,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 10,
       "SE": 11,
@@ -8551,9 +8431,9 @@
       "N": 14
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 15,
@@ -8563,9 +8443,9 @@
       "N": 19
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 20,
@@ -8573,18 +8453,6 @@
       "E": 22,
       "NE": 23,
       "N": 24
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 25,
-      "SE": 26,
-      "E": 27,
-      "NE": 28,
-      "N": 29
      }
     }
    },
@@ -8670,9 +8538,9 @@
     0.903
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -8682,10 +8550,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -8694,9 +8562,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -8706,9 +8574,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -8716,18 +8584,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -8764,9 +8620,9 @@
     0.72
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -8776,9 +8632,9 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
+    "run": {
+     "frames": 10,
+     "fps": 15,
      "loop": true,
      "rows": {
       "S": 5,
@@ -8788,10 +8644,10 @@
       "N": 9
      }
     },
-    "run": {
+    "attack": {
      "frames": 10,
-     "fps": 15,
-     "loop": true,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 10,
       "SE": 11,
@@ -8800,9 +8656,9 @@
       "N": 14
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 15,
@@ -8812,9 +8668,9 @@
       "N": 19
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 20,
@@ -8822,18 +8678,6 @@
       "E": 22,
       "NE": 23,
       "N": 24
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 25,
-      "SE": 26,
-      "E": 27,
-      "NE": 28,
-      "N": 29
      }
     }
    },
@@ -8870,9 +8714,9 @@
     1.096
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -8882,10 +8726,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -8894,9 +8738,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -8906,9 +8750,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -8916,18 +8760,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -8964,9 +8796,9 @@
     1.086
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -8976,10 +8808,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -8988,9 +8820,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -9000,9 +8832,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -9010,18 +8842,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -9058,9 +8878,9 @@
     0.897
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -9070,10 +8890,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -9082,9 +8902,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -9094,9 +8914,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -9104,18 +8924,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -9152,9 +8960,9 @@
     0.736
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -9164,10 +8972,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -9176,9 +8984,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -9188,9 +8996,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -9198,18 +9006,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -9246,9 +9042,9 @@
     1.096
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -9258,10 +9054,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -9270,9 +9066,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -9282,9 +9078,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -9292,18 +9088,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -9340,9 +9124,9 @@
     0.72
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -9352,9 +9136,9 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
+    "run": {
+     "frames": 10,
+     "fps": 15,
      "loop": true,
      "rows": {
       "S": 5,
@@ -9364,10 +9148,10 @@
       "N": 9
      }
     },
-    "run": {
+    "attack": {
      "frames": 10,
-     "fps": 15,
-     "loop": true,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 10,
       "SE": 11,
@@ -9376,9 +9160,9 @@
       "N": 14
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 15,
@@ -9388,9 +9172,9 @@
       "N": 19
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 20,
@@ -9398,18 +9182,6 @@
       "E": 22,
       "NE": 23,
       "N": 24
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 25,
-      "SE": 26,
-      "E": 27,
-      "NE": 28,
-      "N": 29
      }
     }
    },
@@ -9446,9 +9218,9 @@
     0.903
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -9458,10 +9230,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -9470,9 +9242,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -9482,9 +9254,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -9492,18 +9264,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },
@@ -9540,9 +9300,9 @@
     0.72
    ],
    "anims": {
-    "idle": {
-     "frames": 6,
-     "fps": 6,
+    "walk": {
+     "frames": 12,
+     "fps": 12,
      "loop": true,
      "rows": {
       "S": 0,
@@ -9552,10 +9312,10 @@
       "N": 4
      }
     },
-    "walk": {
-     "frames": 12,
-     "fps": 12,
-     "loop": true,
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
      "rows": {
       "S": 5,
       "SE": 6,
@@ -9564,9 +9324,9 @@
       "N": 9
      }
     },
-    "attack": {
-     "frames": 10,
-     "fps": 14,
+    "hit": {
+     "frames": 5,
+     "fps": 16,
      "loop": false,
      "rows": {
       "S": 10,
@@ -9576,9 +9336,9 @@
       "N": 14
      }
     },
-    "hit": {
-     "frames": 5,
-     "fps": 16,
+    "death": {
+     "frames": 16,
+     "fps": 14,
      "loop": false,
      "rows": {
       "S": 15,
@@ -9586,18 +9346,6 @@
       "E": 17,
       "NE": 18,
       "N": 19
-     }
-    },
-    "death": {
-     "frames": 16,
-     "fps": 14,
-     "loop": false,
-     "rows": {
-      "S": 20,
-      "SE": 21,
-      "E": 22,
-      "NE": 23,
-      "N": 24
      }
     }
    },

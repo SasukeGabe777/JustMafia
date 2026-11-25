@@ -24,6 +24,11 @@
   const DIR8 = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'], MIRROR = { SW: 'SE', W: 'E', NW: 'NE' };
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const W = () => window.TZW;
+  // The camera shows 8% more than the old top-down view (the owner asked to zoom out a little; never closer).
+  const ZOOM_OUT = 1.08;
+  // Shots fly at chest height: SHOT_H world units up (= the hero's gun hand), dipping or rising to the
+  // chest of the zombie they are about to hit, so a hit lands on the body that is drawn.
+  const SHOT_H = 36;
   let M = null, low = false;
   const st = { ready: false, loaded: 0, total: 1, failed: 0 };
 
@@ -79,6 +84,12 @@
           if (x1 < 0) { x0 = y0 = 0; x1 = y1 = 1; }
           const fr = { sx: (a.rect ? a.rect[0] : f * cw) + x0, sy: (a.rect ? a.rect[1] : row * ch) + y0, w: x1 - x0 + 1, h: y1 - y0 + 1, ax: a.anchor[0] - x0, ay: a.anchor[1] - y0 };
           list.push(fr); items.push(fr);
+          // the body's size (cell px): height above the feet, width across the chest (for shots and hit boxes)
+          if (f === 0 && dir === (A.rows.S != null ? 'S' : Object.keys(A.rows)[0]) && (an === 'walk' || (!out.body && (an === 'static' || an === 'idle' || an === 'spin')))) {
+            const top = a.anchor[1] - y0, ty = Math.round(a.anchor[1] - top * 0.55); let bx0 = cw, bx1 = -1;
+            if (ty >= 0 && ty < ch) { const o = (ty * rw + f * cw) * 4 + 3; for (let x = 0; x < cw; x++) if (d[o + x * 4] > 128) { if (x < bx0) bx0 = x; bx1 = x; } }
+            out.body = { h: Math.max(10, top), w: bx1 >= bx0 ? bx1 - bx0 + 1 : top * 0.5 };
+          }
         }
         if (slow) await tick();
       }
@@ -134,7 +145,7 @@
         const r = await fetch(BASE + 'manifest.json'); M = await r.json();
         const list = (o.keys || CORE).map(keyOf).filter((k) => M.assets[k]);
         st.total = list.length + 2; st.loaded = 1; if (onProgress) onProgress(st.loaded / st.total);
-        FX.img = await img('fx/fx.webp'); st.loaded++; if (onProgress) onProgress(st.loaded / st.total);
+        FX.img = await img('fx/fx.webp'); try { toonFx(); } catch (e) { /* the plain frames */ } st.loaded++; if (onProgress) onProgress(st.loaded / st.total);
         for (const k of list) { if (!packs.get(k) || !packs.get(k).anims) { try { packs.set(k, await pack(k, false)); } catch (e) { packs.set(k, { failed: true }); st.failed++; } } st.loaded++; if (onProgress) onProgress(st.loaded / st.total); }
         st.ready = true; TZI.ready = true;
       } catch (e) { console.warn('[JustZombies art] could not load the art set', e && e.message); st.ready = false; TZI.ready = false; TZI.broken = true; }
@@ -188,8 +199,23 @@
     if (o.rot || o.flip) { const c = Math.cos(o.rot || 0) * k * D, s2 = Math.sin(o.rot || 0) * k * D, fx2 = o.flip ? -1 : 1; g.setTransform(c * fx2, s2 * fx2, -s2, c, X * D, Y * D); }
     else g.setTransform(k * D, 0, 0, k * D, X * D, Y * D);
     if (o.alpha != null) g.globalAlpha = o.alpha; if (o.add) g.globalCompositeOperation = 'lighter';
-    g.drawImage(FX.img, fr[0], fr[1], fr[2], fr[3], -fr[4], -fr[5], fr[2], fr[3]);
+    const T = F.toon && F.toon[F.frames.indexOf(fr)]; if (T) g.drawImage(T.c, -T.ax, -T.ay); else g.drawImage(FX.img, fr[0], fr[1], fr[2], fr[3], -fr[4], -fr[5], fr[2], fr[3]);
     if (o.add) g.globalCompositeOperation = 'source-over'; if (o.alpha != null) g.globalAlpha = 1;
+  }
+  // Cartoon blood and goo: the fx atlas' splats and spurts redrawn flat, bright and chunky with an ink edge.
+  function toonFx() {
+    for (const [name, col] of [['fx.blood.spurt', '#e8212c'], ['fx.decal.blood', '#d01a26'], ['fx.goo.spurt', '#8dff3a'], ['fx.decal.goo', '#7be82c']]) {
+      const F = M.fx[name]; if (!F || F.toon) continue; F.toon = F.frames.map((fr) => {
+        const p = 3, w = fr[2] + p * 2, h = fr[3] + p * 2, c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+        const m = document.createElement('canvas'); m.width = w; m.height = h; const mg = m.getContext('2d'); mg.drawImage(FX.img, fr[0], fr[1], fr[2], fr[3], p, p, fr[2], fr[3]);
+        const d = mg.getImageData(0, 0, w, h), a = d.data; for (let i = 3; i < a.length; i += 4) a[i] = a[i] > 70 ? 255 : 0; mg.putImageData(d, 0, 0); // chunky: a hard edge
+        for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2], [-1, -1], [1, 1], [-1, 1], [1, -1]]) g.drawImage(m, dx, dy);
+        g.globalCompositeOperation = 'source-in'; g.fillStyle = '#2a0c0c'; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'source-over';
+        const b = document.createElement('canvas'); b.width = w; b.height = h; const bg = b.getContext('2d'); bg.drawImage(m, 0, 0); bg.globalCompositeOperation = 'source-in'; bg.fillStyle = col; bg.fillRect(0, 0, w, h);
+        bg.globalCompositeOperation = 'source-atop'; bg.fillStyle = 'rgba(255,255,255,0.35)'; bg.beginPath(); bg.ellipse(w * 0.4, h * 0.35, w * 0.16, h * 0.1, -0.5, 0, TAU); bg.fill(); // a shine
+        g.drawImage(b, 0, 0); return { c, ax: fr[4] + p, ay: fr[5] + p };
+      });
+    }
   }
   const fxLen = (name) => (M && M.fx[name] ? M.fx[name].frames.length : 1), fxFps = (name) => (M && M.fx[name] ? M.fx[name].fps || 12 : 12);
 
@@ -299,7 +325,8 @@
     if (A.hit > 0) A.hit -= dt;
     const an = A.hit > 0 ? 'hit' : atk ? 'attack' : sp > 12 ? (sp > 105 ? 'run' : 'walk') : 'idle';
     if (an !== A.an) { A.an = an; A.ft = an === 'walk' || an === 'run' ? A.ft : 0; }
-    const rate = an === 'walk' || an === 'run' ? clamp(sp / Math.max(30, z.speed || 70), 0.55, 1.7) : 1;
+    // feet planted: the walk / run cycle advances with the distance covered (one cycle = STRIDE world units)
+    const rate = an === 'walk' || an === 'run' ? clamp(sp / (an === 'run' ? 125 : 70) * (z.boss || z.fb || z.mb ? 0.75 : 1), 0.35, 2.2) : an === 'idle' ? 0 : 1;
     A.ft += dt * rate; z._dir = A.dir;
     return A;
   }
@@ -319,7 +346,26 @@
     VIG = { w, h, c }; return c;
   }
   const TODS = { night: { dark: 0.74, tint: 'rgba(30,50,110,0.16)', col: '4,6,16' }, dusk: { dark: 0.3, tint: 'rgba(255,120,50,0.12)', col: '40,14,30' }, overcast: { dark: 0.16, tint: 'rgba(90,105,125,0.1)', col: '20,24,32' } };
-  const GUN = (sim) => (sim.buffs.minigun > 0 ? 'pickup.minigun' : sim.buffs.raygun > 0 ? 'pickup.raygun' : sim.buffs.rockets > 0 ? 'pickup.rockets' : 'weapon.pistol');
+  // The gun in your hands: a timed super weapon, else your strongest ranged weapon, else the pistol.
+  // g = where the back hand grips (0 = the stock end, 1 = the muzzle), f = the front hand (two-handed guns),
+  // y = the barrel line (0 = top of the art, 1 = bottom), k = size.
+  const GUNS = { 'weapon.pistol': { g: 0.3, y: 0.4, k: 1.1 }, 'pickup.raygun': { g: 0.3, y: 0.4, k: 1.05 }, 'weapon.nailgun': { g: 0.3, y: 0.42, k: 1 },
+    'weapon.smg': { g: 0.32, f: 0.62, y: 0.38, k: 1 }, 'weapon.shotgun': { g: 0.26, f: 0.6, y: 0.38, k: 0.95 }, 'weapon.rail': { g: 0.24, f: 0.58, y: 0.38, k: 0.9 },
+    'weapon.rifle': { g: 0.3, f: 0.62, y: 0.38, k: 0.95 }, 'weapon.launcher': { g: 0.3, f: 0.62, y: 0.42, k: 0.95 }, 'pickup.minigun': { g: 0.34, f: 0.6, y: 0.45, k: 1 },
+    'pickup.rockets': { g: 0.34, f: 0.62, y: 0.42, k: 0.9 }, 'weapon.crossbow': { g: 0.24, f: 0.56, y: 0.45, k: 0.95 }, 'weapon.flamer': { g: 0.3, f: 0.62, y: 0.42, k: 0.95 },
+    'weapon.blower': { g: 0.3, f: 0.6, y: 0.45, k: 0.95 }, 'weapon.coil': { g: 0.3, f: 0.6, y: 0.42, k: 0.95 } };
+  const HELD = ['rail', 'launcher', 'shotgun', 'flamer', 'coil', 'crossbow', 'smg', 'blower', 'nailgun'];
+  function GUN(sim) {
+    const B = sim.buffs; sim._heldW = null; if (B.minigun > 0) return 'pickup.minigun'; if (B.raygun > 0) return 'pickup.raygun'; if (B.rockets > 0) return 'pickup.rockets';
+    let best = null, bs = -1; for (const w of sim.weapons || []) { const i = HELD.indexOf(w.id); if (i < 0) continue; const sc = (w.tier || 1) * 100 + (w.lv || 1) * 10 - i; if (sc > bs) { bs = sc; best = w.id; } }
+    const key = best ? 'weapon.' + best : 'weapon.pistol', ok = !!need(key); sim._heldW = ok && best ? best : null; return ok ? key : 'weapon.pistol';
+  }
+  let SKIN = null;
+  function skinOf(sim) {
+    if (SKIN && SKIN.id === (sim.me && sim.me.id)) return SKIN.c; let c = '#f3c9a0';
+    try { const L2 = window.BOX && BOX.lookOf && sim.me ? BOX.lookOf({ id: sim.me.id, name: sim.me.name, bot: true }) : null, v = L2 && L2.look && L2.look.skin, O = window.MT_OPTIONS; if (typeof v === 'string' && v[0] === '#') c = v; else if (v != null && O && O.skins && O.skins[v]) c = O.skins[v]; } catch (e) { /* the default */ }
+    SKIN = { id: sim.me && sim.me.id, c }; return c;
+  }
 
   function render(g, sim, V) {
     if (!st.ready) return false;
@@ -330,7 +376,8 @@
     // for the old top-down view: V.k = min(w, h) / 500 screen px per world unit there. The iso
     // projection shows a world square at 0.8 x 0.4 x 2 = 0.64 of its top-down area, so drawing
     // art px at s = V.k / 0.8 keeps the visible ground area the same (not closer, not further).
-    const s = V.k / 0.8;
+    // The owner then asked for a little more world: ZOOM_OUT (8%) further out than that. Never closer.
+    const s = V.k / 0.8 / ZOOM_OUT;
     const intro = sim.phase === 'intro', G = sim.area.garage;
     let fx0 = P.x, fy0 = P.y; if (intro && G) { fx0 = G.x + G.w / 2; fy0 = Math.max(G.y + G.h * 0.7, P.y - 20); }
     const sh = sim.shake > 0 ? sim.shake * 22 * V.k : 0;
@@ -352,7 +399,7 @@
       if (!vis(d.x, d.y)) continue; const a = Math.min(1, (d.life - d.t) / 3) * (d.a || 0.9); if (a <= 0) continue;
       const name = d.k === 'goo' ? 'fx.decal.goo' : d.k === 'scorch' ? 'fx.scorch' : 'fx.decal.blood', F = M.fx[name]; if (!F || !FX.img) continue;
       const fr = F.frames[(d.i || 0) % F.frames.length], sc = (d.s || 1) * (d.k === 'scorch' ? 0.9 : 0.75);
-      g.save(); g.translate(d.x, d.y); g.rotate(d.rot || 0); g.globalAlpha = a; g.drawImage(FX.img, fr[0], fr[1], fr[2], fr[3], -fr[4] * sc, -fr[5] * sc, fr[2] * sc, fr[3] * sc); g.restore();
+      g.save(); g.translate(d.x, d.y); g.rotate(d.rot || 0); g.globalAlpha = a; const T = F.toon && F.toon[(d.i || 0) % F.frames.length]; if (T) g.drawImage(T.c, -T.ax * sc, -T.ay * sc, T.c.width * sc, T.c.height * sc); else g.drawImage(FX.img, fr[0], fr[1], fr[2], fr[3], -fr[4] * sc, -fr[5] * sc, fr[2] * sc, fr[3] * sc); g.restore();
     }
     g.globalAlpha = 1;
     const e = sim.area.exits, gates = [];
@@ -416,22 +463,18 @@
       drawZombie(g, sim, q2, t, dt, tg, frozen);
     }
     // ---- in the air: shots, spit, weapons' moving parts, effects ----
-    setGround(g, 26);
-    if (!sim._iso2) sim._iso2 = true;
+    setGround(g, SHOT_H);
     if (sim.drawExtraAir) sim.drawExtraAir(g, t, vis);
-    setGround(g, 26);
-    g.lineCap = 'round'; g.globalCompositeOperation = 'lighter';
-    g.strokeStyle = 'rgba(255,170,60,0.35)'; g.lineWidth = 8; g.beginPath(); for (const b of sim.b) { if (b.kind) continue; g.moveTo(b.x - b.vx * 0.03, b.y - b.vy * 0.03); g.lineTo(b.x, b.y); } g.stroke();
-    g.globalCompositeOperation = 'source-over';
-    g.strokeStyle = '#fff6d0'; g.lineWidth = 3; g.beginPath(); for (const b of sim.b) { if (b.kind) continue; g.moveTo(b.x - b.vx * 0.018, b.y - b.vy * 0.018); g.lineTo(b.x, b.y); } g.stroke();
-    if (sim.b.some((b) => b.crit && !b.kind)) { g.strokeStyle = '#ff6a3c'; g.lineWidth = 5; g.beginPath(); for (const b of sim.b) if (b.crit && !b.kind) { g.moveTo(b.x - b.vx * 0.02, b.y - b.vy * 0.02); g.lineTo(b.x, b.y); } g.stroke(); }
+    drawShots(g, sim, hi);
+    setGround(g, SHOT_H);
     if (sim.drawBullets) sim.drawBullets(g, t);
     if (sim.ghost.length) { g.strokeStyle = 'rgba(170,240,255,0.85)'; g.lineWidth = 3; g.beginPath(); for (const b of sim.ghost) { g.moveTo(b.x - b.vx * 0.02, b.y - b.vy * 0.02); g.lineTo(b.x, b.y); } g.stroke(); }
     setGround(g, 34);
     for (const sp of sim.spit) { g.fillStyle = sp.col || (sp.big ? '#c8ff4a' : '#a6e83a'); g.beginPath(); g.arc(sp.x, sp.y, sp.big ? 12 : 8, 0, TAU); g.fill(); g.fillStyle = 'rgba(255,255,200,0.6)'; g.beginPath(); g.arc(sp.x - 3, sp.y - 3, 3, 0, TAU); g.fill(); }
     drawFx(g, sim, t, hi);
     // muzzle flash at the gun's tip
-    if (sim.muzzle > 0 && !sim.dead && !sim.ride && sim._gunTip) { const [mx, my, ma] = sim._gunTip; fx(g, 'fx.muzzle', Math.floor(t * 60) % fxLen('fx.muzzle'), mx, my, 0.4, { rot: ma, add: true }); }
+    if (sim.muzzle > 0 && !sim.dead && !sim.ride && sim._gunTip) { const [mx, my, ma] = sim._gunTip; fx(g, 'fx.muzzle', Math.floor(t * 60) % fxLen('fx.muzzle'), mx, my, Math.sin(ma) < -0.35 ? 0.28 : 0.4, { rot: ma, add: true, alpha: Math.sin(ma) < -0.35 ? 0.6 : 1 }); }
+    if (sim._dbgHit) drawHitDebug(g, sim);
     // ---------------- light, weather, mood (screen space) ----------------
     setScreen(g);
     mood(g, sim, V, t, hi, intro);
@@ -439,10 +482,54 @@
   }
   function hexA(hex, a) { const h = String(hex || '#ffffff').replace('#', ''); const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
 
+  // ---------------- bodies, shots and hit points ----------------
+  // How big a zombie / boss is drawn (art px per art px) and its body in world units: h = top of the
+  // head above the feet, w = chest width (screen px at s = 1). Bodies are measured from the art (pack()).
+  // A body drawn narrower than its collision ring is drawn up to 15% bigger (bosses 50%), so shots never connect in the air beside it.
+  const zBase = (z) => ((z.boss || z.fb || z.mb) ? 1 : CH) * (z.elite ? 1.08 : 1);
+  function zScale(z) { if (z._fit == null) { const P = need(zKey(z)); if (!P || !P.body) return zBase(z); z._fit = clamp((2 * z.r * 1.131) / (P.body.w * zBase(z) * P.sc), 1, z.boss || z.fb || z.mb ? 1.5 : 1.15); } return zBase(z) * z._fit; }
+  function bodyOf(z) { const P = need(zKey(z)); if (!P || !P.body) return null; const k = zScale(z) * P.sc; return { h: P.body.h * k / HZ, w: P.body.w * k, k }; }
+  const chestH = (z) => { const B = bodyOf(z); return B ? B.h * 0.55 : SHOT_H; };
+  // The point a shot meets a zombie, on screen: the edge of its collision circle facing the shot, at
+  // chest height. TZI.hitPoint is what the debug overlay and the tests check against the drawn body.
+  function hitPoint(z, ang, br = 6) { const r = z.r + br; return C.toScreen(z.x - Math.cos(ang) * r, z.y - Math.sin(ang) * r, chestH(z)); }
+  function bodyBox(z) { const P = need(zKey(z)); if (!P || !P.body) return null; const [X, Y] = C.toScreen(z.x, z.y), k = C.s * zScale(z) * P.sc, w = Math.max(P.body.w, P.body.h * 0.45) * k; return [X - w / 2, Y - P.body.h * k, w, P.body.h * k]; }
+  // the height a shot flies at: chest height, easing to the chest of the zombie just ahead of it
+  function shotH(sim, b) {
+    let best = 1e9, zb = null; const Z = sim.z;
+    for (let i = 0; i < Z.length; i++) { const z = Z[i]; if (z.hp <= 0) continue; const dx = z.x - b.x, dy = z.y - b.y, d = dx * dx + dy * dy; if (d < best) { best = d; zb = z; } }
+    if (!zb || best > 200 * 200) return SHOT_H;
+    const u = clamp(1 - (Math.sqrt(best) - zb.r) / 130, 0, 1), e = u * u * (3 - 2 * u); return SHOT_H + (chestH(zb) - SHOT_H) * e;
+  }
+  // tracers: from the barrel tip (they start where the gun is and blend onto their true line), at chest height
+  function drawShots(g, sim, hi) {
+    const s = C.s, D = C.dpr, P = sim.p, tip = sim._gunTip, list = sim.b; if (!list.length) return;
+    g.setTransform(D, 0, 0, D, 0, 0); g.lineCap = 'round';
+    const seg = [];
+    for (const b of list) {
+      if (b.kind) continue;
+      const sp = Math.hypot(b.vx, b.vy) || 1;
+      if (b._t0 == null) { b._t0 = sim.t; b._ox = 0; b._oy = 0; if (tip && !b.drone && (b.x - P.x) * (b.x - P.x) + (b.y - P.y) * (b.y - P.y) < 110 * 110) { const [X0, Y0] = C.toScreen(b.x, b.y, SHOT_H); b._ox = (tip[0] - X0) / s; b._oy = (tip[1] - Y0) / s; } }
+      const run = (sim.t - b._t0) * sp, h = hi ? shotH(sim, b) : SHOT_H, f1 = Math.max(0, 1 - run / 170), tl = Math.min(run, sp * 0.022), f0 = Math.max(0, 1 - (run - tl) / 170);
+      const [X1, Y1] = C.toScreen(b.x, b.y, h), [X0, Y0] = C.toScreen(b.x - (b.vx / sp) * tl, b.y - (b.vy / sp) * tl, h);
+      seg.push(X0 + b._ox * f0 * s, Y0 + b._oy * f0 * s, X1 + b._ox * f1 * s, Y1 + b._oy * f1 * s, b.crit ? 1 : 0);
+    }
+    const pass = (col, w, only) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); for (let i = 0; i < seg.length; i += 5) { if (only && !seg[i + 4]) continue; g.moveTo(seg[i], seg[i + 1]); g.lineTo(seg[i + 2], seg[i + 3]); } g.stroke(); };
+    g.globalCompositeOperation = 'lighter'; pass('rgba(255,170,60,0.35)', Math.max(3, 7 * s)); g.globalCompositeOperation = 'source-over';
+    pass('#fff6d0', Math.max(1.5, 2.6 * s)); if (seg.some((v, i) => i % 5 === 4 && v)) pass('#ff6a3c', Math.max(2, 4 * s), true);
+  }
+  // debug overlay (TZ_DEBUG.hitbox(true)): each zombie's measured body box, its collision ring at chest
+  // height and the point a shot from you would land
+  function drawHitDebug(g, sim) {
+    setScreen(g); g.lineWidth = 1.5;
+    for (const z of sim.z) { if (z.hp <= 0) continue; const B = bodyBox(z); if (!B) continue; g.strokeStyle = 'rgba(0,255,255,0.9)'; g.strokeRect(B[0], B[1], B[2], B[3]);
+      const H = chestH(z); g.strokeStyle = 'rgba(255,0,255,0.9)'; g.beginPath(); for (let i = 0; i <= 24; i++) { const a = (i / 24) * TAU, [X, Y] = C.toScreen(z.x + Math.cos(a) * z.r, z.y + Math.sin(a) * z.r, H); if (i) g.lineTo(X, Y); else g.moveTo(X, Y); } g.stroke();
+      const [hx, hy] = hitPoint(z, Math.atan2(z.y - sim.p.y, z.x - sim.p.x)); g.fillStyle = '#ff0'; g.fillRect(hx - 3, hy - 3, 6, 6); }
+  }
   // a zombie / boss: animated sprite, elite glow, debuff aura, hit flash, health bar
   function drawZombie(g, sim, z, t, dt, tg, frozen) {
     const s = C.s, Zd = W().ZOMBIES[z.type] || {}, key = zKey(z), Pk = need(key), boss = !!(z.boss || z.fb || z.mb);
-    const [X, Y] = C.toScreen(z.x, z.y), k = s * (boss ? 1 : CH) * (z.elite ? 1.08 : 1);
+    const [X, Y] = C.toScreen(z.x, z.y), k = s * zScale(z);
     if (!Pk) { setBill(g, z.x, z.y); if (z.fb || z.mb) { if (window.TZB) TZB.drawBoss(g, z, t); } else { const kp = Math.max(0.2, Math.round(s * BB * C.dpr * 10) / 10), spr = window.TZA.zombie(z.type, Math.floor(z.f) % 4, kp, z.flash > 0, z.id % 5); g.save(); g.translate(z.x, z.y); if (z.face < 0) g.scale(-1, 1); g.drawImage(spr, -spr.ox, -spr.oy, spr.width / kp, spr.height / kp); g.restore(); } return; }
     const A = zState(z, frozen ? 0 : dt, tg && !(tg.ride && false) ? tg : null);
     const static1 = !!Pk.anims.static, an = static1 ? (Math.hypot(A.vx, A.vy) > 12 && Pk.anims.drive ? 'drive' : 'static') : animName(Pk, A.an);
@@ -569,18 +656,25 @@
       if (sim.drawOnYou) sim.drawOnYou(g, t);
     } finally { P.face = F0; }
   }
+  // The gun held in your hand(s) at chest height, turned to the on-screen aim (never upside down), with a
+  // recoil kick; two-handed guns get the front hand on the fore-grip. Sets sim._gunTip (the barrel tip:
+  // the muzzle flash and the tracers start there).
   function gunIso(g, sim, P, aS, face) {
-    const s = C.s, key = GUN(sim), Pk = need(key), [X, Y] = C.toScreen(P.x, P.y), hx = X + face * 10 * s * BB, hy = Y - 34 * s, left = Math.cos(aS) < 0;
-    const kick = (P.kick || 0) * 4 * s;
-    if (Pk) {
-      const fr = Pk.anims.spin.rows.S[0], sc = s * 0.8 * Pk.sc, D = C.dpr, c = Math.cos(aS), sn = Math.sin(aS);
-      // frame 0 points left: mirror it to point along +x, then turn it to the aim (upside-down guns flip back)
-      const fy2 = left ? -1 : 1;
-      g.setTransform(-c * D, -sn * D, -sn * fy2 * D, c * fy2 * D, (hx - c * kick) * D, (hy - sn * kick) * D);
-      const cx = fr.w * 0.5, cy = fr.h * 0.42;
-      g.drawImage(fr.c, fr.px, fr.py, fr.pw, fr.ph, -(fr.w - cx) * sc - fr.w * sc * 0.15, -cy * sc, fr.w * sc, fr.h * sc);
-      const L = fr.w * sc * 0.85; sim._gunTip = [hx + c * L, hy + sn * L, aS];
-    } else { setBill(g, P.x, P.y, 0, HB); window.TZA.drawGun(g, P.x + face * 13, P.y - 30, Math.atan2(Math.sin(aS), Math.cos(aS)), P.kick, sim.buffs.minigun > 0); sim._gunTip = [hx + Math.cos(aS) * 40 * s, hy + Math.sin(aS) * 40 * s, aS]; }
+    const s = C.s, key = GUN(sim), Pk = need(key), [X, Y] = C.toScreen(P.x, P.y), left = Math.cos(aS) < 0;
+    const c = Math.cos(aS), sn = Math.sin(aS), kick = (P.kick || 0) * 6 * s;
+    // the hand: in front of the chest, a little toward the aim
+    const hx = X + face * 4 * s + c * 9 * s - c * kick, hy = Y - SHOT_H * HZ * s + sn * 5 * s - sn * kick;
+    if (!Pk) { setBill(g, P.x, P.y, 0, HB); window.TZA.drawGun(g, P.x + face * 13, P.y - 30, Math.atan2(sn, c), P.kick, sim.buffs.minigun > 0); sim._gunTip = [hx + c * 40 * s, hy + sn * 40 * s, aS]; return; }
+    const G = GUNS[key] || GUNS['weapon.pistol'], fr = Pk.anims.spin.rows.S[0], sc = s * 0.8 * Pk.sc * G.k, D = C.dpr;
+    const Lg = fr.w * sc, Hg = fr.h * sc, gx = Lg * (1 - G.g), my = Hg * G.y, fy = left ? -1 : 1;
+    // the art points left (muzzle at x = 0): map its x onto -aim, its y across the aim (flipped when aiming left)
+    g.setTransform(-c * D, -sn * D, -sn * fy * D, c * fy * D, (hx + gx * c + my * sn * fy) * D, (hy + gx * sn - my * c * fy) * D);
+    g.drawImage(fr.c, fr.px, fr.py, fr.pw, fr.ph, 0, 0, Lg, Hg);
+    sim._gunTip = [hx + c * gx, hy + sn * gx, aS];
+    // hands (skin tone, inked): the grip, and the fore-grip on two-handed guns
+    setScreen(g); const r = Math.max(2, 4.2 * s), skin = skinOf(sim); g.lineWidth = Math.max(1, 1.4 * s); g.strokeStyle = 'rgba(20,12,8,0.85)'; g.fillStyle = skin;
+    g.beginPath(); g.arc(hx, hy + r * 0.3, r, 0, TAU); g.fill(); g.stroke();
+    if (G.f) { const d = Lg * (G.f - G.g); g.beginPath(); g.arc(hx + c * d, hy + sn * d + r * 0.3, r * 0.95, 0, TAU); g.fill(); g.stroke(); }
   }
   // a ride (yours or a friend's): the vehicle art, its driving anim, exhaust / clippings, the timer ring
   function drawRide(g, sim, r, x, y, mine, t) {
@@ -632,11 +726,12 @@
       const u = f.t / f.life;
       if (f.ox == null) { f.ox = f.x; f.oy = f.y; }
       // anchored where it started (its ground spot + a height), moving like the old 3/4 art did
-      const H = f.k === 'txt' ? 0 : f.h != null ? f.h : 30, [X0, Y0] = C.toScreen(f.ox, f.oy + H, H), X = X0 + (f.x - f.ox) * s * BB, Y = Y0 + (f.y - f.oy) * s * BB;
+      const H = f.k === 'txt' ? 0 : f.h != null ? f.h : 30, [X0, Y0] = C.toScreen(f.ox, f.oy + H, (f.k === 'spurt' || f.k === 'poof') && f.src ? chestH(f.src) : H), X = X0 + (f.x - f.ox) * s * BB, Y = Y0 + (f.y - f.oy) * s * BB;
       if (f.k === 'p') { if (u >= 1) continue; setScreen(g); g.globalAlpha = 1 - u; g.fillStyle = f.c; const sz = f.s * s * 0.9; g.fillRect(X - sz / 2, Y - sz / 2, sz, sz); }
       else if (f.k === 's') { const n = fxLen('fx.smoke'); fx(g, f.c === '#4a5a2a' ? 'fx.smoke' : 'fx.smoke', Math.floor(u * n), X, Y - u * 30 * s, (f.r / 60) * (0.6 + u), { alpha: (1 - u) * (f.a || 0.5) * 1.3 }); }
       else if (f.k === 'fire') { const n = fxLen('fx.explosion'); fx(g, 'fx.explosion', Math.floor(u * n), X, Y - f.r * 0.3 * s, (f.r / 85) * 1.2, { add: true, alpha: 1 - u * 0.5 }); }
       else if (f.k === 'spurt') { if (u >= 1) continue; const nm = f.goo ? 'fx.goo.spurt' : 'fx.blood.spurt', n = fxLen(nm), a = screenAngle(f.wa || 0), left = Math.cos(a) < 0; fx(g, nm, Math.floor(u * n), X, Y, (f.big ? 0.8 : 0.5), { rot: left ? a + Math.PI : a, flip: left }); }
+      else if (f.k === 'poof') { if (u >= 1) continue; const sc0 = (f.big ? 1.2 : 0.6) * (0.7 + u * 0.6); fx(g, 'fx.puff.white', Math.floor(u * fxLen('fx.puff.white')), X, Y, sc0, { alpha: 0.85 * (1 - u) }); fx(g, 'fx.star', Math.floor(u * fxLen('fx.star')), X, Y - 6 * s, (f.big ? 0.9 : 0.5), { add: true, alpha: 1 - u }); }
       else if (f.k === 'ring') { setGround(g); g.globalAlpha = (1 - u) * 0.8; g.strokeStyle = f.c; g.lineWidth = 8 * (1 - u) + 1.5; g.beginPath(); g.arc(f.x, f.y, f.r + (f.R - f.r) * u, 0, TAU); g.stroke(); }
       else if (f.k === 'zap') { setGround(g, 30); g.globalAlpha = 1 - u; g.strokeStyle = '#d8f6ff'; g.lineWidth = 3; g.shadowColor = '#7fd6ff'; g.shadowBlur = hi ? 10 : 0; g.beginPath(); g.moveTo(f.x, f.y); const nn = 5; for (let i = 1; i <= nn; i++) { const kk = i / nn; g.lineTo(f.x + (f.x2 - f.x) * kk + (i < nn ? (Math.random() - 0.5) * 24 : 0), f.y + (f.y2 - f.y) * kk + (i < nn ? (Math.random() - 0.5) * 24 : 0)); } g.stroke(); g.shadowBlur = 0; }
       else if (f.k === 'txt') { setScreen(g); const [tx, ty] = C.toScreen(f.ox, f.oy + 80, 80); g.globalAlpha = 1 - u * u; const sz = Math.round((f.size || 28) * s * 0.8); g.font = `bold ${sz}px "Lilita One", sans-serif`; g.textAlign = 'center'; g.lineWidth = Math.max(3, sz / 5); g.strokeStyle = 'rgba(15,10,6,0.9)'; g.strokeText(f.text, tx, ty - u * 40 * s); g.fillStyle = f.c; g.fillText(f.text, tx, ty - u * 40 * s); }
@@ -787,5 +882,5 @@
     return true;
   }
 
-  const TZI = window.TZI = { fxImage: () => FX.img, topFor, E, SHOW_KEYS, showcase, ready: false, boot, need, has, prefetch, prefetchArea, render, sprite, fx, dirOf, dirToWorld, screenAngle, toScreen: C.toScreen, cam: C, C, st, setGround, setScreen, setBill, prism, groundFor, standFor, garageParts, iso: { HX, HY, HZ, CH, BB }, manifest: () => M, zKey, drawZombie, zState, animFrame, animName, BOSSKEY, VEH, keyOf };
+  const TZI = window.TZI = { bodyOf, bodyBox, hitPoint, chestH, SHOT_H, ZOOM_OUT, fxImage: () => FX.img, topFor, E, SHOW_KEYS, showcase, ready: false, boot, need, has, prefetch, prefetchArea, render, sprite, fx, dirOf, dirToWorld, screenAngle, toScreen: C.toScreen, cam: C, C, st, setGround, setScreen, setBill, prism, groundFor, standFor, garageParts, iso: { HX, HY, HZ, CH, BB }, manifest: () => M, zKey, drawZombie, zState, animFrame, animName, BOSSKEY, VEH, keyOf };
 })();

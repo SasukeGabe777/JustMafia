@@ -53,6 +53,61 @@ async function loadModel(url) {
   return { root: SkeletonUtils.clone(g.scene), clips: g.animations };
 }
 
+// ---------- the cartoon look (spec.toon) ----------
+// Cel shading: MeshToonMaterial with a 3-step ramp; colours pushed brighter / more saturated (textures
+// too); an inverted-hull ink line (addHulls) on top of the 2D silhouette outline.
+let RAMP = null;
+function ramp() {
+  if (RAMP) return RAMP;
+  const d = new Uint8Array([90, 90, 90, 255, 175, 175, 175, 255, 255, 255, 255, 255]);
+  RAMP = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); RAMP.minFilter = RAMP.magFilter = THREE.NearestFilter; RAMP.generateMipmaps = false; RAMP.needsUpdate = true; return RAMP;
+}
+// T.hue: repaint the skin (source hues in T.from, greens to browns by default) to one clear colour per type
+function punch(c, T) { const hsl = {}; c.getHSL(hsl); if (T.hue != null && hsl.s > 0.12 && hsl.l > 0.08) { const [a, b] = T.from || [0.02, 0.45]; if (hsl.h >= a && hsl.h <= b) { hsl.h = T.hue; if (T.skinSat != null) hsl.s = T.skinSat; if (T.skinLight != null) hsl.l = Math.min(0.9, hsl.l * T.skinLight); } } c.setHSL(hsl.h,Math.min(1, hsl.s * (T.sat ?? 1.45) + 0.06), Math.min(0.85, hsl.l * (T.light ?? 1.08) + 0.02)); return c; }
+const texCache = new Map();
+function punchTex(tex, T) {
+  if (!tex || !tex.image) return tex; const ck = tex.uuid + JSON.stringify(T); if (texCache.has(ck)) return texCache.get(ck);
+  const im = tex.image, w = im.width, h = im.height; if (!w || !h) return tex;
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+  const d = g.getImageData(0, 0, w, h), a = d.data, col = new THREE.Color();
+  for (let i = 0; i < a.length; i += 4) { col.setRGB(a[i] / 255, a[i + 1] / 255, a[i + 2] / 255); punch(col, T); a[i] = col.r * 255; a[i + 1] = col.g * 255; a[i + 2] = col.b * 255; }
+  g.putImageData(d, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.flipY = tex.flipY; t.colorSpace = tex.colorSpace; t.wrapS = tex.wrapS; t.wrapT = tex.wrapT; t.magFilter = THREE.NearestFilter; t.minFilter = tex.minFilter; t.repeat.copy(tex.repeat); t.offset.copy(tex.offset);
+  texCache.set(ck, t); return t;
+}
+function toonOf(m, T) {
+  const t = new THREE.MeshToonMaterial({ color: punch(m.color.clone(), T), map: m.map ? punchTex(m.map, T) : null, gradientMap: ramp(), transparent: m.transparent, opacity: m.opacity, side: m.side, vertexColors: m.vertexColors, alphaTest: m.alphaTest });
+  if (m.emissive) { t.emissive = m.emissive.clone(); t.emissiveIntensity = m.emissiveIntensity; }
+  t.name = m.name; return t;
+}
+// The ink line: a back-face copy of every mesh pushed out along its normals (skinned meshes keep the rig).
+function addHulls(root, metres, color) {
+  const list = []; root.traverse((o) => { if (o.isMesh && o.visible && !o.userData.hull) list.push(o); });
+  for (const o of list) {
+    // object units -> metres: the mesh's world box (skinned: posed) over its geometry box
+    o.updateWorldMatrix(true, false); if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    const gs = o.geometry.boundingBox.getSize(new THREE.Vector3()), ws = new THREE.Box3().setFromObject(o, true).getSize(new THREE.Vector3());
+    const k = Math.max(ws.x, ws.y, ws.z) / Math.max(1e-6, gs.x, gs.y, gs.z);
+    const th = Math.min(metres / Math.max(1e-6, k), 0.02 * Math.max(gs.x, gs.y, gs.z)); // (never more than 2% of the part)
+    const mat = new THREE.MeshBasicMaterial({ color, side: THREE.BackSide });
+    mat.onBeforeCompile = (sh) => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n#ifdef USE_SKINNING\n transformed += normalize(objectNormal) * ${th.toFixed(5)};\n#else\n transformed += normalize(normal) * ${th.toFixed(5)};\n#endif`); };
+    mat.customProgramCacheKey = () => 'hull' + th.toFixed(6); // (each thickness is its own shader)
+    let h;
+    if (o.isSkinnedMesh) { h = o.clone(); h.material = mat; h.children.length = 0; }
+    else h = new THREE.Mesh(o.geometry, mat);
+    h.userData.hull = true; h.castShadow = false; h.receiveShadow = false; h.frustumCulled = false;
+    if (o.isSkinnedMesh) { o.parent.add(h); h.position.copy(o.position); h.quaternion.copy(o.quaternion); h.scale.copy(o.scale); }
+    else o.add(h);
+  }
+}
+// Bigger heads, chunkier hands (bones scaled every frame after the clip is applied).
+function boneScaler(root, T) {
+  const want = []; const key = (n) => n.toLowerCase().replace(/[^a-z]/g, '');
+  root.traverse((o) => { if (!o.isBone) return; const n = key(o.name); if (T.head && n === 'head') want.push([o, T.head]); else if (T.hand && /^(hand|wrist)(l|r|left|right)?$/.test(n)) want.push([o, T.hand]); });
+  const base = want.map(([b]) => b.scale.clone());
+  return { reset() { want.forEach(([b], i) => b.scale.copy(base[i])); }, apply() { for (const [b, k] of want) b.scale.multiplyScalar(k); }, n: want.length };
+}
+
 function prepModel(root, spec) {
   const hide = spec.hide ? new RegExp(spec.hide, 'i') : null;
   const only = spec.only ? new RegExp(spec.only, 'i') : null;
@@ -71,6 +126,7 @@ function prepModel(root, spec) {
         if (spec.matTint) for (const [re, c] of spec.matTint) if (new RegExp(re, 'i').test(m.name)) m.color.set(c);
         if (spec.emissive) { m.emissive = new THREE.Color(spec.emissive); m.emissiveIntensity = spec.emissiveIntensity ?? 0.35; }
         if (spec.opacity != null) { m.transparent = true; m.opacity = spec.opacity; }
+        if (spec.toon) { const t = toonOf(m, spec.toon); m.dispose(); return t; }
         return m;
       });
       o.material = Array.isArray(o.material) ? out : out[0];
@@ -170,7 +226,7 @@ async function job(spec) {
   const syncFollow = () => { holder.updateMatrixWorld(true); const inv = holder.matrixWorld.clone().invert(); for (const fo of follow) { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); fo.bone.matrixWorld.decompose(p, q, sc); const w = new THREE.Matrix4().compose(p, q, new THREE.Vector3(1, 1, 1)).multiply(fo.off); fo.tmp.matrix.copy(inv.clone().multiply(w)); fo.tmp.matrixWorldNeedsUpdate = true; } holder.updateMatrixWorld(true); if (window.DBG) for (const fo of follow) { const v = new THREE.Vector3(); fo.tmp.getWorldPosition(v); const bb = new THREE.Box3().setFromObject(fo.tmp); console.log("FOLLOW", v.toArray().map((x) => x.toFixed(2)).join(","), bb.min.toArray().map((x) => x.toFixed(2)).join(","), bb.max.toArray().map((x) => x.toFixed(2)).join(",")); } };
   // attachments (eg a riot shield in a hand bone, or a prop on the head)
   for (const at of spec.attach || []) {
-    const a = await loadModel(at.url); prepModel(a.root, at);
+    const a = await loadModel(at.url); prepModel(a.root, spec.toon && at.toon !== false ? { toon: spec.toon, ...at } : at);
     const tmp = new THREE.Group(); const n2 = normalize(tmp, a.root, at);
     const key = (n) => n.toLowerCase().replace(/[^a-z0-9]/g, ''); let bone = null; if (at.bone) { const want = key(at.bone); root.traverse((o) => { if (!bone && o.isBone && key(o.name) === want) bone = o; }); if (!bone) root.traverse((o) => { if (!bone && o.isBone && key(o.name).includes(want)) bone = o; }); if (!bone) console.log('ATTACH: no bone', at.bone, 'in', spec.url); }
     // place in holder space (metres, model facing +Z) relative to the bone in its idle pose, then parent to the bone
@@ -190,9 +246,11 @@ async function job(spec) {
   // blood decal (grows under the corpse during death clips)
   let blood = null;
   if (spec.blood) {
-    const b = await loadModel(spec.blood.url); prepModel(b.root, { castShadow: false, ...spec.blood });
+    const b = await loadModel(spec.blood.url); prepModel(b.root, { castShadow: false, ...(spec.toon ? { toon: { sat: 1.8, light: 1.25 } } : {}), ...spec.blood });
     const bh = new THREE.Group(); normalize(bh, b.root, spec.blood); bh.visible = false; env.scene.add(bh); blood = bh;
   }
+  if (spec.toon && spec.toon.ink !== 0) addHulls(holder, spec.toon.ink ?? 0.018, spec.toon.inkColor ?? 0x1a120e);
+  const bones = spec.toon ? boneScaler(root, spec.toon) : null;
   const mixer = new THREE.AnimationMixer(root);
   const ctx = { scene: env.scene, cam, ground: env.ground, models, W, H, ax, ay, ppm };
   const dirs = spec.dirs || [0];
@@ -217,7 +275,7 @@ async function job(spec) {
       if (clip) {
         const t0 = (an.from || 0) * clip.duration, t1 = (an.to ?? 1) * clip.duration;
         const t = an.loop === false ? t0 + (t1 - t0) * (an.frames === 1 ? 1 : f / (an.frames - 1)) : t0 + (t1 - t0) * f / an.frames;
-        mixer.setTime(Math.min(t, clip.duration - 1e-4));
+        if (bones) bones.reset(); mixer.setTime(Math.min(t, clip.duration - 1e-4)); if (bones) bones.apply();
       }
       if (an.spin) holder.rotation.y = YAW0 + (f / an.frames) * Math.PI * 2;
       if (blood) {
