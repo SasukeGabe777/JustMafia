@@ -1969,3 +1969,25 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
   stream, 3.5 ms (p95 5.6) with heat + the ice-cream van + a full garage yard.
   Limits: not played on real phones; helper/garage balance needs real play; the spotlight PIP is drawn
   from the snapshot (not a video); audience energy is per audience seat and resets if they rejoin.
+
+## TrashZombies phase 3b (claude/trashzombies-phase3c, November 25, 2026)
+
+- Kill-locked areas (every mode): trash-story.js locks(seed, homes, o) gives each block the team kills it
+  needs (ordinary blocks a few kills per road step from a garage; special blocks - the boss lair, the 3
+  key vaults, the Master Armorer / Scrapyard Crucible, zombie dens, loot stashes - far more than every
+  block around them). Scaled by player count (lockNeed); Endless keeps climbing (no cap); Party Mode
+  score attack stays short and fair (<= 200, only the best shops + a stash are special). The server
+  sends { req, kind, kills } every update; the gates, the phone HUD, the town map and the TV map show
+  "🔒 120 / 200 kills"; specials show as "?" until someone walks in. Special blocks are harder inside
+  (bigger, tougher wave, more elites; a den brings a boss).
+- No dead ends: every block has 2+ roads (most 3-4), loops and cross streets; once a block's own count is
+  met it has 2+ open roads and the open town is always one piece joined to the garages (tested over
+  every mode and 120 seeds; a scratch check over 400 seeds per mode found none).
+- Chests: the story finds (the 3 key pieces in the locked key vaults) and the loot chests of loot
+  stashes and dens sit in a chest you open by hand once the area is clear (OPEN button on the phone,
+  click or F on a computer): the lid opens, the find rises out, plus a little cash/loot (stash: a weapon
+  too). Beside the shop when the block has one; no trader or camper parks on it; gate signs and chests
+  stay lit at night. How-to-play updated.
+- Validation: tools/test-box-trash.js 73 tests (8 new for the above); test-box-kit, test-box,
+  test-box-party, e2e-box. Headless muted screenshots b01-b12. Frame work 2.7 ms avg (p95 4.3) with ~90
+  zombies in a special block on a headless 844x390 phone.
