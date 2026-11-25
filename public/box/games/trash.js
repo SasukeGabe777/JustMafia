@@ -339,7 +339,8 @@
       if (!PH.root || !document.body.contains(PH.root)) { PH.raf = 0; document.body.classList.remove('tz-playing'); return; }
       const dt = Math.min(0.1, (now - PH.last) / 1000); PH.last = now;
       const t0 = performance.now();
-      frame(dt);
+      // (a drawing bug must never freeze the run: log it once and keep the loop going)
+      try { frame(dt); } catch (e) { if (!PH.frameErr) { PH.frameErr = 1; console.error('[JustZombies frame]', e); setTimeout(() => { throw e; }); } }
       const work = performance.now() - t0;
       PH.frames.push(dt * 1000); PH.work.push(work); if (PH.frames.length > 240) { PH.frames.shift(); PH.work.shift(); }
       // keep it smooth: drop the resolution if frames get slow
@@ -511,6 +512,7 @@
     const left = sim.spec ? Math.max(0, sim.spec.target - sim.waveKills) : 0;
     txt(`WAVE ${sim.wave}`, w / 2, 22, small ? 20 : 26, '#ffd23f', 'center');
     txt(sim.cleared ? '✅ Clear: shop or walk on' : `🧟 ${Math.max(left, sim.z.length)} left`, w / 2, small ? 44 : 50, small ? 13 : 16, sim.cleared ? '#7dff6a' : '#fff', 'center');
+    const st = sim.story, ng = sim.nextGate ? sim.nextGate() : null, gate = ng ? `🔒 ${ng.have} / ${ng.need} kills${ng.here ? ' (gate here)' : ''}` : sim.locks ? '🔓 every gate open' : '';
     // the break between waves: a big countdown; at zero the next wave starts here by itself
     const bT = sim.cleared && sim.breakT != null && !sim.build && !sim.dead ? sim.breakT : sim.build && sim.build.endsAt ? Math.max(0, (sim.build.endsAt - Date.now()) / 1000) : null;
     if (bT != null && sim.phase === 'play') {
@@ -521,7 +523,6 @@
       const pulse = hot ? 1 + 0.12 * Math.max(0, Math.sin(sim.t * 12)) : 1; g.save(); g.translate(cx, cy + 1); g.scale(pulse, pulse); txt(String(n), 0, 0, small ? 26 : 32, hot ? '#ff6a5a' : '#fff6d8', 'center'); g.restore();
       txt(sim.build ? '🔨 HORDE IN' : 'NEXT WAVE IN', cx, cy - R0 - 14, small ? 11 : 13, hot ? '#ff8c6a' : '#ffe9a8', 'center');
     }
-    const st = sim.story, ng = sim.nextGate ? sim.nextGate() : null, gate = ng ? `🔒 ${ng.have} / ${ng.need} kills${ng.here ? ' (gate here)' : ''}` : sim.locks ? '🔓 every gate open' : '';
     if (st || gate) txt(`${st ? `🗝️ ${st.keys}/3   🗺️ ${st.maps}/2   ` : ''}${gate}`, w / 2, small ? 80 : 94, small ? 12 : 14, '#ffe9a8', 'center');
     if (st) {
       const fb = sim.z.find((z) => z.fb);
