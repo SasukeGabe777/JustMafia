@@ -71,9 +71,21 @@
   // ---------------- chests ----------------
   // where the chest of this block stands (by the landmark; beside a shop when there's a shop here)
   proto.chestSpot = function () {
-    const S = this.area.spot || { x: W.AW / 2 - 150, y: 0, w: 300, h: 170 };
-    if (this.placeType && this.placeType()) { const r = W.rng(W.hash(this.seed, this.cell[0], this.cell[1], 'chest')); const x = S.x + S.w / 2 + (S.x + S.w / 2 > W.AW / 2 ? -1 : 1) * (S.w / 2 + 170 + r() * 40); return { x: clamp(x, 140, W.AW - 140), y: clamp(S.y + S.h + 70, 160, W.AH - 90) }; }
-    return { x: S.x + S.w / 2, y: S.y + S.h / 2 + 10 };
+    const S = this.area.spot || { x: W.AW / 2 - 150, y: 0, w: 300, h: 170 }, P = window.TZP;
+    if (!(P && P.placeAt(this.seed, this.cell[0], this.cell[1], this.homes))) return { x: S.x + S.w / 2, y: S.y + S.h / 2 + 10 }; // on the landmark
+    // a shop stands on the landmark: the chest goes beside it, somewhere clear
+    const cx = S.x + S.w / 2, by = S.y + S.h, side = cx > W.AW / 2 ? -1 : 1, obs = this.area.obstacles;
+    const C = [[cx + side * (S.w / 2 + 120), by + 30], [cx - side * (S.w / 2 + 120), by + 30], [cx + side * 220, by + 150], [cx - side * 220, by + 150], [cx, by + 190], [cx + side * (S.w / 2 + 120), by - 60]];
+    const ok = ([x, y]) => x > 120 && x < W.AW - 120 && y > 150 && y < W.AH - 70 && !obs.some((o) => x > o.x - 60 && x < o.x + o.w + 60 && y > o.y - 30 && y < o.y + o.h + 90) && !(x > S.x - 50 && x < S.x + S.w + 50 && y > S.y - 30 && y < S.y + S.h + 60);
+    const c = C.find(ok) || C[0]; return { x: clamp(c[0], 140, W.AW - 140), y: clamp(c[1], 160, W.AH - 90) };
+  };
+  // no trader or camper parks on top of a chest (they'd park on the landmark)
+  const baseClear = proto.onClear;
+  proto.onClear = function () {
+    if (!this.chestHere()) return baseClear.call(this);
+    const own = Object.prototype.hasOwnProperty.call(this, 'placeType'), keep = this.placeType;
+    this.placeType = function () { return keep.call(this) || 'chest'; };
+    try { return baseClear.call(this); } finally { if (own) this.placeType = keep; else delete this.placeType; }
   };
   // the unopened chest in this block, if any: { kind: 'find' | 'loot', id, x, y }
   proto.chestHere = function () {
@@ -125,7 +137,10 @@
     list.push({ y: C.y, draw: (g, t) => drawChest(g, C.x, C.y, C.kind === 'find' ? ((window.TZS.FINDS[C.id] || {}).kind === 'key' ? 'key' : 'find') : C.id, t, A ? A.t : -1, A, near, sim.cleared) });
   };
   const baseHoles = proto.lightHoles;
-  proto.lightHoles = function (hole) { if (baseHoles) baseHoles.call(this, hole); const C = this.chestAnim || this.chestHere(); if (C) hole(C.x, C.y - 30, this.chestAnim ? 260 : 150, 0.8); };
+  proto.lightHoles = function (hole) {
+    if (baseHoles) baseHoles.call(this, hole); const C = this.chestAnim || this.chestHere(); if (C) hole(C.x, C.y - 30, this.chestAnim ? 260 : 150, 0.8);
+    for (const d of ['n', 's', 'w', 'e']) { const e = this.area.exits[d]; if (!e || !this.gateInfo(d)) continue; hole(d === 'w' ? 150 : d === 'e' ? W.AW - 150 : e.p, d === 'n' ? 90 : d === 's' ? W.AH - 90 : e.p - 60, 220, 0.75); } // the gate sign stays readable at night
+  };
 
   // ---------------- art: chests and gates (drawn in code) ----------------
   const LOOK = {
