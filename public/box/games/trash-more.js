@@ -13,7 +13,7 @@
   const Sim = window.TZSim.Sim, proto = Sim.prototype;
   const d2 = (a, b, x, y) => (a - x) * (a - x) + (b - y) * (b - y);
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-  const VK = ['', 'cart', 'mower', 'gtruck', 'push'], FITS = ['', 'cone', 'lid', 'chef', 'goggles', 'cape', 'crown'];
+  const VK = ['', 'cart', 'mower', 'gtruck', 'push', 'tank'], FITS = ['', 'cone', 'lid', 'chef', 'goggles', 'cape', 'crown'];
   const ZT = Object.keys(W.ZOMBIES);
   function mo(s) {
     if (s._mo) return s; s._mo = true;
@@ -186,30 +186,74 @@
     toggleRide() {
       if (!this._mo || this.dead || this.down || this.phase !== 'play') return false; const P = this.p;
       if (this.ride) {
-        const r = this.ride; this.ride = null; if (r.kind === 'gtruck') this.buffs.truck = 0;
+        const r = this.ride; this.ride = null; if (r.kind === 'gtruck') this.buffs.truck = 0; if (r.fp) this.fpOut = { t: 0, crash: false, kind: r.kind };
         if (r.kind !== 'gtruck' || r.time > 0.5) this.parked = { ...r, x: clamp(P.x, 60, W.AW - 60), y: clamp(P.y, 80, W.AH - 40) };
         P.x = clamp(P.x + 70 * (P.face || 1), P.r, W.AW - P.r); P.inv = Math.max(P.inv, 0.4); this.collide(P); this.rideFx(false); this.o.on('ride', { on: false }); return 'out';
       }
       const v = this.nearVehicle(); if (!v) return false;
+      if (this.boardAnim) { if (this.boarding) return false; this.boarding = { v, t: 0, x0: P.x, y0: P.y }; this.parked = null; this.o.on('board', { kind: v.kind }); return 'in'; }
+      return this.enterRide(v);
+    },
+    // the walk-up is over (or skipped): in you get
+    enterRide(v) {
+      const P = this.p; this.boarding = null;
       const V0 = X.VEHICLES[v.kind]; this.ride = { ...v, life: v.life != null ? v.life : V0.time || 20, life0: v.life0 || V0.time || 20 }; this.parked = null; P.x = v.x; P.y = v.y; if (v.kind === 'gtruck') this.buffs.truck = v.time; this.rideFx(true);
+      const r = this.ride; if (r.kind === 'gtruck' && r.time == null) { r.time = r.life; this.buffs.truck = r.time; } r.fp = !!this.fpRide; r.head = r.head != null ? r.head : Math.atan2(P.vy || Math.sin(P.aim), P.vx || Math.cos(P.aim)); r.spd = 0; r.tur = r.head; r.reload = 0;
       this.o.report({ op: 'ev', k: 'ride', id: v.kind }); this.o.on('ride', { on: true, kind: v.kind }); return 'in';
     },
     wreck() {
-      const r = this.ride, V = X.VEHICLES[r.kind]; this.ride = null; if (r.kind === 'gtruck') this.buffs.truck = 0; else this.wrecked[this.cellKey()] = 1;
+      const r = this.ride, V = X.VEHICLES[r.kind]; this.ride = null; if (r.kind === 'gtruck') this.buffs.truck = 0; else this.wrecked[this.cellKey()] = 1; if (r.fp) this.fpOut = { t: 0, crash: true, kind: r.kind };
       this.boom(this.p.x, this.p.y, 110, 0, '#ff8c42', false); this.popup(V.name.toUpperCase() + ' WRECKED!', '#ff6a5a', this.p.x, this.p.y - 130); this.p.inv = 1; this.o.on('wreck', { kind: r.kind });
     },
     // a puff of smoke + a ring when you hop in or out (the iso view hides you inside the ride)
     rideFx(on) { const P = this.p; this.fx.push({ k: 'ring', x: P.x, y: P.y, r: 10, R: on ? 80 : 60, t: 0, life: 0.35, c: on ? '#9cff5a' : '#ffe9a8' }); for (let i = 0; i < 6; i++) this.fx.push({ k: 's', x: P.x + (this.rng() - 0.5) * 60, y: P.y - 10, r: 14 + this.rng() * 10, t: 0, life: 0.7 + this.rng() * 0.4, a: 0.4, c: '#8a8580' }); },
     // time's up: you pop out, the ride breaks down (the truck drives off on its route)
     rideOver() {
-      const r = this.ride, V = X.VEHICLES[r.kind], P = this.p; this.ride = null; if (r.kind === 'gtruck') this.buffs.truck = 0; else this.wrecked[this.cellKey()] = 1;
+      const r = this.ride, V = X.VEHICLES[r.kind], P = this.p; this.ride = null; if (r.kind === 'gtruck') this.buffs.truck = 0; else this.wrecked[this.cellKey()] = 1; if (r.fp) this.fpOut = { t: 0, crash: false, kind: r.kind };
       this.rideFx(false); P.x = clamp(P.x + 60 * (P.face || 1), P.r, W.AW - P.r); P.inv = Math.max(P.inv, 0.8); this.collide(P);
       for (let i = 0; i < 10; i++) this.particle(P.x, P.y - 20, (this.rng() - 0.5) * 300, -this.rng() * 260, i % 2 ? '#3a3f44' : '#ffb02e', 0.6, 5);
       this.banner = r.kind === 'gtruck' ? { text: '🚛 TIME’S UP', sub: 'The truck rolls off on its route', t: 2 } : { text: '⏱️ ' + V.name.toUpperCase() + ' BROKE DOWN', sub: 'Out you hop: back on foot', t: 2.2 };
       this.o.on('rideend', { kind: r.kind }); this.o.on('ride', { on: false });
     },
+    // the walk-up: you cross to the ride in about a second (tap to skip), then hop in
+    boardStep(dt) {
+      const B = this.boarding; if (!B) return; B.t += dt; const P = this.p, u = Math.min(1, B.t / 0.75);
+      P.x = B.x0 + (B.v.x - B.x0) * u; P.y = B.y0 + (B.v.y - B.y0) * u; P.vx = (B.v.x - B.x0) * 1.2; P.vy = (B.v.y - B.y0) * 1.2; P.moving = u < 1; P.walkT += dt; P.inv = Math.max(P.inv, 0.3);
+      if (B.t >= 1 || this.skipBoard) { this.skipBoard = false; P.x = B.v.x; P.y = B.v.y; this.enterRide(B.v); }
+    },
+    // first-person driving (the phone's 3D view): steer + gas from I.drive, the tank's turret and cannon
+    driveInput(I) {
+      const r = this.ride; if (!r || !r.fp) return this.boarding ? { ...I, mx: 0, my: 0, ax: 0, ay: 0, fire: false } : I;
+      this._drvIn = I.drive || { steer: 0, gas: 0 };
+      return { ...I, mx: Math.cos(r.head) * r.spd, my: Math.sin(r.head) * r.spd, ax: 0, ay: 0, fire: false, mouse: false };
+    },
+    driveStep(dt) {
+      const r = this.ride, V = X.VEHICLES[r.kind], P = this.p, D = this._drvIn || { steer: 0, gas: 0 }, tank = r.kind === 'tank';
+      const gas = Math.max(-0.6, Math.min(1, D.gas || 0)), acc = (tank ? 1.0 : 1.8) * (Math.sign(gas) !== Math.sign(r.spd) && r.spd !== 0 ? 2.2 : 1);
+      if (gas) r.spd += Math.max(-acc * dt, Math.min(acc * dt, gas - r.spd)); else r.spd *= Math.pow(0.35, dt);
+      const turn = (tank ? 1.4 : 2.3) * (D.steer || 0) * dt * (tank ? 1 : Math.min(1, Math.abs(r.spd) * 3) * Math.sign(r.spd || 1));
+      r.head += turn; if (tank) r.tur += turn;
+      if (D.tur != null && Number.isFinite(D.tur)) r.tur = D.tur; else if (D.turn) r.tur += D.turn * 1.8 * dt;
+      // bumping into a wall or a car slows you right down
+      const moved = Math.hypot(P.x - (r.lx == null ? P.x : r.lx), P.y - (r.ly == null ? P.y : r.ly)); if (Math.abs(r.spd) > 0.3 && moved < 0.5 * dt * 60) r.spd *= 0.6; r.lx = P.x; r.ly = P.y;
+      // ram them: they fly off (death animations, blood on the windshield); score and XP as usual
+      const sp = Math.abs(r.spd);
+      if (sp > 0.3) for (const z of this.z) { if (z.hp <= 0 || (z.ramT || 0) > this.t) continue; const rr = V.r + z.r, dd = d2(z.x, z.y, P.x, P.y); if (dd > rr * rr) continue; const d = Math.sqrt(dd) || 1; z.ramT = this.t + 0.4;
+        const hp0 = z.hp; this.damageZ(z, ((V.ram || 14) + this.wave * 2) * (1 + sp * 2) * (z.boss ? 0.4 : 1), this.me.id, ((z.x - P.x) / d) * 700 * sp, ((z.y - P.y) / d) * 700 * sp); this.shake = Math.max(this.shake, 0.12 + 0.1 * sp);
+        if (hp0 > 0 && z.hp <= 0) { this.splatN = (this.splatN || 0) + 1; this.o.on('ram', { kill: true }); } r.hp -= z.boss ? 30 : 2; }
+      // the tank: lock on near where the turret points, fire, reload
+      if (tank) {
+        const C0 = V.cannon; r.reload = Math.max(0, (r.reload || 0) - dt); let best = null, bs = 0.3;
+        for (const z of this.z) { if (z.hp <= 0) continue; const dx = z.x - P.x, dy = z.y - P.y, d = Math.hypot(dx, dy); if (d < 60 || d > C0.range) continue; let da = Math.atan2(dy, dx) - r.tur; da = Math.atan2(Math.sin(da), Math.cos(da)); const sc = Math.abs(da) + d / 6000; if (Math.abs(da) < 0.3 && sc < bs) { bs = sc; best = z; } }
+        r.lock = best ? best.id : null;
+        if (D.fire && r.reload <= 0) { r.reload = C0.reload; const tx = best ? best.x : P.x + Math.cos(r.tur) * 480, ty = best ? best.y : P.y + Math.sin(r.tur) * 480; (this.shells || (this.shells = [])).push({ x0: P.x, y0: P.y, x: tx, y: ty, t: 0, T: Math.max(0.12, Math.hypot(tx - P.x, ty - P.y) / 1800) }); this.shake = Math.max(this.shake, 0.3); this.snd('cannon', P.x, P.y); this.o.on('cannon', {}); }
+      }
+    },
+    shellStep(dt) { const L = this.shells; if (!L || !L.length) return; for (let i = L.length - 1; i >= 0; i--) { const s = L[i]; s.t += dt; if (s.t >= s.T) { L.splice(i, 1); const C0 = X.VEHICLES.tank.cannon; this.boom(s.x, s.y, C0.rad, C0.dmg * (1 + 0.05 * this.wave), '#ff8c42', false); this.decal('scorch', s.x, s.y, 2.2); } } },
     rideStep(dt) {
-      const r = this.ride; if (!r) return; const V = X.VEHICLES[r.kind], P = this.p;
+      this.boardStep(dt); this.shellStep(dt);
+      const r = this.ride; if (!r) return;
+      if (r.fp) { this.driveStep(dt); if (r.hp <= 0 && this.ride === r) this.wreck(); if (!this.ride) return; } const V = X.VEHICLES[r.kind], P = this.p;
       if (r.life == null) { r.life = r.kind === 'gtruck' ? r.time : V.time || 20; r.life0 = V.time || r.life; }
       if (r.kind !== 'gtruck') { r.life -= dt; if (r.life <= 0) { this.rideOver(); return; } }
       if (r.kind === 'gtruck') { r.time -= dt; this.buffs.truck = Math.max(0.01, r.time); r.life = r.time; if (r.time <= 0) { this.rideOver(); return; } }
@@ -463,6 +507,7 @@
   proto.extraStanding = function (list) {
     baseStanding.call(this, list); if (!this._mo) return;
     const kp = this.kp(), near = this.nearVehicle();
+    if (this.boarding) { const v = this.boarding.v; list.push({ k: 'veh', v, x: v.x, y: v.y - 1 }); } // the ride you're climbing into
     if (this.parked) { const v = this.parked, lab = (g) => label(g, near ? '🚪 TAP ' + X.VEHICLES[v.kind].icon + ' TO GET IN' : X.VEHICLES[v.kind].icon + ' ' + X.VEHICLES[v.kind].name + ' · ' + Math.round(X.VEHICLES[v.kind].time || 0) + ' s', v.x, v.y - 96, near ? '#9cff5a' : '#ffe9a8', near ? 20 : 16); list.push({ k: 'veh', v, x: v.x, y: v.y, label: lab, draw: (g, t) => { drawVehicle(g, v.kind, v.x, v.y, v.face || 1, t, false, v); lab(g); } }); }
     if (this.hiding) { const h = this.hiding; list.push({ k: 'npc', n: h, hiding: true, x: h.x, y: h.y, labels: (g, t) => npcLabels(g, h, t, true), draw: (g, t) => { drawNpc(g, h, kp, t, true); } }); }
     if (this.npc) { const N = this.npc; list.push({ k: 'npc', n: N, x: N.x, y: N.y, labels: (g, t) => npcLabels(g, N, t, false), draw: (g, t) => drawNpc(g, N, kp, t, false) }); }
@@ -485,6 +530,9 @@
     for (const c of this.crush) if (c.t < c.warn) hole(c.v ? c.c : W.AW / 2, c.v ? W.AH / 2 : c.c, 260, 0.35);
   };
   const t2 = (s) => s.t;
+  // driving in first person: the wheel and pedals replace walking; your own gun rests
+  const baseMap = proto.mapInput; proto.mapInput = function (I) { I = baseMap ? baseMap.call(this, I) : I; return this._mo ? this.driveInput(I || {}) : I; };
+  const baseShoot = proto.shoot; proto.shoot = function (dt, I) { if (this.ride && this.ride.fp) return; if (this.boarding) return; return baseShoot.call(this, dt, I); };
 
   // ---------------- the new bosses: patterns ----------------
   const TZB = window.TZB || (window.TZB = { stepBoss: () => 1, drawBoss: () => {} }), baseStepBoss = TZB.stepBoss, baseDrawBoss = TZB.drawBoss;

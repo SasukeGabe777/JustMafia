@@ -80,6 +80,9 @@ body.g-trash { --tz-green: #9cff3c; --tz-orange: #ff8c2e; --tz-ink: #1b1410; --t
 body.tz-playing { overflow: hidden; overscroll-behavior: none; }
 .tz-root { position: fixed; inset: 0; z-index: 60; background: #0c0a08; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .tz-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.tz-gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; } /* the first-person drive (trash-drive.js), under the 2D layer */
+.tz-gl[hidden] { display: none; }
+.tz-cred summary { cursor: pointer; color: #9cff3c; font-weight: 700; margin: 8px 0 2px; }
 .tz-pause { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); width: 46px; height: 42px; border-radius: 12px; border: 3px solid #1b1410; background: rgba(242,239,230,0.92); font-size: 20px; z-index: 3; }
 .tz-ov { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; background: rgba(12,8,6,0.72); color: #f2efe6; overflow: auto; padding: 12px; box-sizing: border-box; }
 .tz-ov[hidden] { display: none; }

@@ -34,4 +34,5 @@ V('vehicle.cart', 'props/vehicle-cart.webp', '/a/gd-kenney-market/Props/Shopping
 V('vehicle.mower', 'props/vehicle-mower.webp', 'proc:mower', { kind: 'proc', proc: 'mower', len: 1.2, cell: [128, 128], anchor: [64, 80], name: 'Push mower (rideable; our own model)' });
 V('vehicle.ridemower', 'props/vehicle-ridemower.webp', 'proc:ridemower', { kind: 'proc', proc: 'ridemower', len: 1.9, cell: [176, 160], anchor: [88, 100], name: 'Ride-on mower (our own model)' });
 V('vehicle.garbagetruck', 'props/vehicle-garbagetruck.webp', KN('garbage-truck'), { len: 6.0, cell: [384, 320], anchor: [192, 184], outlinePx: 2, tint: [0.95, 1.05, 0.9], name: 'Garbage truck (timed ram)' });
+V('vehicle.tank', 'props/vehicle-tank.webp', 'proc:tank', { kind: 'proc', proc: 'tank', len: 5.6, cell: [352, 288], anchor: [176, 170], outlinePx: 2, name: 'Tank (rare rideable; our own model)' });
 module.exports = { roots: base.roots, jobs, PPM };

@@ -71,6 +71,8 @@
       case 'hordestart': play('sfx.alarm', 0.3); break;
       case 'unlock': play('sfx.door', 0.35); break;
       case 'garage': play('sfx.garage.door', 0.5, { gap: 2000 }); break;
+      case 'board': play('sfx.door', 0.35); break;
+      case 'ram': play(pick(['sfx.hit.splat', 'sfx.hit.metal']), 0.3, { gap: 60 }); break;
       case 'weapon': case 'upgrade': case 'item': play('sfx.pickup', 0.3); break;
       case 'debuff': play('sfx.slime', 0.3, { gap: 400 }); break;
       case 'tick': play('sfx.ui.click', 0.25, { gap: 300 }); break;
@@ -92,6 +94,7 @@
       else if (n === 'bossdie') { play('sfx.explosion.b', 0.45); play('sfx.zombie.brute', 0.4, { rate: 0.7 }); }
       else if (n === 'boom') play(pick(['sfx.explosion', 'sfx.explosion.b']), 0.42 * p.v, { pan: p.pan, gap: 90 });
       else if (n === 'boomsmall') play(pick(['sfx.explosion.small', 'sfx.explosion.small.b']), 0.3 * p.v, { pan: p.pan, gap: 70 });
+      else if (n === 'cannon') { play('sfx.gun.heavy', 0.4, { rate: 0.7, gap: 200 }); play('sfx.explosion.small', 0.25, { gap: 200 }); }
       else if (n.startsWith('w:')) weapon(n.slice(2), x, y);
     }
     q.length = 0;
@@ -109,7 +112,7 @@
     const wx = sim._wx || {}, raining = (wx.rain || sim.wxk === 'rain') && sim.phase === 'play';
     loop('rain', 'sfx.rain.loop', raining && !sim.paused ? 0.16 : 0, 1);
     const r = sim.ride, mv = r ? Math.hypot(sim.p.vx || 0, sim.p.vy || 0) : 0;
-    loop('engine', r ? (r.kind === 'gtruck' ? 'sfx.engine.heavy' : 'sfx.engine.loop.high') : '', r && r.kind !== 'cart' && r.kind !== 'push' && !sim.paused && !sim.dead ? 0.16 : r && r.kind === 'push' && !sim.paused ? 0.1 : 0, 0.85 + Math.min(0.5, mv / 500));
+    loop('engine', r ? (r.kind === 'gtruck' || r.kind === 'tank' ? 'sfx.engine.heavy' : 'sfx.engine.loop.high') : '', r && r.kind !== 'cart' && r.kind !== 'push' && !sim.paused && !sim.dead ? 0.16 : r && r.kind === 'push' && !sim.paused ? 0.1 : 0, 0.85 + Math.min(0.5, mv / 500));
     // the garage door in the intro
     if (sim.phase === 'intro' && sim.introT > 1.25 && !sim._doorSnd) { sim._doorSnd = true; event('garage'); }
     if (sim.dead || sim.phase === 'over') stopAll();

@@ -9822,6 +9822,63 @@
     64
    ],
    "scale": 1
+  },
+  "vehicle.tank": {
+   "file": "props/vehicle-tank.webp",
+   "kind": "vehicle",
+   "cell": [
+    352,
+    288
+   ],
+   "anchor": [
+    176,
+    170
+   ],
+   "scale": 1,
+   "size": [
+    3.065,
+    2.896,
+    5.6
+   ],
+   "name": "Tank (rare rideable; our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "drive": {
+     "frames": 8,
+     "fps": 16,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
   }
  },
  "aliases": {

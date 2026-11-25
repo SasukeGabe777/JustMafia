@@ -206,10 +206,10 @@
   }
   const LOT = { junkyard: 'gravel', suburb: 'grass', lot: 'asphalt2', gas: 'concrete', mall: 'paving', park: 'grass2', roof: 'paving', sewer: 'concrete', carnival: 'dirt', school: 'grass', docks: 'planks', landfill: 'dirt2', home: 'grass' };
   const E = 300; // the floor drawn around the area (outside the fence)
-  function groundFor(area, q) {
+  // the flat floor in world units (roads, sidewalks, lots, paint, grime), textured; also the 3D drive's ground
+  function topFor(area, r) {
     const Z = W(), AW = Z.AW, AH = Z.AH, TA = window.TZA;
-    // 1) the flat floor in world units (roads, sidewalks, lots, paint, grime), textured
-    const r = Math.min(1, q * 0.8 + 0.1), td = document.createElement('canvas'); td.width = Math.ceil((AW + 2 * E) * r); td.height = Math.ceil((AH + 2 * E) * r);
+    const td = document.createElement('canvas'); td.width = Math.ceil((AW + 2 * E) * r); td.height = Math.ceil((AH + 2 * E) * r);
     const g = td.getContext('2d'); g.scale(r, r); g.translate(E, E);
     const pat = (n) => { const p = tilePattern(g, n); if (p && p.setTransform && window.DOMMatrix) p.setTransform(new DOMMatrix().scale(80 / 128)); return p; };
     const lot = pat(LOT[area.biome.key] || 'grass') || area.biome.ground[0];
@@ -218,6 +218,10 @@
     try { TA.drawArea(g, area, 1, { ground: true }); } finally { TA.tex = null; }
     // the world past the fence sinks into the dark
     g.fillStyle = 'rgba(8,7,6,0.55)'; for (const [x, y, w, h] of [[-E, -E, AW + 2 * E, E - 140], [-E, AH + 140, AW + 2 * E, E - 140], [-E, -140, E - 140, AH + 280], [AW + 140, -140, E - 140, AH + 280]]) g.fillRect(x, y, w, h);
+    return td;
+  }
+  function groundFor(area, q) {
+    const Z = W(), AW = Z.AW, AH = Z.AH, r = Math.min(1, q * 0.8 + 0.1), td = topFor(area, r);
     // 2) project it: the iso floor canvas (art px * q)
     const ix0 = isoX(-E, AH + E), iy0 = isoY(-E, -E), iw = isoX(AW + E, -E) - ix0, ih = isoY(AW + E, AH + E) - iy0;
     const c = document.createElement('canvas'); c.width = Math.ceil(iw * q); c.height = Math.ceil(ih * q);
@@ -303,7 +307,7 @@
   const animName = (P, an) => (P.anims[an] ? an : an === 'run' ? 'walk' : an === 'idle' ? (P.anims.walk ? 'walk' : 'static') : P.anims.walk ? 'walk' : Object.keys(P.anims)[0]);
 
   // ---------------- the frame ----------------
-  const VEH = { cart: 'vehicle.cart', mower: 'vehicle.ridemower', push: 'vehicle.mower', gtruck: 'vehicle.garbagetruck' };
+  const VEH = { cart: 'vehicle.cart', mower: 'vehicle.ridemower', push: 'vehicle.mower', gtruck: 'vehicle.garbagetruck', tank: 'vehicle.tank' };
   const SURV = ['survivor.lis', 'survivor.matt', 'survivor.sam', 'survivor.shaun'];
   const PLACE = { market: 'bld.market', armor: 'bld.surplus', clinic: 'bld.clinic', tinker: 'bld.gun1', gunsmith: 'bld.gun2', master: 'bld.gun3', forge: 'bld.crucible', camper: 'vehicle.camper' };
   const hashS = (s) => { let h = 7; for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) | 0; return Math.abs(h); };
@@ -534,7 +538,7 @@
       default: return false;
     }
   }
-  const vehScale = (kind) => (kind === 'gtruck' ? 0.95 : kind === 'cart' ? 1.25 : kind === 'push' ? 1.25 : 1.15);
+  const vehScale = (kind) => (kind === 'gtruck' || kind === 'tank' ? 0.95 : kind === 'cart' ? 1.25 : kind === 'push' ? 1.25 : 1.15);
 
   // you: your own character standing in the scene, the gun from the art set, or your ride
   function drawYou(g, sim, V) {
@@ -711,6 +715,7 @@
     if (sim.spec && sim.spec.mini) keys.push(BOSSKEY[sim.spec.mini] || 'boss.final');
     if (sim.bossDue) keys.push('boss.dumpster');
     keys.push('pickup.coins', 'pickup.xp.green', 'pickup.xp.pink', 'prop.barrier.striped', 'prop.fence.metal');
+    keys.push(...Object.values(VEH));
     for (const p of W().PICKUPS) keys.push('pickup.' + p.id);
     prefetch(keys);
   }
@@ -782,5 +787,5 @@
     return true;
   }
 
-  const TZI = window.TZI = { SHOW_KEYS, showcase, ready: false, boot, need, has, prefetch, prefetchArea, render, sprite, fx, dirOf, dirToWorld, screenAngle, toScreen: C.toScreen, cam: C, C, st, setGround, setScreen, setBill, prism, groundFor, standFor, garageParts, iso: { HX, HY, HZ, CH, BB }, manifest: () => M, zKey, drawZombie, zState, animFrame, animName, BOSSKEY, VEH, keyOf };
+  const TZI = window.TZI = { fxImage: () => FX.img, topFor, E, SHOW_KEYS, showcase, ready: false, boot, need, has, prefetch, prefetchArea, render, sprite, fx, dirOf, dirToWorld, screenAngle, toScreen: C.toScreen, cam: C, C, st, setGround, setScreen, setBill, prism, groundFor, standFor, garageParts, iso: { HX, HY, HZ, CH, BB }, manifest: () => M, zKey, drawZombie, zState, animFrame, animName, BOSSKEY, VEH, keyOf };
 })();

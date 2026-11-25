@@ -48,12 +48,15 @@
     mower: { icon: '🚜', name: 'Ride-On Mower', speed: 1.12, hp: 220, r: 40, blade: 70, time: 22, desc: 'Slow, but its blades chew zombies up. 22 seconds of gas.' },
     push: { icon: '🌱', name: 'Push Mower', speed: 1.3, hp: 120, r: 30, blade: 45, time: 18, desc: 'Quick little blades. 18 seconds of gas.' },
     gtruck: { icon: '🚛', name: 'Garbage Truck', speed: 1.45, hp: 700, r: 64, time: 15, desc: 'A rare power-up: drive it for 15 seconds.' },
+    // the rarest ride: a tank (first person from the hatch); its cannon locks on and blows up whole groups
+    tank: { icon: '🪖', name: 'Tank', speed: 0.95, hp: 1100, r: 58, ram: 40, time: 22, cannon: { dmg: 150, rad: 175, reload: 1.5, range: 900 }, desc: 'Rare! A cannon that locks on to zombies. 22 seconds of fuel.' },
   };
   // A parked cart or mower in some blocks (same on every phone): carts by shops and lots, mowers in yards.
   const CART_AT = ['mall', 'lot', 'gas', 'roof', 'docks'], MOWER_AT = ['suburb', 'park', 'school', 'carnival'];
   function vehicleAt(seed, x, y, homes) {
     if ((homes || []).some((h) => h[0] === x && h[1] === y)) return null;
     const h = W.hash(seed, 'veh', x, y) % 100, b = W.biomeOf(seed, x, y).key;
+    if (h >= 97) return 'tank'; // rare
     if (CART_AT.includes(b) && h < 45) return 'cart';
     if (MOWER_AT.includes(b) && h < 45) return h % 3 === 0 ? 'push' : 'mower';
     return h < 10 ? (h < 5 ? 'cart' : 'mower') : null;

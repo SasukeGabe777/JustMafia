@@ -395,6 +395,23 @@ function procModel(kind) {
     for (const x of [-0.2, 0.2]) { const h = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.75, 8), std(0x9aa2aa, { metalness: 0.8 })); h.position.set(x, 0.45, -0.42); h.rotation.x = -0.75; g.add(h); }
     const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.44, 8), std(0x1c1f24)); grip.rotation.z = Math.PI / 2; grip.position.set(0, 0.73, -0.68); g.add(grip);
     const bag = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.26), std(0x4a5a3a, { roughness: 1 })); bag.position.set(0, 0.2, -0.36); g.add(bag);
+  } else if (kind === 'tank') { // JustZombies tank (our own model): olive hull, road wheels in tracks, a turret with a long cannon, an open hatch
+    const olive = std(0x5d6b3a, { roughness: 0.7, metalness: 0.2 }), dark = std(0x2b2f2a, { roughness: 0.9 }), steel = std(0x4a5048, { metalness: 0.5, roughness: 0.5 });
+    const body = new THREE.Group(); body.name = 'body'; g.add(body);
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 3.4), olive); hull.position.y = 0.72; body.add(hull);
+    const glacis = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.35, 0.7), olive); glacis.position.set(0, 0.86, 1.72); glacis.rotation.x = 0.55; body.add(glacis);
+    for (const x of [-1.1, 1.1]) { const fender = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 3.6), olive); fender.position.set(x, 0.98, 0); body.add(fender);
+      const track = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.62, 3.5), dark); track.position.set(x, 0.42, 0); g.add(track);
+      for (let i = 0; i < 5; i++) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.44, 14), steel); w.rotation.z = Math.PI / 2; w.position.set(x, 0.34, -1.3 + i * 0.65); w.name = 'wheel'; const hub = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.46, 0.06), std(0x8a8f80)); w.add(hub); g.add(w); } }
+    const turret = new THREE.Group(); turret.position.set(0, 1.0, -0.15); body.add(turret);
+    const tb = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.9, 0.5, 18), olive); tb.position.y = 0.25; turret.add(tb);
+    const mant = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.36, 0.4), olive); mant.position.set(0, 0.28, 0.86); turret.add(mant);
+    const gun = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 2.2, 12), steel); gun.rotation.x = Math.PI / 2; gun.position.set(0, 0.3, 2.0); turret.add(gun);
+    const brake = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.22, 12), steel); brake.rotation.x = Math.PI / 2; brake.position.set(0, 0.3, 3.1); turret.add(brake);
+    const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.08, 14), dark); hatch.position.set(-0.3, 0.52, -0.2); turret.add(hatch);
+    const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.05, 14), olive); lid.position.set(-0.3, 0.78, -0.48); lid.rotation.x = -1.1; turret.add(lid);
+    const star = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.24, 0.24), std(0xf2c200)); star.position.set(0.97, 0.75, 0.4); body.add(star);
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.1, 6), dark); ant.position.set(0.45, 1.05, -0.55); turret.add(ant);
   } else if (kind === 'ridemower') { // JustZombies ride-on mower (our own model): deck with a spinning blade, seat, wheel, big back wheels
     const body = new THREE.Group(); body.name = 'body'; g.add(body);
     const deck = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.14, 0.7), std(0x3f8f3a, { metalness: 0.3, roughness: 0.45 })); deck.position.set(0, 0.2, 0.25); body.add(deck);

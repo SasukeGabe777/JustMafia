@@ -214,7 +214,7 @@
   }
 
   // ======================================================================= PHONE
-  const PH = { root: null, cv: null, sim: null, run: null, v: null, ctx: null, raf: 0, last: 0, input: null, keys: new Set(), mouse: { x: 0, y: 0, down: false, on: false }, touch: { move: null, aim: null }, device: null, menu: false, frames: [], work: [], quality: 1, hint: 0, people: new Map(), overlay: '', vib: true };
+  const PH = { fpHeld: {}, fp: false, gl: null, root: null, cv: null, sim: null, run: null, v: null, ctx: null, raf: 0, last: 0, input: null, keys: new Set(), mouse: { x: 0, y: 0, down: false, on: false }, touch: { move: null, aim: null }, device: null, menu: false, frames: [], work: [], quality: 1, hint: 0, people: new Map(), overlay: '', vib: true };
   try { PH.vib = localStorage.getItem('tz.vib') !== '0'; PH.gfxPref = localStorage.getItem('tz.gfx') || 'auto'; } catch { PH.gfxPref = 'auto'; }
   // Graphics High / Low: picked per device (weak phones start on Low), and dropped to Low if frames get slow.
   PH.gfxAuto = ((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3) ? 'low' : 'high';
@@ -236,6 +236,7 @@
     });
     PH.run = runKey(v.me); PH.dead = null;
     const sv = loadRun(v); if (sv && PH.sim.loadSave && PH.sim.loadSave(sv)) setTimeout(() => { if (PH.ctx) PH.ctx.toast('💾 Run restored: your cash, weapons and items are back.'); }, 500);
+    PH.sim.boardAnim = true; PH.sim.fpRide = !!(window.TZFP && TZFP.supported());
     if (PH.sim.setWorld) PH.sim.setWorld(v);
     if (v.area) PH.sim.setArea(v.area);
     if (v.me.cls && PH.sim.setClass) PH.sim.cls = v.me.cls; // back in with your class (Regular / Score attack)
@@ -321,12 +322,13 @@
     if (PH.root && el.contains(PH.root)) return PH.root;
     el.innerHTML = '';
     const r = document.createElement('div'); r.className = 'tz-root';
-    r.innerHTML = `<canvas class="tz-cv"></canvas><button class="tz-pause" aria-label="Pause">⏸</button><div class="tz-ov" hidden></div><div class="tz-rot"><div>📱↻</div><b>Turn your phone sideways</b><small>JustZombies plays best in landscape. (You can still play like this.)</small><button class="btn small" data-rot>Play anyway</button></div>`;
-    el.appendChild(r); PH.root = r; PH.cv = r.querySelector('.tz-cv');
+    r.innerHTML = `<canvas class="tz-gl" hidden></canvas><canvas class="tz-cv"></canvas><button class="tz-pause" aria-label="Pause">⏸</button><div class="tz-ov" hidden></div><div class="tz-rot"><div>📱↻</div><b>Turn your phone sideways</b><small>JustZombies plays best in landscape. (You can still play like this.)</small><button class="btn small" data-rot>Play anyway</button></div>`;
+    el.appendChild(r); PH.root = r; PH.cv = r.querySelector('.tz-cv'); PH.gl = r.querySelector('.tz-gl');
     r.querySelector('.tz-pause').onclick = (e) => { e.stopPropagation(); toggleMenu(); };
     r.querySelector('[data-rot]').onclick = () => { PH.rotOk = true; r.classList.remove('portrait'); };
     bindInput(r);
     if (window.TZI) TZI.boot(null, { low: !gfxHi() });
+    if (window.TZFP) TZFP.prepare(); // three.js for the first-person rides
     document.body.classList.add('tz-playing');
     loop();
     return r;
@@ -367,7 +369,11 @@
     sim._lastInput = I;
     sim.update(dt, I);
     V.k = V.k / sim.zoomStep(dt);
-    window.TZSim.render(g, sim, V);
+    if (sim.fpOut) { sim.fpOut.t += dt; if (sim.fpOut.t >= 0.6) sim.fpOut = null; }
+    const fp = !!(window.TZFP && TZFP.ready && ((sim.ride && sim.ride.fp) || sim.fpOut)); PH.fp = fp;
+    if (PH.gl && PH.gl.hidden === fp) PH.gl.hidden = !fp;
+    if (fp && TZFP.render(sim, V, PH.gl)) TZFP.overlay(g, sim, V, dt, isTouch() ? PH.fpHeld : null);
+    else { PH.fp = false; window.TZSim.render(g, sim, V); }
     hud(g, sim, V, dt);
   }
   // the loading screen while the art set decodes (TZI.boot)
@@ -386,8 +392,10 @@
     const pos = (e) => { const b = cv.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
     cv.addEventListener('pointerdown', (e) => {
       const p = pos(e);
-      if (e.pointerType === 'mouse') { if (e.button === 0 && (hitButton(p.x, p.y) || clickChest(p.x, p.y))) return; PH.device = 'mouse'; PH.mouse.on = true; PH.mouse.x = p.x; PH.mouse.y = p.y; if (e.button === 0) PH.mouse.down = true; return; }
+      if (e.pointerType === 'mouse') { if (PH.sim && PH.sim.boarding) PH.sim.skipBoard = true; if (e.button === 0 && (hitButton(p.x, p.y) || clickChest(p.x, p.y))) return; PH.device = 'mouse'; PH.mouse.on = true; PH.mouse.x = p.x; PH.mouse.y = p.y; if (e.button === 0) PH.mouse.down = true; return; }
       PH.device = 'touch'; e.preventDefault();
+      if (PH.sim && PH.sim.boarding) { PH.sim.skipBoard = true; return; }
+      if (PH.fp && PH.sim && PH.sim.ride) { const Vv = { w: cv.clientWidth, h: cv.clientHeight }; const b = TZFP.controls(Vv, PH.sim).find((c) => Math.hypot(p.x - c.x, p.y - c.y) < c.r * 1.25); if (b) { PH.fpHeld[b.id] = e.pointerId; try { cv.setPointerCapture(e.pointerId); } catch { /* fine */ } return; } if (hitButton(p.x, p.y)) return; if (p.x > Vv.w / 2) { if (!PH.touch.aim) PH.touch.aim = { id: e.pointerId, x: p.x, y: p.y, ox: p.x }; } else if (!PH.touch.move) PH.touch.move = { id: e.pointerId, ox: p.x, oy: p.y, x: p.x, y: p.y }; try { cv.setPointerCapture(e.pointerId); } catch { /* fine */ } return; }
       if (hitButton(p.x, p.y) || clickChest(p.x, p.y) || hitMinimap(p.x, p.y)) return;
       if (!PH.fsAsked && canFull() && !isIOS() && !isFull() && !standalone()) goFull(); else if (!PH.iosHinted) iosHint(false);
       if (PH.sim && PH.sim.phase === 'intro') PH.skip = true;
@@ -406,6 +414,7 @@
     const up = (e) => {
       if (e.pointerType === 'mouse') { if (e.button === 0) PH.mouse.down = false; return; }
       const T = PH.touch; if (T.aim && T.aim.id === e.pointerId) T.aim = null; if (T.move && T.move.id === e.pointerId) T.move = null;
+      for (const k of Object.keys(PH.fpHeld)) if (PH.fpHeld[k] === e.pointerId) delete PH.fpHeld[k];
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -444,6 +453,16 @@
       const C = sim.cam, [wx, wy] = C.toWorld(PH.mouse.x, PH.mouse.y, 30);
       I.mouse = true; I.ax = wx - sim.p.x; I.ay = wy - (C.s ? sim.p.y : sim.p.y - 26); I.fire = PH.mouse.down || K.has(' ');
       if (!I.ax && !I.ay) I.ax = 0.001;
+    }
+    if (sim.ride && sim.ride.fp) {
+      const r = sim.ride, H = PH.fpHeld, D = { steer: 0, gas: 0, fire: false };
+      if (K.has('a') || K.has('arrowleft')) D.steer -= 1; if (K.has('d') || K.has('arrowright')) D.steer += 1;
+      if (K.has('w') || K.has('arrowup')) D.gas += 1; if (K.has('s') || K.has('arrowdown')) D.gas -= 1;
+      if (H.gas != null) D.gas += 1; if (H.brake != null) D.gas -= 1;
+      if (T.move) { const dx = T.move.x - T.move.ox, dy = T.move.y - T.move.oy; D.steer += Math.max(-1, Math.min(1, dx / 56)); if (H.gas == null && H.brake == null && Math.abs(dy) > 20) D.gas += Math.max(-1, Math.min(1, -dy / 56)); }
+      D.fire = H.fire != null || K.has(' ') || (PH.device === 'mouse' && PH.mouse.down);
+      if (r.kind === 'tank') { if (T.aim) { D.turn = Math.max(-1, Math.min(1, (T.aim.x - T.aim.ox) / 60)); } else if (PH.device === 'mouse' && PH.mouse.on) D.tur = (r.head || 0) + (PH.mouse.x / Math.max(1, V.w) - 0.5) * 1.6; }
+      D.gas = Math.max(-1, Math.min(1, D.gas)); D.steer = Math.max(-1, Math.min(1, D.steer)); I.drive = D; I.fire = false; I.ax = 0; I.ay = 0;
     }
     if (PH.skip) PH.skip = false;
     return I;
@@ -518,9 +537,9 @@
     // the banner
     if (sim.banner) { const a = Math.min(1, sim.banner.t * 2), by2 = h * 0.24; g.globalAlpha = a; txt(sim.banner.text, w / 2, by2, small ? 34 : 46, '#ffd23f', 'center'); txt(sim.banner.sub, w / 2, by2 + (small ? 30 : 40), small ? 14 : 18, '#fff', 'center'); g.globalAlpha = 1; }
     // control hints
-    if (PH.hint > 0) { PH.hint -= dt; g.globalAlpha = Math.min(1, PH.hint); txt(isTouch() ? 'Drag anywhere to move · right stick to aim' + (sim.set.aim !== 'off' ? ' (or just move: it auto-aims)' : '') : 'WASD to move · mouse to aim · hold click to shoot · Esc to pause', w / 2, h - 22, small ? 12 : 15, '#ffe9a8', 'center'); g.globalAlpha = 1; }
+    if (PH.hint > 0 && !PH.fp) { PH.hint -= dt; g.globalAlpha = Math.min(1, PH.hint); txt(isTouch() ? 'Drag anywhere to move · right stick to aim' + (sim.set.aim !== 'off' ? ' (or just move: it auto-aims)' : '') : 'WASD to move · mouse to aim · hold click to shoot · Esc to pause', w / 2, h - 22, small ? 12 : 15, '#ffe9a8', 'center'); g.globalAlpha = 1; }
     // sticks (touch)
-    if (isTouch() && !sim.dead) {
+    if (isTouch() && !sim.dead && !PH.fp) {
       const Zs = stickZone(V), T = PH.touch;
       g.globalAlpha = T.aim ? 0.9 : 0.55; g.fillStyle = 'rgba(15,10,6,0.45)'; g.beginPath(); g.arc(Zs.x, Zs.y, Zs.r, 0, TAU); g.fill(); g.strokeStyle = '#ff5a3c'; g.lineWidth = 3; g.stroke();
       let kx = Zs.x, ky = Zs.y; if (T.aim) { const dx = T.aim.x - Zs.x, dy = T.aim.y - Zs.y, dd = Math.hypot(dx, dy) || 1, m = Math.min(dd, Zs.r * 0.7); kx += (dx / dd) * m; ky += (dy / dd) * m; }
@@ -529,7 +548,7 @@
       if (T.move) { g.globalAlpha = 0.5; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.arc(T.move.ox, T.move.oy, 56, 0, TAU); g.stroke(); const dx = T.move.x - T.move.ox, dy = T.move.y - T.move.oy, dd = Math.hypot(dx, dy) || 1, m = Math.min(dd, 56); g.fillStyle = '#fff'; g.beginPath(); g.arc(T.move.ox + (dx / dd) * m, T.move.oy + (dy / dd) * m, 24, 0, TAU); g.fill(); g.globalAlpha = 1; }
     }
     // off-screen warnings: red arrows for zombies just outside the view, icons for pickups
-    if (sim.cam && !sim.dead && sim.phase === 'play') {
+    if (sim.cam && !sim.dead && sim.phase === 'play' && !PH.fp) {
       const C = sim.cam, edge = (wx, wy) => { const [sx, sy] = C.toScreen(wx, wy); if (sx > 0 && sx < w && sy > 0 && sy < h) return null; const cx = w / 2, cy = h / 2, a = Math.atan2(sy - cy, sx - cx); const m = 26, tx = Math.cos(a), ty = Math.sin(a), sc = Math.min((w / 2 - m) / Math.max(0.001, Math.abs(tx)), (h / 2 - m) / Math.max(0.001, Math.abs(ty))); return { x: cx + tx * sc, y: Math.max(small ? 70 : 84, cy + ty * sc), a }; };
       const near = []; for (const z of sim.z) { if (z.hp <= 0) continue; const d = Math.hypot(z.x - P.x, z.y - P.y); if (d < 760) near.push([d, z]); }
       near.sort((x, y) => x[0] - y[0]);
@@ -540,7 +559,7 @@
       const Ch = sim.chestHere && sim.chestHere(); if (Ch) { const e = edge(Ch.x, Ch.y - 30); if (e) { g.fillStyle = 'rgba(15,10,6,0.7)'; g.beginPath(); g.arc(e.x, e.y, 16, 0, TAU); g.fill(); g.font = '20px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(Ch.kind === 'find' && (window.TZS.FINDS[Ch.id] || {}).kind === 'key' ? '🗝️' : '🧰', e.x, e.y + 1); } }
     }
     // exit arrows at the screen edge pointing to exits when cleared
-    if (sim.cleared && !sim.dead) {
+    if (sim.cleared && !sim.dead && !PH.fp) {
       const C = sim.cam; if (C) for (const [dd, ok] of Object.entries(sim.area.exits)) {
         if (!ok || sim.gateLeft(dd)) continue; const ex = dd === 'w' ? 0 : dd === 'e' ? Z.AW : ok.p, ey = dd === 'n' ? 0 : dd === 's' ? Z.AH : ok.p;
         const [sx, sy] = C.toScreen(ex, ey); if (sx > 30 && sx < w - 30 && sy > 30 && sy < h - 30) continue;
@@ -555,6 +574,7 @@
     const small = Math.min(V.w, V.h) < 420, r = small ? 22 : 26, y = V.h - r - 16, Zs = stickZone(V);
     const L = [];
     if (sim.down) { L.push({ id: 'help', icon: '🙌', label: 'HELP', big: true }); }
+    else if (PH.fp) { if (sim.ride) L.push({ id: 'ride', icon: '🚪', label: 'GET OUT', big: true }); }
     else {
     const cn = sim.chestNear && sim.chestNear(); if (cn) L.push({ id: 'chest', icon: '🧰', label: 'OPEN', big: !sim.nearShop });
     if (sim.nearShop) L.push({ id: 'shop', icon: '🛒', label: 'SHOP', big: true });
