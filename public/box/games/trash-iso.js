@@ -166,17 +166,28 @@
     if (!A.rows[d]) { const m = MIRROR[d]; if (m && A.rows[m]) { d = m; flip = true; } else d = A.rows.S ? 'S' : Object.keys(A.rows)[0]; }
     return { A, list: A.rows[d], flip };
   }
-  function blit(g, P, fr, X, Y, k, flip) {
+  const TINTS = { frost: ['rgba(205,235,255,0.55)', 'rgba(255,255,255,0.25)'], ember: ['rgba(255,96,24,0.42)', null], farmer: ['rgba(150,104,52,0.32)', null] };
+  let tintN = 0;
+  function tinted(fr, tint) {
+    const k = 't_' + tint; if (fr[k]) return fr[k]; if (tintN > 900) return null; tintN++;
+    const c = document.createElement('canvas'); c.width = Math.max(1, fr.pw); c.height = Math.max(1, fr.ph); const x = c.getContext('2d');
+    x.drawImage(fr.c, fr.px, fr.py, fr.pw, fr.ph, 0, 0, fr.pw, fr.ph); x.globalCompositeOperation = 'source-atop'; const T = TINTS[tint]; x.fillStyle = T[0]; x.fillRect(0, 0, c.width, c.height);
+    if (T[1]) { const gr = x.createLinearGradient(0, 0, 0, c.height * 0.4); gr.addColorStop(0, T[1]); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, c.width, c.height * 0.4); } // (snow on the shoulders)
+    fr[k] = c; return c;
+  }
+  function blit(g, P, fr, X, Y, k, flip, tint) {
     const sc = k * P.sc, dw = fr.w * sc, dh = fr.h * sc, D = C.dpr;
     if (flip) { g.setTransform(-D, 0, 0, D, 2 * X * D, 0); } else g.setTransform(D, 0, 0, D, 0, 0);
-    g.drawImage(fr.c, fr.px, fr.py, fr.pw, fr.ph, X - fr.ax * sc, Y - fr.ay * sc, dw, dh);
+    const tc = tint && TINTS[tint] ? tinted(fr, tint) : null;
+    if (tc) g.drawImage(tc, 0, 0, tc.width, tc.height, X - fr.ax * sc, Y - fr.ay * sc, dw, dh);
+    else g.drawImage(fr.c, fr.px, fr.py, fr.pw, fr.ph, X - fr.ax * sc, Y - fr.ay * sc, dw, dh);
   }
   function sprite(g, key, anim, dir, fi, X, Y, k, o) {
     const P = typeof key === 'string' ? need(key) : key; if (!P) return false;
     const F = frameOf(P, anim, dir); if (!F) return false;
     const fr = F.list[((fi % F.list.length) + F.list.length) % F.list.length];
     if (o && o.alpha != null) g.globalAlpha = o.alpha;
-    blit(g, P, fr, X, Y, k, F.flip);
+    blit(g, P, fr, X, Y, k, F.flip, o && o.tint);
     if (o && o.flash) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = (o.alpha == null ? 1 : o.alpha) * o.flash; blit(g, P, fr, X, Y, k, F.flip); g.globalCompositeOperation = 'source-over'; }
     if (o && (o.alpha != null || o.flash)) g.globalAlpha = 1;
     return true;
@@ -223,8 +234,19 @@
 
   // ---------------- ground: tile textures -> the area's floor, projected once ----------------
   const tex = new Map();
+  // the wild realms' ground (our own procedural tiles, seamless: every speck is drawn wrapped)
+  const PROC_TILE = {
+    snow: ['#e9eff6', [['rgba(160,185,220,0.35)', 60, 3, 9], ['rgba(255,255,255,0.9)', 120, 1, 2], ['rgba(190,210,235,0.5)', 30, 6, 14]]],
+    ash: ['#4c4547', [['rgba(25,20,20,0.55)', 160, 1, 3], ['rgba(110,100,98,0.35)', 60, 3, 8], ['rgba(255,110,40,0.6)', 8, 1, 2]]],
+  };
+  function procTile(name) {
+    const D = PROC_TILE[name], c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), rr = W().rng(W().hash('tile', name));
+    x.fillStyle = D[0]; x.fillRect(0, 0, 128, 128);
+    for (const [col, n, r0, r1] of D[1]) { x.fillStyle = col; for (let i = 0; i < n; i++) { const px = rr() * 128, py = rr() * 128, r = r0 + rr() * (r1 - r0); for (const ox of [-128, 0, 128]) for (const oy of [-128, 0, 128]) { x.beginPath(); x.ellipse(px + ox, py + oy, r, r * 0.7, 0, 0, TAU); x.fill(); } } }
+    return c;
+  }
   function tilePattern(g, name) {
-    const id = keyOf('tile.' + name); if (tex.has(id)) return g.createPattern(tex.get(id), 'repeat');
+    const id = keyOf('tile.' + name); if (!tex.has(id) && PROC_TILE[name]) tex.set(id, procTile(name)); if (tex.has(id)) return g.createPattern(tex.get(id), 'repeat');
     const P = packs.get(id), a = M && M.assets[id]; if (!a) return null;
     const N = 128, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d');
     // un-project the 128 x 64 diamond back into a square texture (slightly enlarged so the seams close)
@@ -232,7 +254,8 @@
     for (const e of [1.06, 1]) { x.setTransform(1, 0, 0, 1, 0, 0); x.translate(N / 2, N / 2); x.scale(e, e); x.translate(-N / 2, -N / 2); x.transform(N / 128, -N / 128, N / 64, N / 64, -N / 2, N / 2); x.drawImage(fr.c, fr.px, fr.py, fr.pw, fr.ph, fr.sx - a.rect[0], fr.sy - a.rect[1], fr.w, fr.h); }
     tex.set(id, c); return g.createPattern(c, 'repeat');
   }
-  const LOT = { junkyard: 'gravel', suburb: 'grass', lot: 'asphalt2', gas: 'concrete', mall: 'paving', park: 'grass2', roof: 'paving', sewer: 'concrete', carnival: 'dirt', school: 'grass', docks: 'planks', landfill: 'dirt2', home: 'grass' };
+  const LOT = { junkyard: 'gravel', suburb: 'grass', lot: 'asphalt2', gas: 'concrete', mall: 'paving', park: 'grass2', roof: 'paving', sewer: 'concrete', carnival: 'dirt', school: 'grass', docks: 'planks', landfill: 'dirt2', home: 'grass',
+    farm: 'grass', fields: 'grass2', snow: 'snow', icelake: 'snow', lodge: 'snow', fortress: 'snow', ash: 'ash', lavafield: 'ash', crater: 'ash' };
   const E = 300; // the floor drawn around the area (outside the fence)
   // the flat floor in world units (roads, sidewalks, lots, paint, grime), textured; also the 3D drive's ground
   function topFor(area, r) {
@@ -272,19 +295,24 @@
 
   // ---------------- standing scenery: buildings, props, the garage ----------------
   const BLD = { house: ['bld.house1', 'bld.house2', 'bld.house3', 'bld.house4'], tower: ['bld.kk.c', 'bld.kk.d', 'bld.kk.g', 'bld.kk.h', 'bld.office'], store: ['bld.kk.a', 'bld.kk.b', 'bld.kk.e'],
-    mall: ['bld.warehouse', 'bld.office'], school: ['bld.kk.e', 'bld.office'], plant: ['bld.factory', 'bld.crucible'], warehouse: ['bld.warehouse', 'bld.factory'], shack: ['bld.shack'], kiosk: ['bld.shack', 'bld.kk.a'], tent: ['bld.shack'] };
+    mall: ['bld.warehouse', 'bld.office'], school: ['bld.kk.e', 'bld.office'], plant: ['bld.factory', 'bld.crucible'], warehouse: ['bld.warehouse', 'bld.factory'], shack: ['bld.shack'], kiosk: ['bld.shack', 'bld.kk.a'], tent: ['bld.shack'],
+    barn: ['bld.barn'], cabin: ['bld.cabin'], lodge: ['bld.lodge'], volcano: ['bld.volcano'] };
   const PROP = { car: ['prop.car', 'prop.car2', 'prop.car3', 'prop.taxi', 'prop.police', 'prop.van'], wreck: ['prop.wreck', 'prop.wreck.burnt', 'prop.wreck.suv', 'prop.wreck2'], bus: ['prop.bus', 'prop.ambulance'], stack: ['prop.wreck2', 'prop.wreck.burnt'],
     container: ['prop.container', 'prop.container2'], tires: ['prop.tires', 'prop.tirepile'], trash: ['prop.trash', 'prop.bags2', 'prop.bags'], barrel: ['prop.barrel', 'prop.barrel.rusty', 'prop.barrel.explosive', 'prop.barrel.spilled'],
     fridge: ['prop.fridge'], bin: ['prop.bin', 'prop.bin2', 'prop.bin3'], hedge: ['prop.hedge', 'prop.bush'], tree: ['prop.tree', 'prop.tree2', 'prop.pine', 'prop.tree.dead'], mailbox: ['prop.hydrant'], cart: ['prop.cart'],
     barrier: ['prop.barrier.concrete', 'prop.barrier.striped', 'prop.barrier'], pump: ['prop.fridge'], crate: ['prop.crate', 'prop.boxes', 'prop.boxes2'], dumpster: ['prop.dumpster', 'prop.dumpster.open'], bench: ['prop.bench'],
     planter: ['prop.planter', 'prop.pot'], bush: ['prop.bush', 'prop.pot'], tank: ['prop.tank'], pipe: ['prop.pipe'], booth: ['prop.container', 'prop.couch'], balloons: ['prop.sign'], picnic: ['prop.bench'], rope: ['prop.tires'],
-    bags: ['prop.bags', 'prop.bags2'], mound: ['prop.mound'], lamp: ['prop.lamp', 'prop.lamp2'], hydrant: ['prop.hydrant'] };
-  const FREE = { tree: 1, lamp: 1, hydrant: 1, bush: 1.1, planter: 1, mailbox: 1, balloons: 1, hedge: 1.1, bin: 1, barrel: 1, tires: 1, rope: 1, bags: 1, trash: 1 }; // natural size, not fitted to the box
+    bags: ['prop.bags', 'prop.bags2'], mound: ['prop.mound'], lamp: ['prop.lamp', 'prop.lamp2'], hydrant: ['prop.hydrant'],
+    haybale: ['prop.haybale'], corn: ['prop.corn'], wheat: ['prop.wheat'], fencefarm: ['prop.fence.farm'], scarecrow: ['prop.scarecrow'], tractor: ['prop.tractor'], silo: ['prop.silo'],
+    snowpine: ['prop.snowpine', 'prop.snowpine2'], snowpine2: ['prop.snowpine2', 'prop.snowpine'], snowrock: ['prop.snowrock'], logs: ['prop.logs'], tent: ['prop.tent'], campfire: ['prop.campfire'], icechunk: ['prop.icechunk'],
+    lavarock: ['prop.lavarock'], basalt: ['prop.basalt'], vent: ['prop.vent'], charred: ['prop.deadtree.charred'] };
+  const FREE = { tree: 1, lamp: 1, hydrant: 1, bush: 1.1, planter: 1, mailbox: 1, balloons: 1, hedge: 1.1, bin: 1, barrel: 1, tires: 1, rope: 1, bags: 1, trash: 1,
+    haybale: 1.1, corn: 1.25, wheat: 1.1, scarecrow: 1, silo: 1, snowpine: 1, snowpine2: 1, snowrock: 1.1, logs: 1, campfire: 1, icechunk: 1, lavarock: 1.1, basalt: 1, vent: 1, charred: 1, tent: 1 }; // natural size, not fitted to the box
   const FLAT = { grate: 1, pond: 1, fountain: 1 };
   function standFor(area) {
     if (area._iso) return area._iso;
     const L = [];
-    for (const o of area.obstacles) {
+    for (const o of area.obstacles.concat(area.soft || [])) {
       if (o.kind === 'wall' || FLAT[o.kind]) continue;
       const list = o.kind === 'bld' ? BLD[o.style] || BLD.house : PROP[o.kind]; if (!list) continue;
       const key = keyOf(list[(o.v || 0) % list.length]), a = M.assets[key]; if (!a) continue;
@@ -421,6 +449,7 @@
     }
     if (sim.drawExtraGround) sim.drawExtraGround(g, t, vis);
     const pad = sim.padHere && sim.padHere(); if (pad && vis(pad.x, pad.y, 300)) drawPad(g, sim, pad, t);
+    if (sim.area.hazards && sim.area.hazards.length) drawHazards(g, sim, t);
     setGround(g);
     for (const c of sim.coins || []) if (vis(c.x, c.y)) { g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(c.x + 3, c.y + 4, 8, 8, 0, 0, TAU); g.fill(); }
     // ---- the fallen: their death animation, then the body lingers and fades ----
@@ -484,6 +513,7 @@
     if (sim._dbgHit) drawHitDebug(g, sim);
     // ---------------- light, weather, mood (screen space) ----------------
     setScreen(g);
+    if (sim.drawBiomeSky) sim.drawBiomeSky(g, V, t, C); // snowfall, the blizzard, ash
     mood(g, sim, V, t, hi, intro);
     return true;
   }
@@ -547,7 +577,10 @@
     // a boss stands in its own coloured ring (its signature), which flares while it winds up an attack
     if (boss) { const bc = BOSSCOL[z.fb || z.mb || z.type] || '#ff4a3a', hot = A.an === 'attack' ? 1 : 0; setGround(g); g.globalAlpha = 0.35 + 0.15 * Math.sin(t * 4 + z.id) + hot * 0.4; g.strokeStyle = bc; g.lineWidth = 7 + hot * 5; g.beginPath(); g.ellipse(z.x, z.y, z.r * (1.15 + hot * 0.15), z.r * (1.15 + hot * 0.15), 0, 0, TAU); g.stroke(); g.globalAlpha = 0.14 + hot * 0.12; g.fillStyle = bc; g.fill(); g.globalAlpha = 1; setScreen(g); }
     const bob = static1 ? Math.sin(t * 9 + z.id) * 1.2 * s : 0;
-    sprite(g, Pk, an, A.dir, fi, X, Y + bob, k, { alpha: z.alpha != null ? z.alpha : undefined, flash: z.flash > 0 ? 0.85 : 0 });
+    // tall corn hides a zombie standing in it (until it's close to you)
+    let za = z.alpha != null ? z.alpha : undefined; if (sim.area.soft && sim.area.soft.length && !boss && sim.inCorn && sim.inCorn(z) && (z.x - sim.p.x) * (z.x - sim.p.x) + (z.y - sim.p.y) * (z.y - sim.p.y) > 150 * 150) za = (za == null ? 1 : za) * 0.28;
+    if (z.variant === 'ember') { setScreen(g); g.globalCompositeOperation = 'lighter'; const R2 = z.r * 1.8 * s, gr = g.createRadialGradient(X, Y - 20 * s, 1, X, Y - 20 * s, R2); gr.addColorStop(0, 'rgba(255,120,30,0.35)'); gr.addColorStop(1, 'rgba(255,60,0,0)'); g.fillStyle = gr; g.fillRect(X - R2, Y - 20 * s - R2, R2 * 2, R2 * 2); g.globalCompositeOperation = 'source-over'; }
+    sprite(g, Pk, an, A.dir, fi, X, Y + bob, k, { alpha: za, flash: z.flash > 0 ? 0.85 : 0, tint: z.variant });
     setScreen(g);
     if (z.elite) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.18 + 0.08 * Math.sin(t * 8); g.strokeStyle = z.elite; g.lineWidth = 2 * s; g.beginPath(); g.ellipse(X, Y - Pk.h * k * 0.5, z.r * 1.2 * s, Pk.h * k * 0.6, 0, 0, TAU); g.stroke(); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
     if (frozen) { g.fillStyle = 'rgba(170,230,255,0.38)'; g.beginPath(); g.ellipse(X, Y - Pk.h * k * 0.45, z.r * 1.2 * s, Pk.h * k * 0.55, 0, 0, TAU); g.fill(); }
@@ -792,6 +825,18 @@
     }
     if (r.mhp) { const w = 60 * s; g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(X - w / 2, cy + R * 0.9, w, 6 * s); g.fillStyle = r.hp / r.mhp < 0.3 ? '#ff4a3a' : '#7fd6ff'; g.fillRect(X - w / 2 + s, cy + R * 0.9 + s, (w - 2 * s) * Math.max(0, r.hp / r.mhp), 4 * s); }
     if (mine) { const name = (sim.me && sim.me.name) || ''; if (name) { g.font = `bold ${Math.round(13 * s)}px "Lilita One", sans-serif`; g.lineWidth = 4; g.strokeStyle = '#1b1410'; g.strokeText(name, X, cy - R); g.fillStyle = sim.me.color || '#fff'; g.fillText(name, X, cy - R); } }
+  }
+  // ---- the wild realms: lava glows and flows, ice glints ----
+  function drawHazards(g, sim, t) {
+    setGround(g); const H = sim.area.hazards;
+    g.globalCompositeOperation = 'lighter';
+    const p = 0.5 + 0.5 * Math.sin(t * 2.2); window.TZA.lavaPaths(g, H, (q) => { g.strokeStyle = `rgba(255,${120 + Math.round(60 * p)},40,${0.25 + 0.2 * p})`; g.lineWidth = q.ww * 0.9; g.stroke(); g.strokeStyle = 'rgba(255,230,140,0.4)'; g.lineWidth = q.ww * 0.18; g.setLineDash([10, 30]); g.lineDashOffset = -t * 40; g.stroke(); g.setLineDash([]); g.lineDashOffset = 0; });
+    for (const h of H) {
+      if (h.kind === 'lava') continue; if (false) { const p = 0; g.fillStyle = `rgba(255,${120 + Math.round(60 * p)},40,${0.28 + 0.2 * p})`; g.fillRect(h.x, h.y, h.w, h.h);
+        g.fillStyle = 'rgba(255,230,140,0.45)'; const k = (t * 30 + h.x * 0.7 + h.y * 0.3) % 40; g.fillRect(h.x + (h.w > h.h ? k : h.w * 0.3), h.y + (h.w > h.h ? h.h * 0.35 : k), h.w > h.h ? 8 : h.w * 0.4, h.w > h.h ? h.h * 0.3 : 8); }
+      else if (h.kind === 'ice') { const u = (t * 0.25 + h.x * 0.001) % 1; g.fillStyle = 'rgba(255,255,255,0.10)'; g.beginPath(); g.ellipse(h.x + h.w * (0.2 + 0.6 * u), h.y + h.h * 0.5, h.w * 0.08, h.h * 0.35, 0.6, 0, TAU); g.fill(); }
+    }
+    g.globalCompositeOperation = 'source-over';
   }
   // ---- helipads, helicopters, flying rides (trash-heli.js) ----
   function drawPad(g, sim, pd, t) {

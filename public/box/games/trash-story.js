@@ -78,14 +78,14 @@
   // roads (never a pocket where the only way on is back the way you came).
   const ORD = (d) => (d <= 1 ? 0 : Math.round(10 * Math.pow(d - 1, 1.6)));
   const LOCK = {
-    story: { mul: 1, cap: 300, key: [110, 210, 320], lair: 430, master: 260, forge: 300, den: [170], vault: [200] },
-    endless: { mul: 1, cap: 0, master: 260, forge: 320, den: [170, 420], vault: [210, 520, 880] }, // no cap: further out keeps climbing
-    timed: { mul: 0.6, cap: 260, master: 260, forge: 300, den: [170], vault: [200] }, // Score attack / Garage Defense / wave 20
+    story: { mul: 1, cap: 300, key: [110, 210, 320], lair: 430, master: 260, forge: 300, den: [170], vault: [200], crater: 360, fortress: 300 },
+    endless: { mul: 1, cap: 0, master: 260, forge: 320, den: [170, 420], vault: [210, 520, 880], crater: 480, fortress: 400 }, // no cap: further out keeps climbing
+    timed: { mul: 0.6, cap: 260, master: 260, forge: 300, den: [170], vault: [200], crater: 280, fortress: 240 }, // Score attack / Garage Defense / wave 20
     party: { mul: 0.5, cap: 150, master: 220, forge: 260, vault: [200] }, // Party Mode: one shared count, few specials
   };
   const SPECIAL = {
     lair: { icon: '☠️', name: 'the boss lair' }, key: { icon: '🗝️', name: 'a key vault' }, shop: { icon: '⚜️', name: 'a master shop' },
-    den: { icon: '🧟', name: 'a zombie den' }, vault: { icon: '💎', name: 'a loot stash' },
+    den: { icon: '🧟', name: 'a zombie den' }, vault: { icon: '💎', name: 'a loot stash' }, crater: { icon: '🌋', name: 'the Volcano Crater' }, fortress: { icon: '🏰', name: 'the Frozen Fortress' },
   };
   const lockNeed = (base, players) => Math.round((base || 0) * (0.6 + 0.4 * Math.max(1, players || 1)));
   const lockMode = (o) => (o && o.party ? 'party' : o && o.mode === 'story' ? 'story' : o && o.mode === 'endless' ? 'endless' : 'timed');
@@ -112,13 +112,14 @@
     let door = null; const keys = [];
     if (o.fixed) { for (const [i, k, b] of o.fixed) if (ok(i)) put(i, k, b); } // a late garage: the same specials as before
     else {
+      if (mode === 'story') { let i = -1; for (let d = top; d >= 2 && i < 0; d--) i = pick(d, d); if (i >= 0) { put(i, 'lair', L.lair); door = xy(i); } } // the lair first: one of the farthest blocks
       const P = places(); // the Master Armorer and the Scrapyard Crucible sit behind big gates
       if (P) for (const [k2, t] of Object.entries(P.places(seed))) if (t === 'master' || t === 'forge') { const [x, y] = k2.split(',').map(Number), i = at(x, y); if (ok(i)) put(i, 'shop', L[t]); }
       if (mode === 'story') {
-        let i = -1; for (let d = top; d >= 2 && i < 0; d--) i = pick(d, d); // the lair: one of the farthest blocks
-        if (i >= 0) { put(i, 'lair', L.lair); door = xy(i); }
         L.key.forEach((b, n) => { let j = pick([2, 3, 4][n], [4, 6, 99][n]); if (j < 0) j = pick(2, 99); if (j >= 0) { put(j, 'key', b); keys.push(xy(j)); } });
       }
+      // the wild realms' big blocks (trash-world.js town(): the crater, the fortress) sit behind big gates too
+      for (const k of ['crater', 'fortress']) { const c = T.cells.find((q) => q.d === k); if (c && L[k]) { const i = at(c.x, c.y); if (ok(i)) put(i, k, L[k]); } }
       (L.den || []).forEach((b, n) => { const j = pick(3 + 2 * n, 99); if (j >= 0) put(j, 'den', b); });
       (L.vault || []).forEach((b, n) => { const j = pick(3 + 2 * n, 99); if (j >= 0) put(j, 'vault', b); });
     }

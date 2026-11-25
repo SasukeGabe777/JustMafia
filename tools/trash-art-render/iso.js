@@ -570,6 +570,66 @@ function procModel(kind) {
     for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, l = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.14), std(i % 2 ? 0x7dff6a : 0xffffff, { emissive: i % 2 ? 0x3aff2a : 0xffffcc, emissiveIntensity: 0.9 })); l.position.set(Math.cos(a) * 2.2, 0.12, Math.sin(a) * 2.2); g.add(l); }
     const sock = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.6, 10), std(0xff7a1a)); sock.rotation.z = Math.PI / 2 + 0.2; sock.position.set(2.1, 1.0, -1.6); g.add(sock);
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.1, 8), std(0x3a3f47)); pole.position.set(1.85, 0.55, -1.6); g.add(pole);
+  } else if (kind === 'barn') { // JustZombies barn (our own model): red walls, white trim, a gambrel roof, big doors
+    const red = std(0xb8362e, { roughness: 0.8, side: THREE.DoubleSide }), white = std(0xf2ede2, { roughness: 0.7 }), roof = std(0x5a4a42, { roughness: 0.9 });
+    const W2 = 2.4, D2 = 3.4, H2 = 2.2;
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(W2 * 2, H2, D2 * 2), red); walls.position.y = H2 / 2; g.add(walls);
+    const sh = new THREE.Shape(); sh.moveTo(-W2 - 0.15, 0); sh.lineTo(-W2 * 0.75, 1.05); sh.lineTo(0, 1.75); sh.lineTo(W2 * 0.75, 1.05); sh.lineTo(W2 + 0.15, 0); sh.lineTo(-W2 - 0.15, 0);
+    const rg = new THREE.ExtrudeGeometry(sh, { depth: D2 * 2 + 0.3, bevelEnabled: false }); rg.translate(0, 0, -(D2 * 2 + 0.3) / 2); const rf = new THREE.Mesh(rg, roof); rf.position.y = H2; g.add(rf);
+    const gableSh = new THREE.Shape(); gableSh.moveTo(-W2, 0); gableSh.lineTo(-W2 * 0.75, 1.0); gableSh.lineTo(0, 1.65); gableSh.lineTo(W2 * 0.75, 1.0); gableSh.lineTo(W2, 0); gableSh.lineTo(-W2, 0);
+    for (const z of [D2 + 0.01, -D2 - 0.01]) { const gb = new THREE.Mesh(new THREE.ShapeGeometry(gableSh), red); gb.position.set(0, H2, z); if (z < 0) gb.rotation.y = Math.PI; g.add(gb); }
+    for (const z of [D2 + 0.03]) { const door = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.7, 0.05), red); door.position.set(0, 0.85, z); g.add(door);
+      const tr = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.12, 0.07), white); tr.position.set(0, 1.72, z); g.add(tr);
+      for (const s of [-1, 1]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.7, 0.07), white); post.position.set(s * 0.92, 0.85, z); g.add(post); const x1 = new THREE.Mesh(new THREE.BoxGeometry(0.09, 2.3, 0.06), white); x1.position.set(s * 0.45, 0.85, z + 0.01); x1.rotation.z = s * 0.72; g.add(x1); }
+      const loft = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 0.05), std(0x3a2a22)); loft.position.set(0, H2 + 0.6, z); g.add(loft); }
+    for (const x of [-W2 - 0.02, W2 + 0.02]) for (const y of [0.05, H2 - 0.05]) { const tb = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, D2 * 2), white); tb.position.set(x, y, 0); g.add(tb); }
+  } else if (kind === 'silo') { // a grain silo with a domed cap and a ladder
+    const steel = std(0xb9c1c8, { metalness: 0.5, roughness: 0.4 }), band = std(0x8b939a, { metalness: 0.5 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 5.2, 24), steel); body.position.y = 2.6; g.add(body);
+    for (let i = 1; i < 6; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(1.11, 0.03, 6, 32), band); r.rotation.x = Math.PI / 2; r.position.y = i * 0.9; g.add(r); }
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(1.15, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), std(0xd8452e, { roughness: 0.5 })); cap.position.y = 5.2; g.add(cap);
+    for (const x of [-0.18, 0.18]) { const rail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 5.0, 0.04), band); rail.position.set(x, 2.6, 1.15); g.add(rail); }
+    for (let y = 0.4; y < 5; y += 0.35) { const rung = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.03, 0.03), band); rung.position.set(0, y, 1.15); g.add(rung); }
+  } else if (kind === 'haybale') { // a round hay bale lying on its side
+    const hay = std(0xe0b84a, { roughness: 0.95 }), end = std(0xc99a33, { roughness: 1 });
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.2, 20), [hay, end, end]); b.rotation.z = Math.PI / 2; b.position.y = 0.7; g.add(b);
+    for (const x of [-0.3, 0.3]) { const tw = new THREE.Mesh(new THREE.TorusGeometry(0.71, 0.02, 6, 28), std(0x7a5a2a)); tw.rotation.y = Math.PI / 2; tw.position.set(x, 0.7, 0); g.add(tw); }
+  } else if (kind === 'scarecrow') { // a scarecrow: a pole, a cross bar, a sack head with a straw hat, a patched shirt
+    const wood = std(0x7a5532), shirt = std(0x3e7bb8, { roughness: 0.9 }), sack = std(0xd9c08a, { roughness: 1 }), straw = std(0xe8c860);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 2.2, 8), wood); pole.position.y = 1.1; g.add(pole);
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.4, 8), wood); bar.rotation.z = Math.PI / 2; bar.position.y = 1.55; g.add(bar);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.3), shirt); body.position.y = 1.3; g.add(body);
+    for (const s of [-1, 1]) { const sl = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.2), shirt); sl.position.set(s * 0.45, 1.55, 0); g.add(sl); const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.22, 6), straw); tuft.rotation.z = -s * Math.PI / 2; tuft.position.set(s * 0.8, 1.55, 0); g.add(tuft); }
+    const patch = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.02), std(0xd8452e)); patch.position.set(0.12, 1.2, 0.16); g.add(patch);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 10), sack); head.position.y = 1.95; g.add(head);
+    for (const x of [-0.08, 0.08]) { const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.02), std(0x1a120e)); eye.position.set(x, 1.99, 0.23); g.add(eye); }
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.04, 18), straw); brim.position.y = 2.15; g.add(brim);
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.22, 14), straw); crown.position.y = 2.27; g.add(crown);
+  } else if (kind === 'cabin' || kind === 'lodge') { // log cabin (and the bigger ski lodge): log walls, a snowy roof, a chimney, a lit window
+    const big = kind === 'lodge', W2 = big ? 3.2 : 1.9, D2 = big ? 2.4 : 1.6, H2 = big ? 2.6 : 1.8;
+    const logs = std(0x7a5232, { roughness: 0.9, side: THREE.DoubleSide }), dark = std(0x4a3020), snow = std(0xf4f8ff, { roughness: 0.6 });
+    for (let y = 0.15; y < H2; y += 0.3) { for (const z of [D2, -D2]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, W2 * 2 + 0.3, 10), logs); l.rotation.z = Math.PI / 2; l.position.set(0, y, z); g.add(l); }
+      for (const x of [W2, -W2]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, D2 * 2 + 0.3, 10), logs); l.rotation.x = Math.PI / 2; l.position.set(x, y + 0.15, 0); g.add(l); } }
+    const core = new THREE.Mesh(new THREE.BoxGeometry(W2 * 2 - 0.1, H2, D2 * 2 - 0.1), dark); core.position.y = H2 / 2; g.add(core);
+    for (const s of [-1, 1]) { const rf = new THREE.Mesh(new THREE.BoxGeometry(W2 * 2 + 0.6, 0.22, D2 * 1.25), snow); rf.position.set(0, H2 + D2 * 0.38, s * D2 * 0.55); rf.rotation.x = s * 0.62; g.add(rf);
+      const under = new THREE.Mesh(new THREE.BoxGeometry(W2 * 2 + 0.55, 0.1, D2 * 1.25), dark); under.position.set(0, H2 + D2 * 0.38 - 0.14, s * D2 * 0.55); under.rotation.x = s * 0.62; g.add(under); }
+    const gsh = new THREE.Shape(); gsh.moveTo(-D2, 0); gsh.lineTo(0, D2 * 0.75); gsh.lineTo(D2, 0); gsh.lineTo(-D2, 0);
+    for (const x of [W2, -W2]) { const gb = new THREE.Mesh(new THREE.ShapeGeometry(gsh), logs); gb.rotation.y = Math.PI / 2; gb.position.set(x, H2, 0); g.add(gb); }
+    const ch = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.3, 0.45), std(0x8a8a8f, { roughness: 0.9 })); ch.position.set(W2 * 0.6, H2 + 0.9, -D2 * 0.3); g.add(ch);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.3, 0.06), std(0x5a3a22)); door.position.set(-W2 * 0.35, 0.65, D2 + 0.17); g.add(door);
+    const win = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.06), std(0xffd98a, { emissive: 0xffb84a, emissiveIntensity: 0.9 })); win.position.set(W2 * 0.4, 1.0, D2 + 0.17); g.add(win);
+    if (big) { const sign = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.06), std(0x2f6fa8)); sign.position.set(0, H2 + 0.15, D2 + 0.2); g.add(sign); const skis = std(0xd8452e); for (const x of [-W2 - 0.25, -W2 - 0.4]) { const sk = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.7, 0.05), skis); sk.position.set(x, 0.85, D2 * 0.6); sk.rotation.z = 0.12; g.add(sk); } }
+  } else if (kind === 'vent') { // a steam vent: a ring of dark rocks round a glowing crack
+    const rock = std(0x2f2a2c, { roughness: 0.95 });
+    for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2, s = 0.22 + (i % 3) * 0.06, m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), rock); m.position.set(Math.cos(a) * 0.55, s * 0.6, Math.sin(a) * 0.55); m.rotation.set(i, i * 2, 0); g.add(m); }
+    const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.3, 0.06, 16), std(0xff6a1a, { emissive: 0xff4a0a, emissiveIntensity: 1.4 })); glow.position.y = 0.04; g.add(glow);
+  } else if (kind === 'volcano') { // the volcano cone: dark rock, lava runs down its sides, a glowing crater
+    const rock = std(0x3b3236, { roughness: 0.95, flatShading: true }), ash = std(0x57504f, { roughness: 1, flatShading: true }), lava = std(0xff5a14, { emissive: 0xff3a00, emissiveIntensity: 1.3 });
+    const cone = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 4.2, 3.6, 14, 3, true), rock); cone.position.y = 1.8; g.add(cone);
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.8, 0.5, 14), ash); skirt.position.y = 0.25; g.add(skirt);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.22, 6, 16), ash); rim.rotation.x = Math.PI / 2; rim.position.y = 3.6; g.add(rim);
+    const pool = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.1, 16), lava); pool.position.y = 3.45; g.add(pool);
+    for (let i = 0; i < 4; i++) { const a = i * 1.7 + 0.4, run = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3.0, 0.08), lava); run.position.set(Math.cos(a) * 2.5, 1.9, Math.sin(a) * 2.5); run.lookAt(0, 6.5, 0); run.rotateX(Math.PI / 2 - 0.05); g.add(run); }
   } else if (kind === 'blower') { // backpack leaf blower
     const pack = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.26, 0.16), std(0xf28c28, { roughness: 0.5 })); pack.position.set(-0.18, 0.15, 0); g.add(pack);
     const eng = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 14), std(0x2b2f36, { metalness: 0.5 })); eng.rotation.x = Math.PI / 2; eng.position.set(-0.18, 0.12, 0.12); g.add(eng);

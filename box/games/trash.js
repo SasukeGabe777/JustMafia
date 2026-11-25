@@ -151,13 +151,13 @@ class Game {
   chest(p, R, m) {
     const L = this.lockPlan, k = key(R.cell), kind = L && L.kind[R.cell[1] * W.GRID + R.cell[0]];
     if (m.cell != null && String(m.cell) !== k) return { ok: false, error: 'That chest isn’t here.' };
-    if (kind !== 'vault' && kind !== 'den') return { ok: false, error: 'No chest here.' };
+    if (kind !== 'vault' && kind !== 'den' && kind !== 'crater' && kind !== 'fortress') return { ok: false, error: 'No chest here.' };
     if (R.state !== 'play') return { ok: false, error: 'You’re down.' };
     const C = this.chests.get(k) || { took: [] }; if (C.took.includes(p.id)) return { ok: false, error: 'You already emptied this chest.' };
     C.took.push(p.id); this.chests.set(k, C);
-    const big = kind === 'vault', cash = Math.round((big ? 140 : 80) * (1 + 0.1 * Math.max(0, R.wave - 1))), PK = ['shield', 'minigun', 'rockets', 'raygun', 'freeze', 'snack', 'xp2', 'nuke'];
+    const big = kind === 'vault' || kind === 'crater' || kind === 'fortress', cash = Math.round((big ? 140 : 80) * (1 + 0.1 * Math.max(0, R.wave - 1))), PK = ['shield', 'minigun', 'rockets', 'raygun', 'freeze', 'snack', 'xp2', 'nuke'];
     const loot = []; for (let i = 0; i < (big ? 3 : 2); i++) loot.push(PK[Math.floor(this.room.rng() * PK.length)]);
-    this.news(big ? '💎' : '🧟', `${p.name} cracked open the ${big ? 'loot stash' : 'den'} chest (+$${cash})`, p.id); this.room.fx('tzchest', { id: p.id, kind });
+    this.news(big ? '💎' : '🧟', `${p.name} cracked open the ${kind === 'crater' ? 'crater' : kind === 'fortress' ? 'fortress' : big ? 'loot stash' : 'den'} chest (+$${cash})`, p.id); this.room.fx('tzchest', { id: p.id, kind });
     this.moment('chest', p, cash, `${p.name} cracked open a ${big ? 'loot stash' : 'zombie den'} chest`); this.soon();
     return { ok: true, cash, loot, weapon: big };
   }

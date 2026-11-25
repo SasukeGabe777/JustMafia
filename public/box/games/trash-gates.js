@@ -13,8 +13,9 @@
   const TS = () => window.TZS;
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const HARD = { target: 1.5, hp: 1.3, dmg: 1.15, every: 0.75, cap: 12, elite: 150 }; // elite: per 1000 (normally 25)
-  const NAMES = { lair: 'The Boss Lair', key: 'A Key Vault', shop: 'A Master Shop', den: 'A Zombie Den', vault: 'A Loot Stash', '?': 'A Special Area' };
-  const ICONS = { lair: '☠️', key: '🗝️', shop: '⚜️', den: '🧟', vault: '💎', '?': '⭐' };
+  const NAMES = { lair: 'The Boss Lair', key: 'A Key Vault', shop: 'A Master Shop', den: 'A Zombie Den', vault: 'A Loot Stash', crater: 'The Volcano Crater', fortress: 'The Frozen Fortress', '?': 'A Special Area' };
+  const ICONS = { lair: '☠️', key: '🗝️', shop: '⚜️', den: '🧟', vault: '💎', crater: '🌋', fortress: '🏰', '?': '⭐' };
+  const DENLIKE = { den: 1, crater: 1, fortress: 1 }; // a boss, a horde and a loot chest live here
 
   // ---------------- the locks from the server ----------------
   proto.setLocks = function (L) {
@@ -54,9 +55,9 @@
     const sp = this.spec; if (!sp || this.build) return;
     const again = !!this.hard; this.hard = k; // (a '?' that turns out to be a den: only the den part is new)
     if (!again) { sp.target = Math.round(sp.target * HARD.target); sp.hpMul *= HARD.hp; sp.dmgMul *= HARD.dmg; sp.every *= HARD.every; sp.cap = Math.min(90, sp.cap + HARD.cap); }
-    if (k === 'den' && this.mode !== 'guest' && !this.bossSpawned) { sp.boss = true; this.bossDue = true; }
-    this.banner = { text: (ICONS[k] || '⭐') + ' ' + (NAMES[k] || NAMES['?']).toUpperCase(), sub: k === 'den' ? 'A zombie den: a boss and a horde live here' : 'A special area: more, tougher zombies (and elites)', t: 3 };
-    if (k === 'den' && this.startEvent && this.mode !== 'guest' && !late) this.startEvent('horde');
+    if (DENLIKE[k] && this.mode !== 'guest' && !this.bossSpawned) { sp.boss = true; this.bossDue = true; }
+    this.banner = { text: (ICONS[k] || '⭐') + ' ' + (NAMES[k] || NAMES['?']).toUpperCase(), sub: k === 'crater' ? 'The volcano crater: lava, fire zombies and a boss' : k === 'fortress' ? 'The frozen fortress: ice, frozen zombies and a boss' : k === 'den' ? 'A zombie den: a boss and a horde live here' : 'A special area: more, tougher zombies (and elites)', t: 3 };
+    if (DENLIKE[k] && this.startEvent && this.mode !== 'guest' && !late) this.startEvent('horde');
     for (const z of this.z) if (!z.hardDone) { z.hardDone = true; this.hardZ(z); }
   };
   proto.hardZ = function (z) {
@@ -92,7 +93,7 @@
     if (!this.area || this.area.garage || this.isDoorCell()) return null;
     const k = this.cellKey(), fid = this.findHere && this.findHere(), sp = this._chestAt && this._chestAt.k === k ? this._chestAt : (this._chestAt = { k, ...this.chestSpot() });
     if (fid) return { kind: 'find', id: fid, x: sp.x, y: sp.y };
-    const ak = this.areaKind(); if ((ak === 'vault' || ak === 'den') && !(this.chestDone && this.chestDone.has(k))) return { kind: 'loot', id: ak, x: sp.x, y: sp.y };
+    const ak = this.areaKind(); if ((ak === 'vault' || DENLIKE[ak]) && !(this.chestDone && this.chestDone.has(k))) return { kind: 'loot', id: ak, x: sp.x, y: sp.y };
     return null;
   };
   proto.chestNear = function () {

@@ -2185,3 +2185,42 @@ TrashZombies is now **JustZombies** (internal key stays `trash`, no file renames
 - Limits: the hero has no back view (the gun goes behind the head when aiming up); a friend's hero still holds
   the old simple pistol; the glider's wing is a flat sprite; the flight view is the town map seen from above, not a
   rendered 3D town.
+
+## JustZombies: a map of realms, not a whole city (claude/justzombies-heli, November 25, 2026)
+
+- **The owner's ask:** frozen areas, lava volcano areas, country areas; the city only a few blocks; a randomized map.
+- **World generation** (`trash-world.js` town()): after the road network (unchanged), each run picks a compact patch of
+  12-19 town blocks (of 81) and splits the rest between the **countryside**, the **frozen north** and **volcano land**
+  (seeded Voronoi patches, each realm at least 6 blocks; every run differs, the seed makes every phone and the TV
+  agree). Districts inside each realm: the 12 town looks (as before) in the city; Old Farm / Cornfields; Snowy Woods /
+  Frozen Lake / Ski Lodge; Ash Flats / Lava Fields; plus each realm's big block: the **Volcano Crater** (the volcano
+  cone in the middle) and the **Frozen Fortress**, the realm blocks farthest from town. Roads keep going through every
+  realm (dirt tracks, packed snow with ruts, cracked basalt), every block keeps at least 2 roads, the map stays connected.
+- **Hazards** (`genArea` hazards / soft): lava rivers that wind across volcano blocks with gaps where the roads cross
+  (rock bridges), ice sheets and the frozen lake, corn patches (soft: you walk and shoot through them; kept out of
+  the obstacles, so collisions and bullets are unchanged), and always some real cover (hay bales, rocks, logs).
+- **Gameplay** (`public/box/games/trash-biome.js`): ice keeps your momentum (you slide); lava burns you (unless you
+  fly over it) and the zombies that walk in; volcano zombies are ember zombies (hit harder, burst into flame when they
+  die), frozen ones are slower and tougher and shatter, country ones are farmers; tall corn hides a zombie until it's
+  close; in the country half the zombies come over the fences from every side; up north rain/fog turns into a
+  blizzard (a white-out round you) and snow falls; volcano land has falling ash and eruptions every 28-46 s (red
+  warning rings, then fireballs). The crater and the fortress are kill-locked specials like dens (more kills: 360/480/280
+  by mode; a boss, a horde and a big loot chest). Shops spread into the wild (a market or clinic at the farm or the
+  lodge, the Crucible near the volcano).
+- **Art:** Kenney Nature Kit (CC0, recoloured: snowy pines, snow rocks, ice spikes, logs, tent, campfire, corn,
+  wheat, farm fence, lava rocks, basalt), the Kenney tractor, a darkened Quaternius dead tree, and our own models
+  (barn, silo, hay bale, scarecrow, log cabin, ski lodge, steam vent, the volcano), all in the toon style with ink lines
+  (`tools/trash-art-render/jobs-biome.js`); snow and ash ground tiles painted in code; lava with a moving glow; zombie
+  variants tinted per frame (snow on the shoulders, embers, overalls brown) and cached. Synthesized ambience: wind,
+  lava, birds and the odd cow. Minimap and TV map: explored blocks in their realm's colours, unexplored ones washed
+  faintly with their realm's colour. How-to, the title line and the box blurb mention the variety.
+- Validation: test-box-trash 88 (new: realms over 220 seeds (city 12-19 blocks, every realm >= 6, >= 9 looks, a crater
+  and a fortress, connected, every block >= 2 roads), hazards / bridges / corn / wild shops / the crater and fortress
+  locks over 40 seeds, lava damage, burning zombies, the eruption, sliding on ice, frozen zombies + shattering, the
+  blizzard; existing tests made map-agnostic where they assumed a town); check-edges on every new sheet; test-box-kit,
+  test-box, test-box-party, e2e-box. Screenshots looked at for each realm at dusk and night, lava, an eruption, ice,
+  the corn, the TV map. Frame work on the headless phone with 60-85 zombies in volcano and corn blocks: 1.3-1.7 ms avg
+  this run (this machine's headless numbers vary run to run; same-script comparisons earlier: branch ~8.5 ms vs main
+  ~8.9 ms in a heavier night/rain scene).
+- Limits: the farm/lodge shops reuse the town shops' buildings; no animals; the blizzard and eruptions are phone-local
+  (each area host's phone runs its own); snow/ash tiles are procedural rather than ambientCG photos.

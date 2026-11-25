@@ -68,6 +68,23 @@
         g.fillStyle = '#3b3d40'; g.fillRect(cx, cy, cw, ch); if (detail) grain(g, cx, cy, cw, ch, 0.5);
         g.strokeStyle = 'rgba(230,230,220,0.55)'; g.lineWidth = 4; g.strokeRect(cx + 20, cy + 20, cw - 40, ch - 40); g.beginPath(); g.moveTo(cx + cw / 2, cy + 20); g.lineTo(cx + cw / 2, cy + ch - 20); g.stroke(); circ(g, cx + cw / 2, cy + ch / 2, 40); g.stroke();
       }
+    } else if (st === 'snow') { // the frozen north: drifts, blue shadows, sparkles
+      mottle(g, r, X, Y, Wd, Ht, 110 * n, ['rgba(150,180,220,0.22)', 'rgba(255,255,255,0.45)', 'rgba(120,150,190,0.14)'], 30, 110);
+      if (detail) { g.strokeStyle = 'rgba(140,170,210,0.35)'; g.lineWidth = 3; for (let i = 0; i < 14; i++) { const y0 = Y + r() * Ht; g.beginPath(); g.moveTo(X, y0); g.bezierCurveTo(X + Wd * 0.3, y0 + (r() - 0.5) * 120, X + Wd * 0.7, y0 + (r() - 0.5) * 120, X + Wd, y0 + (r() - 0.5) * 80); g.stroke(); }
+        for (let i = 0; i < 900; i++) { g.fillStyle = r() < 0.6 ? 'rgba(255,255,255,0.9)' : 'rgba(170,200,240,0.6)'; g.fillRect(X + r() * Wd, Y + r() * Ht, 2, 2); } }
+    } else if (st === 'ash') { // volcano land: ash, cinders, cracks with a glow in them
+      mottle(g, r, X, Y, Wd, Ht, 120 * n, ['rgba(20,16,16,0.3)', 'rgba(110,100,100,0.16)', 'rgba(60,40,36,0.25)'], 30, 110);
+      if (detail) { for (let i = 0; i < 600; i++) { g.fillStyle = r() < 0.85 ? 'rgba(20,16,16,0.5)' : 'rgba(255,110,40,0.55)'; ell(g, X + r() * Wd, Y + r() * Ht, 1 + r() * 3, 1 + r() * 2, r() * 3); g.fill(); }
+        for (let i = 0; i < 26; i++) { let x = X + r() * Wd, y = Y + r() * Ht; g.strokeStyle = 'rgba(255,90,30,0.35)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); for (let j = 0; j < 6; j++) { x += (r() - 0.5) * 60; y += (r() - 0.5) * 60; g.lineTo(x, y); } g.stroke(); }
+        grain(g, X, Y, Wd, Ht, 0.5); }
+    } else if (st === 'farm' || st === 'field') { // the countryside: ploughed rows and crop strips between grassy margins
+      mottle(g, r, X, Y, Wd, Ht, 70 * n, ['rgba(120,150,60,0.18)', 'rgba(60,80,20,0.2)'], 30, 90);
+      const rows = st === 'field' ? 3 : 2;
+      for (let k = 0; k < rows; k++) { const fx = X + M + r() * (Wd - 2 * M - 600), fy = Y + M + r() * (Ht - 2 * M - 360), fw = 420 + r() * 360, fh = 240 + r() * 200, vert = r() < 0.5;
+        g.fillStyle = k % 2 ? '#6e5432' : '#7d5f38'; g.fillRect(fx, fy, fw, fh); g.strokeStyle = 'rgba(40,28,14,0.45)'; g.lineWidth = 6; g.beginPath();
+        if (vert) for (let x = fx + 14; x < fx + fw; x += 28) { g.moveTo(x, fy); g.lineTo(x, fy + fh); } else for (let y = fy + 14; y < fy + fh; y += 28) { g.moveTo(fx, y); g.lineTo(fx + fw, y); } g.stroke();
+        if (st === 'field' || k === 1) { g.strokeStyle = 'rgba(120,170,60,0.75)'; g.lineWidth = 5; g.setLineDash([8, 10]); g.beginPath(); if (vert) for (let x = fx + 14; x < fx + fw; x += 28) { g.moveTo(x, fy + 6); g.lineTo(x, fy + fh - 6); } else for (let y = fy + 14; y < fy + fh; y += 28) { g.moveTo(fx + 6, y); g.lineTo(fx + fw - 6, y); } g.stroke(); g.setLineDash([]); } }
+      if (detail) grain(g, X, Y, Wd, Ht, 0.3);
     } else if (st === 'dirt' || st === 'fair') {
       mottle(g, r, X, Y, Wd, Ht, 120 * n, ['rgba(40,28,14,0.22)', 'rgba(160,130,90,0.16)', 'rgba(70,60,30,0.2)'], 20, 80);
       if (detail) { for (let i = 0; i < 500; i++) { g.fillStyle = r() < 0.5 ? 'rgba(30,22,12,0.5)' : 'rgba(190,170,130,0.35)'; ell(g, X + r() * Wd, Y + r() * Ht, 1 + r() * 3, 1 + r() * 2, r() * 3); g.fill(); }
@@ -97,7 +114,22 @@
   }
 
   // ---------------- roads ----------------
+  // the wild realms' roads: a dirt track (country), packed snow with tyre ruts (frozen), cracked basalt (volcano); no kerbs, no paint
+  const WILD_ROAD = { dirt: ['#7a5a3a', '#8f6c46', 'rgba(50,34,18,0.45)'], snow: ['#c9d4df', '#dfe7ef', 'rgba(120,140,165,0.5)'], basalt: ['#3a3436', '#4a4244', 'rgba(255,100,40,0.35)'] };
+  function wildRoads(g, area, E, detail, r, kind) {
+    const [c0, c1, mark] = WILD_ROAD[kind] || WILD_ROAD.dirt, hub = area.hub, SW = W.SW;
+    g.fillStyle = c1; for (const q of E) { g.fillRect(q.x - SW * 0.6, q.y - SW * 0.6, q.w + SW * 1.2, q.h + SW * 1.2); }
+    g.fillStyle = kind === 'dirt' ? TX('dirt', c0) : c0; for (const q of E) g.fillRect(q.x, q.y, q.w, q.h);
+    if (area.end === 'culdesac') { circ(g, hub.x, hub.y, area.roads[0].w * 0.95); g.fill(); }
+    if (!detail) return;
+    for (const q of E) grain(g, q.x, q.y, q.w, q.h, 0.5);
+    g.strokeStyle = mark; g.lineWidth = kind === 'basalt' ? 2 : 6;
+    for (const q of area.roads) { if (q.bend) continue; const vert = q.dir === 'n' || q.dir === 's', c = vert ? q.x + q.w / 2 : q.y + q.h / 2;
+      if (kind === 'basalt') { for (let i = 0; i < (q.w * q.h) / 9000; i++) { let x = q.x + r() * q.w, y = q.y + r() * q.h; g.beginPath(); g.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (r() - 0.5) * 50; y += (r() - 0.5) * 50; g.lineTo(x, y); } g.stroke(); } }
+      else for (const o of [-q.w * 0.22, q.w * 0.22]) { g.beginPath(); if (vert) { g.moveTo(c + o, q.y); g.lineTo(c + o, q.y + q.h); } else { g.moveTo(q.x, c + o); g.lineTo(q.x + q.w, c + o); } g.stroke(); } }
+  }
   function roads(g, area, detail, r) {
+    if (area.biome && area.biome.road) { const R0 = area.roads, ext0 = (q) => ({ ...q, x: q.x < -50 && q.w > 0 ? q.x - M : q.x, w: q.x < -50 ? q.w + M : q.x + q.w > W.AW + 50 ? q.w + M : q.w, y: q.y < -50 ? q.y - M : q.y, h: q.y < -50 ? q.h + M : q.y + q.h > W.AH + 50 ? q.h + M : q.h }); wildRoads(g, area, R0.map(ext0), detail, r, area.biome.road); hazardsFloor(g, area, detail); return; }
     const R = area.roads, SW = W.SW, hub = area.hub, ext = (q) => ({ ...q, x: q.x < -50 && q.w > 0 ? q.x - M : q.x, w: q.x < -50 ? q.w + M : q.x + q.w > W.AW + 50 ? q.w + M : q.w, y: q.y < -50 ? q.y - M : q.y, h: q.y < -50 ? q.h + M : q.y + q.h > W.AH + 50 ? q.h + M : q.h });
     const E = R.map(ext);
     // sidewalks + curbs
@@ -354,6 +386,23 @@
     g.fillStyle = 'rgba(120,116,106,0.5)'; g.fillRect(S.x - 16, S.y, S.w + 32, S.h + 70); if (detail) grain(g, S.x - 16, S.y, S.w + 32, S.h + 70, 0.4);
   }
   // o.ground: only what lies flat (the iso view stands buildings and props up as sprites)
+  // the hazards painted on the floor: lava (the game adds its moving glow on top), ice sheets / the frozen lake;
+  // rock bridges where a lava river meets a road
+  // a lava river as one smooth stroke through its segments' centres (broken where a road crosses it: the rock bridge)
+  function lavaPaths(g, H, paint) {
+    const byR = new Map(); for (const h of H) if (h.kind === 'lava') { if (!byR.has(h.rv)) byR.set(h.rv, []); byR.get(h.rv).push(h); }
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const L of byR.values()) { let run = []; const flush = () => { if (!run.length) return; g.beginPath(); g.moveTo(run[0].cx, run[0].cy); if (run.length === 1) g.lineTo(run[0].cx + 0.1, run[0].cy); for (let i = 1; i < run.length; i++) g.lineTo(run[i].cx, run[i].cy); paint(run[0]); run = []; };
+      for (const h of L) { const p = run[run.length - 1]; if (p && Math.hypot(h.cx - p.cx, h.cy - p.cy) > 60) flush(); run.push(h); } flush(); }
+  }
+  function hazardsFloor(g, area, detail) {
+    lavaPaths(g, area.hazards || [], (q) => { g.strokeStyle = '#2a1a16'; g.lineWidth = q.ww + 18; g.stroke(); g.strokeStyle = '#ff5a14'; g.lineWidth = q.ww; g.stroke(); if (detail) { g.strokeStyle = 'rgba(255,220,90,0.5)'; g.lineWidth = q.ww * 0.25; g.setLineDash([14, 22]); g.stroke(); g.setLineDash([]); } });
+    for (const h of area.hazards || []) {
+      if (h.kind === 'lava') continue; if (false) { g.fillStyle = '#2a1a16'; g.fillRect(h.x - 8, h.y - 8, h.w + 16, h.h + 16); g.fillStyle = '#ff5a14'; g.fillRect(h.x, h.y, h.w, h.h); if (detail) { g.fillStyle = 'rgba(255,220,90,0.55)'; for (let i = 0; i < 4; i++) g.fillRect(h.x + (i * 37) % Math.max(1, h.w - 10), h.y + (i * 23) % Math.max(1, h.h - 6), 10, 5); } }
+      else if (h.kind === 'ice') { g.fillStyle = 'rgba(160,210,245,0.9)'; g.beginPath(); g.ellipse(h.x + h.w / 2, h.y + h.h / 2, h.w / 2, h.h / 2, 0, 0, TAU); g.fill(); g.strokeStyle = 'rgba(240,250,255,0.9)'; g.lineWidth = 6; g.stroke();
+        if (detail) { g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 2; g.beginPath(); for (let i = 0; i < 6; i++) { const a = i * 1.1, cx = h.x + h.w / 2, cy = h.y + h.h / 2; g.moveTo(cx + Math.cos(a) * h.w * 0.1, cy + Math.sin(a) * h.h * 0.1); g.lineTo(cx + Math.cos(a) * h.w * 0.4, cy + Math.sin(a) * h.h * 0.4); } g.stroke(); } }
+    }
+  }
   function drawArea(g, area, detail = 1, o = {}) {
     const r = rnd(W.hash(area.seed, 'floor', area.x, area.y));
     lotGround(g, area, detail, r);
@@ -546,5 +595,5 @@
     if (tcache.size > 200) tcache.clear();
     tcache.set(key, c); return c;
   }
-  window.TZA = { M, OL, rr, shade, circ, ell, lin, rad, grain, drawArea, areaCanvas, drawGarage, zombie, drawZombie, drawPickup, heroFrames, drawGun, thumb, fillOl, lights, box3, cyl, car };
+  window.TZA = { lavaPaths, M, OL, rr, shade, circ, ell, lin, rad, grain, drawArea, areaCanvas, drawGarage, zombie, drawZombie, drawPickup, heroFrames, drawGun, thumb, fillOl, lights, box3, cyl, car };
 })();

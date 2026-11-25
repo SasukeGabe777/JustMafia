@@ -35,11 +35,17 @@ function jet() {
   for (let i = 0; i < n; i++) { const fl = 0.8 + 0.2 * Math.sin(2 * Math.PI * 9 * ((i % L) / L)); x[i] = hiss[i] * 0.9 * fl + rum[i] * 3.2; }
   return norm(seam(x, FADE), 0.8);
 }
-const out = [['sfx.heli.rotor.loop', 'sfx/heli-rotor-loop.wav', rotor()], ['sfx.jet.loop', 'sfx/jet-loop.wav', jet()]];
+// the wild realms' ambience: wind (frozen: gusts of filtered noise), lava (a low roar with crackles and pops),
+// birds (country: little chirps over a soft breeze); a cow (a one-shot moo: a sawtooth with a vowel filter)
+function wind() { const L = SR * 4, n = L + FADE, nz = lowpass(noise(n, 41), 700), x = new Float32Array(n); for (let i = 0; i < n; i++) { const u = (i % L) / L; x[i] = nz[i] * (0.55 + 0.45 * Math.sin(2 * Math.PI * 2 * u) * Math.sin(2 * Math.PI * 3 * u + 1)); } return norm(seam(highpass(x, 120), FADE), 0.7); }
+function lava() { const L = SR * 3, n = L + FADE, rum = lowpass(noise(n, 51), 160), cr = highpass(noise(n, 53), 1800), r = rng(55), x = new Float32Array(n); let pop = 0; for (let i = 0; i < n; i++) { if (r() < 6 / SR) pop = 1; pop *= 0.996; x[i] = rum[i] * 3 + cr[i] * (0.05 + pop * 0.9) * (r() < 0.3 ? 1 : 0.4); } return norm(seam(x, FADE), 0.7); }
+function birds() { const L = SR * 4, n = L + FADE, br = lowpass(noise(n, 61), 500), r = rng(63), x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = br[i] * 0.6; for (let k = 0; k < 9; k++) { const t0 = Math.floor(r() * (L - SR * 0.4)), f0 = 2600 + r() * 1800, notes = 2 + Math.floor(r() * 3); for (let j = 0; j < notes; j++) { const s0 = t0 + j * Math.floor(SR * 0.09), len = Math.floor(SR * 0.07); for (let i = 0; i < len; i++) { const u = i / len, f = f0 * (1 + 0.25 * Math.sin(Math.PI * u)); x[s0 + i] += Math.sin(2 * Math.PI * f * i / SR) * Math.sin(Math.PI * u) * 0.35; } } } return norm(seam(x, FADE), 0.6); }
+function moo() { const n = Math.round(SR * 1.3), x = new Float32Array(n); let ph = 0; for (let i = 0; i < n; i++) { const u = i / n, f = 115 + 25 * Math.sin(Math.PI * u) - 20 * u; ph += f / SR; const saw = 2 * (ph % 1) - 1; x[i] = saw * Math.min(1, u * 8) * Math.min(1, (1 - u) * 4); } const v = lowpass(lowpass(x, 700), 900); return norm(v, 0.8); }
+const out = [['sfx.heli.rotor.loop', 'sfx/heli-rotor-loop.wav', rotor()], ['sfx.jet.loop', 'sfx/jet-loop.wav', jet()], ['sfx.wind.loop', 'sfx/wind-loop.wav', wind()], ['sfx.lava.loop', 'sfx/lava-loop.wav', lava()], ['sfx.birds.loop', 'sfx/birds-loop.wav', birds()], ['sfx.moo', 'sfx/moo.wav', moo(), false]];
 const mf = path.join(DEST, 'manifest.json'), man = JSON.parse(fs.readFileSync(mf, 'utf8'));
-for (const [id, file, x] of out) {
+for (const [id, file, x, isLoop] of out) {
   fs.writeFileSync(path.join(DEST, file), wav(x));
-  man.sfx[id] = { file, seconds: +(x.length / SR).toFixed(2), loop: true, source: 'justzombies-synth' };
+  man.sfx[id] = { file, seconds: +(x.length / SR).toFixed(2), loop: isLoop !== false, source: 'justzombies-synth' };
   console.log('wrote', file, (fs.statSync(path.join(DEST, file)).size / 1024).toFixed(0) + 'K');
 }
 fs.writeFileSync(mf, JSON.stringify(man, null, 1) + '\n');

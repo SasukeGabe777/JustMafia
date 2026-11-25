@@ -40,6 +40,21 @@
     { key: 'docks', name: 'Rusty Docks', icon: '⚓', ground: ['#6b5035', '#5d452c'], lot: 'docks', edge: '#1f4a63', accent: '#ff8c42', bld: [1, 2, [4, 5], [2, 3], 'warehouse'], props: ['container', 'crate', 'barrel', 'rope', 'crate', 'container'] },
     { key: 'landfill', name: 'Landfill Hills', icon: '🗑️', ground: ['#6c6a3d', '#5f5d33'], lot: 'dirt', edge: '#3a3820', accent: '#c8ff3c', bld: [0, 0, [1, 1], [1, 1], 'shack'], props: ['trash', 'trash', 'tires', 'bags', 'fridge', 'mound', 'mound'] },
   ];
+  // The wild realms around the town (every map is a mix: a few city blocks, the rest country, frozen and
+  // volcano land). realm: which; road: how its roads look (dirt, packed snow, basalt); lava / ice / lake:
+  // hazards on the ground (genArea: hazards); special: the realm's big kill-locked block (trash-story locks()).
+  const WILD = [
+    { key: 'farm', realm: 'country', name: 'Old Farm', icon: '🚜', ground: ['#7d9a44', '#728f3e'], lot: 'farm', edge: '#5a4428', accent: '#ffd23f', road: 'dirt', bld: [1, 1, [4, 5], [3, 3], 'barn'], props: ['haybale', 'haybale', 'corn', 'corn', 'fencefarm', 'scarecrow', 'tractor', 'silo', 'wheat', 'wheat'] },
+    { key: 'fields', realm: 'country', name: 'Cornfields', icon: '🌽', ground: ['#8fa040', '#84953a'], lot: 'field', edge: '#5a4428', accent: '#ffe066', road: 'dirt', bld: [0, 1, [3, 4], [2, 3], 'barn'], props: ['corn', 'corn', 'corn', 'corn', 'corn', 'haybale', 'scarecrow', 'wheat', 'wheat', 'fencefarm'], corn: true },
+    { key: 'snow', realm: 'frozen', name: 'Snowy Woods', icon: '🌲', ground: ['#e9eff6', '#dfe7f0'], lot: 'snow', edge: '#9fb3c8', accent: '#7fd6ff', road: 'snow', bld: [0, 1, [2, 3], [2, 2], 'cabin'], props: ['snowpine', 'snowpine', 'snowpine2', 'snowpine2', 'snowrock', 'logs', 'tent', 'campfire', 'icechunk'], ice: 1 },
+    { key: 'icelake', realm: 'frozen', name: 'Frozen Lake', icon: '🧊', ground: ['#dde9f3', '#d2e1ee'], lot: 'snow', edge: '#9fb3c8', accent: '#7fd6ff', road: 'snow', bld: [0, 1, [2, 3], [2, 2], 'cabin'], props: ['snowpine', 'snowpine2', 'snowrock', 'icechunk', 'icechunk', 'logs'], lake: true },
+    { key: 'lodge', realm: 'frozen', name: 'Ski Lodge', icon: '⛷️', ground: ['#e9eff6', '#dfe7f0'], lot: 'snow', edge: '#9fb3c8', accent: '#ff7a5a', road: 'snow', bld: [1, 1, [5, 6], [3, 4], 'lodge'], props: ['snowpine', 'snowpine2', 'tent', 'campfire', 'logs', 'snowrock'], ice: 1 },
+    { key: 'ash', realm: 'volcano', name: 'Ash Flats', icon: '🌋', ground: ['#4d4748', '#454041'], lot: 'ash', edge: '#2a2224', accent: '#ff6a2a', road: 'basalt', bld: [0, 0, [1, 1], [1, 1], 'none'], props: ['lavarock', 'lavarock', 'basalt', 'basalt', 'vent', 'charred'], lava: 1 },
+    { key: 'lavafield', realm: 'volcano', name: 'Lava Fields', icon: '🔥', ground: ['#433b3d', '#3b3335'], lot: 'ash', edge: '#2a2224', accent: '#ff4a1a', road: 'basalt', bld: [0, 0, [1, 1], [1, 1], 'none'], props: ['lavarock', 'basalt', 'vent', 'vent', 'charred', 'lavarock'], lava: 2 },
+    { key: 'crater', realm: 'volcano', name: 'Volcano Crater', icon: '🌋', ground: ['#3d3537', '#352d2f'], lot: 'ash', edge: '#2a2224', accent: '#ff3a0a', road: 'basalt', bld: [1, 1, [6, 7], [4, 4], 'volcano'], props: ['lavarock', 'basalt', 'vent', 'charred'], lava: 1, special: 'crater' },
+    { key: 'fortress', realm: 'frozen', name: 'Frozen Fortress', icon: '🏰', ground: ['#d6e6f2', '#cadcec'], lot: 'snow', edge: '#7f9ab4', accent: '#7fd6ff', road: 'snow', bld: [1, 2, [3, 4], [2, 3], 'lodge'], props: ['icechunk', 'icechunk', 'icechunk', 'snowrock', 'snowpine'], ice: 2, special: 'fortress' },
+  ];
+  const REALMS = { city: { name: 'Town', icon: '🏙️', color: '#7a7f86' }, country: { name: 'Countryside', icon: '🌾', color: '#8fa040' }, frozen: { name: 'The Frozen North', icon: '❄️', color: '#dfe9f3' }, volcano: { name: 'Volcano Land', icon: '🌋', color: '#5a3a34' } };
   const HOME = { key: 'home', name: 'Your Street', icon: '🏠', ground: ['#4f7a3e', '#466e36'], lot: 'lawn', edge: '#2f5a28', accent: '#ffd23f', bld: [1, 2, [3, 4], [2, 3], 'house'], props: ['bin', 'car', 'hedge', 'mailbox', 'tree', 'bin'] };
   // Props: size in tiles, round (collides a little smaller) or boxy.
   const PROPS = {
@@ -49,6 +64,10 @@
     bench: { w: 2, h: 1 }, planter: { w: 1, h: 1, round: true }, bush: { w: 1, h: 1, round: true }, fountain: { w: 2, h: 2, round: true }, pond: { w: 3, h: 2, round: true },
     tank: { w: 2, h: 2, round: true }, pipe: { w: 3, h: 1 }, grate: { w: 2, h: 1, low: true }, booth: { w: 2, h: 2 }, balloons: { w: 1, h: 1, round: true },
     picnic: { w: 2, h: 1 }, rope: { w: 1, h: 1, round: true }, bags: { w: 1, h: 1, round: true }, mound: { w: 2, h: 2, round: true }, lamp: { w: 1, h: 1, round: true, thin: true }, hydrant: { w: 1, h: 1, round: true, thin: true },
+    // the wild realms (soft: you walk and shoot through it; tall corn hides the zombies in it)
+    haybale: { w: 1, h: 1, round: true }, corn: { w: 1, h: 1, soft: true, hide: true }, wheat: { w: 1, h: 1, soft: true }, fencefarm: { w: 2, h: 1, thin: true }, scarecrow: { w: 1, h: 1, round: true, thin: true },
+    tractor: { w: 2, h: 1 }, silo: { w: 2, h: 2, round: true }, snowpine: { w: 1, h: 1, round: true }, snowpine2: { w: 1, h: 1, round: true }, snowrock: { w: 1, h: 1, round: true }, logs: { w: 1, h: 1 },
+    tent: { w: 2, h: 2 }, campfire: { w: 1, h: 1, round: true, low: true }, icechunk: { w: 1, h: 1, round: true }, lavarock: { w: 1, h: 1, round: true }, basalt: { w: 1, h: 1, round: true }, vent: { w: 1, h: 1, round: true, low: true }, charred: { w: 1, h: 1, round: true, thin: true },
   };
   const DIRS = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] }, OPP = { n: 's', s: 'n', w: 'e', e: 'w' };
   const inGrid = (x, y) => Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < GRID && y < GRID;
@@ -101,10 +120,25 @@
       if (L.length) link(c, L[0][0], SIDE_W, false, null, r2);
     }
     for (const c of C) { const n = Object.values(c.side).filter(Boolean).length; c.n = n; if (n === 1) c.end = r() < 0.55 ? 'culdesac' : 'gate'; }
-    // districts: seeded patches; every look gets a patch, the common ones a couple more
+    // realms: the town is only a few blocks; the rest of the map is countryside, the frozen north and
+    // volcano land (seeded patches, each realm at least a few blocks), then the districts inside each realm
+    const rr = rng(hash(seed, 'realms')), dd = (c, s) => Math.hypot(c.x + 0.5 - s.x, c.y + 0.5 - s.y);
+    for (let tries = 0; tries < 12; tries++) {
+      const city = { x: 1 + rr() * (N - 2), y: 1 + rr() * (N - 2) }, nCity = 12 + Math.floor(rr() * 8);
+      const order = C.map((c) => [c, dd(c, city) + rr() * 0.6]).sort((a, b) => a[1] - b[1]);
+      order.forEach(([c], i) => { c.realm = i < nCity ? 'city' : null; });
+      const rs = ['country', 'frozen', 'volcano', rr() < 0.5 ? 'country' : 'frozen'].map((k) => { let s; for (let j = 0; j < 30; j++) { s = { k, x: rr() * N, y: rr() * N }; if (dd(s, city) > 2.6) break; } return s; });
+      for (const c of C) if (!c.realm) { let best = null, bd = 1e9; for (const s of rs) { const d = dd(c, s) + rr() * 0.5; if (d < bd) { bd = d; best = s; } } c.realm = best.k; }
+      const cnt = {}; for (const c of C) cnt[c.realm] = (cnt[c.realm] || 0) + 1;
+      if (cnt.country >= 6 && cnt.frozen >= 6 && cnt.volcano >= 6) break;
+    }
     const keys = BIOMES.map((b) => b.key).concat(['suburb', 'suburb', 'roof', 'lot', 'park']);
     const seeds = keys.map((k) => ({ k, x: r() * N, y: r() * N }));
-    for (const c of C) { let best = null, bd = 1e9; for (const s of seeds) { const d = Math.hypot(c.x + 0.5 - s.x, c.y + 0.5 - s.y) + r() * 0.35; if (d < bd) { bd = d; best = s; } } c.d = best.k; }
+    const wildSeeds = { country: ['farm', 'fields', 'farm', 'fields'], frozen: ['snow', 'icelake', 'lodge', 'snow'], volcano: ['ash', 'lavafield', 'ash'] };
+    const ws = Object.entries(wildSeeds).flatMap(([realm, L]) => L.map((k) => ({ k, realm, x: rr() * N, y: rr() * N })));
+    for (const c of C) { let best = null, bd = 1e9; const L = c.realm === 'city' ? seeds : ws.filter((s) => s.realm === c.realm); for (const s of L) { const d = Math.hypot(c.x + 0.5 - s.x, c.y + 0.5 - s.y) + r() * 0.35; if (d < bd) { bd = d; best = s; } } c.d = best.k; }
+    // each wild realm's big special block (a volcano crater, a frozen fortress): the block of that realm farthest from town
+    for (const [realm, k] of [['volcano', 'crater'], ['frozen', 'fortress']]) { let best = null, bd = -1; for (const c of C) { if (c.realm !== realm || Object.values(c.side).filter(Boolean).length < 2) continue; const d = C.filter((q) => q.realm === 'city').reduce((m, q) => Math.min(m, Math.abs(q.x - c.x) + Math.abs(q.y - c.y)), 99) + rr() * 0.5; if (d > bd) { bd = d; best = c; } } if (best) best.d = k; }
     const sides = ['n', 's', 'w', 'e'], river = sides[Math.floor(r() * 4)], highway = sides.filter((s) => s !== river)[Math.floor(r() * 3)];
     const T = { seed, N, cells: C, rows, cols, river, highway };
     if (towns.size > 16) towns.clear();
@@ -125,7 +159,9 @@
     while (q.length) { const [x, y] = q.shift(), c = cellOf(seed, x, y); for (const dir of ['n', 's', 'w', 'e']) if (c.side[dir]) { const nx = x + DIRS[dir][0], ny = y + DIRS[dir][1], i = ny * N + nx; if (d[i] > d[y * N + x] + 1) { d[i] = d[y * N + x] + 1; q.push([nx, ny]); } } }
     return d;
   }
-  const byKey = Object.fromEntries(BIOMES.map((b) => [b.key, b]));
+  for (const b of BIOMES) b.realm = b.realm || 'city';
+  const byKey = Object.fromEntries(BIOMES.concat(WILD).map((b) => [b.key, b]));
+  const realmOf = (seed, x, y) => { const c = cellOf(seed, x, y); return (c && c.realm) || 'city'; };
   function biomeOf(seed, x, y, homes) {
     if (homes && homes.some((h) => h[0] === x && h[1] === y)) return HOME;
     const c = cellOf(seed, x, y); return (c && byKey[c.d]) || BIOMES[0];
@@ -192,6 +228,17 @@
       const q = lot(DOOR.w + 40, DOOR.h, 110); spot = { x: q.x + 20, y: q.y, w: DOOR.w, h: DOOR.h };
       mark({ x: q.x, y: q.y, w: q.w, h: q.h + 100 }, 2);
     }
+    // ground hazards: lava rivers (with gaps where the roads cross: rock bridges), ice sheets, the frozen lake
+    const hazards = [];
+    if (biome.lava) for (let n = 0; n < biome.lava; n++) {
+      const vert = r() < 0.5, wdt = 70 + Math.floor(r() * 40), at0 = (vert ? AW : AH) * (0.22 + r() * 0.56), seg = [];
+      for (let v = -40; v < (vert ? AH : AW) + 40; v += 40) { const off = Math.sin(v / 170 + n * 2 + r() * 0.2) * 70, q = vert ? { x: at0 + off - wdt / 2, y: v, w: wdt, h: 40 } : { x: v, y: at0 + off - wdt / 2, w: 40, h: wdt }; if (walks.some((k) => hits(q, k, 6)) || (spot && hits(q, spot, 40)) || (garage && hits(q, garage, 40))) continue; seg.push(q); }
+      for (const q of seg) { hazards.push({ kind: 'lava', ...q, rv: n, cx: q.x + q.w / 2, cy: q.y + q.h / 2, ww: wdt }); mark(q, 2); }
+    }
+    if (biome.lake || biome.ice) {
+      const n = biome.lake ? 1 : biome.ice;
+      for (let k = 0; k < n; k++) { const w = biome.lake ? 560 + r() * 200 : 220 + r() * 160, h = biome.lake ? 340 + r() * 120 : 160 + r() * 100, x = TILE + r() * (AW - 2 * TILE - w), y = TILE + r() * (AH - 2 * TILE - h); hazards.push({ kind: 'ice', x, y, w, h }); if (biome.lake) mark({ x: x + 40, y: y + 40, w: w - 80, h: h - 80 }, 2); }
+    }
     const free = (tx, ty, w, h, gap) => { for (let j = ty - gap; j < ty + h + gap; j++) for (let i = tx - gap; i < tx + w + gap; i++) { if (j < 0 || i < 0 || j >= TH || i >= TW) { if (j >= ty && j < ty + h && i >= tx && i < tx + w) return false; continue; } const u = used[j][i]; if (u === 1 || (u === 2 && j >= ty && j < ty + h && i >= tx && i < tx + w)) return false; } return true; };
     // buildings first (big), then props
     const [bmin, bmax, [bw0, bw1], [bh0, bh1], style] = biome.bld;
@@ -204,22 +251,32 @@
       obstacles.push({ x: tx * TILE + 6, y: ty * TILE + 6, w: w * TILE - 12, h: h * TILE - 12, kind: 'bld', style, v: Math.floor(r() * 4), seed: Math.floor(r() * 1e6) });
     }
     const want = 8 + Math.floor(r() * 6);
-    for (let tries = 0; tries < 320 && obstacles.length - nb < want; tries++) {
+    const soft = []; let placed = 0; // (soft: corn and wheat you walk and shoot through; kept apart from the obstacles)
+    for (let tries = 0; tries < 320 && placed < want; tries++) {
       const kind = pick(r, biome.props), P = PROPS[kind];
+      if (P.soft && soft.length >= 24) continue; // (enough corn: leave room for cover)
       const rot = !P.round && P.w !== P.h && r() < 0.35;
       const w = rot ? P.h : P.w, h = rot ? P.w : P.h;
       const tx = 1 + Math.floor(r() * (TW - w - 1)), ty = 1 + Math.floor(r() * (TH - h - 1));
-      if (!free(tx, ty, w, h, 1)) continue;
+      if (!free(tx, ty, w, h, P.soft ? 0 : 1)) continue;
       mark({ x: tx * TILE, y: ty * TILE, w: w * TILE, h: h * TILE }, 1);
       const pad = P.thin ? 28 : P.round ? 10 : 6;
-      obstacles.push({ x: tx * TILE + pad, y: ty * TILE + pad, w: w * TILE - pad * 2, h: h * TILE - pad * 2, kind, round: !!P.round, low: !!P.low, rot, v: Math.floor(r() * 4), seed: Math.floor(r() * 1e6) });
+      (P.soft ? soft : obstacles).push({ x: tx * TILE + pad, y: ty * TILE + pad, w: w * TILE - pad * 2, h: h * TILE - pad * 2, kind, round: !!P.round, low: !!P.low, soft: !!P.soft, hide: !!P.hide, rot, v: Math.floor(r() * 4), seed: Math.floor(r() * 1e6) }); placed += P.soft ? 0.4 : 1;
+      if (kind === 'corn') for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [-1, 0], [2, 0], [0, 2]].slice(0, biome.corn ? 6 : 3)) { const ax = tx + dx, ay = ty + dy; if (ax < 1 || ay < 1 || ax >= TW - 1 || ay >= TH - 1 || !free(ax, ay, 1, 1, 0)) continue; mark({ x: ax * TILE, y: ay * TILE, w: TILE, h: TILE }, 1); soft.push({ x: ax * TILE + 6, y: ay * TILE + 6, w: TILE - 12, h: TILE - 12, kind: 'corn', soft: true, hide: true, v: Math.floor(r() * 4), seed: Math.floor(r() * 1e6) }); } // (a patch, not a stalk)
+    }
+    // always some real cover (the fields can fill up with corn)
+    const hardKinds = biome.props.filter((k) => !PROPS[k].soft);
+    for (let tries = 0; tries < 300 && hardKinds.length && obstacles.filter((o) => o.kind !== 'wall').length < 4; tries++) {
+      const kind = pick(r, hardKinds), P = PROPS[kind], w = P.w, h = P.h, tx = 1 + Math.floor(r() * (TW - w - 1)), ty = 1 + Math.floor(r() * (TH - h - 1));
+      if (!free(tx, ty, w, h, 0)) continue; mark({ x: tx * TILE, y: ty * TILE, w: w * TILE, h: h * TILE }, 1); const pad = P.thin ? 28 : P.round ? 10 : 6;
+      obstacles.push({ x: tx * TILE + pad, y: ty * TILE + pad, w: w * TILE - pad * 2, h: h * TILE - pad * 2, kind, round: !!P.round, low: !!P.low, rot: false, v: Math.floor(r() * 4), seed: Math.floor(r() * 1e6) });
     }
     // parked cars and wrecks on the side streets (never blocking: they sit on the sidewalk line)
     const decals = [];
     const nd = 34 + Math.floor(r() * 20);
     for (let i = 0; i < nd; i++) decals.push({ x: r() * AW, y: r() * AH, k: Math.floor(r() * 8), s: 0.6 + r() * 0.9, a: r() * Math.PI * 2 });
     const exits = exitsOf(seed, x, y);
-    return { x, y, seed, biome, obstacles, decals, garage, spot, home: !!home, exits, roads, hub: { ...c.hub }, end: c.end, cell: c, town: { river: T.river, highway: T.highway } };
+    return { x, y, seed, biome, realm: home ? 'city' : c.realm || 'city', obstacles, decals, garage, spot, home: !!home, exits, roads, hub: { ...c.hub }, end: c.end, cell: c, hazards, soft, town: { river: T.river, highway: T.highway } };
   }
   // Where you arrive from a direction (on the road, just inside the edge).
   function arrival(area, from) {
@@ -354,5 +411,5 @@
   // Soft cap: grows with n but never passes `top` (diminishing returns).
   const soft = (n, top, k) => top * (1 - Math.pow(k, n || 0));
 
-  return { GRID, AW, AH, TILE, TW, TH, BIOMES, HOME, PROPS, DIRS, OPP, MAIN_W, SIDE_W, SW, town, cellOf, roadBetween, roadDist, roadRects, biomeOf, inGrid, exitsOf, genArea, arrival, GARAGE, DOOR, spawnCell, ABILITIES, AB, CATS, offer, levelsFromAbilities, PICKUPS, PK, ZOMBIES, waveSpec, xpNeed, limits, soft, hash, rng };
+  return { GRID, AW, AH, TILE, TW, TH, BIOMES, WILD, REALMS, realmOf, HOME, PROPS, DIRS, OPP, MAIN_W, SIDE_W, SW, town, cellOf, roadBetween, roadDist, roadRects, biomeOf, inGrid, exitsOf, genArea, arrival, GARAGE, DOOR, spawnCell, ABILITIES, AB, CATS, offer, levelsFromAbilities, PICKUPS, PK, ZOMBIES, waveSpec, xpNeed, limits, soft, hash, rng };
 });

@@ -9863,6 +9863,722 @@
     "W": "E",
     "NW": "NE"
    }
+  },
+  "bld.barn": {
+   "file": "props/bld-barn.webp",
+   "kind": "building",
+   "cell": [
+    662,
+    443
+   ],
+   "anchor": [
+    331,
+    291
+   ],
+   "scale": 1,
+   "size": [
+    5.4,
+    4.229,
+    7.518
+   ],
+   "name": "Red barn (our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.cabin": {
+   "file": "props/bld-cabin.webp",
+   "kind": "building",
+   "cell": [
+    456,
+    324
+   ],
+   "anchor": [
+    228,
+    222
+   ],
+   "scale": 1,
+   "size": [
+    4.6,
+    3.502,
+    3.72
+   ],
+   "name": "Log cabin (our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.lodge": {
+   "file": "props/bld-lodge.webp",
+   "kind": "building",
+   "cell": [
+    678,
+    461
+   ],
+   "anchor": [
+    339,
+    308
+   ],
+   "scale": 1,
+   "size": [
+    7.4,
+    4.571,
+    5.349
+   ],
+   "name": "Ski lodge (our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.volcano": {
+   "file": "props/bld-volcano.webp",
+   "kind": "building",
+   "cell": [
+    532,
+    356
+   ],
+   "anchor": [
+    266,
+    219
+   ],
+   "scale": 1,
+   "size": [
+    9,
+    3.645,
+    9.231
+   ],
+   "name": "The volcano (our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "prop.basalt": {
+   "file": "props/prop-basalt.webp",
+   "kind": "prop",
+   "cell": [
+    166,
+    163
+   ],
+   "anchor": [
+    83,
+    126
+   ],
+   "scale": 1,
+   "size": [
+    2.077,
+    2.4,
+    2.091
+   ],
+   "name": "Basalt column (Kenney Nature Kit, recoloured)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.campfire": {
+   "file": "props/prop-campfire.webp",
+   "kind": "prop",
+   "cell": [
+    70,
+    47
+   ],
+   "anchor": [
+    35,
+    26
+   ],
+   "scale": 1,
+   "size": [
+    1,
+    0.144,
+    0.953
+   ],
+   "name": "Campfire (Kenney Nature Kit)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.corn": {
+   "file": "props/prop-corn.webp",
+   "kind": "prop",
+   "cell": [
+    162,
+    143
+   ],
+   "anchor": [
+    81,
+    116
+   ],
+   "scale": 1,
+   "size": [
+    0.777,
+    2.2,
+    0.777
+   ],
+   "name": "Tall corn (Kenney Nature Kit)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.deadtree.charred": {
+   "file": "props/prop-deadtree.charred.webp",
+   "kind": "prop",
+   "cell": [
+    360,
+    291
+   ],
+   "anchor": [
+    180,
+    223
+   ],
+   "scale": 1,
+   "size": [
+    2.59,
+    4,
+    2.422
+   ],
+   "name": "Charred tree (Quaternius Stylized Nature, darkened)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.fence.farm": {
+   "file": "props/prop-fence.farm.webp",
+   "kind": "prop",
+   "cell": [
+    106,
+    77
+   ],
+   "anchor": [
+    53,
+    51
+   ],
+   "scale": 1,
+   "size": [
+    1.6,
+    0.552,
+    0.112
+   ],
+   "name": "Farm fence (Kenney Nature Kit)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.haybale": {
+   "file": "props/prop-haybale.webp",
+   "kind": "prop",
+   "cell": [
+    160,
+    119
+   ],
+   "anchor": [
+    80,
+    87
+   ],
+   "scale": 1,
+   "size": [
+    1.233,
+    1.5,
+    1.5
+   ],
+   "name": "Hay bale (our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.icechunk": {
+   "file": "props/prop-icechunk.webp",
+   "kind": "prop",
+   "cell": [
+    114,
+    125
+   ],
+   "anchor": [
+    57,
+    94
+   ],
+   "scale": 1,
+   "size": [
+    1.777,
+    1.8,
+    1.235
+   ],
+   "name": "Ice spike (Kenney Nature Kit, recoloured)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.lavarock": {
+   "file": "props/prop-lavarock.webp",
+   "kind": "prop",
+   "cell": [
+    118,
+    76
+   ],
+   "anchor": [
+    59,
+    47
+   ],
+   "scale": 1,
+   "size": [
+    1.7,
+    0.513,
+    1.622
+   ],
+   "name": "Lava rock (Kenney Nature Kit, recoloured)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.logs": {
+   "file": "props/prop-logs.webp",
+   "kind": "prop",
+   "cell": [
+    86,
+    99
+   ],
+   "anchor": [
+    43,
+    67
+   ],
+   "scale": 1,
+   "size": [
+    0.957,
+    0.781,
+    1.6
+   ],
+   "name": "Log pile (Kenney Nature Kit)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.scarecrow": {
+   "file": "props/prop-scarecrow.webp",
+   "kind": "prop",
+   "cell": [
+    200,
+    163
+   ],
+   "anchor": [
+    100,
+    130
+   ],
+   "scale": 1,
+   "size": [
+    1.835,
+    2.4,
+    0.847
+   ],
+   "name": "Scarecrow (our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.silo": {
+   "file": "props/prop-silo.webp",
+   "kind": "prop",
+   "cell": [
+    428,
+    384
+   ],
+   "anchor": [
+    214,
+    310
+   ],
+   "scale": 1,
+   "size": [
+    2.173,
+    6,
+    2.192
+   ],
+   "name": "Grain silo (our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.snowpine": {
+   "file": "props/prop-snowpine.webp",
+   "kind": "prop",
+   "cell": [
+    334,
+    318
+   ],
+   "anchor": [
+    167,
+    273
+   ],
+   "scale": 1,
+   "size": [
+    1.364,
+    5.4,
+    1.384
+   ],
+   "name": "Snowy pine (Kenney Nature Kit, recoloured)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.snowpine2": {
+   "file": "props/prop-snowpine2.webp",
+   "kind": "prop",
+   "cell": [
+    266,
+    265
+   ],
+   "anchor": [
+    133,
+    224
+   ],
+   "scale": 1,
+   "size": [
+    1.687,
+    4.4,
+    1.948
+   ],
+   "name": "Snowy round pine (Kenney Nature Kit, recoloured)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.snowrock": {
+   "file": "props/prop-snowrock.webp",
+   "kind": "prop",
+   "cell": [
+    88,
+    72
+   ],
+   "anchor": [
+    44,
+    43
+   ],
+   "scale": 1,
+   "size": [
+    1.237,
+    0.409,
+    1.6
+   ],
+   "name": "Snow-capped rock (Kenney Nature Kit, recoloured)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.tent": {
+   "file": "props/prop-tent.webp",
+   "kind": "prop",
+   "cell": [
+    146,
+    134
+   ],
+   "anchor": [
+    73,
+    96
+   ],
+   "scale": 1,
+   "size": [
+    2.2,
+    1.411,
+    1.676
+   ],
+   "name": "Tent (Kenney Nature Kit, recoloured)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.tractor": {
+   "file": "props/prop-tractor.webp",
+   "kind": "prop",
+   "cell": [
+    220,
+    203
+   ],
+   "anchor": [
+    110,
+    145
+   ],
+   "scale": 1,
+   "size": [
+    1.829,
+    2.183,
+    3
+   ],
+   "name": "Old tractor (Kenney Car Kit)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.vent": {
+   "file": "props/prop-vent.webp",
+   "kind": "prop",
+   "cell": [
+    116,
+    81
+   ],
+   "anchor": [
+    58,
+    51
+   ],
+   "scale": 1,
+   "size": [
+    1.555,
+    0.644,
+    1.6
+   ],
+   "name": "Steam vent (our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.wheat": {
+   "file": "props/prop-wheat.webp",
+   "kind": "prop",
+   "cell": [
+    126,
+    101
+   ],
+   "anchor": [
+    63,
+    76
+   ],
+   "scale": 1,
+   "size": [
+    1.2,
+    1.19,
+    0.993
+   ],
+   "name": "Wheat (Kenney Nature Kit)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
   }
  },
  "aliases": {
@@ -11625,6 +12341,30 @@
    "file": "sfx/jet-loop.wav",
    "seconds": 1.5,
    "loop": true,
+   "source": "justzombies-synth"
+  },
+  "sfx.wind.loop": {
+   "file": "sfx/wind-loop.wav",
+   "seconds": 4,
+   "loop": true,
+   "source": "justzombies-synth"
+  },
+  "sfx.lava.loop": {
+   "file": "sfx/lava-loop.wav",
+   "seconds": 3,
+   "loop": true,
+   "source": "justzombies-synth"
+  },
+  "sfx.birds.loop": {
+   "file": "sfx/birds-loop.wav",
+   "seconds": 4,
+   "loop": true,
+   "source": "justzombies-synth"
+  },
+  "sfx.moo": {
+   "file": "sfx/moo.wav",
+   "seconds": 1.3,
+   "loop": false,
    "source": "justzombies-synth"
   }
  },

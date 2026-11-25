@@ -53,7 +53,7 @@
         if (cw > 70) { g.font = `bold ${Math.max(10, Math.round(cw * 0.1))}px "Lilita One", sans-serif`; g.textAlign = 'left'; g.textBaseline = 'top'; const label = area.biome.icon + ' ' + area.biome.name; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,0.75)'; g.strokeText(label, px + 8, py + 7); g.fillStyle = '#fff6d8'; g.fillText(label, px + 8, py + 7); }
       } else {
         // fog of war: the town is still there, just dark (its streets show faintly)
-        g.fillStyle = (x + y) % 2 ? '#17141b' : '#141118'; g.fillRect(px, py, cw + 0.5, ch + 0.5);
+        g.fillStyle = (x + y) % 2 ? '#17141b' : '#141118'; g.fillRect(px, py, cw + 0.5, ch + 0.5); if (Z.REALMS && s.seed) { g.fillStyle = hexA2(Z.REALMS[Z.realmOf(s.seed, x, y)].color, 0.14); g.fillRect(px, py, cw + 0.5, ch + 0.5); }
         roadLines(g, Z, s.seed, x, y, px, py, cw, ch, 'rgba(150,140,170,0.22)');
       }
     }
@@ -732,13 +732,14 @@
     txt(`🧭 ${q.name || ''}: ${P ? P.icon + ' ' + P.name : q.place === 'stash' ? '💰 stash' : q.place === 'door' ? '🚪 lair' : '📣'} · ${path.length - 1} blocks`, V.w / 2, V.h - 18, Math.min(V.w, V.h) < 420 ? 12 : 14, '#ffd23f', 'center');
   }
   function roundRect(g, x, y, w, h, r) { w = Math.max(0, w); r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  const hexA2 = (hex, a) => { const n = parseInt(String(hex).slice(1), 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
   function minimap(g, sim, V) {
     const v = PH.v; if (!v) return;
     const Z = W(), N = v.grid || 9, small = Math.min(V.w, V.h) < 420, cs = small ? 11 : 13, mw = N * cs, x0 = V.w - mw - 14, y0 = 62;
     g.fillStyle = 'rgba(15,10,6,0.75)'; roundRect(g, x0 - 5, y0 - 5, mw + 10, mw * 0.6 + 10 + 0, 6); g.fill();
     const ch = cs * 0.6, ex = new Set((v.explored || []).map((e) => e[0] + ',' + e[1]));
     PH.mm = { x: x0 - 5, y: y0 - 5, w: mw + 10, h: N * ch + 10 };
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const seen = ex.has(x + ',' + y); g.fillStyle = seen ? lookOf(v, x, y).ground[0] : 'rgba(255,255,255,0.06)'; g.fillRect(x0 + x * cs, y0 + y * ch, cs, ch); }
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const seen = ex.has(x + ',' + y); g.fillStyle = seen ? lookOf(v, x, y).ground[0] : Z.REALMS ? hexA2(Z.REALMS[Z.realmOf(v.seed, x, y)].color, 0.16) : 'rgba(255,255,255,0.06)'; g.fillRect(x0 + x * cs, y0 + y * ch, cs, ch); }
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) roadLines(g, Z, v.seed, x, y, x0 + x * cs, y0 + y * ch, cs, ch, ex.has(x + ',' + y) ? 'rgba(40,40,44,0.95)' : 'rgba(200,200,210,0.18)');
     const S0 = v.story, LK = v.locks;
     if (LK) for (let i = 0; i < N * N; i++) { // locked blocks: red, special ones gold-edged
@@ -986,7 +987,7 @@
   // The CC0 art and sound packs (full list with links: public/box/games/trash-assets/CREDITS.md)
   const CREDITS = [
     ['Quaternius', 'Zombie Apocalypse Kit, Toon Shooter Game Kit, Ultimate Monsters, Ultimate Animated Character Pack, Stylized Nature MegaKit, single models on poly.pizza'], ['KayKit (Kay Lousberg)', 'City Builder Bits, RPG Tools Bits, Resource Bits, Skeletons'],
-    ['Kenney', 'Car Kit, City Kits (Commercial, Industrial, Suburban), Retro Urban, Furniture, Food, Blaster, Mini Market, Smoke Particles, Particle Pack, Impact / Interface / Sci-fi / RPG / Digital Audio, Music Jingles'], ['ambientCG', 'ground textures'],
+    ['Kenney', 'Nature Kit, Car Kit, City Kits (Commercial, Industrial, Suburban), Retro Urban, Furniture, Food, Blaster, Mini Market, Smoke Particles, Particle Pack, Impact / Interface / Sci-fi / RPG / Digital Audio, Music Jingles'], ['ambientCG', 'ground textures'],
     ['OpenGameArt.org', 'The Free Firearm Sound Library, Gunshots (kurt), Zombie noises (ianzazz), Zombie moans + Hungry ghoul (Darsycho), Zombies Sound Pack (artisticdude), Rain (Ylmir), engine loops (domasx2), Blood Splatter (Sinestesia)'],
   ];
   const creditsHtml = () => `<ul class="jz-credits">${CREDITS.map(([a, b]) => `<li><b>${esc(a)}</b>: ${esc(b)}</li>`).join('')}<li>All CC0 (public domain). Thank you! Vehicles, the garage door and a few props are our own models.</li></ul>`;
@@ -995,7 +996,7 @@
     const G = BOX.games.trash;
     el.innerHTML = `<div class="jz-title"><canvas id="jz-title-cv"></canvas><div class="jz-title-card">
       <div class="jz-logo"><span class="a">Just</span><span class="b">Zombies</span></div>
-      <p class="jz-tag">Roll up the garage door. The whole town is trash, and the trash is walking.</p>
+      <p class="jz-tag">Roll up the garage door. The whole town is trash, and the trash is walking. Past the last street: cornfields, the frozen north and volcano land. A new map every night.</p>
       ${resume ? `<button class="jz-go" id="jz-resume">▶ Back to town ${esc(code || '')}</button>` : ''}<button class="jz-go ${resume ? 'alt' : ''}" id="jz-go">🧟 Roll up the door</button>
       <div class="jz-row"><button class="jz-small" id="jz-how-b">How to play</button><button class="jz-small" id="jz-cred-b">Credits</button><button class="jz-small" id="jz-back">◀ JustGameBox</button></div>
       <ol class="jz-how" id="jz-how" hidden>${G.how.map((h) => `<li>${esc(h)}</li>`).join('')}</ol><div id="jz-cred" hidden>${creditsHtml()}</div>
@@ -1013,7 +1014,7 @@
     name: 'JustZombies', icon: '🧟',
     // a big game with its own address (/zombies) and title screen; /box/tv?game=trash still works (small-game frame)
     standalone: true, smallToo: true, path: 'zombies', title: titleScreen, credits: CREDITS,
-    about: 'Roll up the garage door and blast your way through an endless zombie town, level up, build your loadout, and find your friends on the map.',
+    about: 'Roll up the garage door and blast your way out of town, across farms, frozen woods and volcano land, level up, build your loadout, and find your friends on the map.',
     how: [
       'Your PHONE is the whole game: turn it sideways. Drag anywhere to move; the small stick bottom-right aims and shoots. Auto-aim shoots the nearest zombie while you just move.',
       'On a computer: WASD or arrows to move, the mouse to aim, hold left click to shoot, Esc to pause.',
@@ -1032,6 +1033,7 @@
       '📣 Call out to the team: places you find show up for everyone, with the route along the streets. Score attack (and Party Mode): the highest score wins; keep the kill streak going for a bigger multiplier.',
       'Garage Defense: every 5 waves a horde night pulls everyone home. Build barricades, turrets, spike strips, sprinkler-flamers and car-alarm decoys, then hold the door. Broken doors cost the town hope.',
       'Hop into shopping carts, push mowers and ride-on mowers (V or the button), grab the rare garbage truck or the even rarer tank. Every ride is on a clock (the ring over it): when it runs out, or it gets wrecked, you hop out. Escort hiding survivors to a shop or the clinic. Rain, fog and heat waves change the fight.',
+      'The map is different every run: a few town blocks, and all around them the countryside (open fields, tall corn that hides zombies, hay bales for cover), the frozen north (slippery ice, frozen zombies that shatter, blizzards) and volcano land (lava burns, ember zombies, eruptions: get out of the red rings!). The Volcano Crater and the Frozen Fortress are the toughest blocks of all.',
       '🚁 Helipads: a few hide around town (some in the tougher, locked blocks). Find one and the whole team sees it on the map. Stand on it, tap FLY and pick ANY block the team has explored: the chopper flies you there and drops you off on a rope. Then the pilot refuels for a while (longer in Score attack).',
       'Rare flying rides: the Gunship (its chain gun and rockets fire down by themselves), the Jetpack (short hops over zombies and walls) and the Hang-Glider (always moving, you shoot as you soar). Up high, walls can’t stop you and zombies can’t reach you, but each is on a clock and has its own health.',
       'Down, out or just watching? Your phone helps: drop supply crates, vote on the next event, or (Score attack) send a horde at the leader. Scrap from every night unlocks classes, starting weapons, outfits and harder tiers (not in Party Mode).',

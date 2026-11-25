@@ -12,13 +12,13 @@
   if (typeof module === 'object' && module.exports) module.exports = M; else root.TZP = M;
 })(typeof self !== 'undefined' ? self : this, function (W) {
   const PLACES = {
-    market: { name: 'Corner Market', icon: '🏪', color: '#e0a030', where: ['suburb', 'roof', 'gas', 'mall', 'lot'], n: 4, says: ['Cash only. Zombie cash counts.', 'Hot dogs are three days old. Still good!', 'No shirt, no shoes, no brains? Still served.'] },
-    armor: { name: 'Army Surplus', icon: '🦺', color: '#6b8a4a', where: ['roof', 'lot', 'junkyard', 'docks', 'gas'], n: 3, says: ['Vests, helmets, boom-boom. All slightly used.', 'Everything must go. Including me, eventually.', 'That plate stopped a bullet once. Probably.'] },
-    clinic: { name: 'Free Clinic', icon: '🏥', color: '#e8483a', where: ['roof', 'school', 'mall', 'suburb'], n: 3, says: ['Say ahh. Not you, the zombie.', 'Take two of these and don’t get bitten.', 'The doctor is in. The doctor is nervous.'] },
-    tinker: { name: 'Street Tinkerer', icon: '🔧', color: '#c9a43a', where: ['junkyard', 'landfill', 'carnival', 'lot', 'sewer'], n: 3, up: [1, 5], says: ['Duct tape fixes guns. And feelings.', 'Hand it over, I’ll make it go pew-er.'] },
-    gunsmith: { name: 'Gunsmith', icon: '🛠️', color: '#9a9fa6', where: ['roof', 'gas', 'docks', 'mall'], n: 2, up: [5, 8], says: ['Real tools, real work. Level five and up.', 'That thing’s been through the wars. Let’s fix that.'] },
+    market: { name: 'Corner Market', icon: '🏪', color: '#e0a030', where: ['suburb', 'roof', 'gas', 'mall', 'lot', 'farm', 'lodge'], n: 4, says: ['Cash only. Zombie cash counts.', 'Hot dogs are three days old. Still good!', 'No shirt, no shoes, no brains? Still served.'] },
+    armor: { name: 'Army Surplus', icon: '🦺', color: '#6b8a4a', where: ['roof', 'lot', 'junkyard', 'docks', 'gas', 'lodge', 'snow'], n: 3, says: ['Vests, helmets, boom-boom. All slightly used.', 'Everything must go. Including me, eventually.', 'That plate stopped a bullet once. Probably.'] },
+    clinic: { name: 'Free Clinic', icon: '🏥', color: '#e8483a', where: ['roof', 'school', 'mall', 'suburb', 'farm', 'lodge'], n: 3, says: ['Say ahh. Not you, the zombie.', 'Take two of these and don’t get bitten.', 'The doctor is in. The doctor is nervous.'] },
+    tinker: { name: 'Street Tinkerer', icon: '🔧', color: '#c9a43a', where: ['junkyard', 'landfill', 'carnival', 'lot', 'sewer', 'farm', 'fields'], n: 3, up: [1, 5], says: ['Duct tape fixes guns. And feelings.', 'Hand it over, I’ll make it go pew-er.'] },
+    gunsmith: { name: 'Gunsmith', icon: '🛠️', color: '#9a9fa6', where: ['roof', 'gas', 'docks', 'mall', 'ash', 'lodge'], n: 2, up: [5, 8], says: ['Real tools, real work. Level five and up.', 'That thing’s been through the wars. Let’s fix that.'] },
     master: { name: 'Master Armorer', icon: '⚜️', color: '#ffd23f', where: null, n: 1, up: [8, 10], far: true, says: ['Only the finest work. Levels eight to ten.', 'You came a long way. So did that weapon.'] },
-    forge: { name: 'Scrapyard Crucible', icon: '🔥', color: '#ff6a2a', where: ['junkyard', 'sewer', 'docks', 'landfill'], n: 1, far: true, says: ['A level-ten weapon goes in. Something better comes out.', 'Bring a crucible core. The fire needs feeding.'] },
+    forge: { name: 'Scrapyard Crucible', icon: '🔥', color: '#ff6a2a', where: ['ash', 'lavafield', 'junkyard', 'sewer', 'docks', 'landfill'], n: 1, far: true, says: ['A level-ten weapon goes in. Something better comes out.', 'Bring a crucible core. The fire needs feeding.'] },
     truck: { name: 'Roaming Trader', icon: '🚚', color: '#c37bff', says: ['Fresh off the truck! Well, fresh-ish.', 'I don’t stay long. Zombies scratch the paint.'] },
     camper: { name: 'Survivor Camper', icon: '🚐', color: '#8ab4d8', says: ['Parked here for one wave. Quick, browse!', 'Had to move the van. Smelled like zombie.'] },
   };

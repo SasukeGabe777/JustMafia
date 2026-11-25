@@ -53,8 +53,8 @@ test('areas: roads, sidewalks and the landmark spot stay clear; home blocks have
       assert(o.x >= W.TILE - 30 && o.y >= W.TILE - 30 && o.x + o.w <= W.AW - W.TILE + 30 && o.y + o.h <= W.AH - W.TILE + 30, 'border ring clear');
     }
     assert.equal(!!a.garage, k % 5 === 0); if (a.garage) { assert(!a.spot); for (const q of a.roads) assert(!hit(a.garage, q), 'garage off the road'); } else assert(a.spot);
-    assert(a.obstacles.filter((o) => o.kind !== 'wall').length >= 6, 'something to hide behind');
-    assert(a.obstacles.some((o) => o.kind === 'bld') || ['lot', 'landfill', 'park', 'carnival', 'junkyard'].includes(a.biome.key), 'buildings in the built-up districts: ' + a.biome.key);
+    assert(a.obstacles.filter((o) => o.kind !== 'wall').length >= 3 && a.obstacles.filter((o) => o.kind !== 'wall').length + (a.soft || []).length >= 6, 'something to hide behind (corn counts as cover in the fields): ' + a.biome.key);
+    assert(a.obstacles.some((o) => o.kind === 'bld') || ['lot', 'landfill', 'park', 'carnival', 'junkyard'].includes(a.biome.key) || a.biome.realm !== 'city', 'buildings in the built-up districts: ' + a.biome.key);
   }
 });
 test('level-up offers: 3 cards, one Attack + one Defense + one Special; nothing ever maxes out', () => {
@@ -229,9 +229,9 @@ test('Regular: a locked gate blocks the way until the team has the kills (it sho
   const { room, ps: [a, b] } = story(2); room.start(); const g = room.game;
   assert(g.plan && g.lockPlan && g.story.tier === 0); assert(g.story.beats.length === 1, 'the radio says hello');
   const R = g.runs.get(a.id), nbs = (c) => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [c[0] + dx, c[1] + dy]).filter((n) => W.roadBetween(g.seed, c, n));
-  const target = (() => { for (const n1 of nbs(R.cell)) if (!g.locked(n1[0], n1[1])) for (const n2 of nbs(n1)) if (g.locked(n2[0], n2[1]) && !g.lockPlan.kind[n2[1] * W.GRID + n2[0]]) return [n2[0], n2[1], n1]; return null; })();
+  const target = (() => { for (const n1 of nbs(R.cell)) if (!g.locked(n1[0], n1[1])) for (const n2 of nbs(n1)) if (g.locked(n2[0], n2[1]) && !g.lockPlan.kind[n2[1] * W.GRID + n2[0]]) return [n2[0], n2[1], n1]; for (let y = 0; y < W.GRID; y++) for (let x = 0; x < W.GRID; x++) { if (g.locked(x, y)) continue; for (const n1 of nbs([x, y])) if (g.locked(n1[0], n1[1]) && !g.lockPlan.kind[n1[1] * W.GRID + n1[0]]) { R.cell = [x, y]; return [n1[0], n1[1], null]; } } return null; })(); // (the map varies: stand next to one)
   assert(target, 'a locked block two road steps away');
-  assert(room.act(a, { op: 'enter', x: target[2][0], y: target[2][1] }).ok, 'the blocks by the garage are open');
+  if (target[2]) assert(room.act(a, { op: 'enter', x: target[2][0], y: target[2][1] }).ok, 'the blocks by the garage are open');
   const need = g.reqAt(target[0], target[1]); assert.equal(need, ST.lockNeed(g.lockPlan.req[target[1] * W.GRID + target[0]], 2), 'more players, more kills');
   const locked = room.act(a, { op: 'enter', x: target[0], y: target[1] }); assert.equal(locked.ok, false); assert.match(locked.error, new RegExp(`locked: 0 / ${need} team kills`));
   R.kills = need - 5; g.lockCheck(); assert(g.locked(target[0], target[1]));
@@ -302,7 +302,7 @@ function sandbox() {
   let now = 0; const reports = [], lives = [], events = [];
   const ctx = { console, Math, Date, JSON, Object, Array, Map, Set, Number, String, Promise, Infinity, isFinite, performance: { now: () => now } };
   ctx.window = ctx; ctx.self = ctx; vm.createContext(ctx);
-  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-story.js', 'trash-boss.js', 'trash-shop.js', 'trash-play.js', 'trash-arms.js', 'trash-fight.js', 'trash-extra.js', 'trash-more.js', 'trash-gates.js', 'trash-heli.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
+  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-story.js', 'trash-boss.js', 'trash-shop.js', 'trash-play.js', 'trash-arms.js', 'trash-fight.js', 'trash-extra.js', 'trash-more.js', 'trash-gates.js', 'trash-heli.js', 'trash-biome.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
   const make = (o = {}) => new ctx.TZSim.Sim({ seed: 42, homes: [[4, 4]], me: { id: o.id || 'me', name: 'Me', color: '#fff' }, settings: { diff: 'normal', aim: 'on', xp: 'shared', ...(o.settings || {}) }, restore: o.restore || { cell: [4, 4], home: [4, 4], wave: 1, run: 1 },
     report: (m) => { reports.push(m); return Promise.resolve({ ok: true }); }, live: (m) => lives.push(m), on: (k, d) => events.push([k, d]), people: () => null });
   const step = (s, sec, I = {}, pick = true) => { for (let t = 0; t < sec; t += 1 / 60) { now += 1000 / 60; if (pick && s.cards) s.pick(0); s.update(1 / 60, I); } };
@@ -909,7 +909,7 @@ test('kill locks: ordinary blocks open at low counts, special ones (lair, key va
     for (const [k2, t] of Object.entries(PL.places(seed))) if (t === 'master' || t === 'forge') { tot++; if (S0.kind[k2.split(',')[1] * 9 + +k2.split(',')[0]] === 'shop') shops++; }
     const P = ST.plan(seed, [[4, 4]]); for (const [n, id] of ST.KEYS.entries()) assert.equal(P.finds[S0.keys[n].join()], id, 'the key pieces sit in the key vaults');
   }
-  assert.deepEqual([...kinds].sort(), ['den', 'key', 'lair', 'shop', 'vault']); assert(shops / tot > 0.8, 'the best shops are behind big gates: ' + shops + '/' + tot);
+  assert.deepEqual([...kinds].sort(), ['crater', 'den', 'fortress', 'key', 'lair', 'shop', 'vault']); assert(shops / tot > 0.8, 'the best shops are behind big gates: ' + shops + '/' + tot);
   assert(ST.lockNeed(100, 4) > ST.lockNeed(100, 2) && ST.lockNeed(100, 2) > ST.lockNeed(100, 1)); assert.equal(ST.lockNeed(100, 1), 100);
 });
 test('kill locks on the server (every mode): gates show kills / need, the TV and phones get the counts, specials stay a mystery until found, the open news names them', () => {
@@ -1183,6 +1183,55 @@ test('the hero holds the gun: equip moves (crouch-and-grab, catch, swap, quick g
   assert(k0.G[0] < k1.G[0] - 5 && k0.ang < k1.ang, 'recoil: the hands go back and the muzzle climbs');
   const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-fight.js'), 'utf8'); assert(src.includes('if (this._iso) return; // (the iso view: no little guns floating'), 'no stray floating gun icons');
   assert(fs.readFileSync(path.join(__dirname, '..', 'public', 'avatar.js'), 'utf8').includes('if (!o.noArms) for (const s of [-1, 1])'), 'drawChar can leave the arms to the game (default unchanged)');
+});
+
+// ---------------- the wild realms (biomes) ----------------
+test('realms: every map is a seeded mix of a few town blocks and countryside, the frozen north and volcano land (city a minority); the crater and the fortress; same seed, same map (co-op phones agree)', () => {
+  let cityMax = 0, cityMin = 99;
+  for (let seed = 1; seed <= 220; seed++) {
+    const cnt = {}, keys = new Set(); for (let y = 0; y < W.GRID; y++) for (let x = 0; x < W.GRID; x++) { const R0 = W.realmOf(seed, x, y); cnt[R0] = (cnt[R0] || 0) + 1; keys.add(W.biomeOf(seed, x, y).key); }
+    for (const k of ['city', 'country', 'frozen', 'volcano']) assert(cnt[k] >= 6, seed + ': ' + k + ' ' + cnt[k]);
+    assert(cnt.city <= 0.3 * W.GRID * W.GRID, seed + ': the town is a minority: ' + cnt.city); cityMax = Math.max(cityMax, cnt.city); cityMin = Math.min(cityMin, cnt.city);
+    assert(keys.size >= 9, seed + ': lots of different areas: ' + keys.size);
+    assert([...keys].includes('crater') && [...keys].includes('fortress'), seed + ': a crater and a fortress');
+    // no dead ends: every block has at least two roads and the whole map is connected by road
+    const d = W.roadDist(seed, [[0, 0]]); assert(d.every(Number.isFinite), seed + ': connected');
+    for (let y = 0; y < W.GRID; y++) for (let x = 0; x < W.GRID; x++) assert(Object.values(W.cellOf(seed, x, y).side).filter(Boolean).length >= 2, seed + ' ' + x + ',' + y + ': at least 2 exits');
+  }
+  assert.equal(JSON.stringify(W.town(77).cells.map((c) => c.realm + c.d)), JSON.stringify(W.town(77).cells.map((c) => c.realm + c.d)), 'deterministic');
+  assert.notEqual(JSON.stringify(W.town(77).cells.map((c) => c.realm)), JSON.stringify(W.town(78).cells.map((c) => c.realm)), 'every run is different');
+  console.log('    (town blocks per map: ' + cityMin + '-' + cityMax + ' of 81)');
+});
+test('wild areas: lava rivers with rock bridges at the roads, ice sheets and the frozen lake, corn patches you walk through; roads and the landmark spot stay clear', () => {
+  let lava = 0, ice = 0, corn = 0;
+  for (let seed = 1; seed <= 40; seed++) for (let y = 0; y < W.GRID; y++) for (let x = 0; x < W.GRID; x++) {
+    const a = W.genArea(seed, x, y, false), hit = (o, q) => o.x < q.x + q.w && o.x + o.w > q.x && o.y < q.y + q.h && o.y + o.h > q.y;
+    for (const h of a.hazards) { if (h.kind === 'lava') { lava++; assert(a.biome.realm === 'volcano'); for (const q of a.roads) assert(!hit(h, q), 'no lava on the road (a rock bridge)'); } else { ice++; assert(a.biome.realm === 'frozen'); } }
+    for (const o of a.soft) { assert(o.soft); if (o.kind === 'corn') corn++; }
+    for (const o of a.obstacles) { if (o.kind === 'wall') continue; for (const q of a.roads) assert(!hit(o, q), 'nothing on the road'); }
+  }
+  assert(lava > 200 && ice > 50 && corn > 200, `hazards: lava ${lava}, ice ${ice}, corn ${corn}`);
+  const shop = require('../public/box/games/trash-shop'); let wildShops = 0; for (let seed = 1; seed <= 30; seed++) for (const k of Object.keys(shop.places(seed))) { const [x, y] = k.split(',').map(Number); if (W.realmOf(seed, x, y) !== 'city') wildShops++; } assert(wildShops > 30, 'shops out in the wild too: ' + wildShops);
+  const S2 = require('../public/box/games/trash-story'); let sp = 0; for (let seed = 1; seed <= 30; seed++) { const L = S2.locks(seed, [W.spawnCell(seed, [], 0)], { mode: 'endless' }); if (L.kind.includes('crater')) sp++; if (L.kind.includes('fortress')) sp++; } assert(sp > 30, 'the crater and the fortress are big kill-locked specials: ' + sp + '/60');
+});
+test('wild gameplay: ice keeps your momentum, lava burns you and the zombies (not when you fly), frozen zombies are slower + tougher and shatter, ember zombies hit harder, the volcano erupts', () => {
+  const S = sandbox(); let seed = 1, cell = null;
+  const find = (pred) => { for (let sd = 1; sd < 60; sd++) for (let y = 0; y < W.GRID; y++) for (let x = 0; x < W.GRID; x++) { const a = W.genArea(sd, x, y, false); if (pred(a)) return [sd, [x, y], a]; } return null; };
+  // lava
+  let [sd, c, a] = find((q) => q.hazards.some((h) => h.kind === 'lava')); seed = sd; cell = c;
+  const s = S.make({ restore: { cell, home: [4, 4], wave: 3, run: 1 } }); s.seed = seed; s.enterArea(cell[0], cell[1], null); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.breakT = 9999; s.spawnCd = 999;
+  const L = s.area.hazards.find((h) => h.kind === 'lava'); s.p.x = L.x + L.w / 2; s.p.y = L.y + L.h / 2; const hp0 = s.p.hp; S.step(s, 1, {}); assert(s.p.hp < hp0 - 8, 'lava burns: ' + hp0 + ' -> ' + s.p.hp);
+  const z = s.makeZ('walker', L.x + L.w / 2, L.y + L.h / 2); z.speed = 0; z.x = L.x + L.w / 2; z.y = L.y + L.h / 2; const zh = z.hp; S.step(s, 0.6, {}); assert(z.hp < zh || z.hp <= 0, 'zombies burn in it'); assert.equal(z.variant, 'ember', 'volcano land: ember zombies');
+  // eruption
+  s.p.hp = s.S.mhp; s.p.inv = 1e9; s.erupt = { t: 0.01, ph: 'wait' }; S.step(s, 0.1); assert.equal(s.erupt.ph, 'warn', 'the warning rings'); assert(s.erupt.spots.length >= 5); const list = []; s.extraStanding(list); S.step(s, 3.2); assert.equal(s.erupt.ph, 'wait', 'fireballs came down');
+  // ice
+  [sd, c] = find((q) => q.hazards.some((h) => h.kind === 'ice')); const t = S.make({ restore: { cell: c, home: [4, 4], wave: 3, run: 1 } }); t.seed = sd; t.enterArea(c[0], c[1], null); t.phase = 'play'; t.z.length = 0; t.cleared = true; t.breakT = 9999; t.spawnCd = 999; t.p.inv = 1e9;
+  const I0 = t.area.hazards.find((h) => h.kind === 'ice'); t.p.x = I0.x + I0.w / 2; t.p.y = I0.y + I0.h / 2; t.p.vx = 300; t.p.vy = 0; S.step(t, 0.25, {}); assert(t.p.vx > 120, 'you slide on: ' + t.p.vx);
+  const off = S.make({ restore: { cell: [4, 4], home: [4, 4], wave: 3, run: 1 } }); off.phase = 'play'; off.p.x = 300; off.p.y = 300; off.p.vx = 300; off.p.vy = 0; S.step(off, 0.25, {}); assert(Math.abs(off.p.vx) < t.p.vx * 0.5, 'off the ice you stop far sooner: ' + off.p.vx);
+  const fz = t.makeZ('walker', t.p.x + 300, t.p.y); assert.equal(fz.variant, 'frost'); const base = S.make({ restore: { cell: [4, 4], home: [4, 4], wave: 3, run: 1 } }).makeZ('walker', 100, 100); const sp0 = t.spec || W.waveSpec(t.wave, 1, 'normal'); assert(fz.speed <= W.ZOMBIES.walker.speed * sp0.speedMul * 1.15 * 0.8 + 1e-6 && fz.mhp > W.ZOMBIES.walker.hp * sp0.hpMul * 1.3, 'frozen: slower, tougher'); void base;
+  const n0 = t.fx.length; t.damageZ(fz, 1e6, 'me'); assert(t.shattered > 0 && t.fx.length > n0, 'they shatter');
+  t.wxk = 'rain'; assert(t.blizzard(), 'rain up north is a blizzard');
+  for (const f of ['play.html', 'tv.html']) assert(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', f), 'utf8').includes('trash-biome.js'), f + ' loads it');
 });
 
 Promise.all(pending).then(() => console.log(`\n${passed} JustZombies tests passed.`));

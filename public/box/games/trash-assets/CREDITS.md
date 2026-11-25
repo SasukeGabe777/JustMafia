@@ -107,4 +107,10 @@ Asphalt012, Asphalt015, Concrete034, Grass001, Grass004, Ground037, Ground054, G
 | What | How | Files |
 |---|---|---|
 | Rescue helicopter, gunship (with a spinning-rotor fly animation), jetpack, hang-glider, helipad | procedural three.js models (`procModel` in `tools/trash-art-render/iso.js`, jobs in `jobs-heli.js`), rendered in the toon style with ink lines | props/heli-rescue.webp, props/heli-gunship.webp, props/fly-jetpack.webp, props/fly-glider.webp, props/heli-pad.webp |
-| Helicopter rotor loop, jetpack roar loop | synthesized from filtered noise (`tools/trash-art-render/synth-sfx.js`), no samples | sfx/heli-rotor-loop.wav, sfx/jet-loop.wav |
+| Helicopter rotor loop, jetpack roar loop, wind, lava, birds, a cow | synthesized (filtered noise, oscillators: `tools/trash-art-render/synth-sfx.js`), no samples | sfx/heli-rotor-loop.wav, sfx/jet-loop.wav, sfx/wind-loop.wav, sfx/lava-loop.wav, sfx/birds-loop.wav, sfx/moo.wav |
+| Barn, grain silo, hay bale, scarecrow, log cabin, ski lodge, steam vent, the volcano | procedural three.js models (`jobs-biome.js`), toon style | props/bld-barn.webp, props/prop-silo.webp, props/prop-haybale.webp, props/prop-scarecrow.webp, props/bld-cabin.webp, props/bld-lodge.webp, props/prop-vent.webp, props/bld-volcano.webp |
+| Snow, ash ground tiles; lava and ice on the floor | painted in code at run time (`trash-iso.js` procTile, `trash-art.js` hazardsFloor) | (none) |
+
+## Kenney Nature Kit (CC0)
+
+Author: **Kenney** (www.kenney.nl), Nature Kit, CC0 (License.txt in the pack). Used (some recoloured): snowy pines, snow rocks, ice spikes, log pile, tent, campfire, tall corn, wheat, farm fence, lava rocks, basalt columns. Also the Kenney Car Kit tractor (an old tractor in the fields) and the Quaternius Stylized Nature dead tree (darkened: charred trees).
