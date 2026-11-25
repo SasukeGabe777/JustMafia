@@ -672,6 +672,10 @@ async function setup(browser, game, settings = {}) {
     await ph.until(`!!document.querySelector('[data-ping="here"]')`, 'call-out menu'); await ph.eval(`document.querySelector('[data-ping="here"]').click(); true`);
     await tv.until(`/Over here/.test(document.querySelector('#tz-side').textContent)`, 'the call-out on the TV feed', 6000);
     // a weapon fires by itself; the score shows on the TV
+    // the iso view: where a shot meets each zombie (its collision ring at chest height) is on the body that is drawn
+    await ph.eval(`(() => { const s = TZ_DEBUG.sim(); s.z.length = 0; for (const k of ['walker', 'runner', 'bloater']) { const z = s.spawnOne(k); z.x = s.p.x + 160; z.y = s.p.y + (k === 'runner' ? -80 : k === 'bloater' ? 90 : 0); z.speed = 0; } return true; })()`); await wait(400);
+    await ph.until(`TZ_DEBUG.hitCheck().length >= 24`, 'bodies measured', 15000);
+    assert.deepEqual(await ph.eval(`TZ_DEBUG.hitCheck().filter((c) => !c.ok).map((c) => c.type + '@' + c.a)`), [], 'every hit point lands on the drawn body');
     await ph.eval(`TZ_DEBUG.weapon('smg'); TZ_DEBUG.spawn(3); true`); await wait(1500); assert(await sim('s.weapons.length === 1 && s.killCount >= 0'));
     await tv.until(`!!document.querySelector('#tz-map') && /Tess/.test(document.querySelector('#tz-side').textContent) && /Wave 2/.test(document.querySelector('#tz-side').textContent)`, 'the TV map shows Tess on wave 2', 10000);
     await wait(800); await ph.shot('box-trash-new-area'); await tv.shot('box-trash-tv-map');

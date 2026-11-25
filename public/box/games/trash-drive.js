@@ -53,7 +53,8 @@
     const W0 = fr.c.width, H0 = fr.c.height; tx.offset.set(fr.px / W0, 1 - (fr.py + fr.ph) / H0); tx.repeat.set(fr.pw / W0, fr.ph / H0);
     const k = P.sc * scale / 0.98; sp.scale.set(fr.w * k, fr.h * k, 1); sp.center.set(fr.ax / fr.w, 1 - fr.ay / fr.h);
   }
-  function makeSprite() { const m = new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.2, fog: true }); const sp = new THREE.Sprite(m); sp.userData = {}; return sp; }
+  // (alphaTest 0.5: clean cut-outs; the sheets' baked ground shadow, ~0.3-0.4 alpha, is left out in 3D)
+  function makeSprite() { const m = new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.5, fog: true }); const sp = new THREE.Sprite(m); sp.userData = {}; return sp; }
   function build(sim) {
     const Z = window.TZW, area = sim.area, I = window.TZI, E = I.E, AW = Z.AW, AH = Z.AH;
     const scene = new THREE.Scene(), WX = sim._wx || {}, night = WX.tod === 'night', dusk = WX.tod === 'dusk';
@@ -137,6 +138,7 @@
     const dt = Math.min(0.1, Math.max(0, t - (S.lt == null ? t : S.lt))); S.lt = t;
     for (const z of sim.z) {
       if (n >= pool.length) break; if (!(z.hp > 0) || !near(z.x, z.y, 1000)) continue;
+      if ((z.x - P.x) * (z.x - P.x) + (z.y - P.y) * (z.y - P.y) < 80 * 80) continue; // (right at the bumper: not drawn, no blurry giant on the glass)
       const key = I.zKey(z), Pk = I.need(key); if (!Pk) continue;
       const A = I.zState(z, dt, sim.dead ? null : P), an = Pk.anims.static ? 'static' : I.animName(Pk, A.an), fi = Pk.anims.static ? 0 : I.animFrame(Pk, an, A.ft);
       const phi = A.an === 'attack' ? Math.atan2(P.y - z.y, P.x - z.x) : Math.atan2(A.vy || 0.01, A.vx || 0.01);

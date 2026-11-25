@@ -507,7 +507,7 @@
   proto.extraStanding = function (list) {
     baseStanding.call(this, list); if (!this._mo) return;
     const kp = this.kp(), near = this.nearVehicle();
-    if (this.boarding) { const v = this.boarding.v; list.push({ k: 'veh', v, x: v.x, y: v.y - 1 }); } // the ride you're climbing into
+    if (this.boarding) { const v = this.boarding.v; list.push({ k: 'veh', v, x: v.x, y: v.y, dz: -90 }); } // the ride you're climbing into (drawn under you: you climb on)
     if (this.parked) { const v = this.parked, lab = (g) => label(g, near ? '🚪 TAP ' + X.VEHICLES[v.kind].icon + ' TO GET IN' : X.VEHICLES[v.kind].icon + ' ' + X.VEHICLES[v.kind].name + ' · ' + Math.round(X.VEHICLES[v.kind].time || 0) + ' s', v.x, v.y - 96, near ? '#9cff5a' : '#ffe9a8', near ? 20 : 16); list.push({ k: 'veh', v, x: v.x, y: v.y, label: lab, draw: (g, t) => { drawVehicle(g, v.kind, v.x, v.y, v.face || 1, t, false, v); lab(g); } }); }
     if (this.hiding) { const h = this.hiding; list.push({ k: 'npc', n: h, hiding: true, x: h.x, y: h.y, labels: (g, t) => npcLabels(g, h, t, true), draw: (g, t) => { drawNpc(g, h, kp, t, true); } }); }
     if (this.npc) { const N = this.npc; list.push({ k: 'npc', n: N, x: N.x, y: N.y, labels: (g, t) => npcLabels(g, N, t, false), draw: (g, t) => drawNpc(g, N, kp, t, false) }); }

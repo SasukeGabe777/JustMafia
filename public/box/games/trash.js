@@ -511,18 +511,21 @@
     // top-centre: wave + zombies left
     const left = sim.spec ? Math.max(0, sim.spec.target - sim.waveKills) : 0;
     txt(`WAVE ${sim.wave}`, w / 2, 22, small ? 20 : 26, '#ffd23f', 'center');
-    txt(sim.cleared ? '✅ Clear: shop or walk on' : `🧟 ${Math.max(left, sim.z.length)} left`, w / 2, small ? 44 : 50, small ? 13 : 16, sim.cleared ? '#7dff6a' : '#fff', 'center');
     const st = sim.story, ng = sim.nextGate ? sim.nextGate() : null, gate = ng ? `🔒 ${ng.have} / ${ng.need} kills${ng.here ? ' (gate here)' : ''}` : sim.locks ? '🔓 every gate open' : '';
-    // the break between waves: a big countdown; at zero the next wave starts here by itself
+    // the break between waves: the countdown sits in the second row (where 'N left' was), a ring with
+    // NEXT WAVE IN beside it, so nothing stacks on the lines below on a small phone; at zero the next wave
+    // starts here by itself. (Garage Defense's build phase uses the same clock: HORDE IN.)
     const bT = sim.cleared && sim.breakT != null && !sim.build && !sim.dead ? sim.breakT : sim.build && sim.build.endsAt ? Math.max(0, (sim.build.endsAt - Date.now()) / 1000) : null;
     if (bT != null && sim.phase === 'play') {
-      const R0 = small ? 26 : 32, cx = w / 2, cy = (small ? 112 : 132) + (st || gate ? 18 : 0), hot = bT <= 5, n = Math.ceil(bT), full = sim.build ? 45 : (window.TZSim.BREAK_S || 30);
-      g.fillStyle = 'rgba(15,10,6,0.78)'; g.beginPath(); g.arc(cx, cy, R0 + 6, 0, TAU); g.fill();
-      g.strokeStyle = 'rgba(255,255,255,0.16)'; g.lineWidth = 6; g.beginPath(); g.arc(cx, cy, R0, 0, TAU); g.stroke();
+      const R0 = small ? 16 : 22, hot = bT <= 5, n = Math.ceil(bT), full = sim.build ? 45 : (window.TZSim.BREAK_S || 30), fs0 = small ? 13 : 16;
+      const lab = sim.build ? '🔨 HORDE IN' : '✅ NEXT WAVE IN'; g.font = font(fs0); const tw = g.measureText(lab).width;
+      const cy = small ? 52 : 62, cx = w / 2 + (tw + 10) / 2, lx = cx - R0 - 10;
+      g.fillStyle = 'rgba(15,10,6,0.78)'; g.beginPath(); g.arc(cx, cy, R0 + 5, 0, TAU); g.fill();
+      g.lineWidth = small ? 4 : 5; g.strokeStyle = 'rgba(255,255,255,0.16)'; g.beginPath(); g.arc(cx, cy, R0, 0, TAU); g.stroke();
       g.strokeStyle = hot ? (Math.sin(sim.t * 14) > 0 ? '#ff4a3a' : '#ffb02e') : sim.build ? '#ffb02e' : '#9cff5a'; g.beginPath(); g.arc(cx, cy, R0, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, bT / full)); g.stroke();
-      const pulse = hot ? 1 + 0.12 * Math.max(0, Math.sin(sim.t * 12)) : 1; g.save(); g.translate(cx, cy + 1); g.scale(pulse, pulse); txt(String(n), 0, 0, small ? 26 : 32, hot ? '#ff6a5a' : '#fff6d8', 'center'); g.restore();
-      txt(sim.build ? '🔨 HORDE IN' : 'NEXT WAVE IN', cx, cy - R0 - 14, small ? 11 : 13, hot ? '#ff8c6a' : '#ffe9a8', 'center');
-    }
+      const pulse = hot ? 1 + 0.15 * Math.max(0, Math.sin(sim.t * 12)) : 1; g.save(); g.translate(cx, cy + 1); g.scale(pulse, pulse); txt(String(n), 0, 0, small ? 19 : 24, hot ? '#ff6a5a' : '#fff6d8', 'center'); g.restore();
+      txt(lab, lx, cy, fs0, hot ? '#ff8c6a' : sim.build ? '#ffb02e' : '#7dff6a', 'right');
+    } else txt(sim.cleared ? '✅ Clear: shop or walk on' : `🧟 ${Math.max(left, sim.z.length)} left`, w / 2, small ? 44 : 50, small ? 13 : 16, sim.cleared ? '#7dff6a' : '#fff', 'center');
     if (st || gate) txt(`${st ? `🗝️ ${st.keys}/3   🗺️ ${st.maps}/2   ` : ''}${gate}`, w / 2, small ? 80 : 94, small ? 12 : 14, '#ffe9a8', 'center');
     if (st) {
       const fb = sim.z.find((z) => z.fb);
@@ -536,7 +539,14 @@
     if (sim.down) { const a = 0.5 + 0.5 * Math.sin(sim.t * 6); g.fillStyle = `rgba(120,0,0,${0.25 + 0.1 * a})`; g.fillRect(0, 0, w, h); txt('🆘 YOU’RE DOWN', w / 2, h * 0.4, small ? 30 : 40, '#ff8c6a', 'center'); txt(`A friend can pick you up: ${Math.ceil(sim.down.t)} s`, w / 2, h * 0.4 + 34, small ? 15 : 18, '#fff', 'center'); }
     route(g, sim, V, txt);
     // the banner
-    if (sim.banner) { const a = Math.min(1, sim.banner.t * 2), by2 = h * 0.24; g.globalAlpha = a; txt(sim.banner.text, w / 2, by2, small ? 34 : 46, '#ffd23f', 'center'); txt(sim.banner.sub, w / 2, by2 + (small ? 30 : 40), small ? 14 : 18, '#fff', 'center'); g.globalAlpha = 1; }
+    // the big banner (AREA CLEAR!, a new weapon, a combo...): below the top HUD rows, on a dark backing so both stay readable
+    if (sim.banner) {
+      const a = Math.min(1, sim.banner.t * 2), T0 = small ? 24 : 40, T2 = small ? 12 : 17, by2 = Math.max(h * 0.24, (small ? 102 : 128) + T0 / 2);
+      g.font = font(T0); const T1 = Math.max(16, T0 * Math.min(1, (w - 50) / Math.max(1, g.measureText(sim.banner.text).width))); g.font = font(T1); const w1 = g.measureText(sim.banner.text).width; g.font = font(T2); const w2 = sim.banner.sub ? g.measureText(sim.banner.sub).width : 0;
+      const bw = Math.min(w - 20, Math.max(w1, w2) + 36), bh = T1 + (sim.banner.sub ? T2 + 14 : 0) + 16;
+      g.globalAlpha = a * 0.72; g.fillStyle = 'rgba(15,10,6,0.85)'; roundRect(g, (w - bw) / 2, by2 - T1 / 2 - 8, bw, bh, 14); g.fill();
+      g.globalAlpha = a; txt(sim.banner.text, w / 2, by2, T1, '#ffd23f', 'center'); if (sim.banner.sub) txt(sim.banner.sub, w / 2, by2 + T1 / 2 + T2 / 2 + 8, T2, '#fff', 'center'); g.globalAlpha = 1;
+    }
     // control hints
     if (PH.hint > 0 && !PH.fp) { PH.hint -= dt; g.globalAlpha = Math.min(1, PH.hint); txt(isTouch() ? 'Drag anywhere to move · right stick to aim' + (sim.set.aim !== 'off' ? ' (or just move: it auto-aims)' : '') : 'WASD to move · mouse to aim · hold click to shoot · Esc to pause', w / 2, h - 22, small ? 12 : 15, '#ffe9a8', 'center'); g.globalAlpha = 1; }
     // sticks (touch)

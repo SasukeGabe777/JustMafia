@@ -84,6 +84,8 @@
           if (x1 < 0) { x0 = y0 = 0; x1 = y1 = 1; }
           const fr = { sx: (a.rect ? a.rect[0] : f * cw) + x0, sy: (a.rect ? a.rect[1] : row * ch) + y0, w: x1 - x0 + 1, h: y1 - y0 + 1, ax: a.anchor[0] - x0, ay: a.anchor[1] - y0 };
           list.push(fr); items.push(fr);
+          // a held gun: where its lowest quarter sits (the grip / stock hang below the back end) tells which way it points
+          if (an === 'spin' && (a.kind === 'weapon' || a.kind === 'pickup') && x1 >= 0) { let sx = 0, n2 = 0; const yq = y1 - Math.max(1, Math.round((y1 - y0) * 0.3)); for (let y = yq; y <= y1; y++) { const o = (y * rw + f * cw) * 4 + 3; for (let x = x0; x <= x1; x++) if (d[o + x * 4] > cut) { sx += x; n2++; } } fr.lx = n2 ? sx / n2 - x0 : fr.w / 2; }
           // the body's size (cell px): height above the feet, width across the chest (for shots and hit boxes)
           if (f === 0 && dir === (A.rows.S != null ? 'S' : Object.keys(A.rows)[0]) && (an === 'walk' || (!out.body && (an === 'static' || an === 'idle' || an === 'spin')))) {
             const top = a.anchor[1] - y0, ty = Math.round(a.anchor[1] - top * 0.55); let bx0 = cw, bx1 = -1;
@@ -442,7 +444,7 @@
     for (const gt of gates) { gt.k = 'gate'; gt._d = gt.x + gt.y + 1; list.push(gt); }
     const ext = sim._isoExt || (sim._isoExt = []); ext.length = 0;
     if (sim.extraStanding) sim.extraStanding(ext);
-    for (const q2 of ext) { if (q2.x == null) q2.x = P.x; q2._d = q2.x + q2.y; list.push(q2); }
+    for (const q2 of ext) { if (q2.x == null) q2.x = P.x; q2._d = q2.x + q2.y + (q2.dz || 0); list.push(q2); }
     // big boxes (buildings, the garage): whoever is really in front of one draws after it
     for (const B of list) { const o = B.k === 'obs' && B.big ? B.o : B.front ? sim.area.garage : null; if (!o) continue;
       for (const it of list) { if (!(it === P || it.hp != null || it.tx != null)) continue; if (it.x < o.x - 320 || it.x > o.x + o.w + 320 || it.y < o.y - 320 || it.y > o.y + o.h + 320) continue;
@@ -639,7 +641,7 @@
     try {
       setBill(g, P.x, P.y, 0, HB);
       if (sim.dead) { TS.heroDraw(g, sim.me, P.x, P.y, { k: kp, dead: true, face }); return; }
-      const blink = P.inv > 0 && Math.sin(t * 40) > 0;
+      const blink = P.inv > 0 && P.inv < 60 && Math.sin(t * 40) > 0; // (not under the debug god mode)
       if (sim.drawUnderYou) sim.drawUnderYou(g, t);
       setBill(g, P.x, P.y, 0, HB);
       g.strokeStyle = sim.me.color || '#ffd23f'; g.lineWidth = 2.5; g.globalAlpha = 0.55; g.beginPath(); g.ellipse(P.x, P.y, 26, 11, 0, 0, TAU); g.stroke(); g.globalAlpha = 1;
@@ -665,14 +667,17 @@
     // the hand: in front of the chest, a little toward the aim
     const hx = X + face * 4 * s + c * 9 * s - c * kick, hy = Y - SHOT_H * HZ * s + sn * 5 * s - sn * kick;
     if (!Pk) { setBill(g, P.x, P.y, 0, HB); window.TZA.drawGun(g, P.x + face * 13, P.y - 30, Math.atan2(sn, c), P.kick, sim.buffs.minigun > 0); sim._gunTip = [hx + c * 40 * s, hy + sn * 40 * s, aS]; return; }
-    const G = GUNS[key] || GUNS['weapon.pistol'], fr = Pk.anims.spin.rows.S[0], sc = s * 0.8 * Pk.sc * G.k, D = C.dpr;
+    // the side view: the widest frame of the spin; the grip end (lowest quarter) tells which way the muzzle points
+    if (!Pk._side) { const L0 = Pk.anims.spin.rows.S; let bi = 0; L0.forEach((q, i) => { if (q.w / q.h > L0[bi].w / L0[bi].h + 0.02) bi = i; }); const q = L0[bi]; Pk._side = { fr: q, ml: q.lx == null ? true : q.lx > q.w / 2 }; }
+    const G = GUNS[key] || GUNS['weapon.pistol'], fr = Pk._side.fr, ml = Pk._side.ml, sc = s * 1.1 * Pk.sc * G.k, D = C.dpr;
     const Lg = fr.w * sc, Hg = fr.h * sc, gx = Lg * (1 - G.g), my = Hg * G.y, fy = left ? -1 : 1;
-    // the art points left (muzzle at x = 0): map its x onto -aim, its y across the aim (flipped when aiming left)
-    g.setTransform(-c * D, -sn * D, -sn * fy * D, c * fy * D, (hx + gx * c + my * sn * fy) * D, (hy + gx * sn - my * c * fy) * D);
+    // map the art's length onto the aim (muzzle forward) and its height across it (flipped when aiming left, never upside down)
+    if (ml) g.setTransform(-c * D, -sn * D, -sn * fy * D, c * fy * D, (hx + gx * c + my * sn * fy) * D, (hy + gx * sn - my * c * fy) * D);
+    else { const gp = Lg - gx; g.setTransform(c * D, sn * D, -sn * fy * D, c * fy * D, (hx - gp * c + my * sn * fy) * D, (hy - gp * sn - my * c * fy) * D); }
     g.drawImage(fr.c, fr.px, fr.py, fr.pw, fr.ph, 0, 0, Lg, Hg);
     sim._gunTip = [hx + c * gx, hy + sn * gx, aS];
     // hands (skin tone, inked): the grip, and the fore-grip on two-handed guns
-    setScreen(g); const r = Math.max(2, 4.2 * s), skin = skinOf(sim); g.lineWidth = Math.max(1, 1.4 * s); g.strokeStyle = 'rgba(20,12,8,0.85)'; g.fillStyle = skin;
+    setScreen(g); const r = Math.max(2, 3.5 * s), skin = skinOf(sim); g.lineWidth = Math.max(1, 1.4 * s); g.strokeStyle = 'rgba(20,12,8,0.85)'; g.fillStyle = skin;
     g.beginPath(); g.arc(hx, hy + r * 0.3, r, 0, TAU); g.fill(); g.stroke();
     if (G.f) { const d = Lg * (G.f - G.g); g.beginPath(); g.arc(hx + c * d, hy + sn * d + r * 0.3, r * 0.95, 0, TAU); g.fill(); g.stroke(); }
   }
