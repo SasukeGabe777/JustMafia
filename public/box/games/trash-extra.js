@@ -101,7 +101,7 @@
 
   // ---------------- highlight moments (the TV recap) ----------------
   // weight: how good a moment is (the recap shows the best one since the last recap).
-  const MOMENT_W = { multi: (v) => 40 * v, boss: () => 400, final: () => 1000, streak: (v) => 60 * v, rescue: () => 250, horde: (v) => 300 + 50 * v, revive: () => 150 };
+  const MOMENT_W = { multi: (v) => 40 * v, boss: () => 400, final: () => 1000, streak: (v) => 60 * v, rescue: () => 250, horde: (v) => 300 + 50 * v, revive: () => 150, chest: () => 180, key: () => 350 };
   const momentWeight = (m) => (MOMENT_W[m.kind] ? MOMENT_W[m.kind](m.value || 0) : 0);
 
   return { UNLOCKS, UNLOCK, TIERS, SCRAP_MAX, scrapFor, blankMeta, pickOk, VEHICLES, vehicleAt, SURV_NAMES, SURV_HP, SURV_REWARD, survivorAt, WEATHER, WX, GARAGE, BUILD, buildCost, hordeSize, hordeBonus, HELP, VOTE_EVENTS, sentHorde, MOMENT_W, momentWeight };

@@ -259,3 +259,8 @@ small.tz-why { color: #a89c84; max-width: 130px; text-align: right; }
 .tz-lobmeta .tz-lobrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; } .tz-lobmeta .tz-lobrow b { font: 20px 'Lilita One', sans-serif; color: #ffd23f; }
 .tz-lobmeta .tz-unlocks .tz-shead { display: none; }
 @media (max-height: 460px) { .tz-ulist { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } .tz-help h3 { font-size: 16px; } }
+/* the town map on the phone (tap the minimap): locked blocks, special blocks, the roads between them */
+.tz-tmap { width: 100%; max-width: 980px; height: 100%; margin: auto; display: flex; flex-direction: column; gap: 6px; background: #1d1813; border: 4px solid #ffd23f; border-radius: 16px; padding: 8px 12px; box-sizing: border-box; box-shadow: 0 8px 0 rgba(0,0,0,0.5); }
+.tz-tmh { display: flex; align-items: center; gap: 12px; } .tz-tmh h2 { margin: 0; font: 24px 'Lilita One', sans-serif; color: #ffd23f; } .tz-tmh span { flex: 1; color: #ffe9a8; font-weight: 700; }
+.tz-tmc { flex: 1; min-height: 180px; width: 100%; display: block; border-radius: 10px; background: #0e0b10; }
+.tz-tmap .tz-mut { margin: 0; font-size: 12px; }

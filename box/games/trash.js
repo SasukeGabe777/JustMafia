@@ -69,6 +69,9 @@ class Game {
     this.helpers = new Map(); this.poll = null; this.pollSeq = 0; this.lastPollAt = 0; this.nextEv = null; this.evSeq = 0; this.leaderHitAt = 0;
     this.weather = { k: 'clear', n: 0, until: 0 }; this.survivors = new Map(); // survivor id ("x,y") -> { state: 'escort'|'safe'|'lost', by }
     this.gd = null; this.party = false; this.giftSeq = 0;
+    // area locks (every mode): blocks open as the team's zombie kills rise (trash-story.js locks());
+    // opened = block indexes that are open for good; chests = loot chests opened ("x,y" -> { took: [ids] })
+    this.lockPlan = null; this.opened = new Set(); this.chests = new Map(); this.noLocks = false;
   }
   get isStory() { return this.s.mode === 'story'; }
   get isScore() { return this.s.mode === 'score'; }
@@ -91,6 +94,7 @@ class Game {
       this.story = { tier: 0, keys: [], maps: 0, taken: {}, doorFound: false, doorOpen: false, beats: [], finds: [] };
       this.beat('start');
     }
+    this.makeLocks(); this.lockCheck(true);
     this.tick();
   }
   // ---------------- Regular mode ----------------
@@ -102,12 +106,58 @@ class Game {
     const st = this.story; if (!st || this.phase !== 'play') return;
     const k = this.teamKills();
     while (st.tier < S.MAX_TIER && k >= this.need(st.tier + 1)) {
-      st.tier++;
-      const look = (() => { for (let y = 0; y < W.GRID; y++) for (let x = 0; x < W.GRID; x++) if (S.tierAt(this.plan, x, y) === st.tier) return W.biomeOf(this.seed, x, y); return W.HOME; })();
-      this.news('⛓️', `The chains on the ${look.name} gate snapped! Ring ${st.tier} is open.`); this.room.fx('tzunlock', { tier: st.tier }); this.beat('tier' + st.tier); this.soon();
+      st.tier++; this.beat('tier' + st.tier); this.soon(); // the radio's next beat (the gates themselves: lockCheck)
     }
   }
-  locked(x, y) { return !!(this.story && S.tierAt(this.plan, x, y) > this.story.tier); }
+  // ---------------- area locks (every mode) ----------------
+  makeLocks() {
+    const old = this.lockPlan, homes = this.plan ? this.plan.homes : this.homes;
+    let L = S.locks(this.seed, homes, { mode: this.s.mode, party: this.party, fixed: old ? old.fixed : undefined });
+    if (old) L = { ...L, req: L.req.map((v, i) => Math.min(v, old.req[i])) }; // a new garage: nothing that was easier gets harder
+    this.lockPlan = L;
+  }
+  reqAt(x, y) { const L = this.lockPlan; if (!L || !W.inGrid(x, y)) return 0; return S.lockNeed(L.req[y * W.GRID + x], this.humans().length); }
+  locked(x, y) { if (this.noLocks || !this.lockPlan || !W.inGrid(x, y)) return false; const i = y * W.GRID + x; return !this.opened.has(i) && this.teamKills() < this.reqAt(x, y); }
+  // what a special block is, as far as the team knows (the lair stays a mystery until the maps or the door)
+  kindShown(i) {
+    const L = this.lockPlan, k = L && L.kind[i]; if (!k) return null; const c = (i % W.GRID) + ',' + Math.floor(i / W.GRID);
+    if (k === 'lair') return this.story && (this.story.doorFound || this.story.maps >= 2) ? 'lair' : '?';
+    return this.explored.has(c) || this.found.has(c) ? k : '?';
+  }
+  // newly opened blocks: the news (specials by name), the unlock sound; quiet = the ones open from the start
+  lockCheck(quiet) {
+    const L = this.lockPlan; if (!L || (this.phase !== 'play' && !quiet)) return;
+    const kills = this.teamKills(), N = W.GRID, now = [];
+    for (let i = 0; i < N * N; i++) if (!this.opened.has(i) && kills >= this.reqAt(i % N, Math.floor(i / N))) { this.opened.add(i); now.push(i); }
+    if (quiet || !now.length) return;
+    let plain = 0;
+    for (const i of now) {
+      const k = this.kindShown(i), c = (i % N) + ',' + Math.floor(i / N), pl = PL.placeAt(this.seed, i % N, Math.floor(i / N), this.homes), Sp = S.SPECIAL[k];
+      if (!L.kind[i]) { plain++; continue; }
+      this.news(k === 'shop' && pl ? PL.PLACES[pl].icon : Sp ? Sp.icon : '⭐', `🔓 The big gate is open: ${k === 'shop' && pl ? 'the ' + PL.PLACES[pl].name : Sp ? Sp.name : 'a special area'}${this.explored.has(c) ? '' : ' (somewhere out there)'}! Expect tough zombies.`);
+    }
+    if (plain) this.news('🔓', `${plain} more block${plain > 1 ? 's' : ''} of town opened up (${kills} team kills)`);
+    this.room.fx('tzunlock', { n: now.length }); this.soon();
+  }
+  lockView() {
+    const L = this.lockPlan; if (!L) return null; const N = W.GRID, req = [], kind = [];
+    for (let i = 0; i < N * N; i++) { req.push(this.opened.has(i) ? 0 : this.reqAt(i % N, Math.floor(i / N))); kind.push(this.kindShown(i)); }
+    return { req, kind, kills: this.teamKills() };
+  }
+  // a loot chest in a loot stash or a zombie den (every player opens it once)
+  chest(p, R, m) {
+    const L = this.lockPlan, k = key(R.cell), kind = L && L.kind[R.cell[1] * W.GRID + R.cell[0]];
+    if (m.cell != null && String(m.cell) !== k) return { ok: false, error: 'That chest isn’t here.' };
+    if (kind !== 'vault' && kind !== 'den') return { ok: false, error: 'No chest here.' };
+    if (R.state !== 'play') return { ok: false, error: 'You’re down.' };
+    const C = this.chests.get(k) || { took: [] }; if (C.took.includes(p.id)) return { ok: false, error: 'You already emptied this chest.' };
+    C.took.push(p.id); this.chests.set(k, C);
+    const big = kind === 'vault', cash = Math.round((big ? 140 : 80) * (1 + 0.1 * Math.max(0, R.wave - 1))), PK = ['shield', 'minigun', 'rockets', 'raygun', 'freeze', 'snack', 'xp2', 'nuke'];
+    const loot = []; for (let i = 0; i < (big ? 3 : 2); i++) loot.push(PK[Math.floor(this.room.rng() * PK.length)]);
+    this.news(big ? '💎' : '🧟', `${p.name} cracked open the ${big ? 'loot stash' : 'den'} chest (+$${cash})`, p.id); this.room.fx('tzchest', { id: p.id, kind });
+    this.moment('chest', p, cash, `${p.name} cracked open a ${big ? 'loot stash' : 'zombie den'} chest`); this.soon();
+    return { ok: true, cash, loot, weapon: big };
+  }
   joined(p) { if (this.phase === 'play' && !this.runs.has(p.id)) this.newRun(p, true); }
   left(p) { const id = p && p.id ? p.id : p; this.leaveArea(id); }
   tick() {
@@ -124,6 +174,7 @@ class Game {
       if (!h || (h.sockets <= 0 && !h.bot)) { if (!A.dropAt) A.dropAt = now; else if (now - A.dropAt > HOST_DROP_MS) { const next = A.members.find((id) => id !== A.host && (this.room.get(id) || {}).sockets > 0); if (next) { A.host = next; A.dropAt = 0; this.tellArea(k, { t: 'host' }); } } } else A.dropAt = 0;
     }
     if (this.endsAt && now >= this.endsAt) return this.end('time');
+    this.lockCheck();
     if (this.story) {
       this.storyCheck();
       const runs = this.humans().map((p) => this.runs.get(p.id)).filter(Boolean);
@@ -374,7 +425,7 @@ class Game {
     const taken = [...this.runs.values()].filter((R) => R.id !== p.id && R.state !== 'dead').map((R) => R.cell);
     // Regular mode: late arrivals start in one of the garages the story was planned around (never behind a gate)
     const cell = this.plan ? this.plan.homes[(this.runs.size + (old ? old.run : 0)) % this.plan.homes.length].slice() : W.spawnCell(this.seed, taken, (old ? old.run : 0) + this.runs.size);
-    if (!this.homes.some((h) => h[0] === cell[0] && h[1] === cell[1])) this.homes.push(cell.slice());
+    if (!this.homes.some((h) => h[0] === cell[0] && h[1] === cell[1])) { this.homes.push(cell.slice()); if (this.lockPlan && !this.plan) { this.makeLocks(); this.lockCheck(true); } } // a late garage opens up its street
     const R = {
       id: p.id, bot: !!p.bot, run: (old ? old.run : 0) + 1, cell: cell.slice(), home: cell.slice(), state: 'play', wave: 1, areas: 1, lvl: 1, xp: 0, kills: 0, hp: 100, mhp: 100,
       ab: {}, eq: {}, hearts: 0, score: 0, streak: 0, maps: 0, mapWaves: [], stash: [], bank: old ? (old.bank || 0) + old.kills : 0, choosing: false, at: this.room.now(), lastSt: this.room.now(), best: old ? old.best : null, lastPick: null, danger: false, deaths: old ? old.deaths : 0,
@@ -523,6 +574,7 @@ class Game {
     if (m.op === 'revive') return this.revive(p, R, m);
     if (m.op === 'maps') return { ok: true, options: this.mapOptions(R) };
     if (m.op === 'help') return this.help({ hid: 'p:' + p.id, name: p.name, id: p.id, color: p.color }, m);
+    if (m.op === 'chest') return this.chest(p, R, m);
     if (m.op === 'escort') return this.escort(p, R, m);
     if (m.op === 'rescue') return this.rescue(p, R);
     if (m.op === 'ready') return this.ready(p);
@@ -556,6 +608,7 @@ class Game {
     if (m.veh != null) R.veh = typeof m.veh === 'string' && X.VEHICLES[m.veh] ? m.veh : null;
     if (this.gd && this.gd.phase === 'explore' && R.wave >= this.gd.next) this.startBuild();
     if (this.story) this.storyCheck();
+    this.lockCheck();
     if (before !== R.lvl + ':' + R.wave + ':' + (R.danger ? 1 : 0) + ':' + R.choosing) this.soon();
     return { ok: true, quiet: true };
   }
@@ -567,7 +620,7 @@ class Game {
     if (!W.inGrid(x, y)) return { ok: false, error: 'That’s the edge of town.' };
     if (Math.abs(x - R.cell[0]) + Math.abs(y - R.cell[1]) !== 1) return { ok: false, error: 'Too far away.' };
     if (!W.roadBetween(this.seed, R.cell, [x, y])) return { ok: false, error: 'No road that way.' };
-    if (this.locked(x, y)) return { ok: false, error: `🔒 That gate is chained: ${Math.max(0, this.need(S.tierAt(this.plan, x, y)) - this.teamKills())} more zombies to break through.` };
+    if (this.locked(x, y)) { const sp = this.lockPlan.kind[y * W.GRID + x]; return { ok: false, error: `🔒 That gate is locked: ${this.teamKills()} / ${this.reqAt(x, y)} team kills${sp ? ' (a special area: tough zombies inside)' : ''}. Try another road.` }; }
     this.leaveArea(p.id);
     const fresh = !this.explored.has(key([x, y]));
     R.cell = [x, y]; R.areas++; this.explore(R.cell, p.id);
@@ -647,12 +700,14 @@ class Game {
     if (!id) return { ok: false, error: 'Nothing here.' };
     if (this.story.taken[k]) return { ok: false, error: 'Someone already looted this.' };
     const F = S.FINDS[id]; this.story.taken[k] = p.id; this.story.finds.push({ id, by: p.id });
-    if (F.kind === 'key') { this.story.keys.push(id); this.beat(this.story.keys.length >= 3 ? 'keys' : 'key'); }
+    // the chest holds a little loot too (a key chest a bit more)
+    const cash = Math.round((F.kind === 'key' ? 40 : 15) * (1 + 0.08 * Math.max(0, R.wave - 1)));
+    if (F.kind === 'key') { this.story.keys.push(id); this.beat(this.story.keys.length >= 3 ? 'keys' : 'key'); this.moment('key', p, 1, `${p.name} pulled ${F.name} out of a chest (${this.story.keys.length}/3)`); }
     else if (F.kind === 'map') { this.story.maps++; this.beat('map' + Math.min(2, this.story.maps)); }
     else if (F.kind === 'token') R.hearts = (R.hearts || 0) + 1;
     else R.eq[id] = 1;
-    this.news(F.icon, `${p.name} found ${F.name}!`, p.id); this.room.fx('tzfind', { id: p.id, find: id }); this.soon();
-    return { ok: true, find: id };
+    this.news(F.icon, `${p.name} opened a chest: ${F.name}!`, p.id); this.room.fx('tzfind', { id: p.id, find: id }); this.soon();
+    return { ok: true, find: id, cash };
   }
   openDoor(p, R) {
     const st = this.story; if (!st) return { ok: false, error: 'No door in Endless.' };
@@ -665,7 +720,7 @@ class Game {
   }
   storyTv() {
     const st = this.story; if (!st) return null; const P = this.plan, B = S.BOSSES[P.boss];
-    return { tier: st.tier, max: S.MAX_TIER, needs: [1, 2, 3, 4].map((t) => this.need(t)), kills: this.teamKills(), keys: st.keys.length, maps: st.maps, tiers: P.tiers,
+    return { tier: st.tier, max: S.MAX_TIER, needs: [1, 2, 3, 4].map((t) => this.need(t)), kills: this.teamKills(), keys: st.keys.length, maps: st.maps,
       door: st.maps >= 2 || st.doorFound ? P.door : null, hint: st.maps >= 1 && !(st.maps >= 2 || st.doorFound) ? P.hint : null, doorLook: P.doorLook, doorOpen: st.doorOpen,
       boss: st.doorFound ? { key: P.boss, name: B.name, icon: B.icon } : null, finds: st.finds.slice(), beats: st.beats.slice(-3), won: st.won || null, time: (st.won ? st.won.at : this.room.now()) - this.startedAt };
   }
@@ -720,7 +775,7 @@ class Game {
       found: [...this.found].map(([k, f]) => [k, f.type]), pings: this.pings.map((q) => ({ ...q, name: this.room.name(q.id) })),
       kfeed: this.kfeed.slice(-8), spot: this.spotTv(), card: this.bossCard && this.room.now() - this.bossCard.at < CARD_MS ? { ...this.bossCard, ago: this.room.now() - this.bossCard.at } : null,
       recap: this.recap ? { ...this.recap, ago: this.room.now() - this.recap.at } : null, weather: this.weatherView(), garage: this.garageTv(), poll: this.pollView(null), helpers: this.helperCount(), party: this.party,
-      rescued: [...this.survivors.values()].filter((x) => x.state === 'safe').length,
+      rescued: [...this.survivors.values()].filter((x) => x.state === 'safe').length, locks: this.lockView(),
     };
   }
   spotTv() { const S0 = this.spot; if (!S0) return null; const R = this.runs.get(S0.id), p = this.room.get(S0.id); if (!R || !p) return null; return { id: S0.id, name: p.name, color: p.color, why: S0.why || 'low', hp: R.hp, mhp: R.mhp, x: R.cell[0], y: R.cell[1], wave: R.wave }; }
@@ -735,7 +790,7 @@ class Game {
         load: R.load || null, gifts: R.gifts || [], spot: !!(this.spot && this.spot.id === p.id), rescues: R.rescues || 0, nights: R.nights || 0, scrap: R.scrap == null ? null : R.scrap, scrapGuest: !!R.scrapGuest,
         helper: R.state === 'dead' || R.state === 'down' ? this.helperState('p:' + p.id) : null } : null,
       party: this.party, weather: this.weatherView(), garage: this.garageTv(), nextEv: this.nextEv, poll: R && (R.state === 'dead' || R.state === 'down') ? this.pollView('p:' + p.id) : null, leader: (() => { const L = this.leader(); return L ? { id: L.id, name: L.name } : null; })(),
-      surv: [...this.survivors.entries()].map(([k, x]) => [k, x.state, x.by]),
+      surv: [...this.survivors.entries()].map(([k, x]) => [k, x.state, x.by]), locks: this.lockView(), chests: [...this.chests].filter(([, c]) => c.took.includes(p.id)).map(([k]) => k),
       area: A ? { k: A.k, host: A.host, members: A.members.slice() } : null,
       settings: { diff: this.s.diff, aim: this.s.aim, xp: this.s.xp, length: this.s.length, mode: this.s.mode }, endsIn: this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0,
       feed: this.feed.slice(-4), standings: this.phase === 'over' ? this.standings() : null, why: this.overWhy, mode: this.s.mode, story: this.storyView(p),

@@ -37,7 +37,8 @@
       const P = PLACES[type], far = Math.max(...free.map((c) => d[c.y * N + c.x]));
       for (let i = 0; i < P.n; i++) {
         let L = shuffle(free.filter((c) => !out[c.x + ',' + c.y] && !near(c)));
-        if (P.far) L = L.filter((c) => d[c.y * N + c.x] >= Math.max(3, far - 3));
+        // (the far ones sit behind big gates, trash-story.js locks(): every road out of them leads to a block with a way on)
+        if (P.far) { L = L.filter((c) => d[c.y * N + c.x] >= Math.max(3, far - 3)); const solid = L.filter((c) => Object.keys(c.side).every((s) => !c.side[s] || Object.values(T.cells[(c.y + W.DIRS[s][1]) * N + c.x + W.DIRS[s][0]].side).filter(Boolean).length >= 3)); if (solid.length) L = solid; }
         const fit = P.where ? L.filter((c) => P.where.includes(c.d)) : L;
         const c = (fit.length ? fit : L)[0]; if (c) out[c.x + ',' + c.y] = type;
       }

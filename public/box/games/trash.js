@@ -36,8 +36,8 @@
     };
     TV.raf = requestAnimationFrame(step);
   }
-  function drawMap(g, w, h, t) {
-    const s = TV.s; if (!s) return;
+  function drawMap(g, w, h, t, s0) { // (the TV's map; the phone's town map passes its own state)
+    const s = s0 || TV.s; if (!s) return;
     const Z = W(), N = s.grid || Z.GRID, A = window.TZA;
     g.clearRect(0, 0, w, h);
     const cw = Math.min((w - 20) / N, ((h - 20) / N) * (Z.AW / Z.AH)), ch = cw * (Z.AH / Z.AW), x0 = (w - cw * N) / 2, y0 = (h - ch * N) / 2;
@@ -67,17 +67,31 @@
       const shown = dh * (1 - Math.min(1, Math.max(0, u * 1.4 - 0.2)));
       g.fillStyle = '#c9ccd1'; g.fillRect(dx + Math.sin(t * 50) * (u < 0.8 ? 2 : 0), dy, dw, shown); g.strokeStyle = '#1b1410'; g.lineWidth = 2; g.strokeRect(dx, dy, dw, dh);
     }
-    // Regular mode: chained rings, the hinted area, the door
+    // the roads between blocks (bright where both sides are open), then the locked blocks with their kill counts (every mode)
+    const LK = s.locks, open = (x, y) => !LK || !(LK.req[y * N + x] > LK.kills);
+    if (LK) {
+      g.lineCap = 'round';
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const c = Z.cellOf(s.seed, x, y); if (!c) continue;
+        for (const [d, nx, ny] of [['e', x + 1, y], ['s', x, y + 1]]) { if (!c.side[d] || nx >= N || ny >= N) continue; const both = open(x, y) && open(nx, ny), ax = x0 + (x + 0.5) * cw, ay = y0 + (y + 0.5) * ch, bx = x0 + (nx + 0.5) * cw, by = y0 + (ny + 0.5) * ch; g.strokeStyle = both ? 'rgba(156,255,90,0.55)' : 'rgba(255,90,60,0.4)'; g.lineWidth = Math.max(2, cw * 0.035); g.setLineDash(both ? [] : [6, 6]); g.beginPath(); g.moveTo(ax + (bx - ax) * 0.32, ay + (by - ay) * 0.32); g.lineTo(ax + (bx - ax) * 0.68, ay + (by - ay) * 0.68); g.stroke(); }
+      }
+      g.setLineDash([]);
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const i = y * N + x, need = LK.req[i] || 0, kind = LK.kind && LK.kind[i], px = x0 + x * cw, py = y0 + y * ch;
+        if (kind && (!need || need <= LK.kills)) { const ic = (window.TZG && TZG.ICONS[kind]) || '⭐'; g.font = `${Math.max(11, Math.round(ch * 0.2))}px sans-serif`; g.textAlign = 'left'; g.textBaseline = 'bottom'; g.fillText(ic, px + 6, py + ch - 4); }
+        if (!need || need <= LK.kills) continue;
+        g.fillStyle = kind ? 'rgba(110,70,10,0.55)' : 'rgba(120,20,20,0.42)'; g.fillRect(px + 3, py + 3, cw - 6, ch - 6);
+        if (kind) { g.strokeStyle = `rgba(255,210,63,${0.6 + 0.3 * Math.sin(t * 3)})`; g.lineWidth = 3; g.strokeRect(px + 4, py + 4, cw - 8, ch - 8); }
+        g.strokeStyle = 'rgba(200,204,209,0.4)'; g.lineWidth = 2; g.setLineDash([8, 6]); g.beginPath(); g.moveTo(px + 6, py + 6); g.lineTo(px + cw - 6, py + ch - 6); g.moveTo(px + cw - 6, py + 6); g.lineTo(px + 6, py + ch - 6); g.stroke(); g.setLineDash([]);
+        const fs = Math.max(10, Math.round(Math.min(cw * 0.12, ch * 0.2))); g.font = `bold ${fs}px "Lilita One", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,0.85)';
+        const lbl = `🔒 ${LK.kills} / ${need}`; g.strokeText(lbl, px + cw / 2, py + ch / 2); g.fillStyle = kind ? '#ffe066' : '#ffd23f'; g.fillText(lbl, px + cw / 2, py + ch / 2);
+        if (kind && cw > 60) { const ic = (window.TZG && TZG.ICONS[kind]) || '⭐', nm2 = kind === '?' ? 'special' : ((window.TZG && TZG.NAMES[kind]) || '').replace(/^(A|The) /, ''); g.font = `bold ${Math.max(9, fs - 3)}px "Lilita One", sans-serif`; g.strokeText(ic + ' ' + nm2, px + cw / 2, py + ch / 2 + fs * 1.1); g.fillStyle = '#ffe9a8'; g.fillText(ic + ' ' + nm2, px + cw / 2, py + ch / 2 + fs * 1.1); }
+        const u = Math.min(1, LK.kills / need), bw = cw * 0.6; g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(px + (cw - bw) / 2, py + ch / 2 - fs * 1.25, bw, Math.max(3, fs * 0.28)); g.fillStyle = u > 0.8 ? '#9cff3c' : '#ffb02e'; g.fillRect(px + (cw - bw) / 2, py + ch / 2 - fs * 1.25, bw * u, Math.max(3, fs * 0.28));
+      }
+    }
+    // Regular mode: the hinted area, the door
     const S0 = s.story;
     if (S0) {
-      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-        const tr = S0.tiers[y * N + x]; if (tr <= S0.tier) continue;
-        const px = x0 + x * cw, py = y0 + y * ch;
-        g.fillStyle = 'rgba(120,20,20,0.42)'; g.fillRect(px + 3, py + 3, cw - 6, ch - 6);
-        g.strokeStyle = 'rgba(200,204,209,0.55)'; g.lineWidth = 3; g.setLineDash([8, 6]); g.beginPath(); g.moveTo(px + 6, py + 6); g.lineTo(px + cw - 6, py + ch - 6); g.moveTo(px + cw - 6, py + 6); g.lineTo(px + 6, py + ch - 6); g.stroke(); g.setLineDash([]);
-        g.font = `bold ${Math.max(11, Math.round(cw * 0.12))}px "Lilita One", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,0.8)';
-        const lbl = '🔒 ' + Math.max(0, S0.needs[tr - 1] - S0.kills); g.strokeText(lbl, px + cw / 2, py + ch / 2); g.fillStyle = '#ffd23f'; g.fillText(lbl, px + cw / 2, py + ch / 2);
-      }
       if (S0.hint) { const [hx, hy] = S0.hint; g.strokeStyle = `rgba(255,90,60,${0.6 + 0.3 * Math.sin(t * 3)})`; g.lineWidth = 4; g.setLineDash([12, 8]); g.beginPath(); g.ellipse(x0 + (hx + 0.5) * cw, y0 + (hy + 0.5) * ch, cw * 1.6, ch * 1.6, 0, 0, TAU); g.stroke(); g.setLineDash([]); }
       if (S0.door) { const [dx2, dy2] = S0.door, px = x0 + dx2 * cw, py = y0 + dy2 * ch, D = (window.TZS.DOORS.find((d) => d.key === S0.doorLook) || {}); g.strokeStyle = `rgba(255,90,60,${0.7 + 0.3 * Math.sin(t * 5)})`; g.lineWidth = 6; g.strokeRect(px + 2, py + 2, cw - 4, ch - 4); g.font = `${Math.round(ch * 0.42)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(S0.doorOpen ? '☠️' : D.icon || '🚪', px + cw / 2, py + ch * 0.45); }
     }
@@ -212,7 +226,7 @@
   function newSim(v) {
     const me = { id: v.me.id, name: (PH.view && PH.view.me && PH.view.me.name) || 'You', color: (PH.view && PH.view.me && PH.view.me.color) || '#ffd23f', avatar: (PH.view && PH.view.me && PH.view.me.avatar) || '🙂' };
     PH.sim = new window.TZSim.Sim({
-      seed: v.seed, homes: v.homes, me, settings: { diff: v.settings.diff, aim: PH.aimPref || v.settings.aim, xp: v.settings.xp }, restore: v.me, story: v.story,
+      seed: v.seed, homes: v.homes, me, settings: { diff: v.settings.diff, aim: PH.aimPref || v.settings.aim, xp: v.settings.xp }, restore: v.me, story: v.story, locks: v.locks || null,
       report, live: (m) => PH.ctx && PH.ctx.live && PH.ctx.live(m), people: (id) => PH.people.get(id), on: simEvent,
       mates: () => ((PH.v && PH.v.players) || []).filter((p) => !p.bot && p.state === 'play').length, stashes: () => (PH.v && PH.v.stashes) || [],
     });
@@ -236,7 +250,7 @@
     else if (kind === 'enter') { if (ctx) ctx.haptic('turn'); }
     else if (kind === 'coop') { if (ctx) { ctx.haptic('big'); ctx.toast(d.mode === 'solo' ? 'You’re on your own again.' : `🤝 Co-op! ${d.members.length} of you in this area${d.mode === 'host' ? ' (your phone runs the zombies)' : ''}.`); } }
     else if (kind === 'start') { PH.hint = 7; }
-    else if (kind === 'find') { const F = window.TZS.FINDS[d.id]; if (ctx) ctx.haptic('win'); showCard(`<span class="tz-rc-i">${F.icon}</span><div><small>YOU FOUND</small><b>${esc(F.name)}</b><p>${esc(F.desc)}</p></div>`, 'find'); }
+    else if (kind === 'find') { const F = window.TZS.FINDS[d.id]; if (ctx) ctx.haptic('win'); showCard(`<span class="tz-rc-i">${F.icon}</span><div><small>${F.kind === 'key' ? 'IN THE CHEST: A KEY PIECE' : 'IN THE CHEST'}</small><b>${esc(F.name)}</b><p>${esc(F.desc)}</p></div>`, 'find'); }
     else if (kind === 'final') { buzz([200, 80, 200, 80, 400]); }
     else if (kind === 'combo') { if (ctx) { ctx.haptic('win'); ctx.toast(d.timed ? `💥 ${d.name}!` : '🧪 New combo! It’s in your combo book (pause menu).'); } }
     else if (kind === 'weapon' || kind === 'upgrade' || kind === 'item' || kind === 'core') { if (ctx) ctx.haptic('success'); }
@@ -256,6 +270,8 @@
     else if (kind === 'horde' || kind === 'rescue' || kind === 'crategot') { if (ctx) ctx.haptic(d && d.ok === false ? 'error' : 'win'); }
     else if (kind === 'crate' || kind === 'escort' || kind === 'ride' || kind === 'weather') { if (ctx) ctx.haptic('select'); }
     else if (kind === 'survlost' || kind === 'wreck') { buzz(160); }
+    else if (kind === 'chestopen') { buzz([30, 40, 30, 40, 60]); }
+    else if (kind === 'chestgot') { if (ctx) ctx.haptic('win'); if (d.kind === 'loot') showCard(`<span class="tz-rc-i">${d.id === 'vault' ? '💎' : '🧰'}</span><div><small>CHEST OPENED</small><b>${d.id === 'vault' ? 'A loot stash!' : 'The den’s hoard!'}</b><p>+$${d.cash} and goodies spilled out around the chest: grab them.</p></div>`, 'find'); }
   }
   function showCard(html, cls) {
     if (!PH.root) return;
@@ -348,9 +364,9 @@
     const pos = (e) => { const b = cv.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
     cv.addEventListener('pointerdown', (e) => {
       const p = pos(e);
-      if (e.pointerType === 'mouse') { if (e.button === 0 && hitButton(p.x, p.y)) return; PH.device = 'mouse'; PH.mouse.on = true; PH.mouse.x = p.x; PH.mouse.y = p.y; if (e.button === 0) PH.mouse.down = true; return; }
+      if (e.pointerType === 'mouse') { if (e.button === 0 && (hitButton(p.x, p.y) || clickChest(p.x, p.y))) return; PH.device = 'mouse'; PH.mouse.on = true; PH.mouse.x = p.x; PH.mouse.y = p.y; if (e.button === 0) PH.mouse.down = true; return; }
       PH.device = 'touch'; e.preventDefault();
-      if (hitButton(p.x, p.y)) return;
+      if (hitButton(p.x, p.y) || clickChest(p.x, p.y) || hitMinimap(p.x, p.y)) return;
       if (!PH.fsAsked && canFull() && !isIOS() && !isFull() && !standalone()) goFull(); else if (!PH.iosHinted) iosHint(false);
       if (PH.sim && PH.sim.phase === 'intro') PH.skip = true;
       const V = { w: cv.clientWidth, h: cv.clientHeight }, Z = stickZone(V);
@@ -381,7 +397,7 @@
         if (k === 'escape' || k === 'p') { e.preventDefault(); toggleMenu(); }
         if (PH.sim && PH.sim.cards && ['1', '2', '3'].includes(k)) choose(Number(k) - 1);
         if (k === 'h' && PH.sim && PH.sim.down) { e.preventDefault(); helperUi(); }
-        if (PH.sim && !PH.sim.cards && !PH.menu) { const act = { f: 'shop', b: 'bomb', t: 'turret', q: 'pocket', c: 'call', v: 'ride', g: 'build' }[k]; if (act) { e.preventDefault(); button(act); } }
+        if (PH.sim && !PH.sim.cards && !PH.menu) { const act = { f: PH.sim.chestNear && PH.sim.chestNear() ? 'chest' : 'shop', b: 'bomb', t: 'turret', q: 'pocket', c: 'call', v: 'ride', g: 'build', m: 'map' }[k]; if (act) { e.preventDefault(); button(act); } }
         if (PH.sim && PH.sim.phase === 'intro' && (k === ' ' || k === 'enter')) PH.skip = true;
         if (k === 'enter' && PH.root.querySelector('[data-again]')) PH.root.querySelector('[data-again]').click();
       });
@@ -450,10 +466,9 @@
     const left = sim.spec ? Math.max(0, sim.spec.target - sim.waveKills) : 0;
     txt(`WAVE ${sim.wave}`, w / 2, 22, small ? 20 : 26, '#ffd23f', 'center');
     txt(sim.cleared ? '✅ Area clear: find an exit' : `🧟 ${Math.max(left, sim.z.length)} left`, w / 2, small ? 44 : 50, small ? 13 : 16, sim.cleared ? '#7dff6a' : '#fff', 'center');
-    const st = sim.story;
+    const st = sim.story, ng = sim.nextGate ? sim.nextGate() : null, gate = ng ? `🔒 ${ng.have} / ${ng.need} kills${ng.here ? ' (gate here)' : ''}` : sim.locks ? '🔓 every gate open' : '';
+    if (st || gate) txt(`${st ? `🗝️ ${st.keys}/3   🗺️ ${st.maps}/2   ` : ''}${gate}`, w / 2, small ? 80 : 94, small ? 12 : 14, '#ffe9a8', 'center');
     if (st) {
-      const nextT = st.tier < st.max ? st.tier + 1 : 0, gate = nextT ? `⛓️ ${Math.min(st.kills, st.needs[nextT - 1])}/${st.needs[nextT - 1]}` : '⛓️ all gates open';
-      txt(`🗝️ ${st.keys}/3   🗺️ ${st.maps}/2   ${gate}`, w / 2, small ? 80 : 94, small ? 12 : 14, '#ffe9a8', 'center');
       const fb = sim.z.find((z) => z.fb);
       if (fb) { const bw2 = Math.min(520, w * 0.6), bx2 = (w - bw2) / 2, by3 = h - 30; g.fillStyle = 'rgba(15,10,6,0.8)'; roundRect(g, bx2 - 4, by3 - 4, bw2 + 8, 22, 8); g.fill(); g.fillStyle = '#ff4a3a'; roundRect(g, bx2, by3, bw2 * Math.max(0, fb.hp / fb.mhp), 14, 6); g.fill(); const B = window.TZS.BOSSES[fb.fb]; txt(B.icon + ' ' + B.name, w / 2, by3 - 14, small ? 14 : 18, '#ffd23f', 'center'); }
     }
@@ -486,7 +501,7 @@
       for (const [d, z] of near) { if (shown >= 10) break; const e = edge(z.x, z.y - z.r); if (!e) continue; shown++; g.save(); g.translate(e.x, e.y); g.rotate(e.a); g.globalAlpha = Math.max(0.35, 1 - d / 760); g.fillStyle = z.fb || z.boss ? '#ff2a1a' : '#ff5a3c'; g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -10); g.lineTo(-4, 0); g.lineTo(-8, 10); g.closePath(); g.fill(); g.strokeStyle = '#1b1410'; g.lineWidth = 2; g.stroke(); g.restore(); }
       g.globalAlpha = 1;
       for (const p of sim.pk) { const e = edge(p.x, p.y); if (!e) continue; const Pk = Z.PK[p.k]; g.font = '18px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = 'rgba(15,10,6,0.7)'; g.beginPath(); g.arc(e.x, e.y, 15, 0, TAU); g.fill(); g.fillText(Pk ? Pk.icon : '✨', e.x, e.y + 1); }
-      if (sim.story && sim.findHere && sim.findHere()) { const e = edge(Z.AW / 2, Z.AH / 2); if (e) { g.font = '20px sans-serif'; g.textAlign = 'center'; g.fillText('📦', e.x, e.y); } }
+      const Ch = sim.chestHere && sim.chestHere(); if (Ch) { const e = edge(Ch.x, Ch.y - 30); if (e) { g.fillStyle = 'rgba(15,10,6,0.7)'; g.beginPath(); g.arc(e.x, e.y, 16, 0, TAU); g.fill(); g.font = '20px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(Ch.kind === 'find' && (window.TZS.FINDS[Ch.id] || {}).kind === 'key' ? '🗝️' : '🧰', e.x, e.y + 1); } }
     }
     // exit arrows at the screen edge pointing to exits when cleared
     if (sim.cleared && !sim.dead) {
@@ -505,6 +520,7 @@
     const L = [];
     if (sim.down) { L.push({ id: 'help', icon: '🙌', label: 'HELP', big: true }); }
     else {
+    const cn = sim.chestNear && sim.chestNear(); if (cn) L.push({ id: 'chest', icon: '🧰', label: 'OPEN', big: !sim.nearShop });
     if (sim.nearShop) L.push({ id: 'shop', icon: '🛒', label: 'SHOP', big: true });
     const nv = sim.nearVehicle && sim.nearVehicle(); if (sim.ride || nv) L.push({ id: 'ride', icon: sim.ride ? '🚪' : window.TZX.VEHICLES[nv.kind].icon, label: sim.ride ? 'GET OUT' : 'GET IN', big: !sim.nearShop });
     if (sim.build) L.push({ id: 'build', icon: '🔨', label: 'BUILD' });
@@ -524,10 +540,35 @@
     }
   }
   function hitButton(x, y) { for (const b of PH.btns || []) if (Math.hypot(x - b.x, y - b.y) < b.r) { button(b.id); return true; } return false; }
+  // tap / click the chest itself (when you're next to it)
+  function clickChest(x, y) {
+    const sim = PH.sim; if (!sim || !sim.chestNear || !sim.cam) return false; const C = sim.chestNear(); if (!C) return false;
+    const K = sim.cam, wx = x / K.k - K.ox, wy = y / K.k - K.oy; if (Math.abs(wx - C.x) > 80 || wy < C.y - 130 || wy > C.y + 30) return false;
+    return button('chest');
+  }
+  function hitMinimap(x, y) { const M = PH.mm; if (!M || !PH.sim || PH.sim.phase !== 'play' || x < M.x || x > M.x + M.w || y < M.y || y > M.y + M.h) return false; townMapUi(); return true; }
+  // ---------- the town map (tap the minimap, or M): every block, what's locked and how many kills it needs ----------
+  function townMapUi() {
+    const v = PH.v, sim = PH.sim; if (!v || !sim) return;
+    const ov = setOverlay(`<div class="tz-tmap"><div class="tz-tmh"><h2>🗺️ The town</h2><span>${v.locks ? `🧟 ${v.locks.kills} team kills` : ''}</span><button class="btn small ghost" data-close>Close ✕</button></div><canvas class="tz-tmc"></canvas><p class="tz-mut">🔒 Locked blocks open as the team’s kills rise: ⭐ special ones (the best shops, dens, loot stashes, key vaults, the lair) need lots more and are tougher. Locked gates are detours: there’s always another road.</p></div>`, 'map');
+    if (!ov) return;
+    ov.querySelector('[data-close]').onclick = (e) => { e.stopPropagation(); setOverlay(''); };
+    const c = ov.querySelector('.tz-tmc'), paint = () => {
+      if (!c.isConnected || PH.overlay !== 'map') return; const wv = c.clientWidth, hv = c.clientHeight, d = Math.min(2, window.devicePixelRatio || 1);
+      if (c.width !== Math.round(wv * d) || c.height !== Math.round(hv * d)) { c.width = Math.round(wv * d); c.height = Math.round(hv * d); }
+      const g = c.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
+      const me = { id: sim.me.id, name: 'You', color: sim.me.color, avatar: sim.me.avatar, x: sim.cell[0], y: sim.cell[1], state: sim.dead ? 'dead' : 'play', wave: sim.wave, hp: sim.p.hp, mhp: sim.S.mhp };
+      drawMap(g, wv, hv, performance.now() / 1000, { ...v, players: [me, ...(v.players || [])], explored: (v.explored || []).map((e) => [e[0], e[1]]) });
+      requestAnimationFrame(paint);
+    };
+    requestAnimationFrame(paint);
+  }
   function button(id) {
     const sim = PH.sim; if (!sim || sim.dead || !sim._pl) return false;
     if (id === 'help') { helperUi(); return true; }
     if (sim.down) return false;
+    if (id === 'chest') return !!(sim.openChest && sim.openChest());
+    if (id === 'map') { townMapUi(); return true; }
     if (id === 'ride') { const r = sim.toggleRide && sim.toggleRide(); if (r) buzz(r === 'in' ? [40, 30, 80] : 40); return !!r; }
     if (id === 'build') { if (sim.build) buildUi(); return !!sim.build; }
     if (id === 'shop') { if (sim.nearShop) shopUi(); return true; }
@@ -585,13 +626,18 @@
     const Z = W(), N = v.grid || 9, small = Math.min(V.w, V.h) < 420, cs = small ? 11 : 13, mw = N * cs, x0 = V.w - mw - 14, y0 = 62;
     g.fillStyle = 'rgba(15,10,6,0.75)'; roundRect(g, x0 - 5, y0 - 5, mw + 10, mw * 0.6 + 10 + 0, 6); g.fill();
     const ch = cs * 0.6, ex = new Set((v.explored || []).map((e) => e[0] + ',' + e[1]));
+    PH.mm = { x: x0 - 5, y: y0 - 5, w: mw + 10, h: N * ch + 10 };
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const seen = ex.has(x + ',' + y); g.fillStyle = seen ? lookOf(v, x, y).ground[0] : 'rgba(255,255,255,0.06)'; g.fillRect(x0 + x * cs, y0 + y * ch, cs, ch); }
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) roadLines(g, Z, v.seed, x, y, x0 + x * cs, y0 + y * ch, cs, ch, ex.has(x + ',' + y) ? 'rgba(40,40,44,0.95)' : 'rgba(200,200,210,0.18)');
-    const S0 = v.story;
+    const S0 = v.story, LK = v.locks;
+    if (LK) for (let i = 0; i < N * N; i++) { // locked blocks: red, special ones gold-edged
+      const px = x0 + (i % N) * cs, py = y0 + Math.floor(i / N) * ch, kind = LK.kind && LK.kind[i];
+      if (LK.req[i] > LK.kills) { g.fillStyle = kind ? 'rgba(200,140,20,0.55)' : 'rgba(200,40,30,0.5)'; g.fillRect(px + 0.5, py + 0.5, cs - 1, ch - 1); }
+      if (kind) { g.strokeStyle = '#ffd23f'; g.lineWidth = 1; g.strokeRect(px + 1, py + 1, cs - 2, ch - 2); }
+    }
     if (S0) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const t = S0.tiers[y * N + x], px = x0 + x * cs, py = y0 + y * ch;
-      if (t > S0.tier) { g.fillStyle = 'rgba(200,40,30,0.55)'; g.fillRect(px + 0.5, py + 0.5, cs - 1, ch - 1); }
-      const k = x + ',' + y; if (S0.plan && S0.plan.finds[k] && ex.has(k) && !(S0.taken || []).includes(k)) { g.fillStyle = '#ffd23f'; g.fillRect(px + cs / 2 - 1.5, py + ch / 2 - 1.5, 3, 3); }
+      const px = x0 + x * cs, py = y0 + y * ch, k = x + ',' + y;
+      if (S0.plan && S0.plan.finds[k] && ex.has(k) && !(S0.taken || []).includes(k)) { g.fillStyle = '#ffd23f'; g.fillRect(px + cs / 2 - 1.5, py + ch / 2 - 1.5, 3, 3); }
     }
     const TP = window.TZP; g.font = `${small ? 8 : 9}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     for (const [k, type] of v.found || []) { const [fx, fy] = k.split(',').map(Number), Pl = TP && TP.PLACES[type]; if (Pl) g.fillText(Pl.icon, x0 + fx * cs + cs / 2, y0 + fy * ch + ch / 2); }
@@ -659,9 +705,9 @@
     const v = PH.v || {}, vip = PH.view && PH.view.vip, touch = isTouch();
     const ov = setOverlay(`<div class="tz-menu"><h2>${sim.mode === 'solo' ? '⏸ Paused' : '🤝 Co-op: the game keeps going!'}</h2>
       <div class="tz-mstats"><span>Wave <b>${sim.wave}</b></span><span>Level <b>${sim.lvl}</b></span><span>Kills <b>${sim.killCount}</b></span><span>📍 ${esc(sim.area.biome.name)}</span></div>
-      <h3>Your build</h3><div class="tz-build">${buildHtml(sim.ab)}</div>${gearHtml(sim)}${Object.keys(sim.eq || {}).length ? `<h3>Your finds</h3><div class="tz-finds">${Object.keys(sim.eq).map((id) => { const F = window.TZS.FINDS[id]; return F ? `<span title="${esc(F.desc)}">${F.icon} ${esc(F.name)}</span>` : ''; }).join('')}</div>` : ''}${sim.story ? `<p class="tz-mut">📖 Regular: 🗝️ ${sim.story.keys}/3 key pieces · 🗺️ ${sim.story.maps}/2 map halves · ring ${sim.story.tier}/${sim.story.max} open${sim.story.boss ? ` · ${sim.story.boss.icon} ${esc(sim.story.boss.name)} waits behind the door` : ''}</p>` : ''}${!isFull() && !standalone() && isTouch() && (canFull() || isIOS()) ? '<button class="btn ghost small" data-opt="fs">⛶ Full screen</button>' : ''}
+      <h3>Your build</h3><div class="tz-build">${buildHtml(sim.ab)}</div>${gearHtml(sim)}${Object.keys(sim.eq || {}).length ? `<h3>Your finds</h3><div class="tz-finds">${Object.keys(sim.eq).map((id) => { const F = window.TZS.FINDS[id]; return F ? `<span title="${esc(F.desc)}">${F.icon} ${esc(F.name)}</span>` : ''; }).join('')}</div>` : ''}${sim.story ? `<p class="tz-mut">📖 Regular: 🗝️ ${sim.story.keys}/3 key pieces · 🗺️ ${sim.story.maps}/2 map halves${sim.story.boss ? ` · ${sim.story.boss.icon} ${esc(sim.story.boss.name)} waits behind the door` : ''}</p>` : ''}${!isFull() && !standalone() && isTouch() && (canFull() || isIOS()) ? '<button class="btn ghost small" data-opt="fs">⛶ Full screen</button>' : ''}
       <div class="tz-opts"><button class="btn small ${sim.set.aim !== 'off' ? 'green' : 'ghost'}" data-opt="aim">🎯 Auto-aim: ${sim.set.aim !== 'off' ? 'On' : 'Off'}</button><button class="btn small ${PH.vib ? 'green' : 'ghost'}" data-opt="vib">📳 Buzz: ${PH.vib ? 'On' : 'Off'}</button><button class="btn small ghost" data-opt="gfx">🎨 Graphics: ${PH.gfxPref === 'auto' ? 'Auto (' + (gfxHi() ? 'High' : 'Low') + ')' : gfxHi() ? 'High' : 'Low'}</button></div>
-      <div class="tz-controls">${touch ? '👆 Drag anywhere to move · 🔴 the stick bottom-right aims and shoots · auto-aim shoots the nearest zombie when you let go.' : '⌨️ WASD / arrows move · 🖱️ mouse aims · hold left click (or Space) to shoot · E grabs a pickup · 1 2 3 pick cards · Esc pauses.'}</div>
+      <div class="tz-controls">${touch ? '👆 Drag anywhere to move · 🔴 the stick bottom-right aims and shoots · auto-aim shoots the nearest zombie when you let go.' : '⌨️ WASD / arrows move · 🖱️ mouse aims · hold left click (or Space) to shoot · E grabs a pickup · F (or click) opens a chest · M town map · 1 2 3 pick cards · Esc pauses.'}</div>
       <div class="tz-mbtns"><button class="btn green big" data-opt="resume">▶ Keep playing</button><button class="btn ghost small" data-opt="unl">🔓 Unlocks (🔩 ${(PH.view && PH.view.meta && PH.view.meta.scrap) || 0})</button>${vip ? '<button class="btn ghost small" data-opt="end">🏁 End the night (results)</button>' : ''}</div></div>`, 'menu');
     if (!ov) return;
     for (const b of ov.querySelectorAll('[data-opt]')) b.onclick = async (e) => {
@@ -825,7 +871,9 @@
       'Glowing pickups give a quick boost: Bubble Shield, Trash-Can Armor, Buzzsaw Minigun, Rocket Sneakers, Garbage Day, Freezer Burn, Health Snack, Double XP.',
       'Clear the wave and the exits open: walk out an edge into a brand-new area for the next, tougher wave. Every 5th wave a Dumpster Brute shows up.',
       'The TV shows the town map. Walk into a friend’s area to team up: you share the zombies (and the XP).',
-      'Regular mode: chained gates open as the team racks up kills. Behind them: unique gear, abilities, map halves and 3 key pieces. Find the hidden boss door, open it with the whole key and beat the boss to win. Endless mode: waves forever.',
+      'Locked gates (every mode): blocks of town open as the TEAM’s zombie kills rise. Each locked gate and the map show “🔒 120 / 200 kills”. ⭐ Special blocks (the best shops, zombie dens, loot stashes, key vaults, the boss lair) need many more kills and hide tougher zombies and elites. A locked gate is never the only way: there’s always another road. Tap the minimap (or M) for the town map.',
+      'Chests: clear the area, walk up to the chest and tap OPEN (on a computer: click it, or F). Loot stashes and dens hide loot chests with cash and goodies for everyone.',
+      'Regular mode: the 3 key pieces sit in chests in locked key vaults; other chests hold unique gear, abilities and map halves. Find the hidden boss door, open it with the whole key and beat the boss to win. Endless mode: waves forever, and the far gates keep climbing.',
       'Abilities never max out: pick them again and again and they keep stacking.',
       'Pick a survivor class at the start. Zombies drop cash: spend it at the places you find in town (market, army surplus, clinic). The Tinkerer, the Gunsmith and the rare Master Armorer level your weapons up to 10; the far-off Crucible evolves a level-10 weapon (bosses drop the cores it needs).',
       'Extra weapons fire by themselves. Own the right pair and they combine. Some zombies carry a super weapon: take them out and it’s yours for a few seconds.',

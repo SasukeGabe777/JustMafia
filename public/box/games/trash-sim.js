@@ -28,7 +28,7 @@
       this.cell = (R.cell || [4, 4]).slice();
       const P = this.p = { x: W.AW / 2, y: W.AH / 2, vx: 0, vy: 0, r: 18, hp: 100, aim: 0, face: 1, fireCd: 0, inv: 0, walkT: 0, moving: false, kick: 0, armor: 0, lives: 0, down: 0 };
       this.buffs = { shield: 0, minigun: 0, kicks: 0, freeze: 0, xp2: 0, scope: 0 };
-      this.story = o.story || null; this.eq = { ...(R.eq || {}) }; this.hearts = R.hearts || 0; this.looted = new Set(); this.asked = {};
+      this.story = o.story || null; this.locks = o.locks || null; this.eq = { ...(R.eq || {}) }; this.hearts = R.hearts || 0; this.looted = new Set(); this.asked = {};
       this.stats(); P.hp = R.hp > 0 ? Math.min(R.hp, this.S.mhp) : this.S.mhp; P.lives = (this.ab.life || 0) - (R.livesUsed || 0) + this.hearts;
       this.timers = { bomb: 4, zap: 2, shove: 3, drone: 0, pk: 12, regen: 0 };
       this.orbHit = new Map(); this.raccoon = null; this.drones = []; this.decals = []; this.corpses = []; this.muzzle = 0; this.slowmo = 0;
@@ -52,7 +52,6 @@
     findHere() { const st = this.story; if (!st || !st.plan) return null; const k = this.cellKey(), id = st.plan.finds[k]; return id && !(st.taken || []).includes(k) && !this.looted.has(k) ? id : null; }
     setStory(st, me) {
       const was = this.story; this.story = st || null;
-      if (was && st && st.tier > was.tier) { this.banner = { text: '⛓️ GATES DOWN!', sub: 'Ring ' + st.tier + ' is open: new areas to explore', t: 3 }; this.shake = Math.max(this.shake, 0.3); this.o.on('unlock', { tier: st.tier }); }
       if (me) {
         const eq = me.eq || {}; if (Object.keys(eq).some((k) => !this.eq[k])) { this.eq = { ...this.eq, ...eq }; this.stats(); }
         if ((me.hearts || 0) > this.hearts) { this.p.lives += me.hearts - this.hearts; this.hearts = me.hearts; }
@@ -70,12 +69,7 @@
     }
     storyStep() {
       const st = this.story, P = this.p; if (!st || this.dead) return;
-      const k = this.cellKey(), id = this.findHere();
-      const sp = this.spotXY();
-      if (id && this.cleared && !this.asked['f' + k] && Math.hypot(P.x - sp.x, P.y - sp.y) < 80) {
-        this.asked['f' + k] = 1;
-        this.o.report({ op: 'find', x: this.cell[0], y: this.cell[1] }).then((r) => { if (r && r.ok) { this.looted.add(k); this.applyFind(r.find); } else this.asked['f' + k] = 0; });
-      }
+      // (finds sit in chests you open by hand: trash-gates.js openChest)
       if (this.isDoorCell() && !st.doorOpen && this.cleared && st.keys >= 3 && !this.asked.door) {
         const D = this.area.spot; if (D && P.x > D.x - 30 && P.x < D.x + D.w + 30 && P.y < D.y + D.h + 70) {
           this.asked.door = 1; this.o.report({ op: 'door' }).then((r) => { if (r && r.ok) { st.doorOpen = true; if (this.mode !== 'guest') this.spawnFinal(); } else this.asked.door = 0; });
@@ -739,13 +733,13 @@
       const spr = TA.zombie(c.type, 1, kp, false, c.v); g.save(); g.globalAlpha = Math.max(0, fade); g.translate(c.x, c.y); if (c.face < 0) g.scale(-1, 1); g.rotate(-u * u * 1.45); g.drawImage(spr, -spr.ox, -spr.oy, spr.width / kp, spr.height / kp); g.restore();
     }
     g.globalAlpha = 1;
-    // exits: open arrows on the road, shut barricades, or a chained gate (Regular)
+    // exits: open arrows on the road, shut barricades, or a locked gate with its kill count (trash-gates.js)
     const e = sim.area.exits;
     for (const [d, road] of Object.entries(e)) {
       if (!road) continue;
       const x = d === 'w' ? 0 : d === 'e' ? AW : road.p, y = d === 'n' ? 0 : d === 's' ? AH : road.p, horiz = d === 'n' || d === 's';
-      const gl = sim.gateLeft(d);
-      if (gl && window.TZB) { TZB.drawGate(g, d, gl, t, road); continue; }
+      const gi = sim.gateInfo ? sim.gateInfo(d) : null;
+      if (gi && window.TZG) { TZG.drawGate(g, d, gi, t, road); continue; }
       if (sim.cleared) {
         const pulse = 0.55 + 0.35 * Math.sin(t * 6), dir = { n: -Math.PI / 2, s: Math.PI / 2, w: Math.PI, e: 0 }[d];
         g.save(); g.translate(x, y); g.rotate(dir); g.globalAlpha = pulse;
@@ -771,7 +765,7 @@
     list.push(P);
     for (const o of sim.others.values()) list.push(o);
     if (sim.raccoon && sim.S.raccoon) list.push(sim.raccoon);
-    if (sim.story && window.TZB) { const fid = sim.findHere(); if (fid) { const sp = sim.spotXY(); list.push(sim._crate && sim._crate.id === fid ? sim._crate : (sim._crate = { crate: true, id: fid, x: sp.x, y: sp.y })); } if (sim.isDoorCell() && sim.area.spot) list.push(sim._bd || (sim._bd = { bossDoor: true, y: sim.area.spot.y + sim.area.spot.h })); }
+    if (sim.story && window.TZB && sim.isDoorCell() && sim.area.spot) list.push(sim._bd || (sim._bd = { bossDoor: true, y: sim.area.spot.y + sim.area.spot.h })); // (the chests: trash-gates.js)
     if (sim.extraStanding) sim.extraStanding(list);
     if (G) list.push(sim._door || (sim._door = { door: true, y: G.y + G.h + 0.5 })); if (G && sim._door.y !== G.y + G.h + 0.5) sim._door.y = G.y + G.h + 0.5;
     list.sort((a, b) => a.y - b.y);

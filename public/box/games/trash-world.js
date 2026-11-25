@@ -75,9 +75,9 @@
     }
     const at = (x, y) => C[y * N + x];
     const par = C.map((_, i) => i), find = (i) => (par[i] === i ? i : (par[i] = find(par[i]))), join = (a, b) => { par[find(a)] = find(b); };
-    const link = (a, dir, w, main, p) => {
+    const link = (a, dir, w, main, p, rr = r) => {
       const [dx, dy] = DIRS[dir], b = at(a.x + dx, a.y + dy);
-      if (p == null) p = dir === 'e' || dir === 'w' ? (r() < 0.5 ? a.hub.y : b.hub.y) : (r() < 0.5 ? a.hub.x : b.hub.x);
+      if (p == null) p = dir === 'e' || dir === 'w' ? (rr() < 0.5 ? a.hub.y : b.hub.y) : (rr() < 0.5 ? a.hub.x : b.hub.x);
       const road = { p, w, main: !!main };
       a.side[dir] = road; b.side[OPP[dir]] = road; join(a.y * N + a.x, b.y * N + b.x);
     };
@@ -89,6 +89,17 @@
     const rest = [];
     for (const [x, y, dir] of edges) { const a = at(x, y), [dx, dy] = DIRS[dir], b = at(x + dx, y + dy); if (find(a.y * N + a.x) !== find(b.y * N + b.x)) link(a, dir, SIDE_W, false); else rest.push([x, y, dir]); }
     for (const [x, y, dir] of rest) if (r() < 0.16) link(at(x, y), dir, SIDE_W, false);
+    // No dead ends: more cross streets and loops (their own draw, so the districts below stay put),
+    // then every block gets at least two roads (a way on that isn't the way you came in) and most
+    // blocks three, so you can always push forward or sideways.
+    const r2 = rng(hash(seed, 'cross')), deg = (c) => Object.values(c.side).filter(Boolean).length;
+    const open = (c) => Object.keys(DIRS).filter((d) => !c.side[d] && inGrid(c.x + DIRS[d][0], c.y + DIRS[d][1]));
+    for (const [x, y, dir] of rest) { const a = at(x, y); if (!a.side[dir] && r2() < 0.24) link(a, dir, SIDE_W, false, null, r2); }
+    for (const want of [2, 3]) for (const c of C) {
+      if (deg(c) >= want || (want === 3 && r2() < 0.3)) continue;
+      const L = open(c).map((d) => [d, deg(at(c.x + DIRS[d][0], c.y + DIRS[d][1])) + r2()]).sort((a, b) => a[1] - b[1]);
+      if (L.length) link(c, L[0][0], SIDE_W, false, null, r2);
+    }
     for (const c of C) { const n = Object.values(c.side).filter(Boolean).length; c.n = n; if (n === 1) c.end = r() < 0.55 ? 'culdesac' : 'gate'; }
     // districts: seeded patches; every look gets a patch, the common ones a couple more
     const keys = BIOMES.map((b) => b.key).concat(['suburb', 'suburb', 'roof', 'lot', 'park']);

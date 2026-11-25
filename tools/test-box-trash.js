@@ -114,8 +114,8 @@ test('status pings are sanity-checked (kills, levels, abilities, health)', () =>
 });
 // a neighbouring cell you can drive to (there is a road)
 const roadNb = (g, c) => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [c[0] + dx, c[1] + dy]).find((n) => W.roadBetween(g.seed, c, n));
-function walkTo(room, p, target) { // follow the streets, cell by cell, to a target cell
-  const g = room.game; let R = g.runs.get(p.id), n = 0; const d = W.roadDist(g.seed, [target]);
+function walkTo(room, p, target) { // follow the streets, cell by cell, to a target cell (the kill locks have their own tests)
+  const g = room.game; let R = g.runs.get(p.id), n = 0; const d = W.roadDist(g.seed, [target]); g.noLocks = true;
   while ((R.cell[0] !== target[0] || R.cell[1] !== target[1]) && n++ < 90) {
     const nx = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [R.cell[0] + dx, R.cell[1] + dy]).filter((c) => W.roadBetween(g.seed, R.cell, c)).sort((a, b) => d[a[1] * W.GRID + a[0]] - d[b[1] * W.GRID + b[0]])[0];
     const r = room.act(p, { op: 'enter', x: nx[0], y: nx[1] }); assert(r.ok, r.error);
@@ -225,19 +225,22 @@ test('Regular: the plan is the same for a seed and different across seeds (finds
   }
   assert(doors.size >= 4 && looks.size >= 4 && bosses.size === Object.keys(ST.BOSSES).length && bosses.size >= 9 && finds.size >= 55, `${doors.size} doors, ${looks.size} looks, ${bosses.size} bosses`);
 });
-test('Regular: a chained gate blocks the way until the team has the kills; then it bursts open', () => {
+test('Regular: a locked gate blocks the way until the team has the kills (it shows kills / need); then it opens', () => {
   const { room, ps: [a, b] } = story(2); room.start(); const g = room.game;
-  assert(g.plan && g.story.tier === 0); assert(g.story.beats.length === 1, 'the radio says hello');
-  const R = g.runs.get(a.id), nbs = (c) => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [c[0] + dx, c[1] + dy]).filter((n) => W.roadBetween(g.seed, c, n)), target = (() => { for (const n1 of nbs(R.cell)) if (ST.tierAt(g.plan, n1[0], n1[1]) === 0) for (const n2 of nbs(n1)) if (ST.tierAt(g.plan, n2[0], n2[1]) === 1) return [n2[0], n2[1], n1[0] - R.cell[0], n1[1] - R.cell[1]]; return null; })();
-  assert(target, 'a ring-1 cell two road steps away');
-  assert(room.act(a, { op: 'enter', x: R.cell[0] + target[2], y: R.cell[1] + target[3] }).ok, 'ring 0 is open');
-  const locked = room.act(a, { op: 'enter', x: target[0], y: target[1] }); assert.equal(locked.ok, false); assert.match(locked.error, /chained: \d+ more zombies/);
-  assert.equal(g.need(1), ST.need(1, 2));
-  R.kills = g.need(1) - 5; g.storyCheck(); assert.equal(g.story.tier, 0);
-  g.runs.get(b.id).kills = 5; g.storyCheck(); assert.equal(g.story.tier, 1, 'team kills count');
-  assert(room.fxLog.some((f) => f.kind === 'tzunlock')); assert(g.feed.some((f) => /chains on the .* gate snapped/.test(f.text)));
+  assert(g.plan && g.lockPlan && g.story.tier === 0); assert(g.story.beats.length === 1, 'the radio says hello');
+  const R = g.runs.get(a.id), nbs = (c) => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [c[0] + dx, c[1] + dy]).filter((n) => W.roadBetween(g.seed, c, n));
+  const target = (() => { for (const n1 of nbs(R.cell)) if (!g.locked(n1[0], n1[1])) for (const n2 of nbs(n1)) if (g.locked(n2[0], n2[1]) && !g.lockPlan.kind[n2[1] * W.GRID + n2[0]]) return [n2[0], n2[1], n1]; return null; })();
+  assert(target, 'a locked block two road steps away');
+  assert(room.act(a, { op: 'enter', x: target[2][0], y: target[2][1] }).ok, 'the blocks by the garage are open');
+  const need = g.reqAt(target[0], target[1]); assert.equal(need, ST.lockNeed(g.lockPlan.req[target[1] * W.GRID + target[0]], 2), 'more players, more kills');
+  const locked = room.act(a, { op: 'enter', x: target[0], y: target[1] }); assert.equal(locked.ok, false); assert.match(locked.error, new RegExp(`locked: 0 / ${need} team kills`));
+  R.kills = need - 5; g.lockCheck(); assert(g.locked(target[0], target[1]));
+  g.runs.get(b.id).kills = 5; g.lockCheck(); assert(!g.locked(target[0], target[1]), 'team kills count');
+  assert(room.fxLog.some((f) => f.kind === 'tzunlock')); assert(g.feed.some((f) => /opened up/.test(f.text)));
   assert(room.act(a, { op: 'enter', x: target[0], y: target[1] }).ok, 'open now');
-  const tv = g.tv(); assert.equal(tv.story.tier, 1); assert.equal(tv.story.door, null, 'the TV hides the door'); assert(!('finds' in (tv.story.plan || {})), 'and the loot');
+  const c = room.join('Cy').player; c.sockets = 1; assert(!g.locked(target[0], target[1]), 'a new player never closes an open gate');
+  const tv = g.tv(); assert.equal(tv.locks.req[target[1] * W.GRID + target[0]], 0); assert.equal(tv.story.door, null, 'the TV hides the door'); assert(!('finds' in (tv.story.plan || {})), 'and the loot');
+  assert.equal(tv.locks.kind[g.plan.door[1] * W.GRID + g.plan.door[0]], '?', 'the lair is a mystery on the map');
 });
 test('Regular: finds go to the finder (keys to the team); the map halves reveal the door', () => {
   const { room, ps: [a] } = story(1); room.start(); const g = room.game, R = g.runs.get(a.id);
@@ -275,9 +278,9 @@ test('Regular: a fallen player gets back in after 15 s with their build; everyon
   assert.equal(R.state, 'play'); assert.equal(R.lvl, 4); assert.deepEqual(R.ab, { hp: 1, rapid: 2 }); assert.deepEqual(R.cell, R.home, 'back at the garage');
   room.act(a, { op: 'ev', k: 'dead' }); room.act(b, { op: 'ev', k: 'dead' }); assert.equal(g.phase, 'over'); assert.equal(g.overWhy, 'lost');
 });
-test('Endless is untouched: no gates, no loot, no door', () => {
+test('Endless: no story (no key, no door), but the kill gates are there too', () => {
   const { room, ps: [a] } = mk({ mode: 'endless' }, 1); room.start(); const g = room.game;
-  assert.equal(g.plan, null); assert.equal(g.tv().story, null);
+  assert.equal(g.plan, null); assert.equal(g.tv().story, null); assert(g.lockPlan && g.tv().locks.req.some((v) => v > 0), 'locked blocks in Endless');
   walkTo(room, a, [0, 0]); walkTo(room, a, [8, 8]);
   assert.equal(room.act(a, { op: 'find', x: 8, y: 8 }).ok, false); assert.equal(room.act(a, { op: 'door' }).ok, false);
 });
@@ -299,7 +302,7 @@ function sandbox() {
   let now = 0; const reports = [], lives = [], events = [];
   const ctx = { console, Math, Date, JSON, Object, Array, Map, Set, Number, String, Promise, Infinity, isFinite, performance: { now: () => now } };
   ctx.window = ctx; ctx.self = ctx; vm.createContext(ctx);
-  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-story.js', 'trash-boss.js', 'trash-shop.js', 'trash-play.js', 'trash-arms.js', 'trash-fight.js', 'trash-extra.js', 'trash-more.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
+  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-story.js', 'trash-boss.js', 'trash-shop.js', 'trash-play.js', 'trash-arms.js', 'trash-fight.js', 'trash-extra.js', 'trash-more.js', 'trash-gates.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
   const make = (o = {}) => new ctx.TZSim.Sim({ seed: 42, homes: [[4, 4]], me: { id: o.id || 'me', name: 'Me', color: '#fff' }, settings: { diff: 'normal', aim: 'on', xp: 'shared', ...(o.settings || {}) }, restore: o.restore || { cell: [4, 4], home: [4, 4], wave: 1, run: 1 },
     report: (m) => { reports.push(m); return Promise.resolve({ ok: true }); }, live: (m) => lives.push(m), on: (k, d) => events.push([k, d]), people: () => null });
   const step = (s, sec, I = {}, pick = true) => { for (let t = 0; t < sec; t += 1 / 60) { now += 1000 / 60; if (pick && s.cards) s.pick(0); s.update(1 / 60, I); } };
@@ -568,6 +571,7 @@ test('weapon carriers: some zombies hold a timed super weapon (same on every pho
   let carriers = 0, elites = 0; for (let i = 0; i < 400; i++) { const z = s.makeZ('walker', 100, 100); if (z.carry) carriers++; if (z.elite) elites++; } s.z.length = 0;
   assert(carriers > 4 && carriers < 30, 'a few carriers: ' + carriers); assert(elites > 2 && elites < 25, 'a few elites: ' + elites);
   const z = s.makeZ('walker', s.p.x + 200, s.p.y); z.carry = 'raygun'; s.pk.length = 0; s.damageZ(z, 1e9, 'me'); assert(s.pk.some((p) => p.k === 'raygun'), 'it drops the ray gun');
+  s.area.obstacles.length = 0; // (a clear line of fire, whatever this block's props are)
   s.applyPickup('raygun'); s.spawnOne('walker'); const q = s.z[s.z.length - 1]; q.x = s.p.x + 300; q.y = s.p.y; q.hp = q.mhp = 1e6; S.step(s, 1); assert(q.hp < 1e6, 'the ray gun fires');
   const w1 = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 1, run: 1 } }); for (let i = 0; i < 200; i++) assert(!w1.makeZ('walker', 1, 1).carry, 'not on the first waves');
 });
@@ -624,9 +628,9 @@ test('new zombies: gas-bags blow up next to you, riot shields block from the fro
   assert(['spider', 'foghorn', 'toxic'].every((k) => ST.BOSSES[k]), 'and they can be the final boss too');
 });
 test('slow motion (solo only), area events (gas leak, supply drop, cash grab, car alarm), weapon drops and crucible cores', () => {
-  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1 } }); s.p.inv = 1e9;
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1 } }); s.p.inv = 1e9; s.area.obstacles.length = 0; // (no props in the way, whatever this block looks like)
   s.slowMo(0.5); assert(s.slowmo > 0); const t0 = s.t; S.step(s, 0.2); assert(s.t - t0 < 0.15, 'time slows'); s.mode = 'host'; s.slowmo = 0; s.slowMo(0.5); assert.equal(s.slowmo, 0, 'never in co-op'); s.mode = 'solo';
-  s.startEvent('gas'); const g = s.events[s.events.length - 1]; for (let i = 0; i < 5; i++) { const z = s.makeZ('walker', g.x + i * 10, g.y); z.hp = z.mhp = 50; } s.b.push({ x: g.x, y: g.y, vx: 0, vy: 0, r: 4, dmg: 1, pierce: 0, bounce: 0, life: 0.3, hit: null, burn: 0 }); S.step(s, 0.1); assert(g.lit, 'shooting the gas lights it'); assert(s.z.filter((z) => z.hp > 0).length < 5);
+  s.startEvent('gas'); const g = s.events[s.events.length - 1]; for (let i = 0; i < 5; i++) { const z = s.makeZ('walker', g.x + i * 10, g.y + 60); z.hp = z.mhp = 50; } s.b.push({ x: g.x, y: g.y - 70, vx: 0, vy: 0, r: 4, dmg: 1, pierce: 0, bounce: 0, life: 0.3, hit: null, burn: 0 }); S.step(s, 0.1); assert(g.lit, 'shooting the gas lights it'); assert(s.z.filter((z) => z.hp > 0).length < 5);
   s.startEvent('drop'); const d = s.events[s.events.length - 1]; S.step(s, 7.2); s.p.x = d.x; s.p.y = d.y; const c0 = s.cash; S.step(s, 0.1); assert(s.cash > c0, 'supplies');
   s.coins.length = 0; s.startEvent('cash'); assert(s.coins.length >= 30); const grab = s.coins.slice(), cev = s.events[s.events.length - 1]; S.step(s, 15.5); for (let i = 0; i < 30 && s.events.includes(cev); i++) S.step(s, 1); // (slow motion stretches it a little) assert(!s.coins.some((c) => grab.includes(c)), 'cash grab ends (another one may have started since)');
   const a = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1 } }); a.p.inv = 1e9; a.startEvent('alarm'); const n0 = a.spec.target; S.step(a, 4.5); assert(a.spec.target > n0, 'the alarm brings more');
@@ -868,6 +872,114 @@ test('run save: reloading the phone brings back cash, weapons, items, class, com
 test('hard rules: the camera stays centred on the hero and the view keeps its zoom', () => {
   const sim = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-sim.js'), 'utf8'), cl = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash.js'), 'utf8');
   assert(sim.includes('let cx = P.x, cy = P.y - 30; void L;')); assert(cl.includes('k: Math.min(w, h) / 500'));
+});
+
+// ---------------- phase 3b: kill-locked areas, no dead ends, chests ----------------
+const nbsOf = (seed, i) => { const c = W.town(seed).cells[i]; return Object.keys(c.side).filter((d) => c.side[d]).map((d) => (c.y + W.DIRS[d][1]) * W.GRID + c.x + W.DIRS[d][0]); };
+test('no dead ends: every block has at least two roads (most have three), with loops and cross streets', () => {
+  const deg = {}; for (let seed = 1; seed <= 200; seed++) for (const c of W.town(seed).cells) { const n = Object.values(c.side).filter(Boolean).length; deg[n] = (deg[n] || 0) + 1; assert(n >= 2, `seed ${seed} block ${c.x},${c.y} has ${n} road`); assert(!c.end, 'no cul-de-sacs'); }
+  assert(deg[3] + deg[4] > deg[2] * 4, 'mostly three or four roads: ' + JSON.stringify(deg));
+  // loops: more roads than a tree needs (a tree of 81 blocks has 80)
+  for (const seed of [1, 7, 42]) { const roads = W.town(seed).cells.reduce((s, c) => s + (c.side.e ? 1 : 0) + (c.side.s ? 1 : 0), 0); assert(roads >= 110, seed + ': ' + roads + ' roads'); }
+});
+test('no dead ends with the locks: once a block’s own count is met it has 2+ open roads, and the open town is always joined to the garages', () => {
+  for (const mode of ['story', 'endless', 'score', 'garage', 'party']) for (let seed = 1; seed <= 120; seed++) {
+    const homes = mode === 'story' ? [[4, 4]] : [W.spawnCell(seed, [], 0)]; if (seed % 4 === 0) homes.push(W.spawnCell(seed, homes, 1));
+    const LK = ST.locks(seed, homes, { mode: mode === 'party' ? 'score' : mode, party: mode === 'party' });
+    for (const h of homes) assert.equal(LK.req[h[1] * W.GRID + h[0]], 0, 'garages are open');
+    for (let i = 0; i < 81; i++) { // the block's own requirement met: at least 2 open roads out of it
+      const open = nbsOf(seed, i).filter((j) => LK.req[j] <= LK.req[i]).length; assert(open >= 2, `${mode} ${seed} block ${i}: ${open} open road at ${LK.req[i]} kills`);
+    }
+    for (const k of new Set(LK.req)) { // ...and at that count nothing open is cut off behind a locked gate
+      const U = new Set(LK.req.map((v, i) => (v <= k ? i : -1)).filter((i) => i >= 0)), seen = new Set(homes.map((h) => h[1] * W.GRID + h[0])), q = [...seen];
+      while (q.length) { const j = q.pop(); for (const n of nbsOf(seed, j)) if (U.has(n) && !seen.has(n)) { seen.add(n); q.push(n); } }
+      assert.equal(seen.size, U.size, `${mode} ${seed}: at ${k} kills the open town is one piece`);
+    }
+  }
+});
+test('kill locks: ordinary blocks open at low counts, special ones (lair, key vaults, best shops, dens, loot stashes) need far more; scaled by players; no cap in Endless; Party Mode is simple', () => {
+  const kinds = new Set(); let shops = 0, tot = 0;
+  for (let seed = 1; seed <= 80; seed++) {
+    const S0 = ST.locks(seed, [[4, 4]], { mode: 'story' }), E = ST.locks(seed, [W.spawnCell(seed, [], 0)], { mode: 'endless' }), Pm = ST.locks(seed, [W.spawnCell(seed, [], 0)], { mode: 'score', party: true });
+    for (const L of [S0, E, Pm]) L.kind.forEach((k, i) => { if (!k) return; kinds.add(k); const around = Math.max(...nbsOf(seed, i).map((j) => L.req[j])); assert(L.req[i] > around, `special ${k} needs more than every block around it`); assert(nbsOf(seed, i).every((j) => !L.kind[j]), 'specials never touch'); });
+    assert(S0.door && S0.keys.length === 3 && S0.kind[S0.door[1] * 9 + S0.door[0]] === 'lair'); assert(S0.keys.every(([x, y]) => S0.kind[y * 9 + x] === 'key' && S0.req[y * 9 + x] >= 110), 'the key vaults are locked');
+    const near = S0.req.filter((v, i) => !S0.kind[i] && v > 0); assert(Math.min(...near) <= 30, 'the first ordinary gates are cheap'); assert(S0.req.filter((v) => v === 0).length >= 5, 'a few blocks open from the start');
+    assert(Math.max(...E.req) >= 880, 'Endless: the far loot stash keeps climbing'); assert(Math.max(...Pm.req) <= 200, 'Party Mode: everything is reachable in a short game');
+    assert(Pm.kind.every((k) => !k || k === 'shop' || k === 'vault'), 'Party Mode: only the best shops and a stash are special');
+    for (const [k2, t] of Object.entries(PL.places(seed))) if (t === 'master' || t === 'forge') { tot++; if (S0.kind[k2.split(',')[1] * 9 + +k2.split(',')[0]] === 'shop') shops++; }
+    const P = ST.plan(seed, [[4, 4]]); for (const [n, id] of ST.KEYS.entries()) assert.equal(P.finds[S0.keys[n].join()], id, 'the key pieces sit in the key vaults');
+  }
+  assert.deepEqual([...kinds].sort(), ['den', 'key', 'lair', 'shop', 'vault']); assert(shops / tot > 0.8, 'the best shops are behind big gates: ' + shops + '/' + tot);
+  assert(ST.lockNeed(100, 4) > ST.lockNeed(100, 2) && ST.lockNeed(100, 2) > ST.lockNeed(100, 1)); assert.equal(ST.lockNeed(100, 1), 100);
+});
+test('kill locks on the server (every mode): gates show kills / need, the TV and phones get the counts, specials stay a mystery until found, the open news names them', () => {
+  for (const mode of ['endless', 'score', 'garage']) {
+    const { room, ps: [a] } = mk({ mode }, 1); room.start(); const g = room.game, R = g.runs.get(a.id), L = g.lockPlan;
+    assert(L, mode + ' has locks'); const i = L.kind.findIndex((k) => k), x = i % 9, y = Math.floor(i / 9);
+    assert(g.locked(x, y)); assert.equal(g.tv().locks.kind[i], '?', 'unexplored specials are a mystery'); assert.equal(g.view(a).locks.kind[i], '?');
+    R.kills = g.reqAt(x, y); g.lockCheck(); assert(!g.locked(x, y)); assert(g.feed.some((f) => /big gate is open/.test(f.text)), 'the news calls out a special gate');
+    g.explore([x, y], a.id); assert.equal(g.tv().locks.kind[i], L.kind[i], 'explored: everyone knows what it is'); assert.equal(g.tv().locks.kills, g.teamKills());
+  }
+  // bots respect the gates in every mode
+  const clock = new VirtualClock(), room = new BoxRoom('TEST', def, { clock, seed: 5 }); room.addBots(3); room.settings.mode = 'endless'; room.settings.length = 'm5'; room.start();
+  let n = 0; while (room.game.phase !== 'over' && clock.step()) { if (++n > 100000) throw new Error('stuck'); for (const R of room.game.runs.values()) assert(!room.game.locked(R.cell[0], R.cell[1]), 'never behind a locked gate'); }
+});
+test('phone: a locked gate stays shut even when the area is clear (it shows kills / need); it opens when the team has the kills', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [4, 4], home: [4, 4], wave: 2, run: 1 } }); s.p.inv = 1e9; S.step(s, 5);
+  const dir = ['n', 's', 'w', 'e'].find((d) => s.area.exits[d]), [dx, dy] = W.DIRS[dir], i = (4 + dy) * 9 + 4 + dx, req = new Array(81).fill(0); req[i] = 200;
+  s.setLocks({ req, kind: new Array(81).fill(null), kills: 120 });
+  s.z.length = 0; s.waveKills = s.spec.target; S.step(s, 0.2); assert(s.cleared);
+  assert.deepEqual(JSON.parse(JSON.stringify(s.gateInfo(dir))), { have: 120, need: 200, kind: null }); assert.equal(s.gateLeft(dir), 80); assert.equal(!!s.exitOpen(dir), false, 'locked');
+  const road = s.area.exits[dir]; if (dir === 'n') { s.p.x = road.p; s.p.y = 60; } else if (dir === 's') { s.p.x = road.p; s.p.y = W.AH - 60; } else if (dir === 'w') { s.p.x = 60; s.p.y = road.p; } else { s.p.x = W.AW - 60; s.p.y = road.p; }
+  S.step(s, 1, { mx: dx, my: dy }); assert.equal(s.cell.join(), '4,4', 'the gate holds');
+  assert.equal(s.nextGate().need, 200); assert(s.nextGate().here);
+  s.setLocks({ req, kind: new Array(81).fill(null), kills: 200 }); assert.match(s.banner.text, /GATE OPEN/); assert(s.exitOpen(dir));
+  for (let k = 0; k < 120 && s.cell.join() === '4,4'; k++) S.step(s, 1 / 60, { mx: dx, my: dy }); assert.equal(s.cell.join(), [4 + dx, 4 + dy].join(), 'through it');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-gates.js'), 'utf8'); assert(src.includes('`🔒 ${G.have} / ${G.need} kills`'), 'the gate sign');
+});
+test('phone: special blocks are harder (bigger, tougher wave, more elites); a zombie den brings a boss', () => {
+  const S = sandbox(), plain = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1 } }), kind = new Array(81).fill(null); kind[2 * 9 + 2] = 'vault';
+  const hard = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1 } }); hard.setLocks({ req: new Array(81).fill(0), kind, kills: 0 }); hard.startWave();
+  assert.equal(hard.hard, 'vault'); assert(hard.spec.target >= Math.round(plain.spec.target * 1.4) && hard.spec.hpMul > plain.spec.hpMul && hard.spec.dmgMul > plain.spec.dmgMul, 'a bigger, tougher wave'); assert.match(hard.banner.text, /LOOT STASH/);
+  let e1 = 0, e2 = 0; for (let k = 0; k < 300; k++) { if (plain.makeZ('walker', 100, 100).elite) e1++; if (hard.makeZ('walker', 100, 100).elite) e2++; } assert(e2 > e1 * 3 && e2 > 25, `more elites: ${e1} -> ${e2}`);
+  kind[2 * 9 + 2] = 'den'; const den = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); den.setLocks({ req: new Array(81).fill(0), kind, kills: 0 }); den.startWave(); assert(den.bossDue, 'a boss lives in the den');
+  const q = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1 } }); kind[2 * 9 + 2] = '?'; q.setLocks({ req: new Array(81).fill(0), kind, kills: 0 }); q.startWave(); const t0 = q.spec.target; kind[2 * 9 + 2] = 'den'; q.setLocks({ req: new Array(81).fill(0), kind, kills: 0 }); assert.equal(q.spec.target, t0, 'found out it is a den: not harder twice'); assert(q.bossDue);
+});
+const syncReply = (S, s, answer) => { s.o.report = (m) => { S.reports.push(m); const r = answer(m); return { then(f) { f(r); return this; } }; }; };
+test('chests: story finds (the key pieces) sit in a chest you open by hand once the area is clear; it opens, the find rises out, plus a little cash', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.p.inv = 1e9;
+  s.story = { plan: { finds: { '2,2': 'shard1' }, door: [8, 8], boss: 'truck' }, taken: [], keys: 0, maps: 0, tier: 0 };
+  syncReply(S, s, (m) => (m.op === 'find' ? { ok: true, find: 'shard1', cash: 40 } : { ok: true }));
+  const C = s.chestHere(); assert(C && C.kind === 'find' && C.id === 'shard1', 'a chest in this block');
+  s.p.x = C.x; s.p.y = C.y + 40; S.step(s, 0.5); assert.equal(s.chestNear(), null, 'not before the area is clear'); assert(!S.reports.some((r) => r.op === 'find'));
+  s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; S.step(s, 0.2); assert(s.cleared);
+  s.p.x = C.x + 400; s.p.y = C.y; assert.equal(s.chestNear(), null, 'you have to be next to it'); s.p.x = C.x; s.p.y = C.y + 40;
+  S.step(s, 2); assert(!S.reports.some((r) => r.op === 'find'), 'standing next to it does not open it: you tap / click');
+  assert(s.chestNear()); const cash = s.cash; assert(s.openChest()); assert(S.reports.some((r) => r.op === 'find' && r.x === 2 && r.y === 2)); assert(s.chestAnim && !s.chestAnim.shown, 'the lid is opening');
+  S.step(s, 0.3); assert(!s.chestAnim.shown); S.step(s, 0.6); assert(s.chestAnim.shown, 'the key piece rises out'); assert(S.events.some(([k, d]) => k === 'find' && d.id === 'shard1')); assert.equal(s.cash, cash + 40, 'a little loot too');
+  S.step(s, 3); assert.equal(s.chestAnim, null); assert.equal(s.chestHere(), null, 'opened for good'); assert.equal(s.openChest(), false);
+  // a refusal (someone else got there first) shuts the lid again
+  const t = S.make({ restore: { cell: [3, 3], home: [4, 4], wave: 3, run: 1 } }); t.story = { plan: { finds: { '3,3': 'lid' }, door: [8, 8] }, taken: [], keys: 0 }; syncReply(S, t, () => ({ ok: false, error: 'Someone already looted this.' }));
+  t.z.length = 0; t.waveKills = t.spec.target; t.bossDue = false; S.step(t, 0.2); const C2 = t.chestHere(); t.p.x = C2.x; t.p.y = C2.y + 40; assert(t.openChest()); assert.equal(t.chestAnim, null); assert.match(t.banner.sub, /already/);
+  const cl = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash.js'), 'utf8'); assert(cl.includes("label: 'OPEN'") && cl.includes('clickChest(p.x, p.y)') && /f: PH\.sim\.chestNear/.test(cl), 'the OPEN button (phone), click / F (PC)'); assert(/Chests: clear the area/.test(cl), 'how to play explains the chests');
+});
+test('chests: loot stashes and dens have a loot chest (cash + goodies, a weapon in a stash), once per player; the server checks it', () => {
+  const S = sandbox(), kind = new Array(81).fill(null); kind[2 * 9 + 2] = 'vault';
+  const s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 4, run: 1 } }); s.p.inv = 1e9; s.setLocks({ req: new Array(81).fill(0), kind, kills: 0 });
+  syncReply(S, s, (m) => (m.op === 'chest' ? { ok: true, cash: 150, loot: ['shield', 'snack', 'xp2'], weapon: true } : { ok: true }));
+  s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; S.step(s, 0.2); const C = s.chestHere(); assert(C && C.kind === 'loot' && C.id === 'vault');
+  s.p.x = C.x; s.p.y = C.y + 40; const pk = s.pk.length, cash = s.cash, drops = s.drops.length; assert(s.openChest()); assert(S.reports.some((r) => r.op === 'chest' && r.cell === '2,2')); s.p.x = C.x > W.AW / 2 ? 100 : W.AW - 100; // (step back so nothing gets picked up yet)
+  S.step(s, 2); assert.equal(s.pk.length, pk + 3, 'goodies around the chest'); assert.equal(s.cash, cash + 150); assert(s.drops.length > drops, 'a weapon'); S.step(s, 3); assert.equal(s.chestHere(), null);
+  // the server
+  const { room, ps: [a, b] } = mk({ mode: 'endless' }, 2); room.start(); const g = room.game, i = g.lockPlan.kind.findIndex((k) => k === 'vault' || k === 'den'), cell = [i % 9, Math.floor(i / 9)];
+  const Ra = g.runs.get(a.id), Rb = g.runs.get(b.id); assert.equal(room.act(a, { op: 'chest', cell: cell.join() }).ok, false, 'not there');
+  Ra.cell = cell.slice(); Rb.cell = cell.slice(); const r = room.act(a, { op: 'chest', cell: cell.join() }); assert(r.ok && r.cash > 0 && r.loot.length >= 2);
+  assert.equal(room.act(a, { op: 'chest', cell: cell.join() }).ok, false, 'once'); assert(room.act(b, { op: 'chest', cell: cell.join() }).ok, 'each player gets their own');
+  assert.deepEqual(g.view(a).chests, [cell.join()]); assert(room.fxLog.some((f) => f.kind === 'tzchest'));
+  const j = g.lockPlan.kind.findIndex((k, n) => !k && !g.homes.some((h) => h[1] * 9 + h[0] === n)); Ra.cell = [j % 9, Math.floor(j / 9)]; assert.equal(room.act(a, { op: 'chest', cell: Ra.cell.join() }).ok, false, 'no chest in an ordinary block');
+  // a key chest pays a little too
+  const st = story(1); st.room.start(); const sg = st.room.game, SR = sg.runs.get(st.ps[0].id); SR.cell = sg.lockPlan.keys[0].slice();
+  const kr = st.room.act(st.ps[0], { op: 'find', x: SR.cell[0], y: SR.cell[1] }); assert.equal(kr.find, 'shard1'); assert(kr.cash > 0); assert(sg.moments.some((m) => m.kind === 'key'));
 });
 
 console.log(`\n${passed} TrashZombies tests passed.`);

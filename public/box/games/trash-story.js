@@ -2,13 +2,15 @@
 // TrashZombies Regular mode (the story): gated areas, unique finds, the boss door and the bosses.
 // Shared by the server, the TV and the phones (Node: module.exports; browser: window.TZS).
 //   TZS.plan(seed, homes)  -> { tiers: [81 numbers], finds: { 'x,y': id }, door: [x, y], doorLook, boss }
-//   TZS.need(tier, players) -> team kills that open that tier's gates (more players, more kills)
+//   TZS.need(tier, players) -> team kills for the radio's story beats (more players, more kills)
+//   TZS.locks(seed, homes, o) -> the area locks (every mode): the team kills each block needs
 // The plan is made once when the night starts (from the seed and the garages), so every screen
 // agrees, and every night is different: the finds, the door's place and look, and the boss.
 (function (root, factory) {
-  const M = factory(typeof require === 'function' ? require('./trash-world') : root.TZW);
+  // (the places come from trash-shop.js, looked up when needed: it loads after this file on the TV)
+  const M = factory(typeof require === 'function' ? require('./trash-world') : root.TZW, () => (typeof require === 'function' ? require('./trash-shop') : root.TZP));
   if (typeof module === 'object' && module.exports) module.exports = M; else root.TZS = M;
-})(typeof self !== 'undefined' ? self : this, function (W) {
+})(typeof self !== 'undefined' ? self : this, function (W, places) {
   const MAX_TIER = 4;
   const BASE = [0, 60, 170, 330, 540]; // team kills per tier, for one player
   const need = (tier, players) => (tier <= 0 ? 0 : Math.round(BASE[Math.min(MAX_TIER, tier)] * (0.6 + 0.4 * Math.max(1, players || 1))));
@@ -66,9 +68,88 @@
     open: 'The door is OPEN. Oh no. Oh it’s big. Shoot it! Shoot it a lot!',
     win: 'You did it! The stink is lifting! Radio Dumpster is playing your song all night. Dot out, forever. Or until Tuesday.',
   };
-  function plan(seed, homes) { // tiers: road steps from the nearest garage
+  // ---------------- area locks: the town opens up as the team racks up zombie kills ----------------
+  // Every mode. locks(seed, homes, o) -> { req: [81 team kills for one player], kind: [81: null | 'lair' |
+  // 'key' | 'shop' | 'den' | 'vault'], door, keys } (o: { mode, party, fixed }). Ordinary blocks open at
+  // low counts (a few more kills for every road step from a garage); special blocks (the boss lair, the
+  // key vaults, the best shops, zombie dens, loot stashes) need far more and are harder inside. The
+  // counts grow with the players (lockNeed). Built so a locked gate is only ever a detour: at every kill
+  // count the open part of town is joined to the garages, and every open block has at least two open
+  // roads (never a pocket where the only way on is back the way you came).
+  const ORD = (d) => (d <= 1 ? 0 : Math.round(10 * Math.pow(d - 1, 1.6)));
+  const LOCK = {
+    story: { mul: 1, cap: 300, key: [110, 210, 320], lair: 430, master: 260, forge: 300, den: [170], vault: [200] },
+    endless: { mul: 1, cap: 0, master: 260, forge: 320, den: [170, 420], vault: [210, 520, 880] }, // no cap: further out keeps climbing
+    timed: { mul: 0.6, cap: 260, master: 260, forge: 300, den: [170], vault: [200] }, // Score attack / Garage Defense / wave 20
+    party: { mul: 0.5, cap: 150, master: 220, forge: 260, vault: [200] }, // Party Mode: one shared count, few specials
+  };
+  const SPECIAL = {
+    lair: { icon: '☠️', name: 'the boss lair' }, key: { icon: '🗝️', name: 'a key vault' }, shop: { icon: '⚜️', name: 'a master shop' },
+    den: { icon: '🧟', name: 'a zombie den' }, vault: { icon: '💎', name: 'a loot stash' },
+  };
+  const lockNeed = (base, players) => Math.round((base || 0) * (0.6 + 0.4 * Math.max(1, players || 1)));
+  const lockMode = (o) => (o && o.party ? 'party' : o && o.mode === 'story' ? 'story' : o && o.mode === 'endless' ? 'endless' : 'timed');
+  const lockCache = new Map();
+  function locks(seed, homes, o = {}) {
+    seed = Number(seed) || 1; const N = W.GRID, NN = N * N, T = W.town(seed), mode = lockMode(o), L = LOCK[mode];
     homes = (homes && homes.length ? homes : [[4, 4]]).map((h) => [h[0], h[1]]);
-    const r = W.rng(W.hash(seed, 'story'));
+    const ck = [seed, mode, JSON.stringify(homes), JSON.stringify(o.fixed || null)].join('|'); if (lockCache.has(ck)) return lockCache.get(ck);
+    const r = W.rng(W.hash(seed, 'locks', mode)), at = (x, y) => y * N + x, home = new Set(homes.map((h) => at(h[0], h[1])));
+    const nb = T.cells.map((c) => Object.keys(c.side).filter((d) => c.side[d]).map((d) => at(c.x + W.DIRS[d][0], c.y + W.DIRS[d][1])));
+    const dist = W.roadDist(seed, homes), kind = new Array(NN).fill(null), base = new Array(NN).fill(0);
+    // a special block never cuts anything off: no two touch, every other block keeps two roads to
+    // ordinary blocks, and the ordinary blocks stay joined to the garages without it
+    const ok = (i) => {
+      if (i < 0 || home.has(i) || kind[i] || !(dist[i] >= 2) || nb[i].some((j) => kind[j])) return false;
+      kind[i] = '?';
+      let good = nb.every((L2, j) => !!kind[j] || L2.filter((q) => !kind[q]).length >= 2);
+      if (good) { const seen = new Set(home), q = [...home]; while (q.length) { const j = q.pop(); for (const k of nb[j]) if (!kind[k] && !seen.has(k)) { seen.add(k); q.push(k); } } good = seen.size === kind.filter((k) => !k).length; }
+      kind[i] = null; return good;
+    };
+    const put = (i, k, b) => { kind[i] = k; base[i] = b; };
+    const pick = (lo, hi) => { const C = []; for (let i = 0; i < NN; i++) if (dist[i] >= lo && dist[i] <= hi && ok(i)) C.push(i); return C.length ? C[Math.floor(r() * C.length)] : -1; };
+    const top = Math.max(...dist.filter(Number.isFinite)), xy = (i) => [i % N, Math.floor(i / N)];
+    let door = null; const keys = [];
+    if (o.fixed) { for (const [i, k, b] of o.fixed) if (ok(i)) put(i, k, b); } // a late garage: the same specials as before
+    else {
+      const P = places(); // the Master Armorer and the Scrapyard Crucible sit behind big gates
+      if (P) for (const [k2, t] of Object.entries(P.places(seed))) if (t === 'master' || t === 'forge') { const [x, y] = k2.split(',').map(Number), i = at(x, y); if (ok(i)) put(i, 'shop', L[t]); }
+      if (mode === 'story') {
+        let i = -1; for (let d = top; d >= 2 && i < 0; d--) i = pick(d, d); // the lair: one of the farthest blocks
+        if (i >= 0) { put(i, 'lair', L.lair); door = xy(i); }
+        L.key.forEach((b, n) => { let j = pick([2, 3, 4][n], [4, 6, 99][n]); if (j < 0) j = pick(2, 99); if (j >= 0) { put(j, 'key', b); keys.push(xy(j)); } });
+      }
+      (L.den || []).forEach((b, n) => { const j = pick(3 + 2 * n, 99); if (j >= 0) put(j, 'den', b); });
+      (L.vault || []).forEach((b, n) => { const j = pick(3 + 2 * n, 99); if (j >= 0) put(j, 'vault', b); });
+    }
+    // The ordinary blocks: what each would like to need (by road steps), then the open town grows from
+    // the garages one count at a time, along ordinary roads only; an open block with fewer than two
+    // open roads opens its cheapest ordinary neighbour with it (so it is never a dead end).
+    const want = new Array(NN), req = new Array(NN).fill(-1), inU = (i) => req[i] >= 0;
+    for (let i = 0; i < NN; i++) { let v = Number.isFinite(dist[i]) ? Math.round(ORD(dist[i]) * L.mul) : 0; if (L.cap) v = Math.min(Math.round(L.cap * L.mul), v); want[i] = home.has(i) ? 0 : v; }
+    for (const h of home) req[h] = 0;
+    const ord = (i) => !kind[i];
+    for (const k of [...new Set(want.filter((_, i) => ord(i)))].sort((a, b) => a - b)) {
+      for (let changed = true, guard = 0; changed && guard < 400; guard++) {
+        changed = false;
+        for (let i = 0; i < NN; i++) if (ord(i) && !inU(i) && want[i] <= k && nb[i].some(inU)) { req[i] = k; changed = true; }
+        for (let i = 0; i < NN; i++) {
+          if (!inU(i) || nb[i].filter(inU).length >= 2) continue;
+          const c = nb[i].filter((j) => ord(j) && !inU(j)).sort((a, b) => want[a] - want[b] || a - b)[0];
+          if (c != null) { req[c] = k; changed = true; }
+        }
+      }
+    }
+    const most = Math.max(0, ...req); for (let i = 0; i < NN; i++) if (ord(i) && req[i] < 0) req[i] = most;
+    // The special blocks: well above everything around them (all their roads lead to ordinary blocks).
+    for (let i = 0; i < NN; i++) if (kind[i]) req[i] = Math.max(Math.round(base[i] * L.mul), want[i] + Math.round(40 * L.mul), ...nb[i].map((j) => req[j] + Math.round(50 * L.mul)));
+    const fixed = []; for (let i = 0; i < NN; i++) if (kind[i]) fixed.push([i, kind[i], base[i]]);
+    const out = { mode, req, kind, door, keys, fixed };
+    if (lockCache.size > 40) lockCache.clear(); lockCache.set(ck, out); return out;
+  }
+  function plan(seed, homes) { // tiers: road steps from the nearest garage (where the smaller finds go)
+    homes = (homes && homes.length ? homes : [[4, 4]]).map((h) => [h[0], h[1]]);
+    const r = W.rng(W.hash(seed, 'story')), LK = locks(seed, homes, { mode: 'story' });
     const N = W.GRID, tiers = [], dist = W.roadDist(seed, homes);
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const d = dist[y * N + x];
@@ -78,15 +159,15 @@
     const cells = [];
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!homes.some((h) => h[0] === x && h[1] === y)) cells.push([x, y]);
     const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-    // the door: far away (the highest tier there is), random among those
+    // the door: the boss lair the locks picked (far away, behind the biggest gate)
     const top = Math.max(...cells.map(([x, y]) => tierOf(x, y)));
     const far = shuffle(cells.filter(([x, y]) => tierOf(x, y) === top));
-    const door = far[0];
-    const finds = {};
-    const free = (t) => shuffle(cells.filter(([x, y]) => tierOf(x, y) === t && !(x === door[0] && y === door[1]) && !finds[x + ',' + y]));
+    const door = LK.door || far[0];
+    const finds = {}, special = (x, y) => !!LK.kind[y * N + x];
+    const free = (t) => shuffle(cells.filter(([x, y]) => tierOf(x, y) === t && !(x === door[0] && y === door[1]) && !finds[x + ',' + y] && !special(x, y)));
     const put = (id, tiersOk) => { for (const t of tiersOk) { const c = free(Math.min(t, top))[0]; if (c) { finds[c[0] + ',' + c[1]] = id; return; } } };
-    // key pieces spread over the tiers (the last one deep), map halves in the middle, the rest anywhere
-    put('shard1', [1, 2]); put('shard2', [2, 3]); put('shard3', [3, 4, 2]);
+    // the key pieces: in chests in the key vaults (locked, harder blocks); map halves in the middle, the rest anywhere
+    KEYS.forEach((id, n) => { const c = LK.keys[n]; if (c && !finds[c[0] + ',' + c[1]]) finds[c[0] + ',' + c[1]] = id; else put(id, [[1, 2], [2, 3], [3, 4, 2]][n]); });
     put('map1', [2, 1]); put('map2', [3, 2]);
     const extras = shuffle(['lid', 'skates', 'blower', 'goggles', 'boombox', 'twin', 'leech', 'fire', 'storm']).slice(0, 7);
     extras.forEach((id, i) => put(id, [1 + (i % Math.max(1, top)), 1, 2]));
@@ -98,5 +179,5 @@
     return { tiers, finds, door, doorLook, boss, hint, top };
   }
   const tierAt = (P, x, y) => (P && P.tiers ? P.tiers[y * W.GRID + x] || 0 : 0);
-  return { MAX_TIER, BASE, need, FINDS, KEYS, DOORS, BOSSES, BEATS, RADIO, plan, tierAt };
+  return { MAX_TIER, BASE, need, FINDS, KEYS, DOORS, BOSSES, BEATS, RADIO, plan, tierAt, locks, lockNeed, lockMode, LOCK, SPECIAL, ORD };
 });
