@@ -982,4 +982,104 @@ test('chests: loot stashes and dens have a loot chest (cash + goodies, a weapon 
   const kr = st.room.act(st.ps[0], { op: 'find', x: SR.cell[0], y: SR.cell[1] }); assert.equal(kr.find, 'shard1'); assert(kr.cash > 0); assert(sg.moments.some((m) => m.kind === 'key'));
 });
 
+// ---------------- the final pass: iso view, JustZombies, breaks between waves, timed rides, first person, the tank ----------------
+test('iso view: screen directions turn into the world directions that look the same (drag up moves you up the screen); the camera rule', () => {
+  const ctx = { console, Math, JSON, Object, Array, Map, Set, Number, String, Promise, Infinity, isFinite, setTimeout, performance: { now: () => 0 } }; ctx.window = ctx; ctx.self = ctx; vm.createContext(ctx);
+  for (const f of ['trash-world.js', 'trash-iso.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
+  const I = ctx.TZI, d2w = I.dirToWorld, near = (a, b, e = 1e-6) => Math.abs(a - b) < e;
+  // projection: art x = (x - y) * 0.8, art y = (x + y) * 0.4 (the art set's 128 x 64 tile = 80 world units)
+  const C = I.cam; Object.assign(C, { s: 1, w: 800, h: 400, cx: 0, cy: 0, sx: 0, sy: 0, dpr: 1 });
+  let [sx, sy] = C.toScreen(80, 0); assert(near(sx - 400, 64) && near(sy - 200, 32), 'one tile east = 64 px right, 32 down');
+  [sx, sy] = C.toScreen(0, 80); assert(near(sx - 400, -64) && near(sy - 200, 32), 'one tile south = 64 px left, 32 down');
+  const [wx, wy] = C.toWorld(...C.toScreen(123, -45)); assert(near(wx, 123, 1e-6) && near(wy, -45, 1e-6), 'screen <-> world round trip');
+  const [hx, hy] = C.toWorld(...C.toScreen(300, 200, 30), 30); assert(near(hx, 300, 1e-6) && near(hy, 200, 1e-6), 'and at chest height');
+  // directions: each comes back the same length, and points where it looks like it points
+  const up = d2w(0, -1), right = d2w(1, 0), left = d2w(-1, 0), down = d2w(0, 1);
+  assert(near(up[0], -Math.SQRT1_2) && near(up[1], -Math.SQRT1_2), 'up on screen = north-west in the world');
+  assert(near(right[0], Math.SQRT1_2) && near(right[1], -Math.SQRT1_2), 'right on screen = north-east');
+  assert(near(left[0], -Math.SQRT1_2) && near(left[1], Math.SQRT1_2) && near(down[0], Math.SQRT1_2) && near(down[1], Math.SQRT1_2), 'left and down');
+  for (let a = 0; a < 6.28; a += 0.3) { const d = d2w(Math.cos(a) * 0.7, Math.sin(a) * 0.7), sa = I.screenAngle(Math.atan2(d[1], d[0])); assert(near(Math.hypot(d[0], d[1]), 0.7, 1e-9), 'same length'); assert(near(Math.cos(sa), Math.cos(a), 1e-6) && near(Math.sin(sa), Math.sin(a), 1e-6), 'and it shows where you pushed'); }
+  assert.equal(I.dirOf(1, 1), 'S'); assert.equal(I.dirOf(1, -1), 'E'); assert.equal(I.dirOf(-1, -1), 'N'); assert.equal(I.dirOf(-1, 1), 'W'); assert.equal(I.dirOf(1, 0), 'SE');
+  // the camera: centred on you, no look-ahead, and the same amount of ground as the old top-down view (k = min(w, h) / 500)
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-iso.js'), 'utf8');
+  assert(src.includes('const s = V.k / 0.8;') && /cx: isoX\(fx0, fy0\)/.test(src) && !/lead\(/.test(src), 'iso camera: centred, no lead, area-matched scale');
+  const k = 390 / 500, s = k / 0.8, oldArea = (844 / k) * (390 / k), isoArea = (844 * 390) / (s * s * 0.64); assert(Math.abs(isoArea / oldArea - 1) < 1e-9, 'the visible ground area matches');
+});
+test('JustZombies: the new name everywhere players see it; its own address (/zombies), a big game with JustMafia and JustRaiseDucks; JustKingdoms on the More games shelf', () => {
+  const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
+  assert.equal(def.name, 'JustZombies'); assert.equal(def.key, 'trash');
+  const hub = read('public/hub.html'), big = hub.slice(hub.indexOf('<section class="tiles big" id'), hub.indexOf('</section>', hub.indexOf('<section class="tiles big" id')));
+  assert.deepEqual([...big.matchAll(/data-game="([a-z]+)"/g)].map((m) => m[1]), ['mafia', 'ducks', 'trash'], 'the big three');
+  assert(/<a class="tile live trash" href="\/zombies"[^>]*>[\s\S]*?<h2>JustZombies<\/h2>/.test(big), 'the JustZombies big tile');
+  const small = hub.slice(hub.indexOf('<section class="tiles small" aria')); assert(/data-game="kingdoms"[^>]*data-type="action"/.test(small) && /href="\/kingdoms"/.test(small), 'JustKingdoms is a regular tile (still at /kingdoms)');
+  assert(read('box/index.js').includes("app.get('/zombies'") && read('box/index.js').includes("app.get('/zombies/play'") && read('box/index.js').includes("app.get('/kingdoms'"), 'routes');
+  assert(/STANDALONE = \{ ducks: 'ducks', trash: 'zombies', kingdoms: 'kingdoms' \}/.test(read('one-code.js')), 'one code sends phones to /zombies/play');
+  assert(read('public/party/party.js').includes("games: ['ducks', 'trash', 'mafia']"), 'Party Mode big games');
+  for (const f of ['public/box/games/trash.js', 'public/box/intros/trash.js', 'public/box/titles/trash.js', 'public/box/play.webmanifest', 'public/hub.html', 'public/party/party.js']) assert(!/TrashZombies|Trash<b>Zombies/.test(read(f)), f + ' says JustZombies');
+  assert(read('public/box/tv.js').includes("const PATHS = { zombies: 'trash' }"), 'the TV page knows /zombies');
+  const cl = read('public/box/games/trash.js'); assert(/standalone: true, smallToo: true, path: 'zombies', title: titleScreen/.test(cl) && /creditsHtml\(\)/.test(cl), 'own title screen + credits');
+  assert(read('public/box/games/trash-assets/CREDITS.md').includes('CC0'));
+});
+test('the break between waves: 30 s after a clear the next wave starts by itself where you stand (every mode); the server checks it; only the solo pause menu holds it', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.p.inv = 1e9;
+  assert.equal(s.ctor ? 1 : S.ctx.TZSim.BREAK_S, 30);
+  s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; S.step(s, 0.1); assert(s.cleared && s.breakT > 29, 'clear: the clock starts');
+  s.shopping = true; s.paused = true; S.step(s, 10); assert(s.breakT < 20.5, 'shopping does not stop it: ' + s.breakT);
+  s.menuPause = true; const b0 = s.breakT; S.step(s, 5); assert.equal(s.breakT, b0, 'the solo pause menu holds it'); s.menuPause = false; s.paused = false; s.shopping = false;
+  const w0 = s.wave; S.step(s, 21); assert.equal(s.wave, w0 + 1, 'the next wave came'); assert(!s.cleared && s.breakT == null); assert.equal(s.cell.join(), '2,2', 'right here'); assert(S.reports.some((r) => r.op === 'ev' && r.k === 'wave'));
+  assert(S.events.some(([k]) => k === 'tick'), 'the last seconds tick');
+  // the status ping carries the clock (for the TV)
+  s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; S.step(s, 0.2); s.reportStatus(true); const st = S.reports.filter((r) => r.op === 'st').pop(); assert(st.brk >= 29 && st.brk <= 30);
+  // co-op: the host's clock is in the snapshot; a guest can't hold it
+  const h = S.make({ id: 'h', restore: { cell: [3, 3], home: [4, 4], wave: 2, run: 1 } }); h.setArea({ k: '3,3', host: 'h', members: ['h', 'g'] }); h.z.length = 0; h.waveKills = h.spec.target; h.bossDue = false; S.step(h, 0.2); assert(h.cleared);
+  S.lives.length = 0; S.step(h, 0.3); const snap = S.lives.filter((m) => m.t === 'snap').pop(); assert(snap && snap.w[5] > 25, 'the break rides along in the snapshot');
+  // the server: a 'wave' report needs the break to have run
+  const { room, clock, ps: [a] } = mk({}, 1); room.start(); const g = room.game, R = g.runs.get(a.id);
+  assert.equal(room.act(a, { op: 'ev', k: 'wave', wave: 2 }).ok, false, 'not without a clear');
+  room.act(a, { op: 'ev', k: 'clear', wave: 1 }); assert.equal(room.act(a, { op: 'ev', k: 'wave', wave: 2 }).ok, false, 'not straight away');
+  run(room, clock, 30000); const areas = R.areas; assert.equal(room.act(a, { op: 'ev', k: 'wave', wave: 2 }).ok, true); assert.equal(R.areas, areas + 1, 'the new wave counts like a new area');
+  room.act(a, { op: 'st', kills: 10, lvl: 2, hp: 90, mhp: 100, wave: 2, brk: 12 }); assert.equal(g.people().find((p) => p.id === a.id).brk, 12, 'the TV sees the clock');
+  assert(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash.js'), 'utf8').includes('NEXT WAVE IN'), 'big countdown on the phone + TV');
+});
+test('rides are all timed: each has a clock; when it runs out you pop out and it breaks down (the truck drives off); new: the push mower and the rare tank', () => {
+  for (const [k, V] of Object.entries(X.VEHICLES)) assert(V.time > 0 && V.hp > 0, k + ' is timed');
+  assert(X.VEHICLES.push && X.VEHICLES.tank && X.VEHICLES.tank.cannon, 'push mower + tank');
+  let tanks = 0, push = 0; for (let seed = 1; seed < 30; seed++) for (let x = 0; x < 9; x++) for (let y = 0; y < 9; y++) { const v = X.vehicleAt(seed, x, y, [[4, 4]]); if (v === 'tank') tanks++; if (v === 'push') push++; }
+  assert(tanks > 10 && tanks < 150, 'tanks are rare: ' + tanks); assert(push > 0);
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.p.inv = 1e9; s.breakT = 9999;
+  s.parked = { kind: 'cart', x: s.p.x + 40, y: s.p.y, hp: 140, mhp: 140, face: 1 }; assert.equal(s.toggleRide(), 'in'); assert(s.ride.life === 25 && s.ride.life0 === 25);
+  S.step(s, 10); assert(s.ride && s.ride.life < 15.5, 'the clock runs');
+  S.step(s, 16); assert(!s.ride, 'time’s up: out you pop'); assert(S.events.some(([k]) => k === 'rideend')); assert(!s.parked, 'it broke down');
+  assert(s.wrecked[s.cellKey()], 'and won’t come back here');
+});
+test('getting in: a 1 s walk-up (tap skips it); first person: steer + gas move you along the heading, rams send zombies flying (score + XP as usual), damage wrecks it with a crash', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.p.inv = 1e9; s.breakT = 9999; s.spawnCd = 999;
+  s.boardAnim = true; s.fpRide = true;
+  s.parked = { kind: 'gtruck', x: s.p.x + 80, y: s.p.y, hp: 700, mhp: 700, face: 1 }; assert.equal(s.toggleRide(), 'in'); assert(s.boarding && !s.ride, 'walking up');
+  S.step(s, 0.5); assert(!s.ride && Math.abs(s.p.x - s.boarding.v.x) < 60, 'halfway there'); S.step(s, 0.6); assert(s.ride && s.ride.fp, 'in, in first person'); assert(Math.abs(s.ride.life - 15) < 0.2, 'the truck’s clock');
+  s.ride.head = 0; const x0 = s.p.x, y0 = s.p.y; S.step(s, 1, { drive: { steer: 0, gas: 1 } }); assert(s.p.x > x0 + 80 && Math.abs(s.p.y - y0) < 20, 'gas: forward along the heading');
+  const h0 = s.ride.head; S.step(s, 0.5, { drive: { steer: 1, gas: 1 } }); assert(s.ride.head > h0 + 0.3, 'steering turns it'); assert(s.shotN == null || s.shotN === 0, 'your gun rests while you drive');
+  // ram a zombie at speed
+  s.ride.head = 0; s.ride.spd = 1; const k0 = s.killCount, sc0 = s.score || 0; const z = s.makeZ('walker', s.p.x + 50, s.p.y); z.hp = 5;
+  S.step(s, 0.2, { drive: { steer: 0, gas: 1 } }); assert(z.hp <= 0, 'rammed'); assert(s.killCount > k0 && (s.score || 0) > sc0, 'kills and score count'); assert(s.splatN > 0, 'blood on the glass');
+  // wrecked: a crash, back on foot
+  s.ride.hp = 1; s.p.inv = 0; s.buffs.shield = 0; s.hurt(50); assert(!s.ride, 'wrecked'); assert(s.fpOut && s.fpOut.crash, 'the crash effect');
+  // a tap skips the walk-up
+  s.fpOut = null; s.parked = { kind: 'cart', x: s.p.x + 80, y: s.p.y, hp: 140, mhp: 140, face: 1 }; s.p.inv = 1e9; s.toggleRide(); s.skipBoard = true; S.step(s, 0.05); assert(s.ride && s.ride.kind === 'cart', 'skipped');
+  s.toggleRide(); assert(!s.ride && s.fpOut && !s.fpOut.crash, 'hopping out: a quick fade');
+});
+test('the tank: first person from the hatch; the cannon locks on to a zombie near the crosshair, fires a shell with splash damage, then reloads', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.p.inv = 1e9; s.breakT = 9999; s.spawnCd = 999; s.fpRide = true;
+  s.parked = { kind: 'tank', x: s.p.x, y: s.p.y, hp: 1100, mhp: 1100, face: 1 }; s.toggleRide(); assert(s.ride && s.ride.kind === 'tank' && s.ride.fp && s.ride.life === 22);
+  s.ride.tur = 0; const a = s.makeZ('walker', s.p.x + 400, s.p.y + 30), b = s.makeZ('walker', s.p.x + 430, s.p.y + 60), far = s.makeZ('walker', s.p.x - 400, s.p.y); a.hp = b.hp = far.hp = 60;
+  S.step(s, 0.05, { drive: { steer: 0, gas: 0 } }); assert.equal(s.ride.lock, a.id, 'locked on to the one in the crosshair');
+  S.step(s, 0.05, { drive: { steer: 0, gas: 0, fire: true } }); assert(s.ride.reload > 1.3, 'fired: reloading'); assert.equal(s.shells.length, 1);
+  S.step(s, 0.5, { drive: { steer: 0, gas: 0 } }); assert(a.hp <= 0 && b.hp <= 0, 'boom: splash damage takes the group'); assert(far.hp > 0, 'not the one behind you');
+  S.step(s, 0.05, { drive: { steer: 0, gas: 0, fire: true } }); assert.equal(s.shells.length, 0, 'still reloading');
+  S.step(s, 0.1, { drive: { steer: 0, gas: 0, tur: Math.PI } }); assert(Math.abs(s.ride.tur - Math.PI) < 1e-9, 'the turret turns (mouse / drag)');
+  // co-op: friends see the ride (iso art from the snapshot), the driver stays hidden
+  assert(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-iso.js'), 'utf8').includes('if (o.veh && !o.dead && !o.down) {'), 'others in a ride draw as the ride');
+  s.reportStatus(true); assert.equal(S.reports.filter((r) => r.op === 'st').pop().veh, 'tank');
+});
+
 console.log(`\n${passed} JustZombies tests passed.`);

@@ -1991,3 +1991,86 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
 - Validation: tools/test-box-trash.js 73 tests (8 new for the above); test-box-kit, test-box,
   test-box-party, e2e-box. Headless muted screenshots b01-b12. Frame work 2.7 ms avg (p95 4.3) with ~90
   zombies in a special block on a headless 844x390 phone.
+
+## JustZombies: the iso look, first-person rides, the big-game move (claude/justzombies, November 25, 2026)
+
+TrashZombies is now **JustZombies** (internal key stays `trash`, no file renames; Zombie Survival, key
+`zombie`, is untouched). Built on the CC0 iso art set staged in `public/box/games/trash-assets/`
+(manifest + CREDITS.md; render pipeline in `tools/trash-art-render/`).
+
+- **Isometric view** (`public/box/games/trash-iso.js`, window.TZI). The simulation stays in flat world
+  units; only drawing is projected (2:1: art x = (x - y)·0.8, art y = (x + y)·0.4 - h·0.98, a 128x64 tile =
+  80 units = 1.6 m). Ground things (decals, gates' arrows, the yard, puddles, webs, rings) use one affine
+  transform, so collision boxes, roads and footprints line up with the art; standing things are depth
+  sorted by x + y, with an exact in-front/behind fix-up next to big boxes and see-through buildings when
+  you are behind them. The floor is pre-rendered per area from the art set's ground tiles (un-projected
+  into patterns, then projected once) with the existing roads/paint/grime; the north/west fence stands up.
+  Buildings and shops use the manifest aliases (market/surplus/clinic/gun shops), props map onto the prop
+  sprites, cars/wrecks/containers turn to their long side; your garage is a little house whose roll-up
+  door is the art set's animated door (stretched to the 4-tile opening). Zombies and bosses use the
+  animated sheets (walk/run/attack/hit/death from their movement, smooth frame timing, 8 directions with
+  mirroring); kills play the death animation, a blood/goo spurt from the fx atlas and a white hit flash,
+  then the body lingers and fades (40 max) over an fx-atlas blood decal (70 max). Pickups, gems, coins,
+  drops, chests, turrets, Garage Defense buildables, survivors (survivor sheets), parked rides all come
+  from the atlases; everything else (signs, gate counters, outfits, health bars, the boss door, the old
+  bosses as a fallback) is the older code art stood up as a billboard. Lighting (darkness layer with
+  ground-ellipse light pools, the night flashlight along the on-screen aim), rain, fog, heat, vignette and
+  every debuff overlay stay; debuff zombies keep their aura (softer), elites a toned-down ground glow.
+  The hero is still your JustGameBox character (BOX.drawChar frames) standing in the scene with a shadow,
+  facing by the on-screen aim, holding the weapon art (rotated to the aim) with the fx-atlas muzzle flash.
+  The minimap, the TV map and the spotlight stay top-down.
+- **Camera (hard rule):** centred on the hero, no look-ahead; the old top-down scale k = min(w, h)/500 is
+  kept and the iso art scale is s = k / 0.8, which shows exactly the same ground area (0.8 x 0.4 x 2 = 0.64);
+  people and props are drawn at ~0.8 of true size so the view keeps its wide feel (commented in render()).
+- **Input:** screen directions are turned into world directions (TZI.dirToWorld): drag/WASD up moves you
+  up the screen, the aim stick aims where it points on screen, the mouse aims at the point under the cursor
+  at chest height. Tested in test-box-trash and e2e-box.
+- **Loading + memory:** the phone shows a "Loading the town" bar while the core atlases decode; each
+  atlas is decoded once, every frame is trimmed to its pixels and packed into small canvases (Low graphics
+  packs at 0.6), zombie types / bosses / buildings load as an area or wave needs them (the flat look draws
+  for the moment one is missing). Off-screen sprites are culled.
+- **Sound** (`public/box/games/trash-sound.js`, TZSnd): the staged CC0 clips through the box audio engine
+  (`public/box/audio.js` gained `sample(url)` and `loop(url)` on its SFX bus; loaded on demand by the phone,
+  no music starts there): gunshots by weapon class, hits, splats, groans from the nearest zombies,
+  pickups, XP, level-up, wave start, boss intro, explosions, the tank cannon, engines (by ride), rain,
+  chest latch + open, the garage door, build, alarm, game over. Volumes 0.1-0.5, spread with gaps and
+  distance/pan. Test browsers run with --mute-audio.
+- **Rides** (every ride is timed: the ring over it / on the HUD): shopping cart 25 s, push mower (new) 18 s,
+  ride-on mower 22 s, garbage truck 15 s, **tank** (new, rare: ~3% of blocks) 22 s, each with its own HP.
+  Our own models rendered in the pipeline (`jobs-v3.js`: ride-on mower, push mower, tank; the cart and
+  truck re-rendered) with an 8-frame "drive" animation per direction (wheels/tracks/blades turning, a bob);
+  exhaust smoke or grass clippings; engine loops; a 1 s walk-up when you get in (tap skips it) and a puff
+  when you get out. Your character is not drawn while inside; name + HP + clock stay on the ride. When the
+  clock runs out you pop out and it breaks down (the truck drives off); wrecked by damage = a crash.
+- **First-person drive** (`public/box/games/trash-drive.js`, TZFP; three.js r160 MIT vendored at
+  `public/box/games/lib/three.module.js`, loaded only for JustZombies): once inside, the phone switches to a
+  3D view from the ride: the same block (the textured floor from the iso renderer, buildings/cars/garage as
+  lit boxes with window textures, trees/lamps/bins and every zombie as animated billboards from the iso
+  sheets, facing the right way for the camera; fog + short draw distance; a sprite pool). Steer + gas: the
+  left stick steers (and drives if you don't hold a pedal), GAS / BRAKE on the right; WASD on a computer.
+  Ramming sends zombies flying (normal kills: death animation, score, XP, cash), blood lands on the
+  windshield, the screen shakes; zombies clawing the ride wear its HP down. The cab overlay per ride
+  (truck dashboard + wheel, cart handle + basket, mower hood or push handle). Ends on time-out (fade) or
+  wreck (crash flash), back to the iso view where you drove to. **Tank:** turret view with your character
+  in the hatch, crosshair, lock-on to the zombie nearest the crosshair (red brackets), FIRE = a shell with
+  splash damage (150 x wave, radius 175) and a 1.5 s reload ring; the turret follows the mouse or a drag on
+  the right half. No WebGL -> rides drive in the iso view. Co-op: friends see your ride in iso from the
+  snapshot (`veh`), your character hidden.
+- **Break between waves (every mode):** clearing an area starts a 30 s break with a big countdown on the
+  phone ("NEXT WAVE IN") and on the TV (the soonest player's clock + "⏱ break 12s" per player). At zero the
+  next wave starts where you stand, even if nobody moved; shopping doesn't stop it (only the solo pause
+  menu); in co-op the host's clock rides in the snapshot. The server accepts that wave only after a clear
+  and ~24 s (`op:'ev', k:'wave'`), counting it like a new area. Garage Defense's build phase keeps its
+  fixed 45 s server clock (now a big countdown on the phone too).
+- **The 3rd big game:** `/zombies` (TV) and `/zombies/play` (phone) with its own title screen (the iso town
+  scene + logo, How to play, **Credits** listing the CC0 packs; also in the pause menu), own look
+  (`public/box/zombies-theme.css`); `/box/tv?game=trash` still works in the JustGameBox frame. Main menu:
+  JustMafia, JustRaiseDucks, JustZombies (new text; /art/tiles/trash.svg redrawn as an original iso street at dusk).
+  one-code.js STANDALONE is now a key -> path map; party.js big games = ducks, trash, mafia.
+  **JustKingdoms** moved to the More games shelf (Action & Teamwork: battles and alliances) but keeps its
+  own address `/kingdoms` and look, and plays from Party Mode through its category.
+- **Intro** (`public/box/intros/trash.js`): the iso town at dusk, zombies shambling in, the garage door
+  rolling up, your character (the first player) stepping out and dropping a few with death animations,
+  then the JUSTZOMBIES card; plays by itself; the old drawn garage scene is the fallback if the art can't
+  load.
+- Validation: see the numbers below (tests, frame times, screenshots).

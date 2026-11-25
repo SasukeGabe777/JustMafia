@@ -645,8 +645,8 @@ class Game {
       const P = W.PK[m.id]; if (!P) return { ok: false, error: 'Unknown pickup.' };
       this.room.fx('tzpickup', { id: p.id, pk: P.id }); if (P.id === 'nuke') this.news(P.icon, `${p.name} called Garbage Day!`, p.id);
     } else if (k === 'wave') { // the break ran out: the next wave started where they stand (not a new area)
-      const now = this.room.now(); if (!R.clearAt || now - R.clearAt < (BREAK_S - 6) * 1000) return { ok: false, error: 'Too soon.' };
-      R.clearAt = 0; R.areas++; R.brk = -1; return { ok: true, quiet: true };
+      const now = this.room.now(); if (R.clearAt == null || now - R.clearAt < (BREAK_S - 6) * 1000) return { ok: false, error: 'Too soon.' };
+      R.clearAt = null; R.areas++; R.brk = -1; return { ok: true, quiet: true };
     } else if (k === 'clear') {
       R.clearAt = this.room.now();
       const w = int(m.wave, 1, 999); if (w % 5 === 0 || w >= 10) this.news('🧹', `${p.name} cleared wave ${w}`, p.id); this.room.fx('tzclear', { id: p.id });

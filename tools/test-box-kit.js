@@ -11,7 +11,10 @@ const { GAMES } = require('../box');
 
 const ROOT = path.join(__dirname, '..');
 const read = (p) => { try { return fs.readFileSync(path.join(ROOT, p), 'utf8'); } catch { return null; } };
-const BIG = new Set(['ducks', 'kingdoms']); // big games have their own pages and their own pattern
+const BIG = new Set(['ducks', 'kingdoms']); // games built on their own pattern (own pages + clients), checked below instead
+// The main menu's big three (section.tiles.big): JustMafia, JustRaiseDucks and JustZombies (key 'trash',
+// which is also a full small-game kit). JustKingdoms keeps its own address but sits on the More games shelf.
+const BIG_TILES = ['mafia', 'ducks', 'trash'], OWN_ADDRESS = { ducks: 'ducks', trash: 'zombies', kingdoms: 'kingdoms' };
 const tvHtml = read('public/box/tv.html'), playHtml = read('public/box/play.html'), hub = read('public/hub.html');
 const tvJs = read('public/box/tv.js'), playJs = read('public/box/play.js'), party = read('public/party/party.js');
 const hasScores = fs.existsSync(path.join(ROOT, 'public/box/scores'));
@@ -72,6 +75,27 @@ for (const [key, def] of Object.entries(GAMES)) {
     check(key, 'locked games are listed in public/unlocks.js', (read('public/unlocks.js') || '').includes(`${key}:`));
     check(key, 'locked games have an unlock rule in box/room.js', /UNLOCK_RULES/.test(read('box/room.js')) && (read('box/room.js') || '').includes(`${key}:`));
   }
+}
+
+// ---- the big games and the games with their own address ----
+{
+  const bigSec = hub.slice(hub.indexOf('<section class="tiles big" id'), hub.indexOf('</section>', hub.indexOf('<section class="tiles big" id')));
+  const smallSec = hub.slice(hub.indexOf('<section class="tiles small" aria'));
+  check('hub', 'the big three are ' + BIG_TILES.join(', '), JSON.stringify([...bigSec.matchAll(/data-game="([a-z]+)"/g)].map((m) => m[1])) === JSON.stringify(BIG_TILES));
+  const indexJs = read('box/index.js') || '', oneCode = read('one-code.js') || '', cats = [...(read('public/categories.js') || '').matchAll(/k: '([a-z]+)'/g)].map((m) => m[1]);
+  for (const [key, p] of Object.entries(OWN_ADDRESS)) {
+    check(key, `its own address /${p} and /${p}/play`, indexJs.includes(`app.get('/${p}'`) && indexJs.includes(`app.get('/${p}/play'`));
+    check(key, 'one code sends phones to its address (one-code.js STANDALONE)', new RegExp(`${key}: '${p}'`).test(oneCode));
+    const client = key === 'kingdoms' ? read('public/box/games/kingdoms-tv.js') || '' : read(`public/box/games/${key}.js`) || '';
+    check(key, 'own title screen (standalone: true, title)', /standalone: true/.test(client) && /title: titleScreen/.test(client));
+    const theme = { ducks: 'ducks-theme.css', trash: 'zombies-theme.css', kingdoms: 'kingdoms-theme.css' }[key];
+    check(key, 'own look ' + theme + ' on the TV and phone pages', !!read('public/box/' + theme) && tvHtml.includes('/box/' + theme) && playHtml.includes('/box/' + theme));
+  }
+  check('trash', 'JustZombies is in Party Mode\'s big games', party.includes("games: ['ducks', 'trash', 'mafia']"));
+  check('trash', 'the big tile opens /zombies', /<a class="tile live trash" href="\/zombies"/.test(bigSec));
+  const kt = (smallSec.match(/data-game="kingdoms"[^>]*data-type="([a-z]+)"/) || [])[1];
+  check('kingdoms', 'JustKingdoms is a More games tile with a category', !!kt && cats.includes(kt) && /href="\/kingdoms"/.test(smallSec));
+  check('kingdoms', 'JustKingdoms left the big games in Party Mode (it plays from its category)', !/games: \[[^\]]*'kingdoms'/.test(party));
 }
 
 if (problems.length) { console.log('\nMissing game-kit pieces:\n  ' + problems.join('\n  ')); }

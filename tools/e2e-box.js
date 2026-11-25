@@ -62,7 +62,7 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,YesChef,JustSnap,Meme Maker,Letter Rush,Act It Out,JustPitch,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Kill the King,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,JustZombies,Quick Draw,Bomb Squad,Zombie Survival');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustZombies,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,YesChef,JustSnap,Meme Maker,Letter Rush,Act It Out,JustPitch,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Kill the King,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,JustKingdoms,Quick Draw,Bomb Squad,Zombie Survival');
   // Every small game sits on a category shelf (public/categories.js); there is no catch-all shelf.
   assert.equal(await hub.eval(`[...document.querySelectorAll('.shelf')].map((x) => x.dataset.shelf).join(',')`), 'cards,guess,create,friends,action');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
@@ -581,6 +581,16 @@ async function setup(browser, game, settings = {}) {
     ok('JustSnap: a JPEG from the phone page is shrunk, previewed, sent over the socket, served at an unguessable URL and shown on the TV gallery (anonymous), then the reveal');
   }
 
+  // ---------- JustZombies: its own address (/zombies) with its own title screen and look ----------
+  {
+    const tv0 = await browser.page(); await tv0.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
+    await tv0.go(`${URL}/zombies`); await tv0.until(`!!document.querySelector('#jz-go') && /JustZombies/.test(document.title)`, 'the JustZombies title screen', 15000);
+    assert(await tv0.eval(`document.querySelector('.tv-bar').hidden && document.body.classList.contains('g-trash')`), 'own look, no JustGameBox bar');
+    await tv0.eval(`document.querySelector('#jz-cred-b').click(); true`); assert(await tv0.eval(`/Quaternius/.test(document.querySelector('#jz-cred').textContent)`), 'the CC0 credits');
+    await wait(1500); await tv0.shot('box-zombies-title'); PAGES.push(tv0);
+    ok('JustZombies at /zombies: its own title screen (iso town scene), look and credits');
+  }
+
   // ---------- JustZombies: the phone is the whole game (touch: drag to move + the aim stick; keyboard + mouse) ----------
   {
     const { tv, ph } = await setup(browser, 'trash', { length: 'm10', diff: 'chill' });
@@ -608,9 +618,9 @@ async function setup(browser, game, settings = {}) {
     await touch('touchStart', [[284, 250, 1], [st.x, st.y, 2]]);
     for (let i = 1; i <= 4; i++) { await touch('touchMove', [[284, 250, 1], [st.x - i * 12, st.y, 2]]); await wait(30); }
     await wait(400);
-    assert(Math.abs(Math.abs(await sim('s.p.aim')) - Math.PI) < 0.3, 'the stick aims left');
+    assert(Math.abs((await sim('s.p.aim')) - 3 * Math.PI / 4) < 0.3, 'the stick aims left on the screen (the iso view: world south-west)');
     assert((await sim('s.b.length')) > b0 || (await sim('s.p.kick')) > 0, 'it fires');
-    const x1 = await sim('s.p.x'); await wait(300); assert((await sim('s.p.x')) > x1 + 20, 'the move finger still moves you');
+    const p1 = await sim('[s.p.x, s.p.y]'); await wait(300); const p2 = await sim('[s.p.x, s.p.y]'); assert(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) > 20 || (await sim('Math.hypot(s.p.vx, s.p.vy)')) > 60, 'the move finger still moves you (to the screen right: world north-east)');
     assert.equal(await ph.eval('TZ_DEBUG.device()'), 'touch');
     await ph.shot('box-trash-touch');
     await touch('touchEnd', []);

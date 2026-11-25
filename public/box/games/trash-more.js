@@ -240,7 +240,7 @@
       const sp = Math.abs(r.spd);
       if (sp > 0.3) for (const z of this.z) { if (z.hp <= 0 || (z.ramT || 0) > this.t) continue; const rr = V.r + z.r, dd = d2(z.x, z.y, P.x, P.y); if (dd > rr * rr) continue; const d = Math.sqrt(dd) || 1; z.ramT = this.t + 0.4;
         const hp0 = z.hp; this.damageZ(z, ((V.ram || 14) + this.wave * 2) * (1 + sp * 2) * (z.boss ? 0.4 : 1), this.me.id, ((z.x - P.x) / d) * 700 * sp, ((z.y - P.y) / d) * 700 * sp); this.shake = Math.max(this.shake, 0.12 + 0.1 * sp);
-        if (hp0 > 0 && z.hp <= 0) { this.splatN = (this.splatN || 0) + 1; this.o.on('ram', { kill: true }); } r.hp -= z.boss ? 30 : 2; }
+        void hp0; r.hp -= z.boss ? 30 : 2; }
       // the tank: lock on near where the turret points, fire, reload
       if (tank) {
         const C0 = V.cannon; r.reload = Math.max(0, (r.reload || 0) - dt); let best = null, bs = 0.3;
@@ -532,6 +532,8 @@
   const t2 = (s) => s.t;
   // driving in first person: the wheel and pedals replace walking; your own gun rests
   const baseMap = proto.mapInput; proto.mapInput = function (I) { I = baseMap ? baseMap.call(this, I) : I; return this._mo ? this.driveInput(I || {}) : I; };
+  // anything you run down in first person splats on the glass
+  const baseKillFp = proto.killZ; proto.killZ = function (z, by) { baseKillFp.call(this, z, by); const r = this.ride; if (r && r.fp && this._mo) { const V = X.VEHICLES[r.kind], R0 = V.r + z.r + 50; if (d2(z.x, z.y, this.p.x, this.p.y) < R0 * R0) { this.splatN = (this.splatN || 0) + 1; this.o.on('ram', { kill: true }); } } };
   const baseShoot = proto.shoot; proto.shoot = function (dt, I) { if (this.ride && this.ride.fp) return; if (this.boarding) return; return baseShoot.call(this, dt, I); };
 
   // ---------------- the new bosses: patterns ----------------

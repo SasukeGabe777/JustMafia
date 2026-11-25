@@ -1,46 +1,77 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
-  <!-- JustZombies: a garage door rolled half up at dusk, light spilling out; a zombie with a
-       trash-can helmet shambles past a dented bin. Original art for JustGameBox. -->
+  <!-- JustZombies: an isometric corner of town at dusk. A garage door rolls up and light spills onto the
+       driveway; a crowd of zombies shambles in from the crossroads, one already down in a pool of goo.
+       Original art for JustGameBox (in the style of the game's iso view). -->
   <defs>
-    <linearGradient id="tz-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#24163a"/><stop offset="0.6" stop-color="#6b3550"/><stop offset="1" stop-color="#e0794a"/></linearGradient>
-    <linearGradient id="tz-road" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b3a3f"/><stop offset="1" stop-color="#18161b"/></linearGradient>
-    <linearGradient id="tz-glow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a8" stop-opacity="0.75"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></linearGradient>
-    <linearGradient id="tz-door" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9aa0a8"/><stop offset="1" stop-color="#d6d8dc"/></linearGradient>
-    <linearGradient id="tz-can" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7a8590"/><stop offset="0.5" stop-color="#c9ced6"/><stop offset="1" stop-color="#6c7884"/></linearGradient>
+    <linearGradient id="jz-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#24163a"/>
+      <stop offset="0.55" stop-color="#6b3550"/>
+      <stop offset="1" stop-color="#e0794a"/>
+    </linearGradient>
+    <linearGradient id="jz-glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe9a8" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ffb35a" stop-opacity="0.15"/>
+    </linearGradient>
+    <radialGradient id="jz-pool" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffe2a0" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffe2a0" stop-opacity="0"/>
+    </radialGradient>
+    <g id="jz-z">
+      <ellipse cx="0" cy="0" rx="9" ry="3.5" fill="#000" opacity="0.35"/>
+      <path d="M-4 0 L-3 -12 L3 -12 L4 0 Z" fill="#2f3a4a"/>
+      <path d="M-6 -12 L6 -12 L5 -26 L-5 -26 Z" fill="#5a4a6a" stroke="#1b1410" stroke-width="1.2"/>
+      <path d="M4 -24 L14 -22" stroke="#8fbf7a" stroke-width="3" stroke-linecap="round"/>
+      <path d="M3 -20 L13 -17" stroke="#8fbf7a" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="1" cy="-31" r="6" fill="#8fbf7a" stroke="#1b1410" stroke-width="1.2"/>
+      <circle cx="3.5" cy="-32" r="1.4" fill="#ff3a2a"/>
+    </g>
   </defs>
-  <rect width="400" height="240" fill="url(#tz-sky)"/>
-  <circle cx="330" cy="46" r="18" fill="#ffe9a8"/>
-  <g fill="#2a1830"><rect x="0" y="92" width="40" height="70"/><rect x="44" y="110" width="30" height="52"/><rect x="300" y="100" width="36" height="62"/><rect x="340" y="84" width="60" height="78"/></g>
-  <rect y="160" width="400" height="80" fill="url(#tz-road)"/>
-  <g fill="#ffd23f"><rect x="10" y="205" width="40" height="5"/><rect x="90" y="205" width="40" height="5"/><rect x="250" y="205" width="40" height="5"/><rect x="330" y="205" width="40" height="5"/></g>
-  <!-- the garage -->
-  <path d="M84 72 L162 40 L240 72 Z" fill="#3b2420" stroke="#1b1410" stroke-width="5" stroke-linejoin="round"/>
-  <rect x="92" y="70" width="140" height="94" fill="#5a3a32" stroke="#1b1410" stroke-width="5"/>
-  <rect x="104" y="82" width="116" height="82" fill="#ffe9a8"/>
-  <path d="M104 164 L220 164 L262 214 L64 214 Z" fill="url(#tz-glow)"/>
-  <rect x="104" y="82" width="116" height="42" fill="url(#tz-door)" stroke="#1b1410" stroke-width="4"/>
-  <g stroke="#7a7f86" stroke-width="3"><line x1="104" y1="94" x2="220" y2="94"/><line x1="104" y1="106" x2="220" y2="106"/><line x1="104" y1="118" x2="220" y2="118"/></g>
-  <rect x="148" y="120" width="28" height="5" fill="#4a4f56"/>
-  <!-- a survivor silhouette in the doorway, blaster ready -->
-  <g fill="#1b1410"><circle cx="150" cy="134" r="8"/><rect x="143" y="141" width="14" height="17" rx="3"/><rect x="143" y="157" width="5" height="9"/><rect x="152" y="157" width="5" height="9"/><rect x="154" y="145" width="22" height="5" rx="2"/></g>
-  <!-- the dented bin -->
-  <g stroke="#1b1410" stroke-width="4" stroke-linejoin="round">
-    <path d="M250 128 L282 128 L279 176 L253 176 Z" fill="#3d7a4a"/>
-    <rect x="245" y="120" width="42" height="9" rx="3" fill="#2f6a3c"/>
-  </g>
-  <path d="M258 140 l6 4 l-3 6" stroke="#1b1410" stroke-width="2.5" fill="none"/>
-  <!-- the trash-can-head zombie -->
-  <g stroke="#1b1410" stroke-linejoin="round" stroke-linecap="round">
-    <path d="M300 178 L296 154 M312 178 L316 154" stroke-width="7"/>
-    <rect x="288" y="112" width="34" height="46" rx="7" fill="#4a3a5a" stroke-width="4"/>
-    <path d="M292 122 L262 116 M292 132 L264 132" stroke-width="8"/>
-    <path d="M292 122 L262 116 M292 132 L264 132" stroke="#7fae6a" stroke-width="4"/>
-    <rect x="286" y="74" width="40" height="38" rx="5" fill="url(#tz-can)" stroke-width="4"/>
-    <rect x="282" y="68" width="48" height="9" rx="3" fill="#b7c2cc" stroke-width="3.5"/>
-    <rect x="288" y="92" width="22" height="6" fill="#1b1410" stroke="none"/>
-    <circle cx="295" cy="95" r="2.5" fill="#ff4a3a" stroke="none"/>
-  </g>
-  <!-- XP gems and a muzzle spark -->
-  <g stroke="#0a3a2a" stroke-width="2"><path d="M230 186 l5 -8 l5 8 l-5 8 z" fill="#5affc8"/><path d="M246 196 l4 -6 l4 6 l-4 6 z" fill="#5affc8"/></g>
-  <circle cx="182" cy="147" r="5" fill="#ffe066"/>
+  <rect width="400" height="240" fill="url(#jz-sky)"/>
+  <!-- far rooftops -->
+  <path d="M0 120 L30 104 L60 116 L90 96 L130 116 L160 100 L200 118 L240 98 L280 112 L320 94 L360 110 L400 96 L400 140 L0 140 Z" fill="#2a1830"/>
+  <rect x="96" y="102" width="4" height="5" fill="#ffd98a" opacity="0.7"/><rect x="246" y="104" width="4" height="5" fill="#ffd98a" opacity="0.7"/><rect x="326" y="100" width="4" height="5" fill="#ffd98a" opacity="0.6"/>
+  <!-- the ground: a lawn diamond, the iso crossroads -->
+  <path d="M-40 150 L200 30 L440 150 L200 270 Z" fill="#4f7a3e"/>
+  <path d="M-40 190 L280 30 L360 70 L40 230 Z" fill="#3a3c3f"/>
+  <path d="M60 30 L400 200 L320 240 L-20 70 Z" fill="#3a3c3f"/>
+  <path d="M-30 186 L282 30" stroke="#8f8b83" stroke-width="6"/>
+  <path d="M30 228 L364 62" stroke="#8f8b83" stroke-width="6"/>
+  <path d="M40 210 L320 70" stroke="#c9a43a" stroke-width="2" stroke-dasharray="14 10"/>
+  <path d="M30 60 L360 225" stroke="#d8d6cc" stroke-width="2" stroke-dasharray="12 10" opacity="0.7"/>
+  <!-- the garage (an iso box with a pitched roof), its door rolled half up -->
+  <path d="M170 92 L250 52 L310 82 L230 122 Z" fill="#c9b79a"/>
+  <path d="M170 92 L230 122 L230 172 L170 142 Z" fill="#c9b79a" stroke="#3a2e24" stroke-width="2"/>
+  <path d="M230 122 L310 82 L310 132 L230 172 Z" fill="#a8957a" stroke="#3a2e24" stroke-width="2"/>
+  <path d="M164 92 L240 54 L276 42 L200 80 Z" fill="#5b3a32" stroke="#2a1a16" stroke-width="2"/>
+  <path d="M164 92 L200 80 L236 122 L230 126 Z" fill="#6b4438" stroke="#2a1a16" stroke-width="2"/>
+  <path d="M236 122 L200 80 L276 42 L316 82 Z" fill="#5b3a32" stroke="#2a1a16" stroke-width="2"/>
+  <path d="M178 112 L222 134 L222 166 L178 144 Z" fill="url(#jz-glow)"/>
+  <path d="M178 112 L222 134 L222 146 L178 124 Z" fill="#c9ccd1" stroke="#6c7178" stroke-width="1.2"/>
+  <path d="M178 118 L222 140" stroke="#8a8f98" stroke-width="1"/>
+  <ellipse cx="180" cy="178" rx="58" ry="22" fill="url(#jz-pool)"/>
+  <!-- you, stepping out, blaster up -->
+  <ellipse cx="196" cy="168" rx="9" ry="3.5" fill="#000" opacity="0.4"/>
+  <path d="M191 168 L192 156 L200 156 L201 168 Z" fill="#2f3440"/>
+  <path d="M189 156 L203 156 L202 142 L190 142 Z" fill="#ffd23f" stroke="#1b1410" stroke-width="1.3"/>
+  <circle cx="196" cy="134" r="9" fill="#f2c9a0" stroke="#1b1410" stroke-width="1.3"/>
+  <path d="M187 131 Q196 118 205 131 Q200 126 196 128 Q191 126 187 131 Z" fill="#8a4ad0"/>
+  <path d="M200 148 L172 156" stroke="#2b2f36" stroke-width="4" stroke-linecap="round"/>
+  <path d="M170 157 L158 158 L170 151 Z" fill="#ffe28a"/>
+  <!-- the crowd from the crossroads -->
+  <use href="#jz-z" transform="translate(120 176) scale(-1 1)"/>
+  <use href="#jz-z" transform="translate(96 160) scale(-0.9 0.9)"/>
+  <use href="#jz-z" transform="translate(140 196) scale(-1.1 1.1)"/>
+  <use href="#jz-z" transform="translate(70 186) scale(-1 1)"/>
+  <use href="#jz-z" transform="translate(52 158) scale(-0.8 0.8)"/>
+  <use href="#jz-z" transform="translate(300 196) scale(1.1 1.1)"/>
+  <use href="#jz-z" transform="translate(330 176) scale(0.9 0.9)"/>
+  <!-- one down, in a pool of goo -->
+  <ellipse cx="150" cy="150" rx="16" ry="6" fill="#4a7a2a" opacity="0.85"/>
+  <path d="M140 148 L160 146 L161 151 L141 153 Z" fill="#5a4a6a" stroke="#1b1410" stroke-width="1"/>
+  <circle cx="162" cy="148" r="4.5" fill="#8fbf7a" stroke="#1b1410" stroke-width="1"/>
+  <!-- a burnt-out car on the corner -->
+  <path d="M260 186 L292 170 L318 183 L286 199 Z" fill="#6a3a2a" stroke="#1b1410" stroke-width="1.5"/>
+  <path d="M260 186 L286 199 L286 207 L260 194 Z" fill="#4a2a20"/>
+  <path d="M286 199 L318 183 L318 191 L286 207 Z" fill="#3a221a"/>
+  <path d="M272 184 L292 174 L304 180 L284 190 Z" fill="#1c2630"/>
 </svg>
