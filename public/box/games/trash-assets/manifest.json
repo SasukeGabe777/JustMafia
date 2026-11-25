@@ -683,12 +683,12 @@
    "file": "props/boss-compactor.webp",
    "kind": "vehicle-boss",
    "cell": [
-    448,
-    384
+    508,
+    347
    ],
    "anchor": [
-    224,
-    220
+    254,
+    229
    ],
    "scale": 1,
    "name": "Garbage-compactor boss",
@@ -729,12 +729,12 @@
    "file": "sprites/boss-dumpster.webp",
    "kind": "character",
    "cell": [
-    256,
-    256
+    408,
+    341
    ],
    "anchor": [
-    128,
-    176
+    204,
+    227
    ],
    "scale": 1,
    "name": "Dumpster Brute",
@@ -824,12 +824,12 @@
    "file": "sprites/boss-final.webp",
    "kind": "character",
    "cell": [
-    256,
-    256
+    494,
+    367
    ],
    "anchor": [
-    128,
-    176
+    247,
+    237
    ],
    "scale": 1,
    "name": "Final boss (door boss fallback)",
@@ -919,12 +919,12 @@
    "file": "sprites/boss-foghorn.webp",
    "kind": "character",
    "cell": [
-    256,
-    256
+    442,
+    307
    ],
    "anchor": [
-    128,
-    176
+    221,
+    200
    ],
    "scale": 1,
    "name": "The Foghorn",
@@ -1014,11 +1014,11 @@
    "file": "props/boss-icecream.webp",
    "kind": "vehicle-boss",
    "cell": [
-    352,
-    352
+    348,
+    310
    ],
    "anchor": [
-    176,
+    174,
     214
    ],
    "scale": 1,
@@ -1060,12 +1060,12 @@
    "file": "sprites/boss-mascot.webp",
    "kind": "character",
    "cell": [
-    256,
-    256
+    398,
+    289
    ],
    "anchor": [
-    128,
-    176
+    199,
+    187
    ],
    "scale": 1,
    "name": "Grinny the Mascot",
@@ -1155,12 +1155,12 @@
    "file": "sprites/boss-ratking.webp",
    "kind": "character",
    "cell": [
-    256,
-    256
+    376,
+    293
    ],
    "anchor": [
-    128,
-    176
+    188,
+    184
    ],
    "scale": 1,
    "name": "The Rat Queen",
@@ -1250,12 +1250,12 @@
    "file": "sprites/boss-sludge.webp",
    "kind": "character",
    "cell": [
-    256,
-    256
+    418,
+    301
    ],
    "anchor": [
-    128,
-    176
+    209,
+    209
    ],
    "scale": 1,
    "name": "Big Sludge",
@@ -1345,12 +1345,12 @@
    "file": "sprites/boss-spider.webp",
    "kind": "character",
    "cell": [
-    256,
-    256
+    258,
+    206
    ],
    "anchor": [
-    128,
-    176
+    129,
+    139
    ],
    "scale": 1,
    "name": "Mother Webber",
@@ -1440,12 +1440,12 @@
    "file": "sprites/boss-toxic.webp",
    "kind": "character",
    "cell": [
-    256,
-    256
+    384,
+    315
    ],
    "anchor": [
-    128,
-    176
+    192,
+    214
    ],
    "scale": 1,
    "name": "Toxic Tub",
@@ -1535,12 +1535,12 @@
    "file": "props/boss-truck.webp",
    "kind": "vehicle-boss",
    "cell": [
-    448,
-    384
+    494,
+    336
    ],
    "anchor": [
-    224,
-    220
+    247,
+    222
    ],
    "scale": 1,
    "name": "Garbage Truck Titan",
@@ -1727,12 +1727,12 @@
    "file": "sprites/npc-grocer.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    202,
+    165
    ],
    "anchor": [
-    80,
-    104
+    101,
+    110
    ],
    "scale": 1,
    "name": "Market grocer",
@@ -1832,12 +1832,12 @@
    "file": "sprites/npc-gunsmith.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    202,
+    167
    ],
    "anchor": [
-    80,
-    104
+    101,
+    112
    ],
    "scale": 1,
    "name": "Gunsmith (rank 2)",
@@ -1937,12 +1937,12 @@
    "file": "sprites/npc-master.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    204,
+    166
    ],
    "anchor": [
-    80,
-    104
+    102,
+    111
    ],
    "scale": 1,
    "name": "Master gunsmith (rank 3)",
@@ -2042,12 +2042,12 @@
    "file": "sprites/npc-medic.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    202,
+    166
    ],
    "anchor": [
-    80,
-    104
+    101,
+    114
    ],
    "scale": 1,
    "name": "Clinic medic (hazmat)",
@@ -2135,12 +2135,12 @@
    "file": "sprites/npc-quartermaster.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    186,
+    159
    ],
    "anchor": [
-    80,
-    104
+    93,
+    108
    ],
    "scale": 1,
    "name": "Surplus quartermaster",
@@ -2240,12 +2240,12 @@
    "file": "sprites/npc-tinker.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    202,
+    164
    ],
    "anchor": [
-    80,
-    104
+    101,
+    109
    ],
    "scale": 1,
    "name": "Tinker (gun merchant rank 1)",
@@ -2345,12 +2345,12 @@
    "file": "sprites/npc-trader.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    180,
+    159
    ],
    "anchor": [
-    80,
-    104
+    90,
+    111
    ],
    "scale": 1,
    "name": "Travelling trader",
@@ -6174,12 +6174,12 @@
    "file": "sprites/survivor-lis.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    214,
+    169
    ],
    "anchor": [
-    80,
-    104
+    107,
+    111
    ],
    "scale": 1,
    "name": "Survivor lis (escort / hero)",
@@ -6279,12 +6279,12 @@
    "file": "sprites/survivor-matt.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    208,
+    165
    ],
    "anchor": [
-    80,
-    104
+    104,
+    110
    ],
    "scale": 1,
    "name": "Survivor matt (escort / hero)",
@@ -6384,12 +6384,12 @@
    "file": "sprites/survivor-sam.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    210,
+    167
    ],
    "anchor": [
-    80,
-    104
+    105,
+    111
    ],
    "scale": 1,
    "name": "Survivor sam (escort / hero)",
@@ -6489,12 +6489,12 @@
    "file": "sprites/survivor-shaun.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    210,
+    166
    ],
    "anchor": [
-    80,
-    104
+    105,
+    111
    ],
    "scale": 1,
    "name": "Survivor shaun (escort / hero)",
@@ -6639,12 +6639,12 @@
    "file": "props/vehicle-armored.webp",
    "kind": "vehicle",
    "cell": [
-    320,
-    256
+    328,
+    220
    ],
    "anchor": [
-    160,
-    152
+    164,
+    137
    ],
    "scale": 1,
    "name": "Armored pickup",
@@ -6684,12 +6684,12 @@
    "file": "props/vehicle-camper.webp",
    "kind": "vehicle",
    "cell": [
-    352,
-    288
+    372,
+    312
    ],
    "anchor": [
-    176,
-    170
+    186,
+    212
    ],
    "scale": 1,
    "name": "Survivor truck",
@@ -6729,12 +6729,12 @@
    "file": "props/vehicle-cart.webp",
    "kind": "vehicle",
    "cell": [
-    128,
-    128
+    112,
+    91
    ],
    "anchor": [
-    64,
-    80
+    56,
+    64
    ],
    "scale": 1,
    "name": "Shopping cart (rideable)",
@@ -6786,12 +6786,12 @@
    "file": "props/vehicle-garbagetruck.webp",
    "kind": "vehicle",
    "cell": [
-    384,
-    320
+    424,
+    293
    ],
    "anchor": [
-    192,
-    184
+    212,
+    194
    ],
    "scale": 1,
    "name": "Garbage truck (timed ram)",
@@ -6843,12 +6843,12 @@
    "file": "props/vehicle-mower.webp",
    "kind": "vehicle",
    "cell": [
-    128,
-    128
+    90,
+    96
    ],
    "anchor": [
-    64,
-    80
+    45,
+    67
    ],
    "scale": 1,
    "name": "Push mower (rideable; our own model)",
@@ -6900,12 +6900,12 @@
    "file": "props/vehicle-ridemower.webp",
    "kind": "vehicle",
    "cell": [
-    176,
-    160
+    174,
+    149
    ],
    "anchor": [
-    88,
-    100
+    87,
+    107
    ],
    "scale": 1,
    "name": "Ride-on mower (our own model)",
@@ -6957,12 +6957,12 @@
    "file": "props/vehicle-sedan.webp",
    "kind": "vehicle",
    "cell": [
-    288,
-    224
+    314,
+    222
    ],
    "anchor": [
-    144,
-    134
+    157,
+    147
    ],
    "scale": 1,
    "name": "Sedan (car-alarm decoy car)",
@@ -7002,12 +7002,12 @@
    "file": "props/vehicle-trader.webp",
    "kind": "vehicle",
    "cell": [
-    352,
-    288
+    366,
+    242
    ],
    "anchor": [
-    176,
-    170
+    183,
+    152
    ],
    "scale": 1,
    "name": "Trader truck",
@@ -7559,12 +7559,12 @@
    "file": "sprites/zombie-blinder.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    258,
+    182
    ],
    "anchor": [
-    80,
-    104
+    129,
+    118
    ],
    "scale": 1,
    "name": "Inkspitter",
@@ -7641,12 +7641,12 @@
    "file": "sprites/zombie-bloater.webp",
    "kind": "character",
    "cell": [
-    176,
-    176
+    248,
+    205
    ],
    "anchor": [
-    88,
-    116
+    124,
+    139
    ],
    "scale": 1,
    "name": "Bloater",
@@ -7723,12 +7723,12 @@
    "file": "sprites/zombie-brute.webp",
    "kind": "character",
    "cell": [
-    224,
-    224
+    320,
+    245
    ],
    "anchor": [
-    112,
-    150
+    160,
+    161
    ],
    "scale": 1,
    "name": "Raging Brute",
@@ -7805,12 +7805,12 @@
    "file": "sprites/zombie-canhead.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    304,
+    234
    ],
    "anchor": [
-    80,
-    104
+    152,
+    147
    ],
    "scale": 1,
    "name": "Can-Head",
@@ -7887,12 +7887,12 @@
    "file": "sprites/zombie-carrier.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    258,
+    195
    ],
    "anchor": [
-    80,
-    104
+    129,
+    126
    ],
    "scale": 1,
    "name": "Weapon carrier (drops the timed super weapon it holds)",
@@ -7969,12 +7969,12 @@
    "file": "sprites/zombie-confuser.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    258,
+    192
    ],
    "anchor": [
-    80,
-    104
+    129,
+    127
    ],
    "scale": 1,
    "name": "Spinner",
@@ -8051,12 +8051,12 @@
    "file": "sprites/zombie-crawler.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    258,
+    195
    ],
    "anchor": [
-    80,
-    104
+    129,
+    126
    ],
    "scale": 1,
    "name": "Crawler",
@@ -8133,12 +8133,12 @@
    "file": "sprites/zombie-elite.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    258,
+    195
    ],
    "anchor": [
-    80,
-    104
+    129,
+    126
    ],
    "scale": 1,
    "name": "Glowing elite (any type can glow; this is the stock elite)",
@@ -8215,12 +8215,12 @@
    "file": "sprites/zombie-exploder.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    238,
+    197
    ],
    "anchor": [
-    80,
-    104
+    119,
+    133
    ],
    "scale": 1,
    "name": "Gas-Bag",
@@ -8297,12 +8297,12 @@
    "file": "sprites/zombie-jammer.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    276,
+    207
    ],
    "anchor": [
-    80,
-    104
+    138,
+    136
    ],
    "scale": 1,
    "name": "Gunk Jammer",
@@ -8379,12 +8379,12 @@
    "file": "sprites/zombie-leecher.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    212,
+    170
    ],
    "anchor": [
-    80,
-    104
+    106,
+    114
    ],
    "scale": 1,
    "name": "Leech",
@@ -8473,12 +8473,12 @@
    "file": "sprites/zombie-nest.webp",
    "kind": "character",
    "cell": [
-    224,
-    192
+    154,
+    91
    ],
    "anchor": [
-    112,
-    124
+    77,
+    47
    ],
    "scale": 1,
    "name": "Rot Nest",
@@ -8522,12 +8522,12 @@
    "file": "sprites/zombie-riot.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    258,
+    195
    ],
    "anchor": [
-    80,
-    104
+    129,
+    126
    ],
    "scale": 1,
    "name": "Riot Shield",
@@ -8604,12 +8604,12 @@
    "file": "sprites/zombie-runner.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    212,
+    170
    ],
    "anchor": [
-    80,
-    104
+    106,
+    114
    ],
    "scale": 1,
    "name": "Sprinter",
@@ -8698,12 +8698,12 @@
    "file": "sprites/zombie-screamer.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    296,
+    222
    ],
    "anchor": [
-    80,
-    104
+    148,
+    143
    ],
    "scale": 1,
    "name": "Screamer",
@@ -8780,12 +8780,12 @@
    "file": "sprites/zombie-shaker.webp",
    "kind": "character",
    "cell": [
-    208,
-    208
+    284,
+    219
    ],
    "anchor": [
-    104,
-    140
+    142,
+    144
    ],
    "scale": 1,
    "name": "Stomper",
@@ -8862,12 +8862,12 @@
    "file": "sprites/zombie-sludger.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    238,
+    195
    ],
    "anchor": [
-    80,
-    104
+    119,
+    132
    ],
    "scale": 1,
    "name": "Sludger",
@@ -8944,12 +8944,12 @@
    "file": "sprites/zombie-spitter.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    258,
+    182
    ],
    "anchor": [
-    80,
-    104
+    129,
+    118
    ],
    "scale": 1,
    "name": "Spitter",
@@ -9026,12 +9026,12 @@
    "file": "sprites/zombie-squinter.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    296,
+    222
    ],
    "anchor": [
-    80,
-    104
+    148,
+    143
    ],
    "scale": 1,
    "name": "Squinter",
@@ -9108,12 +9108,12 @@
    "file": "sprites/zombie-stalker.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    212,
+    170
    ],
    "anchor": [
-    80,
-    104
+    106,
+    114
    ],
    "scale": 1,
    "name": "Stalker",
@@ -9202,12 +9202,12 @@
    "file": "sprites/zombie-walker.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    258,
+    195
    ],
    "anchor": [
-    80,
-    104
+    129,
+    126
    ],
    "scale": 1,
    "name": "Shambler",
@@ -9284,12 +9284,12 @@
    "file": "sprites/zombie-webber.webp",
    "kind": "character",
    "cell": [
-    160,
-    160
+    212,
+    170
    ],
    "anchor": [
-    80,
-    104
+    106,
+    114
    ],
    "scale": 1,
    "name": "Webber",
@@ -9575,12 +9575,12 @@
    "file": "props/vehicle-tank.webp",
    "kind": "vehicle",
    "cell": [
-    352,
-    288
+    416,
+    293
    ],
    "anchor": [
-    176,
-    170
+    208,
+    194
    ],
    "scale": 1,
    "size": [

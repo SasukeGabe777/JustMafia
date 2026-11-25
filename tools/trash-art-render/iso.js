@@ -213,7 +213,14 @@ const YAW0 = Math.PI / 4; // model facing +Z turned to face the viewer (screen s
 const DIRNAMES = ['S', 'SE', 'E', 'NE', 'N', 'NW', 'W', 'SW'];
 
 async function job(spec) {
-  const W = spec.cell[0], H = spec.cell[1], ax = spec.anchor[0], ay = spec.anchor[1], ppm = spec.ppm;
+  // spec.fit (on by default for animated sheets): render into a roomier cell, measure the union of every
+  // frame's pixels (all anims, all directions: a death fall, a hit flinch), then crop the whole sheet to
+  // that box (+ a margin), so nothing is ever cut by the cell. The feet anchor moves with the crop and is
+  // written to the meta (the game anchors by it, so it still lines up).
+  const fit = spec.fit === true || (spec.fit !== false && !!spec.anims);
+  const W0 = spec.cell[0], H0 = spec.cell[1];
+  const W = fit ? Math.round(W0 * 2) : W0, H = fit ? Math.round(H0 * 1.9) : H0;
+  const ax = fit ? spec.anchor[0] + Math.round((W - W0) / 2) : spec.anchor[0], ay = fit ? spec.anchor[1] + Math.round((H - H0) * 0.62) : spec.anchor[1], ppm = spec.ppm;
   const env = makeScene(spec.light || {});
   const cam = makeCamera(W, H, ax, ay, ppm);
   const holder = new THREE.Group(); env.scene.add(holder);
@@ -258,8 +265,17 @@ async function job(spec) {
   const rows = [];
   for (const an of anims) for (const d of dirs) rows.push({ an, d });
   const cols = Math.max(...anims.map((a) => a.frames));
-  const atlas = atlasCanvas(cols, rows.length, W, H); const ag = atlas.getContext('2d');
+  const atlas = fit ? null : atlasCanvas(cols, rows.length, W, H), ag = atlas ? atlas.getContext('2d') : null;
   const meta = { cell: [W, H], anchor: [ax, ay], ppm, cols, rows: [], size: [norm.size.x, norm.size.y, norm.size.z].map((v) => +v.toFixed(3)) };
+  // fit: each frame is kept cropped to its own pixels (small), with the union box U over all of them
+  const kept = [], U = { x0: W, y0: H, x1: -1, y1: -1 };
+  const keep = (fr, f, r) => {
+    const d = fr.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data; let x0 = W, y0 = H, x1 = -1, y1 = -1;
+    for (let y = 0; y < H; y++) { const o = y * W * 4 + 3; for (let x = 0; x < W; x++) if (d[o + x * 4] > 2) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; } }
+    if (x1 < 0) { kept.push({ f, r, c: null }); return; }
+    const c = document.createElement('canvas'); c.width = x1 - x0 + 1; c.height = y1 - y0 + 1; c.getContext('2d').drawImage(fr, -x0, -y0);
+    kept.push({ f, r, c, x0, y0 }); U.x0 = Math.min(U.x0, x0); U.y0 = Math.min(U.y0, y0); U.x1 = Math.max(U.x1, x1); U.y1 = Math.max(U.y1, y1);
+  };
   let hips = null; root.traverse((o) => { if (!hips && o.isBone && /hip|pelvis|root/i.test(o.name)) hips = o; });
   for (let r = 0; r < rows.length; r++) {
     const { an, d } = rows[r];
@@ -289,9 +305,20 @@ async function job(spec) {
       if (typeof spec.onFrame === 'string') new Function('THREE', 'holder', 'f', 'an', spec.onFrame)(THREE, holder, f, an);
       syncFollow();
       const fr = renderFrame(ctx, spec);
-      ag.drawImage(fr, f * W, r * H);
+      if (fit) keep(fr, f, r); else ag.drawImage(fr, f * W, r * H);
     }
     meta.rows.push({ anim: an.name, dir: d, dirName: DIRNAMES[d], row: r, frames: an.frames, fps: an.fps || 12, loop: an.loop !== false });
+  }
+  if (fit) {
+    const PAD = 4; if (U.x1 < 0) { U.x0 = U.y0 = 0; U.x1 = U.y1 = 1; }
+    // keep the anchor's column centred (mirrored directions stay put) and add a margin all round
+    const left = Math.max(ax - (U.x0 - PAD), (U.x1 + PAD) - ax), cw = 2 * Math.ceil(left), cx0 = Math.round(ax - cw / 2);
+    const cy0 = U.y0 - PAD, ch = (U.y1 + PAD) - cy0 + 1;
+    const out = atlasCanvas(cols, rows.length, cw, ch), og = out.getContext('2d');
+    for (const k of kept) if (k.c) og.drawImage(k.c, k.f * cw + (k.x0 - cx0), k.r * ch + (k.y0 - cy0));
+    meta.cell = [cw, ch]; meta.anchor = [ax - cx0, ay - cy0]; meta.fit = { from: [W0, H0] };
+    env.scene.traverse((o) => { if (o.geometry && o.geometry.dispose && cache.size > 40) o.geometry.dispose(); });
+    return { data: out.toDataURL(spec.format || 'image/webp', spec.quality ?? 0.9), meta };
   }
   env.scene.traverse((o) => { if (o.geometry && o.geometry.dispose && cache.size > 40) o.geometry.dispose(); });
   return { data: atlas.toDataURL(spec.format || 'image/webp', spec.quality ?? 0.9), meta };

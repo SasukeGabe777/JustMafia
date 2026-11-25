@@ -130,7 +130,7 @@ add('npc.medic', 'sprites/npc-medic.webp', { url: TS + 'Character/Character Hazm
 // ---------------- vehicles (5 directions, 1 frame) ----------------
 const V = (id, url, o) => add(id, `props/${id.replace(/\./g, '-')}.webp`, {
   url, length: o.len, cell: o.cell, anchor: o.anchor, dirs: D5, blob: o.blob || [o.len * 0.35, 0.25], tint: o.tint, attach: o.attach, matTint: o.matTint,
-  light: { shadowExtent: Math.max(5, o.len * 1.5) }, quality: 0.85, yaw: o.yaw || 0, outlinePx: o.outlinePx, kind: o.kind, proc: o.proc,
+  light: { shadowExtent: Math.max(5, o.len * 1.5) }, quality: 0.85, yaw: o.yaw || 0, outlinePx: o.outlinePx, kind: o.kind, proc: o.proc, fit: true,
 }, { kind: o.boss ? 'vehicle-boss' : 'vehicle', boss: o.boss, name: o.name });
 V('vehicle.cart', A + 'gd-kenney-market/Props/Shopping Cart.glb', { len: 1.0, cell: [112, 112], anchor: [56, 70], name: 'Shopping cart' });
 V('vehicle.mower', 'proc:mower', { kind: 'proc', proc: 'mower', len: 1.2, cell: [128, 128], anchor: [64, 80], name: 'Lawnmower (procedural)' });

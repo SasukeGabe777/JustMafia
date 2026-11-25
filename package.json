@@ -17,6 +17,7 @@
     "balance": "node tools/balance.js",
     "e2e-dlc2": "node tools/e2e-dlc2.js",
     "e2e-box": "node tools/e2e-box.js",
+    "check-trash-art": "node tools/trash-art-render/check-edges.js",
     "e2e-account": "node tools/e2e-account.js",
     "e2e-chest": "node tools/e2e-chest.js",
     "e2e-onboard": "node tools/e2e-onboard.js",
