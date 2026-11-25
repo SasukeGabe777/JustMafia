@@ -636,9 +636,12 @@ async function setup(browser, game, settings = {}) {
     await ph.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 720, deviceScaleFactor: 1, mobile: false });
     await wait(300);
     const key = (type, k, code, vk) => ph.send('Input.dispatchKeyEvent', { type, key: k, code, windowsVirtualKeyCode: vk });
-    const y0 = await sim('s.p.y');
+    // (the iso view: up the screen is world north-west, so x + y drops; a clear spot first)
+    await sim('(() => { s.p.x = s.area.hub.x; s.p.y = s.area.hub.y; return true; })()'); await wait(100);
+    const y0 = await sim('s.p.x + s.p.y'), sy0 = await sim('s.cam.toScreen(s.p.x, s.p.y)[1]');
     await key('keyDown', 'w', 'KeyW', 87); await wait(450); await key('keyUp', 'w', 'KeyW', 87);
-    assert((await sim('s.p.y')) < y0 - 40, 'W moves you up');
+    assert((await sim('s.p.x + s.p.y')) < y0 - 40, 'W moves you up the screen');
+    void sy0;
     const mouse = (type, x, y, extra = {}) => ph.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', ...extra });
     await mouse('mouseMoved', 640, 360); await mouse('mouseMoved', 1100, 200);
     await ph.until(`TZ_DEBUG.device() === 'mouse'`, 'mouse mode');
