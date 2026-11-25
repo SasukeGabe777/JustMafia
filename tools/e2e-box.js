@@ -600,8 +600,9 @@ async function setup(browser, game, settings = {}) {
     await ph.until(`!!window.TZ_DEBUG && !!TZ_DEBUG.sim() && !!document.querySelector('.tz-root canvas')`, 'the game on the phone', 20000);
     assert(await ph.eval(`TZ_DEBUG.sim().phase === 'intro' && !!TZ_DEBUG.sim().area.garage`), 'the run starts inside your garage');
     // pick a survivor class (the picker shows over the garage intro)
-    await ph.until(`!!document.querySelector('[data-cls]')`, 'the class picker', 10000);
-    await ph.eval(`document.querySelector('[data-cls="sharp"]').click(); true`);
+    await ph.until(`!!document.querySelector('.jz-go') && !!TZ_DEBUG.wheel()`, 'the class picker (the jukebox wheel)', 10000);
+    await ph.eval(`(() => { const W = TZ_DEBUG.wheel(); for (let i = 0; i < 12 && W.item().id !== 'sharp'; i++) W.set(i); return W.item().id; })()`); await wait(200);
+    await ph.eval(`document.querySelector('.jz-go').click(); true`);
     await ph.until(`TZ_DEBUG.sim().cls === 'sharp' && document.querySelector('.tz-ov').hidden`, 'class picked');
     await ph.until(`TZ_DEBUG.sim().phase === 'play'`, 'out of the garage', 10000);
     await ph.eval(`TZ_DEBUG.god(true); TZ_DEBUG.sim().set.aim = 'off'; TZ_DEBUG.sim().spawnCd = 99; true`);
