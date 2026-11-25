@@ -1,0 +1,11964 @@
+{
+ "version": 2,
+ "note": "JustZombies isometric art (CC0, see CREDITS.md). Re-render with tools/trash-art-render.",
+ "projection": {
+  "type": "dimetric 2:1 (\"pixel isometric\"), orthographic",
+  "cameraElevationDeg": 30,
+  "cameraAzimuthDeg": 45,
+  "tile": {
+   "w": 128,
+   "h": 64,
+   "metres": 1.6,
+   "note": "one ground tile is a 1.6 m square, drawn as a 128 x 64 diamond"
+  },
+  "pxPerMetre": 56.5685,
+  "worldToScreen": "tiles (tx, ty) -> screen: sx = (tx - ty) * 64, sy = (tx + ty) * 32; a height of z metres rises z * 48.99 px (pxPerMetre * cos 30)",
+  "light": "one rig for everything: warm key light from the screen top-left, sky/ground hemisphere fill, cool back fill; soft cast shadows baked into each frame"
+ },
+ "directions": {
+  "names": "screen directions: S = toward the bottom of the screen (facing the viewer), E = screen right, N = away from the viewer",
+  "rendered": [
+   "S",
+   "SE",
+   "E",
+   "NE",
+   "N"
+  ],
+  "mirror": {
+   "SW": "SE",
+   "W": "E",
+   "NW": "NE"
+  },
+  "mirrorHow": "draw the mirrored source row flipped horizontally; anchor x becomes (cell w - anchor x)",
+  "pick": "with world velocity (vx, vy) in tile axes: sx = vx - vy, sy = (vx + vy) / 2; dir = [\"E\",\"SE\",\"S\",\"SW\",\"W\",\"NW\",\"N\",\"NE\"][Math.round(Math.atan2(sy, sx) / (Math.PI / 4)) & 7]",
+  "order": [
+   "S",
+   "SE",
+   "E",
+   "NE",
+   "N",
+   "NW",
+   "W",
+   "SW"
+  ]
+ },
+ "frames": {
+  "layout": "atlases are grids of cell-sized frames: x = frame * cell[0], y = anims[name].rows[dir] * cell[1]",
+  "anchor": "anchor = the ground point under the object (feet / footprint centre) inside one cell; put it on the projected world position",
+  "scale": "draw at scale * (your tile width / 128). Pickups and weapons are rendered at 2x detail (scale 0.5)",
+  "pickups": "pickups/weapons have one 8-frame \"spin\" anim (turntable); bob them in code",
+  "death": "death plays once; hold the last frame (corpse + blood pool) then fade"
+ },
+ "assets": {
+  "bld.crucible": {
+   "file": "props/bld-crucible.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "use": "Scrapyard crucible",
+   "size": [
+    9.5,
+    6.702,
+    5.663
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.factory": {
+   "file": "props/bld-factory.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    9.5,
+    10.216,
+    6.793
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.garage": {
+   "file": "props/bld-garage.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "use": "Garage (Garage Defense base)",
+   "size": [
+    7,
+    5.182,
+    4.999
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.house1": {
+   "file": "props/bld-house1.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    8,
+    5.129,
+    6.327
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.house2": {
+   "file": "props/bld-house2.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    8,
+    6.428,
+    6.394
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.house3": {
+   "file": "props/bld-house3.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    8,
+    4.538,
+    5.637
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.house4": {
+   "file": "props/bld-house4.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    8,
+    4.132,
+    8
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.kk.a": {
+   "file": "props/bld-kk.a.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    7,
+    5.775,
+    7
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.kk.b": {
+   "file": "props/bld-kk.b.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    7,
+    5.775,
+    7
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.kk.c": {
+   "file": "props/bld-kk.c.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    7,
+    10.418,
+    7
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.kk.d": {
+   "file": "props/bld-kk.d.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    6.929,
+    10.29,
+    7
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.kk.e": {
+   "file": "props/bld-kk.e.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    7,
+    8.197,
+    6.976
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.kk.f": {
+   "file": "props/bld-kk.f.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    7,
+    8.197,
+    6.976
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.kk.g": {
+   "file": "props/bld-kk.g.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    7,
+    10.382,
+    6.976
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.kk.h": {
+   "file": "props/bld-kk.h.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    7,
+    10.639,
+    6.976
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.office": {
+   "file": "props/bld-office.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    6.485,
+    6.554,
+    8
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.shack": {
+   "file": "props/bld-shack.webp",
+   "kind": "building",
+   "cell": [
+    352,
+    352
+   ],
+   "anchor": [
+    176,
+    272
+   ],
+   "scale": 1,
+   "size": [
+    6,
+    3.431,
+    3.402
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.tower": {
+   "file": "props/bld-tower.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    896
+   ],
+   "anchor": [
+    224,
+    800
+   ],
+   "scale": 1,
+   "size": [
+    9,
+    19.059,
+    9
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "bld.warehouse": {
+   "file": "props/bld-warehouse.webp",
+   "kind": "building",
+   "cell": [
+    448,
+    560
+   ],
+   "anchor": [
+    224,
+    456
+   ],
+   "scale": 1,
+   "size": [
+    8.454,
+    5.633,
+    9.5
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "boss.compactor": {
+   "file": "props/boss-compactor.webp",
+   "kind": "vehicle-boss",
+   "cell": [
+    448,
+    384
+   ],
+   "anchor": [
+    224,
+    220
+   ],
+   "scale": 1,
+   "name": "Garbage-compactor boss",
+   "boss": true,
+   "size": [
+    3.339,
+    3.339,
+    7.2
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "boss.dumpster": {
+   "file": "sprites/boss-dumpster.webp",
+   "kind": "character",
+   "cell": [
+    256,
+    256
+   ],
+   "anchor": [
+    128,
+    176
+   ],
+   "scale": 1,
+   "name": "Dumpster Brute",
+   "look": "giant zombie with a dumpster on its back",
+   "boss": true,
+   "size": [
+    4.735,
+    3.3,
+    1.559
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 4,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 10,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "boss.final": {
+   "file": "sprites/boss-final.webp",
+   "kind": "character",
+   "cell": [
+    256,
+    256
+   ],
+   "anchor": [
+    128,
+    176
+   ],
+   "scale": 1,
+   "name": "Final boss (door boss fallback)",
+   "look": "huge red zombie",
+   "boss": true,
+   "size": [
+    4.854,
+    3.5,
+    1.756
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 4,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 10,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "boss.foghorn": {
+   "file": "sprites/boss-foghorn.webp",
+   "kind": "character",
+   "cell": [
+    256,
+    256
+   ],
+   "anchor": [
+    128,
+    176
+   ],
+   "scale": 1,
+   "name": "The Foghorn",
+   "look": "giant with a traffic-cone horn",
+   "boss": true,
+   "size": [
+    5.903,
+    3.1,
+    1.268
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 4,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 10,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "boss.icecream": {
+   "file": "props/boss-icecream.webp",
+   "kind": "vehicle-boss",
+   "cell": [
+    352,
+    352
+   ],
+   "anchor": [
+    176,
+    214
+   ],
+   "scale": 1,
+   "name": "Ice-cream-truck boss",
+   "boss": true,
+   "size": [
+    2.4,
+    2.64,
+    5.2
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "boss.mascot": {
+   "file": "sprites/boss-mascot.webp",
+   "kind": "character",
+   "cell": [
+    256,
+    256
+   ],
+   "anchor": [
+    128,
+    176
+   ],
+   "scale": 1,
+   "name": "Grinny the Mascot",
+   "look": "grimy mascot suit holding a giant hot dog",
+   "boss": true,
+   "size": [
+    4.034,
+    2.9,
+    1.524
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 4,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 10,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "boss.ratking": {
+   "file": "sprites/boss-ratking.webp",
+   "kind": "character",
+   "cell": [
+    256,
+    256
+   ],
+   "anchor": [
+    128,
+    176
+   ],
+   "scale": 1,
+   "name": "The Rat Queen",
+   "look": "grey rodent queen with a crown",
+   "boss": true,
+   "size": [
+    4.049,
+    2.6,
+    1.301
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 4,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 10,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "boss.sludge": {
+   "file": "sprites/boss-sludge.webp",
+   "kind": "character",
+   "cell": [
+    256,
+    256
+   ],
+   "anchor": [
+    128,
+    176
+   ],
+   "scale": 1,
+   "name": "Big Sludge",
+   "look": "giant green slime",
+   "boss": true,
+   "size": [
+    2.912,
+    2.4,
+    2.842
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 4,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 10,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "boss.spider": {
+   "file": "sprites/boss-spider.webp",
+   "kind": "character",
+   "cell": [
+    256,
+    256
+   ],
+   "anchor": [
+    128,
+    176
+   ],
+   "scale": 1,
+   "name": "Mother Webber",
+   "look": "huge pale crawler",
+   "boss": true,
+   "size": [
+    1.049,
+    2.2,
+    0.88
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 5,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 10,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 4,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 10,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "boss.toxic": {
+   "file": "sprites/boss-toxic.webp",
+   "kind": "character",
+   "cell": [
+    256,
+    256
+   ],
+   "anchor": [
+    128,
+    176
+   ],
+   "scale": 1,
+   "name": "Toxic Tub",
+   "look": "green giant with a leaking barrel",
+   "boss": true,
+   "size": [
+    4.448,
+    3.1,
+    1.464
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 4,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 10,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "boss.truck": {
+   "file": "props/boss-truck.webp",
+   "kind": "vehicle-boss",
+   "cell": [
+    448,
+    384
+   ],
+   "anchor": [
+    224,
+    220
+   ],
+   "scale": 1,
+   "name": "Garbage Truck Titan",
+   "boss": true,
+   "size": [
+    3.246,
+    3.246,
+    7
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "chest": {
+   "file": "props/chest.webp",
+   "kind": "chest",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1.1,
+    0.699,
+    0.831
+   ],
+   "anims": {
+    "closed": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    },
+    "opening": {
+     "frames": 10,
+     "fps": 18,
+     "loop": false,
+     "rows": {
+      "S": 1
+     }
+    },
+    "open": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 2
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "chest.key": {
+   "file": "props/chest-key.webp",
+   "kind": "chest",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1.1,
+    0.524,
+    0.623
+   ],
+   "anims": {
+    "closed": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    },
+    "opening": {
+     "frames": 10,
+     "fps": 18,
+     "loop": false,
+     "rows": {
+      "S": 1
+     }
+    },
+    "open": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 2
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "garage.door": {
+   "file": "props/garage-door.webp",
+   "kind": "prop",
+   "cell": [
+    224,
+    224
+   ],
+   "anchor": [
+    112,
+    150
+   ],
+   "scale": 1,
+   "name": "Garage door (Garage Defense)",
+   "size": [
+    2.9,
+    2.8,
+    0.4
+   ],
+   "anims": {
+    "closed": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    },
+    "opening": {
+     "frames": 10,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "SE": 2,
+      "NE": 3
+     }
+    },
+    "open": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 4,
+      "NE": 5
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "npc.grocer": {
+   "file": "sprites/npc-grocer.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Market grocer",
+   "size": [
+    1.58,
+    1.75,
+    0.377
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "wave": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "interact": {
+     "frames": 10,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "npc.gunsmith": {
+   "file": "sprites/npc-gunsmith.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Gunsmith (rank 2)",
+   "size": [
+    1.66,
+    1.75,
+    0.341
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "wave": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "interact": {
+     "frames": 10,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "npc.master": {
+   "file": "sprites/npc-master.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Master gunsmith (rank 3)",
+   "size": [
+    1.657,
+    1.75,
+    0.35
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "wave": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "interact": {
+     "frames": 10,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "npc.medic": {
+   "file": "sprites/npc-medic.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Clinic medic (hazmat)",
+   "size": [
+    2.23,
+    1.75,
+    0.579
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "wave": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "npc.quartermaster": {
+   "file": "sprites/npc-quartermaster.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Surplus quartermaster",
+   "size": [
+    1.551,
+    1.75,
+    0.342
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "wave": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "interact": {
+     "frames": 10,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "npc.tinker": {
+   "file": "sprites/npc-tinker.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Tinker (gun merchant rank 1)",
+   "size": [
+    1.571,
+    1.75,
+    0.365
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "wave": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "interact": {
+     "frames": 10,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "npc.trader": {
+   "file": "sprites/npc-trader.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Travelling trader",
+   "size": [
+    1.579,
+    1.75,
+    0.441
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "wave": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "interact": {
+     "frames": 10,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "pickup.ammo.crate": {
+   "file": "pickups/pickup-ammo-crate.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Ammo crate",
+   "size": [
+    0.302,
+    0.203,
+    0.55
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.ammo": {
+   "file": "pickups/pickup-ammo.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Ammo (bullets)",
+   "size": [
+    0.5,
+    0.508,
+    0.167
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.armor": {
+   "file": "pickups/pickup-armor.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Trash-Can Armor (metal armour)",
+   "size": [
+    0.77,
+    0.55,
+    0.38
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.battery": {
+   "file": "pickups/pickup-battery.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Battery",
+   "size": [
+    0.161,
+    0.4,
+    0.161
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.bomb": {
+   "file": "pickups/pickup-bomb.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Bomb charge",
+   "size": [
+    0.373,
+    0.4,
+    0.303
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.cash.bag": {
+   "file": "pickups/pickup-cash-bag.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Cash bag",
+   "size": [
+    0.487,
+    0.45,
+    0.379
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.cash": {
+   "file": "pickups/pickup-cash.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Cash (bill stacks; procedural)",
+   "size": [
+    0.45,
+    0.24,
+    0.253
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.coins": {
+   "file": "pickups/pickup-coins.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Coin pile",
+   "size": [
+    0.45,
+    0.312,
+    0.447
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.core.cage": {
+   "file": "pickups/pickup-core-cage.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Boss core (caged; procedural alt)",
+   "size": [
+    0.518,
+    0.55,
+    0.518
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.core": {
+   "file": "pickups/pickup-core.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Boss core (crucible core)",
+   "size": [
+    0.535,
+    0.6,
+    0.537
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.food": {
+   "file": "pickups/pickup-food.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Food",
+   "size": [
+    0.4,
+    0.287,
+    0.4
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.freeze": {
+   "file": "pickups/pickup-freeze.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Freezer Burn (ice block)",
+   "size": [
+    0.45,
+    0.45,
+    0.45
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.health": {
+   "file": "pickups/pickup-health.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Health / medkit",
+   "size": [
+    0.55,
+    0.471,
+    0.258
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.heart": {
+   "file": "pickups/pickup-heart.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Heart",
+   "size": [
+    0.46,
+    0.45,
+    0.46
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.key": {
+   "file": "pickups/pickup-key.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Whole key",
+   "size": [
+    0.55,
+    0.28,
+    0.09
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.keypiece": {
+   "file": "pickups/pickup-keypiece.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Key piece (procedural)",
+   "size": [
+    0.307,
+    0.45,
+    0.08
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.kicks": {
+   "file": "pickups/pickup-kicks.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Rocket Sneakers (procedural)",
+   "size": [
+    0.285,
+    0.123,
+    0.42
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.map": {
+   "file": "pickups/pickup-map.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Map piece",
+   "size": [
+    0.118,
+    0.117,
+    0.6
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.minigun": {
+   "file": "pickups/pickup-minigun.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Buzzsaw Minigun (timed)",
+   "size": [
+    0.7,
+    0.251,
+    0.279
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.nuke": {
+   "file": "pickups/pickup-nuke.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Garbage Day (bomb)",
+   "size": [
+    0.555,
+    0.5,
+    0.447
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.raygun": {
+   "file": "pickups/pickup-raygun.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Ray Gun (timed)",
+   "size": [
+    0.5,
+    0.263,
+    0.18
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.rockets": {
+   "file": "pickups/pickup-rockets.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Rocket Barrage (timed)",
+   "size": [
+    0.8,
+    0.459,
+    0.288
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.scope": {
+   "file": "pickups/pickup-scope.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Lookout Binoculars (FOV boost; procedural)",
+   "size": [
+    0.4,
+    0.197,
+    0.349
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.shield": {
+   "file": "pickups/pickup-shield.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Bubble Shield",
+   "size": [
+    0.55,
+    0.55,
+    0.55
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.snack": {
+   "file": "pickups/pickup-snack.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Health Snack (hot dog)",
+   "size": [
+    0.213,
+    0.111,
+    0.45
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.soda": {
+   "file": "pickups/pickup-soda.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Soda",
+   "size": [
+    0.256,
+    0.4,
+    0.256
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.truck": {
+   "file": "pickups/pickup-truck.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Garbage-Truck Ram (timed)",
+   "size": [
+    0.348,
+    0.348,
+    0.75
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.turretkit": {
+   "file": "pickups/pickup-turretkit.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Turret kit",
+   "size": [
+    0.547,
+    0.277,
+    0.55
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.xp.green": {
+   "file": "pickups/pickup-xp-green.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "XP gem (green, bigger value)",
+   "size": [
+    0.396,
+    0.4,
+    0.396
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.xp": {
+   "file": "pickups/pickup-xp.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "XP gem (blue)",
+   "size": [
+    0.187,
+    0.4,
+    0.132
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.xp.pink": {
+   "file": "pickups/pickup-xp-pink.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "XP gem (pink, biggest value)",
+   "size": [
+    0.233,
+    0.4,
+    0.233
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "pickup.xp2": {
+   "file": "pickups/pickup-xp2.webp",
+   "kind": "pickup",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Double XP (star coin)",
+   "size": [
+    0.499,
+    0.5,
+    0.136
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.alarm": {
+   "file": "props/prop-alarm.webp",
+   "kind": "prop",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    64
+   ],
+   "scale": 1,
+   "name": "Car-alarm decoy beacon (Garage Defense; procedural)",
+   "size": [
+    0.45,
+    0.675,
+    0.33
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.ambulance": {
+   "file": "props/prop-ambulance.webp",
+   "kind": "prop",
+   "cell": [
+    352,
+    288
+   ],
+   "anchor": [
+    176,
+    170
+   ],
+   "scale": 1,
+   "size": [
+    2.4,
+    2.88,
+    5.2
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.bags": {
+   "file": "props/prop-bags.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    0.617,
+    0.7,
+    0.625
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.bags2": {
+   "file": "props/prop-bags2.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1.197,
+    0.7,
+    0.692
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.barrel.explosive": {
+   "file": "props/prop-barrel.explosive.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    0.766,
+    1,
+    0.766
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.barrel": {
+   "file": "props/prop-barrel.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    0.615,
+    1,
+    0.615
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.barrel.rusty": {
+   "file": "props/prop-barrel.rusty.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    0.744,
+    1,
+    0.744
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.barrel.spilled": {
+   "file": "props/prop-barrel.spilled.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1.6,
+    0.498,
+    0.888
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0
+     }
+    }
+   },
+   "dirs": [
+    "SE"
+   ]
+  },
+  "prop.barricade": {
+   "file": "props/prop-barricade.webp",
+   "kind": "prop",
+   "cell": [
+    192,
+    176
+   ],
+   "anchor": [
+    96,
+    116
+   ],
+   "scale": 1,
+   "name": "Garage Defense barricade",
+   "size": [
+    2.4,
+    2.008,
+    0.42
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.barricade.trash": {
+   "file": "props/prop-barricade.trash.webp",
+   "kind": "prop",
+   "cell": [
+    192,
+    176
+   ],
+   "anchor": [
+    96,
+    116
+   ],
+   "scale": 1,
+   "size": [
+    2.2,
+    1.23,
+    0.642
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.barricade.wood": {
+   "file": "props/prop-barricade.wood.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "name": "Barricade (small)",
+   "size": [
+    1.6,
+    0.532,
+    0.556
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.barrier.concrete": {
+   "file": "props/prop-barrier.concrete.webp",
+   "kind": "prop",
+   "cell": [
+    176,
+    144
+   ],
+   "anchor": [
+    88,
+    96
+   ],
+   "scale": 1,
+   "size": [
+    2.2,
+    1.573,
+    1.246
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.barrier": {
+   "file": "props/prop-barrier.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1.8,
+    1.042,
+    0.58
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.barrier.striped": {
+   "file": "props/prop-barrier.striped.webp",
+   "kind": "prop",
+   "cell": [
+    176,
+    144
+   ],
+   "anchor": [
+    88,
+    96
+   ],
+   "scale": 1,
+   "size": [
+    2.2,
+    1.135,
+    1.103
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.beartrap": {
+   "file": "props/prop-beartrap.webp",
+   "kind": "prop",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    60
+   ],
+   "scale": 1,
+   "size": [
+    0.591,
+    0.133,
+    0.7
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.bench": {
+   "file": "props/prop-bench.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1.8,
+    0.45,
+    0.675
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.bin": {
+   "file": "props/prop-bin.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "name": "Trash can",
+   "size": [
+    0.703,
+    1,
+    0.703
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.bin2": {
+   "file": "props/prop-bin2.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "name": "Trash can (large wheelie bin)",
+   "size": [
+    0.795,
+    1.2,
+    0.795
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.bin3": {
+   "file": "props/prop-bin3.webp",
+   "kind": "prop",
+   "cell": [
+    96,
+    112
+   ],
+   "anchor": [
+    48,
+    84
+   ],
+   "scale": 1,
+   "name": "Trash can (small)",
+   "size": [
+    0.494,
+    0.7,
+    0.301
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.blood1": {
+   "file": "props/prop-blood1.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    96
+   ],
+   "anchor": [
+    64,
+    48
+   ],
+   "scale": 1,
+   "size": [
+    1.342,
+    0,
+    1.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.blood2": {
+   "file": "props/prop-blood2.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    96
+   ],
+   "anchor": [
+    64,
+    48
+   ],
+   "scale": 1,
+   "size": [
+    1.4,
+    0,
+    1.078
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.blood3": {
+   "file": "props/prop-blood3.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    96
+   ],
+   "anchor": [
+    64,
+    48
+   ],
+   "scale": 1,
+   "size": [
+    1.123,
+    0,
+    1.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.boxes": {
+   "file": "props/prop-boxes.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1.2,
+    0.627,
+    0.894
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.boxes2": {
+   "file": "props/prop-boxes2.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1.2,
+    2.156,
+    1.161
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.bus": {
+   "file": "props/prop-bus.webp",
+   "kind": "prop",
+   "cell": [
+    352,
+    288
+   ],
+   "anchor": [
+    176,
+    170
+   ],
+   "scale": 1,
+   "name": "Delivery van (stands in for bus)",
+   "size": [
+    2.585,
+    2.843,
+    5.6
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.bush": {
+   "file": "props/prop-bush.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    2.34,
+    0.9,
+    2.34
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.car": {
+   "file": "props/prop-car.webp",
+   "kind": "prop",
+   "cell": [
+    288,
+    224
+   ],
+   "anchor": [
+    144,
+    134
+   ],
+   "scale": 1,
+   "size": [
+    2.588,
+    2.243,
+    4.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.car2": {
+   "file": "props/prop-car2.webp",
+   "kind": "prop",
+   "cell": [
+    288,
+    224
+   ],
+   "anchor": [
+    144,
+    134
+   ],
+   "scale": 1,
+   "size": [
+    1.825,
+    1.544,
+    4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.car3": {
+   "file": "props/prop-car3.webp",
+   "kind": "prop",
+   "cell": [
+    288,
+    224
+   ],
+   "anchor": [
+    144,
+    134
+   ],
+   "scale": 1,
+   "size": [
+    2.556,
+    2.215,
+    4.6
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.cart": {
+   "file": "props/prop-cart.webp",
+   "kind": "prop",
+   "cell": [
+    112,
+    112
+   ],
+   "anchor": [
+    56,
+    70
+   ],
+   "scale": 1,
+   "size": [
+    0.626,
+    0.816,
+    1
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.cinderblock": {
+   "file": "props/prop-cinderblock.webp",
+   "kind": "prop",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    64
+   ],
+   "scale": 1,
+   "size": [
+    0.5,
+    0.241,
+    0.227
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.cone": {
+   "file": "props/prop-cone.webp",
+   "kind": "prop",
+   "cell": [
+    96,
+    112
+   ],
+   "anchor": [
+    48,
+    84
+   ],
+   "scale": 1,
+   "size": [
+    0.542,
+    0.7,
+    0.542
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.container": {
+   "file": "props/prop-container.webp",
+   "kind": "prop",
+   "cell": [
+    320,
+    256
+   ],
+   "anchor": [
+    160,
+    160
+   ],
+   "scale": 1,
+   "size": [
+    4.8,
+    2.189,
+    2.152
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.container2": {
+   "file": "props/prop-container2.webp",
+   "kind": "prop",
+   "cell": [
+    320,
+    256
+   ],
+   "anchor": [
+    160,
+    160
+   ],
+   "scale": 1,
+   "size": [
+    4.8,
+    2.189,
+    2.153
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.couch": {
+   "file": "props/prop-couch.webp",
+   "kind": "prop",
+   "cell": [
+    176,
+    160
+   ],
+   "anchor": [
+    88,
+    104
+   ],
+   "scale": 1,
+   "size": [
+    2,
+    0.826,
+    0.806
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.crate": {
+   "file": "props/prop-crate.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.dumpster": {
+   "file": "props/prop-dumpster.webp",
+   "kind": "prop",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "size": [
+    2,
+    1.121,
+    1.247
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.dumpster.open": {
+   "file": "props/prop-dumpster.open.webp",
+   "kind": "prop",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "size": [
+    2,
+    2.109,
+    1.66
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.fence": {
+   "file": "props/prop-fence.webp",
+   "kind": "prop",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    108
+   ],
+   "scale": 1,
+   "size": [
+    1.6,
+    1.78,
+    1.047
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.fence.metal": {
+   "file": "props/prop-fence.metal.webp",
+   "kind": "prop",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    108
+   ],
+   "scale": 1,
+   "size": [
+    1.6,
+    1.296,
+    0.052
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.fence.picket": {
+   "file": "props/prop-fence.picket.webp",
+   "kind": "prop",
+   "cell": [
+    224,
+    176
+   ],
+   "anchor": [
+    112,
+    112
+   ],
+   "scale": 1,
+   "size": [
+    3.2,
+    0.987,
+    1.6
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.fridge": {
+   "file": "props/prop-fridge.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    160
+   ],
+   "anchor": [
+    64,
+    124
+   ],
+   "scale": 1,
+   "size": [
+    0.841,
+    1.8,
+    0.571
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.gascan": {
+   "file": "props/prop-gascan.webp",
+   "kind": "prop",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    64
+   ],
+   "scale": 1,
+   "size": [
+    0.38,
+    0.5,
+    0.163
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.hedge": {
+   "file": "props/prop-hedge.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1.851,
+    1.529,
+    1.9
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.hydrant": {
+   "file": "props/prop-hydrant.webp",
+   "kind": "prop",
+   "cell": [
+    96,
+    112
+   ],
+   "anchor": [
+    48,
+    84
+   ],
+   "scale": 1,
+   "size": [
+    0.534,
+    0.8,
+    0.413
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.lamp": {
+   "file": "props/prop-lamp.webp",
+   "kind": "prop",
+   "cell": [
+    144,
+    256
+   ],
+   "anchor": [
+    72,
+    228
+   ],
+   "scale": 1,
+   "size": [
+    0.23,
+    4.2,
+    1.85
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.lamp2": {
+   "file": "props/prop-lamp2.webp",
+   "kind": "prop",
+   "cell": [
+    144,
+    256
+   ],
+   "anchor": [
+    72,
+    228
+   ],
+   "scale": 1,
+   "size": [
+    1.122,
+    4,
+    0.288
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.landmine": {
+   "file": "props/prop-landmine.webp",
+   "kind": "prop",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    60
+   ],
+   "scale": 1,
+   "size": [
+    0.45,
+    0.119,
+    0.45
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.mound": {
+   "file": "props/prop-mound.webp",
+   "kind": "prop",
+   "cell": [
+    224,
+    176
+   ],
+   "anchor": [
+    112,
+    112
+   ],
+   "scale": 1,
+   "size": [
+    2.418,
+    0.187,
+    3
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.pallet": {
+   "file": "props/prop-pallet.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    0.88,
+    0.138,
+    1.2
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0
+     }
+    }
+   },
+   "dirs": [
+    "SE"
+   ]
+  },
+  "prop.papers": {
+   "file": "props/prop-papers.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    96
+   ],
+   "anchor": [
+    64,
+    56
+   ],
+   "scale": 1,
+   "size": [
+    1.2,
+    0.006,
+    1.094
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.pine": {
+   "file": "props/prop-pine.webp",
+   "kind": "prop",
+   "cell": [
+    192,
+    288
+   ],
+   "anchor": [
+    96,
+    260
+   ],
+   "scale": 1,
+   "size": [
+    3.514,
+    5.2,
+    3.225
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.pipe": {
+   "file": "props/prop-pipe.webp",
+   "kind": "prop",
+   "cell": [
+    256,
+    176
+   ],
+   "anchor": [
+    128,
+    112
+   ],
+   "scale": 1,
+   "size": [
+    0.803,
+    0.72,
+    3.6
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.planks": {
+   "file": "props/prop-planks.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    0.663,
+    0.115,
+    1.6
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0
+     }
+    }
+   },
+   "dirs": [
+    "SE"
+   ]
+  },
+  "prop.planter": {
+   "file": "props/prop-planter.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1,
+    0.443,
+    0.75
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.police": {
+   "file": "props/prop-police.webp",
+   "kind": "prop",
+   "cell": [
+    288,
+    224
+   ],
+   "anchor": [
+    144,
+    134
+   ],
+   "scale": 1,
+   "size": [
+    2.129,
+    1.845,
+    4.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.pot": {
+   "file": "props/prop-pot.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "name": "Potted bush",
+   "size": [
+    0.448,
+    0.9,
+    0.471
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.sandbags": {
+   "file": "props/prop-sandbags.webp",
+   "kind": "prop",
+   "cell": [
+    192,
+    160
+   ],
+   "anchor": [
+    96,
+    104
+   ],
+   "scale": 1,
+   "size": [
+    2.4,
+    0.916,
+    0.663
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.sign": {
+   "file": "props/prop-sign.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    160
+   ],
+   "anchor": [
+    64,
+    128
+   ],
+   "scale": 1,
+   "size": [
+    0.883,
+    1.6,
+    0.405
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.spikes": {
+   "file": "props/prop-spikes.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    96
+   ],
+   "anchor": [
+    64,
+    56
+   ],
+   "scale": 1,
+   "name": "Spike strip (Garage Defense; procedural)",
+   "size": [
+    1.4,
+    0.153,
+    0.249
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.sprinkler": {
+   "file": "props/prop-sprinkler.webp",
+   "kind": "prop",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    64
+   ],
+   "scale": 1,
+   "name": "Sprinkler-flamer (Garage Defense; procedural)",
+   "size": [
+    0.8,
+    0.765,
+    0.394
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.tank": {
+   "file": "props/prop-tank.webp",
+   "kind": "prop",
+   "cell": [
+    224,
+    192
+   ],
+   "anchor": [
+    112,
+    128
+   ],
+   "scale": 1,
+   "size": [
+    3,
+    4.136,
+    3
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.taxi": {
+   "file": "props/prop-taxi.webp",
+   "kind": "prop",
+   "cell": [
+    288,
+    224
+   ],
+   "anchor": [
+    144,
+    134
+   ],
+   "scale": 1,
+   "size": [
+    2.4,
+    2.4,
+    4.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.tirepile": {
+   "file": "props/prop-tirepile.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1.6,
+    0.991,
+    1.043
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.tires": {
+   "file": "props/prop-tires.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    0.968,
+    0.9,
+    0.842
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.townsign": {
+   "file": "props/prop-townsign.webp",
+   "kind": "prop",
+   "cell": [
+    176,
+    208
+   ],
+   "anchor": [
+    88,
+    172
+   ],
+   "scale": 1,
+   "size": [
+    2.684,
+    2.4,
+    0.778
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.trafficlight": {
+   "file": "props/prop-trafficlight.webp",
+   "kind": "prop",
+   "cell": [
+    176,
+    256
+   ],
+   "anchor": [
+    88,
+    228
+   ],
+   "scale": 1,
+   "size": [
+    1.362,
+    4.2,
+    1.361
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.trash": {
+   "file": "props/prop-trash.webp",
+   "kind": "prop",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    92
+   ],
+   "scale": 1,
+   "size": [
+    1.289,
+    0.1,
+    1.6
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.tree.dead": {
+   "file": "props/prop-tree.dead.webp",
+   "kind": "prop",
+   "cell": [
+    224,
+    288
+   ],
+   "anchor": [
+    112,
+    256
+   ],
+   "scale": 1,
+   "size": [
+    2.72,
+    4.2,
+    2.543
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.tree": {
+   "file": "props/prop-tree.webp",
+   "kind": "prop",
+   "cell": [
+    224,
+    288
+   ],
+   "anchor": [
+    112,
+    256
+   ],
+   "scale": 1,
+   "size": [
+    2.967,
+    5,
+    3.151
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.tree2": {
+   "file": "props/prop-tree2.webp",
+   "kind": "prop",
+   "cell": [
+    224,
+    288
+   ],
+   "anchor": [
+    112,
+    256
+   ],
+   "scale": 1,
+   "size": [
+    1.983,
+    4.6,
+    2.07
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.van": {
+   "file": "props/prop-van.webp",
+   "kind": "prop",
+   "cell": [
+    288,
+    224
+   ],
+   "anchor": [
+    144,
+    134
+   ],
+   "scale": 1,
+   "size": [
+    2.618,
+    2.356,
+    4.8
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.watertower": {
+   "file": "props/prop-watertower.webp",
+   "kind": "prop",
+   "cell": [
+    288,
+    480
+   ],
+   "anchor": [
+    144,
+    420
+   ],
+   "scale": 1,
+   "size": [
+    2.539,
+    9,
+    2.599
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "prop.wreck.burnt": {
+   "file": "props/prop-wreck.burnt.webp",
+   "kind": "prop",
+   "cell": [
+    288,
+    224
+   ],
+   "anchor": [
+    144,
+    134
+   ],
+   "scale": 1,
+   "name": "Burnt-out car",
+   "size": [
+    2.588,
+    2.243,
+    4.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.wreck": {
+   "file": "props/prop-wreck.webp",
+   "kind": "prop",
+   "cell": [
+    288,
+    224
+   ],
+   "anchor": [
+    144,
+    134
+   ],
+   "scale": 1,
+   "name": "Wrecked car",
+   "size": [
+    2.019,
+    1.346,
+    4.2
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.wreck.suv": {
+   "file": "props/prop-wreck.suv.webp",
+   "kind": "prop",
+   "cell": [
+    288,
+    224
+   ],
+   "anchor": [
+    144,
+    134
+   ],
+   "scale": 1,
+   "name": "Rusted SUV wreck",
+   "size": [
+    2.556,
+    2.215,
+    4.6
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "prop.wreck2": {
+   "file": "props/prop-wreck2.webp",
+   "kind": "prop",
+   "cell": [
+    320,
+    256
+   ],
+   "anchor": [
+    160,
+    152
+   ],
+   "scale": 1,
+   "size": [
+    2.407,
+    1.814,
+    5
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "SE": 0,
+      "NE": 1
+     }
+    }
+   },
+   "dirs": [
+    "SE",
+    "NE"
+   ]
+  },
+  "road.crack1": {
+   "file": "tiles/road-crack1.webp",
+   "kind": "road",
+   "cell": [
+    512,
+    288
+   ],
+   "anchor": [
+    256,
+    128
+   ],
+   "scale": 1,
+   "tiles": [
+    4,
+    4
+   ],
+   "size": [
+    6.4,
+    0.228,
+    6.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "road.crack2": {
+   "file": "tiles/road-crack2.webp",
+   "kind": "road",
+   "cell": [
+    512,
+    288
+   ],
+   "anchor": [
+    256,
+    128
+   ],
+   "scale": 1,
+   "tiles": [
+    4,
+    4
+   ],
+   "size": [
+    6.4,
+    0.464,
+    6.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "road.cross": {
+   "file": "tiles/road-cross.webp",
+   "kind": "road",
+   "cell": [
+    512,
+    288
+   ],
+   "anchor": [
+    256,
+    128
+   ],
+   "scale": 1,
+   "tiles": [
+    4,
+    4
+   ],
+   "size": [
+    6.4,
+    0.08,
+    6.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "road.straight": {
+   "file": "tiles/road-straight.webp",
+   "kind": "road",
+   "cell": [
+    512,
+    288
+   ],
+   "anchor": [
+    256,
+    128
+   ],
+   "scale": 1,
+   "tiles": [
+    4,
+    4
+   ],
+   "size": [
+    6.4,
+    0.096,
+    6.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "road.t": {
+   "file": "tiles/road-t.webp",
+   "kind": "road",
+   "cell": [
+    512,
+    288
+   ],
+   "anchor": [
+    256,
+    128
+   ],
+   "scale": 1,
+   "tiles": [
+    4,
+    4
+   ],
+   "size": [
+    6.4,
+    0.08,
+    6.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "road.turn": {
+   "file": "tiles/road-turn.webp",
+   "kind": "road",
+   "cell": [
+    512,
+    288
+   ],
+   "anchor": [
+    256,
+    128
+   ],
+   "scale": 1,
+   "tiles": [
+    4,
+    4
+   ],
+   "size": [
+    6.4,
+    0.096,
+    6.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "E": 1
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "E"
+   ]
+  },
+  "survivor.lis": {
+   "file": "sprites/survivor-lis.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Survivor lis (escort / hero)",
+   "size": [
+    2.081,
+    1.75,
+    0.664
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "run": {
+     "frames": 10,
+     "fps": 14,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "wave": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "survivor.matt": {
+   "file": "sprites/survivor-matt.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Survivor matt (escort / hero)",
+   "size": [
+    2.331,
+    1.75,
+    0.636
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "run": {
+     "frames": 10,
+     "fps": 14,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "wave": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "survivor.sam": {
+   "file": "sprites/survivor-sam.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Survivor sam (escort / hero)",
+   "size": [
+    2.336,
+    1.75,
+    0.619
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "run": {
+     "frames": 10,
+     "fps": 14,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "wave": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "survivor.shaun": {
+   "file": "sprites/survivor-shaun.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Survivor shaun (escort / hero)",
+   "size": [
+    2.293,
+    1.75,
+    0.989
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "run": {
+     "frames": 10,
+     "fps": 14,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "wave": {
+     "frames": 10,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 14,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "turret": {
+   "file": "props/turret.webp",
+   "kind": "vehicle",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    84
+   ],
+   "scale": 1,
+   "name": "Turret (5 aim directions; Garage Defense buildable)",
+   "size": [
+    1.094,
+    0.554,
+    1.1
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "vehicle.armored": {
+   "file": "props/vehicle-armored.webp",
+   "kind": "vehicle",
+   "cell": [
+    320,
+    256
+   ],
+   "anchor": [
+    160,
+    152
+   ],
+   "scale": 1,
+   "name": "Armored pickup",
+   "size": [
+    2.407,
+    1.814,
+    5
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "vehicle.camper": {
+   "file": "props/vehicle-camper.webp",
+   "kind": "vehicle",
+   "cell": [
+    352,
+    288
+   ],
+   "anchor": [
+    176,
+    170
+   ],
+   "scale": 1,
+   "name": "Survivor truck",
+   "size": [
+    2.784,
+    2.963,
+    5.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "vehicle.cart": {
+   "file": "props/vehicle-cart.webp",
+   "kind": "vehicle",
+   "cell": [
+    112,
+    112
+   ],
+   "anchor": [
+    56,
+    70
+   ],
+   "scale": 1,
+   "name": "Shopping cart",
+   "size": [
+    0.626,
+    0.816,
+    1
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "vehicle.garbagetruck": {
+   "file": "props/vehicle-garbagetruck.webp",
+   "kind": "vehicle",
+   "cell": [
+    384,
+    320
+   ],
+   "anchor": [
+    192,
+    184
+   ],
+   "scale": 1,
+   "name": "Garbage truck (timed ram + street prop)",
+   "size": [
+    2.783,
+    2.783,
+    6
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "vehicle.mower": {
+   "file": "props/vehicle-mower.webp",
+   "kind": "vehicle",
+   "cell": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    80
+   ],
+   "scale": 1,
+   "name": "Lawnmower (procedural)",
+   "size": [
+    0.686,
+    0.916,
+    1.2
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "vehicle.ridemower": {
+   "file": "props/vehicle-ridemower.webp",
+   "kind": "vehicle",
+   "cell": [
+    144,
+    144
+   ],
+   "anchor": [
+    72,
+    88
+   ],
+   "scale": 1,
+   "name": "Ride-on mower (tractor model, tinted)",
+   "size": [
+    1.158,
+    1.383,
+    1.9
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "vehicle.sedan": {
+   "file": "props/vehicle-sedan.webp",
+   "kind": "vehicle",
+   "cell": [
+    288,
+    224
+   ],
+   "anchor": [
+    144,
+    134
+   ],
+   "scale": 1,
+   "name": "Sedan (car-alarm decoy car)",
+   "size": [
+    2.588,
+    2.243,
+    4.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "vehicle.trader": {
+   "file": "props/vehicle-trader.webp",
+   "kind": "vehicle",
+   "cell": [
+    352,
+    288
+   ],
+   "anchor": [
+    176,
+    170
+   ],
+   "scale": 1,
+   "name": "Trader truck",
+   "size": [
+    2.746,
+    2.38,
+    5.4
+   ],
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "weapon.axe": {
+   "file": "pickups/weapon-axe.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Axe (extra)",
+   "size": [
+    0.185,
+    0.054,
+    0.8
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.bat": {
+   "file": "pickups/weapon-bat.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Nail Bat",
+   "size": [
+    0.119,
+    0.123,
+    0.8
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.blower": {
+   "file": "pickups/weapon-blower.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Leaf Blower (procedural)",
+   "size": [
+    0.7,
+    0.229,
+    0.229
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.coil": {
+   "file": "pickups/weapon-coil.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Lightning Coil (procedural)",
+   "size": [
+    0.6,
+    0.202,
+    0.105
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.crossbow": {
+   "file": "pickups/weapon-crossbow.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Fence-Post Crossbow",
+   "size": [
+    0.548,
+    0.251,
+    0.7
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.flamer": {
+   "file": "pickups/weapon-flamer.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Hairspray Torch (flamethrower; procedural)",
+   "size": [
+    0.7,
+    0.345,
+    0.255
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.hubcap": {
+   "file": "pickups/weapon-hubcap.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Boomerang Hubcap",
+   "size": [
+    0.3,
+    0.45,
+    0.45
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.knife": {
+   "file": "pickups/weapon-knife.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Knife (extra)",
+   "size": [
+    0.083,
+    0.043,
+    0.45
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.launcher": {
+   "file": "pickups/weapon-launcher.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Pipe Launcher",
+   "size": [
+    0.8,
+    0.369,
+    0.317
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.nailgun": {
+   "file": "pickups/weapon-nailgun.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Nail Gun",
+   "size": [
+    0.1,
+    0.225,
+    0.55
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.pistol": {
+   "file": "pickups/weapon-pistol.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Pipe Blaster (pistol)",
+   "size": [
+    0.5,
+    0.305,
+    0.075
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.rail": {
+   "file": "pickups/weapon-rail.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Rail Rifle",
+   "size": [
+    0.9,
+    0.335,
+    0.084
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.rifle": {
+   "file": "pickups/weapon-rifle.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Rifle (extra)",
+   "size": [
+    0.8,
+    0.411,
+    0.086
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.saw": {
+   "file": "pickups/weapon-saw.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Chainsaw (procedural)",
+   "size": [
+    0.75,
+    0.294,
+    0.129
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.shotgun": {
+   "file": "pickups/weapon-shotgun.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Scrap Scattergun (shotgun)",
+   "size": [
+    0.8,
+    0.171,
+    0.063
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "weapon.smg": {
+   "file": "pickups/weapon-smg.webp",
+   "kind": "weapon",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    72
+   ],
+   "scale": 0.5,
+   "name": "Pocket Rattler (SMG)",
+   "size": [
+    0.6,
+    0.324,
+    0.067
+   ],
+   "anims": {
+    "spin": {
+     "frames": 8,
+     "fps": 10,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "zombie.blinder": {
+   "file": "sprites/zombie-blinder.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Inkspitter",
+   "look": "violet, inky blood",
+   "size": [
+    3.428,
+    1.8,
+    0.736
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.bloater": {
+   "file": "sprites/zombie-bloater.webp",
+   "kind": "character",
+   "cell": [
+    176,
+    176
+   ],
+   "anchor": [
+    88,
+    116
+   ],
+   "scale": 1,
+   "name": "Bloater",
+   "look": "yellow fat zombie",
+   "size": [
+    2.87,
+    2,
+    0.945
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.brute": {
+   "file": "sprites/zombie-brute.webp",
+   "kind": "character",
+   "cell": [
+    224,
+    224
+   ],
+   "anchor": [
+    112,
+    150
+   ],
+   "scale": 1,
+   "name": "Raging Brute",
+   "look": "huge red zombie",
+   "size": [
+    3.731,
+    2.6,
+    1.228
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.canhead": {
+   "file": "sprites/zombie-canhead.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Can-Head",
+   "look": "trash can on its head",
+   "size": [
+    2.496,
+    1.8,
+    0.903
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.carrier": {
+   "file": "sprites/zombie-carrier.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Weapon carrier (drops the timed super weapon it holds)",
+   "look": "holds a minigun",
+   "size": [
+    2.496,
+    1.8,
+    0.903
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.confuser": {
+   "file": "sprites/zombie-confuser.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Spinner",
+   "look": "pink one-armed zombie, traffic cone hat",
+   "size": [
+    3.428,
+    1.8,
+    0.736
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.crawler": {
+   "file": "sprites/zombie-crawler.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Crawler",
+   "look": "legless crawl cycle",
+   "size": [
+    2.496,
+    1.8,
+    0.903
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 5,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 14,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 18,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.elite": {
+   "file": "sprites/zombie-elite.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Glowing elite (any type can glow; this is the stock elite)",
+   "look": "glowing green outline",
+   "size": [
+    2.496,
+    1.8,
+    0.903
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.exploder": {
+   "file": "sprites/zombie-exploder.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Gas-Bag",
+   "look": "orange fat zombie with a gas can strapped on",
+   "size": [
+    2.726,
+    1.9,
+    0.897
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.jammer": {
+   "file": "sprites/zombie-jammer.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Gunk Jammer",
+   "look": "grey, a wrench through its head",
+   "size": [
+    2.496,
+    1.8,
+    0.903
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.leecher": {
+   "file": "sprites/zombie-leecher.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Leech",
+   "look": "blood-red ribcage",
+   "size": [
+    0.858,
+    1.8,
+    0.72
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "run": {
+     "frames": 10,
+     "fps": 15,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.nest": {
+   "file": "sprites/zombie-nest.webp",
+   "kind": "character",
+   "cell": [
+    224,
+    192
+   ],
+   "anchor": [
+    112,
+    124
+   ],
+   "scale": 1,
+   "name": "Rot Nest",
+   "look": "breathing purple trash mound",
+   "size": [
+    1.934,
+    0.149,
+    2.4
+   ],
+   "anims": {
+    "idle": {
+     "frames": 10,
+     "fps": 8,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 1
+     }
+    },
+    "death": {
+     "frames": 12,
+     "fps": 12,
+     "loop": false,
+     "rows": {
+      "S": 2
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "zombie.riot": {
+   "file": "sprites/zombie-riot.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Riot Shield",
+   "look": "carries a riot shield",
+   "size": [
+    2.496,
+    1.8,
+    0.903
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.runner": {
+   "file": "sprites/zombie-runner.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Sprinter",
+   "look": "ribcage zombie, run cycle",
+   "size": [
+    0.858,
+    1.8,
+    0.72
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "run": {
+     "frames": 10,
+     "fps": 15,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.screamer": {
+   "file": "sprites/zombie-screamer.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Screamer",
+   "look": "second zombie body, violet",
+   "size": [
+    1.973,
+    1.8,
+    1.096
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.shaker": {
+   "file": "sprites/zombie-shaker.webp",
+   "kind": "character",
+   "cell": [
+    208,
+    208
+   ],
+   "anchor": [
+    104,
+    140
+   ],
+   "scale": 1,
+   "name": "Stomper",
+   "look": "big orange stomper",
+   "size": [
+    3.3,
+    2.3,
+    1.086
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.sludger": {
+   "file": "sprites/zombie-sludger.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Sludger",
+   "look": "slimy green fat zombie",
+   "size": [
+    2.726,
+    1.9,
+    0.897
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.spitter": {
+   "file": "sprites/zombie-spitter.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Spitter",
+   "look": "green one-armed zombie",
+   "size": [
+    3.428,
+    1.8,
+    0.736
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.squinter": {
+   "file": "sprites/zombie-squinter.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Squinter",
+   "look": "yellow glow, second body",
+   "size": [
+    1.973,
+    1.8,
+    1.096
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.stalker": {
+   "file": "sprites/zombie-stalker.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Stalker",
+   "look": "dark ribcage zombie",
+   "size": [
+    0.858,
+    1.8,
+    0.72
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "run": {
+     "frames": 10,
+     "fps": 15,
+     "loop": true,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 25,
+      "SE": 26,
+      "E": 27,
+      "NE": 28,
+      "N": 29
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.walker": {
+   "file": "sprites/zombie-walker.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Shambler",
+   "look": "base zombie",
+   "size": [
+    2.496,
+    1.8,
+    0.903
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "zombie.webber": {
+   "file": "sprites/zombie-webber.webp",
+   "kind": "character",
+   "cell": [
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    104
+   ],
+   "scale": 1,
+   "name": "Webber",
+   "look": "pale white ribcage",
+   "size": [
+    0.858,
+    1.8,
+    0.72
+   ],
+   "anims": {
+    "idle": {
+     "frames": 6,
+     "fps": 6,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "walk": {
+     "frames": 12,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    },
+    "attack": {
+     "frames": 10,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 10,
+      "SE": 11,
+      "E": 12,
+      "NE": 13,
+      "N": 14
+     }
+    },
+    "hit": {
+     "frames": 5,
+     "fps": 16,
+     "loop": false,
+     "rows": {
+      "S": 15,
+      "SE": 16,
+      "E": 17,
+      "NE": 18,
+      "N": 19
+     }
+    },
+    "death": {
+     "frames": 16,
+     "fps": 14,
+     "loop": false,
+     "rows": {
+      "S": 20,
+      "SE": 21,
+      "E": 22,
+      "NE": 23,
+      "N": 24
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "tile.asphalt": {
+   "file": "tiles/ground.webp",
+   "kind": "tile",
+   "cell": [
+    128,
+    64
+   ],
+   "anchor": [
+    64,
+    32
+   ],
+   "rect": [
+    0,
+    0,
+    128,
+    64
+   ],
+   "scale": 1
+  },
+  "tile.asphalt2": {
+   "file": "tiles/ground.webp",
+   "kind": "tile",
+   "cell": [
+    128,
+    64
+   ],
+   "anchor": [
+    64,
+    32
+   ],
+   "rect": [
+    128,
+    0,
+    128,
+    64
+   ],
+   "scale": 1
+  },
+  "tile.concrete": {
+   "file": "tiles/ground.webp",
+   "kind": "tile",
+   "cell": [
+    128,
+    64
+   ],
+   "anchor": [
+    64,
+    32
+   ],
+   "rect": [
+    256,
+    0,
+    128,
+    64
+   ],
+   "scale": 1
+  },
+  "tile.grass": {
+   "file": "tiles/ground.webp",
+   "kind": "tile",
+   "cell": [
+    128,
+    64
+   ],
+   "anchor": [
+    64,
+    32
+   ],
+   "rect": [
+    384,
+    0,
+    128,
+    64
+   ],
+   "scale": 1
+  },
+  "tile.grass2": {
+   "file": "tiles/ground.webp",
+   "kind": "tile",
+   "cell": [
+    128,
+    64
+   ],
+   "anchor": [
+    64,
+    32
+   ],
+   "rect": [
+    512,
+    0,
+    128,
+    64
+   ],
+   "scale": 1
+  },
+  "tile.dirt": {
+   "file": "tiles/ground.webp",
+   "kind": "tile",
+   "cell": [
+    128,
+    64
+   ],
+   "anchor": [
+    64,
+    32
+   ],
+   "rect": [
+    640,
+    0,
+    128,
+    64
+   ],
+   "scale": 1
+  },
+  "tile.dirt2": {
+   "file": "tiles/ground.webp",
+   "kind": "tile",
+   "cell": [
+    128,
+    64
+   ],
+   "anchor": [
+    64,
+    32
+   ],
+   "rect": [
+    768,
+    0,
+    128,
+    64
+   ],
+   "scale": 1
+  },
+  "tile.gravel": {
+   "file": "tiles/ground.webp",
+   "kind": "tile",
+   "cell": [
+    128,
+    64
+   ],
+   "anchor": [
+    64,
+    32
+   ],
+   "rect": [
+    896,
+    0,
+    128,
+    64
+   ],
+   "scale": 1
+  },
+  "tile.paving": {
+   "file": "tiles/ground.webp",
+   "kind": "tile",
+   "cell": [
+    128,
+    64
+   ],
+   "anchor": [
+    64,
+    32
+   ],
+   "rect": [
+    1024,
+    0,
+    128,
+    64
+   ],
+   "scale": 1
+  },
+  "tile.planks": {
+   "file": "tiles/ground.webp",
+   "kind": "tile",
+   "cell": [
+    128,
+    64
+   ],
+   "anchor": [
+    64,
+    32
+   ],
+   "rect": [
+    1152,
+    0,
+    128,
+    64
+   ],
+   "scale": 1
+  },
+  "tile.rust": {
+   "file": "tiles/ground.webp",
+   "kind": "tile",
+   "cell": [
+    128,
+    64
+   ],
+   "anchor": [
+    64,
+    32
+   ],
+   "rect": [
+    1280,
+    0,
+    128,
+    64
+   ],
+   "scale": 1
+  }
+ },
+ "aliases": {
+  "boss.boss": "boss.dumpster",
+  "boss.compactor": "boss.compactor",
+  "boss.icecream": "boss.icecream",
+  "bld.market": "bld.kk.e",
+  "bld.surplus": "bld.kk.a",
+  "bld.clinic": "bld.kk.g",
+  "bld.gun1": "bld.kk.b",
+  "bld.gun2": "bld.kk.f",
+  "bld.gun3": "bld.kk.h",
+  "bld.shop1": "bld.kk.c",
+  "bld.shop2": "bld.kk.d",
+  "bld.shop3": "bld.office",
+  "npc.merchant": "npc.tinker",
+  "npc.merchant.rank1": "npc.tinker",
+  "npc.merchant.rank2": "npc.gunsmith",
+  "npc.merchant.rank3": "npc.master",
+  "hero": "survivor.shaun",
+  "survivor": "survivor.lis",
+  "escort": "survivor.sam",
+  "buildable.barricade": "prop.barricade",
+  "buildable.turret": "turret",
+  "buildable.spikes": "prop.spikes",
+  "buildable.sprinkler": "prop.sprinkler",
+  "buildable.alarm": "prop.alarm",
+  "buildable.alarm.car": "vehicle.sedan",
+  "vehicle.wreck": "prop.wreck",
+  "vehicle.wreck.burnt": "prop.wreck.burnt",
+  "vehicle.wreck.suv": "prop.wreck.suv",
+  "prop.trashcan": "prop.bin",
+  "prop.fence.wood": "prop.fence",
+  "prop.tree.pine": "prop.pine",
+  "pickup.bossCore": "pickup.core",
+  "pickup.chest": "chest",
+  "pickup.keychest": "chest.key",
+  "sfx.pistol": "sfx.gun.pistol",
+  "sfx.shotgun": "sfx.gun.shotgun",
+  "sfx.smg": "sfx.gun.smg",
+  "sfx.nailgun": "sfx.nailgun",
+  "sfx.bat": "sfx.swing.bat",
+  "sfx.crossbow": "sfx.crossbow",
+  "sfx.flamer": "sfx.flamer.loop",
+  "sfx.blower": "sfx.blower.loop",
+  "sfx.hubcap": "sfx.hubcap",
+  "sfx.launcher": "sfx.gun.heavy",
+  "sfx.coil": "sfx.gun.lightning",
+  "sfx.saw": "sfx.chainsaw.loop",
+  "sfx.rail": "sfx.rail",
+  "sfx.minigun": "sfx.gun.minigun",
+  "sfx.rockets": "sfx.gun.rocket",
+  "sfx.raygun": "sfx.gun.raygun",
+  "sfx.rifle": "sfx.gun.rifle",
+  "sfx.sniper": "sfx.gun.sniper",
+  "sfx.groan": "sfx.zombie.groan.a",
+  "sfx.hit": "sfx.hit.flesh",
+  "sfx.pickup": "sfx.pickup",
+  "sfx.levelup": "sfx.level.up",
+  "sfx.explosion": "sfx.explosion",
+  "sfx.engine": "sfx.engine.loop",
+  "sfx.rain": "sfx.rain.loop",
+  "sfx.chest": "sfx.chest.open"
+ },
+ "fx": {
+  "fx.explosion": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     1179,
+     0,
+     200,
+     184,
+     100,
+     92
+    ],
+    [
+     978,
+     0,
+     200,
+     185,
+     100,
+     92.5
+    ],
+    [
+     0,
+     201,
+     200,
+     170,
+     100,
+     85
+    ],
+    [
+     0,
+     0,
+     181,
+     200,
+     90.5,
+     100
+    ],
+    [
+     182,
+     0,
+     194,
+     200,
+     97,
+     100
+    ],
+    [
+     777,
+     0,
+     200,
+     191,
+     100,
+     95.5
+    ],
+    [
+     377,
+     0,
+     198,
+     200,
+     99,
+     100
+    ],
+    [
+     201,
+     201,
+     200,
+     164,
+     100,
+     82
+    ],
+    [
+     576,
+     0,
+     200,
+     196,
+     100,
+     98
+    ]
+   ],
+   "fps": 18,
+   "loop": false,
+   "note": "additive-friendly; scale freely",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.flash": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     258,
+     771,
+     140,
+     126,
+     70,
+     63
+    ],
+    [
+     402,
+     201,
+     134,
+     140,
+     67,
+     70
+    ],
+    [
+     1487,
+     372,
+     140,
+     130,
+     70,
+     65
+    ],
+    [
+     537,
+     201,
+     131,
+     140,
+     65.5,
+     70
+    ],
+    [
+     669,
+     201,
+     135,
+     140,
+     67.5,
+     70
+    ],
+    [
+     805,
+     201,
+     138,
+     140,
+     69,
+     70
+    ],
+    [
+     944,
+     201,
+     119,
+     140,
+     59.5,
+     70
+    ],
+    [
+     1064,
+     372,
+     140,
+     133,
+     70,
+     66.5
+    ],
+    [
+     1064,
+     201,
+     133,
+     140,
+     66.5,
+     70
+    ]
+   ],
+   "fps": 24,
+   "loop": false,
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.smoke.black": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     1628,
+     372,
+     140,
+     130,
+     70,
+     65
+    ],
+    [
+     1198,
+     201,
+     134,
+     140,
+     67,
+     70
+    ],
+    [
+     1333,
+     201,
+     127,
+     140,
+     63.5,
+     70
+    ],
+    [
+     1461,
+     201,
+     131,
+     140,
+     65.5,
+     70
+    ],
+    [
+     500,
+     372,
+     140,
+     137,
+     70,
+     68.5
+    ],
+    [
+     641,
+     372,
+     140,
+     137,
+     70,
+     68.5
+    ],
+    [
+     1205,
+     372,
+     140,
+     132,
+     70,
+     66
+    ],
+    [
+     1593,
+     201,
+     137,
+     140,
+     68.5,
+     70
+    ],
+    [
+     1346,
+     372,
+     140,
+     132,
+     70,
+     66
+    ]
+   ],
+   "fps": 12,
+   "loop": false,
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.puff.white": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     216,
+     899,
+     120,
+     109,
+     60,
+     54.5
+    ],
+    [
+     399,
+     771,
+     111,
+     120,
+     55.5,
+     60
+    ],
+    [
+     1501,
+     771,
+     120,
+     115,
+     60,
+     57.5
+    ],
+    [
+     511,
+     771,
+     109,
+     120,
+     54.5,
+     60
+    ],
+    [
+     621,
+     771,
+     108,
+     120,
+     54,
+     60
+    ],
+    [
+     1622,
+     771,
+     120,
+     115,
+     60,
+     57.5
+    ],
+    [
+     730,
+     771,
+     119,
+     120,
+     59.5,
+     60
+    ],
+    [
+     850,
+     771,
+     118,
+     120,
+     59,
+     60
+    ],
+    [
+     1380,
+     771,
+     120,
+     117,
+     60,
+     58.5
+    ]
+   ],
+   "fps": 14,
+   "loop": false,
+   "note": "dust / footstep / spawn puff",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.muzzle": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     730,
+     899,
+     89,
+     96,
+     44.5,
+     48
+    ],
+    [
+     820,
+     899,
+     58,
+     96,
+     29,
+     48
+    ],
+    [
+     879,
+     899,
+     56,
+     96,
+     28,
+     48
+    ],
+    [
+     936,
+     899,
+     81,
+     96,
+     40.5,
+     48
+    ],
+    [
+     1018,
+     899,
+     57,
+     96,
+     28.5,
+     48
+    ]
+   ],
+   "fps": 30,
+   "loop": false,
+   "note": "pick one at random per shot; points to +x",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.fire": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     1743,
+     771,
+     105,
+     110,
+     52.5,
+     55
+    ],
+    [
+     1849,
+     771,
+     95,
+     110,
+     47.5,
+     55
+    ],
+    [
+     1945,
+     771,
+     85,
+     110,
+     42.5,
+     55
+    ],
+    [
+     619,
+     899,
+     110,
+     100,
+     55,
+     50
+    ],
+    [
+     0,
+     899,
+     41,
+     110,
+     20.5,
+     55
+    ],
+    [
+     42,
+     899,
+     44,
+     110,
+     22,
+     55
+    ]
+   ],
+   "fps": 12,
+   "loop": true,
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.spark": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     65,
+     1010,
+     64,
+     62,
+     32,
+     31
+    ],
+    [
+     1358,
+     899,
+     61,
+     64,
+     30.5,
+     32
+    ],
+    [
+     1981,
+     899,
+     64,
+     63,
+     32,
+     31.5
+    ],
+    [
+     130,
+     1010,
+     64,
+     61,
+     32,
+     30.5
+    ],
+    [
+     1420,
+     899,
+     41,
+     64,
+     20.5,
+     32
+    ],
+    [
+     1462,
+     899,
+     38,
+     64,
+     19,
+     32
+    ],
+    [
+     195,
+     1010,
+     64,
+     44,
+     32,
+     22
+    ]
+   ],
+   "fps": 20,
+   "loop": false,
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.tracer": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     1769,
+     372,
+     50,
+     128,
+     25,
+     64
+    ],
+    [
+     1820,
+     372,
+     51,
+     128,
+     25.5,
+     64
+    ],
+    [
+     1872,
+     372,
+     52,
+     128,
+     26,
+     64
+    ],
+    [
+     1925,
+     372,
+     50,
+     128,
+     25,
+     64
+    ],
+    [
+     1976,
+     372,
+     54,
+     128,
+     27,
+     64
+    ],
+    [
+     0,
+     513,
+     56,
+     128,
+     28,
+     64
+    ],
+    [
+     57,
+     513,
+     35,
+     128,
+     17.5,
+     64
+    ]
+   ],
+   "fps": 1,
+   "loop": false,
+   "note": "bullet streaks; stretch along travel",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.smoke": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     0,
+     771,
+     128,
+     127,
+     64,
+     63.5
+    ],
+    [
+     129,
+     771,
+     128,
+     127,
+     64,
+     63.5
+    ],
+    [
+     969,
+     771,
+     128,
+     120,
+     64,
+     60
+    ],
+    [
+     93,
+     513,
+     126,
+     128,
+     63,
+     64
+    ],
+    [
+     220,
+     513,
+     125,
+     128,
+     62.5,
+     64
+    ],
+    [
+     346,
+     513,
+     121,
+     128,
+     60.5,
+     64
+    ],
+    [
+     87,
+     899,
+     128,
+     110,
+     64,
+     55
+    ],
+    [
+     468,
+     513,
+     124,
+     128,
+     62,
+     64
+    ],
+    [
+     593,
+     513,
+     112,
+     128,
+     56,
+     64
+    ],
+    [
+     706,
+     513,
+     127,
+     128,
+     63.5,
+     64
+    ]
+   ],
+   "fps": 10,
+   "loop": false,
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.shield.ring": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     834,
+     513,
+     119,
+     128,
+     59.5,
+     64
+    ],
+    [
+     954,
+     513,
+     110,
+     128,
+     55,
+     64
+    ],
+    [
+     1065,
+     513,
+     124,
+     128,
+     62,
+     64
+    ],
+    [
+     1190,
+     513,
+     122,
+     128,
+     61,
+     64
+    ],
+    [
+     1313,
+     513,
+     120,
+     128,
+     60,
+     64
+    ]
+   ],
+   "fps": 10,
+   "loop": true,
+   "note": "bubble shield",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.twirl": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     1076,
+     899,
+     89,
+     96,
+     44.5,
+     48
+    ],
+    [
+     1166,
+     899,
+     95,
+     96,
+     47.5,
+     48
+    ],
+    [
+     1262,
+     899,
+     95,
+     96,
+     47.5,
+     48
+    ]
+   ],
+   "fps": 8,
+   "loop": true,
+   "note": "confuse / dizzy debuff",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.star": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     1501,
+     899,
+     62,
+     64,
+     31,
+     32
+    ],
+    [
+     1564,
+     899,
+     62,
+     64,
+     31,
+     32
+    ],
+    [
+     1627,
+     899,
+     64,
+     64,
+     32,
+     32
+    ],
+    [
+     1692,
+     899,
+     55,
+     64,
+     27.5,
+     32
+    ],
+    [
+     1748,
+     899,
+     58,
+     64,
+     29,
+     32
+    ],
+    [
+     1807,
+     899,
+     63,
+     64,
+     31.5,
+     32
+    ],
+    [
+     0,
+     1010,
+     64,
+     63,
+     32,
+     31.5
+    ],
+    [
+     1871,
+     899,
+     53,
+     64,
+     26.5,
+     32
+    ],
+    [
+     1925,
+     899,
+     55,
+     64,
+     27.5,
+     32
+    ]
+   ],
+   "fps": 12,
+   "loop": false,
+   "note": "xp / level-up sparkle",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.glow": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     1434,
+     513,
+     127,
+     128,
+     63.5,
+     64
+    ],
+    [
+     1562,
+     513,
+     126,
+     128,
+     63,
+     64
+    ],
+    [
+     1689,
+     513,
+     127,
+     128,
+     63.5,
+     64
+    ]
+   ],
+   "fps": 1,
+   "loop": false,
+   "note": "white glow; tint per pickup colour",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.scorch": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     1380,
+     0,
+     166,
+     180,
+     83,
+     90
+    ],
+    [
+     1547,
+     0,
+     176,
+     180,
+     88,
+     90
+    ],
+    [
+     1724,
+     0,
+     172,
+     180,
+     86,
+     90
+    ]
+   ],
+   "fps": 1,
+   "loop": false,
+   "note": "ground decal after explosions",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.decal.blood": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     1731,
+     201,
+     108,
+     140,
+     54,
+     70
+    ],
+    [
+     337,
+     899,
+     140,
+     108,
+     70,
+     54
+    ],
+    [
+     1840,
+     201,
+     120,
+     140,
+     60,
+     70
+    ],
+    [
+     1098,
+     771,
+     140,
+     120,
+     70,
+     60
+    ],
+    [
+     0,
+     372,
+     134,
+     140,
+     67,
+     70
+    ],
+    [
+     782,
+     372,
+     140,
+     134,
+     70,
+     67
+    ]
+   ],
+   "fps": 1,
+   "loop": false,
+   "note": "ground decal; pick at random, rotate freely",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.decal.goo": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     135,
+     372,
+     108,
+     140,
+     54,
+     70
+    ],
+    [
+     478,
+     899,
+     140,
+     108,
+     70,
+     54
+    ],
+    [
+     244,
+     372,
+     120,
+     140,
+     60,
+     70
+    ],
+    [
+     1239,
+     771,
+     140,
+     120,
+     70,
+     60
+    ],
+    [
+     365,
+     372,
+     134,
+     140,
+     67,
+     70
+    ],
+    [
+     923,
+     372,
+     140,
+     134,
+     70,
+     67
+    ]
+   ],
+   "fps": 1,
+   "loop": false,
+   "note": "zombie goo decal (matches the green zombies)",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.blood.spurt": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     1817,
+     513,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     0,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     129,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     258,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     387,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     516,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     645,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     774,
+     642,
+     128,
+     128,
+     64,
+     64
+    ]
+   ],
+   "fps": 20,
+   "loop": false,
+   "note": "hit spray; flip/rotate toward the shot direction",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  },
+  "fx.goo.spurt": {
+   "file": "fx/fx.webp",
+   "frames": [
+    [
+     903,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     1032,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     1161,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     1290,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     1419,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     1548,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     1677,
+     642,
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     1806,
+     642,
+     128,
+     128,
+     64,
+     64
+    ]
+   ],
+   "fps": 20,
+   "loop": false,
+   "note": "hit spray; flip/rotate toward the shot direction",
+   "frameFormat": "[x, y, w, h, ax, ay]"
+  }
+ },
+ "sfx": {
+  "sfx.gun.pistol": {
+   "file": "sfx/gun-pistol.ogg",
+   "seconds": 0.42,
+   "loop": false,
+   "source": "firearm"
+  },
+  "sfx.gun.pistol.light": {
+   "file": "sfx/gun-pistol-light.ogg",
+   "seconds": 0.61,
+   "loop": false,
+   "source": "kurt"
+  },
+  "sfx.gun.revolver": {
+   "file": "sfx/gun-revolver.ogg",
+   "seconds": 0.99,
+   "loop": false,
+   "source": "firearm"
+  },
+  "sfx.gun.shotgun": {
+   "file": "sfx/gun-shotgun.ogg",
+   "seconds": 1.14,
+   "loop": false,
+   "source": "firearm"
+  },
+  "sfx.gun.shotgun.pump": {
+   "file": "sfx/gun-shotgun-pump.ogg",
+   "seconds": 1.18,
+   "loop": false,
+   "source": "firearm"
+  },
+  "sfx.gun.smg": {
+   "file": "sfx/gun-smg.ogg",
+   "seconds": 0.45,
+   "loop": false,
+   "source": "firearm"
+  },
+  "sfx.gun.minigun": {
+   "file": "sfx/gun-minigun.ogg",
+   "seconds": 0.22,
+   "loop": false,
+   "source": "firearm"
+  },
+  "sfx.gun.rifle": {
+   "file": "sfx/gun-rifle.ogg",
+   "seconds": 0.9,
+   "loop": false,
+   "source": "firearm"
+  },
+  "sfx.gun.rifle.b": {
+   "file": "sfx/gun-rifle-b.ogg",
+   "seconds": 0.89,
+   "loop": false,
+   "source": "firearm"
+  },
+  "sfx.gun.hunting": {
+   "file": "sfx/gun-hunting.ogg",
+   "seconds": 1.11,
+   "loop": false,
+   "source": "firearm"
+  },
+  "sfx.gun.sniper": {
+   "file": "sfx/gun-sniper.ogg",
+   "seconds": 1.42,
+   "loop": false,
+   "source": "firearm"
+  },
+  "sfx.gun.heavy": {
+   "file": "sfx/gun-heavy.ogg",
+   "seconds": 0.3,
+   "loop": false,
+   "source": "firearm"
+  },
+  "sfx.gun.raygun": {
+   "file": "sfx/gun-raygun.ogg",
+   "seconds": 0.59,
+   "loop": false,
+   "source": "kenney-digital"
+  },
+  "sfx.gun.lightning": {
+   "file": "sfx/gun-lightning.ogg",
+   "seconds": 0.6,
+   "loop": false,
+   "source": "kenney-digital"
+  },
+  "sfx.gun.rocket": {
+   "file": "sfx/gun-rocket.ogg",
+   "seconds": 0.9,
+   "loop": false,
+   "source": "kenney-scifi"
+  },
+  "sfx.gun.flare": {
+   "file": "sfx/gun-flare.ogg",
+   "seconds": 0.41,
+   "loop": false,
+   "source": "kenney-digital"
+  },
+  "sfx.gun.empty": {
+   "file": "sfx/gun-empty.ogg",
+   "seconds": 0.3,
+   "loop": false,
+   "source": "kenney-rpg"
+  },
+  "sfx.gun.reload": {
+   "file": "sfx/gun-reload.ogg",
+   "seconds": 0.16,
+   "loop": false,
+   "source": "kenney-rpg"
+  },
+  "sfx.explosion": {
+   "file": "sfx/explosion.ogg",
+   "seconds": 1.04,
+   "loop": false,
+   "source": "kenney-scifi"
+  },
+  "sfx.explosion.b": {
+   "file": "sfx/explosion-b.ogg",
+   "seconds": 0.62,
+   "loop": false,
+   "source": "kenney-scifi"
+  },
+  "sfx.explosion.small": {
+   "file": "sfx/explosion-small.ogg",
+   "seconds": 0.78,
+   "loop": false,
+   "source": "kenney-scifi"
+  },
+  "sfx.explosion.small.b": {
+   "file": "sfx/explosion-small-b.ogg",
+   "seconds": 1.2,
+   "loop": false,
+   "source": "kenney-scifi"
+  },
+  "sfx.hit.flesh": {
+   "file": "sfx/hit-flesh.ogg",
+   "seconds": 0.38,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.hit.flesh.b": {
+   "file": "sfx/hit-flesh-b.ogg",
+   "seconds": 0.29,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.hit.flesh.c": {
+   "file": "sfx/hit-flesh-c.ogg",
+   "seconds": 0.24,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.hit.splat": {
+   "file": "sfx/hit-splat.ogg",
+   "seconds": 0.37,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.hit.splat.b": {
+   "file": "sfx/hit-splat-b.ogg",
+   "seconds": 0.37,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.hit.metal": {
+   "file": "sfx/hit-metal.ogg",
+   "seconds": 0.16,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.hit.metal.b": {
+   "file": "sfx/hit-metal-b.ogg",
+   "seconds": 0.12,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.hit.wood": {
+   "file": "sfx/hit-wood.ogg",
+   "seconds": 0.2,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.hit.glass": {
+   "file": "sfx/hit-glass.ogg",
+   "seconds": 0.24,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.player.hurt": {
+   "file": "sfx/player-hurt.ogg",
+   "seconds": 0.26,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.zombie.groan.a": {
+   "file": "sfx/zombie-groan-a.ogg",
+   "seconds": 2.11,
+   "loop": false,
+   "source": "ianzazz"
+  },
+  "sfx.zombie.groan.b": {
+   "file": "sfx/zombie-groan-b.ogg",
+   "seconds": 1.9,
+   "loop": false,
+   "source": "ianzazz"
+  },
+  "sfx.zombie.groan.c": {
+   "file": "sfx/zombie-groan-c.ogg",
+   "seconds": 0.67,
+   "loop": false,
+   "source": "ianzazz"
+  },
+  "sfx.zombie.runner": {
+   "file": "sfx/zombie-runner.ogg",
+   "seconds": 0.34,
+   "loop": false,
+   "source": "ianzazz"
+  },
+  "sfx.zombie.moan.a": {
+   "file": "sfx/zombie-moan-a.ogg",
+   "seconds": 2.5,
+   "loop": false,
+   "source": "darsycho"
+  },
+  "sfx.zombie.brute": {
+   "file": "sfx/zombie-brute.ogg",
+   "seconds": 2.5,
+   "loop": false,
+   "source": "darsycho-ghoul"
+  },
+  "sfx.zombie.vox.1": {
+   "file": "sfx/zombie-vox-1.ogg",
+   "seconds": 0.79,
+   "loop": false,
+   "source": "artisticdude"
+  },
+  "sfx.zombie.vox.3": {
+   "file": "sfx/zombie-vox-3.ogg",
+   "seconds": 0.56,
+   "loop": false,
+   "source": "artisticdude"
+  },
+  "sfx.zombie.vox.5": {
+   "file": "sfx/zombie-vox-5.ogg",
+   "seconds": 0.46,
+   "loop": false,
+   "source": "artisticdude"
+  },
+  "sfx.zombie.vox.8": {
+   "file": "sfx/zombie-vox-8.ogg",
+   "seconds": 0.79,
+   "loop": false,
+   "source": "artisticdude"
+  },
+  "sfx.zombie.vox.10": {
+   "file": "sfx/zombie-vox-10.ogg",
+   "seconds": 0.64,
+   "loop": false,
+   "source": "artisticdude"
+  },
+  "sfx.zombie.vox.12": {
+   "file": "sfx/zombie-vox-12.ogg",
+   "seconds": 0.75,
+   "loop": false,
+   "source": "artisticdude"
+  },
+  "sfx.zombie.vox.15": {
+   "file": "sfx/zombie-vox-15.ogg",
+   "seconds": 0.83,
+   "loop": false,
+   "source": "artisticdude"
+  },
+  "sfx.zombie.vox.17": {
+   "file": "sfx/zombie-vox-17.ogg",
+   "seconds": 1.53,
+   "loop": false,
+   "source": "artisticdude"
+  },
+  "sfx.zombie.vox.20": {
+   "file": "sfx/zombie-vox-20.ogg",
+   "seconds": 0.91,
+   "loop": false,
+   "source": "artisticdude"
+  },
+  "sfx.zombie.vox.24": {
+   "file": "sfx/zombie-vox-24.ogg",
+   "seconds": 0.31,
+   "loop": false,
+   "source": "artisticdude"
+  },
+  "sfx.pickup": {
+   "file": "sfx/pickup.ogg",
+   "seconds": 0.29,
+   "loop": false,
+   "source": "kenney-interface"
+  },
+  "sfx.pickup.cash": {
+   "file": "sfx/pickup-cash.ogg",
+   "seconds": 0.74,
+   "loop": false,
+   "source": "kenney-rpg"
+  },
+  "sfx.pickup.xp": {
+   "file": "sfx/pickup-xp.ogg",
+   "seconds": 0.38,
+   "loop": false,
+   "source": "kenney-digital"
+  },
+  "sfx.pickup.health": {
+   "file": "sfx/pickup-health.ogg",
+   "seconds": 0.23,
+   "loop": false,
+   "source": "kenney-digital"
+  },
+  "sfx.pickup.power": {
+   "file": "sfx/pickup-power.ogg",
+   "seconds": 0.33,
+   "loop": false,
+   "source": "kenney-digital"
+  },
+  "sfx.shield.up": {
+   "file": "sfx/shield-up.ogg",
+   "seconds": 0.67,
+   "loop": false,
+   "source": "kenney-scifi"
+  },
+  "sfx.freeze": {
+   "file": "sfx/freeze.ogg",
+   "seconds": 0.25,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.level.up": {
+   "file": "sfx/level-up.ogg",
+   "seconds": 0.58,
+   "loop": false,
+   "source": "kenney-jingles"
+  },
+  "sfx.level.up.b": {
+   "file": "sfx/level-up-b.ogg",
+   "seconds": 0.27,
+   "loop": false,
+   "source": "kenney-jingles"
+  },
+  "sfx.wave.start": {
+   "file": "sfx/wave-start.ogg",
+   "seconds": 0.35,
+   "loop": false,
+   "source": "kenney-jingles"
+  },
+  "sfx.game.over": {
+   "file": "sfx/game-over.ogg",
+   "seconds": 1.02,
+   "loop": false,
+   "source": "kenney-jingles"
+  },
+  "sfx.boss.intro": {
+   "file": "sfx/boss-intro.ogg",
+   "seconds": 0.4,
+   "loop": false,
+   "source": "kenney-jingles"
+  },
+  "sfx.footstep.a": {
+   "file": "sfx/footstep-a.ogg",
+   "seconds": 0.09,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.footstep.b": {
+   "file": "sfx/footstep-b.ogg",
+   "seconds": 0.1,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.footstep.grass": {
+   "file": "sfx/footstep-grass.ogg",
+   "seconds": 0.17,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.ui.click": {
+   "file": "sfx/ui-click.ogg",
+   "seconds": 0.01,
+   "loop": false,
+   "source": "kenney-interface"
+  },
+  "sfx.ui.select": {
+   "file": "sfx/ui-select.ogg",
+   "seconds": 0.22,
+   "loop": false,
+   "source": "kenney-interface"
+  },
+  "sfx.ui.error": {
+   "file": "sfx/ui-error.ogg",
+   "seconds": 0.1,
+   "loop": false,
+   "source": "kenney-interface"
+  },
+  "sfx.ui.buy": {
+   "file": "sfx/ui-buy.ogg",
+   "seconds": 0.28,
+   "loop": false,
+   "source": "kenney-rpg"
+  },
+  "sfx.door": {
+   "file": "sfx/door.ogg",
+   "seconds": 0.53,
+   "loop": false,
+   "source": "kenney-scifi"
+  },
+  "sfx.crate.break": {
+   "file": "sfx/crate-break.ogg",
+   "seconds": 0.19,
+   "loop": false,
+   "source": "kenney-impact"
+  },
+  "sfx.engine.loop": {
+   "file": "sfx/engine-loop.ogg",
+   "seconds": 0.86,
+   "loop": true,
+   "source": "domasx2"
+  },
+  "sfx.engine.loop.high": {
+   "file": "sfx/engine-loop-high.ogg",
+   "seconds": 0.67,
+   "loop": true,
+   "source": "domasx2"
+  },
+  "sfx.engine.heavy": {
+   "file": "sfx/engine-heavy.ogg",
+   "seconds": 5,
+   "loop": true,
+   "source": "kenney-scifi"
+  },
+  "sfx.rain.loop": {
+   "file": "sfx/rain-loop.ogg",
+   "seconds": 27,
+   "loop": true,
+   "source": "ylmir"
+  },
+  "sfx.rain.loop.b": {
+   "file": "sfx/rain-loop-b.ogg",
+   "seconds": 26,
+   "loop": true,
+   "source": "ylmir"
+  },
+  "sfx.chest.open": {
+   "file": "sfx/chest-open.ogg",
+   "seconds": 0.66,
+   "loop": false,
+   "source": "kenney rpg-audio"
+  },
+  "sfx.chest.latch": {
+   "file": "sfx/chest-latch.ogg",
+   "seconds": 0.26,
+   "loop": false,
+   "source": "kenney rpg-audio"
+  },
+  "sfx.coins": {
+   "file": "sfx/coins.ogg",
+   "seconds": 0.85,
+   "loop": false,
+   "source": "kenney rpg-audio"
+  },
+  "sfx.swing.bat": {
+   "file": "sfx/swing-bat.ogg",
+   "seconds": 0.65,
+   "loop": false,
+   "source": "kenney impact"
+  },
+  "sfx.crossbow": {
+   "file": "sfx/crossbow.ogg",
+   "seconds": 0.4,
+   "loop": false,
+   "source": "kenney rpg-audio"
+  },
+  "sfx.flamer.loop": {
+   "file": "sfx/flamer-loop.ogg",
+   "seconds": 5,
+   "loop": true,
+   "source": "kenney sci-fi"
+  },
+  "sfx.blower.loop": {
+   "file": "sfx/blower-loop.ogg",
+   "seconds": 5,
+   "loop": true,
+   "source": "kenney sci-fi"
+  },
+  "sfx.chainsaw.loop": {
+   "file": "sfx/chainsaw-loop.ogg",
+   "seconds": 5,
+   "loop": true,
+   "source": "kenney sci-fi"
+  },
+  "sfx.hubcap": {
+   "file": "sfx/hubcap.ogg",
+   "seconds": 0.61,
+   "loop": false,
+   "source": "kenney impact"
+  },
+  "sfx.nailgun": {
+   "file": "sfx/nailgun.ogg",
+   "seconds": 0.16,
+   "loop": false,
+   "source": "kenney impact"
+  },
+  "sfx.rail": {
+   "file": "sfx/rail.ogg",
+   "seconds": 0.68,
+   "loop": false,
+   "source": "kenney sci-fi"
+  },
+  "sfx.zap": {
+   "file": "sfx/zap.ogg",
+   "seconds": 1.02,
+   "loop": false,
+   "source": "kenney digital-audio"
+  },
+  "sfx.garage.door": {
+   "file": "sfx/garage-door.ogg",
+   "seconds": 0.53,
+   "loop": false,
+   "source": "kenney sci-fi"
+  },
+  "sfx.build": {
+   "file": "sfx/build.ogg",
+   "seconds": 0.31,
+   "loop": false,
+   "source": "kenney impact"
+  },
+  "sfx.slime": {
+   "file": "sfx/slime.ogg",
+   "seconds": 0.5,
+   "loop": false,
+   "source": "kenney sci-fi"
+  },
+  "sfx.alarm": {
+   "file": "sfx/alarm.ogg",
+   "seconds": 0.72,
+   "loop": false,
+   "source": "kenney digital-audio"
+  },
+  "sfx.freeze.crack": {
+   "file": "sfx/freeze-crack.ogg",
+   "seconds": 0.24,
+   "loop": false,
+   "source": "kenney impact"
+  },
+  "sfx.punch": {
+   "file": "sfx/punch.ogg",
+   "seconds": 0.43,
+   "loop": false,
+   "source": "kenney impact"
+  }
+ },
+ "ui": {
+  "icon.ammo": {
+   "file": "ui/icons.webp",
+   "rect": [
+    0,
+    0,
+    96,
+    96
+   ]
+  },
+  "icon.ammo.crate": {
+   "file": "ui/icons.webp",
+   "rect": [
+    96,
+    0,
+    96,
+    96
+   ]
+  },
+  "icon.armor": {
+   "file": "ui/icons.webp",
+   "rect": [
+    192,
+    0,
+    96,
+    96
+   ]
+  },
+  "icon.battery": {
+   "file": "ui/icons.webp",
+   "rect": [
+    288,
+    0,
+    96,
+    96
+   ]
+  },
+  "icon.bomb": {
+   "file": "ui/icons.webp",
+   "rect": [
+    384,
+    0,
+    96,
+    96
+   ]
+  },
+  "icon.cash": {
+   "file": "ui/icons.webp",
+   "rect": [
+    480,
+    0,
+    96,
+    96
+   ]
+  },
+  "icon.cash.bag": {
+   "file": "ui/icons.webp",
+   "rect": [
+    576,
+    0,
+    96,
+    96
+   ]
+  },
+  "icon.coins": {
+   "file": "ui/icons.webp",
+   "rect": [
+    672,
+    0,
+    96,
+    96
+   ]
+  },
+  "icon.core": {
+   "file": "ui/icons.webp",
+   "rect": [
+    768,
+    0,
+    96,
+    96
+   ]
+  },
+  "icon.core.cage": {
+   "file": "ui/icons.webp",
+   "rect": [
+    864,
+    0,
+    96,
+    96
+   ]
+  },
+  "icon.food": {
+   "file": "ui/icons.webp",
+   "rect": [
+    0,
+    96,
+    96,
+    96
+   ]
+  },
+  "icon.freeze": {
+   "file": "ui/icons.webp",
+   "rect": [
+    96,
+    96,
+    96,
+    96
+   ]
+  },
+  "icon.health": {
+   "file": "ui/icons.webp",
+   "rect": [
+    192,
+    96,
+    96,
+    96
+   ]
+  },
+  "icon.heart": {
+   "file": "ui/icons.webp",
+   "rect": [
+    288,
+    96,
+    96,
+    96
+   ]
+  },
+  "icon.key": {
+   "file": "ui/icons.webp",
+   "rect": [
+    384,
+    96,
+    96,
+    96
+   ]
+  },
+  "icon.keypiece": {
+   "file": "ui/icons.webp",
+   "rect": [
+    480,
+    96,
+    96,
+    96
+   ]
+  },
+  "icon.kicks": {
+   "file": "ui/icons.webp",
+   "rect": [
+    576,
+    96,
+    96,
+    96
+   ]
+  },
+  "icon.map": {
+   "file": "ui/icons.webp",
+   "rect": [
+    672,
+    96,
+    96,
+    96
+   ]
+  },
+  "icon.minigun": {
+   "file": "ui/icons.webp",
+   "rect": [
+    768,
+    96,
+    96,
+    96
+   ]
+  },
+  "icon.nuke": {
+   "file": "ui/icons.webp",
+   "rect": [
+    864,
+    96,
+    96,
+    96
+   ]
+  },
+  "icon.raygun": {
+   "file": "ui/icons.webp",
+   "rect": [
+    0,
+    192,
+    96,
+    96
+   ]
+  },
+  "icon.rockets": {
+   "file": "ui/icons.webp",
+   "rect": [
+    96,
+    192,
+    96,
+    96
+   ]
+  },
+  "icon.scope": {
+   "file": "ui/icons.webp",
+   "rect": [
+    192,
+    192,
+    96,
+    96
+   ]
+  },
+  "icon.shield": {
+   "file": "ui/icons.webp",
+   "rect": [
+    288,
+    192,
+    96,
+    96
+   ]
+  },
+  "icon.snack": {
+   "file": "ui/icons.webp",
+   "rect": [
+    384,
+    192,
+    96,
+    96
+   ]
+  },
+  "icon.soda": {
+   "file": "ui/icons.webp",
+   "rect": [
+    480,
+    192,
+    96,
+    96
+   ]
+  },
+  "icon.truck": {
+   "file": "ui/icons.webp",
+   "rect": [
+    576,
+    192,
+    96,
+    96
+   ]
+  },
+  "icon.turretkit": {
+   "file": "ui/icons.webp",
+   "rect": [
+    672,
+    192,
+    96,
+    96
+   ]
+  },
+  "icon.xp": {
+   "file": "ui/icons.webp",
+   "rect": [
+    768,
+    192,
+    96,
+    96
+   ]
+  },
+  "icon.xp.green": {
+   "file": "ui/icons.webp",
+   "rect": [
+    864,
+    192,
+    96,
+    96
+   ]
+  },
+  "icon.xp.pink": {
+   "file": "ui/icons.webp",
+   "rect": [
+    0,
+    288,
+    96,
+    96
+   ]
+  },
+  "icon.xp2": {
+   "file": "ui/icons.webp",
+   "rect": [
+    96,
+    288,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.axe": {
+   "file": "ui/icons.webp",
+   "rect": [
+    192,
+    288,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.bat": {
+   "file": "ui/icons.webp",
+   "rect": [
+    288,
+    288,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.blower": {
+   "file": "ui/icons.webp",
+   "rect": [
+    384,
+    288,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.coil": {
+   "file": "ui/icons.webp",
+   "rect": [
+    480,
+    288,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.crossbow": {
+   "file": "ui/icons.webp",
+   "rect": [
+    576,
+    288,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.flamer": {
+   "file": "ui/icons.webp",
+   "rect": [
+    672,
+    288,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.hubcap": {
+   "file": "ui/icons.webp",
+   "rect": [
+    768,
+    288,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.knife": {
+   "file": "ui/icons.webp",
+   "rect": [
+    864,
+    288,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.launcher": {
+   "file": "ui/icons.webp",
+   "rect": [
+    0,
+    384,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.nailgun": {
+   "file": "ui/icons.webp",
+   "rect": [
+    96,
+    384,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.pistol": {
+   "file": "ui/icons.webp",
+   "rect": [
+    192,
+    384,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.rail": {
+   "file": "ui/icons.webp",
+   "rect": [
+    288,
+    384,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.rifle": {
+   "file": "ui/icons.webp",
+   "rect": [
+    384,
+    384,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.saw": {
+   "file": "ui/icons.webp",
+   "rect": [
+    480,
+    384,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.shotgun": {
+   "file": "ui/icons.webp",
+   "rect": [
+    576,
+    384,
+    96,
+    96
+   ]
+  },
+  "icon.weapon.smg": {
+   "file": "ui/icons.webp",
+   "rect": [
+    672,
+    384,
+    96,
+    96
+   ]
+  }
+ }
+}
