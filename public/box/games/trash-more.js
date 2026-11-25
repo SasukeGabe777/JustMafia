@@ -13,7 +13,7 @@
   const Sim = window.TZSim.Sim, proto = Sim.prototype;
   const d2 = (a, b, x, y) => (a - x) * (a - x) + (b - y) * (b - y);
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-  const VK = ['', 'cart', 'mower', 'gtruck'], FITS = ['', 'cone', 'lid', 'chef', 'goggles', 'cape', 'crown'];
+  const VK = ['', 'cart', 'mower', 'gtruck', 'push'], FITS = ['', 'cone', 'lid', 'chef', 'goggles', 'cape', 'crown'];
   const ZT = Object.keys(W.ZOMBIES);
   function mo(s) {
     if (s._mo) return s; s._mo = true;
@@ -115,7 +115,7 @@
     baseApply.call(this, k);
     if (k === 'truck' && this._mo && !this.dead && !this.down) { // the rare garbage truck: you drive it
       if (this.ride && this.ride.kind !== 'gtruck') this.parked = { ...this.ride, x: clamp(this.p.x - 90, 60, W.AW - 60), y: this.p.y };
-      const V = X.VEHICLES.gtruck; this.ride = { kind: 'gtruck', hp: V.hp, mhp: V.hp, time: V.time * (this.cls === 'courier' ? 1.3 : 1), face: this.p.face };
+      const V = X.VEHICLES.gtruck; this.ride = { kind: 'gtruck', hp: V.hp, mhp: V.hp, time: V.time * (this.cls === 'courier' ? 1.3 : 1), face: this.p.face }; this.ride.life = this.ride.life0 = this.ride.time; this.rideFx(true);
       this.buffs.truck = this.ride.time; this.banner = { text: '🚛 GARBAGE TRUCK!', sub: 'Drive it for ' + Math.round(this.ride.time) + ' s (🚪 hops you out)', t: 2.4 }; this.o.report({ op: 'ev', k: 'ride', id: 'gtruck' }); this.o.on('ride', { on: true, kind: 'gtruck' });
     }
   };
@@ -188,19 +188,31 @@
       if (this.ride) {
         const r = this.ride; this.ride = null; if (r.kind === 'gtruck') this.buffs.truck = 0;
         if (r.kind !== 'gtruck' || r.time > 0.5) this.parked = { ...r, x: clamp(P.x, 60, W.AW - 60), y: clamp(P.y, 80, W.AH - 40) };
-        P.x = clamp(P.x + 70 * (P.face || 1), P.r, W.AW - P.r); P.inv = Math.max(P.inv, 0.4); this.collide(P); this.o.on('ride', { on: false }); return 'out';
+        P.x = clamp(P.x + 70 * (P.face || 1), P.r, W.AW - P.r); P.inv = Math.max(P.inv, 0.4); this.collide(P); this.rideFx(false); this.o.on('ride', { on: false }); return 'out';
       }
       const v = this.nearVehicle(); if (!v) return false;
-      this.ride = { ...v }; this.parked = null; P.x = v.x; P.y = v.y; if (v.kind === 'gtruck') this.buffs.truck = v.time;
+      const V0 = X.VEHICLES[v.kind]; this.ride = { ...v, life: v.life != null ? v.life : V0.time || 20, life0: v.life0 || V0.time || 20 }; this.parked = null; P.x = v.x; P.y = v.y; if (v.kind === 'gtruck') this.buffs.truck = v.time; this.rideFx(true);
       this.o.report({ op: 'ev', k: 'ride', id: v.kind }); this.o.on('ride', { on: true, kind: v.kind }); return 'in';
     },
     wreck() {
       const r = this.ride, V = X.VEHICLES[r.kind]; this.ride = null; if (r.kind === 'gtruck') this.buffs.truck = 0; else this.wrecked[this.cellKey()] = 1;
       this.boom(this.p.x, this.p.y, 110, 0, '#ff8c42', false); this.popup(V.name.toUpperCase() + ' WRECKED!', '#ff6a5a', this.p.x, this.p.y - 130); this.p.inv = 1; this.o.on('wreck', { kind: r.kind });
     },
+    // a puff of smoke + a ring when you hop in or out (the iso view hides you inside the ride)
+    rideFx(on) { const P = this.p; this.fx.push({ k: 'ring', x: P.x, y: P.y, r: 10, R: on ? 80 : 60, t: 0, life: 0.35, c: on ? '#9cff5a' : '#ffe9a8' }); for (let i = 0; i < 6; i++) this.fx.push({ k: 's', x: P.x + (this.rng() - 0.5) * 60, y: P.y - 10, r: 14 + this.rng() * 10, t: 0, life: 0.7 + this.rng() * 0.4, a: 0.4, c: '#8a8580' }); },
+    // time's up: you pop out, the ride breaks down (the truck drives off on its route)
+    rideOver() {
+      const r = this.ride, V = X.VEHICLES[r.kind], P = this.p; this.ride = null; if (r.kind === 'gtruck') this.buffs.truck = 0; else this.wrecked[this.cellKey()] = 1;
+      this.rideFx(false); P.x = clamp(P.x + 60 * (P.face || 1), P.r, W.AW - P.r); P.inv = Math.max(P.inv, 0.8); this.collide(P);
+      for (let i = 0; i < 10; i++) this.particle(P.x, P.y - 20, (this.rng() - 0.5) * 300, -this.rng() * 260, i % 2 ? '#3a3f44' : '#ffb02e', 0.6, 5);
+      this.banner = r.kind === 'gtruck' ? { text: '🚛 TIME’S UP', sub: 'The truck rolls off on its route', t: 2 } : { text: '⏱️ ' + V.name.toUpperCase() + ' BROKE DOWN', sub: 'Out you hop: back on foot', t: 2.2 };
+      this.o.on('rideend', { kind: r.kind }); this.o.on('ride', { on: false });
+    },
     rideStep(dt) {
       const r = this.ride; if (!r) return; const V = X.VEHICLES[r.kind], P = this.p;
-      if (r.kind === 'gtruck') { r.time -= dt; this.buffs.truck = Math.max(0.01, r.time); if (r.time <= 0) { this.ride = null; this.buffs.truck = 0; this.banner = { text: '🚛 TIME’S UP', sub: 'The truck rolls off on its route', t: 2 }; this.o.on('ride', { on: false }); return; } }
+      if (r.life == null) { r.life = r.kind === 'gtruck' ? r.time : V.time || 20; r.life0 = V.time || r.life; }
+      if (r.kind !== 'gtruck') { r.life -= dt; if (r.life <= 0) { this.rideOver(); return; } }
+      if (r.kind === 'gtruck') { r.time -= dt; this.buffs.truck = Math.max(0.01, r.time); r.life = r.time; if (r.time <= 0) { this.rideOver(); return; } }
       let n = 0; const sp = Math.hypot(P.vx, P.vy);
       for (const z of this.z) {
         if (z.hp <= 0) continue; const rr = V.r + z.r + 6, dd = d2(z.x, z.y, P.x, P.y); if (dd > rr * rr) continue; n++;
@@ -239,6 +251,7 @@
       if (G.phase === 'horde' && (!this.build || this.build.night !== G.night)) this.toGarage(G.night);
       if (G.phase === 'horde' && this.build && (!this.hordeS || this.hordeS.night !== G.night)) this.startHorde(G.night);
       if (G.phase === 'explore' && this.build) this.endNight();
+      if (this.build) this.build.endsAt = G.phase === 'build' && G.endsIn ? Date.now() + G.endsIn : 0; // the build phase's fixed clock (the server starts the horde at zero)
     },
     toGarage(night) {
       if (this.dead) return; const h = this.home;
@@ -517,7 +530,7 @@
       rr(g, -34, -46 + bob, 70, 40, 6); fo(g, 'rgba(190,200,210,0.35)', 3);
       g.strokeStyle = '#aab3bc'; g.lineWidth = 2; g.beginPath(); for (let i = -28; i < 34; i += 10) { g.moveTo(i, -44 + bob); g.lineTo(i + 4, -8 + bob); } for (let j = -40; j < -8; j += 9) { g.moveTo(-32, j + bob); g.lineTo(34, j + bob); } g.stroke();
       g.strokeStyle = '#c0392b'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(-34, -50 + bob); g.lineTo(-48, -60 + bob); g.stroke();
-    } else if (kind === 'mower') {
+    } else if (kind === 'mower' || kind === 'push') {
       g.fillStyle = 'rgba(120,200,90,0.35)'; g.beginPath(); g.ellipse(34, -2, 30, 10, 0, 0, TAU); g.fill();
       if (moving) { g.strokeStyle = 'rgba(220,255,200,0.6)'; g.lineWidth = 2; g.beginPath(); for (let i = 0; i < 3; i++) { const a = t * 30 + i * 2.1; g.moveTo(34, -2); g.lineTo(34 + Math.cos(a) * 26, -2 + Math.sin(a) * 9); } g.stroke(); }
       for (const [wx, r] of [[-26, 13], [30, 9]]) { g.fillStyle = '#1d1d1d'; g.beginPath(); g.arc(wx, -8 + bob * 0.2, r, 0, TAU); g.fill(); g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(wx, -8, r * 0.4, 0, TAU); g.fill(); }

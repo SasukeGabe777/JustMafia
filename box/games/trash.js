@@ -35,6 +35,7 @@ const PINGS = { here: '📍 Over here!', health: '❤️ Need health!', boss: '�
 const SCORE_PENALTY = 0.15, SCORE_RESPAWN_MS = 5000, DOWN_MS = 40000;
 const REVIVE_MS = 15000, TICK = 1000, ALL_DOWN_MS = 45000, FEED = 10, HOST_DROP_MS = 2500, EMPTY_MS = 3 * 60000;
 const LIVE_KINDS = new Set(['snap', 'in', 'hit', 'grab', 'give', 'fx', 'need', 'tv']);
+const BREAK_S = 30; // the break between waves (public/box/games/trash-sim.js): then the next wave starts by itself
 const KF = 12, SPOT_LOW = 0.35, SPOT_HOLD = 4000, RECAP_MS = 9000, RECAP_EVERY = 4 * 60000, CARD_MS = 5500;
 const key = (c) => c[0] + ',' + c[1];
 const int = (v, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : lo; };
@@ -606,6 +607,7 @@ class Game {
     if (R.streak >= 6 && R.streak > (R.bestStreak || 0)) { R.bestStreak = R.streak; this.moment('streak', p, R.streak, `${p.name} hit a ×${R.streak} kill streak`); }
     if (m.gdoor != null) R.door = int(m.gdoor, 0, 99999);
     if (m.veh != null) R.veh = typeof m.veh === 'string' && X.VEHICLES[m.veh] ? m.veh : null;
+    R.brk = m.brk != null && m.brk >= 0 ? int(m.brk, 0, BREAK_S) : -1;
     if (this.gd && this.gd.phase === 'explore' && R.wave >= this.gd.next) this.startBuild();
     if (this.story) this.storyCheck();
     this.lockCheck();
@@ -642,7 +644,11 @@ class Game {
     } else if (k === 'pickup') {
       const P = W.PK[m.id]; if (!P) return { ok: false, error: 'Unknown pickup.' };
       this.room.fx('tzpickup', { id: p.id, pk: P.id }); if (P.id === 'nuke') this.news(P.icon, `${p.name} called Garbage Day!`, p.id);
+    } else if (k === 'wave') { // the break ran out: the next wave started where they stand (not a new area)
+      const now = this.room.now(); if (!R.clearAt || now - R.clearAt < (BREAK_S - 6) * 1000) return { ok: false, error: 'Too soon.' };
+      R.clearAt = 0; R.areas++; R.brk = -1; return { ok: true, quiet: true };
     } else if (k === 'clear') {
+      R.clearAt = this.room.now();
       const w = int(m.wave, 1, 999); if (w % 5 === 0 || w >= 10) this.news('🧹', `${p.name} cleared wave ${w}`, p.id); this.room.fx('tzclear', { id: p.id });
       if (this.s.length === 'w20' && w >= 20) { this.news('🏁', `${p.name} survived wave 20!`, p.id); this.keepBest(R); this.end('w20'); return { ok: true }; }
     } else if (k === 'victory') {
@@ -762,7 +768,7 @@ class Game {
   people() {
     return this.room.list().filter((p) => this.runs.has(p.id)).map((p) => {
       const R = this.runs.get(p.id);
-      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, bot: !!p.bot, x: R.cell[0], y: R.cell[1], state: R.state, wave: R.wave, lvl: R.lvl, kills: R.kills, score: R.score || 0, streak: R.streak || 1, cls: R.cls || null, wp: R.wp || [], hp: R.hp, mhp: R.mhp, danger: R.danger, ch: R.choosing, pick: R.lastPick, run: R.run, veh: R.veh || null, fit: R.load ? R.load.fit : null,
+      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, bot: !!p.bot, x: R.cell[0], y: R.cell[1], state: R.state, wave: R.wave, lvl: R.lvl, kills: R.kills, score: R.score || 0, streak: R.streak || 1, cls: R.cls || null, wp: R.wp || [], hp: R.hp, mhp: R.mhp, danger: R.danger, ch: R.choosing, pick: R.lastPick, run: R.run, veh: R.veh || null, fit: R.load ? R.load.fit : null, brk: R.state === 'play' && R.brk != null && R.brk >= 0 ? R.brk : -1,
         ab: Object.entries(R.ab).sort((a, c) => c[1] - a[1]).slice(0, 5).map(([id]) => id) };
     });
   }

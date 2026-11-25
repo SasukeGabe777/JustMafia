@@ -10,6 +10,7 @@
 (function () {
   const W = window.TZW, A = () => window.TZA, TAU = Math.PI * 2;
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const BREAK_S = 30; // seconds between waves (then the next wave starts by itself)
   const SNAP_MS = 66, IN_MS = 66, ST_MS = 1000, MAX_Z = 90, MAX_B = 260, MAX_FX = 220;
   const dist2 = (a, b, x, y) => (a - x) * (a - x) + (b - y) * (b - y);
 
@@ -131,7 +132,25 @@
       this.startWave(); this.reportStatus(true);
       this.o.on('enter', { biome: this.area.biome, wave: this.wave });
     }
+    // The break between waves: about 30 s to shop or walk on; then the next wave comes to you, wherever
+    // you are (every mode; Garage Defense's build phase has its own server clock). The host's clock rules a
+    // co-op area (guests see it in the snapshot), so nobody can hold it open.
+    breakStep(dt) {
+      if (!this.cleared) { this.breakT = null; return; }
+      if (this.build || this.hordeS || this.dead || this.down || this.phase !== 'play' || (this.finalSpawned && !this.finalDead) || this.mode === 'guest') return;
+      if (this.breakT == null) this.breakT = BREAK_S;
+      if (this.menuPause && this.mode === 'solo') return;
+      const before = Math.ceil(this.breakT); this.breakT -= dt;
+      if (Math.ceil(this.breakT) !== before && this.breakT > 0 && this.breakT <= 5) this.o.on('tick', { n: Math.ceil(this.breakT) });
+      if (this.breakT <= 0) this.nextWave();
+    }
+    nextWave() {
+      this.breakT = null; this.wave++; this.cleared = false; this.waveKills = 0; this.spawned = 0; this.bossSpawned = false;
+      this.startWave(); this.banner = { text: 'WAVE ' + this.wave, sub: 'Break’s over: here they come!', t: 2.6 };
+      this.o.report({ op: 'ev', k: 'wave', wave: this.wave }); this.reportStatus(true); this.o.on('wave', { wave: this.wave });
+    }
     startWave() {
+      this.breakT = null;
       this.spec = W.waveSpec(this.wave, this.areaMembers.length, this.set.diff);
       if (this.set.diff === 'chill') { this.spec.hpMul *= 0.75; this.spec.every *= 1.25; this.spec.dmgMul *= 0.7; this.spec.target = Math.round(this.spec.target * 0.85); }
       this.banner = { text: 'WAVE ' + this.wave, sub: this.area.biome.name + (this.spec.boss ? ' · ⚠️ BOSS' : ''), t: 2.6 };
@@ -307,6 +326,7 @@
       if (this.phase === 'dead') { this.fxStep(dt); this.netStep(); return; }
       if (this.down) { this.downStep(dt); this.fxStep(dt); this.netStep(); if (this.mode !== 'guest') { this.spawnStep(dt); this.zombieStep(dt); } else this.guestStep(dt); this.othersStep(dt); return; }
       const slow = this.paused || (this.evo && this.mode === 'solo') ? 0 : 1, sdt = dt * slow;
+      this.breakStep(dt); // the short break between waves runs even while you shop (only the solo pause menu stops it)
       if (this.evo && slow === 0) this.evoStep(dt);
       if (sdt > 0) {
         this.moveYou(sdt, I);
@@ -566,7 +586,7 @@
       if (this.waveKills >= sp.target && this.z.length === 0 && (!this.bossDue || this.bossSpawned)) this.clear();
     }
     clear() {
-      this.cleared = true; this.banner = { text: 'AREA CLEAR!', sub: 'Walk out an exit ➜ new area, next wave', t: 3 };
+      this.cleared = true; this.breakT = BREAK_S; this.banner = { text: 'AREA CLEAR!', sub: `Shop or walk on: the next wave comes in ${BREAK_S} s`, t: 3 };
       for (const g of this.gems) g.vac = true;
       if (this.onClear) this.onClear();
       this.o.report({ op: 'ev', k: 'clear', wave: this.wave }); this.o.on('clear', { wave: this.wave }); this.reportStatus(true);
@@ -607,7 +627,7 @@
     youMsg() { const P = this.p; return [Math.round(P.x), Math.round(P.y), Math.round(P.aim * 100) / 100, Math.round(P.hp), Math.round(this.S.mhp), this.dead ? 1 : 0, this.choosing ? 1 : 0, Math.round(this.S.slow * 100) / 100, this.buffs.shield > 0 ? 1 : 0, P.face, this.down ? 1 : 0, (this.shopping || this.choosing) ? 1 : 0, ...(this.youExtra ? this.youExtra() : [])]; }
     sendSnap() {
       const z = []; for (const q of this.z) if (q.hp > 0) z.push(q.id, q.ti, Math.round(q.x), Math.round(q.y), Math.round(q.hp));
-      const msg = { t: 'snap', w: [this.wave, this.waveKills, this.spec ? this.spec.target : 0, this.cleared ? 1 : 0, this.bossDue && !this.bossSpawned ? 1 : 0], z, p: this.pk.map((p) => [p.id, p.k, Math.round(p.x), Math.round(p.y), Math.round(p.life)]),
+      const msg = { t: 'snap', w: [this.wave, this.waveKills, this.spec ? this.spec.target : 0, this.cleared ? 1 : 0, this.bossDue && !this.bossSpawned ? 1 : 0, this.breakT != null ? Math.round(this.breakT * 10) / 10 : -1], z, p: this.pk.map((p) => [p.id, p.k, Math.round(p.x), Math.round(p.y), Math.round(p.life)]),
         s: this.spit.map((s) => [Math.round(s.x), Math.round(s.y), Math.round(s.vx), Math.round(s.vy), Math.round(s.dmg), s.debuff ? ['blind','zoom','web','jam','confuse','leech','sludge','shake'].indexOf(s.debuff) : -1]), you: this.youMsg(), b: this.shots.splice(0, 40), k: this.kills.splice(0), e: this.booms.splice(0, 20), fz: this.buffs.freeze > 0 ? 1 : 0, ...(this.snapExtra ? this.snapExtra() : {}) };
       this.o.live(msg);
       for (const m of this.pend.splice(0)) this.o.live(m);
@@ -632,6 +652,8 @@
         this.snap = m; this.snapAt = this.t;
         const [w, wk, tg, cl] = m.w; if (w > this.wave) this.wave = w; this.waveKills = wk; if (!this.spec) this.spec = W.waveSpec(this.wave, 2, this.set.diff); this.spec.target = tg;
         if (cl && !this.cleared) { this.cleared = true; this.banner = { text: 'AREA CLEAR!', sub: 'Walk out an exit ➜ new area, next wave', t: 3 }; this.o.report({ op: 'ev', k: 'clear', wave: this.wave }); this.o.on('clear', { wave: this.wave }); }
+        else if (!cl && this.cleared) { this.cleared = false; this.breakT = null; this.banner = { text: 'WAVE ' + this.wave, sub: 'Break’s over: here they come!', t: 2.6 }; this.o.on('wave', { wave: this.wave }); }
+        if (cl && m.w[5] != null && m.w[5] >= 0) this.breakT = m.w[5];
         const byId = new Map(this.z.map((z) => [z.id, z])), keep = [];
         for (let i = 0; i < m.z.length; i += 5) {
           const id = m.z[i]; let z = byId.get(id);
@@ -662,7 +684,7 @@
     reportStatus(force) {
       if (!force && this.t - this.lastSt < ST_MS / 1000) return; this.lastSt = this.t;
       const P = this.p;
-      this.o.report({ op: 'st', hp: Math.max(0, Math.round(P.hp)), mhp: Math.round(this.S.mhp), lvl: this.lvl, xp: Math.round(this.xp), kills: this.killCount, wave: this.wave, ab: this.ab, ch: this.choosing ? 1 : 0, score: Math.round(this.score || 0), mult: this.mult || 1, wp: this._fi ? [[this.gun.id, this.gun.lv, this.gun.tier], ...this.weapons.map((w) => [w.id, w.lv, w.tier])] : undefined, ...(this.statusExtra ? this.statusExtra() : {}) }, true);
+      this.o.report({ op: 'st', brk: this.cleared && this.breakT != null ? Math.ceil(this.breakT) : -1, hp: Math.max(0, Math.round(P.hp)), mhp: Math.round(this.S.mhp), lvl: this.lvl, xp: Math.round(this.xp), kills: this.killCount, wave: this.wave, ab: this.ab, ch: this.choosing ? 1 : 0, score: Math.round(this.score || 0), mult: this.mult || 1, wp: this._fi ? [[this.gun.id, this.gun.lv, this.gun.tier], ...this.weapons.map((w) => [w.id, w.lv, w.tier])] : undefined, ...(this.statusExtra ? this.statusExtra() : {}) }, true);
     }
   }
 
@@ -944,5 +966,5 @@
     g.fillStyle = '#7a8086'; g.beginPath(); g.moveTo(8, -31); g.lineTo(10, -38); g.lineTo(14, -32); g.fill();
     g.restore();
   }
-  window.TZSim = { Sim, render, heroDraw, SPR, lead, camCenter, weather, _drawRaccoon: drawRaccoon };
+  window.TZSim = { BREAK_S, Sim, render, heroDraw, SPR, lead, camCenter, weather, _drawRaccoon: drawRaccoon };
 })();

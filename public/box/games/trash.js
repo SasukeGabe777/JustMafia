@@ -145,7 +145,7 @@
     const ranked = s.mode === 'score' || s.mode === 'garage';
     const P = (s.players || []).slice().sort((a, b) => (ranked ? b.score - a.score : 0) || (a.state === 'dead') - (b.state === 'dead') || b.wave - a.wave || b.kills - a.kills);
     const rows = P.map((p, i) => `<div class="tz-row ${p.state === 'dead' ? 'dead' : ''} ${p.danger ? 'danger' : ''} ${s.spot && s.spot.id === p.id ? 'spot' : ''}"><span class="tz-rank">${i + 1}</span>${face({ ...p, bot: true }, 46)}<div class="tz-rmain"><b style="color:${esc(p.color || '#fff')}">${p.veh && window.TZX ? window.TZX.VEHICLES[p.veh].icon + ' ' : ''}${p.cls && window.TZR ? window.TZR.CLASSES[p.cls].icon + ' ' : ''}${nm(p.name)}</b>
-      <small>${p.state === 'dead' ? '💀 out · ' : p.state === 'down' ? '🆘 DOWN · ' : p.ch ? '🃏 picking an ability · ' : ''}${s.mode === 'score' || p.score ? `<b class="tz-sc">${(p.score || 0).toLocaleString('en-US')}</b>${p.streak > 1 ? ` <b class="tz-mx">×${p.streak}</b>` : ''} · ` : ''}Wave ${p.wave} · Lv ${p.lvl} · ${p.kills} kills</small>
+      <small>${p.state === 'dead' ? '💀 out · ' : p.state === 'down' ? '🆘 DOWN · ' : p.ch ? '🃏 picking an ability · ' : p.brk >= 0 ? `<b class="tz-brk-s">⏱ break ${p.brk}s</b> · ` : ''}${s.mode === 'score' || p.score ? `<b class="tz-sc">${(p.score || 0).toLocaleString('en-US')}</b>${p.streak > 1 ? ` <b class="tz-mx">×${p.streak}</b>` : ''} · ` : ''}Wave ${p.wave} · Lv ${p.lvl} · ${p.kills} kills</small>
       <div class="tz-hp"><i style="width:${p.state === 'dead' || !p.mhp ? 0 : Math.round((100 * p.hp) / p.mhp)}%"></i></div><div class="tz-ab">${abIcons(p.ab)}${(p.wp || []).slice(1).map(([id, lv, tier]) => window.TZR && window.TZR.WEAPONS[id] ? `<span class="tz-abi t${tier}" title="${esc(window.TZR.wname(id, tier))}">${window.TZR.WEAPONS[id].icon}<sub>${lv}</sub></span>` : '').join('')}</div></div></div>`).join('');
     const feed = (s.feed || []).slice(-5).reverse().map((f) => `<li>${esc(f.icon)} ${nm(f.text)}</li>`).join('');
     const kfeed = (s.kfeed || []).slice(-5).reverse().map((k) => `<li class="${k.big ? 'big' : ''}"><b style="color:${esc(k.color || '#fff')}">${nm(k.name)}</b> <span>${esc(k.icon)} ${nm(k.text)}</span></li>`).join('');
@@ -156,7 +156,9 @@
     const S0 = s.story, LK = s.locks, openN = LK ? LK.req.filter((r) => !(r > LK.kills)).length : 0, nextNeed = LK ? Math.min(...LK.req.filter((r) => r > LK.kills), Infinity) : Infinity;
     const gates = LK ? `<b>🔓 ${openN}/${LK.req.length} blocks open · 🧟 ${LK.kills} team kills</b>${Number.isFinite(nextNeed) ? `<span>🔒 next gate: ${LK.kills} / ${nextNeed} kills</span><i style="width:${Math.round(100 * Math.min(1, LK.kills / nextNeed))}%"></i>` : '<span>Every gate in town is open!</span>'}` : '';
     const storyBox = S0 || LK ? `<div class="tz-story"><div>${gates || '<b>📖 Regular</b>'}</div>${S0 ? `<div class="tz-sk"><span>🗝️ ${S0.keys}/3</span><span>🗺️ ${S0.maps}/2</span><span>${S0.boss ? `${S0.boss.icon} ${esc(S0.boss.name)}${S0.doorOpen ? ' <b>AWAKE</b>' : ''}` : '🚪 door: ???'}</span></div>` : ''}</div>` : '';
-    return `<div class="tz-sidehead"><span class="tz-logo-s">Trash<b>Zombies</b></span>${S0 ? `<span class="tz-len">📖 ${timer(S0.time || 0)}</span>` : s.endsIn ? `<span class="tz-clock">⏱ ${timer(s.endsIn)}</span>` : `<span class="tz-len">${len}</span>`}</div>${storyBox}
+    const BK = P.filter((p) => !p.bot && p.state === 'play' && p.brk >= 0).sort((a, b) => a.brk - b.brk)[0];
+    const brkBox = BK ? `<div class="tz-break ${BK.brk <= 5 ? 'hot' : ''}"><small>⏱ ${nm(BK.name)}: NEXT WAVE IN</small><b>${BK.brk}</b><span>Shop or walk on: it starts by itself</span></div>` : G0 && G0.phase === 'build' ? `<div class="tz-break build ${G0.endsIn <= 5000 ? 'hot' : ''}"><small>🔨 HORDE NIGHT ${G0.night}: BUILD</small><b>${Math.ceil(G0.endsIn / 1000)}</b><span>The horde comes when it hits zero</span></div>` : '';
+    return brkBox + `<div class="tz-sidehead"><span class="tz-logo-s">Trash<b>Zombies</b></span>${S0 ? `<span class="tz-len">📖 ${timer(S0.time || 0)}</span>` : s.endsIn ? `<span class="tz-clock">⏱ ${timer(s.endsIn)}</span>` : `<span class="tz-len">${len}</span>`}</div>${storyBox}
       ${chips}<h4 class="tz-lbh">🏆 Leaderboard${ranked ? ' · by score' : ''}</h4><div class="tz-rows">${rows}</div>${kfeed ? `<h4 class="tz-lbh">💀 Kill feed</h4><ul class="tz-kfeed">${kfeed}</ul>` : ''}<ul class="tz-feed">${feed}</ul>`;
   }
   // ---------- the boss intro card and the highlight recap (over the map) ----------
@@ -253,6 +255,9 @@
     else if (kind === 'enter') { if (ctx) ctx.haptic('turn'); }
     else if (kind === 'coop') { if (ctx) { ctx.haptic('big'); ctx.toast(d.mode === 'solo' ? 'You’re on your own again.' : `🤝 Co-op! ${d.members.length} of you in this area${d.mode === 'host' ? ' (your phone runs the zombies)' : ''}.`); } }
     else if (kind === 'start') { PH.hint = 7; }
+    else if (kind === 'wave') { buzz([60, 40, 60]); if (PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map') setOverlay(''); }
+    else if (kind === 'tick') { buzz(15); }
+    else if (kind === 'rideend') { buzz([80, 40, 80]); }
     else if (kind === 'find') { const F = window.TZS.FINDS[d.id]; if (ctx) ctx.haptic('win'); showCard(`<span class="tz-rc-i">${F.icon}</span><div><small>${F.kind === 'key' ? 'IN THE CHEST: A KEY PIECE' : 'IN THE CHEST'}</small><b>${esc(F.name)}</b><p>${esc(F.desc)}</p></div>`, 'find'); }
     else if (kind === 'final') { buzz([200, 80, 200, 80, 400]); }
     else if (kind === 'combo') { if (ctx) { ctx.haptic('win'); ctx.toast(d.timed ? `💥 ${d.name}!` : '🧪 New combo! It’s in your combo book (pause menu).'); } }
@@ -355,6 +360,7 @@
     if (window.TZSnd) TZSnd.frame(sim, dt);
     const I = readInput(V, sim);
     const busy = PH.menu || PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks';
+    sim.menuPause = !!PH.menu;
     sim.shopping = PH.overlay === 'shop' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks'; sim._dpr = V.dpr;
     if (performance.now() - (PH.saveAt || 0) > 2000) saveRun();
     if (busy && sim.mode === 'solo') sim.paused = true; else if (!sim.cards) sim.paused = false;
@@ -485,7 +491,17 @@
     // top-centre: wave + zombies left
     const left = sim.spec ? Math.max(0, sim.spec.target - sim.waveKills) : 0;
     txt(`WAVE ${sim.wave}`, w / 2, 22, small ? 20 : 26, '#ffd23f', 'center');
-    txt(sim.cleared ? '✅ Area clear: find an exit' : `🧟 ${Math.max(left, sim.z.length)} left`, w / 2, small ? 44 : 50, small ? 13 : 16, sim.cleared ? '#7dff6a' : '#fff', 'center');
+    txt(sim.cleared ? '✅ Clear: shop or walk on' : `🧟 ${Math.max(left, sim.z.length)} left`, w / 2, small ? 44 : 50, small ? 13 : 16, sim.cleared ? '#7dff6a' : '#fff', 'center');
+    // the break between waves: a big countdown; at zero the next wave starts here by itself
+    const bT = sim.cleared && sim.breakT != null && !sim.build && !sim.dead ? sim.breakT : sim.build && sim.build.endsAt ? Math.max(0, (sim.build.endsAt - Date.now()) / 1000) : null;
+    if (bT != null && sim.phase === 'play') {
+      const R0 = small ? 26 : 32, cx = w / 2, cy = (small ? 112 : 132) + (st || gate ? 18 : 0), hot = bT <= 5, n = Math.ceil(bT), full = sim.build ? 45 : (window.TZSim.BREAK_S || 30);
+      g.fillStyle = 'rgba(15,10,6,0.78)'; g.beginPath(); g.arc(cx, cy, R0 + 6, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.16)'; g.lineWidth = 6; g.beginPath(); g.arc(cx, cy, R0, 0, TAU); g.stroke();
+      g.strokeStyle = hot ? (Math.sin(sim.t * 14) > 0 ? '#ff4a3a' : '#ffb02e') : sim.build ? '#ffb02e' : '#9cff5a'; g.beginPath(); g.arc(cx, cy, R0, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, bT / full)); g.stroke();
+      const pulse = hot ? 1 + 0.12 * Math.max(0, Math.sin(sim.t * 12)) : 1; g.save(); g.translate(cx, cy + 1); g.scale(pulse, pulse); txt(String(n), 0, 0, small ? 26 : 32, hot ? '#ff6a5a' : '#fff6d8', 'center'); g.restore();
+      txt(sim.build ? '🔨 HORDE IN' : 'NEXT WAVE IN', cx, cy - R0 - 14, small ? 11 : 13, hot ? '#ff8c6a' : '#ffe9a8', 'center');
+    }
     const st = sim.story, ng = sim.nextGate ? sim.nextGate() : null, gate = ng ? `🔒 ${ng.have} / ${ng.need} kills${ng.here ? ' (gate here)' : ''}` : sim.locks ? '🔓 every gate open' : '';
     if (st || gate) txt(`${st ? `🗝️ ${st.keys}/3   🗺️ ${st.maps}/2   ` : ''}${gate}`, w / 2, small ? 80 : 94, small ? 12 : 14, '#ffe9a8', 'center');
     if (st) {

@@ -43,8 +43,10 @@
   // ---------------- vehicles ----------------
   // speed: x your run speed. hp: what it soaks up for you. blade: contact damage a second (mower).
   const VEHICLES = {
-    cart: { icon: '🛒', name: 'Shopping Cart', speed: 1.6, hp: 140, r: 34, ram: 10, desc: 'Fast. Bumps zombies aside.' },
-    mower: { icon: '🚜', name: 'Ride-On Mower', speed: 1.12, hp: 220, r: 40, blade: 70, desc: 'Slow, but its blades chew zombies up.' },
+    // every ride is a limited-time thing (time, seconds): when it runs out you pop out and it breaks down (or drives off)
+    cart: { icon: '🛒', name: 'Shopping Cart', speed: 1.6, hp: 140, r: 34, ram: 10, time: 25, desc: 'Fast. Bumps zombies aside. 25 seconds before a wheel falls off.' },
+    mower: { icon: '🚜', name: 'Ride-On Mower', speed: 1.12, hp: 220, r: 40, blade: 70, time: 22, desc: 'Slow, but its blades chew zombies up. 22 seconds of gas.' },
+    push: { icon: '🌱', name: 'Push Mower', speed: 1.3, hp: 120, r: 30, blade: 45, time: 18, desc: 'Quick little blades. 18 seconds of gas.' },
     gtruck: { icon: '🚛', name: 'Garbage Truck', speed: 1.45, hp: 700, r: 64, time: 15, desc: 'A rare power-up: drive it for 15 seconds.' },
   };
   // A parked cart or mower in some blocks (same on every phone): carts by shops and lots, mowers in yards.
@@ -53,7 +55,7 @@
     if ((homes || []).some((h) => h[0] === x && h[1] === y)) return null;
     const h = W.hash(seed, 'veh', x, y) % 100, b = W.biomeOf(seed, x, y).key;
     if (CART_AT.includes(b) && h < 45) return 'cart';
-    if (MOWER_AT.includes(b) && h < 45) return 'mower';
+    if (MOWER_AT.includes(b) && h < 45) return h % 3 === 0 ? 'push' : 'mower';
     return h < 10 ? (h < 5 ? 'cart' : 'mower') : null;
   }
 
