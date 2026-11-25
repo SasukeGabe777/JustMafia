@@ -205,11 +205,12 @@
       if (this.mode === 'guest') { this.hits.push([z.id, Math.round(dmg * 10) / 10, Math.round(kx), Math.round(ky), o.burn || 0]); z.flash = 0.08; this.fxHit(z, dmg, o.crit); return; }
       z.hp -= dmg; z.flash = 0.08; if (o.burn) { z.burn = Math.max(z.burn, o.burn * 4); z.burnT = 3; }
       const res = z.boss ? 0.15 : W.ZOMBIES[z.type].tough ? 0.5 : 1; z.kx += kx * res; z.ky += ky * res;
-      this.fxHit(z, dmg, o.crit);
+      this.fxHit(z, dmg, o.crit); if (o.crit && this.mode === 'solo') this.hitStop = Math.max(this.hitStop || 0, 0.02);
       if (z.hp <= 0) this.killZ(z, by);
     }
     killZ(z, by) {
       z.hp = 0; this.waveKills++;
+      if (this.mode === 'solo' && (z.boss || (W.ZOMBIES[z.type] && W.ZOMBIES[z.type].tough))) this.hitStop = Math.max(this.hitStop || 0, z.boss ? 0.14 : 0.045);
       const mine = by === this.me.id;
       if (mine) this.killCount++;
       // XP: gems when you're alone, straight XP in a shared area (shared, or to the shooter)
@@ -318,6 +319,7 @@
     update(dt, I) {
       dt = Math.min(dt, 0.05);
       if (this.slowmo > 0) { this.slowmo -= dt; dt *= 0.35; } // dramatic slow motion (solo)
+      if (this.hitStop > 0) { this.hitStop -= dt; dt *= 0.1; } // hit-stop: a few frames' pause on a heavy kill or a crit (solo)
       if (this.mapInput) I = this.mapInput(I || {});
       this.t += dt; this._lastInput = I;
       this.flash = this.flash > 0 ? Math.max(0, this.flash - dt) : Math.min(0, this.flash + dt);

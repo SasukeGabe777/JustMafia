@@ -983,6 +983,15 @@ test('chests: loot stashes and dens have a loot chest (cash + goodies, a weapon 
 });
 
 // ---------------- the final pass: iso view, JustZombies, breaks between waves, timed rides, first person, the tank ----------------
+test('iso view: shots are aimed, fired and land at ground spots (the drawn body stands on them): a shot level with a zombie hits it, one passing its old 3/4-view "body" spot misses', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.p.inv = 1e9; s.z.length = 0; s.spawnCd = 99; s.set.aim = 'on';
+  const P = s.p; P.x = s.area.hub.x; P.y = s.area.hub.y; const z = s.spawnOne('walker'); z.x = P.x + 200; z.y = P.y; z.speed = 0; z.hp = z.mhp = 1e6;
+  s.shoot(0.05, {}); assert(Math.abs(P.aim) < 1e-6, 'auto-aim points straight at the zombie\'s ground spot: ' + P.aim);
+  assert(s.b.length > 0 && Math.abs(s.b[0].y - P.y) < 1e-6, 'the shot leaves at your ground spot (no 3/4-view lift)');
+  const hp0 = z.hp; for (let i = 0; i < 20 && z.hp === hp0; i++) s.bulletStep(0.02); assert(z.hp < hp0, 'level with it: a hit');
+  s.b.length = 0; s.b.push({ x: z.x - 120, y: z.y - z.r - 8, vx: 900, vy: 0, r: 4, dmg: 1, crit: false, pierce: 0, bounce: 0, life: 0.8, hit: null, burn: 0 }); const hp1 = z.hp;
+  for (let i = 0; i < 20; i++) s.bulletStep(0.02); assert.equal(z.hp, hp1, 'a shot through the old 3/4 "body" spot (r above the feet) misses');
+});
 test('iso view: screen directions turn into the world directions that look the same (drag up moves you up the screen); the camera rule', () => {
   const ctx = { console, Math, JSON, Object, Array, Map, Set, Number, String, Promise, Infinity, isFinite, setTimeout, performance: { now: () => 0 } }; ctx.window = ctx; ctx.self = ctx; vm.createContext(ctx);
   for (const f of ['trash-world.js', 'trash-iso.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });

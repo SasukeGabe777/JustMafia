@@ -46,6 +46,9 @@
   // one CanvasTexture per atlas page; each sprite gets a clone (same GPU image, its own UVs)
   const pageTex = new Map();
   function texFor(canvas) { let t = pageTex.get(canvas); if (!t) { t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; pageTex.set(canvas, t); } return t; }
+  // the fx atlas: one GPU upload shared by every fx sprite (clones keep their own UVs)
+  let FXT = null;
+  function fxTex(img) { if (!FXT || FXT.image !== img) { FXT = new THREE.CanvasTexture(img); FXT.colorSpace = THREE.SRGBColorSpace; } return FXT; }
   function setFrame(sp, fr, P, scale) {
     const base = texFor(fr.c); let tx = sp.userData.tx && sp.userData.tx.get(fr.c);
     if (!tx) { tx = base.clone(); tx.needsUpdate = false; (sp.userData.tx || (sp.userData.tx = new Map())).set(fr.c, tx); }
@@ -113,6 +116,20 @@
   const DIRS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   function relDir(phi, yaw) { let a = phi - yaw; a = Math.atan2(Math.sin(a), Math.cos(a)); return DIRS[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]; }
   const HEAD = { cart: 52, push: 55, mower: 62, gtruck: 120, tank: 120 };
+  // Build + compile the 3D block ahead of time (called while you walk up to a ride: the one-off build
+  // and shader compile, ~0.5 s on a desktop, happen during the walk-up instead of the first driving frame).
+  function warm(sim, cv) {
+    const I = window.TZI; if (!THREE || !I || !I.ready || !cv) return false;
+    if (!R || R.domElement !== cv) { R = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'low-power', alpha: false }); R.outputColorSpace = THREE.SRGBColorSpace; }
+    if (!S || S.area !== sim.area) { if (S) disposeScene(S); S = build(sim); }
+    try {
+      const fi = I.fxImage && I.fxImage(), sp = S.fxPool && S.fxPool[0]; // (an fx sprite on for a moment, so the glow shader compiles now too)
+      if (fi && sp) { if (!sp.userData.t) { sp.userData.t = fxTex(fi).clone(); sp.material.map = sp.userData.t; } sp.material.blending = THREE.AdditiveBlending; sp.material.needsUpdate = true; sp.visible = true; }
+      R.compile(S.scene, S.cam); if (sp) sp.visible = false; if (fi && R.initTexture) R.initTexture(fxTex(fi));
+      if (R.initTexture) { const seen = new Set(); for (const z of sim.z) { const Pk = I.need(I.zKey(z)); if (!Pk || seen.has(Pk)) continue; seen.add(Pk); for (const pg of Pk.pages || []) R.initTexture(texFor(pg)); if (seen.size > 8) break; } } // (the zombie sheets go up to the GPU now too)
+    } catch (e) { /* compiled on first use */ }
+    return true;
+  }
   function render(sim, V, cv) {
     if (!st.ready || !THREE) return false;
     const I = window.TZI; if (!I || !I.ready) return false;
@@ -138,7 +155,7 @@
     const dt = Math.min(0.1, Math.max(0, t - (S.lt == null ? t : S.lt))); S.lt = t;
     for (const z of sim.z) {
       if (n >= pool.length) break; if (!(z.hp > 0) || !near(z.x, z.y, 1000)) continue;
-      if ((z.x - P.x) * (z.x - P.x) + (z.y - P.y) * (z.y - P.y) < 80 * 80) continue; // (right at the bumper: not drawn, no blurry giant on the glass)
+      if ((z.x - P.x) * (z.x - P.x) + (z.y - P.y) * (z.y - P.y) < 150 * 150) continue; // (right at the bumper: not drawn, no blurry giant on the glass)
       const key = I.zKey(z), Pk = I.need(key); if (!Pk) continue;
       const A = I.zState(z, dt, sim.dead ? null : P), an = Pk.anims.static ? 'static' : I.animName(Pk, A.an), fi = Pk.anims.static ? 0 : I.animFrame(Pk, an, A.ft);
       const phi = A.an === 'attack' ? Math.atan2(P.y - z.y, P.x - z.x) : Math.atan2(A.vy || 0.01, A.vx || 0.01);
@@ -159,8 +176,8 @@
     let k = 0; const fxImg = I.fxImage && I.fxImage();
     if (fxImg) {
       const M = I.manifest();
-      const put = (name, fi, x, y, h, size, add) => { if (k >= S.fxPool.length) return; const F = M.fx[name]; if (!F) return; const fr = F.frames[Math.min(F.frames.length - 1, fi)], sp = S.fxPool[k++]; let tx = sp.userData.t; if (!tx) { tx = sp.userData.t = new THREE.CanvasTexture(fxImg); tx.colorSpace = THREE.SRGBColorSpace; sp.material.map = tx; sp.material.needsUpdate = true; } const W0 = fxImg.width, H0 = fxImg.height; tx.offset.set(fr[0] / W0, 1 - (fr[1] + fr[3]) / H0); tx.repeat.set(fr[2] / W0, fr[3] / H0); sp.material.blending = add ? THREE.AdditiveBlending : THREE.NormalBlending; sp.scale.set(size * fr[2] / 128, size * fr[3] / 128, 1); sp.position.set(x, h, y); sp.visible = true; };
-      for (const f of sim.fx) { if (!near(f.x, f.y, 900)) continue; const u = f.t / f.life; if (f.k === 'fire') put('fx.explosion', Math.floor(u * 9), f.x, f.y + 10, 40, f.r * 2.4, true); else if (f.k === 's' && k < 16) put('fx.smoke', Math.floor(u * 10), f.x, f.y, 30 + u * 40, f.r * 2.5, false); else if (f.k === 'spurt' && k < 20) put(f.goo ? 'fx.goo.spurt' : 'fx.blood.spurt', Math.floor(u * 8), f.x, f.y + 30, 50, 90, false); }
+      const put = (name, fi, x, y, h, size, add) => { if (k >= S.fxPool.length) return; const F = M.fx[name]; if (!F) return; const fr = F.frames[Math.min(F.frames.length - 1, fi)], sp = S.fxPool[k++]; let tx = sp.userData.t; if (!tx) { tx = sp.userData.t = fxTex(fxImg).clone(); sp.material.map = tx; sp.material.needsUpdate = true; } const W0 = fxImg.width, H0 = fxImg.height; tx.offset.set(fr[0] / W0, 1 - (fr[1] + fr[3]) / H0); tx.repeat.set(fr[2] / W0, fr[3] / H0); sp.material.blending = add ? THREE.AdditiveBlending : THREE.NormalBlending; sp.scale.set(size * fr[2] / 128, size * fr[3] / 128, 1); sp.position.set(x, h, y); sp.visible = true; };
+      for (const f of sim.fx) { if (!near(f.x, f.y, 900) || (f.x - P.x) * (f.x - P.x) + (f.y - P.y) * (f.y - P.y) < 110 * 110) continue; const u = f.t / f.life; if (f.k === 'fire') put('fx.explosion', Math.floor(u * 9), f.x, f.y + 10, 40, f.r * 2.4, true); else if (f.k === 's' && k < 16) put('fx.smoke', Math.floor(u * 10), f.x, f.y, 30 + u * 40, f.r * 2.5, false); else if (f.k === 'spurt' && k < 20) put(f.goo ? 'fx.goo.spurt' : 'fx.blood.spurt', Math.floor(u * 8), f.x, f.y + 30, 50, 90, false); }
       for (const s2 of sim.shells || []) { const u = s2.t / s2.T; put('fx.glow', 0, s2.x0 + (s2.x - s2.x0) * u, s2.y0 + (s2.y - s2.y0) * u, 90 - 40 * u, 40, true); }
     }
     for (let i = k; i < S.fxPool.length; i++) S.fxPool[i].visible = false;
@@ -229,5 +246,5 @@
   function wheel(g, x, y, R0, steer, c) { g.save(); g.translate(x, y); g.rotate(steer * 1.2); g.strokeStyle = c; g.lineWidth = R0 * 0.16; g.beginPath(); g.arc(0, 0, R0, 0, TAU); g.stroke(); g.lineWidth = R0 * 0.12; g.beginPath(); g.moveTo(-R0, 0); g.lineTo(R0, 0); g.moveTo(0, 0); g.lineTo(0, R0); g.stroke(); g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(0, -R0, R0 * 0.09, 0, TAU); g.fill(); g.restore(); }
   function roundRect(g, x, y, w, h, r) { w = Math.max(0, w); r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
   function label(g, s, x, y, px, c) { g.font = `bold ${Math.round(px)}px "Lilita One", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = Math.max(3, px / 5); g.strokeStyle = 'rgba(15,10,6,0.9)'; g.strokeText(s, x, y); g.fillStyle = c; g.fillText(s, x, y); }
-  const TZFP = window.TZFP = { ready: false, supported, prepare, render, overlay, controls, project, st, relDir };
+  const TZFP = window.TZFP = { ready: false, supported, prepare, warm, render, overlay, controls, project, st, relDir };
 })();

@@ -315,6 +315,7 @@
 
   // ---------------- zombies: state from movement ----------------
   const BOSSKEY = { boss: 'boss.dumpster', truck: 'boss.truck', ratking: 'boss.ratking', sludge: 'boss.sludge', mascot: 'boss.mascot', spider: 'boss.spider', foghorn: 'boss.foghorn', toxic: 'boss.toxic', icecream: 'boss.icecream', compactor: 'boss.compactor', final: 'boss.final' };
+  const BOSSCOL = { boss: '#7dff6a', spider: '#e6ecff', foghorn: '#ffb02e', toxic: '#b6ff3a', final: '#ff3a3a', icecream: '#ff9ad5', compactor: '#9aa8b4', truck: '#7fd6ff', ratking: '#ffd0c8', sludge: '#5aff6a', mascot: '#ffd23f' };
   const zKey = (z) => (z.fb || z.mb ? BOSSKEY[z.fb || z.mb] || 'boss.final' : z.type === 'boss' ? 'boss.dumpster' : BOSSKEY[z.type] && W().ZOMBIES[z.type] && W().ZOMBIES[z.type].boss ? BOSSKEY[z.type] : 'zombie.' + z.type);
   function zState(z, dt, tg) {
     let A = z._ia;
@@ -539,13 +540,15 @@
     setScreen(g);
     if (z.elite) { const R = z.r * 2.4 * s; const gr = g.createRadialGradient(X, Y, 1, X, Y, R); gr.addColorStop(0, hexA(z.elite, 0.32 + 0.1 * Math.sin(t * 6 + z.id))); gr.addColorStop(1, hexA(z.elite, 0)); g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.save(); g.translate(X, Y); g.scale(1, 0.5); g.translate(-X, -Y); g.fillRect(X - R, Y - R, R * 2, R * 2); g.restore(); g.globalCompositeOperation = 'source-over'; }
     if (Zd.aura) { g.globalAlpha = 0.16 + 0.08 * Math.sin(t * 5 + z.id); g.fillStyle = Zd.aura; g.beginPath(); g.ellipse(X, Y - Pk.h * k * 0.45, z.r * 1.3 * s, Pk.h * k * 0.55, 0, 0, TAU); g.fill(); g.globalAlpha = 1; }
+    // a boss stands in its own coloured ring (its signature), which flares while it winds up an attack
+    if (boss) { const bc = BOSSCOL[z.fb || z.mb || z.type] || '#ff4a3a', hot = A.an === 'attack' ? 1 : 0; setGround(g); g.globalAlpha = 0.35 + 0.15 * Math.sin(t * 4 + z.id) + hot * 0.4; g.strokeStyle = bc; g.lineWidth = 7 + hot * 5; g.beginPath(); g.ellipse(z.x, z.y, z.r * (1.15 + hot * 0.15), z.r * (1.15 + hot * 0.15), 0, 0, TAU); g.stroke(); g.globalAlpha = 0.14 + hot * 0.12; g.fillStyle = bc; g.fill(); g.globalAlpha = 1; setScreen(g); }
     const bob = static1 ? Math.sin(t * 9 + z.id) * 1.2 * s : 0;
     sprite(g, Pk, an, A.dir, fi, X, Y + bob, k, { alpha: z.alpha != null ? z.alpha : undefined, flash: z.flash > 0 ? 0.85 : 0 });
     setScreen(g);
     if (z.elite) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.18 + 0.08 * Math.sin(t * 8); g.strokeStyle = z.elite; g.lineWidth = 2 * s; g.beginPath(); g.ellipse(X, Y - Pk.h * k * 0.5, z.r * 1.2 * s, Pk.h * k * 0.6, 0, 0, TAU); g.stroke(); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
     if (frozen) { g.fillStyle = 'rgba(170,230,255,0.38)'; g.beginPath(); g.ellipse(X, Y - Pk.h * k * 0.45, z.r * 1.2 * s, Pk.h * k * 0.55, 0, 0, TAU); g.fill(); }
     const top = Y - Pk.h * k - 8 * s;
-    if (Zd.aura && window.TZR) { const D = TZR.DEBUFFS[Zd.debuff]; if (D) { g.font = `${Math.round(16 * s)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(D.icon, X, top - 8 * s); } }
+    if (Zd.aura && window.TZR) { const D = TZR.DEBUFFS[Zd.debuff]; if (D) { const iy = top - 10 * s, ir = 11 * s; g.fillStyle = 'rgba(15,10,6,0.72)'; g.beginPath(); g.arc(X, iy, ir, 0, TAU); g.fill(); g.lineWidth = Math.max(1.5, 2 * s); g.strokeStyle = Zd.aura; g.stroke(); g.font = `${Math.round(15 * s)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(D.icon, X, iy + s); } } // (a chip in its colour: the debuff it gives, at a glance)
     if (z.carry && window.TZR) { const T = TZR.TIMED[z.carry]; if (T) { g.strokeStyle = T.color; g.lineWidth = 2.5 * s; g.globalAlpha = 0.7 + 0.3 * Math.sin(t * 10); g.beginPath(); g.ellipse(X, Y, z.r * 1.4 * s, z.r * 0.7 * s, 0, 0, TAU); g.stroke(); g.globalAlpha = 1; g.font = `${Math.round(18 * s)}px sans-serif`; g.textAlign = 'center'; g.fillText(T.icon, X + 18 * s, top); } }
     if (z.rageT > 0) { g.fillStyle = 'rgba(255,40,30,0.28)'; g.beginPath(); g.ellipse(X, Y - Pk.h * k * 0.45, z.r * 1.3 * s, Pk.h * k * 0.55, 0, 0, TAU); g.fill(); }
     if (z.burnT > 0) fx(g, 'fx.fire', Math.floor(t * 12 + z.id), X, Y - Pk.h * k * 0.6, 0.35 * (boss ? 1.6 : 1), { add: true, alpha: 0.85 });

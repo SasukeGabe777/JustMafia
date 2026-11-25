@@ -259,6 +259,7 @@
     else if (kind === 'wave') { buzz([60, 40, 60]); if (PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map') setOverlay(''); }
     else if (kind === 'tick') { buzz(15); }
     else if (kind === 'rideend') { buzz([80, 40, 80]); }
+    else if (kind === 'board') { if (window.TZFP && TZFP.ready && TZFP.warm && PH.gl && PH.sim && PH.sim.fpRide) setTimeout(() => { try { TZFP.warm(PH.sim, PH.gl); } catch (e) { /* built on first use */ } }, 30); }
     else if (kind === 'find') { const F = window.TZS.FINDS[d.id]; if (ctx) ctx.haptic('win'); showCard(`<span class="tz-rc-i">${F.icon}</span><div><small>${F.kind === 'key' ? 'IN THE CHEST: A KEY PIECE' : 'IN THE CHEST'}</small><b>${esc(F.name)}</b><p>${esc(F.desc)}</p></div>`, 'find'); }
     else if (kind === 'final') { buzz([200, 80, 200, 80, 400]); }
     else if (kind === 'combo') { if (ctx) { ctx.haptic('win'); ctx.toast(d.timed ? `💥 ${d.name}!` : '🧪 New combo! It’s in your combo book (pause menu).'); } }
@@ -343,8 +344,8 @@
       try { frame(dt); } catch (e) { if (!PH.frameErr) { PH.frameErr = 1; console.error('[JustZombies frame]', e); setTimeout(() => { throw e; }); } }
       const work = performance.now() - t0;
       PH.frames.push(dt * 1000); PH.work.push(work); if (PH.frames.length > 240) { PH.frames.shift(); PH.work.shift(); }
-      // keep it smooth: drop the resolution if frames get slow
-      if (PH.frames.length >= 120) { const avg = PH.work.slice(-120).reduce((a, b) => a + b, 0) / 120; if (avg > 11 && PH.gfxPref === 'auto' && PH.gfxAuto === 'high') { PH.gfxAuto = 'low'; PH.frames.length = 0; PH.work.length = 0; } else if (avg > 14 && PH.quality > 0.7) { PH.quality = 0.7; PH.frames.length = 0; PH.work.length = 0; } }
+      // keep it smooth: drop the resolution if frames get slow (the slowest 8 of 120 left out: one-off hitches, like building a 3D block, don't count)
+      if (PH.frames.length >= 120) { const avg = PH.work.slice(-120).sort((a, b) => a - b).slice(0, 112).reduce((a, b) => a + b, 0) / 112; if (avg > 11 && PH.gfxPref === 'auto' && PH.gfxAuto === 'high') { PH.gfxAuto = 'low'; PH.frames.length = 0; PH.work.length = 0; } else if (avg > 14 && PH.quality > 0.7) { PH.quality = 0.7; PH.frames.length = 0; PH.work.length = 0; } }
       PH.raf = requestAnimationFrame(step);
     };
     PH.raf = requestAnimationFrame(step);
@@ -541,7 +542,7 @@
     // the banner
     // the big banner (AREA CLEAR!, a new weapon, a combo...): below the top HUD rows, on a dark backing so both stay readable
     if (sim.banner) {
-      const a = Math.min(1, sim.banner.t * 2), T0 = small ? 24 : 40, T2 = small ? 12 : 17, by2 = Math.max(h * 0.24, (small ? 102 : 128) + T0 / 2);
+      const a = Math.min(1, sim.banner.t * 2), T0 = small ? 24 : 40, T2 = small ? 12 : 17, by2 = Math.max(h * 0.24, (small ? 118 : 140) + T0 / 2);
       g.font = font(T0); const T1 = Math.max(16, T0 * Math.min(1, (w - 50) / Math.max(1, g.measureText(sim.banner.text).width))); g.font = font(T1); const w1 = g.measureText(sim.banner.text).width; g.font = font(T2); const w2 = sim.banner.sub ? g.measureText(sim.banner.sub).width : 0;
       const bw = Math.min(w - 20, Math.max(w1, w2) + 36), bh = T1 + (sim.banner.sub ? T2 + 14 : 0) + 16;
       g.globalAlpha = a * 0.72; g.fillStyle = 'rgba(15,10,6,0.85)'; roundRect(g, (w - bw) / 2, by2 - T1 / 2 - 8, bw, bh, 14); g.fill();
