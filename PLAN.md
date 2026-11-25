@@ -2074,3 +2074,55 @@ TrashZombies is now **JustZombies** (internal key stays `trash`, no file renames
   then the JUSTZOMBIES card; plays by itself; the old drawn garage scene is the fallback if the art can't
   load.
 - Validation: see the numbers below (tests, frame times, screenshots).
+
+## JustZombies landing pass: cartoon characters, shots on the body, guns in hand (claude/justzombies2, November 25, 2026)
+
+- **Fixes found while verifying:** the HUD threw during the break countdown (st/gate used before they were
+  declared), which froze the frame loop on every break; the loop now also survives a drawing error (logged
+  once, re-thrown async so tests still see it).
+- **Cartoon characters (owner's ask):** `tools/trash-art-render/iso.js` gained `spec.toon`: MeshToonMaterial with a
+  3-step ramp, colours (and textures) pushed brighter and more saturated, an inverted-hull ink line (each
+  thickness its own shader: three.js otherwise reuses the first hull's program) on top of a bold 2-3 px silhouette
+  outline, head bones x1.22 (survivors/NPCs x1.15), hand bones x1.3, cartoon blood under the death clips. Each type
+  gets a clear skin colour (`toon.hue` repaints the skin hues): the 8 debuff zombies read at a glance (Inkspitter
+  violet, Webber white, Gunk Jammer steel blue, Sludger lime, Squinter yellow, Spinner hot pink, Leech crimson,
+  Stomper teal), Bloater mustard, Gas-Bag orange, Brute red; bosses too (Dumpster Brute green, Toxic Tub lime,
+  final boss red). Zombies, 8 bosses, survivors and NPCs re-rendered (same cells; zombies dropped the never-shown
+  idle row; WebP quality 0.64/0.62; sprites 28 MB -> 32 MB). `restage.js` copies re-rendered atlases in and
+  refreshes their manifest rows. In game the fx atlas' blood/goo splats and spurts are redrawn flat, bright and
+  chunky with an ink edge, and every kill adds a white poof + stars.
+- **Camera:** the owner asked for a little more world: `ZOOM_OUT = 1.08` (8% further out each way than the old
+  top-down view; never closer), still centred on the hero with no look-ahead. Not the first-person rides.
+- **Shots land on the drawn body:** the sim still had the old 3/4 view's body offsets (bullets left from y - 26,
+  aimed and hit at z.y - z.r), which in the iso projection sit up-right of the zombie. Aim, shots, hits, turrets,
+  drones, orbits, zaps and spit now use ground spots. Tracers are drawn at chest height (SHOT_H = 36 = the gun
+  hand), start at the barrel tip and blend onto their true line, and ease to the chest of the zombie just ahead;
+  hit spurts land where the shot met the body, at its chest. Bodies (height, chest width) are measured from the
+  art when it is packed; a sprite narrower than its collision ring is drawn up to 15% bigger (bosses 50%).
+  `TZ_DEBUG.hitbox(true)` draws each body box, its ring at chest height and the hit point; `TZ_DEBUG.hitCheck()`
+  projects 8 hit points per zombie and checks they fall in the body box (e2e-box asserts it).
+- **Zombies in the scene:** walk/run cycles advance with distance covered (feet don't slide), standing still holds
+  the frame; baked ground shadows; the night darkness and flashlight light them like everything else.
+- **Guns in hand:** the hero holds the strongest ranged weapon (or the timed super weapon; the pistol otherwise),
+  the side view picked from the spin sheet (widest frame; the grip end tells which way the muzzle points), sized per
+  gun, gripped at the hand at chest height, never upside down, behind you when aiming up; two-handed guns (shotgun,
+  rail, rifle, launcher, minigun, rockets, crossbow, flamer, blower, coil) get the front hand on the fore-grip.
+  Recoil kick, the muzzle flash at the barrel tip, shell casings, tracers from the tip. The held weapon's little
+  orbit icon is hidden (it's in your hands).
+- **HUD on small phones:** the break countdown is a ring in the second row with NEXT WAVE IN beside it (HORDE IN in
+  the build phase), so nothing stacks on the key/map/kills line; the big banners sit below the HUD rows on a dark
+  backing and shrink to fit.
+- **First person:** zombie billboards use alphaTest 0.5 (clean cut-outs, no baked-shadow boxes); zombies right at the
+  bumper (< 80 units) aren't drawn, so no blurry giant on the glass.
+- **Boarding:** the ride you're climbing into is drawn under you, so the 1 s walk-up reads as climbing on.
+- **Feel:** hit-stop in solo (a few frames on a heavy or boss kill, a blink on a crit); knockback as before. Bosses
+  stand in a ring of their own colour that flares while they wind up an attack. Debuff zombies carry their debuff
+  icon on a chip in their colour.
+- **First person, smoother:** the 3D block is built and compiled while you walk up to a ride (TZFP.warm: the scene,
+  the glow shader, the fx atlas and the zombie sheets go up to the GPU then), the fx sprites share one texture (each
+  used to upload the whole atlas on first use: a 0.3 s hitch on the first tank shell), and Auto graphics ignores the
+  slowest 8 of 120 frames so a one-off hitch doesn't drop the whole run to Low.
+- Validation: test-box-trash (80, new: ground-spot shots), test-box-kit, test-box, test-box-party, e2e-box (new:
+  every hit point lands on the drawn body). Frame work on a headless 844x390 phone (dpr 2, desktop CPU, High):
+  ~95 zombies at night in the rain with a boss 4.1 ms avg (p95 6.2), first-person ride 2.7 ms (p95 4.8), tank
+  1.4-3.2 ms (p95 3-5.8); the first 3D frame ever ~80 ms during the walk-up.
