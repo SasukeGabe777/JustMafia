@@ -130,6 +130,7 @@
       if (have) { if (have.lv < R().MAX_LV) { have.lv++; this.popup(R().wname(id, have.tier) + ' Lv ' + have.lv, '#7fd6ff', this.p.x, this.p.y - 110); } else this.cash += 25; return 'level'; } // a duplicate: +1 level
       if (this.weapons.length >= R().SLOTS) { this.cash += 25; this.popup('SLOTS FULL: +$25', '#ffd23f', this.p.x, this.p.y - 110); return 'cash'; }
       this.weapons.push({ id, lv: 1, tier: 1, cd: 0.4, a: 0, swing: 0 });
+      if (!quiet) { const at = this._grabAt; this._grab = { kind: 'weapon', k: id, at: this.t, x: at ? at.x : null, y: at ? at.y : null }; this._grabAt = null; } // (the hero crouches and grabs it: trash-hero.js)
       if (!quiet) { this.banner = { text: R().WEAPONS[id].icon + ' ' + R().wname(id, 1).toUpperCase(), sub: 'It fires by itself, next to your pistol', t: 2.2 }; this.o.report({ op: 'ev', k: 'weapon', id }); }
       this.o.on('weapon', { id }); this.comboCheck(); return true;
     },
@@ -280,7 +281,7 @@
       this.debuffStep(dt, I); this.timedStep(dt); this.weaponsStep(dt); this.zombieExtra(dt); this.eventStep(dt);
       if (this.truck && this.truck.t > 0) { this.truck.t -= dt; if (this.truck.t <= 0 && this.shopping) this.shopping = false; }
       // drops: weapons and crucible cores
-      for (let i = this.drops.length - 1; i >= 0; i--) { const q = this.drops[i]; q.t += dt; if (d2(q.x, q.y, this.p.x, this.p.y - 20) < 60 * 60) { this.drops.splice(i, 1); if (q.k === 'core') { this.cores++; this.popup('CRUCIBLE CORE!', '#ff6a2a', q.x, q.y - 60); this.o.on('core', {}); } else { const id = this.randomWeapon(); this.addWeapon(id); } } else if (q.t > 45) this.drops.splice(i, 1); }
+      for (let i = this.drops.length - 1; i >= 0; i--) { const q = this.drops[i]; q.t += dt; if (d2(q.x, q.y, this.p.x, this.p.y - 20) < 60 * 60) { this.drops.splice(i, 1); if (q.k === 'core') { this.cores++; this.popup('CRUCIBLE CORE!', '#ff6a2a', q.x, q.y - 60); this.o.on('core', {}); this._grab = { kind: 'small', k: 'core', at: this.t }; } else { const id = this.randomWeapon(); this._grabAt = { x: q.x, y: q.y }; this.addWeapon(id); } } else if (q.t > 45) this.drops.splice(i, 1); }
       // the raccoon fetches cash when there's nothing to bite
       if (this.raccoon && this.S.raccoon && this.coins.length && !this.nearestZ(this.raccoon.x, this.raccoon.y, 300)) { const c = this.coins[0], Rc = this.raccoon, d = Math.hypot(c.x - Rc.x, c.y - Rc.y); if (d < 20) { this.coins.shift(); this.cash += c.v; } else { Rc.x += ((c.x - Rc.x) / d) * 420 * dt; Rc.y += ((c.y - Rc.y) / d) * 420 * dt; Rc.face = c.x > Rc.x ? 1 : -1; Rc.moving = true; } }
       // flying turrets (combo) follow you
@@ -359,8 +360,10 @@
       if (!this._fi) return; const P = this.p;
       this.weapons.forEach((w, i) => {
         const Wd = R().WEAPONS[w.id], ang = w.a || 0, n = this.weapons.length, sa = Math.PI * (1.15 + (n > 1 ? (i / (n - 1)) * 0.7 : 0.35)), ox = P.x + Math.cos(sa) * 46, oy = P.y - 50 + Math.sin(sa) * 30 + Math.sin(t * 3 + i) * 3;
+        if ((Wd.kind === 'swing' || Wd.kind === 'saw') && this._meleeHand === w.id && this._iso) return; // (in your free hand)
         if (Wd.kind === 'swing' || Wd.kind === 'saw') { g.save(); g.translate(P.x, P.y - 30); g.rotate(ang + (w.swing ? (1 - w.swing) * 2.4 - 1.2 : 0)); g.fillStyle = 'rgba(0,0,0,0.4)'; g.fillRect(12, -2, Wd.range * 0.7, 8); g.fillStyle = w.tier >= 3 ? '#e0b030' : Wd.color; g.fillRect(10, -4, Wd.range * 0.7, 7); g.fillStyle = '#c9ccd1'; for (let k = 0; k < 4; k++) g.fillRect(20 + k * 12, -6, 3, 3); g.restore(); return; }
         if (w.id === this._heldW) return; // (the one in your hands is drawn there)
+        if (this._iso) return; // (the iso view: no little guns floating around you; a bat / saw is swung in your free hand, trash-hero.js)
         g.save(); g.translate(ox, oy); if (Math.abs(ang) > Math.PI / 2) { g.rotate(ang); g.scale(0.55, -0.55); } else { g.rotate(ang); g.scale(0.55, 0.55); } drawWeaponIcon(g, w.id, w.tier); g.restore();
       });
       if (this.buffs.truck > 0 && !this.ride) { const A = window.TZA; g.save(); g.globalAlpha = 0.95; A.car(g, P.x - 90, P.y - 70, 180, 90, '#3d8a4a', false, { flip: P.face < 0 ? 1 : 0, r: W.rng(5) }); g.restore(); }

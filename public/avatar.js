@@ -503,7 +503,7 @@
     // arms (sleeves + hands); a game prop (o.wear 'hand') sits in the right hand
     const armC = OF.arm ? '#b4bec9' : OF.sleeve ? OF.sleeve : outfit === 'jester' ? '#e0b24a' : cloth;
     const as = walking ? Math.sin(t * 11) * 0.25 : 0, aw = fem ? 5.8 : 7.4;
-    for (const s of [-1, 1]) {
+    if (!o.noArms) for (const s of [-1, 1]) { // (o.noArms: a game draws the arms itself, e.g. holding a gun; drawn nowhere else)
       const rig = o.arms ? (s < 0 ? o.arms.l : o.arms.r) || 0 : null;
       g.save(); g.translate(s * (SW - 0.6), -28.5); g.rotate(rig != null ? rig + s * 0.1 : s * (fem ? 0.12 : 0.2) + (s < 0 ? as : -as));
       rr(-aw / 2, -1, aw, 13.5, aw / 2); done(lin(s < 0 && outfit === 'jester' ? '#83517f' : armC, -1, 13));
@@ -933,7 +933,14 @@
   }
   // The moods a player can pick (MT_OPTIONS.expression); 'scared' and 'dead' are animation states.
   const EXPRESSIONS = ['smile', 'grin', 'neutral', 'serious', 'surprised', 'sad', 'angry', 'wink', 'sleepy', 'smirk'];
-  root.MTArt = { drawCharacter: drawSmooth, drawSmooth, bodyOf, drawClassic, drawGhost, costumeGhost, drawShadowFigure, drawHat, roundRect, shade, EXPRESSIONS };
+  // What a game needs to draw the arms itself (with o.noArms): sleeve colour, skin, arm width, shoulder half-width
+  // and the shoulder height (character units, feet at 0; add the walk bob).
+  function armLook(av) {
+    av = av || {}; const EVA = root.MT_EVENT_ART || null, color = isHex(av.color) ? av.color : '#3498db';
+    const outfit = OUTFITS[av.outfit] || (EVA && EVA.OUTFITS[av.outfit]) ? av.outfit : 'shirt', OF = OUTFITS[outfit] || EVA.OUTFITS[outfit], cloth = OF.c || color, fem = bodyOf(av) === 'female';
+    return { sleeve: OF.arm ? '#b4bec9' : OF.sleeve ? OF.sleeve : outfit === 'jester' ? '#e0b24a' : cloth, skin: isHex(av.skin) ? av.skin : SKIN0, w: fem ? 5.8 : 7.4, hand: fem ? 2.7 : 3.1, sw: (fem ? 9.6 : 12.8) - 0.6, y: -28.5, len: 14, ink: OL, fem };
+  }
+  root.MTArt = { drawCharacter: drawSmooth, armLook, drawSmooth, bodyOf, drawClassic, drawGhost, costumeGhost, drawShadowFigure, drawHat, roundRect, shade, EXPRESSIONS };
 })(window);
 // ---------- Pets (docs/justgold.md "Pets") ----------
 // A little animated friend that sits on the character's shoulder (avatar field `pet`, one at a

@@ -110,7 +110,7 @@
       if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.mult = 1; } }
       // coins: pulled in like the XP gems
       const R = this.S.magnet;
-      for (let i = this.coins.length - 1; i >= 0; i--) { const c = this.coins[i]; c.t += dt; const dd = Math.hypot(Pp.x - c.x, Pp.y - 20 - c.y); if (dd < R || this.cleared) { const sp = 320 + (R - Math.min(dd, R)) * 6 + (this.cleared ? 500 : 0); c.x += ((Pp.x - c.x) / (dd || 1)) * sp * dt; c.y += ((Pp.y - 20 - c.y) / (dd || 1)) * sp * dt; } if (dd < 28) { this.coins.splice(i, 1); this.cash += c.v; this.o.on('coin', {}); } else if (c.t > 40) this.coins.splice(i, 1); }
+      for (let i = this.coins.length - 1; i >= 0; i--) { const c = this.coins[i]; c.t += dt; const dd = Math.hypot(Pp.x - c.x, Pp.y - 20 - c.y); if (dd < R || this.cleared) { const sp = 320 + (R - Math.min(dd, R)) * 6 + (this.cleared ? 500 : 0); c.x += ((Pp.x - c.x) / (dd || 1)) * sp * dt; c.y += ((Pp.y - 20 - c.y) / (dd || 1)) * sp * dt; } if (dd < 28) { this.coins.splice(i, 1); this.cash += c.v; this.o.on('coin', {}); if (!this._grab || this.t - this._grab.at > 0.7) this._grab = { kind: 'small', k: 'cash', at: this.t }; } else if (c.t > 40) this.coins.splice(i, 1); }
       // food heals over time
       for (let i = this.heals.length - 1; i >= 0; i--) { const h = this.heals[i], a = Math.min(h.left, h.rate * dt); h.left -= a; Pp.hp = Math.min(this.S.mhp, Pp.hp + a); if (h.left <= 0.01) this.heals.splice(i, 1); }
       // turrets

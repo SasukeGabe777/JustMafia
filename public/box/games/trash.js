@@ -542,12 +542,18 @@
     // the banner
     // the big banner (AREA CLEAR!, a new weapon, a combo...): below the top HUD rows, on a dark backing so both stay readable
     if (sim.banner) {
-      const a = Math.min(1, sim.banner.t * 2), T0 = small ? 24 : 40, T2 = small ? 12 : 17, by2 = Math.max(h * 0.24, (small ? 118 : 140) + T0 / 2);
-      g.font = font(T0); const T1 = Math.max(16, T0 * Math.min(1, (w - 50) / Math.max(1, g.measureText(sim.banner.text).width))); g.font = font(T1); const w1 = g.measureText(sim.banner.text).width; g.font = font(T2); const w2 = sim.banner.sub ? g.measureText(sim.banner.sub).width : 0;
-      const bw = Math.min(w - 20, Math.max(w1, w2) + 36), bh = T1 + (sim.banner.sub ? T2 + 14 : 0) + 16;
-      g.globalAlpha = a * 0.72; g.fillStyle = 'rgba(15,10,6,0.85)'; roundRect(g, (w - bw) / 2, by2 - T1 / 2 - 8, bw, bh, 14); g.fill();
-      g.globalAlpha = a; txt(sim.banner.text, w / 2, by2, T1, '#ffd23f', 'center'); if (sim.banner.sub) txt(sim.banner.sub, w / 2, by2 + T1 / 2 + T2 / 2 + 8, T2, '#fff', 'center'); g.globalAlpha = 1;
-    }
+      // never over your hero: if the centred banner would cover them, it moves to a side panel (right of the hero)
+      const a = Math.min(1, sim.banner.t * 2), C = sim.cam && sim.cam.s ? sim.cam : null;
+      let T0 = small ? 24 : 40, T2 = small ? 12 : 17, by2 = Math.max(h * 0.24, (small ? 118 : 140) + T0 / 2), cx = w / 2, room = w - 50;
+      const fit = () => { g.font = font(T0); const T1 = Math.max(14, T0 * Math.min(1, room / Math.max(1, g.measureText(sim.banner.text).width))); g.font = font(T2); const T3 = sim.banner.sub ? Math.max(10, T2 * Math.min(1, room / Math.max(1, g.measureText(sim.banner.sub).width))) : T2; g.font = font(T1); const w1 = g.measureText(sim.banner.text).width; g.font = font(T3); const w2 = sim.banner.sub ? g.measureText(sim.banner.sub).width : 0; return { T1, T3, bw: Math.min(room + 30, Math.max(w1, w2) + 36), bh: T1 + (sim.banner.sub ? T3 + 14 : 0) + 16 }; };
+      let B = fit();
+      if (C && !sim.dead) { const [hx, hy] = C.toScreen(P.x, P.y), hs = C.s, top = hy - 118 * hs, bot = hy + 12 * hs, hw = 46 * hs;
+        const over = by2 - B.T1 / 2 - 8 < bot && by2 - B.T1 / 2 - 8 + B.bh > top && cx - B.bw / 2 < hx + hw && cx + B.bw / 2 > hx - hw;
+        if (over) { const x0 = hx + hw + 10; room = Math.max(120, w - x0 - 16 - 30); cx = x0 + (room + 30) / 2; T0 = small ? 20 : 30; T2 = small ? 11 : 14; B = fit(); by2 = Math.max(h * 0.4, (small ? 130 : 150)); sim._bannerSide = true; } else sim._bannerSide = false; }
+      const { T1, T3, bw, bh } = B; sim._bannerBox = [cx - bw / 2, by2 - T1 / 2 - 8, bw, bh];
+      g.globalAlpha = a * 0.72; g.fillStyle = 'rgba(15,10,6,0.85)'; roundRect(g, cx - bw / 2, by2 - T1 / 2 - 8, bw, bh, 14); g.fill();
+      g.globalAlpha = a; txt(sim.banner.text, cx, by2, T1, '#ffd23f', 'center'); if (sim.banner.sub) txt(sim.banner.sub, cx, by2 + T1 / 2 + T3 / 2 + 8, T3, '#fff', 'center'); g.globalAlpha = 1;
+    } else sim._bannerBox = null;
     // control hints
     if (PH.hint > 0 && !PH.fp) { PH.hint -= dt; g.globalAlpha = Math.min(1, PH.hint); txt(isTouch() ? 'Drag anywhere to move · right stick to aim' + (sim.set.aim !== 'off' ? ' (or just move: it auto-aims)' : '') : 'WASD to move · mouse to aim · hold click to shoot · Esc to pause', w / 2, h - 22, small ? 12 : 15, '#ffe9a8', 'center'); g.globalAlpha = 1; }
     // sticks (touch)

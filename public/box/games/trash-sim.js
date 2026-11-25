@@ -309,6 +309,7 @@
       else if (k === 'nuke') { this.flash = -0.6; this.shake = 0.5; if (this.mode === 'guest') this.pend.push({ t: 'fx', kind: 'nuke' }); else this.nuke(); }
       else if (k === 'freeze') { B.freeze = 6; if (this.mode === 'guest') this.pend.push({ t: 'fx', kind: 'freeze' }); }
       else B[k] = Pk.dur;
+      this._grab = { kind: k === 'minigun' || k === 'rockets' || k === 'raygun' ? 'catch' : 'small', k, at: this.t }; // (the hero's catch / grab move: trash-hero.js)
       this.fx.push({ k: 'txt', x: P.x, y: P.y - 80, text: Pk.name + '!', t: 0, life: 1.1, c: Pk.color });
       this.fx.push({ k: 'ring', x: P.x, y: P.y - 20, r: 10, R: 90, t: 0, life: 0.35, c: Pk.color });
       this.o.report({ op: 'ev', k: 'pickup', id: k }); this.o.on('pickup', { k });
@@ -713,8 +714,9 @@
   function weather(seed) { const h = W.hash(seed, 'tod'); return { tod: ['dusk', 'overcast', 'night', 'night', 'dusk'][h % 5], rain: (h >> 4) % 3 === 0, fog: (h >> 7) % 2 === 0 }; }
   const TODS = { night: { dark: 0.76, tint: 'rgba(30,50,110,0.16)', col: '4,6,16' }, dusk: { dark: 0.3, tint: 'rgba(255,120,50,0.13)', col: '40,14,30' }, overcast: { dark: 0.16, tint: 'rgba(90,105,125,0.1)', col: '20,24,32' } };
   function heroDraw(g, who, x, y, o) {
-    const k = o.k, F = A().heroFrames(who, k), fr = o.dead ? F.dead : o.hurt ? F.hurt : o.moving ? F['w' + (Math.floor((o.walkT || 0) * 14) % 8)] : F.idle;
-    g.save(); g.translate(x, y); if (o.face < 0) g.scale(-1, 1);
+    const k = o.k, F = A().heroFrames(who, k, o.noArms), fr = o.dead ? F.dead : o.hurt ? F.hurt : o.moving ? F['w' + (Math.floor((o.walkT || 0) * 14) % 8)] : F.idle;
+    // o.dx / o.dy: a nudge (recoil, a crouch), o.lean: a tilt from the feet (radians), o.sq: a squash (crouch: 0.85)
+    g.save(); g.translate(x + (o.dx || 0), y + (o.dy || 0)); if (o.lean) g.rotate(o.lean); if (o.face < 0) g.scale(-1, 1); if (o.sq) g.scale(1 + (1 - o.sq) * 0.4, o.sq);
     if (o.alpha != null) g.globalAlpha = o.alpha;
     g.drawImage(fr, -fr.ox / 1, -fr.oy / 1, fr.width / k, fr.height / k);
     g.restore();

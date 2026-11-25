@@ -14,7 +14,8 @@
 //   BOX.faceUrl / BOX.bodyUrl(who, size, opts) -> cached data-URL PNG, '' without a look
 //   BOX.drawChar(ctx, x, y, who, o) -> draws the animated character on a canvas, feet at (x, y)
 //                                      (o: the MTArt.drawCharacter options: scale, t, walking,
-//                                      facing, jump, expression…). false when there is no look.
+//                                      facing, jump, expression…; noArms: skip the arms). false when there is no look.
+//   BOX.armLook(who) -> { sleeve, skin, w, hand, sw, y, len, ink } to draw those arms yourself (or null)
 //   BOX.lookOf(who) -> { look, gear } or null;  BOX.hasLook(who)
 //   opts / o: game (default: the game on screen), mood (an expression: 'grin', 'sad'…),
 //             plain (no game wearables), fill (img fills its parent), cls (extra classes),
@@ -159,6 +160,9 @@
     window.MTArt.drawCharacter(ctx, x, y, look, { t: 0, ...o, wear: o.wear || wearFor(r, o) });
     return true;
   };
+
+  // The arms of a character drawn with o.noArms (a game draws its own, e.g. holding a gun): MTArt.armLook of the look.
+  root.armLook = function (who) { const r = resolve(who); return r && r.look && window.MTArt && window.MTArt.armLook ? window.MTArt.armLook(r.look) : null; };
 
   // The older API, kept for the lobby roster, party board and phone header.
   function url(look, size = 96) { return hasLookObj(look) ? picture(look, [], 'face', clampSize(size, 96), {}) : ''; }

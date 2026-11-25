@@ -352,8 +352,8 @@
   // The gun in your hands: a timed super weapon, else your strongest ranged weapon, else the pistol.
   // g = where the back hand grips (0 = the stock end, 1 = the muzzle), f = the front hand (two-handed guns),
   // y = the barrel line (0 = top of the art, 1 = bottom), k = size.
-  const GUNS = { 'weapon.pistol': { g: 0.3, y: 0.4, k: 1.1 }, 'pickup.raygun': { g: 0.3, y: 0.4, k: 1.05 }, 'weapon.nailgun': { g: 0.3, y: 0.42, k: 1 },
-    'weapon.smg': { g: 0.32, f: 0.62, y: 0.38, k: 1 }, 'weapon.shotgun': { g: 0.26, f: 0.6, y: 0.38, k: 0.95 }, 'weapon.rail': { g: 0.24, f: 0.58, y: 0.38, k: 0.9 },
+  const GUNS = { 'weapon.pistol': { g: 0.3, y: 0.4, k: 0.82 }, 'pickup.raygun': { g: 0.3, y: 0.4, k: 0.85 }, 'weapon.nailgun': { g: 0.3, y: 0.42, k: 0.85 },
+    'weapon.smg': { g: 0.32, f: 0.62, y: 0.38, k: 0.85 }, 'weapon.shotgun': { g: 0.26, f: 0.6, y: 0.38, k: 0.95 }, 'weapon.rail': { g: 0.24, f: 0.58, y: 0.38, k: 0.9 },
     'weapon.rifle': { g: 0.3, f: 0.62, y: 0.38, k: 0.95 }, 'weapon.launcher': { g: 0.3, f: 0.62, y: 0.42, k: 0.95 }, 'pickup.minigun': { g: 0.34, f: 0.6, y: 0.45, k: 1 },
     'pickup.rockets': { g: 0.34, f: 0.62, y: 0.42, k: 0.9 }, 'weapon.crossbow': { g: 0.24, f: 0.56, y: 0.45, k: 0.95 }, 'weapon.flamer': { g: 0.3, f: 0.62, y: 0.42, k: 0.95 },
     'weapon.blower': { g: 0.3, f: 0.6, y: 0.45, k: 0.95 }, 'weapon.coil': { g: 0.3, f: 0.6, y: 0.42, k: 0.95 } };
@@ -648,11 +648,14 @@
       if (sim.drawUnderYou) sim.drawUnderYou(g, t);
       setBill(g, P.x, P.y, 0, HB);
       g.strokeStyle = sim.me.color || '#ffd23f'; g.lineWidth = 2.5; g.globalAlpha = 0.55; g.beginPath(); g.ellipse(P.x, P.y, 26, 11, 0, 0, TAU); g.stroke(); g.globalAlpha = 1;
-      const up = Math.sin(aS) < -0.35, showGun = sim.phase !== 'intro' || sim.introT > 2.9;
-      if (up && showGun) gunIso(g, sim, P, aS, face);
-      setBill(g, P.x, P.y, 0, HB);
-      TS.heroDraw(g, sim.me, P.x, P.y, { k: kp, moving: P.moving || (sim.phase === 'intro' && sim.introT > 2.9), walkT: P.walkT, face, hurt: P.inv > 0.4, alpha: blink ? 0.5 : 1 });
-      if (!up && showGun) gunIso(g, sim, P, aS, face);
+      const up = Math.sin(aS) < -0.35, showGun = sim.phase !== 'intro' || sim.introT > 2.9, moving = P.moving || (sim.phase === 'intro' && sim.introT > 2.9);
+      if (showGun && window.TZH && heroArms(g, sim, P, aS, face, X, Y, kp, moving, blink ? 0.5 : 1, t)) { /* body, arms and gun drawn */ }
+      else {
+        if (up && showGun) gunIso(g, sim, P, aS, face);
+        setBill(g, P.x, P.y, 0, HB);
+        TS.heroDraw(g, sim.me, P.x, P.y, { k: kp, moving, walkT: P.walkT, face, hurt: P.inv > 0.4, alpha: blink ? 0.5 : 1 });
+        if (!up && showGun) gunIso(g, sim, P, aS, face);
+      }
       setBill(g, P.x, P.y, 0, HB);
       if (P.armor > 0) { const ay = P.y - 96; g.fillStyle = '#9aa2aa'; g.strokeStyle = 'rgba(0,0,0,0.6)'; g.lineWidth = 2; g.beginPath(); g.ellipse(P.x, ay, 20, 7, 0, 0, TAU); g.fill(); g.stroke(); g.fillStyle = '#6a737c'; g.fillRect(P.x - 6, ay - 7, 12, 5); }
       if (sim.buffs.shield > 0) fx(g, 'fx.shield.ring', Math.floor(t * 10), X, Y - 40 * s, 0.95, { alpha: 0.75 });
@@ -660,6 +663,66 @@
       if (sim.buffs.kicks > 0 && P.moving) for (let i = 0; i < 2; i++) sim.particle(P.x - P.vx * 0.04 + (Math.random() - 0.5) * 10, P.y - 4, -P.vx * 0.2, -20, '#7dff6a', 0.25, 4);
       if (sim.drawOnYou) sim.drawOnYou(g, t);
     } finally { P.face = F0; }
+  }
+  // ---- your hero holding the gun (trash-hero.js: arms, recoil, the pick-up / swap moves) ----
+  let ARMS = null;
+  function armLookOf(sim) {
+    const id = sim.me && sim.me.id; if (ARMS && ARMS.id === id) return ARMS.L;
+    let L = null; try { L = window.BOX && BOX.armLook && sim.me ? BOX.armLook({ id, name: sim.me.name, bot: true }) : null; } catch (e) { L = null; }
+    if (!L) L = { sleeve: (sim.me && sim.me.color) || '#3498db', skin: skinOf(sim), w: 7.4, hand: 3.1, sw: 12.2, y: -28.5, len: 14, ink: '#2b1f3d' };
+    ARMS = { id, L }; return L;
+  }
+  const GUN_K = 1.3; // the held gun's size (art px per art px at the scene scale): clearly a gun in your hands
+  function gunInfo(key) {
+    const Pk = need(key); if (!Pk || !Pk.anims.spin) return null;
+    if (!Pk._side) { const L0 = Pk.anims.spin.rows.S; let bi = 0; L0.forEach((q, i) => { if (q.w / q.h > L0[bi].w / L0[bi].h + 0.02) bi = i; }); const q = L0[bi]; Pk._side = { fr: q, ml: q.lx == null ? true : q.lx > q.w / 2 }; }
+    const G = GUNS[key] || GUNS['weapon.pistol'], sc = C.s * GUN_K * Pk.sc * G.k, fr = Pk._side.fr;
+    return { Pk, fr, ml: Pk._side.ml, G, sc, Lg: fr.w * sc, Hg: fr.h * sc };
+  }
+  // the gun with its grip at (hx, hy), turned to ang (never upside down); returns the barrel tip
+  function gunAt(g, I, hx, hy, ang, alpha) {
+    const D = C.dpr, c = Math.cos(ang), sn = Math.sin(ang), fy = c < 0 ? -1 : 1, gx = I.Lg * (1 - I.G.g), my = I.Hg * I.G.y;
+    if (I.ml) g.setTransform(-c * D, -sn * D, -sn * fy * D, c * fy * D, (hx + gx * c + my * sn * fy) * D, (hy + gx * sn - my * c * fy) * D);
+    else { const gp = I.Lg - gx; g.setTransform(c * D, sn * D, -sn * fy * D, c * fy * D, (hx - gp * c + my * sn * fy) * D, (hy - gp * sn - my * c * fy) * D); }
+    if (alpha != null) g.globalAlpha = alpha;
+    g.drawImage(I.fr.c, I.fr.px, I.fr.py, I.fr.pw, I.fr.ph, 0, 0, I.Lg, I.Hg); g.globalAlpha = 1;
+    return [hx + c * gx, hy + sn * gx];
+  }
+  const FLASH = { cash: '#ffd23f', snack: '#7dff6a', armor: '#c9ccd1', shield: '#7fd6ff', freeze: '#bfefff', xp2: '#5affc8', kicks: '#7dff6a', nuke: '#ff8c42' };
+  function heroArms(g, sim, P, aS, face, X, Y, kp, moving, alpha, t) {
+    const H = window.TZH, TS = window.TZSim, s = C.s, key = GUN(sim), I = gunInfo(key); if (!I) return false;
+    const AL = armLookOf(sim), dt = Math.min(0.1, Math.max(0, t - (sim._heroT == null ? t : sim._heroT))); sim._heroT = t;
+    const E = sim._eq = H.equipStep(sim._eq, key, sim._grab, t, dt);
+    const fi = Math.floor((P.walkT || 0) * 14) % 8, bob = moving ? Math.abs(Math.sin((fi / 8) * TAU)) * 2.5 : 0.43;
+    const firing = sim.muzzle > 0 || (P.kick || 0) > 0.25, mini = sim.buffs.minigun > 0;
+    sim._spin = clamp((sim._spin || 0) + (mini && firing ? dt * 2.5 : -dt * 1.5), 0, 1);
+    let melee = null;
+    if (sim.weapons) { const w = sim.weapons.find((q) => q.id === 'bat' || q.id === 'saw'); if (w) melee = { id: w.id, tier: w.tier, a: screenAngle(w.a || P.aim), swing: w.swing || 0 }; }
+    sim._meleeHand = melee ? melee.id : null;
+    const Q = H.pose({ X, Y, s, face, aS, key, kick: P.kick || 0, bob, moving, walkT: P.walkT || 0, t, firing, mini: sim._spin, AL, E, gunLen: I.Lg, gg: I.G.g, gf: I.G.f, melee });
+    sim._pose = Q; // (tests / debug)
+    const K = Q.K, J = Q.gunKey === key ? I : gunInfo(Q.gunKey) || I;
+    const drawGunArms = () => {
+      setScreen(g);
+      const Sg = Q.one ? Q.SF : Q.SB, Hg = H.arm(g, Sg, Q.G, AL, K); let Hf = null;
+      if (Q.F) Hf = H.arm(g, Q.SF, Q.F, AL, K);
+      if (Q.item && Q.item.k > 0.02) { // the item flying into your hands
+        const a = Q.ang + Q.item.spin * (face > 0 ? -1 : 1); gunAt(g, J, Q.item.x, Q.item.y, a); sim._gunTip = null;
+      } else sim._gunTip = [...gunAt(g, J, Hg[0], Hg[1], Q.ang), Q.ang];
+      setScreen(g); H.hand(g, Hg, AL, K); if (Hf) H.hand(g, Hf, AL, K);
+    };
+    const drawFree = () => {
+      if (!Q.free) { if (Q.swing && Q.swing.at && melee) { setScreen(g); H.melee(g, melee.id, Q.swing.at, Q.swing.a, Q.swing.u, K, melee.tier, t); } return; } setScreen(g);
+      const Hh = H.arm(g, Q.SB, Q.free, AL, K);
+      if (Q.swing && melee) H.melee(g, melee.id, Hh, Q.swing.a, Q.swing.u, K, melee.tier, t);
+      setScreen(g); H.hand(g, Hh, AL, K);
+    };
+    const drawBody = () => { setBill(g, P.x, P.y, 0, HB); TS.heroDraw(g, sim.me, P.x, P.y, { k: kp, moving, walkT: P.walkT, face, hurt: P.inv > 0.4, alpha, noArms: true, dx: Q.body.dx / s, dy: Q.body.dy / s, lean: Q.body.lean, sq: Q.body.sq }); };
+    if (Q.behind) { drawGunArms(); drawBody(); drawFree(); } else { drawBody(); drawGunArms(); drawFree(); }
+    // a quick grab: a flash at the hand
+    if (Q.flash) { setScreen(g); const col = FLASH[Q.flash.k] || '#ffd23f', u = Q.flash.u; g.globalCompositeOperation = 'lighter'; g.globalAlpha = (1 - u) * 0.9; g.strokeStyle = col; g.lineWidth = 3 * s; g.beginPath(); g.arc(Q.flash.x, Q.flash.y, (4 + u * 16) * s, 0, TAU); g.stroke(); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; fx(g, 'fx.star', Math.floor(u * fxLen('fx.star')), Q.flash.x, Q.flash.y - 4 * s, 0.45, { add: true, alpha: 1 - u }); }
+    if (Q.item && Q.item.k > 0.02 && E.kind === 'catch') { setScreen(g); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.5 * Q.item.k; g.fillStyle = '#fff1b0'; g.beginPath(); g.arc(Q.item.x, Q.item.y, 18 * s, 0, TAU); g.fill(); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+    return true;
   }
   // The gun held in your hand(s) at chest height, turned to the on-screen aim (never upside down), with a
   // recoil kick; two-handed guns get the front hand on the fore-grip. Sets sim._gunTip (the barrel tip:

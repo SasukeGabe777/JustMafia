@@ -506,16 +506,17 @@
   // ---------------- the hero: your own character, pre-rendered ----------------
   // frames: 'idle', 'w0'..'w7' (walking), 'hurt', 'dead'; each facing right (flip for left).
   const hcache = new Map();
-  function heroFrames(who, k) {
+  // noArms: drawn without arms (the game draws them holding the gun: trash-iso.js)
+  function heroFrames(who, k, noArms) {
     const id = (who && who.id) || 'anon';
     let sig = ''; try { const L = window.BOX && BOX.lookOf ? BOX.lookOf({ id, name: who.name, bot: true }) : null; sig = L ? JSON.stringify(L) : ''; } catch (e) { sig = ''; }
-    const key = id + ':' + k.toFixed(2) + ':' + sig;
+    const key = id + ':' + k.toFixed(2) + ':' + sig + (noArms ? ':na' : '');
     if (hcache.has(key)) return hcache.get(key);
     const make = (o) => {
       const c = document.createElement('canvas'), sc = 1.15; c.width = Math.ceil(110 * k); c.height = Math.ceil(120 * k);
       const g = c.getContext('2d'); g.scale(k, k);
       let ok = false;
-      try { ok = !!(window.BOX && BOX.drawChar && BOX.drawChar(g, 55, 104, { id, name: who.name, avatar: who.avatar, color: who.color, bot: true }, { scale: sc, t: 0, facing: 0.75, noShadow: true, game: 'trash', ...o })); } catch (e) { ok = false; }
+      try { ok = !!(window.BOX && BOX.drawChar && BOX.drawChar(g, 55, 104, { id, name: who.name, avatar: who.avatar, color: who.color, bot: true }, { scale: sc, t: 0, facing: 0.75, noShadow: true, game: 'trash', noArms: !!noArms, ...o })); } catch (e) { ok = false; }
       if (!ok) { g.fillStyle = who.color || '#ffd23f'; circ(g, 55, 60, 26); g.fill(); g.font = '40px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(who.avatar || '🙂', 55, 60); }
       // grade the character into the scene: a touch darker and cooler, light from the top-left
       g.globalCompositeOperation = 'source-atop'; g.fillStyle = lin(g, 20, 20, 100, 110, [[0, 'rgba(255,240,210,0.06)'], [0.55, 'rgba(0,0,0,0)'], [1, 'rgba(10,12,20,0.32)']]); g.fillRect(0, 0, 110, 120); g.globalCompositeOperation = 'source-over';
@@ -523,7 +524,7 @@
     };
     const F = { idle: make({ walking: false, t: 0.3 }), hurt: make({ scared: true, t: 0.3 }), dead: make({ dead: true, t: 0.3, lean: 1.2 }) };
     for (let i = 0; i < 8; i++) F['w' + i] = make({ walking: true, t: (i / 8) * (TAU / 11) });
-    if (hcache.size > 24) hcache.clear();
+    if (hcache.size > 32) hcache.clear();
     hcache.set(key, F); return F;
   }
   // The gun every hero carries: a taped-together pipe blaster (or the buzzsaw minigun).
