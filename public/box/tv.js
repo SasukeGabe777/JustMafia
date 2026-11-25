@@ -134,6 +134,8 @@
     state = s; stateAt = Date.now(); render(); playFx(s.fx || []); music(); platform();
     if (s.phase === 'game' && s.state && s.state.phase === 'over' && !s.practice) markDone(s.game); // a real game finished on this TV
   });
+  // Real-time messages for the game on the TV (TrashZombies: the spotlight's live view).
+  socket.on('live', (m) => { try { if (!onTitle && G && G.tvLive) G.tvLive(m); } catch (e) { console.error(e); } });
   socket.on('aud', (a) => { if (!state || !a) return; state.audience = { count: a.audience, poll: a.poll }; lastPoll = a.lastPoll || null; audienceUi(); });
   // The host picked another game: same room, same players. Small games swap in place (the
   // page keeps its sound permission); big games have their own page.

@@ -290,9 +290,11 @@
         <div class="au-counts"><span>🎮 <b>${st.players}</b> playing</span><span>👀 <b>${st.audience}</b> watching</span></div>
         <button class="btn ${audience.playNext ? 'green' : 'ghost'} au-next" id="au-next">${audience.playNext ? '✅ You’ll join the next game' : '🎮 Play next game'}</button>
         ${audience.playNext && st.locked ? '<small class="muted">The host locked the room for now.</small>' : ''}</div>
-      ${poll}${recap}
+      ${g && g.audience && st.gv ? g.audience(st) : ''}${poll}${recap}
       <div class="card-box au-react"><h3>React on the big screen</h3><div class="au-rgrid">${REACTIONS.map((e) => `<button data-ar="${e}">${e}</button>`).join('')}</div></div>
       ${st.top && st.top.length ? `<div class="card-box au-top"><h3>🎉 Party points</h3><div class="board">${st.top.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${esc(r.avatar || '')} ${esc(r.name)}</span><b>${r.pts}</b></div>`).join('')}</div></div>` : ''}`);
+    // a game's helper panel for watchers (TrashZombies): its buttons call the game through audience:act
+    if (g && g.audienceBind && st.gv) g.audienceBind($('#g-body'), st, (msg) => new Promise((res) => socket.emit('audience:act', msg, (r) => res(r || { ok: false, error: 'No answer from the server.' }))), { toast, haptic });
     const nb = $('#au-next'); if (nb) nb.onclick = () => socket.emit('audience:next', { on: !audience.playNext }, (r) => { if (r && r.ok) { audience.playNext = r.playNext; haptic('success'); audienceDraw(); } });
     for (const b of document.querySelectorAll('[data-vote]')) b.onclick = () => socket.emit('audience:vote', { option: b.dataset.vote }, (r) => { if (r && r.ok) { myVotes[r.poll] = b.dataset.vote; haptic('select'); audienceDraw(); } else if (r && r.error) toast(r.error); });
     for (const b of document.querySelectorAll('[data-ar]')) b.onclick = () => { socket.emit('player:react', { e: b.dataset.ar }, () => {}); vibrate(12); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); };

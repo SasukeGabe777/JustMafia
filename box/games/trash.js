@@ -15,11 +15,12 @@ const W = require('../../public/box/games/trash-world');
 const S = require('../../public/box/games/trash-story');
 const PL = require('../../public/box/games/trash-shop');
 const AR = require('../../public/box/games/trash-arms');
+const X = require('../../public/box/games/trash-extra');
 
 const opt = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 const fields = [
-  { key: 'mode', label: 'Mode', options: opt([['story', '📖 Regular: break the gates, find the key, beat the boss'], ['endless', '♾️ Endless: waves forever, no story'], ['score', '🏆 Score attack: timed, highest score wins']]) },
-  { key: 'length', label: 'Run length (Endless / Score)', options: opt([['endless', '♾️ Endless (until everyone falls)'], ['w20', '🏁 Survive to wave 20'], ['m5', '⏱ 5 minutes'], ['m10', '⏱ 10 minutes'], ['m15', '⏱ 15 minutes'], ['m20', '⏱ 20 minutes'], ['m30', '⏱ 30 minutes']]) },
+  { key: 'mode', label: 'Mode', options: opt([['story', '📖 Regular: break the gates, find the key, beat the boss'], ['endless', '♾️ Endless: waves forever, no story'], ['score', '🏆 Score attack: timed, highest score wins'], ['garage', '🏚️ Garage Defense: explore, then hold your garage on horde nights']]) },
+  { key: 'length', label: 'Run length (Endless / Score / Garage)', options: opt([['endless', '♾️ Endless (until everyone falls)'], ['w20', '🏁 Survive to wave 20'], ['m5', '⏱ 5 minutes'], ['m10', '⏱ 10 minutes'], ['m15', '⏱ 15 minutes'], ['m20', '⏱ 20 minutes'], ['m30', '⏱ 30 minutes']]) },
   { key: 'diff', label: 'Difficulty', options: opt([['chill', '🟢 Chill'], ['normal', '🟡 Normal'], ['hard', '🔴 Hard']]) },
   { key: 'aim', label: 'Auto-aim (touch)', options: opt([['on', '🎯 On: just move, it shoots the nearest'], ['off', '🕹️ Off: aim with the right stick']]) },
   { key: 'xp', label: 'Co-op XP', options: opt([['shared', '🤝 Shared in the same area'], ['own', '🙋 Your own kills only']]) },
@@ -33,9 +34,18 @@ const partyFit = ({ minutes: M }) => { const { length } = PF.best({ length: ['m1
 const PINGS = { here: '📍 Over here!', health: '❤️ Need health!', boss: '☠️ Boss here!', help: '🆘 Come help!', place: '📣 Found a place!', go: '🧭 Let’s go here!' };
 const SCORE_PENALTY = 0.15, SCORE_RESPAWN_MS = 5000, DOWN_MS = 40000;
 const REVIVE_MS = 15000, TICK = 1000, ALL_DOWN_MS = 45000, FEED = 10, HOST_DROP_MS = 2500, EMPTY_MS = 3 * 60000;
-const LIVE_KINDS = new Set(['snap', 'in', 'hit', 'grab', 'give', 'fx', 'need']);
+const LIVE_KINDS = new Set(['snap', 'in', 'hit', 'grab', 'give', 'fx', 'need', 'tv']);
+const KF = 12, SPOT_LOW = 0.35, SPOT_HOLD = 4000, RECAP_MS = 9000, RECAP_EVERY = 4 * 60000, CARD_MS = 5500;
 const key = (c) => c[0] + ',' + c[1];
 const int = (v, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : lo; };
+
+// The TrashZombies part of a box profile (unlocks bought with scrap), made safe to use.
+function metaFix(prof) {
+  let M = prof.trash; if (!M || typeof M !== 'object') M = prof.trash = X.blankMeta();
+  if (!Array.isArray(M.own)) M.own = []; if (!M.pick || typeof M.pick !== 'object') M.pick = { cls: null, wp: null, fit: null, tier: null };
+  for (const k of ['scrap', 'earned', 'runs']) if (!Number.isFinite(M[k])) M[k] = 0;
+  return M;
+}
 
 class Game {
   constructor(room, s) {
@@ -52,15 +62,28 @@ class Game {
     this.plan = null; this.story = null; this.beatSeq = 0; // Regular mode (trash-story.js)
     this.found = new Map(); // "x,y" -> { type, by } places the team has discovered (shops, merchants, the crucible)
     this.pings = []; this.pseq = 0; this.stashes = new Map(); // call-outs on the map; hidden stashes revealed by maps
+    // phase 3: the TV (kill feed, highlight moments + recap, boss intro cards, the spotlight)
+    this.kfeed = []; this.kseq = 0; this.moments = []; this.mseq = 0; this.recap = null; this.recapSeq = 0; this.lastRecapAt = 0; this.bossCard = null; this.cardSeq = 0;
+    this.spot = null; // { id, why, since }: the player in trouble the TV follows (their phone streams a view)
+    // helpers: players who are down or out, and people watching on a phone
+    this.helpers = new Map(); this.poll = null; this.pollSeq = 0; this.lastPollAt = 0; this.nextEv = null; this.evSeq = 0; this.leaderHitAt = 0;
+    this.weather = { k: 'clear', n: 0, until: 0 }; this.survivors = new Map(); // survivor id ("x,y") -> { state: 'escort'|'safe'|'lost', by }
+    this.gd = null; this.party = false; this.giftSeq = 0;
   }
   get isStory() { return this.s.mode === 'story'; }
   get isScore() { return this.s.mode === 'score'; }
+  get isGarage() { return this.s.mode === 'garage'; }
+  get ranked() { return this.isScore || this.isGarage; } // score decides the standings
   // ---------------- life cycle ----------------
   start() {
     this.startedAt = this.room.now();
     let m = MINUTES[this.s.length];
     if (this.isScore) { m = m || 10; const pm = this.room.partyMode; if (pm && pm.plan && pm.defs && pm.defs[pm.index] === this.room.def && !this.room.practice && pm.plan.trash) m = pm.plan.trash; } // party: exactly the plan's minutes
     if (m) { this.endsAt = this.startedAt + m * 60000; this.minutes = m; }
+    // Party Mode: everyone starts equal (no unlocks, no loadouts) and nobody earns scrap.
+    const pm = this.room.partyMode; this.party = !!(pm && pm.defs && pm.defs[pm.index] === this.room.def && !this.room.practice);
+    this.weather = { k: 'clear', n: 0, until: this.startedAt + X.WX.firstMs }; this.lastRecapAt = this.lastPollAt = this.startedAt;
+    if (this.isGarage) this.gd = { night: 0, phase: 'explore', next: X.GARAGE.every, hope: X.GARAGE.hope, endsAt: 0, ready: new Set(), done: new Set(), broke: [], survived: 0 };
     for (const p of this.room.list()) this.newRun(p, true);
     if (this.isStory) {
       this.endsAt = 0; // Regular mode ends with the boss (or everyone down), not the clock
@@ -94,6 +117,7 @@ class Game {
     for (const p of this.room.list()) if (p.bot) this.botStep(p, now);
     for (const R of this.runs.values()) if (R.state === 'down' && now - R.downAt > DOWN_MS) { R.state = 'dead'; R.deadAt = now; R.reviveAt = now + REVIVE_MS; }
     this.pings = this.pings.filter((q) => now - q.at < 30000);
+    this.phase3(now); if (this.phase !== 'play') return;
     // An area host whose phone dropped: the next player in the area takes over.
     for (const [k, A] of this.areas) {
       const h = this.room.get(A.host);
@@ -117,8 +141,223 @@ class Game {
     this.phase = 'over'; this.overWhy = why; this.endsAt = 0;
     this.room.cancel(this.timer); this.room.cancel(this.flushT);
     for (const R of this.runs.values()) this.keepBest(R);
+    this.spot = null; if (this.poll) this.closePoll();
+    this.payScrap(why);
     this.room.fx('win');
   }
+  // ---------------- unlocks: scrap at the end of the night (kept on the profile; never in Party Mode) ----------------
+  metaOf(p) { const prof = p && p.profileId && this.room.profiles && typeof this.room.profiles.get === 'function' ? this.room.profiles.get(p.profileId) : null; return prof ? metaFix(prof) : null; }
+  loadOf(p) {
+    if (this.party || !p || p.bot) return null; const M = this.metaOf(p); if (!M) return null;
+    const L = {}; for (const k of ['cls', 'wp', 'fit', 'tier']) L[k] = X.pickOk(M, k, M.pick[k]) ? M.pick[k] || null : null;
+    L.classes = M.own.filter((id) => id.startsWith('cls:')).map((id) => id.slice(4)).filter((c) => AR.CLASSES[c]);
+    return L;
+  }
+  payScrap(why) {
+    if (this.party) return;
+    for (const p of this.humans()) {
+      const R = this.runs.get(p.id); if (!R || R.scrap != null) continue;
+      const kills = R.kills + (R.bank || 0), wave = Math.max(R.wave, (R.best && R.best.wave) || 0);
+      const n = X.scrapFor({ kills, wave, rescues: R.rescues || 0, nights: R.nights || 0, won: why === 'win' || why === 'w20', tier: R.load && R.load.tier });
+      R.scrap = n; const prof = p.profileId && this.room.profiles && this.room.profiles.get(p.profileId); if (!prof) { R.scrapGuest = true; continue; }
+      const M = metaFix(prof); M.scrap += n; M.earned += n; M.runs++; M.best = Math.max(M.best || 0, wave);
+      try { if (this.room.profiles.saveSoon) this.room.profiles.saveSoon(); } catch (e) { console.error('[trash scrap]', e.message); }
+      this.news('🔩', `${p.name} hauled home ${n} scrap`, p.id);
+    }
+  }
+  // ---------------- phase 3, once a second ----------------
+  phase3(now) {
+    // gameplay weather: clear for a bit, then it turns every few minutes (every phone shows the banner)
+    if (now >= this.weather.until) { const L = ['rain', 'fog', 'heat', 'clear'].filter((k) => k !== this.weather.k); this.setWeather(L[Math.floor(this.room.rng() * L.length)], now); }
+    // helpers regain energy while they're down or out (the audience regains it as it goes, see helperOf)
+    for (const R of this.runs.values()) if (!R.bot && (R.state === 'dead' || R.state === 'down')) this.energy('p:' + R.id, now);
+    this.pollStep(now); this.spotStep(now); if (this.gd) this.garageStep(now);
+    if (this.phase !== 'play') return;
+    if (this.recap && now - this.recap.at > RECAP_MS) this.recap = null;
+    if (!this.recap && now - this.lastRecapAt > RECAP_EVERY && this.moments.some((m) => m.at > this.lastRecapAt)) this.makeRecap('⭐ Best moment so far', now);
+  }
+  setWeather(k, now = this.room.now()) {
+    if (!X.WEATHER[k]) return false; const was = this.weather.k;
+    this.weather = { k, n: this.weather.n + 1, until: now + X.WX.everyMs };
+    if (k !== was) { const Wd = X.WEATHER[k]; this.news(Wd.icon, k === 'clear' ? 'The weather clears up.' : `${Wd.name}! ${Wd.tip}.`); this.room.fx('tzweather', { k }); this.soon(); }
+    return true;
+  }
+  // ---------------- the TV: kill feed, moments, the recap, boss cards ----------------
+  killNews(p, R, kf) {
+    let n = 0, boss = null, elite = 0; const types = {};
+    for (const e of kf.slice(0, 20)) { if (!Array.isArray(e)) continue; const t = Object.keys(W.ZOMBIES)[int(e[0], 0, 99)], c = int(e[1], 0, 200); if (!t || !c) continue; n += c; if (e[2]) elite += c; if (W.ZOMBIES[t].boss) boss = t; else types[t] = (types[t] || 0) + c; }
+    if (!n) return;
+    const top = Object.entries(types).sort((a, b) => b[1] - a[1])[0];
+    const text = boss ? `took down ${boss === 'final' && this.plan ? S.BOSSES[this.plan.boss].name : W.ZOMBIES[boss].name}!` : `✖ ${n} zombie${n > 1 ? 's' : ''}${top && top[1] > 1 && top[0] !== 'walker' ? ` (${top[1]} ${W.ZOMBIES[top[0]].name}s)` : ''}${elite ? ' · ⭐ elite' : ''}`;
+    this.kfeed.push({ n: ++this.kseq, id: p.id, name: p.name, color: p.color, icon: boss ? '☠️' : n >= 5 ? '💥' : '🔫', text, at: this.room.now(), big: !!boss || n >= 6 });
+    if (this.kfeed.length > KF) this.kfeed.shift();
+  }
+  moment(kind, p, value, text) {
+    const m = { n: ++this.mseq, kind, id: p ? p.id : null, name: p ? p.name : '', color: p ? p.color : '#fff', avatar: p ? p.avatar : '', value: value || 0, text, wave: p && this.runs.get(p.id) ? this.runs.get(p.id).wave : 0, at: this.room.now() };
+    m.w = X.momentWeight(m); this.moments.push(m); if (this.moments.length > 30) this.moments.shift(); return m;
+  }
+  makeRecap(title, now = this.room.now()) {
+    const since = this.lastRecapAt, L = this.moments.filter((m) => m.at > since); if (!L.length) return null;
+    const best = L.slice().sort((a, b) => b.w - a.w || b.at - a.at)[0], R = best.id && this.runs.get(best.id);
+    const top = this.standings()[0];
+    this.recap = { n: ++this.recapSeq, at: now, title, m: best, stats: { kills: R ? R.kills : 0, wave: R ? R.wave : 0, lvl: R ? R.lvl : 0, score: R ? R.score || 0 : 0, cls: R ? R.cls || null : null }, lead: top ? { name: top.name, score: top.score, kills: top.kills } : null, count: L.length };
+    this.lastRecapAt = now; this.lastRecap = this.recap; this.room.fx('tzrecap', { n: this.recap.n }); this.soon(); return this.recap;
+  }
+  card(key, by, kind) {
+    const B = kind === 'final' ? S.BOSSES[key] : W.ZOMBIES[key] || {}, F = S.BOSSES[key] || {};
+    this.bossCard = { n: ++this.cardSeq, key, kind, name: B.name || F.name || 'Boss', icon: F.icon || (key === 'boss' ? '🗑️' : '☠️'), desc: F.desc || (key === 'boss' ? 'A walking dumpster. It charges.' : ''), by: by ? this.room.name(by) : '', at: this.room.now() };
+    this.room.fx('tzcard', { n: this.bossCard.n, key });
+  }
+  // ---------------- the spotlight: the TV follows whoever is in trouble ----------------
+  spotStep(now) {
+    const cand = this.humans().map((p) => this.runs.get(p.id)).filter((R) => R && (R.state === 'down' || (R.state === 'play' && R.hp > 0 && R.mhp && R.hp / R.mhp < SPOT_LOW))).map((R) => ({ R, s: R.state === 'down' ? -1 : R.hp / R.mhp }));
+    cand.sort((a, b) => a.s - b.s);
+    const cur = this.spot && this.runs.get(this.spot.id), still = cur && (cur.state === 'down' || (cur.state === 'play' && cur.hp > 0 && cur.hp / cur.mhp < 0.5));
+    let next = null;
+    if (still && now - this.spot.since < SPOT_HOLD) next = this.spot.id; // hold on a moment (no flicker)
+    else if (cand.length) next = cand[0].R.id; else if (still) next = this.spot.id;
+    if ((next || null) !== (this.spot ? this.spot.id : null)) {
+      if (this.spot) this.send(this.spot.id, { t: 'spot', on: false });
+      this.spot = next ? { id: next, since: now } : null;
+      if (next) this.send(next, { t: 'spot', on: true });
+      this.soon();
+    }
+    if (this.spot) { const R = this.runs.get(this.spot.id); this.spot.why = R.state === 'down' ? 'down' : 'low'; }
+  }
+  // ---------------- helpers: energy, supply crates, the event vote, hordes at the leader ----------------
+  energy(hid, now = this.room.now(), regen = true) {
+    let H = this.helpers.get(hid); if (!H) { H = { e: X.HELP.start, at: now, crateAt: -1e9, hordeAt: -1e9, voted: 0 }; this.helpers.set(hid, H); }
+    if (regen) H.e = Math.min(X.HELP.max, H.e + (X.HELP.regen * Math.max(0, now - H.at)) / 1000); H.at = now;
+    return H;
+  }
+  helperState(hid, now = this.room.now()) {
+    const H = this.helpers.get(hid) || { e: X.HELP.start, crateAt: -1e9, hordeAt: -1e9, voted: 0 };
+    return { e: Math.floor(H.e), max: X.HELP.max, crateIn: Math.max(0, H.crateAt + X.HELP.crate.cd - now), hordeIn: Math.max(0, H.hordeAt + X.HELP.horde.cd - now), voted: this.poll && H.voted === this.poll.id ? H.vote || true : null };
+  }
+  leader() { if (!this.isScore) return null; const L = this.standings().filter((r) => { const R = this.runs.get(r.id); return R && R.state === 'play'; }); return L[0] || null; }
+  // who: { hid, name, id (player id or null), color }. Players help only while down or out.
+  help(who, m) {
+    const now = this.room.now(), k = String(m.k || '');
+    if (this.phase !== 'play') return { ok: false, error: 'The night is over.' };
+    const regen = !who.id || ['dead', 'down'].includes((this.runs.get(who.id) || {}).state);
+    if (who.id && !regen) return { ok: false, error: 'Helpers are players who are down or out (or watching).' };
+    const H = this.energy(who.hid, now, regen), C = X.HELP;
+    if (k === 'state') return { ok: true, quiet: true, me: this.helperState(who.hid, now) };
+    if (k === 'crate') {
+      const T = this.runs.get(String(m.to || '')), tp = T && this.room.get(T.id);
+      if (!T || !tp || tp.bot || T.state !== 'play' || T.id === who.id) return { ok: false, error: 'Pick a teammate who is still fighting.' };
+      if (now - H.crateAt < C.crate.cd) return { ok: false, error: `Next crate in ${Math.ceil((H.crateAt + C.crate.cd - now) / 1000)} s.` };
+      if (H.e < C.crate.cost) return { ok: false, error: `A crate needs ${C.crate.cost} ⚡ energy.` };
+      H.e -= C.crate.cost; H.crateAt = now; this.gift(T, { kind: 'crate', from: who.name });
+      this.news('📦', `${who.name} dropped a supply crate near ${tp.name}`, who.id); this.room.fx('tzcrate', { to: T.id });
+    } else if (k === 'vote') {
+      const P = this.poll; if (!P) return { ok: false, error: 'No vote right now.' };
+      if (!P.opts.includes(String(m.ev))) return { ok: false, error: 'Pick one of the events.' };
+      if (H.voted === P.id) return { ok: false, error: 'You already voted.' };
+      if (H.e < C.vote.cost) return { ok: false, error: `A vote needs ${C.vote.cost} ⚡ energy.` };
+      H.e -= C.vote.cost; H.voted = P.id; H.vote = String(m.ev); P.votes.set(who.hid, String(m.ev));
+    } else if (k === 'horde') {
+      if (!this.isScore) return { ok: false, error: 'Hordes can only be sent in Score attack.' };
+      const L = this.leader(); if (!L || L.id === who.id) return { ok: false, error: 'Nobody to send them at.' };
+      if (now - H.hordeAt < C.horde.cd) return { ok: false, error: `Next horde in ${Math.ceil((H.hordeAt + C.horde.cd - now) / 1000)} s.` };
+      if (now - this.leaderHitAt < C.horde.leaderCd) return { ok: false, error: `${L.name} just got one. Wait ${Math.ceil((this.leaderHitAt + C.horde.leaderCd - now) / 1000)} s.` };
+      if (H.e < C.horde.cost) return { ok: false, error: `A horde needs ${C.horde.cost} ⚡ energy.` };
+      const T = this.runs.get(L.id); H.e -= C.horde.cost; H.hordeAt = now; this.leaderHitAt = now;
+      this.gift(T, { kind: 'horde', from: who.name, cnt: X.sentHorde(T.wave) });
+      this.news('🧟', `${who.name} sent a horde after the leader, ${L.name}!`, who.id); this.room.fx('tzsent', { to: T.id });
+    } else return { ok: false, error: 'Unknown helper move.' };
+    this.soon();
+    return { ok: true, me: this.helperState(who.hid, now) };
+  }
+  gift(T, g) { T.gifts = (T.gifts || []).concat({ n: ++this.giftSeq, ...g }).slice(-6); }
+  pollStep(now) {
+    if (this.poll && now >= this.poll.endsAt) this.closePoll(now);
+    if (this.poll || now - this.lastPollAt < X.HELP.pollEvery) return;
+    if (!this.helperCount()) return;
+    const L = Object.keys(X.VOTE_EVENTS); for (let i = L.length - 1; i > 0; i--) { const j = Math.floor(this.room.rng() * (i + 1)); [L[i], L[j]] = [L[j], L[i]]; }
+    this.poll = { id: ++this.pollSeq, opts: L.slice(0, 3), votes: new Map(), endsAt: now + X.HELP.pollMs }; this.lastPollAt = now;
+    this.news('🗳️', 'Helpers: vote on the next area event!'); this.soon();
+  }
+  closePoll(now = this.room.now()) {
+    const P = this.poll; this.poll = null; if (!P) return null;
+    const c = {}; for (const v of P.votes.values()) c[v] = (c[v] || 0) + 1; const top = P.opts.slice().sort((a, b) => (c[b] || 0) - (c[a] || 0))[0];
+    if (!c[top]) return null;
+    this.nextEv = { n: ++this.evSeq, k: top, votes: c[top] }; const E = X.VOTE_EVENTS[top];
+    this.news('🗳️', `The helpers voted: next up, a ${E.name}! ${E.icon}`); this.room.fx('tzvote', { k: top }); this.soon(); void now;
+    return this.nextEv;
+  }
+  helperCount() { let n = 0; for (const R of this.runs.values()) if (!R.bot && (R.state === 'dead' || R.state === 'down')) n++; return n + (this.room.audienceCount ? this.room.audienceCount() : 0); }
+  pollView(hid) { const P = this.poll; if (!P) return null; const c = {}; for (const v of P.votes.values()) c[v] = (c[v] || 0) + 1; return { id: P.id, opts: P.opts, counts: c, endsIn: Math.max(0, P.endsAt - this.room.now()), mine: hid && (this.helpers.get(hid) || {}).voted === P.id ? (this.helpers.get(hid) || {}).vote : null }; }
+  audienceAct(a, m) { return this.help({ hid: 'a:' + a.id, name: a.name, id: null, color: a.color }, m || {}); }
+  audienceView() {
+    const L = this.leader();
+    return { mode: this.s.mode, phase: this.phase, players: this.people().filter((x) => !x.bot).map(({ id, name, color, avatar, state, hp, mhp, score, wave }) => ({ id, name, color, avatar, state, hp, mhp, score, wave })), poll: this.pollView(null), leader: L ? { id: L.id, name: L.name } : null, costs: { crate: X.HELP.crate.cost, vote: X.HELP.vote.cost, horde: X.HELP.horde.cost }, weather: this.weather.k, garage: this.garageTv() };
+  }
+  // ---------------- survivors ----------------
+  survivorOf(cell) { return X.survivorAt(this.seed, cell[0], cell[1], this.homes, PL.placeAt); }
+  escort(p, R, m) {
+    const k = String(m.cell || ''); if (k !== key(R.cell)) return { ok: false, error: 'They’re not here.' };
+    const S0 = this.survivorOf(R.cell); if (!S0) return { ok: false, error: 'Nobody hiding here.' };
+    const st = this.survivors.get(k); if (st) return { ok: false, error: st.state === 'escort' ? `${this.room.name(st.by)} is already bringing them in.` : 'Not here any more.' };
+    if ([...this.survivors.values()].some((x) => x.state === 'escort' && x.by === p.id)) return { ok: false, error: 'You’re already escorting someone.' };
+    this.survivors.set(k, { state: 'escort', by: p.id, name: S0.name, at: this.room.now() });
+    this.news('🧍', `${p.name} found ${S0.name} hiding: bring them to a shop or the clinic!`, p.id); this.soon();
+    return { ok: true, name: S0.name };
+  }
+  rescue(p, R) {
+    const e = [...this.survivors.entries()].find(([, x]) => x.state === 'escort' && x.by === p.id); if (!e) return { ok: false, error: 'You’re not escorting anyone.' };
+    const type = PL.placeAt(this.seed, R.cell[0], R.cell[1], this.homes); if (!type || !PL.PLACES[type]) return { ok: false, error: 'Bring them to a shop or the clinic.' };
+    e[1].state = 'safe'; e[1].at = this.room.now(); R.rescues = (R.rescues || 0) + 1;
+    const mul = (type === 'clinic' ? X.SURV_REWARD.clinic : 1) * (R.cls === 'courier' ? 2 : 1), cash = Math.round(X.SURV_REWARD.cash * mul * (1 + 0.08 * R.wave)), score = Math.round(X.SURV_REWARD.score * mul);
+    const P = PL.PLACES[type]; this.news('🎉', `${p.name} brought ${e[1].name} safe to the ${P.name} (+$${cash})`, p.id); this.room.fx('tzrescue', { id: p.id });
+    this.moment('rescue', p, 1, `${p.name} brought ${e[1].name} to safety at the ${P.name}`); this.soon();
+    return { ok: true, cash, score, clinic: type === 'clinic' };
+  }
+  survivorLost(p) {
+    const e = [...this.survivors.entries()].find(([, x]) => x.state === 'escort' && x.by === p.id); if (!e) return { ok: true, quiet: true };
+    e[1].state = 'lost'; this.news('💔', `The zombies got ${e[1].name}…`, p.id); this.soon(); return { ok: true };
+  }
+  // ---------------- Garage Defense: horde nights ----------------
+  garageStep(now) {
+    const G = this.gd;
+    if (G.phase === 'build' && now >= G.endsAt) this.startHorde(now);
+    else if (G.phase === 'horde') {
+      for (const p of this.room.list()) { if (!p.bot) continue; const R = this.runs.get(p.id); if (R && R.state === 'play' && !G.done.has(p.id) && now - G.at > 15000 + (W.hash(this.seed, p.id, G.night) % 20000)) this.hordeEnd(p, R, { ok: this.room.rng() > 0.08 * G.night * (this.s.diff === 'hard' ? 1.5 : 1), door: 0.5 }); }
+      const live = this.garageCrew(); if (now >= G.endsAt || (live.length && live.every((p) => G.done.has(p.id))) || !live.length) this.endHorde(now);
+    }
+  }
+  garageCrew() { return this.room.list().filter((p) => { const R = this.runs.get(p.id); return R && R.state !== 'dead'; }); }
+  startBuild(now = this.room.now()) {
+    const G = this.gd; if (!G || G.phase !== 'explore') return false;
+    G.night++; G.phase = 'build'; G.at = now; G.endsAt = now + X.GARAGE.buildMs; G.ready = new Set(); G.done = new Set(); G.broke = [];
+    for (const p of this.room.list()) { const R = this.runs.get(p.id); if (!R) continue; this.leaveArea(p.id); R.cell = R.home.slice(); if (R.state !== 'dead') R.state = 'play'; this.joinArea(p.id, key(R.cell)); }
+    this.news('🌙', `HORDE NIGHT ${G.night}! Everyone back to your garage: build your defenses!`); this.room.fx('tzhorde', { night: G.night, phase: 'build' }); this.soon();
+    return true;
+  }
+  startHorde(now = this.room.now()) {
+    const G = this.gd; if (!G || G.phase !== 'build') return false;
+    G.phase = 'horde'; G.at = now; G.endsAt = now + X.GARAGE.hordeMs;
+    this.news('🧟', `Night ${G.night}: THE HORDE IS HERE! Hold your garage!`); this.room.fx('tzhorde', { night: G.night, phase: 'horde' }); this.card('boss', null, 'horde'); this.bossCard.name = 'The Horde · Night ' + G.night; this.bossCard.icon = '🧟'; this.bossCard.desc = 'Hold the garage door. Don’t let them through!'; this.soon();
+    return true;
+  }
+  ready(p) { const G = this.gd; if (!G || G.phase !== 'build') return { ok: false, error: 'Not building right now.' }; G.ready.add(p.id); const crew = this.humans().filter((h) => (this.runs.get(h.id) || {}).state !== 'dead'); if (crew.every((h) => G.ready.has(h.id))) this.startHorde(); this.soon(); return { ok: true }; }
+  hordeEnd(p, R, m) {
+    const G = this.gd; if (!G || G.phase !== 'horde') return { ok: false, error: 'No horde right now.' };
+    if (G.done.has(p.id)) return { ok: true, quiet: true }; G.done.add(p.id);
+    if (m.ok === false) { G.broke.push(p.id); G.hope = Math.max(0, G.hope - 1); this.news('💥', `${p.name}'s garage door broke! The town loses hope (${'❤️'.repeat(G.hope) || '0'} left)`, p.id); this.room.fx('tzbroke', { id: p.id }); }
+    else { R.nights = (R.nights || 0) + 1; this.news('🏚️', `${p.name} held the garage through night ${G.night}!`, p.id); this.moment('horde', p, G.night, `${p.name} held the garage through horde night ${G.night}`); }
+    if (G.hope <= 0) { this.end('overrun'); return { ok: true }; }
+    const crew = this.garageCrew(); if (crew.length && crew.every((q) => G.done.has(q.id))) this.endHorde();
+    this.soon(); return { ok: true, bonus: m.ok === false ? 0 : X.hordeBonus(G.night, Number(m.door) || 0) };
+  }
+  endHorde(now = this.room.now()) {
+    const G = this.gd; if (!G || G.phase !== 'horde') return false;
+    G.phase = 'explore'; G.next += X.GARAGE.every; G.endsAt = 0; if (!G.broke.length) G.survived++;
+    this.news('🌅', G.broke.length ? `Night ${G.night} is over. ${G.broke.length} garage${G.broke.length > 1 ? 's' : ''} fell.` : `Dawn! Every garage held through night ${G.night}.`); this.room.fx('tzdawn', { night: G.night });
+    this.makeRecap(`🌅 Night ${G.night} highlights`, now); this.soon();
+    return true;
+  }
+  garageTv() { const G = this.gd; return G ? { night: G.night, phase: G.phase, next: G.next, hope: G.hope, max: X.GARAGE.hope, endsIn: G.endsAt ? Math.max(0, G.endsAt - this.room.now()) : 0, ready: [...G.ready], done: [...G.done], broke: G.broke.slice(), survived: G.survived } : null; }
   next() { if (this.phase === 'play') this.end('host'); }
   results() { return this.phase === 'over' ? this.standings().map((r) => r.id) : []; }
 
@@ -139,6 +378,7 @@ class Game {
     const R = {
       id: p.id, bot: !!p.bot, run: (old ? old.run : 0) + 1, cell: cell.slice(), home: cell.slice(), state: 'play', wave: 1, areas: 1, lvl: 1, xp: 0, kills: 0, hp: 100, mhp: 100,
       ab: {}, eq: {}, hearts: 0, score: 0, streak: 0, maps: 0, mapWaves: [], stash: [], bank: old ? (old.bank || 0) + old.kills : 0, choosing: false, at: this.room.now(), lastSt: this.room.now(), best: old ? old.best : null, lastPick: null, danger: false, deaths: old ? old.deaths : 0,
+      load: this.loadOf(p), rescues: old ? old.rescues || 0 : 0, nights: old ? old.nights || 0 : 0, gifts: [],
     };
     if (p.bot) Object.assign(R, { nextAt: this.room.now() + 4000 + this.room.rng() * 3000, fate: 0.04 + this.room.rng() * 0.05 });
     this.runs.set(p.id, R);
@@ -149,7 +389,7 @@ class Game {
   }
   keepBest(R) {
     const cur = { wave: R.wave, kills: R.kills, lvl: R.lvl, ab: { ...R.ab }, score: R.score || 0 };
-    if (!R.best || (this.isScore ? cur.score > (R.best.score || 0) : cur.wave > R.best.wave || (cur.wave === R.best.wave && cur.kills > R.best.kills))) R.best = cur;
+    if (!R.best || (this.ranked ? cur.score > (R.best.score || 0) : cur.wave > R.best.wave || (cur.wave === R.best.wave && cur.kills > R.best.kills))) R.best = cur;
   }
   explore(cell, by) {
     const k = key(cell); if (!this.explored.has(k)) this.explored.set(k, { by, at: this.room.now() });
@@ -236,6 +476,7 @@ class Game {
     if (nsp) nsp.to('pl:' + this.room.code + ':' + id).emit('live', data);
     else { this.outbox.push({ to: id, data }); if (this.outbox.length > 300) this.outbox.shift(); }
   }
+  sendTv(data) { const nsp = this.room.nsp; if (nsp) nsp.to('host:' + this.room.code).emit('live', data); else { this.outbox.push({ to: 'tv', data }); if (this.outbox.length > 300) this.outbox.shift(); } }
   // The relay: the host's snapshots go to the guests; a guest's input/hits go to the host.
   live(p, m) {
     if (this.phase !== 'play' || !p || !m || typeof m !== 'object' || !LIVE_KINDS.has(m.t)) return false;
@@ -245,6 +486,7 @@ class Game {
     if (++L.n > 60) return false; // at most 60 messages a second per phone
     let size = 0; try { size = JSON.stringify(m).length; } catch { return false; }
     if (size > 16000) return false;
+    if (m.t === 'tv') { if (!this.spot || this.spot.id !== p.id) return false; this.sendTv({ ...m, from: p.id, at: now }); return true; }
     const A = this.areaOf(p.id); if (!A || A.members.length < 2) return false;
     const out = { ...m, from: p.id, area: A.k };
     if (A.host === p.id) {
@@ -267,7 +509,7 @@ class Game {
     if (!R) { this.newRun(p, true); return { ok: true }; }
     if (m.op === 'respawn') {
       if (R.state !== 'dead') return { ok: false, error: 'You’re still standing!' };
-      if (this.story || this.isScore) { if (this.room.now() < (R.reviveAt || 0)) return { ok: false, error: 'Catch your breath a moment…' }; this.newRun(p, false, true); return { ok: true }; }
+      if (this.story || this.isScore || this.isGarage) { if (this.room.now() < (R.reviveAt || 0)) return { ok: false, error: 'Catch your breath a moment…' }; this.newRun(p, false, true); return { ok: true }; }
       this.newRun(p); return { ok: true };
     }
     if (m.op === 'st') return this.status(p, R, m);
@@ -280,6 +522,11 @@ class Game {
     if (m.op === 'stash') return this.stash(p, R);
     if (m.op === 'revive') return this.revive(p, R, m);
     if (m.op === 'maps') return { ok: true, options: this.mapOptions(R) };
+    if (m.op === 'help') return this.help({ hid: 'p:' + p.id, name: p.name, id: p.id, color: p.color }, m);
+    if (m.op === 'escort') return this.escort(p, R, m);
+    if (m.op === 'rescue') return this.rescue(p, R);
+    if (m.op === 'ready') return this.ready(p);
+    if (m.op === 'hordeend') return this.hordeEnd(p, R, m);
     return { ok: false, error: 'Unknown move.' };
   }
   // Status ping (~1 a second): checked loosely (it's a party game, but numbers stay believable).
@@ -303,6 +550,11 @@ class Game {
     R.streak = int(m.mult, 1, 12);
     if (Array.isArray(m.wp)) R.wp = m.wp.slice(0, AR.SLOTS + 1).filter((w) => Array.isArray(w) && AR.WEAPONS[w[0]]).map((w) => [w[0], int(w[1], 1, 10), int(w[2], 1, 3)]);
     R.choosing = !!m.ch; R.danger = R.hp > 0 && R.hp / R.mhp < 0.3;
+    if (Array.isArray(m.kf) && m.kf.length) { this.killNews(p, R, m.kf); this.soon(); }
+    if (R.streak >= 6 && R.streak > (R.bestStreak || 0)) { R.bestStreak = R.streak; this.moment('streak', p, R.streak, `${p.name} hit a ×${R.streak} kill streak`); }
+    if (m.gdoor != null) R.door = int(m.gdoor, 0, 99999);
+    if (m.veh != null) R.veh = typeof m.veh === 'string' && X.VEHICLES[m.veh] ? m.veh : null;
+    if (this.gd && this.gd.phase === 'explore' && R.wave >= this.gd.next) this.startBuild();
     if (this.story) this.storyCheck();
     if (before !== R.lvl + ':' + R.wave + ':' + (R.danger ? 1 : 0) + ':' + R.choosing) this.soon();
     return { ok: true, quiet: true };
@@ -310,6 +562,7 @@ class Game {
   areaKills(R) { return R.wave * 20; } // co-op shared XP: levels can come from friends' kills too
   enter(p, R, m) {
     if (R.state === 'dead') return { ok: false, error: 'You’re down.' };
+    if (this.gd && this.gd.phase !== 'explore') return { ok: false, error: '🌙 Horde night: hold your garage!' };
     const x = Number(m.x), y = Number(m.y);
     if (!W.inGrid(x, y)) return { ok: false, error: 'That’s the edge of town.' };
     if (Math.abs(x - R.cell[0]) + Math.abs(y - R.cell[1]) !== 1) return { ok: false, error: 'Too far away.' };
@@ -351,6 +604,7 @@ class Game {
     } else if (k === 'buy') { return { ok: true, quiet: true };
     } else if (k === 'class') {
       const C = AR.CLASSES[m.id]; if (!C) return { ok: false, error: 'Unknown class.' }; if (R.cls) return { ok: true, quiet: true };
+      if (C.locked && !(R.load && (R.load.classes || []).includes(m.id))) return { ok: false, error: 'Unlock that class with scrap first.' };
       R.cls = m.id; this.news(C.icon, `${p.name} rolls out as the ${C.name}`, p.id);
     } else if (k === 'combo') {
       const C = AR.COMBOS.find((c) => c.id === m.id); if (!C) return { ok: false, error: 'Unknown combo.' }; R.combos = R.combos || []; if (R.combos.includes(C.id)) return { ok: true, quiet: true };
@@ -366,13 +620,19 @@ class Game {
       const w = int(m.wave, 1, 999); if (w % 5 !== 0 || R.mapWaves.includes(w) || w > R.wave + 1) return { ok: false, error: 'No map here.' };
       R.mapWaves.push(w); R.maps++; this.news('🗺️', `${p.name} pulled a map off the boss`, p.id); this.soon(); return { ok: true, options: this.mapOptions(R) };
     } else if (k === 'heart') { R.hearts = Math.max(0, (R.hearts || 0) - 1); this.news('💖', `${p.name} used a Spare Heart`, p.id); this.room.fx('tzhurt', { id: p.id });
-    } else if (k === 'boss') { this.news('🗑️', `A Dumpster Brute crawls out near ${p.name}!`, p.id); this.room.fx('tzboss', { id: p.id }); }
+    } else if (k === 'boss') { const mb = W.ZOMBIES[m.id] && W.ZOMBIES[m.id].mini ? m.id : 'boss'; this.news(mb === 'boss' ? '🗑️' : (S.BOSSES[mb] || {}).icon || '☠️', `${mb === 'boss' ? 'A Dumpster Brute' : W.ZOMBIES[mb].name} crawls out near ${p.name}!`, p.id); this.room.fx('tzboss', { id: p.id, key: mb }); this.card(mb, p.id, 'mini');
+    } else if (k === 'bossdown') { const b = String(m.id || 'boss'), final = b === 'final' && this.plan, nm2 = final ? S.BOSSES[this.plan.boss].name : (W.ZOMBIES[b] || W.ZOMBIES.boss).name; this.moment(final ? 'final' : 'boss', p, 1, `${p.name} took down ${nm2}`); this.kfeed.push({ n: ++this.kseq, id: p.id, name: p.name, color: p.color, icon: '☠️', text: `took down ${nm2}!`, at: this.room.now(), big: true }); if (this.kfeed.length > KF) this.kfeed.shift();
+    } else if (k === 'multi') { const n = int(m.n, 2, 99); if (n < 4) return { ok: true, quiet: true }; const prev = this.moments.find((x) => x.kind === 'multi' && x.id === p.id && this.room.now() - x.at < 3000); if (prev) { if (n > prev.value) { prev.value = n; prev.w = X.momentWeight(prev); prev.text = `${p.name} took out ${n} zombies at once`; } } else this.moment('multi', p, n, `${p.name} took out ${n} zombies at once`); return { ok: true, quiet: true };
+    } else if (k === 'survlost') { return this.survivorLost(p);
+    } else if (k === 'ride') { const V = X.VEHICLES[m.id]; if (!V) return { ok: false, error: 'Unknown ride.' }; if (m.id === 'gtruck') this.news(V.icon, `${p.name} is driving a Garbage Truck!`, p.id); return { ok: true, quiet: m.id !== 'gtruck' };
+    } else if (k === 'build') { const B = X.BUILD[m.id]; if (!B) return { ok: false, error: 'Unknown build.' }; R.built = (R.built || 0) + 1; return { ok: true, quiet: true }; }
     else if (k === 'down') { this.news('💫', `${p.name} used a Spare Lunchbox`, p.id); this.room.fx('tzhurt', { id: p.id }); }
     else if (k === 'hurt') { this.room.fx('tzhurt', { id: p.id }); }
     else if (k === 'dead') {
       if (R.state === 'dead') return { ok: true };
+      this.survivorLost(p);
       R.state = 'dead'; R.hp = 0; R.deaths++; R.deadAt = this.room.now(); this.keepBest(R); this.leaveArea(p.id);
-      if (this.isScore) { R.reviveAt = this.room.now() + SCORE_RESPAWN_MS; this.news('💀', `${p.name} fell (back in a moment, minus points)`, p.id); this.room.fx('tzdead', { id: p.id }); this.soon(); return { ok: true }; }
+      if (this.isScore || this.isGarage) { R.reviveAt = this.room.now() + SCORE_RESPAWN_MS; this.news('💀', `${p.name} fell (back in a moment${this.isScore ? ', minus points' : ''})`, p.id); this.room.fx('tzdead', { id: p.id }); this.soon(); return { ok: true }; }
       if (this.story) { R.reviveAt = this.room.now() + REVIVE_MS; if (this.humans().every((h) => !this.runs.get(h.id) || ['dead', 'down'].includes(this.runs.get(h.id).state))) { this.news('💀', `${p.name} fell. Nobody is left standing…`, p.id); this.room.fx('tzdead', { id: p.id }); this.end('lost'); return { ok: true }; } }
       this.news('💀', `${p.name} fell on wave ${R.wave} (level ${R.lvl}, ${R.kills} kills)`, p.id); this.room.fx('tzdead', { id: p.id });
     } else return { ok: false, error: 'Unknown event.' };
@@ -399,7 +659,7 @@ class Game {
     if (R.cell[0] !== this.plan.door[0] || R.cell[1] !== this.plan.door[1]) return { ok: false, error: 'The door isn’t here.' };
     if (st.keys.length < 3) return { ok: false, error: `The door needs the whole key: ${st.keys.length}/3 pieces.` };
     if (st.doorOpen) return { ok: true, boss: this.plan.boss };
-    st.doorOpen = true; st.doorFound = true; st.openedAt = this.room.now();
+    st.doorOpen = true; st.doorFound = true; st.openedAt = this.room.now(); this.card(this.plan.boss, p.id, 'final');
     const B = S.BOSSES[this.plan.boss]; this.news(B.icon, `${p.name} opened the door. ${B.name} wakes up!`, p.id); this.room.fx('tzdoor', { id: p.id }); this.beat('open'); this.soon();
     return { ok: true, boss: this.plan.boss };
   }
@@ -428,7 +688,9 @@ class Game {
     if (this.room.rng() < R.fate * R.wave * 0.35 * hard) { R.state = 'dead'; R.hp = 0; R.deadAt = now; R.deaths++; this.keepBest(R); this.news('💀', `${p.name} fell on wave ${R.wave}`, p.id); this.room.fx('tzdead', { id: p.id }); return; }
     const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [R.cell[0] + dx, R.cell[1] + dy]).filter(([x, y]) => W.roadBetween(this.seed, R.cell, [x, y]) && !this.locked(x, y));
     if (this.story) this.storyCheck();
+    if (this.gd && this.gd.phase !== 'explore') { R.nextAt = now + 3000; return; }
     if (dirs.length) R.cell = dirs[Math.floor(this.room.rng() * dirs.length)]; R.areas++; R.wave++; this.explore(R.cell, p.id);
+    if (this.gd && this.gd.phase === 'explore' && !this.humans().length && R.wave >= this.gd.next) this.startBuild();
     R.hp = R.mhp = 100 + 25 * (owned.hp || 0);
     R.nextAt = now + 14000 + this.room.rng() * 14000;
   }
@@ -438,14 +700,14 @@ class Game {
     return this.room.list().filter((p) => this.runs.has(p.id)).map((p) => {
       const R = this.runs.get(p.id), cur = { wave: R.wave, kills: R.kills, lvl: R.lvl, ab: R.ab };
       const b = R.best && (R.best.wave > cur.wave || (R.best.wave === cur.wave && R.best.kills > cur.kills)) ? R.best : cur;
-      const score = this.isScore ? Math.max(R.score || 0, (R.best && R.best.score) || 0) : R.score || 0;
-      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, wave: b.wave, kills: b.kills, lvl: b.lvl, score, build: Object.entries(b.ab || {}).sort((a, c) => c[1] - a[1]).slice(0, 6), runs: R.run, eq: Object.keys(R.eq || {}), cls: R.cls || null, wp: R.wp || [], combos: (R.combos || []).length };
-    }).sort((a, b) => (this.isScore ? b.score - a.score : 0) || b.wave - a.wave || b.kills - a.kills || b.lvl - a.lvl);
+      const score = this.ranked ? Math.max(R.score || 0, (R.best && R.best.score) || 0) : R.score || 0;
+      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, wave: b.wave, kills: b.kills, lvl: b.lvl, score, build: Object.entries(b.ab || {}).sort((a, c) => c[1] - a[1]).slice(0, 6), runs: R.run, eq: Object.keys(R.eq || {}), cls: R.cls || null, wp: R.wp || [], combos: (R.combos || []).length, scrap: R.scrap == null ? null : R.scrap, rescues: R.rescues || 0, nights: R.nights || 0 };
+    }).sort((a, b) => (this.ranked ? b.score - a.score : 0) || b.wave - a.wave || b.kills - a.kills || b.lvl - a.lvl);
   }
   people() {
     return this.room.list().filter((p) => this.runs.has(p.id)).map((p) => {
       const R = this.runs.get(p.id);
-      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, bot: !!p.bot, x: R.cell[0], y: R.cell[1], state: R.state, wave: R.wave, lvl: R.lvl, kills: R.kills, score: R.score || 0, streak: R.streak || 1, cls: R.cls || null, wp: R.wp || [], hp: R.hp, mhp: R.mhp, danger: R.danger, ch: R.choosing, pick: R.lastPick, run: R.run,
+      return { id: p.id, name: p.name, avatar: p.avatar, color: p.color, bot: !!p.bot, x: R.cell[0], y: R.cell[1], state: R.state, wave: R.wave, lvl: R.lvl, kills: R.kills, score: R.score || 0, streak: R.streak || 1, cls: R.cls || null, wp: R.wp || [], hp: R.hp, mhp: R.mhp, danger: R.danger, ch: R.choosing, pick: R.lastPick, run: R.run, veh: R.veh || null, fit: R.load ? R.load.fit : null,
         ab: Object.entries(R.ab).sort((a, c) => c[1] - a[1]).slice(0, 5).map(([id]) => id) };
     });
   }
@@ -456,15 +718,24 @@ class Game {
       coop: [...this.areas].filter(([, A]) => A.members.length > 1).map(([k, A]) => ({ k, host: A.host, members: A.members.slice() })),
       standings: this.standings().slice(0, 12), why: this.overWhy, mode: this.s.mode, story: this.storyTv(), minutes: this.minutes || 0,
       found: [...this.found].map(([k, f]) => [k, f.type]), pings: this.pings.map((q) => ({ ...q, name: this.room.name(q.id) })),
+      kfeed: this.kfeed.slice(-8), spot: this.spotTv(), card: this.bossCard && this.room.now() - this.bossCard.at < CARD_MS ? { ...this.bossCard, ago: this.room.now() - this.bossCard.at } : null,
+      recap: this.recap ? { ...this.recap, ago: this.room.now() - this.recap.at } : null, weather: this.weatherView(), garage: this.garageTv(), poll: this.pollView(null), helpers: this.helperCount(), party: this.party,
+      rescued: [...this.survivors.values()].filter((x) => x.state === 'safe').length,
     };
   }
+  spotTv() { const S0 = this.spot; if (!S0) return null; const R = this.runs.get(S0.id), p = this.room.get(S0.id); if (!R || !p) return null; return { id: S0.id, name: p.name, color: p.color, why: S0.why || 'low', hp: R.hp, mhp: R.mhp, x: R.cell[0], y: R.cell[1], wave: R.wave }; }
+  weatherView() { const Wd = X.WEATHER[this.weather.k]; return { k: this.weather.k, n: this.weather.n, icon: Wd.icon, name: Wd.name, tip: Wd.tip }; }
   view(p) {
     const R = this.runs.get(p.id), A = this.areaOf(p.id);
     return {
       phase: this.phase, seed: this.seed, grid: W.GRID, homes: this.homes, explored: [...this.explored.keys()].map((k) => k.split(',').map(Number)),
       players: this.people().filter((x) => x.id !== p.id).map(({ id, name, color, avatar, x, y, state, wave, lvl, hp, mhp, bot, score }) => ({ id, name, color, avatar, x, y, state, wave, lvl, hp, mhp, bot, score })),
       found: [...this.found].map(([k, f]) => [k, f.type]), pings: this.pings.map((q) => ({ ...q, name: this.room.name(q.id) })), stashes: [...this.stashes].filter(([, s]) => !s.took.includes(p.id)).map(([k]) => k),
-      me: R ? { id: p.id, run: R.run, cell: R.cell, home: R.home, state: R.state, wave: R.wave, lvl: R.lvl, xp: R.xp, kills: R.kills, hp: R.hp, mhp: R.mhp, ab: R.ab, eq: R.eq || {}, hearts: R.hearts || 0, best: R.best, deaths: R.deaths, comeback: R.comeback || 0, score: R.score || 0, maps: R.maps || 0, cls: R.cls || null, reviveIn: R.state === 'dead' ? Math.max(0, (R.reviveAt || 0) - this.room.now()) : 0 } : null,
+      me: R ? { id: p.id, run: R.run, cell: R.cell, home: R.home, state: R.state, wave: R.wave, lvl: R.lvl, xp: R.xp, kills: R.kills, hp: R.hp, mhp: R.mhp, ab: R.ab, eq: R.eq || {}, hearts: R.hearts || 0, best: R.best, deaths: R.deaths, comeback: R.comeback || 0, score: R.score || 0, maps: R.maps || 0, cls: R.cls || null, reviveIn: R.state === 'dead' ? Math.max(0, (R.reviveAt || 0) - this.room.now()) : 0,
+        load: R.load || null, gifts: R.gifts || [], spot: !!(this.spot && this.spot.id === p.id), rescues: R.rescues || 0, nights: R.nights || 0, scrap: R.scrap == null ? null : R.scrap, scrapGuest: !!R.scrapGuest,
+        helper: R.state === 'dead' || R.state === 'down' ? this.helperState('p:' + p.id) : null } : null,
+      party: this.party, weather: this.weatherView(), garage: this.garageTv(), nextEv: this.nextEv, poll: R && (R.state === 'dead' || R.state === 'down') ? this.pollView('p:' + p.id) : null, leader: (() => { const L = this.leader(); return L ? { id: L.id, name: L.name } : null; })(),
+      surv: [...this.survivors.entries()].map(([k, x]) => [k, x.state, x.by]),
       area: A ? { k: A.k, host: A.host, members: A.members.slice() } : null,
       settings: { diff: this.s.diff, aim: this.s.aim, xp: this.s.xp, length: this.s.length, mode: this.s.mode }, endsIn: this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0,
       feed: this.feed.slice(-4), standings: this.phase === 'over' ? this.standings() : null, why: this.overWhy, mode: this.s.mode, story: this.storyView(p),
@@ -480,4 +751,28 @@ module.exports = {
   dropIn: true, // late arrivals jump straight in: they roll up their own garage door somewhere on the map
   partyFit,
   create: (room, settings) => new Game(room, settings),
+  // Unlocks (scrap) work in the lobby and between games too: room.act(p, { op: 'meta', ... }).
+  metaView(room, p) {
+    const prof = p && p.profileId && room.profiles && typeof room.profiles.get === 'function' ? room.profiles.get(p.profileId) : null;
+    if (!prof) return { guest: true, scrap: 0, own: [], pick: {} };
+    const M = metaFix(prof); return { scrap: M.scrap, earned: M.earned, runs: M.runs, own: M.own.slice(), pick: { ...M.pick } };
+  },
+  metaAct(room, p, m) {
+    const prof = p && !p.bot && p.profileId && room.profiles && typeof room.profiles.get === 'function' ? room.profiles.get(p.profileId) : null;
+    if (!prof) return { ok: false, error: 'Make your character first (🛍️) to keep scrap and unlocks.' };
+    const M = metaFix(prof), k = String(m.k || '');
+    if (k === 'buy') {
+      const U = X.UNLOCK[String(m.id || '')]; if (!U) return { ok: false, error: 'Unknown unlock.' };
+      if (M.own.includes(U.id)) return { ok: false, error: 'You already have it.' };
+      if (U.needs && !M.own.includes(U.needs)) return { ok: false, error: `Unlock ${X.UNLOCK[U.needs].name} first.` };
+      if (M.scrap < U.cost) return { ok: false, error: `You need ${U.cost} scrap (you have ${M.scrap}).` };
+      M.scrap -= U.cost; M.own.push(U.id); if (U.kind !== 'cls' && M.pick[U.kind] == null) M.pick[U.kind] = U.key;
+    } else if (k === 'pick') {
+      const slot = String(m.slot || ''); if (!['cls', 'wp', 'fit', 'tier'].includes(slot)) return { ok: false, error: 'Unknown slot.' };
+      const v = m.id == null || m.id === '' ? null : String(m.id); if (!X.pickOk(M, slot, v)) return { ok: false, error: 'Unlock it first.' };
+      M.pick[slot] = v;
+    } else return { ok: false, error: 'Unknown move.' };
+    try { if (room.profiles.saveSoon) room.profiles.saveSoon(); } catch (e) { console.error('[trash meta]', e.message); }
+    return { ok: true, meta: module.exports.metaView(room, p) };
+  },
 };

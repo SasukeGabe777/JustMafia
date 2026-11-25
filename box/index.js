@@ -279,6 +279,11 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
       const { room, a } = ctx(); if (!room || !a) return reply(cb, { ok: false, error: 'Join the audience first.' });
       reply(cb, room.vote(a, msg.option));
     });
+    // A watcher helping the game (TrashZombies: supply crates, the event vote, hordes at the leader).
+    socket.on('audience:act', (msg, cb) => {
+      const { room, a } = ctx(); if (!room || !a) return reply(cb, { ok: false, error: 'Join the audience first.' });
+      reply(cb, room.audienceAct(a, msg));
+    });
     socket.on('audience:next', (msg, cb) => {
       const { room, a } = ctx(); if (!room || !a) return reply(cb, { ok: false });
       reply(cb, room.setPlayNext(a, msg.on !== false));

@@ -72,6 +72,11 @@
     sharp: { icon: '🎯', name: 'Sharpshooter', desc: '+15% crit chance, crits hit even harder, and you shoot further.', bias: ['crit', 'pierce', 'rapid'] },
     scav: { icon: '🦝', name: 'Scavenger', desc: '+60% cash, twice the pickups, a bigger magnet.', bias: ['magnet', 'raccoon', 'kicks'] },
     tinker: { icon: '🔧', name: 'Tinkerer', desc: 'Starts with 2 turret kits; turrets last twice as long and fire faster.', bias: ['drone', 'zap', 'orbit'] },
+    // unlocked with scrap (trash-extra.js UNLOCKS); never in Party Mode
+    sparky: { icon: '🔌', name: 'Electrician', desc: 'Starts with the Lightning Coil; shock damage +30%.', bias: ['zap', 'drone', 'rapid'], locked: true },
+    chef: { icon: '🍳', name: 'Grill Cook', desc: 'Starts with the Hairspray Torch; food heals double; burns last longer.', bias: ['burn', 'hp', 'regen'], locked: true },
+    janitor: { icon: '🧹', name: 'Night Janitor', desc: 'Zombies near you slip (15% slower); take 10% less damage.', bias: ['plating', 'slow', 'shove'], locked: true },
+    courier: { icon: '📮', name: 'Mail Carrier', desc: '+20% speed; vehicles take less damage; rescues pay double.', bias: ['kicks', 'dodge', 'magnet'], locked: true },
   };
   // ---------------- passive items (shops; trade-offs) ----------------
   const ITEMS = {

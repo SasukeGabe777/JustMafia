@@ -170,7 +170,7 @@
           case 'bolt': shot(a, { sp: 1300, r: 5, pierce: 99, kind: 'bolt', boom: combos.has('boombolts') ? 110 : 0 }); break;
           case 'boomer': shot(a, { sp: 700, r: 12, pierce: 99, kind: 'hubcap', ret: true, life: 1.4 }); break;
           case 'lob': shot(a, { sp: 620, r: 7, kind: 'grenade', boom: 120 + 20 * (w.tier - 1), life: Math.min(1, Math.sqrt(d2(z.x, z.y, ox, oy)) / 620) }); break;
-          case 'zap': { let from = { x: ox, y: oy }; const seen = []; for (let j = 0; j < 3 + w.tier; j++) { let best = null, bd = 300 * 300; for (const q of this.z) { if (q.hp <= 0 || seen.includes(q.id)) continue; const dd = d2(from.x, from.y, q.x, q.y - q.r); if (dd < bd) { bd = dd; best = q; } } if (!best) break; seen.push(best.id); this.fx.push({ k: 'zap', x: from.x, y: from.y, x2: best.x, y2: best.y - best.r, t: 0, life: 0.18 }); this.damageZ(best, dmg, this.me.id); from = { x: best.x, y: best.y - best.r }; } break; }
+          case 'zap': { let from = { x: ox, y: oy }; const seen = []; for (let j = 0; j < 3 + w.tier; j++) { let best = null, bd = 300 * 300; for (const q of this.z) { if (q.hp <= 0 || seen.includes(q.id)) continue; const dd = d2(from.x, from.y, q.x, q.y - q.r); if (dd < bd) { bd = dd; best = q; } } if (!best) break; seen.push(best.id); this.fx.push({ k: 'zap', x: from.x, y: from.y, x2: best.x, y2: best.y - best.r, t: 0, life: 0.18 }); this.damageZ(best, dmg, this.me.id, 0, 0, { shock: 1 }); from = { x: best.x, y: best.y - best.r }; } break; }
           case 'rail': { const L = 1400, cx = Math.cos(a), cy = Math.sin(a); for (const q of this.z) { if (q.hp <= 0) continue; const px = q.x - ox, py = q.y - q.r - oy, t = px * cx + py * cy; if (t < 0 || t > L) continue; const dd = Math.abs(px * cy - py * cx); if (dd < q.r + 10) { this.damageZ(q, dmg, this.me.id, cx * 200, cy * 200); if (combos.has('railstorm') && this.rng() < 0.4) this.fx.push({ k: 'zap', x: q.x, y: q.y - 300, x2: q.x, y2: q.y - q.r, t: 0, life: 0.2 }); } } this.fx.push({ k: 'rail', x: ox, y: oy, x2: ox + cx * L, y2: oy + cy * L, t: 0, life: 0.25, c: Wd.color }); break; }
           case 'cone': case 'push': { const reach = Wd.range, half = Wd.kind === 'cone' ? 0.38 : 0.5, fire = Wd.kind === 'cone' || combos.has('firetornado');
             for (const q of this.z) { if (q.hp <= 0) continue; const dx = q.x - ox, dy = q.y - q.r - oy, dd = Math.hypot(dx, dy); if (dd > reach + q.r) continue; let da = Math.atan2(dy, dx) - a; da = Math.atan2(Math.sin(da), Math.cos(da)); if (Math.abs(da) > half) continue; this.damageZ(q, dmg, this.me.id, (dx / (dd || 1)) * (Wd.kind === 'push' ? 420 : 30), (dy / (dd || 1)) * (Wd.kind === 'push' ? 420 : 30), { burn: fire ? 1 + w.tier : 0 }); }
@@ -181,7 +181,7 @@
       }
     },
     // bullets with a trick: they explode, spark, or come back (called from the core bullet loop)
-    bulletHit(b, z) { if (b.zap) { const q = this.nearestZ(z.x + 60, z.y, 200); if (q && q !== z) { this.fx.push({ k: 'zap', x: z.x, y: z.y - z.r, x2: q.x, y2: q.y - q.r, t: 0, life: 0.15 }); this.damageZ(q, b.dmg * 0.6, this.me.id); } } if (b.boom && !b.pierce) this.boom(b.x, b.y, b.boom, b.dmg, '#ff8c42', false); },
+    bulletHit(b, z) { if (b.zap) { const q = this.nearestZ(z.x + 60, z.y, 200); if (q && q !== z) { this.fx.push({ k: 'zap', x: z.x, y: z.y - z.r, x2: q.x, y2: q.y - q.r, t: 0, life: 0.15 }); this.damageZ(q, b.dmg * 0.6, this.me.id, 0, 0, { shock: 1 }); } } if (b.boom && !b.pierce) this.boom(b.x, b.y, b.boom, b.dmg, '#ff8c42', false); },
     bulletEnd(b) { if (b.boom) this.boom(b.x, b.y, b.boom, b.dmg, '#ff8c42', false); },
     // ---------------- timed super weapons ----------------
     timedCheck() {
@@ -219,7 +219,7 @@
     debuffStep(dt, I) {
       const Dv = this.debuffs;
       for (const k of Object.keys(Dv)) if (Dv[k] > 0) { Dv[k] -= dt; if (Dv[k] <= 0) { delete Dv[k]; this.immune[k] = this.t + R().IMMUNE_S; } }
-      if (Dv.web > 0 && I) { const m = Math.hypot(I.mx || 0, I.my || 0), dx = (I.mx || 0) - (this._wx || 0), dy = (I.my || 0) - (this._wy || 0); this._wx = I.mx || 0; this._wy = I.my || 0; this.wiggle += Math.hypot(dx, dy) * (m > 0.3 ? 1 : 0); if (this.wiggle > 3) { Dv.web = 0; delete Dv.web; this.immune.web = this.t + R().IMMUNE_S; this.popup('BROKE FREE!', '#fff', this.p.x, this.p.y - 120); } }
+      if (Dv.web > 0 && I) { const m = Math.hypot(I.mx || 0, I.my || 0), dx = (I.mx || 0) - (this._wgx || 0), dy = (I.my || 0) - (this._wgy || 0); this._wgx = I.mx || 0; this._wgy = I.my || 0; this.wiggle += Math.hypot(dx, dy) * (m > 0.3 ? 1 : 0); if (this.wiggle > 3) { Dv.web = 0; delete Dv.web; this.immune.web = this.t + R().IMMUNE_S; this.popup('BROKE FREE!', '#fff', this.p.x, this.p.y - 120); } }
       if (Dv.leech > 0) { this.xp = Math.max(0, this.xp - 2 * dt); this.cash = Math.max(0, this.cash - 1.2 * dt); }
       if (Dv.shake > 0) this.shake = Math.max(this.shake, 0.12);
       this.rateMul *= Dv.jam > 0 ? 0.4 : 1;
@@ -362,7 +362,7 @@
         if (Wd.kind === 'swing' || Wd.kind === 'saw') { g.save(); g.translate(P.x, P.y - 30); g.rotate(ang + (w.swing ? (1 - w.swing) * 2.4 - 1.2 : 0)); g.fillStyle = 'rgba(0,0,0,0.4)'; g.fillRect(12, -2, Wd.range * 0.7, 8); g.fillStyle = w.tier >= 3 ? '#e0b030' : Wd.color; g.fillRect(10, -4, Wd.range * 0.7, 7); g.fillStyle = '#c9ccd1'; for (let k = 0; k < 4; k++) g.fillRect(20 + k * 12, -6, 3, 3); g.restore(); return; }
         g.save(); g.translate(ox, oy); if (Math.abs(ang) > Math.PI / 2) { g.rotate(ang); g.scale(0.55, -0.55); } else { g.rotate(ang); g.scale(0.55, 0.55); } drawWeaponIcon(g, w.id, w.tier); g.restore();
       });
-      if (this.buffs.truck > 0) { const A = window.TZA; g.save(); g.globalAlpha = 0.95; A.car(g, P.x - 90, P.y - 70, 180, 90, '#3d8a4a', false, { flip: P.face < 0 ? 1 : 0, r: W.rng(5) }); g.restore(); }
+      if (this.buffs.truck > 0 && !this.ride) { const A = window.TZA; g.save(); g.globalAlpha = 0.95; A.car(g, P.x - 90, P.y - 70, 180, 90, '#3d8a4a', false, { flip: P.face < 0 ? 1 : 0, r: W.rng(5) }); g.restore(); }
       if (this.evo) {
         const E = this.evo, u = E.t, lift = u < 0.8 ? u / 0.8 : u < 2.6 ? 1 : Math.max(0, 1 - (u - 2.6) / 0.8), gx = P.x, gy = P.y - 40 - lift * 90;
         // the golden beam from the sky, rotating rays, sparkles

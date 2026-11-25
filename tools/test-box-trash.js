@@ -223,7 +223,7 @@ test('Regular: the plan is the same for a seed and different across seeds (finds
     assert(!P.finds[P.door.join()], 'no loot on the door'); assert.equal(ST.tierAt(P, P.door[0], P.door[1]), P.top, 'the door is far away');
     assert(!(P.door[0] === 4 && P.door[1] === 4)); assert(ids.filter((i) => ST.FINDS[i].kind === 'equip' || ST.FINDS[i].kind === 'ability').length >= 5);
   }
-  assert(doors.size >= 4 && looks.size >= 4 && bosses.size === 7 && finds.size >= 55, `${doors.size} doors, ${looks.size} looks, ${bosses.size} bosses`);
+  assert(doors.size >= 4 && looks.size >= 4 && bosses.size === Object.keys(ST.BOSSES).length && bosses.size >= 9 && finds.size >= 55, `${doors.size} doors, ${looks.size} looks, ${bosses.size} bosses`);
 });
 test('Regular: a chained gate blocks the way until the team has the kills; then it bursts open', () => {
   const { room, ps: [a, b] } = story(2); room.start(); const g = room.game;
@@ -299,7 +299,7 @@ function sandbox() {
   let now = 0; const reports = [], lives = [], events = [];
   const ctx = { console, Math, Date, JSON, Object, Array, Map, Set, Number, String, Promise, Infinity, isFinite, performance: { now: () => now } };
   ctx.window = ctx; ctx.self = ctx; vm.createContext(ctx);
-  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-shop.js', 'trash-play.js', 'trash-arms.js', 'trash-fight.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
+  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-story.js', 'trash-boss.js', 'trash-shop.js', 'trash-play.js', 'trash-arms.js', 'trash-fight.js', 'trash-extra.js', 'trash-more.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
   const make = (o = {}) => new ctx.TZSim.Sim({ seed: 42, homes: [[4, 4]], me: { id: o.id || 'me', name: 'Me', color: '#fff' }, settings: { diff: 'normal', aim: 'on', xp: 'shared', ...(o.settings || {}) }, restore: o.restore || { cell: [4, 4], home: [4, 4], wave: 1, run: 1 },
     report: (m) => { reports.push(m); return Promise.resolve({ ok: true }); }, live: (m) => lives.push(m), on: (k, d) => events.push([k, d]), people: () => null });
   const step = (s, sec, I = {}, pick = true) => { for (let t = 0; t < sec; t += 1 / 60) { now += 1000 / 60; if (pick && s.cards) s.pick(0); s.update(1 / 60, I); } };
@@ -561,7 +561,7 @@ test('combos: owning both halves unlocks one (banner + feed), listed in the comb
   s.addWeapon('shotgun'); s.ab.bounce = 1; S.step(s, 0.6); assert(s.combos.has('pinball'), 'a weapon + an ability');
   s.ab.drone = 1; s.kits = 1; s.useTurret(); S.step(s, 0.6); assert(s.combos.has('flyturret'), 'used gear + an ability');
   assert(AR.COMBOS.length >= 8 && AR.COMBOS.every((c) => c.need.length === 2));
-  s.applyPickup('minigun'); assert(!s.tcombo); s.applyPickup('rockets'); assert.equal(s.tcombo.name, 'Rocket Minigun'); S.step(s, 9); assert(!s.tcombo, 'it ends with the rockets');
+  s.applyPickup('minigun'); assert(!s.tcombo); s.applyPickup('rockets'); assert.equal(s.tcombo.name, 'Rocket Minigun'); S.step(s, 10.5); assert(!s.tcombo, 'it ends with the rockets');
 });
 test('weapon carriers: some zombies hold a timed super weapon (same on every phone); kill one and it drops for you', () => {
   const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 8, run: 1 } }); s.p.inv = 1e9;
@@ -571,9 +571,9 @@ test('weapon carriers: some zombies hold a timed super weapon (same on every pho
   s.applyPickup('raygun'); s.spawnOne('walker'); const q = s.z[s.z.length - 1]; q.x = s.p.x + 300; q.y = s.p.y; q.hp = q.mhp = 1e6; S.step(s, 1); assert(q.hp < 1e6, 'the ray gun fires');
   const w1 = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 1, run: 1 } }); for (let i = 0; i < 200; i++) assert(!w1.makeZ('walker', 1, 1).carry, 'not on the first waves');
 });
-test('classes: six survivors with a passive and starting kit; their cards lean their way', () => {
+test('classes: six base survivors (plus four unlockable ones) with a passive and starting kit; their cards lean their way', () => {
   const S = sandbox(), mk1 = (c) => { const s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 2, run: 1 } }); s.setClass(c); return s; };
-  assert.equal(Object.keys(AR.CLASSES).length, 6);
+  assert.equal(Object.values(AR.CLASSES).filter((c) => !c.locked).length, 6); assert.equal(Object.values(AR.CLASSES).filter((c) => c.locked).length, 4);
   const base = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 2, run: 1 } }).S;
   assert.equal(mk1('demo').bombs, 2); assert.equal(mk1('tinker').kits, 2); const b = mk1('brawler'); assert(b.weapons.some((w) => w.id === 'bat') && b.S.mhp > base.mhp);
   assert(mk1('sharp').S.crit > base.crit); assert(mk1('medic').S.regen > base.regen); assert(mk1('scav').cashMul > 1.5);
@@ -628,7 +628,7 @@ test('slow motion (solo only), area events (gas leak, supply drop, cash grab, ca
   s.slowMo(0.5); assert(s.slowmo > 0); const t0 = s.t; S.step(s, 0.2); assert(s.t - t0 < 0.15, 'time slows'); s.mode = 'host'; s.slowmo = 0; s.slowMo(0.5); assert.equal(s.slowmo, 0, 'never in co-op'); s.mode = 'solo';
   s.startEvent('gas'); const g = s.events[s.events.length - 1]; for (let i = 0; i < 5; i++) { const z = s.makeZ('walker', g.x + i * 10, g.y); z.hp = z.mhp = 50; } s.b.push({ x: g.x, y: g.y, vx: 0, vy: 0, r: 4, dmg: 1, pierce: 0, bounce: 0, life: 0.3, hit: null, burn: 0 }); S.step(s, 0.1); assert(g.lit, 'shooting the gas lights it'); assert(s.z.filter((z) => z.hp > 0).length < 5);
   s.startEvent('drop'); const d = s.events[s.events.length - 1]; S.step(s, 7.2); s.p.x = d.x; s.p.y = d.y; const c0 = s.cash; S.step(s, 0.1); assert(s.cash > c0, 'supplies');
-  s.coins.length = 0; s.startEvent('cash'); assert(s.coins.length >= 30); S.step(s, 15.5); assert(s.coins.filter((c) => c.hold).length === 0, 'cash grab ends');
+  s.coins.length = 0; s.startEvent('cash'); assert(s.coins.length >= 30); const grab = s.coins.slice(), cev = s.events[s.events.length - 1]; S.step(s, 15.5); for (let i = 0; i < 30 && s.events.includes(cev); i++) S.step(s, 1); // (slow motion stretches it a little) assert(!s.coins.some((c) => grab.includes(c)), 'cash grab ends (another one may have started since)');
   const a = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1 } }); a.p.inv = 1e9; a.startEvent('alarm'); const n0 = a.spec.target; S.step(a, 4.5); assert(a.spec.target > n0, 'the alarm brings more');
   const k = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 5, run: 1 } }); k.p.inv = 1e9; const bz = k.spawnOne('boss'); k.damageZ(bz, 1e9, 'me'); assert(k.drops.some((q) => q.k === 'core'), 'bosses drop crucible cores'); const q = k.drops.find((x) => x.k === 'core'); k.p.x = q.x; k.p.y = q.y + 20; S.step(k, 0.1); assert.equal(k.cores, 1);
 });
@@ -639,6 +639,235 @@ test('server: classes, combos, upgrades and evolutions reach the feed and the TV
   assert(room.act(a, { op: 'ev', k: 'evolve', id: 'pistol', tier: 3 }).ok); assert(g.feed.some((f) => /Golden Hand-Cannon/.test(f.text))); assert(room.fxLog.some((f) => f.kind === 'tzevolve'));
   room.act(a, { op: 'st', kills: 5, lvl: 2, hp: 90, mhp: 100, wave: 1, wp: [['pistol', 3, 1], ['smg', 99, 7], ['bogus', 1, 1]] });
   assert.deepEqual(g.runs.get(a.id).wp, [['pistol', 3, 1], ['smg', 10, 3]]); const t = g.tv().players[0]; assert.equal(t.cls, 'medic'); assert.equal(t.wp.length, 2);
+});
+
+// ---------------- C: phase 3 (unlocks, Garage Defense, helpers, the TV, vehicles, survivors, weather, new bosses, run save) ----------------
+const X = require('../public/box/games/trash-extra');
+const os = require('os');
+const { BoxProfileStore } = require('../box/profiles');
+const mkProf = (settings = {}, n = 2, file = null) => {
+  const clock = new VirtualClock(), profiles = new BoxProfileStore(file), room = new BoxRoom('TEST', def, { clock, seed: 7, profiles });
+  const ps = []; for (let i = 0; i < n; i++) { const p = room.join(['Ana', 'Ben', 'Cy', 'Dee'][i]).player; p.sockets = 1; p.profileId = profiles.create(p.name).id; ps.push(p); }
+  Object.assign(room.settings, { mode: 'endless' }, settings);
+  return { clock, room, ps, profiles };
+};
+test('unlocks: scrap is paid at the end of the night and kept on the profile file; buying + picking a loadout survives a restart', () => {
+  const file = path.join(os.tmpdir(), 'tz-prof-' + process.pid + '-' + Date.now() + '.json');
+  try {
+    const { room, clock, ps: [a], profiles } = mkProf({}, 1, file); room.start(); const g = room.game; run(room, clock, 2000);
+    room.act(a, { op: 'st', kills: 40, lvl: 4, hp: 90, mhp: 100, wave: 1 });
+    assert.equal(def.metaView(room, a).scrap, 0); g.end('host');
+    const R = g.runs.get(a.id); assert(R.scrap > 0, 'scrap paid: ' + R.scrap); assert.equal(def.metaView(room, a).scrap, R.scrap); assert(g.view(a).me.scrap === R.scrap); assert(g.feed.some((f) => /scrap/.test(f.text)));
+    g.end('host'); assert.equal(def.metaView(room, a).scrap, R.scrap, 'paid once');
+    profiles.data.profiles[a.profileId].trash.scrap = 1000;
+    assert.equal(room.act(a, { op: 'meta', k: 'buy', id: 'tier:apocalypse' }).ok, false, 'apocalypse needs nightmare first');
+    for (const id of ['cls:sparky', 'wp:crossbow', 'fit:crown', 'tier:nightmare']) assert(room.act(a, { op: 'meta', k: 'buy', id }).ok, id);
+    assert.equal(room.act(a, { op: 'meta', k: 'buy', id: 'wp:crossbow' }).ok, false, 'only once');
+    assert.equal(room.act(a, { op: 'meta', k: 'pick', slot: 'wp', id: 'smg' }).ok, false, 'not owned');
+    assert(room.act(a, { op: 'meta', k: 'pick', slot: 'fit', id: 'crown' }).ok);
+    const M = def.metaView(room, a); assert.equal(M.scrap, 1000 - 120 - 150 - 120 - 200); assert.deepEqual(M.pick, { cls: null, wp: 'crossbow', fit: 'crown', tier: 'nightmare' });
+    assert(room.playerState(a).meta && room.playerState(a).meta.own.includes('cls:sparky'), 'the phone sees it (lobby too)');
+    profiles.save(); const again = new BoxProfileStore(file), M2 = again.get(a.profileId).trash; assert.deepEqual(M2.own.sort(), ['cls:sparky', 'fit:crown', 'tier:nightmare', 'wp:crossbow']); assert.equal(M2.scrap, M.scrap, 'kept in the .data file');
+    // the next night: the loadout reaches the phone; the unlocked class is allowed
+    const room2 = new BoxRoom('TES2', def, { clock: new VirtualClock(), seed: 9, profiles: again }), b = room2.join('Ana').player; b.sockets = 1; b.profileId = a.profileId; room2.settings.mode = 'endless'; room2.start();
+    const L = room2.game.view(b).me.load; assert.equal(L.wp, 'crossbow'); assert.equal(L.fit, 'crown'); assert.equal(L.tier, 'nightmare'); assert.deepEqual(L.classes, ['sparky']);
+    assert(room2.act(b, { op: 'ev', k: 'class', id: 'sparky' }).ok);
+    const c = room2.join('Cy').player; c.sockets = 1; assert.equal(room2.act(c, { op: 'ev', k: 'class', id: 'chef' }).ok, false, 'a locked class needs the unlock');
+    assert.equal(room2.act(c, { op: 'meta', k: 'buy', id: 'fit:cone' }).ok, false, 'no profile, no scrap');
+  } finally { try { fs.unlinkSync(file); } catch { /* gone */ } }
+  // the phone: the loadout starts the run with the weapon, the outfit and a harder tier
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1, load: { wp: 'crossbow', fit: 'crown', tier: 'nightmare', classes: ['sparky'] } } });
+  assert(s.weapons.some((w) => w.id === 'crossbow')); assert.equal(s.fit, 'crown'); const z = s.makeZ('walker', 100, 100), n = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }).makeZ('walker', 100, 100); assert(z.mhp > n.mhp * 1.3, 'nightmare zombies are tougher');
+  assert(s.setClass('sparky') && s.weapons.some((w) => w.id === 'coil'), 'the Electrician starts with the coil'); assert.equal(n.mhp > 0, true);
+  const t = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); assert.equal(t.setClass('janitor'), false, 'locked without the unlock');
+});
+test('Party Mode: no unlocks and no scrap (everyone starts equal)', () => {
+  const { room, ps: [a, b], profiles } = mkProf({ mode: 'score', length: 'm10' }, 2);
+  for (const p of [a, b]) { const M = profiles.get(p.profileId); M.trash = { ...X.blankMeta(), scrap: 0, own: ['cls:chef', 'wp:shotgun', 'fit:cone', 'tier:nightmare'], pick: { cls: null, wp: 'shotgun', fit: 'cone', tier: 'nightmare' } }; }
+  room.partyMode = { defs: [room.def], index: 0, plan: { trash: 5 }, phase: 'playing' }; room.start(); const g = room.game;
+  assert.equal(g.party, true); assert.equal(g.view(a).me.load, null, 'no loadout'); assert.equal(g.view(a).party, true);
+  assert.equal(room.act(a, { op: 'ev', k: 'class', id: 'chef' }).ok, false, 'no unlocked classes either');
+  g.runs.get(a.id).kills = 300; g.end('time'); assert.equal(g.runs.get(a.id).scrap, undefined); assert.equal(profiles.get(a.profileId).trash.scrap, 0, 'no scrap in Party Mode');
+  assert(!g.feed.some((f) => /scrap/.test(f.text)));
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1, load: null } }); assert.equal(s.weapons.length, 0); assert.equal(s.fit, null); assert.equal(s.tier, 'normal');
+});
+test('Garage Defense: wave 5 pulls everyone home to build; the horde comes; held doors score, broken ones cost hope; no hope = over', () => {
+  assert(def.fields.find((f) => f.key === 'mode').options.some((o) => o.value === 'garage'), 'in the lobby with the other modes');
+  const { room, clock, ps: [a, b] } = mk({ mode: 'garage' }, 2); room.start(); const g = room.game; run(room, clock, 1500);
+  assert.equal(g.gd.phase, 'explore'); assert.equal(g.tv().garage.next, 5);
+  const Ra = g.runs.get(a.id); walkTo(room, a, roadNb(g, Ra.home)); assert.notDeepEqual(Ra.cell, Ra.home);
+  for (let w = 2; w <= 5; w++) { run(room, clock, 1100); room.act(a, { op: 'st', kills: 10 * w, lvl: 2, hp: 90, mhp: 100, wave: w }); Ra.areas = 9; }
+  assert.equal(g.gd.phase, 'build'); assert.equal(g.gd.night, 1); assert.deepEqual(Ra.cell, Ra.home, 'pulled back home'); assert(g.feed.some((f) => /HORDE NIGHT 1/.test(f.text)));
+  assert.equal(room.act(a, { op: 'enter', x: Ra.cell[0] + 1, y: Ra.cell[1] }).ok, false, 'no wandering off on a horde night');
+  assert(room.act(a, { op: 'ready' }).ok); assert.equal(g.gd.phase, 'build', 'waiting for Ben'); assert(room.act(b, { op: 'ready' }).ok); assert.equal(g.gd.phase, 'horde'); assert(g.tv().card, 'the TV shows the horde card');
+  const r1 = room.act(a, { op: 'hordeend', ok: true, door: 0.8 }); assert(r1.ok && r1.bonus === X.hordeBonus(1, 0.8)); assert.equal(Ra.nights, 1);
+  assert(room.act(b, { op: 'hordeend', ok: false }).ok); assert.equal(g.gd.hope, 2); assert(g.feed.some((f) => /door broke/.test(f.text)));
+  assert.equal(g.gd.phase, 'explore', 'everyone done: dawn'); assert.equal(g.gd.next, 10); assert(g.recap && /Night 1/.test(g.recap.title), 'the TV recap between nights');
+  // the build timer runs out by itself
+  Ra.wave = 10; run(room, clock, 1100); room.act(a, { op: 'st', kills: 120, lvl: 3, hp: 90, mhp: 100, wave: 10 }); assert.equal(g.gd.phase, 'build'); run(room, clock, X.GARAGE.buildMs + 1500); assert.equal(g.gd.phase, 'horde');
+  room.act(a, { op: 'hordeend', ok: false }); room.act(b, { op: 'hordeend', ok: false }); assert.equal(g.phase, 'over'); assert.equal(g.overWhy, 'overrun');
+  // score decides the standings
+  const h = mk({ mode: 'garage' }, 2); h.room.start(); h.room.game.runs.get(h.ps[0].id).score = 10; h.room.game.runs.get(h.ps[1].id).score = 900; h.room.game.runs.get(h.ps[0].id).wave = 9; assert.equal(h.room.game.standings()[0].id, h.ps[1].id);
+});
+test('Garage Defense on the phone: barricades, turrets, spikes, flamers and decoys; the door takes hits; a held door scores; a broken door reports', () => {
+  const S = sandbox(), s = S.make({ settings: { mode: 'garage' }, restore: { cell: [2, 2], home: [4, 4], wave: 5, run: 1 } }); s.p.inv = 1e9; s.cash = 2000;
+  s.setGarage({ phase: 'build', night: 1, endsIn: 40000, hope: 3, max: 3, next: 5, ready: [] });
+  assert.equal(s.cell.join(), '4,4'); assert(s.area.garage && s.build && s.cleared); assert.equal(s.z.length, 0); assert.equal(s.exitOpen('s') || s.exitOpen('n') || s.exitOpen('e') || s.exitOpen('w'), false, 'exits shut');
+  const c0 = s.cash; for (const k of ['barricade', 'turret', 'spikes', 'flamer', 'decoy']) { s.p.x += 60; assert(s.buildBuy(k).ok, k); }
+  assert.equal(c0 - s.cash, ['barricade', 'turret', 'spikes', 'flamer', 'decoy'].reduce((t, k) => t + X.buildCost(k, 1), 0)); assert.equal(s.buildBuy('repair').ok, false, 'the door is fine');
+  const bar = s.area.obstacles.find((o) => o.bar); assert(bar && bar.low, 'a low wall'); assert(s.turrets.some((T) => T.night)); assert(S.reports.filter((r) => r.k === 'build').length === 5);
+  s.cash = 0; assert.equal(s.buildBuy('barricade').ok, false);
+  // bullets fly over barricades
+  s.b.length = 0; s.b.push({ x: bar.x - 5, y: bar.y + bar.h / 2, vx: 900, vy: 0, r: 5, dmg: 1, crit: false, pierce: 0, bounce: 0, life: 0.8, hit: null, burn: 0 }); s.bulletStep(0.02); assert.equal(s.b.length, 1, 'not stopped by the barricade');
+  s.setGarage({ phase: 'horde', night: 1, endsIn: 200000, hope: 3, max: 3 }); assert(s.hordeS && !s.cleared && s.spec.target === X.hordeSize(1, 1));
+  const D = s.build.door, z = s.makeZ('walker', D.x, D.y + 20); z.speed = 0; const hp0 = D.hp; S.step(s, 1); assert(D.hp < hp0, 'zombies at the door hurt it');
+  const sp = s.build.items.find((it) => it.k === 'spikes'), z2 = s.makeZ('walker', sp.x, sp.y); z2.speed = 0; const zh = z2.hp; S.step(s, 0.3); assert(z2.hp < zh || z2.hp <= 0, 'spikes shred');
+  const dc = s.build.items.find((it) => it.k === 'decoy'), z3 = s.makeZ('walker', dc.x + 300, dc.y); assert.equal(s.pickTarget(z3, s.p, 1), dc, 'the car alarm pulls zombies in');
+  // held: kill the rest
+  s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; const sc = s.score; S.step(s, 0.2);
+  assert(s.hordeS.done && s.score > sc); const he = S.reports.find((r) => r.op === 'hordeend'); assert(he && he.ok === true && he.door > 0);
+  s.setGarage({ phase: 'explore', night: 1, next: 10, hope: 3 }); assert(!s.build && !s.area.obstacles.some((o) => o.bar) && !s.turrets.some((T) => T.night) && s.cleared, 'dawn clears the yard');
+  // broken
+  const S2 = sandbox(), t = S2.make({ settings: { mode: 'garage' }, restore: { cell: [4, 4], home: [4, 4], wave: 5, run: 1 } }); t.p.inv = 1e9; t.phase = 'play'; t.cash = 100;
+  t.setGarage({ phase: 'horde', night: 2, endsIn: 200000, hope: 3, max: 3 }); assert(t.build && t.hordeS); t.build.door.hp = 1; const zz = t.makeZ('brute', t.build.door.x, t.build.door.y + 10); zz.speed = 0; S2.step(t, 0.5);
+  assert(t.hordeS.failed && t.cash === 70, 'raided'); assert(S2.reports.some((r) => r.op === 'hordeend' && r.ok === false));
+});
+test('helpers: down or out players (and watchers) drop crates, vote on the next event and send hordes at the leader, with energy + cooldowns', () => {
+  const { room, clock, ps: [a, b, c] } = mk({ mode: 'score', length: 'm10' }, 3); room.start(); const g = room.game; run(room, clock, 1500);
+  assert.equal(room.act(a, { op: 'help', k: 'crate', to: b.id }).ok, false, 'only while down or out');
+  room.act(a, { op: 'ev', k: 'dead' }); assert(g.view(a).me.helper, 'a dead player gets the helper panel'); assert.equal(g.view(b).me.helper, null);
+  const e0 = g.view(a).me.helper.e; assert(e0 >= X.HELP.crate.cost);
+  const r = room.act(a, { op: 'help', k: 'crate', to: b.id }); assert(r.ok, r.error); assert.equal(g.view(a).me.helper.e, Math.floor(e0 - X.HELP.crate.cost));
+  assert.equal(g.view(b).me.gifts.slice(-1)[0].kind, 'crate'); assert(g.feed.some((f) => /supply crate/.test(f.text)));
+  assert(/Next crate in/.test(room.act(a, { op: 'help', k: 'crate', to: c.id }).error), 'cooldown');
+  run(room, clock, X.HELP.crate.cd + 500); assert(room.act(a, { op: 'help', k: 'crate', to: c.id }).ok); const H = g.helpers.get('p:' + a.id); H.e = 5; run(room, clock, X.HELP.crate.cd + 100); H.e = 5; H.at = room.now();
+  assert(/needs/.test(room.act(a, { op: 'help', k: 'crate', to: b.id }).error), 'energy runs out'); H.e = 100;
+  assert.equal(room.act(a, { op: 'help', k: 'crate', to: a.id }).ok, false, 'not yourself');
+  // the leader gets a horde (score attack only), with a cooldown on the leader too
+  g.runs.get(b.id).score = 5000; g.runs.get(c.id).score = 100;
+  assert(room.act(a, { op: 'help', k: 'horde' }).ok); assert.equal(g.view(b).me.gifts.slice(-1)[0].kind, 'horde'); assert(g.view(b).me.gifts.slice(-1)[0].cnt >= 6);
+  H.e = 100; H.hordeAt = -1e9; assert(/just got one/.test(room.act(a, { op: 'help', k: 'horde' }).error), 'the leader gets a breather');
+  // the vote
+  g.lastPollAt = -1e12; run(room, clock, 1100); assert(g.poll, 'a vote opens while there are helpers'); const opt = g.poll.opts[0]; H.e = 100;
+  assert(room.act(a, { op: 'help', k: 'vote', ev: opt }).ok); assert.equal(room.act(a, { op: 'help', k: 'vote', ev: opt }).ok, false, 'one vote');
+  assert.equal(g.view(a).poll.mine, opt); run(room, clock, X.HELP.pollMs + 1200); assert(!g.poll && g.nextEv && g.nextEv.k === opt, 'the vote decides the next event'); assert.equal(g.view(b).nextEv.k, opt);
+  // a watcher on a phone helps too
+  const au = room.joinAudience('Watcher').member; au.sockets = 1; assert(room.audienceState().gv && room.audienceState().gv.players.length === 3, 'the audience sees the helper panel');
+  const ar = room.audienceAct(au, { k: 'state' }); assert(ar.ok && ar.me.e === X.HELP.start); assert(room.audienceAct(au, { k: 'crate', to: c.id }).ok); assert.equal(g.view(c).me.gifts.slice(-1)[0].from, 'Watcher');
+  // not in other modes
+  const e = mk({ mode: 'endless' }, 2); e.room.start(); e.room.act(e.ps[0], { op: 'ev', k: 'dead' }); assert(/Score attack/.test(e.room.act(e.ps[0], { op: 'help', k: 'horde' }).error));
+  // the phone: gifts arrive, the crate lands, the horde spawns, the voted event starts the next wave
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.p.inv = 1e9;
+  s.setWorld({ me: { gifts: [{ n: 1, kind: 'crate' }] }, nextEv: null }); assert.equal(s.crates.length, 0, 'old gifts are not replayed');
+  s.setWorld({ me: { gifts: [{ n: 1, kind: 'crate' }, { n: 2, kind: 'crate', from: 'Dee' }, { n: 3, kind: 'horde', cnt: 7, from: 'Dee' }] }, nextEv: { n: 4, k: 'drop' } });
+  assert.equal(s.crates.length, 1); assert(s.z.filter((q) => q.sent).length >= 6, 'the horde shows up');
+  const cr = s.crates[0]; cr.t = cr.land; s.p.x = cr.x; s.p.y = cr.y + 20; const cash = s.cash; S.step(s, 0.1); assert(s.cash > cash && !s.crates.length, 'crate: cash + health + a power-up');
+  s.events.length = 0; s.startWave(); assert(s.events.some((q) => q.k === 'drop'), 'the voted event'); assert.equal(s.pendingEv, null);
+});
+test('the TV: a live kill feed, a ranked leaderboard, boss intro cards, highlight moments and the recap; the spotlight follows whoever is in trouble', () => {
+  const { room, clock, ps: [a, b] } = mk({ mode: 'score', length: 'm10' }, 2); room.start(); const g = room.game; run(room, clock, 1500);
+  const ZT = Object.keys(W.ZOMBIES);
+  room.act(a, { op: 'st', kills: 9, lvl: 2, hp: 90, mhp: 100, wave: 1, score: 400, kf: [[ZT.indexOf('runner'), 6, 0, 0], [0, 3, 0, 0]] });
+  const t = g.tv(); assert(t.kfeed.length === 1 && /9 zombies/.test(t.kfeed[0].text) && /Sprinters/.test(t.kfeed[0].text), JSON.stringify(t.kfeed));
+  room.act(a, { op: 'st', kills: 10, lvl: 2, hp: 90, mhp: 100, wave: 1, kf: [['x', 'y'], [999, 5]] }); assert.equal(g.tv().kfeed.length, 1, 'junk is ignored');
+  assert(room.act(a, { op: 'ev', k: 'boss', id: 'icecream' }).ok); const card = g.tv().card; assert.equal(card.key, 'icecream'); assert.equal(card.name, ST.BOSSES.icecream.name); assert(room.fxLog.some((f) => f.kind === 'tzcard' && f.key === 'icecream'));
+  run(room, clock, 6500); assert.equal(g.tv().card, null, 'the card goes away');
+  room.act(a, { op: 'ev', k: 'multi', n: 4 }); room.act(a, { op: 'ev', k: 'multi', n: 7 }); room.act(b, { op: 'ev', k: 'bossdown', id: 'compactor' });
+  assert.equal(g.moments.filter((m) => m.kind === 'multi').length, 1, 'one chain, one moment'); assert.equal(g.moments.find((m) => m.kind === 'multi').value, 7);
+  assert(g.tv().kfeed.some((k) => /The Big Crunch/.test(k.text)));
+  run(room, clock, 4 * 60000); assert(g.recapSeq >= 1 && g.lastRecap.m.kind === 'boss', 'the recap shows the best moment (a boss kill beats a x7)'); assert(room.fxLog.some((f) => f.kind === 'tzrecap'));
+  // the spotlight
+  assert.equal(g.tv().spot, null); room.act(b, { op: 'st', kills: 12, lvl: 2, hp: 20, mhp: 100, wave: 1 }); run(room, clock, 1100);
+  assert.equal(g.tv().spot.id, b.id); assert.equal(g.view(b).me.spot, true); assert(g.outbox.some((m) => m.to === b.id && m.data.t === 'spot' && m.data.on));
+  g.outbox.length = 0; assert.equal(g.live(b, { t: 'tv', c: [1, 1], you: [1, 2], z: [] }), true); assert(g.outbox.some((m) => m.to === 'tv' && m.data.from === b.id), 'its phone streams to the TV');
+  assert.equal(g.live(a, { t: 'tv', c: [1, 1], you: [1, 2], z: [] }), false, 'nobody else can');
+  room.act(a, { op: 'st', kills: 14, lvl: 2, hp: 5, mhp: 100, wave: 1 }); run(room, clock, 1100); assert.equal(g.tv().spot.id, b.id, 'no flicker');
+  room.act(b, { op: 'st', kills: 14, lvl: 2, hp: 95, mhp: 100, wave: 1 }); run(room, clock, 5000); assert.equal(g.tv().spot.id, a.id, 'then the next one in trouble');
+  const st = g.standings(); assert(st[0].score >= st[1].score);
+});
+test('vehicles: get in and out cleanly, carts are fast, mowers chew, zombies hit the ride (and a crowd stops it); the garbage truck is a rare timed power-up', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.z.length = 0; s.cleared = true;
+  let found = 0; for (let x = 0; x < 9; x++) for (let y = 0; y < 9; y++) if (X.vehicleAt(42, x, y, [[4, 4]])) found++; assert(found >= 6 && found <= 50, 'parked rides around town: ' + found); assert.equal(X.vehicleAt(42, 4, 4, [[4, 4]]), null, 'not in a garage');
+  s.parked = { kind: 'cart', x: s.p.x + 300, y: s.p.y, hp: 140, mhp: 140, face: 1 }; assert.equal(s.nearVehicle(), null, 'too far'); assert.equal(s.toggleRide(), false);
+  s.p.x = s.parked.x - 40; assert(s.nearVehicle()); assert.equal(s.toggleRide(), 'in'); assert(s.ride && !s.parked); assert(S.reports.some((r) => r.k === 'ride' && r.id === 'cart'));
+  S.step(s, 0.1, { mx: 1 }); assert(s.speedMul > 1.5, 'the cart is fast: x' + s.speedMul); s.toggleRide(); S.step(s, 0.1, { mx: -1 }); assert.equal(s.speedMul, 1, 'on foot again');
+  assert(!s.ride && s.parked && s.parked.kind === 'cart', 'out: it stays parked');
+  s.p.x = s.parked.x; s.p.y = s.parked.y; s.toggleRide(); s.p.inv = 0; s.buffs.shield = 0; const hp = s.p.hp, vhp = s.ride.hp; s.hurt(30); assert.equal(s.p.hp, hp, 'the ride takes the hit'); assert(s.ride.hp < vhp);
+  for (let i = 0; i < 4; i++) s.makeZ('walker', s.p.x + 10 * i, s.p.y); s.speedMul = 1; s.rideStep(0.016); assert.equal(s.ride.stuck, 4); assert(s.speedMul < 0.4, 'a crowd stops it');
+  s.z.length = 0; s.p.inv = 0; s.ride.hp = 5; s.hurt(30); assert(!s.ride && s.wrecked[s.cellKey()], 'wrecked'); assert(S.events.some((e) => e[0] === 'wreck'));
+  // the mower
+  s.set.aim = 'off'; s.parked = { kind: 'mower', x: s.p.x, y: s.p.y, hp: 220, mhp: 220, face: 1 }; s.p.inv = 1e9; s.toggleRide(); const z = s.makeZ('canhead', s.p.x + 30, s.p.y); z.speed = 0; const zh = z.hp; S.step(s, 0.5); assert(z.hp < zh, 'the blades chew'); s.toggleRide();
+  // the garbage truck
+  s.applyPickup('truck'); assert.equal(s.ride.kind, 'gtruck'); assert(s.buffs.truck > 10); S.step(s, 3); assert(s.ride.time < 13); assert.equal(s.toggleRide(), 'out'); assert.equal(s.buffs.truck, 0, 'out of the truck: no ramming'); assert.equal(s.parked.kind, 'gtruck');
+  s.p.x = s.parked.x; s.p.y = s.parked.y; s.toggleRide(); s.ride.time = 0.1; S.step(s, 0.3); assert(!s.ride && !s.buffs.truck, 'time’s up: it drives off');
+  let trucks = 0; for (let i = 0; i < 400; i++) { s.pk.length = 0; s.dropPickup(400, 400); if (s.pk[0].k === 'truck') trucks++; } assert(trucks < 400 / W.PICKUPS.length, 'rare: ' + trucks);
+  assert.equal(s.youExtra().slice(0, 2).join(), '0,0'); s.parked = { kind: 'cart', x: s.p.x, y: s.p.y, hp: 9, mhp: 140 }; s.toggleRide(); assert.equal(s.youExtra()[0], 1, 'friends see your ride');
+  const o = { id: 'x', x: 0, y: 0 }; s.otherExtra(o, [0, 0, 0, 100, 100, 0, 0, 0, 0, 1, 0, 0, 2, 6, 10, 20, 50]); assert.equal(o.veh, 'mower'); assert.equal(o.fit, 'crown'); assert(o.npc && o.npc.hp === 50);
+});
+test('survivors: found hiding in town, escorted (zombies go for them), brought to a shop or the clinic for a reward; once per survivor', () => {
+  const { room, ps: [a, b] } = mk({}, 2); room.start(); const g = room.game;
+  let cell = null; for (let y = 0; y < 9 && !cell; y++) for (let x = 0; x < 9 && !cell; x++) if (X.survivorAt(g.seed, x, y, g.homes, PL.placeAt)) cell = [x, y];
+  assert(cell, 'some blocks hide a survivor'); let n = 0; for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) if (X.survivorAt(g.seed, x, y, g.homes, PL.placeAt)) { n++; assert(!PL.placeAt(g.seed, x, y, g.homes), 'never in a shop block'); } assert(n >= 4 && n <= 20, 'about one in seven: ' + n);
+  const Ra = g.runs.get(a.id); Ra.cell = cell.slice(); assert.equal(room.act(a, { op: 'escort', cell: '0,0' === cell.join() ? '1,1' : '0,0' }).ok, false, 'you have to be there');
+  const r = room.act(a, { op: 'escort', cell: cell.join() }); assert(r.ok && r.name); assert(g.feed.some((f) => /hiding/.test(f.text)));
+  const Rb = g.runs.get(b.id); Rb.cell = cell.slice(); assert(/already/.test(room.act(b, { op: 'escort', cell: cell.join() }).error), 'one escort');
+  assert.equal(room.act(a, { op: 'rescue' }).ok, false, 'not a shop here');
+  const [clinic] = Object.entries(PL.places(g.seed)).find(([k, t]) => t === 'clinic' && !g.homes.some((h) => h.join() === k)); Ra.cell = clinic.split(',').map(Number);
+  const rr = room.act(a, { op: 'rescue' }); assert(rr.ok && rr.clinic && rr.cash > 0 && rr.score > X.SURV_REWARD.score); assert.equal(Ra.rescues, 1); assert(g.view(a).surv.some(([k, st2]) => k === cell.join() && st2 === 'safe'));
+  assert.equal(room.act(a, { op: 'rescue' }).ok, false, 'once'); Ra.cell = cell.slice(); assert.equal(room.act(a, { op: 'escort', cell: cell.join() }).ok, false, 'already safe');
+  assert(g.moments.some((m) => m.kind === 'rescue')); assert.equal(g.tv().rescued, 1);
+  // the phone
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.p.inv = 1e9; s.z.length = 0; s.cleared = true;
+  s.area.obstacles = []; s.set.aim = 'off';
+  s.hiding = { id: '2,2', name: 'Old Gus', color: '#fff', x: s.p.x + 50, y: s.p.y, hp: 120, mhp: 120 }; s.o.report = (m) => { S.reports.push(m); const v = m.op === 'escort' ? { ok: true, name: 'Old Gus' } : m.op === 'rescue' ? { ok: true, cash: 90, score: 900, clinic: true } : { ok: true }; return { then: (f) => f(v) }; };
+  S.step(s, 0.1); assert(s.npc && !s.hiding, 'escorting'); assert(S.reports.some((m) => m.op === 'escort' && m.cell === '2,2'));
+  s.p.x = Math.min(W.AW - 100, s.p.x + 300); const d0 = Math.abs(s.npc.x - s.p.x); S.step(s, 2); assert(Math.abs(s.npc.x - s.p.x) < Math.min(d0, 120), 'they follow');
+  assert(s.targets().includes(s.npc), 'zombies go for them'); const z = s.makeZ('walker', s.npc.x, s.npc.y); z.speed = 0; const hp = s.npc.hp; S.step(s, 0.5); assert(s.npc.hp < hp); s.z.length = 0;
+  s.leave(Object.keys(s.area.exits).find((d) => s.area.exits[d] && W.inGrid(s.cell[0] + { n: 0, s: 0, w: -1, e: 1 }[d], s.cell[1] + { n: -1, s: 1, w: 0, e: 0 }[d]))); assert(s.npc && Math.hypot(s.npc.x - s.p.x, s.npc.y - s.p.y) < 120, 'they come along to the next block');
+  s.area.obstacles = []; s.z.length = 0; s.npc.hp = 1; s.makeZ('brute', s.npc.x, s.npc.y).speed = 0; S.step(s, 0.5); assert(!s.npc && S.reports.some((m) => m.k === 'survlost'), 'lost');
+});
+test('weather: rain puts fires out and powers shock weapons, fog hides you from far zombies, a heat wave speeds them up; the server turns it every few minutes', () => {
+  const { room, clock, ps: [a] } = mk({}, 1); room.start(); const g = room.game;
+  assert.equal(g.weather.k, 'clear'); run(room, clock, X.WX.firstMs + 1500); assert.notEqual(g.weather.k, 'clear'); assert(g.feed.some((f) => /Rain|Fog|Heat/.test(f.text))); assert(room.fxLog.some((f) => f.kind === 'tzweather'));
+  assert.equal(g.view(a).weather.k, g.weather.k); assert(g.tv().weather.tip);
+  const S = sandbox(), mkS = () => { const s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.p.inv = 1e9; s.z.length = 0; return s; };
+  const dry = mkS(), wet = mkS(); wet.setWeather('rain'); assert(S.events.some((e) => e[0] === 'weather') && /RAIN/.test(wet.banner.text), 'a banner says so');
+  for (const s of [dry, wet]) { const z = s.makeZ('brute', 900, 300); z.hp = z.mhp = 1e5; s.damageZ(z, 100, 'me', 0, 0, { shock: 1 }); s._shock = 1e5 - z.hp; s.damageZ(z, 100, 'me', 0, 0, { burn: 2 }); s._fire = 1e5 - s._shock - z.hp; s._burn = z.burn; }
+  assert.equal(wet._shock, dry._shock * X.WX.shockRain); assert(wet._fire < dry._fire && wet._burn < dry._burn, 'fires go out');
+  const fog = mkS(); fog.setWeather('fog'); const far = fog.makeZ('walker', fog.p.x + 900, fog.p.y), near = fog.makeZ('walker', fog.p.x + 200, fog.p.y);
+  const tgF = fog.pickTarget(far, fog.p, 900 * 900), tgN = fog.pickTarget(near, fog.p, 200 * 200); assert(tgF !== fog.p && tgF.slowK, 'far: it shuffles about'); assert.equal(tgN, fog.p, 'near: it notices you');
+  const hot = mkS(), cool = mkS(); hot.setWeather('heat'); hot.area.obstacles = []; cool.area.obstacles = []; for (const s of [hot, cool]) { const z = s.makeZ('walker', s.p.x + 600, s.p.y); z.speed = 100; s._z = z; s._x = z.x; s.zombieStep(0.5); } assert(Math.abs(hot._z.x - hot._x) > Math.abs(cool._z.x - cool._x) * 1.2, 'heat: faster zombies');
+});
+test('new bosses with their own arenas: the ice-cream truck laps and leaves slowing slush (with its jingle); the compactor slams crush zones; in the rotation', () => {
+  assert(ST.BOSSES.icecream && ST.BOSSES.compactor && W.ZOMBIES.icecream.mini && W.ZOMBIES.compactor.mini);
+  const minis = new Set(); for (let w = 10; w <= 40; w += 5) minis.add(W.waveSpec(w, 1).mini); assert(minis.has('icecream') && minis.has('compactor'), 'mini-boss rotation');
+  const finals = new Set(); for (let seed = 1; seed <= 200; seed++) finals.add(ST.plan(seed, [[4, 4]]).boss); assert(finals.has('icecream') && finals.has('compactor'), 'final-boss rotation');
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 15, run: 1 } }); s.p.inv = 1e9; s.phase = 'play'; s.z.length = 0; assert.equal(s.spec.mini, 'icecream');
+  s.banner = null; s.waveKills = Math.ceil(s.spec.target * 0.3); S.step(s, 0.05); const ice = s.z.find((z) => z.mb); assert.equal(ice.mb, 'icecream'); assert(S.reports.some((r) => r.k === 'boss' && r.id === 'icecream'), 'the TV gets its card'); ice.hp = ice.mhp = 1e6;
+  const p0 = [ice.x, ice.y]; S.step(s, 2); assert(Math.hypot(ice.x - p0[0], ice.y - p0[1]) > 50, 'it drives'); assert(S.events.some((e) => e[0] === 'jingle'), 'the jingle plays'); assert(s.slush.length > 0, 'slush');
+  const q = s.slush[0]; s.p.x = q.x; s.p.y = q.y; s.fightStep(0.016); s.arenaStep(0.016); assert(s.speedMul <= 0.5, 'slush slows you');
+  const S2 = sandbox(), c = S2.make({ restore: { cell: [2, 2], home: [4, 4], wave: 20, run: 1 } }); c.phase = 'play'; c.z.length = 0; assert.equal(c.spec.mini, 'compactor'); c.waveKills = c.spec.target; const cb = c.spawnOne('boss'); cb.hp = cb.mhp = 1e6; cb.speed = 0;
+  c.p.inv = 0; c.buffs.shield = 0; c.p.hp = c.S.mhp = 1000; c.S.dodge = 0; S2.step(c, 2.8); assert(c.crush.length > 0 || c.crushHit.size > 0, 'crush zones'); const zone = c.crush[0] || { v: true, c: c.p.x, w: 230 };
+  c.crush = [{ id: 999, v: true, c: c.p.x, w: 230, t: 0, warn: 0.5, life: 1 }]; c.p.inv = 0; const hp = c.p.hp; c.arenaStep(0.6); assert(c.p.hp < hp, 'CRUNCH'); void zone;
+  const snap = c.snapExtra(); assert(snap.ar && snap.ar.c.length === 1); const S3 = sandbox(), gst = S3.make({ restore: { cell: [2, 2], home: [4, 4], wave: 20, run: 1 } }); gst.snapIn({ ar: snap.ar }); assert.equal(gst.crush.length, 1, 'guests see the hazards');
+  const fz = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 }, settings: {} }); fz.story = { plan: { boss: 'icecream' } }; fz.spawnFinal(); const fb = fz.z.find((z) => z.fb); assert.equal(fb.fb, 'icecream'); assert(fb.noCollide, 'it drives over the curbs');
+});
+test('run save: reloading the phone brings back cash, weapons, items, class, combos, the ride and the survivor (same run only)', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1, lvl: 4 } }); s.p.inv = 1e9; s.phase = 'play';
+  s.cash = 321; s.score = 4567; s.setClass('demo'); s.addWeapon('shotgun'); s.addWeapon('smg'); s.weapons[0].lv = 7; s.weapons[1].tier = 2; s.cores = 2; s.items.boots = 2; s.combos.add('pinball'); s.bombs = 3; s.plates = 2; s.pocket = 'shield'; s.gear.mhp = 20;
+  s.ride = { kind: 'mower', hp: 100, mhp: 220 }; s.npc = { id: '3,3', name: 'Mabel', color: '#fff', hp: 80, mhp: 120, x: 0, y: 0 }; s.giftN = 7; s.evN = 3;
+  const d = JSON.parse(JSON.stringify(s.saveData()));
+  const t = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1, lvl: 4 } }); assert(t.loadSave(d));
+  assert.equal(t.cash, 321); assert.equal(t.score, 4567); assert.equal(t.cls, 'demo'); assert.equal(JSON.stringify(t.weapons.map((w) => [w.id, w.lv, w.tier])), JSON.stringify([['shotgun', 7, 1], ['smg', 1, 2]])); assert.equal(t.cores, 2); assert.equal(t.items.boots, 2);
+  assert(t.combos.has('pinball')); assert.equal(t.bombs, 3); assert.equal(t.plates, 2); assert.equal(t.pocket, 'shield'); assert.equal(t.gear.mhp, 20); assert.equal(t.ride.kind, 'mower'); assert.equal(t.npc.name, 'Mabel'); assert.equal(t.giftN, 7); assert.equal(t.evN, 3);
+  assert(t.S.mhp > 100, 'stats rebuilt');
+  const u = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1 } }); assert.equal(u.loadSave({ ...d, seed: 999 }), false, 'another night: ignored'); assert.equal(u.loadSave({ ...d, v: 0 }), false);
+  const bad = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 6, run: 1 } }); bad.loadSave({ ...d, cash: -5, weapons: [{ id: 'nope', lv: 99 }, { id: 'smg', lv: 99, tier: 9 }], items: { nope: 3 } }); assert.equal(bad.cash, 0); assert.equal(JSON.stringify(bad.weapons.map((w) => [w.id, w.lv, w.tier])), JSON.stringify([['smg', 10, 3]])); assert.equal(JSON.stringify(bad.items), '{}');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash.js'), 'utf8'); assert(/'tz\.run\.' \+ code \+ '\.' \+ id/.test(src) && /try \{ localStorage\.setItem\(k/.test(src) && /loadRun\(v\)/.test(src), 'the phone keeps it in localStorage per room + player');
+});
+test('hard rules: the camera stays centred on the hero and the view keeps its zoom', () => {
+  const sim = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-sim.js'), 'utf8'), cl = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash.js'), 'utf8');
+  assert(sim.includes('let cx = P.x, cy = P.y - 30; void L;')); assert(cl.includes('k: Math.min(w, h) / 500'));
 });
 
 console.log(`\n${passed} TrashZombies tests passed.`);

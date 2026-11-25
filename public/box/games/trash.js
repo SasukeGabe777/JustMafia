@@ -31,6 +31,7 @@
       const wv = c.clientWidth, hv = c.clientHeight, d = Math.min(2, window.devicePixelRatio || 1);
       if (c.width !== Math.round(wv * d) || c.height !== Math.round(hv * d)) { c.width = Math.round(wv * d); c.height = Math.round(hv * d); }
       const g = c.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0); drawMap(g, wv, hv, performance.now() / 1000);
+      const sc = TV.el.querySelector('#tz-spotc'); if (sc) spotDraw(sc, performance.now() / 1000);
       TV.raf = requestAnimationFrame(step);
     };
     TV.raf = requestAnimationFrame(step);
@@ -127,20 +128,62 @@
     return out;
   }
   function tvSide(s) {
-    const P = (s.players || []).slice().sort((a, b) => (s.mode === 'score' ? b.score - a.score : 0) || (a.state === 'dead') - (b.state === 'dead') || b.wave - a.wave || b.kills - a.kills);
-    const rows = P.map((p) => `<div class="tz-row ${p.state === 'dead' ? 'dead' : ''} ${p.danger ? 'danger' : ''}">${face({ ...p, bot: true }, 46)}<div class="tz-rmain"><b style="color:${esc(p.color || '#fff')}">${p.cls && window.TZR ? window.TZR.CLASSES[p.cls].icon + ' ' : ''}${nm(p.name)}</b>
+    const ranked = s.mode === 'score' || s.mode === 'garage';
+    const P = (s.players || []).slice().sort((a, b) => (ranked ? b.score - a.score : 0) || (a.state === 'dead') - (b.state === 'dead') || b.wave - a.wave || b.kills - a.kills);
+    const rows = P.map((p, i) => `<div class="tz-row ${p.state === 'dead' ? 'dead' : ''} ${p.danger ? 'danger' : ''} ${s.spot && s.spot.id === p.id ? 'spot' : ''}"><span class="tz-rank">${i + 1}</span>${face({ ...p, bot: true }, 46)}<div class="tz-rmain"><b style="color:${esc(p.color || '#fff')}">${p.veh && window.TZX ? window.TZX.VEHICLES[p.veh].icon + ' ' : ''}${p.cls && window.TZR ? window.TZR.CLASSES[p.cls].icon + ' ' : ''}${nm(p.name)}</b>
       <small>${p.state === 'dead' ? '💀 out · ' : p.state === 'down' ? '🆘 DOWN · ' : p.ch ? '🃏 picking an ability · ' : ''}${s.mode === 'score' || p.score ? `<b class="tz-sc">${(p.score || 0).toLocaleString('en-US')}</b>${p.streak > 1 ? ` <b class="tz-mx">×${p.streak}</b>` : ''} · ` : ''}Wave ${p.wave} · Lv ${p.lvl} · ${p.kills} kills</small>
       <div class="tz-hp"><i style="width:${p.state === 'dead' || !p.mhp ? 0 : Math.round((100 * p.hp) / p.mhp)}%"></i></div><div class="tz-ab">${abIcons(p.ab)}${(p.wp || []).slice(1).map(([id, lv, tier]) => window.TZR && window.TZR.WEAPONS[id] ? `<span class="tz-abi t${tier}" title="${esc(window.TZR.wname(id, tier))}">${window.TZR.WEAPONS[id].icon}<sub>${lv}</sub></span>` : '').join('')}</div></div></div>`).join('');
-    const feed = (s.feed || []).slice().reverse().map((f) => `<li>${esc(f.icon)} ${nm(f.text)}</li>`).join('');
-    const len = s.mode === 'score' ? '🏆 Score attack' : { endless: '♾️ Endless', w20: '🏁 First to wave 20' }[s.length] || '';
+    const feed = (s.feed || []).slice(-6).reverse().map((f) => `<li>${esc(f.icon)} ${nm(f.text)}</li>`).join('');
+    const kfeed = (s.kfeed || []).slice(-6).reverse().map((k) => `<li class="${k.big ? 'big' : ''}"><b style="color:${esc(k.color || '#fff')}">${nm(k.name)}</b> <span>${esc(k.icon)} ${nm(k.text)}</span></li>`).join('');
+    const len = s.mode === 'score' ? '🏆 Score attack' : s.mode === 'garage' ? '🏚️ Garage Defense' : { endless: '♾️ Endless', w20: '🏁 First to wave 20' }[s.length] || '';
+    const G0 = s.garage, wx = s.weather;
+    const chips = `<div class="tz-chips">${wx ? `<span class="tz-chip wx-${esc(wx.k)}" title="${esc(wx.tip)}">${esc(wx.icon)} ${esc(wx.name)}${wx.k !== 'clear' ? `<small>${esc(wx.tip)}</small>` : ''}</span>` : ''}${G0 ? `<span class="tz-chip gd-${esc(G0.phase)}">${G0.phase === 'explore' ? `🏚️ Horde night ${G0.night + 1} at wave ${G0.next}` : G0.phase === 'build' ? `🔨 Night ${G0.night}: building · ${timer(G0.endsIn)}` : `🧟 Night ${G0.night}: THE HORDE · ${timer(G0.endsIn)}`}<small>Hope ${'❤️'.repeat(G0.hope)}${'🖤'.repeat(Math.max(0, G0.max - G0.hope))}</small></span>` : ''}${s.poll ? `<span class="tz-chip vote">🗳️ Helpers vote: ${s.poll.opts.map((k) => (window.TZX ? window.TZX.VOTE_EVENTS[k].icon : '') + ' ' + (s.poll.counts[k] || 0)).join(' · ')}</span>` : ''}${s.helpers ? `<span class="tz-chip help">🙌 ${s.helpers} helper${s.helpers > 1 ? 's' : ''}</span>` : ''}</div>`;
     const S0 = s.story, nt = S0 && S0.tier < S0.max ? S0.tier + 1 : 0;
     const storyBox = S0 ? `<div class="tz-story"><div><b>📖 Ring ${S0.tier}/${S0.max} open</b>${nt ? `<span>⛓️ next gate: ${Math.min(S0.kills, S0.needs[nt - 1])}/${S0.needs[nt - 1]} team kills</span><i style="width:${Math.round(100 * Math.min(1, S0.kills / S0.needs[nt - 1]))}%"></i>` : '<span>All gates are down!</span>'}</div><div class="tz-sk"><span>🗝️ ${S0.keys}/3</span><span>🗺️ ${S0.maps}/2</span><span>${S0.boss ? `${S0.boss.icon} ${esc(S0.boss.name)}${S0.doorOpen ? ' <b>AWAKE</b>' : ''}` : '🚪 door: ???'}</span></div></div>` : '';
     return `<div class="tz-sidehead"><span class="tz-logo-s">Trash<b>Zombies</b></span>${S0 ? `<span class="tz-len">📖 ${timer(S0.time || 0)}</span>` : s.endsIn ? `<span class="tz-clock">⏱ ${timer(s.endsIn)}</span>` : `<span class="tz-len">${len}</span>`}</div>${storyBox}
-      <div class="tz-rows">${rows}</div><ul class="tz-feed">${feed}</ul>`;
+      ${chips}<h4 class="tz-lbh">🏆 Leaderboard${ranked ? ' · by score' : ''}</h4><div class="tz-rows">${rows}</div>${kfeed ? `<h4 class="tz-lbh">💀 Kill feed</h4><ul class="tz-kfeed">${kfeed}</ul>` : ''}<ul class="tz-feed">${feed}</ul>`;
   }
+  // ---------- the boss intro card and the highlight recap (over the map) ----------
+  function tvCards(s) {
+    const C = s.card, Rc = s.recap; let html = '';
+    if (C) html += `<div class="tz-bcard k-${esc(C.key)}"><div class="tz-bc-i">${esc(C.icon)}</div><div><small>${C.kind === 'final' ? '☠️ FINAL BOSS' : C.kind === 'horde' ? '🌙 HORDE NIGHT' : '⚠️ BOSS INCOMING'}</small><h2>${esc(C.name)}</h2><p>${esc(C.desc || '')}</p>${C.by ? `<em>near ${nm(C.by)}</em>` : ''}</div></div>`;
+    else if (Rc && Rc.m) { const M = Rc.m, st = Rc.stats || {}; html += `<div class="tz-recap"><small>${esc(Rc.title)}</small><div class="tz-rc-row">${face({ id: M.id, name: M.name, avatar: M.avatar, bot: true }, 90)}<div><h2 style="color:${esc(M.color || '#ffd23f')}">${nm(M.name)}</h2><p>${nm(M.text)}</p></div><div class="tz-rc-big">${{ multi: '💥 ×' + M.value, boss: '☠️', final: '🏆', streak: '🔥 ×' + M.value, rescue: '🧍', horde: '🏚️', revive: '🤝' }[M.kind] || '⭐'}</div></div><div class="tz-rc-stats"><span>Wave <b>${st.wave || 0}</b></span><span>Kills <b>${st.kills || 0}</b></span><span>Level <b>${st.lvl || 0}</b></span>${st.score ? `<span>Score <b>${Number(st.score).toLocaleString('en-US')}</b></span>` : ''}${Rc.lead ? `<span>👑 ${nm(Rc.lead.name)}</span>` : ''}</div></div>`; }
+    return html;
+  }
+  // ---------- the spotlight: a live picture from the phone of whoever is in trouble ----------
+  function tvLive(m) { if (m && m.t === 'tv') { TV.snap = m; TV.snapAt = performance.now(); TV.snapPrev = TV.snapPrev && TV.snapPrev.from === m.from ? TV.snapCur : null; TV.snapCur = m; } }
+  function spotDraw(c, t) {
+    const s = TV.s, sp = s && s.spot, m = TV.snap, fresh = m && sp && m.from === sp.id && performance.now() - TV.snapAt < 2500;
+    const box = c.parentElement; if (box) box.classList.toggle('on', !!fresh);
+    if (!fresh) return;
+    const wv = c.clientWidth, hv = c.clientHeight, d = Math.min(2, window.devicePixelRatio || 1); if (!wv || !hv) return;
+    if (c.width !== Math.round(wv * d) || c.height !== Math.round(hv * d)) { c.width = Math.round(wv * d); c.height = Math.round(hv * d); }
+    const g = c.getContext('2d'), Z = W(), TA = window.TZA; g.setTransform(d, 0, 0, d, 0, 0); g.fillStyle = '#0c0a08'; g.fillRect(0, 0, wv, hv);
+    const you = m.you || [], hx = you[0] || Z.AW / 2, hy = you[1] || Z.AH / 2, k = Math.min(wv / 900, hv / 560), ox = wv / 2 / k - hx, oy = hv / 2 / k - (hy - 30);
+    const key = m.c.join(',') + ':' + m.h; if (!TV.spotBg || TV.spotBg.key !== key) { const area = Z.genArea(s.seed, m.c[0], m.c[1], !!m.h); TV.spotBg = { key, area, cv: TA.areaCanvas(area, 0.45) }; }
+    const B = TV.spotBg.cv; g.setTransform(d * k, 0, 0, d * k, ox * k * d, oy * k * d); g.drawImage(B.canvas, -TA.M, -TA.M, B.canvas.width / B.scale, B.canvas.height / B.scale);
+    const kp = Math.max(0.2, Math.round(k * d * 10) / 10), list = [], ZT = Object.keys(Z.ZOMBIES), bk = new Map((m.bk || []).map(([i, key2]) => [i, key2]));
+    for (let i = 0, j = 0; i < (m.z || []).length; i += 5, j++) list.push({ z: true, ti: m.z[i], x: m.z[i + 1], y: m.z[i + 2], hp: m.z[i + 3], face: m.z[i + 4], j, bk: bk.get(j) });
+    list.push({ you: true, x: hx, y: hy }); for (const o of m.o || []) list.push({ other: true, id: o[0], x: o[1], y: o[2], down: o[5] }); if (m.n) list.push({ npc: true, x: m.n[0], y: m.n[1], name: m.n[2] });
+    list.sort((a, b) => a.y - b.y);
+    const who = (s.players || []).find((p) => p.id === m.from) || { id: m.from, name: '', color: '#fff' };
+    for (const q of list) {
+      if (q.z) { const type = ZT[q.ti] || 'walker'; if (q.bk && window.TZB) { window.TZB.drawBoss(g, { x: q.x, y: q.y, r: (Z.ZOMBIES[type] || {}).r || 60, hp: q.hp, mhp: 100, face: q.face, fb: q.bk, mb: q.bk }, t); continue; } const spr = TA.zombie(type, Math.floor(t * 6 + q.j) % 4, kp, false, q.j % 5); g.save(); g.translate(q.x, q.y); if (q.face < 0) g.scale(-1, 1); g.drawImage(spr, -spr.ox, -spr.oy, spr.width / kp, spr.height / kp); g.restore(); continue; }
+      if (q.you) { if (window.TZMore && m.veh) window.TZMore.drawVehicle(g, m.veh, q.x, q.y, you[9] || 1, t, true, null); if (window.TZSim) window.TZSim.heroDraw(g, who, q.x, q.y, { k: kp, dead: !!m.dn, face: you[9] || 1, moving: true, walkT: t }); if (window.TZMore && m.fit && m.fit !== 'cape') window.TZMore.drawFit(g, m.fit, q.x, q.y, you[9] || 1, t, false); g.strokeStyle = who.color || '#fff'; g.lineWidth = 3; g.beginPath(); g.ellipse(q.x, q.y, 26, 10, 0, 0, TAU); g.stroke(); continue; }
+      if (q.other) { const pw = (s.players || []).find((p) => p.id === q.id) || { id: q.id }; if (window.TZSim) window.TZSim.heroDraw(g, pw, q.x, q.y, { k: kp, dead: !!q.down, face: 1 }); continue; }
+      if (q.npc && window.TZSim) window.TZSim.heroDraw(g, { id: 'npc:' + q.name, name: q.name, color: '#e8b830' }, q.x, q.y, { k: kp, face: 1, moving: true, walkT: t });
+    }
+    g.setTransform(d, 0, 0, d, 0, 0);
+    if (m.wx === 'rain') { g.strokeStyle = 'rgba(190,210,230,0.35)'; g.lineWidth = 1; g.beginPath(); for (let i = 0; i < 50; i++) { const x = ((i * 97 + t * 400) % wv), y = ((i * 53 + t * 700) % hv); g.moveTo(x, y); g.lineTo(x - 3, y + 12); } g.stroke(); }
+    else if (m.wx === 'fog') { g.fillStyle = 'rgba(170,175,185,0.28)'; g.fillRect(0, 0, wv, hv); } else if (m.wx === 'heat') { g.fillStyle = 'rgba(255,120,40,0.1)'; g.fillRect(0, 0, wv, hv); }
+    if (m.dn) { g.fillStyle = `rgba(120,0,0,${0.25 + 0.1 * Math.sin(t * 6)})`; g.fillRect(0, 0, wv, hv); }
+    const hpw = wv - 24, fr = m.mhp ? Math.max(0, m.hp / m.mhp) : 0; g.fillStyle = 'rgba(15,10,6,0.8)'; g.fillRect(10, hv - 26, hpw + 4, 16); g.fillStyle = fr < 0.3 ? '#ff4a3a' : '#5ad65a'; g.fillRect(12, hv - 24, hpw * fr, 12);
+  }
+  const spotTag = (sp) => `📺 SPOTLIGHT · <b style="color:${esc(sp.color || '#fff')}">${nm(sp.name)}</b> ${sp.why === 'down' ? '🆘 is DOWN: go help!' : `❤️ ${Math.max(0, Math.round(sp.hp))}/${sp.mhp} · in trouble!`}`;
+  function spotHtml(s) { const sp = s.spot; if (!sp) return ''; return `<div class="tz-spotw ${sp.why === 'down' ? 'down' : ''}"><canvas id="tz-spotc"></canvas><div class="tz-spot-tag">${spotTag(sp)}</div></div>`; }
   function tvOver(el, s) {
     const st = s.standings || [], top = st.slice(0, 3);
-    const scoreTxt = (r) => (r.score ? `<b class="tz-sc">${r.score.toLocaleString('en-US')} pts</b> · ` : '');
+    const scoreTxt = (r) => (r.score ? `<b class="tz-sc">${r.score.toLocaleString('en-US')} pts</b> · ` : '') + (r.scrap != null ? `<b class="tz-scrap">🔩 +${r.scrap}</b> · ` : '');
     const pod = top.map((r, i) => `<div class="tz-pod p${i + 1}"><div class="tz-pbody">${BOX.body ? BOX.body({ ...r, bot: true }, i === 0 ? 210 : 170, { mood: 'grin' }) : esc(r.avatar)}</div><div class="tz-pbase"><b>${['🥇', '🥈', '🥉'][i]} ${nm(r.name)}</b><small>${scoreTxt(r)}Wave ${r.wave} · ${r.kills} kills · Lv ${r.lvl}</small><div class="tz-ab">${abIcons(r.build)}</div></div></div>`).join('');
     const rest = st.slice(3).map((r, i) => `<li><span>#${i + 4}</span>${face(r, 34)}<b>${nm(r.name)}</b><small>Wave ${r.wave} · ${r.kills} kills · Lv ${r.lvl}</small><div class="tz-ab">${abIcons(r.build)}</div></li>`).join('');
     const S0 = s.story;
@@ -148,7 +191,7 @@
       const won = s.why === 'win', finds = (S0.finds || []).map((f) => { const F = window.TZS.FINDS[f.id]; const who = (s.standings || []).find((r) => r.id === f.by); return F ? `<span class="tz-vf">${F.icon} ${esc(F.name)}<small>${who ? nm(who.name) : ''}</small></span>` : ''; }).join('');
       return BOX.morph(el, `<div class="tz-over ${won ? 'tz-victory' : 'tz-defeat'}">${won ? '<div class="tz-rays"></div><div class="tz-confetti"></div>' : ''}<h1 class="tz-logo">${won ? 'THE TOWN IS <b>SAVED!</b>' : 'THE TRASH <b>WON…</b>'}</h1><p class="tz-why">${won ? `${S0.boss ? S0.boss.icon + ' ' + esc(S0.boss.name) : 'The boss'} is down! ` : 'Everyone fell before the boss went down. '}⏱ ${timer(S0.time || 0)} · ${S0.kills} team kills · 🗝️ ${S0.keys}/3 · ${(S0.finds || []).length} finds</p><div class="tz-podium">${pod}</div>${finds ? `<div class="tz-vfinds">${finds}</div>` : ''}${rest ? `<ol class="tz-rest">${rest}</ol>` : ''}</div>`);
     }
-    const why = { time: s.mode === 'score' ? 'Time’s up! Highest score takes it.' : 'Time’s up! The garbage trucks roll in at dawn.', down: 'Everyone’s down. The zombies take the street…', w20: 'Wave 20 survived! The street is safe (for now).', host: 'The host called it a night.', empty: 'Everyone went home. The zombies have the town.' }[s.why] || 'The night is over.';
+    const why = { overrun: `The horde broke through: the town ran out of hope after ${s.garage ? s.garage.night : 0} horde night${s.garage && s.garage.night === 1 ? '' : 's'}.`, time: s.mode === 'score' || s.mode === 'garage' ? 'Time’s up! Highest score takes it.' : 'Time’s up! The garbage trucks roll in at dawn.', down: 'Everyone’s down. The zombies take the street…', w20: 'Wave 20 survived! The street is safe (for now).', host: 'The host called it a night.', empty: 'Everyone went home. The zombies have the town.' }[s.why] || 'The night is over.';
     BOX.morph(el, `<div class="tz-over"><h1 class="tz-logo">Trash<b>Zombies</b></h1><p class="tz-why">${esc(why)}</p><div class="tz-podium">${pod}</div>${rest ? `<ol class="tz-rest">${rest}</ol>` : ''}</div>`);
   }
 
@@ -174,9 +217,11 @@
       mates: () => ((PH.v && PH.v.players) || []).filter((p) => !p.bot && p.state === 'play').length, stashes: () => (PH.v && PH.v.stashes) || [],
     });
     PH.run = runKey(v.me); PH.dead = null;
+    const sv = loadRun(v); if (sv && PH.sim.loadSave && PH.sim.loadSave(sv)) setTimeout(() => { if (PH.ctx) PH.ctx.toast('💾 Run restored: your cash, weapons and items are back.'); }, 500);
+    if (PH.sim.setWorld) PH.sim.setWorld(v);
     if (v.area) PH.sim.setArea(v.area);
     if (v.me.cls && PH.sim.setClass) PH.sim.cls = v.me.cls; // back in with your class (Regular / Score attack)
-    else if (PH.sim.setClass) setTimeout(classUi, 300);
+    else if (PH.sim.setClass && !PH.sim.cls) setTimeout(classUi, 300);
     window.TZ_DEBUG = debugApi();
   }
   function simEvent(kind, d) {
@@ -205,6 +250,12 @@
     else if (kind === 'camper') { if (ctx) ctx.toast('🚐 A Survivor Camper pulled up: shop before you go!'); }
     else if (kind === 'buy') { if (ctx) ctx.haptic('select'); }
     else if (kind === 'victory') { if (ctx) ctx.haptic('win'); showCard('<span class="tz-rc-i">🏆</span><div><small>VICTORY</small><b>The boss is down!</b><p>The stink is lifting over the town…</p></div>', 'find'); }
+    else if (kind === 'jingle') jingle();
+    else if (kind === 'build') { buzz([60, 40, 60]); setTimeout(() => { if (PH.sim && PH.sim.build && !PH.menu) buildUi(); }, 700); }
+    else if (kind === 'hordestart' || kind === 'sent') { buzz([120, 60, 120]); if (PH.overlay === 'build') setOverlay(''); }
+    else if (kind === 'horde' || kind === 'rescue' || kind === 'crategot') { if (ctx) ctx.haptic(d && d.ok === false ? 'error' : 'win'); }
+    else if (kind === 'crate' || kind === 'escort' || kind === 'ride' || kind === 'weather') { if (ctx) ctx.haptic('select'); }
+    else if (kind === 'survlost' || kind === 'wreck') { buzz(160); }
   }
   function showCard(html, cls) {
     if (!PH.root) return;
@@ -280,8 +331,9 @@
     PH.root.classList.toggle('portrait', V.h > V.w * 1.1 && !PH.rotOk);
     if (!sim) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0c0a08'; g.fillRect(0, 0, PH.cv.width, PH.cv.height); return; }
     const I = readInput(V, sim);
-    const busy = PH.menu || PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map' || PH.overlay === 'class';
-    sim.shopping = PH.overlay === 'shop' || PH.overlay === 'class';
+    const busy = PH.menu || PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks';
+    sim.shopping = PH.overlay === 'shop' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks'; sim._dpr = V.dpr;
+    if (performance.now() - (PH.saveAt || 0) > 2000) saveRun();
     if (busy && sim.mode === 'solo') sim.paused = true; else if (!sim.cards) sim.paused = false;
     sim._lastInput = I;
     sim.update(dt, I);
@@ -328,7 +380,8 @@
         if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'e', ' '].includes(k)) { e.preventDefault(); PH.keys.add(k); if (PH.device !== 'mouse') PH.device = 'mouse'; }
         if (k === 'escape' || k === 'p') { e.preventDefault(); toggleMenu(); }
         if (PH.sim && PH.sim.cards && ['1', '2', '3'].includes(k)) choose(Number(k) - 1);
-        if (PH.sim && !PH.sim.cards && !PH.menu) { const act = { f: 'shop', b: 'bomb', t: 'turret', q: 'pocket', c: 'call' }[k]; if (act) { e.preventDefault(); button(act); } }
+        if (k === 'h' && PH.sim && PH.sim.down) { e.preventDefault(); helperUi(); }
+        if (PH.sim && !PH.sim.cards && !PH.menu) { const act = { f: 'shop', b: 'bomb', t: 'turret', q: 'pocket', c: 'call', v: 'ride', g: 'build' }[k]; if (act) { e.preventDefault(); button(act); } }
         if (PH.sim && PH.sim.phase === 'intro' && (k === ' ' || k === 'enter')) PH.skip = true;
         if (k === 'enter' && PH.root.querySelector('[data-again]')) PH.root.querySelector('[data-again]').click();
       });
@@ -407,6 +460,7 @@
     if (sim.mode !== 'solo') txt(sim.mode === 'host' ? '🤝 CO-OP (host)' : '🤝 CO-OP', w / 2, small ? 62 : 72, 12, '#ffd23f', 'center');
     // top-right: minimap (under the pause button)
     minimap(g, sim, V);
+    hud3(g, sim, V, txt);
     buttons(g, sim, V, txt);
     if (sim.down) { const a = 0.5 + 0.5 * Math.sin(sim.t * 6); g.fillStyle = `rgba(120,0,0,${0.25 + 0.1 * a})`; g.fillRect(0, 0, w, h); txt('🆘 YOU’RE DOWN', w / 2, h * 0.4, small ? 30 : 40, '#ff8c6a', 'center'); txt(`A friend can pick you up: ${Math.ceil(sim.down.t)} s`, w / 2, h * 0.4 + 34, small ? 15 : 18, '#fff', 'center'); }
     route(g, sim, V, txt);
@@ -449,11 +503,16 @@
     PH.btns = []; if (!sim._pl || sim.dead || sim.phase !== 'play') return;
     const small = Math.min(V.w, V.h) < 420, r = small ? 22 : 26, y = V.h - r - 16, Zs = stickZone(V);
     const L = [];
+    if (sim.down) { L.push({ id: 'help', icon: '🙌', label: 'HELP', big: true }); }
+    else {
     if (sim.nearShop) L.push({ id: 'shop', icon: '🛒', label: 'SHOP', big: true });
+    const nv = sim.nearVehicle && sim.nearVehicle(); if (sim.ride || nv) L.push({ id: 'ride', icon: sim.ride ? '🚪' : window.TZX.VEHICLES[nv.kind].icon, label: sim.ride ? 'GET OUT' : 'GET IN', big: !sim.nearShop });
+    if (sim.build) L.push({ id: 'build', icon: '🔨', label: 'BUILD' });
     if (sim.pocket) L.push({ id: 'pocket', icon: (W().PK[sim.pocket] || {}).icon || '🎒' });
     if (sim.bombs) L.push({ id: 'bomb', icon: '💣', n: sim.bombs });
     if (sim.kits) L.push({ id: 'turret', icon: '🗼', n: sim.kits });
     L.push({ id: 'call', icon: '📣' });
+    }
     let x = Zs.x - Zs.r - 20 - r;
     for (const b of L) {
       const R = b.big ? r * 1.35 : r, cy = b.big ? Zs.y - Zs.r - R - 30 : y, cx = b.big ? Zs.x : x; if (!b.big) x -= r * 2 + 10;
@@ -467,6 +526,10 @@
   function hitButton(x, y) { for (const b of PH.btns || []) if (Math.hypot(x - b.x, y - b.y) < b.r) { button(b.id); return true; } return false; }
   function button(id) {
     const sim = PH.sim; if (!sim || sim.dead || !sim._pl) return false;
+    if (id === 'help') { helperUi(); return true; }
+    if (sim.down) return false;
+    if (id === 'ride') { const r = sim.toggleRide && sim.toggleRide(); if (r) buzz(r === 'in' ? [40, 30, 80] : 40); return !!r; }
+    if (id === 'build') { if (sim.build) buildUi(); return !!sim.build; }
     if (id === 'shop') { if (sim.nearShop) shopUi(); return true; }
     if (id === 'pocket') return sim.usePocket();
     if (id === 'bomb') { const ok = sim.useBomb(); if (ok) buzz([60, 40, 120]); return ok; }
@@ -581,11 +644,12 @@
   // ---------- the survivor class (picked at the start of a run) ----------
   function classUi() {
     const sim = PH.sim, R = window.TZR; if (!sim || sim.cls || sim.dead || PH.overlay === 'class') return;
-    const ov = setOverlay(`<div class="tz-class"><h2>Pick your survivor</h2><div class="tz-clist">${Object.entries(R.CLASSES).map(([id, C]) => `<button class="tz-copt" data-cls="${id}"><span>${C.icon}</span><b>${esc(C.name)}</b><small>${esc(C.desc)}</small></button>`).join('')}</div><p class="tz-mut">${sim.mode === 'solo' ? 'The game waits.' : 'You can’t be hurt while you pick.'}</p></div>`, 'class');
+    const owned = (sim.load && sim.load.classes) || [], party = !!(PH.v && PH.v.party), can = (id) => !R.CLASSES[id].locked || owned.includes(id);
+    const ov = setOverlay(`<div class="tz-class"><h2>Pick your survivor</h2><div class="tz-clist">${Object.entries(R.CLASSES).filter(([id, C]) => can(id) || !party).map(([id, C]) => can(id) ? `<button class="tz-copt ${C.locked ? 'unl' : ''}" data-cls="${id}"><span>${C.icon}</span><b>${esc(C.name)}</b><small>${esc(C.desc)}</small></button>` : `<button class="tz-copt locked" disabled><span>🔒</span><b>${esc(C.name)}</b><small>Unlock it with scrap (pause menu → 🔓 Unlocks)</small></button>`).join('')}</div>${party ? '<p class="tz-mut">🎉 Party Mode: everyone starts equal (no unlocks).</p>' : ''}<p class="tz-mut">${sim.mode === 'solo' ? 'The game waits.' : 'You can’t be hurt while you pick.'}</p></div>`, 'class');
     if (!ov) return;
     const pick = (id) => { if (sim.setClass(id)) { setOverlay(''); if (PH.ctx) PH.ctx.haptic('select'); } };
     for (const b of ov.querySelectorAll('[data-cls]')) b.onclick = (e) => { e.stopPropagation(); pick(b.dataset.cls); };
-    clearTimeout(PH.clsT); PH.clsT = setTimeout(() => { if (PH.sim === sim && !sim.cls && PH.overlay === 'class') { const L = Object.keys(R.CLASSES); pick(L[Math.floor(Math.random() * L.length)]); } }, 25000);
+    clearTimeout(PH.clsT); PH.clsT = setTimeout(() => { if (PH.sim === sim && !sim.cls && PH.overlay === 'class') { const L = Object.keys(R.CLASSES).filter(can); pick(L[Math.floor(Math.random() * L.length)]); } }, 25000);
   }
   function toggleMenu(force) {
     const sim = PH.sim; if (!sim || sim.dead) return;
@@ -598,11 +662,12 @@
       <h3>Your build</h3><div class="tz-build">${buildHtml(sim.ab)}</div>${gearHtml(sim)}${Object.keys(sim.eq || {}).length ? `<h3>Your finds</h3><div class="tz-finds">${Object.keys(sim.eq).map((id) => { const F = window.TZS.FINDS[id]; return F ? `<span title="${esc(F.desc)}">${F.icon} ${esc(F.name)}</span>` : ''; }).join('')}</div>` : ''}${sim.story ? `<p class="tz-mut">📖 Regular: 🗝️ ${sim.story.keys}/3 key pieces · 🗺️ ${sim.story.maps}/2 map halves · ring ${sim.story.tier}/${sim.story.max} open${sim.story.boss ? ` · ${sim.story.boss.icon} ${esc(sim.story.boss.name)} waits behind the door` : ''}</p>` : ''}${!isFull() && !standalone() && isTouch() && (canFull() || isIOS()) ? '<button class="btn ghost small" data-opt="fs">⛶ Full screen</button>' : ''}
       <div class="tz-opts"><button class="btn small ${sim.set.aim !== 'off' ? 'green' : 'ghost'}" data-opt="aim">🎯 Auto-aim: ${sim.set.aim !== 'off' ? 'On' : 'Off'}</button><button class="btn small ${PH.vib ? 'green' : 'ghost'}" data-opt="vib">📳 Buzz: ${PH.vib ? 'On' : 'Off'}</button><button class="btn small ghost" data-opt="gfx">🎨 Graphics: ${PH.gfxPref === 'auto' ? 'Auto (' + (gfxHi() ? 'High' : 'Low') + ')' : gfxHi() ? 'High' : 'Low'}</button></div>
       <div class="tz-controls">${touch ? '👆 Drag anywhere to move · 🔴 the stick bottom-right aims and shoots · auto-aim shoots the nearest zombie when you let go.' : '⌨️ WASD / arrows move · 🖱️ mouse aims · hold left click (or Space) to shoot · E grabs a pickup · 1 2 3 pick cards · Esc pauses.'}</div>
-      <div class="tz-mbtns"><button class="btn green big" data-opt="resume">▶ Keep playing</button>${vip ? '<button class="btn ghost small" data-opt="end">🏁 End the night (results)</button>' : ''}</div></div>`, 'menu');
+      <div class="tz-mbtns"><button class="btn green big" data-opt="resume">▶ Keep playing</button><button class="btn ghost small" data-opt="unl">🔓 Unlocks (🔩 ${(PH.view && PH.view.meta && PH.view.meta.scrap) || 0})</button>${vip ? '<button class="btn ghost small" data-opt="end">🏁 End the night (results)</button>' : ''}</div></div>`, 'menu');
     if (!ov) return;
     for (const b of ov.querySelectorAll('[data-opt]')) b.onclick = async (e) => {
       e.stopPropagation(); const o = b.dataset.opt;
       if (o === 'resume') return toggleMenu(false);
+      if (o === 'unl') { PH.menu = false; return unlockUi(); }
       if (o === 'fs') { if (isIOS()) { toggleMenu(false); iosHint(true); return; } goFull(); return toggleMenu(true); }
       if (o === 'gfx') { PH.gfxPref = { auto: 'high', high: 'low', low: 'auto' }[PH.gfxPref] || 'auto'; try { localStorage.setItem('tz.gfx', PH.gfxPref); } catch { /* private */ } return toggleMenu(true); }
       if (o === 'aim') { sim.set.aim = sim.set.aim !== 'off' ? 'off' : 'on'; PH.aimPref = sim.set.aim; return toggleMenu(true); }
@@ -623,11 +688,97 @@
         <div class="tz-build">${buildHtml(d.ab)}</div>
         ${v.mode === 'score' ? `<p class="tz-mut">Score attack: you lose 15% of your points for falling. ${me.reviveIn > 0 ? `Back in <b>${Math.ceil(me.reviveIn / 1000)} s</b> at your garage.` : 'Back in at your garage, with your build.'}</p>` : ''}
         ${v.story ? `<p class="tz-mut">${v.story.reviveIn > 0 ? `Your friends are still fighting. Back in <b>${Math.ceil(v.story.reviveIn / 1000)} s</b> at your garage, with your build.` : 'Back in at your garage, with your whole build.'}</p>` : ''}
+        ${helperHtml(v)}
         <div class="tz-mbtns"><button class="btn green big" data-again ${(v.story && v.story.reviveIn > 0) || me.reviveIn > 0 ? 'disabled' : ''}>${v.story || v.mode === 'score' ? '🔁 Back in' : '🔁 Play again'}${isTouch() ? '' : ' (Enter)'}</button>${vip ? '<button class="btn ghost small" data-end>🏁 End the night</button>' : ''}</div></div></div>`, 'dead');
       if (!ov) return;
       const a = ov.querySelector('[data-again]'); if (a) a.onclick = async () => { a.disabled = true; const r = await report({ op: 'respawn' }); if (!r.ok) a.disabled = false; };
       const e = ov.querySelector('[data-end]'); if (e) e.onclick = async () => { if (e.dataset.armed) await report({ op: 'end' }); else { e.dataset.armed = '1'; e.textContent = 'Tap again to end for everyone'; } };
+      helperBind(ov, (m) => report({ op: 'help', ...m }));
     }
+  }
+  // ---------- phase 3 HUD: weather, the horde night, your ride, the survivor you escort, the TV ----------
+  function hud3(g, sim, V, txt) {
+    const X = window.TZX; if (!X || !sim._mo) return; const w = V.w, h = V.h, small = Math.min(w, h) < 420, rx = w - 14; let ry = small ? 152 : 168;
+    const Wd = X.WEATHER[sim.wxk]; if (Wd && sim.wxk !== 'clear') { txt(Wd.icon + ' ' + Wd.name, rx, ry, small ? 13 : 15, '#bfe3ff', 'right'); ry += 18; if (sim.wxT > 0 || small === false) { txt(Wd.tip, rx, ry, small ? 10 : 12, 'rgba(230,240,255,0.85)', 'right'); ry += 18; } }
+    if (sim.spotOn) { g.globalAlpha = 0.6 + 0.4 * Math.sin(sim.t * 5); txt('📺 You’re on the TV!', rx, ry, small ? 12 : 14, '#ff8c6a', 'right'); g.globalAlpha = 1; ry += 20; }
+    const N = sim.npc; if (N) { txt('🧍 ' + N.name + ' ' + Math.max(0, Math.round((100 * N.hp) / N.mhp)) + '% → a shop or 🏥', rx, ry, small ? 12 : 14, '#ffe066', 'right'); ry += 20; }
+    const G = sim.gd, b = sim.build;
+    if (G && G.phase !== 'explore') {
+      const ty = small ? 98 : 114; txt(G.phase === 'build' ? '🔨 BUILD · horde in ' + Math.ceil((G.endsIn || 0) / 1000) + 's' : '🧟 HORDE NIGHT ' + G.night, w / 2, ty, small ? 15 : 18, G.phase === 'build' ? '#ffb02e' : '#ff6a4a', 'center');
+      txt('Hope ' + '❤️'.repeat(G.hope || 0) + '🖤'.repeat(Math.max(0, (G.max || 3) - (G.hope || 0))), w / 2, ty + (small ? 18 : 22), small ? 11 : 13, '#fff', 'center');
+      if (b) { const bw = Math.min(220, w * 0.3), bx = (w - bw) / 2, by = ty + (small ? 32 : 38), fr = Math.max(0, b.door.hp / b.door.mhp); g.fillStyle = 'rgba(15,10,6,0.8)'; roundRect(g, bx - 3, by - 3, bw + 6, 14, 6); g.fill(); g.fillStyle = fr < 0.3 ? '#ff4a3a' : '#ffd23f'; roundRect(g, bx, by, bw * fr, 8, 4); g.fill(); txt('🚪', bx - 16, by + 4, 13, '#fff', 'center'); }
+    } else if (G && G.phase === 'explore') txt('🏚️ Horde night ' + (G.night + 1) + ' at wave ' + G.next, w / 2, small ? 98 : 114, small ? 11 : 13, '#ffe9a8', 'center');
+    if (sim.down) txt('🙌 Tap HELP (or H): help the team while you wait', w / 2, h * 0.4 + (small ? 60 : 72), small ? 12 : 14, '#ffe9a8', 'center');
+  }
+  // ---------- Garage Defense: the build panel ----------
+  function buildUi(note) {
+    const sim = PH.sim, X = window.TZX; if (!sim || !sim.build || sim.dead) { if (PH.overlay === 'build') setOverlay(''); return; }
+    const b = sim.build, G = (PH.v && PH.v.garage) || {}, D = b.door, meId = PH.v && PH.v.me && PH.v.me.id, ready = (G.ready || []).includes(meId);
+    const counts = {}; for (const it of b.items) counts[it.k] = (counts[it.k] || 0) + 1;
+    const items = Object.entries(X.BUILD).map(([k, B]) => { const c = X.buildCost(k, b.night), ok = sim.cash >= c && !(k === 'repair' && D.hp >= D.mhp); return `<div class="tz-good"><span class="tz-gi">${B.icon}</span><div><b>${esc(B.name)}${counts[k] ? ' ×' + counts[k] : ''}</b><small>${esc(B.desc)}</small></div><button class="btn small ${ok ? 'green' : 'ghost'}" data-bld="${k}" ${ok ? '' : 'disabled'}>$${c}</button></div>`; }).join('');
+    PH.buildNote = note || '';
+    const ov = setOverlay(`<div class="tz-shop tz-build" style="--pc:#ffb02e"><div class="tz-shead"><span class="tz-sicon">🔨</span><div><h2>Horde night ${b.night}: build!</h2><p>${G.phase === 'build' ? `The horde comes in <b>${timer(G.endsIn || 0)}</b>.` : '🧟 The horde is here: you can still build.'} Each thing goes down where you stand: walk around your yard, then buy.</p></div><b class="tz-cash">$${sim.cash}</b></div>${note ? `<p class="tz-snote">${esc(note)}</p>` : ''}<div class="tz-gstat"><span>🚪 Door ${Math.ceil(D.hp)}/${D.mhp}</span><span>Hope ${'❤️'.repeat(G.hope || 0)}</span><span>🏚️ Night ${b.night}</span></div><div class="tz-goods">${items}</div><div class="tz-mbtns">${G.phase === 'build' ? `<button class="btn ${ready ? 'ghost' : 'green'}" data-ready ${ready ? 'disabled' : ''}>${ready ? '✅ Ready: waiting for the others' : '✅ Ready for the horde'}</button>` : ''}<button class="btn ghost" data-close>Walk around ▶</button></div></div>`, 'build');
+    if (!ov) return;
+    for (const btn of ov.querySelectorAll('[data-bld]')) btn.onclick = (e) => { e.stopPropagation(); const r = sim.buildBuy(btn.dataset.bld); if (r.ok && PH.ctx) PH.ctx.haptic('select'); buildUi(r.ok ? '' : r.error); };
+    const rd = ov.querySelector('[data-ready]'); if (rd) rd.onclick = async (e) => { e.stopPropagation(); rd.disabled = true; const r = await report({ op: 'ready' }); if (r && r.ok && PH.ctx) PH.ctx.haptic('success'); };
+    ov.querySelector('[data-close]').onclick = (e) => { e.stopPropagation(); setOverlay(''); };
+  }
+  // ---------- helpers (down, out or watching): crates, the event vote, a horde at the leader ----------
+  function helperHtml(v, aud) {
+    const X = window.TZX, me = v.me || {}, H = me.helper; if (!H || !X) return '';
+    const mates = (v.players || []).filter((p) => !p.bot && p.state === 'play' && p.id !== me.id), P = v.poll, L = v.leader, C = X.HELP;
+    const mine = P && (P.mine || (H.voted && H.voted !== true ? H.voted : null));
+    return `<div class="tz-help ${aud ? 'aud' : ''}"><h3>🙌 Help from the sidelines <span class="tz-en"><i style="width:${Math.round((100 * H.e) / H.max)}%"></i><b>⚡ ${H.e}/${H.max}</b></span></h3>
+      <div class="tz-hrow"><b>📦 Drop a supply crate</b><small>${C.crate.cost} ⚡ · health, cash and a power-up${H.crateIn > 0 ? ' · ready in ' + Math.ceil(H.crateIn / 1000) + ' s' : ''}</small><div class="tz-hbtns">${mates.length ? mates.map((p) => { const ok = H.e >= C.crate.cost && !(H.crateIn > 0); return `<button class="btn small ${ok ? 'green' : 'ghost'}" data-crate="${esc(p.id)}" ${ok ? '' : 'disabled'}>${face(p, 22)} ${nm(p.name)}</button>`; }).join('') : '<small class="tz-mut">Nobody is fighting right now.</small>'}</div></div>
+      ${P ? `<div class="tz-hrow"><b>🗳️ Vote: the next area event</b><small>${C.vote.cost} ⚡ · closes in ${timer(P.endsIn)}</small><div class="tz-hbtns">${P.opts.map((k) => `<button class="btn small ${mine === k ? 'green' : 'ghost'}" data-hvote="${k}" ${mine || H.e < C.vote.cost ? 'disabled' : ''}>${X.VOTE_EVENTS[k].icon} ${esc(X.VOTE_EVENTS[k].name)} <em>${P.counts[k] || 0}</em></button>`).join('')}</div></div>` : '<div class="tz-hrow"><b>🗳️ Event vote</b><small>The next vote opens soon.</small></div>'}
+      ${v.mode === 'score' ? (() => { const ok = L && L.id !== me.id && H.e >= C.horde.cost && !(H.hordeIn > 0); return `<div class="tz-hrow"><b>🧟 Send a horde at the leader${L ? ': ' + nm(L.name) : ''}</b><small>${C.horde.cost} ⚡${H.hordeIn > 0 ? ' · ready in ' + Math.ceil(H.hordeIn / 1000) + ' s' : ''}</small><div class="tz-hbtns"><button class="btn small ${ok ? 'red' : 'ghost'}" data-hhorde ${ok ? '' : 'disabled'}>🧟 Send it!</button></div></div>`; })() : ''}</div>`;
+  }
+  function helperBind(root, act, after) {
+    const done = (r) => { if (r && r.ok) { if (PH.ctx) PH.ctx.haptic('success'); if (after) after(r); } };
+    for (const b of root.querySelectorAll('[data-crate]')) b.onclick = async (e) => { e.stopPropagation(); b.disabled = true; done(await act({ k: 'crate', to: b.dataset.crate })); };
+    for (const b of root.querySelectorAll('[data-hvote]')) b.onclick = async (e) => { e.stopPropagation(); b.disabled = true; done(await act({ k: 'vote', ev: b.dataset.hvote })); };
+    const hb = root.querySelector('[data-hhorde]'); if (hb) hb.onclick = async (e) => { e.stopPropagation(); hb.disabled = true; done(await act({ k: 'horde' })); };
+  }
+  function helperUi() {
+    const v = PH.v; if (!v || !PH.sim || !PH.sim.down) { if (PH.overlay === 'helper') setOverlay(''); return; }
+    const ov = setOverlay(`<div class="tz-menu tz-helpov"><h2>🆘 You’re down: help out!</h2>${helperHtml(v) || '<p class="tz-mut">Hang on…</p>'}<div class="tz-mbtns"><button class="btn ghost" data-close>Back</button></div></div>`, 'helper');
+    if (!ov) return; helperBind(ov, (m) => report({ op: 'help', ...m })); ov.querySelector('[data-close]').onclick = (e) => { e.stopPropagation(); setOverlay(''); };
+  }
+  // ---------- unlocks that carry over (scrap, kept on your profile) ----------
+  function unlockHtml(meta, party) {
+    const X = window.TZX; if (!X) return ''; meta = meta || { guest: true, scrap: 0, own: [], pick: {} };
+    const own = new Set(meta.own || []), pick = meta.pick || {};
+    const sec = (kind, title) => `<h3>${title}</h3><div class="tz-ulist">${X.UNLOCKS.filter((u) => u.kind === kind).map((u) => { const has = own.has(u.id), on = kind !== 'cls' && pick[kind] === u.key, needs = u.needs && !own.has(u.needs);
+      return `<div class="tz-unl ${has ? 'own' : ''} ${on ? 'on' : ''}"><span class="tz-gi">${u.icon}</span><div><b>${esc(u.name)}</b><small>${esc(u.desc)}</small></div>${has ? (kind === 'cls' ? '<em>✅ Yours</em>' : `<button class="btn small ${on ? 'green' : 'ghost'}" data-upick="${kind}" data-uid="${on ? '' : u.key}">${on ? '✓ On' : 'Use'}</button>`) : `<button class="btn small ${!meta.guest && meta.scrap >= u.cost && !needs ? 'green' : 'ghost'}" data-ubuy="${u.id}" ${meta.guest || meta.scrap < u.cost || needs ? 'disabled' : ''}>🔩 ${u.cost}</button>`}</div>`; }).join('')}</div>`;
+    return `<div class="tz-unlocks"><div class="tz-shead"><span class="tz-sicon">🔓</span><div><h2>Unlocks</h2><p>${meta.guest ? 'Make your character (🛍️) to keep scrap between nights.' : 'Scrap comes from every night you play (not in Party Mode). Unlocks stay yours.'}</p></div><b class="tz-cash">🔩 ${meta.scrap || 0}</b></div>${party ? '<p class="tz-snote">🎉 Party Mode: everyone starts equal, so unlocks are off for this game (and it pays no scrap).</p>' : ''}${sec('cls', '🧑 New survivor classes')}${sec('wp', '🔫 Starting weapon (pick one)')}${sec('fit', '🎩 Outfits (pick one)')}${sec('tier', '😈 Harder tiers (more scrap)')}</div>`;
+  }
+  function unlockBind(root, after) {
+    const go = async (m) => { const r = await (PH.ctx ? PH.ctx.act({ op: 'meta', ...m }) : Promise.resolve({ ok: false })); if (r && r.ok) { if (PH.view) PH.view.meta = r.meta; if (PH.ctx) PH.ctx.haptic('success'); } if (after) after(r); };
+    for (const b of root.querySelectorAll('[data-ubuy]')) b.onclick = (e) => { e.stopPropagation(); b.disabled = true; go({ k: 'buy', id: b.dataset.ubuy }); };
+    for (const b of root.querySelectorAll('[data-upick]')) b.onclick = (e) => { e.stopPropagation(); go({ k: 'pick', slot: b.dataset.upick, id: b.dataset.uid || null }); };
+  }
+  function unlockUi() {
+    const ov = setOverlay(`<div class="tz-shop tz-unlov">${unlockHtml(PH.view && PH.view.meta, PH.v && PH.v.party)}<p class="tz-mut">New picks start with your next run.</p><div class="tz-mbtns"><button class="btn green" data-close>Done ▶</button></div></div>`, 'unlocks');
+    if (!ov) return; unlockBind(ov, () => unlockUi()); ov.querySelector('[data-close]').onclick = (e) => { e.stopPropagation(); setOverlay(''); };
+  }
+  // ---------- the run save: reloading the page puts you back with your cash, weapons and items ----------
+  const runStoreKey = () => { const code = (PH.view && PH.view.code) || '', id = PH.v && PH.v.me && PH.v.me.id; return code && id ? 'tz.run.' + code + '.' + id : null; };
+  function saveRun() {
+    PH.saveAt = performance.now(); const sim = PH.sim, v = PH.v, k = runStoreKey(); if (!sim || !v || !v.me || !k || !sim.saveData || sim.dead || sim.phase === 'intro') return;
+    try { localStorage.setItem(k, JSON.stringify({ rk: runKey(v.me), seed: v.seed, d: sim.saveData() })); } catch { /* full or private */ }
+  }
+  function loadRun(v) {
+    const k = runStoreKey(); if (!k) return null;
+    try { const s = JSON.parse(localStorage.getItem(k) || 'null'); if (!s || s.seed !== v.seed || s.rk !== runKey(v.me) || !s.d) return null; return s.d; } catch { return null; }
+  }
+  function dropRun() { const k = runStoreKey(); try { if (k) localStorage.removeItem(k); for (let i = localStorage.length - 1; i >= 0; i--) { const kk = localStorage.key(i); if (!kk || !kk.startsWith('tz.run.')) continue; const s = JSON.parse(localStorage.getItem(kk) || 'null'); if (!s || !s.d || Date.now() - (s.d.at || 0) > 86400000) localStorage.removeItem(kk); } } catch { /* fine */ } }
+  if (!PH.saveBound) { PH.saveBound = true; window.addEventListener('pagehide', () => saveRun()); document.addEventListener('visibilitychange', () => { if (document.hidden) saveRun(); }); }
+  // ---------- the ice-cream truck's jingle (an original little tune) ----------
+  let AC = null;
+  function jingle() {
+    try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch { return; }
+    const notes = [72, 76, 79, 76, 77, 74, 71, 74, 72], t0 = AC.currentTime + 0.05;
+    notes.forEach((n, i) => { const o = AC.createOscillator(), g = AC.createGain(); o.type = i % 2 ? 'triangle' : 'square'; o.frequency.value = 440 * Math.pow(2, (n - 69) / 12); g.gain.setValueAtTime(0.0001, t0 + i * 0.16); g.gain.exponentialRampToValueAtTime(0.06, t0 + i * 0.16 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.16 + 0.15); o.connect(g); g.connect(AC.destination); o.start(t0 + i * 0.16); o.stop(t0 + i * 0.16 + 0.17); });
   }
   function debugApi() {
     return {
@@ -654,6 +805,12 @@
       boss(key) { const s = PH.sim; s.z = s.z.filter((z) => !z.fb); s.finalSpawned = false; s.finalDead = false; s.story.plan.boss = key; s.spawnFinal(); return true; },
 
       stick() { const c = PH.cv; return stickZone({ w: c.clientWidth, h: c.clientHeight }); }, device: () => PH.device, menu: () => PH.menu,
+      wx(k) { PH.sim.setWeather(k); return PH.sim.wxk; }, park(kind) { const s = PH.sim; s.parked = { kind, x: s.p.x + 60, y: s.p.y, hp: window.TZX.VEHICLES[kind].hp, mhp: window.TZX.VEHICLES[kind].hp, face: 1 }; return true; }, ride: () => PH.sim.toggleRide(),
+      hide() { const s = PH.sim; s.hiding = { id: s.cellKey(), name: 'Old Gus', color: '#e8b830', x: s.p.x + 80, y: s.p.y + 10, hp: 120, mhp: 120, face: -1 }; return true; }, npc() { const s = PH.sim; s.npc = { id: s.cellKey(), name: 'Nana Pearl', color: '#c37bff', x: s.p.x - 60, y: s.p.y + 20, hp: 90, mhp: 120, follow: true }; return true; },
+      crate() { PH.sim.gift({ kind: 'crate', from: 'Dee' }); return PH.sim.crates.length; }, landCrates() { for (const c of PH.sim.crates) c.t = c.land; return true; },
+      garage(phase, night) { PH.sim.setGarage({ phase, night: night || 1, endsIn: 30000, hope: 3, max: 3, next: 5, ready: [], done: [] }); return !!PH.sim.build; }, buildBuy(k) { return PH.sim.buildBuy(k); }, buildUi() { buildUi(); return PH.overlay; },
+      bossKey(key) { const s = PH.sim; s.z = s.z.filter((z) => !z.mb); const z = s.makeZ(key, s.p.x + 300, s.p.y - 100); z.mb = key; z.cd = 2; z.cd2 = 4; return z.id; },
+      spot(on) { PH.sim.spotOn = !!on; return true; }, save() { saveRun(); return PH.sim.saveData(); }, helperUi() { helperUi(); return PH.overlay; }, unlockUi() { unlockUi(); return PH.overlay; }, fit(f) { PH.sim.fit = f; return true; },
       intro() { const s = PH.sim; if (!s.area.garage) return false; s.phase = 'intro'; s.introT = 0; s.p.x = s.area.garage.x + s.area.garage.w / 2; s.p.y = s.area.garage.y + 120; s.banner = null; return true; },
     };
   }
@@ -705,9 +862,11 @@
       if (!s) return;
       TV.s = s;
       if (s.phase === 'over') { cancelAnimationFrame(TV.raf); TV.raf = 0; TV.el = null; return tvOver(el, s); }
-      if (!el.querySelector('.tz-tv')) { el.innerHTML = '<div class="tz-tv"><div class="tz-mapw"><canvas id="tz-map"></canvas><div class="tz-maptag">🗺️ The town · walk into a friend’s area to team up</div></div><aside class="tz-side" id="tz-side"></aside></div>'; TV.el = el; tvLoop(); }
+      if (!el.querySelector('.tz-tv')) { el.innerHTML = '<div class="tz-tv"><div class="tz-mapw"><canvas id="tz-map"></canvas><div class="tz-maptag">🗺️ The town · walk into a friend’s area to team up</div><div id="tz-spot"></div><div class="tz-cards" id="tz-cards"></div></div><aside class="tz-side" id="tz-side"></aside></div>'; TV.el = el; tvLoop(); }
       TV.el = el; if (!TV.raf) tvLoop();
       BOX.morph(el.querySelector('#tz-side'), tvSide(s));
+      const spw = el.querySelector('#tz-spot'), sig = s.spot ? s.spot.id + ':' + s.spot.why + ':' + Math.round(s.spot.hp) : ''; if (spw.dataset.sig !== sig) { spw.dataset.sig = sig; if (!s.spot) spw.innerHTML = ''; else if (!spw.querySelector('#tz-spotc')) spw.innerHTML = spotHtml(s); else BOX.morph(spw.querySelector('.tz-spot-tag'), spotTag(s.spot)); spw.firstElementChild && spw.firstElementChild.classList.toggle('down', !!(s.spot && s.spot.why === 'down')); }
+      BOX.morph(el.querySelector('#tz-cards'), tvCards(s));
     },
     onFx(f) {
       const s = TV.s;
@@ -727,9 +886,16 @@
       else if (f.kind === 'tzdown') { clip('zombie/groan-1.ogg', { vol: 0.4 }) || BOX.sfx('fall'); }
       else if (f.kind === 'tzdoorfound') { BOX.sfx('ominous'); }
       else if (f.kind === 'tzdoor') { BOX.sfx('roar'); clip('zombie/thunder.ogg', { vol: 0.5 }); }
+      else if (f.kind === 'tzcard') { if (f.key === 'icecream') jingle(); else BOX.sfx('ominous'); }
+      else if (f.kind === 'tzrecap') { BOX.sfx('reveal'); }
+      else if (f.kind === 'tzweather') { BOX.sfx(f.k === 'rain' ? 'whoosh' : 'reveal'); }
+      else if (f.kind === 'tzhorde') { if (f.phase === 'horde') { BOX.sfx('roar'); clip('zombie/groan-2.ogg', { vol: 0.6 }); } else BOX.sfx('siren'); }
+      else if (f.kind === 'tzbroke') { BOX.sfx('crunch'); BOX.sfx('explosion'); }
+      else if (f.kind === 'tzdawn' || f.kind === 'tzrescue' || f.kind === 'tzvote') { BOX.sfx('chime'); }
+      else if (f.kind === 'tzcrate' || f.kind === 'tzsent') { BOX.sfx('pop'); }
       void s;
     },
-    music(s) { if (!s) return 'play'; if (s.phase === 'over') return s.why === 'lost' ? 'lose' : 'finale'; if (s.story && s.story.doorOpen) return 'action'; const P = s.players || []; if (P.length && P.every((p) => p.state === 'dead')) return 'lose'; return P.some((p) => p.wave % 5 === 0 && p.state !== 'dead' && !p.bot) ? 'tense' : 'play'; },
+    music(s) { if (!s) return 'play'; if (s.phase === 'over') return s.why === 'lost' || s.why === 'overrun' ? 'lose' : 'finale'; if (s.story && s.story.doorOpen) return 'action'; if (s.garage && s.garage.phase === 'horde') return 'action'; if (s.garage && s.garage.phase === 'build') return 'tense'; const P = s.players || []; if (P.length && P.every((p) => p.state === 'dead')) return 'lose'; return P.some((p) => p.wave % 5 === 0 && p.state !== 'dead' && !p.bot) ? 'tense' : 'play'; },
     // ---------------- phone ----------------
     phone(el, v, ctx, view) {
       if (!v) return;
@@ -737,12 +903,14 @@
       for (const p of v.players || []) PH.people.set(p.id, p);
       if (view && view.me) PH.people.set(view.me.id, view.me);
       if (v.phase === 'over') {
-        if (PH.root) { PH.root = null; PH.sim = null; cancelAnimationFrame(PH.raf); document.body.classList.remove('tz-playing'); }
+        if (PH.root) { dropRun(); PH.root = null; PH.sim = null; cancelAnimationFrame(PH.raf); document.body.classList.remove('tz-playing'); }
         const st = v.standings || [], i = st.findIndex((r) => r.id === (v.me && v.me.id)), r = st[i] || {};
         const won = v.why === 'win', lost = v.why === 'lost';
         BOX.morph(el, `<div class="card-box tz-ph-over ${won ? 'won' : ''}">${won ? '<div class="tz-confetti"></div><h2 class="tz-win">🏆 YOU WIN!</h2>' : lost ? '<h2 class="tz-lose">💀 The trash won…</h2>' : ''}<h2 class="tz-logo sm">Trash<b>Zombies</b></h2>${won && v.story ? `<p>${v.story.boss ? esc(v.story.boss.name) + ' is down' : 'The boss is down'} in <b>${BOX.mmss ? BOX.mmss(v.story.time) : Math.round(v.story.time / 60000) + ' min'}</b> · ${v.story.kills} team kills · ${v.story.finds.length} finds</p>` : ''}<div class="tz-pbig">${BOX.body ? BOX.body({ id: v.me && v.me.id, bot: true }, 130, { mood: i === 0 ? 'grin' : 'smile' }) : ''}</div>
           <h3>${i === 0 ? '🏆 Top survivor!' : `#${i + 1} of ${st.length}`}</h3>${r.score ? `<p class="tz-bigsc">${r.score.toLocaleString('en-US')} points</p>` : ''}<p>Best run: wave <b>${r.wave || 1}</b> · ${r.kills || 0} kills · level ${r.lvl || 1}</p><div class="tz-ab">${abIcons(r.build)}</div>
-          <ol class="tz-mini">${st.slice(0, 6).map((x) => `<li>${face(x, 26)} <b>${nm(x.name)}</b> <span>W${x.wave} · ${x.kills}k</span></li>`).join('')}</ol></div>`);
+          <ol class="tz-mini">${st.slice(0, 6).map((x) => `<li>${face(x, 26)} <b>${nm(x.name)}</b> <span>W${x.wave} · ${x.kills}k</span></li>`).join('')}</ol>
+          <div class="tz-scrapbox">${v.party ? '<p>🎉 Party Mode: no scrap this time (everyone starts equal).</p>' : v.me && v.me.scrap != null ? `<p class="tz-bigsc">🔩 +${v.me.scrap} scrap${v.me.scrapGuest ? '' : ' saved to your profile'}</p>${v.me.scrapGuest ? '<p class="tz-mut">Make your character (🛍️) to keep scrap next time.</p>' : ''}` : ''}<button class="btn ghost small" data-unl>🔓 Unlocks (🔩 ${(view && view.meta && view.meta.scrap) || 0})</button><div class="tz-unlbox">${PH.overUnl ? unlockHtml(view && view.meta, false) : ''}</div></div></div>`);
+        { const ub = el.querySelector('[data-unl]'); if (ub) ub.onclick = () => { PH.overUnl = !PH.overUnl; BOX.morph(el.querySelector('.tz-unlbox'), PH.overUnl ? unlockHtml(PH.view && PH.view.meta, false) : ''); unlockBind(el.querySelector('.tz-unlbox'), () => { BOX.morph(el.querySelector('.tz-unlbox'), unlockHtml(PH.view && PH.view.meta, false)); unlockBind(el.querySelector('.tz-unlbox')); }); }; if (PH.overUnl) unlockBind(el.querySelector('.tz-unlbox')); }
         if (!PH.overHaptic) { PH.overHaptic = true; ctx.haptic('win'); }
         return;
       }
@@ -753,10 +921,27 @@
       if (v.me.state === 'dead' && (!PH.sim || PH.sim.dead || PH.run !== runKey(v.me))) { if (!PH.sim || PH.run !== runKey(v.me)) { PH.sim = null; PH.run = runKey(v.me); } overlay(); return; }
       if (!PH.sim || PH.run !== runKey(v.me)) { setOverlay(''); PH.menu = false; newSim(v); }
       else if (v.area && PH.sim) PH.sim.setArea(v.area);
-      if (PH.sim) { PH.sim.homes = v.homes || PH.sim.homes; PH.sim.setStory(v.story, v.me); }
+      if (PH.sim) { PH.sim.homes = v.homes || PH.sim.homes; PH.sim.setStory(v.story, v.me); if (PH.sim.setWorld) PH.sim.setWorld(v); }
+      if (PH.overlay === 'build') buildUi(PH.buildNote); else if (PH.overlay === 'helper') helperUi();
       fsButton();
       if (PH.sim && PH.sim.cards && PH.overlay !== 'cards') cardsUi();
     },
     live(m) { if (PH.sim) PH.sim.onLive(m); },
+    tvLive,
+    // ---------------- watching on a phone: the helper panel (play.js audience screen) ----------------
+    audience(st) { const gv = st.gv; if (!gv || gv.phase !== 'play') return ''; return `<div class="card-box tz-help-aud">${helperHtml({ me: { id: null, helper: PH.audHelper || { e: 0, max: 100, crateIn: 0, hordeIn: 0 } }, players: gv.players, poll: gv.poll, leader: gv.leader, mode: gv.mode }, true)}</div>`; },
+    audienceBind(root, st, act, ui) {
+      const box = root.querySelector('.tz-help-aud'); if (!box) return;
+      const redraw = () => { const gv = st.gv; if (!gv) return; BOX.morph(box, helperHtml({ me: { id: null, helper: PH.audHelper }, players: gv.players, poll: gv.poll, leader: gv.leader, mode: gv.mode }, true)); helperBind(box, act, (r) => { if (r.me) { PH.audHelper = r.me; redraw(); } }); };
+      helperBind(box, act, (r) => { if (r.me) { PH.audHelper = r.me; redraw(); } });
+      if (!PH.audAt || Date.now() - PH.audAt > 2000) { PH.audAt = Date.now(); act({ k: 'state' }).then((r) => { if (r && r.ok && r.me) { PH.audHelper = r.me; redraw(); } else if (r && r.error && ui && ui.toast && !PH.audErr) { PH.audErr = true; } }); }
+    },
+    // ---------------- the lobby: your scrap and unlocks ----------------
+    lobby(view) { const M = view && view.meta; if (!M) return ''; return `<div class="card-box tz-lobmeta"><div class="tz-lobrow"><b>🔩 ${M.scrap || 0} scrap</b><button class="btn small ghost" data-lobunl>🔓 Unlocks & loadout</button></div><div class="tz-lobunl">${PH.lobUnl ? unlockHtml(M, false) : ''}</div></div>`; },
+    lobbyBind(el, view, ctx) {
+      PH.ctx = ctx; PH.view = view; const b = el.querySelector('[data-lobunl]'); if (!b) return; const box = el.querySelector('.tz-lobunl');
+      const draw = () => { BOX.morph(box, PH.lobUnl ? unlockHtml(PH.view && PH.view.meta, false) : ''); unlockBind(box, draw); };
+      b.onclick = () => { PH.lobUnl = !PH.lobUnl; draw(); }; if (PH.lobUnl) unlockBind(box, draw);
+    },
   };
 })();

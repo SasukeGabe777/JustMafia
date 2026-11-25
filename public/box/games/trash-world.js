@@ -321,6 +321,8 @@
     spider: { name: 'Mother Webber', r: 58, hp: 900, speed: 60, dmg: 22, xp: 40, from: 99, w: 0, boss: true, mini: true },
     foghorn: { name: 'The Foghorn', r: 58, hp: 950, speed: 50, dmg: 22, xp: 40, from: 99, w: 0, boss: true, mini: true },
     toxic: { name: 'Toxic Tub', r: 62, hp: 1000, speed: 45, dmg: 24, xp: 40, from: 99, w: 0, boss: true, mini: true },
+    icecream: { name: 'Mister Brain Freeze', r: 62, hp: 950, speed: 115, dmg: 24, xp: 40, from: 99, w: 0, boss: true, mini: true },
+    compactor: { name: 'The Big Crunch', r: 64, hp: 1100, speed: 38, dmg: 28, xp: 40, from: 99, w: 0, boss: true, mini: true },
     final: { name: 'Final boss', r: 60, hp: 2500, speed: 60, dmg: 25, xp: 60, from: 99, w: 0, boss: true }, // Regular mode: the boss behind the door (trash-story.js)
   };
   function waveSpec(wave, players, diff) {
@@ -332,7 +334,7 @@
       cap: Math.min(90, 16 + wave * 6 + (n - 1) * 10),
       hpMul: (1 + 0.13 * (wave - 1) + 0.004 * (wave - 1) * (wave - 1)) * (hard ? 1.35 : 1), speedMul: Math.min(1.5, 1 + 0.02 * (wave - 1)) * (hard ? 1.1 : 1), dmgMul: (1 + 0.05 * (wave - 1) + 0.001 * (wave - 1) * (wave - 1)) * (hard ? 1.3 : 1),
       weights: Object.entries(ZOMBIES).filter(([, z]) => z.from <= wave && z.w).map(([k, z]) => [k, k === 'walker' ? z.w : Math.min(z.cap || z.w + 6, z.w + (wave - z.from) * (z.cap ? 0.15 : 0.6))]),
-      mini: wave >= 10 && wave % 5 === 0 ? ['spider', 'foghorn', 'toxic'][(wave / 5) % 3] : null,
+      mini: wave >= 10 && wave % 5 === 0 ? ['spider', 'foghorn', 'toxic', 'icecream', 'compactor'][(wave / 5) % 5] : null,
     };
   }
   const xpNeed = (level) => Math.round(5 + level * 4 + Math.pow(level, 1.5));

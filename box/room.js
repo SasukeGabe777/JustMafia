@@ -729,7 +729,15 @@ class BoxRoom {
       poll: this.pollView(), lastPoll: this.lastPoll && this.now() - this.lastPoll.at < 15000 ? { q: this.lastPoll.q, winner: this.lastPoll.winner, votes: this.lastPoll.votes } : null,
       party: pm ? { index: pm.index, of: pm.defs.length, phase: pm.phase, next: pm.defs[pm.index + 1] ? pm.defs[pm.index + 1].key : null } : null,
       recap: this.recap ? { id: this.recap.id, champion: this.recap.champion, played: this.recap.played.map((g) => ({ game: g.game, title: g.title, winner: g.winner })) } : null,
+      gv: this.phase === 'game' && this.game && typeof this.game.audienceView === 'function' ? this.game.audienceView() : null, // a game's public helper panel (TrashZombies)
     };
+  }
+  // Watchers who help the game (TrashZombies helpers): the game decides what they can do.
+  audienceAct(a, msg) {
+    if (this.phase !== 'game' || !this.game || typeof this.game.audienceAct !== 'function') return { ok: false, error: 'Nothing to help with right now.' };
+    const r = this.game.audienceAct(a, msg || {}) || { ok: true };
+    if (r.quiet) { delete r.quiet; return r; }
+    this.sync(); return r;
   }
   // Coalesced (at most ~4 a second) and only when something changed.
   syncAudience() {
@@ -1103,6 +1111,8 @@ class BoxRoom {
 
   act(p, msg) {
     this.lastActivity = Date.now();
+    // A game's own lasting extras (TrashZombies unlocks): any phase, kept on the player's profile.
+    if (msg && msg.op === 'meta' && typeof this.def.metaAct === 'function') { let r; try { r = this.def.metaAct(this, p, msg) || { ok: true }; } catch (e) { console.error('[meta]', e); r = { ok: false, error: 'Something went wrong.' }; } this.sync(); return r; }
     if (this.phase === 'show' && this.show) {
       if (msg && msg.op === 'fact') { const r = this.show.submit(p, msg.text); this.sync(); return r; }
       if (msg && msg.op === 'gotit') { const r = this.show.gotit(p); this.sync(); return r; }
@@ -1142,6 +1152,7 @@ class BoxRoom {
       partyMode: this.partyState(), unlocks: [...this.unlocks], count: this.players.size, practice: this.practiceState(),
       away: this.away ? { game: this.away.game, title: this.away.title, code: this.away.code, url: `/play?room=${encodeURIComponent(this.away.code)}&autojoin=1&name=${encodeURIComponent(p.name)}` } : null, min: this.def.min, live: !!this.def.liveLobby,
       vip: !!this.vip() && this.vip().id === p.id, vipName: this.vip() ? this.vip().name : null,
+      ...(typeof this.def.metaView === 'function' ? { meta: (() => { try { return this.def.metaView(this, p); } catch (e) { return null; } })() } : {}),
       kickList: this.vip() && this.vip().id === p.id ? this.list().filter((x) => x.id !== p.id).map((x) => ({ id: x.id, name: x.name, avatar: x.avatar, bot: !!x.bot, online: !!x.bot || x.sockets > 0 })) : null,
       state: this.game && this.phase !== 'show' ? this.game.view(p) : null, show: this.show ? this.show.view(p) : null,
     };

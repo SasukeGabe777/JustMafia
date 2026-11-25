@@ -203,3 +203,58 @@ html:has(body.tz-playing), body.tz-playing { overscroll-behavior: none; touch-ac
 .tz-sh3 { grid-column: 1 / -1; margin: 6px 0 0; font: 17px 'Lilita One', sans-serif; color: var(--pc, #ffd23f); }
 .tz-why { color: #a89c84; max-width: 130px; text-align: right; }
 .tz-bigsc { font: 30px 'Lilita One', sans-serif; color: #ffd23f; margin: 2px 0; }
+
+/* ---------------- phase 3: the TV (leaderboard, kill feed, chips, boss cards, the recap, the spotlight) ---------------- */
+.tz-rank { font: 22px 'Lilita One', sans-serif; color: #ffd23f; width: 26px; text-align: center; text-shadow: 0 2px 0 #1b1410; }
+.tz-row.spot { border-color: #ff8c6a; box-shadow: 0 0 14px rgba(255,140,106,0.6); }
+.tz-lbh { margin: 0; font: 17px 'Lilita One', sans-serif; color: #9cff3c; letter-spacing: 0.5px; }
+.tz-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tz-chip { display: grid; background: rgba(15,10,6,0.85); border: 3px solid #3a3044; border-radius: 10px; padding: 3px 10px; font: 16px 'Lilita One', sans-serif; color: #fff6d8; }
+.tz-chip small { font: 12px sans-serif; color: #cfc6d8; }
+.tz-chip.wx-rain { border-color: #7fb6ff; } .tz-chip.wx-fog { border-color: #aab3bc; } .tz-chip.wx-heat { border-color: #ff8c42; }
+.tz-chip.gd-build { border-color: #ffb02e; } .tz-chip.gd-horde { border-color: #ff4a3a; animation: tz-pulse 0.8s ease-in-out infinite; } .tz-chip.vote { border-color: #c37bff; } .tz-chip.help { border-color: #9cff3c; }
+.tz-kfeed { list-style: none; margin: 0; padding: 6px 10px; background: rgba(15,10,6,0.85); border-radius: 12px; border: 3px solid #3a1414; font-size: 15px; display: grid; gap: 3px; flex: 0 0 auto; }
+.tz-kfeed li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tz-kfeed li span { color: #e8dcc0; } .tz-kfeed li.big span { color: #ff8c6a; font-weight: 700; }
+.tz-kfeed li:first-child { animation: tz-kin 0.4s ease-out; } @keyframes tz-kin { from { transform: translateX(30px); opacity: 0; } }
+.tz-cards { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.tz-bcard, .tz-recap { pointer-events: none; background: linear-gradient(160deg, #2a1a22, #120c10); border: 6px solid #ff5a3c; border-radius: 22px; padding: 18px 28px; box-shadow: 0 12px 0 rgba(0,0,0,0.5), 0 0 60px rgba(255,90,60,0.45); color: #fff6d8; max-width: 80%; animation: tz-cardin 0.55s cubic-bezier(.2,1.5,.4,1); }
+@keyframes tz-cardin { from { transform: scale(0.4) rotate(-6deg); opacity: 0; } }
+.tz-bcard { display: flex; gap: 22px; align-items: center; } .tz-bc-i { font-size: 120px; line-height: 1; filter: drop-shadow(0 6px 0 #1b1410); animation: tz-bob 1.2s ease-in-out infinite; }
+@keyframes tz-bob { 50% { transform: translateY(-8px) rotate(3deg); } }
+.tz-bcard small, .tz-recap > small { font: 18px 'Lilita One', sans-serif; color: #ff8c6a; letter-spacing: 2px; }
+.tz-bcard h2 { margin: 2px 0; font: 54px 'Lilita One', sans-serif; color: #ffd23f; text-shadow: 0 4px 0 #1b1410; } .tz-bcard p { margin: 0; font-size: 20px; color: #e8dcc0; } .tz-bcard em { color: #9cff3c; font-size: 16px; }
+.tz-bcard.k-icecream { border-color: #ff9ac8; box-shadow: 0 12px 0 rgba(0,0,0,0.5), 0 0 60px rgba(255,154,200,0.5); } .tz-bcard.k-compactor { border-color: #ffd23f; }
+.tz-recap { border-color: #ffd23f; box-shadow: 0 12px 0 rgba(0,0,0,0.5), 0 0 60px rgba(255,210,63,0.4); text-align: center; }
+.tz-rc-row { display: flex; gap: 18px; align-items: center; justify-content: center; margin: 8px 0; text-align: left; }
+.tz-rc-row h2 { margin: 0; font: 40px 'Lilita One', sans-serif; text-shadow: 0 3px 0 #1b1410; } .tz-rc-row p { margin: 0; font-size: 20px; color: #e8dcc0; max-width: 520px; }
+.tz-rc-big { font: 54px 'Lilita One', sans-serif; color: #ffd23f; text-shadow: 0 4px 0 #1b1410; white-space: nowrap; }
+.tz-rc-stats { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; font-size: 18px; color: #cfc6d8; } .tz-rc-stats b { color: #fff6d8; font-family: 'Lilita One', sans-serif; }
+#tz-spot { position: absolute; left: 14px; bottom: 14px; width: 40%; max-width: 560px; aspect-ratio: 16 / 10; pointer-events: none; }
+.tz-spotw { position: absolute; inset: 0; border: 5px solid #ff8c6a; border-radius: 14px; overflow: hidden; background: #0c0a08; box-shadow: 0 8px 0 rgba(0,0,0,0.5); opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s; }
+.tz-spotw.on { opacity: 1; transform: none; } .tz-spotw.down { border-color: #ff3a2a; animation: tz-pulse 0.8s ease-in-out infinite; }
+#tz-spotc { width: 100%; height: 100%; display: block; }
+.tz-spot-tag { position: absolute; left: 0; right: 0; top: 0; padding: 4px 10px; font: 17px 'Lilita One', sans-serif; color: #fff6d8; background: linear-gradient(rgba(15,10,6,0.9), rgba(15,10,6,0)); }
+.tz-scrap { color: #b7c2cc; }
+
+/* ---------------- phase 3: the phone (build panel, helpers, unlocks) ---------------- */
+.tz-ov.build, .tz-ov.unlocks, .tz-ov.helper { align-items: flex-start; }
+.tz-gstat { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font: 16px 'Lilita One', sans-serif; color: #ffe9a8; }
+.tz-gstat span { background: #0c0a08; border-radius: 8px; padding: 2px 10px; }
+.tz-help { background: #1a1620; border: 3px solid #9cff3c; border-radius: 14px; padding: 8px 12px; margin: 8px 0; text-align: left; }
+.tz-help h3 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 6px; font: 19px 'Lilita One', sans-serif; color: #9cff3c; }
+.tz-en { position: relative; flex: 1; min-width: 120px; height: 20px; background: #0c0a08; border-radius: 10px; overflow: hidden; }
+.tz-en i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #3ec1ff, #9cff3c); } .tz-en b { position: relative; display: block; text-align: center; font: 14px 'Lilita One', sans-serif; color: #fff; text-shadow: 0 1px 0 #000; line-height: 20px; }
+.tz-hrow { display: grid; gap: 2px; padding: 6px 0; border-top: 1px solid #2e2838; } .tz-hrow > b { font: 16px 'Lilita One', sans-serif; color: #fff6d8; } .tz-hrow > small { color: #b8aecb; font-size: 12.5px; }
+.tz-hbtns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; } .tz-hbtns .btn { display: inline-flex; align-items: center; gap: 6px; } .tz-hbtns em { font-style: normal; background: #0c0a08; border-radius: 6px; padding: 0 6px; }
+.tz-helpov { max-width: 680px; }
+.tz-help-aud .tz-help { margin: 0; }
+.tz-unlocks h3 { margin: 10px 0 4px; font: 18px 'Lilita One', sans-serif; color: #ffd23f; }
+.tz-ulist { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }
+.tz-unl { display: flex; align-items: center; gap: 10px; background: #2a231c; border: 2px solid #3d3329; border-radius: 12px; padding: 6px 10px; }
+.tz-unl > div { flex: 1; min-width: 0; display: grid; } .tz-unl b { font: 16px 'Lilita One', sans-serif; color: #fff6d8; } .tz-unl small { color: #cfc4a8; font-size: 12px; line-height: 1.2; }
+.tz-unl.own { border-color: #5a7a3a; } .tz-unl.on { border-color: #9cff3c; box-shadow: 0 0 10px rgba(156,255,60,0.35); } .tz-unl em { color: #9cff3c; font-style: normal; font: 14px 'Lilita One', sans-serif; }
+.tz-copt.locked { opacity: 0.5; cursor: default; } .tz-copt.unl { border-color: #c37bff; }
+.tz-scrapbox { margin-top: 10px; display: grid; gap: 6px; justify-items: center; } .tz-unlbox { width: 100%; text-align: left; }
+.tz-lobmeta .tz-lobrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; } .tz-lobmeta .tz-lobrow b { font: 20px 'Lilita One', sans-serif; color: #ffd23f; }
+.tz-lobmeta .tz-unlocks .tz-shead { display: none; }
+@media (max-height: 460px) { .tz-ulist { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } .tz-help h3 { font-size: 16px; } }

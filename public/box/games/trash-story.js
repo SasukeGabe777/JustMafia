@@ -46,6 +46,9 @@
     spider: { name: 'Mother Webber', icon: '🕷️', hp: 2500, r: 60, speed: 62, dmg: 22, desc: 'Webs you to the ground and sprays blinding ink.' },
     foghorn: { name: 'The Foghorn', icon: '📯', hp: 2500, r: 60, speed: 52, dmg: 22, desc: 'Its blasts make you dizzy and squint.' },
     toxic: { name: 'Toxic Tub', icon: '☣️', hp: 2700, r: 64, speed: 46, dmg: 24, desc: 'Slimes the ground and gunks up your guns.' },
+    // their own arenas (trash-more.js): the truck laps the block, the compactor slams crush walls
+    icecream: { name: 'Mister Brain Freeze', icon: '🍦', hp: 2500, r: 66, speed: 120, dmg: 26, desc: 'Plays its jingle, laps the block and leaves slowing slush.' },
+    compactor: { name: 'The Big Crunch', icon: '🗜️', hp: 2900, r: 70, speed: 38, dmg: 30, desc: 'Its arena walls slam shut: get out of the red crush zones!' },
   };
   // A few short beats from the radio (and notes) that tell the story as you go.
   const RADIO = 'Dot, Radio Dumpster 101.3';
