@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies on the phone, part 2 (extends TZSim.Sim): the score and kill streak, cash, the
+// JustZombies on the phone, part 2 (extends TZSim.Sim): the score and kill streak, cash, the
 // specialised places (market, surplus, clinic, the gun merchants, the crucible) and their shops,
 // the pocket item, bomb charges and turret kits, going down and getting revived (Regular co-op),
 // boss maps and hidden stashes. Uses TZW, TZP (trash-shop.js) and TZSim.

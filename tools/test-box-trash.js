@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies: the shared world rules, the server (runs, sanity checks, co-op areas and the live
+// JustZombies: the shared world rules, the server (runs, sanity checks, co-op areas and the live
 // relay, host hand-off, results) and the phone simulation itself (run in a sandbox: exits, waves,
 // level-up cards, pickups, co-op snapshots).   node tools/test-box-trash.js
 const assert = require('node:assert/strict');
@@ -422,7 +422,7 @@ test('Score attack: timed, ranked by score; falling costs 15% (min 200) and you 
   assert.equal(R.state, 'play'); assert.equal(R.score, 1700); assert.deepEqual(R.cell, R.home); assert(g.feed.some((f) => /lost 300 points/.test(f.text)));
   run(room, clock, 5 * 60000); assert.equal(g.phase, 'over'); assert.equal(g.overWhy, 'time');
 });
-test('Party Mode: TrashZombies is a score attack lasting exactly the planned minutes; party points go by score', () => {
+test('Party Mode: JustZombies is a score attack lasting exactly the planned minutes; party points go by score', () => {
   assert.equal(def.partyFit({ players: 4, minutes: 10 }).mode, 'score');
   const { room, ps: [a, b] } = mk({ mode: 'score', length: 'm10' }, 2);
   room.partyMode = { defs: [room.def], index: 0, plan: { trash: 7 }, phase: 'playing' }; room.start(); const g = room.game;
@@ -982,4 +982,4 @@ test('chests: loot stashes and dens have a loot chest (cash + goodies, a weapon 
   const kr = st.room.act(st.ps[0], { op: 'find', x: SR.cell[0], y: SR.cell[1] }); assert.equal(kr.find, 'shard1'); assert(kr.cash > 0); assert(sg.moments.some((m) => m.kind === 'key'));
 });
 
-console.log(`\n${passed} TrashZombies tests passed.`);
+console.log(`\n${passed} JustZombies tests passed.`);

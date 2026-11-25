@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies Regular mode on the phone: the final bosses (art + attack patterns), the boss door
+// JustZombies Regular mode on the phone: the final bosses (art + attack patterns), the boss door
 // landmarks, the find crates and the locked gates (window.TZB). Uses TZW, TZS and TZA.
 (function () {
   const TAU = Math.PI * 2, OL = '#1b1410';

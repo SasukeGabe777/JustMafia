@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies on the phone, part 5 (extends TZSim.Sim; after trash-more.js): area locks and chests.
+// JustZombies on the phone, part 5 (extends TZSim.Sim; after trash-more.js): area locks and chests.
 //   Locked gates (every mode): the town opens up as the team racks up zombie kills (trash-story.js
 //   locks(); the server sends { req, kind, kills } every update). A locked road shows its gate with
 //   "🔒 120 / 200 kills". Special blocks (the boss lair, key vaults, the master shops, zombie dens,

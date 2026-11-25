@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies on the phone: the whole game runs here (window.TZSim).
+// JustZombies on the phone: the whole game runs here (window.TZSim).
 //   const sim = new TZSim.Sim(opts)   opts: { seed, homes, me: { id, name, color, avatar }, settings,
 //                                            restore (the server's copy of this run), report(msg) -> act,
 //                                            live(msg) (co-op relay), on(kind, data) (UI + haptics) }

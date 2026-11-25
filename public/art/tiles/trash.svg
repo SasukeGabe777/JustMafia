@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
-  <!-- TrashZombies: a garage door rolled half up at dusk, light spilling out; a zombie with a
+  <!-- JustZombies: a garage door rolled half up at dusk, light spilling out; a zombie with a
        trash-can helmet shambles past a dented bin. Original art for JustGameBox. -->
   <defs>
     <linearGradient id="tz-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#24163a"/><stop offset="0.6" stop-color="#6b3550"/><stop offset="1" stop-color="#e0794a"/></linearGradient>

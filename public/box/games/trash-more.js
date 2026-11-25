@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies on the phone, part 4 (extends TZSim.Sim; after trash-fight.js): the phase 3 systems.
+// JustZombies on the phone, part 4 (extends TZSim.Sim; after trash-fight.js): the phase 3 systems.
 //   vehicles (shopping cart, ride-on mower, the rare garbage truck), survivors to escort to a shop
 //   or the clinic, gameplay weather (rain, fog, heat wave), Garage Defense (the build phase, the
 //   horde at your garage door), the two new bosses and their arenas (an ice-cream truck that laps

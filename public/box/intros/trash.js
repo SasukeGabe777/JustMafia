@@ -1,8 +1,9 @@
 'use strict';
-// TrashZombies intro: pitch dark inside a garage, a single bulb swinging. The heavy roll-up door
-// rattles, jams, then rolls up: light floods in, dust in the beam, and the street outside is
-// crawling with zombies between the dumpsters. The spray-paint TRASHZOMBIES logo slaps onto the
-// door. Roll call: every survivor steps out of their own garage door with their blaster.
+// JustZombies intro, in the iso art set (TZI.showcase, public/box/games/trash-iso.js): your street at
+// dusk with zombies shambling through town, the roll-up garage door lifts, your character steps out and
+// takes a few of them down (death animations, blood), then the spray-paint JUSTZOMBIES title card.
+// Roll call: every survivor steps out of their own garage door. Plays by itself (no click needed).
+// If the art set can't load, the older code-drawn garage scene below plays instead.
 // No host: a narrator reads the lines. Engine: public/box/show.js ('cast' mode).
 // Phones load this file for the HOW TO PLAY tutorial without the engine, so nothing here touches
 // BOX.studio at load time.
@@ -93,17 +94,28 @@
   }
   function logoOn(g, s, k, y = 420) {
     g.save(); g.translate(960, y); g.rotate(-0.04); g.scale(back(k), back(k));
-    txt(g, 'TRASH', -250, 0, 210, '#fff6d8', { stroke: OL, lw: 26 });
+    txt(g, 'JUST', -250, 0, 210, '#fff6d8', { stroke: OL, lw: 26 });
     txt(g, 'ZOMBIES', 250, 40, 210, '#9cff3c', { stroke: OL, lw: 26 });
     // paint drips
     g.fillStyle = '#9cff3c'; for (const [x, l] of [[60, 70], [190, 110], [330, 50], [440, 90]]) { g.fillRect(x, 120, 14, l * clamp(k * 2 - 1)); g.beginPath(); g.arc(x + 7, 120 + l * clamp(k * 2 - 1), 9, 0, TAU); g.fill(); }
     g.restore();
   }
-  function stage(g, s, o = {}) { garage(g, s, o.game ? 1 : o.open != null ? o.open : 1, { logo: o.logo ? Math.min(1, o.logo) : 0, zombies: o.bare ? 4 : 9 }); if (o.logo && (o.open == null || o.open >= 1)) logoOn(g, s, o.logo, 300); }
+  // The iso scene, drawn into a 1600x900 canvas and laid over the 1920x1080 stage. T: seconds on the
+  // showcase timeline (door at ~2.4 s, you step out at ~4.4 s, the shooting from ~6 s); loop for backdrops.
+  const OFF = { c: null };
+  const heroOf = (s) => { const P = s.show && (s.show.players || s.show.cast || []); const p = Array.isArray(P) ? P.find((x) => x && !x.bot) || P[0] : null; return p ? { id: p.id, name: p.name, color: p.color, avatar: p.avatar } : null; };
+  function iso(g, s, T, o = {}) {
+    const Z = window.TZI; if (!Z) return false; if (!Z.ready) { Z.boot(null, { keys: Z.SHOW_KEYS }); return false; }
+    if (!OFF.c) { OFF.c = document.createElement('canvas'); OFF.c.width = 1600; OFF.c.height = 900; }
+    Z.showcase(OFF.c.getContext('2d'), 1600, 900, 1, T, { intro: !o.loop, who: heroOf(s) || undefined });
+    g.drawImage(OFF.c, -40, -22, 2000, 1125); return true;
+  }
+  function stage(g, s, o = {}) { if (iso(g, s, s.t, { loop: true })) { if (o.logo) logoOn(g, s, Math.min(1, o.logo), 300); return; }
+    garage(g, s, o.game ? 1 : o.open != null ? o.open : 1, { logo: o.logo ? Math.min(1, o.logo) : 0, zombies: o.bare ? 4 : 9 }); if (o.logo && (o.open == null || o.open >= 1)) logoOn(g, s, o.logo, 300); }
   function logo(g, s, lit) { g.save(); g.globalAlpha = clamp(lit == null ? 1 : lit); g.translate(-960, -380); logoOn(g, s, 1, 380); g.restore(); }
 
   BOX.intros.trash = {
-    title: 'TrashZombies',
+    title: 'JustZombies',
     tutorial: [
       { icon: '📱', title: 'Your phone is the game', text: 'Turn your phone sideways. Drag anywhere to move. The small stick bottom-right aims and shoots. Auto-aim shoots the nearest zombie while you just move.', phone: 'Turn your phone sideways and drag to move!', say: 'Your phone is the whole game. Turn it sideways, drag anywhere to move, and use the small stick to aim. Or just move, and auto-aim does the shooting.' },
       { icon: '⬆️', title: 'Level up', text: 'Zombies drop green XP gems. Every level, pick one of 3 abilities: Attack, Defense or Special. They stack!', say: 'Zombies drop green gems. Every level up, pick one of three abilities, attack, defense or special. They stack up into your build.' },
@@ -121,20 +133,23 @@
     },
     stage, logo,
     castOpening: [
-      // Dark garage, a swinging bulb; the door rattles.
-      { ms: 3000, sfx: [[200, 'creak'], [1500, 'rattle']], say: 'welcome', sayAt: 200,
-        draw(g, s) { s.cam(960, 520, lerp(1.25, 1.1, ease(s.k))); garage(g, s, s.T > 1500 ? Math.max(0, Math.sin((s.T - 1500) / 120) * 0.02) : 0, { zombies: 9 }); } },
-      // The door rolls up: light floods in, the street outside is full of zombies.
-      { ms: 3200, sfx: [[0, 'drag'], [900, 'swell']], say: 'stakes', sayAt: 400,
-        draw(g, s) { const k = easeOut(s.T / 2200); s.cam(960, lerp(520, 560, k), lerp(1.1, 1.0, k)); garage(g, s, k, { zombies: 9 }); if (s.T < 300) { g.fillStyle = `rgba(255,250,230,${0.4 * (1 - s.T / 300)})`; g.fillRect(-600, -300, 3120, 1700); } } },
-      // The logo slaps onto the screen.
-      { ms: 2400, sfx: [[0, 'boom'], [150, 'whoosh']],
-        draw(g, s) { s.cam(960, 540, 1.0); garage(g, s, 1, { zombies: 9 }); g.fillStyle = 'rgba(12,8,6,0.35)'; g.fillRect(-600, -300, 3120, 1700); logoOn(g, s, clamp(s.T / 500), 420); const k = back((s.T - 800) / 400); if (k > 0) { g.save(); g.translate(960, 760); g.scale(k, k); txt(g, 'MOVE · SHOOT · LEVEL UP · DON’T GET TRASHED', 0, 0, 44, '#ffe9a8', { stroke: OL, lw: 9 }); g.restore(); } } },
+      // Dusk on your street: zombies shamble in through town (the older garage scene if the art can't load).
+      { ms: 3000, sfx: [[200, 'creak']], say: 'welcome', sayAt: 200,
+        draw(g, s) { s.cam(960, 540, 1); if (!iso(g, s, s.T / 1000)) garage(g, s, 0, { zombies: 9 }); } },
+      // The roll-up door lifts, light spills out, you step onto the driveway.
+      { ms: 3400, sfx: [[0, 'drag'], [1300, 'swell']], say: 'stakes', sayAt: 300,
+        draw(g, s) { s.cam(960, 540, 1); if (!iso(g, s, 3 + s.T / 1000)) garage(g, s, easeOut(s.T / 2200), { zombies: 9 }); } },
+      // A few of them go down: death animations, blood, muzzle flashes.
+      { ms: 4200, sfx: [[300, 'boom'], [1500, 'boom'], [2700, 'boom']],
+        draw(g, s) { s.cam(960, 540, 1 + 0.04 * s.k); if (!iso(g, s, 6.4 + s.T / 1000)) garage(g, s, 1, { zombies: 9 }); } },
+      // The title card slaps on.
+      { ms: 2600, sfx: [[0, 'boom'], [150, 'whoosh']],
+        draw(g, s) { s.cam(960, 540, 1); if (!iso(g, s, 10.6 + s.T / 1000)) garage(g, s, 1, { zombies: 9 }); g.fillStyle = 'rgba(12,8,6,0.4)'; g.fillRect(-600, -300, 3120, 1700); logoOn(g, s, clamp(s.T / 500), 430); const k = back((s.T - 800) / 400); if (k > 0) { g.save(); g.translate(960, 760); g.scale(k, k); txt(g, 'A WHOLE TOWN. ONE PHONE EACH.', 0, 0, 60, '#ffd23f', { stroke: OL, lw: 12 }); g.restore(); } } },
     ],
     // Roll call: every survivor steps out of their own little garage door, blaster in hand.
     roll(g, s, F, u, per, o = {}) {
       s.cam(960, 540, 1);
-      street(g, s, { zombies: 5 });
+      if (!iso(g, s, s.t, { loop: true })) street(g, s, { zombies: 5 });
       g.fillStyle = 'rgba(12,8,6,0.45)'; g.fillRect(-600, -300, 3120, 1700);
       txt(g, 'THE SURVIVORS', 960, 120, 96, '#9cff3c', { stroke: OL, lw: 16 });
       const n = F.length, cols = n <= 6 ? n : Math.ceil(n / 2), rows = Math.ceil(n / Math.max(1, cols)), gap = Math.min(290, 1640 / Math.max(1, cols));

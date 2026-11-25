@@ -1,4 +1,4 @@
-/* TrashZombies: trash-punk look (spray-paint green, hazard orange, rusty metal, chunky outlines).
+/* JustZombies: trash-punk look (spray-paint green, hazard orange, rusty metal, chunky outlines).
    TV: body.g-trash (lobby, the town map, results); phone: the full-screen game (.tz-root). */
 body.g-trash { --tz-green: #9cff3c; --tz-orange: #ff8c2e; --tz-ink: #1b1410; --tz-metal: #c9ccd1; --tz-night: #15111a; }
 .tz-logo { font-family: 'Lilita One', sans-serif; font-size: 92px; margin: 0; line-height: 0.95; color: #fff6d8; letter-spacing: 1px;

@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies: the synth fallback score (recorded CC0 tracks play the main cues:
+// JustZombies: the synth fallback score (recorded CC0 tracks play the main cues:
 // public/audio/music/games/trash/music.json). Garage punk in E minor: a driving synth bass in
 // eighths, a buzzy lead, fast straight drums; a darker, slower take for the waiting moments.
 (function () {
@@ -18,7 +18,7 @@
   const punk = { k: 'x.......x.x.....', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' };
   const drive = { k: 'x...x...x.x.x...', s: '....x.......x..x', h: 'xxxxxxxxxxxxxxxx' };
   S.trash = {
-    name: 'TrashZombies',
+    name: 'JustZombies',
     cues: {
       title: {
         bpm: 156, tracks,

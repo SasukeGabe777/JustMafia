@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies places, goods and score (shared by the server, the TV and the phones;
+// JustZombies places, goods and score (shared by the server, the TV and the phones;
 // Node: module.exports; browser: window.TZP).
 //   TZP.places(seed)        -> { 'x,y': type } the specialised places of a town (same for every screen)
 //   TZP.stock(r, type, wave, ctx) -> good ids on the shelf; TZP.price(id, wave) -> cash

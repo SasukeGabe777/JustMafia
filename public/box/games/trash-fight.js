@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies on the phone, part 3 (extends TZSim.Sim; after trash-play.js): weapons that fire by
+// JustZombies on the phone, part 3 (extends TZSim.Sim; after trash-play.js): weapons that fire by
 // themselves next to your pistol (levels 1-10 at the gun merchants, tiers 1-3 at the crucible, with
 // the golden lift-up cutscene), weapon combos, timed super weapons (and the zombies that carry them),
 // survivor classes, passive items (lock + reroll at the shops), the roaming trader truck, slow motion,

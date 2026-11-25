@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies phase 3, the shared rules (server, TV and phones; Node: module.exports; browser:
+// JustZombies phase 3, the shared rules (server, TV and phones; Node: module.exports; browser:
 // window.TZX): unlocks that carry over between runs (scrap), difficulty tiers, vehicles, survivors
 // to rescue, gameplay weather, Garage Defense (horde nights, the build shop), the helpers (players
 // who are down or out, and people watching on a phone) and the TV's highlight moments.

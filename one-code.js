@@ -5,7 +5,7 @@
 // is reached through the bridge (mafia-bridge.js) and its TV shows the box room's code. So
 // every QR encodes one universal address, /j/CODE, and the server sends the phone to wherever
 // that code's group is right now:
-//   - a box room → its phone page (/box/play, or /ducks/play, /kingdoms/play for the big games).
+//   - a box room → its phone page (/box/play, or /ducks/play, /zombies/play, /kingdoms/play for the games with their own address).
 //     While the group is away in JustMafia, the box phone page forwards the phone there
 //     (joined with its name), so a late joiner lands in the Mafia game too.
 //   - a JustMafia room → /play?room=CODE.
@@ -17,11 +17,13 @@
 const express = require('express');
 const { GAMES, EXTERNAL } = require('./box');
 
-const STANDALONE = ['ducks', 'kingdoms']; // big box games with their own address
+// box games with their own address: game key -> path (JustZombies keeps its internal key 'trash')
+const STANDALONE = { ducks: 'ducks', trash: 'zombies', kingdoms: 'kingdoms' };
+const isStand = (key) => Object.prototype.hasOwnProperty.call(STANDALONE, key);
 const clean = (c) => String(c || '').trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
 const defOf = (k) => (typeof k === 'string' ? (Object.prototype.hasOwnProperty.call(GAMES, k) ? GAMES[k] : Object.prototype.hasOwnProperty.call(EXTERNAL, k) ? EXTERNAL[k] : null) : null);
-const boxPhone = (key, code) => (STANDALONE.includes(key) ? `/${key}/play?room=${code}` : `/box/play?room=${code}`);
-const boxTv = (key) => (STANDALONE.includes(key) ? `/${key}?resume=1` : `/box/tv?game=${encodeURIComponent(key)}&resume=1`);
+const boxPhone = (key, code) => (isStand(key) ? `/${STANDALONE[key]}/play?room=${code}` : `/box/play?room=${code}`);
+const boxTv = (key) => (isStand(key) ? `/${STANDALONE[key]}?resume=1` : `/box/tv?game=${encodeURIComponent(key)}&resume=1`);
 const MAFIA_TV = '/mafia?resume=1';
 const isOpen = (phase) => phase === 'lobby' || phase === 'gameover';
 

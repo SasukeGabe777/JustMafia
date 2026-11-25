@@ -18,7 +18,7 @@
     if (g && g.standalone) document.title = g.name; else document.title = g ? g.name + ' · JustGameBox' : 'JustGameBox';
     const h = document.querySelector('.ph-join h1'); if (h && g && g.standalone) h.textContent = g.icon + ' ' + g.name;
   };
-  theme(location.pathname.split('/')[1]);
+  theme({ zombies: 'trash' }[location.pathname.split('/')[1]] || location.pathname.split('/')[1]);
   const socket = io('/box', { transports: ['websocket', 'polling'] });
   let me = null, view = null, G = null, gameKey = null, toastT = 0, renderQueued = false, lastRender = 0;
   const tokenKey = (code) => 'box.p.' + code;
@@ -40,7 +40,7 @@
   const vibrate = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch { /* no */ } };
   // ctx.haptic('success' | 'error' | 'turn' | 'win' | 'select' | 'buzz' | …): see /haptics.js.
   const haptic = (kind) => { try { window.HAPTIC && window.HAPTIC.play(kind); } catch { /* none */ } };
-  // ctx.live(msg): a quick real-time message for the game (no reply, no screen sync; TrashZombies co-op).
+  // ctx.live(msg): a quick real-time message for the game (no reply, no screen sync; JustZombies co-op).
   const live = (msg) => { try { if (socket.connected) socket.volatile.emit('player:live', msg); } catch { /* offline */ } };
   const ctx = { act, actAsync, toast, sfx: BOX.sfx, vibrate, haptic, live };
   const hostDo = (type, extra = {}) => new Promise((res) => socket.emit('player:host', { type, ...extra }, (r) => { if (r && !r.ok && r.error) toast(r.error); res(r || { ok: false }); }));
@@ -101,7 +101,7 @@
   function setGame(key) {
     if (key === gameKey) return;
     gameKey = key; G = BOX.games[key] || null; theme(key);
-    if (me) history.replaceState(null, '', (G && G.standalone ? '/' + key + '/play' : '/box/play') + '?room=' + me.code);
+    if (me) history.replaceState(null, '', (G && G.standalone ? '/' + (G.path || key) + '/play' : '/box/play') + '?room=' + me.code);
     $('#h-game').textContent = G ? G.icon : ''; $('#h-game').title = G ? G.name : '';
     $('#g-body').innerHTML = ''; window.scrollTo(0, 0);
   }
@@ -293,7 +293,7 @@
       ${g && g.audience && st.gv ? g.audience(st) : ''}${poll}${recap}
       <div class="card-box au-react"><h3>React on the big screen</h3><div class="au-rgrid">${REACTIONS.map((e) => `<button data-ar="${e}">${e}</button>`).join('')}</div></div>
       ${st.top && st.top.length ? `<div class="card-box au-top"><h3>🎉 Party points</h3><div class="board">${st.top.map((r, i) => `<div class="row"><span class="n">${i + 1}</span><span>${esc(r.avatar || '')} ${esc(r.name)}</span><b>${r.pts}</b></div>`).join('')}</div></div>` : ''}`);
-    // a game's helper panel for watchers (TrashZombies): its buttons call the game through audience:act
+    // a game's helper panel for watchers (JustZombies): its buttons call the game through audience:act
     if (g && g.audienceBind && st.gv) g.audienceBind($('#g-body'), st, (msg) => new Promise((res) => socket.emit('audience:act', msg, (r) => res(r || { ok: false, error: 'No answer from the server.' }))), { toast, haptic });
     const nb = $('#au-next'); if (nb) nb.onclick = () => socket.emit('audience:next', { on: !audience.playNext }, (r) => { if (r && r.ok) { audience.playNext = r.playNext; haptic('success'); audienceDraw(); } });
     for (const b of document.querySelectorAll('[data-vote]')) b.onclick = () => socket.emit('audience:vote', { option: b.dataset.vote }, (r) => { if (r && r.ok) { myVotes[r.poll] = b.dataset.vote; haptic('select'); audienceDraw(); } else if (r && r.error) toast(r.error); });

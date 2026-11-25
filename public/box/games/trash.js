@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies: the TV (a big map of the town grid, who is where, the kill feed, the results) and
+// JustZombies: the TV (a big map of the town grid, who is where, the kill feed, the results) and
 // the phone (the WHOLE game: a full-screen canvas shooter, public/box/games/trash-sim.js).
 // Phone controls: touch = drag anywhere to move (a floating stick appears under your thumb), the
 // small stick bottom-right aims and fires (auto-aim shoots the nearest zombie while it's idle);
@@ -158,7 +158,7 @@
     const storyBox = S0 || LK ? `<div class="tz-story"><div>${gates || '<b>📖 Regular</b>'}</div>${S0 ? `<div class="tz-sk"><span>🗝️ ${S0.keys}/3</span><span>🗺️ ${S0.maps}/2</span><span>${S0.boss ? `${S0.boss.icon} ${esc(S0.boss.name)}${S0.doorOpen ? ' <b>AWAKE</b>' : ''}` : '🚪 door: ???'}</span></div>` : ''}</div>` : '';
     const BK = P.filter((p) => !p.bot && p.state === 'play' && p.brk >= 0).sort((a, b) => a.brk - b.brk)[0];
     const brkBox = BK ? `<div class="tz-break ${BK.brk <= 5 ? 'hot' : ''}"><small>⏱ ${nm(BK.name)}: NEXT WAVE IN</small><b>${BK.brk}</b><span>Shop or walk on: it starts by itself</span></div>` : G0 && G0.phase === 'build' ? `<div class="tz-break build ${G0.endsIn <= 5000 ? 'hot' : ''}"><small>🔨 HORDE NIGHT ${G0.night}: BUILD</small><b>${Math.ceil(G0.endsIn / 1000)}</b><span>The horde comes when it hits zero</span></div>` : '';
-    return brkBox + `<div class="tz-sidehead"><span class="tz-logo-s">Trash<b>Zombies</b></span>${S0 ? `<span class="tz-len">📖 ${timer(S0.time || 0)}</span>` : s.endsIn ? `<span class="tz-clock">⏱ ${timer(s.endsIn)}</span>` : `<span class="tz-len">${len}</span>`}</div>${storyBox}
+    return brkBox + `<div class="tz-sidehead"><span class="tz-logo-s">Just<b>Zombies</b></span>${S0 ? `<span class="tz-len">📖 ${timer(S0.time || 0)}</span>` : s.endsIn ? `<span class="tz-clock">⏱ ${timer(s.endsIn)}</span>` : `<span class="tz-len">${len}</span>`}</div>${storyBox}
       ${chips}<h4 class="tz-lbh">🏆 Leaderboard${ranked ? ' · by score' : ''}</h4><div class="tz-rows">${rows}</div>${kfeed ? `<h4 class="tz-lbh">💀 Kill feed</h4><ul class="tz-kfeed">${kfeed}</ul>` : ''}<ul class="tz-feed">${feed}</ul>`;
   }
   // ---------- the boss intro card and the highlight recap (over the map) ----------
@@ -210,7 +210,7 @@
       return BOX.morph(el, `<div class="tz-over ${won ? 'tz-victory' : 'tz-defeat'}">${won ? '<div class="tz-rays"></div><div class="tz-confetti"></div>' : ''}<h1 class="tz-logo">${won ? 'THE TOWN IS <b>SAVED!</b>' : 'THE TRASH <b>WON…</b>'}</h1><p class="tz-why">${won ? `${S0.boss ? S0.boss.icon + ' ' + esc(S0.boss.name) : 'The boss'} is down! ` : 'Everyone fell before the boss went down. '}⏱ ${timer(S0.time || 0)} · ${S0.kills} team kills · 🗝️ ${S0.keys}/3 · ${(S0.finds || []).length} finds</p><div class="tz-podium">${pod}</div>${finds ? `<div class="tz-vfinds">${finds}</div>` : ''}${rest ? `<ol class="tz-rest">${rest}</ol>` : ''}</div>`);
     }
     const why = { overrun: `The horde broke through: the town ran out of hope after ${s.garage ? s.garage.night : 0} horde night${s.garage && s.garage.night === 1 ? '' : 's'}.`, time: s.mode === 'score' || s.mode === 'garage' ? 'Time’s up! Highest score takes it.' : 'Time’s up! The garbage trucks roll in at dawn.', down: 'Everyone’s down. The zombies take the street…', w20: 'Wave 20 survived! The street is safe (for now).', host: 'The host called it a night.', empty: 'Everyone went home. The zombies have the town.' }[s.why] || 'The night is over.';
-    BOX.morph(el, `<div class="tz-over"><h1 class="tz-logo">Trash<b>Zombies</b></h1><p class="tz-why">${esc(why)}</p><div class="tz-podium">${pod}</div>${rest ? `<ol class="tz-rest">${rest}</ol>` : ''}</div>`);
+    BOX.morph(el, `<div class="tz-over"><h1 class="tz-logo">Just<b>Zombies</b></h1><p class="tz-why">${esc(why)}</p><div class="tz-podium">${pod}</div>${rest ? `<ol class="tz-rest">${rest}</ol>` : ''}</div>`);
   }
 
   // ======================================================================= PHONE
@@ -321,7 +321,7 @@
     if (PH.root && el.contains(PH.root)) return PH.root;
     el.innerHTML = '';
     const r = document.createElement('div'); r.className = 'tz-root';
-    r.innerHTML = `<canvas class="tz-cv"></canvas><button class="tz-pause" aria-label="Pause">⏸</button><div class="tz-ov" hidden></div><div class="tz-rot"><div>📱↻</div><b>Turn your phone sideways</b><small>TrashZombies plays best in landscape. (You can still play like this.)</small><button class="btn small" data-rot>Play anyway</button></div>`;
+    r.innerHTML = `<canvas class="tz-cv"></canvas><button class="tz-pause" aria-label="Pause">⏸</button><div class="tz-ov" hidden></div><div class="tz-rot"><div>📱↻</div><b>Turn your phone sideways</b><small>JustZombies plays best in landscape. (You can still play like this.)</small><button class="btn small" data-rot>Play anyway</button></div>`;
     el.appendChild(r); PH.root = r; PH.cv = r.querySelector('.tz-cv');
     r.querySelector('.tz-pause').onclick = (e) => { e.stopPropagation(); toggleMenu(); };
     r.querySelector('[data-rot]').onclick = () => { PH.rotOk = true; r.classList.remove('portrait'); };
@@ -744,6 +744,7 @@
       <h3>Your build</h3><div class="tz-build">${buildHtml(sim.ab)}</div>${gearHtml(sim)}${Object.keys(sim.eq || {}).length ? `<h3>Your finds</h3><div class="tz-finds">${Object.keys(sim.eq).map((id) => { const F = window.TZS.FINDS[id]; return F ? `<span title="${esc(F.desc)}">${F.icon} ${esc(F.name)}</span>` : ''; }).join('')}</div>` : ''}${sim.story ? `<p class="tz-mut">📖 Regular: 🗝️ ${sim.story.keys}/3 key pieces · 🗺️ ${sim.story.maps}/2 map halves${sim.story.boss ? ` · ${sim.story.boss.icon} ${esc(sim.story.boss.name)} waits behind the door` : ''}</p>` : ''}${!isFull() && !standalone() && isTouch() && (canFull() || isIOS()) ? '<button class="btn ghost small" data-opt="fs">⛶ Full screen</button>' : ''}
       <div class="tz-opts"><button class="btn small ${sim.set.aim !== 'off' ? 'green' : 'ghost'}" data-opt="aim">🎯 Auto-aim: ${sim.set.aim !== 'off' ? 'On' : 'Off'}</button><button class="btn small ${PH.vib ? 'green' : 'ghost'}" data-opt="vib">📳 Buzz: ${PH.vib ? 'On' : 'Off'}</button><button class="btn small ghost" data-opt="gfx">🎨 Graphics: ${PH.gfxPref === 'auto' ? 'Auto (' + (gfxHi() ? 'High' : 'Low') + ')' : gfxHi() ? 'High' : 'Low'}</button></div>
       <div class="tz-controls">${touch ? '👆 Drag anywhere to move · 🔴 the stick bottom-right aims and shoots · auto-aim shoots the nearest zombie when you let go.' : '⌨️ WASD / arrows move · 🖱️ mouse aims · hold left click (or Space) to shoot · E grabs a pickup · F (or click) opens a chest · M town map · 1 2 3 pick cards · Esc pauses.'}</div>
+      <details class="tz-cred"><summary>🎨 Credits: CC0 art + sound packs</summary>${creditsHtml()}</details>
       <div class="tz-mbtns"><button class="btn green big" data-opt="resume">▶ Keep playing</button><button class="btn ghost small" data-opt="unl">🔓 Unlocks (🔩 ${(PH.view && PH.view.meta && PH.view.meta.scrap) || 0})</button>${vip ? '<button class="btn ghost small" data-opt="end">🏁 End the night (results)</button>' : ''}</div></div>`, 'menu');
     if (!ov) return;
     for (const b of ov.querySelectorAll('[data-opt]')) b.onclick = async (e) => {
@@ -897,8 +898,36 @@
     };
   }
 
+  // The CC0 art and sound packs (full list with links: public/box/games/trash-assets/CREDITS.md)
+  const CREDITS = [
+    ['Quaternius', 'Zombie Apocalypse Kit, Toon Shooter Game Kit, Ultimate Monsters, Ultimate Animated Character Pack, Stylized Nature MegaKit, single models on poly.pizza'], ['KayKit (Kay Lousberg)', 'City Builder Bits, RPG Tools Bits, Resource Bits, Skeletons'],
+    ['Kenney', 'Car Kit, City Kits (Commercial, Industrial, Suburban), Retro Urban, Furniture, Food, Blaster, Mini Market, Smoke Particles, Particle Pack, Impact / Interface / Sci-fi / RPG / Digital Audio, Music Jingles'], ['ambientCG', 'ground textures'],
+    ['OpenGameArt.org', 'The Free Firearm Sound Library, Gunshots (kurt), Zombie noises (ianzazz), Zombie moans + Hungry ghoul (Darsycho), Zombies Sound Pack (artisticdude), Rain (Ylmir), engine loops (domasx2), Blood Splatter (Sinestesia)'],
+  ];
+  const creditsHtml = () => `<ul class="jz-credits">${CREDITS.map(([a, b]) => `<li><b>${esc(a)}</b>: ${esc(b)}</li>`).join('')}<li>All CC0 (public domain). Thank you! Vehicles, the garage door and a few props are our own models.</li></ul>`;
+  // The title screen at /zombies: the town at dusk in the iso art (TZI.showcase), the logo and a start button.
+  function titleScreen(el, { start, back, resume, code }) {
+    const G = BOX.games.trash;
+    el.innerHTML = `<div class="jz-title"><canvas id="jz-title-cv"></canvas><div class="jz-title-card">
+      <div class="jz-logo"><span class="a">Just</span><span class="b">Zombies</span></div>
+      <p class="jz-tag">Roll up the garage door. The whole town is trash, and the trash is walking.</p>
+      ${resume ? `<button class="jz-go" id="jz-resume">▶ Back to town ${esc(code || '')}</button>` : ''}<button class="jz-go ${resume ? 'alt' : ''}" id="jz-go">🧟 Roll up the door</button>
+      <div class="jz-row"><button class="jz-small" id="jz-how-b">How to play</button><button class="jz-small" id="jz-cred-b">Credits</button><button class="jz-small" id="jz-back">◀ JustGameBox</button></div>
+      <ol class="jz-how" id="jz-how" hidden>${G.how.map((h) => `<li>${esc(h)}</li>`).join('')}</ol><div id="jz-cred" hidden>${creditsHtml()}</div>
+      <p class="jz-fine">Open this on the TV; everyone plays on their phone (or a computer). Solo or 1–100 players, best with 1–4.</p></div></div>`;
+    el.querySelector('#jz-go').onclick = start; const rs = el.querySelector('#jz-resume'); if (rs) rs.onclick = resume; el.querySelector('#jz-back').onclick = back;
+    el.querySelector('#jz-how-b').onclick = () => { const h = el.querySelector('#jz-how'); h.hidden = !h.hidden; el.querySelector('#jz-cred').hidden = true; };
+    el.querySelector('#jz-cred-b').onclick = () => { const h = el.querySelector('#jz-cred'); h.hidden = !h.hidden; el.querySelector('#jz-how').hidden = true; };
+    const cv = el.querySelector('#jz-title-cv'), t0 = performance.now(); if (window.TZI) TZI.boot(null, { keys: window.TZI.SHOW_KEYS });
+    const step = () => { if (!document.body.contains(cv)) return; const W = cv.clientWidth, H = cv.clientHeight, d = Math.min(1.5, window.devicePixelRatio || 1); if (cv.width !== Math.round(W * d) || cv.height !== Math.round(H * d)) { cv.width = Math.round(W * d); cv.height = Math.round(H * d); }
+      const g = cv.getContext('2d'); if (window.TZI && TZI.ready && TZI.showcase) TZI.showcase(g, W, H, d, (performance.now() - t0) / 1000, { title: true }); else { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0c0a08'; g.fillRect(0, 0, cv.width, cv.height); }
+      requestAnimationFrame(step); };
+    step();
+  }
   BOX.games.trash = {
-    name: 'TrashZombies', icon: '🗑️',
+    name: 'JustZombies', icon: '🧟',
+    // a big game with its own address (/zombies) and title screen; /box/tv?game=trash still works (small-game frame)
+    standalone: true, smallToo: true, path: 'zombies', title: titleScreen, credits: CREDITS,
     about: 'Roll up the garage door and blast your way through an endless zombie town, level up, build your loadout, and find your friends on the map.',
     how: [
       'Your PHONE is the whole game: turn it sideways. Drag anywhere to move; the small stick bottom-right aims and shoots. Auto-aim shoots the nearest zombie while you just move.',
@@ -906,6 +935,7 @@
       'Kill zombies, grab the green XP gems and level up: pick 1 of 3 abilities (Attack, Defense or Special). They stack!',
       'Glowing pickups give a quick boost: Bubble Shield, Trash-Can Armor, Buzzsaw Minigun, Rocket Sneakers, Garbage Day, Freezer Burn, Health Snack, Double XP.',
       'Clear the wave and the exits open: walk out an edge into a brand-new area for the next, tougher wave. Every 5th wave a Dumpster Brute shows up.',
+      'Between waves you get a short break (30 seconds, the big countdown): shop, heal or walk on. When it hits zero the next wave comes to you, wherever you stand.',
       'The TV shows the town map. Walk into a friend’s area to team up: you share the zombies (and the XP).',
       'Locked gates (every mode): blocks of town open as the TEAM’s zombie kills rise. Each locked gate and the map show “🔒 120 / 200 kills”. ⭐ Special blocks (the best shops, zombie dens, loot stashes, key vaults, the boss lair) need many more kills and hide tougher zombies and elites. A locked gate is never the only way: there’s always another road. Tap the minimap (or M) for the town map.',
       'Chests: clear the area, walk up to the chest and tap OPEN (on a computer: click it, or F). Loot stashes and dens hide loot chests with cash and goodies for everyone.',
@@ -916,7 +946,7 @@
       'Later waves bring nasty zombies that blind you, web you (wiggle to break free), jam your guns or flip your controls. The clinic cleans you up.',
       '📣 Call out to the team: places you find show up for everyone, with the route along the streets. Score attack (and Party Mode): the highest score wins; keep the kill streak going for a bigger multiplier.',
       'Garage Defense: every 5 waves a horde night pulls everyone home. Build barricades, turrets, spike strips, sprinkler-flamers and car-alarm decoys, then hold the door. Broken doors cost the town hope.',
-      'Hop into shopping carts and ride-on mowers (V or the button), grab the rare garbage truck, and escort hiding survivors to a shop or the clinic. Rain, fog and heat waves change the fight.',
+      'Hop into shopping carts, push mowers and ride-on mowers (V or the button), grab the rare garbage truck or the even rarer tank. Every ride is on a clock (the ring over it): when it runs out, or it gets wrecked, you hop out. Escort hiding survivors to a shop or the clinic. Rain, fog and heat waves change the fight.',
       'Down, out or just watching? Your phone helps: drop supply crates, vote on the next event, or (Score attack) send a horde at the leader. Scrap from every night unlocks classes, starting weapons, outfits and harder tiers (not in Party Mode).',
     ],
     fx: { start: 'start' },
@@ -924,7 +954,7 @@
     lobbyTv(el, L) {
       if (!el.querySelector('.tz-lobby')) {
         el.innerHTML = `<div class="tz-lobby"><div class="tz-lb-sky"></div><div class="tz-lb-door"><div class="tz-lb-slats"></div><span>No. 13</span></div>
-          <div class="tz-lb-main"><h1 class="tz-logo">Trash<b>Zombies</b></h1><p class="tz-tag">Roll up the garage. Walk out. Don’t get trashed.</p>
+          <div class="tz-lb-main"><h1 class="tz-logo">Just<b>Zombies</b></h1><p class="tz-tag">Roll up the garage. Walk out. Don’t get trashed.</p>
           <div class="tz-lb-row"><div class="tz-join"><img id="qr" alt="QR code to join"><div class="tz-code-l">Room code</div><div class="tz-code" id="code"></div><div class="tz-url">or go to <b id="url"></b></div><small>Your phone is the controller AND the screen</small></div>
           <div class="tz-lb-set"><h3>🛠️ House rules</h3><div class="tz-settings" id="settings"></div></div></div>
           <div class="tz-roster" id="roster"></div><div class="tz-err" id="lobby-err"></div>
@@ -993,7 +1023,7 @@
         if (PH.root) { dropRun(); if (window.TZSnd) TZSnd.stopAll(); PH.root = null; PH.sim = null; cancelAnimationFrame(PH.raf); document.body.classList.remove('tz-playing'); }
         const st = v.standings || [], i = st.findIndex((r) => r.id === (v.me && v.me.id)), r = st[i] || {};
         const won = v.why === 'win', lost = v.why === 'lost';
-        BOX.morph(el, `<div class="card-box tz-ph-over ${won ? 'won' : ''}">${won ? '<div class="tz-confetti"></div><h2 class="tz-win">🏆 YOU WIN!</h2>' : lost ? '<h2 class="tz-lose">💀 The trash won…</h2>' : ''}<h2 class="tz-logo sm">Trash<b>Zombies</b></h2>${won && v.story ? `<p>${v.story.boss ? esc(v.story.boss.name) + ' is down' : 'The boss is down'} in <b>${BOX.mmss ? BOX.mmss(v.story.time) : Math.round(v.story.time / 60000) + ' min'}</b> · ${v.story.kills} team kills · ${v.story.finds.length} finds</p>` : ''}<div class="tz-pbig">${BOX.body ? BOX.body({ id: v.me && v.me.id, bot: true }, 130, { mood: i === 0 ? 'grin' : 'smile' }) : ''}</div>
+        BOX.morph(el, `<div class="card-box tz-ph-over ${won ? 'won' : ''}">${won ? '<div class="tz-confetti"></div><h2 class="tz-win">🏆 YOU WIN!</h2>' : lost ? '<h2 class="tz-lose">💀 The trash won…</h2>' : ''}<h2 class="tz-logo sm">Just<b>Zombies</b></h2>${won && v.story ? `<p>${v.story.boss ? esc(v.story.boss.name) + ' is down' : 'The boss is down'} in <b>${BOX.mmss ? BOX.mmss(v.story.time) : Math.round(v.story.time / 60000) + ' min'}</b> · ${v.story.kills} team kills · ${v.story.finds.length} finds</p>` : ''}<div class="tz-pbig">${BOX.body ? BOX.body({ id: v.me && v.me.id, bot: true }, 130, { mood: i === 0 ? 'grin' : 'smile' }) : ''}</div>
           <h3>${i === 0 ? '🏆 Top survivor!' : `#${i + 1} of ${st.length}`}</h3>${r.score ? `<p class="tz-bigsc">${r.score.toLocaleString('en-US')} points</p>` : ''}<p>Best run: wave <b>${r.wave || 1}</b> · ${r.kills || 0} kills · level ${r.lvl || 1}</p><div class="tz-ab">${abIcons(r.build)}</div>
           <ol class="tz-mini">${st.slice(0, 6).map((x) => `<li>${face(x, 26)} <b>${nm(x.name)}</b> <span>W${x.wave} · ${x.kills}k</span></li>`).join('')}</ol>
           <div class="tz-scrapbox">${v.party ? '<p>🎉 Party Mode: no scrap this time (everyone starts equal).</p>' : v.me && v.me.scrap != null ? `<p class="tz-bigsc">🔩 +${v.me.scrap} scrap${v.me.scrapGuest ? '' : ' saved to your profile'}</p>${v.me.scrapGuest ? '<p class="tz-mut">Make your character (🛍️) to keep scrap next time.</p>' : ''}` : ''}<button class="btn ghost small" data-unl>🔓 Unlocks (🔩 ${(view && view.meta && view.meta.scrap) || 0})</button><div class="tz-unlbox">${PH.overUnl ? unlockHtml(view && view.meta, false) : ''}</div></div></div>`);

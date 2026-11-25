@@ -715,5 +715,72 @@
     prefetch(keys);
   }
 
-  const TZI = window.TZI = { ready: false, boot, need, has, prefetch, prefetchArea, render, sprite, fx, dirOf, dirToWorld, screenAngle, toScreen: C.toScreen, cam: C, C, st, setGround, setScreen, setBill, prism, groundFor, standFor, garageParts, iso: { HX, HY, HZ, CH, BB }, manifest: () => M, zKey, drawZombie, zState, animFrame, animName, BOSSKEY, VEH, keyOf };
+  // ---------------- the showcase: a little scripted scene for the title screen and the TV intro ----------------
+  // A real town block (your garage on a crossroads) at dusk: zombies shamble in, the roll-up door lifts,
+  // your character steps out and takes a few of them down. o.intro: the timeline below (seconds); else a loop.
+  const SHOW_KEYS = CORE.concat(['zombie.screamer', 'zombie.canhead', 'zombie.brute', 'zombie.crawler', 'pickup.xp.green', 'prop.lamp2', 'prop.dumpster', 'prop.car2', 'prop.taxi', 'prop.police', 'prop.van', 'prop.wreck.burnt', 'prop.pine', 'prop.tree2', 'bld.house3', 'bld.house4']);
+  let SH = null;
+  function showSetup() {
+    if (SH) return SH;
+    const area = W().genArea(11, 4, 4, true), G = area.garage, cx = G.x + G.w / 2, fy = G.y + G.h;
+    const types = ['walker', 'runner', 'bloater', 'walker', 'screamer', 'canhead', 'walker', 'crawler', 'walker', 'brute'];
+    const Z = types.map((type, i) => { const a = -0.3 + (i / types.length) * Math.PI * 1.4 + (i % 2) * 0.2, R = 560 + (i % 3) * 90; return { type, id: i + 1, r: 20, hp: 1, mhp: 1, speed: type === 'runner' ? 120 : 60, flash: 0, sx: cx + Math.cos(a) * R, sy: fy + 140 + Math.sin(a) * R * 0.75, die: [6.4, 6.9, 7.5, 8.1, 8.6, 9.2, 9.9, 10.5, 11.1, 11.8][i], x: 0, y: 0 }; });
+    SH = { area, G, cx, fy, Z, hero: { x: cx, y: G.y + 120 }, sim: { phase: 'play', _doorOpen: 0, p: { x: -9999, y: -9999 }, t: 0 }, corpses: [], fx: [] };
+    return SH;
+  }
+  function showcase(g, Wd, Hd, dpr, t, o = {}) {
+    if (!st.ready) return false;
+    const S = showSetup(), { area, G, cx, fy } = S, loop = !o.intro, T = loop ? 4.6 + (t % 9) : t;
+    // the timeline
+    const door = clamp((T - 2.4) / 1.8, 0, 1), heroK = clamp((T - 4.4) / 1.3, 0, 1);
+    const hx = cx, hy = G.y + 120 + (fy + 150 - (G.y + 120)) * (heroK < 1 ? heroK : 1);
+    S.sim._doorOpen = door;
+    // camera: a slow drift toward the driveway; the intro starts wider on the street
+    const zoom = Hd / (loop ? 600 : 760 - 160 * clamp(T / 7, 0, 1)), fxp = cx + (loop ? Math.sin(t * 0.1) * 40 : 160 * (1 - clamp(T / 5, 0, 1))), fyp = fy + (loop ? 330 : 130);
+    Object.assign(C, { s: zoom, k: zoom * 0.8, dpr, w: Wd, h: Hd, cx: isoX(fxp, fyp), cy: isoY(fxp, fyp) - 30, sx: 0, sy: 0 });
+    setScreen(g); g.fillStyle = '#0c0a08'; g.fillRect(0, 0, Wd, Hd);
+    const q = Math.min(1, Math.max(0.6, zoom * dpr * 0.8));
+    if (!S.bg || Math.abs(S.bg.q - q) > 0.25) S.bg = groundFor(area, q);
+    const B = S.bg, bx = (C.cx - Wd / 2 / zoom - B.ix0) * B.q, by = (C.cy - Hd / 2 / zoom - B.iy0) * B.q;
+    { const sx0 = Math.max(0, bx), sy0 = Math.max(0, by), sw = Math.min(B.canvas.width - sx0, Wd / zoom * B.q), shh = Math.min(B.canvas.height - sy0, Hd / zoom * B.q); if (sw > 0 && shh > 0) g.drawImage(B.canvas, sx0, sy0, sw, shh, (sx0 - bx) / B.q * zoom, (sy0 - by) / B.q * zoom, sw / B.q * zoom, shh / B.q * zoom); }
+    // zombies: walk in, stop near you, drop when shot (death animation, blood)
+    const list = [], hero = { _d: hx + hy, k: 'hero' }, aimAt = [];
+    for (const z of S.Z) {
+      const T0 = loop ? 0 : 0.2, u = clamp((T - T0) / 7, 0, 1), tx = hx + (z.sx - hx) * 0.22, ty = hy + 60 + (z.sy - hy) * 0.22;
+      z.x = z.sx + (tx - z.sx) * u; z.y = z.sy + (ty - z.sy) * u; z.dir = dirOf(tx - z.sx, ty - z.sy);
+      if (heroK >= 1 && T >= z.die) { const dt2 = T - z.die; if (dt2 < 0.1) aimAt.push(z); const key = 'zombie.' + z.type, Pk = need(key); if (Pk && Pk.anims.death) { const D = Pk.anims.death; S.corpses.length = 0; z._dead = { fi: Math.min(D.n - 1, Math.floor(dt2 * D.fps)), a: clamp((loop ? 9 : 99) - dt2, 0, 1) }; } continue; }
+      z._dead = null; z._d = z.x + z.y; list.push(z);
+    }
+    // the bodies (under everything that stands)
+    for (const z of S.Z) if (z._dead) { const [X, Y] = C.toScreen(z.x, z.y); sprite(g, 'zombie.' + z.type, 'death', z.dir, z._dead.fi, X, Y, zoom * CH, { alpha: z._dead.a }); if (z._dead.fi < 3) { fx(g, 'fx.blood.spurt', z._dead.fi * 2, X, Y - 40 * zoom, 0.7); } }
+    for (const S2 of standFor(area)) { S2._d = S2.depth; list.push(S2); }
+    for (const part of garageParts(area)) { part._d = part.depth; list.push(part); }
+    if (heroK > 0) list.push(hero);
+    list.sort((a, b) => a._d - b._d);
+    const target = S.Z.filter((z) => !z._dead && heroK >= 1).sort((a, b) => a.die - b.die)[0];
+    const aim = target ? Math.atan2(target.y - hy, target.x - hx) : Math.PI / 2, aS = screenAngle(aim), face = Math.cos(aS) >= 0 ? 1 : -1;
+    const shooting = target && T > target.die - 0.5;
+    for (const q2 of list) {
+      if (q2.k === 'obs') { const [X, Y] = C.toScreen(q2.x, q2.y); sprite(g, q2.key, 'static', q2.row, 0, X, Y, zoom * q2.sc); continue; }
+      if (q2.k === 'garage') { q2.draw(g, S.sim, t); continue; }
+      if (q2.k === 'hero') {
+        const [X, Y] = C.toScreen(hx, hy); setScreen(g); g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(X + 5 * zoom, Y + zoom, 22 * zoom, 9 * zoom, 0, 0, TAU); g.fill();
+        const who = o.who || { id: 'jz-hero', name: 'You', color: '#ffd23f' }, kp = Math.max(0.3, Math.round(zoom * HB * dpr * 10) / 10);
+        setBill(g, hx, hy, 0, HB); window.TZSim.heroDraw(g, who, hx, hy, { k: kp, moving: heroK < 1, walkT: t, face: heroK < 1 ? 1 : face });
+        if (heroK >= 1) { const Pk = need('weapon.shotgun') || need('weapon.pistol'); if (Pk) { const fr = Pk.anims.spin.rows.S[0], sc = zoom * 0.8 * Pk.sc, D = C.dpr, c = Math.cos(aS), sn = Math.sin(aS), fy2 = c < 0 ? -1 : 1, gx = X + face * 10 * zoom, gy = Y - 34 * zoom; g.setTransform(-c * D, -sn * D, -sn * fy2 * D, c * fy2 * D, gx * D, gy * D); g.drawImage(fr.c, fr.px, fr.py, fr.pw, fr.ph, -fr.w * sc * 0.65, -fr.h * 0.42 * sc, fr.w * sc, fr.h * sc); if (shooting && Math.sin(t * 40) > 0) fx(g, 'fx.muzzle', Math.floor(t * 30) % fxLen('fx.muzzle'), gx + c * fr.w * sc * 0.6, gy + sn * fr.w * sc * 0.6, 0.45, { rot: aS, add: true }); } }
+        continue;
+      }
+      const [X, Y] = C.toScreen(q2.x, q2.y), Pk = need('zombie.' + q2.type); if (!Pk) continue;
+      const near = Math.hypot(q2.x - hx, q2.y - hy) < 200 && heroK >= 1, an = near ? 'attack' : q2.type === 'runner' ? 'run' : 'walk';
+      sprite(g, Pk, animName(Pk, an), q2.dir, animFrame(Pk, animName(Pk, an), t + q2.id * 0.3), X, Y, zoom * CH, { flash: shooting && q2 === target && Math.sin(t * 30) > 0 ? 0.7 : 0 });
+    }
+    // dusk: warm tint, the porch light, a vignette
+    setScreen(g);
+    g.fillStyle = 'rgba(255,120,50,0.12)'; g.fillRect(0, 0, Wd, Hd); g.fillStyle = 'rgba(40,14,30,0.22)'; g.fillRect(0, 0, Wd, Hd);
+    if (door > 0) { const [lx, ly] = C.toScreen(cx, fy + 40); const R = 260 * zoom, gr = g.createRadialGradient(lx, ly, 0, lx, ly, R); gr.addColorStop(0, `rgba(255,220,150,${0.35 * door})`); gr.addColorStop(1, 'rgba(255,220,150,0)'); g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.save(); g.translate(lx, ly); g.scale(1, 0.6); g.translate(-lx, -ly); g.fillRect(lx - R, ly - R, R * 2, R * 2); g.restore(); g.globalCompositeOperation = 'source-over'; }
+    g.drawImage(vignette(Wd, Hd), 0, 0, Wd, Hd);
+    return true;
+  }
+
+  const TZI = window.TZI = { SHOW_KEYS, showcase, ready: false, boot, need, has, prefetch, prefetchArea, render, sprite, fx, dirOf, dirToWorld, screenAngle, toScreen: C.toScreen, cam: C, C, st, setGround, setScreen, setBill, prism, groundFor, standFor, garageParts, iso: { HX, HY, HZ, CH, BB }, manifest: () => M, zKey, drawZombie, zState, animFrame, animName, BOSSKEY, VEH, keyOf };
 })();

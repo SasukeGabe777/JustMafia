@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies Regular mode (the story): gated areas, unique finds, the boss door and the bosses.
+// JustZombies Regular mode (the story): gated areas, unique finds, the boss door and the bosses.
 // Shared by the server, the TV and the phones (Node: module.exports; browser: window.TZS).
 //   TZS.plan(seed, homes)  -> { tiers: [81 numbers], finds: { 'x,y': id }, door: [x, y], doorLook, boss }
 //   TZS.need(tier, players) -> team kills for the radio's story beats (more players, more kills)

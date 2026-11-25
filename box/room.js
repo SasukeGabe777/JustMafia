@@ -640,7 +640,7 @@ class BoxRoom {
   busy() {
     if (this.locked) return 'locked';
     if (this.players.size >= MAX_PLAYERS) return 'full';
-    // A drop-in game (module dropIn: true, e.g. TrashZombies) lets new players straight into the running game.
+    // A drop-in game (module dropIn: true, e.g. JustZombies) lets new players straight into the running game.
     if (this.phase === 'game' && this.def.dropIn && this.game && this.game.phase !== 'over' && !this.practice) return null;
     if (this.phase === 'show' || (this.phase === 'game' && !(this.game && this.game.phase === 'over'))) return 'running';
     return null;
@@ -729,10 +729,10 @@ class BoxRoom {
       poll: this.pollView(), lastPoll: this.lastPoll && this.now() - this.lastPoll.at < 15000 ? { q: this.lastPoll.q, winner: this.lastPoll.winner, votes: this.lastPoll.votes } : null,
       party: pm ? { index: pm.index, of: pm.defs.length, phase: pm.phase, next: pm.defs[pm.index + 1] ? pm.defs[pm.index + 1].key : null } : null,
       recap: this.recap ? { id: this.recap.id, champion: this.recap.champion, played: this.recap.played.map((g) => ({ game: g.game, title: g.title, winner: g.winner })) } : null,
-      gv: this.phase === 'game' && this.game && typeof this.game.audienceView === 'function' ? this.game.audienceView() : null, // a game's public helper panel (TrashZombies)
+      gv: this.phase === 'game' && this.game && typeof this.game.audienceView === 'function' ? this.game.audienceView() : null, // a game's public helper panel (JustZombies)
     };
   }
-  // Watchers who help the game (TrashZombies helpers): the game decides what they can do.
+  // Watchers who help the game (JustZombies helpers): the game decides what they can do.
   audienceAct(a, msg) {
     if (this.phase !== 'game' || !this.game || typeof this.game.audienceAct !== 'function') return { ok: false, error: 'Nothing to help with right now.' };
     const r = this.game.audienceAct(a, msg || {}) || { ok: true };
@@ -1111,7 +1111,7 @@ class BoxRoom {
 
   act(p, msg) {
     this.lastActivity = Date.now();
-    // A game's own lasting extras (TrashZombies unlocks): any phase, kept on the player's profile.
+    // A game's own lasting extras (JustZombies unlocks): any phase, kept on the player's profile.
     if (msg && msg.op === 'meta' && typeof this.def.metaAct === 'function') { let r; try { r = this.def.metaAct(this, p, msg) || { ok: true }; } catch (e) { console.error('[meta]', e); r = { ok: false, error: 'Something went wrong.' }; } this.sync(); return r; }
     if (this.phase === 'show' && this.show) {
       if (msg && msg.op === 'fact') { const r = this.show.submit(p, msg.text); this.sync(); return r; }

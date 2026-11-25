@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies: a top-down survival shooter played ON THE PHONE. Each phone runs its own area
+// JustZombies: a top-down survival shooter played ON THE PHONE. Each phone runs its own area
 // (zombies, bullets, pickups, XP) locally, so there is no input lag over LAN or online; the server
 // only keeps the world: the grid of areas (looks generated from the room seed, see
 // public/box/games/trash-world.js), which cell each player is in, their run stats (sanity-checked),
@@ -40,7 +40,7 @@ const KF = 12, SPOT_LOW = 0.35, SPOT_HOLD = 4000, RECAP_MS = 9000, RECAP_EVERY =
 const key = (c) => c[0] + ',' + c[1];
 const int = (v, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : lo; };
 
-// The TrashZombies part of a box profile (unlocks bought with scrap), made safe to use.
+// The JustZombies part of a box profile (unlocks bought with scrap), made safe to use.
 function metaFix(prof) {
   let M = prof.trash; if (!M || typeof M !== 'object') M = prof.trash = X.blankMeta();
   if (!Array.isArray(M.own)) M.own = []; if (!M.pick || typeof M.pick !== 'object') M.pick = { cls: null, wp: null, fit: null, tier: null };
@@ -805,7 +805,7 @@ class Game {
 }
 
 module.exports = {
-  key: 'trash', name: 'TrashZombies', min: 1, best: [1, 4], fields, defaults,
+  key: 'trash', name: 'JustZombies', min: 1, best: [1, 4], fields, defaults,
   show: { facts: false }, // intro cutscene before the game (public/box/intros/trash.js)
   difficulty: { key: 'diff', values: { easy: 'chill', medium: 'normal', hard: 'hard' } },
   practice: false, // a run is its own warm-up: the first waves are gentle

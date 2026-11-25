@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies: the shared world rules (the server, the TV and the phones all load this file).
+// JustZombies: the shared world rules (the server, the TV and the phones all load this file).
 // - the grid of areas (GRID x GRID cells), each cell's look (biome) and layout generated from the
 //   room seed, so every phone and the TV build exactly the same area from (seed, x, y);
 // - the abilities you pick on level-up (Attack / Defense / Special), the pickups, the zombie

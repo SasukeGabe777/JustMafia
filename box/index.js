@@ -68,6 +68,9 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
   // Big games get their own address, like JustMafia's /mafia.
   app.get('/ducks', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
   app.get('/ducks/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
+  app.get('/zombies', (req, res) => res.sendFile(path.join(pub, 'tv.html'))); // JustZombies (game key 'trash')
+  app.get('/zombies/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
+  // JustKingdoms now sits with the other games on the main menu, but keeps its own address and look.
   app.get('/kingdoms', (req, res) => res.sendFile(path.join(pub, 'tv.html')));
   app.get('/kingdoms/play', (req, res) => res.sendFile(path.join(pub, 'play.html')));
 
@@ -279,7 +282,7 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
       const { room, a } = ctx(); if (!room || !a) return reply(cb, { ok: false, error: 'Join the audience first.' });
       reply(cb, room.vote(a, msg.option));
     });
-    // A watcher helping the game (TrashZombies: supply crates, the event vote, hordes at the leader).
+    // A watcher helping the game (JustZombies: supply crates, the event vote, hordes at the leader).
     socket.on('audience:act', (msg, cb) => {
       const { room, a } = ctx(); if (!room || !a) return reply(cb, { ok: false, error: 'Join the audience first.' });
       reply(cb, room.audienceAct(a, msg));
@@ -416,7 +419,7 @@ function installBox(app, io, { takenElsewhere = () => false, elsewhere = () => n
       if (!room || !p) return reply(cb, { ok: false, error: 'You are not in this room.' });
       reply(cb, room.act(p, msg));
     });
-    // Real-time relay for games that need it (TrashZombies co-op areas): no reply, no screen sync.
+    // Real-time relay for games that need it (JustZombies co-op areas): no reply, no screen sync.
     socket.on('player:live', (msg) => {
       const { room, p } = ctx();
       if (!room || !p || room.phase !== 'game' || !room.game || !room.game.live) return;

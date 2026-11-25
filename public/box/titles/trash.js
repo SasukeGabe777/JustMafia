@@ -1,11 +1,11 @@
 'use strict';
-// TrashZombies title screen (format: public/box/title.js): dusk on a junky street. A garage door
+// JustZombies title screen (format: public/box/title.js): dusk on a junky street. A garage door
 // rattles up and up, light spills out onto the driveway, and zombies shamble in from the right
 // past dumpsters and bins. Spray-paint logo.
 (function () {
   const TAU = Math.PI * 2, OL = '#1b1410';
   BOX.titles.trash = {
-    logo: '<span style="color:#fff6d8;-webkit-text-stroke:3px #1b1410;text-shadow:0 6px 0 #1b1410">Trash</span><span style="color:#9cff3c;-webkit-text-stroke:3px #1b1410;text-shadow:0 6px 0 #1b1410">Zombies</span>',
+    logo: '<span style="color:#fff6d8;-webkit-text-stroke:3px #1b1410;text-shadow:0 6px 0 #1b1410">Just</span><span style="color:#9cff3c;-webkit-text-stroke:3px #1b1410;text-shadow:0 6px 0 #1b1410">Zombies</span>',
     tagline: 'Roll up the garage door. Walk out. Don’t get trashed.', start: '▶ Roll up the door', meta: 'Solo or 1–100 players · 5–30 min',
     font: "'Lilita One', sans-serif",
     css: '.bt-trash .bt-logo { font-size: clamp(40px, 5.6vw, 92px); white-space: nowrap; letter-spacing: 0; }',

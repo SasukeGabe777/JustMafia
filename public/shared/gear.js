@@ -381,7 +381,7 @@
     ['king', 'hand', 'scepter', 'Royal Scepter', 180, '🪄', { shape: 'staff', a: '#e0b84a', c: '#e8424f', glow: true }, 'Point it at someone and say “summoned”.'],
     ['king', 'cloak', 'velvet', 'Courtier’s Cloak', 120, '🧣', { shape: 'cape', a: '#5a1a6a', b: '#3a0f46', c: '#e0b84a' }, 'Plum velvet for whispering in corridors.'],
     ['king', 'cloak', 'shroud', 'Ghostly Shroud', 160, '👻', { shape: 'cape', a: '#b7c7d8', b: '#7a8aa0', c: '#ffffff' }, 'For courtiers who came back to haunt.'],
-    // TrashZombies: scavenged junk you wear while you blast through the town.
+    // JustZombies: scavenged junk you wear while you blast through the town.
     ['trash', 'hat', 'hardhat', 'Dented Hard Hat', 60, '⛑️', { shape: 'hardhat', a: '#ff8c2e', b: '#2b1f1a', c: '#fff6a8', d: 'lamp' }, 'Found it in a dumpster. Still has a working lamp.'],
     ['trash', 'hat', 'rag', 'Hazard Bandana', 80, '⚠️', { shape: 'bandana', a: '#9cff3c', b: '#1a1a1a', d: 'stripes', pattern: 'stripes' }, 'Toxic green with black stripes. Very punk.'],
     ['trash', 'mask', 'smog', 'Smog Mask', 140, '😷', { shape: 'gasMask', a: '#6a7a5a', b: '#2a2a2a' }, 'Keeps out the landfill smell. Mostly.'],

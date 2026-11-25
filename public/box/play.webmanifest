@@ -1,7 +1,7 @@
 {
   "name": "JustGameBox",
   "short_name": "GameBox",
-  "description": "Party games for the big screen. Your phone is the controller (and in TrashZombies, the whole game).",
+  "description": "Party games for the big screen. Your phone is the controller (and in JustZombies, the whole game).",
   "scope": "/",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone"],

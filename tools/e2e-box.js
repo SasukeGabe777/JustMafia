@@ -62,7 +62,7 @@ async function setup(browser, game, settings = {}) {
   const hub = await browser.page();
   await hub.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
   await hub.go(`${URL}/`);
-  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,YesChef,JustSnap,Meme Maker,Letter Rush,Act It Out,JustPitch,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Kill the King,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,TrashZombies,Quick Draw,Bomb Squad,Zombie Survival');
+  assert.equal(await hub.eval(`[...document.querySelectorAll('.tile.live h2')].map((h) => h.textContent).join(',')`), 'JustMafia,JustRaiseDucks,JustKingdoms,President,Blackjack Night,JustBid,JustDrop,Price Panic,Emoji Charades,Hot Take Trivia,Color Match,Tune Buzz,JustBlanks,JustSketch Relay,JustFunny,YesChef,JustSnap,Meme Maker,Letter Rush,Act It Out,JustPitch,Two Truths & a Lie,Most Likely To…,Who Said It?,Where Do You Stand?,JustUndercover,Kill the King,Alien Abduction,Debate Club,JustSummon,JustMarble,JustEscape,JustZombies,Quick Draw,Bomb Squad,Zombie Survival');
   // Every small game sits on a category shelf (public/categories.js); there is no catch-all shelf.
   assert.equal(await hub.eval(`[...document.querySelectorAll('.shelf')].map((x) => x.dataset.shelf).join(',')`), 'cards,guess,create,friends,action');
   assert.equal(await hub.eval(`document.querySelectorAll('.tiles.big .tile').length`), 3, 'three big tiles');
@@ -581,7 +581,7 @@ async function setup(browser, game, settings = {}) {
     ok('JustSnap: a JPEG from the phone page is shrunk, previewed, sent over the socket, served at an unguessable URL and shown on the TV gallery (anonymous), then the reveal');
   }
 
-  // ---------- TrashZombies: the phone is the whole game (touch: drag to move + the aim stick; keyboard + mouse) ----------
+  // ---------- JustZombies: the phone is the whole game (touch: drag to move + the aim stick; keyboard + mouse) ----------
   {
     const { tv, ph } = await setup(browser, 'trash', { length: 'm10', diff: 'chill' });
     await tv.click('#start'); await skipShow(tv);
@@ -662,7 +662,7 @@ async function setup(browser, game, settings = {}) {
     await ph.eval(`TZ_DEBUG.weapon('smg'); TZ_DEBUG.spawn(3); true`); await wait(1500); assert(await sim('s.weapons.length === 1 && s.killCount >= 0'));
     await tv.until(`!!document.querySelector('#tz-map') && /Tess/.test(document.querySelector('#tz-side').textContent) && /Wave 2/.test(document.querySelector('#tz-side').textContent)`, 'the TV map shows Tess on wave 2', 10000);
     await wait(800); await ph.shot('box-trash-new-area'); await tv.shot('box-trash-tv-map');
-    ok('TrashZombies: the run starts in your garage with a class pick; touch drag moves, the aim stick aims and fires while dragging; level-up cards (Attack/Defense/Special); WASD, mouse aim + hold to fire, Esc pause and number keys on a computer; a pickup; a cleared area opens the exits into a new-looking area; the TV map follows');
+    ok('JustZombies: the run starts in your garage with a class pick; touch drag moves, the aim stick aims and fires while dragging; level-up cards (Attack/Defense/Special); WASD, mouse aim + hold to fire, Esc pause and number keys on a computer; a pickup; a cleared area opens the exits into a new-looking area; the TV map follows');
   }
 
   // ---------- One code for the night: the title screen switches the live room ----------

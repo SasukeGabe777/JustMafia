@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies gear (shared by the server, the TV and the phones; Node: module.exports; browser: window.TZR):
+// JustZombies gear (shared by the server, the TV and the phones; Node: module.exports; browser: window.TZR):
 // weapons (levels 1-10 at the gun merchants, tiers 1-3 at the crucible), weapon combos, the timed
 // super weapons (some zombies carry them), survivor classes, passive items with trade-offs, and the
 // debuffs some zombies (and bosses) put on you. All names are original.

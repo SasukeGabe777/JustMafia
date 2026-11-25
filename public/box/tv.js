@@ -8,8 +8,9 @@
   const params = new URLSearchParams(location.search);
   // Big games have their own address (/ducks) and open like a game of their own: own title
   // screen, own look, no JustGameBox bar. Small games use /box/tv?game=<key>.
+  const PATHS = { zombies: 'trash' }; // an address that isn't the game key (/zombies is JustZombies, key 'trash')
   const pathGame = location.pathname.replace(/\/+$/, '').split('/')[1];
-  let gameKey = params.get('game') || pathGame;
+  let gameKey = params.get('game') || PATHS[pathGame] || pathGame;
   let G = BOX.games[gameKey];
   if (!G) { $('#tv-main').innerHTML = '<p>Unknown game. <a href="/">Back to the games</a></p>'; return; }
   if (G.external) { location.replace(G.href || '/'); return; } // JustMafia lives at /mafia
@@ -17,7 +18,7 @@
   document.title = STAND ? G.name : G.name + ' · JustGameBox';
   $('#tv-title').textContent = G.icon + ' ' + G.name;
   if (STAND) { document.body.classList.add('standalone', 'g-' + gameKey); document.querySelector('.tv-bar').hidden = true; }
-  else if (!G.standalone) document.body.classList.add('g-' + gameKey); // every game styles its own screens (public/box/games/<key>.css)
+  else if (!G.standalone || G.smallToo) document.body.classList.add('g-' + gameKey); // every game styles its own screens (public/box/games/<key>.css)
 
   const socket = io('/box', { transports: ['websocket', 'polling'] });
   let state = null, baseUrl = location.origin, lastFx = 0, rendered = '', stateAt = 0;
@@ -134,7 +135,7 @@
     state = s; stateAt = Date.now(); render(); playFx(s.fx || []); music(); platform();
     if (s.phase === 'game' && s.state && s.state.phase === 'over' && !s.practice) markDone(s.game); // a real game finished on this TV
   });
-  // Real-time messages for the game on the TV (TrashZombies: the spotlight's live view).
+  // Real-time messages for the game on the TV (JustZombies: the spotlight's live view).
   socket.on('live', (m) => { try { if (!onTitle && G && G.tvLive) G.tvLive(m); } catch (e) { console.error(e); } });
   socket.on('aud', (a) => { if (!state || !a) return; state.audience = { count: a.audience, poll: a.poll }; lastPoll = a.lastPoll || null; audienceUi(); });
   // The host picked another game: same room, same players. Small games swap in place (the
@@ -143,7 +144,7 @@
     const next = BOX.games[s.game]; if (!next) return;
     const prev = saved() || {};
     save({ code: s.code, hostKey: prev.hostKey, game: s.game });
-    if (next.standalone || STAND) { location.href = next.standalone ? '/' + s.game + '?resume=1' : '/box/tv?game=' + s.game + '&resume=1'; return; }
+    if (next.standalone || STAND) { location.href = next.standalone ? '/' + (next.path || s.game) + '?resume=1' : '/box/tv?game=' + s.game + '&resume=1'; return; }
     document.body.classList.remove('g-' + gameKey); gameKey = s.game; G = next; rendered = ''; showBar(); document.body.classList.add('g-' + gameKey);
     document.title = G.name + ' · JustGameBox'; $('#tv-title').textContent = G.icon + ' ' + G.name;
     history.replaceState(null, '', location.pathname + '?game=' + gameKey);

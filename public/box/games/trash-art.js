@@ -1,5 +1,5 @@
 'use strict';
-// TrashZombies art, all drawn in code: a gritty, realistic top-down town (3/4 view for anything
+// JustZombies art, all drawn in code: a gritty, realistic top-down town (3/4 view for anything
 // that stands up). Light comes from the top-left, so every shadow falls down-right; static things
 // are pre-rendered once per area onto an offscreen canvas.
 //   TZA.areaCanvas(area, scale)      the area's ground, roads, decals, buildings, props, fence
