@@ -133,13 +133,13 @@
     // ---------------- drawing (called by TZSim.render) ----------------
     drawExtraGround(g, t, vis) {
       pl(this); if (this.drawFightGround) this.drawFightGround(g, t, vis);
-      for (const c of this.coins) { if (!vis(c.x, c.y)) continue; const s = Math.abs(Math.sin(c.t * 5)); g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(c.x + 3, c.y + 4, 7, 3, 0, 0, TAU); g.fill(); g.fillStyle = '#e8b830'; g.beginPath(); g.ellipse(c.x, c.y - 4, 7 * (0.3 + 0.7 * s), 7, 0, 0, TAU); g.fill(); g.fillStyle = '#fff2a8'; g.beginPath(); g.ellipse(c.x - 1, c.y - 6, 2 * s, 2.5, 0, 0, TAU); g.fill(); }
-      if (this.mapItem) { const M = this.mapItem, b = Math.sin(t * 4) * 4; g.save(); g.translate(M.x, M.y - 14 + b); const gr = g.createRadialGradient(0, 0, 4, 0, 0, 50); gr.addColorStop(0, 'rgba(255,220,120,0.7)'); gr.addColorStop(1, 'rgba(255,220,120,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 50, 0, TAU); g.fill(); g.rotate(-0.2); g.fillStyle = '#d9c08a'; g.fillRect(-20, -14, 40, 28); g.fillStyle = '#b89a5a'; g.fillRect(-24, -16, 6, 32); g.fillRect(18, -16, 6, 32); g.strokeStyle = '#8a2a22'; g.lineWidth = 2; g.beginPath(); g.moveTo(-12, -6); g.lineTo(0, 4); g.lineTo(10, -4); g.stroke(); g.fillStyle = '#8a2a22'; g.font = 'bold 14px sans-serif'; g.textAlign = 'center'; g.fillText('✕', 10, -2); g.restore(); }
+      if (!this._iso) for (const c of this.coins) { if (!vis(c.x, c.y)) continue; const s = Math.abs(Math.sin(c.t * 5)); g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(c.x + 3, c.y + 4, 7, 3, 0, 0, TAU); g.fill(); g.fillStyle = '#e8b830'; g.beginPath(); g.ellipse(c.x, c.y - 4, 7 * (0.3 + 0.7 * s), 7, 0, 0, TAU); g.fill(); g.fillStyle = '#fff2a8'; g.beginPath(); g.ellipse(c.x - 1, c.y - 6, 2 * s, 2.5, 0, 0, TAU); g.fill(); }
+      if (this.mapItem && !this._iso) { const M = this.mapItem, b = Math.sin(t * 4) * 4; g.save(); g.translate(M.x, M.y - 14 + b); const gr = g.createRadialGradient(0, 0, 4, 0, 0, 50); gr.addColorStop(0, 'rgba(255,220,120,0.7)'); gr.addColorStop(1, 'rgba(255,220,120,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 50, 0, TAU); g.fill(); g.rotate(-0.2); g.fillStyle = '#d9c08a'; g.fillRect(-20, -14, 40, 28); g.fillStyle = '#b89a5a'; g.fillRect(-24, -16, 6, 32); g.fillRect(18, -16, 6, 32); g.strokeStyle = '#8a2a22'; g.lineWidth = 2; g.beginPath(); g.moveTo(-12, -6); g.lineTo(0, 4); g.lineTo(10, -4); g.stroke(); g.fillStyle = '#8a2a22'; g.font = 'bold 14px sans-serif'; g.textAlign = 'center'; g.fillText('✕', 10, -2); g.restore(); }
     },
     extraStanding(list) {
       pl(this); const type = this.placeType(), S = this.area.spot;
-      if (type && S) list.push(this._placeE && this._placeE.type === type && this._placeE.S === S ? this._placeE : (this._placeE = { type, S, y: S.y + S.h - 20, draw: (g, t) => drawPlace(g, type, S, t, this.cleared) }));
-      for (const T of this.turrets) list.push(T._e || (T._e = { y: T.y, draw: (g, t) => drawTurret(g, T, t) }));
+      if (type && S) list.push(this._placeE && this._placeE.type === type && this._placeE.S === S ? this._placeE : (this._placeE = { k: 'place', type, S, x: S.x + S.w / 2, y: S.y + S.h - 20, draw: (g, t) => drawPlace(g, type, S, t, this.cleared), sign: (g, t) => drawPlaceSign(g, type, S, t, this.cleared) }));
+      for (const T of this.turrets) { const e = T._e || (T._e = { k: 'turret', T, draw: (g, t) => drawTurret(g, T, t) }); e.x = T.x; e.y = T.y; list.push(e); }
     },
     drawExtraAir(g, t, vis) { if (this.drawFightAir) this.drawFightAir(g, t, vis); },
     // the pistol shows its tier (steel, chrome, gold); during the evolution it's up in the light
@@ -165,7 +165,11 @@
       if (type === 'forge') { g.fillStyle = `rgba(255,${120 + Math.sin(t * 6) * 40},40,0.6)`; g.beginPath(); g.arc(x + w * 0.75, y + 40, 22, 0, TAU); g.fill(); }
       if (type === 'clinic') { g.fillStyle = '#e8483a'; g.fillRect(x + w / 2 - 8, y + 24, 16, 46); g.fillRect(x + w / 2 - 23, y + 39, 46, 16); }
     }
-    // the sign
+    g.restore(); drawPlaceSign(g, type, S, t, open);
+  }
+  // the shop sign + whether it's open (also stood up over the iso building)
+  function drawPlaceSign(g, type, S, t, open) {
+    const [, accent, sign] = LOOK[type] || LOOK.market, Pl = P().PLACES[type], x = S.x, y = S.y, w = S.w, h = S.h; g.save();
     g.font = 'bold 22px "Lilita One", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     const lab = Pl.icon + ' ' + sign, sy = y + h + 8; g.lineWidth = 5; g.strokeStyle = 'rgba(15,10,6,0.9)'; g.strokeText(lab, x + w / 2, sy); g.fillStyle = accent; g.fillText(lab, x + w / 2, sy);
     g.font = 'bold 15px "Lilita One", sans-serif'; const st = open ? '🛒 OPEN: walk up' : '🔒 clear the wave to shop'; g.strokeText(st, x + w / 2, sy + 22); g.fillStyle = open ? '#9cff5a' : '#ffd23f'; g.fillText(st, x + w / 2, sy + 22);

@@ -31,7 +31,7 @@
       this.story = o.story || null; this.locks = o.locks || null; this.eq = { ...(R.eq || {}) }; this.hearts = R.hearts || 0; this.looted = new Set(); this.asked = {};
       this.stats(); P.hp = R.hp > 0 ? Math.min(R.hp, this.S.mhp) : this.S.mhp; P.lives = (this.ab.life || 0) - (R.livesUsed || 0) + this.hearts;
       this.timers = { bomb: 4, zap: 2, shove: 3, drone: 0, pk: 12, regen: 0 };
-      this.orbHit = new Map(); this.raccoon = null; this.drones = []; this.decals = []; this.corpses = []; this.muzzle = 0; this.slowmo = 0;
+      this.orbHit = new Map(); this.raccoon = null; this.drones = []; this.decals = []; this.corpses = []; this.muzzle = 0; this.slowmo = 0; this.sq = [];
       const home = !R.wave || (R.wave === 1 && R.cell && R.home && R.cell[0] === R.home[0] && R.cell[1] === R.home[1]);
       if (this.initPlay) this.initPlay(); // score, cash, shops (trash-play.js)
       this.enterArea(this.cell[0], this.cell[1], null, home);
@@ -210,14 +210,24 @@
       const goo = W.ZOMBIES[z.type] && (W.ZOMBIES[z.type].pops || z.type === 'spitter');
       for (let i = 0; i < (z.boss ? 26 : 7); i++) this.particle(z.x, z.y - z.r, (this.rng() - 0.5) * 300, (this.rng() - 0.75) * 300, goo ? '#9ad83a' : i % 2 ? '#6a0e0a' : '#8a1a12', 0.5 + this.rng() * 0.3, 3 + this.rng() * 4);
       this.decal(goo ? 'goo' : 'blood', z.x + (this.rng() - 0.5) * 16, z.y - 4, (z.boss ? 2.2 : 0.8) + this.rng() * 0.5);
-      if (!z.fb && !z.boss && this.corpses.length < 40) this.corpses.push({ type: z.type, v: z.id % 5, x: z.x, y: z.y, face: z.face || 1, t: 0, life: 1.8 });
-      else if (this.corpses.length >= 40) this.corpses.shift();
+      // the body plays its death animation, lingers and fades (the iso view); capped at 40
+      if (this.corpses.length >= 40) this.corpses.shift();
+      this.corpses.push({ type: z.type, v: z.id % 5, x: z.x, y: z.y, face: z.face || 1, t: 0, life: z.boss ? 6 : 4.8, dir: z._dir || 'S', boss: z.fb || z.mb || (z.boss ? z.type : null) });
+      if (this.fx.length < MAX_FX - 10) this.fx.push({ k: 'spurt', x: z.x, y: z.y - 30, t: 0, life: 0.4, goo, big: true, wa: Math.atan2(z.y - this.p.y, z.x - this.p.x) });
+      this.snd(z.boss ? 'bossdie' : goo ? 'splat' : 'kill', z.x, z.y);
     }
     decal(k, x, y, s = 1) { if (this.decals.length > 70) this.decals.shift(); this.decals.push({ k, x, y, s, rot: this.rng() * TAU, i: Math.floor(this.rng() * 4), t: 0, life: k === 'scorch' ? 30 : 16, a: 0.9 }); }
     droneN() { return Math.min(4, this.S.drone || 0); }
-    fxHit(z, dmg, crit) { this.particle(z.x, z.y - z.r * 1.4, (this.rng() - 0.5) * 160, -80 - this.rng() * 120, crit ? '#ffe066' : '#8fd65a', 0.3, crit ? 6 : 3); }
+    fxHit(z, dmg, crit) {
+      this.particle(z.x, z.y - z.r * 1.4, (this.rng() - 0.5) * 160, -80 - this.rng() * 120, crit ? '#ffe066' : '#8fd65a', 0.3, crit ? 6 : 3);
+      if (this.fx.length < MAX_FX - 40 && this.rng() < 0.6) this.fx.push({ k: 'spurt', x: z.x, y: z.y - 30, t: 0, life: 0.3, goo: !!(W.ZOMBIES[z.type] && (W.ZOMBIES[z.type].pops || z.type === 'spitter')), wa: Math.atan2(z.y - this.p.y, z.x - this.p.x) });
+      this.snd('hit', z.x, z.y);
+    }
+    // a sound for the phone to play (trash-sound.js drains it; a test sandbox just ignores it)
+    snd(name, x, y) { if (this.sq.length < 40) this.sq.push([name, x, y]); }
     // An explosion: hurts zombies (and you, if it's a bloater popping next to you).
     boom(x, y, rad, dmg, color, hurtsYou) {
+      this.snd(rad > 120 ? 'boom' : 'boomsmall', x, y);
       this.fx.push({ k: 'ring', x, y, r: 10, R: rad, t: 0, life: 0.35, c: color }); this.shake = Math.max(this.shake, 0.2);
       if (this.fx.length < MAX_FX - 10) { this.fx.push({ k: 'fire', x, y: y - 10, r: rad * 0.55, t: 0, life: 0.35 }); for (let i = 0; i < 5; i++) this.fx.push({ k: 's', x: x + (this.rng() - 0.5) * rad * 0.6, y: y - 10 + (this.rng() - 0.5) * rad * 0.4, r: 18 + this.rng() * rad * 0.25, t: 0, life: 1 + this.rng() * 0.8, a: 0.45, c: color === '#b6ff3c' ? '#4a5a2a' : '#34312e' }); }
       this.decal(color === '#b6ff3c' ? 'goo' : 'scorch', x, y, rad / 70);
@@ -702,6 +712,7 @@
   }
   let LC = null;
   function render(g, sim, V) {
+    if (window.TZI && window.TZI.ready && window.TZI.render(g, sim, V)) return; // JustZombies: the isometric view (trash-iso.js); this flat one shows while the art loads
     const TA = A(), P = sim.p, k = V.k, hi = V.hi !== false, kp = Math.max(0.2, Math.round(V.k * V.dpr * 10) / 10), AW = W.AW, AH = W.AH;
     if (!sim.bg || sim.bg.area !== sim.area || sim.bg.hi !== hi) { const s = hi ? Math.min(1, Math.max(0.5, kp)) : Math.min(0.6, Math.max(0.4, kp * 0.6)); sim.bg = TA.areaCanvas(sim.area, s); sim.bg.area = sim.area; sim.bg.hi = hi; }
     const WX = sim._wx || (sim._wx = weather(sim.seed));
@@ -715,7 +726,7 @@
     if (intro && G) { cx = G.x + G.w / 2; cy = Math.max(G.y + 60, P.y - 40); L.lx = 0; L.ly = 0; }
     const M = TA.M, C0 = camCenter(cx, cy, vw, vh, M); cx = C0.x; cy = C0.y;
     const sh = sim.shake > 0 ? sim.shake * 22 : 0, ox = vw / 2 - cx + (sh ? (Math.random() - 0.5) * sh : 0), oy = vh / 2 - cy + (sh ? (Math.random() - 0.5) * sh : 0);
-    sim.cam = { ox, oy, k, vw, vh };
+    sim.cam = { ox, oy, k, vw, vh, toScreen: (x, y) => [(x + ox) * k, (y + oy) * k], toWorld: (x, y) => [x / k - ox, y / k - oy], dirToWorld: (dx, dy) => [dx, dy] };
     g.setTransform(V.dpr, 0, 0, V.dpr, 0, 0);
     g.fillStyle = '#0c0a08'; g.fillRect(0, 0, V.w, V.h);
     g.setTransform(V.dpr * k, 0, 0, V.dpr * k, ox * k * V.dpr, oy * k * V.dpr);
@@ -729,7 +740,7 @@
     g.globalAlpha = 1;
     // the fallen: they topple over, then fade into the ground
     for (const c of sim.corpses) {
-      if (!vis(c.x, c.y)) continue; const u = Math.min(1, c.t / 0.32), fade = Math.min(1, (c.life - c.t) / 0.8);
+      if (!vis(c.x, c.y) || c.boss) continue; const u = Math.min(1, c.t / 0.32), fade = Math.min(1, (c.life - c.t) / 0.8);
       const spr = TA.zombie(c.type, 1, kp, false, c.v); g.save(); g.globalAlpha = Math.max(0, fade); g.translate(c.x, c.y); if (c.face < 0) g.scale(-1, 1); g.rotate(-u * u * 1.45); g.drawImage(spr, -spr.ox, -spr.oy, spr.width / kp, spr.height / kp); g.restore();
     }
     g.globalAlpha = 1;
@@ -933,5 +944,5 @@
     g.fillStyle = '#7a8086'; g.beginPath(); g.moveTo(8, -31); g.lineTo(10, -38); g.lineTo(14, -32); g.fill();
     g.restore();
   }
-  window.TZSim = { Sim, render, heroDraw, SPR, lead, camCenter, weather };
+  window.TZSim = { Sim, render, heroDraw, SPR, lead, camCenter, weather, _drawRaccoon: drawRaccoon };
 })();

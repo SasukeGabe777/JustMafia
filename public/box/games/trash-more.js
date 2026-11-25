@@ -450,14 +450,14 @@
   proto.extraStanding = function (list) {
     baseStanding.call(this, list); if (!this._mo) return;
     const kp = this.kp(), near = this.nearVehicle();
-    if (this.parked) { const v = this.parked; list.push({ y: v.y, draw: (g, t) => { drawVehicle(g, v.kind, v.x, v.y, v.face || 1, t, false, v); label(g, near ? '🚪 TAP ' + X.VEHICLES[v.kind].icon + ' TO GET IN' : X.VEHICLES[v.kind].icon + ' ' + X.VEHICLES[v.kind].name, v.x, v.y - 86, near ? '#9cff5a' : '#ffe9a8', near ? 20 : 16); } }); }
-    if (this.hiding) { const h = this.hiding; list.push({ y: h.y, draw: (g, t) => { drawNpc(g, h, kp, t, true); } }); }
-    if (this.npc) { const N = this.npc; list.push({ y: N.y, draw: (g, t) => drawNpc(g, N, kp, t, false) }); }
-    for (const c of this.crates) if (c.t >= c.land * 0.2) list.push({ y: c.y, draw: (g, t) => drawCrate(g, c, t) });
+    if (this.parked) { const v = this.parked, lab = (g) => label(g, near ? '🚪 TAP ' + X.VEHICLES[v.kind].icon + ' TO GET IN' : X.VEHICLES[v.kind].icon + ' ' + X.VEHICLES[v.kind].name + ' · ' + Math.round(X.VEHICLES[v.kind].time || 0) + ' s', v.x, v.y - 96, near ? '#9cff5a' : '#ffe9a8', near ? 20 : 16); list.push({ k: 'veh', v, x: v.x, y: v.y, label: lab, draw: (g, t) => { drawVehicle(g, v.kind, v.x, v.y, v.face || 1, t, false, v); lab(g); } }); }
+    if (this.hiding) { const h = this.hiding; list.push({ k: 'npc', n: h, hiding: true, x: h.x, y: h.y, labels: (g, t) => npcLabels(g, h, t, true), draw: (g, t) => { drawNpc(g, h, kp, t, true); } }); }
+    if (this.npc) { const N = this.npc; list.push({ k: 'npc', n: N, x: N.x, y: N.y, labels: (g, t) => npcLabels(g, N, t, false), draw: (g, t) => drawNpc(g, N, kp, t, false) }); }
+    for (const c of this.crates) if (c.t >= c.land * 0.2) list.push({ k: 'crate', c, x: c.x, y: c.y, labels: (g) => { if (c.landed && c.from) label(g, '📦 from ' + c.from, c.x, c.y - 70, '#ffd23f', 14); }, draw: (g, t) => drawCrate(g, c, t) });
     const b = this.build;
     if (b) {
-      list.push({ y: b.door.y - 2, draw: (g) => drawDoorBar(g, b.door) });
-      for (const it of b.items) { if (it.k === 'barricade') list.push({ y: it.o.y + it.o.h, draw: (g) => drawBarricade(g, it.o) }); else if (it.k === 'flamer') list.push({ y: it.y, draw: (g, t) => drawFlamer(g, it, t) }); else if (it.k === 'decoy') list.push({ y: it.y, draw: (g, t) => drawDecoy(g, it, t) }); }
+      list.push({ x: b.door.x, y: b.door.y - 2, draw: (g) => drawDoorBar(g, b.door) });
+      for (const it of b.items) { if (it.k === 'barricade') list.push({ k: 'barricade', o: it.o, x: it.o.x + it.o.w / 2, y: it.o.y + it.o.h / 2, draw: (g) => drawBarricade(g, it.o) }); else if (it.k === 'flamer') list.push({ k: 'flamer', it, x: it.x, y: it.y, draw: (g, t) => drawFlamer(g, it, t) }); else if (it.k === 'decoy') list.push({ k: 'decoy', it, x: it.x, y: it.y, draw: (g, t) => drawDecoy(g, it, t) }); }
     }
   };
   const baseAir = proto.drawExtraAir;
@@ -551,6 +551,9 @@
     g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(N.x + 6, N.y + 2, 22, 8, 0, 0, TAU); g.fill();
     g.strokeStyle = N.color || '#e8b830'; g.lineWidth = 2.5; g.setLineDash([6, 5]); g.beginPath(); g.ellipse(N.x, N.y, 22, 8, 0, 0, TAU); g.stroke(); g.setLineDash([]);
     window.TZSim.heroDraw(g, who, N.x, N.y, { k: kp, moving: !!N.moving, walkT: N.walkT || 0, face: N.face || 1, hurt: N.hurtT > 0 });
+    npcLabels(g, N, t, hiding);
+  }
+  function npcLabels(g, N, t, hiding) {
     if (N.name) label(g, (hiding ? '🙋 ' : '🧍 ') + N.name, N.x, N.y - 108, hiding ? '#ffe066' : '#fff', 16);
     if (hiding) label(g, 'HELP! Walk up to me', N.x, N.y - 128 + Math.sin(t * 3) * 3, '#ffd23f', 14);
     else if (N.mhp) { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(N.x - 22, N.y - 96, 44, 6); g.fillStyle = N.hp / N.mhp < 0.35 ? '#ff4a3a' : '#7dff6a'; g.fillRect(N.x - 21, N.y - 95, 42 * Math.max(0, N.hp / N.mhp), 4); }

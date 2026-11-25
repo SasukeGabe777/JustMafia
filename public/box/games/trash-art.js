@@ -52,9 +52,11 @@
   }
 
   // ---------------- the ground off the road ----------------
+  // the iso floor (trash-iso.js) lends real ground textures for a moment: TZA.tex = { lot, road, walk }
+  const TX = (k, d) => (window.TZA && window.TZA.tex && window.TZA.tex[k]) || d;
   function lotGround(g, area, detail, r) {
     const B = area.biome, [a, b] = B.ground, X = -M, Y = -M, Wd = W.AW + 2 * M, Ht = W.AH + 2 * M, st = B.lot;
-    g.fillStyle = a; g.fillRect(X, Y, Wd, Ht);
+    g.fillStyle = TX('lot', a); g.fillRect(X, Y, Wd, Ht);
     const n = detail ? 1 : 0.25;
     if (st === 'lawn' || st === 'grass' || st === 'yard') {
       mottle(g, r, X, Y, Wd, Ht, 90 * n, ['rgba(120,150,60,0.18)', 'rgba(30,50,20,0.22)', 'rgba(110,90,50,0.16)'], 30, 90);
@@ -73,14 +75,14 @@
         grain(g, X, Y, Wd, Ht, 0.45); }
       if (st === 'fair' && detail) { const cs = ['#e8424f', '#ffd23f', '#3ec1ff', '#7dff6a', '#ff7ac6', '#fff']; for (let i = 0; i < 260; i++) { g.fillStyle = cs[i % cs.length]; g.globalAlpha = 0.55; g.fillRect(X + r() * Wd, Y + r() * Ht, 3, 2); } g.globalAlpha = 1; }
     } else if (st === 'parking') {
-      g.fillStyle = '#3c3f44'; g.fillRect(X, Y, Wd, Ht); if (detail) grain(g, X, Y, Wd, Ht, 0.6);
+      g.fillStyle = TX('lot', '#3c3f44'); g.fillRect(X, Y, Wd, Ht); if (detail) grain(g, X, Y, Wd, Ht, 0.6);
       mottle(g, r, X, Y, Wd, Ht, 40 * n, ['rgba(0,0,0,0.12)', 'rgba(255,255,255,0.03)'], 40, 120);
       g.strokeStyle = 'rgba(225,222,210,0.5)'; g.lineWidth = 4; g.beginPath();
       for (let row = 0; row < 4; row++) { const y0 = 60 + row * 240; for (let x = 40; x < W.AW; x += 130) { g.moveTo(x, y0); g.lineTo(x, y0 + 150); } g.moveTo(40, y0 + 150); g.lineTo(W.AW - 40, y0 + 150); }
       g.stroke();
     } else if (st === 'slabs' || st === 'plaza' || st === 'canal' || st === 'docks') {
       const tw = st === 'slabs' ? 160 : st === 'docks' ? 200 : 80, th = st === 'docks' ? 26 : st === 'slabs' ? 160 : 80;
-      g.fillStyle = st === 'docks' ? '#5d4630' : a; g.fillRect(X, Y, Wd, Ht);
+      g.fillStyle = TX('lot', st === 'docks' ? '#5d4630' : a); g.fillRect(X, Y, Wd, Ht);
       if (detail) { for (let y = Y, row = 0; y < Y + Ht; y += th, row++) for (let x = X - (st === 'docks' ? (row % 3) * 60 : 0); x < X + Wd; x += tw) { const v = r(); g.fillStyle = v < 0.5 ? `rgba(0,0,0,${0.04 + r() * 0.09})` : `rgba(255,255,255,${r() * 0.05})`; g.fillRect(x, y, tw, th); } }
       g.strokeStyle = st === 'docks' ? 'rgba(20,12,6,0.6)' : 'rgba(30,28,24,0.32)'; g.lineWidth = st === 'docks' ? 3 : 2; g.beginPath();
       for (let y = Y; y <= Y + Ht; y += th) { g.moveTo(X, y); g.lineTo(X + Wd, y); }
@@ -99,12 +101,12 @@
     const R = area.roads, SW = W.SW, hub = area.hub, ext = (q) => ({ ...q, x: q.x < -50 && q.w > 0 ? q.x - M : q.x, w: q.x < -50 ? q.w + M : q.x + q.w > W.AW + 50 ? q.w + M : q.w, y: q.y < -50 ? q.y - M : q.y, h: q.y < -50 ? q.h + M : q.y + q.h > W.AH + 50 ? q.h + M : q.h });
     const E = R.map(ext);
     // sidewalks + curbs
-    for (const q of E) { g.fillStyle = '#8f8b83'; g.fillRect(q.x - SW, q.y - SW, q.w + 2 * SW, q.h + 2 * SW); }
-    if (area.end === 'culdesac') { circ(g, hub.x, hub.y, R[0].w * 0.95 + SW); g.fillStyle = '#8f8b83'; g.fill(); }
+    for (const q of E) { g.fillStyle = TX('walk', '#8f8b83'); g.fillRect(q.x - SW, q.y - SW, q.w + 2 * SW, q.h + 2 * SW); }
+    if (area.end === 'culdesac') { circ(g, hub.x, hub.y, R[0].w * 0.95 + SW); g.fillStyle = TX('walk', '#8f8b83'); g.fill(); }
     if (detail) for (const q of E) { grain(g, q.x - SW, q.y - SW, q.w + 2 * SW, q.h + 2 * SW, 0.35); g.strokeStyle = 'rgba(40,36,30,0.35)'; g.lineWidth = 2; g.beginPath();
       const vert = q.h > q.w; if (vert) { for (let y = q.y - SW; y < q.y + q.h + SW; y += 46) { g.moveTo(q.x - SW, y); g.lineTo(q.x, y); g.moveTo(q.x + q.w, y); g.lineTo(q.x + q.w + SW, y); } } else { for (let x = q.x - SW; x < q.x + q.w + SW; x += 46) { g.moveTo(x, q.y - SW); g.lineTo(x, q.y); g.moveTo(x, q.y + q.h); g.lineTo(x, q.y + q.h + SW); } } g.stroke(); }
     // asphalt
-    const asph = '#3a3c3f';
+    const asph = TX('road', '#3a3c3f');
     for (const q of E) { g.fillStyle = asph; g.fillRect(q.x, q.y, q.w, q.h); }
     if (area.end === 'culdesac') { circ(g, hub.x, hub.y, R[0].w * 0.95); g.fillStyle = asph; g.fill(); }
     for (const q of E) { g.strokeStyle = 'rgba(200,196,186,0.6)'; g.lineWidth = 5; g.strokeRect(q.x + 1, q.y + 1, q.w - 2, q.h - 2); }
@@ -351,14 +353,15 @@
     const S = area.spot; if (!S) return;
     g.fillStyle = 'rgba(120,116,106,0.5)'; g.fillRect(S.x - 16, S.y, S.w + 32, S.h + 70); if (detail) grain(g, S.x - 16, S.y, S.w + 32, S.h + 70, 0.4);
   }
-  function drawArea(g, area, detail = 1) {
+  // o.ground: only what lies flat (the iso view stands buildings and props up as sprites)
+  function drawArea(g, area, detail = 1, o = {}) {
     const r = rnd(W.hash(area.seed, 'floor', area.x, area.y));
     lotGround(g, area, detail, r);
     roads(g, area, detail, r);
     if (detail) decals(g, area);
     drawSpot(g, area, detail);
     drawGarageShell(g, area, detail);
-    for (const o of area.obstacles.slice().sort((a, b) => a.y + a.h - (b.y + b.h))) prop(g, o, detail);
+    for (const q of area.obstacles.slice().sort((a, b) => a.y + a.h - (b.y + b.h))) if (!o.ground || q.low || q.kind === 'pond' || q.kind === 'fountain' || q.kind === 'grate') prop(g, q, detail);
     fence(g, area, detail);
   }
   // The pre-rendered area (world units 1:1 at scale 1, plus the margin M on every side).

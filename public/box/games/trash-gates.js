@@ -134,7 +134,8 @@
     if (baseStanding) baseStanding.call(this, list);
     const A = this.chestAnim, C = A && A.k === this.cellKey() ? A : this.chestHere(); if (!C) return;
     const near = !A && this.cleared && Math.hypot(this.p.x - C.x, this.p.y - C.y) < 140, sim = this;
-    list.push({ y: C.y, draw: (g, t) => drawChest(g, C.x, C.y, C.kind === 'find' ? ((window.TZS.FINDS[C.id] || {}).kind === 'key' ? 'key' : 'find') : C.id, t, A ? A.t : -1, A, near, sim.cleared) });
+    const look = C.kind === 'find' ? ((window.TZS.FINDS[C.id] || {}).kind === 'key' ? 'key' : 'find') : C.id;
+    list.push({ k: 'chest', C, A, look, near, cleared: sim.cleared, x: C.x, y: C.y, labels: (g, t) => chestTop(g, C.x, C.y, look, t, A ? A.t : -1, A, near, sim.cleared), draw: (g, t) => drawChest(g, C.x, C.y, look, t, A ? A.t : -1, A, near, sim.cleared) });
   };
   const baseHoles = proto.lightHoles;
   proto.lightHoles = function (hole) {
@@ -173,7 +174,11 @@
     // the lock (a keyhole on a key chest)
     if (open < 0.3) { rr(g, -10, -42, 20, 20, 4); g.fillStyle = look === 'key' ? '#fff0b0' : '#3a3a3e'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#1b1410'; g.stroke(); g.fillStyle = '#1b1410'; g.beginPath(); g.arc(0, -35, 3, 0, TAU); g.fill(); g.fillRect(-1.5, -35, 3, 8); }
     g.restore();
-    // what's inside rises out
+    chestTop(g, x, y, look, t, at, A, near, cleared);
+  }
+  // what's inside rises out; the 'open me' hint (also drawn over the iso chest art)
+  function chestTop(g, x, y, look, t, at, A, near, cleared) {
+    const big = look === 'vault' || look === 'key' ? 1.12 : 1;
     if (A && A.shown) {
       const u = clamp((at - 0.7) / 0.6, 0, 1), F = A.kind === 'find' ? (window.TZS.FINDS[A.id] || {}) : null, icon = F ? F.icon : A.id === 'vault' ? '💎' : '💰';
       g.save(); g.translate(x, y - 70 - 70 * u); const s = 0.6 + 0.6 * u + 0.05 * Math.sin(t * 8); g.scale(s, s);
@@ -204,5 +209,15 @@
     if (sp) { g.font = 'bold 19px "Lilita One", sans-serif'; const s2 = `${ICONS[G.kind] || '⭐'} ${G.kind === '?' ? 'Special area' : NAMES[G.kind]}: tough zombies`; g.lineWidth = 5; g.strokeText(s2, lx, ly + 46); g.fillStyle = '#ffe9a8'; g.fillText(s2, lx, ly + 46); }
     void t;
   }
-  window.TZG = { drawChest, drawGate, HARD, NAMES, ICONS };
+  // the gate's sign alone, centred on (lx, ly) (the iso view stands real fence panels across the road)
+  function drawGateSign(g, lx, ly, G, t) {
+    const sp = !!G.kind, bw = 240, bx = lx - bw / 2, u = clamp(G.have / Math.max(1, G.need), 0, 1);
+    g.fillStyle = 'rgba(15,10,6,0.82)'; rr(g, bx - 8, ly - 26, bw + 16, sp ? 84 : 62, 10); g.fill();
+    g.font = 'bold 26px "Lilita One", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 6; g.strokeStyle = '#1b1410';
+    const s = `🔒 ${G.have} / ${G.need} kills`; g.strokeText(s, lx, ly); g.fillStyle = '#ffd23f'; g.fillText(s, lx, ly);
+    g.fillStyle = 'rgba(255,255,255,0.15)'; rr(g, bx, ly + 18, bw, 12, 6); g.fill(); g.fillStyle = u > 0.8 ? '#9cff3c' : '#ffb02e'; rr(g, bx, ly + 18, Math.max(12, bw * u), 12, 6); g.fill();
+    if (sp) { g.font = 'bold 19px "Lilita One", sans-serif'; const s2 = `${ICONS[G.kind] || '⭐'} ${G.kind === '?' ? 'Special area' : NAMES[G.kind]}: tough zombies`; g.lineWidth = 5; g.strokeText(s2, lx, ly + 46); g.fillStyle = '#ffe9a8'; g.fillText(s2, lx, ly + 46); }
+    void t;
+  }
+  window.TZG = { drawChest, drawGate, drawGateSign, chestTop, HARD, NAMES, ICONS };
 })();

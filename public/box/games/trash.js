@@ -242,6 +242,7 @@
   }
   function simEvent(kind, d) {
     const ctx = PH.ctx;
+    if (window.TZSnd) TZSnd.event(kind, d);
     if (kind === 'hurt') buzz(35);
     else if (kind === 'level') { if (ctx) ctx.haptic('win'); cardsUi(); }
     else if (kind === 'pickup') { if (ctx) ctx.haptic('success'); }
@@ -320,6 +321,7 @@
     r.querySelector('.tz-pause').onclick = (e) => { e.stopPropagation(); toggleMenu(); };
     r.querySelector('[data-rot]').onclick = () => { PH.rotOk = true; r.classList.remove('portrait'); };
     bindInput(r);
+    if (window.TZI) TZI.boot(null, { low: !gfxHi() });
     document.body.classList.add('tz-playing');
     loop();
     return r;
@@ -348,6 +350,9 @@
     const sim = PH.sim, V = view(), g = PH.cv.getContext('2d');
     PH.root.classList.toggle('portrait', V.h > V.w * 1.1 && !PH.rotOk);
     if (!sim) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0c0a08'; g.fillRect(0, 0, PH.cv.width, PH.cv.height); return; }
+    if (window.TZI && !TZI.ready && !TZI.broken && (PH.loadT = (PH.loadT || 0) + dt) < 25) { loadingScreen(g, V); return; }
+    if (window.TZI && TZI.ready && PH.artArea !== sim.area) { PH.artArea = sim.area; TZI.prefetchArea(sim); }
+    if (window.TZSnd) TZSnd.frame(sim, dt);
     const I = readInput(V, sim);
     const busy = PH.menu || PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks';
     sim.shopping = PH.overlay === 'shop' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks'; sim._dpr = V.dpr;
@@ -358,6 +363,15 @@
     V.k = V.k / sim.zoomStep(dt);
     window.TZSim.render(g, sim, V);
     hud(g, sim, V, dt);
+  }
+  // the loading screen while the art set decodes (TZI.boot)
+  function loadingScreen(g, V) {
+    const d = V.dpr, w = V.w, h = V.h, u = TZI.st.loaded / Math.max(1, TZI.st.total);
+    g.setTransform(d, 0, 0, d, 0, 0); g.fillStyle = '#0c0a08'; g.fillRect(0, 0, w, h);
+    const gr = g.createRadialGradient(w / 2, h * 0.45, 10, w / 2, h * 0.45, Math.max(w, h) * 0.6); gr.addColorStop(0, 'rgba(120,180,60,0.18)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `bold ${Math.round(Math.min(w, h) * 0.12)}px "Lilita One", sans-serif`; g.lineWidth = 6; g.strokeStyle = '#1b1410'; g.strokeText('JustZombies', w / 2, h * 0.38); g.fillStyle = '#9cff5a'; g.fillText('JustZombies', w / 2, h * 0.38);
+    const bw = Math.min(360, w * 0.6), bx = w / 2 - bw / 2, by = h * 0.58; g.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(g, bx, by, bw, 14, 7); g.fill(); g.fillStyle = '#9cff5a'; roundRect(g, bx, by, Math.max(14, bw * u), 14, 7); g.fill();
+    g.font = 'bold 15px "Lilita One", sans-serif'; g.fillStyle = '#ffe9a8'; g.fillText(`Loading the town… ${Math.round(u * 100)}%`, w / 2, by + 34);
   }
   // ---------- input ----------
   function stickZone(V) { const r = Math.max(46, Math.min(70, Math.min(V.w, V.h) * 0.13)); return { x: V.w - r - 28, y: V.h - r - 28, r }; }
@@ -415,10 +429,14 @@
     if (K.has('e')) I.grab = true;
     const T = PH.touch;
     if (T.move) { const dx = T.move.x - T.move.ox, dy = T.move.y - T.move.oy, d = Math.hypot(dx, dy), R = 64; if (d > 8) { I.mx = (dx / Math.max(d, R)) * Math.min(1, d / R); I.my = (dy / Math.max(d, R)) * Math.min(1, d / R); } }
-    if (T.aim) { const Z = stickZone(V), dx = T.aim.x - Z.x, dy = T.aim.y - Z.y; if (Math.hypot(dx, dy) > Z.r * 0.22) { I.ax = dx; I.ay = dy; I.fire = true; } }
+    // up on the screen moves you up the screen: the iso camera turns screen directions into world ones
+    const s2w = (sim.cam && sim.cam.dirToWorld) || ((x, y) => [x, y]);
+    if (I.mx || I.my) [I.mx, I.my] = s2w(I.mx, I.my);
+    if (T.aim) { const Z = stickZone(V), dx = T.aim.x - Z.x, dy = T.aim.y - Z.y; if (Math.hypot(dx, dy) > Z.r * 0.22) { [I.ax, I.ay] = s2w(dx, dy); I.fire = true; } }
     else if (PH.device === 'mouse' && PH.mouse.on && sim.cam) {
-      const C = sim.cam, wx = PH.mouse.x / C.k - C.ox, wy = PH.mouse.y / C.k - C.oy;
-      I.mouse = true; I.ax = wx - sim.p.x; I.ay = wy - (sim.p.y - 26); I.fire = PH.mouse.down || K.has(' ');
+      // the point under the cursor at chest height (the iso camera), or on the flat map
+      const C = sim.cam, [wx, wy] = C.toWorld(PH.mouse.x, PH.mouse.y, 30);
+      I.mouse = true; I.ax = wx - sim.p.x; I.ay = wy - (C.s ? sim.p.y : sim.p.y - 26); I.fire = PH.mouse.down || K.has(' ');
       if (!I.ax && !I.ay) I.ax = 0.001;
     }
     if (PH.skip) PH.skip = false;
@@ -496,7 +514,7 @@
     }
     // off-screen warnings: red arrows for zombies just outside the view, icons for pickups
     if (sim.cam && !sim.dead && sim.phase === 'play') {
-      const C = sim.cam, edge = (wx, wy) => { const sx = (wx + C.ox) * C.k, sy = (wy + C.oy) * C.k; if (sx > 0 && sx < w && sy > 0 && sy < h) return null; const cx = w / 2, cy = h / 2, a = Math.atan2(sy - cy, sx - cx); const m = 26, tx = Math.cos(a), ty = Math.sin(a), sc = Math.min((w / 2 - m) / Math.max(0.001, Math.abs(tx)), (h / 2 - m) / Math.max(0.001, Math.abs(ty))); return { x: cx + tx * sc, y: Math.max(small ? 70 : 84, cy + ty * sc), a }; };
+      const C = sim.cam, edge = (wx, wy) => { const [sx, sy] = C.toScreen(wx, wy); if (sx > 0 && sx < w && sy > 0 && sy < h) return null; const cx = w / 2, cy = h / 2, a = Math.atan2(sy - cy, sx - cx); const m = 26, tx = Math.cos(a), ty = Math.sin(a), sc = Math.min((w / 2 - m) / Math.max(0.001, Math.abs(tx)), (h / 2 - m) / Math.max(0.001, Math.abs(ty))); return { x: cx + tx * sc, y: Math.max(small ? 70 : 84, cy + ty * sc), a }; };
       const near = []; for (const z of sim.z) { if (z.hp <= 0) continue; const d = Math.hypot(z.x - P.x, z.y - P.y); if (d < 760) near.push([d, z]); }
       near.sort((x, y) => x[0] - y[0]);
       let shown = 0;
@@ -509,7 +527,7 @@
     if (sim.cleared && !sim.dead) {
       const C = sim.cam; if (C) for (const [dd, ok] of Object.entries(sim.area.exits)) {
         if (!ok || sim.gateLeft(dd)) continue; const ex = dd === 'w' ? 0 : dd === 'e' ? Z.AW : ok.p, ey = dd === 'n' ? 0 : dd === 's' ? Z.AH : ok.p;
-        const sx = (ex + C.ox) * C.k, sy = (ey + C.oy) * C.k; if (sx > 30 && sx < w - 30 && sy > 30 && sy < h - 30) continue;
+        const [sx, sy] = C.toScreen(ex, ey); if (sx > 30 && sx < w - 30 && sy > 30 && sy < h - 30) continue;
         const cx = Math.max(40, Math.min(w - 40, sx)), cy = Math.max(90, Math.min(h - 40, sy)), a = Math.atan2(sy - h / 2, sx - w / 2);
         g.save(); g.translate(cx, cy); g.rotate(a); g.globalAlpha = 0.6 + 0.4 * Math.sin(sim.t * 6); g.fillStyle = '#7dff6a'; g.beginPath(); g.moveTo(18, 0); g.lineTo(-10, -14); g.lineTo(-10, 14); g.closePath(); g.fill(); g.restore(); g.globalAlpha = 1;
       }
@@ -545,7 +563,7 @@
   // tap / click the chest itself (when you're next to it)
   function clickChest(x, y) {
     const sim = PH.sim; if (!sim || !sim.chestNear || !sim.cam) return false; const C = sim.chestNear(); if (!C) return false;
-    const K = sim.cam, wx = x / K.k - K.ox, wy = y / K.k - K.oy; if (Math.abs(wx - C.x) > 80 || wy < C.y - 130 || wy > C.y + 30) return false;
+    const [wx, wy] = sim.cam.toWorld(x, y, 30); if (Math.hypot(wx - C.x, wy - C.y) > 120) return false;
     return button('chest');
   }
   function hitMinimap(x, y) { const M = PH.mm; if (!M || !PH.sim || PH.sim.phase !== 'play' || x < M.x || x > M.x + M.w || y < M.y || y > M.y + M.h) return false; townMapUi(); return true; }
@@ -617,7 +635,7 @@
     const path = routeCells(Z, v.seed, sim.cell, [q.x, q.y]); if (path.length < 2) return;
     const nx = path[1], dir = nx[0] > sim.cell[0] ? 'e' : nx[0] < sim.cell[0] ? 'w' : nx[1] > sim.cell[1] ? 's' : 'n', road = sim.area.exits[dir]; if (!road) return;
     const ex = dir === 'w' ? 0 : dir === 'e' ? Z.AW : road.p, ey = dir === 'n' ? 0 : dir === 's' ? Z.AH : road.p, C = sim.cam;
-    let sx = (ex + C.ox) * C.k, sy = (ey + C.oy) * C.k; sx = Math.max(40, Math.min(V.w - 40, sx)); sy = Math.max(110, Math.min(V.h - 60, sy));
+    let [sx, sy] = C.toScreen(ex, ey); sx = Math.max(40, Math.min(V.w - 40, sx)); sy = Math.max(110, Math.min(V.h - 60, sy));
     const a = { n: -Math.PI / 2, s: Math.PI / 2, w: Math.PI, e: 0 }[dir], P = q.place && window.TZP.PLACES[q.place];
     g.save(); g.translate(sx, sy); g.rotate(a); g.globalAlpha = 0.7 + 0.3 * Math.sin(sim.t * 6); g.fillStyle = '#ffd23f'; g.strokeStyle = '#1b1410'; g.lineWidth = 3; g.beginPath(); g.moveTo(22, 0); g.lineTo(-12, -16); g.lineTo(-4, 0); g.lineTo(-12, 16); g.closePath(); g.fill(); g.stroke(); g.restore(); g.globalAlpha = 1;
     txt(`🧭 ${q.name || ''}: ${P ? P.icon + ' ' + P.name : q.place === 'stash' ? '💰 stash' : q.place === 'door' ? '🚪 lair' : '📣'} · ${path.length - 1} blocks`, V.w / 2, V.h - 18, Math.min(V.w, V.h) < 420 ? 12 : 14, '#ffd23f', 'center');
@@ -956,7 +974,7 @@
       for (const p of v.players || []) PH.people.set(p.id, p);
       if (view && view.me) PH.people.set(view.me.id, view.me);
       if (v.phase === 'over') {
-        if (PH.root) { dropRun(); PH.root = null; PH.sim = null; cancelAnimationFrame(PH.raf); document.body.classList.remove('tz-playing'); }
+        if (PH.root) { dropRun(); if (window.TZSnd) TZSnd.stopAll(); PH.root = null; PH.sim = null; cancelAnimationFrame(PH.raf); document.body.classList.remove('tz-playing'); }
         const st = v.standings || [], i = st.findIndex((r) => r.id === (v.me && v.me.id)), r = st[i] || {};
         const won = v.why === 'win', lost = v.why === 'lost';
         BOX.morph(el, `<div class="card-box tz-ph-over ${won ? 'won' : ''}">${won ? '<div class="tz-confetti"></div><h2 class="tz-win">🏆 YOU WIN!</h2>' : lost ? '<h2 class="tz-lose">💀 The trash won…</h2>' : ''}<h2 class="tz-logo sm">Trash<b>Zombies</b></h2>${won && v.story ? `<p>${v.story.boss ? esc(v.story.boss.name) + ' is down' : 'The boss is down'} in <b>${BOX.mmss ? BOX.mmss(v.story.time) : Math.round(v.story.time / 60000) + ' min'}</b> · ${v.story.kills} team kills · ${v.story.finds.length} finds</p>` : ''}<div class="tz-pbig">${BOX.body ? BOX.body({ id: v.me && v.me.id, bot: true }, 130, { mood: i === 0 ? 'grin' : 'smile' }) : ''}</div>

@@ -161,7 +161,7 @@
         w.cd -= dt * R().speed(w.lv, w.tier) * rm; w.swing = Math.max(0, w.swing - dt * 4);
         if (w.cd > 0) continue;
         const z = this.nearestZ(ox, oy, Wd.range * (S.aimRange / 640)); if (!z) { w.cd = 0.1; continue; }
-        const a = Math.atan2(z.y - z.r - oy, z.x - ox); w.a = a; w.cd = 1 / Wd.rate;
+        const a = Math.atan2(z.y - z.r - oy, z.x - ox); w.a = a; w.cd = 1 / Wd.rate; if (this.snd) this.snd('w:' + w.id, P.x, P.y);
         const shot = (ang, o = {}) => { if (this.b.length >= 300) this.b.shift(); const sp = o.sp || 900; this.b.push({ x: ox + Math.cos(ang) * 26, y: oy + Math.sin(ang) * 26, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, r: o.r || 5, dmg: o.dmg || dmg, crit: false, pierce: o.pierce || 0, bounce: o.bounce || 0, life: o.life || (Wd.range / sp), hit: null, burn: o.burn || 0, kind: o.kind, color: Wd.color, boom: o.boom, zap: o.zap, ret: o.ret, kb: o.kb, t0: this.t }); if (this.mode !== 'solo') this.shots.push([Math.round(ox), Math.round(oy), Math.round(ang * 100) / 100]); };
         switch (Wd.kind) {
           case 'spread': for (let i = 0; i < Wd.pellets + w.tier - 1; i++) shot(a + (this.rng() - 0.5) * 0.55, { sp: 950, life: 0.36, r: 4, bounce: combos.has('pinball') ? 2 : 0 }); break;
@@ -332,11 +332,11 @@
         if (e.k === 'drop') { if (!e.landed) { const h = (7 - e.t) * 90; g.fillStyle = `rgba(255,60,40,${0.5 + 0.5 * Math.sin(t * 20)})`; g.beginPath(); g.arc(e.x, e.y, 10, 0, TAU); g.fill(); g.fillStyle = 'rgba(255,90,60,0.25)'; g.beginPath(); g.arc(e.x, e.y, 40 + Math.sin(t * 8) * 6, 0, TAU); g.fill(); g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(e.x, e.y, 30 * (1 - h / 700), 10, 0, 0, TAU); g.fill(); } else { window.TZA.box3(g, e.x - 30, e.y - 34, 60, 44, '#6b7a4a', 14, { ht: 30 }); g.fillStyle = '#fff'; g.font = '20px sans-serif'; g.textAlign = 'center'; g.fillText('📦', e.x, e.y - 50 + Math.sin(t * 4) * 4); } }
         if (e.k === 'alarm' && e.t < 8) { g.fillStyle = `rgba(255,40,40,${0.4 * (Math.sin(t * 16) > 0 ? 1 : 0)})`; g.beginPath(); g.arc(e.x, e.y, 60, 0, TAU); g.fill(); }
       }
-      for (const q of this.drops) { const b = Math.sin(t * 4 + q.x) * 4; g.save(); g.translate(q.x, q.y - 16 + b); const gr = g.createRadialGradient(0, 0, 2, 0, 0, 46); gr.addColorStop(0, q.k === 'core' ? 'rgba(255,110,40,0.8)' : 'rgba(127,214,255,0.7)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 46, 0, TAU); g.fill(); g.font = '30px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(q.k === 'core' ? '🔥' : '🎁', 0, 0); g.restore(); }
+      if (!this._iso) for (const q of this.drops) { const b = Math.sin(t * 4 + q.x) * 4; g.save(); g.translate(q.x, q.y - 16 + b); const gr = g.createRadialGradient(0, 0, 2, 0, 0, 46); gr.addColorStop(0, q.k === 'core' ? 'rgba(255,110,40,0.8)' : 'rgba(127,214,255,0.7)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 46, 0, TAU); g.fill(); g.font = '30px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(q.k === 'core' ? '🔥' : '🎁', 0, 0); g.restore(); }
     },
     drawFightAir(g, t) {
       // auras on the special zombies, the timed weapons they carry, the stalkers' flicker
-      for (const z of this.z) {
+      if (!this._iso) for (const z of this.z) { // (the iso view draws these itself: trash-iso.js)
         if (z.hp <= 0) continue; const Z = W.ZOMBIES[z.type]; if (!Z) continue;
         if (Z.aura) { g.globalAlpha = 0.28 + 0.12 * Math.sin(t * 5 + z.id); g.fillStyle = Z.aura; g.beginPath(); g.ellipse(z.x, z.y - z.r * 1.2, z.r * 1.5, z.r * 1.8, 0, 0, TAU); g.fill(); g.globalAlpha = 1; g.font = `${Math.round(z.r * 0.9)}px sans-serif`; g.textAlign = 'center'; g.fillText(R().DEBUFFS[Z.debuff].icon, z.x, z.y - z.r * 3.1); }
         if (z.carry) { const T = R().TIMED[z.carry]; g.strokeStyle = T.color; g.lineWidth = 3; g.globalAlpha = 0.7 + 0.3 * Math.sin(t * 10); g.beginPath(); g.ellipse(z.x, z.y - z.r * 1.2, z.r * 1.2, z.r * 1.6, 0, 0, TAU); g.stroke(); g.globalAlpha = 1; g.font = `${Math.round(z.r * 1.1)}px sans-serif`; g.textAlign = 'center'; g.fillText(T.icon, z.x + z.face * z.r * 1.1, z.y - z.r * 1.4); }

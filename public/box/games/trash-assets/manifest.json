@@ -54,12 +54,12 @@
    "file": "props/bld-crucible.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    660
    ],
    "anchor": [
-    224,
-    456
+    360,
+    490
    ],
    "scale": 1,
    "use": "Scrapyard crucible",
@@ -88,12 +88,12 @@
    "file": "props/bld-factory.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    880
    ],
    "anchor": [
-    224,
-    456
+    360,
+    700
    ],
    "scale": 1,
    "size": [
@@ -121,12 +121,12 @@
    "file": "props/bld-garage.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    660
    ],
    "anchor": [
-    224,
-    456
+    360,
+    490
    ],
    "scale": 1,
    "use": "Garage (Garage Defense base)",
@@ -155,12 +155,12 @@
    "file": "props/bld-house1.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    660
    ],
    "anchor": [
-    224,
-    456
+    360,
+    490
    ],
    "scale": 1,
    "size": [
@@ -188,12 +188,12 @@
    "file": "props/bld-house2.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    660
    ],
    "anchor": [
-    224,
-    456
+    360,
+    490
    ],
    "scale": 1,
    "size": [
@@ -221,12 +221,12 @@
    "file": "props/bld-house3.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    660
    ],
    "anchor": [
-    224,
-    456
+    360,
+    490
    ],
    "scale": 1,
    "size": [
@@ -254,12 +254,12 @@
    "file": "props/bld-house4.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    660
    ],
    "anchor": [
-    224,
-    456
+    360,
+    490
    ],
    "scale": 1,
    "size": [
@@ -287,12 +287,12 @@
    "file": "props/bld-kk.a.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    880
    ],
    "anchor": [
-    224,
-    456
+    360,
+    700
    ],
    "scale": 1,
    "size": [
@@ -320,12 +320,12 @@
    "file": "props/bld-kk.b.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    880
    ],
    "anchor": [
-    224,
-    456
+    360,
+    700
    ],
    "scale": 1,
    "size": [
@@ -353,12 +353,12 @@
    "file": "props/bld-kk.c.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    880
    ],
    "anchor": [
-    224,
-    456
+    360,
+    700
    ],
    "scale": 1,
    "size": [
@@ -386,12 +386,12 @@
    "file": "props/bld-kk.d.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    880
    ],
    "anchor": [
-    224,
-    456
+    360,
+    700
    ],
    "scale": 1,
    "size": [
@@ -419,12 +419,12 @@
    "file": "props/bld-kk.e.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    880
    ],
    "anchor": [
-    224,
-    456
+    360,
+    700
    ],
    "scale": 1,
    "size": [
@@ -452,12 +452,12 @@
    "file": "props/bld-kk.f.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    880
    ],
    "anchor": [
-    224,
-    456
+    360,
+    700
    ],
    "scale": 1,
    "size": [
@@ -485,12 +485,12 @@
    "file": "props/bld-kk.g.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    880
    ],
    "anchor": [
-    224,
-    456
+    360,
+    700
    ],
    "scale": 1,
    "size": [
@@ -518,12 +518,12 @@
    "file": "props/bld-kk.h.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    880
    ],
    "anchor": [
-    224,
-    456
+    360,
+    700
    ],
    "scale": 1,
    "size": [
@@ -551,12 +551,12 @@
    "file": "props/bld-office.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    736,
+    660
    ],
    "anchor": [
-    224,
-    456
+    360,
+    490
    ],
    "scale": 1,
    "size": [
@@ -584,12 +584,12 @@
    "file": "props/bld-shack.webp",
    "kind": "building",
    "cell": [
-    352,
-    352
+    480,
+    420
    ],
    "anchor": [
-    176,
-    272
+    232,
+    300
    ],
    "scale": 1,
    "size": [
@@ -650,12 +650,12 @@
    "file": "props/bld-warehouse.webp",
    "kind": "building",
    "cell": [
-    448,
-    560
+    816,
+    700
    ],
    "anchor": [
-    224,
-    456
+    400,
+    490
    ],
    "scale": 1,
    "size": [
@@ -6729,15 +6729,15 @@
    "file": "props/vehicle-cart.webp",
    "kind": "vehicle",
    "cell": [
-    112,
-    112
+    128,
+    128
    ],
    "anchor": [
-    56,
-    70
+    64,
+    80
    ],
    "scale": 1,
-   "name": "Shopping cart",
+   "name": "Shopping cart (rideable)",
    "size": [
     0.626,
     0.816,
@@ -6754,6 +6754,18 @@
       "E": 2,
       "NE": 3,
       "N": 4
+     }
+    },
+    "drive": {
+     "frames": 8,
+     "fps": 16,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
      }
     }
    },
@@ -6782,7 +6794,7 @@
     184
    ],
    "scale": 1,
-   "name": "Garbage truck (timed ram + street prop)",
+   "name": "Garbage truck (timed ram)",
    "size": [
     2.783,
     2.783,
@@ -6799,6 +6811,18 @@
       "E": 2,
       "NE": 3,
       "N": 4
+     }
+    },
+    "drive": {
+     "frames": 8,
+     "fps": 16,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
      }
     }
    },
@@ -6827,7 +6851,7 @@
     80
    ],
    "scale": 1,
-   "name": "Lawnmower (procedural)",
+   "name": "Push mower (rideable; our own model)",
    "size": [
     0.686,
     0.916,
@@ -6844,6 +6868,18 @@
       "E": 2,
       "NE": 3,
       "N": 4
+     }
+    },
+    "drive": {
+     "frames": 8,
+     "fps": 16,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
      }
     }
    },
@@ -6864,18 +6900,18 @@
    "file": "props/vehicle-ridemower.webp",
    "kind": "vehicle",
    "cell": [
-    144,
-    144
+    176,
+    160
    ],
    "anchor": [
-    72,
-    88
+    88,
+    100
    ],
    "scale": 1,
-   "name": "Ride-on mower (tractor model, tinted)",
+   "name": "Ride-on mower (our own model)",
    "size": [
-    1.158,
-    1.383,
+    1.474,
+    1.535,
     1.9
    ],
    "anims": {
@@ -6889,6 +6925,18 @@
       "E": 2,
       "NE": 3,
       "N": 4
+     }
+    },
+    "drive": {
+     "frames": 8,
+     "fps": 16,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
      }
     }
    },

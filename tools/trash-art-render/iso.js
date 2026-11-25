@@ -391,10 +391,25 @@ function procModel(kind) {
     const deck = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.1, 20), std(0xc0392b, { metalness: 0.4, roughness: 0.4 })); deck.position.y = 0.12; g.add(deck);
     const eng = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.18), std(0x2b2f36, { metalness: 0.5 })); eng.position.set(0, 0.24, 0.02); g.add(eng);
     const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.04, 10), std(0xf2c200)); cap.position.set(0.05, 0.33, 0.05); g.add(cap);
-    for (const [x, z] of [[-0.24, 0.2], [0.24, 0.2], [-0.24, -0.2], [0.24, -0.2]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 14), std(0x1c1f24, { roughness: 0.9 })); w.rotation.z = Math.PI / 2; w.position.set(x, 0.07, z); g.add(w); }
+    for (const [x, z] of [[-0.24, 0.2], [0.24, 0.2], [-0.24, -0.2], [0.24, -0.2]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 14), std(0x1c1f24, { roughness: 0.9 })); w.rotation.z = Math.PI / 2; w.position.set(x, 0.07, z); w.name = 'wheel'; const hub = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.055, 0.025), std(0xd8dde3, { metalness: 0.6 })); hub.position.set(0, 0, 0); w.add(hub); g.add(w); }
     for (const x of [-0.2, 0.2]) { const h = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.75, 8), std(0x9aa2aa, { metalness: 0.8 })); h.position.set(x, 0.45, -0.42); h.rotation.x = -0.75; g.add(h); }
     const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.44, 8), std(0x1c1f24)); grip.rotation.z = Math.PI / 2; grip.position.set(0, 0.73, -0.68); g.add(grip);
     const bag = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.26), std(0x4a5a3a, { roughness: 1 })); bag.position.set(0, 0.2, -0.36); g.add(bag);
+  } else if (kind === 'ridemower') { // JustZombies ride-on mower (our own model): deck with a spinning blade, seat, wheel, big back wheels
+    const body = new THREE.Group(); body.name = 'body'; g.add(body);
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.14, 0.7), std(0x3f8f3a, { metalness: 0.3, roughness: 0.45 })); deck.position.set(0, 0.2, 0.25); body.add(deck);
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.32, 0.6), std(0x47a83f, { metalness: 0.3, roughness: 0.4 })); hood.position.set(0, 0.42, 0.42); body.add(hood);
+    const grill = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.02), std(0x22262b)); grill.position.set(0, 0.42, 0.73); body.add(grill);
+    for (const x of [-0.18, 0.18]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 12), std(0xfff3c0, { emissive: 0xffe08a, emissiveIntensity: 0.8 })); l.rotation.x = Math.PI / 2; l.position.set(x, 0.5, 0.735); body.add(l); }
+    const seatB = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.42), std(0x23262b, { roughness: 0.8 })); seatB.position.set(0, 0.58, -0.2); body.add(seatB);
+    const seatK = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.42, 0.08), std(0x23262b, { roughness: 0.8 })); seatK.position.set(0, 0.8, -0.4); body.add(seatK);
+    const rear = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.26, 0.5), std(0x3f8f3a, { metalness: 0.3, roughness: 0.45 })); rear.position.set(0, 0.4, -0.25); body.add(rear);
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.4, 8), std(0x2b2f36)); col.position.set(0, 0.75, 0.12); col.rotation.x = -0.5; body.add(col);
+    const sw = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.022, 8, 18), std(0x1c1f24)); sw.position.set(0, 0.93, 0.04); sw.rotation.x = -1.1; body.add(sw);
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.05, 0.62), std(0xf2c200)); stripe.position.set(0, 0.585, 0.42); body.add(stripe);
+    const blade = new THREE.Group(); blade.name = 'blade'; blade.position.set(0, 0.1, 0.25); g.add(blade);
+    const bl = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.08), std(0xc9ccd1, { metalness: 0.85, roughness: 0.3 })); blade.add(bl);
+    for (const [x, z, r] of [[-0.42, 0.42, 0.13], [0.42, 0.42, 0.13], [-0.4, -0.3, 0.2], [0.4, -0.3, 0.2]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.12, 16), std(0x1c1f24, { roughness: 0.9 })); w.rotation.z = Math.PI / 2; w.position.set(x, r, z); w.name = 'wheel'; const hub = new THREE.Mesh(new THREE.BoxGeometry(r * 1.5, 0.13, 0.05), std(0xf2c200)); w.add(hub); g.add(w); }
   } else if (kind === 'blower') { // backpack leaf blower
     const pack = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.26, 0.16), std(0xf28c28, { roughness: 0.5 })); pack.position.set(-0.18, 0.15, 0); g.add(pack);
     const eng = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 14), std(0x2b2f36, { metalness: 0.5 })); eng.rotation.x = Math.PI / 2; eng.position.set(-0.18, 0.12, 0.12); g.add(eng);

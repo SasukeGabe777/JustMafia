@@ -4,7 +4,8 @@
    =====================================================================================
    Recorded soundtrack files play where public/audio/music/manifest.json lists one (REAL TRACKS
    below); everything else is synthesized in the browser with Web Audio.
-   The TV page and the main menu play music; phones never load this file.
+   The TV page and the main menu play music; phones only load this file for JustZombies's sound effects
+   (sample / loop below: no music is started on a phone).
 
    SIGNAL FLOW
      instrument voices -> track strip (gain, filters, tremolo, pan, reverb/delay sends)
@@ -36,6 +37,8 @@
      BOX.audio.clip(path, o)         a small RECORDED sound effect: public/audio/sfx/<path> (e.g. 'bid/garage.ogg')
                                      on the SFX bus, quiet by default (o.vol 0.3; o.rate, o.pan, o.delay s, o.jitter).
                                      Same path at most once per o.gap ms (150). Silent if missing. -> bool
+     BOX.audio.sample(url, o)        like clip() for any same-site URL (a game's own sound folder), on the SFX bus -> bool
+     BOX.audio.loop(url, o)          a looping sound on the SFX bus -> { set(vol, rate), stop(fade) } (engines, rain, flamers)
      BOX.audio.ui(kind, o)           a quiet recorded UI sound (public/audio/sfx/ui/<kind>.ogg): click, toggle, open,
                                      close, tick (sliders), join (a player joins the lobby). -> bool (false: play your own)
      BOX.audio.duck(on)              lower the music under the narrator
@@ -1121,6 +1124,31 @@
       return true;
     },
     ui(kind, o = {}) { return api.clip('ui/' + kind + '.ogg', { vol: UI_VOL[kind] || 0.14, jitter: 0.03, ...o }); },
+    sample(url, o = {}) {
+      if (!url || !ensure() || E.ctx.state !== 'running') return false;
+      const now = performance.now(), gap = o.gap != null ? o.gap : 60, last = clipLast.get(url) || 0;
+      if (now - last < gap) return false; clipLast.set(url, now);
+      loadBuf(url, () => {
+        const buf = bufs.get(url); if (!buf || typeof buf === 'string' || !E) return;
+        const c = E.ctx, src = c.createBufferSource(), g = c.createGain(), j = o.jitter != null ? o.jitter : 0.05;
+        src.buffer = buf; src.playbackRate.value = (o.rate || 1) * (1 + (rnd() * 2 - 1) * j); g.gain.value = clamp(o.vol != null ? o.vol : 0.3, 0, 1);
+        let out = g; if (o.pan && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = clamp(o.pan, -1, 1); g.connect(p); out = p; }
+        src.connect(g); out.connect(E.sfx.dry || E.sfx); src.start(c.currentTime + Math.max(0, o.delay || 0));
+      });
+      return true;
+    },
+    loop(url, o = {}) {
+      const h = { vol: o.vol != null ? o.vol : 0.2, rate: o.rate || 1, src: null, g: null, dead: false,
+        set(v, r) { if (v != null) h.vol = v; if (r != null) h.rate = r; if (h.g && E) { const t = E.ctx.currentTime; h.g.gain.setTargetAtTime(clamp(h.vol, 0, 1), t, 0.08); h.src.playbackRate.setTargetAtTime(h.rate, t, 0.08); } },
+        stop(fade = 0.3) { h.dead = true; if (h.g && E) { const t = E.ctx.currentTime; h.g.gain.setTargetAtTime(0, t, fade / 3); try { h.src.stop(t + fade + 0.05); } catch { /* done */ } } } };
+      if (!url || !ensure()) { h.dead = true; return h; }
+      loadBuf(url, () => {
+        const buf = bufs.get(url); if (h.dead || !buf || typeof buf === 'string' || !E) return;
+        const c = E.ctx; h.src = c.createBufferSource(); h.g = c.createGain(); h.src.buffer = buf; h.src.loop = true; h.src.playbackRate.value = h.rate;
+        h.g.gain.value = 0; h.src.connect(h.g); h.g.connect(E.sfx.dry || E.sfx); h.src.start(); h.g.gain.setTargetAtTime(clamp(h.vol, 0, 1), c.currentTime, 0.15);
+      });
+      return h;
+    },
     duck(on) { if (duckOn === !!on) return; duckOn = !!on; applyLevels(); },
     set(kind, v) { if (!(kind in settings)) return; settings[kind] = kind === 'mute' ? !!v : clamp(Number(v) || 0, 0, 1); saveSettings(); applyLevels(); },
     mute(on) { api.set('mute', on); },
