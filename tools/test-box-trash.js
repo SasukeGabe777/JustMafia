@@ -965,7 +965,7 @@ test('chests: story finds (the key pieces) sit in a chest you open by hand once 
 });
 test('chests: loot stashes and dens have a loot chest (cash + goodies, a weapon in a stash), once per player; the server checks it', () => {
   const S = sandbox(), kind = new Array(81).fill(null); kind[2 * 9 + 2] = 'vault';
-  const s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 4, run: 1 } }); s.p.inv = 1e9; s.setLocks({ req: new Array(81).fill(0), kind, kills: 0 });
+  const s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 4, run: 1 } }); s.p.inv = 1e9; s.setLocks({ req: new Array(81).fill(0), kind, kills: 0 }); s.startEvent = () => null; // (no random area event, e.g. a cash grab, muddling the count)
   syncReply(S, s, (m) => (m.op === 'chest' ? { ok: true, cash: 150, loot: ['shield', 'snack', 'xp2'], weapon: true } : { ok: true }));
   s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; S.step(s, 0.2); const C = s.chestHere(); assert(C && C.kind === 'loot' && C.id === 'vault');
   s.p.x = C.x; s.p.y = C.y + 40; const pk = s.pk.length, cash = s.cash, drops = s.drops.length; assert(s.openChest()); assert(S.reports.some((r) => r.op === 'chest' && r.cell === '2,2')); s.p.x = C.x > W.AW / 2 ? 100 : W.AW - 100; // (step back so nothing gets picked up yet)
