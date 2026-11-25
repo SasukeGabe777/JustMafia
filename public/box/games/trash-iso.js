@@ -337,7 +337,8 @@
   const animName = (P, an) => (P.anims[an] ? an : an === 'run' ? 'walk' : an === 'idle' ? (P.anims.walk ? 'walk' : 'static') : P.anims.walk ? 'walk' : Object.keys(P.anims)[0]);
 
   // ---------------- the frame ----------------
-  const VEH = { cart: 'vehicle.cart', mower: 'vehicle.ridemower', push: 'vehicle.mower', gtruck: 'vehicle.garbagetruck', tank: 'vehicle.tank' };
+  const VEH = { cart: 'vehicle.cart', mower: 'vehicle.ridemower', push: 'vehicle.mower', gtruck: 'vehicle.garbagetruck', tank: 'vehicle.tank', gunship: 'heli.gunship', jetpack: 'fly.jetpack', glider: 'fly.glider' };
+  const HELI_K = 0.8; // the helicopters' size in the scene (art px per art px)
   const SURV = ['survivor.lis', 'survivor.matt', 'survivor.sam', 'survivor.shaun'];
   const PLACE = { market: 'bld.market', armor: 'bld.surplus', clinic: 'bld.clinic', tinker: 'bld.gun1', gunsmith: 'bld.gun2', master: 'bld.gun3', forge: 'bld.crucible', camper: 'vehicle.camper' };
   const hashS = (s) => { let h = 7; for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) | 0; return Math.abs(h); };
@@ -384,7 +385,9 @@
     const intro = sim.phase === 'intro', G = sim.area.garage;
     let fx0 = P.x, fy0 = P.y; if (intro && G) { fx0 = G.x + G.w / 2; fy0 = Math.max(G.y + G.h * 0.7, P.y - 20); }
     const sh = sim.shake > 0 ? sim.shake * 22 * V.k : 0;
-    Object.assign(C, { s, k: V.k, dpr: V.dpr, w: V.w, h: V.h, cx: isoX(fx0, fy0), cy: isoY(fx0, fy0) - 34, sx: sh ? (Math.random() - 0.5) * sh : 0, sy: sh ? (Math.random() - 0.5) * sh : 0 });
+    // (up in the air: a gunship, a glider, the helicopter: the camera looks at the ride, up where it flies)
+    const fr0 = sim.flying && sim.flying(), hp0 = sim.heliPose && sim.heliPose(), camAlt = fr0 && fr0.kind !== 'jetpack' ? fr0.alt || 0 : hp0 ? (hp0.inside ? hp0.alt : hp0.heroAlt || 0) : 0;
+    Object.assign(C, { s, k: V.k, dpr: V.dpr, w: V.w, h: V.h, cx: isoX(fx0, fy0), cy: isoY(fx0, fy0) - 34 - camAlt * HZ * 0.8, sx: sh ? (Math.random() - 0.5) * sh : 0, sy: sh ? (Math.random() - 0.5) * sh : 0 });
     sim.cam = C; TZI.cam = C;
     const dt = Math.min(0.1, Math.max(0, t - (sim._isoT == null ? t : sim._isoT))); sim._isoT = t;
     const hw = V.w / 2 / s + 60, hh = V.h / 2 / s + 60;
@@ -417,6 +420,7 @@
       } else gates.push({ d, gi: null, road, x, y });
     }
     if (sim.drawExtraGround) sim.drawExtraGround(g, t, vis);
+    const pad = sim.padHere && sim.padHere(); if (pad && vis(pad.x, pad.y, 300)) drawPad(g, sim, pad, t);
     setGround(g);
     for (const c of sim.coins || []) if (vis(c.x, c.y)) { g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(c.x + 3, c.y + 4, 8, 8, 0, 0, TAU); g.fill(); }
     // ---- the fallen: their death animation, then the body lingers and fades ----
@@ -619,6 +623,7 @@
         sprite(g, Pk, an, 'S', fi, X, Y, s * (q2.look === 'vault' || q2.look === 'key' ? 1.35 : 1.2)); setBill(g, C2.x, C2.y); if (q2.labels) q2.labels(g, t); return true; }
       case 'turret': { const T = q2.T, dir = dirOf(Math.cos(T.a), Math.sin(T.a)); if (!sprite(g, 'turret', 'static', dir, 0, X, Y, s)) return false; if (T.life < 5 && Math.sin(t * 12) > 0) { setScreen(g); g.fillStyle = '#ff4a3a'; g.beginPath(); g.arc(X, Y - 40 * s, 3 * s, 0, TAU); g.fill(); } return true; }
       case 'barricade': { const o = q2.o, horiz = o.w >= o.h, n = Math.max(1, Math.round((horiz ? o.w : o.h) / 110)); let ok = true; for (let i = 0; i < n; i++) { const x = horiz ? o.x + (i + 0.5) * (o.w / n) : o.x + o.w / 2, y = horiz ? o.y + o.h / 2 : o.y + (i + 0.5) * (o.h / n), [X2, Y2] = C.toScreen(x, y); ok = sprite(g, 'prop.barricade', 'static', horiz ? 'SE' : 'NE', 0, X2, Y2, s * 0.85) && ok; } return ok; }
+      case 'heli': return drawHeli(g, sim, q2, X, Y, t);
       case 'flamer': return sprite(g, 'prop.sprinkler', 'static', 'S', 0, X, Y, s * 1.2);
       case 'decoy': { const ok = sprite(g, 'vehicle.sedan', 'static', 'SE', 0, X, Y, s * 0.9); if (ok) { const on = Math.sin(t * 14) > 0; sprite(g, 'prop.alarm', 'static', 'S', 0, X, Y - 40 * s, s); if (on) fx(g, 'fx.glow', 0, X, Y - 70 * s, 0.6, { add: true, alpha: 0.8 }); } return ok; }
       case 'crate': { const c = q2.c, u = c.t < c.land ? c.t / c.land : 1, h = (1 - u) * 260; if (!sprite(g, 'prop.crate', 'static', 'S', 0, X, Y - h * HZ * s, s * 1.1)) return false; if (c.landed && q2.labels) { setBill(g, c.x, c.y); q2.labels(g, t); } return true; }
@@ -639,6 +644,14 @@
     const mvx = (P.vx || 0) - (P.vy || 0), face = aiming ? (Math.cos(aS) >= 0 ? 1 : -1) : Math.abs(mvx) > 8 ? (mvx > 0 ? 1 : -1) : sim._iFace || 1; sim._iFace = face;
     sim._gunTip = null;
     if (sim.ride && !sim.dead) { drawRide(g, sim, sim.ride, P.x, P.y, true, t); return; }
+    const hp = sim.heliPose && sim.heliPose();
+    if (hp && hp.inside) return; // (in the helicopter)
+    if (hp && hp.heroAlt > 1) { // sliding down the rope
+      const kp2 = Math.max(0.2, Math.round(s * HB * C.dpr * 10) / 10), [, Yh] = C.toScreen(P.x, P.y, hp.heroAlt);
+      setScreen(g); g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(X, Y, 18 * s, 7 * s, 0, 0, TAU); g.fill();
+      setBill(g, P.x, P.y, hp.heroAlt, HB); TS.heroDraw(g, sim.me, P.x, P.y, { k: kp2, face, moving: false });
+      void Yh; return;
+    }
     setScreen(g); g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(X + 5 * s, Y + 1 * s, 22 * s, 9 * s, 0, 0, TAU); g.fill();
     const kp = Math.max(0.2, Math.round(s * HB * C.dpr * 10) / 10), F0 = P.face; P.face = face;
     try {
@@ -748,11 +761,20 @@
     if (G.f) { const d = Lg * (G.f - G.g); g.beginPath(); g.arc(hx + c * d, hy + sn * d + r * 0.3, r * 0.95, 0, TAU); g.fill(); g.stroke(); }
   }
   // a ride (yours or a friend's): the vehicle art, its driving anim, exhaust / clippings, the timer ring
-  function drawRide(g, sim, r, x, y, mine, t) {
+  function drawRide(g, sim, r, x, y, mine, t, who) {
     const s = C.s, [X, Y] = C.toScreen(x, y), A = r._ia || (r._ia = { px: x, py: y, dir: 'SE', mv: 0 });
     const mv = Math.hypot(x - A.px, y - A.py); if (mv > 0.6) A.dir = dirOf(x - A.px, y - A.py); A.mv += (mv - A.mv) * 0.3; A.px = x; A.py = y; r.dir = A.dir;
-    const key = VEH[r.kind] || 'vehicle.cart', moving = A.mv > 0.4;
-    if (!sprite(g, key, moving ? 'drive' : 'static', A.dir, Math.floor(t * 16), X, Y, s * vehScale(r.kind))) { setBill(g, x, y); if (sim._drawVehicleOld) sim._drawVehicleOld(g, r.kind, x, y, 1, t, moving, r); }
+    const key = VEH[r.kind] || 'vehicle.cart', moving = A.mv > 0.4, FV = window.TZX && TZX.VEHICLES[r.kind], fly = !!(FV && FV.fly);
+    const alt = fly ? (r.alt != null ? r.alt : FV.hop ? Math.abs(Math.sin(t * Math.PI / FV.hop)) * FV.alt : FV.alt) : 0;
+    if (fly) drawFlying(g, sim, r, FV, x, y, X, Y, alt, A, mine, t, who);
+    else if (!sprite(g, key, moving ? 'drive' : 'static', A.dir, Math.floor(t * 16), X, Y, s * vehScale(r.kind))) { setBill(g, x, y); if (sim._drawVehicleOld) sim._drawVehicleOld(g, r.kind, x, y, 1, t, moving, r); }
+    // the tank: the turret's aim line, a lock ring on the target, the reload ring
+    if (mine && r.kind === 'tank') { const tur = r.tur != null ? r.tur : sim.p.aim, z = r.lock != null && sim.z.find((q) => q.id === r.lock && q.hp > 0), C0 = window.TZX.VEHICLES.tank.cannon, rl = Math.min(1, (r.reload || 0) / C0.reload);
+      setScreen(g); const a2 = screenAngle(tur), [mx, my] = C.toScreen(x + Math.cos(tur) * 260, y + Math.sin(tur) * 260, 20); g.strokeStyle = 'rgba(255,220,120,0.55)'; g.lineWidth = 2; g.setLineDash([6, 8]); g.beginPath(); g.moveTo(X + Math.cos(a2) * 50 * s, Y - 50 * s + Math.sin(a2) * 25 * s); g.lineTo(mx, my); g.stroke(); g.setLineDash([]);
+      if (z) { const [zx, zy] = C.toScreen(z.x, z.y, chestH(z)), R2 = (26 + 6 * Math.sin(t * 8)) * s; g.strokeStyle = '#ff4a3a'; g.lineWidth = 3 * s; g.beginPath(); g.arc(zx, zy, R2, 0, TAU); g.stroke(); for (let i = 0; i < 4; i++) { const b = i * Math.PI / 2 + t; g.beginPath(); g.moveTo(zx + Math.cos(b) * R2 * 0.6, zy + Math.sin(b) * R2 * 0.6); g.lineTo(zx + Math.cos(b) * R2 * 1.3, zy + Math.sin(b) * R2 * 1.3); g.stroke(); } }
+      else { g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 2; g.beginPath(); g.arc(mx, my, 14 * s, 0, TAU); g.moveTo(mx - 20 * s, my); g.lineTo(mx + 20 * s, my); g.moveTo(mx, my - 20 * s); g.lineTo(mx, my + 20 * s); g.stroke(); }
+      if (rl > 0) { g.strokeStyle = '#ffb02e'; g.lineWidth = 4 * s; g.beginPath(); g.arc(X, Y - 100 * s, 12 * s, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - rl)); g.stroke(); }
+      if (sim.muzzle > 0) fx(g, 'fx.muzzle', 0, X + Math.cos(a2) * 70 * s, Y - 55 * s + Math.sin(a2) * 35 * s, 0.7, { rot: a2, add: true }); }
     // exhaust (engines) or grass clippings (mowers)
     if (moving && sim.fx.length < 200 && Math.random() < 0.5) {
       if (r.kind === 'gtruck' || r.kind === 'mower') sim.fx.push({ k: 's', x: x - Math.cos(sim.p.aim) * 30, y: y - 12, r: 8 + Math.random() * 6, t: 0, life: 0.7, a: 0.35, c: '#6a6560' });
@@ -760,7 +782,7 @@
     }
     // the countdown ring + HP (every ride is a limited-time thing)
     setScreen(g);
-    const L = r.life || r.time, L0 = r.life0 || (r.kind === 'gtruck' ? 15 : 0), R = 30 * s, cy = Y - (r.kind === 'gtruck' ? 120 : 70) * s;
+    const L = r.life || r.time, L0 = r.life0 || (r.kind === 'gtruck' ? 15 : 0), R = 30 * s, cy = Y - (r.kind === 'gtruck' ? 120 : fly ? (r.kind === 'gunship' ? 150 : 130) : 70) * s - alt * HZ * s;
     if (L != null && L0 > 0) {
       const u = clamp(L / L0, 0, 1);
       g.fillStyle = 'rgba(15,10,6,0.72)'; g.beginPath(); g.arc(X, cy, R * 0.72, 0, TAU); g.fill();
@@ -771,9 +793,55 @@
     if (r.mhp) { const w = 60 * s; g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(X - w / 2, cy + R * 0.9, w, 6 * s); g.fillStyle = r.hp / r.mhp < 0.3 ? '#ff4a3a' : '#7fd6ff'; g.fillRect(X - w / 2 + s, cy + R * 0.9 + s, (w - 2 * s) * Math.max(0, r.hp / r.mhp), 4 * s); }
     if (mine) { const name = (sim.me && sim.me.name) || ''; if (name) { g.font = `bold ${Math.round(13 * s)}px "Lilita One", sans-serif`; g.lineWidth = 4; g.strokeStyle = '#1b1410'; g.strokeText(name, X, cy - R); g.fillStyle = sim.me.color || '#fff'; g.fillText(name, X, cy - R); } }
   }
+  // ---- helipads, helicopters, flying rides (trash-heli.js) ----
+  function drawPad(g, sim, pd, t) {
+    const s = C.s, [X, Y] = C.toScreen(pd.x, pd.y), ok = sim.heliWait() <= 0;
+    sprite(g, 'heli.pad', 'static', 'S', 0, X, Y, s * 0.92);
+    // the landing lights blink; a label: what it is, or when the pilot is back
+    setScreen(g); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.25 + 0.2 * Math.sin(t * 5); g.fillStyle = ok ? '#7dff6a' : '#ffb02e'; g.beginPath(); g.ellipse(X, Y, 120 * s, 60 * s, 0, 0, TAU); g.fill(); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    if (sim.heli) return;
+    const near = sim.nearPad && sim.nearPad(), txt2 = ok ? (near ? '🚁 TAP FLY: PICK A PLACE' : '🚁 HELIPAD') : '🚁 BACK IN ' + Math.ceil(sim.heliWait()) + ' s';
+    g.font = `bold ${Math.round(13 * s + 2)}px "Lilita One", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 4; g.strokeStyle = '#1b1410'; const ly = Y + 70 * s; g.strokeText(txt2, X, ly); g.fillStyle = ok ? '#9cff3c' : '#ffb02e'; g.fillText(txt2, X, ly);
+  }
+  // a helicopter (q2: x, y, alt, still, rope, heroAlt, alpha, gun): its shadow on the ground, the body up in the air
+  function drawHeli(g, sim, q2, X, Y, t) {
+    const s = C.s, alt = q2.alt || 0, key = q2.gun ? 'heli.gunship' : 'heli.rescue', Pk = need(key); if (!Pk) return true; // (still loading: nothing yet)
+    const a = q2.alpha == null ? 1 : q2.alpha; setScreen(g);
+    g.globalAlpha = a * Math.max(0.12, 0.42 - alt / 900); g.fillStyle = '#000'; g.beginPath(); g.ellipse(X + alt * 0.12 * s, Y + alt * 0.05 * s, 95 * s * (1 - alt / 1400), 34 * s * (1 - alt / 1400), 0, 0, TAU); g.fill(); g.globalAlpha = 1;
+    const hy = Y - alt * HZ * s;
+    if (q2.rope) { g.strokeStyle = '#3a2a1c'; g.lineWidth = Math.max(1.5, 2.2 * s); g.beginPath(); g.moveTo(X + 14 * s, hy - 40 * s); g.lineTo(X + 14 * s, Y - (q2.heroAlt || 0) * HZ * s - 60 * s); g.stroke(); }
+    sprite(g, Pk, q2.still ? 'static' : 'fly', q2.dir || 'SE', Math.floor(t * 24), X, hy, s * HELI_K, a < 1 ? { alpha: a } : null);
+    if (q2.parked && sim.nearPad && sim.nearPad()) { setScreen(g); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.3 + 0.2 * Math.sin(t * 6); g.strokeStyle = '#9cff3c'; g.lineWidth = 3 * s; g.beginPath(); g.ellipse(X, Y, 110 * s, 50 * s, 0, 0, TAU); g.stroke(); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+    return true;
+  }
+  // the chopper on a plain screen spot (the phone's flight view, trash.js)
+  function heliAt(g, X, Y, k, dir, t, gun) { const Pk = need(gun ? 'heli.gunship' : 'heli.rescue'); if (!Pk) return false; const D0 = C.dpr; C.dpr = window.devicePixelRatio ? Math.min(2, window.devicePixelRatio) : 1; const ok = sprite(g, Pk, 'fly', dir || 'E', Math.floor(t * 24), X, Y, k); C.dpr = D0; return ok; }
+  // a flying ride: shadow on the ground, the ride (or you on it) up high
+  function drawFlying(g, sim, r, FV, x, y, X, Y, alt, A, mine, t, who) {
+    const s = C.s, TS = window.TZSim, hy = Y - alt * HZ * s, P = sim.p, face = mine ? (P.face || 1) : (Math.cos(screenAngle(r.head || 0)) >= 0 ? 1 : -1);
+    setScreen(g); g.fillStyle = 'rgba(0,0,0,0.32)'; g.beginPath(); const sr = r.kind === 'gunship' ? 80 : r.kind === 'glider' ? 60 : 22; g.ellipse(X + alt * 0.1 * s, Y + alt * 0.04 * s, sr * s * (1 - alt / 900), sr * 0.4 * s * (1 - alt / 900), 0, 0, TAU); g.fill();
+    if (r.kind === 'gunship') {
+      sprite(g, 'heli.gunship', 'fly', A.dir, Math.floor(t * 24), X, hy, s * HELI_K);
+      if (mine) { const a = screenAngle(P.aim); sim._gunTip = [X + Math.cos(a) * 40 * s, hy - 14 * s + Math.sin(a) * 18 * s, a]; }
+      return;
+    }
+    const kp = Math.max(0.2, Math.round(s * HB * C.dpr * 10) / 10), me = who || sim.me;
+    if (r.kind === 'jetpack') {
+      sprite(g, 'fly.jetpack', 'static', face > 0 ? 'SW' : 'SE', 0, X - face * 13 * s, hy - 22 * s, s * 1.1);
+      const thrust = alt > 2 ? 1 : 0.3; setScreen(g); g.globalCompositeOperation = 'lighter';
+      for (const dx of [-5, 5]) { const fx0 = X - face * 13 * s + dx * s, fy0 = hy - 20 * s, L = (14 + Math.random() * 10) * thrust * s; const gr = g.createLinearGradient(fx0, fy0, fx0, fy0 + L); gr.addColorStop(0, 'rgba(255,240,170,0.95)'); gr.addColorStop(0.5, 'rgba(255,140,40,0.7)'); gr.addColorStop(1, 'rgba(255,60,20,0)'); g.fillStyle = gr; g.beginPath(); g.moveTo(fx0 - 3 * s, fy0); g.lineTo(fx0 + 3 * s, fy0); g.lineTo(fx0, fy0 + L); g.closePath(); g.fill(); }
+      g.globalCompositeOperation = 'source-over';
+      setBill(g, x, y, alt, HB); TS.heroDraw(g, me, x, y, { k: kp, face, moving: alt < 2 && Math.hypot(P.vx || 0, P.vy || 0) > 30 && mine, walkT: P.walkT });
+      if (mine && alt > 20 && Math.random() < 0.3) sim.particle(x, y - 4, (Math.random() - 0.5) * 40, 40, '#cfcfcf', 0.4, 5);
+      return;
+    }
+    // the glider: you hang under the wing
+    sprite(g, 'fly.glider', 'static', A.dir, 0, X, Y - (alt + 38) * HZ * s, s * 0.95);
+    setBill(g, x, y, alt - 30, HB); TS.heroDraw(g, me, x, y, { k: kp, face, moving: false, lean: face * 0.15 });
+  }
   function drawOther(g, sim, o, V) {
     const s = C.s, TS = window.TZSim, who = (sim.o.people && sim.o.people(o.id)) || { id: o.id, name: '?', color: '#fff' }, [X, Y] = C.toScreen(o.x, o.y);
-    if (o.veh && !o.dead && !o.down) { const r = o._ride || (o._ride = {}); r.kind = o.veh; r.life = o.vl; r.life0 = o.vl0; drawRide(g, sim, r, o.x, o.y, false, sim.t); setScreen(g); g.font = `bold ${Math.round(13 * s)}px "Lilita One", sans-serif`; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = '#1b1410'; g.strokeText(who.name || '', X, Y - 110 * s); g.fillStyle = who.color || '#fff'; g.fillText(who.name || '', X, Y - 110 * s); return; }
+    if (o.veh && !o.dead && !o.down) { const r = o._ride || (o._ride = {}); r.kind = o.veh; r.life = o.vl; r.life0 = o.vl0; drawRide(g, sim, r, o.x, o.y, false, sim.t, who); setScreen(g); g.font = `bold ${Math.round(13 * s)}px "Lilita One", sans-serif`; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = '#1b1410'; g.strokeText(who.name || '', X, Y - 110 * s); g.fillStyle = who.color || '#fff'; g.fillText(who.name || '', X, Y - 110 * s); return; }
     setScreen(g); g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(X + 5 * s, Y + s, 22 * s, 9 * s, 0, 0, TAU); g.fill();
     const aS = screenAngle(o.aim || 0), face = Math.cos(aS) >= 0 ? 1 : -1, F0 = o.face; o.face = face;
     setBill(g, o.x, o.y, 0, HB); g.strokeStyle = who.color || '#fff'; g.lineWidth = 2.5; g.beginPath(); g.ellipse(o.x, o.y, 26, 11, 0, 0, TAU); g.stroke();
@@ -953,5 +1021,6 @@
     return true;
   }
 
+  window.TZI_HELI = { heliAt };
   const TZI = window.TZI = { bodyOf, bodyBox, hitPoint, chestH, SHOT_H, ZOOM_OUT, fxImage: () => FX.img, topFor, E, SHOW_KEYS, showcase, ready: false, boot, need, has, prefetch, prefetchArea, render, sprite, fx, dirOf, dirToWorld, screenAngle, toScreen: C.toScreen, cam: C, C, st, setGround, setScreen, setBill, prism, groundFor, standFor, garageParts, iso: { HX, HY, HZ, CH, BB }, manifest: () => M, zKey, drawZombie, zState, animFrame, animName, BOSSKEY, VEH, keyOf };
 })();

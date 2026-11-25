@@ -75,9 +75,12 @@
     let G, F = null;
     if (one) G = [SF[0] + c * 12.5 * K - c * back, SF[1] + sn * 12.5 * K - sn * back + 1.5 * K];
     else {
-      const mid = [(SF[0] + SB[0]) / 2, (SF[1] + SB[1]) / 2 + 8 * K];
-      G = [mid[0] + c * 5 * K - c * back, mid[1] + sn * 4 * K - sn * back];
-      F = [G[0] + c * o.gunLen * ((o.gf || 0.6) - (o.gg || 0.3)), G[1] + sn * o.gunLen * ((o.gf || 0.6) - (o.gg || 0.3))];
+      const mid = [(SF[0] + SB[0]) / 2 - face * 3 * K, (SF[1] + SB[1]) / 2 + 6 * K], L = o.gunLen * ((o.gf || 0.6) - (o.gg || 0.3)), reach = AL.len * 0.56 * 2 * K * 0.97;
+      G = [mid[0] + c * 3 * K - c * back, mid[1] + sn * 4 * K - sn * back];
+      // both hands must reach: the back hand the grip, the front hand the fore-grip (pull the gun in until they do)
+      for (let i = 0; i < 24; i++) { const fx = G[0] + c * L - SF[0], fy = G[1] + sn * L - SF[1]; if (fx * fx + fy * fy <= reach * reach) break; G = [G[0] - c * 1.5 * K + (SF[0] - G[0] - c * L) * 0.04, G[1] - sn * 1.5 * K + (SF[1] - G[1] - sn * L) * 0.04]; }
+      { const gx = G[0] - SB[0], gy = G[1] - SB[1], d = Math.hypot(gx, gy); if (d > reach) G = [SB[0] + (gx / d) * reach, SB[1] + (gy / d) * reach]; }
+      F = [G[0] + c * L, G[1] + sn * L];
     }
     // a grab: both hands reach down to the item on the ground in front of you, then bring it up
     const ground = [o.X + face * 14 * K, o.Y - 3 * K];

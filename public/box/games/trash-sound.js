@@ -113,6 +113,11 @@
     loop('rain', 'sfx.rain.loop', raining && !sim.paused ? 0.16 : 0, 1);
     const r = sim.ride, mv = r ? Math.hypot(sim.p.vx || 0, sim.p.vy || 0) : 0;
     loop('engine', r ? (r.kind === 'gtruck' || r.kind === 'tank' ? 'sfx.engine.heavy' : 'sfx.engine.loop.high') : '', r && r.kind !== 'cart' && r.kind !== 'push' && !sim.paused && !sim.dead ? 0.16 : r && r.kind === 'push' && !sim.paused ? 0.1 : 0, 0.85 + Math.min(0.5, mv / 500));
+    // helicopters (yours, a friend's, the gunship) and the jetpack: our own synthesized loops
+    const hp = sim.heliPose && sim.heliPose(), fo = sim.flyover, rk = r && r.kind;
+    const rotorV = (hp ? (hp.flying ? 0.3 : 0.26) : 0) + (fo ? 0.2 * (1 - Math.min(1, fo.t / fo.T)) : 0) + (rk === 'gunship' ? 0.2 : 0);
+    loop('rotor', 'sfx.heli.rotor.loop', !sim.paused && !sim.dead ? Math.min(0.32, rotorV) : 0, hp && hp.flying ? 1.08 : 1);
+    loop('jet', 'sfx.jet.loop', rk === 'jetpack' && !sim.paused && !sim.dead ? 0.08 + Math.min(0.12, (r.alt || 0) / 500) : 0, 0.9 + Math.min(0.3, (r && r.alt || 0) / 300));
     // the garage door in the intro
     if (sim.phase === 'intro' && sim.introT > 1.25 && !sim._doorSnd) { sim._doorSnd = true; event('garage'); }
     if (sim.dead || sim.phase === 'over') stopAll();

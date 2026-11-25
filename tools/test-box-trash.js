@@ -302,7 +302,7 @@ function sandbox() {
   let now = 0; const reports = [], lives = [], events = [];
   const ctx = { console, Math, Date, JSON, Object, Array, Map, Set, Number, String, Promise, Infinity, isFinite, performance: { now: () => now } };
   ctx.window = ctx; ctx.self = ctx; vm.createContext(ctx);
-  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-story.js', 'trash-boss.js', 'trash-shop.js', 'trash-play.js', 'trash-arms.js', 'trash-fight.js', 'trash-extra.js', 'trash-more.js', 'trash-gates.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
+  for (const f of ['trash-world.js', 'trash-sim.js', 'trash-story.js', 'trash-boss.js', 'trash-shop.js', 'trash-play.js', 'trash-arms.js', 'trash-fight.js', 'trash-extra.js', 'trash-more.js', 'trash-gates.js', 'trash-heli.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8'), ctx, { filename: f });
   const make = (o = {}) => new ctx.TZSim.Sim({ seed: 42, homes: [[4, 4]], me: { id: o.id || 'me', name: 'Me', color: '#fff' }, settings: { diff: 'normal', aim: 'on', xp: 'shared', ...(o.settings || {}) }, restore: o.restore || { cell: [4, 4], home: [4, 4], wave: 1, run: 1 },
     report: (m) => { reports.push(m); return Promise.resolve({ ok: true }); }, live: (m) => lives.push(m), on: (k, d) => events.push([k, d]), people: () => null });
   const step = (s, sec, I = {}, pick = true) => { for (let t = 0; t < sec; t += 1 / 60) { now += 1000 / 60; if (pick && s.cards) s.pick(0); s.update(1 / 60, I); } };
@@ -1061,34 +1061,128 @@ test('rides are all timed: each has a clock; when it runs out you pop out and it
   S.step(s, 16); assert(!s.ride, 'time’s up: out you pop'); assert(S.events.some(([k]) => k === 'rideend')); assert(!s.parked, 'it broke down');
   assert(s.wrecked[s.cellKey()], 'and won’t come back here');
 });
-test('getting in: a 1 s walk-up (tap skips it); first person: steer + gas move you along the heading, rams send zombies flying (score + XP as usual), damage wrecks it with a crash', () => {
+const key2 = (c) => c[0] + ',' + c[1];
+const pending = [];
+const atest = (n, fn) => pending.push(Promise.resolve().then(fn).then(() => { passed++; console.log('  ✓ ' + n); }).catch((e) => { console.error('  ✗ ' + n); console.error(e); process.exit(1); }));
+test('getting in: a 1 s walk-up (tap skips it); you drive in the iso view with the walking controls, rams send zombies flying (score + XP as usual), damage wrecks it', () => {
   const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.p.inv = 1e9; s.breakT = 9999; s.spawnCd = 999;
-  s.boardAnim = true; s.fpRide = true;
+  s.boardAnim = true;
   s.parked = { kind: 'gtruck', x: s.p.x + 80, y: s.p.y, hp: 700, mhp: 700, face: 1 }; assert.equal(s.toggleRide(), 'in'); assert(s.boarding && !s.ride, 'walking up');
-  S.step(s, 0.5); assert(!s.ride && Math.abs(s.p.x - s.boarding.v.x) < 60, 'halfway there'); S.step(s, 0.6); assert(s.ride && s.ride.fp, 'in, in first person'); assert(Math.abs(s.ride.life - 15) < 0.2, 'the truck’s clock');
-  s.ride.head = 0; const x0 = s.p.x, y0 = s.p.y; S.step(s, 1, { drive: { steer: 0, gas: 1 } }); assert(s.p.x > x0 + 80 && Math.abs(s.p.y - y0) < 20, 'gas: forward along the heading');
-  const h0 = s.ride.head; S.step(s, 0.5, { drive: { steer: 1, gas: 1 } }); assert(s.ride.head > h0 + 0.3, 'steering turns it'); assert(s.shotN == null || s.shotN === 0, 'your gun rests while you drive');
+  S.step(s, 0.5); assert(!s.ride && Math.abs(s.p.x - s.boarding.v.x) < 60, 'halfway there'); S.step(s, 0.6); assert(s.ride && !s.ride.fp, 'in (no first person any more)'); assert(Math.abs(s.ride.life - 15) < 0.2, 'the truck’s clock');
+  s.p.x = 400; s.p.y = 480; const x0 = s.p.x; S.step(s, 1, { mx: 1, my: 0 }); assert(s.p.x > x0 + 80, 'drag / WASD drives it like walking');
   // ram a zombie at speed
-  s.ride.head = 0; s.ride.spd = 1; const k0 = s.killCount, sc0 = s.score || 0; const z = s.makeZ('walker', s.p.x + 50, s.p.y); z.hp = 5;
-  S.step(s, 0.2, { drive: { steer: 0, gas: 1 } }); assert(z.hp <= 0, 'rammed'); assert(s.killCount > k0 && (s.score || 0) > sc0, 'kills and score count'); assert(s.splatN > 0, 'blood on the glass');
-  // wrecked: a crash, back on foot
-  s.ride.hp = 1; s.p.inv = 0; s.buffs.shield = 0; s.hurt(50); assert(!s.ride, 'wrecked'); assert(s.fpOut && s.fpOut.crash, 'the crash effect');
+  const k0 = s.killCount, sc0 = s.score || 0; const z = s.makeZ('walker', s.p.x + 50, s.p.y); z.hp = 5;
+  S.step(s, 0.3, { mx: 1, my: 0 }); assert(z.hp <= 0, 'rammed'); assert(s.killCount > k0 && (s.score || 0) > sc0, 'kills and score count');
+  // wrecked: back on foot
+  s.ride.hp = 1; s.p.inv = 0; s.buffs.shield = 0; s.hurt(50); assert(!s.ride, 'wrecked'); assert(S.events.some(([k]) => k === 'wreck'), 'the crash effect');
   // a tap skips the walk-up
-  s.fpOut = null; s.parked = { kind: 'cart', x: s.p.x + 80, y: s.p.y, hp: 140, mhp: 140, face: 1 }; s.p.inv = 1e9; s.toggleRide(); s.skipBoard = true; S.step(s, 0.05); assert(s.ride && s.ride.kind === 'cart', 'skipped');
-  s.toggleRide(); assert(!s.ride && s.fpOut && !s.fpOut.crash, 'hopping out: a quick fade');
+  s.parked = { kind: 'cart', x: s.p.x + 80, y: s.p.y, hp: 140, mhp: 140, face: 1 }; s.p.inv = 1e9; s.toggleRide(); s.skipBoard = true; S.step(s, 0.05); assert(s.ride && s.ride.kind === 'cart', 'skipped');
+  s.toggleRide(); assert(!s.ride, 'hopping out');
+  for (const f of ['trash.js', 'trash-more.js']) assert(!/TZFP|fpRide/.test(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', f), 'utf8')), 'no first-person code left in ' + f);
+  assert(!fs.existsSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-drive.js')), 'the 3D drive is gone');
 });
-test('the tank: first person from the hatch; the cannon locks on to a zombie near the crosshair, fires a shell with splash damage, then reloads', () => {
-  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.p.inv = 1e9; s.breakT = 9999; s.spawnCd = 999; s.fpRide = true;
-  s.parked = { kind: 'tank', x: s.p.x, y: s.p.y, hp: 1100, mhp: 1100, face: 1 }; s.toggleRide(); assert(s.ride && s.ride.kind === 'tank' && s.ride.fp && s.ride.life === 22);
-  s.ride.tur = 0; const a = s.makeZ('walker', s.p.x + 400, s.p.y + 30), b = s.makeZ('walker', s.p.x + 430, s.p.y + 60), far = s.makeZ('walker', s.p.x - 400, s.p.y); a.hp = b.hp = far.hp = 60;
-  S.step(s, 0.05, { drive: { steer: 0, gas: 0 } }); assert.equal(s.ride.lock, a.id, 'locked on to the one in the crosshair');
-  S.step(s, 0.05, { drive: { steer: 0, gas: 0, fire: true } }); assert(s.ride.reload > 1.3, 'fired: reloading'); assert.equal(s.shells.length, 1);
-  S.step(s, 0.5, { drive: { steer: 0, gas: 0 } }); assert(a.hp <= 0 && b.hp <= 0, 'boom: splash damage takes the group'); assert(far.hp > 0, 'not the one behind you');
-  S.step(s, 0.05, { drive: { steer: 0, gas: 0, fire: true } }); assert.equal(s.shells.length, 0, 'still reloading');
-  S.step(s, 0.1, { drive: { steer: 0, gas: 0, tur: Math.PI } }); assert(Math.abs(s.ride.tur - Math.PI) < 1e-9, 'the turret turns (mouse / drag)');
-  // co-op: friends see the ride (iso art from the snapshot), the driver stays hidden
+test('the tank in the iso view: the aim stick / mouse turns the turret, the cannon locks on to the zombie nearest the aim, fires a shell with splash damage, then reloads; your own gun rests', () => {
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 }, settings: { aim: 'off' } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.p.inv = 1e9; s.breakT = 9999; s.spawnCd = 999;
+  s.p.x = 500; s.p.y = 480; s.parked = { kind: 'tank', x: s.p.x, y: s.p.y, hp: 1100, mhp: 1100, face: 1 }; s.toggleRide(); assert(s.ride && s.ride.kind === 'tank' && !s.ride.fp && s.ride.life === 22);
+  const a = s.makeZ('walker', s.p.x + 400, s.p.y + 30), b = s.makeZ('walker', s.p.x + 430, s.p.y + 60), far = s.makeZ('walker', s.p.x - 400, s.p.y); a.hp = b.hp = far.hp = 60; for (const q of [a, b, far]) q.speed = 0;
+  S.step(s, 0.05, { ax: 1, ay: 0.05, mouse: true, fire: false }); assert.equal(s.ride.lock, a.id, 'locked on to the one nearest the aim'); assert.equal((s.shells || []).length, 0, 'mouse: no fire without a click');
+  S.step(s, 0.05, { ax: 1, ay: 0.05, mouse: true, fire: true }); assert(s.ride.reload > 1.3, 'fired: reloading'); assert.equal(s.shells.length, 1); assert(!(s.shotN > 0), 'your gun rests in the tank');
+  S.step(s, 0.5, {}); assert(a.hp <= 0 && b.hp <= 0, 'boom: splash damage takes the group'); assert(far.hp > 0, 'not the one behind you');
+  S.step(s, 0.05, { ax: -1, ay: 0, mouse: true, fire: true }); assert.equal(s.shells.length, 0, 'still reloading'); assert(Math.abs(Math.abs(s.ride.tur) - Math.PI) < 1e-6, 'the turret turns with the aim');
   assert(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-iso.js'), 'utf8').includes('if (o.veh && !o.dead && !o.down) {'), 'others in a ride draw as the ride');
   s.reportStatus(true); assert.equal(S.reports.filter((r) => r.op === 'st').pop().veh, 'tank');
 });
+// ---------------- helipads, helicopter travel, flying rides, the hero's moves ----------------
+test('helipads: a few per map, seeded (every phone agrees), spread out, some far out; each sits on a clear street', () => {
+  let farLocked = 0;
+  for (let seed = 1; seed <= 60; seed++) {
+    const P = X.helipads(seed); assert.equal(JSON.stringify(P), JSON.stringify(X.helipads(seed)), 'same seed, same pads');
+    assert.equal(P.length, X.HELI.pads, seed + ': ' + P.length + ' pads');
+    for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) assert(Math.abs(P[i][0] - P[j][0]) + Math.abs(P[i][1] - P[j][1]) >= X.HELI.gap, 'spread out');
+    for (const [x, y] of P) { const a = W.genArea(seed, x, y, false), q = X.padSpot(a); for (const o of a.obstacles) { if (o.kind === 'wall') continue; assert(!(q.x + 60 > o.x && q.x - 60 < o.x + o.w && q.y + 60 > o.y && q.y - 60 < o.y + o.h), seed + ' pad clear of ' + o.kind); } }
+    const L = require('../public/box/games/trash-story').locks(seed, [W.spawnCell(seed, [], 0)], { mode: 'endless' }); if (P.some(([x, y]) => L.req[y * W.GRID + x] > 0)) farLocked++;
+  }
+  assert(farLocked > 40, 'most maps have a pad behind a kill-locked gate: ' + farLocked + '/60');
+  assert.notEqual(JSON.stringify(X.helipads(1)), JSON.stringify(X.helipads(2)), 'another seed, other pads');
+});
+test('helipad travel (server): found by exploring (shared with the team), fly only from a found pad to an explored, open block; a cooldown (longer in Score attack); co-op members hear the chopper', () => {
+  const { room, clock, ps: [a, b] } = mk({}, 2); room.start(); const g = room.game, Ra = g.runs.get(a.id), Rb = g.runs.get(b.id);
+  const pad = X.helipads(g.seed)[0], pk = pad.join(',');
+  assert.equal(room.act(a, { op: 'heli', to: key2(Rb.cell) }).ok, false, 'no pad here');
+  g.noLocks = true; Ra.cell = pad.slice(); g.explore(Ra.cell, a.id); assert(g.pads.has(pk), 'exploring the block finds the pad'); assert(g.view(b).pads.includes(pk), 'the team sees it'); assert(g.tv().pads.includes(pk), 'so does the TV');
+  assert(g.feed.some((f) => /helipad/.test(f.text)), 'news');
+  const unexplored = (() => { for (let y = 0; y < W.GRID; y++) for (let x = 0; x < W.GRID; x++) if (!g.explored.has(x + ',' + y)) return x + ',' + y; })();
+  const r0 = room.act(a, { op: 'heli', to: unexplored }); assert.equal(r0.ok, false, 'only explored blocks'); assert(/explored/.test(r0.error));
+  assert.equal(room.act(a, { op: 'heli', to: pk }).ok, false, 'not where you are');
+  g.joinArea(b.id, key2(Rb.cell)); g.outbox.length = 0; const dest = key2(Rb.cell), areas = Ra.areas;
+  const r1 = room.act(a, { op: 'heli', to: dest }); assert(r1.ok, JSON.stringify(r1)); assert.equal(key2(Ra.cell), dest, 'flown there'); assert.equal(Ra.areas, areas + 1);
+  assert(r1.area && r1.area.members.includes(b.id), 'joins the friend there'); assert(g.outbox.some((m) => m.to === b.id && m.data.t === 'heli' && m.data.phase === 'in'), 'the friend hears it come in');
+  assert(g.tv().flights.some((f) => f.to === dest), 'the TV map shows the flight');
+  // back home needs a pad where you are now (none here unless it is one) and the cooldown
+  Ra.cell = pad.slice(); const r2 = room.act(a, { op: 'heli', to: dest }); assert.equal(r2.ok, false); assert(r2.wait > 0 && /refuel/.test(r2.error), 'cooldown');
+  run(room, clock, X.HELI.cd + 1000); assert(room.act(a, { op: 'heli', to: dest }).ok, 'ready again');
+  // locked blocks: no
+  g.noLocks = false; g.lockPlan.req = g.lockPlan.req.map(() => 99999); g.opened.clear(); Ra.cell = pad.slice(); Ra.heliAt = null; const r3 = room.act(a, { op: 'heli', to: dest }); assert.equal(r3.ok, false, 'not into a locked block');
+  // Score attack: a longer cooldown (fair)
+  const S2 = mk({ mode: 'score' }, 1); S2.room.start(); assert.equal(S2.room.game.heliCd(), X.HELI.cdRanked); assert(X.HELI.cdRanked > X.HELI.cd);
+  // a ping on a pad block calls out the helipad
+  g.noLocks = true; Ra.pingAt = null; room.act(a, { op: 'ping', k: 'place', cell: pk }); assert.equal(g.pings[g.pings.length - 1].place, 'heli');
+});
+atest('helicopter travel (phone): stand on the pad, ask the pilot, board, lift off, fly (the aerial view), drop off on the rope at the new block\'s pad; friends see a flyover', () => {
+  const S = sandbox(), pad = X.helipads(42)[0], s = S.make({ restore: { cell: pad.slice(), home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.breakT = 9999; s.spawnCd = 999;
+  const pd = s.padHere(); assert(pd, 'this block has a pad'); s.p.x = pd.x + 400 > W.AW ? pd.x - 300 : pd.x + 300; s.p.y = pd.y; assert(!s.nearPad(), 'not on it yet'); s.p.x = pd.x; s.p.y = pd.y + 30; assert(s.nearPad(), 'on the pad');
+  const to = [(pad[0] + 2) % W.GRID, pad[1]];
+  s.o.report = (m) => { S.reports.push(m); return Promise.resolve(m.op === 'heli' ? { ok: true, to: to.join(','), cd: X.HELI.cd, area: { k: to.join(','), host: 'me', members: ['me'] } } : { ok: true }); };
+  return s.heliGo(to.join(',')).then(() => {
+    assert(s.heli && s.heli.phase === 'board', 'boarding'); assert(S.reports.some((r) => r.op === 'heli' && r.to === to.join(',')));
+    S.step(s, 0.75); assert.equal(s.heli.phase, 'lift'); assert(s.heliPose().inside, 'the hero is inside');
+    S.step(s, 0.85); assert.equal(s.heli.phase, 'fly'); assert.equal(s.cell.join(), to.join(), 'the new block'); const p2 = s.padHere() || X.padSpot(s.area); assert(Math.hypot(s.p.x - p2.x, s.p.y - p2.y) < 60, 'over its pad');
+    const hp0 = s.p.hp; s.makeZ('walker', s.p.x, s.p.y); S.step(s, X.HELI.flyS + 0.05); assert.equal(s.heli.phase, 'drop'); assert(s.heliPose().heroAlt > 50, 'sliding down the rope'); assert.equal(s.p.hp, hp0, 'safe while flying in');
+    S.step(s, 1.6); assert(!s.heli, 'down: free to go'); assert(s.flyover && s.flyover.kind === 'away', 'the chopper flies off'); assert(s.heliWait() > 30, 'the pilot refuels');
+    // a friend's chopper comes in: a flyover in this block
+    s.flyover = null; s.onLive({ t: 'heli', id: 'friend', phase: 'in', area: s.cell.join(',') }); assert(s.flyover && s.flyoverPose().alt > 100, 'friends see it fly over');
+    const list = []; s.extraStanding(list); assert(list.some((q) => q.k === 'heli'), 'drawn in the scene');
+  });
+});
+test('flying rides (rare, timed, with HP): gunship, jetpack, hang-glider; up high you pass over walls and zombies can\'t reach you; the gunship fires down by itself; the glider never stops', () => {
+  for (const k of ['gunship', 'jetpack', 'glider']) { const V = X.VEHICLES[k]; assert(V && V.fly && V.time > 0 && V.hp > 0, k); }
+  let n = 0; for (let seed = 1; seed < 40; seed++) for (let x = 0; x < 9; x++) for (let y = 0; y < 9; y++) if (X.FLY.includes(X.vehicleAt(seed, x, y, []))) n++; assert(n > 30 && n < 300, 'rare: ' + n);
+  const S = sandbox(), s = S.make({ restore: { cell: [2, 2], home: [4, 4], wave: 3, run: 1 } }); s.phase = 'play'; s.z.length = 0; s.cleared = true; s.breakT = 9999; s.spawnCd = 999;
+  // the gunship: climbs, guns + rockets at the nearest zombies, walls don't stop it
+  s.p.x = 600; s.p.y = 480; s.parked = { kind: 'gunship', x: s.p.x, y: s.p.y, hp: 520, mhp: 520, face: 1 }; s.toggleRide(); assert(s.ride && s.ride.kind === 'gunship' && s.ride.life === 18);
+  S.step(s, 1.5); assert(s.ride.alt > 100 && s.airborne(), 'up high');
+  const z = s.makeZ('walker', s.p.x + 250, s.p.y); z.speed = 0; z.hp = 400; z.mhp = 400; S.step(s, 1.5); assert(z.hp < 400, 'the guns fire down by themselves'); assert(S.events.some(([k]) => k === 'shot'));
+  const bump = s.makeZ('walker', s.p.x, s.p.y); bump.speed = 0; s.p.inv = 0; s.buffs.shield = 0; const hp0 = s.ride.hp, php = s.p.hp; s.contact(0.1); assert.equal(s.ride.hp, hp0); assert.equal(s.p.hp, php, 'zombies can\'t reach you up there');
+  const wall = s.area.obstacles.find((o) => o.kind === 'bld' || o.kind === 'prop') || s.area.obstacles[0]; s.p.x = wall.x + wall.w / 2; s.p.y = wall.y + wall.h / 2; s.collide(s.p); assert.equal(s.p.x, wall.x + wall.w / 2, 'over the roofs');
+  S.step(s, 20); assert(!s.ride, 'timed: out of fuel');
+  // the jetpack hops while you move
+  s.p.x = 600; s.p.y = 480; s.parked = { kind: 'jetpack', x: s.p.x, y: s.p.y, hp: 160, mhp: 160, face: 1 }; s.p.inv = 1e9; s.toggleRide(); let top = 0; for (let i = 0; i < 40; i++) { S.step(s, 1 / 60, { mx: 1, my: 0 }); top = Math.max(top, s.ride.alt); } assert(top > 50, 'a hop'); S.step(s, 1.2, {}); assert.equal(s.ride.alt, 0, 'lands when you stop');
+  s.toggleRide();
+  // the glider keeps moving with no input
+  s.p.x = 400; s.p.y = 480; s.parked = { kind: 'glider', x: s.p.x, y: s.p.y, hp: 150, mhp: 150, face: 1 }; s.toggleRide(); s.ride.head = 0; const gx = s.p.x; S.step(s, 0.6, {}); assert(s.p.x > gx + 100, 'soaring on'); S.step(s, 1, { mx: 0, my: 1 }); assert(s.ride.head > 0.8, 'steers toward the drag');
+  s.reportStatus(true); assert.equal(S.reports.filter((r) => r.op === 'st').pop().veh, 'glider', 'friends see it');
+});
+test('the hero holds the gun: equip moves (crouch-and-grab, catch, swap, quick grab) and the pose keeps the hands on the gun within arm\'s reach', () => {
+  const ctx = { console, Math, JSON, Object, Array }; ctx.window = ctx; vm.createContext(ctx); vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-hero.js'), 'utf8'), ctx);
+  const H = ctx.TZH; let E = H.equipStep(undefined, 'weapon.pistol', null, 0, 0); assert(!E.active, 'nothing at the start');
+  E = H.equipStep(E, 'weapon.pistol', { kind: 'weapon', k: 'shotgun', at: 1, x: 10, y: 20 }, 1, 0.016); assert(E.active && E.kind === 'weapon', 'a weapon pick-up: crouch and grab');
+  E = H.equipStep(E, 'weapon.shotgun', { kind: 'weapon', k: 'shotgun', at: 1 }, 1.05, 0.05); assert.equal(E.kind, 'weapon', 'the new gun is the same move, not a swap');
+  for (let i = 0; i < 40; i++) E = H.equipStep(E, 'weapon.shotgun', null, 1.1 + i * 0.016, 0.016); assert(!E.active, 'done in ~0.4 s');
+  E = H.equipStep(E, 'pickup.minigun', { kind: 'catch', k: 'minigun', at: 2 }, 2, 0.016); assert.equal(E.kind, 'catch', 'a timed super weapon is caught');
+  for (let i = 0; i < 40; i++) E = H.equipStep(E, 'pickup.minigun', null, 2 + i * 0.016, 0.016);
+  E = H.equipStep(E, 'weapon.shotgun', null, 3, 0.016); assert(E.kind === 'swap' && E.old === 'pickup.minigun', 'it runs out: lower and raise (a swap)');
+  E = H.equipStep(E, 'weapon.shotgun', { kind: 'small', k: 'cash', at: 4 }, 4, 0.016); assert(E.sActive && E.sk === 'cash', 'cash: a quick grab');
+  const AL = { sleeve: '#c33', skin: '#fc9', w: 7.4, hand: 3.1, sw: 12.2, y: -28.5, len: 14 };
+  for (const key of ['weapon.pistol', 'weapon.shotgun', 'pickup.minigun']) for (let i = 0; i < 8; i++) {
+    const aS = (i / 8) * Math.PI * 2, face = Math.cos(aS) >= 0 ? 1 : -1, Q = H.pose({ X: 200, Y: 300, s: 1, face, aS, key, kick: 0, bob: 0, moving: false, walkT: 0, t: 0, AL, E: { active: false }, gunLen: 50, gg: 0.3, gf: 0.6 });
+    const reach = AL.len * 0.56 * 2 * 1.15; assert(Math.hypot(Q.G[0] - (Q.one ? Q.SF : Q.SB)[0], Q.G[1] - (Q.one ? Q.SF : Q.SB)[1]) <= reach + 1e-6, key + ' grip within reach');
+    if (!Q.one) { assert(Q.F, key + ' two hands'); const d = Math.hypot(Q.F[0] - Q.G[0], Q.F[1] - Q.G[1]); assert(Math.abs(d - 50 * 0.3) < 1e-6, 'the support hand on the fore-grip'); } else assert(key === 'weapon.pistol' && Q.free, 'one hand on a pistol, the other free');
+    assert.equal(Q.behind, Math.sin(aS) < -0.35, 'aiming away: gun and arms behind you');
+  }
+  const k0 = H.pose({ X: 0, Y: 0, s: 1, face: 1, aS: 0, key: 'weapon.launcher', kick: 1, bob: 0, AL, E: {}, gunLen: 50, gg: 0.3, gf: 0.6, t: 0 }), k1 = H.pose({ X: 0, Y: 0, s: 1, face: 1, aS: 0, key: 'weapon.launcher', kick: 0, bob: 0, AL, E: {}, gunLen: 50, gg: 0.3, gf: 0.6, t: 0 });
+  assert(k0.G[0] < k1.G[0] - 5 && k0.ang < k1.ang, 'recoil: the hands go back and the muzzle climbs');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'box', 'games', 'trash-fight.js'), 'utf8'); assert(src.includes('if (this._iso) return; // (the iso view: no little guns floating'), 'no stray floating gun icons');
+  assert(fs.readFileSync(path.join(__dirname, '..', 'public', 'avatar.js'), 'utf8').includes('if (!o.noArms) for (const s of [-1, 1])'), 'drawChar can leave the arms to the game (default unchanged)');
+});
 
-console.log(`\n${passed} JustZombies tests passed.`);
+Promise.all(pending).then(() => console.log(`\n${passed} JustZombies tests passed.`));

@@ -12,7 +12,7 @@ hands, blood pools under corpses) or animated (lids, the garage door, the rot ne
 atlas. Sounds were trimmed, normalised and re-encoded to OGG. A few objects are our own procedural models
 (spike strip, sprinkler-flamer, car-alarm beacon, lawnmower, chainsaw, leaf blower, flamethrower, lightning coil,
 ray gun, minigun, rocket sneakers, crown, bubble shield, binoculars, cash stacks, key piece, caged boss core, armour vest,
-garage door).
+garage door, the rescue helicopter, the gunship, the jetpack, the hang-glider and the helipad).
 
 ## Quaternius (3D models, CC0)
 Author: **Quaternius** — https://quaternius.com
@@ -101,3 +101,10 @@ Asphalt012, Asphalt015, Concrete034, Grass001, Grass004, Ground037, Ground054, G
 ## Checked and NOT used
 - "Gunshot Sounds" by Tabasco (OpenGameArt): the page says CC0 but the zip's own text says CC-BY 3.0.
 - Quaternius uploads that poly.pizza lists as CC-BY (older uploads) were skipped.
+
+## Our own (made for JustZombies, released CC0)
+
+| What | How | Files |
+|---|---|---|
+| Rescue helicopter, gunship (with a spinning-rotor fly animation), jetpack, hang-glider, helipad | procedural three.js models (`procModel` in `tools/trash-art-render/iso.js`, jobs in `jobs-heli.js`), rendered in the toon style with ink lines | props/heli-rescue.webp, props/heli-gunship.webp, props/fly-jetpack.webp, props/fly-glider.webp, props/heli-pad.webp |
+| Helicopter rotor loop, jetpack roar loop | synthesized from filtered noise (`tools/trash-art-render/synth-sfx.js`), no samples | sfx/heli-rotor-loop.wav, sfx/jet-loop.wav |

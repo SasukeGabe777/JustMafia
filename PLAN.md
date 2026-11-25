@@ -2126,3 +2126,62 @@ TrashZombies is now **JustZombies** (internal key stays `trash`, no file renames
   every hit point lands on the drawn body). Frame work on a headless 844x390 phone (dpr 2, desktop CPU, High):
   ~95 zombies at night in the rain with a boss 4.1 ms avg (p95 6.2), first-person ride 2.7 ms (p95 4.8), tank
   1.4-3.2 ms (p95 3-5.8); the first 3D frame ever ~80 ms during the walk-up.
+
+## JustZombies: guns in hand, helipads and flying rides, no first person, uncut sprites (claude/justzombies-heli, November 25, 2026)
+
+- **Uncut sprites (owner's bug: the head was cut off during the death animation):** the render pipeline
+  (`tools/trash-art-render/iso.js` job()) now renders every animated sheet into a roomier cell, measures the union
+  of all its frames (every anim and direction, death falls and hit flinches included) and crops the whole sheet to
+  that box plus a 4 px margin; the moved feet anchor goes in the meta/manifest (the game anchors by it, so nothing
+  moves in game). Zombies, bosses, survivors, NPCs and rides re-rendered (same toon look) and restaged.
+  `tools/trash-art-render/check-edges.js` (`npm run check-trash-art`) decodes every sheet in headless muted Chrome and
+  fails if any frame's solid pixels touch its cell's top, left or right edge: before 48 of 53 sheets had clipped
+  frames, now 0 (9,797 frames). The game never clipped (packed frames are drawn whole).
+- **The hero holds the gun:** `BOX.drawChar` / `MTArt.drawCharacter` gained `noArms` (skip the arms; default
+  unchanged for every other game) and `BOX.armLook(who)` (sleeve colour, skin, arm width, shoulders). JustZombies
+  draws the hero armless and adds its own arms (`public/box/games/trash-hero.js`, window.TZH): a 2-bone arm from
+  the shoulder to the grip (sleeve in the outfit colour, inked; hand in the skin tone): one arm for pistols / SMG /
+  nail gun / ray gun (the other hangs and sways, or swings the bat / chainsaw), two for long guns with the support
+  hand on the fore-grip (the gun is pulled in until both hands reach). Behind the body when aiming up the screen.
+  Recoil goes back through the hands (elbows bend), the muzzle climbs, the body leans (per gun: the launcher kicks
+  hard), the minigun shakes as it spins up; muzzle flash at the barrel tip, casings as before. Held guns ~25% bigger
+  (pistols a little smaller than the long guns). Moves: a weapon pick-up is a ~0.4 s crouch-and-grab (the gun flies
+  up from the ground into the hands, then comes up to aim), a timed super weapon is caught out of the air, a swap
+  lowers the old gun and raises the new one, cash / health / armour get a quick grab and a coloured flash. The
+  stray little guns floating round the hero are gone in the iso view. Big banners never cover the hero: if the
+  centred banner would, it moves to a side panel right of the hero (smaller text).
+- **Helipads + helicopter travel:** `TZX.helipads(seed)` puts 5 pads on each map (seeded, at least 3 blocks apart,
+  2 of them far out, usually behind kill-locked gates), each on a clear street (`TZX.padSpot`). The server records
+  a pad when a block is explored (news, the team's map and the TV map show 🚁; call-outs on it name the helipad).
+  On a found pad the phone shows FLY: a map picker (tap / click any block the team has explored that isn't locked)
+  -> server op `heli` (checks the pad, explored, open, cooldown 45 s; 90 s in Score attack / Party Mode) -> you walk
+  to the chopper and climb in (hidden), it lifts off, the aerial view sweeps over the town map from your block to the
+  new one (clouds, its shadow), then it hovers over the new block's pad and you slide down a rope, safe meanwhile;
+  the next wave waits for you. Members of both blocks get a `heli` live message and see the chopper fly over; the TV
+  map draws the flight. Rotor and jet sounds are our own synthesized loops.
+- **Flying rides (rare, timed, with HP):** Gunship (18 s, its chain gun and rockets fire down at the nearest
+  zombies by themselves), Jetpack (16 s, short hops while you move), Hang-Glider (16 s, always moving, you steer
+  and shoot). Up high, walls don't stop you and zombies can't reach you (spit still can); the camera looks at the ride
+  up where it flies; a shadow on the ground shows the height. ~3% of blocks have one.
+- **No first person (owner's change):** every ride (cart, mowers, garbage truck, tank, the flying ones) is driven
+  in the normal iso view with the walking controls; the walk-up, the countdown ring, HP, crash / exit effects, engine
+  sounds stay. Every ride now smashes zombies it hits at speed (knockback, kills, score). The tank keeps its cannon
+  aimed in iso: the aim stick / mouse turns the turret, the cannon locks on to the zombie nearest the aim (a red lock
+  ring; a crosshair when nothing is locked), splash damage, a reload ring; auto-aim picks the nearest and fires.
+  `trash-drive.js` and the vendored three.js (`public/box/games/lib/three.module.js`) are removed (the art pipeline
+  keeps its own copy under tools/).
+- **Art:** our own procedural models (rescue helicopter, gunship, jetpack, hang-glider, helipad) rendered in the
+  toon style with ink lines (`tools/trash-art-render/jobs-heli.js`, helicopters with an 8-frame rotor animation);
+  manifest + CREDITS.md updated.
+- Validation: test-box-trash (85: helipad seeding / clear spots / locked pads, server travel to explored + open
+  blocks only, cooldown + the longer ranked cooldown, co-op notices, the phone's board -> lift -> fly -> rope drop,
+  flyovers, the three flying rides, iso driving + ramming, the iso tank cannon, the equip state machine and the arm
+  reach of every pose); check-edges (0 clipped of 9,797 frames); test-box-kit, test-box, test-box-party, e2e-box.
+  Headless 844x390 phone (dpr 2, High, night + rain, ~90 zombies): 8.4-8.7 ms avg work on this branch vs 8.7-9.2 ms
+  for origin/main measured with the same script on the same machine (the earlier 4.1 ms figure came from a different
+  scene/run). Screenshots looked at: guns in 8 directions x pistol/shotgun/minigun, the pick-up / catch / swap / grab
+  frames, the banner beside the hero, the pad, the picker, boarding, lift-off, the flight, the rope drop, each flying
+  ride, the iso tank.
+- Limits: the hero has no back view (the gun goes behind the head when aiming up); a friend's hero still holds
+  the old simple pistol; the glider's wing is a flat sprite; the flight view is the town map seen from above, not a
+  rendered 3D town.

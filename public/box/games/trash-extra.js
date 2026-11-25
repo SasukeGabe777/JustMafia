@@ -50,13 +50,46 @@
     gtruck: { icon: '🚛', name: 'Garbage Truck', speed: 1.45, hp: 700, r: 64, time: 15, desc: 'A rare power-up: drive it for 15 seconds.' },
     // the rarest ride: a tank (first person from the hatch); its cannon locks on and blows up whole groups
     tank: { icon: '🪖', name: 'Tank', speed: 0.95, hp: 1100, r: 58, ram: 40, time: 22, cannon: { dmg: 150, rad: 175, reload: 1.5, range: 900 }, desc: 'Rare! A cannon that locks on to zombies. 22 seconds of fuel.' },
+    // flying rides (rare): over walls and cars; zombies can't reach you while you're up (spit still can).
+    // alt: how high (world units); gun: the gunship's chain gun + rockets; hop: the jetpack's hops; glide: always moving.
+    gunship: { icon: '🚁', name: 'Gunship', speed: 1.25, hp: 520, r: 46, time: 18, fly: true, alt: 110, gun: { rate: 9, dmg: 1.6, range: 620, rocket: 1.4, rad: 120, rdmg: 70 }, desc: 'Rare! Fly over the walls and rain fire on them. 18 seconds of fuel.' },
+    jetpack: { icon: '🎒', name: 'Jetpack', speed: 1.4, hp: 160, r: 22, time: 16, fly: true, hop: 0.7, alt: 80, desc: 'Rare! Short hops over zombies and walls. 16 seconds of fuel.' },
+    glider: { icon: '🪁', name: 'Hang-Glider', speed: 1.75, hp: 150, r: 30, time: 16, fly: true, glide: true, alt: 90, desc: 'Rare! Soar over everything, always moving, guns blazing. 16 seconds of wind.' },
   };
+  const FLY = Object.keys(VEHICLES).filter((k) => VEHICLES[k].fly);
+  // ---------------- helipads ----------------
+  // A few per map (seeded: every phone agrees), spread out, some far out in the harder (kill-locked) blocks.
+  // Found by exploring (shared on the team's map); stand on one to fly to ANY block the team has explored.
+  const HELI = { pads: 5, far: 2, gap: 3, cd: 45000, cdRanked: 90000, near: 120, flyS: 2.4 };
+  const pads = new Map();
+  function helipads(seed) {
+    seed = Number(seed) || 1; if (pads.has(seed)) return pads.get(seed);
+    const N = W.GRID, c = (N - 1) / 2, all = [];
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) all.push({ x, y, h: W.hash(seed, 'heli', x, y), far: Math.abs(x - c) + Math.abs(y - c) >= 5 });
+    all.sort((a, b) => a.h - b.h);
+    const out = [], ok = (q) => out.every((o) => Math.abs(o[0] - q.x) + Math.abs(o[1] - q.y) >= HELI.gap);
+    for (const q of all) { if (out.length >= HELI.far) break; if (q.far && ok(q)) out.push([q.x, q.y]); }
+    for (const q of all) { if (out.length >= HELI.pads) break; if (!q.far && ok(q)) out.push([q.x, q.y]); }
+    if (pads.size > 50) pads.clear(); pads.set(seed, out); return out;
+  }
+  const isPad = (seed, x, y) => helipads(seed).some((p) => p[0] === x && p[1] === y);
+  // Where the pad sits in its block: on a street (always clear), the road spot nearest the middle, off the corners.
+  function padSpot(area) {
+    const M = 190, cx = W.AW / 2, cy = W.AH / 2; let best = null, bd = Infinity;
+    for (const r of area.roads || []) {
+      const x = Math.max(M, Math.min(W.AW - M, Math.max(r.x + 75, Math.min(r.x + r.w - 75, cx)))), y = Math.max(M, Math.min(W.AH - M, Math.max(r.y + 75, Math.min(r.y + r.h - 75, cy))));
+      if (x < r.x || x > r.x + r.w || y < r.y || y > r.y + r.h) continue;
+      const d = (x - cx) * (x - cx) + (y - cy) * (y - cy); if (d < bd) { bd = d; best = { x, y }; }
+    }
+    return best || { x: area.hub ? area.hub.x : cx, y: area.hub ? area.hub.y : cy };
+  }
   // A parked cart or mower in some blocks (same on every phone): carts by shops and lots, mowers in yards.
   const CART_AT = ['mall', 'lot', 'gas', 'roof', 'docks'], MOWER_AT = ['suburb', 'park', 'school', 'carnival'];
   function vehicleAt(seed, x, y, homes) {
     if ((homes || []).some((h) => h[0] === x && h[1] === y)) return null;
     const h = W.hash(seed, 'veh', x, y) % 100, b = W.biomeOf(seed, x, y).key;
     if (h >= 97) return 'tank'; // rare
+    if (h >= 94) return FLY[h - 94]; // rare: a gunship, a jetpack or a hang-glider
     if (CART_AT.includes(b) && h < 45) return 'cart';
     if (MOWER_AT.includes(b) && h < 45) return h % 3 === 0 ? 'push' : 'mower';
     return h < 10 ? (h < 5 ? 'cart' : 'mower') : null;
@@ -109,5 +142,5 @@
   const MOMENT_W = { multi: (v) => 40 * v, boss: () => 400, final: () => 1000, streak: (v) => 60 * v, rescue: () => 250, horde: (v) => 300 + 50 * v, revive: () => 150, chest: () => 180, key: () => 350 };
   const momentWeight = (m) => (MOMENT_W[m.kind] ? MOMENT_W[m.kind](m.value || 0) : 0);
 
-  return { UNLOCKS, UNLOCK, TIERS, SCRAP_MAX, scrapFor, blankMeta, pickOk, VEHICLES, vehicleAt, SURV_NAMES, SURV_HP, SURV_REWARD, survivorAt, WEATHER, WX, GARAGE, BUILD, buildCost, hordeSize, hordeBonus, HELP, VOTE_EVENTS, sentHorde, MOMENT_W, momentWeight };
+  return { UNLOCKS, UNLOCK, TIERS, SCRAP_MAX, scrapFor, blankMeta, pickOk, VEHICLES, FLY, HELI, helipads, isPad, padSpot, vehicleAt, SURV_NAMES, SURV_HP, SURV_REWARD, survivorAt, WEATHER, WX, GARAGE, BUILD, buildCost, hordeSize, hordeBonus, HELP, VOTE_EVENTS, sentHorde, MOMENT_W, momentWeight };
 });

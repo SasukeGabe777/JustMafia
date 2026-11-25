@@ -95,6 +95,11 @@
       if (S0.hint) { const [hx, hy] = S0.hint; g.strokeStyle = `rgba(255,90,60,${0.6 + 0.3 * Math.sin(t * 3)})`; g.lineWidth = 4; g.setLineDash([12, 8]); g.beginPath(); g.ellipse(x0 + (hx + 0.5) * cw, y0 + (hy + 0.5) * ch, cw * 1.6, ch * 1.6, 0, 0, TAU); g.stroke(); g.setLineDash([]); }
       if (S0.door) { const [dx2, dy2] = S0.door, px = x0 + dx2 * cw, py = y0 + dy2 * ch, D = (window.TZS.DOORS.find((d) => d.key === S0.doorLook) || {}); g.strokeStyle = `rgba(255,90,60,${0.7 + 0.3 * Math.sin(t * 5)})`; g.lineWidth = 6; g.strokeRect(px + 2, py + 2, cw - 4, ch - 4); g.font = `${Math.round(ch * 0.42)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(S0.doorOpen ? '☠️' : D.icon || '🚪', px + cw / 2, py + ch * 0.45); }
     }
+    // helipads the team found (🚁), helicopters in the air (a line from where they took off)
+    for (const k of s.pads || []) { const [fx, fy] = k.split(',').map(Number), px = x0 + fx * cw, py = y0 + fy * ch, R0 = Math.max(9, cw * 0.1); g.fillStyle = 'rgba(15,10,6,0.8)'; g.beginPath(); g.arc(px + cw * 0.2, py + ch * 0.3, R0, 0, TAU); g.fill(); g.strokeStyle = '#9cff3c'; g.lineWidth = 3; g.stroke(); g.font = `${Math.round(R0 * 1.15)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🚁', px + cw * 0.2, py + ch * 0.31); }
+    for (const f of s.flights || []) { const [ax, ay] = f.from.split(',').map(Number), [bx, by] = f.to.split(',').map(Number), u = Math.min(1, (f.ago || 0) / 2600 + (t - (f._t0 || (f._t0 = t))) / 2.6), X1 = x0 + (ax + 0.5) * cw, Y1 = y0 + (ay + 0.5) * ch, X2 = x0 + (bx + 0.5) * cw, Y2 = y0 + (by + 0.5) * ch;
+      g.strokeStyle = 'rgba(156,255,60,0.7)'; g.lineWidth = 3; g.setLineDash([8, 8]); g.beginPath(); g.moveTo(X1, Y1); g.lineTo(X2, Y2); g.stroke(); g.setLineDash([]);
+      const hx = X1 + (X2 - X1) * u, hy = Y1 + (Y2 - Y1) * u - Math.sin(Math.PI * u) * ch * 0.3; g.font = `${Math.round(Math.max(18, cw * 0.22))}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🚁', hx, hy); }
     // places the team found, hidden stashes, call-outs (with the route along the streets)
     const TP = window.TZP;
     for (const [k, type] of s.found || []) { const [fx, fy] = k.split(',').map(Number), Pl = TP && TP.PLACES[type]; if (!Pl) continue; const px = x0 + fx * cw, py = y0 + fy * ch; g.fillStyle = 'rgba(15,10,6,0.78)'; g.beginPath(); g.arc(px + cw * 0.82, py + ch * 0.28, Math.max(10, cw * 0.11), 0, TAU); g.fill(); g.strokeStyle = Pl.color; g.lineWidth = 3; g.stroke(); g.font = `${Math.max(12, Math.round(cw * 0.13))}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(Pl.icon, px + cw * 0.82, py + ch * 0.29); }
@@ -214,7 +219,7 @@
   }
 
   // ======================================================================= PHONE
-  const PH = { fpHeld: {}, fp: false, gl: null, root: null, cv: null, sim: null, run: null, v: null, ctx: null, raf: 0, last: 0, input: null, keys: new Set(), mouse: { x: 0, y: 0, down: false, on: false }, touch: { move: null, aim: null }, device: null, menu: false, frames: [], work: [], quality: 1, hint: 0, people: new Map(), overlay: '', vib: true };
+  const PH = { root: null, cv: null, sim: null, run: null, v: null, ctx: null, raf: 0, last: 0, input: null, keys: new Set(), mouse: { x: 0, y: 0, down: false, on: false }, touch: { move: null, aim: null }, device: null, menu: false, frames: [], work: [], quality: 1, hint: 0, people: new Map(), overlay: '', vib: true };
   try { PH.vib = localStorage.getItem('tz.vib') !== '0'; PH.gfxPref = localStorage.getItem('tz.gfx') || 'auto'; } catch { PH.gfxPref = 'auto'; }
   // Graphics High / Low: picked per device (weak phones start on Low), and dropped to Low if frames get slow.
   PH.gfxAuto = ((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3) ? 'low' : 'high';
@@ -236,7 +241,7 @@
     });
     PH.run = runKey(v.me); PH.dead = null;
     const sv = loadRun(v); if (sv && PH.sim.loadSave && PH.sim.loadSave(sv)) setTimeout(() => { if (PH.ctx) PH.ctx.toast('💾 Run restored: your cash, weapons and items are back.'); }, 500);
-    PH.sim.boardAnim = true; PH.sim.fpRide = !!(window.TZFP && TZFP.supported());
+    PH.sim.boardAnim = true;
     if (PH.sim.setWorld) PH.sim.setWorld(v);
     if (v.area) PH.sim.setArea(v.area);
     if (v.me.cls && PH.sim.setClass) PH.sim.cls = v.me.cls; // back in with your class (Regular / Score attack)
@@ -259,7 +264,6 @@
     else if (kind === 'wave') { buzz([60, 40, 60]); if (PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map') setOverlay(''); }
     else if (kind === 'tick') { buzz(15); }
     else if (kind === 'rideend') { buzz([80, 40, 80]); }
-    else if (kind === 'board') { if (window.TZFP && TZFP.ready && TZFP.warm && PH.gl && PH.sim && PH.sim.fpRide) setTimeout(() => { try { TZFP.warm(PH.sim, PH.gl); } catch (e) { /* built on first use */ } }, 30); }
     else if (kind === 'find') { const F = window.TZS.FINDS[d.id]; if (ctx) ctx.haptic('win'); showCard(`<span class="tz-rc-i">${F.icon}</span><div><small>${F.kind === 'key' ? 'IN THE CHEST: A KEY PIECE' : 'IN THE CHEST'}</small><b>${esc(F.name)}</b><p>${esc(F.desc)}</p></div>`, 'find'); }
     else if (kind === 'final') { buzz([200, 80, 200, 80, 400]); }
     else if (kind === 'combo') { if (ctx) { ctx.haptic('win'); ctx.toast(d.timed ? `💥 ${d.name}!` : '🧪 New combo! It’s in your combo book (pause menu).'); } }
@@ -323,13 +327,12 @@
     if (PH.root && el.contains(PH.root)) return PH.root;
     el.innerHTML = '';
     const r = document.createElement('div'); r.className = 'tz-root';
-    r.innerHTML = `<canvas class="tz-gl" hidden></canvas><canvas class="tz-cv"></canvas><button class="tz-pause" aria-label="Pause">⏸</button><div class="tz-ov" hidden></div><div class="tz-rot"><div>📱↻</div><b>Turn your phone sideways</b><small>JustZombies plays best in landscape. (You can still play like this.)</small><button class="btn small" data-rot>Play anyway</button></div>`;
-    el.appendChild(r); PH.root = r; PH.cv = r.querySelector('.tz-cv'); PH.gl = r.querySelector('.tz-gl');
+    r.innerHTML = `<canvas class="tz-cv"></canvas><button class="tz-pause" aria-label="Pause">⏸</button><div class="tz-ov" hidden></div><div class="tz-rot"><div>📱↻</div><b>Turn your phone sideways</b><small>JustZombies plays best in landscape. (You can still play like this.)</small><button class="btn small" data-rot>Play anyway</button></div>`;
+    el.appendChild(r); PH.root = r; PH.cv = r.querySelector('.tz-cv');
     r.querySelector('.tz-pause').onclick = (e) => { e.stopPropagation(); toggleMenu(); };
     r.querySelector('[data-rot]').onclick = () => { PH.rotOk = true; r.classList.remove('portrait'); };
     bindInput(r);
     if (window.TZI) TZI.boot(null, { low: !gfxHi() });
-    if (window.TZFP) TZFP.prepare(); // three.js for the first-person rides
     document.body.classList.add('tz-playing');
     loop();
     return r;
@@ -363,7 +366,7 @@
     if (window.TZI && TZI.ready && PH.artArea !== sim.area) { PH.artArea = sim.area; TZI.prefetchArea(sim); }
     if (window.TZSnd) TZSnd.frame(sim, dt);
     const I = readInput(V, sim);
-    const busy = PH.menu || PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks';
+    const busy = PH.menu || PH.overlay === 'shop' || PH.overlay === 'call' || PH.overlay === 'map' || PH.overlay === 'heli' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks';
     sim.menuPause = !!PH.menu;
     sim.shopping = PH.overlay === 'shop' || PH.overlay === 'class' || PH.overlay === 'build' || PH.overlay === 'unlocks'; sim._dpr = V.dpr;
     if (performance.now() - (PH.saveAt || 0) > 2000) saveRun();
@@ -371,12 +374,57 @@
     sim._lastInput = I;
     sim.update(dt, I);
     V.k = V.k / sim.zoomStep(dt);
-    if (sim.fpOut) { sim.fpOut.t += dt; if (sim.fpOut.t >= 0.6) sim.fpOut = null; }
-    const fp = !!(window.TZFP && TZFP.ready && ((sim.ride && sim.ride.fp) || sim.fpOut)); PH.fp = fp;
-    if (PH.gl && PH.gl.hidden === fp) PH.gl.hidden = !fp;
-    if (fp && TZFP.render(sim, V, PH.gl)) TZFP.overlay(g, sim, V, dt, isTouch() ? PH.fpHeld : null);
-    else { PH.fp = false; window.TZSim.render(g, sim, V); }
+    if (sim.heli && sim.heli.phase === 'fly') flightView(g, sim, V);
+    else window.TZSim.render(g, sim, V);
     hud(g, sim, V, dt);
+  }
+  // ---------- helicopter travel (trash-heli.js): the flight over the town ----------
+  // An aerial view: the town map (every explored block's picture) sweeps by below, the chopper in the
+  // middle with its shadow on the ground, clouds drifting past; from your old block to the new one.
+  function flightView(g, sim, V) {
+    const h = sim.heli, u = Math.min(1, h.t / (window.TZX.HELI.flyS || 2.4)), e = u * u * (3 - 2 * u), d = V.dpr, w = V.w, hh = V.h, v = PH.v || {};
+    const N = W().GRID, key = sim.seed + ':' + (v.explored || []).length + ':' + N;
+    if (!PH.flyMap || PH.flyMap.key !== key) { const c = document.createElement('canvas'), cw0 = 150, ch0 = Math.round(cw0 * W().AH / W().AW); c.width = cw0 * N + 20; c.height = ch0 * N + 20; drawMap(c.getContext('2d'), c.width, c.height, 0, { seed: sim.seed, grid: N, homes: sim.homes, explored: (v.explored || []).map((q) => [q[0], q[1]]), players: [], locks: null, pads: v.pads, found: v.found }); PH.flyMap = { key, c, cw: (c.width - 20) / N, ch: ((c.width - 20) / N) * (W().AH / W().AW), x0: 10, y0: 10 + ((c.height - 20) - ((c.width - 20) / N) * (W().AH / W().AW) * N) / 2 }; }
+    const M = PH.flyMap, ax = M.x0 + (h.from[0] + 0.5) * M.cw, ay = M.y0 + (h.from[1] + 0.5) * M.ch, bx = M.x0 + (h.to[0] + 0.5) * M.cw, by = M.y0 + (h.to[1] + 0.5) * M.ch;
+    const cx = ax + (bx - ax) * e, cy = ay + (by - ay) * e, zoom = Math.max(w / (M.cw * 3.6), hh / (M.ch * 3.6)) * (1.1 - 0.25 * Math.sin(Math.PI * u));
+    g.setTransform(d, 0, 0, d, 0, 0); g.fillStyle = '#141018'; g.fillRect(0, 0, w, hh);
+    g.save(); g.translate(w / 2, hh / 2); g.rotate(-0.12); g.scale(zoom, zoom * 0.82); g.translate(-cx, -cy); g.drawImage(M.c, 0, 0); g.restore();
+    // haze, clouds, the shadow, the chopper
+    g.fillStyle = 'rgba(180,210,255,0.12)'; g.fillRect(0, 0, w, hh);
+    for (let i = 0; i < 6; i++) { const cx2 = ((i * 397 + 900 - u * 1600 * (1 + i % 3 * 0.4)) % (w + 600)) - 300, cy2 = (i * 151) % hh, r = 70 + (i % 3) * 40; const gr = g.createRadialGradient(cx2, cy2, 4, cx2, cy2, r); gr.addColorStop(0, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(cx2, cy2, r * 1.6, r, 0, 0, TAU); g.fill(); }
+    const dir = Math.abs(bx - ax) > Math.abs(by - ay) ? (bx > ax ? 'E' : 'W') : (by > ay ? 'S' : 'N'), k = Math.min(w, hh) / 420;
+    g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(w / 2 + 60 * k, hh / 2 + 110 * k, 90 * k, 30 * k, 0, 0, TAU); g.fill();
+    const bob = Math.sin(sim.t * 3) * 4 * k; if (!(window.TZI_HELI && TZI_HELI.heliAt(g, w / 2, hh / 2 + 60 * k + bob, k * 1.05, dir, sim.t))) { g.font = (90 * k) + 'px sans-serif'; g.textAlign = 'center'; g.fillText('🚁', w / 2, hh / 2); }
+    g.setTransform(d, 0, 0, d, 0, 0);
+    const font = (px) => `bold ${px}px "Lilita One", sans-serif`; g.font = font(Math.round(22 * Math.max(0.8, k))); g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 5; g.strokeStyle = 'rgba(15,10,6,0.9)'; const tx = '🚁 Flying to the ' + h.name + '…'; const ty = hh * 0.8; g.strokeText(tx, w / 2, ty); g.fillStyle = '#ffe9a8'; g.fillText(tx, w / 2, ty);
+  }
+  // the map picker: tap any block the team has explored (not locked) and fly there
+  function heliUi() {
+    const v = PH.v, sim = PH.sim; if (!v || !sim || !sim.nearPad || !sim.nearPad()) return;
+    const wait = sim.heliWait(); if (wait > 0) { sim.banner = { text: '🚁 REFUELLING', sub: 'The pilot is back in ' + Math.ceil(wait) + ' s', t: 2 }; return; }
+    const ov = setOverlay(`<div class="tz-tmap tz-heli"><div class="tz-tmh"><h2>🚁 Where to?</h2><span class="tz-mut">Any block the team has explored</span><button class="btn small ghost" data-close>Close ✕</button></div><canvas class="tz-tmc"></canvas><div class="tz-heli-go"><span data-pick>Tap a block on the map</span><button class="btn small" data-fly disabled>🚁 Fly</button></div></div>`, 'heli');
+    if (!ov) return;
+    let pick = null; const N = W().GRID, LK = v.locks, ex = new Set((v.explored || []).map((q) => q[0] + ',' + q[1]));
+    const ok = (k) => { const [x, y] = k.split(',').map(Number); return ex.has(k) && k !== sim.cell.join(',') && !(LK && LK.req[y * N + x] > LK.kills); };
+    PH.heliOk = ok;
+    ov.querySelector('[data-close]').onclick = (e) => { e.stopPropagation(); setOverlay(''); };
+    const go = ov.querySelector('[data-fly]'), lab = ov.querySelector('[data-pick]');
+    go.onclick = (e) => { e.stopPropagation(); if (!pick) return; const k = pick; setOverlay(''); sim.heliGo(k); buzz([40, 30, 80]); };
+    const c = ov.querySelector('.tz-tmc'), geo = () => { const wv = c.clientWidth, hv = c.clientHeight, cw = Math.min((wv - 20) / N, ((hv - 20) / N) * (W().AW / W().AH)), ch = cw * (W().AH / W().AW); return { cw, ch, x0: (wv - cw * N) / 2, y0: (hv - ch * N) / 2 }; };
+    c.onclick = (e) => { const r = c.getBoundingClientRect(), G = geo(), x = Math.floor((e.clientX - r.left - G.x0) / G.cw), y = Math.floor((e.clientY - r.top - G.y0) / G.ch); if (x < 0 || y < 0 || x >= N || y >= N) return; const k = x + ',' + y;
+      if (!ok(k)) { lab.textContent = k === sim.cell.join(',') ? 'You’re here already' : !ex.has(k) ? 'Nobody has explored that block yet' : '🔒 That block is locked'; pick = null; go.disabled = true; return; }
+      pick = k; const look = sim.homes.some((hh) => hh[0] === x && hh[1] === y) ? W().HOME : W().biomeOf(sim.seed, x, y); lab.textContent = 'Fly to the ' + look.icon + ' ' + look.name; go.disabled = false; };
+    const paint = () => {
+      if (!c.isConnected || PH.overlay !== 'heli') return; const wv = c.clientWidth, hv = c.clientHeight, d = Math.min(2, window.devicePixelRatio || 1);
+      if (c.width !== Math.round(wv * d) || c.height !== Math.round(hv * d)) { c.width = Math.round(wv * d); c.height = Math.round(hv * d); }
+      const g = c.getContext('2d'), t = performance.now() / 1000; g.setTransform(d, 0, 0, d, 0, 0);
+      const me = { id: sim.me.id, name: 'You', color: sim.me.color, avatar: sim.me.avatar, x: sim.cell[0], y: sim.cell[1], state: 'play', wave: sim.wave, hp: sim.p.hp, mhp: sim.S.mhp };
+      drawMap(g, wv, hv, t, { ...v, players: [me, ...(v.players || [])], explored: (v.explored || []).map((q) => [q[0], q[1]]) });
+      const G = geo();
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const k = x + ',' + y; if (!ok(k)) continue; const px = G.x0 + x * G.cw, py = G.y0 + y * G.ch; g.strokeStyle = k === pick ? '#ffd23f' : `rgba(156,255,60,${0.45 + 0.3 * Math.sin(t * 4)})`; g.lineWidth = k === pick ? 5 : 2.5; g.strokeRect(px + 3, py + 3, G.cw - 6, G.ch - 6); }
+      requestAnimationFrame(paint);
+    };
+    requestAnimationFrame(paint);
   }
   // the loading screen while the art set decodes (TZI.boot)
   function loadingScreen(g, V) {
@@ -397,7 +445,6 @@
       if (e.pointerType === 'mouse') { if (PH.sim && PH.sim.boarding) PH.sim.skipBoard = true; if (e.button === 0 && (hitButton(p.x, p.y) || clickChest(p.x, p.y))) return; PH.device = 'mouse'; PH.mouse.on = true; PH.mouse.x = p.x; PH.mouse.y = p.y; if (e.button === 0) PH.mouse.down = true; return; }
       PH.device = 'touch'; e.preventDefault();
       if (PH.sim && PH.sim.boarding) { PH.sim.skipBoard = true; return; }
-      if (PH.fp && PH.sim && PH.sim.ride) { const Vv = { w: cv.clientWidth, h: cv.clientHeight }; const b = TZFP.controls(Vv, PH.sim).find((c) => Math.hypot(p.x - c.x, p.y - c.y) < c.r * 1.25); if (b) { PH.fpHeld[b.id] = e.pointerId; try { cv.setPointerCapture(e.pointerId); } catch { /* fine */ } return; } if (hitButton(p.x, p.y)) return; if (p.x > Vv.w / 2) { if (!PH.touch.aim) PH.touch.aim = { id: e.pointerId, x: p.x, y: p.y, ox: p.x }; } else if (!PH.touch.move) PH.touch.move = { id: e.pointerId, ox: p.x, oy: p.y, x: p.x, y: p.y }; try { cv.setPointerCapture(e.pointerId); } catch { /* fine */ } return; }
       if (hitButton(p.x, p.y) || clickChest(p.x, p.y) || hitMinimap(p.x, p.y)) return;
       if (!PH.fsAsked && canFull() && !isIOS() && !isFull() && !standalone()) goFull(); else if (!PH.iosHinted) iosHint(false);
       if (PH.sim && PH.sim.phase === 'intro') PH.skip = true;
@@ -416,7 +463,6 @@
     const up = (e) => {
       if (e.pointerType === 'mouse') { if (e.button === 0) PH.mouse.down = false; return; }
       const T = PH.touch; if (T.aim && T.aim.id === e.pointerId) T.aim = null; if (T.move && T.move.id === e.pointerId) T.move = null;
-      for (const k of Object.keys(PH.fpHeld)) if (PH.fpHeld[k] === e.pointerId) delete PH.fpHeld[k];
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -455,16 +501,6 @@
       const C = sim.cam, [wx, wy] = C.toWorld(PH.mouse.x, PH.mouse.y, 30);
       I.mouse = true; I.ax = wx - sim.p.x; I.ay = wy - (C.s ? sim.p.y : sim.p.y - 26); I.fire = PH.mouse.down || K.has(' ');
       if (!I.ax && !I.ay) I.ax = 0.001;
-    }
-    if (sim.ride && sim.ride.fp) {
-      const r = sim.ride, H = PH.fpHeld, D = { steer: 0, gas: 0, fire: false };
-      if (K.has('a') || K.has('arrowleft')) D.steer -= 1; if (K.has('d') || K.has('arrowright')) D.steer += 1;
-      if (K.has('w') || K.has('arrowup')) D.gas += 1; if (K.has('s') || K.has('arrowdown')) D.gas -= 1;
-      if (H.gas != null) D.gas += 1; if (H.brake != null) D.gas -= 1;
-      if (T.move) { const dx = T.move.x - T.move.ox, dy = T.move.y - T.move.oy; D.steer += Math.max(-1, Math.min(1, dx / 56)); if (H.gas == null && H.brake == null && Math.abs(dy) > 20) D.gas += Math.max(-1, Math.min(1, -dy / 56)); }
-      D.fire = H.fire != null || K.has(' ') || (PH.device === 'mouse' && PH.mouse.down);
-      if (r.kind === 'tank') { if (T.aim) { D.turn = Math.max(-1, Math.min(1, (T.aim.x - T.aim.ox) / 60)); } else if (PH.device === 'mouse' && PH.mouse.on) D.tur = (r.head || 0) + (PH.mouse.x / Math.max(1, V.w) - 0.5) * 1.6; }
-      D.gas = Math.max(-1, Math.min(1, D.gas)); D.steer = Math.max(-1, Math.min(1, D.steer)); I.drive = D; I.fire = false; I.ax = 0; I.ay = 0;
     }
     if (PH.skip) PH.skip = false;
     return I;
@@ -555,9 +591,9 @@
       g.globalAlpha = a; txt(sim.banner.text, cx, by2, T1, '#ffd23f', 'center'); if (sim.banner.sub) txt(sim.banner.sub, cx, by2 + T1 / 2 + T3 / 2 + 8, T3, '#fff', 'center'); g.globalAlpha = 1;
     } else sim._bannerBox = null;
     // control hints
-    if (PH.hint > 0 && !PH.fp) { PH.hint -= dt; g.globalAlpha = Math.min(1, PH.hint); txt(isTouch() ? 'Drag anywhere to move · right stick to aim' + (sim.set.aim !== 'off' ? ' (or just move: it auto-aims)' : '') : 'WASD to move · mouse to aim · hold click to shoot · Esc to pause', w / 2, h - 22, small ? 12 : 15, '#ffe9a8', 'center'); g.globalAlpha = 1; }
+    if (PH.hint > 0) { PH.hint -= dt; g.globalAlpha = Math.min(1, PH.hint); txt(isTouch() ? 'Drag anywhere to move · right stick to aim' + (sim.set.aim !== 'off' ? ' (or just move: it auto-aims)' : '') : 'WASD to move · mouse to aim · hold click to shoot · Esc to pause', w / 2, h - 22, small ? 12 : 15, '#ffe9a8', 'center'); g.globalAlpha = 1; }
     // sticks (touch)
-    if (isTouch() && !sim.dead && !PH.fp) {
+    if (isTouch() && !sim.dead) {
       const Zs = stickZone(V), T = PH.touch;
       g.globalAlpha = T.aim ? 0.9 : 0.55; g.fillStyle = 'rgba(15,10,6,0.45)'; g.beginPath(); g.arc(Zs.x, Zs.y, Zs.r, 0, TAU); g.fill(); g.strokeStyle = '#ff5a3c'; g.lineWidth = 3; g.stroke();
       let kx = Zs.x, ky = Zs.y; if (T.aim) { const dx = T.aim.x - Zs.x, dy = T.aim.y - Zs.y, dd = Math.hypot(dx, dy) || 1, m = Math.min(dd, Zs.r * 0.7); kx += (dx / dd) * m; ky += (dy / dd) * m; }
@@ -566,7 +602,7 @@
       if (T.move) { g.globalAlpha = 0.5; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.arc(T.move.ox, T.move.oy, 56, 0, TAU); g.stroke(); const dx = T.move.x - T.move.ox, dy = T.move.y - T.move.oy, dd = Math.hypot(dx, dy) || 1, m = Math.min(dd, 56); g.fillStyle = '#fff'; g.beginPath(); g.arc(T.move.ox + (dx / dd) * m, T.move.oy + (dy / dd) * m, 24, 0, TAU); g.fill(); g.globalAlpha = 1; }
     }
     // off-screen warnings: red arrows for zombies just outside the view, icons for pickups
-    if (sim.cam && !sim.dead && sim.phase === 'play' && !PH.fp) {
+    if (sim.cam && !sim.dead && sim.phase === 'play') {
       const C = sim.cam, edge = (wx, wy) => { const [sx, sy] = C.toScreen(wx, wy); if (sx > 0 && sx < w && sy > 0 && sy < h) return null; const cx = w / 2, cy = h / 2, a = Math.atan2(sy - cy, sx - cx); const m = 26, tx = Math.cos(a), ty = Math.sin(a), sc = Math.min((w / 2 - m) / Math.max(0.001, Math.abs(tx)), (h / 2 - m) / Math.max(0.001, Math.abs(ty))); return { x: cx + tx * sc, y: Math.max(small ? 70 : 84, cy + ty * sc), a }; };
       const near = []; for (const z of sim.z) { if (z.hp <= 0) continue; const d = Math.hypot(z.x - P.x, z.y - P.y); if (d < 760) near.push([d, z]); }
       near.sort((x, y) => x[0] - y[0]);
@@ -577,7 +613,7 @@
       const Ch = sim.chestHere && sim.chestHere(); if (Ch) { const e = edge(Ch.x, Ch.y - 30); if (e) { g.fillStyle = 'rgba(15,10,6,0.7)'; g.beginPath(); g.arc(e.x, e.y, 16, 0, TAU); g.fill(); g.font = '20px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(Ch.kind === 'find' && (window.TZS.FINDS[Ch.id] || {}).kind === 'key' ? '🗝️' : '🧰', e.x, e.y + 1); } }
     }
     // exit arrows at the screen edge pointing to exits when cleared
-    if (sim.cleared && !sim.dead && !PH.fp) {
+    if (sim.cleared && !sim.dead) {
       const C = sim.cam; if (C) for (const [dd, ok] of Object.entries(sim.area.exits)) {
         if (!ok || sim.gateLeft(dd)) continue; const ex = dd === 'w' ? 0 : dd === 'e' ? Z.AW : ok.p, ey = dd === 'n' ? 0 : dd === 's' ? Z.AH : ok.p;
         const [sx, sy] = C.toScreen(ex, ey); if (sx > 30 && sx < w - 30 && sy > 30 && sy < h - 30) continue;
@@ -592,11 +628,11 @@
     const small = Math.min(V.w, V.h) < 420, r = small ? 22 : 26, y = V.h - r - 16, Zs = stickZone(V);
     const L = [];
     if (sim.down) { L.push({ id: 'help', icon: '🙌', label: 'HELP', big: true }); }
-    else if (PH.fp) { if (sim.ride) L.push({ id: 'ride', icon: '🚪', label: 'GET OUT', big: true }); }
     else {
     const cn = sim.chestNear && sim.chestNear(); if (cn) L.push({ id: 'chest', icon: '🧰', label: 'OPEN', big: !sim.nearShop });
     if (sim.nearShop) L.push({ id: 'shop', icon: '🛒', label: 'SHOP', big: true });
     const nv = sim.nearVehicle && sim.nearVehicle(); if (sim.ride || nv) L.push({ id: 'ride', icon: sim.ride ? '🚪' : window.TZX.VEHICLES[nv.kind].icon, label: sim.ride ? 'GET OUT' : 'GET IN', big: !sim.nearShop });
+    const np = sim.nearPad && sim.nearPad(); if (np && !nv) { const wt = sim.heliWait(); L.push({ id: 'heli', icon: '🚁', label: wt > 0 ? Math.ceil(wt) + ' s' : 'FLY', big: wt <= 0 && !sim.nearShop }); }
     if (sim.build) L.push({ id: 'build', icon: '🔨', label: 'BUILD' });
     if (sim.pocket) L.push({ id: 'pocket', icon: (W().PK[sim.pocket] || {}).icon || '🎒' });
     if (sim.bombs) L.push({ id: 'bomb', icon: '💣', n: sim.bombs });
@@ -644,6 +680,7 @@
     if (id === 'chest') return !!(sim.openChest && sim.openChest());
     if (id === 'map') { townMapUi(); return true; }
     if (id === 'ride') { const r = sim.toggleRide && sim.toggleRide(); if (r) buzz(r === 'in' ? [40, 30, 80] : 40); return !!r; }
+    if (id === 'heli') { heliUi(); return true; }
     if (id === 'build') { if (sim.build) buildUi(); return !!sim.build; }
     if (id === 'shop') { if (sim.nearShop) shopUi(); return true; }
     if (id === 'pocket') return sim.usePocket();
@@ -910,6 +947,15 @@
       clear() { const s = PH.sim; s.z.length = 0; s.waveKills = s.spec.target; s.bossDue = false; return true; },
       god(on) { PH.sim.p.inv = on ? 1e9 : 0; return true; }, kill() { const s = PH.sim; s.p.inv = 0; s.buffs.shield = 0; s.p.armor = 0; s.p.lives = 0; s.p.hp = 1; s.hurt(999); return s.dead; },
       walk(dir) { const s = PH.sim; s.cleared = true; s.leave(dir); return s.cell.join(','); },
+      view: () => PH.v, pads() { return window.TZX.helipads(PH.sim.seed); },
+      // walk block by block (open roads only) to the nearest helipad; then stand on it
+      async goPad() { const s = PH.sim, Z = W(), N = Z.GRID, LK = PH.v && PH.v.locks, pads = new Set(window.TZX.helipads(s.seed).map((p) => p.join(','))), open = (x, y) => !LK || !(LK.req[y * N + x] > LK.kills);
+        const prev = new Map([[s.cell.join(','), null]]), q = [s.cell.slice()]; let end = pads.has(s.cell.join(',')) ? s.cell.join(',') : null;
+        while (q.length && !end) { const [x, y] = q.shift(); for (const [d, dx, dy] of [['n', 0, -1], ['s', 0, 1], ['w', -1, 0], ['e', 1, 0]]) { const nx = x + dx, ny = y + dy, k = nx + ',' + ny; if (!Z.inGrid(nx, ny) || prev.has(k) || !Z.roadBetween(s.seed, [x, y], [nx, ny]) || !open(nx, ny)) continue; prev.set(k, [x + ',' + y, d]); if (pads.has(k)) { end = k; break; } q.push([nx, ny]); } }
+        if (!end) return null; const steps = []; for (let k = end; prev.get(k); k = prev.get(k)[0]) steps.unshift(prev.get(k)[1]);
+        for (const d of steps) { s.z.length = 0; s.cleared = true; s.leave(d); await new Promise((r) => setTimeout(r, 450)); while (s.cards) s.pick(0); }
+        const pd = s.padHere(); if (pd) { s.p.x = pd.x; s.p.y = pd.y + 30; } return s.cell.join(','); },
+      atPad() { const s = PH.sim, pd = s.padHere(); if (!pd) return false; s.p.x = pd.x; s.p.y = pd.y + 30; return true; }, heliUi() { heliUi(); return PH.overlay; }, heliGo(k) { return PH.sim.heliGo(k); },
       teleport(x, y) { const s = PH.sim; s.p.x = x; s.p.y = y; return true; },
       kills(n) { PH.sim.killCount += n; PH.sim.reportStatus(true); return PH.sim.killCount; },
       story: () => PH.v && PH.v.story, pv: () => PH.v,
@@ -986,6 +1032,8 @@
       '📣 Call out to the team: places you find show up for everyone, with the route along the streets. Score attack (and Party Mode): the highest score wins; keep the kill streak going for a bigger multiplier.',
       'Garage Defense: every 5 waves a horde night pulls everyone home. Build barricades, turrets, spike strips, sprinkler-flamers and car-alarm decoys, then hold the door. Broken doors cost the town hope.',
       'Hop into shopping carts, push mowers and ride-on mowers (V or the button), grab the rare garbage truck or the even rarer tank. Every ride is on a clock (the ring over it): when it runs out, or it gets wrecked, you hop out. Escort hiding survivors to a shop or the clinic. Rain, fog and heat waves change the fight.',
+      '🚁 Helipads: a few hide around town (some in the tougher, locked blocks). Find one and the whole team sees it on the map. Stand on it, tap FLY and pick ANY block the team has explored: the chopper flies you there and drops you off on a rope. Then the pilot refuels for a while (longer in Score attack).',
+      'Rare flying rides: the Gunship (its chain gun and rockets fire down by themselves), the Jetpack (short hops over zombies and walls) and the Hang-Glider (always moving, you shoot as you soar). Up high, walls can’t stop you and zombies can’t reach you, but each is on a clock and has its own health.',
       'Down, out or just watching? Your phone helps: drop supply crates, vote on the next event, or (Score attack) send a horde at the leader. Scrap from every night unlocks classes, starting weapons, outfits and harder tiers (not in Party Mode).',
     ],
     fx: { start: 'start' },
@@ -1049,6 +1097,8 @@
       else if (f.kind === 'tzbroke') { BOX.sfx('crunch'); BOX.sfx('explosion'); }
       else if (f.kind === 'tzdawn' || f.kind === 'tzrescue' || f.kind === 'tzvote') { BOX.sfx('chime'); }
       else if (f.kind === 'tzcrate' || f.kind === 'tzsent') { BOX.sfx('pop'); }
+      else if (f.kind === 'tzheli') { BOX.sfx('whoosh'); }
+      else if (f.kind === 'tzpad') { BOX.sfx('reveal'); }
       void s;
     },
     music(s) { if (!s) return 'play'; if (s.phase === 'over') return s.why === 'lost' || s.why === 'overrun' ? 'lose' : 'finale'; if (s.story && s.story.doorOpen) return 'action'; if (s.garage && s.garage.phase === 'horde') return 'action'; if (s.garage && s.garage.phase === 'build') return 'tense'; const P = s.players || []; if (P.length && P.every((p) => p.state === 'dead')) return 'lose'; return P.some((p) => p.wave % 5 === 0 && p.state !== 'dead' && !p.bot) ? 'tense' : 'play'; },

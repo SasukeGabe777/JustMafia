@@ -9627,6 +9627,242 @@
     "W": "E",
     "NW": "NE"
    }
+  },
+  "fly.glider": {
+   "file": "props/fly-glider.webp",
+   "kind": "vehicle",
+   "cell": [
+    262,
+    152
+   ],
+   "anchor": [
+    131,
+    126
+   ],
+   "scale": 1,
+   "size": [
+    4.4,
+    1.182,
+    2.8
+   ],
+   "name": "Hang-glider (rare flying ride; our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "fly.jetpack": {
+   "file": "props/fly-jetpack.webp",
+   "kind": "vehicle",
+   "cell": [
+    120,
+    104
+   ],
+   "anchor": [
+    60,
+    79
+   ],
+   "scale": 1,
+   "size": [
+    0.8,
+    1.325,
+    0.533
+   ],
+   "name": "Jetpack (rare flying ride; our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "heli.gunship": {
+   "file": "props/heli-gunship.webp",
+   "kind": "vehicle",
+   "cell": [
+    398,
+    270
+   ],
+   "anchor": [
+    199,
+    213
+   ],
+   "scale": 1,
+   "size": [
+    5.809,
+    2.277,
+    6.8
+   ],
+   "name": "Gunship (rare flying ride; our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "fly": {
+     "frames": 8,
+     "fps": 24,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
+  },
+  "heli.pad": {
+   "file": "props/heli-pad.webp",
+   "kind": "prop",
+   "cell": [
+    340,
+    186
+   ],
+   "anchor": [
+    170,
+    111
+   ],
+   "scale": 1,
+   "size": [
+    4.8,
+    1.185,
+    4.78
+   ],
+   "name": "Helipad (our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0
+     }
+    }
+   },
+   "dirs": [
+    "S"
+   ]
+  },
+  "heli.rescue": {
+   "file": "props/heli-rescue.webp",
+   "kind": "vehicle",
+   "cell": [
+    398,
+    270
+   ],
+   "anchor": [
+    199,
+    213
+   ],
+   "scale": 1,
+   "size": [
+    5.809,
+    2.277,
+    6.8
+   ],
+   "name": "Rescue helicopter (helipad travel; our own model)",
+   "anims": {
+    "static": {
+     "frames": 1,
+     "fps": 12,
+     "loop": true,
+     "rows": {
+      "S": 0,
+      "SE": 1,
+      "E": 2,
+      "NE": 3,
+      "N": 4
+     }
+    },
+    "fly": {
+     "frames": 8,
+     "fps": 24,
+     "loop": true,
+     "rows": {
+      "S": 5,
+      "SE": 6,
+      "E": 7,
+      "NE": 8,
+      "N": 9
+     }
+    }
+   },
+   "dirs": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N"
+   ],
+   "mirror": {
+    "SW": "SE",
+    "W": "E",
+    "NW": "NE"
+   }
   }
  },
  "aliases": {
@@ -11378,6 +11614,18 @@
    "seconds": 0.43,
    "loop": false,
    "source": "kenney impact"
+  },
+  "sfx.heli.rotor.loop": {
+   "file": "sfx/heli-rotor-loop.wav",
+   "seconds": 2,
+   "loop": true,
+   "source": "justzombies-synth"
+  },
+  "sfx.jet.loop": {
+   "file": "sfx/jet-loop.wav",
+   "seconds": 1.5,
+   "loop": true,
+   "source": "justzombies-synth"
   }
  },
  "ui": {

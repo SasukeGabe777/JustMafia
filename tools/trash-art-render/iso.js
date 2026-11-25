@@ -512,6 +512,64 @@ function procModel(kind) {
     const blade = new THREE.Group(); blade.name = 'blade'; blade.position.set(0, 0.1, 0.25); g.add(blade);
     const bl = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.08), std(0xc9ccd1, { metalness: 0.85, roughness: 0.3 })); blade.add(bl);
     for (const [x, z, r] of [[-0.42, 0.42, 0.13], [0.42, 0.42, 0.13], [-0.4, -0.3, 0.2], [0.4, -0.3, 0.2]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.12, 16), std(0x1c1f24, { roughness: 0.9 })); w.rotation.z = Math.PI / 2; w.position.set(x, r, z); w.name = 'wheel'; const hub = new THREE.Mesh(new THREE.BoxGeometry(r * 1.5, 0.13, 0.05), std(0xf2c200)); w.add(hub); g.add(w); }
+  } else if (kind === 'heli' || kind === 'gunship') { // JustZombies helicopters (our own models): the rescue chopper (orange) and the gunship (olive, stub wings, rocket pods, chin gun)
+    const gun = kind === 'gunship', main = std(gun ? 0x5d6b3a : 0xf28c28, { roughness: 0.45, metalness: 0.25 }), trim = std(gun ? 0x2f3527 : 0xf4f1e8, { roughness: 0.5 }), dark = std(0x23262b, { roughness: 0.7 }), glass = std(0x7fc8ff, { roughness: 0.1, metalness: 0.3, emissive: 0x18324a, emissiveIntensity: 0.4 });
+    const body = new THREE.Group(); body.name = 'body'; g.add(body);
+    const cab = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), main); cab.scale.set(0.95, 0.85, 1.55); cab.position.set(0, 1.25, 0.2); body.add(cab);
+    const wind = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2.4), glass); wind.scale.set(0.82, 0.7, 0.9); wind.rotation.x = Math.PI / 2.2; wind.position.set(0, 1.35, 0.95); body.add(wind);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.97, 0.97, 0.22, 24), trim); band.rotation.x = Math.PI / 2; band.scale.set(1, 1, 0.88); band.position.set(0, 1.25, -0.2); body.add(band);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.75, 0.8), dark); door.position.set(0.93, 1.2, -0.1); body.add(door); const door2 = door.clone(); door2.position.x = -0.93; body.add(door2);
+    const boom = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.26, 2.8, 14), main); boom.rotation.x = Math.PI / 2; boom.position.set(0, 1.45, -2.4); body.add(boom);
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.85, 0.55), main); fin.position.set(0, 1.85, -3.65); fin.rotation.x = -0.25; body.add(fin);
+    const stab = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 0.35), trim); stab.position.set(0, 1.5, -3.3); body.add(stab);
+    const trotor = new THREE.Group(); trotor.name = 'trotor'; trotor.position.set(0.12, 1.9, -3.7); body.add(trotor);
+    for (let i = 0; i < 2; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.85, 0.12), dark); b.rotation.x = i * Math.PI / 2; trotor.add(b); }
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 0.45, 12), dark); mast.position.set(0, 2.15, 0.1); body.add(mast);
+    const rotor = new THREE.Group(); rotor.name = 'rotor'; rotor.position.set(0, 2.42, 0.1); body.add(rotor);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.14, 12), trim); rotor.add(hub);
+    for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.04, 3.1), dark); b.position.set(Math.sin(i * Math.PI / 2) * 1.55, 0, Math.cos(i * Math.PI / 2) * 1.55); b.rotation.y = i * Math.PI / 2; rotor.add(b); const tip = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.05, 0.3), std(0xf2c200)); tip.position.set(Math.sin(i * Math.PI / 2) * 3.0, 0, Math.cos(i * Math.PI / 2) * 3.0); tip.rotation.y = i * Math.PI / 2; rotor.add(tip); }
+    for (const x of [-0.75, 0.75]) { const skid = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.6, 8), dark); skid.rotation.x = Math.PI / 2; skid.position.set(x, 0.08, 0.15); g.add(skid);
+      for (const z of [-0.5, 0.8]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.62, 8), dark); st.position.set(x * 0.85, 0.38, z); st.rotation.z = x > 0 ? 0.3 : -0.3; g.add(st); } }
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), std(0xff3b3b, { emissive: 0xff2020, emissiveIntensity: 1.2 })); light.position.set(0, 0.42, 0.3); body.add(light);
+    if (gun) {
+      for (const s of [-1, 1]) { const wing = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.08, 0.5), main); wing.position.set(s * 1.25, 1.05, 0.1); body.add(wing);
+        const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.9, 12), dark); pod.rotation.x = Math.PI / 2; pod.position.set(s * 1.55, 0.88, 0.15); body.add(pod);
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.25, 12), std(0xc0392b)); nose.rotation.x = Math.PI / 2; nose.position.set(s * 1.55, 0.88, 0.72); body.add(nose); }
+      const chin = new THREE.Group(); chin.position.set(0, 0.62, 1.35); body.add(chin);
+      const tur = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), dark); chin.add(tur);
+      for (let i = 0; i < 3; i++) { const bb = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.8, 8), std(0x3a3f47, { metalness: 0.6 })); bb.rotation.x = Math.PI / 2; bb.position.set(-0.07 + i * 0.07, -0.02, 0.45); chin.add(bb); }
+      const star = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.3, 0.3), std(0xf2c200)); star.position.set(0.96, 1.35, -0.6); body.add(star);
+    } else {
+      const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.36, 0.12), std(0xffffff)); crossV.position.set(0.965, 1.55, -0.75); body.add(crossV);
+      const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.12, 0.36), std(0xffffff)); crossH.position.set(0.965, 1.55, -0.75); body.add(crossH);
+      const winch = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.18, 0.3), dark); winch.position.set(0.95, 1.95, -0.1); body.add(winch);
+    }
+  } else if (kind === 'jetpack') { // JustZombies jetpack (our own model): twin tanks, nozzles, straps
+    const red = std(0xd9483a, { roughness: 0.4, metalness: 0.35 }), steel = std(0xb8bfc8, { metalness: 0.7, roughness: 0.3 }), dark = std(0x2b2f36);
+    for (const x of [-0.13, 0.13]) { const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.55, 16), red); tank.position.set(x, 0.42, 0); g.add(tank);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), red); cap.position.set(x, 0.695, 0); g.add(cap);
+      const noz = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 0.14, 12), steel); noz.position.set(x, 0.08, 0); g.add(noz); }
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.45, 0.06), steel); plate.position.set(0, 0.45, 0.12); g.add(plate);
+    for (const x of [-0.12, 0.12]) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.04), dark); st.position.set(x, 0.48, 0.17); g.add(st); }
+    const dial = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.02, 12), std(0xf2c200)); dial.rotation.x = Math.PI / 2; dial.position.set(0, 0.6, -0.12); g.add(dial);
+  } else if (kind === 'glider') { // JustZombies hang-glider (our own model): a striped delta wing and its control bar
+    const sh = new THREE.Shape(); sh.moveTo(0, 1.4); sh.lineTo(2.2, -0.8); sh.quadraticCurveTo(0, -0.45, -2.2, -0.8); sh.lineTo(0, 1.4);
+    const geo = new THREE.ShapeGeometry(sh); geo.rotateX(-Math.PI / 2);
+    const wing = new THREE.Mesh(geo, std(0xffd23f, { side: THREE.DoubleSide, roughness: 0.6 })); wing.position.y = 1.9; g.add(wing);
+    const sh2 = new THREE.Shape(); sh2.moveTo(0, 1.2); sh2.lineTo(0.9, -0.15); sh2.lineTo(-0.9, -0.15); sh2.lineTo(0, 1.2);
+    const geo2 = new THREE.ShapeGeometry(sh2); geo2.rotateX(-Math.PI / 2); const stripe = new THREE.Mesh(geo2, std(0x3ec1ff, { side: THREE.DoubleSide })); stripe.position.y = 1.91; g.add(stripe);
+    const keel = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.3, 8), std(0x3a3f47)); keel.rotation.x = Math.PI / 2; keel.position.set(0, 1.88, 0.25); g.add(keel);
+    for (const s of [-1, 1]) { const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.25, 8), std(0x3a3f47)); bar.position.set(s * 0.28, 1.3, 0.35); bar.rotation.z = s * 0.45; g.add(bar); }
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.75, 8), std(0x3a3f47)); base.rotation.z = Math.PI / 2; base.position.set(0, 0.75, 0.35); g.add(base);
+  } else if (kind === 'helipad') { // JustZombies helipad (our own model): a concrete disc, a yellow ring, the H, landing lights
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.4, 0.08, 40), std(0x6f747a, { roughness: 0.9 })); pad.position.y = 0.04; g.add(pad);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.85, 0.09, 6, 48), std(0xf2c200, { roughness: 0.6 })); ring.rotation.x = Math.PI / 2; ring.scale.z = 0.3; ring.position.y = 0.09; g.add(ring);
+    const white = std(0xf4f1e8, { roughness: 0.6 });
+    for (const x of [-0.5, 0.5]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.03, 1.5), white); leg.position.set(x, 0.095, 0); g.add(leg); }
+    const mid = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, 0.22), white); mid.position.set(0, 0.095, 0); g.add(mid);
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, l = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.14), std(i % 2 ? 0x7dff6a : 0xffffff, { emissive: i % 2 ? 0x3aff2a : 0xffffcc, emissiveIntensity: 0.9 })); l.position.set(Math.cos(a) * 2.2, 0.12, Math.sin(a) * 2.2); g.add(l); }
+    const sock = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.6, 10), std(0xff7a1a)); sock.rotation.z = Math.PI / 2 + 0.2; sock.position.set(2.1, 1.0, -1.6); g.add(sock);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.1, 8), std(0x3a3f47)); pole.position.set(1.85, 0.55, -1.6); g.add(pole);
   } else if (kind === 'blower') { // backpack leaf blower
     const pack = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.26, 0.16), std(0xf28c28, { roughness: 0.5 })); pack.position.set(-0.18, 0.15, 0); g.add(pack);
     const eng = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 14), std(0x2b2f36, { metalness: 0.5 })); eng.rotation.x = Math.PI / 2; eng.position.set(-0.18, 0.12, 0.12); g.add(eng);

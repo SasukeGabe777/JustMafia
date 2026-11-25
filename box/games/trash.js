@@ -73,6 +73,8 @@ class Game {
     // area locks (every mode): blocks open as the team's zombie kills rise (trash-story.js locks());
     // opened = block indexes that are open for good; chests = loot chests opened ("x,y" -> { took: [ids] })
     this.lockPlan = null; this.opened = new Set(); this.chests = new Map(); this.noLocks = false;
+    // helipads (trash-extra.js helipads()): found ones ("x,y" -> { by, at }); recent flights for the TV map
+    this.pads = new Map(); this.padCells = new Set(X.helipads(this.seed).map(key)); this.flights = []; this.flSeq = 0;
   }
   get isStory() { return this.s.mode === 'story'; }
   get isScore() { return this.s.mode === 'score'; }
@@ -447,6 +449,28 @@ class Game {
     const k = key(cell); if (!this.explored.has(k)) this.explored.set(k, { by, at: this.room.now() });
     // a specialised place in this block: the whole team sees it from now on
     const type = PL.placeAt(this.seed, cell[0], cell[1], this.homes); if (type && !this.found.has(k) && !(this.plan && key(this.plan.door) === k)) this.discover(k, type, by);
+    if (this.padCells.has(k) && !this.pads.has(k)) { this.pads.set(k, { by, at: this.room.now() }); const p = this.room.get(by); if (p && !p.bot) { this.news('🚁', `${p.name} found a helipad: fly from it to anywhere the team has been!`, by); this.room.fx('tzpad', { id: by, k }); } }
+  }
+  // ---------------- helipads: fly to any block the team has explored ----------------
+  heliCd() { return this.ranked || this.party ? X.HELI.cdRanked : X.HELI.cd; } // (Score attack / Party: a longer wait, so it stays fair)
+  heliIn(R) { return R && R.heliAt != null ? Math.max(0, R.heliAt + this.heliCd() - this.room.now()) : 0; }
+  heli(p, R, m) {
+    if (R.state !== 'play') return { ok: false, error: 'You’re down.' };
+    if (this.gd && this.gd.phase !== 'explore') return { ok: false, error: '🌙 Horde night: hold your garage!' };
+    const here = key(R.cell); if (!this.pads.has(here)) return { ok: false, error: 'There’s no helipad here.' };
+    const to = String(m.to || ''); if (!this.explored.has(to)) return { ok: false, error: 'The pilot only flies to places the team has explored.' };
+    if (to === here) return { ok: false, error: 'You’re already here.' };
+    const [x, y] = to.split(',').map(Number); if (!W.inGrid(x, y)) return { ok: false, error: 'That’s off the map.' };
+    if (this.locked(x, y)) return { ok: false, error: '🔒 That block is locked right now.' };
+    const wait = this.heliIn(R); if (wait > 0) return { ok: false, error: `🚁 The helicopter is refuelling: ${Math.ceil(wait / 1000)} s.`, wait };
+    const now = this.room.now(); R.heliAt = now;
+    this.tellArea(here, { t: 'heli', id: p.id, phase: 'off' });
+    this.leaveArea(p.id); R.cell = [x, y]; R.areas++; this.explore(R.cell, p.id);
+    const A = this.joinArea(p.id, to); this.tellArea(to, { t: 'heli', id: p.id, phase: 'in' });
+    this.flights.push({ n: ++this.flSeq, id: p.id, from: here, to, at: now }); if (this.flights.length > 8) this.flights.shift();
+    const look = this.homes.some((h) => h[0] === x && h[1] === y) ? W.HOME : W.biomeOf(this.seed, x, y);
+    this.news('🚁', `${p.name} flew to the ${look.name}`, p.id); this.room.fx('tzheli', { id: p.id, from: here, to }); this.soon();
+    return { ok: true, to, cd: this.heliCd(), area: A ? { k: to, host: A.host, members: A.members.slice() } : null };
   }
   discover(k, type, by, how) {
     if (this.found.has(k)) return false; const P = PL.PLACES[type]; this.found.set(k, { type, by, at: this.room.now() });
@@ -459,9 +483,9 @@ class Game {
     const now = this.room.now(); if (R.pingAt != null && now - R.pingAt < 1500) return { ok: false, error: 'Easy on the megaphone!' }; R.pingAt = now;
     let x = R.cell[0], y = R.cell[1];
     if (k === 'go' || k === 'place') { const c = String(m.cell || ''); if (!this.found.has(c) && !this.explored.has(c)) return { ok: false, error: 'Nobody has found that place yet.' }; [x, y] = c.split(',').map(Number); }
-    const q = { n: ++this.pseq, id: p.id, k, x, y, at: now, place: (this.found.get(x + ',' + y) || {}).type || null };
+    const q = { n: ++this.pseq, id: p.id, k, x, y, at: now, place: (this.found.get(x + ',' + y) || {}).type || (this.pads.has(x + ',' + y) ? 'heli' : null) };
     this.pings.push(q); if (this.pings.length > 8) this.pings.shift();
-    const P = q.place && PL.PLACES[q.place]; this.news('📣', `${p.name}: ${PINGS[k]}${P ? ' ' + P.icon + ' ' + P.name : ''}`, p.id); this.room.fx('tzping', { id: p.id, k }); this.soon();
+    const P = q.place === 'heli' ? { icon: '🚁', name: 'Helipad' } : q.place && PL.PLACES[q.place]; this.news('📣', `${p.name}: ${PINGS[k]}${P ? ' ' + P.icon + ' ' + P.name : ''}`, p.id); this.room.fx('tzping', { id: p.id, k }); this.soon();
     return { ok: true };
   }
   // A boss dropped a map: its finder picks where it leads (revealed for the whole team, with a call-out).
@@ -570,6 +594,7 @@ class Game {
     if (m.op === 'find') return this.find(p, R, m);
     if (m.op === 'door') return this.openDoor(p, R);
     if (m.op === 'ping') return this.ping(p, R, m);
+    if (m.op === 'heli') return this.heli(p, R, m);
     if (m.op === 'reveal') return this.reveal(p, R, m);
     if (m.op === 'stash') return this.stash(p, R);
     if (m.op === 'revive') return this.revive(p, R, m);
@@ -683,7 +708,7 @@ class Game {
     } else if (k === 'bossdown') { const b = String(m.id || 'boss'), final = b === 'final' && this.plan, nm2 = final ? S.BOSSES[this.plan.boss].name : (W.ZOMBIES[b] || W.ZOMBIES.boss).name; this.moment(final ? 'final' : 'boss', p, 1, `${p.name} took down ${nm2}`); this.kfeed.push({ n: ++this.kseq, id: p.id, name: p.name, color: p.color, icon: '☠️', text: `took down ${nm2}!`, at: this.room.now(), big: true }); if (this.kfeed.length > KF) this.kfeed.shift();
     } else if (k === 'multi') { const n = int(m.n, 2, 99); if (n < 4) return { ok: true, quiet: true }; const prev = this.moments.find((x) => x.kind === 'multi' && x.id === p.id && this.room.now() - x.at < 3000); if (prev) { if (n > prev.value) { prev.value = n; prev.w = X.momentWeight(prev); prev.text = `${p.name} took out ${n} zombies at once`; } } else this.moment('multi', p, n, `${p.name} took out ${n} zombies at once`); return { ok: true, quiet: true };
     } else if (k === 'survlost') { return this.survivorLost(p);
-    } else if (k === 'ride') { const V = X.VEHICLES[m.id]; if (!V) return { ok: false, error: 'Unknown ride.' }; if (m.id === 'gtruck') this.news(V.icon, `${p.name} is driving a Garbage Truck!`, p.id); return { ok: true, quiet: m.id !== 'gtruck' };
+    } else if (k === 'ride') { const V = X.VEHICLES[m.id]; if (!V) return { ok: false, error: 'Unknown ride.' }; if (m.id === 'gtruck' || V.fly) this.news(V.icon, V.fly ? `${p.name} took off on a ${V.name}!` : `${p.name} is driving a Garbage Truck!`, p.id); return { ok: true, quiet: m.id !== 'gtruck' && !V.fly };
     } else if (k === 'build') { const B = X.BUILD[m.id]; if (!B) return { ok: false, error: 'Unknown build.' }; R.built = (R.built || 0) + 1; return { ok: true, quiet: true }; }
     else if (k === 'down') { this.news('💫', `${p.name} used a Spare Lunchbox`, p.id); this.room.fx('tzhurt', { id: p.id }); }
     else if (k === 'hurt') { this.room.fx('tzhurt', { id: p.id }); }
@@ -782,6 +807,7 @@ class Game {
       kfeed: this.kfeed.slice(-8), spot: this.spotTv(), card: this.bossCard && this.room.now() - this.bossCard.at < CARD_MS ? { ...this.bossCard, ago: this.room.now() - this.bossCard.at } : null,
       recap: this.recap ? { ...this.recap, ago: this.room.now() - this.recap.at } : null, weather: this.weatherView(), garage: this.garageTv(), poll: this.pollView(null), helpers: this.helperCount(), party: this.party,
       rescued: [...this.survivors.values()].filter((x) => x.state === 'safe').length, locks: this.lockView(),
+      pads: [...this.pads.keys()], flights: this.flights.filter((f) => this.room.now() - f.at < 6000).map((f) => ({ ...f, ago: this.room.now() - f.at })),
     };
   }
   spotTv() { const S0 = this.spot; if (!S0) return null; const R = this.runs.get(S0.id), p = this.room.get(S0.id); if (!R || !p) return null; return { id: S0.id, name: p.name, color: p.color, why: S0.why || 'low', hp: R.hp, mhp: R.mhp, x: R.cell[0], y: R.cell[1], wave: R.wave }; }
@@ -797,6 +823,7 @@ class Game {
         helper: R.state === 'dead' || R.state === 'down' ? this.helperState('p:' + p.id) : null } : null,
       party: this.party, weather: this.weatherView(), garage: this.garageTv(), nextEv: this.nextEv, poll: R && (R.state === 'dead' || R.state === 'down') ? this.pollView('p:' + p.id) : null, leader: (() => { const L = this.leader(); return L ? { id: L.id, name: L.name } : null; })(),
       surv: [...this.survivors.entries()].map(([k, x]) => [k, x.state, x.by]), locks: this.lockView(), chests: [...this.chests].filter(([, c]) => c.took.includes(p.id)).map(([k]) => k),
+      pads: [...this.pads.keys()], heliIn: this.heliIn(R), heliCd: this.heliCd(),
       area: A ? { k: A.k, host: A.host, members: A.members.slice() } : null,
       settings: { diff: this.s.diff, aim: this.s.aim, xp: this.s.xp, length: this.s.length, mode: this.s.mode }, endsIn: this.endsAt ? Math.max(0, this.endsAt - this.room.now()) : 0,
       feed: this.feed.slice(-4), standings: this.phase === 'over' ? this.standings() : null, why: this.overWhy, mode: this.s.mode, story: this.storyView(p),
