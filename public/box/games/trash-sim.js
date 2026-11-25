@@ -386,7 +386,7 @@
       const front = dirs.length;
       if (S.rear >= 1) dirs.push(P.aim + Math.PI); if (S.rear >= 2) { dirs.push(P.aim + Math.PI / 2, P.aim - Math.PI / 2); }
       dirs.forEach((a, i) => this.fireBullet(ox, oy, a, i >= front ? S.rearDmg : 1));
-      this.muzzle = 0.05;
+      this.muzzle = 0.05; this.shotN = (this.shotN || 0) + 1;
       if (this.casings !== false && this.fx.length < MAX_FX - 20) { const ca = P.aim + Math.PI / 2 * P.face; this.fx.push({ k: 'c', x: P.x + P.face * 10, y: P.y - 30, vx: Math.cos(ca) * 90 + (this.rng() - 0.5) * 40, vy: -120 - this.rng() * 60, gy: P.y + 4 + (this.rng() - 0.5) * 16, t: 0, life: 1.4, rot: this.rng() * 3, vr: 18 }); }
       this.o.on('shot', { mini });
     }

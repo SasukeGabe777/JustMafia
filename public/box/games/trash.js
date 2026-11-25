@@ -670,6 +670,10 @@
       'The TV shows the town map. Walk into a friend’s area to team up: you share the zombies (and the XP).',
       'Regular mode: chained gates open as the team racks up kills. Behind them: unique gear, abilities, map halves and 3 key pieces. Find the hidden boss door, open it with the whole key and beat the boss to win. Endless mode: waves forever.',
       'Abilities never max out: pick them again and again and they keep stacking.',
+      'Pick a survivor class at the start. Zombies drop cash: spend it at the places you find in town (market, army surplus, clinic). The Tinkerer, the Gunsmith and the rare Master Armorer level your weapons up to 10; the far-off Crucible evolves a level-10 weapon (bosses drop the cores it needs).',
+      'Extra weapons fire by themselves. Own the right pair and they combine. Some zombies carry a super weapon: take them out and it’s yours for a few seconds.',
+      'Later waves bring nasty zombies that blind you, web you (wiggle to break free), jam your guns or flip your controls. The clinic cleans you up.',
+      '📣 Call out to the team: places you find show up for everyone, with the route along the streets. Score attack (and Party Mode): the highest score wins; keep the kill streak going for a bigger multiplier.',
     ],
     fx: { start: 'start' },
     // ---------------- lobby ----------------

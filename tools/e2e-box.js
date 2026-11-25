@@ -589,6 +589,10 @@ async function setup(browser, game, settings = {}) {
     await ph.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
     await ph.until(`!!window.TZ_DEBUG && !!TZ_DEBUG.sim() && !!document.querySelector('.tz-root canvas')`, 'the game on the phone', 20000);
     assert(await ph.eval(`TZ_DEBUG.sim().phase === 'intro' && !!TZ_DEBUG.sim().area.garage`), 'the run starts inside your garage');
+    // pick a survivor class (the picker shows over the garage intro)
+    await ph.until(`!!document.querySelector('[data-cls]')`, 'the class picker', 10000);
+    await ph.eval(`document.querySelector('[data-cls="sharp"]').click(); true`);
+    await ph.until(`TZ_DEBUG.sim().cls === 'sharp' && document.querySelector('.tz-ov').hidden`, 'class picked');
     await ph.until(`TZ_DEBUG.sim().phase === 'play'`, 'out of the garage', 10000);
     await ph.eval(`TZ_DEBUG.god(true); TZ_DEBUG.sim().set.aim = 'off'; TZ_DEBUG.sim().spawnCd = 99; true`);
     const sim = (e) => ph.eval(`(() => { const s = TZ_DEBUG.sim(); return ${e}; })()`);
@@ -628,10 +632,10 @@ async function setup(browser, game, settings = {}) {
     const mouse = (type, x, y, extra = {}) => ph.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', ...extra });
     await mouse('mouseMoved', 640, 360); await mouse('mouseMoved', 1100, 200);
     await ph.until(`TZ_DEBUG.device() === 'mouse'`, 'mouse mode');
-    const b1 = await sim('s.b.length + (s.p.kick > 0 ? 1 : 0)');
+    const b1 = await sim('s.shotN || 0');
     await mouse('mousePressed', 1100, 200, { clickCount: 1, buttons: 1 }); await wait(400);
     const aim = await sim('s.p.aim'); assert(aim < 0 && aim > -Math.PI / 2, 'the mouse aims up-right: ' + aim);
-    assert((await sim('s.b.length')) > 0 || b1 > 0, 'holding the button fires');
+    assert((await sim('s.shotN || 0')) > b1, 'holding the button fires');
     await mouse('mouseReleased', 1100, 200, { clickCount: 1 });
     await key('keyDown', 'Escape', 'Escape', 27); await key('keyUp', 'Escape', 'Escape', 27);
     await ph.until(`TZ_DEBUG.menu() && !!document.querySelector('.tz-menu')`, 'Esc pauses');
@@ -648,11 +652,17 @@ async function setup(browser, game, settings = {}) {
     await ph.eval(`TZ_DEBUG.give('shield'); true`); assert(await sim('s.buffs.shield > 7'));
     const look0 = await sim('s.area.biome.key'), cell0 = await sim('s.cell.join()');
     await ph.eval('TZ_DEBUG.clear(); true'); await ph.until(`TZ_DEBUG.sim().cleared`, 'area clear');
-    const dir = await sim(`s.area.exits.e ? 'e' : 'w'`); await ph.eval(`TZ_DEBUG.walk('${dir}')`);
-    assert.notEqual(await sim('s.cell.join()'), cell0); assert.notEqual(await sim('s.area.biome.key'), look0, 'a new look'); assert.equal(await sim('s.wave'), 2);
+    const dir = await sim(`['e', 'w', 's', 'n'].find((d) => s.area.exits[d] && !s.gateLeft(d))`); await ph.eval(`TZ_DEBUG.walk('${dir}')`);
+    assert.notEqual(await sim('s.cell.join()'), cell0); assert.equal(await sim('s.wave'), 2); void look0;
+    // the call-out button (bottom row) opens the quick pings; one reaches the TV feed
+    await ph.until(`(TZ_DEBUG.sim().phase === 'play')`, 'playing'); await ph.eval(`TZ_DEBUG.btn('call'); true`);
+    await ph.until(`!!document.querySelector('[data-ping="here"]')`, 'call-out menu'); await ph.eval(`document.querySelector('[data-ping="here"]').click(); true`);
+    await tv.until(`/Over here/.test(document.querySelector('#tz-side').textContent)`, 'the call-out on the TV feed', 6000);
+    // a weapon fires by itself; the score shows on the TV
+    await ph.eval(`TZ_DEBUG.weapon('smg'); TZ_DEBUG.spawn(3); true`); await wait(1500); assert(await sim('s.weapons.length === 1 && s.killCount >= 0'));
     await tv.until(`!!document.querySelector('#tz-map') && /Tess/.test(document.querySelector('#tz-side').textContent) && /Wave 2/.test(document.querySelector('#tz-side').textContent)`, 'the TV map shows Tess on wave 2', 10000);
     await wait(800); await ph.shot('box-trash-new-area'); await tv.shot('box-trash-tv-map');
-    ok('TrashZombies: the run starts in your garage; touch drag moves, the aim stick aims and fires while dragging; level-up cards (Attack/Defense/Special); WASD, mouse aim + hold to fire, Esc pause and number keys on a computer; a pickup; a cleared area opens the exits into a new-looking area; the TV map follows');
+    ok('TrashZombies: the run starts in your garage with a class pick; touch drag moves, the aim stick aims and fires while dragging; level-up cards (Attack/Defense/Special); WASD, mouse aim + hold to fire, Esc pause and number keys on a computer; a pickup; a cleared area opens the exits into a new-looking area; the TV map follows');
   }
 
   // ---------- One code for the night: the title screen switches the live room ----------

@@ -1821,3 +1821,97 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
   (pause menu), full-screen button + iPhone Add-to-Home-Screen hint, uncapped stacking (up to 4 drones, then they merge
   power). Regular mode (gates, finds, key, boss door, 4 bosses) from the earlier WIP is in. Still to come: modes polish,
   downed/revive, shops + merchants + forge, score/party scoring, weapons, classes, items, new zombies, events.
+
+## TrashZombies phase 2 (claude/trashzombies-phase2, November 24, 2026)
+
+- A. Camera: the owner's wide view (min(w, h) / 500) centred on the hero (look-ahead was tried and
+  removed at the owner's request; TZSim.lead stays as a tested pure helper). Edge arrows for zombies,
+  pickups, exits, the find crate, the shop and call-out routes. Lookout binoculars / Eagle Eye zoom out
+  from this base; the Squinter debuff zooms in.
+- A. Realistic look (public/box/games/trash-art.js, rewritten): pre-rendered per area: textured asphalt
+  with cracks, patches, oil stains and worn lane paint (double yellow on main streets, dashed on side
+  streets, crosswalks at main junctions), concrete sidewalks with seams and curbs, manholes, lawns /
+  dirt / slabs / plazas / docks / a canal; buildings with roofs (shingles, gravel + AC units + vents +
+  skylights, corrugated metal, striped tents), front walls with windows (some broken / boarded) and
+  shop signs, ambient occlusion; cars (some wrecked or burned), a school bus, dumpsters, bags, junk,
+  trees with canopies, lamps, hydrants; soft shadows all falling down-right; chain-link fence with gaps
+  where roads cross; the river or the highway outside the town edge. Per run (from the seed): dusk,
+  overcast or night (a darkness layer with holes: flashlight cone, muzzle flash, street lamps, explosions,
+  pickups), rain, drifting fog, dust motes, vignette. Zombies redrawn (shaded skin, torn varied clothes,
+  5 variants each, shambling wobble, white hit flash), blood / goo splats and scorch marks that fade,
+  bodies that topple over, brass shell casings that bounce, explosion fire + smoke. Graphics High / Low /
+  Auto in the pause menu (Auto: weak phones start on Low, drops to Low if frames get slow).
+- A. One connected town per seed (trash-world.js town()): two main streets each way straight across,
+  a random spanning tree of side streets plus a few loops, dead ends as cul-de-sacs or chained gates,
+  districts as seeded patches (a mall or park can span blocks). A road leaving a cell enters the
+  neighbour at the same position and width; exits exist only where roads cross; the server refuses
+  moves without a road; Regular rings are counted in road steps from the garages. Buildings and props
+  never sit on roads/sidewalks; every block reserves a landmark spot by the road (find crate, boss door,
+  shop); the garage is placed by the street. TV map: one continuous town (fogged blocks show their
+  streets); phone minimap shows the streets too.
+- A. Full screen: the button (start + pause menu), auto request on the first tap, landscape lock where
+  allowed; iPhone: web app manifest + an iOS-only "Tap Share → Add to Home Screen" hint.
+- A. No caps: abilities stack forever (cards show ×n → ×n+1), soft caps for fire rate / dodge / speed /
+  cooldowns, damage / health grow without limit, extra bullets / hubcaps / drones (max 4) merge into
+  stronger ones; zombies keep scaling with the wave.
+- B. Modes: Regular (story, boss win), Endless, Score attack (timed). Party Mode: Score attack lasting
+  exactly the plan's minutes; highest score wins (party points by score rank); falling costs 15% of your
+  score (min 200) and you're back at your garage after 5 s.
+- B. Regular: chained gates with kill counters (team kills, base × (0.6 + 0.4 × players)), the radio
+  story, unique finds (equipment, abilities, 3 key pieces, map halves, spare hearts), a random boss door
+  (5 looks) and 7 bosses (4 earlier + Mother Webber, The Foghorn, Toxic Tub mixing debuffs); "GATES
+  DOWN" banner on phones. Co-op players go DOWN instead of out: a teammate standing by you for 2 s picks
+  you up (25 s bleed-out); the round is lost when everyone is down or out.
+- B. Places (trash-shop.js), about one block in five, where they fit: Corner Market (food that heals
+  over time, buffs, XP chips, a reroll ticket, a book for a chosen ability, a mystery pocket item),
+  Army Surplus (armour plates, hard hat, vest, bomb charges, turret kits, a bigger flashlight), Free
+  Clinic (full heal, max health, revive token, bandages, antidote, a free debuff check-up), Street
+  Tinkerer (weapon Lv 1→5), Gunsmith (Lv 5→8), Master Armorer (Lv 8→10, one per town, far out), the
+  Scrapyard Crucible (evolution only, one per town, far out); plus the Survivor Camper every 4th wave and
+  the Roaming Trader truck (35 s) after some waves. Shops open once the wave is cleared; solo pauses,
+  co-op can't be hurt while browsing. Run-only cash from zombies (coins solo, straight to the killer in
+  co-op), shown in the HUD. Discovery is shared (TV map + every minimap). Call-outs (📣 button / C key):
+  Over here, Need health, Boss here, Come help, "X is here", "Let's go to X" with a route along the
+  streets on the phone (arrow at the right exit) and the TV map. Boss waves drop a map: the finder picks
+  where it leads (nearest unfound clinic/armory/gunsmith/market, the master armorer, the crucible, the
+  boss door clue, or a hidden stash of cash for everyone).
+- C. Score: points per kill by type (elites x3), a kill-streak multiplier (x2 after 8 quick kills, x3
+  after 20, …; lost when hit or idle 3 s; big in the HUD), wave clear + no-damage bonuses, multi-kill
+  bonuses, boss points; live on the TV side list and results.
+- C. Weapons (trash-arms.js / trash-fight.js): the pistol plus 4 slots that fire by themselves: Scrap
+  Scattergun, Pocket Rattler, Nail Gun, Nail Bat, Fence-Post Crossbow, Hairspray Torch, Leaf Blower,
+  Boomerang Hubcap, Pipe Launcher, Lightning Coil, Chainsaw, Rail Rifle (common / rare / epic /
+  legendary). Levels 1-10 at the three merchant ranks; at level 10 the crucible evolves it (needs a
+  crucible core: bosses drop them, elites rarely in Endless) to Tier 2 then Tier 3 (each tier: a new
+  name and finish, back to level 1); the golden lift-up cutscene (solo pauses, co-op can't be hurt).
+  Duplicates add a level (shops don't sell weapons you own). Combos (10, with a combo book in the pause
+  menu): Fire Tornado, Arc Nails, Boom Bolts, Pinball Shells, Flying Turret, Lucky Rattler, Hubcap
+  Storm, Spiked Bat, Thunder Rail, Hot Saw. Timed super weapons: Buzzsaw Minigun, Rocket Barrage, Ray
+  Gun, Garbage-Truck Ram; two at once fuse (Rocket Minigun, Ray Minigun, Rocket Truck, UFO Truck).
+  Some zombies carry one (glowing ring + icon, they take weak shots) and drop it.
+- C. Classes: Medic, Demolitionist, Brawler, Sharpshooter, Scavenger, Tinkerer (passive, starting kit,
+  card bias). Items (12, trade-offs, rarity): Lead Boots, Lucky Rabbit Sock, Piggy Bank, Riot Pads,
+  Glass Knuckles, Coffee Drip, Magnet Belt, Thick Skin, Gold Tooth, Zombie Repellent, Trash Crown, Spring
+  Shoes; lock an item for the next visit; reroll the shelf (price doubles).
+- C. Zombies: Crawler, Gas-Bag (explodes), Screamer (shockwave), Stalker (flickers), Raging Brute,
+  Riot Shield (hit from the side/back), Rot Nest (spawns crawlers), elites (glow), and debuff zombies
+  from wave 7: Inkspitter (blind), Webber (webbed: wiggle to break free; webs on the ground), Gunk Jammer
+  (slow guns), Sludger (slow puddles), Squinter (camera zooms in), Spinner (controls reversed), Leech
+  (drains XP + cash), Stomper (screen + aim shake). Debuffs last a few seconds, at most 2 at once, 4 s
+  immunity after each; cleansed by the clinic, an antidote, a health snack. Boss waves from 10 bring a
+  mini-boss mixing them (Mother Webber, The Foghorn, Toxic Tub).
+- C. Arcade: slow motion on big multi-kills, the last zombie and boss kills (solo only), area events
+  (car alarm horde, horde rush, gas leak you can ignite, supply drop with a flare, cash grab), the
+  raccoon fetches cash, turrets, drones, bomb charges, revive tokens, weapon drops from elites.
+- Validation: tools/test-box-trash.js (53 tests: town connectivity + determinism + edge continuity,
+  areas off-road, camera helpers, gates, plan per seed, finds, door + key + win, downed + revive, score
+  attack + party timing + respawn penalty, places + shared discovery + call-outs, boss maps + stashes,
+  shops + prices + stock, score / multiplier / bonuses, weapons + slots + duplicates, merchant ranges,
+  the crucible chain + cutscene, combos + timed fusions, carriers, classes, items + lock + reroll,
+  debuffs + caps + immunity + cleanse, new zombies, mini-bosses, slow motion, events, server feed).
+  test-box-kit, test-box, test-box-party, e2e-box (TrashZombies: class pick, touch + keyboard/mouse,
+  cards, call-out on the TV, a self-firing weapon). Headless 844x390 phone / 1600x900 TV screenshots.
+  Frame work ~2 ms average (5-8 ms max) with 100 zombies at night in the rain on a desktop CPU, High
+  and Low; a mid phone is maybe 4-6x slower.
+  Limits: not played on real phones or a real network; co-op tested with headless phones only; weapon
+  balance and debuff fairness need real play; real phone frame times are estimated, not measured.
