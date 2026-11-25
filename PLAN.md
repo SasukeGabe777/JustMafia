@@ -1915,3 +1915,57 @@ Branch `claude/events`; details in `docs/progress.md` (calendar table) and `docs
   and Low; a mid phone is maybe 4-6x slower.
   Limits: not played on real phones or a real network; co-op tested with headless phones only; weapon
   balance and debuff fairness need real play; real phone frame times are estimated, not measured.
+
+## TrashZombies phase 3 (claude/trashzombies-phase3, November 25, 2026)
+
+- The TV is part of the game: a ranked leaderboard (by score in Score attack / Garage Defense), a live
+  kill feed built from the phones' status pings (kills grouped by type, elites, boss kills), boss intro
+  cards (mini-bosses, the final boss, horde nights; 5.5 s), highlight moments (multi-kills, streaks, boss
+  kills, rescues, held horde nights) and a recap card of the best one (after every horde night, and
+  every 4 minutes otherwise), weather / horde-night / vote chips. The map stays. The spotlight: the
+  server picks the human in the most trouble (down first, then lowest HP under 35%, held 4 s so it
+  doesn't flicker); only that phone streams a small snapshot (`player:live` t:'tv', ~6 Hz) that the
+  server forwards to the TV (`live` on the host channel), drawn as a picture-in-picture over the map.
+- Helpers: players who are down or out, and audience phones (new `audience:act` socket event +
+  `room.audienceAct` + `gv` in the audience state, a game hook in play.js `audience()/audienceBind()`),
+  get a helper panel with energy (40 start, +3/s, max 100): a supply crate for a chosen teammate (35,
+  20 s cooldown), a vote on the next area event (10, one vote per 30 s poll, opened every minute while
+  there are helpers), and in Score attack only a horde at the current leader (60, 45 s cooldown, plus a
+  25 s breather per leader). Gifts reach the phone through its view (`me.gifts`, sequence-numbered).
+- Unlocks: scrap is paid at the end of a night (kills, wave, rescues, horde nights, a win; harder
+  tiers pay more) onto the box profile (`prof.trash` in .data/box-profiles.json via BoxProfileStore).
+  Spent from the lobby, the pause menu or the results on 4 new classes (Electrician, Grill Cook, Night
+  Janitor, Mail Carrier), starting weapons, outfits drawn on the hero (original art) and personal
+  Nightmare / Apocalypse tiers. Generic room hooks: `def.metaAct` (`op:'meta'`, any phase) and
+  `def.metaView` (`playerState().meta`). Party Mode: no loadout, no unlocked classes, no scrap.
+- Garage Defense (mode `garage`): when anyone reaches wave 5, 10, … everyone is pulled home for a
+  45 s build phase (barricades that zombies smash, turrets, spike strips, sprinkler-flamers, car-alarm
+  decoys, door repairs; placed where you stand), then the horde (bigger each night, a boss from night
+  2) attacks players and the garage door. Held doors score a bonus; a broken door costs the town one of
+  3 hope hearts and 30% cash; no hope = game over ('overrun'). Ranked by score.
+- Vehicles: parked shopping carts (fast, bump zombies) and ride-on mowers (blades), the garbage truck
+  as a rarer timed pickup you drive (15 s). Get in / out with a button or V; the ride takes the hits,
+  a crowd of zombies slows it to a crawl, it can be wrecked. Friends see your ride and outfit.
+- Survivors hide in about one block in seven (never in a shop block); walk up to escort them, zombies
+  go for them, bring them to any place (the clinic pays 1.5x and heals you) for cash + score; once each.
+- Gameplay weather from the server (clear 90 s, then it turns every 2.5 min): rain (burns 35%, fire
+  60%, shock x1.5), fog (zombies further than 400 px shuffle about until they notice you), heat wave
+  (zombies x1.25). Banner + HUD chip on the phone, chip on the TV.
+- New bosses in the final-boss and mini-boss rotations with arenas: Mister Brain Freeze (an ice-cream
+  van that laps a painted track, plays an original jingle, leaves slowing slush and serves rings of
+  frozen cones) and The Big Crunch (a walking compactor; its pit walls slam on red crush zones). The
+  hazards are in the co-op snapshot.
+- Run save: the phone keeps the run in localStorage (`tz.run.<room>.<player>`, every 2 s and on
+  pagehide) and restores cash, weapons, items, class, combos, gear, the ride, the survivor and the yard
+  when the page is reloaded mid-run (same seed and run only).
+- Fixed on the way: the web wiggle used `sim._wx`, which is also the render's weather object (webbed
+  phones lost their lighting); the phase 2 `.tz-why` rule squeezed the TV results headline.
+- Validation: tools/test-box-trash.js 65 tests (12 new: unlocks + profile file round trip, Party Mode
+  equality, Garage Defense server flow + phone yard, helpers + cooldowns + audience, the TV feed / cards
+  / recap / spotlight relay, vehicles, survivors, weather, the new bosses + arenas, run save, the camera
+  rule); test-box-kit, test-box, test-box-party, e2e-box. Headless (muted) screenshots of every new
+  screen; a reload restored cash/weapons/items. Frame work on one headless 844x390 phone: 1.5 ms avg
+  with 90 zombies, 2.1 ms (p95 2.8) adding rain + the compactor + a ride + a survivor + the spotlight
+  stream, 3.5 ms (p95 5.6) with heat + the ice-cream van + a full garage yard.
+  Limits: not played on real phones; helper/garage balance needs real play; the spotlight PIP is drawn
+  from the snapshot (not a video); audience energy is per audience seat and resets if they rejoin.

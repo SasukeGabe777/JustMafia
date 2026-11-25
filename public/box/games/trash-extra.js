@@ -72,7 +72,7 @@
 
   // ---------------- weather that changes the fight ----------------
   const WEATHER = {
-    clear: { icon: '🌤️', name: 'Clear skies', tip: 'Nothing special out there.' },
+    clear: { icon: '🌤️', name: 'Clear skies', tip: 'The weather calmed down.' },
     rain: { icon: '🌧️', name: 'Rain', tip: 'Fires go out fast · shock weapons +50%' },
     fog: { icon: '🌫️', name: 'Fog', tip: 'Zombies only notice you up close' },
     heat: { icon: '🥵', name: 'Heat wave', tip: 'Zombies move 25% faster' },

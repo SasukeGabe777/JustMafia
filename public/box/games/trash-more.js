@@ -147,7 +147,8 @@
       if (me.spot != null) this.spotOn = !!me.spot;
       if (v.garage) this.setGarage(v.garage);
     },
-    setWeather(k) {
+    setWeather(k, pin) {
+      if (pin) this.wxPin = k; else if (this.wxPin && k !== this.wxPin) return; // (screenshots pin it)
       if (!X.WEATHER[k] || k === this.wxk) return; const was = this.wxk; this.wxk = k;
       const base = (this._wxBase = this._wxBase || window.TZSim.weather(this.seed)); this._wx = { tod: base.tod, rain: k === 'rain', fog: k === 'fog', heat: k === 'heat' };
       this.zSpeedMul = k === 'heat' ? X.WX.heatSpeed : 1;
@@ -215,7 +216,7 @@
       const P = this.p, H = this.hiding;
       if (H && !this.npc && !this.dead && !this.down && !H.asking && (H.askAt || 0) <= this.t && d2(H.x, H.y, P.x, P.y) < 100 * 100) {
         H.asking = true; H.askAt = this.t + 2;
-        this.o.report({ op: 'escort', cell: H.id }).then((r) => { H.asking = false; if (r && r.ok) { if (this.hiding !== H) return; this.npc = { ...H, follow: true, asked: false }; this.hiding = null; this.banner = { text: '🧍 ' + H.name.toUpperCase() + ' IS WITH YOU', sub: 'Bring them to a shop or the clinic for a reward', t: 3 }; this.o.on('escort', { name: H.name }); } else if (r && r.error && /already|Not here/.test(r.error)) this.hiding = null; });
+        this.o.report({ op: 'escort', cell: H.id }, true).then((r) => { H.asking = false; if (r && r.ok) { if (this.hiding !== H) return; this.npc = { ...H, follow: true, asked: false }; this.hiding = null; this.banner = { text: '🧍 ' + H.name.toUpperCase() + ' IS WITH YOU', sub: 'Bring them to a shop or the clinic for a reward', t: 3 }; this.o.on('escort', { name: H.name }); } else if (r && r.error && /already|Not here/.test(r.error)) this.hiding = null; });
       }
       if (H) H.t = (H.t || 0) + dt;
       const N = this.npc; if (!N) return;
@@ -228,7 +229,7 @@
       const type = PP().placeAt(this.seed, this.cell[0], this.cell[1], this.homes), D = type && this.shopDoor();
       if (D && !N.asked && (N.askAt || 0) <= this.t && d2(N.x, N.y, D.x, D.y) < 210 * 210 && d2(P.x, P.y, D.x, D.y) < 240 * 240) {
         N.asked = true; N.askAt = this.t + 2;
-        this.o.report({ op: 'rescue' }).then((r) => { if (r && r.ok) { this.cash += r.cash; this.score += r.score; if (r.clinic) this.p.hp = this.S.mhp; this.popup('RESCUED +$' + r.cash, '#7dff6a', N.x, N.y - 100); this.banner = { text: '🎉 ' + N.name.toUpperCase() + ' IS SAFE!', sub: `+$${r.cash} · +${r.score} points${r.clinic ? ' · the clinic patched you up' : ''}`, t: 3.5 }; if (this.npc === N) this.npc = null; this.o.on('rescue', r); } else N.asked = false; });
+        this.o.report({ op: 'rescue' }, true).then((r) => { if (r && r.ok) { this.cash += r.cash; this.score += r.score; if (r.clinic) this.p.hp = this.S.mhp; this.popup('RESCUED +$' + r.cash, '#7dff6a', N.x, N.y - 100); this.banner = { text: '🎉 ' + N.name.toUpperCase() + ' IS SAFE!', sub: `+$${r.cash} · +${r.score} points${r.clinic ? ' · the clinic patched you up' : ''}`, t: 3.5 }; if (this.npc === N) this.npc = null; this.o.on('rescue', r); } else N.asked = false; });
       }
     },
     // ---------------- Garage Defense ----------------

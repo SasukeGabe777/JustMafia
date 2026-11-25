@@ -201,10 +201,11 @@ html:has(body.tz-playing), body.tz-playing { overscroll-behavior: none; touch-ac
 .tz-cb { display: grid; background: #221c16; border: 2px dashed #4a3f33; border-radius: 10px; padding: 4px 8px; color: #8a7f6a; font-size: 13px; }
 .tz-cb.on { border: 2px solid #9cff3c; color: #fff6d8; } .tz-cb small { font-size: 11px; color: #a89c84; }
 .tz-sh3 { grid-column: 1 / -1; margin: 6px 0 0; font: 17px 'Lilita One', sans-serif; color: var(--pc, #ffd23f); }
-.tz-why { color: #a89c84; max-width: 130px; text-align: right; }
+small.tz-why { color: #a89c84; max-width: 130px; text-align: right; }
 .tz-bigsc { font: 30px 'Lilita One', sans-serif; color: #ffd23f; margin: 2px 0; }
 
 /* ---------------- phase 3: the TV (leaderboard, kill feed, chips, boss cards, the recap, the spotlight) ---------------- */
+.tz-rows { min-height: 170px; flex: 1 0 auto; } .tz-feed { max-height: 24%; }
 .tz-rank { font: 22px 'Lilita One', sans-serif; color: #ffd23f; width: 26px; text-align: center; text-shadow: 0 2px 0 #1b1410; }
 .tz-row.spot { border-color: #ff8c6a; box-shadow: 0 0 14px rgba(255,140,106,0.6); }
 .tz-lbh { margin: 0; font: 17px 'Lilita One', sans-serif; color: #9cff3c; letter-spacing: 0.5px; }
